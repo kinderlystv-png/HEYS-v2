@@ -371,7 +371,8 @@ describe('Store — chrono tombstones', () => {
 
 describe('Store — clearChronoScope (убрать круг из дня, не удаляя занятие)', () => {
     let Store;
-    beforeEach(() => { ({ Store } = loadModules()); });
+    let Chrono;
+    beforeEach(() => { ({ Store, Chrono } = loadModules()); });
 
     it('removes scoped entries/snapshots but keeps the activity and other dates', () => {
         const a = Store.addChronoActivity({ name: 'Reading', emoji: '📚' });
@@ -398,6 +399,51 @@ describe('Store — clearChronoScope (убрать круг из дня, не у
             expect.objectContaining({ type: 'entry', id: today.id }),
             expect.objectContaining({ type: 'snapshot', id: `2026-06-06:${a.id}` }),
         ]));
+    });
+
+    it('restores cleared entries with their original timing snapshot', () => {
+        const a = Store.addChronoActivity({ name: 'Phone', emoji: '📱' });
+        const original = Store.addChronoEntry({
+            activityId: a.id,
+            date: '2026-06-20',
+            minutes: 48,
+            at: '2026-06-20T08:31:00.000Z',
+            createdAt: '2026-06-20T09:19:00.000Z',
+            displayGroupId: 'display-1',
+            displayStartAt: '2026-06-20T08:31:00.000Z',
+            displayEndAt: '2026-06-20T09:19:00.000Z',
+        });
+
+        const removed = Store.clearChronoScope(a.id, ['2026-06-20']);
+        const snapshot = removed.entries[0];
+        const restored = Store.addChronoEntry({
+            activityId: snapshot.activityId,
+            date: snapshot.date,
+            minutes: snapshot.minutes,
+            at: snapshot.at,
+            createdAt: snapshot.createdAt,
+            parallelGroupId: snapshot.parallelGroupId,
+            displayGroupId: snapshot.displayGroupId,
+            displayStartAt: snapshot.displayStartAt,
+            displayEndAt: snapshot.displayEndAt,
+        });
+
+        expect(snapshot.id).toBe(original.id);
+        expect(restored.id).not.toBe(original.id);
+        expect(restored).toMatchObject({
+            activityId: a.id,
+            date: '2026-06-20',
+            minutes: 48,
+            at: '2026-06-20T08:31:00.000Z',
+            createdAt: '2026-06-20T09:19:00.000Z',
+            displayGroupId: 'display-1',
+            displayStartAt: '2026-06-20T08:31:00.000Z',
+            displayEndAt: '2026-06-20T09:19:00.000Z',
+        });
+        expect(Chrono.buildChronoLoggedRows({}, Store.getChronoEntries(), Store.getChronoActivities(), '2026-06-20'))
+            .toMatchObject([
+                { durationLabel: '48м', minutes: 48 },
+            ]);
     });
 
     it('does not resurrect scoped snapshots when stale cloud data is saved later', () => {
@@ -1134,6 +1180,26 @@ describe('chrono analytics helpers', () => {
         expect(rows).toMatchObject([
             { id: 'entry:first', entryIds: ['first'], timeRange: '07:00–08:00', durationLabel: '1ч', name: 'Read' },
             { id: 'parallel:g1', entryIds: ['p1', 'p2'], timeRange: '08:00–10:30', durationLabel: '2ч 30м', name: 'Code · Podcast' },
+        ]);
+    });
+
+    it('buildChronoLoggedRows falls back to minutes when legacy restored entry has at equal to createdAt', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            {},
+            [{
+                id: 'legacy-restored',
+                activityId: 'phone',
+                date: '2026-06-20',
+                minutes: 48,
+                at: '2026-06-20T12:19:00',
+                createdAt: '2026-06-20T12:19:00',
+            }],
+            [{ id: 'phone', name: 'Phone' }],
+            '2026-06-20',
+        );
+
+        expect(rows).toMatchObject([
+            { id: 'entry:legacy-restored', durationLabel: '48м', minutes: 48 },
         ]);
     });
 

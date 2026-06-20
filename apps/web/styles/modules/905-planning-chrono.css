@@ -24,7 +24,7 @@
     flex: 1 1 0;
     height: 100%;
     min-height: 0;
-    padding: 12px 12px 16px;
+    padding: 18px 12px 16px;
     box-sizing: border-box;
     gap: 12px;
     /* Скролл на самом экране, а не на cloud — иначе breakdown-бар в режиме
@@ -746,6 +746,18 @@ html.chrono-bubble-dragging .chrono-screen {
     font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__last-context {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .chrono-overview__untracked-badge {

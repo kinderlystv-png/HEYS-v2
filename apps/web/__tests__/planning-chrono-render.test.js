@@ -72,6 +72,33 @@ describe('chrono render stability', () => {
         expect(view.container.textContent).toContain('Focus');
     });
 
+    it('ChronoOverviewPanel keeps untracked badge next to wake-to-now context with no rows', () => {
+        const view = render(React.createElement(Chrono.ChronoOverviewPanel, {
+            insights: [],
+            balance: [],
+            streaks: [],
+            timeOfDay: null,
+            lastAdded: null,
+            loggedRows: [],
+            untracked: {
+                minutes: 48,
+                hoursLabel: '0,8ч',
+                wakeLabel: '09:54',
+                sinceLabel: '09:54',
+                sinceKind: 'wake',
+            },
+            untrackedActive: false,
+            onUntrackedClick: () => { },
+            onLoggedRowClick: () => { },
+            onLoggedRowsReorder: () => { },
+        }));
+
+        expect(view.container.querySelector('.chrono-overview__last-context')?.textContent)
+            .toBe('с пробуждения 09:54 → сейчас');
+        expect(view.container.querySelector('.chrono-overview__untracked-badge')?.textContent)
+            .toBe('не записано 0,8ч');
+    });
+
     it('ChronoWeekBreakdown can switch from empty to populated without changing hook order', () => {
         const baseProps = {
             dates: ['2026-06-01'],

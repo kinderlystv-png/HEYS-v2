@@ -326,12 +326,14 @@
             const explicitStartMs = entry.at ? new Date(entry.at).getTime() : NaN;
             const displayStartMs = entry.displayStartAt ? new Date(entry.displayStartAt).getTime() : NaN;
             const displayEndMs = entry.displayEndAt ? new Date(entry.displayEndAt).getTime() : NaN;
+            const useExplicitStart = Number.isFinite(explicitStartMs)
+                && Math.abs(explicitStartMs - endMs) > 999;
             const groupId = entry.displayGroupId
                 ? `display:${entry.displayGroupId}`
                 : (entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`);
             const group = groups.get(groupId) || {
                 id: groupId,
-                startMs: Number.isFinite(explicitStartMs) ? explicitStartMs : null,
+                startMs: useExplicitStart ? explicitStartMs : null,
                 displayStartMs: Number.isFinite(displayStartMs) ? displayStartMs : null,
                 displayEndMs: Number.isFinite(displayEndMs) ? displayEndMs : null,
                 endMs,
@@ -340,7 +342,7 @@
                 activityIds: [],
                 names: [],
             };
-            if (Number.isFinite(explicitStartMs)) {
+            if (useExplicitStart) {
                 group.startMs = group.startMs == null
                     ? explicitStartMs
                     : Math.min(group.startMs, explicitStartMs);
@@ -2973,6 +2975,11 @@
             rows: null,
         });
         const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
+        const untrackedContextLabel = untracked
+            ? (untracked.sinceKind === 'last-entry'
+                ? `с последней записи ${untracked.sinceLabel} → сейчас`
+                : `с пробуждения ${untracked.wakeLabel || untracked.sinceLabel} → сейчас`)
+            : '';
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -3166,6 +3173,9 @@
                 lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
                 lastAdded && h('span', { className: 'chrono-overview__last-now' },
                     `сейчас ${lastAdded.nowLabel}`),
+                !lastAdded && untrackedContextLabel && h('span', {
+                    className: 'chrono-overview__last-context',
+                }, untrackedContextLabel),
                 untracked && h('button', {
                     type: 'button',
                     className: 'chrono-overview__untracked-badge' + (untrackedActive ? ' active' : ''),
@@ -4287,7 +4297,12 @@
                         activityId: e.activityId,
                         date: e.date,
                         minutes: e.minutes,
+                        at: e.at,
+                        createdAt: e.createdAt,
                         parallelGroupId: e.parallelGroupId,
+                        displayGroupId: e.displayGroupId,
+                        displayStartAt: e.displayStartAt,
+                        displayEndAt: e.displayEndAt,
                     });
                 });
                 setToast(null);
