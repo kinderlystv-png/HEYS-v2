@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.20.0bb71722",
+      "buildHash": "0bb71722",
+      "date": "2026-06-20",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Исправлена отмена хронометража",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Отмена возвращает правильное время",
+          "description": "Если убрать занятие из дня и сразу отменить действие, запись возвращается с исходным интервалом и длительностью."
+        }
+      ],
+      "coveredCommits": ["0bb71722"]
+    },
+    {
       "version": "2026.06.20.0f8f0efc",
       "buildHash": "0f8f0efc",
       "date": "2026-06-20",
@@ -151,22 +167,6 @@
         }
       ],
       "coveredCommits": ["5ec7b239"]
-    },
-    {
-      "version": "2026.06.18.a72c5486",
-      "buildHash": "a72c5486",
-      "date": "2026-06-18",
-      "kind": "technical",
-      "profile": "technical-backend-api",
-      "title": "Telegram-боты стали устойчивее",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Telegram-боты стабильнее освобождают обработку",
-          "description": "После короткого polling-цикла бот корректнее завершает работу с базой и освобождает очередь обработки. Это снижает риск зависших повторных запусков."
-        }
-      ],
-      "coveredCommits": ["a72c5486"]
     }
   ]
 }
