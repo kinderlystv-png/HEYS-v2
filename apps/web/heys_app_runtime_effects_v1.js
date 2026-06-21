@@ -44,6 +44,24 @@
                 HEYS._consentsValid = false;
                 return;
             }
+            if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
+                // Landing demo runs against a synthetic demo-client and a no-op API.
+                // Do not show legal consent gates inside the public iframe.
+                setNeedsConsent(false);
+                setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes([]);
+                setGraceExpiresAt && setGraceExpiresAt(null);
+                setMustBlockReconsent && setMustBlockReconsent(false);
+                setNeedsAgeGate && setNeedsAgeGate(false);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = true;
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
+                        detail: { valid: true, needsConsent: false, source: 'demo-mode' }
+                    }));
+                } catch (_) { /* noop */ }
+                return;
+            }
             const isPinSessionActive = () => {
                 try {
                     return !!HEYS.cloud?.isPinAuthClient?.()

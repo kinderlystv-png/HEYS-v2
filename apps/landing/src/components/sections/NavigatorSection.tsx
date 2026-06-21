@@ -203,7 +203,7 @@ function NoPunishmentBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean
                     </h3>
                     <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100 mt-2'}`}>
                         <p className="text-gray-600 text-sm md:text-base overflow-hidden">
-                            HEYS видит риск выгорания за 3 дня. А если вы переели — не заставит голодать завтра, а плавно скорректирует курс.
+                            HEYS показывает, когда накапливаются факторы риска: недосып, пропуски еды, стресс и резкие сдвиги в режиме. Если день пошёл не по плану, система не предлагает голодать завтра, а помогает мягко скорректировать курс.
                         </p>
                     </div>
                 </div>
@@ -217,7 +217,7 @@ function NoPunishmentBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                 <div className="overflow-hidden">
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                        Резкая компенсация недоедания уходит в жир, а упрёки приводят к срыву. Оценивая накопленный стресс, мы рассчитываем <strong className="font-semibold text-gray-900">Crash Risk Score</strong> за 3 дня до потенциальной ямы:
+                        Резкая компенсация недоедания усиливает качели, а упрёки приводят к срыву. Оценивая накопленный стресс и сдвиги режима, HEYS показывает <strong className="font-semibold text-gray-900">Crash Risk Score</strong> как ранний сигнал внимания:
                     </p>
 
                     <div className="grid sm:grid-cols-2 gap-5">
@@ -520,7 +520,7 @@ export default function NavigatorSection() {
                         className={`text-gray-600 text-center mb-12 max-w-2xl mx-auto leading-relaxed transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                         style={{ transitionDelay: '100ms' }}
                     >
-                        Не просто что вы едите — а как складывается ваш ритм прямо сейчас: сон, активность, стресс, восстановление. Куратор видит сдвиги за 2-3 дня до того, как вы их почувствуете — и пишет первым.
+                        Не просто что вы едите — а как складывается ваш ритм прямо сейчас: сон, активность, стресс, восстановление. Куратор видит сдвиги в контексте недели и помогает выбрать следующий шаг.
                     </p>
 
                     <div

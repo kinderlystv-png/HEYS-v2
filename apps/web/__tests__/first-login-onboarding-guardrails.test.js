@@ -46,6 +46,12 @@ describe('first login onboarding guardrails', () => {
     expect(morningCheckinSource).toContain('defer registration/check-in');
   });
 
+  it('does not show legal consent gates inside the public landing demo', () => {
+    expect(runtimeEffectsSource).toContain('window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled');
+    expect(runtimeEffectsSource).toContain("source: 'demo-mode'");
+    expect(runtimeEffectsSource).toContain('HEYS._consentsValid = true');
+  });
+
   it('keeps the outdated onboarding tour disabled until it is updated', () => {
     expect(appOnboardingSource).toContain('const ONBOARDING_TOUR_ENABLED = false');
     expect(appOnboardingSource).toContain("reason: 'disabled'");

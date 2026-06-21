@@ -169,7 +169,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 style={{ transitionDelay: '800ms' }}
               >
                 <span className="md:hidden">
-                  Дневник, аналитика и куратор, который смотрит каждый день.
+                  Дневник, аналитика и куратор, который
+                  <br />
+                  смотрит каждый день.
                 </span>
                 <span className="hidden md:inline">
                   Внутри — приложение: дневник, разборы, аналитика.
