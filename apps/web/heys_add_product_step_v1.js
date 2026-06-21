@@ -1522,8 +1522,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════
   // 🍽️ ГОТОВЫЕ НАБОРЫ — Meal Presets Overlay
   // ═══════════════════════════════════════════════════════════════════
+  function resolveContextMeal(context) {
+    const meals = Array.isArray(context?.day?.meals) ? context.day.meals : [];
+    if (context?.mealId) {
+      const byId = meals.find((meal) => meal && meal.id === context.mealId);
+      if (byId) return byId;
+    }
+    return meals[context?.mealIndex] || null;
+  }
+
+  function formatContextMealLabel(context, fallback = 'приём') {
+    const meal = resolveContextMeal(context);
+    if (!meal) return fallback;
+    return [meal.time, meal.name || fallback].filter(Boolean).join(' ');
+  }
+
   function MealPresetsOverlay({ context, onClose }) {
     const autoCreate = !!context?._openPresetsCreate;
+    const contextMeal = resolveContextMeal(context);
+    const contextMealItems = contextMeal?.items || [];
     const [view, setView] = useState(() => autoCreate ? 'create' : 'list');
     const [presets, setPresets] = useState(() => HEYS.store?.getMealPresets?.() || []);
     const [suggestedPresets, setSuggestedPresets] = useState(() => HEYS.store?.getSuggestedPresets?.() || []);
@@ -1532,11 +1549,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [isApplyingPreset, setIsApplyingPreset] = useState(false);
     const [createName, setCreateName] = useState(() => {
       if (!autoCreate) return '';
-      return context?.day?.meals?.[context?.mealIndex]?.name || 'Набор';
+      return contextMeal?.name || 'Набор';
     });
     const [editPreset, setEditPreset] = useState(() => {
       if (!autoCreate) return null;
-      const mealItems = context?.day?.meals?.[context?.mealIndex]?.items || [];
+      const mealItems = contextMealItems;
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
@@ -1590,12 +1607,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const handleCreateFromMeal = () => {
-      const mealItems = context?.day?.meals?.[context?.mealIndex]?.items || [];
+      const mealItems = contextMealItems;
       if (mealItems.length === 0) {
         console.warn('[HEYS.presets] ⚠️ No items in current meal');
         return;
       }
-      const mealName = context?.day?.meals?.[context?.mealIndex]?.name || 'Набор';
+      const mealName = contextMeal?.name || 'Набор';
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
@@ -1712,6 +1729,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             pushAddTrace('🧩 Preset bulk -> onAddMany', {
               traceId,
               mealIndex: context?.mealIndex ?? null,
+              mealId: context?.mealId ?? null,
               count: entries.length,
               productIds: entries.map((entry) => entry.product.id ?? entry.product.product_id ?? null),
               productNames: entries.map((entry) => entry.product.name || null),
@@ -1720,6 +1738,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             context.onAddMany({
               entries,
               mealIndex: context?.mealIndex,
+              mealId: context?.mealId,
               _traceId: traceId,
               _origin: 'preset-apply-bulk',
               _presetName: selectedPreset?.name || null
@@ -1731,6 +1750,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               pushAddTrace('🧩 Preset item -> onAdd (fallback)', {
                 traceId: itemTraceId,
                 mealIndex: context?.mealIndex ?? null,
+                mealId: context?.mealId ?? null,
                 grams: entry.grams,
                 productId: entry.product.id ?? entry.product.product_id ?? null,
                 productName: entry.product.name || null,
@@ -1740,6 +1760,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 product: entry.product,
                 grams: entry.grams,
                 mealIndex: context?.mealIndex,
+                mealId: context?.mealId,
                 _traceId: itemTraceId,
                 _origin: 'preset-apply',
                 _presetBatch: { index: idx, total: entries.length }
@@ -1963,7 +1984,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('span', null, '✏️'),
             React.createElement('span', null, ' Создать новый набор')
           ),
-          (context?.day?.meals?.[context?.mealIndex]?.items || []).length > 0 &&
+          contextMealItems.length > 0 &&
           React.createElement('button', {
             className: 'mpr-create-btn',
             onClick: handleCreateFromMeal
@@ -3219,6 +3240,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       haptic('success');
       context.onAddPhoto({
         mealIndex: context.mealIndex,
+        mealId: context.mealId,
         photo: pendingPhotoData.compressedData,
         filename: pendingPhotoData.filename,
         timestamp: Date.now()
@@ -6060,6 +6082,7 @@ NOVA: 1
           hasProduct: !!product,
           grams,
           mealIndex: context?.mealIndex ?? null,
+          mealId: context?.mealId ?? null,
           productId: product?.id ?? product?.product_id ?? null,
           productName: product?.name || null,
           isEditMode: !!context?.isEditMode,
@@ -6072,6 +6095,7 @@ NOVA: 1
           hasProduct: !!product,
           grams,
           mealIndex: context?.mealIndex ?? null,
+          mealId: context?.mealId ?? null,
           productName: product?.name || null
         });
         return;
@@ -6079,6 +6103,7 @@ NOVA: 1
       console.info('[HEYS.addProduct] 🟢 GramsStep submit', {
         grams,
         mealIndex: context?.mealIndex ?? null,
+        mealId: context?.mealId ?? null,
         productId: product?.id ?? product?.product_id ?? null,
         productName: product?.name || null
       });
@@ -6090,6 +6115,7 @@ NOVA: 1
         // Структурный фикс: docs/REFACTOR_REACT_MEMO_DAY_TAB.md
         context.onSave({
           mealIndex: context.mealIndex,
+          mealId: context.mealId,
           itemId: context.itemId,
           grams
         });
@@ -6118,6 +6144,7 @@ NOVA: 1
           product: productForSubmit,
           grams,
           mealIndex: context.mealIndex,
+          mealId: context.mealId,
           _traceId: traceId,
           _origin: 'grams-step'
         };
@@ -6125,6 +6152,7 @@ NOVA: 1
           traceId,
           grams,
           mealIndex: context?.mealIndex ?? null,
+          mealId: context?.mealId ?? null,
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
           productName: productForSubmit?.name || null
         });
@@ -6135,12 +6163,14 @@ NOVA: 1
           context.onAdd(payload);
           pushAddTrace('✅ context.onAdd called (GramsStep)', {
             traceId,
-            mealIndex: context?.mealIndex ?? null
+            mealIndex: context?.mealIndex ?? null,
+            mealId: context?.mealId ?? null
           });
         } catch (error) {
           pushAddTrace('❌ context.onAdd failed (GramsStep)', {
             traceId,
             mealIndex: context?.mealIndex ?? null,
+            mealId: context?.mealId ?? null,
             error: error?.message || error
           }, 'error');
         }
@@ -6227,6 +6257,7 @@ NOVA: 1
 
             HEYS.AddProductStep.show({
               mealIndex: context?.mealIndex ?? 0,
+              mealId: context?.mealId ?? null,
               products: latestProducts,
               day: latestDay,
               dateKey: context?.dateKey || new Date().toISOString().slice(0, 10),
@@ -6292,7 +6323,7 @@ NOVA: 1
 
         // Fallback: старый ConfirmModal
         if (HEYS.ConfirmModal?.show) {
-          const mealName = (context?.day?.meals?.[context?.mealIndex]?.name || 'приём').toLowerCase();
+          const mealName = formatContextMealLabel(context, 'приём').toLowerCase();
           Promise.resolve(HEYS.ConfirmModal.show({
             icon: '🍽️',
             title: `Добавить ещё в ${mealName}?`,
@@ -6712,6 +6743,7 @@ NOVA: 1
   function showAddProductModal(options = {}) {
     const {
       mealIndex = 0,
+      mealId = null,
       products: providedProducts,
       day,
       dateKey = new Date().toISOString().slice(0, 10),
@@ -6750,6 +6782,7 @@ NOVA: 1
 
     console.info('[HEYS.addProduct] 📦 Open modal', {
       mealIndex,
+      mealId,
       dateKey,
       productsCount: products.length,
       hasProvidedProducts: Array.isArray(providedProducts) && providedProducts.length > 0,
@@ -6832,6 +6865,7 @@ NOVA: 1
         day,
         dateKey,
         mealIndex,
+        mealId,
         multiProductMode,
         _openPresetsCreate: openPresetsCreate,
         // 🆕 autoRepeat: closure-переменная не сериализуется → contextKey стабилен между шагами
@@ -6911,12 +6945,14 @@ NOVA: 1
             product: selectedProduct,
             grams: grams,
             mealIndex,
+            mealId,
             _traceId: traceId,
             _origin: 'stepmodal-complete'
           };
           console.info('[HEYS.addProduct] ✅ onComplete -> onAdd', {
             traceId,
             mealIndex,
+            mealId,
             grams,
             productId: selectedProduct.id ?? selectedProduct.product_id ?? null,
             productName: selectedProduct.name || null,
@@ -6926,12 +6962,14 @@ NOVA: 1
             onAdd?.(payload);
             pushAddTrace('✅ onAdd callback completed (onComplete)', {
               traceId,
-              mealIndex
+              mealIndex,
+              mealId
             });
           } catch (error) {
             pushAddTrace('❌ onAdd callback failed (onComplete)', {
               traceId,
               mealIndex,
+              mealId,
               error: error?.message || error
             }, 'error');
           }
@@ -6940,6 +6978,7 @@ NOVA: 1
         } else {
           console.warn('[HEYS.addProduct] ⚠️ onComplete skipped (missing product or grams)', {
             mealIndex,
+            mealId,
             grams,
             hasSelectedProduct: !!selectedProduct,
             selectedProductName: selectedProduct?.name || null

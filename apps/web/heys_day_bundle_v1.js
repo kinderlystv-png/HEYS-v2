@@ -5445,6 +5445,23 @@
     );
   }
 
+  function resolveMealIndex(day, mealIndex, mealId) {
+    const mealsList = Array.isArray(day?.meals) ? day.meals : [];
+    if (mealId) {
+      const byId = mealsList.findIndex((m) => m && m.id === mealId);
+      if (byId >= 0) return byId;
+    }
+    return Number.isInteger(mealIndex) ? mealIndex : Number(mealIndex);
+  }
+
+  function appendItemsToMealTarget(day, mealIndex, mealId, itemsToAppend) {
+    const targetIndex = resolveMealIndex(day, mealIndex, mealId);
+    return {
+      mealIndex: targetIndex,
+      meals: appendItemsToMeal(day, targetIndex, itemsToAppend)
+    };
+  }
+
   function recordGramsForProduct(productId, grams, finalProduct) {
     if (!productId || finalProduct?._oneTime) return;
     try {
@@ -5762,9 +5779,10 @@
     const handleOpenModal = React.useCallback(() => {
       try { navigator.vibrate?.(10); } catch (e) { }
 
-      const handleAddPhoto = async ({ mealIndex, photo, filename, timestamp }) => {
+      const handleAddPhoto = async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
         const activeDay = getLatestDay();
-        const activeMeal = activeDay?.meals?.[mealIndex];
+        const resolvedMealIndex = resolveMealIndex(activeDay, mealIndex, requestedMealId);
+        const activeMeal = activeDay?.meals?.[resolvedMealIndex];
 
         // Проверяем лимит фото (10 на приём)
         const currentPhotos = activeMeal?.photos?.length || 0;
@@ -5775,7 +5793,7 @@
 
         // Получаем данные для загрузки
         const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
-        const mealId = activeMeal?.id || uid('meal_');
+        const mealId = activeMeal?.id || requestedMealId || uid('meal_');
         const photoId = uid('photo_');
 
         // Пытаемся загрузить в облако
@@ -5791,8 +5809,9 @@
 
         // Сначала добавляем в UI (для мгновенного отображения)
         setDay((prevDay = {}) => {
+          const targetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
           const meals = (prevDay.meals || []).map((m, i) =>
-            i === mealIndex
+            i === targetIndex
               ? {
                 ...m,
                 photos: [...(m.photos || []), photoData]
@@ -5805,11 +5824,11 @@
         try { navigator.vibrate?.(10); } catch (e) { }
 
         try {
-          const mealName = activeMeal?.name || `meal${mealIndex}`;
+          const mealName = activeMeal?.name || `meal${resolvedMealIndex}`;
           window.HEYS?.eventLog?.write(
             'meal-photo',
             `Photo добавлен в ${mealName} ${date || '?'}`,
-            { dateKey: date, mealIndex, mealName },
+            { dateKey: date, mealIndex: resolvedMealIndex, mealId, mealName },
             'handleAddPhoto'
           );
         } catch (_) { /* noop */ }
@@ -5821,8 +5840,9 @@
 
             if (result?.uploaded && result?.url) {
               setDay((prevDay = {}) => {
+                const targetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
                 const meals = (prevDay.meals || []).map((m, i) => {
-                  if (i !== mealIndex || !m.photos) return m;
+                  if (i !== targetIndex || !m.photos) return m;
                   return {
                     ...m,
                     photos: m.photos.map(p =>
@@ -5836,8 +5856,9 @@
               });
             } else if (result?.pending) {
               setDay((prevDay = {}) => {
+                const targetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
                 const meals = (prevDay.meals || []).map((m, i) => {
-                  if (i !== mealIndex || !m.photos) return m;
+                  if (i !== targetIndex || !m.photos) return m;
                   return {
                     ...m,
                     photos: m.photos.map(p =>
@@ -5852,8 +5873,9 @@
             }
           } catch (e) {
             setDay((prevDay = {}) => {
+              const targetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
               const meals = (prevDay.meals || []).map((m, i) => {
-                if (i !== mealIndex || !m.photos) return m;
+                if (i !== targetIndex || !m.photos) return m;
                 return {
                   ...m,
                   photos: m.photos.map(p =>
@@ -5886,7 +5908,9 @@
 
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
-        const latestMeal = latestDay?.meals?.[mi] || {};
+        const mealId = override.mealId || latestDay?.meals?.[mi]?.id || null;
+        const resolvedMealIndex = resolveMealIndex(latestDay, mi, mealId);
+        const latestMeal = latestDay?.meals?.[resolvedMealIndex] || {};
         const latestProducts = getLatestProducts();
         const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
           ? override.multiProductMode
@@ -5903,7 +5927,8 @@
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
-            mealIndex: mi,
+            mealIndex: resolvedMealIndex,
+            mealId,
             mealPhotos: latestMeal.photos || [],
             products: latestProducts,
             day: latestDay,
@@ -5955,7 +5980,7 @@
         });
       };
 
-      const handleAddMany = ({ entries, mealIndex: targetMealIndex = mi, _traceId, _origin, _presetName } = {}) => {
+      const handleAddMany = ({ entries, mealIndex: targetMealIndex = mi, mealId: targetMealId = null, _traceId, _origin, _presetName } = {}) => {
         const items = Array.isArray(entries) ? entries : [];
         const traceId = _traceId || `daybulk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         const prepared = items
@@ -5990,10 +6015,13 @@
 
         const currentDay = getLatestDay();
         const currentMeals = currentDay?.meals || [];
-        if (!currentMeals[targetMealIndex]) {
+        const resolvedTargetIndex = resolveMealIndex(currentDay, targetMealIndex, targetMealId);
+        if (!currentMeals[resolvedTargetIndex]) {
           console.warn('[HEYS.day] ❌ Meal index not found for bulk add — aborting', {
             traceId,
             mealIndex: targetMealIndex,
+            mealId: targetMealId,
+            resolvedMealIndex: resolvedTargetIndex,
             mealsCount: currentMeals.length,
             presetName: _presetName || null
           });
@@ -6021,21 +6049,26 @@
 
         setDay((prevDay = {}) => {
           const mealsList = prevDay.meals || [];
-          const itemsBefore = mealsList?.[targetMealIndex]?.items?.length || 0;
-          if (!mealsList[targetMealIndex]) {
+          const prevTargetIndex = resolveMealIndex(prevDay, targetMealIndex, targetMealId);
+          const itemsBefore = mealsList?.[prevTargetIndex]?.items?.length || 0;
+          if (!mealsList[prevTargetIndex]) {
             console.warn('[HEYS.day] ❌ Meal index not found for bulk add', {
               traceId,
               mealIndex: targetMealIndex,
+              mealId: targetMealId,
+              resolvedMealIndex: prevTargetIndex,
               mealsCount: mealsList.length,
               presetName: _presetName || null
             });
           }
-          const meals = appendItemsToMeal(prevDay, targetMealIndex, newItems);
-          const itemsAfter = meals?.[targetMealIndex]?.items?.length || 0;
+          const { mealIndex: actualMealIndex, meals } = appendItemsToMealTarget(prevDay, targetMealIndex, targetMealId, newItems);
+          const itemsAfter = meals?.[actualMealIndex]?.items?.length || 0;
           emitAddTrace('🧱 bulk setDay meal update', {
             traceId,
             origin: _origin || 'unknown',
-            mealIndex: targetMealIndex,
+            mealIndex: actualMealIndex,
+            requestedMealIndex: targetMealIndex,
+            mealId: targetMealId,
             itemsBefore,
             itemsAfter,
             expectedDelta: newItems.length,
@@ -6049,7 +6082,9 @@
             logDayTrace('[HEYS.day-trace] 4/8 bulk setDay applied', {
               traceId,
               date: prevDay.date,
-              mealIndex: targetMealIndex,
+              mealIndex: actualMealIndex,
+              requestedMealIndex: targetMealIndex,
+              mealId: targetMealId,
               itemsBefore,
               itemsAfter,
               expectedDelta: newItems.length,
@@ -6066,13 +6101,16 @@
         requestAnimationFrame(() => {
           setTimeout(() => {
             const latestDay = HEYS.Day?.getDay?.();
-            const meal = latestDay?.meals?.[targetMealIndex];
+            const actualMealIndex = resolveMealIndex(latestDay, targetMealIndex, targetMealId);
+            const meal = latestDay?.meals?.[actualMealIndex];
             const mealItems = Array.isArray(meal?.items) ? meal.items : [];
             const persistedIds = new Set(mealItems.map((it) => it?.id));
             const missingIds = newItems.map((it) => it.id).filter((id) => !persistedIds.has(id));
             emitAddTrace(missingIds.length ? '❌ bulk post-add verify failed' : '🔎 bulk post-add verify', {
               traceId,
-              mealIndex: targetMealIndex,
+              mealIndex: actualMealIndex,
+              requestedMealIndex: targetMealIndex,
+              mealId: targetMealId,
               expectedAdded: newItems.length,
               missingIds,
               mealItemsCount: mealItems.length,
@@ -6098,7 +6136,7 @@
         });
       };
 
-      const handleAdd = ({ product, grams, mealIndex, _traceId, _origin, _presetBatch }) => {
+      const handleAdd = ({ product, grams, mealIndex, mealId, _traceId, _origin, _presetBatch }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
         try {
@@ -6107,6 +6145,7 @@
             origin: _origin || 'unknown',
             date,
             mealIndex,
+            mealId,
             grams,
             productId: product?.id ?? product?.product_id ?? null,
             productName: product?.name || null,
@@ -6119,6 +6158,7 @@
           traceId,
           origin: _origin || 'unknown',
           mealIndex,
+          mealId,
           grams,
           productId: product?.id ?? product?.product_id ?? null,
           productName: product?.name || null,
@@ -6143,10 +6183,13 @@
 
         const currentDay = getLatestDay();
         const currentMeals = currentDay?.meals || [];
-        if (!currentMeals[mealIndex]) {
+        const resolvedTargetIndex = resolveMealIndex(currentDay, mealIndex, mealId);
+        if (!currentMeals[resolvedTargetIndex]) {
           console.warn('[HEYS.day] ❌ Meal index not found for add — aborting', {
             traceId,
             mealIndex,
+            mealId,
+            resolvedMealIndex: resolvedTargetIndex,
             mealsCount: currentMeals.length,
             productName: finalProduct?.name || null
           });
@@ -6192,24 +6235,25 @@
 
         setDay((prevDay = {}) => {
           const mealsList = prevDay.meals || [];
-          const itemsBefore = mealsList?.[mealIndex]?.items?.length || 0;
-          if (!mealsList[mealIndex]) {
+          const prevTargetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
+          const itemsBefore = mealsList?.[prevTargetIndex]?.items?.length || 0;
+          if (!mealsList[prevTargetIndex]) {
             console.warn('[HEYS.day] ❌ Meal index not found for add', {
               traceId,
               mealIndex,
+              mealId,
+              resolvedMealIndex: prevTargetIndex,
               mealsCount: mealsList.length,
               productName: finalProduct?.name || null
             });
           }
-          const meals = mealsList.map((m, i) =>
-            i === mealIndex
-              ? { ...m, items: [...(m.items || []), newItem] }
-              : m
-          );
-          const itemsAfter = meals?.[mealIndex]?.items?.length || 0;
+          const { mealIndex: actualMealIndex, meals } = appendItemsToMealTarget(prevDay, mealIndex, mealId, [newItem]);
+          const itemsAfter = meals?.[actualMealIndex]?.items?.length || 0;
           emitAddTrace('🧱 setDay meal update', {
             traceId,
-            mealIndex,
+            mealIndex: actualMealIndex,
+            requestedMealIndex: mealIndex,
+            mealId,
             itemsBefore,
             itemsAfter,
             addedItemId: newItem.id,
@@ -6222,7 +6266,9 @@
             logDayTrace('[HEYS.day-trace] 4/8 setDay applied', {
               traceId,
               date: prevDay.date,
-              mealIndex,
+              mealIndex: actualMealIndex,
+              requestedMealIndex: mealIndex,
+              mealId,
               itemsBefore,
               itemsAfter,
               totalItems: _totalItems,
@@ -6237,12 +6283,15 @@
         requestAnimationFrame(() => {
           setTimeout(() => {
             const latestDay = HEYS.Day?.getDay?.();
-            const meal = latestDay?.meals?.[mealIndex];
+            const actualMealIndex = resolveMealIndex(latestDay, mealIndex, mealId);
+            const meal = latestDay?.meals?.[actualMealIndex];
             const mealItems = Array.isArray(meal?.items) ? meal.items : [];
             const wasPersisted = mealItems.some((it) => it?.id === newItem.id);
             emitAddTrace('🔎 post-add verify', {
               traceId,
-              mealIndex,
+              mealIndex: actualMealIndex,
+              requestedMealIndex: mealIndex,
+              mealId,
               addedItemId: newItem.id,
               persistedInDayRef: wasPersisted,
               mealItemsCount: mealItems.length,
@@ -6278,19 +6327,20 @@
           // reads the React prop (may be undefined if not passed).
           const latestDayForSummary = lastOpenedDay || HEYS.Day?.getDay?.() || getLatestDay();
           const srcMeals = latestDayForSummary.meals || [];
+          const summaryMealIndex = resolveMealIndex(latestDayForSummary, mealIndex, mealId);
           const updatedMealsForSummary = srcMeals.map((m, i) =>
-            i === mealIndex
+            i === summaryMealIndex
               ? { ...m, items: [...(m.items || []), newItem] }
               : m
           );
           // Safety: if the meal at mealIndex didn't exist in the snapshot
           // (race between React state commit and dayRef.current update),
           // create the meal entry so the summary can display the product.
-          if (mealIndex >= srcMeals.length) {
-            while (updatedMealsForSummary.length < mealIndex) {
+          if (summaryMealIndex >= srcMeals.length) {
+            while (updatedMealsForSummary.length < summaryMealIndex) {
               updatedMealsForSummary.push({ items: [] });
             }
-            updatedMealsForSummary[mealIndex] = { items: [newItem] };
+            updatedMealsForSummary[summaryMealIndex] = { id: mealId || undefined, items: [newItem] };
           }
           const updatedDayForSummary = { ...latestDayForSummary, meals: updatedMealsForSummary, updatedAt: newUpdatedAt };
 
@@ -6304,16 +6354,17 @@
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
                 day: updatedDayForSummary,
-                mealIndex,
+                mealIndex: summaryMealIndex,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,
                 per100,
                 scale,
                 onAddMore: (updatedDay, autoRepeatCount) => openAddModal({
                   day: updatedDay,
+                  mealId,
                   autoRepeatCount: autoRepeatCount || 0
                 }),
-                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, mealId, multiProductMode: false })
               });
             }, 100);
           });

@@ -199,6 +199,56 @@ describe('Meal preset bulk add', () => {
     expect(window.HEYS.Day.requestFlush).toHaveBeenCalledWith({ force: true });
   });
 
+  it('adds a product by stable meal id when duplicate meal names reorder', () => {
+    currentDay = {
+      date: '2026-06-17',
+      meals: [
+        { id: 'meal-early', name: 'Обед', time: '12:45', items: [] },
+        { id: 'meal-late', name: 'Обед', time: '18:45', items: [] }
+      ],
+      updatedAt: 1781692220000
+    };
+    window.HEYS.Day.getDay.mockImplementation(() => currentDay);
+
+    const setDay = vi.fn((updater) => {
+      currentDay = updater(currentDay);
+      return currentDay;
+    });
+
+    const button = window.HEYS.dayComponents.MealAddProduct({
+      mi: 1,
+      products: [],
+      date: '2026-06-17',
+      day: currentDay,
+      setDay,
+      isCurrentMeal: true
+    });
+
+    button.props.onClick();
+
+    const modalOptions = window.HEYS.AddProductStep.show.mock.calls[0][0];
+    expect(modalOptions.mealIndex).toBe(1);
+    expect(modalOptions.mealId).toBe('meal-late');
+
+    currentDay = {
+      ...currentDay,
+      meals: [currentDay.meals[1], currentDay.meals[0]]
+    };
+
+    modalOptions.onAdd({
+      mealIndex: 1,
+      mealId: 'meal-late',
+      product: makeProduct('p-late', 'Chicken fillet'),
+      grams: 100
+    });
+
+    expect(setDay).toHaveBeenCalledTimes(1);
+    expect(currentDay.meals[0].id).toBe('meal-late');
+    expect(currentDay.meals[0].items.map((item) => item.name)).toEqual(['Chicken fillet']);
+    expect(currentDay.meals[1].id).toBe('meal-early');
+    expect(currentDay.meals[1].items).toHaveLength(0);
+  });
+
   it('wires the ready-sets overlay to onAddMany as the primary apply path', () => {
     const source = readAddProductStepSource();
 

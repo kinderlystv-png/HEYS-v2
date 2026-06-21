@@ -8,12 +8,12 @@
     "builtAt": "2026-06-21T11:42:07.528Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.5168ae61ddcf.js",
-    "hash": "5168ae61ddcf",
-    "sourceFingerprint": "044e2f6bdb7b",
+    "file": "boot-calc.bundle.3b2c1b8da4b0.js",
+    "hash": "3b2c1b8da4b0",
+    "sourceFingerprint": "cfc4add9fdcb",
     "fileCount": 19,
-    "size": 744444,
-    "builtAt": "2026-06-19T21:18:16.656Z"
+    "size": 748930,
+    "builtAt": "2026-06-21T17:43:32.137Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.36f1376b0815.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-06-19T21:18:30.984Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.fa6c50641f2f.js",
-    "hash": "fa6c50641f2f",
-    "sourceFingerprint": "e3b33c8f0fef",
+    "file": "postboot-3-ui-lazy.bundle.c26a60671ebe.js",
+    "hash": "c26a60671ebe",
+    "sourceFingerprint": "e6988cade3c9",
     "fileCount": 52,
-    "size": 2524238,
-    "builtAt": "2026-06-21T16:46:41.303Z"
+    "size": 2525530,
+    "builtAt": "2026-06-21T17:43:37.707Z"
   }
 }
