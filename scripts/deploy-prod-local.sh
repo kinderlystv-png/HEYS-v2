@@ -18,6 +18,7 @@ YC_BUCKET_DEMO="try-heyslab-ru"
 YC_BUCKET_LANDING="heys-static"
 YC_ENDPOINT="https://storage.yandexcloud.net"
 CDN_PWA_ID="bc8rvrvenqslkmti5yts"
+CDN_DEMO_ID="bc8r24iwog2zxvppd4i4"
 CDN_LANDING_ID="bc8rk3pnqppsfime3nth"
 
 SKIP_LANDING=0
@@ -260,6 +261,11 @@ if [ "$SKIP_CDN" = "0" ]; then
     --path "/manifest.json" --path "/manifest.webmanifest" \
     --path "/version.json" --path "/build-meta.json" \
     --path "/whats-new.json" || true
+  yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+    --path "/" --path "/index.html" --path "/sw.js" \
+    --path "/manifest.json" --path "/manifest.webmanifest" \
+    --path "/version.json" --path "/build-meta.json" \
+    --path "/whats-new.json" --path "/react-bundle.js" || true
 
   JS_PATHS=""
   for jsfile in apps/web/dist/heys_*.js; do
@@ -268,6 +274,7 @@ if [ "$SKIP_CDN" = "0" ]; then
   done
   if [ -n "$JS_PATHS" ]; then
     yc cdn cache purge --resource-id "$CDN_PWA_ID" $JS_PATHS || true
+    yc cdn cache purge --resource-id "$CDN_DEMO_ID" $JS_PATHS || true
   fi
 
   yc cdn cache purge --resource-id "$CDN_PWA_ID" --path "/react-bundle.js" || true

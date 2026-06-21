@@ -640,6 +640,7 @@ jobs:
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
           # CDN Resource IDs (из infra/README.md)
           CDN_PWA_ID: bc8rvrvenqslkmti5yts
+          CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
           CDN_LANDING_ID: bc8rk3pnqppsfime3nth
         run: |
           # Пропускаем если нет токена
@@ -666,7 +667,23 @@ jobs:
             --path "/sw.js" \
             --path "/manifest.json" \
             --path "/manifest.webmanifest" \
-            --path "/version.json" || true
+            --path "/version.json" \
+            --path "/build-meta.json" \
+            --path "/whats-new.json" \
+            --path "/react-bundle.js" || true
+
+          # === Demo CDN Invalidation ===
+          echo "🔄 Purging CDN cache for Demo PWA..."
+          yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+            --path "/" \
+            --path "/index.html" \
+            --path "/sw.js" \
+            --path "/manifest.json" \
+            --path "/manifest.webmanifest" \
+            --path "/version.json" \
+            --path "/build-meta.json" \
+            --path "/whats-new.json" \
+            --path "/react-bundle.js" || true
 
           # ВСЕ кастомные JS файлы — динамический список!
           echo "🔄 Purging all heys_*.js files..."
@@ -681,6 +698,7 @@ jobs:
 
           if [ -n "$JS_PATHS" ]; then
             yc cdn cache purge --resource-id "$CDN_PWA_ID" $JS_PATHS || true
+            yc cdn cache purge --resource-id "$CDN_DEMO_ID" $JS_PATHS || true
           fi
 
           # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
@@ -848,6 +866,7 @@ jobs:
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
           # Same CDN_PWA_ID as in deploy-artifact job.
           CDN_PWA_ID: bc8rvrvenqslkmti5yts
+          CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
         run: |
           if [ -z "$YC_TOKEN" ]; then
             echo "⏭️ Skipping CDN invalidation (no YC_OAUTH_TOKEN)"
@@ -864,6 +883,10 @@ jobs:
           # скрина с тем же именем CDN бы отдавал старую версию до естественной
           # экспирации (cache-control: immutable max-age=1y).
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+            --path "/whats-new.json" \
+            --path "/build-meta.json" \
+            --path "/whats-new/*" || true
+          yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
             --path "/whats-new.json" \
             --path "/build-meta.json" \
             --path "/whats-new/*" || true
