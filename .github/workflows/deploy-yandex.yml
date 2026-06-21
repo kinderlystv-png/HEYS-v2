@@ -33,6 +33,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
+  YC_BUCKET_DEMO: try-heyslab-ru # Demo PWA → try.heyslab.ru
   YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru (CDN origin: heys-static.website.yandexcloud.net)
   YC_ENDPOINT: https://storage.yandexcloud.net
 
@@ -595,6 +596,17 @@ jobs:
 
           echo "✅ PWA deployment complete!"
 
+      - name: Mirror PWA artifact to Demo
+        run: |
+          # Demo subdomain runs the same PWA artifact. DEMO_MODE is gated by
+          # hostname in apps/web/index.html, so no separate build is needed.
+          echo "🪞 Mirroring PWA bucket to demo bucket..."
+          aws s3 sync s3://${{ env.YC_BUCKET_PWA }}/ s3://${{ env.YC_BUCKET_DEMO }}/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --no-progress
+
+          echo "✅ Demo PWA mirror complete!"
+
       - name: Deploy Landing to Yandex Object Storage
         run: |
           # === Landing Page → heys-static bucket ===
@@ -705,16 +717,18 @@ jobs:
 
           # Validate ORIGIN (Object Storage) — this is the real signal that deploy succeeded.
           PWA_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_PWA}/index.html"
+          DEMO_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_DEMO}/index.html"
           LANDING_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_LANDING}/index.html"
           API_URL="https://api.heyslab.ru/health"
 
           PWA_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_ORIGIN_URL")
+          DEMO_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEMO_ORIGIN_URL")
           LANDING_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$LANDING_ORIGIN_URL")
           API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL")
 
-          echo "Origin: PWA $PWA_ORIGIN_STATUS | Landing $LANDING_ORIGIN_STATUS | API $API_STATUS"
+          echo "Origin: PWA $PWA_ORIGIN_STATUS | Demo $DEMO_ORIGIN_STATUS | Landing $LANDING_ORIGIN_STATUS | API $API_STATUS"
 
-          if [ "$PWA_ORIGIN_STATUS" != "200" ] || [ "$LANDING_ORIGIN_STATUS" != "200" ] || [ "$API_STATUS" != "200" ]; then
+          if [ "$PWA_ORIGIN_STATUS" != "200" ] || [ "$DEMO_ORIGIN_STATUS" != "200" ] || [ "$LANDING_ORIGIN_STATUS" != "200" ] || [ "$API_STATUS" != "200" ]; then
             echo "❌ Origin/API health check failed"
             exit 1
           fi
@@ -745,6 +759,7 @@ jobs:
           echo "| Site | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| PWA | https://app.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
+          echo "| Demo PWA | https://try.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| Landing | https://heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| API | https://api.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
 
@@ -782,23 +797,29 @@ jobs:
 
       - name: Upload whats-new.json + build-meta.json to PWA bucket
         run: |
-          echo "⬆️ Uploading whats-new.json..."
-          aws s3 cp apps/web/public/whats-new.json \
-            "s3://${{ env.YC_BUCKET_PWA }}/whats-new.json" \
-            --content-type "application/json" \
-            --cache-control "no-cache, must-revalidate" \
-            --endpoint-url "${{ env.YC_ENDPOINT }}"
-
-          # build-meta.json не всегда меняется в release-bump'ах, но грузим его
-          # тоже — idempotent + дешёво (~1KB).
-          if [ -f apps/web/public/build-meta.json ]; then
-            echo "⬆️ Uploading build-meta.json..."
-            aws s3 cp apps/web/public/build-meta.json \
-              "s3://${{ env.YC_BUCKET_PWA }}/build-meta.json" \
+          upload_release_meta() {
+            local bucket="$1"
+            echo "⬆️ Uploading whats-new.json to s3://${bucket}..."
+            aws s3 cp apps/web/public/whats-new.json \
+              "s3://${bucket}/whats-new.json" \
               --content-type "application/json" \
               --cache-control "no-cache, must-revalidate" \
               --endpoint-url "${{ env.YC_ENDPOINT }}"
-          fi
+
+            # build-meta.json не всегда меняется в release-bump'ах, но грузим его
+            # тоже — idempotent + дешёво (~1KB).
+            if [ -f apps/web/public/build-meta.json ]; then
+              echo "⬆️ Uploading build-meta.json to s3://${bucket}..."
+              aws s3 cp apps/web/public/build-meta.json \
+                "s3://${bucket}/build-meta.json" \
+                --content-type "application/json" \
+                --cache-control "no-cache, must-revalidate" \
+                --endpoint-url "${{ env.YC_ENDPOINT }}"
+            fi
+          }
+
+          upload_release_meta "${{ env.YC_BUCKET_PWA }}"
+          upload_release_meta "${{ env.YC_BUCKET_DEMO }}"
 
       - name: Sync whats-new/ assets (release-note screenshots)
         # isReleaseMetaOnlyFile() matches `apps/web/public/whats-new/` ⇒ release-bump
@@ -810,6 +831,10 @@ jobs:
             echo "⬆️ Syncing whats-new/ assets..."
             aws s3 sync apps/web/public/whats-new/ \
               "s3://${{ env.YC_BUCKET_PWA }}/whats-new/" \
+              --cache-control "public, max-age=31536000, immutable" \
+              --endpoint-url "${{ env.YC_ENDPOINT }}"
+            aws s3 sync apps/web/public/whats-new/ \
+              "s3://${{ env.YC_BUCKET_DEMO }}/whats-new/" \
               --cache-control "public, max-age=31536000, immutable" \
               --endpoint-url "${{ env.YC_ENDPOINT }}"
           else
@@ -848,6 +873,7 @@ jobs:
           echo "## ⚡ Fast Release-Bump Deploy" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Only whats-new.json (and build-meta.json if present) deployed." >> $GITHUB_STEP_SUMMARY
+          echo "PWA and demo buckets were both updated." >> $GITHUB_STEP_SUMMARY
           echo "Full bundles unchanged — skipped 11.84MB rebuild + upload." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Commit: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY

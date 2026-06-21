@@ -14,6 +14,7 @@ cd "$ROOT"
 
 # === Config ===
 YC_BUCKET_PWA="heys-app"
+YC_BUCKET_DEMO="try-heyslab-ru"
 YC_BUCKET_LANDING="heys-static"
 YC_ENDPOINT="https://storage.yandexcloud.net"
 CDN_PWA_ID="bc8rvrvenqslkmti5yts"
@@ -30,6 +31,7 @@ done
 
 echo "🚀 Local production deploy to Yandex Cloud"
 echo "   PWA bucket:     $YC_BUCKET_PWA"
+echo "   Demo bucket:    $YC_BUCKET_DEMO"
 echo "   Landing bucket: $YC_BUCKET_LANDING"
 echo "   Skip landing:   $SKIP_LANDING"
 echo "   Skip CDN purge: $SKIP_CDN"
@@ -219,6 +221,14 @@ fi
 echo ""
 echo "✅ PWA deployment complete!"
 
+# === Demo mirror ===
+echo ""
+echo "🪞 [Demo] Mirroring PWA bucket to demo bucket..."
+aws s3 sync s3://${YC_BUCKET_PWA}/ s3://${YC_BUCKET_DEMO}/ \
+  --endpoint-url=${YC_ENDPOINT} \
+  --no-progress
+echo "✅ Demo PWA mirror complete!"
+
 # === Landing ===
 if [ "$SKIP_LANDING" = "0" ] && [ -d apps/landing/out ]; then
   echo ""
@@ -285,12 +295,14 @@ fi
 echo ""
 echo "🏥 Health checks..."
 PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${YC_ENDPOINT}/${YC_BUCKET_PWA}/index.html")
+DEMO_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${YC_ENDPOINT}/${YC_BUCKET_DEMO}/index.html")
 API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.heyslab.ru/health")
 LANDING_STATUS="skipped"
 if [ "$SKIP_LANDING" = "0" ]; then
   LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${YC_ENDPOINT}/${YC_BUCKET_LANDING}/index.html")
 fi
 echo "   PWA origin:     $PWA_STATUS"
+echo "   Demo origin:    $DEMO_STATUS"
 echo "   Landing origin: $LANDING_STATUS"
 echo "   API:            $API_STATUS"
 
@@ -298,6 +310,7 @@ echo ""
 echo "🎉 Deploy complete!"
 echo "   Build version:  $BUILD_VERSION"
 echo "   PWA:            https://app.heyslab.ru"
+echo "   Demo PWA:       https://try.heyslab.ru"
 echo "   Landing:        https://heyslab.ru"
 echo "   API:            https://api.heyslab.ru"
 echo ""
