@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.21.4c00751d",
+      "buildHash": "4c00751d",
+      "date": "2026-06-21",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Stability and product search update",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Улучшены вход, поиск продуктов и Telegram-бот",
+          "description": "Обновлены проверки согласий и подписки, поиск общих продуктов и доставка ответов Telegram-бота."
+        }
+      ],
+      "coveredCommits": ["5f22fcbb", "3b585e20"]
+    },
+    {
       "version": "2026.06.20.0bb71722",
       "buildHash": "0bb71722",
       "date": "2026-06-20",
@@ -151,22 +167,6 @@
         }
       ],
       "coveredCommits": ["95cfefc1", "fc18e6ea", "16e2a030", "db3c9d86"]
-    },
-    {
-      "version": "2026.06.18.5ec7b239",
-      "buildHash": "5ec7b239",
-      "date": "2026-06-18",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Голосовые с расшифровкой",
-      "items": [
-        {
-          "type": "feat",
-          "title": "Добавили пилот расшифровки голосовых",
-          "description": "Голосовые сообщения теперь готовятся к автоматической расшифровке через Yandex SpeechKit: перед первой расшифровкой запрашивается согласие, а текст появляется под плеером после обработки."
-        }
-      ],
-      "coveredCommits": ["5ec7b239"]
     }
   ]
 }
