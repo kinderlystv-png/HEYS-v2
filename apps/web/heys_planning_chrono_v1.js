@@ -205,6 +205,12 @@
         return (Math.max(0, Number(minutes) || 0) / 60).toFixed(1).replace('.', ',') + 'ч';
     }
 
+    function formatUntrackedDurationLabel(minutes) {
+        const rounded = Math.max(0, Math.round(Number(minutes) || 0));
+        if (rounded > 0 && rounded < 60) return `${rounded} мин`;
+        return formatDecimalHoursFromMinutes(rounded);
+    }
+
     function splitMinutesForWheel(minutes) {
         const safe = Math.max(0, Math.min(23 * 60 + 59, Math.round(Number(minutes) || 0)));
         return {
@@ -451,6 +457,7 @@
         return {
             minutes: Math.round(untrackedMinutes),
             hoursLabel: formatDecimalHoursFromMinutes(untrackedMinutes),
+            durationLabel: formatUntrackedDurationLabel(untrackedMinutes),
             wakeLabel: String(wakeClock || ''),
             startMs,
             endMs: now,
@@ -2980,6 +2987,9 @@
                 ? `с последней записи ${untracked.sinceLabel} → сейчас`
                 : `с пробуждения ${untracked.wakeLabel || untracked.sinceLabel} → сейчас`)
             : '';
+        const untrackedDurationLabel = untracked
+            ? (untracked.durationLabel || formatUntrackedDurationLabel(untracked.minutes) || untracked.hoursLabel || '')
+            : '';
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -3173,18 +3183,19 @@
                 lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
                 lastAdded && h('span', { className: 'chrono-overview__last-now' },
                     `сейчас ${lastAdded.nowLabel}`),
-                !lastAdded && untrackedContextLabel && h('span', {
-                    className: 'chrono-overview__last-context',
-                }, untrackedContextLabel),
+                untracked && h('span', {
+                    className: 'chrono-overview__untracked-text',
+                    title: untrackedContextLabel || undefined,
+                }, untrackedActive ? untrackedDurationLabel : `не учтено ${untrackedDurationLabel}`),
                 untracked && h('button', {
                     type: 'button',
-                    className: 'chrono-overview__untracked-badge' + (untrackedActive ? ' active' : ''),
+                    className: 'chrono-overview__untracked-action' + (untrackedActive ? ' active' : ''),
                     onClick: onUntrackedClick,
                     'aria-pressed': untrackedActive ? 'true' : 'false',
                     title: untracked.sinceKind === 'last-entry'
                         ? `С последней записи в ${untracked.sinceLabel}`
                         : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
-                }, untrackedActive ? 'Распределить время' : `не записано ${untracked.hoursLabel}`),
+                }, untrackedActive ? 'Выбирайте актив' : 'Записать'),
             ),
             showBody && h('div', { id: isModal ? undefined : 'chrono-overview-body', className: 'chrono-overview__body' },
                 h('div', { className: 'chrono-overview__top' },

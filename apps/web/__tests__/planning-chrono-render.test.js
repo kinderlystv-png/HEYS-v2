@@ -93,10 +93,39 @@ describe('chrono render stability', () => {
             onLoggedRowsReorder: () => { },
         }));
 
-        expect(view.container.querySelector('.chrono-overview__last-context')?.textContent)
+        expect(view.container.querySelector('.chrono-overview__last-context'))
+            .toBeNull();
+        expect(view.container.querySelector('.chrono-overview__untracked-text')?.textContent)
+            .toBe('не учтено 48 мин');
+        expect(view.container.querySelector('.chrono-overview__untracked-text')?.getAttribute('title'))
             .toBe('с пробуждения 09:54 → сейчас');
-        expect(view.container.querySelector('.chrono-overview__untracked-badge')?.textContent)
-            .toBe('не записано 0,8ч');
+        expect(view.container.querySelector('.chrono-overview__untracked-action')?.textContent)
+            .toBe('Записать');
+
+        view.rerender(React.createElement(Chrono.ChronoOverviewPanel, {
+            insights: [],
+            balance: [],
+            streaks: [],
+            timeOfDay: null,
+            lastAdded: null,
+            loggedRows: [],
+            untracked: {
+                minutes: 48,
+                hoursLabel: '0,8ч',
+                wakeLabel: '09:54',
+                sinceLabel: '09:54',
+                sinceKind: 'wake',
+            },
+            untrackedActive: true,
+            onUntrackedClick: () => { },
+            onLoggedRowClick: () => { },
+            onLoggedRowsReorder: () => { },
+        }));
+
+        expect(view.container.querySelector('.chrono-overview__untracked-text')?.textContent)
+            .toBe('48 мин');
+        expect(view.container.querySelector('.chrono-overview__untracked-action')?.textContent)
+            .toBe('Выбирайте актив');
     });
 
     it('ChronoWeekBreakdown can switch from empty to populated without changing hook order', () => {
