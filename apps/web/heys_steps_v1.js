@@ -61,6 +61,188 @@
     }
   };
 
+  const stopRangeGesture = (event) => {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+  };
+
+  const getRangeGestureProps = (onValue) => {
+    const handleRangeValue = (event) => {
+      stopRangeGesture(event);
+      const nextValue = Number(event.target.value);
+      if (!Number.isFinite(nextValue)) return;
+      onValue(nextValue, event);
+    };
+
+    return {
+      onInput: handleRangeValue,
+      onChange: handleRangeValue,
+      onPointerDown: stopRangeGesture,
+      onPointerMove: stopRangeGesture,
+      onPointerUp: stopRangeGesture,
+      onTouchStart: stopRangeGesture,
+      onTouchMove: stopRangeGesture,
+      onTouchEnd: stopRangeGesture,
+      onMouseDown: stopRangeGesture,
+      onMouseMove: stopRangeGesture,
+      onMouseUp: stopRangeGesture
+    };
+  };
+
+  function DragValueSlider({
+    value,
+    onValue,
+    min = 1,
+    max = 10,
+    step = 1,
+    className = 'mc-quality-slider',
+    background,
+    ariaLabel,
+    style
+  }) {
+    const trackRef = useRef(null);
+    const draggingRef = useRef(false);
+    const numericValue = Number(value);
+    const safeMin = Number(min);
+    const safeMax = Number(max);
+    const safeStep = Number(step) || 1;
+    const percent = safeMax > safeMin
+      ? ((numericValue - safeMin) / (safeMax - safeMin)) * 100
+      : 0;
+    const clampedPercent = Math.max(0, Math.min(100, percent));
+
+    const valueFromClientX = (clientX) => {
+      const rect = trackRef.current?.getBoundingClientRect?.();
+      if (!rect || rect.width <= 0) return numericValue;
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const rawValue = safeMin + ratio * (safeMax - safeMin);
+      const stepped = Math.round(rawValue / safeStep) * safeStep;
+      return Math.max(safeMin, Math.min(safeMax, stepped));
+    };
+
+    const applyClientX = (clientX, event) => {
+      stopRangeGesture(event);
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      const nextValue = valueFromClientX(clientX);
+      if (nextValue !== numericValue) onValue(nextValue, event);
+    };
+
+    const startDrag = (event) => {
+      draggingRef.current = true;
+      if (event.currentTarget?.setPointerCapture && event.pointerId !== undefined) {
+        try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) {}
+      }
+      applyClientX(event.clientX, event);
+    };
+
+    const moveDrag = (event) => {
+      if (!draggingRef.current) return;
+      applyClientX(event.clientX, event);
+    };
+
+    const moveMouse = (event) => {
+      if (!draggingRef.current) return;
+      applyClientX(event.clientX, event);
+    };
+
+    const endDrag = (event) => {
+      draggingRef.current = false;
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('mousemove', moveMouse);
+        document.removeEventListener('mouseup', endDrag);
+      }
+      stopRangeGesture(event);
+    };
+
+    const startMouse = (event) => {
+      draggingRef.current = true;
+      if (typeof document !== 'undefined') {
+        document.addEventListener('mousemove', moveMouse);
+        document.addEventListener('mouseup', endDrag);
+      }
+      applyClientX(event.clientX, event);
+    };
+
+    const touchClientX = (event) => {
+      const touch = event.touches?.[0] || event.changedTouches?.[0];
+      return touch ? touch.clientX : null;
+    };
+
+    const startTouch = (event) => {
+      const clientX = touchClientX(event);
+      if (clientX === null) return;
+      draggingRef.current = true;
+      applyClientX(clientX, event);
+    };
+
+    const moveTouch = (event) => {
+      if (!draggingRef.current) return;
+      const clientX = touchClientX(event);
+      if (clientX === null) return;
+      applyClientX(clientX, event);
+    };
+
+    const handleKeyDown = (event) => {
+      let nextValue = numericValue;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') nextValue += safeStep;
+      else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') nextValue -= safeStep;
+      else if (event.key === 'Home') nextValue = safeMin;
+      else if (event.key === 'End') nextValue = safeMax;
+      else return;
+      event.preventDefault();
+      onValue(Math.max(safeMin, Math.min(safeMax, nextValue)), event);
+    };
+
+    return React.createElement('div', {
+      ref: trackRef,
+      className: `${className} mc-drag-slider`,
+      role: 'slider',
+      tabIndex: 0,
+      'aria-label': ariaLabel,
+      'aria-valuemin': safeMin,
+      'aria-valuemax': safeMax,
+      'aria-valuenow': numericValue,
+      onPointerDown: startDrag,
+      onPointerMove: moveDrag,
+      onPointerUp: endDrag,
+      onPointerCancel: endDrag,
+      onTouchStart: startTouch,
+      onTouchMove: moveTouch,
+      onTouchEnd: endDrag,
+      onMouseDown: startMouse,
+      onMouseMove: moveMouse,
+      onMouseUp: endDrag,
+      onMouseLeave: endDrag,
+      onKeyDown: handleKeyDown,
+      style: Object.assign({
+        position: 'relative',
+        display: 'block',
+        width: '100%',
+        height: '39px',
+        borderRadius: '4px',
+        touchAction: 'none',
+        userSelect: 'none',
+        cursor: 'grab',
+        background
+      }, style || {})
+    },
+      React.createElement('span', {
+        'aria-hidden': 'true',
+        style: {
+          position: 'absolute',
+          left: `calc(${clampedPercent}% - 17px)`,
+          top: '50%',
+          width: '34px',
+          height: '34px',
+          transform: 'translateY(-50%)',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.38)',
+          pointerEvents: 'none'
+        }
+      })
+    );
+  }
+
   function resolveDateKey(rawDateKey) {
     const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -1487,17 +1669,18 @@
         }, SLEEP_QUALITY_EMOJI[sleepQuality - 1]),
         React.createElement('span', { className: 'mc-quality-label' }, SLEEP_QUALITY_LABELS[sleepQuality - 1])
       ),
-      React.createElement('input', {
+      React.createElement('input', Object.assign({
         type: 'range',
         className: 'mc-quality-slider',
         min: 1,
         max: 10,
         value: sleepQuality,
-        onChange: (e) => onChange({ ...data, sleepQuality: Number(e.target.value) }),
+      }, getRangeGestureProps((nextValue) => onChange({ ...data, sleepQuality: nextValue })), {
         style: {
+          touchAction: 'none',
           background: `linear-gradient(to right, ${qualityColor} ${(sleepQuality - 1) * 11.1}%, #e5e7eb ${(sleepQuality - 1) * 11.1}%)`
         }
-      }),
+      })),
       React.createElement('div', { className: 'mc-quality-buttons' },
         [1, 4, 7, 10].map(q =>
           React.createElement('button', {
@@ -1682,18 +1865,19 @@
         React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
       ),
       React.createElement('div', { className: 'mc-steps-slider-container' },
-        React.createElement('input', {
+        React.createElement('input', Object.assign({
           type: 'range',
           className: 'mc-steps-slider',
           min: sliderMin,
           max: sliderMax,
           step: 500,
           value: stepsGoal,
-          onChange: (e) => onChange({ ...data, stepsGoal: Number(e.target.value) }),
+        }, getRangeGestureProps((nextValue) => onChange({ ...data, stepsGoal: nextValue })), {
           style: {
+            touchAction: 'none',
             background: `linear-gradient(to right, ${sliderColor} ${sliderPercent}%, #e5e7eb ${sliderPercent}%)`
           }
-        }),
+        })),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
           React.createElement('span', null, '3к'),
           React.createElement('span', { className: 'mc-steps-slider-label-health' }, '7к ❤️'),
@@ -2075,21 +2259,22 @@
 
       // Слайдер
       React.createElement('div', { className: 'household-slider-container' },
-        React.createElement('input', {
+        React.createElement('input', Object.assign({
           type: 'range',
           className: 'household-slider',
           min: sliderMin,
           max: sliderMax,
           step: 5,
           value: minutes,
-          onChange: (e) => {
+        }, getRangeGestureProps((nextValue) => {
             triggerHaptic(5);
-            onChange({ ...data, minutes: Number(e.target.value) });
-          },
+            onChange({ ...data, minutes: nextValue });
+          }), {
           style: {
+            touchAction: 'none',
             background: `linear-gradient(to right, ${color} ${sliderPercent}%, #e5e7eb ${sliderPercent}%)`
           }
-        }),
+        })),
         React.createElement('div', { className: 'household-slider-labels' },
           React.createElement('span', null, '0'),
           React.createElement('span', null, '30'),
@@ -3104,21 +3289,22 @@
         }, p.emoji))
       ),
       // Слайдер
-      React.createElement('input', {
+      React.createElement('input', Object.assign({
         type: 'range',
         min: 1,
         max: 10,
         value: value,
-        onChange: (e) => onChange(Number(e.target.value)),
+      }, getRangeGestureProps((nextValue) => onChange(nextValue)), {
         style: {
           width: '100%',
           height: '6px',
           borderRadius: '3px',
           appearance: 'none',
+          touchAction: 'none',
           background: `linear-gradient(to right, ${color} ${(value - 1) * 11.1}%, #e5e7eb ${(value - 1) * 11.1}%)`,
           cursor: 'pointer'
         }
-      })
+      }))
     );
   }
 
@@ -3408,6 +3594,11 @@
 
     // Компонент одного рейтинга с пресетами и градиентом
     const RatingCard = ({ field, value, emoji, emojiFn, title, color, colorFn, presets, isNegative, index }) => {
+      const handleSliderValue = (nextValue) => {
+        if (nextValue === Number(value)) return;
+        updateField(field, nextValue);
+      };
+
       return React.createElement('div', {
         className: 'mood-rating-card',
         style: {
@@ -3479,20 +3670,19 @@
           })
         ),
 
-        // Слайдер — простой вариант, работает по tap
-        React.createElement('input', {
-          type: 'range',
+        // Слайдер — кастомный drag, чтобы модалка не перехватывала жест.
+        React.createElement(DragValueSlider, {
           className: 'mc-quality-slider',
           min: 1,
           max: 10,
           value: value,
-          onChange: e => {
-            updateField(field, Number(e.target.value));
-          },
+          onValue: handleSliderValue,
+          ariaLabel: title,
+          background: isNegative
+            ? `linear-gradient(to right, #10b981 0%, #22c55e 30%, #eab308 50%, #f97316 70%, #ef4444 100%)`
+            : `linear-gradient(to right, #ef4444 0%, #f97316 30%, #eab308 50%, #22c55e 70%, #10b981 100%)`,
           style: {
-            background: isNegative
-              ? `linear-gradient(to right, #10b981 0%, #22c55e 30%, #eab308 50%, #f97316 70%, #ef4444 100%)`
-              : `linear-gradient(to right, #ef4444 0%, #f97316 30%, #eab308 50%, #22c55e 70%, #10b981 100%)`
+            marginTop: '2px'
           }
         })
       );
@@ -3523,7 +3713,7 @@
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
 
         // Настроение
-        React.createElement(RatingCard, {
+        RatingCard({
           field: 'mood',
           value: mood,
           emojiFn: getMoodEmoji,
@@ -3535,7 +3725,7 @@
         }),
 
         // Бодрость
-        React.createElement(RatingCard, {
+        RatingCard({
           field: 'wellbeing',
           value: wellbeing,
           emojiFn: getWellbeingEmoji,
@@ -3547,7 +3737,7 @@
         }),
 
         // Стресс
-        React.createElement(RatingCard, {
+        RatingCard({
           field: 'stress',
           value: stress,
           emojiFn: getStressEmoji,
@@ -4106,14 +4296,14 @@
                   }
                 },
                   React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🙂 Настроение: ${postState.mood}/10`),
-                  React.createElement('input', {
+                  React.createElement('input', Object.assign({
                     type: 'range',
                     min: 1,
                     max: 10,
                     value: postState.mood,
-                    onChange: (event) => setPostField('mood', Number(event.target.value)),
-                    className: 'mc-quality-slider'
-                  })
+                    className: 'mc-quality-slider',
+                    style: { touchAction: 'none' }
+                  }, getRangeGestureProps((nextValue) => setPostField('mood', nextValue))))
                 ),
                 React.createElement('div', {
                   style: {
@@ -4123,14 +4313,14 @@
                   }
                 },
                   React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `⚡ Бодрость: ${postState.wellbeing}/10`),
-                  React.createElement('input', {
+                  React.createElement('input', Object.assign({
                     type: 'range',
                     min: 1,
                     max: 10,
                     value: postState.wellbeing,
-                    onChange: (event) => setPostField('wellbeing', Number(event.target.value)),
-                    className: 'mc-quality-slider'
-                  })
+                    className: 'mc-quality-slider',
+                    style: { touchAction: 'none' }
+                  }, getRangeGestureProps((nextValue) => setPostField('wellbeing', nextValue))))
                 ),
                 React.createElement('div', {
                   style: {
@@ -4140,14 +4330,14 @@
                   }
                 },
                   React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🧠 Стресс: ${postState.stress}/10`),
-                  React.createElement('input', {
+                  React.createElement('input', Object.assign({
                     type: 'range',
                     min: 1,
                     max: 10,
                     value: postState.stress,
-                    onChange: (event) => setPostField('stress', Number(event.target.value)),
-                    className: 'mc-quality-slider'
-                  })
+                    className: 'mc-quality-slider',
+                    style: { touchAction: 'none' }
+                  }, getRangeGestureProps((nextValue) => setPostField('stress', nextValue))))
                 )
               ),
               React.createElement('button', {
