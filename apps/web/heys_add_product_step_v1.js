@@ -549,6 +549,71 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const normalizeSharedProductForAddStep = (p) => {
+    if (!p || typeof p !== 'object') return null;
+    const protein100 = toNum(p.protein100, 0);
+    const simple100 = toNum(p.simple100, 0);
+    const complex100 = toNum(p.complex100, 0);
+    const badFat100 = toNum(p.badfat100 ?? p.badFat100, 0);
+    const goodFat100 = toNum(p.goodfat100 ?? p.goodFat100, 0);
+    const trans100 = toNum(p.trans100, 0);
+    const carbs100 = simple100 + complex100;
+    const fat100 = badFat100 + goodFat100 + trans100;
+    const kcal100 = Math.round(protein100 * 3 + carbs100 * 4 + fat100 * 9);
+
+    return {
+      ...p,
+      protein100,
+      simple100,
+      complex100,
+      badFat100,
+      goodFat100,
+      trans100,
+      fiber100: toNum(p.fiber100, 0),
+      gi: toNum(p.gi, 0),
+      harm: (HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm ?? p.harmScore ?? p.harmscore, 0)) || 0,
+      kcal100,
+      carbs100,
+      fat100,
+      updatedAt: p.updatedAt || (p.updated_at ? Date.parse(p.updated_at) : 0),
+      createdAt: p.createdAt || (p.created_at ? Date.parse(p.created_at) : 0),
+      _fromShared: true
+    };
+  };
+
+  const isOverlayProductsEnabledForAddStep = () => {
+    try {
+      return HEYS.flags?.isEnabled?.('overlay_products_v2') === true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const readCurrentClientProductsForAddStep = () => {
+    if (!isOverlayProductsEnabledForAddStep()) return null;
+    const Overlay = HEYS.OverlayStore;
+    if (!Overlay || typeof Overlay.readRaw !== 'function') return [];
+
+    const rows = Overlay.readRaw();
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+
+    try {
+      if (typeof Overlay.toMergedView === 'function') {
+        const sharedById = HEYS.cloud?.getSharedIndex?.() || new Map();
+        const merged = Overlay.toMergedView(sharedById);
+        if (Array.isArray(merged)) return merged;
+      }
+    } catch (_) { /* noop */ }
+
+    const rowIds = new Set(rows.map((r) => String(r?.id ?? '')).filter(Boolean));
+    const globalView = HEYS.products?.getAll?.();
+    if (Array.isArray(globalView) && rowIds.size > 0) {
+      return globalView.filter((p) => rowIds.has(String(p?.id ?? p?.product_id ?? '')));
+    }
+
+    return rows.filter((r) => r && r._custom === true);
+  };
+
   const toInt = (value, fallback = null) => {
     if (value == null || value === '') return fallback;
     const n = Number(String(value).trim().replace(',', '.'));
@@ -2157,6 +2222,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [showSharedProducts, setShowSharedProducts] = useState(true);
 
     // v25.8.6.7: Sync searchQuery from StepModal's getInitialData
     // useState initializer runs only once at mount, but stepData is set via useEffect
@@ -2377,20 +2443,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const latestProducts = useMemo(() => {
       // [verbose log removed — was firing hundreds of times per session, drowning trace channel]
       const base = Array.isArray(context?.products) ? context.products : [];
+      const scopedProducts = readCurrentClientProductsForAddStep();
+      const shouldTrustScopedProducts = Array.isArray(scopedProducts);
 
       // Пробуем получить из HEYS.products.getAll()
-      let storeProducts = [];
-      if (HEYS.products?.getAll) {
+      let storeProducts = shouldTrustScopedProducts ? scopedProducts : [];
+      if (!shouldTrustScopedProducts && HEYS.products?.getAll) {
         storeProducts = HEYS.products.getAll() || [];
       }
 
       // Fallback: напрямую из HEYS.store
-      if (storeProducts.length === 0 && HEYS.store?.get) {
+      if (!shouldTrustScopedProducts && storeProducts.length === 0 && HEYS.store?.get) {
         storeProducts = HEYS.store.get('heys_products', []) || [];
       }
 
       // Fallback: из localStorage через U()
-      if (storeProducts.length === 0) {
+      if (!shouldTrustScopedProducts && storeProducts.length === 0) {
         const utils = U();
         if (utils.lsGet) {
           storeProducts = utils.lsGet('heys_products', []) || [];
@@ -2398,15 +2466,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       // Fallback: напрямую из localStorage
-      if (storeProducts.length === 0) {
+      if (!shouldTrustScopedProducts && storeProducts.length === 0) {
         const rawProducts = readStoredValue('heys_products', null);
         if (Array.isArray(rawProducts)) storeProducts = rawProducts;
       }
 
       storeProducts = Array.isArray(storeProducts) ? storeProducts : [];
       // Если store длиннее — используем его как основу
-      const primary = storeProducts.length >= base.length ? storeProducts : base;
-      const secondary = primary === storeProducts ? base : storeProducts;
+      const primary = shouldTrustScopedProducts || storeProducts.length >= base.length ? storeProducts : base;
+      const secondary = primary === storeProducts ? (shouldTrustScopedProducts ? [] : base) : storeProducts;
       // Объединяем, убирая дубликаты по id/name
       const seen = new Set();
       const merged = [];
@@ -2431,6 +2499,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
     const [sharedLoading, setSharedLoading] = useState(false);
+    const [sharedCatalogPreview, setSharedCatalogPreview] = useState([]);
+    const [sharedCatalogLoading, setSharedCatalogLoading] = useState(false);
 
     useEffect(() => {
       const handleSharedUpdated = (event) => {
@@ -2457,6 +2527,60 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       window.addEventListener('heys:shared-product-updated', handleSharedUpdated);
       return () => window.removeEventListener('heys:shared-product-updated', handleSharedUpdated);
     }, []);
+
+    useEffect(() => {
+      if (!showSharedProducts) {
+        setSharedCatalogPreview([]);
+        setSharedCatalogLoading(false);
+        return undefined;
+      }
+
+      let cancelled = false;
+      const readCachedPreview = () => {
+        const cached = HEYS.cloud?.getCachedSharedProducts?.();
+        return Array.isArray(cached)
+          ? cached.map(normalizeSharedProductForAddStep).filter(Boolean).slice(0, 24)
+          : [];
+      };
+      const applyCachedPreview = () => {
+        const preview = readCachedPreview();
+        if (preview.length && !cancelled) setSharedCatalogPreview(preview);
+        return preview.length > 0;
+      };
+
+      const loadPreview = async () => {
+        const hasCached = applyCachedPreview();
+        if (hasCached) return;
+        if (!HEYS.cloud?.getAllSharedProducts) return;
+
+        setSharedCatalogLoading(true);
+        try {
+          const result = await HEYS.cloud.getAllSharedProducts({ limit: 60 });
+          const list = Array.isArray(result) ? result : (result?.data || result?.products || []);
+          if (!cancelled) {
+            setSharedCatalogPreview(
+              (Array.isArray(list) ? list : [])
+                .map(normalizeSharedProductForAddStep)
+                .filter(Boolean)
+                .slice(0, 24)
+            );
+          }
+        } catch (err) {
+          console.error('[AddProductStep] Shared catalog preview error:', err);
+        } finally {
+          if (!cancelled) setSharedCatalogLoading(false);
+        }
+      };
+
+      const handleSharedProductsUpdated = () => applyCachedPreview();
+      window.addEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
+      loadPreview();
+
+      return () => {
+        cancelled = true;
+        window.removeEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
+      };
+    }, [showSharedProducts]);
 
     useEscapeToClose(closeModal, true);
 
@@ -2497,8 +2621,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // 🌐 Асинхронный поиск по общей базе (debounced)
     useEffect(() => {
       const trimmed = search.trim();
-      if (trimmed.length < 2) {
+      if (!showSharedProducts || trimmed.length < 2) {
         setSharedResults([]);
+        setSharedLoading(false);
         return;
       }
 
@@ -2510,40 +2635,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           console.log('[SharedSearch] Result:', result?.data?.length, 'products');
           if (result?.data) {
             // Преобразуем данные для совместимости с UI
-            const normalized = result.data.map(p => {
-              // Нормализация полей (snake_case → camelCase fallback)
-              const protein100 = Number(p.protein100 ?? 0) || 0;
-              const simple100 = Number(p.simple100 ?? 0) || 0;
-              const complex100 = Number(p.complex100 ?? 0) || 0;
-              const badFat100 = Number(p.badfat100 ?? p.badFat100 ?? 0) || 0;
-              const goodFat100 = Number(p.goodfat100 ?? p.goodFat100 ?? 0) || 0;
-              const trans100 = Number(p.trans100 ?? 0) || 0;
-
-              // kcal100 — вычисляемое поле (не хранится в shared_products)
-              // TEF-aware formula: protein*3 + carbs*4 + fat*9 (синхронизировано с heys_core_v12.js:computeDerived)
-              const carbs100 = simple100 + complex100;
-              const fat100 = badFat100 + goodFat100 + trans100;
-              const kcal100 = Math.round(protein100 * 3 + carbs100 * 4 + fat100 * 9);
-
-              return {
-                ...p,
-                protein100,
-                simple100,
-                complex100,
-                badFat100,
-                goodFat100,
-                trans100,
-                fiber100: Number(p.fiber100 ?? 0) || 0,
-                gi: Number(p.gi ?? 0) || 0,
-                harm: (HEYS.models?.normalizeHarm?.(p) ?? Number(p.harm ?? p.harmScore ?? p.harmscore ?? 0)) || 0,  // Canonical harm field
-                // Вычисленные поля
-                kcal100,
-                carbs100,
-                fat100,
-                // Флаг что это из общей базы
-                _fromShared: true
-              };
-            });
+            const normalized = result.data.map(normalizeSharedProductForAddStep).filter(Boolean);
             console.log('[SharedSearch] Normalized first:', normalized[0]?.name, 'kcal100:', normalized[0]?.kcal100);
             setSharedResults(normalized);
           }
@@ -2555,7 +2647,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, 300);
 
       return () => clearTimeout(timeoutId);
-    }, [search]);
+    }, [search, showSharedProducts]);
 
     // Умный список: частота + свежесть (объединяет "часто" и "последние")
     const usageStats = useMemo(() =>
@@ -2757,6 +2849,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
       || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
     const lc = normalizeSearch(search.trim());
+    const showSearch = lc.length > 0;
     const searchResults = useMemo(() => {
       let results = [];
 
@@ -2816,9 +2909,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!lc) return [];
 
       // Фильтруем shared тоже по категории (иначе переключатель категории кажется «сломанный»)
+      const visibleSharedResults = showSharedProducts ? sharedResults : [];
       const sharedFiltered = selectedCategory !== 'all'
-        ? sharedResults.filter(p => matchCategory(p, selectedCategory))
-        : sharedResults;
+        ? visibleSharedResults.filter(p => matchCategory(p, selectedCategory))
+        : visibleSharedResults;
 
       // Собираем кандидатов и пересчитываем скор по «реальному» совпадению,
       // чтобы семантические/косвенные личные совпадения не утаптывали точные shared-матчи.
@@ -2948,17 +3042,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
 
       return combined.slice(0, 25);
-    }, [searchResults, sharedResults, lc, normalizeSearch, selectedCategory]);
+    }, [searchResults, sharedResults, lc, normalizeSearch, selectedCategory, showSharedProducts]);
 
-    // "Возможно вы искали" — альтернативные запросы при пустых результатах
-    const didYouMean = useMemo(() => {
-      if (!lc || combinedResults.length > 0) return [];
+    const canSuggestSharedSearch = !showSharedProducts && search.trim().length >= 2;
 
-      if (HEYS?.SmartSearchWithTypos?.getDidYouMean) {
-        return HEYS.SmartSearchWithTypos.getDidYouMean(lc, latestProducts, 3);
-      }
-      return [];
-    }, [lc, combinedResults.length, latestProducts]);
+    const visibleSharedCatalogPreview = useMemo(() => {
+      if (!showSharedProducts || showSearch) return [];
+      const list = Array.isArray(sharedCatalogPreview) ? sharedCatalogPreview : [];
+      const filtered = selectedCategory !== 'all'
+        ? list.filter(p => matchCategory(p, selectedCategory))
+        : list;
+      return filtered.slice(0, 12);
+    }, [sharedCatalogPreview, selectedCategory, showSearch, showSharedProducts]);
 
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -3366,7 +3461,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     // Что показывать: результаты поиска или умный список
-    const showSearch = lc.length > 0;
     const shouldRenderSettledProducts = !isWaitingForProductsSettle;
 
     // Счётчик фото в текущем приёме
@@ -3472,25 +3566,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Поле поиска
         React.createElement('div', { className: 'aps-search-container' },
-          React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
-          React.createElement('input', {
-            ref: inputRef,
-            type: 'text',
-            className: 'aps-search-input',
-            placeholder: 'Поиск продукта...',
-            value: searchInput,
-            onChange: (e) => setSearchInput(e.target.value),
-            autoComplete: 'off',
-            autoCorrect: 'off',
-            spellCheck: false
-          }),
-          search && React.createElement('button', {
-            className: 'aps-search-clear',
-            onClick: () => {
-              setSearchInput('');
-              setSearch('');
-            }
-          }, '×')
+          React.createElement('div', { className: 'aps-search-field' },
+            React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
+            React.createElement('input', {
+              ref: inputRef,
+              type: 'text',
+              className: 'aps-search-input',
+              placeholder: 'Поиск продукта...',
+              value: searchInput,
+              onChange: (e) => setSearchInput(e.target.value),
+              autoComplete: 'off',
+              autoCorrect: 'off',
+              spellCheck: false
+            }),
+            search && React.createElement('button', {
+              className: 'aps-search-clear',
+              onClick: () => {
+                setSearchInput('');
+                setSearch('');
+              }
+            }, '×')
+          ),
+          React.createElement('label', {
+            className: 'aps-shared-toggle' + (showSharedProducts ? ' is-active' : ''),
+            title: showSharedProducts ? 'Общие продукты включены' : 'Включить общие продукты'
+          },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: showSharedProducts,
+              onChange: (e) => setShowSharedProducts(e.target.checked)
+            }),
+            React.createElement('span', { className: 'aps-shared-toggle__icon', 'aria-hidden': 'true' }, '🌐'),
+            React.createElement('span', { className: 'aps-shared-toggle__label' }, 'Общие')
+          )
         )
       ),
 
@@ -3507,17 +3615,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
             combinedResults.map(p => renderProductCard(p, true, false, true))
           ),
-          // Пустой результат с "Возможно вы искали"
+          // Пустой результат
           combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
             React.createElement('span', null, '😕'),
 
-            // "Возможно вы искали" — кликабельные альтернативы
-            didYouMean.length > 0 && React.createElement('div', {
+            canSuggestSharedSearch && React.createElement('div', {
               className: 'aps-did-you-mean',
               style: {
                 marginTop: '12px',
                 padding: '12px',
-                backgroundColor: 'rgba(255, 213, 0, 0.1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
                 borderRadius: '8px',
                 textAlign: 'left'
               }
@@ -3528,52 +3635,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   color: 'var(--text-secondary)',
                   marginBottom: '8px'
                 }
-              }, '💡 Возможно вы искали:'),
-              React.createElement('div', {
-                style: {
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }
-              },
-                didYouMean.map((item, i) =>
-                  React.createElement('button', {
-                    key: i,
-                    onClick: () => {
-                      setSearchInput(item.text);
-                      setSearch(item.text);
-                    },
-                    style: {
-                      padding: '6px 12px',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '16px',
-                      backgroundColor: 'var(--bg-card)',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }
-                  },
-                    React.createElement('span', null, item.text),
-                    item.label && React.createElement('span', {
-                      style: {
-                        fontSize: '10px',
-                        color: 'var(--text-tertiary)',
-                        marginLeft: '4px'
-                      }
-                    }, item.label)
-                  )
-                )
-              )
+              }, 'В личных продуктах ничего не найдено. Можно поискать в общей базе.'),
+              React.createElement('button', {
+                className: 'aps-add-new-btn',
+                onClick: () => setShowSharedProducts(true)
+              }, 'Искать в общих')
             ),
 
-            !didYouMean.length && React.createElement('span', null, 'Попробуйте другой запрос'),
+            !canSuggestSharedSearch && React.createElement('span', null, 'Попробуйте другой запрос'),
 
             React.createElement('button', {
               className: 'aps-add-new-btn',
               onClick: handleNewProduct,
-              style: { marginTop: didYouMean.length > 0 ? '12px' : '8px' }
+              style: { marginTop: canSuggestSharedSearch ? '12px' : '8px' }
             }, '+ Добавить "' + search + '"')
           )
         ),
@@ -3583,6 +3657,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Частые и избранные'),
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p, true, true, true))
+          )
+        ),
+
+        shouldRenderSettledProducts && !showSearch && showSharedProducts && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' },
+            sharedCatalogLoading && visibleSharedCatalogPreview.length === 0
+              ? '🌐 Общие продукты: загрузка...'
+              : '🌐 Общие продукты'
+          ),
+          visibleSharedCatalogPreview.length > 0 && React.createElement('div', { className: 'aps-products-list' },
+            visibleSharedCatalogPreview.map(p => renderProductCard(p, false, false, false))
+          ),
+          visibleSharedCatalogPreview.length === 0 && !sharedCatalogLoading && React.createElement('div', { className: 'aps-empty' },
+            React.createElement('span', null, selectedCategory === 'all'
+              ? 'Общая база пока не загрузилась'
+              : 'В этой категории общих продуктов нет')
           )
         ),
 

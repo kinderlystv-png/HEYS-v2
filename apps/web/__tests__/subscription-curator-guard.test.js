@@ -10,6 +10,8 @@ const modulePath = path.resolve(__dirname, '../heys_subscription_v1.js');
 const moduleSource = fs.readFileSync(modulePath, 'utf8');
 const subscriptionsModulePath = path.resolve(__dirname, '../heys_subscriptions_v1.js');
 const subscriptionsModuleSource = fs.readFileSync(subscriptionsModulePath, 'utf8');
+const paywallModulePath = path.resolve(__dirname, '../heys_paywall_v1.js');
+const paywallModuleSource = fs.readFileSync(paywallModulePath, 'utf8');
 
 function createMockStorage(seed = {}) {
   const store = { ...seed };
@@ -29,6 +31,11 @@ function loadSubscription() {
 function loadSubscriptions() {
   eval(subscriptionsModuleSource);
   return window.HEYS.Subscriptions;
+}
+
+function loadPaywall() {
+  eval(paywallModuleSource);
+  return window.HEYS.Paywall;
 }
 
 describe('HEYS.Subscription curator guard', () => {
@@ -116,5 +123,86 @@ describe('HEYS.Subscription curator guard', () => {
 
     expect(status).toMatchObject({ success: true, status: 'active', source: 'local_curator' });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('blocks write access for cached none and trial_pending statuses', () => {
+    const storage = createMockStorage({
+      heys_subscription_status: JSON.stringify({ status: 'none', ts: Date.now() }),
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const subscription = loadSubscription();
+    const paywall = loadPaywall();
+
+    expect(subscription.canWrite('none')).toBe(false);
+    expect(subscription.canWrite('trial_pending')).toBe(false);
+    expect(subscription.canWrite('trial')).toBe(true);
+    expect(subscription.canWrite('active')).toBe(true);
+    expect(paywall.canWriteSync()).toBe(false);
+
+    subscription.clearCache();
+    storage._store.heys_subscription_status = JSON.stringify({ status: 'trial', ts: Date.now() });
+    expect(paywall.canWriteSync()).toBe(true);
+  });
+
+  it('blocks PIN write access when status cache is missing and local status is none', () => {
+    const clientId = '73b65323-5974-4f60-835f-ace14252614f';
+    const storage = createMockStorage({
+      heys_pin_auth_client: clientId,
+      heys_client_current: JSON.stringify(clientId),
+      heys_profile: JSON.stringify({ name: 'Пупсик тестовый', subscription_status: 'none' }),
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    window.HEYS = { currentClientId: clientId };
+    loadSubscription();
+    const paywall = loadPaywall();
+
+    expect(paywall.canWriteSync()).toBe(false);
+  });
+
+  it('unwraps session subscription RPC response and caches trial status', async () => {
+    const clientId = '52e2575a-65b5-4998-ad7d-c83171f8087c';
+    const storage = createMockStorage({
+      heys_pin_auth_client: clientId,
+      heys_client_current: JSON.stringify(clientId),
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        get_subscription_status_by_session: {
+          status: 'trial',
+          trial_ends_at: '2026-06-28T10:48:48.855Z',
+        },
+      },
+      error: null,
+    });
+    window.HEYS = {
+      currentClientId: clientId,
+      YandexAPI: { rpc },
+    };
+
+    const subscription = loadSubscription();
+    const status = await subscription.getStatus(true);
+
+    expect(status).toBe('trial');
+    expect(subscription.getCachedStatus()).toBe('trial');
+    expect(JSON.parse(storage._store.heys_subscription_status).status).toBe('trial');
   });
 });

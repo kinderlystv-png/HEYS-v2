@@ -670,6 +670,17 @@
       return false;
     }
 
+    // First-login order is strict: legal consents must block registration.
+    // On reload the registration flag can persist, so do not reopen profile
+    // steps until the consent check has completed successfully.
+    if (HEYS._consentsValid !== true) {
+      console.info('[MorningCheckin] ℹ️ Consents not valid yet — defer registration/check-in', {
+        consentsChecked: HEYS._consentsChecked,
+        consentsValid: HEYS._consentsValid,
+      });
+      return false;
+    }
+
     const todayKey = getTodayKey();
     const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
 

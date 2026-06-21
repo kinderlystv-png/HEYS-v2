@@ -584,8 +584,13 @@
                 const [clientChangeTick, setClientChangeTick] = HookReact.useState(0);
                 HookReact.useEffect(() => {
                     const handleClientChange = () => setClientChangeTick((v) => v + 1);
+                    const handleProfileUpdate = () => setClientChangeTick((v) => v + 1);
                     window.addEventListener('heys:client-changed', handleClientChange);
-                    return () => window.removeEventListener('heys:client-changed', handleClientChange);
+                    window.addEventListener('heys:profile-updated', handleProfileUpdate);
+                    return () => {
+                        window.removeEventListener('heys:client-changed', handleClientChange);
+                        window.removeEventListener('heys:profile-updated', handleProfileUpdate);
+                    };
                 }, []);
                 const pendingText = HookReact.useMemo(() => {
                     if (!fallbackPendingDetails) return '';

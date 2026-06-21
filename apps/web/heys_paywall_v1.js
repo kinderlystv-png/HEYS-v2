@@ -884,17 +884,26 @@
     }
 
     try {
-      const status = await HEYS.Subscription.getStatus();
-      // Можно писать если: trial, active, или нет данных (новый пользователь до регистрации)
-      if (!status || !status.status) return true; // Новый пользователь
-      return status.status === HEYS.Subscription.STATUS.TRIAL ||
-        status.status === HEYS.Subscription.STATUS.ACTIVE ||
-        status.status === HEYS.Subscription.STATUS.TRIAL_PENDING;
+      const status = normalizeSubscriptionStatus(await HEYS.Subscription.getStatus());
+      if (!status) return true; // До выбора клиента статус может быть ещё неизвестен.
+      return status === HEYS.Subscription.STATUS.TRIAL ||
+        status === HEYS.Subscription.STATUS.ACTIVE;
     } catch (err) {
       devWarn('[Paywall] Error checking status:', err);
       trackError(err, { scope: 'Paywall', action: 'checkStatus' });
-      return true; // Fallback: разрешаем при ошибке
+      return false;
     }
+  }
+
+  function normalizeSubscriptionStatus(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      if (typeof value.status === 'string') return value.status;
+      if (typeof value.subscription_status === 'string') return value.subscription_status;
+      if (value.data) return normalizeSubscriptionStatus(value.data);
+    }
+    return '';
   }
 
   /**
@@ -904,12 +913,29 @@
   function canWriteSync() {
     if (!HEYS.Subscription) return true;
 
-    const cached = HEYS.Subscription.getCachedStatus?.();
-    if (!cached || !cached.status) return true;
+    const cached = normalizeSubscriptionStatus(HEYS.Subscription.getCachedStatus?.())
+      || normalizeSubscriptionStatus(HEYS.Subscription.getLocalStatus?.());
+    if (!cached) {
+      requestStatusRefresh('empty-cache');
+      return false;
+    }
 
-    return cached.status === HEYS.Subscription.STATUS.TRIAL ||
-      cached.status === HEYS.Subscription.STATUS.ACTIVE ||
-      cached.status === HEYS.Subscription.STATUS.TRIAL_PENDING;
+    const allowed = cached === HEYS.Subscription.STATUS.TRIAL ||
+      cached === HEYS.Subscription.STATUS.ACTIVE;
+    if (!allowed) requestStatusRefresh(cached);
+    return allowed;
+  }
+
+  let _statusRefreshPromise = null;
+  function requestStatusRefresh(reason) {
+    if (_statusRefreshPromise || !HEYS.Subscription?.refresh) return;
+    _statusRefreshPromise = HEYS.Subscription.refresh()
+      .catch((err) => {
+        devWarn('[Paywall] status refresh failed:', reason, err?.message || err);
+      })
+      .finally(() => {
+        _statusRefreshPromise = null;
+      });
   }
 
   /**

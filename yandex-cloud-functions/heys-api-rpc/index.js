@@ -51,6 +51,78 @@ function isNonClientDataKey(k) {
   return NON_CLIENT_DATA_BLACKLIST.includes(k) || NON_CLIENT_DATA_BLACKLIST.includes(stripClientScopeFromKey(k));
 }
 
+const BOOTSTRAP_WRITABLE_KEYS = new Set([
+  'heys_profile',
+  'heys_norms',
+  'heys_consents',
+  'heys_onboarding_complete',
+  'heys_tour_completed',
+  'heys_advice_settings',
+  'heys_insights_tour_completed',
+  'heys_tour_interrupted_step',
+  'heys_weekly_wrap_view_count',
+  'heys_widget_layout_v1',
+  'heys_widget_layout_meta_v1',
+]);
+
+function normalizedClientKvKey(k) {
+  return stripClientScopeFromKey(String(k || ''));
+}
+
+function isDayv2Key(k) {
+  return /^heys_dayv2_\d{4}-\d{2}-\d{2}$/i.test(normalizedClientKvKey(k));
+}
+
+function clientKvValueHasMeals(k, value) {
+  return isDayv2Key(k) && Array.isArray(value?.meals) && value.meals.length > 0;
+}
+
+function canWriteClientKvWithoutSubscription(k, value) {
+  const normalized = normalizedClientKvKey(k);
+  if (BOOTSTRAP_WRITABLE_KEYS.has(normalized)) return true;
+  if (isDayv2Key(normalized)) return !clientKvValueHasMeals(normalized, value);
+  return false;
+}
+
+async function checkClientKvSubscriptionWrite(client, clientId, k, value, source) {
+  if (canWriteClientKvWithoutSubscription(k, value)) {
+    return { ok: true, status: 'bootstrap_allowed' };
+  }
+
+  const r = await client.query(
+    `SELECT public.get_effective_subscription_status($1::uuid) AS status`,
+    [clientId]
+  );
+  const status = r.rows?.[0]?.status || 'none';
+  if (status === 'trial' || status === 'active') {
+    return { ok: true, status };
+  }
+
+  try {
+    await client.query(
+      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+       VALUES ($1::uuid, $2::text, 'subscription_write_blocked', FALSE, $3)`,
+      [clientId, String(k || '').slice(0, 200), `${source}:${status}`]
+    );
+  } catch (_) { /* audit failure must not allow the write */ }
+
+  return { ok: false, status };
+}
+
+function subscriptionRequiredResponse(corsHeaders, status, extra = {}) {
+  return {
+    statusCode: 200,
+    headers: corsHeaders,
+    body: JSON.stringify({
+      ok: false,
+      success: false,
+      error: 'subscription_required',
+      status: status || 'none',
+      ...extra,
+    }),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2520,6 +2592,18 @@ module.exports.handler = async function (event, context) {
           headers: corsHeaders,
           body: JSON.stringify({ ok: false, error: 'not_client_data', key: k })
         };
+      }
+
+      const writeGate = await checkClientKvSubscriptionWrite(
+        client,
+        resolvedClientId,
+        k,
+        incomingValue,
+        isCurator ? 'merge_save_client_kv_by_curator' : 'merge_save_client_kv_by_session'
+      );
+      if (!writeGate.ok) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return subscriptionRequiredResponse(corsHeaders, writeGate.status, { key: k });
       }
 
       // Transaction with row-level lock to serialize concurrent merges on the same (client_id, k).

@@ -51,4 +51,46 @@ describe('consent gate flow', () => {
       window.React = previousReact;
     }
   });
+
+  it('does not let stale curator state bypass PIN consent gate', () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+
+    window.HEYS = {
+      cloud: {
+        isPinAuthClient: () => true,
+      },
+      Consents: {
+        ConsentScreen: function ConsentScreen() {},
+        ConsentOutdatedBanner: function ConsentOutdatedBanner() {},
+      },
+    };
+    window.React = {
+      createElement: (type, props) => ({ type, props }),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const gate = window.HEYS.AppGateFlow.buildConsentGate({
+        gate: null,
+        desktopGate: null,
+        cloudUser: { id: 'stale-curator' },
+        clientId: 'client-1',
+        needsConsent: false,
+        checkingConsent: false,
+        setNeedsConsent: () => {},
+        setShowMorningCheckin: () => {},
+        outdatedTypes: [{ type: 'user_agreement' }],
+        graceExpiresAt: '2026-06-28T00:00:00Z',
+        mustBlockReconsent: false,
+      });
+
+      expect(gate).toBeTruthy();
+      expect(gate.type).toBe(window.HEYS.Consents.ConsentScreen);
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
+  });
 });

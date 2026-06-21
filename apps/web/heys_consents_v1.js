@@ -1720,5 +1720,8 @@
   });
 
   // Verbose init log removed
+  try {
+    window.dispatchEvent(new CustomEvent('heys:consents-ready'));
+  } catch (_) { /* noop */ }
 
 })(typeof window !== 'undefined' ? window : global);

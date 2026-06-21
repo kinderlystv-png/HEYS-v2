@@ -2260,12 +2260,23 @@
         } = props;
 
         const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
-        const baseEligible = !gate && !desktopGate && !cloudUser && clientId && !checkingConsent;
+        const isPinSessionActive = (() => {
+            try {
+                return !!HEYS.cloud?.isPinAuthClient?.()
+                    || !!HEYS.auth?.getSessionToken?.()
+                    || !!readGlobalValue('heys_session_token', null)
+                    || !!readGlobalValue('heys_pin_auth_client', null)
+                    || !!readGlobalValue('heys_pin_cookie_session_hint', null);
+            } catch (_) {
+                return false;
+            }
+        })();
+        const baseEligible = !gate && !desktopGate && (!cloudUser || isPinSessionActive) && clientId && !checkingConsent;
 
         // Diagnostic (debug-only, не засоряет prod console)
         if (needsConsent && !baseEligible) {
             console.debug('[CONSENTS GATE] needsConsent=true но baseEligible=false:',
-                { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, clientId: !!clientId, checkingConsent });
+                { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, isPinSessionActive, clientId: !!clientId, checkingConsent });
         }
         const hasOutdatedRequiredConsents = (outdatedTypes || []).length > 0;
         const shouldBlockForConsents = needsConsent || mustBlockReconsent || hasOutdatedRequiredConsents;

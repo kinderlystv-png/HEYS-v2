@@ -97,8 +97,10 @@ describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
     expect(storageSource).toContain('blockDayv2BatchFallback(it.k, result.error);');
     expect(storageSource).toContain('blockDayv2BatchFallback(it.k, e.message);');
     expect(storageSource).toContain('return { success: false, error: mergeAbortError, saved: mergeSavedCount };');
-    expect(storageSource).toMatch(/if \(isDayv2MergeKey\(it\.k\)\) \{\s+blockDayv2BatchFallback\(it\.k, result\.error\);\s+break;\s+\}\s+if \(isServerLacksMergeEndpoint/);
-    expect(storageSource).toMatch(/if \(isDayv2MergeKey\(it\.k\)\) \{\s+blockDayv2BatchFallback\(it\.k, e\.message\);\s+break;\s+\}\s+console\.warn\('\[merge-save\] exception/);
+    expect(storageSource).toContain("console.warn('[merge-save] subscription_required for', it.k, '— dropping denied pending write');");
+    expect(storageSource).toContain('subscription_rejected: subscriptionRejectedKeys');
+    expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(result.error))');
+    expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(e.message))');
   });
 });
 

@@ -44,7 +44,19 @@
                 HEYS._consentsValid = false;
                 return;
             }
-            if (cloudUser) {
+            const isPinSessionActive = () => {
+                try {
+                    return !!HEYS.cloud?.isPinAuthClient?.()
+                        || !!HEYS.auth?.getSessionToken?.()
+                        || !!localStorage.getItem('heys_session_token')
+                        || !!localStorage.getItem('heys_pin_auth_client')
+                        || !!localStorage.getItem('heys_pin_cookie_session_hint');
+                } catch (_) {
+                    return false;
+                }
+            };
+
+            if (cloudUser && !isPinSessionActive()) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 HEYS._consentsChecked = true;
@@ -52,59 +64,136 @@
                 return;
             }
 
-            const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
-            const legacy = HEYS.Consents?.api?.checkRequired;
+            let cancelled = false;
+            let retryTimer = null;
 
             setCheckingConsent(true);
+            setNeedsConsent(true);
+            HEYS._consentsChecked = false;
+            HEYS._consentsValid = false;
 
             // Утилита: нормализовать legacy-ответ в shape v2.
-            const legacyAsV2 = (clientIdArg) => legacy(clientIdArg).then(r => ({
+            const legacyAsV2 = (clientIdArg, legacyFn) => legacyFn(clientIdArg).then(r => ({
                 valid: r.valid, missing: r.missing || [],
                 outdated: [], graceExpiresAt: null, graceStatus: 'none',
                 mustBlock: false, ageConfirmed: true,
             }));
 
-            // versioned() требует session-токен; при login токен появляется ПОЗЖЕ
-            // чем clientId. Поэтому если versioned вернул error (No session token /
-            // network) — fallback на legacy (clientId-based, без токена).
-            const promise = versioned
-                ? versioned().then(r => {
-                    if (r?.error && legacy) {
-                        console.log('[CONSENTS] versioned failed (' + r.error + ') — fallback to legacy');
-                        return legacyAsV2(clientId);
-                    }
-                    return r;
-                  })
-                : legacy
-                    ? legacyAsV2(clientId)
-                    : Promise.resolve({ valid: true, missing: [], outdated: [], mustBlock: false, ageConfirmed: true });
+            const runCheck = (attempt = 0) => {
+                const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
+                const legacy = HEYS.Consents?.api?.checkRequired;
 
-            promise.then((r) => {
-                const needs = !r.valid;
-                setNeedsConsent(needs);
-                setCheckingConsent(false);
-                setOutdatedTypes && setOutdatedTypes(r.outdated || []);
-                setGraceExpiresAt && setGraceExpiresAt(r.graceExpiresAt || null);
-                setMustBlockReconsent && setMustBlockReconsent(!!r.mustBlock);
-                // Age-gate показываем только когда основные согласия в порядке —
-                // иначе сначала ConsentScreen, потом age.
-                setNeedsAgeGate && setNeedsAgeGate(!r.ageConfirmed && !needs);
-                HEYS._consentsChecked = true;
-                HEYS._consentsValid = r.valid;
-                if (needs) {
-                    console.log('[CONSENTS] Client needs to accept consents:', r.missing, 'outdated:', r.outdated);
-                } else if ((r.outdated || []).length) {
-                    console.log('[CONSENTS] ⚠ Outdated docs, grace until:', r.graceExpiresAt);
-                } else {
-                    console.log('[CONSENTS] ✅ All consents are valid');
+                if (!versioned && !legacy) {
+                    setNeedsConsent(true);
+                    setCheckingConsent(true);
+                    HEYS._consentsChecked = false;
+                    HEYS._consentsValid = false;
+
+                    if (attempt < 40) {
+                        retryTimer = setTimeout(() => runCheck(attempt + 1), 250);
+                    } else {
+                        console.error('[CONSENTS] Consent API is not ready — blocking client flow');
+                        setCheckingConsent(false);
+                        setMustBlockReconsent && setMustBlockReconsent(true);
+                        HEYS._consentsChecked = true;
+                        try {
+                            window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
+                                detail: { valid: false, needsConsent: true, source: 'consent-api-timeout' }
+                            }));
+                        } catch (_) { /* noop */ }
+                    }
+                    return;
                 }
-            }).catch((err) => {
-                console.error('[CONSENTS] Error checking consents:', err);
-                setCheckingConsent(false);
-                setNeedsConsent(false);
-                HEYS._consentsChecked = true;
-                HEYS._consentsValid = true;
-            });
+
+                const pinSessionActive = isPinSessionActive();
+                const promise = versioned
+                    ? versioned().then(r => {
+                        if (r?.error) {
+                            if (pinSessionActive) {
+                                console.warn('[CONSENTS] versioned failed for PIN session — blocking client flow:', r.error);
+                                return {
+                                    valid: false,
+                                    missing: r.missing || [],
+                                    outdated: [],
+                                    graceExpiresAt: null,
+                                    graceStatus: 'none',
+                                    mustBlock: true,
+                                    ageConfirmed: true,
+                                    error: r.error,
+                                };
+                            }
+                            if (legacy) {
+                                console.log('[CONSENTS] versioned failed (' + r.error + ') — fallback to legacy');
+                                return legacyAsV2(clientId, legacy);
+                            }
+                        }
+                        return r;
+                    })
+                    : (pinSessionActive
+                        ? Promise.resolve({
+                            valid: false,
+                            missing: [],
+                            outdated: [],
+                            graceExpiresAt: null,
+                            graceStatus: 'none',
+                            mustBlock: true,
+                            ageConfirmed: true,
+                            error: 'versioned consent API not ready',
+                        })
+                        : legacyAsV2(clientId, legacy));
+
+                promise.then((r) => {
+                    if (cancelled) return;
+                    const outdated = Array.isArray(r.outdated) ? r.outdated : [];
+                    const effectiveConsentValid = !!r.valid && outdated.length === 0 && !r.mustBlock;
+                    const needs = !effectiveConsentValid;
+                    setNeedsConsent(needs);
+                    setCheckingConsent(false);
+                    setOutdatedTypes && setOutdatedTypes(outdated);
+                    setGraceExpiresAt && setGraceExpiresAt(r.graceExpiresAt || null);
+                    setMustBlockReconsent && setMustBlockReconsent(!!r.mustBlock);
+                    // Age-gate показываем только когда основные согласия в порядке —
+                    // иначе сначала ConsentScreen, потом age.
+                    setNeedsAgeGate && setNeedsAgeGate(!r.ageConfirmed && effectiveConsentValid);
+                    HEYS._consentsChecked = true;
+                    HEYS._consentsValid = effectiveConsentValid;
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
+                            detail: { valid: effectiveConsentValid, needsConsent: needs, source: 'consent-check' }
+                        }));
+                    } catch (_) { /* noop */ }
+                    if (outdated.length) {
+                        console.log('[CONSENTS] ⚠ Outdated docs, grace until:', r.graceExpiresAt);
+                    } else if (needs) {
+                        console.log('[CONSENTS] Client needs to accept consents:', r.missing, 'outdated:', outdated);
+                    } else {
+                        console.log('[CONSENTS] ✅ All consents are valid');
+                    }
+                }).catch((err) => {
+                    if (cancelled) return;
+                    console.error('[CONSENTS] Error checking consents:', err);
+                    setNeedsConsent(true);
+                    setCheckingConsent(false);
+                    setMustBlockReconsent && setMustBlockReconsent(true);
+                    HEYS._consentsChecked = true;
+                    HEYS._consentsValid = false;
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
+                            detail: { valid: false, needsConsent: true, source: 'consent-check-error' }
+                        }));
+                    } catch (_) { /* noop */ }
+                });
+            };
+
+            const handleConsentsReady = () => runCheck(0);
+            window.addEventListener('heys:consents-ready', handleConsentsReady);
+            runCheck(0);
+
+            return () => {
+                cancelled = true;
+                if (retryTimer) clearTimeout(retryTimer);
+                window.removeEventListener('heys:consents-ready', handleConsentsReady);
+            };
         }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent,
             setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate]);
     };

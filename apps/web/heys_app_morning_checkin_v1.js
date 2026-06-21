@@ -163,6 +163,24 @@
             return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
         }, [isInitializing]); // clientId убран из зависимостей — используем ref
 
+        React.useEffect(() => {
+            const handleConsentsStateChanged = () => {
+                if (HEYS._consentsValid !== true) {
+                    setShowMorningCheckin(false);
+                    return;
+                }
+                setTimeout(() => {
+                    if (!HEYS.shouldShowMorningCheckin) return;
+                    if (window.HEYS?.ui?.suppressMorningCheckin) return;
+                    const shouldShow = HEYS.shouldShowMorningCheckin();
+                    setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+                }, 0);
+            };
+
+            window.addEventListener('heys:consents-state-changed', handleConsentsStateChanged);
+            return () => window.removeEventListener('heys:consents-state-changed', handleConsentsStateChanged);
+        }, []);
+
         return { showMorningCheckin, setShowMorningCheckin };
     };
 

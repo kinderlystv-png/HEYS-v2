@@ -6500,6 +6500,8 @@
         return msg.includes('not allowed') || msg.includes('not implemented') || msg.includes('unknown function');
       };
       const isDayv2MergeKey = (k) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
+      const isSubscriptionRequiredError = (err) => String(err || '').toLowerCase().includes('subscription_required');
+      const subscriptionRejectedKeys = [];
       const blockDayv2BatchFallback = (k, err) => {
         mergeAbortError = `merge_save_required_for_dayv2:${String(err || 'unknown').slice(0, 120)}`;
         console.warn('[merge-save] dayv2 merge failed for', k, '— keeping pending instead of unsafe batch fallback');
@@ -6568,6 +6570,11 @@
             // Server-side merge unavailable (deploy lag, network blip). For
             // dayv2, plain batch is unsafe because it cannot preserve
             // server-side subjective/check-in fields; keep it pending instead.
+            if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(result.error)) {
+              subscriptionRejectedKeys.push(it.k);
+              console.warn('[merge-save] subscription_required for', it.k, '— dropping denied pending write');
+              continue;
+            }
             if (isDayv2MergeKey(it.k)) {
               blockDayv2BatchFallback(it.k, result.error);
               break;
@@ -6585,6 +6592,11 @@
             dispatchSessionExpiredOnce('merge-save-exception', e.message);
             mergeAbortError = e.message || 'merge_save_auth_failed';
             break;
+          }
+          if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(e.message)) {
+            subscriptionRejectedKeys.push(it.k);
+            console.warn('[merge-save] subscription_required exception for', it.k, '— dropping denied pending write');
+            continue;
           }
           if (isDayv2MergeKey(it.k)) {
             blockDayv2BatchFallback(it.k, e.message);
@@ -6611,7 +6623,7 @@
 
       // If all items were merged successfully (and none fell back), we're done.
       if (yandexItems.length === 0) {
-        return { success: true, saved: mergeSavedCount };
+        return { success: true, saved: mergeSavedCount, subscription_rejected: subscriptionRejectedKeys };
       }
 
       const Store = global.HEYS?.store;

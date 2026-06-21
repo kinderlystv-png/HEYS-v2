@@ -3619,13 +3619,22 @@
       window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
       }));
-      // TASK-003: полный payload → immediate apply минуя SKIP_RAF_PENDING.
-      window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: {
-          date: dateKey, field: 'morningMood', source: 'morning-mood-step', forceReload: true,
-          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
-        }
-      }));
+      // iOS PWA: keep the header "Next" tap path light. StepModal navigates
+      // only after save() returns, while heys:day-updated wakes DayTab state
+      // subscribers. Defer that heavier refresh until the slide transition has
+      // already moved to the next step; the day data is saved synchronously above.
+      const dayUpdatedDetail = {
+        date: dateKey,
+        field: 'morningMood',
+        source: 'morning-mood-step',
+        forceReload: true,
+        data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+      };
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: dayUpdatedDetail
+        }));
+      }, 260);
     },
     xpAction: 'morning_mood_logged'
   });

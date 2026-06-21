@@ -5,7 +5,7 @@
     "sourceFingerprint": "847d96c96df5",
     "fileCount": 40,
     "size": 1118806,
-    "builtAt": "2026-06-21T11:39:47.582Z"
+    "builtAt": "2026-06-21T11:42:07.528Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.5168ae61ddcf.js",
@@ -29,7 +29,7 @@
     "sourceFingerprint": "7b126002a430",
     "fileCount": 51,
     "size": 1063046,
-    "builtAt": "2026-06-21T11:39:50.973Z"
+    "builtAt": "2026-06-21T11:42:10.831Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.6f476e40b9cc.js",
@@ -53,7 +53,7 @@
     "sourceFingerprint": "0e0d1e260cf1",
     "fileCount": 32,
     "size": 1493261,
-    "builtAt": "2026-06-21T11:39:54.302Z"
+    "builtAt": "2026-06-21T11:42:14.204Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.807cb783ab2f.js",
@@ -85,6 +85,6 @@
     "sourceFingerprint": "87c8e708196d",
     "fileCount": 52,
     "size": 2523783,
-    "builtAt": "2026-06-21T11:40:00.506Z"
+    "builtAt": "2026-06-21T11:42:19.988Z"
   }
 }

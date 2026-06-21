@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 const stepModalSource = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
 const profileStepSource = fs.readFileSync(path.resolve(__dirname, '../heys_profile_step_v1.js'), 'utf8');
 const morningCheckinSource = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
+const appMorningCheckinSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_morning_checkin_v1.js'), 'utf8');
+const runtimeEffectsSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_runtime_effects_v1.js'), 'utf8');
+const consentsSource = fs.readFileSync(path.resolve(__dirname, '../heys_consents_v1.js'), 'utf8');
 const userTabSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_tab_impl_v1.js'), 'utf8');
 const legacyUserSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_v12.js'), 'utf8');
 
@@ -26,6 +29,19 @@ describe('first login onboarding guardrails', () => {
     expect(profileStepSource).not.toContain('heys_morning_checkin_done');
     expect(morningCheckinSource).toContain('Завершите первый вход');
     expect(morningCheckinSource).toContain('обязательный чек-ин');
+  });
+
+  it('keeps registration blocked until required consents are valid', () => {
+    expect(runtimeEffectsSource).toContain('Consent API is not ready — blocking client flow');
+    expect(runtimeEffectsSource).toContain('setNeedsConsent(true)');
+    expect(runtimeEffectsSource).not.toContain('Promise.resolve({ valid: true, missing: [], outdated: [], mustBlock: false, ageConfirmed: true })');
+    expect(runtimeEffectsSource).toContain('versioned failed for PIN session — blocking client flow');
+    expect(runtimeEffectsSource).toContain('effectiveConsentValid');
+    expect(runtimeEffectsSource).toContain('HEYS._consentsValid = effectiveConsentValid');
+    expect(consentsSource).toContain('heys:consents-ready');
+    expect(appMorningCheckinSource).toContain('heys:consents-state-changed');
+    expect(morningCheckinSource).toContain('HEYS._consentsValid !== true');
+    expect(morningCheckinSource).toContain('defer registration/check-in');
   });
 });
 

@@ -5523,7 +5523,8 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   min-width: 200px;
   max-width: 240px;
-  z-index: 1000;
+  /* Above bottom tabs/FABs (1000-1001), below fullscreen overlays/modals (10000+). */
+  z-index: 1010;
   animation: popupFadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
   position: relative;
@@ -7967,7 +7968,8 @@
     linear-gradient(var(--toast-bg, var(--color-white)), var(--toast-bg, var(--color-white))) padding-box,
     var(--toast-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  /* Above bottom tabs/FABs (1000-1001), below fullscreen overlays/modals (10000+). */
+  z-index: 1010;
   opacity: 0;
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
   width: 80%;

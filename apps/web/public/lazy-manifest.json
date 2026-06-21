@@ -5,7 +5,7 @@
     "sourceFingerprint": "0e0d1e260cf1",
     "fileCount": 32,
     "size": 1493261,
-    "builtAt": "2026-06-21T11:39:54.302Z"
+    "builtAt": "2026-06-21T11:42:14.204Z"
   },
   "postboot-2-insights-lazy": {
     "file": "postboot-2-insights-lazy.bundle.b22e1794d63c.js",
@@ -21,6 +21,6 @@
     "sourceFingerprint": "87c8e708196d",
     "fileCount": 52,
     "size": 2523783,
-    "builtAt": "2026-06-21T11:40:00.506Z"
+    "builtAt": "2026-06-21T11:42:19.988Z"
   }
 }

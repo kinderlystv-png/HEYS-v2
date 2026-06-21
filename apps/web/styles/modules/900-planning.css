@@ -3422,6 +3422,14 @@ body.planning-checklist-modal-open .crs-bar-container {
     pointer-events: none !important;
 }
 
+body:has(.macro-toast.visible) .planning-subnav,
+body:has(.macro-toast.visible) .planning-tasks-scale-fab,
+body:has(.macro-toast.visible) .planning-checklists-archive-badge {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 body:has(.planning-modal-overlay) .fab-group,
 body:has(.planning-modal-overlay) #tour-fab-buttons,
 body:has(.planning-modal-overlay) .widgets-fab-left,

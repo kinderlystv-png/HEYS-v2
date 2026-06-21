@@ -2004,9 +2004,17 @@
 
 /* Поле поиска */
 .aps-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aps-search-field {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .aps-search-icon {
@@ -2056,6 +2064,96 @@
 [data-theme='dark'] .aps-search-clear {
   background: #4b5563;
   color: #d1d5db;
+}
+
+.aps-shared-toggle {
+  position: relative;
+  top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 76px;
+  align-self: center;
+  width: 76px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 6px;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  border: 1px dashed rgba(124, 58, 237, 0.58);
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.06);
+  box-shadow: none;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.aps-shared-toggle.is-active {
+  color: #fff;
+  border-color: #7c3aed;
+  border-style: solid;
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.18);
+}
+
+@media (hover: hover) {
+  .aps-shared-toggle:hover {
+    border-color: #8b5cf6;
+    color: #6d28d9;
+    background: rgba(139, 92, 246, 0.10);
+  }
+
+  .aps-shared-toggle.is-active:hover {
+    color: #fff;
+    background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+  }
+}
+
+.aps-shared-toggle:active {
+  transform: scale(0.96);
+}
+
+.aps-shared-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.aps-shared-toggle__label {
+  white-space: nowrap;
+}
+
+.aps-shared-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+[data-theme='dark'] .aps-shared-toggle {
+  color: #c4b5fd;
+  background: rgba(76, 29, 149, 0.16);
+  border-color: rgba(167, 139, 250, 0.52);
+}
+
+[data-theme='dark'] .aps-shared-toggle.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+  border-color: #a78bfa;
+}
+
+.aps-shared-toggle:has(input:focus-visible) {
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
 }
 
 /* Секции */

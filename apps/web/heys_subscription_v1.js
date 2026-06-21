@@ -155,6 +155,11 @@
     // каждые 5 минут триггерит бесполезный cloud sync
     if (prev !== status) {
       writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
+      try {
+        window.dispatchEvent(new CustomEvent('heys:subscription-changed', {
+          detail: { status, previousStatus: prev || null }
+        }));
+      } catch (_) { }
     }
   }
 
@@ -167,6 +172,17 @@
 
   // === In-flight deduplication (thundering herd prevention) ===
   let _inflightPromise = null;
+
+  function unwrapStatusPayload(payload) {
+    if (!payload) return STATUS.NONE;
+    if (typeof payload === 'string') return payload;
+    if (typeof payload.status === 'string') return payload.status;
+    if (payload.data) return unwrapStatusPayload(payload.data);
+    if (payload.get_subscription_status_by_session) {
+      return unwrapStatusPayload(payload.get_subscription_status_by_session);
+    }
+    return STATUS.NONE;
+  }
 
   // === API вызовы ===
 
@@ -221,7 +237,7 @@
           throw new Error(res.error.message);
         }
 
-        const status = res.data || STATUS.NONE;
+        const status = unwrapStatusPayload(res.data || STATUS.NONE);
         setCachedStatus(status);
 
         // 🎫 v3.0: trial_pending = куратор одобрил, но дата старта в будущем
@@ -241,6 +257,20 @@
     })();
 
     return _inflightPromise;
+  }
+
+  let _passiveRefreshTimer = null;
+  function schedulePassiveRefresh(reason) {
+    if (typeof window === 'undefined') return;
+    if (_passiveRefreshTimer) clearTimeout(_passiveRefreshTimer);
+    _passiveRefreshTimer = setTimeout(() => {
+      _passiveRefreshTimer = null;
+      getStatus(true).catch((e) => {
+        if (!/invalid_session|no session token/i.test(String(e?.message || e))) {
+          console.warn('[Subscription] passive refresh failed:', reason, e?.message || e);
+        }
+      });
+    }, 150);
   }
 
   /**
@@ -301,10 +331,10 @@
 
   /**
    * Можно ли добавлять данные?
-   * trial_pending разрешает запись (куратор уже одобрил)
+   * trial_pending ещё не открывает дневник: куратор одобрил, но доступ стартует позже.
    */
   function canWrite(status) {
-    return status === STATUS.TRIAL || status === STATUS.ACTIVE || status === STATUS.TRIAL_PENDING;
+    return status === STATUS.TRIAL || status === STATUS.ACTIVE;
   }
 
   /**
@@ -318,7 +348,7 @@
    * Активен ли триал или подписка?
    */
   function isActive(status) {
-    return status === STATUS.TRIAL || status === STATUS.ACTIVE || status === STATUS.TRIAL_PENDING;
+    return status === STATUS.TRIAL || status === STATUS.ACTIVE;
   }
 
   /**
@@ -445,10 +475,12 @@
 
     // API
     getStatus,
+    refresh: () => getStatus(true),
     startTrial,            // @deprecated v5.0 — используй activateTrialTimer
     activateTrialTimer,    // v5.0: стартует 7-дневный таймер при первом логине
     clearCache,
     getCachedStatus,       // Для синхронной проверки в Paywall
+    getLocalStatus: getLocalSubscriptionStatus,
 
     // Helpers
     canWrite,
@@ -459,6 +491,15 @@
     // React
     useSubscription,
   };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('heys:auth-changed', () => schedulePassiveRefresh('auth-changed'));
+    window.addEventListener('heys:client-changed', () => schedulePassiveRefresh('client-changed'));
+    window.addEventListener('focus', () => schedulePassiveRefresh('focus'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') schedulePassiveRefresh('visibility');
+    });
+  }
 
   // 🔇 v4.7.0: Лог загрузки отключён
 })(typeof window !== 'undefined' ? window : globalThis);
