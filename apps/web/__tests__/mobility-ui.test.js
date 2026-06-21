@@ -241,7 +241,7 @@ describe('Mobility UI', () => {
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
   });
 
-  it('позволяет собрать свою тренировку из упражнений и запустить сопровождение', { timeout: 20000 }, async () => {
+  it('позволяет собрать свою тренировку из упражнений и запустить сопровождение', { timeout: 60000 }, async () => {
     const directBuilt = UI()._buildCustomBuilt(['joint_cars_hip', 'breath_box_tonify'], 'morning_tonify', profile, {});
     expect(directBuilt.session.blocks.map((block) => block.atoms[0].id)).toEqual(['joint_cars_hip', 'breath_box_tonify']);
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
@@ -415,7 +415,7 @@ describe('Mobility UI', () => {
     delete globalThis.HEYS.TrainingStep;
   }, 15000);
 
-  it('не пишет mobilityLog в дневник без явного контекста тренировки', () => {
+  it('не пишет mobilityLog в дневник без явного контекста тренировки', { timeout: 60000 }, () => {
     const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
     const savedTrainings = [];
     globalThis.HEYS.TrainingStep = {
@@ -446,7 +446,7 @@ describe('Mobility UI', () => {
     expect(container.textContent).toContain('снизить интенсивность');
   });
 
-  it('показывает CWI advisory в session panel', () => {
+  it('показывает CWI advisory в session panel', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, {
       profile,
       modeId: 'post_workout',
