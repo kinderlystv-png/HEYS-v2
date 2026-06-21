@@ -36,6 +36,7 @@ const DEFAULT_TELEGRAM_REQUEST_TIMEOUT_MS = 3000;
 const DEFAULT_CALLBACK_ACK_TIMEOUT_MS = 700;
 const DEFAULT_START_BOT_POLL_WINDOW_MS = 55000;
 const POLL_LEASE_SAFETY_MS = 15000;
+const BOT_GET_UPDATES_MAX_TIMEOUT_SEC = 3;
 
 function isLockboxPlaceholder(value) {
   return typeof value === 'string' && /^__IN_LOCKBOX__/.test(value);
@@ -150,6 +151,10 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = getTelegramReques
   } finally {
     clearTimeout(timer);
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function hashSecret(value) {
@@ -1227,7 +1232,10 @@ async function runStartBotPoll(payload = {}) {
 
   while (Date.now() + 1500 < deadline) {
     const remainingMs = deadline - Date.now();
-    const timeoutSec = Math.max(1, Math.min(10, Math.floor((remainingMs - 1000) / 1000)));
+    const timeoutSec = Math.max(
+      1,
+      Math.min(BOT_GET_UPDATES_MAX_TIMEOUT_SEC, Math.floor((remainingMs - 1000) / 1000)),
+    );
     let updates = [];
     try {
       updates = await tgRequest('getUpdates', {
@@ -1237,7 +1245,9 @@ async function runStartBotPoll(payload = {}) {
       }, START_BOT, (timeoutSec + 3) * 1000);
     } catch (e) {
       console.warn('[HEYS Start] poll getUpdates failed:', e.message);
-      break;
+      if (Date.now() + 1500 >= deadline) break;
+      await sleep(750);
+      continue;
     }
 
     if (!Array.isArray(updates) || updates.length === 0) continue;
@@ -1290,7 +1300,10 @@ async function runClientBotPoll(payload = {}) {
 
   while (Date.now() + 1500 < deadline) {
     const remainingMs = deadline - Date.now();
-    const timeoutSec = Math.max(1, Math.min(10, Math.floor((remainingMs - 1000) / 1000)));
+    const timeoutSec = Math.max(
+      1,
+      Math.min(BOT_GET_UPDATES_MAX_TIMEOUT_SEC, Math.floor((remainingMs - 1000) / 1000)),
+    );
     let updates = [];
     try {
       updates = await tgRequest('getUpdates', {
@@ -1300,7 +1313,9 @@ async function runClientBotPoll(payload = {}) {
       }, 'client', (timeoutSec + 3) * 1000);
     } catch (e) {
       console.warn('[BOT] client poll getUpdates failed:', e.message);
-      break;
+      if (Date.now() + 1500 >= deadline) break;
+      await sleep(750);
+      continue;
     }
 
     if (!Array.isArray(updates) || updates.length === 0) continue;
@@ -1311,7 +1326,8 @@ async function runClientBotPoll(payload = {}) {
       }
       const result = await handleTelegramWebhook(update);
       processed += 1;
-      if (await deliverTelegramMethodResponse(result, 'client')) delivered += 1;
+      const body = parseMaybeJson(result?.body);
+      if (body?.delivered || await deliverTelegramMethodResponse(result, 'client')) delivered += 1;
     }
 
     if (lastUpdateId !== null) {
@@ -1342,6 +1358,11 @@ async function runClientBotPoll(payload = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function handleTelegramWebhook(body) {
+  const directOk = async (response) => {
+    const delivered = await deliverTelegramMethodResponse(response, 'client');
+    return jsonResponse(200, { ok: true, delivered });
+  };
+
   // Telegram update structure: { update_id, message: { chat: { id }, text } }
   const message = body?.message;
   if (!message || !message.chat || !message.chat.id) {
@@ -1355,17 +1376,17 @@ async function handleTelegramWebhook(body) {
     if (text.startsWith('/start')) {
       const payload = text.replace(/^\/start\s*/, '');
       const response = await handleStartCommand(chatId, payload);
-      if (response) return response;
+      if (response) return directOk(response);
     } else if (text === '/help' || text === '/menu') {
-      return clientBotMessageResponse(
+      return directOk(clientBotMessageResponse(
         chatId,
           '<b>Доступные команды:</b>\n' +
           '/start &lt;ссылка&gt; — привязать аккаунт\n' +
           '/help — это сообщение\n\n' +
           'PIN и доступ к приложению выдаёт ваш куратор.',
-      );
+      ));
     } else {
-      return clientBotMessageResponse(chatId, 'Я не понимаю это сообщение. Используйте /help для списка команд.');
+      return directOk(clientBotMessageResponse(chatId, 'Я не понимаю это сообщение. Используйте /help для списка команд.'));
     }
   } catch (e) {
     console.error('[BOT] webhook handler error:', e.message);

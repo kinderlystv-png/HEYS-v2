@@ -114,12 +114,14 @@ test('timer warmup primes runtime config without touching DB', async (t) => {
   assert.equal(queries.length, 0);
 });
 
-test('client bot simple replies use webhook response without Telegram API roundtrip', async (t) => {
+test('client bot simple replies send direct Telegram reply', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
-  t.mock.method(global, 'fetch', async () => {
-    throw new Error('fetch should not be called');
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
   });
 
   const oldEnv = { ...process.env };
@@ -143,9 +145,11 @@ test('client bot simple replies use webhook response without Telegram API roundt
 
   assert.equal(result.statusCode, 200);
   const response = JSON.parse(result.body);
-  assert.equal(response.method, 'sendMessage');
-  assert.equal(response.chat_id, 123456);
-  assert.match(response.text, /Используйте \/help/);
+  assert.deepEqual(response, { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0].url, /sendMessage$/);
+  assert.equal(fetchCalls[0].body.chat_id, 123456);
+  assert.match(fetchCalls[0].body.text, /Используйте \/help/);
   assert.equal(queries.length, 0);
 });
 
@@ -153,8 +157,10 @@ test('client bot accepts webhook secret hash without Lockbox on simple replies',
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
-  t.mock.method(global, 'fetch', async () => {
-    throw new Error('fetch should not be called');
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
   });
 
   const oldEnv = { ...process.env };
@@ -182,7 +188,9 @@ test('client bot accepts webhook secret hash without Lockbox on simple replies',
 
   assert.equal(result.statusCode, 200);
   const response = JSON.parse(result.body);
-  assert.equal(response.method, 'sendMessage');
+  assert.deepEqual(response, { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0].url, /sendMessage$/);
   assert.equal(queries.length, 0);
 });
 
@@ -441,12 +449,14 @@ test('client bot poller processes simple update, delivers reply and commits offs
   assert.equal(queries.some((q) => /UPDATE public\.funnel_events[\s\S]+event_type = 'runtime_lock'/.test(q.sql)), true);
 });
 
-test('client bot pin claim success uses webhook response without Telegram API roundtrip', async (t) => {
+test('client bot pin claim success sends direct Telegram reply', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
-  t.mock.method(global, 'fetch', async () => {
-    throw new Error('fetch should not be called');
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
   });
 
   const oldEnv = { ...process.env };
@@ -477,21 +487,25 @@ test('client bot pin claim success uses webhook response without Telegram API ro
 
   assert.equal(result.statusCode, 200);
   const response = JSON.parse(result.body);
-  assert.equal(response.method, 'sendMessage');
-  assert.equal(response.chat_id, 123456);
-  assert.match(response.text, /Здравствуйте, <b>Ivan<\/b>\./);
-  assert.match(response.text, /привязывает ваш Telegram к приложению/);
-  assert.match(response.text, /PIN из сообщения куратора/);
-  assert.match(response.text, /https:\/\/app\.heyslab\.ru/);
+  assert.deepEqual(response, { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0].url, /sendMessage$/);
+  assert.equal(fetchCalls[0].body.chat_id, 123456);
+  assert.match(fetchCalls[0].body.text, /Здравствуйте, <b>Ivan<\/b>\./);
+  assert.match(fetchCalls[0].body.text, /привязывает ваш Telegram к приложению/);
+  assert.match(fetchCalls[0].body.text, /PIN из сообщения куратора/);
+  assert.match(fetchCalls[0].body.text, /https:\/\/app\.heyslab\.ru/);
   assert.equal(queries.filter((q) => /claim_pin_token_chat/.test(q.sql)).length, 1);
 });
 
-test('client bot pin claim failure uses webhook response without Telegram API roundtrip', async (t) => {
+test('client bot pin claim failure sends direct Telegram reply', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
-  t.mock.method(global, 'fetch', async () => {
-    throw new Error('fetch should not be called');
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
   });
 
   const oldEnv = { ...process.env };
@@ -521,9 +535,11 @@ test('client bot pin claim failure uses webhook response without Telegram API ro
 
   assert.equal(result.statusCode, 200);
   const response = JSON.parse(result.body);
-  assert.equal(response.method, 'sendMessage');
-  assert.equal(response.chat_id, 123456);
-  assert.match(response.text, /Ссылка не найдена/);
+  assert.deepEqual(response, { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0].url, /sendMessage$/);
+  assert.equal(fetchCalls[0].body.chat_id, 123456);
+  assert.match(fetchCalls[0].body.text, /Ссылка не найдена/);
   assert.equal(queries.filter((q) => /claim_pin_token_chat/.test(q.sql)).length, 1);
 });
 
