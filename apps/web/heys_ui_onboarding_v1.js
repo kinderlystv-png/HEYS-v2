@@ -21,6 +21,7 @@
 
   // === CONFIGURATION ===
 
+  const ONBOARDING_TOUR_ENABLED = false;
   const TOUR_ID = 'onboarding_tour_v1';
   const STORAGE_KEY = 'heys_tour_completed';
   const HAPTIC_ENABLED = true; // navigator.vibrate на переходах
@@ -552,6 +553,11 @@
      * @param {Object} options - { force: boolean, onComplete: func, skipWelcome: boolean }
      */
     async start(options = {}) {
+      if (!ONBOARDING_TOUR_ENABLED) {
+        trackTourEvent('onboarding_tour_skipped', { reason: 'disabled' });
+        return false;
+      }
+
       if (state.isActive) return;
 
       // Проверка: уже проходил?
@@ -806,6 +812,10 @@
      */
     isActive() {
       return state.isActive;
+    },
+
+    isEnabled() {
+      return ONBOARDING_TOUR_ENABLED;
     },
 
     /**

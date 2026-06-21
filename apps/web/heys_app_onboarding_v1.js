@@ -1,6 +1,7 @@
 // heys_app_onboarding_v1.js — Onboarding tour helpers
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const ONBOARDING_TOUR_ENABLED = false;
 
     const trackOnboardingEvent = (event, data) => {
         if (HEYS.analytics?.trackEvent) {
@@ -54,6 +55,11 @@
     // 🎓 ONBOARDING TOUR — функция проверки и запуска
     // Отдельная функция чтобы можно было вызвать и при загрузке, и после checkin-complete
     const tryStartOnboardingTour = () => {
+        if (!ONBOARDING_TOUR_ENABLED) {
+            trackOnboardingEvent('onboarding_tour_skipped', { reason: 'disabled' });
+            return false;
+        }
+
         const hasSeenTour = getStoredFlag('heys_tour_completed', false);
 
         // 🆕 v1.7: Используем централизованную проверку авторизации
@@ -162,5 +168,6 @@
         tryStartOnboardingTour,
         isCuratorSession,
         isClientAuthorized,
+        isEnabled: () => ONBOARDING_TOUR_ENABLED,
     };
 })();

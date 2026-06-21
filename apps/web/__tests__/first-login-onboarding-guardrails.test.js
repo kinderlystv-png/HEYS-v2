@@ -9,6 +9,8 @@ const morningCheckinSource = fs.readFileSync(path.resolve(__dirname, '../heys_mo
 const appMorningCheckinSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_morning_checkin_v1.js'), 'utf8');
 const runtimeEffectsSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_runtime_effects_v1.js'), 'utf8');
 const consentsSource = fs.readFileSync(path.resolve(__dirname, '../heys_consents_v1.js'), 'utf8');
+const appOnboardingSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_onboarding_v1.js'), 'utf8');
+const uiOnboardingSource = fs.readFileSync(path.resolve(__dirname, '../heys_ui_onboarding_v1.js'), 'utf8');
 const userTabSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_tab_impl_v1.js'), 'utf8');
 const legacyUserSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_v12.js'), 'utf8');
 
@@ -42,6 +44,19 @@ describe('first login onboarding guardrails', () => {
     expect(appMorningCheckinSource).toContain('heys:consents-state-changed');
     expect(morningCheckinSource).toContain('HEYS._consentsValid !== true');
     expect(morningCheckinSource).toContain('defer registration/check-in');
+  });
+
+  it('keeps the outdated onboarding tour disabled until it is updated', () => {
+    expect(appOnboardingSource).toContain('const ONBOARDING_TOUR_ENABLED = false');
+    expect(appOnboardingSource).toContain("reason: 'disabled'");
+    expect(appOnboardingSource).toContain('isEnabled: () => ONBOARDING_TOUR_ENABLED');
+    expect(uiOnboardingSource).toContain('const ONBOARDING_TOUR_ENABLED = false');
+    expect(uiOnboardingSource).toContain('return false;');
+    expect(uiOnboardingSource).toContain('isEnabled()');
+    expect(userTabSource).not.toContain('OnboardingTour.start({ force: true })');
+    expect(userTabSource).not.toContain('Запустить обучение заново');
+    expect(legacyUserSource).not.toContain('OnboardingTour.start({ force: true })');
+    expect(legacyUserSource).not.toContain('Запустить обучение заново');
   });
 });
 
