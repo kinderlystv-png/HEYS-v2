@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.23.de9f4da8",
+      "buildHash": "de9f4da8",
+      "date": "2026-06-23",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "адаптировать hero под высоту вкладки на мобильном",
+      "items": [
+        {
+          "type": "fix",
+          "title": "адаптировать hero под высоту вкладки на мобильном",
+          "description": "адаптировать hero под высоту вкладки на мобильном"
+        }
+      ],
+      "coveredCommits": ["de9f4da8", "751294c4"]
+    },
+    {
       "version": "2026.06.21.19ddecc1",
       "buildHash": "19ddecc1",
       "date": "2026-06-21",
@@ -151,22 +167,6 @@
         }
       ],
       "coveredCommits": ["33d57fea"]
-    },
-    {
-      "version": "2026.06.19.023879f1",
-      "buildHash": "023879f1",
-      "date": "2026-06-19",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Готовое приветствие клиента",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Сообщение для первого входа",
-          "description": "Куратор может скопировать одно аккуратное сообщение со ссылкой, PIN и шагами входа; клиентский бот отвечает в том же спокойном тоне."
-        }
-      ],
-      "coveredCommits": ["023879f1"]
     }
   ]
 }
