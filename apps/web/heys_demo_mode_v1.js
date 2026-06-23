@@ -91,6 +91,9 @@
     //    no-op'd by heys_storage_supabase_v1.js DEMO_MODE branch.
     const ls = snapshot.lsKeys || {};
     const demoClientId = 'demo-client-' + safeGender;
+    const requestedDefaultTab = global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.defaultTab;
+    const validDemoTabs = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+    const demoDefaultTab = validDemoTabs.includes(requestedDefaultTab) ? requestedDefaultTab : 'widgets';
     // dayv2 keys are scoped by clientId in this version of HEYS:
     // heys_<clientId>_dayv2_YYYY-MM-DD. Write both forms so all read
     // paths (scoped via _scopedDayKey + any legacy unscoped reads) work.
@@ -119,6 +122,20 @@
       }
     }
     markPerf('lsKeys written (' + writeCount + ' entries)');
+
+    // Landing demo should open as a "mirror" of the result, not on manual input.
+    // The app reads defaultTab from heys_profile during tab-state bootstrap.
+    try {
+      const rawProfile = localStorage.getItem('heys_profile');
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      localStorage.setItem('heys_profile', JSON.stringify({
+        ...(profile && typeof profile === 'object' ? profile : {}),
+        defaultTab: demoDefaultTab,
+      }));
+      markPerf('demo defaultTab seeded — ' + demoDefaultTab);
+    } catch (err) {
+      console.warn('[DEMO_MODE] failed to seed defaultTab:', err);
+    }
 
     // 1b) Seed default heys_advice_settings so the cold-start guard takes the
     //     "normal" 1.5s path instead of waiting up to 5s for a sync event.
@@ -190,7 +207,7 @@
 
     console.info('[DEMO_MODE] snapshot applied:',
       `${writeCount} ls keys, ${products.length} products,`,
-      `pseudonym=${snapshot.pseudonym}, generatedAt=${snapshot.generatedAt}`);
+      `pseudonym=${snapshot.pseudonym}, defaultTab=${demoDefaultTab}, generatedAt=${snapshot.generatedAt}`);
 
     // 4) Fire sync-completion events so downstream listeners (advice cold-start
     //    guard, meal recommender, cascade, dayv2 cache, etc.) don't wait for a
