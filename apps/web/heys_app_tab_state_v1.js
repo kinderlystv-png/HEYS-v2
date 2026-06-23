@@ -45,22 +45,29 @@
         window.HEYS._pendingProfileSyncFlags.defaultTab = pendingState;
     }
 
+    function readProfileFromLS() {
+        try {
+            const raw = localStorage.getItem('heys_profile');
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) { return {}; }
+    }
+
     const useTabState = ({ React }) => {
         const getDefaultTabFromProfile = () => {
             const U = window.HEYS?.utils;
-            const profile = U?.lsGet?.('heys_profile', {}) || {};
+            const profile = U?.lsGet?.('heys_profile', {}) || readProfileFromLS();
             return resolveHomeTab(profile.defaultTab);
         };
 
         const getDefaultTasksSubtabFromProfile = () => {
             const U = window.HEYS?.utils;
-            const profile = U?.lsGet?.('heys_profile', {}) || {};
+            const profile = U?.lsGet?.('heys_profile', {}) || readProfileFromLS();
             return resolveHomeTasksSubtab(profile.defaultTasksSubtab);
         };
 
-        const [defaultTab, setDefaultTabState] = React.useState('diary');
-        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(DEFAULT_TASKS_SUBTAB);
-        const [tab, rawSetTab] = React.useState('diary');
+        const [defaultTab, setDefaultTabState] = React.useState(() => resolveHomeTab(readProfileFromLS().defaultTab));
+        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(() => resolveHomeTasksSubtab(readProfileFromLS().defaultTasksSubtab));
+        const [tab, rawSetTab] = React.useState(() => resolveHomeTab(readProfileFromLS().defaultTab));
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
         const defaultTabRef = React.useRef(defaultTab);
         const defaultTasksSubtabRef = React.useRef(defaultTasksSubtab);

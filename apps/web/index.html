@@ -76,7 +76,10 @@
                 window.__HEYS_DEMO_T0__ = Date.now();
                 var params = new URLSearchParams(window.location.search);
                 var g = params.get('gender') === 'female' ? 'female' : 'male';
-                window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
+                var requestedDefaultTab = params.get('defaultTab') || params.get('tab') || params.get('view') || 'widgets';
+                var validDemoTabs = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+                var defaultTab = validDemoTabs.indexOf(requestedDefaultTab) >= 0 ? requestedDefaultTab : 'widgets';
+                window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g, defaultTab: defaultTab };
                 try {
                     var demoClientId = 'demo-client-' + g;
                     localStorage.setItem('heys_pin_auth_client', JSON.stringify(demoClientId));
@@ -92,8 +95,8 @@
                     } else {
                         killGate();
                     }
-                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + '), T0=' + window.__HEYS_DEMO_T0__);
-                    console.info('[DEMO_PERF] +    0ms — T0: hostname=' + h + ' gender=' + g);
+                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + '), defaultTab=' + defaultTab + ', T0=' + window.__HEYS_DEMO_T0__);
+                    console.info('[DEMO_PERF] +    0ms — T0: hostname=' + h + ' gender=' + g + ' defaultTab=' + defaultTab);
                 } catch (e) { console.error('[DEMO_MODE] bootstrap failed:', e); }
             } else {
                 window.__HEYS_DEMO_MODE__ = { enabled: false };
@@ -948,10 +951,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.ca68f8771491.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.7bb1f666e883.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.3b2c1b8da4b0.js" as="script" />
     <link rel="preload" href="boot-day.bundle.36f1376b0815.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.18f7ab39a722.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.9d98d1237f91.js" as="script" />
     <link rel="preload" href="boot-init.bundle.6f476e40b9cc.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -3232,10 +3235,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.ca68f8771491.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.7bb1f666e883.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.3b2c1b8da4b0.js"></script>
     <script defer src="boot-day.bundle.36f1376b0815.js"></script>
-    <script defer src="boot-app.bundle.18f7ab39a722.js"></script>
+    <script defer src="boot-app.bundle.9d98d1237f91.js"></script>
     <script defer src="boot-init.bundle.6f476e40b9cc.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -3298,7 +3301,7 @@
                 'postboot-1-game-eager.bundle.bb651c659737.js',
                 'postboot-1-game-lazy.bundle.1db566ad724d.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-2-insights-lazy.bundle.b22e1794d63c.js',
+                'postboot-2-insights-lazy.bundle.5987eace0615.js',
                 'postboot-3-ui-eager.bundle.2da300f79259.js',
                 'postboot-3-ui-lazy.bundle.a32eab2b6cb6.js'
             ];
