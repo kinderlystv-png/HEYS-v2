@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.23.dfc4dd26",
+      "buildHash": "dfc4dd26",
+      "date": "2026-06-23",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Демо открывается на виджетах",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Демо теперь открывается на виджетах",
+          "description": "Интерактивный демо с лендинга сразу показывает виджеты — как зеркало готового дневника, без экрана ввода."
+        }
+      ],
+      "coveredCommits": ["1d353c9d", "de9f4da8", "751294c4"]
+    },
+    {
       "version": "2026.06.23.de9f4da8",
       "buildHash": "de9f4da8",
       "date": "2026-06-23",
@@ -151,22 +167,6 @@
         }
       ],
       "coveredCommits": ["b1792931"]
-    },
-    {
-      "version": "2026.06.19.33d57fea",
-      "buildHash": "33d57fea",
-      "date": "2026-06-19",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Исправлена активация триала",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Приглашение клиента и статус триала",
-          "description": "Клиент после активации больше не остаётся во вкладке ожидания; в панели клиента понятнее подписана кнопка перевыпуска PIN и приглашения."
-        }
-      ],
-      "coveredCommits": ["33d57fea"]
     }
   ]
 }
