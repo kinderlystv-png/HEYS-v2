@@ -976,6 +976,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.3.0 loaded — 40 pattern analyzers (modular-router for C8/C9/C13/C14/C15/C16/C17/C18/C19/C20/C21/C22)');
+  devLog('[PI Patterns] v6.3.0 loaded — 41 pattern analyzers (modular-router for C8/C9/C13/C14/C15/C16/C17/C18/C19/C20/C21/C22)');
 
 })(typeof window !== 'undefined' ? window : global);
