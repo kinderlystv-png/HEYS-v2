@@ -29,4 +29,5 @@ apps/web/heys_morning_checkin_v1.js:156
 # heys_demo_mode_v1.js: legacy demo mode — пишет под фиксированный demo client.
 # Demo mode опасен для production (см. comment в коде); если решим dropшать
 # demo mode — удалить и entries.
-apps/web/heys_demo_mode_v1.js:185
+apps/web/heys_demo_mode_v1.js:131
+apps/web/heys_demo_mode_v1.js:202
