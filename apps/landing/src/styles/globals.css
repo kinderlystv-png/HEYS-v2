@@ -249,48 +249,111 @@ body {
   }
 }
 
-/* ═══════════════════════════════════════════════
-   Navigator Section — CRS Scale & Timer animations
-   ═══════════════════════════════════════════════ */
-
-@keyframes heysCrsPulse {
-  0%,
-  100% {
-    opacity: 0.7;
+/* Mobile hero keeps the first screen filled while fitting shorter browser viewports. */
+@media (max-width: 1023px) {
+  .hero-mobile-fit {
+    --hero-mobile-header-y: clamp(12px, calc(1.7857dvh + 0.93px), 16px);
+    --hero-mobile-content-y: clamp(9px, calc(1.3393dvh + 0.7px), 12px);
+    /* Comfortable "natural" rhythm authored for a tall screen — generous air
+       between blocks. The JS fit-scaler (transform: scale) shrinks the whole
+       block only when the viewport is too short to fit it; on tall screens
+       the content is centred with this air kept intact. */
+    --hero-mobile-gap: 28px;
+    --hero-mobile-phone-w: clamp(150px, 44vw, 200px);
+    --hero-mobile-title-size: 28px;
+    --hero-mobile-title-mb: 22px;
+    --hero-mobile-subtitle-size: 15px;
+    --hero-mobile-subtitle-mb: 30px;
+    --hero-mobile-action-mb: 8px;
+    --hero-mobile-action-gap-x: clamp(14px, calc(1.7857dvh + 2.93px), 18px);
+    --hero-mobile-action-gap-y: clamp(6px, calc(0.8929dvh + 0.46px), 8px);
+    --hero-mobile-button-h: clamp(38px, calc(2.6786dvh + 21.39px), 44px);
+    --hero-mobile-button-py: clamp(8px, calc(0.8929dvh + 2.46px), 10px);
+    --hero-mobile-button-px: clamp(18px, calc(1.7857dvh + 6.93px), 22px);
+    --hero-mobile-button-radius: clamp(13px, calc(1.3393dvh + 4.7px), 16px);
+    --hero-mobile-button-size: clamp(12px, calc(0.8929dvh + 6.46px), 14px);
+    --hero-mobile-micro-size: clamp(10.5px, calc(0.6696dvh + 6.35px), 12px);
   }
 
-  50% {
-    opacity: 1;
+  .hero-mobile-header {
+    padding-top: var(--hero-mobile-header-y);
+    padding-bottom: var(--hero-mobile-header-y);
+  }
+
+  .hero-mobile-content {
+    padding-top: 2px;
+    padding-bottom: var(--hero-mobile-content-y);
+  }
+
+  .hero-mobile-grid {
+    gap: var(--hero-mobile-gap);
+  }
+
+  .hero-mobile-phone {
+    width: min(46vw, var(--hero-mobile-phone-w));
+  }
+
+  .hero-mobile-title {
+    margin-bottom: var(--hero-mobile-title-mb);
+    font-size: var(--hero-mobile-title-size);
+    line-height: 1.12;
+  }
+
+  .hero-mobile-subtitle {
+    margin-bottom: var(--hero-mobile-subtitle-mb);
+    font-size: var(--hero-mobile-subtitle-size);
+    line-height: 1.42;
+  }
+
+  .hero-mobile-actions {
+    margin-bottom: var(--hero-mobile-action-mb);
+    column-gap: var(--hero-mobile-action-gap-x);
+    row-gap: var(--hero-mobile-action-gap-y);
+  }
+
+  .hero-mobile-primary {
+    min-height: var(--hero-mobile-button-h);
+    padding: var(--hero-mobile-button-py) var(--hero-mobile-button-px);
+    border-radius: var(--hero-mobile-button-radius);
+    font-size: var(--hero-mobile-button-size);
+  }
+
+  .hero-mobile-secondary {
+    font-size: var(--hero-mobile-button-size);
+  }
+
+  .hero-mobile-micro {
+    font-size: var(--hero-mobile-micro-size);
   }
 }
 
-@keyframes heysTimerPulse {
-  0%,
-  100% {
-    transform: scale(1);
+@media (max-width: 1023px) and (max-height: 620px) {
+  .hero-mobile-fit {
+    --hero-mobile-header-y: clamp(8px, 1.8dvh, 11px);
+    --hero-mobile-content-y: clamp(6px, 1.4dvh, 8px);
+    --hero-mobile-gap: clamp(6px, 1.6dvh, 10px);
+    --hero-mobile-phone-w: clamp(72px, 16dvh, 88px);
+    --hero-mobile-title-size: clamp(17px, 4.8vw, 20px);
+    --hero-mobile-title-mb: clamp(6px, 1.5dvh, 9px);
+    --hero-mobile-subtitle-size: clamp(10px, 3vw, 11.5px);
+    --hero-mobile-subtitle-mb: clamp(7px, 1.6dvh, 9px);
+    --hero-mobile-action-mb: clamp(2px, 1dvh, 4px);
+    --hero-mobile-action-gap-x: clamp(10px, 3vw, 14px);
+    --hero-mobile-action-gap-y: clamp(4px, 1.2dvh, 6px);
+    --hero-mobile-button-h: clamp(30px, 7dvh, 36px);
+    --hero-mobile-button-py: clamp(6px, 1.6dvh, 8px);
+    --hero-mobile-button-px: clamp(14px, 4.2vw, 18px);
+    --hero-mobile-button-radius: clamp(10px, 3vw, 13px);
+    --hero-mobile-button-size: clamp(10.5px, 3vw, 12px);
+    --hero-mobile-micro-size: clamp(9px, 2.7vw, 10.5px);
   }
 
-  50% {
-    transform: scale(1.03);
+  .hero-mobile-subtitle {
+    line-height: 1.32;
   }
-}
-
-.crs-bar-active {
-  animation: heysCrsPulse 2s ease-in-out infinite;
-}
-
-.timer-ring-active {
-  animation: heysTimerPulse 1.5s ease-in-out infinite;
 }
 
 /* Comparison table row hover highlight */
 .comparison-row-hover:hover {
   background-color: rgba(59, 130, 246, 0.03);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .crs-bar-active,
-  .timer-ring-active {
-    animation: none;
-  }
 }
