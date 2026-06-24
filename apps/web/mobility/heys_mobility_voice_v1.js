@@ -56,9 +56,7 @@
     try {
       if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
         HEYS.utils.lsSet(SETTINGS_KEY, s);
-        return;
       }
-      if (global.localStorage) global.localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     } catch (_) {}
   }
 

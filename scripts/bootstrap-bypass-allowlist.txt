@@ -129,8 +129,8 @@ apps/web/heys_fingers_bundle_v1.js:16425
 apps/web/heys_fingers_bundle_v1.js:18756
 apps/web/heys_fingers_bundle_v1.js:26848
 # mobility bundle — active-session snapshot is local-only recovery state
-apps/web/heys_mobility_bundle_v1.js:2648
-apps/web/heys_mobility_bundle_v1.js:2730
+apps/web/heys_mobility_bundle_v1.js:2650
+apps/web/heys_mobility_bundle_v1.js:2732
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
