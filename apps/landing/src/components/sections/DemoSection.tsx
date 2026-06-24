@@ -1,6 +1,7 @@
 // DemoSection.tsx — Интерактивный демо HEYS внутри iPhone-рамки.
 // Anchor: #demo
-// Lazy-loaded iframe on https://try.heyslab.ru/?gender=… (subdomain to avoid Safari ITP).
+// Lazy-loaded iframe on https://try.heyslab.ru/?gender=…&defaultTab=widgets
+// (subdomain to avoid Safari ITP).
 
 'use client'
 
@@ -15,6 +16,16 @@ const DEMO_BASE_URL =
 // Native iPhone 15 viewport so HEYS renders at PWA-like dimensions inside iframe.
 const NATIVE_W = 393
 const NATIVE_H = 852
+
+function buildDemoSrc(gender: 'male' | 'female') {
+    const params = new URLSearchParams({
+        gender,
+        defaultTab: 'widgets',
+        tab: 'widgets',
+        view: 'widgets',
+    })
+    return `${DEMO_BASE_URL}/?${params.toString()}`
+}
 
 export default function DemoSection() {
     const [isVisible, setIsVisible] = useState(false)
@@ -104,7 +115,7 @@ export default function DemoSection() {
         return () => window.removeEventListener('resize', compute)
     }, [inDemo, isMobile])
 
-    const iframeSrc = inDemo ? `${DEMO_BASE_URL}/?gender=${gender}` : null
+    const iframeSrc = gender ? buildDemoSrc(gender) : null
 
     // Visual outer box size (scaled). Layout uses these dimensions so flex centers correctly.
     const outerW = (NATIVE_W + 20) * scale
@@ -182,10 +193,10 @@ export default function DemoSection() {
                               className="inline-flex flex-col items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 active:scale-95 transition-all tracking-wide shadow-lg shadow-blue-600/30 whitespace-nowrap leading-tight"
                           >
                               <span className="font-semibold text-[13px] sm:text-[15px]">
-                                  Попробовать бесплатный триал
+                                  Оставить заявку на неделю Pro
                               </span>
                               <span className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">
-                                  Pro · поддержка куратора
+                                  0 ₽ · без карты
                               </span>
                           </a>
                           <button
@@ -235,11 +246,11 @@ export default function DemoSection() {
                         }`}
                     >
                         <h2 className="text-[24px] sm:text-[28px] md:text-[34px] font-semibold text-[#111827] mb-3 leading-[1.2]">
-                            Не скрин — настоящее приложение
+                            Так выглядит ваша картина
                         </h2>
                         <p className="text-[14px] sm:text-[15px] text-[#6b7280] max-w-xl mx-auto leading-relaxed">
-                            Реальный день, реальные продукты, реальный рацион.
-                            Вы можете добавлять, менять, листать.
+                            Демо открывается с виджетов: не экран ввода, а зеркало того,
+                            что куратор уже внёс в дневник.
                         </p>
                     </div>
 
@@ -301,10 +312,10 @@ function PreviewButton({ onClick }: { onClick: () => void }) {
             </div>
             <div className="text-center px-4">
                 <div className="text-[15px] font-semibold text-[#111827] mb-1">
-                    Открыть приложение
+                    Открыть картину
                 </div>
                 <div className="text-[12px] text-[#374151]/80">
-                    нажми, чтобы выбрать рацион
+                    сначала покажем виджеты
                 </div>
             </div>
         </button>

@@ -1,6 +1,6 @@
-// TrustSection.tsx — Секция "Фундамент"
+// TrustSection.tsx — Секция "Доверие"
 // Anchor: #trust
-// Наука + 3 принципа системы (кураторский блок переехал в CuratorSection)
+// Реальный стартовый proof: опыт куратора, стандарт ведения, первый набор.
 
 'use client'
 
@@ -9,18 +9,18 @@ import { useEffect, useRef, useState } from 'react'
 const principles = [
     {
         number: '1',
-        title: 'Ноль наказания.',
-        desc: 'Срыв — не ваша вина, а сигнал пересмотреть план.',
+        title: 'Опыт куратора',
+        desc: 'С вами работает куратор HEYS с опытом более 20 лет в питании и сопровождении. Он помогает собрать картину недели и выбрать следующий шаг.',
     },
     {
         number: '2',
-        title: 'Система вместо силы воли.',
-        desc: 'Мы не мотивируем — мы выстраиваем процесс, где правильные решения становятся лёгкими.',
+        title: 'Понятный процесс',
+        desc: 'Каждая неделя собирается по одной логике: дневник, контекст, бережные рамки и следующий шаг.',
     },
     {
         number: '3',
-        title: 'Данные вместо догадок.',
-        desc: 'Каждый совет основан на ваших реальных показателях, а не на общих правилах.',
+        title: 'Ограниченный первый набор',
+        desc: 'Pro запускается постепенно: мы берём ограниченное число людей, чтобы сохранять внимание к каждому участнику.',
     },
 ]
 
@@ -59,27 +59,34 @@ export default function TrustSection() {
                         className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
-                        Принципы работы
+                        На чём держится доверие
                     </h2>
                     <p
                         className={`text-gray-600 text-center mb-12 max-w-2xl mx-auto leading-relaxed transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                         style={{ transitionDelay: '100ms' }}
                     >
-                        Методология, данные и три принципа, на которых держится формат.
+                        Доверие строится на проверяемых вещах: опыте куратора,
+                        понятном процессе ведения и ограниченном первом наборе.
                     </p>
 
-                    {/* Block 1 — Science */}
+                    {/* Block 1 — Proof */}
                     <div
                         className={`rounded-2xl bg-white border border-gray-200 p-6 md:p-8 mb-6 transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                         style={{ transitionDelay: '200ms' }}
                     >
                         <h3 className="text-base md:text-lg font-bold text-gray-900 mb-2">
-                            41 паттерн вместо общих советов
+                            Процесс виден с первой недели
                         </h3>
                         <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                            HEYS разбирает дневник по 41 паттерну питания и состояния: сон, режим, активность, стресс и повторяющиеся сценарии недели. У каждого паттерна в методологии есть научная ссылка с PMID, а куратор переводит этот разбор в понятные шаги без медицинских обещаний.
+                            Вы присылаете данные, куратор ведёт дневник, а в HEYS появляется
+                            актуальная картина недели. Разбор учитывает питание, сон,
+                            нагрузку и ритм, а не сводится к общим советам.
+                        </p>
+                        <p className="mt-4 text-sm leading-relaxed text-gray-500">
+                            Подробности методики можно изучить отдельно. Здесь главное
+                            понять, подходит ли вам формат ведения с куратором.
                         </p>
                     </div>
 
@@ -90,10 +97,10 @@ export default function TrustSection() {
                         style={{ transitionDelay: '400ms' }}
                     >
                         <h3 className="text-base md:text-lg font-bold text-gray-900 mb-4">
-                            Что для нас важно
+                            Что есть уже сейчас
                         </h3>
 
-                        <div className="grid sm:grid-cols-3 gap-4">
+                        <div className="grid md:grid-cols-3 gap-4">
                             {principles.map((p, index) => (
                                 <div
                                     key={index}

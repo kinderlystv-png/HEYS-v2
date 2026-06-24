@@ -50,5 +50,3 @@ export const OPERATOR = {
   ogrnip: '320265100094118',
   address: '355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56',
 } as const
-
-export const SUPPORT_HOURS = '09:00–21:00'

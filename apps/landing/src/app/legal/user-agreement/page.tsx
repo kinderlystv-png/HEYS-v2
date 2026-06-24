@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions';
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
 import { PRICING } from '@/config/pricing';
 
 const DOC = LEGAL_DOCS.userAgreement;
@@ -88,7 +88,7 @@ export default function UserAgreementPage() {
           <tr>
             <td><strong>{PRICING.proPlus.name}</strong></td>
             <td>{PRICING.proPlus.price} {PRICING.proPlus.period}</td>
-            <td>Всё из Pro + режим 7/7 + приоритетный режим ответа + созвон в середине недели + сопровождение тренировок (куратор онлайн или по записи)</td>
+            <td>Всё из Pro + приоритетное внимание к разбору и сопровождению + созвон в середине недели + сопровождение тренировок (онлайн или по записи)</td>
           </tr>
         </tbody>
       </table>
@@ -123,7 +123,7 @@ export default function UserAgreementPage() {
       <ul>
         <li>Обеспечивать доступ к Сервису в соответствии с выбранным тарифом</li>
         <li>Обрабатывать персональные данные в соответствии с Политикой конфиденциальности</li>
-        <li>Отвечать на обращения в рабочее время ({SUPPORT_HOURS})</li>
+        <li>Обрабатывать обращения в рамках регламента выбранного тарифа</li>
       </ul>
 
       <h3>4.2. Пользователь обязуется:</h3>
@@ -161,10 +161,10 @@ export default function UserAgreementPage() {
         <li>Назначение лекарственных препаратов</li>
       </ul>
 
-      <h3>5.3. Время работы</h3>
+      <h3>5.3. Рамки коммуникации</h3>
       <ul>
-        <li><strong>Pro</strong>: {SUPPORT_HOURS} (время Пользователя), дежурный режим в выходные</li>
-        <li><strong>Pro+</strong>: {SUPPORT_HOURS}, полный режим 7 дней в неделю</li>
+        <li><strong>Pro</strong>: коммуникация и разборы в рамках регламента выбранного тарифа</li>
+        <li><strong>Pro+</strong>: приоритетное внимание к разбору, сопровождению и тренировочному контексту</li>
       </ul>
 
       <h3>5.4. Подменный куратор</h3>

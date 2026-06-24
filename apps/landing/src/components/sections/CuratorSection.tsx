@@ -1,6 +1,6 @@
-// CuratorSection.tsx — Куратор как живой человек на старте
+// CuratorSection.tsx — Как устроено ведение Pro
 // Anchor: #curator
-// Раскрывает вторую колонну обещания Hero («приложение + живой человек»)
+// Раскрывает механику: куратор ведёт контекст → связь → виджеты/отчёты.
 
 'use client'
 
@@ -8,24 +8,19 @@ import { useEffect, useRef, useState } from 'react'
 
 const cards = [
     {
+        icon: '👤',
+        title: 'Куратор ведёт ваш контекст',
+        text: 'Переносит присланные данные в дневник и ведёт картину недели. Вникает в график, сон, нагрузку и обстоятельства — меньше ручной рутины с вашей стороны.',
+    },
+    {
         icon: '💬',
-        title: 'Обычная переписка',
-        text: 'Общение с куратором — в удобном для вас мессенджере (Telegram, WhatsApp, MAX). Без форм обращений и шаблонных ответов.',
+        title: 'Связь — как вам удобно',
+        text: 'На старте куратор связывается с вами во внешнем канале из заявки. После входа можно перейти во встроенный мессенджер HEYS: всё в одном, контекст рядом с перепиской.',
     },
     {
-        icon: '🚀',
-        title: 'Личное сопровождение на весь срок',
-        text: 'Куратор остаётся с вами всё время подписки: смотрит дневник каждый день, разбирает прогрессию раз в неделю и держит контекст недели. Первая неделя — погружение в вашу ситуацию.',
-    },
-    {
-        icon: '🤝',
-        title: 'Срыв — это сигнал, не вина',
-        text: 'Куратор не оценивает и не считает виноватым. Помогает разобрать что именно помешало.',
-    },
-    {
-        icon: '🧭',
-        title: 'Без давления',
-        text: 'Не контролирует ради контроля и не упрекает за пропуски. Если ритм сбивается, помогает спокойно выбрать следующий шаг.',
+        icon: '📊',
+        title: 'Картина — в виджетах и отчётах',
+        text: 'Куратор внёс данные — вы открываете приложение и видите актуальную картину: виджеты, динамику и отчёты недели. Настраивается под вас.',
     },
 ]
 
@@ -61,7 +56,7 @@ export default function CuratorSection() {
                     }`}
                 >
                     <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">
-                        01 — РЯДОМ ЧЕЛОВЕК
+                        01 — КАК УСТРОЕНО
                     </span>
                 </div>
 
@@ -73,15 +68,15 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '150ms' }}
                 >
                     <h2 className="text-[26px] sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4 leading-[1.2] text-balance">
-                        Старт с человеком, не с инструкцией
+                        Вы не живёте в приложении. Дневник ведёт куратор.
                     </h2>
                     <p className="text-[15px] sm:text-[17px] text-[#6b7280] leading-relaxed">
-                        Не бот, не FAQ. Живой куратор знакомится с вашей ситуацией и ведёт дневник по присланным данным.
+                        От вас — прислать еду и контекст удобным способом. Дальше куратор переносит данные, держит картину недели и показывает результат в HEYS.
                     </p>
                 </div>
 
-                {/* 4 cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-10 sm:mb-12">
+                {/* 3 cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-10 sm:mb-12">
                     {cards.map((c, i) => (
                         <div
                             key={c.title}
@@ -113,7 +108,7 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '700ms' }}
                 >
                     <div className="text-[11px] uppercase tracking-widest text-gray-400 text-center mb-3">
-                        Пример общения с куратором
+                        Пример подхода к разбору
                     </div>
                     <div className="bg-gray-50/60 border border-gray-100 rounded-3xl p-4 sm:p-5 space-y-3">
                         {/* Client bubble (right) */}
@@ -129,7 +124,7 @@ export default function CuratorSection() {
                             </div>
                         </div>
                         <div className="text-[11px] text-gray-400 text-center pt-1">
-                            Образец переписки, имена и детали изменены
+                            Иллюстрация метода, не отзыв клиента
                         </div>
                     </div>
                 </div>
@@ -142,9 +137,9 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '850ms' }}
                 >
                     <p className="text-[17px] sm:text-[19px] font-medium text-gray-900 leading-snug text-balance">
-                        HEYS — это инструменты.<br />
+                        Вам не нужно жить в приложении и заполнять его вручную.<br />
                         <span className="text-blue-600">
-                            Куратор — человек, который помогает применить их именно к вашей ситуации.
+                            Куратор ведёт дневник, а вы заходите увидеть результат.
                         </span>
                     </p>
                 </div>
@@ -157,7 +152,7 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '925ms' }}
                 >
                     <p className="text-[13px] sm:text-sm text-gray-500 italic leading-relaxed">
-                        Один куратор держит ваш контекст в голове целиком: дневник, тренировки, сон, ритм. Поэтому берём ограниченное число людей одновременно.
+                        Первый набор ограничен реальной ёмкостью: так куратор сохраняет внимание к дневнику, тренировкам, сну и ритму недели.
                     </p>
                 </div>
 
@@ -172,7 +167,7 @@ export default function CuratorSection() {
                         href="#trial"
                         className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-medium text-[14px] sm:text-[15px] transition-colors group"
                     >
-                        Записаться на 7 дней с куратором
+                        Оставить заявку на неделю Pro (0 ₽)
                         <span className="transition-transform group-hover:translate-x-0.5">→</span>
                     </a>
                 </div>

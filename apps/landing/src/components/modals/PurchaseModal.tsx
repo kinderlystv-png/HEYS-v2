@@ -157,7 +157,7 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 mb-2">Заявка принята!</h3>
                             <p className="text-slate-600">
-                                Мы свяжемся с вами в ближайшее время через {messenger === 'telegram' ? 'Telegram' : messenger === 'whatsapp' ? 'WhatsApp' : 'звонок'}, чтобы завершить оформление.
+                                Мы свяжемся с вами через {messenger === 'telegram' ? 'Telegram' : messenger === 'whatsapp' ? 'WhatsApp' : 'звонок'}, чтобы завершить оформление.
                             </p>
                             <button
                                 onClick={onClose}

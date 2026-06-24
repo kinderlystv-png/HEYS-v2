@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { DEFAULT_VARIANT } from '@/config/landing-variants';
-import { LEGAL_DOCS, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions';
+import { LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
 
 declare global {
   interface Window {
@@ -220,12 +220,12 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <div className="text-5xl mb-4">🎉</div>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Заявка отправлена!</h3>
         <p className="text-gray-600 mb-4">
-          Ваш куратор свяжется с вами в рабочее время ({SUPPORT_HOURS})
+          Куратор свяжется с вами через выбранный канал:
           {messenger === 'telegram'
-            ? ' в Telegram'
+            ? ' Telegram'
             : messenger === 'whatsapp'
-              ? ' в WhatsApp'
-              : ' в MAX'}
+              ? ' WhatsApp'
+              : ' MAX'}
         </p>
         <p className="text-gray-500 text-sm">
           Если не получили сообщение — проверьте папку «Запросы» или напишите нам:{' '}
@@ -508,7 +508,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             Отправляем...
           </span>
         ) : (
-          ctaLabel || 'Записаться на неделю старта →'
+          ctaLabel || 'Оставить заявку на неделю Pro (0 ₽) →'
         )}
       </button>
     </form>

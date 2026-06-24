@@ -59,10 +59,10 @@ export default function GenderSelectModal({ isOpen, onClose, onSelect }: GenderS
                 </button>
 
                 <h2 className="text-[20px] sm:text-[22px] font-semibold text-[#111827] mb-2 pr-8">
-                    Покажи приложение под себя
+                    Показать приложение под вашу цель
                 </h2>
                 <p className="text-[14px] text-[#6b7280] mb-6 leading-relaxed">
-                    Загрузим живой день и продукты подходящего рациона. Всё, что ты сделаешь —
+                    Загрузим пример дня и продукты подходящего рациона. Всё, что вы сделаете,
                     останется только в этом окне.
                 </p>
 

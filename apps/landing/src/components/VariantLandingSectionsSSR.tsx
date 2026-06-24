@@ -26,6 +26,7 @@ function SectionHeading({ eyebrow, title, subtitle }: { eyebrow?: string; title:
 
 function SocialProofSection({ content }: { content: VariantContent }) {
   const sp = content.socialProof
+  if (!sp.quotes.length) return null
 
   return (
     <section className="py-16 md:py-20 bg-white relative" id="socialProof">

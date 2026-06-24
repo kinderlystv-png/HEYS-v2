@@ -184,7 +184,7 @@
 .mobility-overlay__bar strong{font-size:17px;font-weight:800;color:#162036;letter-spacing:0}
 .mobility-overlay__bar button{appearance:none;border:0;border-radius:8px;padding:10px 13px;background:#e7f4ee;color:#0f6b43;font:700 14px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}
 .mobility-overlay__bar button:active{transform:translateY(1px)}
-.mobility-app{width:100%;max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,16px) + 48px) 24px calc(28px + env(safe-area-inset-bottom))}
+.mobility-app{width:100%;max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,16px) + 48px) 24px calc(28px + env(safe-area-inset-bottom));overflow-x:hidden}
 .mobility-app__header{padding:2px 2px 10px}
 .mobility-app__header h2{margin:0 0 4px;font-size:22px;line-height:1.15;color:#162036;letter-spacing:0}
 .mobility-app__header p{margin:0;color:#667085;font-size:14px;line-height:1.35}
@@ -244,35 +244,52 @@
 .mobility-breath-phases{display:grid;gap:5px;padding-left:20px!important}
 .mobility-save-status{margin:0 0 12px;padding:10px 12px;border-radius:8px;background:#dcfce7;color:#166534;font-size:13px;font-weight:800}
 .mobility-fs-session{min-height:100%;display:flex;flex-direction:column;gap:0}
-.mobility-fs__header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-.mobility-fs__header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto}
-.mobility-fs__header h1,.mobility-fs__title{font-size:23px!important;font-weight:800!important;margin:0!important;line-height:1.15!important;color:#172033!important;letter-spacing:0!important;white-space:nowrap}
-.mobility-fs__icon-btn{appearance:none;width:48px;height:48px;border:1px solid rgba(15,23,42,.08);border-radius:12px;background:#fff;color:#172033;font:900 18px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 6px 18px rgba(15,23,42,.07);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-.mobility-fs__icon-btn--close{color:#ec4899;background:#fff5f8;border-color:#fecdd3}
+.mobility-app{--mob-w:390px}
+.mobility-fs__header{display:flex;align-items:center;justify-content:space-between;gap:clamp(8px,calc(var(--mob-w) * .035),18px);margin-bottom:20px;min-width:0}
+.mobility-fs__header-actions{display:flex;align-items:center;gap:clamp(5px,calc(var(--mob-w) * .02),9px);flex:0 0 auto;margin-left:auto}
+.mobility-fs__header-actions .mobility-fs__icon-btn--close{margin-left:clamp(3px,calc(var(--mob-w) * .015),7px)}
+.mobility-fs__header h1,.mobility-fs__title{font-size:clamp(20px,calc(var(--mob-w) * .062),28px)!important;font-weight:800!important;margin:0 6px 0 0!important;line-height:1.1!important;color:#0b1220!important;letter-spacing:-.022em!important;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mobility-fs__title-text{display:inline-block}
+.mobility-fs__icon-btn{appearance:none;width:clamp(32px,calc(var(--mob-w) * .092),40px);height:clamp(32px,calc(var(--mob-w) * .092),40px);border:0;border-radius:999px;background:rgba(118,118,128,.12);color:#3c3c43;font:600 clamp(15px,calc(var(--mob-w) * .043),18px)/1 -apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",sans-serif;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-backdrop-filter:saturate(140%);backdrop-filter:saturate(140%);transition:background .15s ease,transform .1s ease,color .15s ease}
+.mobility-fs__icon-btn:hover{background:rgba(118,118,128,.18);color:#1c1c1e}
+.mobility-fs__icon-btn:active{transform:scale(.9);background:rgba(118,118,128,.24)}
+.mobility-fs__icon-btn--close{color:#8a8a8e;font-weight:500;font-size:20px}
+.mobility-fs__icon-btn--close:hover{background:rgba(255,59,48,.12);color:#ff3b30}
 .mobility-fs__eyebrow{margin:0 0 4px;color:#16a66a;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
 .mobility-fs__sub{max-width:620px;margin:6px 0 0;color:#667085;font-size:14px;line-height:1.35}
 .mobility-fs__score{min-width:84px;border-radius:8px;padding:9px 10px;background:#e7f4ee;color:#0f6b43;text-align:center;font-weight:900;box-shadow:0 8px 20px rgba(15,107,67,.1)}
 .mobility-fs__score small{display:block;color:#47745d;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-.mobility-fs-tabs{display:flex;justify-content:space-between;gap:2px;padding:4px;background:rgba(120,120,128,.10);border:.5px solid rgba(0,0,0,.04);border-radius:14px;margin-bottom:18px;box-shadow:inset 0 1px 2px rgba(0,0,0,.03);overflow-x:auto;scrollbar-width:none}
+.mobility-fs-tabs{display:flex;justify-content:space-between;gap:3px;padding:5px;background:linear-gradient(180deg,rgba(118,120,128,.12),rgba(118,120,128,.08));border:.5px solid rgba(15,23,42,.05);border-radius:16px;margin:0 0 18px;box-shadow:inset 0 1px 2.5px rgba(15,23,42,.06),0 1px 0 rgba(255,255,255,.6);overflow-x:auto;scrollbar-width:none}
 .mobility-fs-tabs::-webkit-scrollbar{display:none}
-.mobility-fs-tab{appearance:none;flex:1 1 auto;min-width:62px;padding:9px 4px 8px;border:0;border-radius:10px;background:transparent;color:rgba(60,60,67,.78);font:600 11.5px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;cursor:pointer;white-space:normal;word-break:keep-all;display:flex;flex-direction:column;align-items:center;gap:2px}
-.mobility-fs-tab__icon{font-size:18px;line-height:1}
-.mobility-fs-tab__label{font-size:11.5px;line-height:1.15}
-.mobility-fs-tab--active,.mobility-fs-tab.is-active{background:linear-gradient(180deg,#fff 0%,#f7f8fb 100%);color:#0f172a;font-weight:800;box-shadow:0 1px 1px rgba(0,0,0,.04),0 4px 10px rgba(15,23,42,.10),inset 0 .5px 0 rgba(255,255,255,.9)}
+.mobility-fs-tab{appearance:none;flex:1 1 0;min-width:0;padding:8px 2px 7px;border:0;border-radius:12px;background:transparent;color:rgba(60,60,67,.72);font:650 11px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.01em;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s ease,background .15s ease,transform .1s ease}
+.mobility-fs-tab:hover{color:rgba(15,23,42,.9)}
+.mobility-fs-tab:active{transform:scale(.96)}
+.mobility-fs-tab__icon{font-size:17px;line-height:1;opacity:.85;transition:opacity .15s ease}
+.mobility-fs-tab__label{font-size:11px;line-height:1.15;font-weight:inherit;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobility-fs-tab--active,.mobility-fs-tab.is-active{background:linear-gradient(180deg,#fff 0%,#fafbfd 100%);color:#0b1220;font-weight:800;box-shadow:0 1px 1px rgba(15,23,42,.05),0 5px 12px rgba(15,23,42,.12),inset 0 .5px 0 rgba(255,255,255,1)}
+.mobility-fs-tab--active .mobility-fs-tab__icon,.mobility-fs-tab.is-active .mobility-fs-tab__icon{opacity:1}
 .mobility-fs-equipment{margin:0 0 16px}
-.mobility-fs-equipment,.mobility-fs-equipment__row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
-.mobility-fs-equipment::-webkit-scrollbar,.mobility-fs-equipment__row::-webkit-scrollbar{display:none}
-.mobility-fs-equipment-chip{appearance:none;min-height:58px;min-width:74px;border:1px solid rgba(15,23,42,.08);border-radius:12px;background:#fff;color:#334155;font:800 12px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer}
-.mobility-fs-equipment-chip.is-available{border-color:#16a66a;background:#e9f8f1;color:#0f6b43;box-shadow:0 0 0 2px rgba(22,166,106,.12)}
+.mobility-fs-equipment,.mobility-fs-equipment__row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:2px 1px}
+.mobility-fs-equipment-chip{appearance:none;min-height:42px;padding:0 12px;border:1px solid rgba(15,23,42,.09);border-radius:999px;background:linear-gradient(180deg,#fff,#f7f9f8);color:#3a4659;font:700 13px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 1px 1px rgba(15,23,42,.03),0 3px 9px rgba(15,23,42,.05);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease,background .12s ease,color .12s ease}
+.mobility-fs-equipment-chip>span:not(:last-child){display:none}
+.mobility-fs-equipment-chip:hover{transform:translateY(-1px);box-shadow:0 2px 3px rgba(15,23,42,.05),0 6px 14px rgba(15,23,42,.08)}
+.mobility-fs-equipment-chip:active{transform:translateY(0)}
+.mobility-fs-equipment-chip.is-available{border-color:transparent;background:linear-gradient(160deg,#1aae72,#0f7a4c);color:#fff;box-shadow:0 2px 4px rgba(15,107,67,.18),0 8px 18px rgba(15,107,67,.26)}
 .mobility-fs-goalsel{margin:0 0 18px}
-.mobility-fs-goalsel__label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#667085;margin:0 0 8px}
-.mobility-fs-goalsel__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.mobility-fs-goalsel__btn{appearance:none;position:relative;min-height:62px;border:1px solid rgba(15,23,42,.08);border-radius:12px;background:#fff;color:#172033;font:800 12px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer}
-.mobility-fs-goalsel__btn.is-active{background:linear-gradient(135deg,#16a66a,#0f6b43);color:#fff;border-color:#16a66a;box-shadow:0 10px 24px rgba(15,107,67,.22)}
-.mobility-fs-goalsel__emoji{font-size:17px;line-height:1}
-.mobility-fs-goalsel__text{font-size:12px;line-height:1.15}
-.mobility-fs-goalsel__count{position:absolute;top:7px;right:7px;min-width:19px;height:19px;border-radius:999px;background:rgba(15,23,42,.08);color:inherit;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
-.mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__count{background:rgba(255,255,255,.25)}
+.mobility-fs-goalsel__label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#667085;margin:0 0 10px}
+.mobility-fs-goalsel__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mobility-fs-goalsel__btn{appearance:none;position:relative;overflow:hidden;min-height:84px;padding:14px 8px 11px;border:1px solid rgba(15,23,42,.07);border-radius:16px;background:linear-gradient(180deg,#fff 0%,#f8faf9 100%);color:#172033;font:700 12px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;box-shadow:0 1px 1px rgba(15,23,42,.03),0 6px 16px rgba(15,23,42,.05);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+.mobility-fs-goalsel__btn:hover{transform:translateY(-1px);box-shadow:0 2px 3px rgba(15,23,42,.05),0 10px 22px rgba(15,23,42,.08)}
+.mobility-fs-goalsel__btn:active{transform:translateY(0)}
+.mobility-fs-goalsel__btn.is-empty{opacity:.5}
+.mobility-fs-goalsel__btn.is-active{background:linear-gradient(160deg,#1aae72 0%,#0f6b43 100%);color:#fff;border-color:transparent;box-shadow:0 2px 4px rgba(15,107,67,.18),0 12px 26px rgba(15,107,67,.28);opacity:1}
+.mobility-fs-goalsel__btn.is-active:hover{transform:translateY(-1px);box-shadow:0 4px 6px rgba(15,107,67,.2),0 16px 30px rgba(15,107,67,.3)}
+.mobility-fs-goalsel__icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:11px;background:rgba(15,23,42,.045);transition:background .12s ease}
+.mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__icon{background:rgba(255,255,255,.18)}
+.mobility-fs-goalsel__emoji{font-size:19px;line-height:1}
+.mobility-fs-goalsel__text{font-size:12px;line-height:1.1;font-weight:800;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobility-fs-goalsel__count{position:absolute;top:8px;right:8px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(15,23,42,.07);color:#475467;font-size:10px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center}
+.mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__count{background:rgba(255,255,255,.22);color:#fff}
 .mobility-fs-tab-content{min-width:0;padding:6px 0 12px}
 .mobility-fs-today__hero{display:block}
 .mobility-fs-mixcard,.mobility-fs-program-card{margin:0 0 16px}
@@ -480,16 +497,15 @@
 .mobility-guided-live .mobility-breath-phases li{border-radius:999px;background:#ecfdf5;color:#0f6b43;padding:5px 8px;font-size:11px;font-weight:850}
 @media (max-width:760px){
   .mobility-overlay-root{background:#f6faf8;backdrop-filter:none;-webkit-backdrop-filter:none}
-  .mobility-app{padding:calc(env(safe-area-inset-top,16px) + 48px) 10px calc(28px + env(safe-area-inset-bottom))}
+  .mobility-app{padding:calc(env(safe-area-inset-top,12px) + 14px) clamp(14px,calc(var(--mob-w) * .043),20px) calc(28px + env(safe-area-inset-bottom))}
   .mobility-app__layout{display:block}
   .mobility-panel{padding:12px;margin-bottom:10px}
   .mobility-mode-grid,.mobility-blocks,.mobility-effects__grid{grid-template-columns:1fr}
   .mobility-checks{grid-template-columns:1fr}
   .mobility-assessment-row{grid-template-columns:1fr 1fr;align-items:start}
   .mobility-assessment-row>span{grid-column:1/-1}
-  .mobility-fs__header{align-items:flex-start}
-  .mobility-fs__title{font-size:24px}
-  .mobility-fs-tabs{top:58px;margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
+  .mobility-fs__header{align-items:center}
+  .mobility-fs-tabs{top:58px}
   .mobility-today-hero{padding:14px}
   .mobility-today-hero__top{display:block}
   .mobility-quick-grid{grid-template-columns:1fr}
@@ -1621,7 +1637,9 @@
               props.onChange && props.onChange(Object.assign({}, profile, { goal: goal }));
             }
           },
-            h('span', { className: 'mobility-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[goal] || '🎯'),
+            h('span', { className: 'mobility-fs-goalsel__icon', 'aria-hidden': 'true' },
+              h('span', { className: 'mobility-fs-goalsel__emoji' }, GOAL_EMOJI[goal] || '🎯')
+            ),
             h('span', { className: 'mobility-fs-goalsel__text' }, GOAL_SHORT_LABEL[goal] || GOAL_LABEL[goal] || goal),
             h('span', { className: 'mobility-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
           );
@@ -1652,8 +1670,6 @@
             'data-equipment': id,
             onClick: function () { toggle(id); }
           },
-            h('span', { 'aria-hidden': 'true' }, selected ? '✓' : '+'),
-            h('span', { 'aria-hidden': 'true' }, EQUIPMENT_ICON[id] || '·'),
             h('span', null, EQUIPMENT_LABEL[id] || id)
           );
         })
@@ -2094,6 +2110,33 @@
     const [customRunAtomIds, setCustomRunAtomIds] = useState([]);
     const [showRegistry, setShowRegistry] = useState(false);
     const [showSources, setShowSources] = useState(false);
+    // Адаптивный масштаб под ширину контейнера: меряем при маунте и на resize,
+    // прокидываем --mob-w (px) в CSS, который масштабирует заголовок/иконки/отступы
+    // через clamp(). Так нет горизонтального скролла и заголовок ужимается на узких.
+    const rootRef = useRef(null);
+    useEffect(function () {
+      const el = rootRef.current;
+      if (!el) return;
+      let raf = 0;
+      function apply() {
+        raf = 0;
+        const w = el.clientWidth || (el.parentNode && el.parentNode.clientWidth) || 0;
+        if (w) el.style.setProperty('--mob-w', w + 'px');
+      }
+      function onResize() {
+        if (raf) return;
+        raf = (global.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); })(apply);
+      }
+      apply();
+      global.addEventListener('resize', onResize);
+      let ro = null;
+      if (global.ResizeObserver) { ro = new global.ResizeObserver(onResize); ro.observe(el); }
+      return function () {
+        global.removeEventListener('resize', onResize);
+        if (ro) ro.disconnect();
+        if (raf && global.cancelAnimationFrame) global.cancelAnimationFrame(raf);
+      };
+    }, []);
     // Resume прерванной сессии (kernel-persistence, Этап 3): на boot ищем свежий
     // snapshot материализованного плана и предлагаем продолжить с того же шага.
     const [resumeSnap, setResumeSnap] = useState(null);
@@ -2317,7 +2360,6 @@
       { id: 'today', label: 'Сегодня', icon: '✓' },
       { id: 'protocols', label: 'Протоколы', icon: '▦' },
       { id: 'constructor', label: 'Своя', icon: '+' },
-      { id: 'tests', label: 'Тесты', icon: '◎' },
       { id: 'progress', label: 'Прогресс', icon: '↗' },
       { id: 'calendar', label: 'Календарь', icon: '□' }
     ];
@@ -2365,9 +2407,9 @@
           classPrefix: 'mobility-fs',
           title: 'Мобильность',
           actions: [
-            { id: 'settings', icon: '⚙', label: 'Настройки', title: 'Тесты и профиль', onClick: function () { setActiveTab('tests'); } },
+            { id: 'tests', icon: '◎', label: 'Тесты и профиль', title: 'Тесты и профиль', onClick: function () { setActiveTab('tests'); } },
             { id: 'registry', icon: '▦', label: 'Все упражнения', title: 'Все упражнения', onClick: function () { setShowRegistry(true); } },
-            { id: 'sources', icon: '📚', label: 'Источники', title: 'Источники и методология', onClick: function () { setShowSources(true); } },
+            { id: 'sources', icon: '▤', label: 'Источники', title: 'Источники и методология', onClick: function () { setShowSources(true); } },
             props.onClose ? { id: 'close', kind: 'close', icon: '×', label: 'Закрыть', title: 'Закрыть', onClick: props.onClose } : null
           ].filter(Boolean)
         });
@@ -2401,7 +2443,7 @@
           h(Focus.EquipmentBar, {
             classPrefix: 'mobility-fs',
             items: equipmentIds.map(function (id) {
-              return { id: id, label: EQUIPMENT_LABEL[id] || id, icon: EQUIPMENT_ICON[id] || '·' };
+              return { id: id, label: EQUIPMENT_LABEL[id] || id };
             }),
             value: currentEquipment,
             onToggle: toggleEquipment,
@@ -2621,7 +2663,7 @@
       return renderToday();
     }
 
-    return h('main', { className: 'mobility-app mobility-fs-session', 'data-mode': modeId },
+    return h('main', { className: 'mobility-app mobility-fs-session', 'data-mode': modeId, ref: rootRef },
       renderTrainingHeader(),
       renderTabs(),
       renderTrainingContext(),

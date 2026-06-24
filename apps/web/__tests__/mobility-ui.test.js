@@ -60,6 +60,9 @@ const UI = () => globalThis.HEYS.Mobility.UI;
 const startGuidedSession = () => {
   fireEvent.click(screen.getByRole('button', { name: '▶ Запустить ведомую сессию' }));
 };
+const openTestsProfile = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Тесты и профиль' }));
+};
 
 const profile = {
   age: 30,
@@ -290,7 +293,7 @@ describe('Mobility UI', () => {
 
   it('цель в расширенном профиле перестраивает рекомендуемый режим', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
-    fireEvent.click(screen.getByRole('tab', { name: /Тесты/ }));
+    openTestsProfile();
     fireEvent.change(screen.getByLabelText('Цель'), { target: { value: 'relax' } });
     expect(container.querySelector('.mobility-app').getAttribute('data-mode')).toBe('evening_relax');
   });
@@ -300,7 +303,7 @@ describe('Mobility UI', () => {
       profile: Object.assign({}, profile, { acceptedDisclaimer: false }),
       modeId: 'morning_tonify'
     }));
-    fireEvent.click(screen.getByRole('tab', { name: /Тесты/ }));
+    openTestsProfile();
     expect(container.textContent).toContain('режим не является медицинской рекомендацией');
   });
 
@@ -364,7 +367,7 @@ describe('Mobility UI', () => {
 
   it('аудит подвижности даёт ручной ввод полного ROM-скрина', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'develop_mobility' }));
-    fireEvent.click(screen.getByRole('tab', { name: /Тесты/ }));
+    openTestsProfile();
     expect(screen.getByLabelText('ankle_dorsiflexion замер')).toBeTruthy();
     expect(screen.getByLabelText('shoulder_er активно')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('ankle_dorsiflexion замер'), { target: { value: '12' } });
@@ -387,7 +390,7 @@ describe('Mobility UI', () => {
       trainingIndex: 2
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
-    fireEvent.click(screen.getByRole('tab', { name: /Тесты/ }));
+    openTestsProfile();
     fireEvent.change(screen.getByLabelText('ankle_dorsiflexion замер'), { target: { value: '12' } });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить аудит' }));
     expect(container.textContent).toContain('Аудит сохранён');
@@ -437,7 +440,7 @@ describe('Mobility UI', () => {
 
   it('readiness UI принимает субъективные шкалы и меняет advisory', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
-    fireEvent.click(screen.getByRole('tab', { name: /Тесты/ }));
+    openTestsProfile();
     expect(container.textContent).toContain('готовность нормальная');
     fireEvent.change(screen.getByLabelText('Скованность'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Болезненность'), { target: { value: '10' } });
