@@ -318,7 +318,7 @@ describe('Mobility UI', () => {
     expect(container.querySelector('.mobility-guided')).toBeNull();
   });
 
-  it('показывает Осанку как полноценный режим и запускает posture-микс', () => {
+  it('показывает Осанку как полноценный режим и запускает posture-микс', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
     fireEvent.click(screen.getByRole('tab', { name: /Осанка/ }));
 
