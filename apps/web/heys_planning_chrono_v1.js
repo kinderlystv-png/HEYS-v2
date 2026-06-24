@@ -1233,9 +1233,9 @@
 
     function readDismissedUntrackedTailDates() {
         try {
-            const clientId = getCurrentClientId() || 'global';
-            const raw = localStorage.getItem(`${UNTRACKED_TAIL_DISMISS_KEY}_${clientId}`);
-            const parsed = raw ? JSON.parse(raw) : [];
+            const parsed = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
+                ? HEYS.utils.lsGet(UNTRACKED_TAIL_DISMISS_KEY, [])
+                : [];
             return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
         } catch (_) {
             return [];
@@ -1248,8 +1248,9 @@
             .filter(Boolean)))
             .sort();
         try {
-            const clientId = getCurrentClientId() || 'global';
-            localStorage.setItem(`${UNTRACKED_TAIL_DISMISS_KEY}_${clientId}`, JSON.stringify(normalized));
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                HEYS.utils.lsSet(UNTRACKED_TAIL_DISMISS_KEY, normalized);
+            }
         } catch (_) { /* noop */ }
         return normalized;
     }
@@ -3145,14 +3146,21 @@
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
             try {
-                const stored = localStorage.getItem(OVERVIEW_COLLAPSED_KEY);
-                return stored === null ? true : stored === '1';
+                const stored = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
+                    ? HEYS.utils.lsGet(OVERVIEW_COLLAPSED_KEY, null)
+                    : null;
+                if (stored === null || stored === undefined) return true;
+                return stored === true || stored === 1 || stored === '1';
             } catch (e) { return true; }
         });
         const toggle = useCallback(() => {
             setCollapsed((prev) => {
                 const next = !prev;
-                try { localStorage.setItem(OVERVIEW_COLLAPSED_KEY, next ? '1' : '0'); }
+                try {
+                    if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                        HEYS.utils.lsSet(OVERVIEW_COLLAPSED_KEY, next ? 1 : 0);
+                    }
+                }
                 catch (e) { /* noop */ }
                 return next;
             });
