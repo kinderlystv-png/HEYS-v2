@@ -1412,8 +1412,15 @@
         } catch (e) { /* noop */ }
     }
 
-    function renderMedicalDisclaimer(React, onAccept) {
-        if (isMedicalDisclaimerAccepted()) return null;
+    // Самостоятельный компонент с локальным state: клик по кнопке скрывает
+    // дисклеймер мгновенно через собственный ре-рендер. Раньше это была чистая
+    // функция, а onAccept в call-site был пустой заглушкой (`() => {}`), поэтому
+    // запись в localStorage происходила, но дисклеймер не исчезал до перезахода
+    // в drawer — кнопка выглядела «ненажимающейся».
+    function MedicalDisclaimer(props) {
+        const React = props.React;
+        const [accepted, setAccepted] = React.useState(isMedicalDisclaimerAccepted);
+        if (accepted) return null;
         // 🎨 Phase A.7 (2026-05-30): explicit color: inherit для совместимости
         // с dark theme. Background rgba transparent overlay работает на любом
         // фоне, но без `color: inherit` browser default button text может быть
@@ -1437,7 +1444,7 @@
             React.createElement('div', { style: { opacity: 0.9, color: 'inherit' } },
                 'Все советы здесь основаны на peer-reviewed research (ESPEN, ACSM, WHO, EFSA и meta-analyses), но не заменяют консультацию врача. При хронических заболеваниях, беременности, приёме лекарств — сверяйся с врачом или диетологом.'),
             React.createElement('button', {
-                onClick: (e) => { e.stopPropagation(); acceptMedicalDisclaimer(); if (onAccept) onAccept(); },
+                onClick: (e) => { e.stopPropagation(); acceptMedicalDisclaimer(); setAccepted(true); },
                 style: {
                     marginTop: '8px', padding: '6px 14px',
                     background: 'rgba(255,200,100,0.25)',
@@ -1448,6 +1455,11 @@
                 }
             }, 'Понятно, дальше не показывать')
         );
+    }
+
+    function renderMedicalDisclaimer(React) {
+        if (isMedicalDisclaimerAccepted()) return null;
+        return React.createElement(MedicalDisclaimer, { React });
     }
 
     dayAdviceListUI.renderManualAdviceList = function renderManualAdviceList({
@@ -1529,7 +1541,7 @@
                 onTouchEnd: handleAdviceListTouchEnd,
             },
                 // Phase 6: Medical disclaimer (one-time, top of drawer)
-                renderMedicalDisclaimer(React, () => { /* re-render */ }),
+                renderMedicalDisclaimer(React),
                 React.createElement('div', { className: 'advice-list-header' },
                     React.createElement('div', { className: 'advice-list-header-top' },
                         React.createElement('span', null, `💡 Советы (${activeCount})`),
