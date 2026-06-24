@@ -1,5 +1,5 @@
 // mobility-builder.test.js — mode_engine + routine_builder.
-// Проверяет 7 режимов, purpose/autonomic, safety-first сборку и ручные правки.
+// Проверяет режимы, purpose/autonomic, safety-first сборку и ручные правки.
 
 import fs from 'fs';
 import path from 'path';
@@ -18,6 +18,7 @@ const setupOnce = () => {
   /* eslint-disable-next-line no-eval */
   eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_session_v1.js'), 'utf8'));
   ev('heys_mobility_axis_catalog_v1.js');
+  ev('heys_mobility_load_v1.js');
   ev('heys_mobility_validators_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
   ev('heys_mobility_mode_engine_v1.js');
@@ -36,17 +37,22 @@ const profile = (over = {}) => Object.assign({
 }, over);
 const atomIds = (session) => session.blocks.flatMap((b) => b.atoms.map((a) => a.id));
 const atomAutonomics = (session) => session.blocks.flatMap((b) => b.atoms.map((a) => a.autonomic));
+const avgDifficulty = (session) => {
+  const atoms = session.blocks.flatMap((b) => b.atoms);
+  return atoms.reduce((sum, a) => sum + Number(a.difficulty || 3), 0) / atoms.length;
+};
 
 describe('mobility mode_engine', () => {
   beforeAll(setupOnce);
 
-  it('экспортирует все 7 режимов', () => {
+  it('экспортирует все режимы', () => {
     expect(ME().MODE_IDS.sort()).toEqual([
       'anti_sedentary',
       'develop_mobility',
       'evening_relax',
       'morning_tonify',
       'post_workout',
+      'posture',
       'pre_workout_ramp',
       'rehab'
     ]);
@@ -104,9 +110,10 @@ describe('mobility routine_builder', () => {
 
   it('гипермобильному пользователю develop-статика/PNF блокируются, но F остаётся доступен', () => {
     const r = RB().buildSession('develop_mobility', profile({ populations: ['hypermobile'] }), {});
+    const ids = atomIds(r.session);
     expect(r.ok).toBe(true);
-    expect(atomIds(r.session)).toContain('loadmob_nordic_eccentric');
-    expect(atomIds(r.session)).not.toContain('flex_static_hamstring');
+    expect(ids.some((id) => id.startsWith('loadmob_'))).toBe(true);
+    expect(ids).not.toContain('flex_static_hamstring');
     expect(r.trace.some((t) => t.slot === 'static_develop' && t.reason === 'no_safe_candidate')).toBe(true);
   });
 
@@ -165,6 +172,49 @@ describe('mobility routine_builder', () => {
     expect(r.ok).toBe(true);
     expect(atomIds(r.session)).toContain('mob_dynamic_thoracic_openbook');
     expect(r.session.reasons).toContain('population_desk_thoracic_hip');
+  });
+
+  it('posture строит шея-лопатка-грудной отдел без обязательного инвентаря', () => {
+    const r = RB().buildSession('posture', profile({ equipment: [] }), {});
+    const ids = atomIds(r.session);
+    expect(r.ok).toBe(true);
+    expect(r.session.mode).toBe('posture');
+    expect(r.session.reasons).toEqual(expect.arrayContaining([
+      'posture_strength_over_stretch',
+      'neck_scapular_thoracic_chain'
+    ]));
+    expect(ids).toEqual(expect.arrayContaining([
+      'act_deep_neck_flexor_nod',
+      'mob_dynamic_thoracic_openbook',
+      'act_wall_angels',
+      'act_glute_bridge',
+      'joint_cars_spine'
+    ]));
+    expect(ids).not.toContain('mob_thoracic_extension_foamroll');
+    expect(ids).not.toContain('act_band_pullapart');
+    expect(r.issues.some((i) => i.level === 'error')).toBe(false);
+  });
+
+  it('posture использует выбранный инвентарь и не берёт отсутствующий', () => {
+    const r = RB().buildSession('posture', profile({ equipment: ['foam_roll'] }), {
+      preferredAtomIds: ['mob_thoracic_extension_foamroll']
+    });
+    const ids = atomIds(r.session);
+    expect(r.ok).toBe(true);
+    expect(ids).toContain('mob_thoracic_extension_foamroll');
+    expect(ids).not.toContain('act_band_pullapart');
+    expect(ids).not.toContain('smr_ball_pec_minor');
+  });
+
+  it('уровень нагрузки меняет подбор атомов и сохраняется в session', () => {
+    const low = RB().buildSession('posture', profile({ loadLevel: 1 }), {});
+    const high = RB().buildSession('posture', profile({ loadLevel: 5 }), {});
+    expect(low.ok).toBe(true);
+    expect(high.ok).toBe(true);
+    expect(low.session.loadLevel).toBe(1);
+    expect(high.session.loadLevel).toBe(5);
+    expect(high.session.reasons).toContain('load_level_5');
+    expect(avgDifficulty(high.session)).toBeGreaterThan(avgDifficulty(low.session));
   });
 
   it('peak/key-load периодизация убирает high tissue F-атомы из автоподбора и manual extra', () => {

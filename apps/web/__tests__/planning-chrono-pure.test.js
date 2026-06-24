@@ -960,9 +960,17 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
         const a = Store.addChronoActivity({ name: 'Edit' });
         const e = Store.addChronoEntry({ activityId: a.id, date: '2026-06-02', minutes: 30 });
 
-        const updated = Store.updateChronoEntry(e.id, { minutes: 45 });
+        const updated = Store.updateChronoEntry(e.id, {
+            minutes: 45,
+            at: '2026-06-02T10:00:00.000Z',
+            createdAt: '2026-06-02T10:45:00.000Z',
+            displayStartAt: '2026-06-02T10:00:00.000Z',
+            displayEndAt: '2026-06-02T10:45:00.000Z',
+        });
         expect(updated.id).toBe(e.id);
         expect(updated.minutes).toBe(45);
+        expect(updated.createdAt).toBe('2026-06-02T10:45:00.000Z');
+        expect(updated.displayEndAt).toBe('2026-06-02T10:45:00.000Z');
 
         const adjusted = Store.adjustChronoEntryMinutes(e.id, -10);
         expect(adjusted.minutes).toBe(35);
@@ -1219,6 +1227,69 @@ describe('chrono analytics helpers', () => {
 
         expect(rows).toMatchObject([
             { id: 'entry:legacy-restored', durationLabel: '48м', minutes: 48 },
+        ]);
+    });
+
+    it('buildChronoLoggedRows repairs stale display range after entry duration edit', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            {},
+            [{
+                id: 'studio',
+                activityId: 'studio',
+                date: '2026-06-24',
+                minutes: 120,
+                at: '2026-06-24T13:07:00',
+                createdAt: '2026-06-24T17:57:00',
+                displayStartAt: '2026-06-24T13:07:00',
+                displayEndAt: '2026-06-24T17:57:00',
+            }],
+            [{ id: 'studio', name: 'Studio' }],
+            '2026-06-24',
+        );
+
+        expect(rows).toMatchObject([
+            { id: 'entry:studio', timeRange: '13:07–15:07', durationLabel: '2ч', minutes: 120 },
+        ]);
+    });
+
+    it('buildChronoLoggedRows repairs stale explicit range after entry duration edit', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            {},
+            [{
+                id: 'studio',
+                activityId: 'studio',
+                date: '2026-06-24',
+                minutes: 120,
+                at: '2026-06-24T13:07:00',
+                createdAt: '2026-06-24T17:57:00',
+            }],
+            [{ id: 'studio', name: 'Studio' }],
+            '2026-06-24',
+        );
+
+        expect(rows).toMatchObject([
+            { id: 'entry:studio', timeRange: '13:07–15:07', durationLabel: '2ч', minutes: 120 },
+        ]);
+    });
+
+    it('buildChronoLoggedRows repairs stale range when only display start exists', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            {},
+            [{
+                id: 'studio',
+                activityId: 'studio',
+                date: '2026-06-24',
+                minutes: 120,
+                at: '2026-06-24T13:07:00',
+                createdAt: '2026-06-24T17:57:00',
+                displayStartAt: '2026-06-24T13:07:00',
+            }],
+            [{ id: 'studio', name: 'Studio' }],
+            '2026-06-24',
+        );
+
+        expect(rows).toMatchObject([
+            { id: 'entry:studio', timeRange: '13:07–15:07', durationLabel: '2ч', minutes: 120 },
         ]);
     });
 
@@ -1533,6 +1604,108 @@ describe('chrono analytics helpers', () => {
             hoursLabel: '0,5ч',
             wakeLabel: '07:00',
             sinceLabel: '09:30',
+            sinceKind: 'last-entry',
+        });
+    });
+
+    it('buildUntrackedChronoSummary uses edited duration as the last entry end', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'studio',
+                    date: '2026-06-24',
+                    minutes: 120,
+                    at: '2026-06-24T13:07:00',
+                    createdAt: '2026-06-24T17:57:00',
+                },
+            ],
+            '2026-06-24',
+            new Date('2026-06-24T20:57:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 350,
+            hoursLabel: '5,8ч',
+            sinceLabel: '15:07',
+            sinceKind: 'last-entry',
+        });
+    });
+
+    it('buildUntrackedChronoSummary uses display-group end after filling a multi-activity tail', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'game',
+                    date: '2026-06-24',
+                    minutes: 151,
+                    at: '2026-06-24T15:07:00',
+                    createdAt: '2026-06-24T21:08:00',
+                    displayGroupId: 'tail1',
+                    displayStartAt: '2026-06-24T15:07:00',
+                    displayEndAt: '2026-06-24T21:08:00',
+                },
+                {
+                    id: 'programming',
+                    date: '2026-06-24',
+                    minutes: 166,
+                    at: '2026-06-24T15:07:00',
+                    createdAt: '2026-06-24T21:08:00',
+                    displayGroupId: 'tail1',
+                    displayStartAt: '2026-06-24T15:07:00',
+                    displayEndAt: '2026-06-24T21:08:00',
+                },
+                {
+                    id: 'routine',
+                    date: '2026-06-24',
+                    minutes: 42,
+                    at: '2026-06-24T15:07:00',
+                    createdAt: '2026-06-24T21:08:00',
+                    displayGroupId: 'tail1',
+                    displayStartAt: '2026-06-24T15:07:00',
+                    displayEndAt: '2026-06-24T21:08:00',
+                },
+            ],
+            '2026-06-24',
+            new Date('2026-06-24T21:09:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 1,
+            sinceLabel: '21:08',
+            sinceKind: 'last-entry',
+        });
+    });
+
+    it('buildUntrackedChronoSummary uses zero-minute entries as tail anchors', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'filled-tail',
+                    date: '2026-06-24',
+                    minutes: 361,
+                    at: '2026-06-24T15:07:00',
+                    createdAt: '2026-06-24T21:08:00',
+                    displayGroupId: 'tail1',
+                    displayStartAt: '2026-06-24T15:07:00',
+                    displayEndAt: '2026-06-24T21:08:00',
+                },
+                {
+                    id: 'marker',
+                    date: '2026-06-24',
+                    minutes: 0,
+                    createdAt: '2026-06-24T21:40:00',
+                },
+            ],
+            '2026-06-24',
+            new Date('2026-06-24T22:32:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 52,
+            sinceLabel: '21:40',
             sinceKind: 'last-entry',
         });
     });

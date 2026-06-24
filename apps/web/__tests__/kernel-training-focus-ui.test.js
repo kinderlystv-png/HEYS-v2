@@ -119,4 +119,25 @@ describe('TrainingFocus UI primitives', () => {
     fireEvent.click(within(runner).getByRole('button', { name: 'Старт' }));
     expect(onStart).toHaveBeenCalledTimes(1);
   });
+
+  it('GoalSelector can show a status label for pending goals', () => {
+    const onChange = vi.fn();
+    render(React.createElement(Focus().GoalSelector, {
+      classPrefix: 'test-focus',
+      label: 'Цель тренировки',
+      value: 'posture',
+      items: [
+        { id: 'morning', label: 'Утро', icon: '🌤', count: 1 },
+        { id: 'posture', label: 'Осанка', icon: '🧍', count: 0, statusLabel: 'Скоро', title: 'Режим готовится' }
+      ],
+      onChange
+    }));
+
+    const posture = screen.getByRole('tab', { name: /Осанка/ });
+    expect(posture.className).toContain('has-status');
+    expect(posture.getAttribute('title')).toBe('Режим готовится');
+    expect(screen.getByText('Скоро')).toBeTruthy();
+    fireEvent.click(posture);
+    expect(onChange).toHaveBeenCalledWith('posture');
+  });
 });

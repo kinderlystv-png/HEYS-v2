@@ -156,6 +156,7 @@ describe('HEYS.syncQueueRuntimePure', () => {
   it.each([
     'heys_planning_checklists_v1',
     'heys_planning_checklist_tombstones_v1',
+    'heys_planning_chrono_untracked_tail_dismissed_v1',
   ])('enqueueClientSave treats %s as an immediate critical write', (key) => {
     global.HEYS = {};
     loadModule();

@@ -1,6 +1,6 @@
 // heys_mobility_mode_engine_v1.js — режимы мобильности + контекст сборки.
 //
-// Данные режима: 7 режимов из METHODOLOGY ч.6 / CONSTRUCTOR_SPEC §4.
+// Данные режима: режимы из METHODOLOGY ч.6 / CONSTRUCTOR_SPEC §4.
 // Движок не хранит каталог упражнений; он задаёт purpose/autonomic/слоты и
 // контекст валидаторов. Сборку атомов делает HEYS.Mobility.routineBuilder.
 //
@@ -121,6 +121,26 @@
         { id: 'cars', block: 'G' }
       ],
       reasons: ['micro_over_episode', 'desk_stiffness']
+    },
+    posture: {
+      id: 'posture',
+      label: 'Осанка: шея, лопатка, грудной',
+      purpose: 'prep',
+      autonomic: 'tonify',
+      timeOfDay: 'day',
+      warmupCompleted: true,
+      slots: [
+        { id: 'neck_control', block: 'C', atomIds: ['act_deep_neck_flexor_nod'] },
+        { id: 'thoracic_mobility', block: 'B', atomIds: ['mob_dynamic_thoracic_openbook', 'mob_thoracic_extension_foamroll'] },
+        { id: 'scapular_control', block: 'C', atomIds: ['act_wall_angels', 'act_band_pullapart', 'act_prone_scapular_w'] },
+        { id: 'shoulder_extension', block: 'B', atomIds: ['mob_shoulder_extension_strap'], optional: true },
+        { id: 'anterior_chain_relief', block: 'D', atomIds: ['flex_static_pec_wall'], optional: true },
+        { id: 'hip_support', block: 'C', atomIds: ['act_glute_bridge'], optional: true },
+        { id: 'spine_cars', block: 'G', atomIds: ['joint_cars_spine', 'joint_cars_shoulder'] },
+        { id: 'soft_tissue', block: 'H', atomIds: ['smr_ball_pec_minor', 'smr_percussion_upper_back'], optional: true },
+        { id: 'supported_downshift', block: 'I', atomIds: ['restorative_supported_bolster', 'breath_resonant'], optional: true }
+      ],
+      reasons: ['posture_strength_over_stretch', 'neck_scapular_thoracic_chain']
     }
   };
 

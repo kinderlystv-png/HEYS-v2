@@ -36,6 +36,7 @@ const MODULES = [
   { file: 'heys_kernel_sports_v1.js', label: 'shared SPORT_CONFIG registry (kernel)', dir: KERNEL_DIR },
   { file: 'heys_mobility_axis_catalog_v1.js', label: 'axis catalog + enums' },
   { file: 'heys_mobility_sport_config_v1.js', label: 'SPORT_CONFIG instance' },
+  { file: 'heys_mobility_load_v1.js', label: 'adaptive load scale' },
   { file: 'heys_mobility_bibliography_v1.js', label: 'sources + effect map (kernel registry)' },
   { file: 'heys_mobility_atom_catalog_v1.js', label: 'atom catalog A-J' },
   { file: 'heys_mobility_validators_v1.js', label: 'safety validators S1-S9' },
@@ -50,6 +51,7 @@ const MODULES = [
   { file: 'heys_mobility_routine_builder_v1.js', label: 'hybrid routine builder' },
   { file: 'heys_mobility_breath_runner_v1.js', label: 'breath runner' },
   { file: 'heys_mobility_routine_runner_v1.js', label: 'routine runner' },
+  { file: 'heys_mobility_voice_v1.js', label: 'voice coach' },
   { file: 'heys_mobility_session_persistence_v1.js', label: 'active-session persistence wrapper' },
   { file: 'heys_mobility_ui_v1.js', label: 'React UI source' },
   { file: 'heys_mobility_entry_v1.js', label: 'public API' }

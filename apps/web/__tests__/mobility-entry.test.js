@@ -13,6 +13,7 @@ const MOB_DIR = path.join(WEB_DIR, 'mobility');
 
 const MODULES = [
   'heys_mobility_axis_catalog_v1.js',
+  'heys_mobility_load_v1.js',
   'heys_mobility_bibliography_v1.js',
   'heys_mobility_atom_catalog_v1.js',
   'heys_mobility_validators_v1.js',

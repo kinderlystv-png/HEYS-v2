@@ -12,7 +12,7 @@
   const LEVELS = ['beginner', 'intermediate', 'advanced'];
   const POPULATIONS = ['hypermobile', 'pregnancy', 'adolescent', 'older', 'desk'];
   const EQUIPMENT = ['foam_roll', 'band', 'strap', 'ball', 'percussion', 'bolster'];
-  const GOALS = ['morning', 'pre_workout', 'recover', 'develop', 'relax', 'rehab', 'desk'];
+  const GOALS = ['morning', 'pre_workout', 'recover', 'develop', 'posture', 'relax', 'rehab', 'desk'];
   const GOAL_TO_MODE = {
     morning: 'morning_tonify',
     pre_workout: 'pre_workout_ramp',
@@ -20,7 +20,8 @@
     develop: 'develop_mobility',
     relax: 'evening_relax',
     rehab: 'rehab',
-    desk: 'anti_sedentary'
+    desk: 'anti_sedentary',
+    posture: 'posture'
   };
 
   function onboardingKernel() {
@@ -43,6 +44,7 @@
           populations: { type: 'list', allowed: POPULATIONS },
           equipment: { type: 'list', allowed: EQUIPMENT },
           goal: { type: 'enum', allowed: GOALS, default: 'morning' },
+          loadLevel: { type: 'number', default: 3, min: 1, max: 5, integer: true },
           acceptedDisclaimer: { type: 'boolean', default: false }
         }
       });
@@ -56,6 +58,7 @@
       populations: pickKnown(src.populations, POPULATIONS),
       equipment: pickKnown(src.equipment, EQUIPMENT),
       goal: GOALS.indexOf(src.goal) >= 0 ? src.goal : 'morning',
+      loadLevel: Mobility.loadScale ? Mobility.loadScale.normalize(src.loadLevel) : Math.min(5, Math.max(1, Math.round(Number(src.loadLevel) || 3))),
       acceptedDisclaimer: src.acceptedDisclaimer === true
     };
   }

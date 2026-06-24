@@ -68,6 +68,12 @@ describe('mobility progression', () => {
     expect(M().progression.weeklyHoldVolumeSec(records, atom.id)).toBe(60);
   });
 
+  it('weeklyHoldVolumeSec считает диапазон reps через точную цель', () => {
+    const atom = { id: 'hold_range', doseShape: 'hold', dose: { holdSec: 15, reps: [2, 4], sets: 2 } };
+    const records = { sessions: [{ session: { blocks: [{ atoms: [atom] }] } }] };
+    expect(M().progression.weeklyHoldVolumeSec(records, atom.id)).toBe(90);
+  });
+
   it('romTrend считает динамику ROM из assessment history', () => {
     const records = {
       assessments: [

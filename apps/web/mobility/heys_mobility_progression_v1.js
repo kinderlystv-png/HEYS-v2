@@ -16,6 +16,14 @@
   function progressionKernel() {
     return HEYS.TrainingKernel && HEYS.TrainingKernel.progression;
   }
+  function targetReps(reps, fallback) {
+    if (Array.isArray(reps) && reps.length) {
+      const values = reps.map(function (v) { return Number(v); }).filter(function (v) { return isFinite(v) && v > 0; });
+      if (values.length) return Math.round(values.reduce(function (sum, v) { return sum + v; }, 0) / values.length);
+    }
+    const n = Number(reps);
+    return isFinite(n) && n > 0 ? n : (fallback || 1);
+  }
 
   function hasPain(history) {
     return (history && Array.isArray(history.painFlags) ? history.painFlags : []).some(function (f) { return f && f.level === 'pain'; });
@@ -36,7 +44,7 @@
         (Array.isArray(b.atoms) ? b.atoms : []).forEach(function (a) {
           if (a.id === atomId && a.doseShape === 'hold') {
             const d = a.dose || {};
-            sum += (Number(d.holdSec) || 0) * (Number(d.reps) || 1) * (Number(d.sets) || 1);
+            sum += (Number(d.holdSec) || 0) * targetReps(d.reps, 1) * (Number(d.sets) || 1);
           }
         });
       });

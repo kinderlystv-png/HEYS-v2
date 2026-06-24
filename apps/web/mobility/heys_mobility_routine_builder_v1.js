@@ -40,6 +40,26 @@
   function isHighTissueAtom(atom) {
     return !!atom && (atom.fatigueCost === 'high' || atom.tissueLoad === 'high');
   }
+  function loadScale() {
+    return Mobility.loadScale || null;
+  }
+  function normalizeLoadLevel(profile, options) {
+    const scale = loadScale();
+    if (scale && typeof scale.fromProfile === 'function') return scale.fromProfile(profile, options);
+    const src = options && options.loadLevel != null ? options.loadLevel : profile && profile.loadLevel;
+    const n = Math.round(Number(src));
+    return Math.min(5, Math.max(1, isFinite(n) ? n : 3));
+  }
+  function preferenceMultiplier(atom, loadLevel) {
+    const scale = loadScale();
+    if (!scale || typeof scale.loadClass !== 'function') return 1;
+    const difficulty = scale.loadClass(atom);
+    const distance = Math.abs(difficulty - loadLevel);
+    let mult = Math.max(0.35, 1 - distance * 0.18);
+    if (loadLevel <= 2 && difficulty >= 4) mult = 0.18;
+    if (loadLevel >= 5 && difficulty <= 2) mult = 0.32;
+    return mult;
+  }
   function seededNoise(id, seed) {
     const ks = kernelSession();
     if (ks && ks.seededNoise) return ks.seededNoise(id, seed);
@@ -54,33 +74,50 @@
   }
   function atomAllowedByMode(atom, mode) {
     if (!atom || !mode) return false;
+    if (mode.id === 'posture' && (atom.id === 'restorative_supported_bolster' || atom.id === 'breath_resonant')) return true;
     if (atom.autonomic !== 'neutral' && atom.autonomic !== mode.autonomic) return false;
     if (mode.id === 'develop_mobility') return atom.purpose === 'develop';
     if (mode.id === 'evening_relax') return atom.purpose === 'regulate' || atom.purpose === 'recover';
     if (mode.id === 'post_workout') return atom.purpose === 'recover' || atom.autonomic === 'relax';
     if (mode.id === 'rehab') return atom.purpose === 'recover' || atom.doseShape === 'cars';
+    if (mode.id === 'posture') {
+      return atom.purpose === 'prep' ||
+        atom.purpose === 'recover' ||
+        atom.axis === 'motor_control' ||
+        atom.axis === 'joint_stability' ||
+        atom.id === 'flex_static_pec_wall' ||
+        atom.id === 'mob_shoulder_extension_strap';
+    }
     return atom.purpose === mode.purpose || atom.doseShape === 'cars';
   }
   function scoreAtom(atom, slot, mode, options) {
     let score = 0;
     const blockWeights = options.blockWeights || {};
     if (blockWeights[atom.block]) score += Number(blockWeights[atom.block]) * 20;
+    const loadLevel = options.loadLevel || 3;
     const focus = options.populationFocus || {};
     if (focus.preferredAtomIds && focus.preferredAtomIds.indexOf(atom.id) >= 0) {
-      score += 50 + (focus.preferredAtomIds.length - focus.preferredAtomIds.indexOf(atom.id)) * 20;
+      score += (50 + (focus.preferredAtomIds.length - focus.preferredAtomIds.indexOf(atom.id)) * 20) *
+        preferenceMultiplier(atom, loadLevel);
     }
     if (focus.preferredJointRegions && focus.preferredJointRegions.indexOf(atom.jointRegion) >= 0) score += 14;
     if (focus.preferredAxes && focus.preferredAxes.indexOf(atom.axis) >= 0) score += 12;
     if (focus.preferredBlocks && focus.preferredBlocks.indexOf(atom.block) >= 0) score += 10;
     if (focus.avoidHighLoad && (atom.fatigueCost === 'high' || atom.tissueLoad === 'high')) score -= 30;
     const preferred = options.preferredAtomIds || [];
-    if (preferred.indexOf(atom.id) >= 0) score += 100;
+    if (preferred.indexOf(atom.id) >= 0) {
+      score += (100 + (preferred.length - preferred.indexOf(atom.id)) * 20) *
+        preferenceMultiplier(atom, loadLevel);
+    }
     if (slot.atomIds && slot.atomIds.indexOf(atom.id) >= 0) score += 80 + (slot.atomIds.length - slot.atomIds.indexOf(atom.id));
     if (atom.autonomic === mode.autonomic) score += 12;
     if (atom.purpose === mode.purpose) score += 8;
     if (atom.timeOfDayPref && atom.timeOfDayPref === (options.timeOfDay || mode.timeOfDay)) score += 5;
     if (atom.doseConfidence === 'A') score += 3;
     if (atom.doseConfidence === 'B') score += 2;
+    if (Mobility.loadScale && typeof Mobility.loadScale.scoreBias === 'function') {
+      score += Mobility.loadScale.scoreBias(atom, loadLevel);
+    }
     if (options.randomSeed) score += seededNoise(atom.id, options.randomSeed);
     return score;
   }
@@ -124,8 +161,8 @@
     const pops = profile && Array.isArray(profile.populations) ? profile.populations : [];
     const focus = { preferredAtomIds: [], preferredJointRegions: [], preferredAxes: [], preferredBlocks: [], reasons: [], avoidHighLoad: false };
     if (pops.indexOf('desk') >= 0) {
-      focus.preferredAtomIds.push('recov_movement_snack', 'mob_dynamic_thoracic_openbook', 'mob_dynamic_legswing_hip', 'joint_cars_spine');
-      focus.preferredJointRegions.push('thoracic', 'hip');
+      focus.preferredAtomIds.push('recov_movement_snack', 'mob_dynamic_thoracic_openbook', 'act_deep_neck_flexor_nod', 'act_wall_angels', 'act_glute_bridge', 'joint_cars_spine');
+      focus.preferredJointRegions.push('thoracic', 'hip', 'neck', 'shoulder');
       focus.reasons.push('population_desk_thoracic_hip');
     }
     if (pops.indexOf('hypermobile') >= 0) {
@@ -211,6 +248,7 @@
         slot: slot.id,
         block: slot.block,
         picked: picked.id,
+        loadLevel: options.loadLevel,
         candidateCount: candidates.length,
         filteredWarnings: candidates[0].issues.filter(function (i) { return i.level === 'warn'; }).map(function (i) { return i.code; })
       }
@@ -266,7 +304,11 @@
     const assessmentAudit = assessmentAuditFromOptions(opts);
     const blockWeights = mergeBlockWeights(opts, assessmentAudit);
     const popFocus = populationFocus(profile);
-    const pickerOptions = Object.assign({}, opts, { blockWeights: blockWeights, populationFocus: popFocus });
+    const loadLevel = normalizeLoadLevel(profile, opts);
+    const loadPolicy = Mobility.loadScale && Mobility.loadScale.getLevel
+      ? Mobility.loadScale.getLevel(loadLevel)
+      : { value: loadLevel };
+    const pickerOptions = Object.assign({}, opts, { blockWeights: blockWeights, populationFocus: popFocus, loadLevel: loadLevel });
     const trace = [];
     let blocks = [];
 
@@ -303,6 +345,7 @@
             slot: slot.id,
             block: slot.block,
             picked: picked.atom.id,
+            loadLevel: pickerOptions.loadLevel,
             candidateCount: row.candidates.length,
             filteredWarnings: picked.issues.filter(function (i) { return i.level === 'warn'; }).map(function (i) { return i.code; })
           };
@@ -320,6 +363,13 @@
     blocks = applyReplacements(blocks, mode, profile, context, pickerOptions);
     appendExtraAtoms(blocks, mode, profile, context, pickerOptions, trace);
     blocks = applyBlockPriority(blocks, blockWeights, trace);
+    blocks = blocks.map(function (b) {
+      return Object.assign({}, b, {
+        atoms: (b.atoms || []).map(function (a) {
+          return Object.assign({}, a, { loadLevel: loadLevel });
+        })
+      });
+    });
 
     const session = {
       date: opts.date || null,
@@ -329,9 +379,17 @@
       timeOfDay: context.timeOfDay,
       beforePower: context.beforePower,
       warmupCompleted: context.warmupCompleted,
+      loadLevel: loadLevel,
+      loadPolicy: {
+        key: loadPolicy.key || null,
+        label: loadPolicy.label || null,
+        shortLabel: loadPolicy.shortLabel || null,
+        tone: loadPolicy.tone || null,
+        description: loadPolicy.description || null
+      },
       blocks: blocks,
       painFlags: context.painFlags,
-      reasons: uniq((mode.reasons || []).concat(popFocus.reasons || []).concat(context.circadian ? [context.circadian.reason] : [])),
+      reasons: uniq((mode.reasons || []).concat(popFocus.reasons || []).concat(['load_level_' + loadLevel]).concat(context.circadian ? [context.circadian.reason] : [])),
       advisories: [context.coldWater].filter(Boolean),
       periodization: context.periodization,
       assessment: assessmentAudit ? {

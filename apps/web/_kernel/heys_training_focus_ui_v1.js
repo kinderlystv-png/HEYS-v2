@@ -102,19 +102,21 @@
         items.map(function (item) {
           const active = props.value === item.id;
           const count = Number(item.count) || 0;
+          const countLabel = item.countLabel || item.statusLabel || String(count);
+          const empty = item.empty === true || count === 0;
           return h('button', {
             key: item.id,
             type: 'button',
             role: 'tab',
             'aria-selected': active,
-            className: prefixClass(prefix, '-goalsel__btn') + (active ? ' is-active' : '') + (count === 0 ? ' is-empty' : ''),
+            className: prefixClass(prefix, '-goalsel__btn') + (active ? ' is-active' : '') + (empty ? ' is-empty' : '') + (item.statusLabel ? ' has-status' : ''),
             'data-goal': item.id,
-            title: count ? count + ' протоколов' : undefined,
+            title: item.title || (count ? count + ' протоколов' : undefined),
             onClick: function () { props.onChange && props.onChange(item.id); }
           },
             h('span', { className: prefixClass(prefix, '-goalsel__emoji'), 'aria-hidden': 'true' }, item.icon || '🎯'),
             h('span', { className: prefixClass(prefix, '-goalsel__text') }, item.label || item.id),
-            h('span', { className: prefixClass(prefix, '-goalsel__count'), 'aria-label': count + ' протоколов' }, count)
+            h('span', { className: prefixClass(prefix, '-goalsel__count'), 'aria-label': item.statusLabel || count + ' протоколов' }, countLabel)
           );
         })
       )

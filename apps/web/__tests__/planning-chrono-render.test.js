@@ -128,6 +128,37 @@ describe('chrono render stability', () => {
             .toBe('Выбирайте актив');
     });
 
+    it('ChronoOverviewPanel hides last-added line when there is no untracked time', () => {
+        const view = render(React.createElement(Chrono.ChronoOverviewPanel, {
+            insights: [],
+            balance: [],
+            streaks: [],
+            timeOfDay: null,
+            lastAdded: {
+                timeLabel: '21:40',
+                nowLabel: '21:40',
+                nowKind: 'now',
+                detail: '+1м Programming',
+                elapsedHoursLabel: '0,0ч',
+            },
+            loggedRows: [{
+                id: 'entry:first',
+                entryIds: ['first'],
+                timeRange: '21:39-21:40',
+                durationLabel: '1м',
+                name: 'Programming',
+            }],
+            untracked: null,
+            untrackedActive: false,
+            onUntrackedClick: () => { },
+            onLoggedRowClick: () => { },
+            onLoggedRowsReorder: () => { },
+        }));
+
+        expect(view.container.querySelector('.chrono-overview__last')).toBeNull();
+        expect(view.container.textContent).not.toContain('сейчас 21:40');
+    });
+
     it('ChronoWeekBreakdown can switch from empty to populated without changing hook order', () => {
         const baseProps = {
             dates: ['2026-06-01'],

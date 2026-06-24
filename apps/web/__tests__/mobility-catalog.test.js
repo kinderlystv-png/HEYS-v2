@@ -86,6 +86,16 @@ describe('atom_catalog — целостность', () => {
     });
   });
 
+  it('каждый атом размечен по шкале сложности 1-5', () => {
+    CAT().ATOMS.forEach((a) => {
+      expect(a.difficulty, a.id).toBeGreaterThanOrEqual(1);
+      expect(a.difficulty, a.id).toBeLessThanOrEqual(5);
+      expect(a.minLoadLevel, a.id).toBeGreaterThanOrEqual(1);
+      expect(a.maxLoadLevel, a.id).toBeLessThanOrEqual(5);
+      expect(a.minLoadLevel, a.id).toBeLessThanOrEqual(a.maxLoadLevel);
+    });
+  });
+
   it('каждый атом несёт пользовательский контент карточки', () => {
     CAT().ATOMS.forEach((a) => {
       expect(typeof a.title).toBe('string');

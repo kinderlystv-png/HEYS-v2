@@ -38,6 +38,7 @@ const setupOnce = () => {
     'heys_kernel_periodization_v1.js'
   ].forEach(evKernel);
   ev('heys_mobility_axis_catalog_v1.js');
+  ev('heys_mobility_load_v1.js');
   ev('heys_mobility_validators_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
   ev('heys_mobility_mode_engine_v1.js');
@@ -45,6 +46,7 @@ const setupOnce = () => {
   ev('heys_mobility_routine_builder_v1.js');
   ev('heys_mobility_breath_runner_v1.js');
   ev('heys_mobility_routine_runner_v1.js');
+  ev('heys_mobility_voice_v1.js');
   ev('heys_mobility_session_persistence_v1.js');
   ev('heys_mobility_assessment_v1.js');
   ev('heys_mobility_onboarding_v1.js');
@@ -93,6 +95,11 @@ describe('Mobility UI', () => {
     expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText('Цель тренировки')).toBeTruthy();
     expect(container.querySelector('.mobility-fs-equipment')).not.toBeNull();
+    const loadSlider = screen.getByRole('slider', { name: 'Сложность и тяжесть тренировки' });
+    expect(loadSlider.value).toBe('3');
+    fireEvent.change(loadSlider, { target: { value: '5' } });
+    expect(loadSlider.value).toBe('5');
+    expect(screen.getByText('Атлет')).toBeTruthy();
     expect(screen.getByText('Сессия по методологии')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Запустить микс' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Все протоколы' })).toBeTruthy();
@@ -149,6 +156,24 @@ describe('Mobility UI', () => {
     expect(screen.getAllByText('Ведомая тренировка').length).toBeGreaterThan(0);
   });
 
+  it('ведомая сессия озвучивает старт и фазу как voice coach', async () => {
+    const built = UI()._buildCustomBuilt(['act_deep_neck_flexor_nod'], 'posture', profile, {});
+    const plan = globalThis.HEYS.Mobility.routineRunner.buildRunPlan(built.session);
+    const say = vi.fn();
+    globalThis.HEYS.Mobility.voice.say = say;
+
+    const { container } = render(React.createElement(UI().ExecutionPanel, {
+      plan,
+      built,
+      autoStart: true
+    }));
+
+    await waitFor(() => expect(say).toHaveBeenCalledWith('cue.start_session', expect.anything()));
+    await waitFor(() => expect(say).toHaveBeenCalledWith('cue.prep', expect.anything()));
+    expect(container.querySelector('.mobility-voice-mini')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /Голос:/ })).toBeTruthy();
+  });
+
   it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', async () => {
     globalThis.HEYS.Mobility.persistence = globalThis.HEYS.TrainingKernel.activeSession.create({
       keySuffix: 'routine_active_session',
@@ -157,6 +182,8 @@ describe('Mobility UI', () => {
     });
     const resumeBuilt = UI()._buildCustomBuilt(['joint_cars_hip', 'breath_box_tonify'], 'morning_tonify', profile, {});
     const resumePlan = globalThis.HEYS.Mobility.routineRunner.buildRunPlan(resumeBuilt.session);
+    const breathIndex = resumePlan.steps.findIndex((step) => step.atomId === 'breath_box_tonify');
+    expect(breathIndex).toBeGreaterThanOrEqual(0);
     globalThis.window.localStorage.setItem('heys_routine_active_session', JSON.stringify({
       planSteps: resumePlan.steps,
       sessionMode: resumePlan.sessionMode,
@@ -166,7 +193,7 @@ describe('Mobility UI', () => {
         issues: resumeBuilt.issues || [],
         session: resumeBuilt.session
       },
-      index: 1,
+      index: breathIndex,
       remainingSec: 12,
       status: 'running',
       lastTickAt: Date.now()
@@ -269,7 +296,7 @@ describe('Mobility UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Все упражнения' }));
     const dialog = screen.getByRole('dialog', { name: 'Все упражнения' });
     expect(dialog).toBeTruthy();
-    expect(within(dialog).getByText('29 атомов · фото, доза и назначение')).toBeTruthy();
+    expect(within(dialog).getByText(/\d+ атомов · фото, доза и назначение/)).toBeTruthy();
     expect(dialog.querySelectorAll('.mobility-fs-registry-card__img').length).toBeGreaterThan(0);
     fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Поиск по упражнениям' }), {
       target: { value: 'Hip CARs' }
@@ -289,6 +316,31 @@ describe('Mobility UI', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Вечер/ }));
     expect(container.querySelector('.mobility-app').getAttribute('data-mode')).toBe('evening_relax');
     expect(container.querySelector('.mobility-guided')).toBeNull();
+  });
+
+  it('показывает Осанку как полноценный режим и запускает posture-микс', () => {
+    const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Осанка/ }));
+
+    expect(container.querySelector('.mobility-app').getAttribute('data-mode')).toBe('posture');
+    expect(screen.getAllByText('Осанка').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Режим осанки готовится')).toBeNull();
+    expect(screen.queryByText('без запуска')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Запустить микс' })).toBeTruthy();
+    expect(screen.getByText('Осанка собрана через контроль и укрепление, не через одну растяжку')).toBeTruthy();
+    expect(container.textContent).toContain('Осанка: лопатка с резинкой');
+    const mixCard = container.querySelector('.mobility-fs-mixcard');
+    const exerciseRows = mixCard.querySelectorAll('.mobility-fs-mixcard__exrow');
+    const countChip = Array.from(mixCard.querySelectorAll('.mobility-chip'))
+      .map((node) => node.textContent || '')
+      .find((text) => /\d+ упр$/.test(text));
+    expect(countChip).toBeTruthy();
+    expect(exerciseRows.length).toBe(Number(countChip.match(/\d+/)[0]));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    startGuidedSession();
+    expect(container.querySelector('.mobility-guided')).not.toBeNull();
+    expect(container.textContent).toContain('Кивок глубоких сгибателей шеи');
   });
 
   it('цель в расширенном профиле перестраивает рекомендуемый режим', () => {

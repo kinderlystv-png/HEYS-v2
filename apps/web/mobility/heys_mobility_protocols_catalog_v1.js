@@ -53,7 +53,7 @@
       id: 'develop_posterior_chain_18',
       name: 'Развитие задней линии',
       modeId: 'develop_mobility',
-      durationMin: [14, 20],
+      durationMin: [5, 7],
       level: 'intermediate',
       intent: 'Отдельная развивающая сессия для задней поверхности бедра и контроля в конце диапазона.',
       focus: ['static', 'pnf', 'endrange_strength'],
@@ -65,7 +65,7 @@
       id: 'develop_hip_control_15',
       name: 'Тазобедренный контроль',
       modeId: 'develop_mobility',
-      durationMin: [12, 18],
+      durationMin: [5, 7],
       level: 'intermediate',
       intent: 'Развивать диапазон тазобедренных через контроль, PNF и умеренную нагрузку.',
       focus: ['hip', 'control', 'loaded_mobility'],
@@ -89,7 +89,7 @@
       id: 'desk_reset_4',
       name: 'Пауза от сидения',
       modeId: 'anti_sedentary',
-      durationMin: [3, 6],
+      durationMin: [2, 4],
       level: 'beginner',
       intent: 'Короткий сброс скованности для грудного отдела, бедра и шеи в рабочий день.',
       focus: ['desk', 'thoracic', 'hip'],
@@ -99,10 +99,106 @@
       tags: ['офис', 'коротко', 'без инвентаря']
     },
     {
+      id: 'posture_reset_no_equipment_8',
+      name: 'Осанка без инвентаря',
+      modeId: 'posture',
+      durationMin: [15, 17],
+      level: 'beginner',
+      intent: 'Коротко включить шею, лопатку и грудной отдел без обещания «исправить осанку» одной растяжкой.',
+      focus: ['neck_control', 'scapular_control', 'thoracic'],
+      equipment: [],
+      preferredAtomIds: ['act_deep_neck_flexor_nod', 'mob_dynamic_thoracic_openbook', 'act_wall_angels', 'act_glute_bridge', 'joint_cars_spine'],
+      tags: ['осанка', 'без инвентаря', 'офис']
+    },
+    {
+      id: 'posture_band_scapular_12',
+      name: 'Осанка: лопатка с резинкой',
+      modeId: 'posture',
+      durationMin: [16, 18],
+      level: 'beginner',
+      intent: 'Добавить лёгкую выносливость верхней спины и контроль лопатки к базовой работе шеи и грудного отдела.',
+      focus: ['scapular_endurance', 'neck_control', 'thoracic'],
+      equipment: ['band'],
+      preferredAtomIds: ['act_deep_neck_flexor_nod', 'act_band_pullapart', 'act_wall_angels', 'mob_dynamic_thoracic_openbook', 'joint_cars_shoulder'],
+      tags: ['осанка', 'резинка', 'лопатка']
+    },
+    {
+      id: 'posture_floor_chain_14',
+      name: 'Осанка: шея, лопатка, таз',
+      modeId: 'posture',
+      durationMin: [12, 16],
+      level: 'beginner',
+      intent: 'Собрать низконагрузочную цепочку: шея, W-активация лопаток, грудной отдел и опора таза.',
+      focus: ['neck_control', 'scapular_control', 'hip_support'],
+      equipment: [],
+      preferredAtomIds: ['act_deep_neck_flexor_nod', 'act_prone_scapular_w', 'mob_dynamic_thoracic_openbook', 'act_glute_bridge', 'flex_static_pec_wall', 'joint_cars_spine'],
+      tags: ['осанка', 'пол', 'контроль']
+    },
+    {
+      id: 'posture_foamroll_thoracic_10',
+      name: 'Осанка: грудной отдел на валике',
+      modeId: 'posture',
+      durationMin: [15, 17],
+      level: 'beginner',
+      intent: 'Использовать валик как мягкую опору для грудного разгибания, затем закрепить движение лопаткой и шеей.',
+      focus: ['thoracic_extension', 'neck_control', 'scapular_control'],
+      equipment: ['foam_roll'],
+      preferredAtomIds: ['mob_thoracic_extension_foamroll', 'act_deep_neck_flexor_nod', 'act_wall_angels', 'joint_cars_spine'],
+      tags: ['осанка', 'валик', 'грудной отдел']
+    },
+    {
+      id: 'posture_ball_pec_release_10',
+      name: 'Осанка: мягкая грудная разгрузка',
+      modeId: 'posture',
+      durationMin: [15, 17],
+      level: 'beginner',
+      intent: 'Снять лишнее напряжение спереди плеча мячом и сразу вернуть контроль лопатки.',
+      focus: ['soft_tissue', 'scapular_control', 'thoracic'],
+      equipment: ['ball'],
+      preferredAtomIds: ['smr_ball_pec_minor', 'act_wall_angels', 'act_deep_neck_flexor_nod', 'mob_dynamic_thoracic_openbook'],
+      tags: ['осанка', 'мяч', 'грудные']
+    },
+    {
+      id: 'posture_strap_shoulder_10',
+      name: 'Осанка: плечо с ремнём',
+      modeId: 'posture',
+      durationMin: [15, 17],
+      level: 'beginner',
+      intent: 'Мягко дать плечу доступ назад и закрепить его активным контролем, без силового форсирования.',
+      focus: ['shoulder_mobility', 'scapular_control', 'neck_control'],
+      equipment: ['strap'],
+      preferredAtomIds: ['mob_shoulder_extension_strap', 'act_prone_scapular_w', 'act_deep_neck_flexor_nod', 'joint_cars_shoulder'],
+      tags: ['осанка', 'ремень', 'плечо']
+    },
+    {
+      id: 'posture_percussion_upper_back_8',
+      name: 'Осанка: короткая разгрузка верхней спины',
+      modeId: 'posture',
+      durationMin: [15, 17],
+      level: 'beginner',
+      intent: 'Коротко использовать перкуссию как подготовку тканей, затем выполнить контроль шеи и лопатки.',
+      focus: ['soft_tissue', 'neck_control', 'scapular_control'],
+      equipment: ['percussion'],
+      preferredAtomIds: ['smr_percussion_upper_back', 'act_deep_neck_flexor_nod', 'act_wall_angels', 'joint_cars_spine'],
+      tags: ['осанка', 'перкуссия', 'коротко']
+    },
+    {
+      id: 'posture_supported_evening_10',
+      name: 'Осанка: спокойное вечернее восстановление',
+      modeId: 'posture',
+      durationMin: [12, 14],
+      level: 'beginner',
+      intent: 'Снизить напряжение после дня за столом: мягкая опора, дыхание и лёгкий контроль без силового акцента.',
+      focus: ['recovery', 'breath', 'comfort'],
+      equipment: ['bolster'],
+      preferredAtomIds: ['restorative_supported_bolster', 'breath_resonant', 'act_deep_neck_flexor_nod', 'joint_cars_spine'],
+      tags: ['осанка', 'болстер', 'вечер']
+    },
+    {
       id: 'rehab_control_8',
       name: 'Контроль без боли',
       modeId: 'rehab',
-      durationMin: [6, 10],
+      durationMin: [10, 12],
       level: 'beginner',
       intent: 'Строгая pain-free рамка: CARs, лёгкое движение и безопасное восстановление.',
       focus: ['pain_free', 'cars', 'low_load'],
@@ -114,7 +210,7 @@
       id: 'deload_maintain_10',
       name: 'Deload-поддержание',
       modeId: 'post_workout',
-      durationMin: [8, 12],
+      durationMin: [12, 14],
       level: 'beginner',
       intent: 'Поддержать диапазон в разгрузочную неделю без тяжёлой тканевой нагрузки.',
       focus: ['deload', 'maintain', 'low_load'],
@@ -127,7 +223,7 @@
       id: 'peak_maintenance_6',
       name: 'Поддержание перед стартом',
       modeId: 'pre_workout_ramp',
-      durationMin: [5, 8],
+      durationMin: [5, 9],
       level: 'beginner',
       intent: 'Короткое поддержание перед ключевой нагрузкой: без тяжёлой F-нагрузки и долгой статики.',
       focus: ['peak', 'maintain', 'safe_prep'],
@@ -173,6 +269,16 @@
       typeof options.keyLoadWithinHours === 'number' &&
       isFinite(options.keyLoadWithinHours) &&
       options.keyLoadWithinHours <= 48;
+    if (goal === 'posture') {
+      const eq = Array.isArray(p.equipment) ? p.equipment : [];
+      if (eq.indexOf('band') >= 0) return getProtocol('posture_band_scapular_12');
+      if (eq.indexOf('foam_roll') >= 0) return getProtocol('posture_foamroll_thoracic_10');
+      if (eq.indexOf('ball') >= 0) return getProtocol('posture_ball_pec_release_10');
+      if (eq.indexOf('strap') >= 0) return getProtocol('posture_strap_shoulder_10');
+      if (eq.indexOf('percussion') >= 0) return getProtocol('posture_percussion_upper_back_8');
+      if (eq.indexOf('bolster') >= 0) return getProtocol('posture_supported_evening_10');
+      return getProtocol('posture_reset_no_equipment_8');
+    }
     if (pops.indexOf('desk') >= 0 || goal === 'desk') return getProtocol('desk_reset_4');
     if (goal === 'relax') return getProtocol('evening_downshift_8');
     if (goal === 'recover') return getProtocol('post_workout_restore_12');

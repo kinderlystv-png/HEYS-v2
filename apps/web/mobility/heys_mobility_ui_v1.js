@@ -34,6 +34,7 @@
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
+    loadLevel: 3,
     acceptedDisclaimer: true
   };
 
@@ -49,7 +50,8 @@
     develop_mobility: 'Развитие',
     evening_relax: 'Вечер',
     rehab: 'Реабилитационная рамка',
-    anti_sedentary: 'Пауза'
+    anti_sedentary: 'Пауза',
+    posture: 'Осанка'
   };
   const GOAL_LABEL = {
     morning: 'Утренний тонус',
@@ -58,7 +60,8 @@
     develop: 'Развитие диапазона',
     relax: 'Вечернее расслабление',
     rehab: 'Дозированное восстановление',
-    desk: 'Пауза от сидения'
+    desk: 'Пауза от сидения',
+    posture: 'Осанка'
   };
   const GOAL_SHORT_LABEL = {
     morning: 'Утро',
@@ -67,7 +70,8 @@
     develop: 'Диапазон',
     relax: 'Вечер',
     rehab: 'Реабилитация',
-    desk: 'Пауза'
+    desk: 'Пауза',
+    posture: 'Осанка'
   };
   const GOAL_EMOJI = {
     morning: '🌤',
@@ -76,7 +80,8 @@
     develop: '📈',
     relax: '🌙',
     rehab: '🧩',
-    desk: '🪑'
+    desk: '🪑',
+    posture: '🧍'
   };
   const GOAL_TO_MODE = {
     morning: 'morning_tonify',
@@ -85,7 +90,8 @@
     develop: 'develop_mobility',
     relax: 'evening_relax',
     rehab: 'rehab',
-    desk: 'anti_sedentary'
+    desk: 'anti_sedentary',
+    posture: 'posture'
   };
   const EQUIPMENT_LABEL = {
     band: 'Резинка',
@@ -163,12 +169,21 @@
     micro_over_episode: 'Короткие регулярные паузы важнее редкой длинной сессии',
     desk_stiffness: 'Учтена скованность от сидения',
     population_desk_thoracic_hip: 'Акцент на грудной отдел и тазобедренные',
+    posture_strength_over_stretch: 'Осанка собрана через контроль и укрепление, не через одну растяжку',
+    neck_scapular_thoracic_chain: 'Связка шея-лопатка-грудной отдел включена в подбор',
     population_hypermobile_stability: 'Приоритет контролю и стабильности',
     population_pregnancy_low_load: 'Беременность: низкая нагрузка и мягкий объём',
     population_older_low_load: 'Возрастной профиль: низкая нагрузка и мягкий объём',
     morning_more_warmup: 'Утром разогрев длиннее, конечный диапазон осторожнее',
     day_neutral: 'Дневной режим без циркадного ограничения',
     evening_relax_bias: 'Вечером приоритет расслабления'
+  };
+  const LOAD_REASON_LABEL = {
+    load_level_1: 'Нагрузка: восстановление',
+    load_level_2: 'Нагрузка: лёгкая',
+    load_level_3: 'Нагрузка: база',
+    load_level_4: 'Нагрузка: сильная',
+    load_level_5: 'Нагрузка: атлет'
   };
 
   function ensureMobilityStyles() {
@@ -213,6 +228,7 @@
 .mobility-chip--error,.mobility-chip--warmup-warn{background:#fee2e2;color:#991b1b}
 .mobility-chip--warn{background:#fef3c7;color:#92400e}
 .mobility-chip--axis,.mobility-chip--autonomic,.mobility-chip--purpose{background:#e0f2fe;color:#075985}
+.mobility-chip--load{background:#e7f4ee;color:#0f6b43}
 .mobility-session__head,.mobility-block__top,.mobility-effect__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .mobility-session__head h3{margin-bottom:0}
 .mobility-session__chips,.mobility-progress__meta,.mobility-calendar__meta,.mobility-runner__meta,.mobility-execution__status{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
@@ -275,21 +291,43 @@
 .mobility-fs-equipment-chip:hover{transform:translateY(-1px);box-shadow:0 2px 3px rgba(15,23,42,.05),0 6px 14px rgba(15,23,42,.08)}
 .mobility-fs-equipment-chip:active{transform:translateY(0)}
 .mobility-fs-equipment-chip.is-available{border-color:transparent;background:linear-gradient(160deg,#1aae72,#0f7a4c);color:#fff;box-shadow:0 2px 4px rgba(15,107,67,.18),0 8px 18px rgba(15,107,67,.26)}
-.mobility-fs-goalsel{margin:0 0 18px}
-.mobility-fs-goalsel__label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#667085;margin:0 0 10px}
-.mobility-fs-goalsel__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.mobility-fs-goalsel__btn{appearance:none;position:relative;overflow:hidden;min-height:84px;padding:14px 8px 11px;border:1px solid rgba(15,23,42,.07);border-radius:16px;background:linear-gradient(180deg,#fff 0%,#f8faf9 100%);color:#172033;font:700 12px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;box-shadow:0 1px 1px rgba(15,23,42,.03),0 6px 16px rgba(15,23,42,.05);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+.mobility-fs-goalsel{margin:0 0 14px}
+.mobility-fs-goalsel__label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#667085;margin:0 0 8px}
+.mobility-fs-goalsel__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:7px}
+.mobility-fs-goalsel__btn{appearance:none;position:relative;overflow:hidden;min-height:58px;padding:7px 7px 6px;border:1px solid rgba(15,23,42,.07);border-radius:12px;background:linear-gradient(180deg,#fff 0%,#f8faf9 100%);color:#172033;font:700 12px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 1px 1px rgba(15,23,42,.03),0 6px 16px rgba(15,23,42,.05);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
 .mobility-fs-goalsel__btn:hover{transform:translateY(-1px);box-shadow:0 2px 3px rgba(15,23,42,.05),0 10px 22px rgba(15,23,42,.08)}
 .mobility-fs-goalsel__btn:active{transform:translateY(0)}
-.mobility-fs-goalsel__btn.is-empty{opacity:.5}
+.mobility-fs-goalsel__btn.is-empty{opacity:.72}
 .mobility-fs-goalsel__btn.is-active{background:linear-gradient(160deg,#1aae72 0%,#0f6b43 100%);color:#fff;border-color:transparent;box-shadow:0 2px 4px rgba(15,107,67,.18),0 12px 26px rgba(15,107,67,.28);opacity:1}
 .mobility-fs-goalsel__btn.is-active:hover{transform:translateY(-1px);box-shadow:0 4px 6px rgba(15,107,67,.2),0 16px 30px rgba(15,107,67,.3)}
-.mobility-fs-goalsel__icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:11px;background:rgba(15,23,42,.045);transition:background .12s ease}
+.mobility-fs-goalsel__icon{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;background:rgba(15,23,42,.045);transition:background .12s ease}
 .mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__icon{background:rgba(255,255,255,.18)}
-.mobility-fs-goalsel__emoji{font-size:19px;line-height:1}
-.mobility-fs-goalsel__text{font-size:12px;line-height:1.1;font-weight:800;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mobility-fs-goalsel__count{position:absolute;top:8px;right:8px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(15,23,42,.07);color:#475467;font-size:10px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center}
+.mobility-fs-goalsel__emoji{font-size:18px;line-height:1;width:24px;height:24px;border-radius:8px;background:rgba(15,23,42,.045);display:flex;align-items:center;justify-content:center}
+.mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__emoji{background:rgba(255,255,255,.18)}
+.mobility-fs-goalsel__text{font-size:11.5px;line-height:1.1;font-weight:800;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobility-fs-goalsel__count{position:absolute;top:5px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:rgba(15,23,42,.07);color:#475467;font-size:9px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center}
 .mobility-fs-goalsel__btn.is-active .mobility-fs-goalsel__count{background:rgba(255,255,255,.22);color:#fff}
+.mobility-fs-goalsel__btn.has-status .mobility-fs-goalsel__count{min-width:34px;background:rgba(22,163,74,.10);color:#15803d}
+.mobility-fs-goalsel__btn.has-status.is-active .mobility-fs-goalsel__count{background:rgba(255,255,255,.22);color:#fff}
+.mobility-fs-load{margin:-2px 0 18px;padding:14px 14px 12px;border:1px solid rgba(15,23,42,.075);border-radius:16px;background:linear-gradient(180deg,#ffffff 0%,#f7faf9 100%);box-shadow:0 1px 1px rgba(15,23,42,.03),0 10px 26px rgba(15,23,42,.055)}
+.mobility-fs-load__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.mobility-fs-load__label{min-width:0;display:grid;gap:2px}
+.mobility-fs-load__eyebrow{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.13em;color:#667085}
+.mobility-fs-load__title{font-size:15px;line-height:1.1;font-weight:900;color:#111827}
+.mobility-fs-load__caption{font-size:12px;line-height:1.25;font-weight:700;color:#667085}
+.mobility-fs-load__badge{flex:0 0 auto;display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;background:#0f172a;color:#fff;font-size:12px;font-weight:900;box-shadow:0 8px 20px rgba(15,23,42,.16)}
+.mobility-fs-load__track{position:relative;padding:9px 0 4px}
+.mobility-fs-load__range{appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;display:block}
+.mobility-fs-load__range:focus{outline:none}
+.mobility-fs-load__range::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#16a66a 0%,#16a66a var(--load-progress,50%),#e5e7eb var(--load-progress,50%),#e5e7eb 100%);box-shadow:inset 0 1px 2px rgba(15,23,42,.12)}
+.mobility-fs-load__range::-moz-range-track{height:8px;border-radius:999px;background:#e5e7eb}
+.mobility-fs-load__range::-moz-range-progress{height:8px;border-radius:999px;background:#16a66a}
+.mobility-fs-load__range::-webkit-slider-thumb{appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:999px;border:3px solid #fff;background:linear-gradient(180deg,#22c55e,#0f8a55);box-shadow:0 4px 12px rgba(15,107,67,.3),0 0 0 1px rgba(15,23,42,.08)}
+.mobility-fs-load__range::-moz-range-thumb{width:22px;height:22px;border-radius:999px;border:3px solid #fff;background:linear-gradient(180deg,#22c55e,#0f8a55);box-shadow:0 4px 12px rgba(15,107,67,.3),0 0 0 1px rgba(15,23,42,.08)}
+.mobility-fs-load__ticks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:7px}
+.mobility-fs-load__tick{appearance:none;min-width:0;border:0;background:transparent;color:#94a3b8;font:800 10px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:4px 0;border-radius:8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobility-fs-load__tick.is-active{color:#0f6b43;background:#e7f4ee}
+.mobility-fs-goal-placeholder__hint{margin:10px 0 0;color:#667085;font-size:13px;line-height:1.35;font-weight:700}
 .mobility-fs-tab-content{min-width:0;padding:6px 0 12px}
 .mobility-fs-today__hero{display:block}
 .mobility-fs-mixcard,.mobility-fs-program-card{margin:0 0 16px}
@@ -477,12 +515,12 @@
 .mobility-countdown__btn--abort{background:linear-gradient(180deg,rgba(254,226,226,.85),rgba(254,202,202,.7));border-color:rgba(220,38,38,.22);color:#b91c1c;min-width:84px;padding-inline:10px;box-shadow:0 1px 2px rgba(220,38,38,.06),0 4px 12px rgba(220,38,38,.10),inset 0 1px 0 rgba(255,255,255,.7)}
 [data-theme="dark"] .mobility-countdown__btn--abort{background:linear-gradient(180deg,rgba(127,29,29,.45),rgba(127,29,29,.30));border-color:rgba(252,165,165,.30);color:#fca5a5}
 @media (prefers-reduced-motion:reduce){.mobility-countdown__digit.is-final-count{animation:none!important}.mobility-countdown__ring-fill{transition:none!important}}
-.mobility-guided-live{position:fixed!important;inset:0!important;z-index:2147483200;width:100vw!important;max-width:none!important;min-height:100vh;min-height:100dvh;margin:0!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff 0%,#fbfcfb 100%)!important;box-shadow:none!important;overflow:hidden!important;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mobility-guided-live{position:fixed!important;inset:0!important;z-index:2147483200;width:100vw!important;max-width:none!important;height:100vh;height:100dvh;margin:0!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff 0%,#fbfcfb 100%)!important;box-shadow:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
 .mobility-guided-live .mobility-guided__visual{display:none}
-.mobility-guided-live .mobility-countdown{width:min(100%,430px)}
+.mobility-guided-live .mobility-countdown{width:min(100%,430px);flex:0 0 auto}
 .mobility-guided-live .mobility-countdown__grip{max-width:min(100%,360px)}
 .mobility-guided-live .mobility-countdown__digit{width:100%;max-width:100%;padding:0 18px;box-sizing:border-box;text-align:center;font-size:clamp(50px,14vw,64px);letter-spacing:-.035em;white-space:nowrap}
-.mobility-live-roadmap{width:min(100% - 24px,392px);margin:8px auto 0}
+.mobility-live-roadmap{width:min(100% - 24px,392px);margin:8px auto 0;flex:0 0 auto}
 .mobility-live-roadmap .fingers-fs-live-roadmap__list{display:flex;flex-direction:column}
 .mobility-guided-live .fingers-fs-live-roadmap__item{min-width:0}
 .mobility-guided-live .mobility-guided-step{min-width:0}
@@ -495,6 +533,18 @@
 .mobility-guided-live .mobility-guided-step.is-done{color:#cbd5e1;background:#f8fafc}
 .mobility-guided-live .mobility-breath-phases{width:min(100% - 24px,392px);margin:0 auto!important;padding:0!important;list-style:none;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
 .mobility-guided-live .mobility-breath-phases li{border-radius:999px;background:#ecfdf5;color:#0f6b43;padding:5px 8px;font-size:11px;font-weight:850}
+.mobility-voice-mini{position:relative;display:inline-flex;align-items:center;justify-content:center;align-self:flex-end;margin:0 6px 0 auto;z-index:3}
+.mobility-voice-mini__btn{appearance:none;width:40px;height:40px;border:1px solid rgba(15,23,42,.08);border-radius:999px;background:rgba(255,255,255,.9);color:#0f6b43;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(15,23,42,.08);cursor:pointer}
+.mobility-voice-mini.is-open .mobility-voice-mini__btn{background:#ecfdf5;border-color:rgba(16,185,129,.25)}
+.mobility-voice-mini__pop{position:absolute;right:0;top:46px;width:min(280px,calc(100vw - 28px));padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(15,23,42,.1);box-shadow:0 18px 50px rgba(15,23,42,.18);display:grid;gap:10px;color:#172033}
+.mobility-voice-mini__row{display:grid!important;gap:6px!important;margin:0!important;color:#334155!important;font-size:12px!important;font-weight:850!important}
+.mobility-voice-mini__row--volume{gap:8px!important}
+.mobility-voice-mini__label{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.mobility-voice-mini__value{color:#0f6b43;font-weight:950}
+.mobility-voice-mini__toggle{width:42px!important;height:24px!important;min-height:24px!important;justify-self:end;accent-color:#16a66a}
+.mobility-voice-mini__slider{width:100%;accent-color:#16a66a}
+.mobility-voice-mini__close{width:100%;margin:0!important;border:0!important;background:linear-gradient(135deg,#16a66a,#0f8a55)!important;color:#fff!important}
+@media (min-height:900px){.mobility-guided-live{justify-content:center}}
 @media (max-width:760px){
   .mobility-overlay-root{background:#f6faf8;backdrop-filter:none;-webkit-backdrop-filter:none}
   .mobility-app{padding:calc(env(safe-area-inset-top,12px) + 14px) clamp(14px,calc(var(--mob-w) * .043),20px) calc(28px + env(safe-area-inset-bottom))}
@@ -524,7 +574,7 @@
   .mobility-protocol-grid{grid-template-columns:1fr}
   .mobility-guided__hero{display:block}
   .mobility-guided__visual{min-height:220px}
-  .mobility-guided-live{min-height:100vh;min-height:100dvh}
+  .mobility-guided-live{height:100vh;height:100dvh}
   .mobility-guided-live .mobility-countdown{padding-top:0;gap:7px}
   .mobility-guided-live .mobility-countdown__ring-wrap{width:166px;height:166px}
   .mobility-guided-live .mobility-countdown__chip{min-width:96px}
@@ -617,6 +667,7 @@
       calendar: Mobility.calendar,
       protocolCatalog: Mobility.protocolCatalog,
       recordsStore: Mobility.recordsStore,
+      loadScale: Mobility.loadScale,
       validators: Mobility.validators
     };
   }
@@ -642,15 +693,25 @@
     return h('span', { key: key || text, className: cx('mobility-chip', kind && 'mobility-chip--' + kind) }, text);
   }
   function reasonText(reason) {
-    return REASON_LABEL[reason] || reason;
+    return REASON_LABEL[reason] || LOAD_REASON_LABEL[reason] || reason;
+  }
+  function targetRepsLabel(reps, fallback) {
+    if (Array.isArray(reps) && reps.length) {
+      const values = reps.map(function (v) { return Number(v); }).filter(function (v) { return Number.isFinite(v) && v > 0; });
+      if (values.length) return String(Math.round(values.reduce(function (sum, v) { return sum + v; }, 0) / values.length));
+    }
+    const n = Number(reps);
+    return String(Number.isFinite(n) && n > 0 ? n : (fallback || 1));
   }
   function formatDose(atom) {
-    const d = (atom && atom.dose) || {};
+    const d = atom && atom.loadLevel != null && Mobility.loadScale && typeof Mobility.loadScale.tuneDose === 'function'
+      ? Mobility.loadScale.tuneDose(atom, atom.loadLevel)
+      : (atom && atom.dose) || {};
     if (atom.doseShape === 'hold') return (d.holdSec || 0) + ' сек';
     if (atom.doseShape === 'pnf') return (d.reps || 1) + ' цикла';
     if (atom.doseShape === 'breath') return Math.round((d.durationSec || 0) / 60) + ' мин';
     if (atom.doseShape === 'dynamic' || atom.doseShape === 'activation' || atom.doseShape === 'cars') {
-      return Array.isArray(d.reps) ? d.reps[0] + '-' + d.reps[1] + ' повт.' : (d.reps || 1) + ' повт.';
+      return targetRepsLabel(d.reps, atom.doseShape === 'cars' ? 2 : 8) + ' повт.';
     }
     if (d.durationSec) return Math.round(d.durationSec / 60) + ' мин';
     return atom.doseShape;
@@ -1022,6 +1083,7 @@
         h('div', { className: 'mobility-session__chips' },
           chip('purpose', PURPOSE_LABEL[session.purpose] || session.purpose),
           chip('autonomic', AUTONOMIC_LABEL[session.autonomic] || session.autonomic),
+          session.loadPolicy && session.loadPolicy.label ? chip('load', session.loadPolicy.label) : null,
           session.warmupCompleted ? chip('warmup', 'разогрев учтён') : chip('warmup-warn', 'разогрев не отмечен'),
           chip(built.ok ? 'ok' : 'error', built.ok ? 'доступно' : 'есть ограничения')
         )
@@ -1084,7 +1146,7 @@
           return h('li', { key: idx },
             h('strong', null, s.label),
             s.durationSec ? h('span', null, ' · ', s.durationSec, ' сек') : null,
-            s.reps ? h('span', null, ' · ', Array.isArray(s.reps) ? s.reps.join('-') : s.reps, ' повт.') : null
+            s.reps ? h('span', null, ' · ', targetRepsLabel(s.reps, 1), ' повт.') : null
           );
         })
       )
@@ -1093,8 +1155,8 @@
 
   function stepMetric(step) {
     if (!step) return '—';
+    if (step.reps) return targetRepsLabel(step.reps, 1) + ' повт.';
     if (step.durationSec) return step.durationSec + ' сек';
-    if (step.reps) return Array.isArray(step.reps) ? step.reps.join('-') + ' повт.' : step.reps + ' повт.';
     return step.kind || 'шаг';
   }
   function stepDurationSec(step) {
@@ -1124,14 +1186,19 @@
   function liveStepMeta(step) {
     if (!step) return '';
     const parts = [];
-    if (step.kind) parts.push(step.kind);
+    if (step.label) parts.push(step.label);
+    else if (step.kind) parts.push(step.kind);
     const metric = stepMetric(step);
-    if (metric && metric !== step.kind) parts.push(metric);
-    if (step.sets) parts.push(step.sets + ' подх.');
+    if (metric && metric !== step.kind && metric !== step.label) parts.push(metric);
+    if (step.set && step.sets && step.sets > 1) parts.push('подход ' + step.set + '/' + step.sets);
+    else if (step.sets && step.sets > 1) parts.push(step.sets + ' подх.');
+    if (step.secondsPerRep) parts.push(step.secondsPerRep + ' сек/повт.');
     return parts.join(' · ');
   }
 
-  function livePhase(status) {
+  function livePhase(status, step) {
+    if (status === 'running' && step && step.kind === 'prep') return 'prep';
+    if (status === 'running' && step && step.kind === 'rest') return 'paused';
     if (status === 'running') return 'hang';
     if (status === 'paused') return 'paused';
     if (status === 'complete') return 'done';
@@ -1139,7 +1206,9 @@
     return 'prep';
   }
 
-  function livePhaseLabel(status) {
+  function livePhaseLabel(status, step) {
+    if (status === 'running' && step && step.kind === 'prep') return 'ПОДГОТОВКА';
+    if (status === 'running' && step && step.kind === 'rest') return 'ОТДЫХ';
     if (status === 'running') return 'РАБОТА';
     if (status === 'paused') return 'Пауза';
     if (status === 'complete') return 'Готово!';
@@ -1147,10 +1216,32 @@
     return 'Готов к старту';
   }
 
+  function mobilityVoice() {
+    return Mobility.voice && typeof Mobility.voice.say === 'function' ? Mobility.voice : null;
+  }
+
+  function sayMobilityCue(cueId, opts) {
+    try {
+      const voice = mobilityVoice();
+      if (voice) voice.say(cueId, opts || {});
+    } catch (_) {}
+  }
+
+  function cueForMobilityStep(step) {
+    if (!step || !step.kind) return 'cue.next_step';
+    if (step.kind === 'prep') return 'cue.prep';
+    if (step.kind === 'rest') return 'cue.rest_start';
+    if (step.kind === 'hold' || step.kind === 'pnf_hold') return 'cue.hold';
+    if (step.kind === 'smr') return 'cue.smr';
+    if (step.kind === 'breath') return 'cue.breath';
+    if (step.kind === 'reps_work' || step.kind === 'eccentric_reps' || step.kind === 'cars') return 'cue.reps';
+    return 'cue.work';
+  }
+
   function liveDigit(step, remainingSec) {
     const total = stepDurationSec(step);
     if (total) return formatClock(remainingSec);
-    if (step && step.reps) return Array.isArray(step.reps) ? step.reps.join('-') : String(step.reps);
+    if (step && step.reps) return targetRepsLabel(step.reps, 1);
     return '→';
   }
 
@@ -1361,6 +1452,7 @@
     const indexRef = useRef(0); indexRef.current = index;
     const autoStartedRef = useRef(false);
     const enterPhaseRef = useRef(null);
+    const lastVoiceKeyRef = useRef('');
 
     // Шаг истёк (тик дошёл до 0) или пропуск → следующий шаг или завершение.
     // Таймерные шаги — фаза RUN (тикает); шаги без длительности (reps/cars) —
@@ -1408,6 +1500,7 @@
 
     function startSession() {
       if (core.markSessionStart() === false) return;
+      sayMobilityCue('cue.start_session');
       // Resume: старт с сохранённого шага и (для таймерных) с остатка времени.
       const startIdx = Math.max(0, Math.min(Number(props.initialIndex) || 0, steps.length - 1));
       setIndex(startIdx); indexRef.current = startIdx;
@@ -1418,8 +1511,8 @@
     }
     function send(event) {
       if (event === 'start') startSession();
-      else if (event === 'pause') core.pause();
-      else if (event === 'resume') core.resume();
+      else if (event === 'pause') { core.pause(); sayMobilityCue('cue.paused'); }
+      else if (event === 'resume') { core.resume(); sayMobilityCue('cue.resumed'); }
       else if (event === 'next') core.skipPhase();
       else if (event === 'abort') core.abort();
     }
@@ -1499,6 +1592,21 @@
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status, index, remainingSec]);
+    useEffect(function () {
+      if (status !== 'running' && status !== 'complete' && status !== 'aborted') return;
+      const key = status + ':' + index + ':' + (current && current.kind || '');
+      if (lastVoiceKeyRef.current === key) return;
+      lastVoiceKeyRef.current = key;
+      if (status === 'complete') {
+        sayMobilityCue('cue.session_done');
+        return;
+      }
+      if (status === 'aborted') {
+        sayMobilityCue('cue.session_aborted');
+        return;
+      }
+      sayMobilityCue(cueForMobilityStep(current));
+    }, [status, index, current && current.kind]);
     if (!runner || !steps.length || !current) return null;
     const ratio = currentDurationSec ? Math.max(0, Math.min(1, (Number(remainingSec) || 0) / currentDurationSec)) : 1;
     const digit = liveDigit(current, remainingSec);
@@ -1519,6 +1627,7 @@
       { id: 'abort', label: 'Прервать', ariaLabel: 'Стоп', abort: true, onClick: requestAbort }
     ].filter(Boolean);
     const runnerNode = h(React.Fragment, null,
+      Mobility.VoiceMiniControls ? h(Mobility.VoiceMiniControls, { inline: true }) : null,
       h('div', { className: 'mobility-guided__visual', 'aria-hidden': 'true' },
         currentAtom && currentAtom.visualAsset
           ? h('img', {
@@ -1533,8 +1642,8 @@
         baseClass: 'mobility-countdown',
         continuousClass: 'mobility-continuous',
         continuous: true,
-        phaseKey: livePhase(state.status),
-        phaseLabel: livePhaseLabel(state.status),
+        phaseKey: livePhase(state.status, current),
+        phaseLabel: livePhaseLabel(state.status, current),
         counter: 'Упр ' + (state.index + 1) + '/' + steps.length,
         title: liveStepTitle(current),
         image: currentAtom && currentAtom.visualAsset,
@@ -1612,7 +1721,7 @@
 
   function GoalStepPanel(props) {
     const profile = normalizeProfile(props.profile);
-    const goals = ['morning', 'pre_workout', 'recover', 'develop', 'relax', 'desk'];
+    const goals = ['morning', 'pre_workout', 'recover', 'develop', 'posture', 'relax', 'desk'];
     const protocolItems = Mobility.protocolCatalog && Array.isArray(Mobility.protocolCatalog.PROTOCOLS)
       ? Mobility.protocolCatalog.PROTOCOLS
       : [];
@@ -1644,6 +1753,61 @@
             h('span', { className: 'mobility-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
           );
         })
+      )
+    );
+  }
+
+  function LoadLevelSlider(props) {
+    const scale = deps().loadScale;
+    const levels = scale && Array.isArray(scale.LEVELS) ? scale.LEVELS : [
+      { value: 1, label: 'Восстановление', shortLabel: 'Очень легко', description: 'минимальная нагрузка' },
+      { value: 2, label: 'Лёгкая', shortLabel: 'Легко', description: 'спокойная доза' },
+      { value: 3, label: 'База', shortLabel: 'База', description: 'стандартная доза' },
+      { value: 4, label: 'Сильная', shortLabel: 'Сложно', description: 'плотнее и сложнее' },
+      { value: 5, label: 'Атлет', shortLabel: 'Тяжело', description: 'верхняя доза' }
+    ];
+    const value = scale && scale.normalize ? scale.normalize(props.value) : Math.min(5, Math.max(1, Math.round(Number(props.value) || 3)));
+    const current = levels.find(function (item) { return item.value === value; }) || levels[2];
+    const progress = ((value - 1) / 4) * 100;
+    function setLevel(next) {
+      const normalized = scale && scale.normalize ? scale.normalize(next) : Math.min(5, Math.max(1, Math.round(Number(next) || 3)));
+      props.onChange && props.onChange(normalized);
+    }
+    return h('section', {
+      className: 'mobility-fs-load mobility-fs-load--level-' + value,
+      'aria-label': 'Сложность и тяжесть тренировки',
+      style: { '--load-progress': progress + '%' }
+    },
+      h('div', { className: 'mobility-fs-load__top' },
+        h('div', { className: 'mobility-fs-load__label' },
+          h('span', { className: 'mobility-fs-load__eyebrow' }, 'Нагрузка'),
+          h('span', { className: 'mobility-fs-load__title' }, current.label),
+          h('span', { className: 'mobility-fs-load__caption' }, current.description)
+        ),
+        h('span', { className: 'mobility-fs-load__badge' }, value, '/5')
+      ),
+      h('div', { className: 'mobility-fs-load__track' },
+        h('input', {
+          className: 'mobility-fs-load__range',
+          type: 'range',
+          min: 1,
+          max: 5,
+          step: 1,
+          value: value,
+          'aria-label': 'Сложность и тяжесть тренировки',
+          onChange: function (e) { setLevel(e.target.value); }
+        }),
+        h('div', { className: 'mobility-fs-load__ticks' },
+          levels.map(function (item) {
+            return h('button', {
+              key: item.value,
+              type: 'button',
+              className: 'mobility-fs-load__tick' + (item.value === value ? ' is-active' : ''),
+              onClick: function () { setLevel(item.value); },
+              title: item.label
+            }, item.shortLabel || item.label);
+          })
+        )
       )
     );
   }
@@ -1865,6 +2029,8 @@
     if (!d.modeEngine || !d.validators || !Mobility.atomCatalog) return null;
     const mode = d.modeEngine.getMode(modeId) || { id: modeId, purpose: 'prep', autonomic: 'neutral' };
     const context = d.modeEngine.buildContext(mode, options || {});
+    const loadLevel = d.loadScale && d.loadScale.fromProfile ? d.loadScale.fromProfile(profile, options || {}) : Math.min(5, Math.max(1, Math.round(Number(profile && profile.loadLevel) || 3)));
+    const loadPolicy = d.loadScale && d.loadScale.getLevel ? d.loadScale.getLevel(loadLevel) : { value: loadLevel };
     const atoms = (atomIds || []).map(function (id) { return Mobility.atomCatalog.getAtom(id); }).filter(Boolean);
     if (!atoms.length) return null;
     const blocks = atoms.map(function (atom, idx) {
@@ -1876,7 +2042,7 @@
         autonomic: atom.autonomic,
         fatigueCost: atom.fatigueCost || 'low',
         tissueLoad: atom.tissueLoad || 'low',
-        atoms: [atom]
+        atoms: [Object.assign({}, atom, { loadLevel: loadLevel })]
       };
     });
     const session = {
@@ -1887,9 +2053,17 @@
       timeOfDay: context && context.timeOfDay,
       beforePower: context && context.beforePower,
       warmupCompleted: context && context.warmupCompleted,
+      loadLevel: loadLevel,
+      loadPolicy: {
+        key: loadPolicy.key || null,
+        label: loadPolicy.label || null,
+        shortLabel: loadPolicy.shortLabel || null,
+        tone: loadPolicy.tone || null,
+        description: loadPolicy.description || null
+      },
       blocks: blocks,
       painFlags: context && context.painFlags || [],
-      reasons: ['custom_selection'],
+      reasons: ['custom_selection', 'load_level_' + loadLevel],
       advisories: [context && context.coldWater].filter(Boolean),
       periodization: context && context.periodization,
       assessment: null
@@ -1949,7 +2123,8 @@
   }
 
   function ExercisePreviewList(props) {
-    const atoms = (props.atoms || []).slice(0, props.limit || 4);
+    const allAtoms = props.atoms || [];
+    const atoms = props.limit ? allAtoms.slice(0, props.limit) : allAtoms;
     if (!atoms.length) return null;
     return h('div', { className: 'mobility-fs-mixcard__exlist', 'aria-label': 'Упражнения в сессии' },
       h('div', { className: 'mobility-fs-mixcard__exlist-title' }, 'Что внутри'),
@@ -1991,7 +2166,7 @@
           chip('blocks', blockCount + ' упр.'),
           props.issueCount ? chip('warn', props.issueCount + ' огранич.') : chip('ok', 'без блокировок')
         ),
-        h(ExercisePreviewList, { atoms: atoms, limit: 4 }),
+        h(ExercisePreviewList, { atoms: atoms }),
         h('div', { className: 'mobility-constructor-actions' },
           h('button', {
             type: 'button',
@@ -2037,7 +2212,7 @@
           durationMin ? chip('duration', durationMin + ' мин') : null,
           chip('steps', blockCount + ' упр')
         ),
-        h(ExercisePreviewList, { atoms: atoms, limit: 4 }),
+        h(ExercisePreviewList, { atoms: atoms }),
         h('div', { className: 'mobility-fs-mixcard__actions' },
           h('button', {
             type: 'button',
@@ -2202,6 +2377,11 @@
         setRunnerStarted(false);
       }
     }
+    function handleLoadLevelChange(loadLevel) {
+      setProfile(Object.assign({}, profile, { loadLevel: loadLevel }));
+      setFlowMode('choose');
+      setRunnerStarted(false);
+    }
 
     const built = useMemo(function () {
       if (!d.routineBuilder) return null;
@@ -2365,6 +2545,7 @@
     ];
 
     function startGuidedSession() {
+      if (!activeBuilt || !activeBuilt.session || !plan) return;
       showMobilityPreflight({
         modeId: modeId,
         selectedMode: selectedMode,
@@ -2437,7 +2618,7 @@
           : currentEquipment.concat([id]);
         setProfile(Object.assign({}, profile, { equipment: next }));
       }
-      const goalIds = ['morning', 'pre_workout', 'recover', 'develop', 'relax', 'desk'];
+      const goalIds = ['morning', 'pre_workout', 'recover', 'develop', 'posture', 'relax', 'desk'];
       if (Focus && Focus.EquipmentBar && Focus.GoalSelector) {
         return h(React.Fragment, null,
           h(Focus.EquipmentBar, {
@@ -2454,22 +2635,31 @@
             label: 'Цель тренировки',
             value: profile.goal,
             items: goalIds.map(function (goal) {
+              const count = protocolCountForGoal(goal);
               return {
                 id: goal,
                 label: GOAL_SHORT_LABEL[goal] || GOAL_LABEL[goal] || goal,
                 icon: GOAL_EMOJI[goal] || '🎯',
-                count: protocolCountForGoal(goal)
+                count: count
               };
             }),
             onChange: function (goal) {
               handleProfileChange(Object.assign({}, profile, { goal: goal }));
             }
+          }),
+          h(LoadLevelSlider, {
+            value: profile.loadLevel,
+            onChange: handleLoadLevelChange
           })
         );
       }
       return h(React.Fragment, null,
         h(EquipmentStepPanel, { profile: profile, onChange: setProfile }),
-        h(GoalStepPanel, { profile: profile, onChange: handleProfileChange })
+        h(GoalStepPanel, { profile: profile, onChange: handleProfileChange }),
+        h(LoadLevelSlider, {
+          value: profile.loadLevel,
+          onChange: handleLoadLevelChange
+        })
       );
     }
 

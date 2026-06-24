@@ -201,6 +201,25 @@
         return base.getTime();
     }
 
+    function resolveChronoEntryEndMs(entry) {
+        if (!entry || !entry.createdAt) return NaN;
+        const endMs = new Date(entry.createdAt).getTime();
+        const displayEndMs = entry.displayEndAt ? new Date(entry.displayEndAt).getTime() : NaN;
+        if ((entry.displayGroupId || entry.parallelGroupId) && Number.isFinite(displayEndMs)) return displayEndMs;
+        const explicitStartMs = entry.at ? new Date(entry.at).getTime() : NaN;
+        const displayStartMs = entry.displayStartAt ? new Date(entry.displayStartAt).getTime() : NaN;
+        const startMs = Number.isFinite(displayStartMs)
+            ? displayStartMs
+            : (Number.isFinite(explicitStartMs) ? explicitStartMs : NaN);
+        const minutes = Math.max(0, Number(entry.minutes) || 0);
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && minutes > 0) {
+            const expectedEndMs = startMs + minutes * 60000;
+            const currentDurationMinutes = Math.max(0, Math.round((endMs - startMs) / 60000));
+            if (Math.abs(currentDurationMinutes - minutes) > 1) return expectedEndMs;
+        }
+        return endMs;
+    }
+
     function buildChronoDayEndMs(date, nextDay) {
         const sleepStartClock = nextDay && (nextDay.sleepStart || nextDay.bedTime || nextDay.asleepAt);
         return buildDateTimeMs(date, sleepStartClock);
@@ -333,7 +352,7 @@
             if (!entry || entry.date !== date || !entry.createdAt || Number(entry.minutes) <= 0) return;
             const activity = activityById.get(entry.activityId);
             if (!activity) return;
-            const endMs = new Date(entry.createdAt).getTime();
+            const endMs = resolveChronoEntryEndMs(entry);
             if (!Number.isFinite(endMs)) return;
             const explicitStartMs = entry.at ? new Date(entry.at).getTime() : NaN;
             const displayStartMs = entry.displayStartAt ? new Date(entry.displayStartAt).getTime() : NaN;
@@ -350,6 +369,7 @@
                 displayEndMs: Number.isFinite(displayEndMs) ? displayEndMs : null,
                 endMs,
                 minutes: 0,
+                entryMinutes: [],
                 entryIds: [],
                 activityIds: [],
                 names: [],
@@ -371,6 +391,7 @@
             }
             group.endMs = Math.max(group.endMs, endMs);
             group.minutes = Math.max(group.minutes, Number(entry.minutes) || 0);
+            group.entryMinutes.push(Math.max(0, Number(entry.minutes) || 0));
             group.entryIds.push(entry.id);
             group.activityIds.push(entry.activityId);
             group.names.push(activity.name || 'Занятие');
@@ -380,15 +401,28 @@
         const rows = Array.from(groups.values())
             .sort((a, b) => a.endMs - b.endMs)
             .map((group) => {
-                const groupEndMs = Number.isFinite(group.displayEndMs) ? group.displayEndMs : group.endMs;
-                const fallbackStartMs = groupEndMs - Math.max(1, group.minutes) * 60000;
+                const rawGroupEndMs = Number.isFinite(group.displayEndMs) ? group.displayEndMs : group.endMs;
+                const fallbackStartMs = rawGroupEndMs - Math.max(1, group.minutes) * 60000;
                 const explicitStartMs = Number.isFinite(group.startMs) ? group.startMs : null;
                 const displayStartMs = Number.isFinite(group.displayStartMs) ? group.displayStartMs : null;
                 const startMs = displayStartMs != null
                     ? displayStartMs
                     : explicitStartMs != null
                     ? explicitStartMs
-                    : (previousEndMs != null ? Math.min(previousEndMs, groupEndMs) : fallbackStartMs);
+                    : (previousEndMs != null ? Math.min(previousEndMs, rawGroupEndMs) : fallbackStartMs);
+                const displayDurationMinutes = Math.max(0, Math.round((rawGroupEndMs - startMs) / 60000));
+                const hasExplicitTimingRange = (displayStartMs != null || explicitStartMs != null)
+                    && Number.isFinite(rawGroupEndMs);
+                const uniqueActivityIds = Array.from(new Set(group.activityIds || []));
+                const entryMinutes = Array.isArray(group.entryMinutes) ? group.entryMinutes : [];
+                const uniformEntryMinutes = entryMinutes.length > 0
+                    && entryMinutes.every((minutes) => Math.abs(minutes - entryMinutes[0]) <= 1);
+                const groupEndMs = hasExplicitTimingRange
+                    && group.minutes > 0
+                    && (uniqueActivityIds.length <= 1 || uniformEntryMinutes)
+                    && Math.abs(displayDurationMinutes - group.minutes) > 1
+                    ? startMs + Math.max(1, group.minutes) * 60000
+                    : rawGroupEndMs;
                 previousEndMs = groupEndMs;
                 const derivedMinutes = Math.max(0, Math.round((groupEndMs - startMs) / 60000));
                 const displayMinutes = Math.max(1, derivedMinutes);
@@ -443,8 +477,8 @@
 
     function getLastChronoEntryMs(entries, date) {
         const latest = (Array.isArray(entries) ? entries : [])
-            .filter((entry) => entry && entry.date === date && entry.createdAt && Number(entry.minutes) > 0)
-            .map((entry) => new Date(entry.createdAt).getTime())
+            .filter((entry) => entry && entry.date === date && entry.createdAt)
+            .map((entry) => resolveChronoEntryEndMs(entry))
             .filter((ms) => Number.isFinite(ms))
             .sort((a, b) => b - a)[0];
         return Number.isFinite(latest) ? latest : null;
@@ -1530,13 +1564,16 @@
         }, [onClose]);
 
         useEffect(() => {
-            if (inputRef.current) inputRef.current.focus();
             function onKey(e) {
                 if (e.key === 'Escape') onClose();
             }
             window.addEventListener('keydown', onKey);
             return () => window.removeEventListener('keydown', onKey);
         }, [onClose]);
+
+        useEffect(() => {
+            if (inputRef.current) inputRef.current.focus();
+        }, []);
 
         const trimmed = query.trim().toLowerCase();
         const filtered = useMemo(() => {
@@ -2171,9 +2208,19 @@
         const commitMinutes = useCallback((minutes) => {
             const next = Math.round(Number(minutes) || 0);
             if (next <= 0) return;
-            rowEntries.forEach((entry) => onUpdateEntry && onUpdateEntry(entry.id, { minutes: next }));
+            const startMs = Number(row && row.startMs);
+            const endMs = Number.isFinite(startMs) ? startMs + next * 60000 : NaN;
+            const timingPatch = Number.isFinite(startMs) && Number.isFinite(endMs)
+                ? {
+                    at: new Date(startMs).toISOString(),
+                    createdAt: new Date(endMs).toISOString(),
+                    displayStartAt: new Date(startMs).toISOString(),
+                    displayEndAt: new Date(endMs).toISOString(),
+                }
+                : {};
+            rowEntries.forEach((entry) => onUpdateEntry && onUpdateEntry(entry.id, { minutes: next, ...timingPatch }));
             setDraftMinutes(String(next));
-        }, [rowEntries, onUpdateEntry]);
+        }, [rowEntries, onUpdateEntry, row && row.startMs]);
 
         const commitActivity = useCallback((nextActivityId) => {
             if (!primaryEntry || !nextActivityId || isParallel) return;
@@ -3142,6 +3189,7 @@
         const untrackedDurationLabel = untracked
             ? (untracked.durationLabel || formatUntrackedDurationLabel(untracked.minutes) || untracked.hoursLabel || '')
             : '';
+        const showUntrackedLine = !!untracked;
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -3333,10 +3381,13 @@
                     }, '↕'),
                     h('span', { className: 'chrono-overview__ledger-time' }, row.timeRange),
                     h('span', { className: 'chrono-overview__ledger-duration' }, `· ${row.durationLabel}`),
-                    h('span', { className: 'chrono-overview__ledger-name' }, `· ${row.name}`),
+                    h('span', { className: 'chrono-overview__ledger-name' },
+                        h('span', { className: 'chrono-overview__ledger-name-dot', 'aria-hidden': 'true' }, '·'),
+                        h('span', { className: 'chrono-overview__ledger-name-text' }, row.name),
+                    ),
                 )),
             ),
-            (lastAdded || untracked) && h('div', {
+            showUntrackedLine && h('div', {
                 className: 'chrono-overview__last' + (!lastAdded ? ' chrono-overview__last--badge-only' : ''),
             },
                 lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
@@ -4176,6 +4227,16 @@
             setDismissedTailDates(readDismissedUntrackedTailDates());
             setTailPromptClosed(false);
         }, [chronoClientId]);
+
+        useEffect(() => {
+            const syncDismissedTailDates = (event) => {
+                const key = event && event.detail && event.detail.key;
+                if (key && key !== UNTRACKED_TAIL_DISMISS_KEY) return;
+                setDismissedTailDates(readDismissedUntrackedTailDates());
+            };
+            window.addEventListener('heys:planning-updated', syncDismissedTailDates);
+            return () => window.removeEventListener('heys:planning-updated', syncDismissedTailDates);
+        }, []);
 
         const activities = state.chronoActivities || [];
         const untrackedSteps = useMemo(() => buildUntrackedSteps(untrackedDraft, activities), [untrackedDraft, activities]);

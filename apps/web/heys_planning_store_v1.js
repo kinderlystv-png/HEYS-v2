@@ -1205,6 +1205,12 @@
             if (!activity) return null;
             next.activityId = activityId;
         }
+        ['at', 'createdAt', 'displayStartAt', 'displayEndAt', 'displayGroupId'].forEach((key) => {
+            if (patch && Object.prototype.hasOwnProperty.call(patch, key)) {
+                if (patch[key] == null || patch[key] === '') delete next[key];
+                else next[key] = String(patch[key]);
+            }
+        });
 
         entries[index] = next;
         saveChronoEntries(entries);
@@ -1469,6 +1475,7 @@
             'heys_planning_chrono_entries',
             'heys_planning_chrono_snapshots',
             'heys_planning_chrono_tombstones_v1',
+            'heys_planning_chrono_untracked_tail_dismissed_v1',
             'heys_planning_checklists_v1',
             'heys_planning_checklist_tombstones_v1',
             // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
@@ -1532,6 +1539,8 @@
                     Store.saveChronoSnapshots(item.v);
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
                     Store.saveChronoTombstones(item.v); // tombstones already union-merge in saveChronoTombstones
+                } else if (item.k === 'heys_planning_chrono_untracked_tail_dismissed_v1' && HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                    HEYS.utils.lsSet('heys_planning_chrono_untracked_tail_dismissed_v1', item.v);
                 } else if (item.k === 'heys_planning_checklists_v1' && typeof Store.saveChecklists === 'function') {
                     const _localChecklists = getChecklists();
                     if (isCloudChecklistWipeSuspicious(item.k, _localChecklists, item.v)) {

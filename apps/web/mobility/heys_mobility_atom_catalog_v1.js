@@ -57,8 +57,28 @@
       modality: 'bodyweight', doseShape: 'dynamic', dose: { reps: [6, 10], sets: 1, tempo: 'controlled' },
       jointRegion: 'thoracic', timeOfDayPref: null, loadModel: 'amplitude', loadValue: 0.7,
       gates: gates(), sourceIds: ['cook_boyle_jbj'], doseConfidence: 'B' },
+    { id: 'mob_thoracic_extension_foamroll', block: 'B', axis: 'active_rom', purpose: 'prep', autonomic: 'neutral', energySystem: null,
+      modality: 'foam_roll', doseShape: 'dynamic', dose: { reps: [6, 10], sets: 1, tempo: 'slow' },
+      jointRegion: 'thoracic', timeOfDayPref: null, loadModel: 'amplitude', loadValue: 0.6,
+      gates: gates({ equipment: ['foam_roll'], contraind: ['over_bone', 'acute_injury'] }), sourceIds: ['jospt2017neck', 'cook_boyle_jbj'], doseConfidence: 'B' },
+    { id: 'mob_shoulder_extension_strap', block: 'B', axis: 'active_rom', purpose: 'prep', autonomic: 'neutral', energySystem: null,
+      modality: 'strap', doseShape: 'dynamic', dose: { reps: [8, 12], sets: 1, tempo: 'controlled' },
+      jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'amplitude', loadValue: 0.55,
+      gates: gates({ equipment: ['strap'] }), sourceIds: ['jospt2017neck'], doseConfidence: 'C' },
 
     // ── C. Активация ──
+    { id: 'act_deep_neck_flexor_nod', block: 'C', axis: 'activation', purpose: 'prep', autonomic: 'tonify', energySystem: null,
+      modality: 'bodyweight', doseShape: 'activation', dose: { reps: [6, 10], sets: 2, restSec: 20 },
+      jointRegion: 'neck', timeOfDayPref: null, loadModel: 'bodyweight', loadValue: null,
+      gates: gates(), sourceIds: ['jospt2017neck'], doseConfidence: 'A' },
+    { id: 'act_wall_angels', block: 'C', axis: 'motor_control', purpose: 'prep', autonomic: 'tonify', energySystem: null,
+      modality: 'wall_env', doseShape: 'activation', dose: { reps: [6, 10], sets: 2, restSec: 25 },
+      jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'bodyweight', loadValue: null,
+      gates: gates(), sourceIds: ['jospt2017neck', 'warneke2024strengthposture'], doseConfidence: 'B' },
+    { id: 'act_prone_scapular_w', block: 'C', axis: 'activation', purpose: 'prep', autonomic: 'tonify', energySystem: null,
+      modality: 'bodyweight', doseShape: 'activation', dose: { reps: [8, 12], sets: 2, restSec: 30 },
+      jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'bodyweight', loadValue: null,
+      gates: gates(), sourceIds: ['jospt2017neck', 'warneke2024strengthposture'], doseConfidence: 'B' },
     { id: 'act_band_pullapart', block: 'C', axis: 'activation', purpose: 'prep', autonomic: 'tonify', energySystem: null,
       modality: 'band', doseShape: 'activation', dose: { reps: [12, 20], sets: 2, restSec: 30 },
       jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'bodyweight', loadValue: null,
@@ -89,6 +109,10 @@
       modality: 'bodyweight', doseShape: 'hold', dose: { holdSec: 45, reps: 1, sets: 2, restSec: 15, intensity: 'comfort' },
       jointRegion: 'full', timeOfDayPref: 'evening', loadModel: 'amplitude', loadValue: 0.4,
       gates: gates(), sourceIds: ['warneke2025delphi'], doseConfidence: 'C' },
+    { id: 'flex_static_pec_wall', block: 'D', axis: 'passive_flex', purpose: 'develop', autonomic: 'neutral', energySystem: null,
+      modality: 'wall_env', doseShape: 'hold', dose: { holdSec: 30, reps: 1, sets: 2, restSec: 20, intensity: 'comfort' },
+      jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'amplitude', loadValue: 0.55,
+      gates: gates({ populationGate: ['hypermobile'] }), sourceIds: ['warneke2024posture', 'jospt2017neck'], doseConfidence: 'C' },
 
     // ── E. PNF / contract-relax ──
     { id: 'flex_pnf_hamstring_hr', block: 'E', axis: 'passive_flex', purpose: 'develop', autonomic: 'neutral', energySystem: null,
@@ -139,10 +163,18 @@
       modality: 'ball', doseShape: 'smr', dose: { durationSec: 60, sets: 1, target: 'glute' },
       jointRegion: 'hip', timeOfDayPref: null, loadModel: 'none', loadValue: null,
       gates: gates({ equipment: ['ball'], contraind: ['over_bone', 'over_nerve', 'acute_injury'] }), sourceIds: ['behmwilke2019'], doseConfidence: 'B' },
+    { id: 'smr_ball_pec_minor', block: 'H', axis: 'tissue_recovery', purpose: 'recover', autonomic: 'neutral', energySystem: null,
+      modality: 'ball', doseShape: 'smr', dose: { durationSec: 45, sets: 1, target: 'pec_minor' },
+      jointRegion: 'shoulder', timeOfDayPref: null, loadModel: 'none', loadValue: null,
+      gates: gates({ equipment: ['ball'], contraind: ['over_bone', 'over_nerve', 'acute_injury'] }), sourceIds: ['behmwilke2019', 'jospt2017neck'], doseConfidence: 'C' },
     { id: 'smr_percussion_calf', block: 'H', axis: 'tissue_recovery', purpose: 'recover', autonomic: 'neutral', energySystem: null,
       modality: 'percussion', doseShape: 'smr', dose: { durationSec: 60, sets: 1, target: 'calf' },
       jointRegion: 'ankle', timeOfDayPref: null, loadModel: 'none', loadValue: null,
       gates: gates({ equipment: ['percussion'], contraind: ['over_bone', 'over_nerve', 'acute_injury', 'pre_power'] }), sourceIds: ['behmwilke2019'], doseConfidence: 'B' },
+    { id: 'smr_percussion_upper_back', block: 'H', axis: 'tissue_recovery', purpose: 'recover', autonomic: 'neutral', energySystem: null,
+      modality: 'percussion', doseShape: 'smr', dose: { durationSec: 45, sets: 1, target: 'upper_back' },
+      jointRegion: 'thoracic', timeOfDayPref: null, loadModel: 'none', loadValue: null,
+      gates: gates({ equipment: ['percussion'], contraind: ['over_bone', 'over_nerve', 'acute_injury', 'pre_power'] }), sourceIds: ['behmwilke2019'], doseConfidence: 'C' },
 
     // ── I. Дыхание / down-regulation ──
     { id: 'breath_cyclic_sigh', block: 'I', axis: 'autonomic', purpose: 'regulate', autonomic: 'relax', energySystem: null,
@@ -173,6 +205,46 @@
       gates: gates(), sourceIds: ['dupuy2018'], doseConfidence: 'B' }
   ];
 
+  const LOAD_META = {
+    wu_pulse_raise: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    wu_locomotor: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    mob_dynamic_legswing_hip: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    mob_flow_worlds_greatest: { difficulty: 4, minLoadLevel: 3, maxLoadLevel: 5 },
+    mob_dynamic_thoracic_openbook: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 4 },
+    mob_thoracic_extension_foamroll: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    mob_shoulder_extension_strap: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    act_deep_neck_flexor_nod: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 },
+    act_wall_angels: { difficulty: 3, minLoadLevel: 1, maxLoadLevel: 4 },
+    act_prone_scapular_w: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    act_band_pullapart: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    act_glute_bridge: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    act_band_lateral_walk: { difficulty: 4, minLoadLevel: 3, maxLoadLevel: 5 },
+    flex_static_hamstring: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    flex_static_calf: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    flex_static_hipflexor: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    flex_relax_supine_comfort: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 2 },
+    flex_static_pec_wall: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    flex_pnf_hamstring_hr: { difficulty: 4, minLoadLevel: 3, maxLoadLevel: 5 },
+    flex_pnf_hipflexor_crac: { difficulty: 4, minLoadLevel: 3, maxLoadLevel: 5 },
+    loadmob_nordic_eccentric: { difficulty: 5, minLoadLevel: 4, maxLoadLevel: 5 },
+    loadmob_cossack_loaded_hold: { difficulty: 5, minLoadLevel: 4, maxLoadLevel: 5 },
+    loadmob_pails_rails_hip: { difficulty: 4, minLoadLevel: 3, maxLoadLevel: 5 },
+    joint_cars_hip: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    joint_cars_shoulder: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    joint_cars_spine: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    smr_foamroll_quad: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    smr_ball_glute: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    smr_ball_pec_minor: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 },
+    smr_percussion_calf: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    smr_percussion_upper_back: { difficulty: 3, minLoadLevel: 2, maxLoadLevel: 5 },
+    breath_cyclic_sigh: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 },
+    breath_resonant: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 },
+    breath_box_tonify: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    restorative_supported_bolster: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 },
+    recov_active_walk: { difficulty: 2, minLoadLevel: 1, maxLoadLevel: 4 },
+    recov_movement_snack: { difficulty: 1, minLoadLevel: 1, maxLoadLevel: 3 }
+  };
+
   const CONTENT = {
     wu_pulse_raise: {
       title: 'Пульс-разогрев',
@@ -198,6 +270,31 @@
       title: 'Open book для грудного отдела',
       instruction: 'Лёжа на боку раскрывай грудной отдел рукой назад, сохраняя таз спокойным.',
       cues: ['колени вместе', 'выдох на раскрытии', 'не дави плечом в боль']
+    },
+    mob_thoracic_extension_foamroll: {
+      title: 'Разгибание грудного отдела на валике',
+      instruction: 'Положи валик под верх спины и мягко раскрой грудной отдел на выдохе без давления на шею.',
+      cues: ['валик не под поясницей', 'шея поддержана', 'амплитуда умеренная']
+    },
+    mob_shoulder_extension_strap: {
+      title: 'Мобилизация плеча с ремнём',
+      instruction: 'Держи ремень за спиной и мягко отведи руки назад, сохраняя рёбра спокойными.',
+      cues: ['не прогибай поясницу', 'плечи не тянуть к ушам', 'движение плавное']
+    },
+    act_deep_neck_flexor_nod: {
+      title: 'Кивок глубоких сгибателей шеи',
+      instruction: 'Лёжа или у стены сделай маленький кивок, как будто удлиняешь заднюю поверхность шеи.',
+      cues: ['движение маленькое', 'челюсть свободна', 'не дави затылком резко']
+    },
+    act_wall_angels: {
+      title: 'Wall angels',
+      instruction: 'Встань у стены и медленно веди руки вверх-вниз, удерживая рёбра и шею спокойными.',
+      cues: ['рёбра вниз', 'шея длинная', 'амплитуда без боли']
+    },
+    act_prone_scapular_w: {
+      title: 'W-активация лопаток',
+      instruction: 'Лёжа на животе мягко собери лопатки в форму W и вернись без рывка.',
+      cues: ['шея длинная', 'плечи от ушей', 'усилие умеренное']
     },
     act_band_pullapart: {
       title: 'Разведение резинки',
@@ -233,6 +330,11 @@
       title: 'Мягкое расслабляющее удержание',
       instruction: 'Ляг удобно, выбери комфортную позицию растяжения и удерживай её без стремления к максимуму.',
       cues: ['длинный выдох', 'лицо расслаблено', 'амплитуда комфортная']
+    },
+    flex_static_pec_wall: {
+      title: 'Мягкое раскрытие грудных у стены',
+      instruction: 'Поставь предплечье на стену и слегка разверни корпус, удерживая умеренное натяжение спереди плеча.',
+      cues: ['без онемения в руке', 'рёбра не выпячивать', 'растяжение мягкое']
     },
     flex_pnf_hamstring_hr: {
       title: 'PNF задней поверхности бедра',
@@ -284,10 +386,20 @@
       instruction: 'Найди комфортную зону давления мячом в ягодичной области и работай медленно.',
       cues: ['не дави на нерв', 'боль не выше умеренной', 'движение маленькое']
     },
+    smr_ball_pec_minor: {
+      title: 'Мяч для грудной области',
+      instruction: 'Поставь мяч между стеной и мягкими тканями спереди плеча, работай маленькими движениями без давления на кость.',
+      cues: ['не дави в подмышку', 'нет онемения', 'давление умеренное']
+    },
     smr_percussion_calf: {
       title: 'Перкуссия икры',
       instruction: 'Коротко обработай мягкие ткани икры перкуссионным устройством, избегая костей и острой травмы.',
       cues: ['низкая интенсивность', 'не перед мощной работой', 'не работать по вене']
+    },
+    smr_percussion_upper_back: {
+      title: 'Перкуссия верхней спины',
+      instruction: 'Коротко обработай мягкие ткани вокруг верхней спины, не работая по позвоночнику и костям.',
+      cues: ['низкая интенсивность', 'не по позвонкам', 'остановись при боли']
     },
     breath_cyclic_sigh: {
       title: 'Циклический вздох',
@@ -322,6 +434,7 @@
   };
 
   ATOMS.forEach(function (atom) {
+    Object.assign(atom, LOAD_META[atom.id] || { difficulty: 3, minLoadLevel: 1, maxLoadLevel: 5 });
     Object.assign(atom, CONTENT[atom.id] || {});
     atom.visualAsset = '/exercises/mobility/' + atom.id + '.webp';
     atom.visualPromptRef = 'methodology/VISUAL_PROMPTS.md#' + atom.id;
@@ -405,6 +518,11 @@
       (g.equipment || []).forEach(function (e) { if (!ac.inEnum(e, 'equipment')) errs.push(id + ': equipment.' + e + ' невалиден'); });
     }
     if (!Array.isArray(atom.sourceIds)) errs.push(id + ': sourceIds не массив');
+    ['difficulty', 'minLoadLevel', 'maxLoadLevel'].forEach(function (k) {
+      const n = Number(atom[k]);
+      if (!Number.isFinite(n) || n < 1 || n > 5) errs.push(id + ': ' + k + ' должен быть числом 1-5');
+    });
+    if (Number(atom.minLoadLevel) > Number(atom.maxLoadLevel)) errs.push(id + ': minLoadLevel больше maxLoadLevel');
     if (!atom.title || typeof atom.title !== 'string') errs.push(id + ': title отсутствует');
     if (!atom.instruction || typeof atom.instruction !== 'string') errs.push(id + ': instruction отсутствует');
     if (!Array.isArray(atom.cues) || atom.cues.length < 2) errs.push(id + ': cues требует минимум 2 подсказки');

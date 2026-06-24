@@ -745,11 +745,13 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-overview__ledger-row {
     appearance: none;
     width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    position: relative;
+    display: grid;
+    grid-template-columns: 76px 55px minmax(0, 1fr);
+    align-items: flex-start;
+    column-gap: 4px;
     min-height: 21px;
-    padding: 1px 3px;
+    padding: 1px 0;
     border: 0;
     border-radius: 7px;
     background: transparent;
@@ -782,7 +784,9 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-overview__ledger-handle {
-    flex: 0 0 auto;
+    position: absolute;
+    left: -12px;
+    top: 1px;
     width: 8px;
     height: 16px;
     display: inline-flex;
@@ -813,26 +817,48 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-overview__ledger-time {
-    flex: 0 0 auto;
+    min-width: 0;
     color: var(--planning-text, #0f172a);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    padding-top: 1px;
+    white-space: nowrap;
 }
 
 .chrono-overview__ledger-duration {
-    flex: 0 0 auto;
+    min-width: 0;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: var(--planning-muted, #64748b);
+    padding-top: 1px;
+    white-space: nowrap;
 }
 
 .chrono-overview__ledger-name {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
     font-weight: 700;
+}
+
+.chrono-overview__ledger-name-dot {
+    flex: 0 0 auto;
+    line-height: 1.02;
+}
+
+.chrono-overview__ledger-name-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-height: 1.02;
+    max-height: 3.06em;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .chrono-overview__last {

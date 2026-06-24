@@ -28,6 +28,10 @@
       title: 'Practical recommendations on stretching exercise: a Delphi consensus', keyFinding: 'Единые определения методов растяжки и рекомендации по 8 областям применения.' },
     warneke2024posture: { id: 'warneke2024posture', author: 'Warneke et al.', year: 2024, type: 'peer-reviewed', strength: 'A', url: '', topics: ['mechanisms'],
       title: 'Stretching and posture: a systematic review', keyFinding: 'Изолированная растяжка не исправляет осанку (23 исследования).' },
+    jospt2017neck: { id: 'jospt2017neck', author: 'Blanpied et al.', year: 2017, type: 'guideline', strength: 'A', url: 'https://www.jospt.org/doi/10.2519/jospt.2017.0302', topics: ['posture', 'safety'],
+      title: 'Neck Pain: Revision 2017 Clinical Practice Guidelines', keyFinding: 'Для шеи полезны ROM, глубокие сгибатели, лопаточно-грудная выносливость и постепенное укрепление.' },
+    warneke2024strengthposture: { id: 'warneke2024strengthposture', author: 'Warneke, Lohmann & Wilke', year: 2024, type: 'peer-reviewed', strength: 'A', url: 'https://pubmed.ncbi.nlm.nih.gov/38834878/', topics: ['posture', 'mechanisms'],
+      title: 'Effects of stretching or strengthening exercise on spinal and lumbopelvic posture', keyFinding: 'Для осанки приоритет у укрепления ослабленных мышц; одной растяжки недостаточно.' },
     konrad2023: { id: 'konrad2023', author: 'Konrad et al.', year: 2023, type: 'peer-reviewed', strength: 'A', url: '', topics: ['rom'],
       title: 'Acute effects of stretching techniques on ROM: a meta-analysis', keyFinding: 'Статика и PNF дают больший острый прирост ROM, чем баллистика.' },
     cook_boyle_jbj: { id: 'cook_boyle_jbj', author: 'Cook & Boyle', year: 2010, type: 'practitioner', strength: 'B', url: '', topics: ['assessment'],
@@ -77,6 +81,7 @@
   // Лейблы тем/типов — ДОМЕННЫЕ (передаются в общий UI-компонент).
   const TOPIC_LABELS = {
     warmup: 'Разминка', rom: 'Амплитуда', recovery: 'Восстановление', breath: 'Дыхание',
+    posture: 'Осанка',
     safety: 'Безопасность', mechanisms: 'Механизмы', assessment: 'Тесты', vascular: 'Сосуды'
   };
   const TYPE_LABELS = {

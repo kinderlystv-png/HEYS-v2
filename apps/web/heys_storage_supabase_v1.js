@@ -285,6 +285,7 @@
     'heys_planning_chrono_entries',
     'heys_planning_chrono_snapshots',
     'heys_planning_chrono_tombstones_v1',
+    'heys_planning_chrono_untracked_tail_dismissed_v1',
     'heys_planning_checklists_v1',
     'heys_planning_checklist_tombstones_v1',
   ];
@@ -7553,6 +7554,7 @@
                 'heys_planning_chrono_entries',
                 'heys_planning_chrono_snapshots',
                 'heys_planning_chrono_tombstones_v1',
+                'heys_planning_chrono_untracked_tail_dismissed_v1',
                 'heys_planning_checklists_v1',
                 'heys_planning_checklist_tombstones_v1'
               ];

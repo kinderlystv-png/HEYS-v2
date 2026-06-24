@@ -17,6 +17,7 @@ const setupOnce = () => {
   /* eslint-disable-next-line no-eval */
   eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
   ev('heys_mobility_axis_catalog_v1.js');
+  ev('heys_mobility_load_v1.js');
   ev('heys_mobility_validators_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
   ev('heys_mobility_mode_engine_v1.js');
@@ -62,11 +63,57 @@ describe('mobility routine_runner', () => {
     expect(steps.slice(0, 3).map((s) => s.kind)).toEqual(['pnf_contract', 'pnf_relax', 'pnf_hold']);
   });
 
-  it('materializeAtom для hold создаёт timer step', () => {
+  it('materializeAtom для hold создаёт подготовку и timer step', () => {
     const atom = HEYS_M().atomCatalog.getAtom('flex_static_hamstring');
     const steps = HEYS_M().routineRunner.materializeAtom(atom);
-    expect(steps[0].kind).toBe('hold');
-    expect(steps[0].durationSec).toBe(30);
+    expect(steps.slice(0, 3).map((s) => s.kind)).toEqual(['prep', 'hold', 'rest']);
+    expect(steps[0].durationSec).toBe(10);
+    expect(steps[1].durationSec).toBe(30);
+  });
+
+  it('materializeAtom для повторов делает точные таймерные подходы', () => {
+    const atom = HEYS_M().atomCatalog.getAtom('act_deep_neck_flexor_nod');
+    const steps = HEYS_M().routineRunner.materializeAtom(atom);
+    expect(steps.map((s) => s.kind)).toEqual(['prep', 'reps_work', 'rest', 'prep', 'reps_work']);
+    expect(steps[1]).toMatchObject({
+      reps: 8,
+      secondsPerRep: 4,
+      durationSec: 32,
+      set: 1,
+      sets: 2
+    });
+    expect(steps[3].durationSec).toBe(10);
+  });
+
+  it('hold с несколькими reps учитывает полную длительность работы подхода', () => {
+    const atom = HEYS_M().atomCatalog.getAtom('loadmob_pails_rails_hip');
+    const steps = HEYS_M().routineRunner.materializeAtom(atom);
+    const work = steps.find((step) => step.kind === 'hold');
+    expect(work).toMatchObject({
+      durationSec: 30,
+      reps: 2,
+      set: 1,
+      sets: 2
+    });
+  });
+
+  it('runner не оставляет диапазоны повторов в исполняемых шагах', () => {
+    const atoms = HEYS_M().atomCatalog.ATOMS;
+    atoms.forEach((atom) => {
+      const steps = HEYS_M().routineRunner.materializeAtom(atom);
+      expect(steps.some((step) => Array.isArray(step.reps)), atom.id).toBe(false);
+    });
+  });
+
+  it('уровень нагрузки меняет точные повторы и подходы', () => {
+    const atom = HEYS_M().atomCatalog.getAtom('act_band_pullapart');
+    const low = HEYS_M().routineRunner.materializeAtom(atom, { loadLevel: 1 });
+    const high = HEYS_M().routineRunner.materializeAtom(atom, { loadLevel: 5 });
+    const lowWork = low.find((s) => s.kind === 'reps_work');
+    const highWork = high.find((s) => s.kind === 'reps_work');
+    expect(lowWork.reps).toBeLessThan(highWork.reps);
+    expect(lowWork.sets).toBeLessThan(highWork.sets);
+    expect(high.length).toBeGreaterThan(low.length);
   });
 
   it('buildRunPlan принимает session из builder', () => {
@@ -75,6 +122,7 @@ describe('mobility routine_runner', () => {
     expect(plan.totalSteps).toBeGreaterThan(0);
     expect(plan.steps.some((s) => s.kind === 'breath')).toBe(true);
     expect(plan.estimatedDurationSec).toBeGreaterThan(0);
+    expect(plan.steps.every((s) => s.kind !== 'reps' || s.durationSec)).toBe(true);
   });
 
   it('lifecycle transition поддерживает start/pause/resume/abort', () => {

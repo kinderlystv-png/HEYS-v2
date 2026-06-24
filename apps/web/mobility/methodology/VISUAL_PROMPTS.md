@@ -56,6 +56,24 @@ Asset: `/exercises/mobility/mob_dynamic_thoracic_openbook.webp`
 Clear instructional exercise photo: side-lying thoracic open book, neutral
 studio, full body visible, safe posture, no text overlay.
 
+<a id="mob_thoracic_extension_foamroll"></a>
+
+### mob_thoracic_extension_foamroll
+
+Asset: `/exercises/mobility/mob_thoracic_extension_foamroll.webp`
+
+Clear instructional exercise photo: thoracic extension over foam roller, neutral
+studio, full body visible, safe posture, no text overlay.
+
+<a id="mob_shoulder_extension_strap"></a>
+
+### mob_shoulder_extension_strap
+
+Asset: `/exercises/mobility/mob_shoulder_extension_strap.webp`
+
+Clear instructional exercise photo: shoulder extension mobility with strap
+behind back, neutral studio, full body visible, safe posture, no text overlay.
+
 <a id="act_band_pullapart"></a>
 
 ### act_band_pullapart
@@ -64,6 +82,33 @@ Asset: `/exercises/mobility/act_band_pullapart.webp`
 
 Clear instructional exercise photo: resistance-band pull-apart, neutral studio,
 full body visible, safe posture, no text overlay.
+
+<a id="act_deep_neck_flexor_nod"></a>
+
+### act_deep_neck_flexor_nod
+
+Asset: `/exercises/mobility/act_deep_neck_flexor_nod.webp`
+
+Clear instructional exercise photo: small deep neck flexor nod against wall,
+neutral studio, full body visible, safe posture, no text overlay.
+
+<a id="act_wall_angels"></a>
+
+### act_wall_angels
+
+Asset: `/exercises/mobility/act_wall_angels.webp`
+
+Clear instructional exercise photo: wall angels scapular control drill, neutral
+studio, full body visible, safe posture, no text overlay.
+
+<a id="act_prone_scapular_w"></a>
+
+### act_prone_scapular_w
+
+Asset: `/exercises/mobility/act_prone_scapular_w.webp`
+
+Clear instructional exercise photo: prone W scapular activation drill, neutral
+studio, full body visible, safe posture, no text overlay.
 
 <a id="act_glute_bridge"></a>
 
@@ -118,6 +163,15 @@ Asset: `/exercises/mobility/flex_relax_supine_comfort.webp`
 
 Clear instructional exercise photo: relaxed supine comfort stretch, neutral
 studio, full body visible, safe posture, no text overlay.
+
+<a id="flex_static_pec_wall"></a>
+
+### flex_static_pec_wall
+
+Asset: `/exercises/mobility/flex_static_pec_wall.webp`
+
+Clear instructional exercise photo: gentle wall pec stretch, neutral studio,
+full body visible, safe posture, no text overlay.
 
 <a id="flex_pnf_hamstring_hr"></a>
 
@@ -209,6 +263,15 @@ Asset: `/exercises/mobility/smr_ball_glute.webp`
 Clear instructional exercise photo: massage ball glute release, neutral studio,
 full body visible, safe posture, no text overlay.
 
+<a id="smr_ball_pec_minor"></a>
+
+### smr_ball_pec_minor
+
+Asset: `/exercises/mobility/smr_ball_pec_minor.webp`
+
+Clear instructional exercise photo: massage ball pec minor release against wall,
+neutral studio, full body visible, safe posture, no text overlay.
+
 <a id="smr_percussion_calf"></a>
 
 ### smr_percussion_calf
@@ -217,6 +280,15 @@ Asset: `/exercises/mobility/smr_percussion_calf.webp`
 
 Clear instructional exercise photo: percussion tool on calf, neutral studio,
 full body visible, safe posture, no text overlay.
+
+<a id="smr_percussion_upper_back"></a>
+
+### smr_percussion_upper_back
+
+Asset: `/exercises/mobility/smr_percussion_upper_back.webp`
+
+Clear instructional exercise photo: percussion tool on upper back soft tissue,
+neutral studio, full body visible, safe posture, no text overlay.
 
 <a id="breath_cyclic_sigh"></a>
 
