@@ -1165,6 +1165,25 @@ describe('chrono analytics helpers', () => {
         });
     });
 
+    it('buildLastAddedSummary can label a past-day end as sleep instead of now', () => {
+        const summary = Chrono.buildLastAddedSummary(
+            [
+                { id: 'last', activityId: 'a', date: '2026-06-23', minutes: 13, createdAt: '2026-06-23T23:41:00' },
+            ],
+            [{ id: 'a', name: 'Studio' }],
+            new Date('2026-06-24T00:30:00').getTime(),
+            '2026-06-23',
+            { nowKind: 'sleep' },
+        );
+
+        expect(summary).toMatchObject({
+            timeLabel: '23:41',
+            nowLabel: '00:30',
+            nowKind: 'sleep',
+            elapsedHoursLabel: '0,8ч',
+        });
+    });
+
     it('buildChronoLoggedRows uses wake time, previous end and parallel names', () => {
         const rows = Chrono.buildChronoLoggedRows(
             { sleepEnd: '07:00' },
@@ -1548,6 +1567,80 @@ describe('chrono analytics helpers', () => {
             wakeLabel: '02:00',
             sinceLabel: '02:00',
             sinceKind: 'wake',
+        });
+    });
+
+    it('buildUntrackedChronoSummary can end a past day at next check-in sleepStart', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '08:00' },
+            [
+                { id: 'last', date: '2026-06-23', minutes: 13, createdAt: '2026-06-23T23:41:00' },
+            ],
+            '2026-06-23',
+            new Date('2026-06-24T12:14:00').getTime(),
+            {
+                endMs: new Date('2026-06-24T00:30:00').getTime(),
+                endKind: 'sleep',
+                endLabel: '00:30',
+            },
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 49,
+            durationLabel: '49 мин',
+            sinceLabel: '23:41',
+            sinceKind: 'last-entry',
+            endLabel: '00:30',
+            endKind: 'sleep',
+        });
+    });
+
+    it('buildPastUntrackedTailSummaries finds past day tails up to next sleepStart', () => {
+        const summaries = Chrono.buildPastUntrackedTailSummaries(
+            [
+                { id: 'last', date: '2026-06-23', minutes: 13, createdAt: '2026-06-23T23:41:00' },
+            ],
+            {
+                '2026-06-23': { sleepEnd: '08:00' },
+                '2026-06-24': { sleepStart: '00:30' },
+            },
+            '2026-06-24',
+            { nowMs: new Date('2026-06-24T12:14:00').getTime(), lookbackDays: 2 },
+        );
+
+        expect(summaries).toHaveLength(1);
+        expect(summaries[0]).toMatchObject({
+            date: '2026-06-23',
+            minutes: 49,
+            sinceLabel: '23:41',
+            endLabel: '00:30',
+            endKind: 'sleep',
+        });
+    });
+
+    it('buildPastUntrackedTailSummaries filters dismissed tail dates', () => {
+        const summaries = Chrono.buildPastUntrackedTailSummaries(
+            [
+                { id: 'd1', date: '2026-06-23', minutes: 10, createdAt: '2026-06-23T22:00:00' },
+                { id: 'd2', date: '2026-06-22', minutes: 10, createdAt: '2026-06-22T21:00:00' },
+            ],
+            {
+                '2026-06-22': { sleepEnd: '07:00' },
+                '2026-06-23': { sleepEnd: '08:00', sleepStart: '23:00' },
+                '2026-06-24': { sleepStart: '00:30' },
+            },
+            '2026-06-24',
+            {
+                nowMs: new Date('2026-06-24T12:14:00').getTime(),
+                lookbackDays: 2,
+                dismissedDates: ['2026-06-23'],
+            },
+        );
+
+        expect(summaries.map((item) => item.date)).toEqual(['2026-06-22']);
+        expect(summaries[0]).toMatchObject({
+            sinceLabel: '21:00',
+            endLabel: '23:00',
         });
     });
 

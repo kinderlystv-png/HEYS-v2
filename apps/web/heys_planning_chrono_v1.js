@@ -201,6 +201,11 @@
         return base.getTime();
     }
 
+    function buildChronoDayEndMs(date, nextDay) {
+        const sleepStartClock = nextDay && (nextDay.sleepStart || nextDay.bedTime || nextDay.asleepAt);
+        return buildDateTimeMs(date, sleepStartClock);
+    }
+
     function formatDecimalHoursFromMinutes(minutes) {
         return (Math.max(0, Number(minutes) || 0) / 60).toFixed(1).replace('.', ',') + 'ч';
     }
@@ -261,7 +266,7 @@
         return total;
     }
 
-    function buildLastAddedSummary(entries, activities, nowMs, date) {
+    function buildLastAddedSummary(entries, activities, nowMs, date, options = {}) {
         const activityById = new Map((Array.isArray(activities) ? activities : []).map((a) => [a.id, a]));
         const sorted = (Array.isArray(entries) ? entries : [])
             .filter((entry) => {
@@ -281,6 +286,7 @@
         return {
             timeLabel: formatClockTime(createdMs),
             nowLabel: formatClockTime(now),
+            nowKind: options && options.nowKind ? String(options.nowKind) : 'now',
             detail: `+${formatMinutes(last.minutes)} ${activity.name || 'Занятие'}`,
             elapsedHoursLabel: elapsedHours.toFixed(1).replace('.', ',') + 'ч',
         };
@@ -444,10 +450,13 @@
         return Number.isFinite(latest) ? latest : null;
     }
 
-    function buildUntrackedChronoSummary(day, entries, date, nowMs) {
+    function buildUntrackedChronoSummary(day, entries, date, nowMs, options = {}) {
         const wakeClock = day && (day.sleepEnd || day.wakeTime || day.wokeAt);
         const wakeMs = buildDateTimeMs(date, wakeClock);
-        const now = Number(nowMs) || Date.now();
+        const explicitEndMs = Number(options && options.endMs);
+        const now = Number.isFinite(explicitEndMs) ? explicitEndMs : (Number(nowMs) || Date.now());
+        const endKind = Number.isFinite(explicitEndMs) ? (options.endKind || 'custom') : 'now';
+        const endLabel = options && options.endLabel ? String(options.endLabel) : formatClockTime(now);
         if (wakeMs == null || !Number.isFinite(now) || wakeMs > now) return null;
         const lastEntryMs = getLastChronoEntryMs(entries, date);
         const startMs = lastEntryMs != null ? Math.max(wakeMs, lastEntryMs) : wakeMs;
@@ -461,9 +470,45 @@
             wakeLabel: String(wakeClock || ''),
             startMs,
             endMs: now,
+            endLabel,
+            endKind,
             sinceLabel: formatClockTime(startMs),
             sinceKind: lastEntryMs != null ? 'last-entry' : 'wake',
         };
+    }
+
+    function buildPastUntrackedTailSummaries(entries, daysByDate, todayStr, options = {}) {
+        const result = [];
+        const lookbackDays = Math.max(1, Math.round(Number(options.lookbackDays) || 7));
+        const dismissed = options.dismissedDates instanceof Set
+            ? options.dismissedDates
+            : new Set(Array.isArray(options.dismissedDates) ? options.dismissedDates : []);
+        const nowMs = Number(options.nowMs) || Date.now();
+
+        for (let offset = 1; offset <= lookbackDays; offset += 1) {
+            const date = Utils.addDays(todayStr, -offset);
+            if (!date || dismissed.has(date)) continue;
+            const nextDate = Utils.addDays(date, 1);
+            const day = (daysByDate && daysByDate[date]) || {};
+            const nextDay = (daysByDate && daysByDate[nextDate]) || {};
+            const sleepEndMs = buildChronoDayEndMs(date, nextDay);
+            if (sleepEndMs == null) continue;
+            const sleepStart = nextDay && nextDay.sleepStart ? String(nextDay.sleepStart) : formatClockTime(sleepEndMs);
+            const summary = buildUntrackedChronoSummary(day, entries, date, nowMs, {
+                endMs: sleepEndMs,
+                endKind: 'sleep',
+                endLabel: sleepStart,
+            });
+            if (!summary || !summary.minutes) continue;
+            result.push({
+                ...summary,
+                date,
+                nextDate,
+                sleepStart,
+            });
+        }
+
+        return result;
     }
 
     function distributeUntrackedMinutes(totalMinutes, activityIds, currentAllocations, changedId, changedMinutes) {
@@ -1186,6 +1231,29 @@
         return readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
     }
 
+    function readDismissedUntrackedTailDates() {
+        try {
+            const clientId = getCurrentClientId() || 'global';
+            const raw = localStorage.getItem(`${UNTRACKED_TAIL_DISMISS_KEY}_${clientId}`);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveDismissedUntrackedTailDates(dates) {
+        const normalized = Array.from(new Set((Array.isArray(dates) ? dates : [])
+            .map((date) => String(date || '').slice(0, 10))
+            .filter(Boolean)))
+            .sort();
+        try {
+            const clientId = getCurrentClientId() || 'global';
+            localStorage.setItem(`${UNTRACKED_TAIL_DISMISS_KEY}_${clientId}`, JSON.stringify(normalized));
+        } catch (_) { /* noop */ }
+        return normalized;
+    }
+
     // === Дата-навигация ===
 
     function shiftDateStr(dateStrValue, deltaDays) {
@@ -1609,6 +1677,7 @@
 
     // UI-prefs: свёрнут ли блок «Сводка». Локальный per-device ключ, не client-data.
     const OVERVIEW_COLLAPSED_KEY = 'heys_planning_chrono_overview_collapsed_v1';
+    const UNTRACKED_TAIL_DISMISS_KEY = 'heys_planning_chrono_untracked_tail_dismissed_v1';
     const LEDGER_LONG_PRESS_MS = 450;
     const LEDGER_DRAG_CANCEL_PX = 8;
 
@@ -1759,6 +1828,85 @@
                             className: 'planning-btn',
                             onClick: onClose,
                         }, 'Отмена'),
+                    ),
+                ),
+            ),
+        );
+    }
+
+    function ChronoUntrackedTailPromptModal({ tails, onFill, onDismissDates, onClose }) {
+        const overlayRef = useRef(null);
+        const list = Array.isArray(tails) ? tails.filter(Boolean) : [];
+        const single = list.length === 1 ? list[0] : null;
+
+        useEffect(() => {
+            const ModalManager = HEYS.ModalManager;
+            if (!ModalManager || typeof ModalManager.register !== 'function') return undefined;
+            return ModalManager.register('chrono-untracked-tail-prompt', () => onClose && onClose());
+        }, [onClose]);
+
+        useEffect(() => {
+            function onKey(e) { if (e.key === 'Escape' && onClose) onClose(); }
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+        }, [onClose]);
+
+        if (list.length === 0) return null;
+
+        const title = single ? 'Остался незаполненный хвост' : 'Есть незаполненные хвосты';
+        const dismissLabel = single ? 'Не актуально' : 'Не актуально по этим дням';
+        const dates = list.map((item) => item.date).filter(Boolean);
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--nested chrono-untracked-tail-overlay',
+            ref: overlayRef,
+            onClick: (e) => { if (e.target === overlayRef.current && onClose) onClose(); },
+        },
+            h('div', { className: 'planning-modal planning-modal--picker chrono-untracked-tail', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, title),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose, 'aria-label': 'Закрыть' }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body chrono-untracked-tail__body' },
+                    single
+                        ? h('div', { className: 'chrono-untracked-tail__hero' },
+                            h('span', { className: 'chrono-untracked-tail__icon', 'aria-hidden': 'true' }, '⏱'),
+                            h('div', { className: 'chrono-untracked-tail__copy' },
+                                h('strong', null, `${formatDateLabel(single.date)}: не учтено ${single.durationLabel || formatUntrackedDurationLabel(single.minutes)}`),
+                                h('span', null, `Последняя запись была в ${single.sinceLabel}. До сна в ${single.sleepStart || single.endLabel} осталось время без активности.`),
+                            ),
+                        )
+                        : h('div', { className: 'chrono-untracked-tail__stack' },
+                            h('p', { className: 'chrono-untracked-tail__lead' },
+                                `Нашёл ${list.length} дней, где после последней записи осталось время до сна.`),
+                            h('div', { className: 'chrono-untracked-tail__list' },
+                                list.map((item) => h('div', { key: item.date, className: 'chrono-untracked-tail__row' },
+                                    h('span', { className: 'chrono-untracked-tail__date' }, formatDateLabel(item.date)),
+                                    h('span', { className: 'chrono-untracked-tail__meta' },
+                                        `${item.sinceLabel} → сон ${item.sleepStart || item.endLabel}`),
+                                    h('strong', { className: 'chrono-untracked-tail__duration' },
+                                        item.durationLabel || formatUntrackedDurationLabel(item.minutes)),
+                                )),
+                            ),
+                            h('p', { className: 'chrono-untracked-tail__hint' },
+                                'Открой нужные даты стрелками в хронометраже и дозаполни только то, что ещё важно.'),
+                        ),
+                    h('div', { className: 'chrono-untracked-tail__actions' },
+                        single && h('button', {
+                            type: 'button',
+                            className: 'planning-btn planning-btn--primary',
+                            onClick: () => onFill && onFill(single.date),
+                        }, 'Дозаполнить'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-btn planning-btn--danger',
+                            onClick: () => onDismissDates && onDismissDates(dates),
+                        }, dismissLabel),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-btn',
+                            onClick: onClose,
+                        }, 'Позже'),
                     ),
                 ),
             ),
@@ -2982,10 +3130,13 @@
             rows: null,
         });
         const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
+        const untrackedEndLabel = untracked && untracked.endKind === 'sleep'
+            ? `сон ${untracked.endLabel}`
+            : 'сейчас';
         const untrackedContextLabel = untracked
             ? (untracked.sinceKind === 'last-entry'
-                ? `с последней записи ${untracked.sinceLabel} → сейчас`
-                : `с пробуждения ${untracked.wakeLabel || untracked.sinceLabel} → сейчас`)
+                ? `с последней записи ${untracked.sinceLabel} → ${untrackedEndLabel}`
+                : `с пробуждения ${untracked.wakeLabel || untracked.sinceLabel} → ${untrackedEndLabel}`)
             : '';
         const untrackedDurationLabel = untracked
             ? (untracked.durationLabel || formatUntrackedDurationLabel(untracked.minutes) || untracked.hoursLabel || '')
@@ -3182,7 +3333,7 @@
             },
                 lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
                 lastAdded && h('span', { className: 'chrono-overview__last-now' },
-                    `сейчас ${lastAdded.nowLabel}`),
+                    `${lastAdded.nowKind === 'sleep' ? 'сон' : 'сейчас'} ${lastAdded.nowLabel}`),
                 untracked && h('span', {
                     className: 'chrono-overview__untracked-text',
                     title: untrackedContextLabel || undefined,
@@ -4000,7 +4151,10 @@
         const [timerStopOpen, setTimerStopOpen] = useState(false);
         const [overviewModalOpen, setOverviewModalOpen] = useState(false);
         const [timerNow, setTimerNow] = useState(() => Date.now());
+        const [dismissedTailDates, setDismissedTailDates] = useState(() => readDismissedUntrackedTailDates());
+        const [tailPromptClosed, setTailPromptClosed] = useState(false);
         const todayStr = Utils.chronoDateStr?.() || Utils.dateStr();
+        const chronoClientId = getCurrentClientId() || 'global';
         const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
 
         useEffect(() => {
@@ -4009,6 +4163,11 @@
                 Store.compactChronoOlderThan90Once();
             }
         }, []);
+
+        useEffect(() => {
+            setDismissedTailDates(readDismissedUntrackedTailDates());
+            setTailPromptClosed(false);
+        }, [chronoClientId]);
 
         const activities = state.chronoActivities || [];
         const untrackedSteps = useMemo(() => buildUntrackedSteps(untrackedDraft, activities), [untrackedDraft, activities]);
@@ -4461,9 +4620,19 @@
         const timeOfDay = useMemo(() => buildTimeOfDayPattern(displayActivities, entries, todayStr),
             [displayActivities, entries, todayStr]);
 
-        const lastAdded = useMemo(() => buildLastAddedSummary(entries, activities, timerNow, activeDate),
-            [entries, activities, timerNow, activeDate]);
         const activeDay = useMemo(() => readChronoDayV2(activeDate), [activeDate, entries, timerNow]);
+        const nextActiveDate = useMemo(() => Utils.addDays(activeDate, 1), [activeDate]);
+        const nextActiveDay = useMemo(() => readChronoDayV2(nextActiveDate), [nextActiveDate, entries, timerNow]);
+        const activeDayEndMs = useMemo(() => {
+            if (activeDate === todayStr) return null;
+            return buildChronoDayEndMs(activeDate, nextActiveDay);
+        }, [activeDate, todayStr, nextActiveDay]);
+        const lastAdded = useMemo(() => {
+            const endMs = Number.isFinite(activeDayEndMs) ? activeDayEndMs : timerNow;
+            return buildLastAddedSummary(entries, activities, endMs, activeDate, {
+                nowKind: Number.isFinite(activeDayEndMs) ? 'sleep' : 'now',
+            });
+        }, [entries, activities, timerNow, activeDate, activeDayEndMs]);
         const loggedRows = useMemo(() => buildChronoLoggedRows(activeDay, entries, activities, activeDate),
             [activeDay, entries, activities, activeDate]);
         const handleLoggedRowsReorder = useCallback((nextRows) => {
@@ -4473,14 +4642,68 @@
             if (assignments.length > 0) state.reorderChronoRows(assignments);
         }, [state, loggedRows, activeDate]);
 
-        const todayDay = useMemo(() => readChronoDayV2(todayStr), [todayStr, timerNow]);
         const untracked = useMemo(() => {
-            if (activeDate !== todayStr) return null;
-            return buildUntrackedChronoSummary(todayDay, entries, todayStr, timerNow);
-        }, [activeDate, todayStr, entries, todayDay, timerNow]);
+            if (activeDate === todayStr) {
+                return buildUntrackedChronoSummary(activeDay, entries, activeDate, timerNow);
+            }
+            const sleepEndMs = activeDayEndMs;
+            if (sleepEndMs == null) return null;
+            return buildUntrackedChronoSummary(activeDay, entries, activeDate, timerNow, {
+                endMs: sleepEndMs,
+                endKind: 'sleep',
+                endLabel: nextActiveDay && nextActiveDay.sleepStart ? String(nextActiveDay.sleepStart) : formatClockTime(sleepEndMs),
+            });
+        }, [activeDate, todayStr, entries, activeDay, nextActiveDay, timerNow, activeDayEndMs]);
         const untrackedKey = untracked
             ? `${untracked.sinceKind}:${untracked.sinceLabel}:${untracked.minutes}`
             : '';
+
+        const pastTailDaysByDate = useMemo(() => {
+            const map = {};
+            for (let offset = 0; offset <= 8; offset += 1) {
+                const date = Utils.addDays(todayStr, -offset);
+                if (date) map[date] = readChronoDayV2(date);
+            }
+            return map;
+        }, [todayStr, entries, timerNow]);
+
+        const pastUntrackedTails = useMemo(() => buildPastUntrackedTailSummaries(
+            entries,
+            pastTailDaysByDate,
+            todayStr,
+            {
+                lookbackDays: 7,
+                dismissedDates: dismissedTailDates,
+                nowMs: timerNow,
+            },
+        ), [entries, pastTailDaysByDate, todayStr, dismissedTailDates, timerNow]);
+
+        const shouldShowTailPrompt = scope === 'day'
+            && activeDate === todayStr
+            && !tailPromptClosed
+            && pastUntrackedTails.length > 0
+            && !durationTarget
+            && !deleteTarget
+            && !historyTarget
+            && !entryEditTarget
+            && !timerCompleteShown
+            && !timerStopOpen
+            && !overviewModalOpen;
+
+        const handleTailPromptFill = useCallback((date) => {
+            if (!date) return;
+            setScope('day');
+            setActiveDate(date);
+            setTailPromptClosed(true);
+            setUntrackedDraft(null);
+            setOverviewModalOpen(false);
+        }, []);
+
+        const handleTailPromptDismissDates = useCallback((dates) => {
+            const next = saveDismissedUntrackedTailDates([].concat(dismissedTailDates || [], dates || []));
+            setDismissedTailDates(next);
+            setTailPromptClosed(true);
+        }, [dismissedTailDates]);
 
         useEffect(() => {
             if (!untrackedDraft) return;
@@ -4823,6 +5046,12 @@
                 onDiscard: handleTimerStopDiscard,
                 onClose: () => setTimerStopOpen(false),
             }),
+            shouldShowTailPrompt && h(ChronoUntrackedTailPromptModal, {
+                tails: pastUntrackedTails,
+                onFill: handleTailPromptFill,
+                onDismissDates: handleTailPromptDismissDates,
+                onClose: () => setTailPromptClosed(true),
+            }),
             overviewModalOpen && h(ChronoOverviewModal, {
                 dateLabel,
                 overviewProps: {
@@ -4867,6 +5096,7 @@
         ChronoTimerBanner,
         ChronoTimerCompleteModal,
         ChronoTimerStopModal,
+        ChronoUntrackedTailPromptModal,
         radiusForMinutes,
         colorForActivity,
         formatMinutes,
@@ -4895,6 +5125,7 @@
         buildChronoReorderAssignments,
         buildLastAddedSummary,
         buildUntrackedChronoSummary,
+        buildPastUntrackedTailSummaries,
         distributeUntrackedMinutes,
         buildUntrackedSteps,
         buildSmartSuggestions,

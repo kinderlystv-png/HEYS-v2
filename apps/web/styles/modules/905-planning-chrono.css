@@ -193,6 +193,129 @@ html.chrono-bubble-dragging .chrono-screen {
     justify-content: center;
 }
 
+/* --- Untracked past-day tail prompt --- */
+.chrono-untracked-tail {
+    width: calc(100% - 24px);
+    max-width: 430px;
+}
+
+.chrono-untracked-tail__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.chrono-untracked-tail__hero {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(20, 184, 166, 0.08));
+    border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.chrono-untracked-tail__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+    font-size: 22px;
+}
+
+.chrono-untracked-tail__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chrono-untracked-tail__copy strong {
+    color: var(--planning-text);
+    font-size: 15px;
+    line-height: 1.22;
+}
+
+.chrono-untracked-tail__copy span,
+.chrono-untracked-tail__lead,
+.chrono-untracked-tail__hint {
+    margin: 0;
+    color: var(--planning-muted);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.chrono-untracked-tail__stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chrono-untracked-tail__list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.chrono-untracked-tail__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 11px;
+    border-radius: 12px;
+    border: 1px solid var(--planning-border-soft);
+    background: var(--planning-surface-elevated);
+}
+
+.chrono-untracked-tail__date {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--planning-text);
+    white-space: nowrap;
+}
+
+.chrono-untracked-tail__meta {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--planning-muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-untracked-tail__duration {
+    color: var(--planning-accent);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.chrono-untracked-tail__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.chrono-untracked-tail__actions .planning-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+[data-theme="dark"] .chrono-untracked-tail__hero {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(20, 184, 166, 0.11));
+    border-color: rgba(147, 197, 253, 0.18);
+}
+
+[data-theme="dark"] .chrono-untracked-tail__icon {
+    background: rgba(15, 23, 42, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16);
+}
+
 /* --- Timer chips в duration-модалке --- */
 .chrono-duration__timer {
     display: flex;
