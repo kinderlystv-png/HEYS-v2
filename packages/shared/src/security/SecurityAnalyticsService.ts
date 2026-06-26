@@ -83,10 +83,10 @@ interface ThreatAnalysisResult {
 }
 
 export interface SecurityAnalyticsConfig {
-  /** PostgREST base URL (legacy field name; same shape as former Supabase project URL). */
-  supabaseUrl: string;
-  /** Service or anon API key for PostgREST `apikey` / `Authorization: Bearer`. */
-  supabaseKey: string;
+  /** PostgREST base URL. */
+  postgrestUrl?: string;
+  /** Service or API token for PostgREST `apikey` / `Authorization: Bearer`. */
+  apiKey?: string;
   enableRealTimeProcessing: boolean;
   enableAutomatedResponse: boolean;
   mlModelPath?: string;
@@ -105,7 +105,10 @@ export class SecurityAnalyticsService extends LightweightEventEmitter {
 
   constructor(config: SecurityAnalyticsConfig) {
     super();
-    this.database = new DatabaseService(config.supabaseUrl, config.supabaseKey);
+    this.database = new DatabaseService(
+      config.postgrestUrl || '',
+      config.apiKey || '',
+    );
     this.threatDetection = new ThreatDetectionService();
 
     if (config.enableRealTimeProcessing) {

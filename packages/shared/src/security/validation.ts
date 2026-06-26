@@ -70,7 +70,6 @@ export class InputSanitizer {
   private readonly config: DOMPurifyConfig;
 
   constructor(purifier: typeof DOMPurify = DOMPurify) {
-    this.sanitizeFn = this.resolveSanitizeFn(purifier);
     this.config = {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
       ALLOWED_ATTR: ['href', 'title'],
@@ -79,31 +78,55 @@ export class InputSanitizer {
       SANITIZE_DOM: true,
       KEEP_CONTENT: true,
     };
+    this.sanitizeFn = this.resolveSanitizeFn(purifier);
   }
 
   private resolveSanitizeFn(
     purifier: unknown,
   ): ((input: string, config?: DOMPurifyConfig) => unknown) | undefined {
-    const asDirect = purifier as { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
-    if (typeof asDirect?.sanitize === 'function') {
-      return asDirect.sanitize.bind(asDirect);
+    const probe = (candidate: (input: string, config?: DOMPurifyConfig) => unknown): boolean => {
+      try {
+        const output = String(
+          candidate('<p>x</p><img src="x" onerror="alert(1)">', this.config),
+        );
+        return output.includes('<p>x</p>') && !output.includes('onerror');
+      } catch {
+        return false;
+      }
+    };
+
+    const asDirect = purifier as {
+      isSupported?: boolean;
+      sanitize?: (input: string, config?: DOMPurifyConfig) => unknown;
+    };
+    if (asDirect?.isSupported === true && typeof asDirect?.sanitize === 'function') {
+      const candidate = asDirect.sanitize.bind(asDirect);
+      if (probe(candidate)) return candidate;
     }
 
     const asDefault = purifier as {
-      default?: { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
+      default?: {
+        isSupported?: boolean;
+        sanitize?: (input: string, config?: DOMPurifyConfig) => unknown;
+      };
     };
-    if (typeof asDefault?.default?.sanitize === 'function') {
-      return asDefault.default.sanitize.bind(asDefault.default);
+    if (asDefault?.default?.isSupported === true && typeof asDefault?.default?.sanitize === 'function') {
+      const candidate = asDefault.default.sanitize.bind(asDefault.default);
+      if (probe(candidate)) return candidate;
     }
 
     if (typeof purifier === 'function' && typeof globalThis !== 'undefined') {
       try {
         const factoryResult = (purifier as (w: unknown) => unknown)(
           (globalThis as { window?: unknown }).window ?? globalThis,
-        ) as { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
+        ) as {
+          isSupported?: boolean;
+          sanitize?: (input: string, config?: DOMPurifyConfig) => unknown;
+        };
 
-        if (typeof factoryResult?.sanitize === 'function') {
-          return factoryResult.sanitize.bind(factoryResult);
+        if (factoryResult?.isSupported === true && typeof factoryResult?.sanitize === 'function') {
+          const candidate = factoryResult.sanitize.bind(factoryResult);
+          if (probe(candidate)) return candidate;
         }
       } catch {
         // noop - fallback sanitizer will be used
@@ -221,15 +244,16 @@ export class InputSanitizer {
     const result = this.sanitizeFn
       ? this.sanitizeFn(input, config)
       : this.fallbackSanitize(input, config);
+    let sanitized: string;
     if (typeof result === 'string') {
-      return result;
+      sanitized = result;
+    } else if (result && typeof (result as { toString?: () => string }).toString === 'function') {
+      sanitized = (result as { toString: () => string }).toString();
+    } else {
+      sanitized = String(result ?? '');
     }
 
-    if (result && typeof (result as { toString?: () => string }).toString === 'function') {
-      return (result as { toString: () => string }).toString();
-    }
-
-    return String(result ?? '');
+    return this.fallbackSanitize(sanitized, config);
   }
 }
 

@@ -70,7 +70,7 @@ purpose: Task prompt — Security Phase 3
 ### ✅ pgcrypto доступен
 
 - Extension активирован в `database/yandex_migration/001_schema.sql`.
-- Используем `pgp_sym_encrypt(data, key, 'cipher-algo=aes256')` /
+- Используем `pgp_sym_encrypt(data, encryption_value, 'cipher-algo=aes256')` /
   `pgp_sym_decrypt`.
 
 ### ✅ Фаза 0 — Потенциальные блокеры (закрыты решениями)
@@ -363,7 +363,7 @@ await pool.query('SET heys.encryption_key = $1', [
 ### Environment Variable
 
 ```bash
-HEYS_ENCRYPTION_KEY=665a312d2f77527a3d3b61d88dc57a68c8e6af548d168c010ecec47508fb13fe
+HEYS_ENCRYPTION_KEY=<64_HEX_CHARS_FROM_LOCKBOX_OR_LOCAL_ENV>
 ```
 
 ### Yandex Cloud Function Update

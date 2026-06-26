@@ -119,7 +119,7 @@ describe('КТ4 - Автоматизация безопасности', () => {
     it('должен обнаруживать жестко закодированные секреты', async () => {
       const vulnerableFile = path.join(SAMPLE_FILES_DIR, 'hardcoded-secrets.js');
       const vulnerableCode = `
-        const API_KEY = 'sk-1234567890abcdef';
+        const API_KEY = 'dummy-secret-for-sast-test';
         const PASSWORD = 'secretpassword123';
         const JWT_SECRET = 'my-super-secret-jwt-key';
       `;
@@ -483,7 +483,7 @@ describe('КТ4 - Автоматизация безопасности', () => {
           document.innerHTML = userInput;
         `,
         'secrets.js': `
-          const apiKey = 'sk-1234567890abcdef';
+          const apiKey = 'dummy-secret-for-sast-test';
         `
       };
 
@@ -563,10 +563,10 @@ async function createTestVulnerableFiles() {
 
     'secrets-test.js': `
       // Hardcoded secrets
-      const API_KEY = 'sk-1234567890abcdef';
+      const API_KEY = 'dummy-secret-for-sast-test';
       const DATABASE_PASSWORD = 'super-secret-password';
-      const JWT_SECRET = 'my-jwt-secret-key-123';
-      const STRIPE_KEY = 'sk_test_DUMMY1234567890ABCDEF1234';
+      const JWT_TEST_VALUE = 'my-jwt-secret-key-123';
+      const STRIPE_KEY = 'dummy-stripe-secret-for-sast-test';
     `,
 
     'insecure-operations.js': `

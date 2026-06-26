@@ -1,6 +1,6 @@
 /**
  * PostgREST-compatible database access (no @supabase/* SDK).
- * Constructor URL/key match the legacy Supabase project shape: base URL + anon/service key.
+ * Constructor URL/key match a generic PostgREST shape: base URL + bearer/API token.
  */
 
 // Database Types
@@ -133,7 +133,7 @@ export class DatabaseService {
   private readonly baseUrl: string;
   private readonly apiKey: string;
 
-  /** @param postgrestBaseUrl Project REST base (e.g. https://xxx.supabase.co or any PostgREST root) */
+  /** @param postgrestBaseUrl Project REST base (e.g. https://api.example.com or any PostgREST root) */
   constructor(postgrestBaseUrl: string, apiKey: string) {
     this.baseUrl = postgrestBaseUrl.replace(/\/$/, '');
     this.apiKey = apiKey;
