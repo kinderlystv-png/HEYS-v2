@@ -17,8 +17,6 @@ describe('JWTAuthMiddleware', () => {
     config = {
       allowAnonymous: false,
       skipPaths: ['/api/health', '/api/public'],
-      supabaseUrl: 'https://test.supabase.co',
-      supabaseAnonKey: 'test-anon-key',
     };
     middleware = new JWTAuthMiddleware(config);
   });

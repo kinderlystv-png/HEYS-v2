@@ -1,9 +1,19 @@
 # -*- coding: utf-8 -*-
 import json
+import os
 import psycopg2
 
 # Read backup
-with open('/Users/poplavskijanton/Documents/heys-backup-ccfe6ea3-2026-01-25.json', 'r') as f:
+backup_path = os.environ.get('HEYS_RESTORE_BACKUP_PATH')
+client_id = os.environ.get('HEYS_RESTORE_CLIENT_ID')
+pg_password = os.environ.get('YC_PG_PASSWORD')
+
+if not backup_path or not client_id or not pg_password:
+    raise SystemExit(
+        "Set HEYS_RESTORE_BACKUP_PATH, HEYS_RESTORE_CLIENT_ID and YC_PG_PASSWORD before running restore_day25.py"
+    )
+
+with open(backup_path, 'r') as f:
     backup = json.load(f)
 
 day_data = backup['days'].get('2026-01-25')
@@ -18,14 +28,13 @@ conn = psycopg2.connect(
     host="rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
     port=6432,
     dbname="heys_production",
-    user="heys_admin",
-    password="heys007670",
+    user=os.environ.get("YC_PG_USER", "heys_admin"),
+    password=pg_password,
     sslmode="verify-full",
-    sslrootcert="/Users/poplavskijanton/.postgresql/root.crt"
+    sslrootcert=os.environ.get("YC_PG_SSL_ROOT_CERT", "/Users/poplavskijanton/.postgresql/root.crt")
 )
 cur = conn.cursor()
 
-client_id = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a'
 key = 'heys_dayv2_2026-01-25'
 
 # Check existing

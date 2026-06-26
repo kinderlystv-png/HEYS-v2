@@ -24,20 +24,20 @@
     "builtAt": "2026-06-19T21:18:19.487Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.9d98d1237f91.js",
-    "hash": "9d98d1237f91",
-    "sourceFingerprint": "93e0dbe7ce76",
+    "file": "boot-app.bundle.f40ec9d1a369.js",
+    "hash": "f40ec9d1a369",
+    "sourceFingerprint": "378d06cef475",
     "fileCount": 51,
-    "size": 1060553,
-    "builtAt": "2026-06-23T09:48:08.750Z"
+    "size": 1060345,
+    "builtAt": "2026-06-26T10:37:15.835Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.6f476e40b9cc.js",
-    "hash": "6f476e40b9cc",
-    "sourceFingerprint": "3068964cb712",
+    "file": "boot-init.bundle.dd4545585722.js",
+    "hash": "dd4545585722",
+    "sourceFingerprint": "a701180cfded",
     "fileCount": 6,
-    "size": 20598,
-    "builtAt": "2026-06-19T21:18:23.755Z"
+    "size": 20390,
+    "builtAt": "2026-06-26T10:37:15.994Z"
   },
   "postboot-1-game-eager": {
     "file": "postboot-1-game-eager.bundle.bb651c659737.js",

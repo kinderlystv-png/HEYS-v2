@@ -18,16 +18,10 @@ interface AuthenticatedUser {
 
 type RequestWithUser = Request & { user?: AuthenticatedUser };
 
-/**
- * Optional fields `supabaseUrl` / `supabaseAnonKey` are kept for backward-compatible
- * config shapes; the middleware does not call remote auth providers.
- */
 export interface AuthMiddlewareConfig {
   requiredRole?: string | undefined;
   allowAnonymous?: boolean | undefined;
   skipPaths?: string[] | undefined;
-  supabaseUrl?: string | undefined;
-  supabaseAnonKey?: string | undefined;
 }
 
 /**

@@ -6,7 +6,7 @@
 </head>
 <body>
   <h1>Проверка RPC <code>reset_client_pin</code> (PostgREST)</h1>
-  <p>Без CDN: введите базовый URL PostgREST и API-ключ при запуске проверки. Ключ в страницу не сохраняется.</p>
+  <p>Без CDN: введите базовый URL HEYS PostgREST и bearer-токен при запуске проверки. Токен в страницу не сохраняется.</p>
   <button type="button" onclick="checkRPC()">Проверить</button>
   <pre id="result"></pre>
 
@@ -15,11 +15,11 @@
       const result = document.getElementById('result');
       result.textContent = 'Проверка...';
 
-      const base = (prompt('PostgREST base URL (без слэша в конце), например https://xxx.supabase.co', '') || '').trim();
-      const key = (prompt('API key (anon или service)', '') || '').trim();
+      const base = (prompt('HEYS PostgREST base URL (без слэша в конце), например https://api.example.com', '') || '').trim();
+      const token = (prompt('Bearer token', '') || '').trim();
 
-      if (!base || !key) {
-        result.textContent = 'Отменено: нужны URL и ключ.';
+      if (!base || !token) {
+        result.textContent = 'Отменено: нужны URL и токен.';
         return;
       }
 
@@ -29,8 +29,7 @@
         const res = await fetch(url, {
           method: 'POST',
           headers: {
-            apikey: key,
-            Authorization: 'Bearer ' + key,
+            Authorization: 'Bearer ' + token,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

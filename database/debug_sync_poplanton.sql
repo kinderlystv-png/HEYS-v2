@@ -1,5 +1,5 @@
 -- DEBUG: Проверка синхронизации данных poplanton за сегодня
--- Запускать в Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql
+-- Запускать через psql/Yandex Cloud PostgreSQL с доступом к production-схеме.
 
 -- ═══════════════════════════════════════════════════════════════════
 -- 1. НАЙТИ КЛИЕНТА poplanton

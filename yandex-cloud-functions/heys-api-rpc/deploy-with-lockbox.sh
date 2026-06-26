@@ -32,6 +32,11 @@ if [[ -z "${JWT_SECRET:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${LOCKBOX_PG_SECRET_ID:-}" ]]; then
+  echo "❌ LOCKBOX_PG_SECRET_ID is not set. Aborting deploy."
+  exit 1
+fi
+
 SERVICE_ACCOUNT_NAME="heys-function-invoker"
 SA_ID=$(yc iam service-account get "$SERVICE_ACCOUNT_NAME" --format json 2>/dev/null | jq -r '.id')
 if [[ -z "$SA_ID" || "$SA_ID" == "null" ]]; then
@@ -40,7 +45,7 @@ if [[ -z "$SA_ID" || "$SA_ID" == "null" ]]; then
 fi
 
 # Secret ID from Lockbox
-SECRET_ID="e6qcc920n15ja2tj2s2d"
+SECRET_ID="${LOCKBOX_PG_SECRET_ID}"
 # VERSION_ID removed to always use latest
 
 # DB user MUST match whichever password is stored in Lockbox under postgresql_password.

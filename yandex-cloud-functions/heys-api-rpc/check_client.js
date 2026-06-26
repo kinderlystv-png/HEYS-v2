@@ -6,13 +6,16 @@ async function main() {
     port: 6432,
     database: 'heys_production',
     user: 'heys_admin',
-    password: 'Heys2024SecureDB!',
+    password: process.env.YC_PG_PASSWORD,
     ssl: { rejectUnauthorized: false }
   });
   
   await client.connect();
   
-  const clientId = '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc';
+  const clientId = process.env.HEYS_DEBUG_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('HEYS_DEBUG_CLIENT_ID is required');
+  }
   
   console.log('=== ДАННЫЕ КЛИЕНТА', clientId, '===\n');
   
@@ -48,8 +51,12 @@ async function main() {
       console.log(`    plaintext v: ${r.plaintext_value?.substring(0, 100)}...`);
     });
   } else {
-    console.log('  Нет заш    console.log('  Нет заш    console.log('  Нет заш    console.log('  Нет заш� с ключом
-  const encKey = '0123456789abcdef0123456789abcdef'; // из env HEYS_ENCRYPTION_KEY
+    console.log('  Нет зашифрованных записей');
+  }
+  const encKey = process.env.HEYS_ENCRYPTION_KEY;
+  if (!encKey) {
+    throw new Error('HEYS_ENCRYPTION_KEY is required');
+  }
   
   console.log('\n3. ПОПЫТКА РАСШИФРОВКИ:');
   try {
@@ -94,7 +101,11 @@ async function main() {
   
   console.log('\n4. PLAINTEXT ДАННЫЕ (v колонка):');
   if (plaintext.rows.length > 0) {
-    plaintext.rows.fo    plaintext.rows.fo    plaintext.rows.fo    plaintext.rows.fo    plaintext.rows.fo    plaintext.rows.fonsole.log('  Нет plaintext данных');
+    plaintext.rows.forEach(r => {
+      console.log('  - ' + r.k + ': ' + String(r.value || '').substring(0, 200) + '...');
+    });
+  } else {
+    console.log('  Нет plaintext данных');
   }
   
   await client.end();

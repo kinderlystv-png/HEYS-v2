@@ -1,7 +1,7 @@
 -- =====================================================
 -- HEYS Database Schema Migration to Yandex.Cloud PostgreSQL
 -- Generated: 2025-12-20
--- Source: Supabase project ukqolcziqcuplqfgrmsh
+-- Source: legacy PostgreSQL export
 -- Target: Yandex.Cloud PostgreSQL heys_production
 -- =====================================================
 

@@ -100,8 +100,8 @@
   </div>
 
   <script>
-    // API ключ SMS.ru
-    const API_KEY = '78608003-ED53-BC7C-0C47-788283EBCC3F';
+    // API ключ SMS.ru вводится только локально для ручного теста.
+    const API_KEY = new URLSearchParams(location.search).get('apiKey') || '';
     
     // Текущий код (для проверки)
     let currentCode = null;

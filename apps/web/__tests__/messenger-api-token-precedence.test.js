@@ -43,7 +43,7 @@ describe('HEYS.MessengerAPI token precedence', () => {
   });
 
   it('keeps PIN session token precedence for explicit PIN auth clients', () => {
-    localStorage.setItem('heys_pin_auth_client', 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a');
+    localStorage.setItem('heys_pin_auth_client', 'test-pin-client-id');
     localStorage.setItem('heys_curator_session', 'curator.jwt.token');
     localStorage.setItem('heys_session_token', JSON.stringify('pin-session-token'));
 

@@ -93,13 +93,12 @@
 
             // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
             // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
-            // но основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev
-            const supabaseUrl = apiBaseUrl;
+            // Основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev.
+            const cloudApiUrl = apiBaseUrl;
 
             HEYS.cloud.init({
-                url: supabaseUrl,
-                anonKey:
-                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+                url: cloudApiUrl,
+                anonKey: '',
                 localhostProxyUrl: isLocalBrowserDev ? apiBaseUrl : undefined
             });
         }
