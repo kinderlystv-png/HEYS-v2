@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.27.5eb634b3",
+      "buildHash": "5eb634b3",
+      "date": "2026-06-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Обновлён лендинг HEYS Pro",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Лендинг стал понятнее",
+          "description": "Обновили первый экран, объяснение работы куратора, демо, сравнение форматов и блок под капотом: теперь страница спокойнее показывает, как HEYS ведёт дневник и помогает ориентироваться по виджетам."
+        }
+      ],
+      "coveredCommits": ["5eb634b3"]
+    },
+    {
       "version": "2026.06.26.d31def18",
       "buildHash": "d31def18",
       "date": "2026-06-26",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["57230d54"]
-    },
-    {
-      "version": "2026.06.21.4c00751d",
-      "buildHash": "4c00751d",
-      "date": "2026-06-21",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Stability and product search update",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Улучшены вход, поиск продуктов и Telegram-бот",
-          "description": "Обновлены проверки согласий и подписки, поиск общих продуктов и доставка ответов Telegram-бота."
-        }
-      ],
-      "coveredCommits": ["5f22fcbb", "3b585e20"]
     }
   ]
 }
