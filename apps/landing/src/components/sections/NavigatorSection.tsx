@@ -6,39 +6,6 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
-const riskLevels = [
-    {
-        id: 'low',
-        color: 'bg-emerald-500',
-        label: 'Спокойно',
-        text: 'ритм держится, можно продолжать без лишних изменений',
-    },
-    {
-        id: 'guarded',
-        color: 'bg-lime-500',
-        label: 'Наблюдаем',
-        text: 'появился небольшой сдвиг, его лучше не игнорировать',
-    },
-    {
-        id: 'elevated',
-        color: 'bg-amber-500',
-        label: 'Лучше подстраховаться',
-        text: 'сон, еда или нагрузка начинают тянуть день в сторону срыва',
-    },
-    {
-        id: 'high',
-        color: 'bg-orange-500',
-        label: 'Нужно внимание',
-        text: 'накопилось несколько факторов, куратору важно быстро увидеть причину',
-    },
-    {
-        id: 'critical',
-        color: 'bg-rose-500',
-        label: 'Нужен разбор',
-        text: 'система подсвечивает ситуацию для бережной корректировки плана',
-    },
-]
-
 const causeExamples = [
     {
         icon: '😴',
@@ -82,6 +49,56 @@ const foodWindowItems = [
     'Как близко друг к другу стоят приёмы пищи',
     'Что меняется после тренировки, недосыпа или позднего ужина',
 ]
+
+function RiskRadarWidgetPreview() {
+    const size = 180
+    const strokeWidth = 26
+    const radius = (size - strokeWidth) / 2
+    const halfCircumference = Math.PI * radius
+    const score = 2
+    const progress = (score / 100) * halfCircumference
+    const offset = halfCircumference - progress
+
+    return (
+        <div className="mx-auto max-w-[280px] rounded-[28px] border border-white/70 bg-gradient-to-br from-[#FFE7D8] via-white to-[#F7FAFF] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.10)]">
+            <div className="relative mx-auto h-[128px] w-[180px]">
+                <svg
+                    viewBox={`0 0 ${size} ${size / 2 + 26}`}
+                    className="absolute inset-x-0 top-0 h-[116px] w-full"
+                    aria-hidden="true"
+                >
+                    <path
+                        d={`M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`}
+                        fill="none"
+                        stroke="rgba(226, 232, 240, 0.95)"
+                        strokeLinecap="round"
+                        strokeWidth={strokeWidth}
+                    />
+                    <path
+                        d={`M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`}
+                        fill="none"
+                        stroke="#22C55E"
+                        strokeDasharray={halfCircumference}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        strokeWidth={strokeWidth}
+                    />
+                </svg>
+                <div className="absolute inset-x-0 top-[54px] text-center">
+                    <div className="text-[42px] font-bold leading-none text-[#22C55E]">
+                        {score}%
+                    </div>
+                    <div className="mt-1 text-[18px] font-semibold leading-none text-slate-500">
+                        Риск-радар
+                    </div>
+                </div>
+            </div>
+            <div className="mx-auto mt-3 flex h-12 max-w-[210px] items-center justify-center rounded-full border-2 border-[#22C55E] bg-white/78 px-5 text-[16px] font-bold uppercase tracking-wide text-[#22C55E]">
+                Спокойно
+            </div>
+        </div>
+    )
+}
 
 function AccordionBlock({
     isVisible,
@@ -206,8 +223,8 @@ export default function NavigatorSection() {
                         }`}
                         style={{ transitionDelay: '100ms' }}
                     >
-                        Navigator собирает питание, сон, активность, стресс и ритм недели в
-                        понятную картину. RiskRadar подсвечивает ранний сигнал риска, а куратор
+                        HEYS собирает питание, сон, активность, стресс и ритм недели в
+                        понятную картину. Риск-радар подсвечивает ранний сдвиг, а куратор
                         переводит его в простой следующий шаг.
                     </p>
 
@@ -218,30 +235,23 @@ export default function NavigatorSection() {
                             onToggle={() => toggleAccordion(0)}
                             delay={200}
                             tone="border-indigo-100 bg-indigo-50/45"
-                            title="RiskRadar: ранний сигнал, а не диагноз"
-                            summary="Система сравнивает текущую неделю с вашим обычным ритмом и показывает, где лучше вмешаться мягко и вовремя."
+                            title="Риск-радар: ранний сигнал, а не диагноз"
+                            summary="HEYS сравнивает текущую неделю с вашим обычным ритмом и показывает куратору, где день начинает требовать внимания."
                         >
-                            <div className="space-y-3">
-                                {riskLevels.map((level, index) => (
-                                    <div key={level.id} className="flex items-center gap-4">
-                                        <div
-                                            className={`${level.color} h-3 rounded-full`}
-                                            style={{ width: `${118 - index * 16}px` }}
-                                        />
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-semibold text-gray-900">
-                                                {level.label}
-                                            </div>
-                                            <div className="text-sm text-gray-600">{level.text}</div>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="grid gap-5 md:grid-cols-[280px_1fr] md:items-center">
+                                <RiskRadarWidgetPreview />
+                                <div className="space-y-3">
+                                    <p className="rounded-xl border border-white/70 bg-white/65 p-4 text-sm leading-relaxed text-gray-600">
+                                        Это не диагноз, а рабочая подсказка для куратора:
+                                        где ритм держится спокойно, а где накопились сдвиги.
+                                    </p>
+                                    <p className="rounded-xl border border-white/70 bg-white/65 p-4 text-sm leading-relaxed text-gray-600">
+                                        Когда статус меняется, куратор смотрит не на один
+                                        процент, а на неделю: питание, сон, нагрузку и
+                                        обстоятельства дня.
+                                    </p>
+                                </div>
                             </div>
-                            <p className="mt-5 rounded-xl border border-white/70 bg-white/65 p-4 text-sm leading-relaxed text-gray-600">
-                                Публично это не медицинская шкала. Это рабочий индикатор для
-                                куратора: где накопились сдвиги и какой следующий шаг будет
-                                самым бережным.
-                            </p>
                         </AccordionBlock>
 
                         <AccordionBlock
@@ -251,7 +261,7 @@ export default function NavigatorSection() {
                             delay={300}
                             tone="border-emerald-100 bg-emerald-50/45"
                             title="Ищем причину в режиме недели"
-                            summary="Вечерняя тяга, пропуски еды и усталость часто складываются в цепочку. HEYS помогает увидеть её без обвинений."
+                            summary="Вечерняя тяга, пропуски еды и усталость часто связаны. HEYS помогает увидеть эту связь без обвинений."
                         >
                             <div className="space-y-3">
                                 {causeExamples.map((item) => (
@@ -274,7 +284,7 @@ export default function NavigatorSection() {
                             onToggle={() => toggleAccordion(2)}
                             delay={400}
                             tone="border-amber-100 bg-amber-50/45"
-                            title="Корректируем без наказания"
+                            title="Возвращаем ритм без наказания"
                             summary="Если день пошёл не по плану, система не предлагает жёсткую компенсацию. Задача — вернуть ритм, а не усилить качели."
                         >
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -299,7 +309,7 @@ export default function NavigatorSection() {
                             onToggle={() => toggleAccordion(3)}
                             delay={500}
                             tone="border-sky-100 bg-sky-50/45"
-                            title="Окно после еды — без псевдоточного таймера"
+                            title="Окно после еды — как ориентир, а не таймер"
                             summary="HEYS показывает качественный ориентир: как приёмы пищи накладываются друг на друга и что это значит для планирования дня."
                         >
                             <div className="grid gap-4 md:grid-cols-[1fr_240px]">
@@ -348,22 +358,6 @@ export default function NavigatorSection() {
                         </AccordionBlock>
                     </div>
 
-                    <div
-                        className={`mt-12 text-center transition-all duration-700 ease-out ${
-                            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-                        }`}
-                        style={{ transitionDelay: '600ms' }}
-                    >
-                        <a
-                            href="#trial"
-                            className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95"
-                        >
-                            Оставить заявку на неделю Pro (0 ₽)
-                        </a>
-                        <p className="mt-3 text-sm text-gray-400">
-                            7 дней сопровождения. Без привязки карты.
-                        </p>
-                    </div>
                 </div>
             </div>
         </section>

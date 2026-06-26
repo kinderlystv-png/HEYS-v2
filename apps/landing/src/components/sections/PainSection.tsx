@@ -94,6 +94,27 @@ export default function PainSection() {
                             <span className="text-blue-600 inline-block mt-2">Рядом нужен человек, который видит и реагирует.</span>
                         </p>
                     </div>
+
+                    <div
+                        className={`mt-8 sm:mt-10 rounded-3xl border border-blue-100 bg-[#F4FAFF] px-5 py-6 sm:px-8 sm:py-7 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                            }`}
+                        style={{ transitionDelay: '900ms' }}
+                    >
+                        <p className="text-[18px] sm:text-xl font-semibold text-gray-900 leading-snug">
+                            Если узнали себя — начните с недели Pro.
+                        </p>
+                        <p className="mt-2 text-[14px] sm:text-[15px] text-[#6b7280] leading-relaxed">
+                            7 дней сопровождения: куратор ведёт дневник, вы видите картину в HEYS.
+                            Без карты и автосписаний.
+                        </p>
+                        <a
+                            href="#trial"
+                            className="mt-5 inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-[#1D70B7] px-6 py-3 text-[14px] font-semibold tracking-wide text-white shadow-[0_10px_22px_rgba(29,112,183,0.16)] transition-all hover:bg-[#185F9D] active:scale-95"
+                        >
+                            Оставить заявку на неделю Pro (0 ₽)
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>

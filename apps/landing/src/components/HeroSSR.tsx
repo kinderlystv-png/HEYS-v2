@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import logoHeroBlue from '../assets/logo-hero-blue.png';
+
 import HeroFlowDemo from './HeroFlowDemo';
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants';
@@ -21,9 +23,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
   // Mobile fit-to-height: if the content would overflow the available slot
   // (short browser tab / large system font), scale the whole block down so it
-  // never needs scroll; on tall screens it stays at scale 1, centred, with the
-  // generous CSS gaps kept as air. Mirrors stavropol-landing's report-sheet
-  // scaler, but only for < lg where the hero is h-dvh.
+  // never needs scroll; spare height stays around the whole block instead of
+  // stretching the gaps between individual elements.
   const fitSlotRef = useRef<HTMLDivElement | null>(null); // flex slot (available height)
   const fitContentRef = useRef<HTMLDivElement | null>(null); // measured/scaled block
   const [contentScale, setContentScale] = useState(1);
@@ -105,10 +106,12 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(180deg, #8EBFE0 0%, #D8ECF8 50%, #FCFBF9 90%, #FAE5D5 100%)',
+          background:
+            'linear-gradient(180deg, #8EBFE0 0%, #E2ECF2 46%, #FCFBF9 82%, #F3D7D7 100%)',
         }}
         aria-hidden="true"
       />
+      <div className="hero-brand-plus-pattern absolute inset-0" aria-hidden="true" />
 
       {/* Header */}
       <header
@@ -116,9 +119,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
           mounted ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <div className="hero-mobile-header mx-auto w-full max-w-[1024px] px-4 md:px-6 py-4 flex items-center justify-between">
+        <div className="hero-mobile-header mx-auto w-full max-w-[1024px] py-4 pl-6 pr-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center">
-            <img src="/logo.png" alt="HEYS" width={80} height={53} />
+            <img src={logoHeroBlue.src} alt="HEYS" width={80} height={53} />
           </div>
 
           {/* Desktop nav */}
@@ -181,18 +184,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 {link.label}
               </a>
             ))}
-            <a
-              href="#trial"
-              onClick={() => setMenuOpen(false)}
-              className={`mt-4 inline-flex items-center justify-center px-8 py-3 bg-[#111827] text-white/95 font-normal rounded-full transition-all text-[15px] tracking-wide transform ${
-                menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-              }`}
-              style={{
-                transitionDelay: menuOpen ? `${content.nav.links.length * 50 + 150}ms` : '0ms',
-              }}
-            >
-              Оставить заявку
-            </a>
           </nav>
         </div>
       </header>
@@ -206,9 +197,12 @@ export default function HeroSSR({ content }: HeroSSRProps) {
           ref={fitContentRef}
           className="hero-mobile-content mx-auto w-full max-w-[1024px] px-4 pb-4 pt-2 md:px-6 md:pb-24 md:pt-8"
           style={{
-            transform: contentScale === 1 ? undefined : `scale(${contentScale})`,
+            transform:
+              contentScale === 1
+                ? 'translateY(var(--hero-mobile-content-shift-y, 0px))'
+                : `translateY(var(--hero-mobile-content-shift-y, 0px)) scale(${contentScale})`,
             transformOrigin: 'center center',
-            willChange: contentScale === 1 ? undefined : 'transform',
+            willChange: 'transform',
           }}
         >
           <div className="hero-mobile-grid grid grid-cols-1 items-center lg:grid-cols-[1fr_400px] lg:gap-14">
@@ -255,7 +249,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 </span>
               </h2>
 
-              {/* CTA — один primary + secondary text link */}
+              {/* CTA — first move is understanding the format, not forcing a form. */}
               <div
                 className={`hero-mobile-actions flex flex-row flex-wrap items-center justify-center gap-x-6 gap-y-3 transition-all duration-700 ease-out lg:mb-4 lg:justify-start ${
                   mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
@@ -263,8 +257,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 style={{ transitionDelay: '1200ms' }}
               >
                 <a
-                  href="#trial"
-                  className="hero-mobile-primary inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[14px] tracking-wide shadow-lg shadow-blue-600/25"
+                  href="#curator"
+                  className="hero-mobile-primary inline-flex items-center justify-center gap-2 bg-[#1D70B7] px-6 py-3 text-white font-semibold rounded-2xl hover:bg-[#185F9D] active:scale-95 transition-all text-[14px] tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)]"
                 >
                   {content.hero.ctaPrimary}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -276,46 +270,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                       strokeLinejoin="round"
                     />
                   </svg>
-                </a>
-                <a
-                  href="#demo"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const target = document.getElementById('demo');
-                    if (!target) {
-                      window.dispatchEvent(new CustomEvent('heys:open-demo'));
-                      return;
-                    }
-                    const reducedMotion = window.matchMedia(
-                      '(prefers-reduced-motion: reduce)',
-                    ).matches;
-                    if (reducedMotion) {
-                      target.scrollIntoView({ behavior: 'auto', block: 'start' });
-                      window.dispatchEvent(new CustomEvent('heys:open-demo'));
-                      return;
-                    }
-                    // Плавный скрол → дождаться конца → пауза 250мс
-                    // (юзер успевает «увидеть» секцию) → открыть модалку.
-                    // scrollend поддерживается в Chrome 114+/Safari 17.5+;
-                    // fallback-таймер на 1200мс для старых браузеров.
-                    let fired = false;
-                    const fire = () => {
-                      if (fired) return;
-                      fired = true;
-                      window.removeEventListener('scrollend', onScrollEnd);
-                      clearTimeout(fallbackTimer);
-                      setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('heys:open-demo'));
-                      }, 250);
-                    };
-                    const onScrollEnd = () => fire();
-                    window.addEventListener('scrollend', onScrollEnd);
-                    const fallbackTimer = setTimeout(fire, 1200);
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                  className="hero-mobile-secondary text-[14px] text-[#374151] hover:text-[#111827] underline underline-offset-4 transition-colors"
-                >
-                  Открыть картину в приложении ↓
                 </a>
               </div>
               {content.hero.microtext ? (

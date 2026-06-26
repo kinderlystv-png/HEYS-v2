@@ -660,6 +660,16 @@
                 isConsentBlocking,
             } = derivedState;
             const getPendingText = () => pendingText;
+            const isLandingDemoEmbed = (() => {
+                try {
+                    const params = new URLSearchParams(window.location.search || '');
+                    return params.get('embed') === 'landing-demo'
+                        || params.get('demo') === 'landing'
+                        || params.get('hideWhatsNew') === '1';
+                } catch (_) {
+                    return false;
+                }
+            })();
 
             React.useEffect(() => {
                 if (tab !== 'tasks') return;
@@ -687,6 +697,11 @@
             }, [tab]);
 
             React.useEffect(() => {
+                if (isLandingDemoEmbed) {
+                    if (showWhatsNew) setShowWhatsNew(false);
+                    return undefined;
+                }
+
                 let cancelled = false;
 
                 const clearRetry = () => {
@@ -853,6 +868,7 @@
                 isInitializing,
                 isConsentBlocking,
                 isMorningCheckinBlocking,
+                isLandingDemoEmbed,
                 showSyncLockOverlay,
                 showWhatsNew,
             ]);

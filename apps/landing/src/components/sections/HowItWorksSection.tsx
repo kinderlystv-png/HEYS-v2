@@ -122,19 +122,6 @@ export default function HowItWorksSection() {
                             </div>
                         ))}
                     </div>
-
-                    {/* CTA */}
-                    <div
-                        className={`text-center mt-12 transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                        style={{ transitionDelay: '650ms' }}
-                    >
-                        <a
-                            href="#trial"
-                            className="inline-flex items-center justify-center px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[15px] tracking-wide shadow-lg shadow-blue-600/25"
-                        >
-                            Оставить заявку на неделю Pro (0 ₽)
-                        </a>
-                    </div>
                 </div>
             </div>
         </section>

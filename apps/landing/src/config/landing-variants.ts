@@ -169,7 +169,7 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
       headline: 'Ваш дневник питания ведёт куратор.',
       subheadline: 'Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.',
       features: [],
-      ctaPrimary: 'Оставить заявку на неделю Pro (0 ₽)',
+      ctaPrimary: 'Понять, как работает HEYS',
       ctaSecondary: '',
       microtext: 'Без карты · Без автосписаний · Не медицинская услуга',
     },
@@ -182,7 +182,6 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
         { id: 'trust', label: 'доверие', href: '#trust' },
         { id: 'pricing', label: 'тарифы', href: '#pricing' },
         { id: 'faq', label: 'вопросы', href: '#faq' },
-        { id: 'trial', label: 'неделя Pro (0 ₽)', href: '#trial' },
       ],
     },
     page: {

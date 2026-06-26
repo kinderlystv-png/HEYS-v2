@@ -20,6 +20,9 @@ const NATIVE_H = 852
 function buildDemoSrc(gender: 'male' | 'female') {
     const params = new URLSearchParams({
         gender,
+        embed: 'landing-demo',
+        default_ts: '1',
+        hideWhatsNew: '1',
         defaultTab: 'widgets',
         tab: 'widgets',
         view: 'widgets',
@@ -264,7 +267,7 @@ export default function DemoSection() {
                         style={{ transitionDelay: '200ms' }}
                     >
                         {/* Desktop preview frame — iPhone 14/15-like */}
-                        <div className="hidden md:block relative w-[380px] aspect-[9/19.5] rounded-[44px] border-[10px] border-black bg-black shadow-2xl overflow-hidden">
+                        <div className="hidden md:block relative w-[420px] aspect-[9/19.5] rounded-[44px] border-[10px] border-black bg-black shadow-2xl overflow-hidden">
                             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-10" />
                             <PreviewButton
                                 onClick={() => setModalOpen(true)}
@@ -276,7 +279,7 @@ export default function DemoSection() {
                             never exceeds visible viewport minus header — иначе
                             на узких/коротких экранах (URL-бар + любой webview)
                             нижняя половина mockup'а с CTA уезжает за обрез. */}
-                        <div className="md:hidden relative mx-auto aspect-[9/19.5] w-[min(400px,calc(100vw-32px),calc((100dvh-280px)*9/19.5))] rounded-[32px] border-[6px] border-black bg-black shadow-2xl overflow-hidden">
+                        <div className="md:hidden relative mx-auto aspect-[9/19.5] w-[min(430px,calc(100vw-32px),calc((100dvh-220px)*9/19.5))] rounded-[32px] border-[6px] border-black bg-black shadow-2xl overflow-hidden">
                             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-10" />
                             <PreviewButton
                                 onClick={() => setModalOpen(true)}
@@ -312,10 +315,10 @@ function PreviewButton({ onClick }: { onClick: () => void }) {
             </div>
             <div className="text-center px-4">
                 <div className="text-[15px] font-semibold text-[#111827] mb-1">
-                    Открыть картину
+                    Посмотреть пример
                 </div>
                 <div className="text-[12px] text-[#374151]/80">
-                    сначала покажем виджеты
+                    начнём со сводки
                 </div>
             </div>
         </button>

@@ -40,6 +40,7 @@
         const params = new URLSearchParams(window.location.search);
         const action = params.get('action');
         const tabParam = params.get('tab');
+        const viewParam = params.get('view');
         const shareReceived = params.get('share-received');
         const switchClientParam = params.get('switch_client');
         const openMessagesParam = params.get('open_messages');
@@ -255,11 +256,12 @@
             };
 
             processSharedImages();
-        } else if (tabParam) {
-            // 🆕 Shortcut для переключения вкладок: ?tab=day, ?tab=stats и т.д.
+        } else if (tabParam || viewParam) {
+            // 🆕 Shortcut для переключения вкладок: ?tab=widgets / ?view=widgets и т.д.
             needsUrlCleanup = true;
-            const validTabs = ['stats', 'ration', 'user', 'day'];
-            const mappedTab = tabParam === 'day' ? 'stats' : tabParam;
+            const requestedTab = tabParam || viewParam;
+            const validTabs = ['stats', 'diary', 'widgets', 'insights', 'month', 'ration', 'user', 'day'];
+            const mappedTab = requestedTab === 'day' ? 'stats' : requestedTab;
             if (validTabs.includes(mappedTab)) {
                 if (skipTabSwitchRef) skipTabSwitchRef.current = true;
                 setTab(mappedTab);
@@ -271,6 +273,7 @@
         if (needsUrlCleanup) {
             url.searchParams.delete('action');
             url.searchParams.delete('tab');
+            url.searchParams.delete('view');
             url.searchParams.delete('share-received');
             url.searchParams.delete('switch_client');
             url.searchParams.delete('open_messages');
