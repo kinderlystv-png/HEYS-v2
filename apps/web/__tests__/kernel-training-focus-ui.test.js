@@ -111,8 +111,9 @@ describe('TrainingFocus UI primitives', () => {
       ]
     }));
 
-    const runner = screen.getByLabelText('Ведомая тренировка');
+    const runner = screen.getByLabelText('Тренировка с сопровождением');
     expect(runner.getAttribute('data-training-runner')).toBe('guided');
+    expect(within(runner).getByText('Тренировка с сопровождением')).toBeTruthy();
     expect(within(runner).getAllByText('Hip CARs').length).toBeGreaterThan(0);
     expect(within(runner).getByAltText('Фото упражнения: Hip CARs')).toBeTruthy();
     expect(within(runner).getByText('Вдох 4 сек')).toBeTruthy();

@@ -46,6 +46,16 @@ describe('mobility assessment', () => {
     expect(M().assessment.classifyLimiter(r).type).toBe('control');
   });
 
+  it('postureAudit отдаёт веса слотов осанки', () => {
+    const audit = M().assessment.postureAudit([
+      { testId: 'deep_neck_flexor_hold', measure: 12 },
+      { testId: 'wall_angel_quality', measure: 4 }
+    ]);
+    expect(audit.slotWeights.neck_control).toBeGreaterThan(0);
+    expect(audit.slotWeights.scapular_control).toBeGreaterThan(0);
+    expect(audit.leadingPostureLimiter.slotId).toBe('neck_control');
+  });
+
   it('retestDue срабатывает после 6 недель', () => {
     expect(M().assessment.retestDue('2026-01-01', '2026-02-20', 6)).toBe(true);
     expect(M().assessment.retestDue('2026-01-01', '2026-01-20', 6)).toBe(false);

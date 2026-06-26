@@ -101,6 +101,13 @@
     percussion: 'Массажёр',
     bolster: 'Болстер'
   };
+  const POPULATION_LABEL = {
+    hypermobile: 'Гипермобильность',
+    pregnancy: 'Беременность',
+    adolescent: 'Подросток',
+    older: 'Старший возраст',
+    desk: 'Много сидячей работы'
+  };
   const EQUIPMENT_ICON = {
     band: '▱',
     strap: '⌁',
@@ -127,50 +134,193 @@
     prep: 'Подготовка',
     develop: 'Развитие',
     recover: 'Восстановление',
-    regulate: 'Регуляция'
+    regulate: 'Снижение тонуса'
   };
+  const MODALITY_LABEL = {
+    bodyweight: 'Без инвентаря',
+    band: 'Резинка',
+    strap: 'Ремень',
+    foam_roll: 'Ролл',
+    ball: 'Мяч',
+    percussion: 'Массажёр',
+    bolster: 'Болстер',
+    breath: 'Дыхание',
+    wall_env: 'У стены',
+    loaded: 'С нагрузкой'
+  };
+  const DOSE_SHAPE_LABEL = {
+    raise: 'Разогрев',
+    dynamic: 'Динамика',
+    flow: 'Связка движений',
+    activation: 'Активация',
+    hold: 'Удержание',
+    pnf: 'Контракт-расслабление',
+    eccentric: 'Медленная сила',
+    cars: 'Суставной контроль',
+    smr: 'Мягкая тканевая работа',
+    breath: 'Дыхание',
+    active_rec: 'Восстановительное движение'
+  };
+  const BLOCK_LABEL = {
+    A: 'Разогрев',
+    B: 'Мобилизация',
+    C: 'Контроль',
+    D: 'Растяжка',
+    E: 'Контракт-расслабление',
+    F: 'Сила в диапазоне',
+    G: 'Суставной контроль',
+    H: 'Мягкие ткани',
+    I: 'Дыхание',
+    J: 'Восстановление'
+  };
+  const ATOM_TITLE_LABEL = {
+    mob_dynamic_thoracic_openbook: 'Раскрытие грудного отдела на боку',
+    act_wall_angels: 'Скольжение рук у стены',
+    flex_pnf_hamstring_hr: 'Контракт-расслабление задней линии',
+    flex_pnf_hipflexor_crac: 'Контракт-расслабление сгибателей бедра',
+    loadmob_nordic_eccentric: 'Медленное укрепление задней линии',
+    loadmob_cossack_loaded_hold: 'Удержание в боковом приседе',
+    loadmob_pails_rails_hip: 'Изометрия бедра в конце диапазона',
+    joint_cars_hip: 'Контрольные круги тазобедренного',
+    joint_cars_shoulder: 'Контрольные круги плеча',
+    joint_cars_spine: 'Контрольные круги позвоночника',
+    breath_box_tonify: 'Квадратное дыхание'
+  };
+  const PROTOCOL_NAME_LABEL = {
+    pre_workout_ramp_10: 'Разминка перед нагрузкой',
+    develop_posterior_chain_18: 'Развитие задней линии',
+    develop_hip_control_15: 'Контроль тазобедренных',
+    posture_floor_chain_14: 'Осанка: шея, лопатка, таз',
+    rehab_control_8: 'Мягкий контроль без боли',
+    deload_maintain_10: 'Лёгкое поддержание',
+    deload_maintenance_10: 'Лёгкое поддержание'
+  };
+  const PROTOCOL_INTENT_LABEL = {
+    develop_posterior_chain_18: 'Отдельная работа для задней поверхности бедра: амплитуда, контроль и спокойное укрепление.',
+    rehab_control_8: 'Мягкое движение без боли, суставной контроль и безопасное восстановление.',
+    deload_maintain_10: 'Поддержать диапазон в разгрузочную неделю без тяжёлой тканевой нагрузки.',
+    pre_workout_ramp_10: 'Подготовить тело к основной нагрузке без долгой статики.'
+  };
+  const CONSTRUCTOR_QUICK_ATOM_IDS = [
+    'wu_locomotor',
+    'mob_dynamic_thoracic_openbook',
+    'joint_cars_hip',
+    'joint_cars_shoulder',
+    'act_deep_neck_flexor_nod',
+    'act_wall_angels',
+    'breath_box_tonify',
+    'breath_resonant'
+  ];
   const AUTONOMIC_LABEL = {
     tonify: 'Тонус',
     neutral: 'Нейтрально',
     relax: 'Расслабление'
   };
+  const COURSE_PHASE_LABEL = {
+    accumulation: 'техника и регулярность',
+    intensification: 'контроль и объём',
+    deload: 'разгрузка',
+    retest: 'обновить замеры',
+    maintenance: 'поддержание',
+    taper: 'мягкое поддержание',
+    dup: 'волнообразная нагрузка'
+  };
+  const COURSE_SLOT_LABEL = {
+    neck_control: 'Шея',
+    thoracic_mobility: 'Грудной отдел',
+    scapular_control: 'Лопатка',
+    shoulder_extension: 'Плечо',
+    anterior_chain_relief: 'Передняя линия',
+    hip_support: 'Таз',
+    spine_cars: 'Позвоночник',
+    soft_tissue: 'Мягкие ткани',
+    supported_downshift: 'Снижение тонуса'
+  };
+  const TEST_LABEL = {
+    ankle_dorsiflexion: 'Голеностоп: тыльное сгибание',
+    knee_to_wall_cm: 'Голеностоп: колено к стене',
+    hip_flexion: 'Тазобедренный: сгибание',
+    hip_extension_thomas: 'Тазобедренный: разгибание',
+    hamstring_slr: 'Задняя линия бедра',
+    thoracic_rotation: 'Грудной отдел: ротация',
+    shoulder_flexion: 'Плечо: сгибание',
+    shoulder_er: 'Плечо: наружная ротация',
+    knee_flexion: 'Колено: сгибание',
+    deep_neck_flexor_hold: 'Шея: глубокие сгибатели',
+    wall_angel_quality: 'Лопатка: скольжение рук у стены',
+    scapular_control_score: 'Лопатка: контроль'
+  };
+  const JOINT_LABEL = {
+    ankle: 'Голеностоп',
+    knee: 'Колено',
+    hip: 'Тазобедренный',
+    thoracic: 'Грудной отдел',
+    shoulder: 'Плечо',
+    neck: 'Шея'
+  };
+  const LIMITER_TYPE_LABEL = {
+    ceiling: 'диапазон',
+    control: 'контроль',
+    strength_or_technique: 'сила или техника',
+    ok: 'без явного ограничения',
+    unknown: 'недостаточно данных'
+  };
+  const PROTOCOL_TAG_LABEL = {
+    ramp: 'структура разминки',
+    hamstring: 'задняя линия',
+    'end-range': 'конец диапазона',
+    deload: 'разгрузка',
+    peak: 'перед стартом',
+    safe_prep: 'безопасная подготовка',
+    low_load: 'низкая нагрузка',
+    cars: 'суставной контроль',
+    pain_free: 'без боли'
+  };
+  const CALENDAR_FOCUS_LABEL = {
+    develop: 'развитие диапазона',
+    maintain: 'поддержание',
+    deload: 'разгрузка'
+  };
   const AXIS_LABEL = {
-    passive_flex: 'Пассивная гибкость',
-    active_rom: 'Активный ROM',
+    readiness: 'Самочувствие',
+    activation: 'Активация',
+    passive_flex: 'Мягкость тканей',
+    active_rom: 'Самостоятельный диапазон',
     motor_control: 'Контроль',
     tissue_prep: 'Разогрев ткани',
-    autonomic: 'Автономика',
+    tissue_recovery: 'Мягкие ткани',
+    autonomic: 'Тонус',
     recovery: 'Восстановление',
     joint_stability: 'Стабильность',
     strength_endrange: 'Сила в диапазоне',
     habit_break: 'Пауза от сидения'
   };
   const PROGRESSION_REASON_LABEL = {
-    no_atom: 'Нет атома для подсказки',
-    pain_or_low_readiness: 'Боль или низкая готовность: снизить интенсивность',
-    plateau_detected: 'Прогресс остановился: смените ось нагрузки',
-    low_dose_confidence: 'Доза с низкой уверенностью: не наращивайте объём автоматически',
-    minimum_effective_dose_first: 'Сначала держите минимально достаточную дозу'
+    no_atom: 'Нет упражнения для подсказки',
+    pain_or_low_readiness: 'Боль или низкое самочувствие: снизить интенсивность',
+    plateau_detected: 'Изменения замедлились: поменяйте один параметр нагрузки',
+    low_dose_confidence: 'Нагрузка пока осторожная: не наращивайте объём автоматически',
+    minimum_effective_dose_first: 'Сначала держите минимально достаточную нагрузку'
   };
   const REASON_LABEL = {
     morning_fuller_warmup: 'Утром нужен более полный разогрев',
-    autonomic_tonify: 'Сессия собрана под тонус',
+    autonomic_tonify: 'Тренировка собрана под тонус',
     ramp_raise_activate_mobilise: 'Перед нагрузкой: разогреть, активировать, мобилизовать',
     no_long_static_pre_power: 'Долгая статика не ставится перед мощной работой',
     comfort_not_supercompensation: 'После нагрузки цель — комфорт, не дополнительный стресс',
     recovery_relax: 'Восстановительный режим снижает возбуждение',
     develop_separate_from_warmup: 'Развитие диапазона отделено от разминки',
-    full_warmup_before_endrange: 'Перед конечным диапазоном нужен разогрев',
-    active_rom_over_passive: 'Приоритет активного контроля, не только пассивной амплитуды',
-    autonomic_relax: 'Сессия собрана под расслабление',
+    full_warmup_before_endrange: 'Перед крайними положениями нужен разогрев',
+    active_rom_over_passive: 'Приоритет контролю движения, не только амплитуде',
+    autonomic_relax: 'Тренировка собрана под расслабление',
     sleep_downshift: 'Темп и дыхание помогают снизить возбуждение',
     rehab_strict_gates: 'Реабилитационная рамка использует строгие ограничения',
     pain_free_progression: 'Прогрессия только без боли',
-    micro_over_episode: 'Короткие регулярные паузы важнее редкой длинной сессии',
+    micro_over_episode: 'Короткие регулярные паузы важнее редкой длинной тренировки',
     desk_stiffness: 'Учтена скованность от сидения',
     population_desk_thoracic_hip: 'Акцент на грудной отдел и тазобедренные',
     posture_strength_over_stretch: 'Осанка собрана через контроль и укрепление, не через одну растяжку',
-    neck_scapular_thoracic_chain: 'Связка шея-лопатка-грудной отдел включена в подбор',
+    neck_scapular_thoracic_chain: 'Связка шея-лопатка-грудной отдел включена в план',
     population_hypermobile_stability: 'Приоритет контролю и стабильности',
     population_pregnancy_low_load: 'Беременность: низкая нагрузка и мягкий объём',
     population_older_low_load: 'Возрастной профиль: низкая нагрузка и мягкий объём',
@@ -258,6 +408,46 @@
 .mobility-execution__controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .mobility-execution__controls button{margin:0!important}
 .mobility-breath-phases{display:grid;gap:5px;padding-left:20px!important}
+.mobility-technique-card{display:grid;gap:5px;margin-top:10px;padding:10px;border-radius:12px;background:#f8fafc;border:1px solid rgba(15,23,42,.08);color:#334155;text-align:left}
+.mobility-technique-card strong{font-size:13px;line-height:1.2;color:#0f172a}
+.mobility-technique-card span,.mobility-technique-card li{font-size:12px;line-height:1.3;font-weight:700}
+.mobility-technique-card--compact{width:min(100% - 24px,392px);margin:2px auto 0;padding:0;border:0;border-radius:0;background:transparent;color:#475569;gap:4px}
+.mobility-technique-card--compact span,.mobility-technique-card--compact li{font-size:12px;line-height:1.32;font-weight:500}
+.mobility-technique-card--compact .mobility-technique-card__focus{color:#172033;font-size:13px;font-weight:750}
+.mobility-technique-card--compact .mobility-technique-card__check{color:#667085;font-size:12px;font-weight:500}
+.mobility-technique-card--compact ul{margin:0;padding-left:16px}
+.mobility-step-feedback{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
+.mobility-step-feedback button{appearance:none;border:1px solid rgba(15,23,42,.08);border-radius:999px;background:#fff;color:#334155;padding:7px 9px;font:800 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 2px 8px rgba(15,23,42,.06);cursor:pointer}
+.mobility-course-card{display:grid!important;align-items:stretch!important;justify-content:stretch!important;gap:9px!important}
+.mobility-course-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.mobility-course-card__copy{min-width:0;display:grid;gap:2px}
+.mobility-course-card__status{flex:0 0 auto;border-radius:999px;background:#ecfdf5;color:#0f6b43;padding:5px 8px;font-size:10px;font-weight:900;text-transform:uppercase}
+.mobility-course-card__note{margin:0;color:#667085;font-size:12px;font-weight:650;line-height:1.35}
+.mobility-course-card__next{display:grid;gap:3px;border-radius:8px;background:#f8fbfa;border:1px solid rgba(15,23,42,.07);padding:10px}
+.mobility-course-card__next span{color:#667085;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.mobility-course-card__next strong{color:#172033;font-size:13px;line-height:1.25}
+.mobility-course-card__help{display:grid;gap:5px;color:#667085;font-size:12px;font-weight:750;line-height:1.35}
+.mobility-course-card__help span{display:block}
+.mobility-course-card__facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:0;padding:0;list-style:none}
+.mobility-course-card__facts li{display:grid;gap:3px;border:1px solid rgba(15,23,42,.07);border-radius:8px;background:#fff;padding:9px;color:#667085;font-size:11px;font-weight:700;line-height:1.3}
+.mobility-course-card__facts strong{color:#172033;font-size:12px;font-weight:900}
+.mobility-course-card__zones{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:2px}
+.mobility-course-card__zones-title{flex:1 0 100%;color:#667085;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.mobility-course-card__slot{appearance:none;min-width:0;border:1px solid rgba(22,166,106,.18);border-radius:999px;background:#f7fcfa;color:#0f6b43;padding:7px 9px;font:850 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:nowrap;cursor:pointer}
+.mobility-progress__intro{margin:0 0 10px;color:#667085;font-size:13px;line-height:1.4;font-weight:650}
+.mobility-tests-intro{margin:0 0 12px;padding:12px;border-radius:8px;background:#f8fbfa;border:1px solid rgba(15,23,42,.07);color:#475569}
+.mobility-tests-intro strong{display:block;color:#172033;font-size:14px;line-height:1.2;margin-bottom:4px}
+.mobility-tests-intro span{display:block;font-size:12px;font-weight:700;line-height:1.35}
+.mobility-progress-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.mobility-progress-actions button{margin:0!important}
+.mobility-progress-actions .mobility-primary-btn{background:#0f6b43;color:#fff;box-shadow:0 10px 24px rgba(15,107,67,.14)}
+.mobility-secondary-btn--plain{background:#fff!important;color:#334155!important;border:1px solid rgba(15,23,42,.1)!important;box-shadow:none!important}
+.mobility-progress__section{display:grid;gap:8px;margin-top:12px}
+.mobility-progress__section-title{margin:0;color:#172033;font-size:14px;font-weight:900}
+.mobility-progress__note{margin:0;color:#667085;font-size:12px;font-weight:650;line-height:1.35}
+.mobility-session-notices{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.mobility-session-notices li{border-radius:10px;padding:8px 10px;background:#f8fafc;color:#475569;font-size:12px;font-weight:700;line-height:1.35}
+.mobility-session-notices li[data-level="error"],.mobility-session-notices li[data-level="warn"],.mobility-session-notices li[data-level="warning"]{background:#fff7ed;color:#9a3412}
 .mobility-save-status{margin:0 0 12px;padding:10px 12px;border-radius:8px;background:#dcfce7;color:#166534;font-size:13px;font-weight:800}
 .mobility-fs-session{min-height:100%;display:flex;flex-direction:column;gap:0}
 .mobility-app{--mob-w:390px}
@@ -341,10 +531,10 @@
 .mobility-fs-mixcard__chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
 .mobility-fs-mixcard__exlist{display:grid;gap:8px;margin:12px 0}
 .mobility-fs-mixcard__exlist-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#667085}
-.mobility-fs-mixcard__exrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:#f8fbfa;border:1px solid rgba(15,23,42,.06)}
-.mobility-fs-mixcard__exthumb{width:46px;height:46px;border-radius:10px;overflow:hidden;background:#e7f4ee;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.mobility-fs-mixcard__exthumb img{width:46px;height:46px;object-fit:cover;display:block}
-.mobility-fs-mixcard__exinfo{min-width:0;display:flex;flex-direction:column;gap:2px}
+.mobility-fs-mixcard__exrow{display:block;overflow:hidden;padding:0;border-radius:12px;background:#f8fbfa;border:1px solid rgba(15,23,42,.06)}
+.mobility-fs-mixcard__exthumb{width:100%;height:118px;overflow:hidden;background:#e7f4ee;display:flex;align-items:center;justify-content:center}
+.mobility-fs-mixcard__exthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.mobility-fs-mixcard__exinfo{min-width:0;display:flex;flex-direction:column;gap:2px;padding:8px 10px 9px}
 .mobility-fs-mixcard__exname{color:#172033;font-size:13px;font-weight:900;line-height:1.2}
 .mobility-fs-mixcard__exsub{color:#667085;font-size:12px;font-weight:700;line-height:1.2}
 .mobility-fs-mixcard__actions{display:flex;gap:8px;margin-top:12px}
@@ -400,6 +590,12 @@
 .mobility-compact-plan strong{color:#172033;font-size:13px}
 .mobility-compact-plan span{display:block;color:#667085;font-size:12px;font-weight:750}
 .mobility-constructor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mobility-constructor__summary{display:grid;gap:8px;margin:0 0 12px;padding:12px;border-radius:8px;background:#f8fbfa;border:1px solid rgba(15,23,42,.07)}
+.mobility-constructor__summary strong{color:#172033;font-size:14px;line-height:1.2}
+.mobility-constructor__summary span{color:#667085;font-size:12px;font-weight:750;line-height:1.35}
+.mobility-constructor__selected{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.mobility-constructor__selected .mobility-chip{background:#ecfdf5;color:#0f6b43}
+.mobility-constructor__section-title{margin:0 0 8px;color:#667085;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
 .mobility-exercise-card{min-height:86px;padding:10px}
 .mobility-exercise-card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .mobility-constructor-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -446,6 +642,13 @@
 .mobility-fs-registry__empty{border:1px dashed rgba(15,23,42,.14);border-radius:12px;background:#f8fbfa;color:#667085;padding:18px;text-align:center;font-size:13px;font-weight:850}
 .mobility-fs-registry__footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(15,23,42,.07)}
 .mobility-fs-registry__footer-text{color:#667085;font-size:12px;font-weight:850}
+.mobility-protocols__intro{display:grid;gap:4px;margin:0 0 12px;padding:12px;border-radius:8px;background:#f8fbfa;border:1px solid rgba(15,23,42,.07)}
+.mobility-protocols__intro strong{color:#172033;font-size:14px;line-height:1.2}
+.mobility-protocols__intro span{color:#667085;font-size:12px;font-weight:750;line-height:1.35}
+.mobility-protocols__current{display:grid;gap:5px;margin:0 0 12px;padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid rgba(22,166,106,.18);color:#0f6b43}
+.mobility-protocols__current span{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.mobility-protocols__current strong{font-size:14px;line-height:1.2;color:#0f5132}
+.mobility-protocols__current p{margin:0;color:#527064;font-size:12px;font-weight:700;line-height:1.35}
 .mobility-protocol-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}
 .mobility-protocol-card{position:relative;min-width:0;border:1px solid rgba(15,23,42,.08);border-radius:8px;background:#fff;padding:13px;text-align:left;box-shadow:0 10px 24px rgba(15,23,42,.06);cursor:pointer}
 .mobility-protocol-card.is-selected{border-color:#16a66a;background:#e9f8f1;box-shadow:0 0 0 2px rgba(22,166,106,.12),0 12px 28px rgba(15,23,42,.08)}
@@ -492,7 +695,7 @@
 .mobility-countdown__counter{font-size:13px;color:rgba(60,60,67,.65);text-align:center;font-weight:600;letter-spacing:-.005em;font-variant-numeric:tabular-nums}
 [data-theme="dark"] .mobility-countdown__counter{color:rgba(235,235,245,.55)}
 .mobility-countdown__grip{margin:0;font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1.15;text-align:center;color:#0f172a}
-.mobility-countdown__hero{width:184px;height:184px;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.82) 100%),var(--phase-color-soft);border:.5px solid rgba(0,0,0,.06);box-shadow:0 1px 2px rgba(15,23,42,.05),0 10px 26px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center}
+.mobility-countdown__hero{width:100%;max-width:392px;height:176px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.82) 100%),var(--phase-color-soft);border:.5px solid rgba(0,0,0,.06);box-shadow:0 1px 2px rgba(15,23,42,.05),0 10px 26px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center}
 .mobility-countdown__hero img{width:100%;height:100%;object-fit:cover;display:block}
 .mobility-countdown__chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .mobility-countdown__chip{display:inline-flex;flex-direction:column;align-items:center;padding:7px 14px;border-radius:14px;min-width:84px;background:rgba(255,255,255,.82);border:.5px solid rgba(0,0,0,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
@@ -518,6 +721,14 @@
 .mobility-guided-live{position:fixed!important;inset:0!important;z-index:2147483200;width:100vw!important;max-width:none!important;height:100vh;height:100dvh;margin:0!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff 0%,#fbfcfb 100%)!important;box-shadow:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
 .mobility-guided-live .mobility-guided__visual{display:none}
 .mobility-guided-live .mobility-countdown{width:min(100%,430px);flex:0 0 auto}
+.mobility-guided-live .mobility-countdown__hero{order:1}
+.mobility-guided-live .mobility-countdown__grip{order:2}
+.mobility-guided-live .mobility-countdown__chips{order:3}
+.mobility-guided-live .mobility-countdown__counter{order:4}
+.mobility-guided-live .mobility-countdown__phase-badge{order:5}
+.mobility-guided-live .mobility-countdown__ring-wrap{order:6}
+.mobility-guided-live .mobility-breath-phases,.mobility-guided-live .mobility-technique-card--compact,.mobility-guided-live .mobility-step-feedback{order:7}
+.mobility-guided-live .mobility-countdown__controls{order:8}
 .mobility-guided-live .mobility-countdown__grip{max-width:min(100%,360px)}
 .mobility-guided-live .mobility-countdown__digit{width:100%;max-width:100%;padding:0 18px;box-sizing:border-box;text-align:center;font-size:clamp(50px,14vw,64px);letter-spacing:-.035em;white-space:nowrap}
 .mobility-live-roadmap{width:min(100% - 24px,392px);margin:8px auto 0;flex:0 0 auto}
@@ -575,6 +786,7 @@
   .mobility-guided__hero{display:block}
   .mobility-guided__visual{min-height:220px}
   .mobility-guided-live{height:100vh;height:100dvh}
+  .mobility-countdown__hero{height:148px}
   .mobility-guided-live .mobility-countdown{padding-top:0;gap:7px}
   .mobility-guided-live .mobility-countdown__ring-wrap{width:166px;height:166px}
   .mobility-guided-live .mobility-countdown__chip{min-width:96px}
@@ -648,7 +860,7 @@
     return ownerLock.release();
   }
   function _warnMobilityTimerLockDenied() {
-    const msg = 'Уже запущена другая тренировка в этой сессии. Закройте её или подождите несколько секунд.';
+    const msg = 'Уже запущена другая тренировка в этом окне. Закройте её или подождите несколько секунд.';
     try {
       if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
       else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
@@ -665,6 +877,7 @@
       bibliography: Mobility.bibliography,
       progression: Mobility.progression,
       calendar: Mobility.calendar,
+      coursePlanner: Mobility.coursePlanner,
       protocolCatalog: Mobility.protocolCatalog,
       recordsStore: Mobility.recordsStore,
       loadScale: Mobility.loadScale,
@@ -692,8 +905,71 @@
   function chip(kind, text, key) {
     return h('span', { key: key || text, className: cx('mobility-chip', kind && 'mobility-chip--' + kind) }, text);
   }
+  function humanizeVisibleText(text) {
+    return String(text || '')
+      .replace(/\bpain-free\b/gi, 'без боли')
+      .replace(/\bCARs\b/g, 'суставной контроль')
+      .replace(/\bRAMP\b/g, 'разминка')
+      .replace(/\bend-range\b/gi, 'крайние положения')
+      .replace(/\bdeload\b/gi, 'разгрузка')
+      .replace(/\bDeload\b/g, 'разгрузка');
+  }
   function reasonText(reason) {
-    return REASON_LABEL[reason] || LOAD_REASON_LABEL[reason] || reason;
+    return humanizeVisibleText(REASON_LABEL[reason] || LOAD_REASON_LABEL[reason] || reason);
+  }
+  function limiterReasonText(reason) {
+    const map = {
+      'пассивный потолок ниже нормы': 'диапазон пока ниже ориентира',
+      'пассивный диапазон есть, активного контроля мало': 'движение доступно, но контроля в нём пока мало',
+      'вероятнее сила/техника вне основного scope мобильности': 'похоже, важнее сила или техника, а не растяжка',
+      'значимого лимитера не видно': 'явного ограничения по замеру не видно'
+    };
+    return map[reason] || reason;
+  }
+  function protocolTagLabel(tag) {
+    return PROTOCOL_TAG_LABEL[tag] || tag;
+  }
+  function issueCountLabel(count) {
+    const n = Number(count) || 0;
+    if (!n) return 'без ограничений';
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    const word = mod10 === 1 && mod100 !== 11
+      ? 'ограничение'
+      : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'ограничения' : 'ограничений');
+    return n + ' ' + word;
+  }
+  function unitLabel(unit) {
+    if (unit === 'deg') return '°';
+    if (unit === 'cm') return ' см';
+    if (unit === 'sec') return ' сек';
+    if (unit === 'score') return ' балл';
+    return unit || '';
+  }
+  function formatMeasure(value, unit) {
+    const n = Number(value);
+    const text = Number.isFinite(n) ? String(Math.round(n * 10) / 10) : String(value || '');
+    const label = unitLabel(unit);
+    return label && label[0] === ' ' ? text + label : text + label;
+  }
+  function atomTypeLabel(atom) {
+    if (!atom) return '';
+    return DOSE_SHAPE_LABEL[atom.doseShape] ||
+      MODALITY_LABEL[atom.modality] ||
+      BLOCK_LABEL[atom.block] ||
+      '';
+  }
+  function atomTitle(atom) {
+    if (!atom) return 'Упражнение';
+    return ATOM_TITLE_LABEL[atom.id] || atom.title || atom.id || 'Упражнение';
+  }
+  function protocolTitle(protocol) {
+    if (!protocol) return 'План';
+    return PROTOCOL_NAME_LABEL[protocol.id] || protocol.name || protocol.id || 'План';
+  }
+  function protocolIntent(protocol) {
+    if (!protocol) return '';
+    return humanizeVisibleText(PROTOCOL_INTENT_LABEL[protocol.id] || protocol.intent || '');
   }
   function targetRepsLabel(reps, fallback) {
     if (Array.isArray(reps) && reps.length) {
@@ -711,10 +987,10 @@
     if (atom.doseShape === 'pnf') return (d.reps || 1) + ' цикла';
     if (atom.doseShape === 'breath') return Math.round((d.durationSec || 0) / 60) + ' мин';
     if (atom.doseShape === 'dynamic' || atom.doseShape === 'activation' || atom.doseShape === 'cars') {
-      return targetRepsLabel(d.reps, atom.doseShape === 'cars' ? 2 : 8) + ' повт.';
+      return targetRepsLabel(d.reps, atom.doseShape === 'cars' ? 2 : 8) + ' раз';
     }
     if (d.durationSec) return Math.round(d.durationSec / 60) + ' мин';
-    return atom.doseShape;
+    return DOSE_SHAPE_LABEL[atom.doseShape] || '';
   }
 
   function SourceBadge(props) {
@@ -742,7 +1018,7 @@
               chip('confidence', 'Доказ. ' + e.confidence)
             ),
             h('div', { className: 'mobility-effect__verdict' }, VERDICT_LABEL[e.verdict] || e.verdict),
-            h('p', null, e.msg)
+            h('p', null, humanizeVisibleText(e.msg))
           );
         })
       )
@@ -758,7 +1034,7 @@
     },
       h('img', {
         src: atom.visualAsset,
-        alt: 'Фото упражнения: ' + (atom.title || atom.id),
+        alt: 'Фото упражнения: ' + atomTitle(atom),
         loading: 'lazy',
         decoding: 'async',
         style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
@@ -773,6 +1049,130 @@
     return step && step.atomId && catalog && typeof catalog.getAtom === 'function'
       ? catalog.getAtom(step.atomId)
       : null;
+  }
+  function TechniqueCuePanel(props) {
+    const atom = props.atom || {};
+    const cues = atom.techniqueCues || null;
+    if (!cues) return null;
+    const compact = !!props.compact;
+    const mistakes = Array.isArray(cues.commonMistakes) ? cues.commonMistakes : [];
+    const head = cues.keyCue || cues.setup || 'Техника';
+    if (compact) {
+      const check = cues.selfCheck && cues.selfCheck !== head ? cues.selfCheck : '';
+      return h('div', { className: 'mobility-technique-card mobility-technique-card--compact', 'aria-label': 'Фокус техники' },
+        h('span', { className: 'mobility-technique-card__focus' }, head),
+        check ? h('span', { className: 'mobility-technique-card__check' }, check) : null
+      );
+    }
+    return h('div', { className: 'mobility-technique-card' + (compact ? ' mobility-technique-card--compact' : ''), 'aria-label': 'Техника упражнения' },
+      h('strong', null, head),
+      cues.setup ? h('span', null, cues.setup) : null,
+      cues.selfCheck ? h('span', null, cues.selfCheck) : null,
+      mistakes.length
+        ? h('ul', null, mistakes.map(function (item, idx) { return h('li', { key: 'm' + idx }, item); }))
+        : null,
+      cues.regress ? h('span', null, 'Проще: ' + cues.regress) : null,
+      cues.progress ? h('span', null, 'Сложнее: ' + cues.progress) : null
+    );
+  }
+  function courseSlotLabel(course, slotId) {
+    if (COURSE_SLOT_LABEL[slotId]) return COURSE_SLOT_LABEL[slotId];
+    const slots = course && Array.isArray(course.slots) ? course.slots : [];
+    const slot = slots.find(function (s) { return s.id === slotId; });
+    const label = slot && slot.label || slotId || 'Зона';
+    return String(label).split(':')[0];
+  }
+  function CourseStatusCard(props) {
+    const course = props.course || null;
+    const built = props.built || null;
+    const summary = props.variant === 'summary';
+    const blocks = built && built.session && Array.isArray(built.session.blocks) ? built.session.blocks : [];
+    const weekLabel = course && course.currentWeekLabel ? course.currentWeekLabel : '';
+    const phaseLabel = course && course.currentPhaseLabel ? course.currentPhaseLabel : '';
+    if (!course) {
+      return h('section', { className: 'mobility-compact-plan mobility-course-card' + (summary ? ' mobility-course-card--summary' : ''), 'data-course-empty': '1' },
+        h('div', { className: 'mobility-course-card__head' },
+          h('div', { className: 'mobility-course-card__copy' },
+            h('strong', null, 'Курс осанки'),
+            h('span', null, summary ? 'Не запущен · можно включить в разделе прогресса' : '4 недели: контроль шеи, лопаток, грудного отдела и таза')
+          )
+        ),
+        h('p', { className: 'mobility-course-card__note' }, summary
+          ? 'Сегодня можно сделать обычную тренировку. Курс нужен, если хотите вести осанку как последовательный план.'
+        : 'Курс задаёт недельный фокус, а ежедневная тренировка подстраивает нагрузку под самочувствие, боль и доступный инвентарь.'),
+        summary && props.onOpenProgress ? h('button', { type: 'button', className: 'mobility-secondary-btn', onClick: props.onOpenProgress }, 'Открыть курс') : null,
+        !summary && props.onStart ? h('button', { type: 'button', className: 'mobility-primary-btn', onClick: props.onStart }, 'Начать курс') : null
+      );
+    }
+    return h('section', { className: 'mobility-compact-plan mobility-course-card' + (summary ? ' mobility-course-card--summary' : ''), 'data-course-active': course.id },
+      h('div', { className: 'mobility-course-card__head' },
+        h('div', { className: 'mobility-course-card__copy' },
+          h('strong', null, 'Курс осанки'),
+          h('span', null, summary
+            ? 'Неделя ' + weekLabel + ' · сегодняшняя тренировка уже учитывает курс'
+            : 'Неделя ' + weekLabel + (phaseLabel ? ' · ' + phaseLabel : ''))
+        ),
+        h('span', { className: 'mobility-course-card__status' }, 'в работе')
+      ),
+      h('p', { className: 'mobility-course-card__note' }, summary
+        ? 'Здесь кратко: курс уже учитывается в сегодняшней тренировке. Детали курса — в «Прогрессе».'
+        : 'Курс уже учтён в сегодняшней тренировке. Здесь можно заменить отдельную зону и сверить изменения.'),
+      !summary
+        ? h(React.Fragment, null,
+            h('div', { className: 'mobility-course-card__next' },
+              h('span', null, 'Что делать сейчас'),
+              h('strong', null, 'Сделайте сегодняшнюю тренировку. Курс уже встроен в план.')
+            ),
+            h('div', { className: 'mobility-course-card__help' },
+              h('span', null, 'Если упражнение не подходит, замените только нужную зону ниже.'),
+              h('span', null, 'Проверяйте изменения раз в несколько недель.')
+            )
+          )
+        : null,
+      summary && props.onOpenProgress ? h('button', { type: 'button', className: 'mobility-secondary-btn', onClick: props.onOpenProgress }, 'Управлять в Прогрессе') : null,
+      !summary && blocks.length
+        ? h('div', { className: 'mobility-course-card__zones', 'aria-label': 'Зоны для замены на сегодня' },
+            h('span', { className: 'mobility-course-card__zones-title' }, 'Заменить зону, если нужно'),
+            blocks.slice(0, 6).map(function (block) {
+              const atom = block.atoms && block.atoms[0];
+              const label = courseSlotLabel(course, block.slotId || block.id);
+              return h('button', {
+                key: block.slotId || block.id,
+                type: 'button',
+                className: 'mobility-course-card__slot',
+                onClick: function () { props.onReplace && props.onReplace(block); },
+                title: 'Заменить упражнение: ' + (atom ? atomTitle(atom) : label)
+              }, label);
+            })
+          )
+        : null
+    );
+  }
+
+  function SessionNoticeList(props) {
+    const built = props.built || {};
+    const session = built.session || {};
+    const issues = Array.isArray(built.issues) ? built.issues : [];
+    const advisories = Array.isArray(session.advisories) ? session.advisories : [];
+    const items = issues.map(function (i) {
+      return {
+        key: 'issue:' + i.code,
+        level: i.level || 'warn',
+        text: humanizeVisibleText(i.msg || i.code)
+      };
+    }).concat(advisories.map(function (a) {
+      return {
+        key: 'advisory:' + a.code,
+        level: a.level || 'info',
+        text: humanizeVisibleText(a.msg || a.code)
+      };
+    }));
+    if (!items.length) return null;
+    return h('ul', { className: 'mobility-session-notices', 'aria-label': 'Что учтено перед стартом' },
+      items.slice(0, props.limit || 3).map(function (item, idx) {
+        return h('li', { key: item.key + idx, 'data-level': item.level }, item.text);
+      })
+    );
   }
 
   function ModePicker(props) {
@@ -812,8 +1212,8 @@
       props.onChange && props.onChange(Object.assign({}, profile, { [listName]: next }));
     }
 
-    return h('section', { className: 'mobility-panel mobility-profile', 'aria-label': 'Профиль' },
-      h('h3', null, 'Профиль'),
+    return h('section', { className: 'mobility-panel mobility-profile', 'aria-label': 'Настройки тренировки' },
+      h('h3', null, 'Настройки тренировки'),
       h('label', null,
         h('span', null, 'Возраст'),
         h('input', {
@@ -844,7 +1244,7 @@
           onboarding.GOALS.map(function (id) { return h('option', { key: id, value: id }, GOAL_LABEL[id] || id); })
         )
       ),
-      h('div', { className: 'mobility-checks', 'aria-label': 'Флаги популяции' },
+      h('div', { className: 'mobility-checks', 'aria-label': 'Особые условия' },
         onboarding.POPULATIONS.map(function (id) {
           return h('label', { key: id },
             h('input', {
@@ -852,7 +1252,7 @@
               checked: profile.populations.indexOf(id) >= 0,
               onChange: function () { toggle('populations', id); }
             }),
-            id
+            POPULATION_LABEL[id] || id
           );
         })
       ),
@@ -864,7 +1264,7 @@
               checked: profile.equipment.indexOf(id) >= 0,
               onChange: function () { toggle('equipment', id); }
             }),
-            id
+            EQUIPMENT_LABEL[id] || id
           );
         })
       ),
@@ -878,7 +1278,7 @@
       ),
       result.issues.length
         ? h('ul', { className: 'mobility-issues' }, result.issues.map(function (i) {
-            return h('li', { key: i.code, 'data-level': i.level }, i.msg);
+            return h('li', { key: i.code, 'data-level': i.level }, humanizeVisibleText(i.msg || i.code));
           }))
         : null
     );
@@ -891,18 +1291,18 @@
     if (!score) return null;
     const fields = [
       ['stiffness', 'Скованность'],
-      ['soreness', 'Болезненность'],
+      ['soreness', 'Боль и дискомфорт'],
       ['sleepQuality', 'Сон'],
       ['stress', 'Стресс'],
-      ['hrvToday', 'HRV сегодня'],
-      ['hrvBaseline', 'HRV база'],
-      ['hrvMad', 'HRV MAD']
+      ['hrvToday', 'Пульс: вариабельность сегодня'],
+      ['hrvBaseline', 'Пульс: обычный уровень'],
+      ['hrvMad', 'Пульс: дневной разброс']
     ];
     function update(name, value) {
       props.onChange && props.onChange(Object.assign({}, input, { [name]: numberOrNull(value) }));
     }
     return h('section', { className: 'mobility-panel mobility-readiness', 'data-band': score.band },
-      h('h3', null, 'Готовность'),
+      h('h3', null, 'Самочувствие сегодня'),
       h('div', { className: 'mobility-readiness__score' }, String(score.score), '/100'),
       h('p', null, score.advisory),
       h('div', { className: 'mobility-readiness__inputs' },
@@ -931,55 +1331,69 @@
       });
       props.onChange && props.onChange(next);
     }
-    return h('section', { className: 'mobility-panel mobility-assessment', 'aria-label': 'Аудит подвижности' },
-      h('h3', null, 'Аудит подвижности'),
+    return h('section', { className: 'mobility-panel mobility-assessment', 'aria-label': 'Замеры движения' },
+      h('h3', null, 'Замеры движения'),
       audit && audit.leadingLimiter
         ? h('div', { className: 'mobility-limiter' },
-            chip('limiter', audit.leadingLimiter.jointRegion),
-            chip('type', audit.leadingLimiter.type),
-            h('p', null, audit.leadingLimiter.reason)
+            h('strong', null, 'Что сейчас мешает движению'),
+            chip('limiter', JOINT_LABEL[audit.leadingLimiter.jointRegion] || audit.leadingLimiter.jointRegion),
+            chip('type', LIMITER_TYPE_LABEL[audit.leadingLimiter.type] || audit.leadingLimiter.type),
+            h('p', null, limiterReasonText(audit.leadingLimiter.reason))
           )
-        : h('p', null, 'Лимитер не выбран'),
+        : h('p', null, 'После первых замеров покажем главный фокус'),
       h('div', { className: 'mobility-assessment__rows' },
         screens.map(function (row, idx) {
           const test = assessment && assessment.TESTS ? assessment.TESTS[row.testId] : null;
           const scored = audit && audit.rows ? audit.rows.find(function (r) { return r.testId === row.testId; }) : null;
+          const label = TEST_LABEL[row.testId] || row.testId;
           return h('div', { key: row.testId || idx, className: 'mobility-assessment-row' },
-            h('span', null, row.testId, test ? ' · норма ' + test.norm + test.unit : ''),
+            h('span', null, label, test ? ' · ориентир ' + formatMeasure(test.norm, test.unit) : ''),
             h('label', null,
-              h('span', null, 'Замер'),
+              h('span', null, 'Сейчас'),
               h('input', {
-                'aria-label': row.testId + ' замер',
+                'aria-label': label + ' текущий замер',
                 type: 'number',
                 value: row.measure == null ? '' : row.measure,
                 onChange: function (e) { updateRow(idx, { measure: numberOrNull(e.target.value) }); }
               })
             ),
             h('label', null,
-              h('span', null, 'Активно'),
+              h('span', null, 'Самостоятельно'),
               h('input', {
-                'aria-label': row.testId + ' активно',
+                'aria-label': label + ' самостоятельно',
                 type: 'number',
                 value: row.activeROM == null ? '' : row.activeROM,
                 onChange: function (e) { updateRow(idx, { activeROM: numberOrNull(e.target.value) }); }
               })
             ),
             h('label', null,
-              h('span', null, 'Пассивно'),
+              h('span', null, 'С помощью'),
               h('input', {
-                'aria-label': row.testId + ' пассивно',
+                'aria-label': label + ' с помощью',
                 type: 'number',
                 value: row.passiveROM == null ? '' : row.passiveROM,
                 onChange: function (e) { updateRow(idx, { passiveROM: numberOrNull(e.target.value) }); }
               })
             ),
-            scored && scored.ok ? h('strong', null, Math.round(scored.deficit * 100), '%') : h('small', null, 'нет замера')
+            scored && scored.ok ? h('strong', null, Math.round(scored.deficit * 100), '%') : h('small', null, 'добавьте замер')
           );
         })
       ),
       props.onSaveAssessment
-        ? h('button', { type: 'button', onClick: function () { props.onSaveAssessment(audit); } }, 'Сохранить аудит')
+        ? h('button', { type: 'button', onClick: function () { props.onSaveAssessment(audit); } }, 'Сохранить замеры')
         : null
+    );
+  }
+
+  function TestsPanel(props) {
+    return h('div', null,
+      h('div', { className: 'mobility-tests-intro' },
+        h('strong', null, 'Перед тренировкой'),
+        h('span', null, 'Самочувствие задаёт нагрузку на сегодня. Замеры показывают, что меняется в движении и осанке.')
+      ),
+      h(ProfilePanel, { profile: props.profile, onChange: props.onProfileChange }),
+      h(ReadinessPanel, { input: props.readinessInput, onChange: props.onReadinessChange }),
+      h(AssessmentPanel, { screens: props.assessmentScreens, onChange: props.onAssessmentChange, onSaveAssessment: props.onSaveAssessment })
     );
   }
 
@@ -1000,37 +1414,58 @@
       });
     });
     const trends = progression ? testIds.map(function (id) { return progression.romTrend(records, id); }).filter(function (t) { return t.ok; }) : [];
+    const isPosture = props.profile && props.profile.goal === 'posture';
     const firstAtom = props.built && props.built.session && props.built.session.blocks && props.built.session.blocks[0]
       ? props.built.session.blocks[0].atoms[0]
       : null;
     const readinessScore = d.readiness ? d.readiness.score(props.readinessInput || {}) : null;
-    const suggestion = progression && firstAtom ? progression.suggest(firstAtom, props.progressionHistory || {}, readinessScore) : null;
+    const suggestion = !isPosture && progression && firstAtom ? progression.suggest(firstAtom, props.progressionHistory || {}, readinessScore) : null;
     const [manualAxis, setManualAxis] = useState(suggestion && suggestion.axis || 'amplitude');
 
-    return h('section', { className: 'mobility-panel mobility-progress', 'aria-label': 'Прогресс ROM' },
-      h('h3', null, 'Прогресс ROM'),
-      h('div', { className: 'mobility-progress__meta' },
-        chip(retestDue ? 'warn' : 'ok', retestDue ? 'нужен ретест' : 'ретест не нужен'),
-        latestDate ? chip('date', latestDate.slice(0, 10)) : chip('empty', 'нет истории')
+    return h('section', { className: 'mobility-panel mobility-progress', 'aria-label': 'Прогресс' },
+      h('h3', null, isPosture ? 'Курс осанки' : 'Прогресс'),
+      h('p', { className: 'mobility-progress__intro' }, isPosture
+        ? 'Это центр курса: статус, замены по зонам и замеры. Сама тренировка запускается во вкладке «Сегодня».'
+        : 'Здесь замеры и подсказка, как двигаться дальше. Тренировка запускается во вкладке «Сегодня».'),
+      (props.course || isPosture)
+        ? h(CourseStatusCard, {
+            course: props.course,
+            built: props.built,
+            onStart: props.onStartCourse,
+            onReplace: props.onReplaceCourseSlot
+          })
+        : null,
+      isPosture
+        ? h('div', { className: 'mobility-progress-actions', 'aria-label': 'Действия курса' },
+            h('button', { type: 'button', className: 'mobility-primary-btn', onClick: props.onOpenToday }, 'Перейти к тренировке'),
+            h('button', { type: 'button', className: 'mobility-secondary-btn mobility-secondary-btn--plain', onClick: props.onOpenTests }, 'Открыть замеры')
+          )
+        : null,
+      h('div', { className: 'mobility-progress__section' },
+        h('h4', { className: 'mobility-progress__section-title' }, 'Замеры и контроль изменений'),
+        h('div', { className: 'mobility-progress__meta' },
+          chip(retestDue ? 'warn' : 'ok', retestDue ? 'нужно обновить замеры' : 'замеры актуальны'),
+          latestDate ? chip('date', latestDate.slice(0, 10)) : chip('empty', 'нет истории')
+        ),
+        trends.length
+          ? h('div', { className: 'mobility-progress__rows' },
+              trends.map(function (t) {
+                return h('div', { key: t.testId, className: 'mobility-progress-row', 'data-direction': t.direction },
+                  h('span', null, TEST_LABEL[t.testId] || t.testId),
+                  h('strong', null, (t.delta > 0 ? '+' : '') + formatMeasure(t.delta, t.unit)),
+                  h('small', null, formatMeasure(t.latest, t.unit))
+                );
+              }))
+          : h('p', { className: 'mobility-progress__note' }, 'После двух замеров появится динамика')
       ),
-      trends.length
-        ? h('div', { className: 'mobility-progress__rows' },
-            trends.map(function (t) {
-              return h('div', { key: t.testId, className: 'mobility-progress-row', 'data-direction': t.direction },
-                h('span', null, t.testId),
-                h('strong', null, (t.delta > 0 ? '+' : '') + Math.round(t.delta * 10) / 10, t.unit),
-                h('small', null, Math.round(t.latest * 10) / 10, t.unit)
-              );
-            }))
-        : h('p', null, 'После двух замеров появится динамика по тестам'),
       suggestion
         ? h('div', { className: 'mobility-progression-advice', 'data-action': suggestion.action },
-            h('h4', null, 'Подсказка прогрессии'),
-            h('p', null, PROGRESSION_REASON_LABEL[suggestion.reason] || suggestion.reason),
+            h('h4', null, 'Следующий шаг'),
+            h('p', null, humanizeVisibleText(PROGRESSION_REASON_LABEL[suggestion.reason] || suggestion.reason)),
             h('label', null,
-              h('span', null, 'Ось прогрессии'),
+              h('span', null, 'Что скорректировать'),
               h('select', {
-                'aria-label': 'Ось прогрессии',
+                'aria-label': 'Что скорректировать',
                 value: manualAxis,
                 onChange: function (e) { setManualAxis(e.target.value); }
               },
@@ -1054,11 +1489,31 @@
       nowDate: props.nowDate,
       records: props.records || {}
     });
+    const course = props.course || null;
+    const courseWeek = course && deps().coursePlanner && deps().coursePlanner.currentWeek
+      ? deps().coursePlanner.currentWeek(course, props.nowDate)
+      : null;
     return h('section', { className: 'mobility-panel mobility-calendar', 'aria-label': 'План недели' },
       h('h3', null, 'План недели'),
+      course
+        ? h('div', { className: 'mobility-compact-plan', 'data-course-calendar': '1' },
+            h('div', null,
+              h('strong', null, 'Курс учтён'),
+              h('span', null, 'Неделя ' + (courseWeek && courseWeek.week || 1) + ' · ' + (COURSE_PHASE_LABEL[courseWeek && courseWeek.phase] || 'плановая работа'))
+            ),
+            h('span', null, 'Курс уже влияет на тренировку недели. Замены зон и замеры находятся в «Прогрессе».'),
+            props.onOpenProgress ? h('button', { type: 'button', className: 'mobility-secondary-btn', onClick: props.onOpenProgress }, 'Посмотреть курс') : null
+          )
+        : h('div', { className: 'mobility-compact-plan', 'data-course-empty': '1' },
+            h('div', null,
+              h('strong', null, 'Курс осанки не запущен'),
+              h('span', null, 'Календарь показывает неделю. Курс можно включить в «Прогрессе».')
+            ),
+            props.onOpenProgress ? h('button', { type: 'button', className: 'mobility-secondary-btn', onClick: props.onOpenProgress }, 'Настроить курс') : null
+          ),
       h('div', { className: 'mobility-calendar__meta' },
-        chip('focus', plan.focus),
-        plan.retest && plan.retest.due ? chip('warn', 'ретест') : chip('ok', 'ретест позже')
+        chip('focus', CALENDAR_FOCUS_LABEL[plan.focus] || plan.focus),
+        plan.retest && plan.retest.due ? chip('warn', 'замеры нужны') : chip('ok', 'замеры актуальны')
       ),
       h('div', { className: 'mobility-calendar__days' },
         plan.days.map(function (d) {
@@ -1074,10 +1529,10 @@
   function SessionPanel(props) {
     const built = props.built;
     if (!built || !built.session) {
-      return h('section', { className: 'mobility-panel mobility-session' }, h('p', null, 'Сессия не собрана'));
+      return h('section', { className: 'mobility-panel mobility-session' }, h('p', null, 'Тренировка не собрана'));
     }
     const session = built.session;
-    return h('section', { className: 'mobility-panel mobility-session', 'aria-label': 'Сессия' },
+    return h('section', { className: 'mobility-panel mobility-session', 'aria-label': 'Тренировка' },
       h('div', { className: 'mobility-session__head' },
         h('h3', null, MODE_LABEL[session.mode] || session.mode),
         h('div', { className: 'mobility-session__chips' },
@@ -1094,16 +1549,16 @@
         : null,
       built.issues && built.issues.length
         ? h('ul', { className: 'mobility-issues', 'aria-label': 'Ограничения' },
-            built.issues.map(function (i, idx) { return h('li', { key: i.code + idx, 'data-level': i.level }, i.code, ': ', i.msg); }))
+            built.issues.map(function (i, idx) { return h('li', { key: i.code + idx, 'data-level': i.level }, humanizeVisibleText(i.msg || i.code)); }))
         : null,
       session.advisories && session.advisories.length
         ? h('ul', { className: 'mobility-advisories', 'aria-label': 'Подсказки' },
             session.advisories.map(function (a, idx) {
-              return h('li', { key: a.code + idx, 'data-level': a.level || 'info' }, a.code, ': ', a.msg);
+              return h('li', { key: a.code + idx, 'data-level': a.level || 'info' }, humanizeVisibleText(a.msg || a.code));
             }))
         : null,
       props.onSaveSession
-        ? h('button', { type: 'button', onClick: props.onSaveSession }, 'Сохранить сессию')
+        ? h('button', { type: 'button', onClick: props.onSaveSession }, 'Сохранить тренировку')
         : null,
       h('div', { className: 'mobility-blocks' },
         session.blocks.map(function (b) {
@@ -1111,7 +1566,7 @@
           return h('article', { key: b.id, className: 'mobility-block' },
             h(AtomVisual, { atom: atom }),
             h('div', { className: 'mobility-block__top' },
-              h('strong', null, atom.title || atom.id),
+              h('strong', null, atomTitle(atom)),
               chip('axis', AXIS_LABEL[atom.axis] || atom.axis)
             ),
             h('p', { className: 'mobility-block__instruction' }, atom.instruction || ''),
@@ -1121,7 +1576,7 @@
               : null,
             h('div', { className: 'mobility-block__dose' },
               formatDose(atom),
-              atom.doseConfidence ? chip('confidence', 'Доза ' + atom.doseConfidence) : null
+              atom.doseConfidence ? chip('confidence', 'Нагрузка ' + atom.doseConfidence) : null
             ),
             h('div', { className: 'mobility-block__sources' },
               (atom.sourceIds || []).slice(0, 2).map(function (id) { return h(SourceBadge, { key: id, sourceId: id }); })
@@ -1138,7 +1593,7 @@
     return h('section', { className: 'mobility-panel mobility-runner', 'aria-label': 'План выполнения' },
       h('h3', null, 'План выполнения'),
       h('div', { className: 'mobility-runner__meta' },
-        chip('steps', plan.totalSteps + ' шагов'),
+        chip('steps', plan.totalSteps + ' частей'),
         chip('duration', Math.round((plan.estimatedDurationSec || 0) / 60) + ' мин')
       ),
       h('ol', null,
@@ -1146,7 +1601,7 @@
           return h('li', { key: idx },
             h('strong', null, s.label),
             s.durationSec ? h('span', null, ' · ', s.durationSec, ' сек') : null,
-            s.reps ? h('span', null, ' · ', targetRepsLabel(s.reps, 1), ' повт.') : null
+            s.reps ? h('span', null, ' · ', targetRepsLabel(s.reps, 1), ' раз') : null
           );
         })
       )
@@ -1155,9 +1610,9 @@
 
   function stepMetric(step) {
     if (!step) return '—';
-    if (step.reps) return targetRepsLabel(step.reps, 1) + ' повт.';
+    if (step.reps) return targetRepsLabel(step.reps, 1) + ' раз';
     if (step.durationSec) return step.durationSec + ' сек';
-    return step.kind || 'шаг';
+    return step.kind || 'этап';
   }
   function stepDurationSec(step) {
     return Math.max(0, Math.round(Number(step && step.durationSec) || 0));
@@ -1180,7 +1635,7 @@
 
   function liveStepTitle(step) {
     const atom = atomForStep(step);
-    return atom && atom.title || step && step.label || 'Упражнение';
+    return atom ? atomTitle(atom) : (step && step.label || 'Упражнение');
   }
 
   function liveStepMeta(step) {
@@ -1192,7 +1647,7 @@
     if (metric && metric !== step.kind && metric !== step.label) parts.push(metric);
     if (step.set && step.sets && step.sets > 1) parts.push('подход ' + step.set + '/' + step.sets);
     else if (step.sets && step.sets > 1) parts.push(step.sets + ' подх.');
-    if (step.secondsPerRep) parts.push(step.secondsPerRep + ' сек/повт.');
+    if (step.secondsPerRep) parts.push(step.secondsPerRep + ' сек на раз');
     return parts.join(' · ');
   }
 
@@ -1212,8 +1667,8 @@
     if (status === 'running') return 'РАБОТА';
     if (status === 'paused') return 'Пауза';
     if (status === 'complete') return 'Готово!';
-    if (status === 'aborted') return 'Прервано';
-    return 'Готов к старту';
+    if (status === 'aborted') return 'Остановлено';
+    return 'Можно начинать';
   }
 
   function mobilityVoice() {
@@ -1305,7 +1760,7 @@
   function MobilityPreflightChecklist(props) {
     const preset = props.preset || mobilityPreflightPreset();
     return h('div', { className: 'mobility-preflight' },
-      h('p', { className: 'mobility-preflight__lead' }, 'Перед ведомой сессией коротко настрой тело под режим. Это снижает риск резкого старта.'),
+      h('p', { className: 'mobility-preflight__lead' }, 'Начните спокойно: первый повтор нужен, чтобы почувствовать движение.'),
       h('div', { className: 'mobility-preflight__prep' }, preset.prep),
       h('ul', { className: 'mobility-preflight__list' },
         (preset.checks || []).map(function (text, idx) {
@@ -1316,7 +1771,7 @@
         })
       ),
       props.issueCount
-        ? h('p', { className: 'mobility-preflight__lead' }, 'Есть ограничения в плане: выполняй только без усиления боли.')
+        ? h('p', { className: 'mobility-preflight__lead' }, 'В плане есть ' + issueCountLabel(props.issueCount) + ': работайте только без усиления боли.')
         : null
     );
   }
@@ -1332,14 +1787,14 @@
     const preset = mobilityPreflightPreset(opts.modeId, opts.selectedMode);
     modal.show({
       icon: preset.icon,
-      title: 'Готовы начать?',
+      title: 'Перед началом',
       text: h(MobilityPreflightChecklist, { preset: preset, issueCount: opts.issueCount }),
       confirmStyle: 'success',
       actions: [
         { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text', isCancel: true, row: 0 },
         {
           key: 'go',
-          label: 'Всё ОК, начинаем',
+          label: 'Начать тренировку',
           style: 'success',
           variant: 'fill',
           value: 'go',
@@ -1414,9 +1869,9 @@
     const steps = Array.isArray(props.steps) ? props.steps : [];
     const currentIndex = Math.max(0, Number(props.currentIndex) || 0);
     const denseClass = steps.length > 8 ? ' is-ultra-dense' : steps.length > 4 ? ' is-dense' : '';
-    return h('div', { className: 'mobility-live-roadmap' + denseClass, 'aria-label': 'Этапы тренировки' },
+    return h('div', { className: 'mobility-live-roadmap' + denseClass, 'aria-label': 'План занятия' },
       h('div', { className: 'mobility-live-roadmap__head' },
-        h('span', null, 'Этапы тренировки'),
+        h('span', null, 'План занятия'),
         h('span', null, Math.min(currentIndex + 1, steps.length || 1), '/', steps.length || 1)
       ),
       h('div', { className: 'mobility-live-roadmap__list' },
@@ -1538,10 +1993,10 @@
         }
         modal.show({
           icon: '💾',
-          title: 'Записать прогресс?',
-          text: 'Выполнено: ' + completedSteps.length + ' из ' + steps.length + ' шагов. Можно сохранить как незавершённую сессию.',
-          confirmText: 'Записать как частично',
-          cancelText: 'Не записывать',
+          title: 'Сохранить то, что уже сделали?',
+          text: 'Готово ' + completedSteps.length + ' из ' + steps.length + '. Отметим тренировку как частично выполненную.',
+          confirmText: 'Сохранить результат',
+          cancelText: 'Не сохранять',
           confirmStyle: 'success',
           onConfirm: function () {
             props.onAbortSave && props.onAbortSave(progress);
@@ -1558,10 +2013,10 @@
       }
       modal.show({
         icon: '⚠',
-        title: 'Прервать тренировку?',
-        text: 'Сессия останется как незавершённая — сможешь вернуться к плану позже.',
-        confirmText: 'Прервать',
-        cancelText: 'Продолжить',
+        title: 'Остановить тренировку?',
+        text: 'Таймер остановится. Если вы уже что-то сделали, это можно сохранить следующим шагом.',
+        confirmText: 'Остановить',
+        cancelText: 'Продолжить тренировку',
         confirmStyle: 'warning',
         onConfirm: doAbort
       });
@@ -1612,19 +2067,38 @@
     const digit = liveDigit(current, remainingSec);
     const Focus = global.HEYS && global.HEYS.TrainingFocus;
     if (!Focus || typeof Focus.LiveCountdownDisplay !== 'function') return null;
-    const afterRing = current.breath && current.breath.phases
-      ? h('ol', { className: 'mobility-breath-phases', 'aria-label': 'Фазы дыхания' },
-          current.breath.phases.map(function (p, idx) {
-            return h('li', { key: p.type + idx, 'data-phase': p.type }, p.label, ' ', p.durationSec, ' сек');
-          }))
-      : null;
+    const afterRing = h(React.Fragment, null,
+      current.breath && current.breath.phases
+        ? h('ol', { className: 'mobility-breath-phases', 'aria-label': 'Фазы дыхания' },
+            current.breath.phases.map(function (p, idx) {
+              return h('li', { key: p.type + idx, 'data-phase': p.type }, p.label, ' ', p.durationSec, ' сек');
+            }))
+        : null,
+      h(TechniqueCuePanel, { atom: currentAtom, compact: true }),
+      props.onFeedback ? h('div', { className: 'mobility-step-feedback', 'aria-label': 'Ощущения после упражнения' },
+        [
+          { id: 'easy', label: 'Легко' },
+          { id: 'ok', label: 'В самый раз' },
+          { id: 'hard', label: 'Слишком тяжело' },
+          { id: 'unstable', label: 'Потерял технику', technique: 'unstable' }
+        ].map(function (item) {
+          return h('button', {
+            key: item.id,
+            type: 'button',
+            onClick: function () {
+              props.onFeedback(current, item.technique ? { effort: 'hard', technique: item.technique } : { effort: item.id });
+            }
+          }, item.label);
+        })
+      ) : null
+    );
     const controls = [
       state.status === 'idle' ? { id: 'start', label: 'Старт', onClick: function () { send('start'); } } : null,
       state.status === 'running' ? { id: 'pause', label: '⏸ Пауза', ariaLabel: 'Пауза', onClick: function () { send('pause'); } } : null,
-      state.status === 'paused' ? { id: 'resume', label: '▶ Возобновить', onClick: function () { send('resume'); } } : null,
-      { id: 'next', label: '→', ariaLabel: 'Пропустить фазу', title: 'Пропустить фазу', onClick: function () { send('next'); } },
-      props.onPain ? { id: 'pain', label: 'Боль', ariaLabel: 'Отметить боль', onClick: function () { props.onPain(current); } } : null,
-      { id: 'abort', label: 'Прервать', ariaLabel: 'Стоп', abort: true, onClick: requestAbort }
+      state.status === 'paused' ? { id: 'resume', label: '▶ Продолжить', onClick: function () { send('resume'); } } : null,
+      { id: 'next', label: '→', ariaLabel: 'Пропустить часть', title: 'Пропустить часть', onClick: function () { send('next'); } },
+      props.onPain ? { id: 'pain', label: 'Есть боль', ariaLabel: 'Отметить боль', onClick: function () { props.onPain(current); } } : null,
+      { id: 'abort', label: 'Завершить', ariaLabel: 'Завершить тренировку', abort: true, onClick: requestAbort }
     ].filter(Boolean);
     const runnerNode = h(React.Fragment, null,
       Mobility.VoiceMiniControls ? h(Mobility.VoiceMiniControls, { inline: true }) : null,
@@ -1632,7 +2106,7 @@
         currentAtom && currentAtom.visualAsset
           ? h('img', {
               src: currentAtom.visualAsset,
-              alt: 'Фото упражнения: ' + (currentAtom.title || current.label),
+              alt: 'Фото упражнения: ' + (currentAtom ? atomTitle(currentAtom) : current.label),
               loading: 'lazy',
               decoding: 'async'
             })
@@ -1644,16 +2118,16 @@
         continuous: true,
         phaseKey: livePhase(state.status, current),
         phaseLabel: livePhaseLabel(state.status, current),
-        counter: 'Упр ' + (state.index + 1) + '/' + steps.length,
+        counter: 'Упражнение ' + (state.index + 1) + '/' + steps.length,
         title: liveStepTitle(current),
         image: currentAtom && currentAtom.visualAsset,
-        imageAlt: 'Фото упражнения: ' + (currentAtom && currentAtom.title || current.label || 'упражнение'),
+        imageAlt: 'Фото упражнения: ' + (currentAtom ? atomTitle(currentAtom) : (current.label || 'упражнение')),
         digit: digit,
         ratio: ratio,
         chips: [
           {
             id: 'duration',
-            label: currentDurationSec ? 'Длительность' : 'Доза',
+            label: currentDurationSec ? 'Длительность' : 'Объём',
             value: currentDurationSec ? Math.round(currentDurationSec / 60) + ' мин' : stepMetric(current)
           }
         ],
@@ -1673,17 +2147,18 @@
       return h(Focus.LiveRunnerShell, {
         baseClass: 'fingers-fs-live',
         className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live',
-        ariaLabel: 'Ведомая тренировка',
+        ariaLabel: 'Тренировка с сопровождением',
         runner: runnerNode,
         items: roadmapItems,
         currentIndex: state.index,
         roadmapBaseClass: 'fingers-fs-live-roadmap',
         roadmapClassName: 'mobility-live-roadmap',
         roadmapItemClassName: 'mobility-guided-step',
-        roadmapLabel: 'Этапы тренировки'
+        roadmapTitle: 'План занятия',
+        roadmapLabel: 'План занятия'
       });
     }
-    return h('section', { className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live', 'data-training-runner': 'guided', 'aria-label': 'Ведомая тренировка' },
+    return h('section', { className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live', 'data-training-runner': 'guided', 'aria-label': 'Тренировка с сопровождением' },
       runnerNode,
       h(MobilityLiveRoadmap, { steps: steps, currentIndex: state.index })
     );
@@ -1693,8 +2168,18 @@
     const protocols = deps().protocolCatalog;
     if (!protocols || typeof protocols.listProtocols !== 'function') return null;
     const items = protocols.listProtocols({});
-    return h('section', { className: 'mobility-panel mobility-protocols', 'aria-label': 'Протоколы' },
-      h('h3', null, 'Протоколы'),
+    const selectedPlan = items.find(function (p) { return p.id === props.value; }) || items[0] || null;
+    return h('section', { className: 'mobility-panel mobility-protocols', 'aria-label': 'Готовые тренировки' },
+      h('h3', null, 'Готовые тренировки'),
+      h('div', { className: 'mobility-protocols__intro' },
+        h('strong', null, 'Выберите сценарий'),
+        h('span', null, 'Подойдёт, если хотите понятную тренировку без ручной настройки. Сегодняшний выбор запускается во вкладке «Сегодня».')
+      ),
+      selectedPlan ? h('div', { className: 'mobility-protocols__current' },
+        h('span', null, 'Сегодня выбран'),
+        h('strong', null, protocolTitle(selectedPlan)),
+        h('p', null, protocolIntent(selectedPlan))
+      ) : null,
       h('div', { className: 'mobility-protocol-grid' },
         items.map(function (p) {
           const selected = props.value === p.id;
@@ -1706,12 +2191,12 @@
             onClick: function () { props.onChange && props.onChange(p); }
           },
             h('div', { className: 'mobility-protocol-card__top' },
-              h('h4', null, p.name),
-              chip('duration', duration)
+              h('h4', null, protocolTitle(p)),
+              chip(selected ? 'ok' : 'duration', selected ? 'выбран' : duration)
             ),
-            h('p', null, p.intent),
+            h('p', null, protocolIntent(p)),
             h('div', { className: 'mobility-protocol-card__tags' },
-              (p.tags || []).slice(0, 3).map(function (tag) { return chip('tag', tag, p.id + ':' + tag); })
+              (p.tags || []).slice(0, 3).map(function (tag) { return chip('tag', protocolTagLabel(tag), p.id + ':' + tag); })
             )
           );
         })
@@ -1750,7 +2235,7 @@
               h('span', { className: 'mobility-fs-goalsel__emoji' }, GOAL_EMOJI[goal] || '🎯')
             ),
             h('span', { className: 'mobility-fs-goalsel__text' }, GOAL_SHORT_LABEL[goal] || GOAL_LABEL[goal] || goal),
-            h('span', { className: 'mobility-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
+            h('span', { className: 'mobility-fs-goalsel__count', 'aria-label': cnt + ' планов' }, cnt)
           );
         })
       )
@@ -1761,10 +2246,10 @@
     const scale = deps().loadScale;
     const levels = scale && Array.isArray(scale.LEVELS) ? scale.LEVELS : [
       { value: 1, label: 'Восстановление', shortLabel: 'Очень легко', description: 'минимальная нагрузка' },
-      { value: 2, label: 'Лёгкая', shortLabel: 'Легко', description: 'спокойная доза' },
-      { value: 3, label: 'База', shortLabel: 'База', description: 'стандартная доза' },
+      { value: 2, label: 'Лёгкая', shortLabel: 'Легко', description: 'спокойная нагрузка' },
+      { value: 3, label: 'База', shortLabel: 'База', description: 'стандартная нагрузка' },
       { value: 4, label: 'Сильная', shortLabel: 'Сложно', description: 'плотнее и сложнее' },
-      { value: 5, label: 'Атлет', shortLabel: 'Тяжело', description: 'верхняя доза' }
+      { value: 5, label: 'Атлет', shortLabel: 'Тяжело', description: 'верхняя нагрузка' }
     ];
     const value = scale && scale.normalize ? scale.normalize(props.value) : Math.min(5, Math.max(1, Math.round(Number(props.value) || 3)));
     const current = levels.find(function (item) { return item.value === value; }) || levels[2];
@@ -1854,8 +2339,8 @@
           onClick: props.onStartMix
         },
           h('span', { className: 'mobility-action-card__icon', 'aria-hidden': 'true' }, '↯'),
-          h('strong', null, 'Быстрый микс'),
-          h('span', null, '5-12 подходящих шагов под цель и ограничения')
+          h('strong', null, 'Быстрая тренировка'),
+          h('span', null, 'подходит, если хотите начать сразу')
         ),
         h('button', {
           type: 'button',
@@ -1863,8 +2348,8 @@
           onClick: props.onOpenProtocols
         },
           h('span', { className: 'mobility-action-card__icon', 'aria-hidden': 'true' }, '▦'),
-          h('strong', null, 'По протоколу'),
-          h('span', null, 'готовая структура: утро, RAMP, восстановление')
+          h('strong', null, 'Готовый план'),
+          h('span', null, 'готовая структура: утро, нагрузка, восстановление')
         ),
         h('button', {
           type: 'button',
@@ -1872,8 +2357,8 @@
           onClick: props.onOpenConstructor
         },
           h('span', { className: 'mobility-action-card__icon', 'aria-hidden': 'true' }, '+'),
-          h('strong', null, 'Своя сборка'),
-          h('span', null, 'выбрать упражнения руками и запустить сопровождение')
+          h('strong', null, 'Свой план'),
+          h('span', null, 'выбрать упражнения и начать с сопровождением')
         )
       )
     );
@@ -1883,17 +2368,39 @@
     const catalog = Mobility.atomCatalog;
     const atoms = catalog && Array.isArray(catalog.ATOMS) ? catalog.ATOMS : [];
     const selected = Array.isArray(props.selectedAtomIds) ? props.selectedAtomIds : [];
+    const byId = atoms.reduce(function (acc, atom) {
+      if (atom && atom.id) acc[atom.id] = atom;
+      return acc;
+    }, {});
+    const selectedAtoms = selected.map(function (id) { return byId[id]; }).filter(Boolean);
+    const quickIds = CONSTRUCTOR_QUICK_ATOM_IDS.concat(selected).filter(function (id, idx, arr) {
+      return id && arr.indexOf(id) === idx;
+    });
+    const quickAtoms = quickIds.map(function (id) { return byId[id]; }).filter(Boolean);
     function toggle(id) {
       const next = selected.indexOf(id) >= 0
         ? selected.filter(function (x) { return x !== id; })
         : selected.concat([id]);
       props.onChange && props.onChange(next);
     }
-    return h('section', { className: 'mobility-panel mobility-constructor', 'aria-label': 'Конструктор упражнений' },
-      h('h3', null, 'Конструктор'),
-      h('p', null, 'Выберите упражнения, затем запустите сопровождение. Safety-гейты всё равно применяются.'),
+    return h('section', { className: 'mobility-panel mobility-constructor', 'aria-label': 'Свой план' },
+      h('h3', null, 'Свой план'),
+      h('div', { className: 'mobility-constructor__summary' },
+        h('strong', null, selected.length ? 'Почти готово' : 'Соберите короткую тренировку'),
+        h('span', null, selected.length
+          ? 'Запускайте сопровождение, когда состав подходит. Ограничения и безопасность останутся включены.'
+          : 'Начните с вариантов ниже или откройте список через кнопку «Упражнения».'),
+        selectedAtoms.length
+          ? h('div', { className: 'mobility-constructor__selected', 'aria-label': 'Выбранные упражнения' },
+              selectedAtoms.map(function (atom) {
+                return chip('selected', atomTitle(atom), atom.id);
+              })
+            )
+          : null
+      ),
+      h('div', { className: 'mobility-constructor__section-title' }, 'Подойдут сейчас'),
       h('div', { className: 'mobility-constructor-grid' },
-        atoms.map(function (atom) {
+        quickAtoms.map(function (atom) {
           const isSelected = selected.indexOf(atom.id) >= 0;
           return h('button', {
             key: atom.id,
@@ -1902,10 +2409,10 @@
             onClick: function () { toggle(atom.id); }
           },
             h('div', { className: 'mobility-exercise-card__top' },
-              h('strong', null, atom.title || atom.id),
+              h('strong', null, atomTitle(atom)),
               chip('axis', AXIS_LABEL[atom.axis] || atom.axis)
             ),
-            h('span', null, formatDose(atom), ' · ', PURPOSE_LABEL[atom.purpose] || atom.purpose)
+            h('span', null, formatDose(atom), ' · ', PURPOSE_LABEL[atom.purpose] || atom.purpose, atomTypeLabel(atom) ? ' · ' + atomTypeLabel(atom) : '')
           );
         })
       ),
@@ -1914,9 +2421,9 @@
           type: 'button',
           onClick: function () { props.onStart && props.onStart(selected.slice()); },
           disabled: selected.length === 0
-        }, 'Запустить свою'),
-        selected.length ? h('button', { type: 'button', onClick: function () { props.onChange && props.onChange([]); } }, 'Очистить') : null,
-        selected.length ? chip('ok', selected.length + ' выбрано') : chip('warn', 'ничего не выбрано')
+        }, 'Начать свой план'),
+        selected.length ? h('button', { type: 'button', onClick: function () { props.onChange && props.onChange([]); } }, 'Сбросить') : null,
+        selected.length ? chip('ok', selected.length + ' в плане') : chip('warn', 'план пуст')
       )
     );
   }
@@ -1935,28 +2442,30 @@
     if (Focus && Focus.Registry) {
       return h(Focus.Registry, {
         classPrefix: 'mobility-fs',
-        title: 'Все упражнения',
-        subtitle: atoms.length + ' атомов · фото, доза и назначение',
+        title: 'Упражнения',
+        subtitle: atoms.length + ' упражнений · фото, как выполнять и зачем',
         items: atoms.map(function (atom) {
+          const cues = atom.techniqueCues || {};
           return {
             id: atom.id,
-            title: atom.title || atom.id,
+            title: atomTitle(atom),
             image: atom.visualAsset || '',
-            imageAlt: 'Фото упражнения: ' + (atom.title || atom.id),
+            imageAlt: 'Фото упражнения: ' + atomTitle(atom),
             icon: '↕',
             meta: formatDose(atom) + ' · ' + (PURPOSE_LABEL[atom.purpose] || atom.purpose),
             chips: [
               AXIS_LABEL[atom.axis] || atom.axis,
-              atom.modality || atom.block || atom.doseShape
-            ].filter(Boolean)
+              atomTypeLabel(atom)
+            ].filter(Boolean),
+            actionHint: cues.selfCheck || cues.keyCue || ''
           };
         }),
         selectedIds: selected,
-        addLabel: 'Добавить',
+        addLabel: 'В план',
         removeLabel: 'Убрать',
-        footerText: selected.length ? selected.length + ' выбрано' : 'ничего не выбрано',
+        footerText: selected.length ? selected.length + ' в плане' : 'план пуст',
         footerAction: {
-          label: selected.length ? 'Открыть свою сборку' : 'Перейти в свою сборку',
+          label: selected.length ? 'Открыть свой план' : 'К своему плану',
           onClick: function () {
             props.onOpenConstructor && props.onOpenConstructor();
             props.onClose && props.onClose();
@@ -1977,12 +2486,12 @@
         className: 'mobility-registry-dialog',
         role: 'dialog',
         'aria-modal': 'true',
-        'aria-label': 'Все упражнения'
+        'aria-label': 'Упражнения'
       },
         h('div', { className: 'mobility-registry-head' },
           h('div', null,
-            h('h3', null, 'Все упражнения'),
-            h('p', null, atoms.length, ' атомов · можно добавить в свою сборку')
+            h('h3', null, 'Упражнения'),
+            h('p', null, atoms.length, ' упражнений · можно добавить в свой план')
           ),
           h('button', {
             type: 'button',
@@ -1999,14 +2508,15 @@
               className: 'mobility-registry-card' + (isSelected ? ' is-selected' : '')
             },
               h('div', { className: 'mobility-registry-card__top' },
-                h('strong', null, atom.title || atom.id),
+                h('strong', null, atomTitle(atom)),
                 chip('axis', AXIS_LABEL[atom.axis] || atom.axis)
               ),
-              h('span', null, formatDose(atom), ' · ', PURPOSE_LABEL[atom.purpose] || atom.purpose),
+              h('span', null, formatDose(atom), ' · ', PURPOSE_LABEL[atom.purpose] || atom.purpose, atomTypeLabel(atom) ? ' · ' + atomTypeLabel(atom) : ''),
+              h(TechniqueCuePanel, { atom: atom }),
               h('button', {
                 type: 'button',
                 onClick: function () { toggle(atom.id); }
-              }, isSelected ? 'Убрать из своей' : 'Добавить в свою')
+              }, isSelected ? 'Убрать из плана' : 'В свой план')
             );
           })
         ),
@@ -2017,8 +2527,8 @@
               props.onOpenConstructor && props.onOpenConstructor();
               props.onClose && props.onClose();
             }
-          }, selected.length ? 'Открыть свою сборку' : 'Перейти в свою сборку'),
-          selected.length ? chip('ok', selected.length + ' выбрано') : chip('warn', 'ничего не выбрано')
+          }, selected.length ? 'Открыть свой план' : 'К своему плану'),
+          selected.length ? chip('ok', selected.length + ' в плане') : chip('warn', 'план пуст')
         )
       )
     );
@@ -2036,7 +2546,7 @@
     const blocks = atoms.map(function (atom, idx) {
       return {
         id: 'custom_' + idx,
-        name: atom.title || atom.id,
+        name: atomTitle(atom),
         axis: atom.axis,
         purpose: atom.purpose,
         autonomic: atom.autonomic,
@@ -2102,7 +2612,7 @@
       : numeric != null && numeric < 55
         ? 'Сегодня — мягко'
         : 'Сегодня — можно работать';
-    const sub = (PURPOSE_LABEL[selectedMode.purpose] || 'Подбор') + ' · ' + (AUTONOMIC_LABEL[selectedMode.autonomic] || 'нейтрально');
+    const sub = (PURPOSE_LABEL[selectedMode.purpose] || 'Рекомендация') + ' · ' + (AUTONOMIC_LABEL[selectedMode.autonomic] || 'спокойный режим');
     return h('section', {
       className: 'mobility-fs-today__hero',
       style: {
@@ -2117,7 +2627,7 @@
       h('div', { className: 'mobility-fs-today__hero-body' },
         h('h2', { style: { color: color } }, title),
         h('p', null, sub),
-        issueCount ? h('div', { className: 'mobility-fs-today__reason' }, issueCount + ' огранич. — safety-гейты учтены') : null
+        issueCount ? h('div', { className: 'mobility-fs-today__reason' }, issueCountLabel(issueCount) + ': правила безопасности учтены') : null
       )
     );
   }
@@ -2126,8 +2636,8 @@
     const allAtoms = props.atoms || [];
     const atoms = props.limit ? allAtoms.slice(0, props.limit) : allAtoms;
     if (!atoms.length) return null;
-    return h('div', { className: 'mobility-fs-mixcard__exlist', 'aria-label': 'Упражнения в сессии' },
-      h('div', { className: 'mobility-fs-mixcard__exlist-title' }, 'Что внутри'),
+    return h('div', { className: 'mobility-fs-mixcard__exlist', 'aria-label': 'Состав тренировки' },
+      h('div', { className: 'mobility-fs-mixcard__exlist-title' }, 'Состав тренировки'),
       atoms.map(function (atom) {
         return h('div', { key: atom.id, className: 'mobility-fs-mixcard__exrow' },
           h('div', { className: 'mobility-fs-mixcard__exthumb' },
@@ -2136,7 +2646,7 @@
               : h('span', { className: 'mobility-fs-mixcard__exemoji', 'aria-hidden': 'true' }, 'M')
           ),
           h('div', { className: 'mobility-fs-mixcard__exinfo' },
-            h('span', { className: 'mobility-fs-mixcard__exname' }, atom.title || atom.id),
+            h('span', { className: 'mobility-fs-mixcard__exname' }, atomTitle(atom)),
             h('span', { className: 'mobility-fs-mixcard__exsub' }, formatDose(atom), ' · ', PURPOSE_LABEL[atom.purpose] || atom.purpose)
           )
         );
@@ -2150,34 +2660,35 @@
     const atoms = sessionAtoms(built);
     const durationMin = plan && plan.estimatedDurationSec ? Math.round(plan.estimatedDurationSec / 60) : null;
     const blockCount = built && built.session && Array.isArray(built.session.blocks) ? built.session.blocks.length : atoms.length;
-    return h('section', { className: 'mobility-fs-mixcard mobility-fs-guided-launch', 'aria-label': 'Запуск ведомой сессии' },
+    return h('section', { className: 'mobility-fs-mixcard mobility-fs-guided-launch', 'aria-label': 'Запуск тренировки с сопровождением' },
       h('div', { className: 'mobility-fs-mixcard__inner' },
         h('div', { className: 'mobility-fs-mixcard__head-row' },
           h('div', { className: 'mobility-fs-mixcard__badge' },
             h('span', { 'aria-hidden': 'true' }, '▶'),
-            ' Ведомая'
+            ' С подсказками'
           ),
           durationMin ? h('div', { className: 'mobility-fs-mixcard__goalhint' }, durationMin + ' мин') : null
         ),
-        h('h3', { className: 'mobility-fs-mixcard__title' }, props.title || 'Ведомая сессия'),
-        h('p', { className: 'mobility-fs-mixcard__desc' }, props.text || 'План готов. Запусти сопровождение: таймер будет вести шаги, а фото и подсказки останутся перед глазами.'),
+        h('h3', { className: 'mobility-fs-mixcard__title' }, props.title || 'Тренировка с сопровождением'),
+        h('p', { className: 'mobility-fs-mixcard__desc' }, props.text || 'План готов: фото, темп и подсказки будут перед глазами во время выполнения.'),
         h('div', { className: 'mobility-fs-mixcard__chips' },
-          chip('steps', (plan ? plan.totalSteps : 0) + ' шагов'),
+          chip('steps', (plan ? plan.totalSteps : 0) + ' частей'),
           chip('blocks', blockCount + ' упр.'),
-          props.issueCount ? chip('warn', props.issueCount + ' огранич.') : chip('ok', 'без блокировок')
+          props.issueCount ? chip('warn', issueCountLabel(props.issueCount)) : chip('ok', 'без ограничений')
         ),
+        h(SessionNoticeList, { built: built, limit: 3 }),
         h(ExercisePreviewList, { atoms: atoms }),
         h('div', { className: 'mobility-constructor-actions' },
           h('button', {
             type: 'button',
             className: 'mobility-fs-cta',
             onClick: props.onStart
-          }, '▶ Запустить ведомую сессию'),
+          }, 'Начать с подсказками'),
           h('button', {
             type: 'button',
             className: 'mobility-fs-ghost',
             onClick: props.onSavePlan
-          }, 'Сохранить план без таймера')
+          }, 'Оставить на потом')
         )
       )
     );
@@ -2191,24 +2702,20 @@
     const durationMin = plan && plan.estimatedDurationSec ? Math.round(plan.estimatedDurationSec / 60) : null;
     const blockCount = built && built.session && Array.isArray(built.session.blocks) ? built.session.blocks.length : atoms.length;
     return h('section', { className: 'mobility-fs-mixcard' },
-      h('div', { className: 'mobility-fs-mixcard__hint' },
-        h('span', { 'aria-hidden': 'true' }, '🧬 '),
-        'Сессия по методологии под цель и готовность. Кнопка ↻ даст другой равноценный набор.'
-      ),
       h('div', { className: 'mobility-fs-mixcard__inner' },
         h('div', { className: 'mobility-fs-mixcard__head-row' },
           h('div', { className: 'mobility-fs-mixcard__badge' },
-            h('span', { 'aria-hidden': 'true' }, '🎲'),
-            ' Микс'
+            h('span', { 'aria-hidden': 'true' }, '▦'),
+            ' На сегодня'
           ),
           h('div', { className: 'mobility-fs-mixcard__goalhint' }, 'под цель «' + goalLabel + '»')
         ),
-        h('h3', { className: 'mobility-fs-mixcard__title' }, 'Сессия по методологии'),
+        h('h3', { className: 'mobility-fs-mixcard__title' }, 'Сегодняшняя тренировка'),
         h('p', { className: 'mobility-fs-mixcard__desc' },
-          'Подобрана из безопасных упражнений с учётом цели, инвентаря и ограничений.'
+          'Учли цель, самочувствие, инвентарь и ограничения.'
         ),
         h('div', { className: 'mobility-fs-mixcard__chips' },
-          chip('purpose', built && built.session ? PURPOSE_LABEL[built.session.purpose] || built.session.purpose : 'подбор'),
+          chip('purpose', built && built.session ? PURPOSE_LABEL[built.session.purpose] || built.session.purpose : 'рекомендация'),
           durationMin ? chip('duration', durationMin + ' мин') : null,
           chip('steps', blockCount + ' упр')
         ),
@@ -2225,7 +2732,7 @@
             type: 'button',
             className: 'mobility-fs-mixcard__btn mobility-fs-mixcard__btn--launch',
             onClick: props.onLaunch
-          }, 'Запустить микс')
+          }, 'Начать тренировку')
         )
       )
     );
@@ -2240,8 +2747,8 @@
         h('span', { 'aria-hidden': 'true' }, '★'),
         h('span', null, 'на сегодня')
       ),
-      h('h3', { className: 'mobility-fs-program-card__title' }, protocol.name),
-      h('p', { className: 'mobility-fs-program-card__desc' }, protocol.intent),
+      h('h3', { className: 'mobility-fs-program-card__title' }, protocolTitle(protocol)),
+      h('p', { className: 'mobility-fs-program-card__desc' }, protocolIntent(protocol)),
       h('div', { className: 'mobility-fs-mixcard__chips' },
         chip('purpose', MODE_LABEL[protocol.modeId] || protocol.modeId),
         duration ? chip('duration', duration) : null
@@ -2251,12 +2758,12 @@
           type: 'button',
           className: 'mobility-fs-mixcard__btn mobility-fs-mixcard__btn--secondary',
           onClick: props.onOpenProtocols
-        }, 'Все протоколы'),
+        }, 'Все планы'),
         h('button', {
           type: 'button',
           className: 'mobility-fs-mixcard__btn mobility-fs-mixcard__btn--launch',
           onClick: function () { props.onLaunch && props.onLaunch(protocol); }
-        }, 'Запустить протокол')
+        }, 'Начать план')
       )
     );
   }
@@ -2285,6 +2792,11 @@
     const [customRunAtomIds, setCustomRunAtomIds] = useState([]);
     const [showRegistry, setShowRegistry] = useState(false);
     const [showSources, setShowSources] = useState(false);
+    const [activeCourse, setActiveCourse] = useState(function () {
+      return d.recordsStore && d.recordsStore.latestCourse
+        ? d.recordsStore.latestCourse(props.clientId, props.storage)
+        : null;
+    });
     // Адаптивный масштаб под ширину контейнера: меряем при маунте и на resize,
     // прокидываем --mob-w (px) в CSS, который масштабирует заголовок/иконки/отступы
     // через clamp(). Так нет горизонтального скролла и заголовок ужимается на узких.
@@ -2388,9 +2900,10 @@
       const protocolOptions = d.protocolCatalog && selectedProtocol
         ? d.protocolCatalog.buildOptions(selectedProtocol)
         : {};
-      return d.routineBuilder.buildSession(modeId, profileForBuild, Object.assign({}, protocolOptions, {
+      const options = Object.assign({}, protocolOptions, {
         timeOfDay: props.timeOfDay,
         screens: assessmentScreens,
+        readinessInput: readinessInput,
         coldWaterPlanned: props.coldWaterPlanned,
         afterAdaptiveStrength: props.afterAdaptiveStrength,
         trainingPhase: props.trainingPhase,
@@ -2398,14 +2911,25 @@
         keyLoadWithinHours: props.keyLoadWithinHours,
         randomSeed: mixSeed || null,
         painFlags: props.painFlags || [],
-        contraindications: props.contraindications || []
-      }));
+        contraindications: props.contraindications || [],
+        records: d.recordsStore && d.recordsStore.load ? d.recordsStore.load(props.clientId, props.storage) : props.records
+      });
+      if (activeCourse && profileForBuild.goal === 'posture' && flowMode !== 'protocol' && d.coursePlanner && d.coursePlanner.buildDailySession) {
+        return d.coursePlanner.buildDailySession(activeCourse, profileForBuild, Object.assign({}, options, {
+          todayKey: props.nowDate,
+          modeId: activeCourse.modeId || modeId
+        }));
+      }
+      return d.routineBuilder.buildSession(modeId, profileForBuild, options);
     }, [
       modeId,
       profileForBuild,
       selectedProtocol,
+      activeCourse,
+      flowMode,
       props.timeOfDay,
       assessmentScreens,
+      readinessInput,
       props.coldWaterPlanned,
       props.afterAdaptiveStrength,
       props.trainingPhase,
@@ -2413,13 +2937,17 @@
       props.keyLoadWithinHours,
       mixSeed,
       props.painFlags,
-      props.contraindications
+      props.contraindications,
+      props.records,
+      props.clientId,
+      props.storage
     ]);
 
     const customSourceAtomIds = customRunAtomIds.length ? customRunAtomIds : customAtomIds;
     const customBuilt = useMemo(function () {
       return buildCustomBuilt(customSourceAtomIds, modeId, profileForBuild, {
         timeOfDay: props.timeOfDay,
+        readinessInput: readinessInput,
         coldWaterPlanned: props.coldWaterPlanned,
         afterAdaptiveStrength: props.afterAdaptiveStrength,
         trainingPhase: props.trainingPhase,
@@ -2433,6 +2961,7 @@
       modeId,
       profileForBuild,
       props.timeOfDay,
+      readinessInput,
       props.coldWaterPlanned,
       props.afterAdaptiveStrength,
       props.trainingPhase,
@@ -2528,6 +3057,73 @@
       }, props.storage);
       setSaveStatus('pain');
     }
+    function saveStepFeedback(step, feedback) {
+      if (!d.recordsStore || !step) return;
+      const courseMeta = executionBuilt && executionBuilt.session && executionBuilt.session.course;
+      d.recordsStore.addStepFeedback(props.clientId, Object.assign({
+        courseId: courseMeta && courseMeta.id || null,
+        week: courseMeta && courseMeta.week || null,
+        phase: courseMeta && courseMeta.phase || null,
+        slotId: step.slotId || step.blockId || null,
+        atomId: step.atomId || null
+      }, feedback || {}), props.storage);
+      setSaveStatus('feedback');
+    }
+    function startPostureCourse() {
+      if (!d.coursePlanner || !d.coursePlanner.buildCourse) return;
+      const audit = d.assessment && d.assessment.postureAudit
+        ? d.assessment.postureAudit(assessmentScreens)
+        : (d.assessment && d.assessment.limiterAudit ? d.assessment.limiterAudit(assessmentScreens) : null);
+      const course = d.coursePlanner.buildCourse({
+        goal: 'posture',
+        modeId: 'posture',
+        startedAt: props.nowDate,
+        weeks: 4,
+        loadLevel: profile.loadLevel,
+        equipment: profile.equipment,
+        assessment: audit
+      });
+      const saved = d.recordsStore && d.recordsStore.saveCourse
+        ? d.recordsStore.saveCourse(props.clientId, course, props.storage)
+        : course;
+      setActiveCourse(saved);
+      handleProfileChange(Object.assign({}, profile, { goal: 'posture' }));
+      setModeId('posture');
+      setFlowMode('choose');
+      setRunnerStarted(false);
+      setSaveStatus('course');
+    }
+    function replaceCourseSlot(block) {
+      if (!activeCourse || !d.coursePlanner || !d.coursePlanner.replaceWithinSlot || !block) return;
+      const atom = block.atoms && block.atoms[0];
+      const buildContext = d.modeEngine && d.modeEngine.buildContext
+        ? d.modeEngine.buildContext(activeCourse.modeId || modeId, {
+          painFlags: props.painFlags || [],
+          contraindications: props.contraindications || []
+        })
+        : {};
+      const result = d.coursePlanner.replaceWithinSlot(activeCourse, block.slotId || block.id, atom && atom.id, {
+        profile: profileForBuild,
+        buildContext: buildContext,
+        reason: 'manual_replace'
+      });
+      if (!result || !result.ok) return;
+      const saved = d.recordsStore && d.recordsStore.saveCourse
+        ? d.recordsStore.saveCourse(props.clientId, result.course, props.storage)
+        : result.course;
+      if (d.recordsStore && d.recordsStore.addSlotHistory) {
+        d.recordsStore.addSlotHistory(props.clientId, {
+          courseId: saved.id,
+          slotId: block.slotId || block.id,
+          fromAtomId: atom && atom.id || null,
+          toAtomId: result.replacementAtomId,
+          reason: 'manual_replace'
+        }, props.storage);
+      }
+      setActiveCourse(saved);
+      setMixSeed(Date.now());
+      setSaveStatus('course');
+    }
 
     const readinessScore = d.readiness ? d.readiness.score(readinessInput || {}) : null;
     const modes = d.modeEngine && typeof d.modeEngine.listModes === 'function' ? d.modeEngine.listModes() : [];
@@ -2535,11 +3131,20 @@
     const durationMin = plan && plan.estimatedDurationSec ? Math.round(plan.estimatedDurationSec / 60) : null;
     const issueCount = activeBuilt && Array.isArray(activeBuilt.issues) ? activeBuilt.issues.length : 0;
     const blockCount = activeBuilt && activeBuilt.session && Array.isArray(activeBuilt.session.blocks) ? activeBuilt.session.blocks.length : 0;
+    const activeCourseWeek = activeCourse && d.coursePlanner && d.coursePlanner.currentWeek
+      ? d.coursePlanner.currentWeek(activeCourse, props.nowDate)
+      : null;
+    const activeCourseView = activeCourse
+      ? Object.assign({}, activeCourse, {
+          currentWeekLabel: activeCourseWeek ? activeCourseWeek.week + ' / ' + activeCourse.weeksTotal : '',
+          currentPhaseLabel: activeCourseWeek ? COURSE_PHASE_LABEL[activeCourseWeek.phase] || '' : ''
+        })
+      : null;
     const Focus = global.HEYS && global.HEYS.TrainingFocus;
     const tabs = [
       { id: 'today', label: 'Сегодня', icon: '✓' },
-      { id: 'protocols', label: 'Протоколы', icon: '▦' },
-      { id: 'constructor', label: 'Своя', icon: '+' },
+      { id: 'protocols', label: 'Планы', icon: '▦' },
+      { id: 'constructor', label: 'Свой план', icon: '+' },
       { id: 'progress', label: 'Прогресс', icon: '↗' },
       { id: 'calendar', label: 'Календарь', icon: '□' }
     ];
@@ -2588,9 +3193,9 @@
           classPrefix: 'mobility-fs',
           title: 'Мобильность',
           actions: [
-            { id: 'tests', icon: '◎', label: 'Тесты и профиль', title: 'Тесты и профиль', onClick: function () { setActiveTab('tests'); } },
-            { id: 'registry', icon: '▦', label: 'Все упражнения', title: 'Все упражнения', onClick: function () { setShowRegistry(true); } },
-            { id: 'sources', icon: '▤', label: 'Источники', title: 'Источники и методология', onClick: function () { setShowSources(true); } },
+            { id: 'tests', icon: '◎', label: 'Самочувствие и замеры', title: 'Самочувствие и замеры', onClick: function () { setActiveTab('tests'); } },
+            { id: 'registry', icon: '▦', label: 'Упражнения', title: 'Упражнения', onClick: function () { setShowRegistry(true); } },
+            { id: 'sources', icon: '▤', label: 'Обоснование плана', title: 'Обоснование плана', onClick: function () { setShowSources(true); } },
             props.onClose ? { id: 'close', kind: 'close', icon: '×', label: 'Закрыть', title: 'Закрыть', onClick: props.onClose } : null
           ].filter(Boolean)
         });
@@ -2664,7 +3269,7 @@
     }
 
     function renderModeRail() {
-      return h('div', { className: 'mobility-mode-rail', 'aria-label': 'Быстрый выбор режима' },
+      return h('div', { className: 'mobility-mode-rail', 'aria-label': 'Выбор режима' },
         modes.map(function (m) {
           const selected = m.id === modeId;
           return h('button', {
@@ -2682,25 +3287,25 @@
 
     function renderToday() {
       const title = flowMode === 'custom'
-        ? 'Своя сборка'
+        ? 'Свой план'
         : flowMode === 'resume'
-          ? 'Прерванная тренировка'
+          ? 'Пауза в тренировке'
         : flowMode === 'protocol' && selectedProtocol
-          ? selectedProtocol.name
-          : 'Быстрый микс';
+          ? protocolTitle(selectedProtocol)
+          : 'Быстрая тренировка';
       const text = flowMode === 'custom'
-        ? 'Сопровождение по выбранным упражнениям.'
+        ? 'Ваши упражнения готовы к выполнению.'
         : flowMode === 'resume'
-          ? 'Продолжение с сохранённого шага.'
+          ? 'Продолжение с того места, где вы остановились.'
         : flowMode === 'protocol' && selectedProtocol
-          ? selectedProtocol.intent
-          : 'Автосборка из подходящих упражнений под цель, инвентарь и ограничения.';
+          ? protocolIntent(selectedProtocol)
+          : 'Учли цель, самочувствие, инвентарь и ограничения.';
       const renderResumeBanner = function () {
         return (resumeSnap && !runnerStarted)
           ? h('div', { className: 'mobility-compact-plan', 'data-resume-banner': '1' },
               h('div', null,
-                h('strong', null, 'Прерванная тренировка'),
-                h('span', null, 'Шаг ' + ((Number(resumeSnap.index) || 0) + 1) + ' из ' + resumeSnap.planSteps.length + ' — можно продолжить')
+                h('strong', null, 'Пауза в тренировке'),
+                h('span', null, 'Продолжить с этапа ' + ((Number(resumeSnap.index) || 0) + 1) + ' из ' + resumeSnap.planSteps.length)
               ),
               h('div', { style: { display: 'flex', gap: '8px' } },
                 h('button', { type: 'button', className: 'mobility-primary-btn', onClick: resumeGuidedSession }, 'Продолжить'),
@@ -2718,7 +3323,7 @@
                 score: readinessScore && readinessScore.score,
                 color: issueCount ? '#ef4444' : '#16a66a',
                 title: issueCount ? 'Сегодня — с ограничениями' : 'Сегодня — можно работать',
-                subtitle: (PURPOSE_LABEL[selectedMode.purpose] || selectedMode.purpose || 'Подбор') + ' · ' + (AUTONOMIC_LABEL[selectedMode.autonomic] || selectedMode.autonomic || 'нейтрально'),
+                subtitle: (PURPOSE_LABEL[selectedMode.purpose] || 'Рекомендация') + ' · ' + (AUTONOMIC_LABEL[selectedMode.autonomic] || 'спокойный режим'),
                 reasons: activeBuilt && activeBuilt.session && Array.isArray(activeBuilt.session.reasons)
                   ? activeBuilt.session.reasons.slice(0, 3).map(reasonText)
                   : []
@@ -2731,6 +3336,14 @@
             onReroll: function () { setMixSeed(Date.now()); setRunnerStarted(false); },
             onLaunch: function () { setFlowMode('mix'); setRunnerStarted(false); }
           }),
+          profile.goal === 'posture'
+            ? h(CourseStatusCard, {
+                variant: 'summary',
+                course: activeCourseView,
+                built: built,
+                onOpenProgress: function () { setActiveTab('progress'); }
+              })
+            : null,
           h(RecommendedProtocolCard, {
             protocol: selectedProtocol,
             onOpenProtocols: function () { setActiveTab('protocols'); },
@@ -2751,7 +3364,7 @@
                 ),
                 readinessScore ? h('div', { className: 'mobility-fs__score' },
                   String(readinessScore.score),
-                  h('small', null, 'готовность')
+                  h('small', null, 'самочувствие')
                 ) : null
               ),
               h('div', { className: 'mobility-today-hero__meta' },
@@ -2759,8 +3372,8 @@
                 executionDurationMin
                   ? chip('duration', executionDurationMin + ' мин')
                   : durationMin ? chip('duration', durationMin + ' мин') : null,
-                chip('steps', executionPlan ? executionPlan.totalSteps + ' шагов' : 'нет плана'),
-                chip(executionIssueCount ? 'warn' : 'ok', executionIssueCount ? executionIssueCount + ' огранич.' : 'без блокировок')
+                chip('steps', executionPlan ? executionPlan.totalSteps + ' частей' : 'план подбирается'),
+                chip(executionIssueCount ? 'warn' : 'ok', executionIssueCount ? issueCountLabel(executionIssueCount) : 'без ограничений')
               )
             )
           ),
@@ -2768,8 +3381,8 @@
             h('div', null,
               h('strong', null, executionBlockCount || blockCount || 0, ' упражн.'),
               h('span', null, executionDurationMin
-                ? executionDurationMin + ' мин · ' + (executionPlan ? executionPlan.totalSteps : 0) + ' шагов'
-                : durationMin ? durationMin + ' мин · ' + (plan ? plan.totalSteps : 0) + ' шагов' : 'план собирается')
+                ? executionDurationMin + ' мин · ' + (executionPlan ? executionPlan.totalSteps : 0) + ' частей'
+                : durationMin ? durationMin + ' мин · ' + (plan ? plan.totalSteps : 0) + ' частей' : 'план подбирается')
             ),
             h('button', { type: 'button', onClick: function () { setFlowMode('choose'); setRunnerStarted(false); setResuming(false); } }, 'Назад')
           ),
@@ -2783,6 +3396,7 @@
                 initialRemainingSec: (resuming && resumeSnap) ? resumeSnap.remainingSec : null,
                 autoStart: true,
                 onPain: savePainFlag,
+                onFeedback: saveStepFeedback,
                 onAbortSave: function (progress) { savePartialSession(progress, executionBuilt, executionPlan); },
                 onAbortComplete: function () { setRunnerStarted(false); setResuming(false); setResumeSnap(null); }
               })
@@ -2796,7 +3410,7 @@
                 onSavePlan: saveSession
               }),
           h('div', { className: 'mobility-today-hero__actions' },
-            h('button', { type: 'button', className: 'mobility-primary-btn', onClick: saveSession }, props.dateKey ? 'Сохранить в тренировку' : 'Сохранить сессию')
+            h('button', { type: 'button', className: 'mobility-primary-btn', onClick: saveSession }, props.dateKey ? 'Сохранить в тренировку' : 'Сохранить тренировку')
           )
         )
       );
@@ -2826,38 +3440,62 @@
         );
       }
       if (activeTab === 'tests') {
-        return h('div', null,
-          h(ProfilePanel, { profile: profile, onChange: handleProfileChange }),
-          h(ReadinessPanel, { input: readinessInput, onChange: setReadinessInput }),
-          h(AssessmentPanel, { screens: assessmentScreens, onChange: setAssessmentScreens, onSaveAssessment: saveAssessment })
-        );
+        return h(TestsPanel, {
+          profile: profile,
+          onProfileChange: handleProfileChange,
+          readinessInput: readinessInput,
+          onReadinessChange: setReadinessInput,
+          assessmentScreens: assessmentScreens,
+          onAssessmentChange: setAssessmentScreens,
+          onSaveAssessment: saveAssessment
+        });
       }
       if (activeTab === 'progress') {
         return h('div', null,
-          h(ProgressPanel, { records: props.records, nowDate: props.nowDate, built: activeBuilt, readinessInput: readinessInput, progressionHistory: props.progressionHistory }),
-          h(SessionPanel, { built: activeBuilt }),
-          h(EffectMapPanel),
-          h(RunnerPlanPanel, { plan: plan })
+          h(ProgressPanel, {
+            records: props.records,
+            nowDate: props.nowDate,
+            built: activeBuilt,
+            readinessInput: readinessInput,
+            progressionHistory: props.progressionHistory,
+            profile: profile,
+            course: activeCourseView,
+            onStartCourse: startPostureCourse,
+            onReplaceCourseSlot: replaceCourseSlot,
+            onOpenToday: function () { setActiveTab('today'); setFlowMode('choose'); setRunnerStarted(false); },
+            onOpenTests: function () { setActiveTab('tests'); }
+          })
         );
       }
       if (activeTab === 'calendar') {
         return h(CalendarPanel, {
           profile: profile,
           records: props.records,
+          course: activeCourseView,
+          onStartCourse: startPostureCourse,
           phase: props.phase,
           keyLoadWithinHours: props.keyLoadWithinHours,
           startDate: props.startDate,
-          nowDate: props.nowDate
+          nowDate: props.nowDate,
+          onOpenProgress: function () { setActiveTab('progress'); }
         });
       }
       return renderToday();
     }
 
+    const showTrainingContext = activeTab === 'today' && flowMode === 'choose';
+
     return h('main', { className: 'mobility-app mobility-fs-session', 'data-mode': modeId, ref: rootRef },
       renderTrainingHeader(),
       renderTabs(),
-      renderTrainingContext(),
-      saveStatus ? h('div', { className: 'mobility-save-status', 'data-status': saveStatus }, saveStatus === 'session' ? 'Сессия сохранена' : saveStatus === 'assessment' ? 'Аудит сохранён' : 'Боль отмечена') : null,
+      showTrainingContext ? renderTrainingContext() : null,
+      saveStatus ? h('div', { className: 'mobility-save-status', 'data-status': saveStatus },
+        saveStatus === 'session' ? 'Тренировка сохранена'
+          : saveStatus === 'assessment' ? 'Замеры сохранены'
+          : saveStatus === 'course' ? 'Курс обновлён'
+          : saveStatus === 'feedback' ? 'Ощущения сохранены'
+          : 'Боль отмечена'
+      ) : null,
       h('div', { className: 'mobility-fs-tab-content' }, renderTabContent()),
       showRegistry ? h(ExerciseRegistryOverlay, {
         selectedAtomIds: customAtomIds,

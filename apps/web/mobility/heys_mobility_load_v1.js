@@ -160,6 +160,65 @@
     if (target >= 5 && atom && atom.doseShape === 'eccentric') score += 10;
     return score;
   }
+  function hasPainFlag(flags) {
+    return (Array.isArray(flags) ? flags : []).some(function (f) { return f && f.level === 'pain'; });
+  }
+  function recentFeedbackSignals(history) {
+    const h = history || {};
+    const feedback = Array.isArray(h.stepFeedback) ? h.stepFeedback.slice(-12) : [];
+    const hard = feedback.filter(function (f) {
+      return f && (f.effort === 'hard' || f.effort === 'too_hard' || f.technique === 'unstable');
+    }).length;
+    const easy = feedback.filter(function (f) { return f && f.effort === 'easy'; }).length;
+    return { hard: hard, easy: easy, count: feedback.length };
+  }
+  function readinessBand(readiness) {
+    if (!readiness) return null;
+    if (typeof readiness === 'string') return readiness;
+    return readiness.band || readiness.status || null;
+  }
+  function effectiveLevel(selectedLevel, readiness, painFlags, history, opts) {
+    const selected = clampLevel(selectedLevel);
+    const o = opts || {};
+    let effective = selected;
+    const reasons = [];
+    const band = readinessBand(readiness);
+    if (hasPainFlag(painFlags)) {
+      effective = Math.min(effective, Math.max(1, selected - 2));
+      reasons.push('effective_load_pain_downshift');
+    }
+    if (band === 'red') {
+      effective = Math.min(effective, Math.max(1, selected - 2));
+      reasons.push('effective_load_readiness_red');
+    } else if (band === 'yellow') {
+      effective = Math.min(effective, Math.max(1, selected - 1));
+      reasons.push('effective_load_readiness_yellow');
+    }
+    if (o.phase === 'deload' || o.periodizationPhase === 'deload') {
+      effective = Math.min(effective, Math.max(1, selected - 1));
+      reasons.push('effective_load_deload');
+    }
+    const fb = recentFeedbackSignals(history);
+    if (fb.hard >= 2) {
+      effective = Math.min(effective, Math.max(1, selected - 1));
+      reasons.push('effective_load_feedback_hard');
+    }
+    if (fb.easy >= 4 && !reasons.length) {
+      effective = Math.min(5, selected + 1);
+      reasons.push('effective_load_feedback_easy');
+    }
+    if (effective > selected && o.allowAutoIncrease !== true) {
+      effective = selected;
+      reasons.push('effective_load_increase_capped');
+    }
+    return {
+      selectedLevel: selected,
+      effectiveLevel: clampLevel(effective),
+      reasons: reasons,
+      readinessBand: band,
+      feedback: fb
+    };
+  }
 
   Mobility.loadScale = {
     __registered: true,
@@ -169,6 +228,8 @@
     fromProfile: fromProfile,
     loadClass: loadClass,
     tuneDose: tuneDose,
-    scoreBias: scoreBias
+    scoreBias: scoreBias,
+    effectiveLevel: effectiveLevel,
+    effectiveLoadLevel: effectiveLevel
   };
 })(typeof window !== 'undefined' ? window : globalThis);

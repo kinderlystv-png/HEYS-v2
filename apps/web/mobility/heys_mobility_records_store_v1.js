@@ -37,7 +37,7 @@
     return storage || global.localStorage || null;
   }
   function empty() {
-    return { sessions: [], assessments: [], painFlags: [] };
+    return { sessions: [], assessments: [], painFlags: [], courses: [], slotHistory: [], stepFeedback: [] };
   }
   function adapter(storage) {
     const kr = kernelRecords();
@@ -113,6 +113,38 @@
     else save(clientId, Object.assign(data, { painFlags: data.painFlags.concat([item]) }), storage);
     return item;
   }
+  function saveCourse(clientId, course, storage) {
+    const data = load(clientId, storage);
+    const item = Object.assign({
+      id: recordId(['mob_course', Date.now(), data.courses.length]),
+      savedAt: new Date().toISOString()
+    }, course || {});
+    const list = (Array.isArray(data.courses) ? data.courses : []).filter(function (c) { return c && c.id !== item.id; }).concat([item]);
+    const next = Object.assign(data, { courses: list.slice(-50) });
+    save(clientId, next, storage);
+    return item;
+  }
+  function latestCourse(clientId, storage) {
+    const data = load(clientId, storage);
+    const list = Array.isArray(data.courses) ? data.courses : [];
+    return list.length ? list[list.length - 1] : null;
+  }
+  function addSlotHistory(clientId, entry, storage) {
+    const data = load(clientId, storage);
+    const item = Object.assign({ savedAt: new Date().toISOString() }, entry || {});
+    const a = adapter(storage);
+    if (a) a.append(clientId, 'slotHistory', item, { cap: 500 }, storageOf(storage));
+    else save(clientId, Object.assign(data, { slotHistory: data.slotHistory.concat([item]).slice(-500) }), storage);
+    return item;
+  }
+  function addStepFeedback(clientId, feedback, storage) {
+    const data = load(clientId, storage);
+    const item = Object.assign({ savedAt: new Date().toISOString() }, feedback || {});
+    const a = adapter(storage);
+    if (a) a.append(clientId, 'stepFeedback', item, { cap: 800 }, storageOf(storage));
+    else save(clientId, Object.assign(data, { stepFeedback: data.stepFeedback.concat([item]).slice(-800) }), storage);
+    return item;
+  }
   function latestAssessment(clientId, storage) {
     const a = adapter(storage);
     if (a) return a.latest(clientId, 'assessments', storageOf(storage));
@@ -142,6 +174,10 @@
     addSession: addSession,
     addAssessment: addAssessment,
     addPainFlag: addPainFlag,
+    saveCourse: saveCourse,
+    latestCourse: latestCourse,
+    addSlotHistory: addSlotHistory,
+    addStepFeedback: addStepFeedback,
     latestAssessment: latestAssessment,
     listSessions: listSessions,
     createMemoryStorage: createMemoryStorage

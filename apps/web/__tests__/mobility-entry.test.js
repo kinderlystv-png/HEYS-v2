@@ -25,6 +25,7 @@ const MODULES = [
   'heys_mobility_mode_engine_v1.js',
   'heys_mobility_protocols_catalog_v1.js',
   'heys_mobility_calendar_v1.js',
+  'heys_mobility_course_planner_v1.js',
   'heys_mobility_routine_builder_v1.js',
   'heys_mobility_breath_runner_v1.js',
   'heys_mobility_routine_runner_v1.js',
@@ -70,6 +71,8 @@ describe('Mobility public entry', () => {
     const M = setupFull();
     expect(M.isReady()).toBe(true);
     expect(typeof M.buildSession).toBe('function');
+    expect(typeof M.buildCourse).toBe('function');
+    expect(typeof M.buildCourseSession).toBe('function');
     expect(typeof M.buildRunPlan).toBe('function');
     expect(typeof M.renderPreviewPill).toBe('function');
   });
@@ -81,6 +84,17 @@ describe('Mobility public entry', () => {
     expect(built.ok).toBe(true);
     expect(built.session.mode).toBe('evening_relax');
     expect(plan.totalSteps).toBeGreaterThan(0);
+  });
+
+  it('buildCourseSession delegates to slot-based course planner', () => {
+    const M = setupFull();
+    const course = M.buildCourse({ goal: 'posture', startedAt: '2026-06-01', weeks: 4 });
+    const built = M.buildCourseSession(course, Object.assign({}, profile, { goal: 'posture' }), {
+      todayKey: '2026-06-08'
+    });
+    expect(course.slots.length).toBeGreaterThan(0);
+    expect(built.ok).toBe(true);
+    expect(built.session.course.id).toBe(course.id);
   });
 
   it('renderPreviewPill returns a clickable React element', () => {

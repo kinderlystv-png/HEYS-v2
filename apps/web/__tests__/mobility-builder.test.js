@@ -150,6 +150,19 @@ describe('mobility routine_builder', () => {
     expect(r.issues.some((i) => i.code === 'S2.pain_stop')).toBe(true);
   });
 
+  it('effective load снижает фактическую дозу при красной готовности', () => {
+    expect(globalThis.HEYS.Mobility.loadScale.effectiveLoadLevel).toBe(globalThis.HEYS.Mobility.loadScale.effectiveLevel);
+    const r = RB().buildSession('posture', profile({ loadLevel: 5 }), {
+      readinessScore: { band: 'red', score: 35 },
+      recentHistory: { stepFeedback: [{ effort: 'hard' }, { technique: 'unstable' }] }
+    });
+    expect(r.ok).toBe(true);
+    expect(r.session.selectedLoadLevel).toBe(5);
+    expect(r.session.loadLevel).toBeLessThan(5);
+    expect(r.session.effectiveLoad.reasons).toEqual(expect.arrayContaining(['effective_load_readiness_red']));
+    expect(r.session.reasons).toContain('effective_load_readiness_red');
+  });
+
   it('modeEngine.buildSession делегирует в routineBuilder', () => {
     const r = ME().buildSession('anti_sedentary', profile(), {});
     expect(r.ok).toBe(true);

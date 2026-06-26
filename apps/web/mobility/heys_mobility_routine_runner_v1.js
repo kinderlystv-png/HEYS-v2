@@ -198,7 +198,7 @@
     blocks.forEach(function (b) {
       (Array.isArray(b.atoms) ? b.atoms : []).forEach(function (a) {
         materializeAtom(a, { loadLevel: loadLevel }).forEach(function (s) {
-          steps.push(Object.assign({ blockId: b.id, mode: session.mode }, s));
+          steps.push(Object.assign({ blockId: b.id, slotId: b.slotId || b.id, mode: session.mode }, s));
         });
       });
     });

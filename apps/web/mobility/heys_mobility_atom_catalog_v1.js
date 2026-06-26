@@ -438,6 +438,15 @@
     Object.assign(atom, CONTENT[atom.id] || {});
     atom.visualAsset = '/exercises/mobility/' + atom.id + '.webp';
     atom.visualPromptRef = 'methodology/VISUAL_PROMPTS.md#' + atom.id;
+    const cues = Array.isArray(atom.cues) ? atom.cues : [];
+    atom.techniqueCues = atom.techniqueCues || {
+      setup: atom.instruction || '',
+      keyCue: cues[0] || 'движение без боли',
+      commonMistakes: cues.slice(1, 3),
+      selfCheck: 'дыхание ровное, боль не выше дискомфорта',
+      regress: 'уменьши амплитуду, скорость или усилие',
+      progress: 'добавляй объём только если техника остаётся чистой'
+    };
   });
 
   // ─── API (индекс — из ОБЩЕГО ЯДРА; локальный фолбэк) ───────────────────────────
@@ -526,6 +535,14 @@
     if (!atom.title || typeof atom.title !== 'string') errs.push(id + ': title отсутствует');
     if (!atom.instruction || typeof atom.instruction !== 'string') errs.push(id + ': instruction отсутствует');
     if (!Array.isArray(atom.cues) || atom.cues.length < 2) errs.push(id + ': cues требует минимум 2 подсказки');
+    if (!atom.techniqueCues || typeof atom.techniqueCues !== 'object') {
+      errs.push(id + ': techniqueCues отсутствует');
+    } else {
+      ['setup', 'keyCue', 'selfCheck', 'regress', 'progress'].forEach(function (k) {
+        if (!atom.techniqueCues[k] || typeof atom.techniqueCues[k] !== 'string') errs.push(id + ': techniqueCues.' + k + ' отсутствует');
+      });
+      if (!Array.isArray(atom.techniqueCues.commonMistakes)) errs.push(id + ': techniqueCues.commonMistakes не массив');
+    }
     if (!atom.visualAsset || !/^\/exercises\/mobility\/[a-z0-9_]+\.webp$/.test(atom.visualAsset)) {
       errs.push(id + ': visualAsset отсутствует или не по схеме /exercises/mobility/<atomId>.webp');
     }

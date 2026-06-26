@@ -20,7 +20,10 @@
     thoracic_rotation: { id: 'thoracic_rotation', jointRegion: 'thoracic', norm: 35, unit: 'deg', mobilityJoint: true },
     shoulder_flexion: { id: 'shoulder_flexion', jointRegion: 'shoulder', norm: 180, unit: 'deg', mobilityJoint: true },
     shoulder_er: { id: 'shoulder_er', jointRegion: 'shoulder', norm: 90, unit: 'deg', mobilityJoint: true },
-    knee_flexion: { id: 'knee_flexion', jointRegion: 'knee', norm: 135, unit: 'deg', mobilityJoint: false }
+    knee_flexion: { id: 'knee_flexion', jointRegion: 'knee', norm: 135, unit: 'deg', mobilityJoint: false },
+    deep_neck_flexor_hold: { id: 'deep_neck_flexor_hold', jointRegion: 'neck', norm: 30, unit: 'sec', mobilityJoint: false },
+    wall_angel_quality: { id: 'wall_angel_quality', jointRegion: 'shoulder', norm: 8, unit: 'score', mobilityJoint: false },
+    scapular_control_score: { id: 'scapular_control_score', jointRegion: 'shoulder', norm: 8, unit: 'score', mobilityJoint: false }
   };
   const TEST_IDS = Object.keys(TESTS);
 
@@ -112,6 +115,37 @@
       blockWeights: blockWeights
     };
   }
+  const POSTURE_SLOT_BY_TEST = {
+    deep_neck_flexor_hold: ['neck_control'],
+    thoracic_rotation: ['thoracic_mobility'],
+    wall_angel_quality: ['scapular_control', 'thoracic_mobility'],
+    scapular_control_score: ['scapular_control'],
+    shoulder_flexion: ['scapular_control', 'thoracic_mobility'],
+    shoulder_er: ['scapular_control'],
+    hip_extension_thomas: ['hip_support', 'anterior_chain_relief'],
+    hamstring_slr: ['hip_support'],
+    hip_flexion: ['hip_support']
+  };
+  function postureAudit(screens) {
+    const base = limiterAudit(screens);
+    const slotWeights = {};
+    (base.rows || []).forEach(function (row) {
+      if (!row || row.ok !== true) return;
+      const slots = POSTURE_SLOT_BY_TEST[row.testId] || [];
+      const priority = row.limiter && Number(row.limiter.priority) || Number(row.deficit) || 0;
+      slots.forEach(function (slotId, idx) {
+        const value = Math.max(0, priority * (idx === 0 ? 1 : 0.75));
+        slotWeights[slotId] = Math.max(Number(slotWeights[slotId]) || 0, value);
+      });
+    });
+    const leadingPostureLimiter = Object.keys(slotWeights)
+      .map(function (slotId) { return { slotId: slotId, priority: slotWeights[slotId] }; })
+      .sort(function (a, b) { return b.priority - a.priority || a.slotId.localeCompare(b.slotId); })[0] || null;
+    return Object.assign({}, base, {
+      slotWeights: slotWeights,
+      leadingPostureLimiter: leadingPostureLimiter
+    });
+  }
   function retestDue(lastTestDate, nowDate, intervalWeeks) {
     if (!lastTestDate) return true;
     const last = new Date(lastTestDate).getTime();
@@ -128,6 +162,7 @@
     scoreMeasurement: scoreMeasurement,
     classifyLimiter: classifyLimiter,
     limiterAudit: limiterAudit,
+    postureAudit: postureAudit,
     retestDue: retestDue
   };
 })(typeof window !== 'undefined' ? window : globalThis);

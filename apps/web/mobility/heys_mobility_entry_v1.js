@@ -111,6 +111,16 @@
     const session = sessionOrResult && sessionOrResult.session ? sessionOrResult.session : sessionOrResult;
     return Mobility.routineRunner.buildRunPlan(session);
   }
+  function buildCourse(opts) {
+    if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildCourse !== 'function') return null;
+    return Mobility.coursePlanner.buildCourse(opts || {});
+  }
+  function buildCourseSession(course, profile, opts) {
+    if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildDailySession !== 'function') {
+      return { ok: false, errors: [{ level: 'error', code: 'mobility.course_not_loaded', msg: 'планер курса не загружен' }], session: null };
+    }
+    return Mobility.coursePlanner.buildDailySession(course, getProfile(profile), opts || {});
+  }
 
   function modeLabel(modeId) {
     return MODE_LABEL[modeId] || modeId || 'Мобильность';
@@ -274,6 +284,8 @@
 
   Mobility.getProfile = getProfile;
   Mobility.buildSession = buildSession;
+  Mobility.buildCourse = buildCourse;
+  Mobility.buildCourseSession = buildCourseSession;
   Mobility.buildRunPlan = buildRunPlan;
   Mobility.renderPreviewPill = renderPreviewPill;
   Mobility.openFullscreen = openFullscreen;

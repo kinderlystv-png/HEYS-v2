@@ -154,6 +154,15 @@
     }
     return null;
   }
+  function readinessFromOptions(opts) {
+    if (opts.readinessScore && typeof opts.readinessScore === 'object') return opts.readinessScore;
+    if (opts.readiness && typeof opts.readiness === 'object' && opts.readiness.band) return opts.readiness;
+    const input = opts.readinessInput || opts.readiness;
+    if (input && Mobility.readiness && typeof Mobility.readiness.score === 'function') {
+      return Mobility.readiness.score(input);
+    }
+    return null;
+  }
   function mergeBlockWeights(opts, audit) {
     return Object.assign({}, (audit && audit.blockWeights) || {}, opts.blockWeights || {});
   }
@@ -304,7 +313,16 @@
     const assessmentAudit = assessmentAuditFromOptions(opts);
     const blockWeights = mergeBlockWeights(opts, assessmentAudit);
     const popFocus = populationFocus(profile);
-    const loadLevel = normalizeLoadLevel(profile, opts);
+    const selectedLoadLevel = normalizeLoadLevel(profile, opts);
+    const readinessScore = readinessFromOptions(opts);
+    const effectiveLoad = Mobility.loadScale && typeof Mobility.loadScale.effectiveLevel === 'function'
+      ? Mobility.loadScale.effectiveLevel(selectedLoadLevel, readinessScore, context.painFlags, opts.recentHistory || opts.records || {}, {
+        phase: opts.phase || context.phase,
+        periodizationPhase: context.periodization && context.periodization.phase,
+        allowAutoIncrease: opts.allowAutoIncrease
+      })
+      : { selectedLevel: selectedLoadLevel, effectiveLevel: selectedLoadLevel, reasons: [] };
+    const loadLevel = effectiveLoad.effectiveLevel || selectedLoadLevel;
     const loadPolicy = Mobility.loadScale && Mobility.loadScale.getLevel
       ? Mobility.loadScale.getLevel(loadLevel)
       : { value: loadLevel };
@@ -380,6 +398,8 @@
       beforePower: context.beforePower,
       warmupCompleted: context.warmupCompleted,
       loadLevel: loadLevel,
+      selectedLoadLevel: selectedLoadLevel,
+      effectiveLoad: effectiveLoad,
       loadPolicy: {
         key: loadPolicy.key || null,
         label: loadPolicy.label || null,
@@ -389,7 +409,7 @@
       },
       blocks: blocks,
       painFlags: context.painFlags,
-      reasons: uniq((mode.reasons || []).concat(popFocus.reasons || []).concat(['load_level_' + loadLevel]).concat(context.circadian ? [context.circadian.reason] : [])),
+      reasons: uniq((mode.reasons || []).concat(popFocus.reasons || []).concat(['load_level_' + loadLevel]).concat(effectiveLoad.reasons || []).concat(context.circadian ? [context.circadian.reason] : [])),
       advisories: [context.coldWater].filter(Boolean),
       periodization: context.periodization,
       assessment: assessmentAudit ? {

@@ -48,6 +48,7 @@ const MODULES = [
   { file: 'heys_mobility_mode_engine_v1.js', label: 'mode engine' },
   { file: 'heys_mobility_protocols_catalog_v1.js', label: 'ready-to-run protocol catalog' },
   { file: 'heys_mobility_calendar_v1.js', label: 'weekly calendar planner' },
+  { file: 'heys_mobility_course_planner_v1.js', label: 'slot-based course planner' },
   { file: 'heys_mobility_routine_builder_v1.js', label: 'hybrid routine builder' },
   { file: 'heys_mobility_breath_runner_v1.js', label: 'breath runner' },
   { file: 'heys_mobility_routine_runner_v1.js', label: 'routine runner' },
