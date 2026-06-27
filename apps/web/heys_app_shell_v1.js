@@ -2015,6 +2015,24 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         pushKV('recentHotSyncApplies', Array.isArray(HEYS?._hotsyncApplies) ? HEYS._hotsyncApplies.slice(-20) : []);
                         pushKV('recentDayv2Blocks', Array.isArray(HEYS?._hotsyncDayv2Blocks) ? HEYS._hotsyncDayv2Blocks.slice(-10) : []);
                         pushKV('recentPlanningBlocks', Array.isArray(HEYS?._hotsyncPlanningBlocks) ? HEYS._hotsyncPlanningBlocks.slice(-10) : []);
+                        pushHeader('Planning sync parity');
+                        const planningParity = typeof HEYS?.Planning?.Store?.getPlanningSyncParitySnapshot === 'function'
+                            ? HEYS.Planning.Store.getPlanningSyncParitySnapshot()
+                            : null;
+                        if (planningParity && Array.isArray(planningParity.keys)) {
+                            pushKV('clientId', planningParity.clientId);
+                            planningParity.keys.forEach((row) => {
+                                const local = row.local || {};
+                                const cloud = row.cloud || {};
+                                extraLines.push(`  ${row.key}: class=${row.class} status=${row.status} local=${local.length ?? local.kind}:${local.hash || '—'} cloud=${cloud.length ?? cloud.kind ?? '—'}:${cloud.hash || '—'} localOnly=${row.localOnlyCount || 0} remoteOnly=${row.remoteOnlyCount || 0}`);
+                                if (row.key === 'heys_planning_chrono_timer') {
+                                    extraLines.push('    note: localOnly=true (active stopwatch is not uploaded by design)');
+                                }
+                            });
+                            pushKV('recentPersistHistory', planningParity.recentPersistHistory || []);
+                        } else {
+                            extraLines.push('  (Planning.Store parity snapshot unavailable)');
+                        }
                     } catch (prodDiagErr) {
                         extraLines.push('  products/day forensic snapshot failed: ' + (prodDiagErr?.message || prodDiagErr));
                     }

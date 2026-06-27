@@ -1,11 +1,11 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.ea4c6eaad9b0.js",
-    "hash": "ea4c6eaad9b0",
-    "sourceFingerprint": "b90ffd7aaf0f",
+    "file": "boot-core.bundle.b2eba11e7951.js",
+    "hash": "b2eba11e7951",
+    "sourceFingerprint": "98745015667e",
     "fileCount": 40,
-    "size": 1119506,
-    "builtAt": "2026-06-24T22:37:06.291Z"
+    "size": 1120146,
+    "builtAt": "2026-06-27T09:43:46.294Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.66355fd0e856.js",
@@ -24,12 +24,12 @@
     "builtAt": "2026-06-19T21:18:19.487Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.0e567863c825.js",
-    "hash": "0e567863c825",
-    "sourceFingerprint": "73a9fd0e9036",
+    "file": "boot-app.bundle.bbbe870a921d.js",
+    "hash": "bbbe870a921d",
+    "sourceFingerprint": "2f50a48629a1",
     "fileCount": 51,
-    "size": 1060805,
-    "builtAt": "2026-06-26T23:15:45.471Z"
+    "size": 1062233,
+    "builtAt": "2026-06-27T09:43:49.007Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.dd4545585722.js",
@@ -48,12 +48,12 @@
     "builtAt": "2026-06-19T21:18:23.864Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.1db566ad724d.js",
-    "hash": "1db566ad724d",
-    "sourceFingerprint": "0e0d1e260cf1",
+    "file": "postboot-1-game-lazy.bundle.e67d451eda9a.js",
+    "hash": "e67d451eda9a",
+    "sourceFingerprint": "1560277ff07f",
     "fileCount": 32,
-    "size": 1493261,
-    "builtAt": "2026-06-21T11:42:14.204Z"
+    "size": 1494023,
+    "builtAt": "2026-06-27T09:43:52.076Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.807cb783ab2f.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-06-19T21:18:30.984Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.65a4cc15ec05.js",
-    "hash": "65a4cc15ec05",
-    "sourceFingerprint": "755e4ad29f43",
+    "file": "postboot-3-ui-lazy.bundle.c1348d7cf6c2.js",
+    "hash": "c1348d7cf6c2",
+    "sourceFingerprint": "5426f9955017",
     "fileCount": 52,
-    "size": 2541539,
-    "builtAt": "2026-06-24T22:37:16.592Z"
+    "size": 2549511,
+    "builtAt": "2026-06-27T09:43:57.274Z"
   }
 }

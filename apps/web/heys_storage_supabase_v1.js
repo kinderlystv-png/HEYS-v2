@@ -13025,9 +13025,20 @@
     if (!__decompHot.ok) {
       return false; // skip — better than corrupting localStorage with the compressed string
     }
-    value = __decompHot.value;
+	    value = __decompHot.value;
 
-    let serialized = null;
+	    try {
+	      const PStore = global.HEYS?.Planning?.Store;
+	      if (baseKey.startsWith('heys_planning_') && PStore && typeof PStore.notePlanningCloudValue === 'function') {
+	        PStore.notePlanningCloudValue(baseKey, value, {
+	          clientId,
+	          revision: remoteRevision,
+	          source,
+	        });
+	      }
+	    } catch (_) { /* diagnostics only */ }
+
+	    let serialized = null;
     try {
       serialized = JSON.stringify(value);
     } catch (_) {
@@ -13239,12 +13250,25 @@
               if (_isSuspect) {
                 logCritical(`🛡️ [HOT-SYNC] BLOCKED planning wipe (${baseKey}); local has ${localArr.length} items`);
                 blockedEmptyChrono = true;
-              } else {
-                const reserialized = JSON.stringify(mergedArr);
-                if (currentRaw === reserialized) return false; // idempotent no-op → no echo upload
-                global.localStorage.setItem(scopedKey, reserialized);
-                value = mergedArr; // downstream event dispatch uses value
-                appliedMergedChrono = true;
+	              } else {
+	                const reserialized = JSON.stringify(mergedArr);
+	                try {
+	                  const diff = typeof PStore.describePlanningArrayDiff === 'function'
+	                    ? PStore.describePlanningArrayDiff(localArr, value)
+	                    : { localOnlyIds: [] };
+	                  if (diff.localOnlyIds && diff.localOnlyIds.length > 0
+	                      && typeof PStore.enqueuePlanningMergeRescue === 'function') {
+	                    PStore.enqueuePlanningMergeRescue(baseKey, mergedArr, {
+	                      reason: 'planning-merge-rescue',
+	                      source,
+	                      localOnlyCount: diff.localOnlyIds.length,
+	                    });
+	                  }
+	                } catch (_) { /* rescue is best-effort */ }
+	                if (currentRaw === reserialized) return false; // idempotent no-op; rescue above handles local-only parity
+	                global.localStorage.setItem(scopedKey, reserialized);
+	                value = mergedArr; // downstream event dispatch uses value
+	                appliedMergedChrono = true;
               }
             }
           }

@@ -649,6 +649,22 @@
     return hasPositiveCheckinNumber(profile?.stepsGoal);
   }
 
+  function isYesterdayVerifyDecisionReady() {
+    return HEYS.YesterdayVerifyReady === true
+      && HEYS.YesterdayVerify
+      && HEYS.YesterdayVerify.stepRegistered === true
+      && typeof HEYS.YesterdayVerify.shouldShow === 'function';
+  }
+
+  function shouldShowYesterdayVerifyRequired() {
+    if (!isYesterdayVerifyDecisionReady()) {
+      HEYS._morningCheckinWaitingForYesterdayVerify = Date.now();
+      console.info('[MorningCheckin] ℹ️ YesterdayVerify not ready — defer yesterday-step decision');
+      return false;
+    }
+    return HEYS.YesterdayVerify.shouldShow();
+  }
+
   /** Отсутствуют ли core-поля утреннего чек-ина (вес/время сна/качество/настроение) в дне. */
   function coreCheckinDataMissing(mergedDay) {
     const d = mergedDay || {};
@@ -789,13 +805,9 @@
     if (!hasMorningMood(mergedDay)) pending.push('morning_mood');
     if (!hasStepsGoal(profile)) pending.push('stepsGoal');
 
-    try {
-      if (HEYS.YesterdayVerify
-        && typeof HEYS.YesterdayVerify.shouldShow === 'function'
-        && HEYS.YesterdayVerify.shouldShow()) {
-        pending.push('yesterdayVerify');
-      }
-    } catch (_) { /* YesterdayVerify не загружен */ }
+    if (shouldShowYesterdayVerifyRequired()) {
+      pending.push('yesterdayVerify');
+    }
 
     console.info('[MorningCheckin] 🔍 shouldShow check', {
       clientId: currentClientId?.slice(0, 8),
@@ -832,9 +844,7 @@
     // Conditional push: если pending дней нет — не добавляем «пустой» слот в прогресс-бар.
     // Источник правды о наличии pending: HEYS.YesterdayVerify.shouldShow() →
     // getPendingPastDays().totalPendingDays > 0.
-    if (HEYS.YesterdayVerify
-      && typeof HEYS.YesterdayVerify.shouldShow === 'function'
-      && HEYS.YesterdayVerify.shouldShow()) {
+    if (shouldShowYesterdayVerifyRequired()) {
       steps.push('yesterdayVerify');
     }
 
@@ -1131,6 +1141,8 @@
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
   HEYS.MorningCheckinUtils.getCheckinSteps = getCheckinSteps;
   HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
+  HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
+  HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));

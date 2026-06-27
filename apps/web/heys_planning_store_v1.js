@@ -24,6 +24,28 @@
         CHECKLIST_TOMBSTONES: 'heys_planning_checklist_tombstones_v1',
     };
 
+    const CRITICAL_PLANNING_KEYS = new Set([
+        KEYS.PROJECTS,
+        KEYS.TASKS,
+        KEYS.SLOTS,
+        KEYS.LINKS,
+        KEYS.CHRONO_ACTIVITIES,
+        KEYS.CHRONO_ENTRIES,
+        KEYS.CHRONO_SNAPSHOTS,
+        KEYS.CHRONO_TOMBSTONES,
+        'heys_planning_chrono_untracked_tail_dismissed_v1',
+        KEYS.CHECKLISTS,
+        KEYS.CHECKLIST_TOMBSTONES,
+    ]);
+    const LOCAL_ONLY_PLANNING_KEYS = new Set([KEYS.CHRONO_TIMER]);
+    const MERGEABLE_PLANNING_KEYS = new Set([
+        KEYS.CHRONO_ACTIVITIES,
+        KEYS.CHRONO_ENTRIES,
+        KEYS.CHECKLISTS,
+    ]);
+    const _planningCloudMeta = new Map();
+    const _planningPersistHistory = [];
+
     const CHRONO_TOMBSTONE_TTL_MS = 180 * 86400000;
 
     const PROJECT_COLORS = [
@@ -333,6 +355,128 @@
         }
     }
 
+    function stableHash(value) {
+        let raw = '';
+        try { raw = JSON.stringify(value); } catch (_) { raw = String(value); }
+        let hash = 2166136261 >>> 0;
+        for (let i = 0; i < raw.length; i++) {
+            hash ^= raw.charCodeAt(i);
+            hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        return hash.toString(16);
+    }
+
+    function valueSummary(value) {
+        const arr = Array.isArray(value) ? value : [];
+        const ids = arr
+            .map((item) => item && item.id != null ? String(item.id) : null)
+            .filter(Boolean);
+        return {
+            kind: Array.isArray(value) ? 'array' : (value === null ? 'null' : typeof value),
+            length: Array.isArray(value) ? value.length : null,
+            hash: stableHash(value),
+            ids,
+        };
+    }
+
+    function pushPlanningPersistHistory(row) {
+        try {
+            _planningPersistHistory.push({
+                ts: Date.now(),
+                key: row.key,
+                reason: row.reason || null,
+                sync: row.sync !== false,
+                status: row.status || null,
+                error: row.error || null,
+            });
+            if (_planningPersistHistory.length > 80) _planningPersistHistory.shift();
+        } catch (_) { /* noop */ }
+    }
+
+    function notePlanningCloudValue(key, value, opts) {
+        if (!CRITICAL_PLANNING_KEYS.has(key)) return;
+        _planningCloudMeta.set(key, {
+            ...(valueSummary(value)),
+            key,
+            clientId: opts?.clientId || getPlanningCloudClientId(),
+            revision: opts?.revision,
+            source: opts?.source || 'cloud',
+            seenAt: Date.now(),
+        });
+    }
+
+    function describePlanningArrayDiff(localArr, remoteArr) {
+        const localIds = new Set((Array.isArray(localArr) ? localArr : [])
+            .map((item) => {
+                if (typeof item === 'string') return item;
+                return item && item.id != null ? String(item.id) : null;
+            })
+            .filter(Boolean));
+        const remoteIds = new Set((Array.isArray(remoteArr) ? remoteArr : [])
+            .map((item) => {
+                if (typeof item === 'string') return item;
+                return item && item.id != null ? String(item.id) : null;
+            })
+            .filter(Boolean));
+        return {
+            localOnlyIds: Array.from(localIds).filter((id) => !remoteIds.has(id)),
+            remoteOnlyIds: Array.from(remoteIds).filter((id) => !localIds.has(id)),
+        };
+    }
+
+    function enqueuePlanningKeyForSync(key, value, reason) {
+        if (!CRITICAL_PLANNING_KEYS.has(key)) return false;
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.saveClientKey === 'function') {
+                HEYS.cloud.saveClientKey(key, value);
+                pushPlanningPersistHistory({ key, reason, sync: true, status: 'queued' });
+                return true;
+            }
+            pushPlanningPersistHistory({ key, reason, sync: true, status: 'no-cloud' });
+        } catch (error) {
+            pushPlanningPersistHistory({ key, reason, sync: true, status: 'error', error: error?.message || String(error) });
+            console.warn('[HEYS.planning] Failed to enqueue planning key:', key, error?.message || error);
+        }
+        return false;
+    }
+
+    function verifyChronoEntriesQueued(key, value, reason) {
+        if (key !== KEYS.CHRONO_ENTRIES) return;
+        setTimeout(() => {
+            try {
+                const status = HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function'
+                    ? HEYS.cloud.getSyncStatus(key)
+                    : 'unknown';
+                const recent = _planningPersistHistory
+                    .slice()
+                    .reverse()
+                    .find((item) => item.key === key && item.sync && (Date.now() - item.ts) < 5000);
+                if (status !== 'pending' && !recent) {
+                    console.warn('[HEYS.planning] chrono entries changed but no pending/recent sync marker; force enqueue', { key, reason, status });
+                    enqueuePlanningKeyForSync(key, value, reason || 'chrono-entry-queue-guard');
+                }
+            } catch (_) { /* noop */ }
+        }, 0);
+    }
+
+    function persistPlanningKey(key, value, opts) {
+        const options = opts || {};
+        const sync = options.sync !== false && CRITICAL_PLANNING_KEYS.has(key);
+        const localOnly = LOCAL_ONLY_PLANNING_KEYS.has(key);
+        lsSet(key, value);
+        if (localOnly) {
+            pushPlanningPersistHistory({ key, reason: options.reason || 'local-only', sync: false, status: 'local-only' });
+            return value;
+        }
+        if (sync) {
+            enqueuePlanningKeyForSync(key, value, options.reason || 'planning-save');
+            verifyChronoEntriesQueued(key, value, options.reason || 'planning-save');
+        } else {
+            pushPlanningPersistHistory({ key, reason: options.reason || 'cloud-apply', sync: false, status: 'local-write' });
+        }
+        return value;
+    }
+
     function normalizeChronoTombstone(entry) {
         if (!entry) return null;
         const type = String(entry.type || 'activity');
@@ -364,10 +508,13 @@
         return pruneChronoTombstones(lsGet(KEYS.CHRONO_TOMBSTONES, []));
     }
 
-    function saveChronoTombstones(tombstones) {
+    function saveChronoTombstones(tombstones, opts) {
         const current = lsGet(KEYS.CHRONO_TOMBSTONES, []);
         const incoming = Array.isArray(tombstones) ? tombstones : [];
-        lsSet(KEYS.CHRONO_TOMBSTONES, pruneChronoTombstones(current.concat(incoming)));
+        persistPlanningKey(KEYS.CHRONO_TOMBSTONES, pruneChronoTombstones(current.concat(incoming)), {
+            reason: opts?.reason || 'chrono-tombstones-save',
+            sync: opts?.sync,
+        });
     }
 
     function addChronoTombstone(type, id, source) {
@@ -548,24 +695,33 @@
         return sortByOrder(lsGet(KEYS.PROJECTS, []));
     }
 
-    function saveProjects(projects) {
-        lsSet(KEYS.PROJECTS, sortByOrder(projects || []));
+    function saveProjects(projects, opts) {
+        persistPlanningKey(KEYS.PROJECTS, sortByOrder(projects || []), {
+            reason: opts?.reason || 'projects-save',
+            sync: opts?.sync,
+        });
     }
 
     function getTasks() {
         return sortByOrder(lsGet(KEYS.TASKS, []));
     }
 
-    function saveTasks(tasks) {
-        lsSet(KEYS.TASKS, sortByOrder(tasks || []));
+    function saveTasks(tasks, opts) {
+        persistPlanningKey(KEYS.TASKS, sortByOrder(tasks || []), {
+            reason: opts?.reason || 'tasks-save',
+            sync: opts?.sync,
+        });
     }
 
     function getSlots() {
         return sortByOrder(lsGet(KEYS.SLOTS, []));
     }
 
-    function saveSlots(slots) {
-        lsSet(KEYS.SLOTS, sortByOrder(slots || []));
+    function saveSlots(slots, opts) {
+        persistPlanningKey(KEYS.SLOTS, sortByOrder(slots || []), {
+            reason: opts?.reason || 'slots-save',
+            sync: opts?.sync,
+        });
     }
 
     function getNextOrder(items, predicate) {
@@ -799,8 +955,11 @@
         return lsGet(KEYS.LINKS, []);
     }
 
-    function saveLinks(links) {
-        lsSet(KEYS.LINKS, Array.isArray(links) ? links : []);
+    function saveLinks(links, opts) {
+        persistPlanningKey(KEYS.LINKS, Array.isArray(links) ? links : [], {
+            reason: opts?.reason || 'links-save',
+            sync: opts?.sync,
+        });
     }
 
     function addLink(fromId, toId, opts) {
@@ -863,10 +1022,13 @@
         return pruneChecklistTombstones(lsGet(KEYS.CHECKLIST_TOMBSTONES, []));
     }
 
-    function saveChecklistTombstones(tombstones) {
+    function saveChecklistTombstones(tombstones, opts) {
         const current = lsGet(KEYS.CHECKLIST_TOMBSTONES, []);
         const incoming = Array.isArray(tombstones) ? tombstones : [];
-        lsSet(KEYS.CHECKLIST_TOMBSTONES, pruneChecklistTombstones(current.concat(incoming)));
+        persistPlanningKey(KEYS.CHECKLIST_TOMBSTONES, pruneChecklistTombstones(current.concat(incoming)), {
+            reason: opts?.reason || 'checklist-tombstones-save',
+            sync: opts?.sync,
+        });
     }
 
     function addChecklistTombstone(id, source) {
@@ -938,7 +1100,7 @@
         return sortByOrder(filterChecklists(coerceChecklistArray(lsGet(KEYS.CHECKLISTS, []))));
     }
 
-    function saveChecklists(checklists) {
+    function saveChecklists(checklists, opts) {
         const normalized = (Array.isArray(checklists) ? checklists : []).map((checklist, index) => {
             if (!checklist || typeof checklist !== 'object') return null;
             const title = String(checklist.title || '').trim();
@@ -954,7 +1116,10 @@
                 updatedAt: checklist.updatedAt || checklist.createdAt || nowISO(),
             };
         }).filter(Boolean);
-        lsSet(KEYS.CHECKLISTS, sortByOrder(filterChecklists(normalized)));
+        persistPlanningKey(KEYS.CHECKLISTS, sortByOrder(filterChecklists(normalized)), {
+            reason: opts?.reason || 'checklists-save',
+            sync: opts?.sync,
+        });
     }
 
     function addChecklist(input) {
@@ -1026,8 +1191,11 @@
         return sortByOrder(filterChronoActivities(coerceChronoArray(lsGet(KEYS.CHRONO_ACTIVITIES, []))));
     }
 
-    function saveChronoActivities(activities) {
-        lsSet(KEYS.CHRONO_ACTIVITIES, sortByOrder(filterChronoActivities(activities || [])));
+    function saveChronoActivities(activities, opts) {
+        persistPlanningKey(KEYS.CHRONO_ACTIVITIES, sortByOrder(filterChronoActivities(activities || [])), {
+            reason: opts?.reason || 'chrono-activities-save',
+            sync: opts?.sync,
+        });
     }
 
     function addChronoActivity(input) {
@@ -1151,8 +1319,11 @@
         return filterChronoEntries(coerceChronoArray(lsGet(KEYS.CHRONO_ENTRIES, [])));
     }
 
-    function saveChronoEntries(entries) {
-        lsSet(KEYS.CHRONO_ENTRIES, filterChronoEntries(entries));
+    function saveChronoEntries(entries, opts) {
+        persistPlanningKey(KEYS.CHRONO_ENTRIES, filterChronoEntries(entries), {
+            reason: opts?.reason || 'chrono-entries-save',
+            sync: opts?.sync,
+        });
     }
 
     function addChronoEntry(input) {
@@ -1295,8 +1466,11 @@
         return filterChronoSnapshots(coerceChronoArray(lsGet(KEYS.CHRONO_SNAPSHOTS, [])));
     }
 
-    function saveChronoSnapshots(snapshots) {
-        lsSet(KEYS.CHRONO_SNAPSHOTS, filterChronoSnapshots(snapshots));
+    function saveChronoSnapshots(snapshots, opts) {
+        persistPlanningKey(KEYS.CHRONO_SNAPSHOTS, filterChronoSnapshots(snapshots), {
+            reason: opts?.reason || 'chrono-snapshots-save',
+            sync: opts?.sync,
+        });
     }
 
     function upsertSnapshotInPlace(snapshots, date, activityId, addMinutes) {
@@ -1365,7 +1539,10 @@
     }
 
     function saveChronoTimer(timer) {
-        lsSet(KEYS.CHRONO_TIMER, timer || null);
+        persistPlanningKey(KEYS.CHRONO_TIMER, timer || null, {
+            reason: 'chrono-timer-local-only',
+            sync: false,
+        });
     }
 
     function startChronoTimer(input) {
@@ -1486,10 +1663,17 @@
                 return { ok: false, reason: res.error || 'batch_failed' };
             }
             res.data.forEach(function (item) {
+                if (item && item.k) {
+                    notePlanningCloudValue(item.k, item.v, {
+                        clientId,
+                        revision: item.revision,
+                        source: 'refresh-planning-from-cloud',
+                    });
+                }
                 if (item && item.k === 'heys_planning_chrono_tombstones_v1' && item.v != null) {
-                    saveChronoTombstones(item.v);
+                    saveChronoTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item && item.k === 'heys_planning_checklist_tombstones_v1' && item.v != null) {
-                    saveChecklistTombstones(item.v);
+                    saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 }
             });
             res.data.forEach(function (item) {
@@ -1509,13 +1693,13 @@
                 // stale cloud array can't drop local-only adds or resurrect local deletes.
                 // Other keys: legacy replace (no tombstone layer → union would resurrect).
                 if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
-                    Store.saveProjects(item.v);
+                    Store.saveProjects(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
-                    Store.saveTasks(item.v);
+                    Store.saveTasks(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
-                    Store.saveSlots(item.v);
+                    Store.saveSlots(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
-                    Store.saveLinks(item.v);
+                    Store.saveLinks(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_chrono_activities' && typeof Store.saveChronoActivities === 'function') {
                     const _localAct = getChronoActivities();
                     // 🛡️ Anti-wipe guard через tombstone-aware helper: пропускаем
@@ -1526,30 +1710,30 @@
                     if (isCloudChronoWipeSuspicious(item.k, _localAct, item.v)) {
                         console.warn('[HEYS.planning] BLOCKED suspicious chrono activities wipe; local has', _localAct.length, 'items');
                     } else {
-                        Store.saveChronoActivities(mergeCloudPlanningArray(item.k, _localAct, item.v) || item.v);
+                        Store.saveChronoActivities(mergeCloudPlanningArray(item.k, _localAct, item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                     }
                 } else if (item.k === 'heys_planning_chrono_entries' && typeof Store.saveChronoEntries === 'function') {
                     const _localEnt = getChronoEntries();
                     if (isCloudChronoWipeSuspicious(item.k, _localEnt, item.v)) {
                         console.warn('[HEYS.planning] BLOCKED suspicious chrono entries wipe; local has', _localEnt.length, 'items');
                     } else {
-                        Store.saveChronoEntries(mergeCloudPlanningArray(item.k, _localEnt, item.v) || item.v);
+                        Store.saveChronoEntries(mergeCloudPlanningArray(item.k, _localEnt, item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                     }
                 } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
-                    Store.saveChronoSnapshots(item.v);
+                    Store.saveChronoSnapshots(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
-                    Store.saveChronoTombstones(item.v); // tombstones already union-merge in saveChronoTombstones
+                    Store.saveChronoTombstones(item.v, { sync: false, reason: 'cloud-refresh' }); // tombstones already union-merge in saveChronoTombstones
                 } else if (item.k === 'heys_planning_chrono_untracked_tail_dismissed_v1' && HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-                    HEYS.utils.lsSet('heys_planning_chrono_untracked_tail_dismissed_v1', item.v);
+                    persistPlanningKey('heys_planning_chrono_untracked_tail_dismissed_v1', item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_checklists_v1' && typeof Store.saveChecklists === 'function') {
                     const _localChecklists = getChecklists();
                     if (isCloudChecklistWipeSuspicious(item.k, _localChecklists, item.v)) {
                         console.warn('[HEYS.planning] BLOCKED suspicious checklist wipe; local has', _localChecklists.length, 'items');
                     } else {
-                        Store.saveChecklists(mergeCloudPlanningArray(item.k, _localChecklists, item.v) || item.v);
+                        Store.saveChecklists(mergeCloudPlanningArray(item.k, _localChecklists, item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                     }
                 } else if (item.k === 'heys_planning_checklist_tombstones_v1' && typeof Store.saveChecklistTombstones === 'function') {
-                    Store.saveChecklistTombstones(item.v);
+                    Store.saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 }
             });
             _cloudPullDoneClientId = clientId || _cloudPullDoneClientId;
@@ -1654,6 +1838,11 @@
 
     Planning.Constants = {
         KEYS,
+        STORAGE_CLASSES: {
+            criticalClientKeys: Array.from(CRITICAL_PLANNING_KEYS),
+            localOnlyKeys: Array.from(LOCAL_ONLY_PLANNING_KEYS),
+            mergeableArrayKeys: Array.from(MERGEABLE_PLANNING_KEYS),
+        },
         PROJECT_COLORS,
         PRIORITY_CONFIG,
         STATUS_CONFIG,
@@ -1689,7 +1878,80 @@
         sortByOrder,
     };
 
+    function readPlanningValueForParity(key) {
+        if (key === KEYS.CHRONO_TIMER) return getChronoTimer();
+        if (key === KEYS.PROJECTS) return getProjects();
+        if (key === KEYS.TASKS) return getTasks();
+        if (key === KEYS.SLOTS) return getSlots();
+        if (key === KEYS.LINKS) return getLinks();
+        if (key === KEYS.CHRONO_ACTIVITIES) return getChronoActivities();
+        if (key === KEYS.CHRONO_ENTRIES) return getChronoEntries();
+        if (key === KEYS.CHRONO_SNAPSHOTS) return getChronoSnapshots();
+        if (key === KEYS.CHRONO_TOMBSTONES) return getChronoTombstones();
+        if (key === KEYS.CHECKLISTS) return getChecklists();
+        if (key === KEYS.CHECKLIST_TOMBSTONES) return getChecklistTombstones();
+        return lsGet(key, []);
+    }
+
+    function getPlanningSyncParitySnapshot() {
+        const keys = Array.from(CRITICAL_PLANNING_KEYS).concat([KEYS.CHRONO_TIMER]);
+        return {
+            clientId: getPlanningCloudClientId() || null,
+            generatedAt: Date.now(),
+            keys: keys.map((key) => {
+                const localValue = readPlanningValueForParity(key);
+                const local = valueSummary(localValue);
+                const cloud = _planningCloudMeta.get(key) || null;
+                const diff = cloud && Array.isArray(localValue) && MERGEABLE_PLANNING_KEYS.has(key)
+                    ? describePlanningArrayDiff(localValue, cloud.ids || [])
+                    : { localOnlyIds: [], remoteOnlyIds: [] };
+                let status = 'unknown';
+                try {
+                    if (HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function') {
+                        status = HEYS.cloud.getSyncStatus(key);
+                    }
+                } catch (_) { /* noop */ }
+                const lastPersist = _planningPersistHistory
+                    .slice()
+                    .reverse()
+                    .find((item) => item.key === key) || null;
+                return {
+                    key,
+                    class: LOCAL_ONLY_PLANNING_KEYS.has(key)
+                        ? 'localOnly'
+                        : (MERGEABLE_PLANNING_KEYS.has(key) ? 'criticalClientKey+mergeableArray' : 'criticalClientKey'),
+                    status,
+                    local,
+                    cloud,
+                    localOnlyCount: diff.localOnlyIds.length,
+                    remoteOnlyCount: diff.remoteOnlyIds.length,
+                    localOnlyIds: diff.localOnlyIds.slice(0, 20),
+                    remoteOnlyIds: diff.remoteOnlyIds.slice(0, 20),
+                    lastPersist,
+                };
+            }),
+            recentPersistHistory: _planningPersistHistory.slice(-20),
+        };
+    }
+
+    function enqueuePlanningMergeRescue(key, mergedValue, opts) {
+        if (!CRITICAL_PLANNING_KEYS.has(key)) return false;
+        let status = 'unknown';
+        try {
+            status = HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function'
+                ? HEYS.cloud.getSyncStatus(key)
+                : 'unknown';
+        } catch (_) { /* noop */ }
+        if (status === 'pending') return false;
+        return enqueuePlanningKeyForSync(key, mergedValue, opts?.reason || 'planning-merge-rescue');
+    }
+
     Planning.Store = {
+        persistPlanningKey,
+        getPlanningSyncParitySnapshot,
+        notePlanningCloudValue,
+        describePlanningArrayDiff,
+        enqueuePlanningMergeRescue,
         getProjects,
         saveProjects,
         addProject,

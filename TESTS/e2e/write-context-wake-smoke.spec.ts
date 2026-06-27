@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('write-context wake recovery', () => {
-    test('creates a chrono activity after wake without red sync toast or lock overlay', async ({ page }) => {
+    test('creates a chrono activity and completed entry after wake without red sync toast or lock overlay', async ({ page }) => {
         await page.goto('/', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => {
             const w = window as typeof window & { HEYS?: any };
@@ -59,6 +59,13 @@ test.describe('write-context wake recovery', () => {
                     name: 'Wake smoke ' + Date.now(),
                     emoji: 'T',
                 });
+                const entry = activity?.id
+                    ? w.HEYS.Planning.Store.addChronoEntry({
+                        activityId: activity.id,
+                        minutes: 7,
+                        createdAt: new Date().toISOString(),
+                    })
+                    : null;
 
                 await new Promise((resolve) => setTimeout(resolve, 2400));
 
@@ -68,10 +75,17 @@ test.describe('write-context wake recovery', () => {
                 const syncLockOverlayVisible = Boolean(document.querySelector('.sync-lock-overlay'));
                 const activityStillLocal = w.HEYS.Planning.Store.getChronoActivities()
                     .some((item: any) => item && item.id === activity?.id);
+                const entryStillLocal = w.HEYS.Planning.Store.getChronoEntries()
+                    .some((item: any) => item && item.id === entry?.id);
+                const parity = w.HEYS.Planning.Store.getPlanningSyncParitySnapshot?.();
+                const entriesParity = parity?.keys?.find((row: any) => row.key === 'heys_planning_chrono_entries');
 
                 return {
                     activityOk: Boolean(activity?.id),
                     activityStillLocal,
+                    entryOk: Boolean(entry?.id),
+                    entryStillLocal,
+                    entriesParity,
                     planningUpdated,
                     pendingCount: w.HEYS.cloud.getPendingCount?.() || 0,
                     retryScheduled: w.HEYS._writeContextBackgroundRetryScheduled || 0,
@@ -91,6 +105,9 @@ test.describe('write-context wake recovery', () => {
 
         expect(result.activityOk).toBeTruthy();
         expect(result.activityStillLocal).toBeTruthy();
+        expect(result.entryOk).toBeTruthy();
+        expect(result.entryStillLocal).toBeTruthy();
+        expect(result.entriesParity?.class).toContain('criticalClientKey');
         expect(result.planningUpdated).toBeTruthy();
         expect(result.pendingCount).toBeGreaterThan(0);
         expect(result.retryScheduled).toBeGreaterThan(0);

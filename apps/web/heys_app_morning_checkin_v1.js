@@ -29,6 +29,51 @@
         return legacyParsed._sourceClientId === clientId ? legacyParsed : null;
     }
 
+    function isYesterdayVerifyReady() {
+        return HEYS.YesterdayVerifyReady === true
+            && HEYS.YesterdayVerify
+            && HEYS.YesterdayVerify.stepRegistered === true
+            && typeof HEYS.YesterdayVerify.shouldShow === 'function';
+    }
+
+    function evaluateMorningCheckinWhenReady(setShowMorningCheckin, meta) {
+        const missing = [];
+        if (typeof HEYS.shouldShowMorningCheckin !== 'function') missing.push('morning-checkin');
+        if (!isYesterdayVerifyReady()) missing.push('yesterday-verify');
+        if (missing.length > 0) {
+            console.info('[MorningCheckin] ℹ️ required modules deferred — ожидаем загрузку', {
+                missing,
+                source: meta?.source || 'unknown',
+            });
+            const retry = () => evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
+                ...(meta || {}),
+                source: 'module-ready-retry',
+            });
+            if (missing.includes('morning-checkin')) {
+                window.addEventListener('heys-morning-checkin-ready', retry, { once: true });
+            }
+            if (missing.includes('yesterday-verify')) {
+                window.addEventListener('heys-yesterday-verify-ready', retry, { once: true });
+            }
+            return false;
+        }
+
+        const shouldShow = HEYS.shouldShowMorningCheckin();
+        console.info('[MorningCheckin] 🔍 shouldShow результат:', shouldShow, {
+            clientId: meta?.clientId ? String(meta.clientId).slice(0, 8) : undefined,
+            isInitializing: meta?.isInitializing,
+            suppressFlag: !!window.HEYS?.ui?.suppressMorningCheckin,
+        });
+
+        if (window.HEYS?.ui?.suppressMorningCheckin) {
+            console.warn('[MorningCheckin] 🛑 suppressMorningCheckin=true — подавляем');
+            return true;
+        }
+
+        setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+        return true;
+    }
+
     const useMorningCheckinSync = ({ React, isInitializing, clientId }) => {
         const [showMorningCheckin, setShowMorningCheckin] = React.useState(false);
 
@@ -124,38 +169,11 @@
                         console.info('[MorningCheckin] ℹ️ lsClientId пуст (PIN race) — принимаем eventClientId:', eventClientId?.slice(0, 8));
                     }
 
-                    if (HEYS.shouldShowMorningCheckin) {
-                        const shouldShow = HEYS.shouldShowMorningCheckin();
-                        console.info('[MorningCheckin] 🔍 shouldShow результат:', shouldShow, {
-                            clientId: lsClientId?.slice(0, 8),
-                            isInitializing,
-                            suppressFlag: !!window.HEYS?.ui?.suppressMorningCheckin,
-                        });
-
-                        // 🛑 Если активен флаг подавления (Onboarding Tour), не показываем чек-ин
-                        if (window.HEYS?.ui?.suppressMorningCheckin) {
-                            console.warn('[MorningCheckin] 🛑 suppressMorningCheckin=true — подавляем');
-                            return;
-                        }
-
-                        // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
-                        setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
-                    } else {
-                        // PERF v7.1: module deferred after boot chain — wait for ready event
-                        console.info('[MorningCheckin] ℹ️ shouldShowMorningCheckin deferred — ожидаем загрузку модуля');
-                        const onModuleReady = () => {
-                            if (HEYS.shouldShowMorningCheckin) {
-                                const shouldShow = HEYS.shouldShowMorningCheckin();
-                                if (window.HEYS?.ui?.suppressMorningCheckin) return;
-                                // shouldShowMorningCheckin уже использует readProfileForceRawScoped
-                                // внутри, поэтому дополнительная проверка по firstName/birthDate/weight
-                                // была не нужна и ломала ежедневный флоу для completed-профилей
-                                // (например, когда профиль полный, но утренний вес не введён).
-                                setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
-                            }
-                        };
-                        window.addEventListener('heys-morning-checkin-ready', onModuleReady, { once: true });
-                    }
+                    evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
+                        source: 'sync-completed',
+                        clientId: lsClientId || eventClientId,
+                        isInitializing,
+                    });
                 }, 200);
             };
 
@@ -170,10 +188,11 @@
                     return;
                 }
                 setTimeout(() => {
-                    if (!HEYS.shouldShowMorningCheckin) return;
-                    if (window.HEYS?.ui?.suppressMorningCheckin) return;
-                    const shouldShow = HEYS.shouldShowMorningCheckin();
-                    setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+                    evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
+                        source: 'consents-state-changed',
+                        clientId: clientIdRef.current || clientId,
+                        isInitializing,
+                    });
                 }, 0);
             };
 

@@ -1516,6 +1516,25 @@
 
   // === Регистрация шага ===
   let _registerRetries = 0;
+  let _stepRegistered = false;
+
+  function notifyYesterdayVerifyReady(reason) {
+    try {
+      const apiReady = HEYS.YesterdayVerify && typeof HEYS.YesterdayVerify.shouldShow === 'function';
+      const ready = !!(apiReady && _stepRegistered);
+      HEYS.YesterdayVerifyReady = ready;
+      if (HEYS.YesterdayVerify && typeof HEYS.YesterdayVerify === 'object') {
+        HEYS.YesterdayVerify.isReady = ready;
+        HEYS.YesterdayVerify.stepRegistered = _stepRegistered;
+      }
+      if (typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys-yesterday-verify-ready', {
+          detail: { reason: reason || 'module-ready', ready, apiReady: !!apiReady, stepRegistered: _stepRegistered }
+        }));
+      }
+    } catch (_) { /* noop */ }
+  }
+
   function registerYesterdayVerifyStep() {
     if (!HEYS.StepModal?.registerStep) {
       if (_registerRetries < 20) {
@@ -1562,6 +1581,8 @@
       xpAction: 'yesterday_verify'
     });
 
+    _stepRegistered = true;
+    notifyYesterdayVerifyReady('step-registered');
     devLog('[YesterdayVerify] ✅ Step registered');
   }
 
@@ -1575,10 +1596,13 @@
     getDayReviewInfo,
     getPendingPastDays,
     shouldShow: shouldShowYesterdayVerify,
+    isReady: _stepRegistered,
+    stepRegistered: _stepRegistered,
     INCOMPLETE_ACTIONS,
     QUICK_FILL_PRESETS
   };
 
+  notifyYesterdayVerifyReady('api-exported');
   devLog('[HEYS] YesterdayVerify v1.4.1 loaded');
 
 })(typeof window !== 'undefined' ? window : global);
