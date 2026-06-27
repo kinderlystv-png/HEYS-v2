@@ -6,6 +6,8 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  let _approachIdSeq = 0;
+  let _exerciseIdSeq = 0;
 
   /** Как в шаге «Зоны пульса» / настройках профиля (индекс 0…3). */
   const WB_KCAL_ZONE_LABELS = ['Разминка', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
@@ -234,6 +236,16 @@
 
   function approachOrdinalRu(i) {
     return (i + 1) + '-й подход';
+  }
+
+  function createApproachId(exi, api) {
+    _approachIdSeq += 1;
+    return 'ap_' + Date.now() + '_' + _approachIdSeq + '_' + exi + '_' + api;
+  }
+
+  function createExerciseId(exi) {
+    _exerciseIdSeq += 1;
+    return 'ex_' + Date.now() + '_' + _exerciseIdSeq + '_' + exi;
   }
 
   /** Сколько подходов в упражнении (для превью при свёрнутой карточке). */
@@ -778,7 +790,7 @@
     if (snap.approaches && snap.approaches.length > 0) {
       return snap.approaches.map(function (a, idx) {
         return {
-          id: 'ap_snap_' + Date.now() + '_' + idx,
+          id: createApproachId('snap', idx),
           weightKg: a.weightKg != null ? String(a.weightKg) : '',
           reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
         };
@@ -792,7 +804,7 @@
     const out = [];
     for (let s = 0; s < nSets; s++) {
       out.push({
-        id: 'ap_snap_' + Date.now() + '_' + s,
+        id: createApproachId('snap', s),
         weightKg: w,
         reps: r
       });
@@ -909,6 +921,7 @@
     const [ssPickFrom, setSsPickFrom] = React.useState(null);
     /** По id упражнения: свёрнут блок под шапкой (название, таблица, RPE…). */
     const [wbExFolded, setWbExFolded] = React.useState({});
+    const addApproachGuardRef = React.useRef({});
     const hasOwn = Object.prototype.hasOwnProperty;
 
     React.useEffect(function () {
@@ -1427,9 +1440,9 @@
                 wl0.exercises = wl0.exercises.filter((_, j) => j !== exi);
                 if (wl0.exercises.length === 0) {
                   wl0.exercises = [{
-                    id: 'ex_' + Date.now(),
+                    id: createExerciseId(0),
                     name: '',
-                    approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+                    approaches: [{ id: createApproachId(0, 0), weightKg: '', reps: 10 }],
                     note: '',
                     ssGroup: 0,
                     rpe: 0
@@ -1699,6 +1712,11 @@
               className: 'ct-wb-add-approach-btn',
               onClick: function (e) {
                 e.stopPropagation();
+                e.preventDefault();
+                const guardKey = ti + ':' + exi;
+                const nowClick = Date.now();
+                if (nowClick - (addApproachGuardRef.current[guardKey] || 0) < 250) return;
+                addApproachGuardRef.current[guardKey] = nowClick;
                 if (typeof haptic === 'function') haptic('light');
                 const nextIdx = approaches.length;
                 patchTraining(ti, function (t0) {
@@ -1710,7 +1728,7 @@
                     const lastReps = lastAp ? Math.max(1, parseInt(lastAp.reps, 10) || 10) : 10;
                     const lastW = lastAp && lastAp.weightKg != null ? String(lastAp.weightKg) : '';
                     ap4.push({
-                      id: 'ap_' + Date.now(),
+                      id: createApproachId(exi, ap4.length),
                       weightKg: lastW,
                       reps: lastReps
                     });
@@ -2631,9 +2649,9 @@
           zoneMinutes: zoneMinutes.slice(),
           totalDurationMinutes: zoneMinutes.reduce((s, v) => s + (+v || 0), 0),
           exercises: [{
-            id: 'ex_' + Date.now(),
+            id: createExerciseId(0),
             name: '',
-            approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+            approaches: [{ id: createApproachId(0, 0), weightKg: '', reps: 10 }],
             note: '',
             ssGroup: 0,
             rpe: 0
@@ -3106,9 +3124,9 @@
               patchTraining(ti, (t0) => {
                 const wl0 = ensureWorkoutLogShape(t0);
                 wl0.exercises = wl0.exercises.concat([{
-                  id: 'ex_' + Date.now(),
+                  id: createExerciseId(wl0.exercises.length),
                   name: '',
-                  approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+                  approaches: [{ id: createApproachId(wl0.exercises.length, 0), weightKg: '', reps: 10 }],
                   note: '',
                   ssGroup: 0,
                   rpe: 0
