@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.28.205f849b",
+      "buildHash": "205f849b",
+      "date": "2026-06-28",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Штрихкоды стабильнее на телефоне",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Сканер и штрихкоды работают надёжнее",
+          "description": "Если код не найден, поиск остаётся пустым и активным с понятной подсказкой. Продукты корректнее показывают сохранённые штрихкоды на разных устройствах, а запуск камеры на iPhone стал устойчивее."
+        }
+      ],
+      "coveredCommits": ["205f849b"]
+    },
+    {
       "version": "2026.06.28.c7ae0396",
       "buildHash": "c7ae0396",
       "date": "2026-06-28",
@@ -143,38 +159,6 @@
         }
       ],
       "coveredCommits": ["4e2d8df7", "f518b4ff"]
-    },
-    {
-      "version": "2026.06.27.4e2d8df7",
-      "buildHash": "4e2d8df7",
-      "date": "2026-06-27",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "prevent duplicate workout log entries",
-      "items": [
-        {
-          "type": "fix",
-          "title": "prevent duplicate workout log entries",
-          "description": "prevent duplicate workout log entries"
-        }
-      ],
-      "coveredCommits": ["4e2d8df7", "f518b4ff"]
-    },
-    {
-      "version": "2026.06.27.79e2721d",
-      "buildHash": "79e2721d",
-      "date": "2026-06-27",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Надёжнее синхронизация чек-ина и хронометража",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Чек-ин и хронометраж синхронизируются стабильнее",
-          "description": "Чек-ин ждёт загрузки проверки пропущенных дней, а завершённые записи хронометража явно отправляются в облако. Это снижает риск, что запись видна только на одном устройстве."
-        }
-      ],
-      "coveredCommits": ["79e2721d"]
     }
   ]
 }
