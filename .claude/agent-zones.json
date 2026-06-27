@@ -1,7 +1,7 @@
 {
-  "_doc": "Source zones owned by each parallel agent. Used by scripts/check-agent-staging.mjs (forbid cross-zone staging) and scripts/auto-sync-legacy-bundles.mjs (auto-stash foreign-dirty before integration rebuild). Glob-style: trailing /** matches dir, * within name matches filename glob.",
+  "_doc": "Source zones owned by each parallel agent. Used by scripts/check-agent-staging.mjs to warn about cross-zone staging. scripts/auto-sync-legacy-bundles.mjs no longer auto-stashes foreign dirty scope; it fails loud when dirty generated or unstaged same-output source would make integration unsafe. Glob-style: trailing /** matches dir, * within name matches filename glob.",
   "_invariants": [
-    "Generated files (apps/web/public/**, apps/web/*bundle*, apps/web/index.html, manifests, sw.js) are owned by `_generated` zone — any agent's source change may touch them via hook auto-rebuild.",
+    "Generated files (apps/web/public/**, apps/web/*bundle*, apps/web/index.html, manifests, sw.js) are owned by `_generated` zone. Agents may create preview-generated output for local QA, but commit/release generated artifacts belong to integration/release flow.",
     "Zone overlap is forbidden: a file matches at most one explicit source zone (lookup fails fast)."
   ],
   "zones": {

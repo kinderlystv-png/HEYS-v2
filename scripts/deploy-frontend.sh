@@ -1,7 +1,7 @@
 #!/bin/bash
 # Production deploy: rebuilds bundles + uploads to heys-app bucket (app.heyslab.ru).
 # Parallel uploads via xargs (~8-10x faster than serial) with retry×3 on transient failures.
-# Usage: ./scripts/deploy-frontend.sh
+# Usage: ./scripts/deploy-frontend.sh --confirm-deploy
 
 set -e
 
@@ -9,6 +9,20 @@ ROOT="/Users/poplavskijanton/HEYS-v2"
 DIST="$ROOT/apps/web/dist"
 BUCKET="${PROD_BUCKET:-heys-app}"
 PARALLEL="${UPLOAD_PARALLEL:-6}"
+CONFIRM_DEPLOY=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-deploy) CONFIRM_DEPLOY=1 ;;
+    *) echo "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+if [ "$CONFIRM_DEPLOY" != "1" ] && [ "${HEYS_CONFIRM_DEPLOY:-}" != "1" ]; then
+  echo "❌ deploy-frontend requires explicit --confirm-deploy."
+  echo "   This rebuilds and uploads production PWA files to s3://$BUCKET."
+  exit 2
+fi
 
 echo "🔨 Step 1: Rebuilding legacy bundles..."
 cd "$ROOT"

@@ -4,7 +4,7 @@
 # the same artifact as app.heyslab.ru.
 #
 # Usage:
-#   bash scripts/deploy-demo.sh
+#   bash scripts/deploy-demo.sh --confirm-deploy
 #
 # Optional env:
 #   PWA_BUCKET=heys-app DEMO_BUCKET=try-heyslab-ru YC_ENDPOINT=https://storage.yandexcloud.net
@@ -15,6 +15,20 @@ PWA_BUCKET="${PWA_BUCKET:-heys-app}"
 DEMO_BUCKET="${DEMO_BUCKET:-try-heyslab-ru}"
 YC_ENDPOINT="${YC_ENDPOINT:-https://storage.yandexcloud.net}"
 CDN_DEMO_ID="${CDN_DEMO_ID:-bc8r24iwog2zxvppd4i4}"
+CONFIRM_DEPLOY=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-deploy) CONFIRM_DEPLOY=1 ;;
+    *) echo "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+if [ "$CONFIRM_DEPLOY" != "1" ] && [ "${HEYS_CONFIRM_DEPLOY:-}" != "1" ]; then
+  echo "❌ deploy-demo requires explicit --confirm-deploy."
+  echo "   This mirrors production PWA files to s3://$DEMO_BUCKET and may purge CDN."
+  exit 2
+fi
 
 command -v aws >/dev/null || { echo "aws CLI not found"; exit 1; }
 

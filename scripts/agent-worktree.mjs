@@ -15,7 +15,7 @@
 //   pnpm agent:worktree <task> [--base=origin/main] [--dry-run]
 //
 // Result: ../.claude/worktrees/<task> on branch claude/<task>, ready to edit,
-// `pnpm dev:web`, commit (source-only), and integrate.
+// run local QA, and integrate. Commit only when the user explicitly asks for it.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -112,8 +112,8 @@ function main() {
     process.stdout.write('\n[agent-worktree] ✅ ready. Next:\n');
     process.stdout.write(`  cd ${relDir}\n`);
     process.stdout.write('  pnpm dev:web                  # edit → rebuild affected bundle (bundle:legacy:auto --files=…) → reload\n');
-    process.stdout.write('  git add <source> && git commit  # source-only; hooks block bundles/whats-new\n');
-    process.stdout.write(`  # integrate when done: pnpm agents:integrate --branches=${branch} --title=… --items=…\n`);
+    process.stdout.write('  # if commit was explicitly requested: git add <source> && git commit  # source-only; hooks block bundles/whats-new\n');
+    process.stdout.write(`  # if integration/shipping was explicitly requested: pnpm agents:integrate --confirm-integration --branches=${branch} --title=… --items=…\n`);
 }
 
 main();

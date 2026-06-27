@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { describe, expect, it } from 'vitest';
@@ -18,6 +19,15 @@ const {
 } = await import(scriptUrl);
 
 describe('push-agent CLI helpers', () => {
+  it('refuses mutating runs without explicit confirmation', () => {
+    const result = spawnSync('node', [SCRIPT_PATH, '--title=x', '--item-title=y', '--item-description=z'], {
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('requires explicit --confirm-push');
+  });
+
   it('normalizes pnpm -- separator and parses options', () => {
     const parsed = parseCliArgs([
       '--',

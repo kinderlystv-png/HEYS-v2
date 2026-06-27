@@ -1,10 +1,25 @@
 #!/bin/bash
 # Deploy landing to Yandex Object Storage (heys-static bucket → heyslab.ru CDN).
 # Parallel uploads via xargs for speed (~8-10x faster than serial).
+# Usage: ./scripts/deploy-landing.sh --confirm-deploy
 
 OUT_DIR="/Users/poplavskijanton/HEYS-v2/apps/landing/out"
 BUCKET="heys-static"
 PARALLEL="${UPLOAD_PARALLEL:-6}"
+CONFIRM_DEPLOY=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-deploy) CONFIRM_DEPLOY=1 ;;
+    *) echo "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+if [ "$CONFIRM_DEPLOY" != "1" ] && [ "${HEYS_CONFIRM_DEPLOY:-}" != "1" ]; then
+  echo "❌ deploy-landing requires explicit --confirm-deploy."
+  echo "   This uploads landing files to s3://$BUCKET."
+  exit 2
+fi
 
 echo "🚀 Deploying landing to $BUCKET (parallel=$PARALLEL)..."
 

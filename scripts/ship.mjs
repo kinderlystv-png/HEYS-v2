@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * ship.mjs — one-command "stage → rebuild → commit → push → watch deploy".
+ * ship.mjs — one-command "commit staged scope → rebuild → push → watch deploy".
  *
  * Solo-flow alternative to the multi-step `agents:integrate` ceremony.
  * Designed for the common case: a single agent working serially on main (or
@@ -14,7 +14,7 @@
  *   pnpm ship "chore(scripts): refactor logging" --no-push
  *
  * Pipeline:
- *   1. Stage all current changes (source + anything dirty).
+ *   1. Verify explicit staged scope. The script never auto-stages dirty files.
  *   2. `git commit -m <msg>` — pre-commit hook (mode=integration) rebuilds
  *      affected bundles and stages them into the same commit.
  *   3. If commit is user-facing (feat/fix/perf), auto-generate a whats-new
@@ -192,12 +192,12 @@ function watchDeploy(branch) {
 /**
  * Ship-lock — Variant D from docs/PUSH_TRAIN_DESIGN.md.
  *
- * Serialise `pnpm ship` across 5+ parallel agents working on the same `main`
- * checkout. Editing remains parallel (last-writer-wins on a per-file basis,
- * unchanged from current behaviour). Only the commit+push sequence is
- * serialised, because that's where today's pain lives:
- *   - non-fast-forward push storms (5 agents racing for tip-of-main),
- *   - duplicated whats-new.json entries (each agent generates its own),
+ * Serialise `pnpm ship` when multiple sessions try to publish from the same
+ * checkout. Independent parallel agent work should happen in separate
+ * worktrees and be integrated through `pnpm agents:integrate`; this lock only
+ * protects the commit+push/shipping sequence:
+ *   - non-fast-forward push storms,
+ *   - duplicated whats-new.json entries,
  *   - git index.lock chaos when multiple `git commit` race.
  *
  * Lock file: .claude/ship-lock — owned by the current ship's PID, contains

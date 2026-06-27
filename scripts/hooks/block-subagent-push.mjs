@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// PreToolUse(Bash) hook — блокирует `git push` / push-and-watch.sh когда
+// PreToolUse(Bash) hook — блокирует push/shipping/integration commands когда
 // команду пытается выполнить SUBAGENT (вызванный через Agent tool).
-// Главная сессия пользователя не задета — push разрешён.
+// Главная сессия пользователя не задета — push/shipping разрешены.
 //
 // Зачем: subagent compliance с правилом «не пушить без явной команды»
 // слабее основной сессии. Зафиксировано 2 инцидента 2026-05-31 (один
@@ -34,11 +34,15 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
-  // Паттерны push'а. Грануляция: git push в любой форме + локальный
-  // wrapper push-and-watch.sh (он внутри делает git push + ждёт CI).
+  // Паттерны push/shipping/integration. Грануляция: git push в любой форме, локальный
+  // wrapper push-and-watch.sh, pnpm push:* и pnpm ship (ship по умолчанию
+  // commit+push+watch), а также pnpm agents:integrate (merge/build/release commits).
   const pushPatterns = [
     /\bgit\s+push\b/,
     /push-and-watch\.sh/,
+    /\bpnpm\s+push:[\w:-]+\b/,
+    /\bpnpm\s+ship\b/,
+    /\bpnpm\s+agents:integrate\b/,
   ];
   const isPush = pushPatterns.some((rx) => rx.test(command));
   if (!isPush) {
@@ -48,12 +52,12 @@ process.stdin.on('end', () => {
   // Блокируем.
   process.stderr.write(
     `❌ Subagent push заблокирован.\n` +
-    `   Subagent'ы не могут запускать 'git push' / push-and-watch.sh.\n` +
-    `   Push разрешён только из главной сессии после явной команды\n` +
+    `   Subagent'ы не могут запускать git push / pnpm push:* / pnpm ship / pnpm agents:integrate.\n` +
+    `   Push/shipping/integration разрешены только из главной сессии после явной команды\n` +
     `   пользователя («пуш»/«push»/«запушь»/«отправь»/«выкатывай»).\n` +
     `\n` +
-    `   Что делать: закоммить изменения, отчитайся главной сессии\n` +
-    `   «закоммитил X, Y, Z. Пушить?» и остановись.\n` +
+    `   Что делать: если commit был явно разрешён — отчитайся главной сессии\n` +
+    `   «закоммитил X, Y, Z. Пушить?»; иначе отчитайся без commit и остановись.\n` +
     `\n` +
     `   Hook: scripts/hooks/block-subagent-push.mjs\n`
   );

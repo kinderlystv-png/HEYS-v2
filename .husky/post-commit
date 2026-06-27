@@ -1,8 +1,0 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Auto-pop stash от legacy-sync auto-stash (improvement B).
-# Когда pre-commit auto-stashил foreign-зону чтобы ребилнуть baseline чисто,
-# здесь возвращаем те правки обратно в worktree, чтобы параллельный агент
-# их не потерял.
-node scripts/auto-pop-foreign-stash.mjs 2>/dev/null || true

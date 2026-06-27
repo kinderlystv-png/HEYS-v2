@@ -27,4 +27,4 @@ echo "Updating version references in documentation..."
 find docs -name '*.md' -type f -exec sed -i "s/{{version}}/$NEW_VER/g" {} +
 
 echo "Version updated to $NEW_VER successfully!"
-echo "Don't forget to commit changes: git add . && git commit -m 'Version bump to $NEW_VER'"
+echo "Commit only after explicit approval: git add <intended files> && git commit -m 'Version bump to $NEW_VER'"

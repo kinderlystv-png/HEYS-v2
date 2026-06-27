@@ -20,4 +20,4 @@ for /r docs %%f in (*.md) do (
 )
 
 echo Version updated to %NEW_VER% successfully!
-echo Don't forget to commit changes: git add . && git commit -m "Version bump to %NEW_VER%"
+echo Commit only after explicit approval: git add ^<intended files^> ^&^& git commit -m "Version bump to %NEW_VER%"

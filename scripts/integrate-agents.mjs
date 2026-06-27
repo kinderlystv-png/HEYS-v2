@@ -39,6 +39,16 @@ function getOption(name) {
     return cli.options.get(name) || '';
 }
 
+function assertIntegrationRunConfirmed() {
+    if (hasFlag('--dry-run')) return;
+    if (hasFlag('--confirm-integration')) return;
+
+    writeError('agents:integrate requires explicit --confirm-integration for mutating runs.');
+    writeError('This helper merges branches, rebuilds generated/release artifacts, and creates integration commits.');
+    writeError('Preview only: pnpm agents:integrate --dry-run --branches=... --title="..." --items=\'[...]\'');
+    process.exit(2);
+}
+
 function writeLine(text = '') {
     process.stdout.write(`${text}\n`);
 }
@@ -192,6 +202,7 @@ function main() {
     writeLine(`  release range: ${range}`);
     writeLine(`  title: ${title}`);
 
+    assertIntegrationRunConfirmed();
     assertCleanWorktree();
 
     const startRef = gitOutput('rev-parse HEAD');

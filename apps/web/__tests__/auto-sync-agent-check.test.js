@@ -67,6 +67,7 @@ describe('auto-sync legacy bundles integration mode', () => {
     git(['config', 'user.email', 'test@heys.local']);
     git(['config', 'user.name', 'Test']);
     mkdirSync(path.join(repo, 'apps/web/public'), { recursive: true });
+    mkdirSync(path.join(repo, '.claude'), { recursive: true });
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// src\n');
     git(['add', '.']);
     git(['commit', '-q', '-m', 'base']);
@@ -93,5 +94,57 @@ describe('auto-sync legacy bundles integration mode', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('Generated files are already dirty');
     expect(result.stderr).toContain('apps/web/public/sw.js');
+  });
+
+  it('does not auto-stash foreign dirty scope when generated files block rebuild', () => {
+    writeFileSync(path.join(repo, '.claude/agent-zones.json'), JSON.stringify({
+      zones: {
+        own: ['apps/web/heys_storage_supabase_v1.js'],
+        foreign: ['docs/**'],
+      },
+    }));
+    mkdirSync(path.join(repo, 'docs'), { recursive: true });
+    writeFileSync(path.join(repo, 'docs/foreign.md'), 'foreign wip\n');
+    git(['add', '.claude/agent-zones.json', 'docs/foreign.md']);
+    git(['commit', '-q', '-m', 'zones']);
+
+    writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
+    git(['add', 'apps/web/heys_storage_supabase_v1.js']);
+    writeFileSync(path.join(repo, 'docs/foreign.md'), 'foreign dirty\n');
+    writeFileSync(path.join(repo, 'apps/web/public/sw.js'), '// dirty generated\n');
+
+    const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: cleanGitEnv(),
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Generated files are already dirty');
+    expect(result.stderr).toContain('Авто-stash чужих зон отключён');
+    expect(git(['stash', 'list'])).toBe('');
+    expect(git(['status', '--porcelain'])).toContain(' M docs/foreign.md');
+  });
+
+  it('aborts when unstaged legacy source would affect the same generated output', () => {
+    writeFileSync(path.join(repo, 'apps/web/heys_core_v12.js'), '// foreign source\n');
+    git(['add', 'apps/web/heys_core_v12.js']);
+    git(['commit', '-q', '-m', 'add core source']);
+
+    writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited storage\n');
+    git(['add', 'apps/web/heys_storage_supabase_v1.js']);
+    writeFileSync(path.join(repo, 'apps/web/heys_core_v12.js'), '// unstaged same bundle\n');
+
+    const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: cleanGitEnv(),
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Unstaged legacy source would affect the same generated output');
+    expect(result.stderr).toContain('apps/web/heys_storage_supabase_v1.js');
+    expect(result.stderr).toContain('apps/web/heys_core_v12.js');
+    expect(git(['stash', 'list'])).toBe('');
   });
 });

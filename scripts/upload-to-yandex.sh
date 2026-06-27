@@ -1,12 +1,26 @@
 #!/bin/bash
 # DEPRECATED — no Content-Encoding/gzip, no cache-control headers.
-# Use: bash scripts/deploy-frontend.sh   (local)
-# Or:  git push main                     (CI/CD via deploy-yandex.yml)
+# Use: bash scripts/deploy-frontend.sh --confirm-deploy   (local)
+# Or, after explicit deploy/push approval: git push main (CI/CD via deploy-yandex.yml)
 #
 # Upload script for Yandex Object Storage
 
 DIST_DIR="/Users/poplavskijanton/HEYS-v2/apps/web/dist"
 BUCKET="heys-app"
+CONFIRM_UPLOAD=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-upload) CONFIRM_UPLOAD=1 ;;
+    *) echo "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+if [ "$CONFIRM_UPLOAD" != "1" ] && [ "${HEYS_CONFIRM_UPLOAD:-}" != "1" ]; then
+  echo "❌ upload-to-yandex is deprecated and requires explicit --confirm-upload."
+  echo "   Prefer: bash scripts/deploy-frontend.sh --confirm-deploy"
+  exit 2
+fi
 
 cd "$DIST_DIR"
 

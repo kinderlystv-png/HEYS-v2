@@ -148,7 +148,7 @@ function main() {
 
     writeLine('');
     writeLine('✅ What\'s New подтверждён и закоммичен отдельным follow-up commit.');
-    writeLine('Теперь можно делать обычный git push.');
+    writeLine('Push выполняй только после явной команды пользователя; pre-push guards должны пройти.');
 }
 
 try {

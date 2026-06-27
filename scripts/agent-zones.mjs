@@ -2,9 +2,7 @@
 //
 // Manifest: .claude/agent-zones.json — declares which paths each parallel
 // agent owns. Used by:
-//   - scripts/check-agent-staging.mjs — forbid cross-zone staging
-//   - scripts/auto-sync-legacy-bundles.mjs — auto-stash foreign-dirty files
-//     so hook can rebuild from clean baseline (improvement B).
+//   - scripts/check-agent-staging.mjs — warn about cross-zone staging.
 //
 // Glob rules (minimal subset to keep zero-dep):
 //   "foo/**"   → any path under foo/

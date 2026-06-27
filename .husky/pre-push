@@ -65,7 +65,7 @@ else
   if [ "$check_status" -ne 0 ]; then
     echo "❌ Push отменён. Для non-interactive agent flow:"
     echo "   1) pnpm push:agent -- --print-command"
-    echo "   2) pnpm push:agent -- --title=\"...\" --item-title=\"...\" --item-description=\"...\""
+    echo "   2) pnpm push:agent -- --confirm-push --title=\"...\" --item-title=\"...\" --item-description=\"...\""
     echo "   Для ручного интерактивного flow: pnpm push:ready"
     exit 1
   fi
@@ -117,8 +117,8 @@ echo "🔗 Проверка соответствия legacy-бандлов ис�
 node scripts/verify-legacy-bundles.mjs --ref=HEAD || {
   echo "❌ Бандлы не соответствуют исходникам (source изменён без пересборки)."
   echo "💡 Запусти integration-проход, который пересоберёт бандлы:"
-  echo "   pnpm agents:integrate --branches=... --title=\"...\" --items='[...]'"
-  echo "   (или, для одиночной правки, pnpm bundle:legacy && git add apps/web/public ...)."
+  echo "   pnpm agents:integrate --confirm-integration --branches=... --title=\"...\" --items='[...]'"
+  echo "   (или, для одиночной правки, scoped rebuild по своему source scope + явный commit/shipping flow)."
   exit 1
 }
 

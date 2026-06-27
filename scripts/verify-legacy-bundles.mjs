@@ -198,10 +198,10 @@ function makeSelectiveRebuildCmd(changedInputs) {
 function printFixHint() {
     if (!SHOW_FIX_HINT) return;
     console.error('');
-    console.error('[verify-legacy-bundles] Fix: run a full legacy rebuild (updates manifest, public/, index.html, sw):');
-    console.error('  pnpm --filter @heys/web run predev && pnpm bundle:legacy');
-    console.error('Or selective rebuild when only some sources changed:');
+    console.error('[verify-legacy-bundles] Fix: prefer a selective rebuild when exact sources are known:');
     console.error('  pnpm bundle:legacy:auto --files=apps/web/heys_example.js');
+    console.error('For integration/release scope only, run the full legacy rebuild:');
+    console.error('  pnpm --filter @heys/web run predev && pnpm bundle:legacy');
     console.error('See: docs/AI_KEY_FILES.md (bundle-legacy.mjs, bundle-manifest.json)');
 }
 
@@ -264,10 +264,10 @@ function main() {
                         const selectiveCmd = makeSelectiveRebuildCmd(changedInputs);
                         const changedPrintable = changedInputs.length
                             ? changedInputs.join(', ')
-                            : 'unable to detect exact files (run full rebuild)';
+                            : 'unable to detect exact files (use integration/release rebuild)';
                         const fixHint = selectiveCmd
                             ? `\n  Fix: ${selectiveCmd}`
-                            : '\n  Fix: pnpm --filter @heys/web run predev && pnpm bundle:legacy';
+                            : '\n  Fix: integration/release scope only: pnpm --filter @heys/web run predev && pnpm bundle:legacy';
                         errors.push(
                             `bundle "${name}": source_fingerprint mismatch.\n  manifest: ${entry.sourceFingerprint}\n  current:  ${currentFingerprint}\n  Changed inputs: ${changedPrintable}${fixHint}`,
                         );

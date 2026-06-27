@@ -55,6 +55,18 @@ function runIntegrate(extraArgs) {
 }
 
 describe('integrate-agents', () => {
+  it('refuses mutating integration without explicit confirmation', () => {
+    const result = runIntegrate([
+      '--branches=codex/a',
+      '--title=t',
+      '--item-title=x',
+      '--item-description=y',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('requires explicit --confirm-integration');
+  });
+
   it('--dry-run prints the merge order and planned commits without mutating', () => {
     const before = git(['rev-parse', 'HEAD']);
     const status = git(['status', '--porcelain']);
@@ -88,6 +100,7 @@ describe('integrate-agents', () => {
     const startRef = git(['rev-parse', 'HEAD']);
 
     const result = runIntegrate([
+      '--confirm-integration',
       '--branches=codex/a,codex/b',
       '--title=t',
       '--item-title=x',
@@ -108,6 +121,7 @@ describe('integrate-agents', () => {
     writeFileSync(path.join(repo, 'dirty.txt'), 'uncommitted\n');
 
     const result = runIntegrate([
+      '--confirm-integration',
       '--branches=codex/a',
       '--title=t',
       '--item-title=x',

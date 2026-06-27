@@ -13,13 +13,13 @@
  *   5. git push (with HUSKY=0 to avoid interactive re-prompt)
  *
  * Usage:
- *   node scripts/push-safe.mjs                  # Full pipeline
- *   node scripts/push-safe.mjs --skip-tests     # Skip test suite
+ *   node scripts/push-safe.mjs --confirm-push              # Full pipeline
+ *   node scripts/push-safe.mjs --confirm-push --skip-tests # Skip test suite
  *   node scripts/push-safe.mjs --dry-run        # Show what would happen
  *
  * pnpm shortcut:
- *   pnpm push:safe
- *   pnpm push:safe -- --skip-tests
+ *   pnpm push:safe -- --confirm-push
+ *   pnpm push:safe -- --confirm-push --skip-tests
  */
 
 import { execSync, spawnSync } from 'node:child_process';
@@ -33,6 +33,7 @@ const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
 const args = process.argv.slice(2);
 const skipTests = args.includes('--skip-tests');
 const dryRun = args.includes('--dry-run');
+const confirmPush = args.includes('--confirm-push');
 
 function writeLine(text = '') {
   process.stdout.write(`${text}\n`);
@@ -74,6 +75,14 @@ function nodeScript(scriptPath, scriptArgs = []) {
   return result.status || 0;
 }
 
+if (!dryRun && !confirmPush) {
+  writeError('❌ push-safe requires explicit --confirm-push.');
+  writeError('   This script can create commits and run HUSKY=0 git push.');
+  writeError('   For coding agents prefer: pnpm push:agent -- --print-command');
+  writeError('   Preview only: pnpm push:safe -- --dry-run');
+  process.exit(2);
+}
+
 // ─── Step 1: Validate What's New ────────────────────────────────
 writeLine('');
 writeLine('🚀 HEYS push-safe pipeline');
@@ -106,7 +115,7 @@ if (checkStatus !== 0) {
     writeError('   Для user-facing/UI/runtime изменений нужен точный текст релиза.');
     writeError('   Agent flow: pnpm push:agent -- --print-command');
     writeError(
-      '   Затем: pnpm push:agent -- --title="..." --item-title="..." --item-description="..."',
+      '   Затем: pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."',
     );
     writeError('   Manual interactive flow: pnpm push:ready');
     process.exit(1);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ════════════════════════════════════════════════════════════════════
-# push-and-watch.sh — единственный способ push'ить в этой репе.
+# push-and-watch.sh — ручной push + deploy-watch helper.
 # ════════════════════════════════════════════════════════════════════
 #
 # Делает:
@@ -16,9 +16,9 @@
 # делает чек обязательным — невозможно "забыть посмотреть actions".
 #
 # Usage:
-#   bash scripts/push-and-watch.sh              # main, default workflow
-#   bash scripts/push-and-watch.sh main         # explicit branch
-#   WORKFLOW="API Health Monitor" bash scripts/push-and-watch.sh
+#   bash scripts/push-and-watch.sh --confirm-push              # main, default workflow
+#   bash scripts/push-and-watch.sh --confirm-push main         # explicit branch
+#   WORKFLOW="API Health Monitor" bash scripts/push-and-watch.sh --confirm-push
 #
 # Exit codes:
 #   0 — push прошёл + deploy зелёный
@@ -29,7 +29,23 @@
 
 set -uo pipefail
 
-BRANCH="${1:-main}"
+CONFIRM_PUSH=0
+BRANCH="main"
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-push) CONFIRM_PUSH=1 ;;
+    -*) echo "Unknown flag: $arg"; exit 2 ;;
+    *) BRANCH="$arg" ;;
+  esac
+done
+
+if [ "$CONFIRM_PUSH" != "1" ] && [ "${HEYS_CONFIRM_PUSH:-}" != "1" ]; then
+  echo "❌ push-and-watch requires explicit --confirm-push."
+  echo "   This script runs git push and watches production deploy."
+  echo "   Preview/check first via: pnpm push:agent -- --print-command"
+  exit 2
+fi
+
 WORKFLOW="${WORKFLOW:-Deploy to Yandex Cloud}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-900}"  # 15 минут на deploy
 

@@ -346,7 +346,7 @@ main() {
         echo -e "   Коммит заблокирован. Исправьте проблемы выше."
         echo ""
         echo -e "${YELLOW}💡 Быстрое решение:${NC}"
-        echo "   git commit --no-verify  # Пропустить проверку (НЕ рекомендуется)"
+        echo "   git commit --no-verify  # Только с явного разрешения пользователя"
         echo ""
         exit 1
     elif [ $WARNINGS -gt 0 ]; then

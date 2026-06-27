@@ -6,14 +6,15 @@
  * git push -> whats-new rejection -> manual follow-up -> git push again.
  *
  * Usage:
- *   pnpm push:agent -- --title="..." --item-title="..." --item-description="..."
- *   pnpm push:agent -- --title="..." --items='[{"type":"fix","title":"...","description":"..."}]'
+ *   pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."
+ *   pnpm push:agent -- --confirm-push --title="..." --items='[{"type":"fix","title":"...","description":"..."}]'
  *   pnpm push:agent -- --dry-run --title="..." --item-title="..." --item-description="..."
- *   pnpm push:agent -- --remote=origin --branch=main ...
+ *   pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."
+ *   pnpm push:agent -- --confirm-push --remote=origin --branch=main ...
  *   pnpm push:agent -- --status
  *   pnpm push:agent -- --print-command
- *   pnpm push:agent -- --no-push ...
- *   pnpm push:agent -- --no-watch ...
+ *   pnpm push:agent -- --confirm-push --no-push ...
+ *   pnpm push:agent -- --confirm-push --no-watch ...
  */
 
 import { spawnSync } from 'node:child_process';
@@ -58,6 +59,17 @@ function hasFlag(name) {
 
 function getOption(name) {
   return cli.options.get(name) || '';
+}
+
+function assertMutatingRunConfirmed() {
+  if (hasFlag('--dry-run') || hasFlag('--status') || hasFlag('--print-command')) return;
+  if (hasFlag('--confirm-push')) return;
+
+  writeError('push-agent requires explicit --confirm-push for mutating runs.');
+  writeError('This helper can create a whats-new follow-up commit and run git push.');
+  writeError('Preview only: pnpm push:agent -- --dry-run --no-push --title="..." --item-title="..." --item-description="..."');
+  writeError('Template: pnpm push:agent -- --print-command');
+  process.exit(2);
 }
 
 function run(command, commandArgs, options = {}) {
@@ -244,7 +256,7 @@ function printUsageAndExit() {
   writeError('Use one of:');
   writeError(`  ${buildSuggestedCommand()}`);
   writeError(
-    '  pnpm push:agent -- --title="..." --items=\'[{"type":"fix","title":"...","description":"..."}]\'',
+    '  pnpm push:agent -- --confirm-push --title="..." --items=\'[{"type":"fix","title":"...","description":"..."}]\'',
   );
   writeError(
     '  pnpm push:agent -- --dry-run --title="..." --item-title="..." --item-description="..."',
@@ -265,7 +277,7 @@ function buildPrepareReleaseAutoArgs(title, itemsJson, options = {}) {
 function buildSuggestedCommand() {
   const hash = getGitOutput(['rev-parse', '--short=8', 'HEAD']) || '<hash>';
   return (
-    `pnpm push:agent -- --title="Короткий пользовательский заголовок" ` +
+    `pnpm push:agent -- --confirm-push --title="Короткий пользовательский заголовок" ` +
     `--item-title="Что стало работать корректнее" ` +
     `--item-description="Что изменилось для пользователя. Target commit: ${hash}."`
   );
@@ -542,6 +554,7 @@ function main() {
   if (hasFlag('--print-command')) {
     printSuggestedCommandAndExit();
   }
+  assertMutatingRunConfirmed();
   ensureReleaseEntry();
   push();
 }
@@ -555,6 +568,7 @@ export {
   buildItemsJsonFromOptions,
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
+  assertMutatingRunConfirmed,
   getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
