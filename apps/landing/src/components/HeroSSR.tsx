@@ -107,7 +107,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, #8EBFE0 0%, #E2ECF2 46%, #FCFBF9 82%, #F3D7D7 100%)',
+            'linear-gradient(180deg, #8EBFE0 0%, #E2ECF2 46%, #FCFBF9 68%, #FFF8EA 84%, #FFFFFF 100%)',
         }}
         aria-hidden="true"
       />

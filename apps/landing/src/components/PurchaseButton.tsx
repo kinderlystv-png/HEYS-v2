@@ -21,10 +21,10 @@ export default function PurchaseButton({ planName, planPrice, featured = false, 
             <>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors border ${premium
+                    className={`flex min-h-[46px] w-full items-center justify-center rounded-xl border px-4 py-3 text-center text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${premium
                         ? 'bg-white/10 text-white hover:bg-white/20 border-white/10'
                         : featured
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600 shadow-md'
+                            ? 'bg-[#1D70B7] text-white hover:bg-[#185F9D] border-[#1D70B7] shadow-[0_10px_22px_rgba(29,112,183,0.18)]'
                             : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-100'
                         }`}
                 >
@@ -45,10 +45,10 @@ export default function PurchaseButton({ planName, planPrice, featured = false, 
         <>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors mt-3 border ${premium
+                className={`mt-3 flex min-h-[46px] w-full items-center justify-center rounded-xl border px-4 py-3 text-center text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${premium
                     ? 'bg-transparent text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-600'
                     : featured
-                        ? 'bg-transparent text-blue-600 border-blue-200 hover:bg-blue-50'
+                        ? 'bg-transparent text-[#1D70B7] border-[#DCECF8] hover:bg-[#F8FBFF]'
                         : 'bg-transparent text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
             >

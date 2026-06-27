@@ -193,7 +193,7 @@ export default function DemoSection() {
                           <a
                               href="#trial"
                               onClick={() => setGender(null)}
-                              className="inline-flex flex-col items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 active:scale-95 transition-all tracking-wide shadow-lg shadow-blue-600/30 whitespace-nowrap leading-tight"
+                              className="inline-flex flex-col items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 bg-[#1D70B7] text-white rounded-2xl hover:bg-[#185F9D] active:scale-95 transition-all tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)] whitespace-nowrap leading-tight"
                           >
                               <span className="font-semibold text-[13px] sm:text-[15px]">
                                   Оставить заявку на неделю Pro
@@ -236,7 +236,7 @@ export default function DemoSection() {
                 className="relative py-12 sm:py-16 lg:py-20"
                 style={{
                     background:
-                        'linear-gradient(180deg, #FAE5D5 0%, #FAE5D5 20%, #FCFBF9 55%, #ffffff 100%)',
+                        'linear-gradient(180deg, #FFFFFF 0%, #FFF8EA 18%, #FBEFE6 42%, #FCFBF9 76%, #FFFFFF 100%)',
                 }}
             >
                 <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6">

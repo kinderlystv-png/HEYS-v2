@@ -13,74 +13,46 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
   const trial = content.trial
 
   return (
-    <section className="relative pb-16 md:pb-24 bg-white" id="trial">
-      {/* Sticky Header Badge */}
-      <div className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100 py-3 mb-10 px-6 text-center shadow-sm w-full">
-        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">
-          10 — БЕСПЛАТНЫЙ ТЕСТ
-        </span>
-      </div>
-
-      <div className="container mx-auto px-4 md:px-6 pt-10">
+    <section className="relative bg-[linear-gradient(180deg,#F9FAFB_0%,#FFF6DF_18%,#FFE9B8_48%,#FFF3DB_100%)] pb-16 pt-12 md:pb-24 md:pt-16" id="trial">
+      <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
 
-          {/* Badge */}
-          <div className="mb-6">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 text-sm font-medium px-4 py-2 rounded-full border border-blue-100">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-              </span>
-              {trial.badge}
+          {/* Offer card */}
+          <div className="relative overflow-hidden rounded-3xl border border-[#E89A1F] bg-[linear-gradient(180deg,#FFF9E8_0%,#FFD979_58%,#FFB93E_100%)] p-7 shadow-[0_24px_70px_rgba(181,111,0,0.22)] sm:p-9">
+            <div className="text-center">
+              <h2 className="text-3xl font-extrabold leading-tight text-[#1F2937] md:text-4xl">
+                {trial.title}
+              </h2>
+              <div className="mt-4 flex items-baseline justify-center gap-2">
+                <span className="text-5xl font-extrabold tracking-normal text-[#111827]">0</span>
+                <span className="text-2xl font-bold text-[#111827]">₽</span>
+                <span className="text-sm font-semibold text-[#6B4B00]">/ 7 дней</span>
+              </div>
             </div>
-          </div>
 
-          {/* Heading */}
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-5 leading-tight">
-            {trial.title}
-          </h2>
-
-          {/* Subtitle Sub-block */}
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-8">
-            <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-4">
+            <p className="mx-auto mt-5 max-w-xl text-center text-[15px] leading-relaxed text-[#4A3820] md:text-base">
               {trial.subtitle}
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9951E] bg-white/75 px-3 py-1.5 text-sm font-semibold text-[#5C4100]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 Без привязки карты
               </span>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9951E] bg-white/75 px-3 py-1.5 text-sm font-semibold text-[#5C4100]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 Без автосписаний
               </span>
             </div>
-          </div>
 
-          {/* What you get */}
-          <div className="mb-8">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Что будет на тесте:</h3>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {trial.bullets.map((bullet, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors">
-                  <span className="text-xl leading-none flex-shrink-0 bg-white w-10 h-10 flex items-center justify-center rounded-lg shadow-sm border border-gray-100">{bullet.icon}</span>
-                  <span className="text-gray-700 mt-1.5 text-sm md:text-base leading-snug">{bullet.text}</span>
-                </div>
-              ))}
+            <div className="mt-7 rounded-2xl border border-[#D9951E] bg-white/60 p-4 text-center text-sm leading-relaxed text-[#4A3820]">
+              <span className="font-semibold text-[#5C4100]">Первый набор ограничен.</span>{' '}
+              Куратор берёт немного участников, чтобы сохранять вовлечённость в каждого.
             </div>
           </div>
 
-          {/* Limitation info */}
-          <div className="flex items-start gap-3 text-gray-500 text-sm bg-amber-50 p-4 rounded-xl border border-amber-100 mb-8">
-            <svg className="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <p className="leading-relaxed">
-              <strong className="text-amber-700 block mb-0.5">Мест мало</strong>
-              {trial.limitation}
-            </p>
-          </div>
-
           {/* Форма заявки */}
-          <div className="bg-gray-50 rounded-3xl border border-gray-200 p-6 md:p-8">
+          <div className="mt-8 bg-white/90 rounded-3xl border border-[#E9AF2E] p-6 md:p-8 shadow-[0_22px_60px_rgba(181,111,0,0.16)]">
             <div className="mb-6">
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-1">Оставить заявку на неделю Pro</h3>
               <p className="text-sm text-gray-500">7 дней сопровождения — 0 ₽, без привязки карты</p>

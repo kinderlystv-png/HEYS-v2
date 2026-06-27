@@ -321,7 +321,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             onClick={() => setMessenger('telegram')}
             className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${
               messenger === 'telegram'
-                ? 'bg-blue-600 text-white border-blue-600'
+                ? 'bg-[#1D70B7] text-white border-[#1D70B7]'
                 : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
             }`}
             disabled={formState === 'loading'}
@@ -485,7 +485,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       <button
         type="submit"
         disabled={formState === 'loading'}
-        className="w-full py-4 px-6 bg-blue-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full rounded-2xl bg-[#1D70B7] px-6 py-4 text-lg font-semibold text-white shadow-[0_10px_22px_rgba(29,112,183,0.18)] transition-all duration-200 hover:bg-[#185F9D] hover:shadow-[0_12px_26px_rgba(29,112,183,0.22)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
       >
         {formState === 'loading' ? (
           <span className="flex items-center justify-center gap-2">

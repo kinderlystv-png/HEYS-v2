@@ -131,10 +131,8 @@ export interface VariantContent {
     items: { q: string; a: string }[]
   }
   trial: {
-    badge: string
     title: string
     subtitle: string
-    bullets: { icon: string; text: string }[]
     limitation: string
     startPoint: string
     ctaAvailable: string
@@ -349,15 +347,8 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
       ],
     },
     trial: {
-      badge: '🎯 Тестовый период',
       title: 'Неделя Pro бесплатно',
-      subtitle: '7 дней сопровождения, чтобы понять, как вам подходит формат: куратор ведёт дневник, вы видите картину.',
-      bullets: [
-        { icon: '📱', text: 'Куратор знакомится с вашей целью и режимом' },
-        { icon: '📊', text: 'Первые данные попадают в дневник и виджеты' },
-        { icon: '💬', text: 'Разбор недели и понятный следующий шаг' },
-        { icon: '🎯', text: 'Рекомендация подходящего тарифа (Self / Pro / Pro+)' },
-      ],
+      subtitle: 'Наше лучшее предложение: полный формат Pro на неделю — с участием куратора и вниманием к вашей неделе.',
       limitation: 'Берём ограниченное число людей одновременно — иначе не сохранить вовлечённость в каждую жизнь: график, тренировки, сон, контекст.',
       startPoint: 'Формат начинается с первого утреннего чек-ина.',
       ctaAvailable: 'Оставить заявку на неделю Pro (0 ₽) →',
