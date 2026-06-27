@@ -93,14 +93,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return alnum.length >= 6 && alnum.length <= 32 ? alnum : '';
   };
 
-  const getProductBarcode = (product) => normalizeBarcode(
-    product?.barcode ?? product?.ean ?? product?.upc ?? product?.barcode_value
-  );
+  const getProductBarcodes = (product) => {
+    if (!product) return [];
+    const raw = [
+      product.barcode,
+      ...(Array.isArray(product.barcodes) ? product.barcodes : []),
+      product.ean,
+      product.upc,
+      product.barcode_value
+    ];
+    const seen = new Set();
+    const out = [];
+    raw.forEach((value) => {
+      const code = normalizeBarcode(value);
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      out.push(code);
+    });
+    return out;
+  };
+
+  const getProductBarcode = (product) => getProductBarcodes(product)[0] || '';
+
+  const hasProductBarcode = (product, barcode) => {
+    const code = normalizeBarcode(barcode);
+    return !!code && getProductBarcodes(product).includes(code);
+  };
+
+  const mergeProductBarcode = (product, barcode) => {
+    const code = normalizeBarcode(barcode);
+    const barcodes = getProductBarcodes(product);
+    if (code && !barcodes.includes(code)) barcodes.unshift(code);
+    return {
+      ...product,
+      barcode: barcodes[0] || null,
+      barcodes
+    };
+  };
 
   const findProductByBarcode = (products, barcode) => {
     const code = normalizeBarcode(barcode);
     if (!code || !Array.isArray(products)) return null;
-    return products.find((product) => getProductBarcode(product) === code) || null;
+    return products.find((product) => hasProductBarcode(product, code)) || null;
   };
 
   const lsGet = (key, def) => {
@@ -240,9 +274,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const overrides = {
         ...(existingRow?.overrides || {})
       };
-      const barcode = normalizeBarcode(product.barcode);
+      const barcodes = getProductBarcodes(product);
+      const barcode = barcodes[0] || '';
       if (barcode) overrides.barcode = barcode;
       else delete overrides.barcode;
+      if (barcodes.length) overrides.barcodes = barcodes;
+      else delete overrides.barcodes;
 
       return Overlay.upsertRow({
         ...(existingRow || {}),
@@ -259,7 +296,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ...(existingRow || {}),
       ...product,
       id: pid,
-      barcode: normalizeBarcode(product.barcode) || null,
+      barcode: getProductBarcode(product) || null,
+      barcodes: getProductBarcodes(product),
       _custom: true,
       in_my_list: true,
       user_modified: existingRow?.user_modified === true || product.user_modified === true || !!isUserEdit
@@ -1215,8 +1253,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       portions: Array.isArray(product.portions) ? product.portions : null,
       description: product.description || null,
       barcode: normalizeBarcode(product.barcode) || null,
-      sodium100: toNum(product.sodium100, null),
-      omega3_100: toNum(product.omega3_100, null),
+    sodium100: toNum(product.sodium100, null),
+    omega3_100: toNum(product.omega3_100, null),
       omega6_100: toNum(product.omega6_100, null),
       nova_group: toInt(product.nova_group ?? product.novaGroup, null),
       additives: normalizeAdditives(product.additives),
@@ -1246,6 +1284,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       iodine: toNum(product.iodine, null)
     };
 
+    payload.barcodes = getProductBarcodes(product);
+
     const minimalPayload = {
       id: targetId,
       name: product.name || null,
@@ -1263,7 +1303,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       category: product.category || null,
       portions: Array.isArray(product.portions) ? product.portions : null,
       description: product.description || null,
-      barcode: normalizeBarcode(product.barcode) || null
+      barcode: getProductBarcode(product) || null,
+      barcodes: getProductBarcodes(product)
     };
 
     try {
@@ -2316,6 +2357,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const scannerRef = useRef(null);
     const readyTimerRef = useRef(null);
     const startRequestRef = useRef(false);
+    const cameraAutoStartKey = 'heys_barcode_camera_autostart';
+
+    const shouldAutoStartCamera = useCallback(() => {
+      if (HEYS.__barcodeCameraAutoStart === true) return true;
+      return readStoredValue(cameraAutoStartKey, false) === true;
+    }, []);
 
     const cleanupCamera = useCallback(() => {
       if (readyTimerRef.current) {
@@ -2381,6 +2428,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           audio: false
         });
         streamRef.current = stream;
+        HEYS.__barcodeCameraAutoStart = true;
+        writeStoredValue(cameraAutoStartKey, true);
 
         const video = videoRef.current;
         if (!video) return;
@@ -2419,6 +2468,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     useEffect(() => {
       return cleanupCamera;
     }, [cleanupCamera]);
+
+    useEffect(() => {
+      if (!shouldAutoStartCamera()) return undefined;
+      const timer = setTimeout(() => startCamera(), 80);
+      return () => clearTimeout(timer);
+    }, [shouldAutoStartCamera, startCamera]);
 
     const submitManual = () => {
       const code = normalizeBarcode(manualValue);
@@ -3465,8 +3520,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       const updatedProduct = {
-        ...product,
-        barcode,
+        ...mergeProductBarcode(product, barcode),
         updatedAt: Date.now()
       };
 
@@ -3486,6 +3540,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const localSave = upsertLocalProduct(updatedProduct, true);
       notifyProductUpdated(localSave.product || updatedProduct);
+      if (HEYS.cloud?.createPendingProduct) {
+        HEYS.cloud.createPendingProduct(null, localSave.product || updatedProduct)
+          .then((result) => {
+            const status = result?.status || result?.data?.status;
+            if (status === 'pending') {
+              HEYS.Toast?.info?.('Штрихкод отправлен на проверку для общей базы');
+            }
+          })
+          .catch(() => { });
+      }
       if (isOverlayProductsEnabledForAddStep() && !localSave.overlaySaved) {
         HEYS.Toast?.warning?.(`Штрихкод ${barcode} сохранён локально, но облачная синхронизация сейчас недоступна`);
         return true;
@@ -3512,20 +3576,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setBarcodeLookupBusy(true);
       try {
         const localMatches = (Array.isArray(latestProducts) ? latestProducts : [])
-          .filter((product) => getProductBarcode(product) === barcode)
+          .filter((product) => hasProductBarcode(product, barcode))
           .map((product) => ({ ...product, _source: 'personal', _barcodeMatch: true }));
 
         let sharedMatches = [];
         if (HEYS.cloud?.searchSharedProducts) {
           const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 12 });
           sharedMatches = (Array.isArray(result?.data) ? result.data : [])
-            .map((product) => ({
-              ...normalizeSharedProductForAddStep(product),
-              barcode,
-              _source: 'shared',
-              _fromShared: true,
-              _barcodeMatch: true
-            }))
+            .map((product) => {
+              const normalized = normalizeSharedProductForAddStep(product);
+              return normalized && {
+                ...mergeProductBarcode(normalized, barcode),
+                _source: 'shared',
+                _fromShared: true,
+                _barcodeMatch: true
+              };
+            })
             .filter(Boolean);
         }
 
@@ -3815,6 +3881,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmToneStyle = getHarmToneStyle(harmVal, { surface: 'aps' });
       const barcode = getProductBarcode(product);
+      const barcodeCount = getProductBarcodes(product).length;
 
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
@@ -3856,7 +3923,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
             barcode && React.createElement(React.Fragment, null,
               React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-              React.createElement('span', { className: 'aps-product-barcode' }, barcode)
+              React.createElement('span', { className: 'aps-product-barcode' },
+                barcode,
+                barcodeCount > 1 ? ` +${barcodeCount - 1}` : ''
+              )
             )
           )
         ),
@@ -4029,16 +4099,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 setSearch('');
                 setBarcodeResults([]);
               }
-            }, '×')
+            }, '×'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
+              onClick: () => setBarcodeModal({ mode: 'search' }),
+              disabled: barcodeLookupBusy,
+              'aria-label': 'Сканировать штрихкод',
+              title: 'Сканировать штрихкод'
+            }, barcodeLookupBusy ? '…' : '▦')
           ),
-          React.createElement('button', {
-            type: 'button',
-            className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
-            onClick: () => setBarcodeModal({ mode: 'search' }),
-            disabled: barcodeLookupBusy,
-            'aria-label': 'Сканировать штрихкод',
-            title: 'Сканировать штрихкод'
-          }, barcodeLookupBusy ? '…' : '▦'),
           React.createElement('label', {
             className: 'aps-shared-toggle' + (showSharedProducts ? ' is-active' : ''),
             title: showSharedProducts ? 'Общие продукты включены' : 'Включить общие продукты'
@@ -4505,7 +4575,7 @@ NOVA: 1
             setError('Не хватает полей: ' + formatMissingFields(aiParsed.missingFields));
             return;
           }
-          const product = scannedBarcode ? { ...aiParsed.product, barcode: scannedBarcode } : aiParsed.product;
+          const product = scannedBarcode ? mergeProductBarcode(aiParsed.product, scannedBarcode) : aiParsed.product;
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -4514,7 +4584,7 @@ NOVA: 1
 
         const parsed = parseProductLine(pasteText);
         if (parsed) {
-          const product = scannedBarcode ? { ...parsed, barcode: scannedBarcode } : parsed;
+          const product = scannedBarcode ? mergeProductBarcode(parsed, scannedBarcode) : parsed;
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -4538,7 +4608,7 @@ NOVA: 1
 
       haptic('medium');
 
-      const productWithBarcode = scannedBarcode ? { ...parsedPreview, barcode: scannedBarcode } : parsedPreview;
+      const productWithBarcode = scannedBarcode ? mergeProductBarcode(parsedPreview, scannedBarcode) : parsedPreview;
       const baseProduct = await ensureProductFingerprint(productWithBarcode);
       // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
       // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
@@ -4947,11 +5017,15 @@ NOVA: 1
       const harm = harmInput != null
         ? harmInput
         : (HEYS.models?.normalizeHarm?.(base) ?? base.harm ?? null);
+      const formBarcode = normalizeBarcode(form.barcode);
+      const preservedBarcodes = getProductBarcodes(base).filter((code) => code !== formBarcode);
+      const barcodes = formBarcode ? [formBarcode, ...preservedBarcodes] : [];
 
       return {
         ...base,
         name,
-        barcode: normalizeBarcode(form.barcode) || null,
+        barcode: barcodes[0] || null,
+        barcodes,
         simple100: finalSimple,
         complex100: finalComplex,
         protein100,

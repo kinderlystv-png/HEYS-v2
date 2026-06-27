@@ -15131,6 +15131,23 @@
     return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
   }
 
+  function normalizeSharedProductBarcodes(product, primaryBarcode = null) {
+    const raw = [
+      primaryBarcode,
+      product?.barcode,
+      ...(Array.isArray(product?.barcodes) ? product.barcodes : [])
+    ];
+    const seen = new Set();
+    const out = [];
+    raw.forEach((value) => {
+      const code = normalizeSharedProductBarcode(value);
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      out.push(code);
+    });
+    return out;
+  }
+
   cloud.searchSharedProducts = async function (query, options = {}) {
     const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;
     const barcodeQuery = normalizeSharedProductBarcode(barcode) || null;
@@ -15143,18 +15160,29 @@
     }
 
     try {
-      // Внутренний helper: выполнить запрос по name_norm через ilike
-      const fetchByName = async (nameQ) => {
-        const q = (nameQ || '').toString().trim();
-        if (!q) return [];
+      const fetchSharedProducts = async (filters) => {
         const { data, error } = await YandexAPI.rest('shared_products', {
           select: '*',
-          filters: { 'ilike.name_norm': `%${q}%` },
+          filters,
           order: 'created_at.desc',
           limit
         });
         if (error) throw error;
         return data || [];
+      };
+      const mergeRows = (...lists) => {
+        const byId = new Map();
+        lists.flat().forEach((p) => {
+          const key = p?.id || p?.fingerprint || p?.name;
+          if (key && !byId.has(key)) byId.set(key, p);
+        });
+        return Array.from(byId.values()).slice(0, limit);
+      };
+      // Внутренний helper: выполнить запрос по name_norm через ilike
+      const fetchByName = async (nameQ) => {
+        const q = (nameQ || '').toString().trim();
+        if (!q) return [];
+        return fetchSharedProducts({ 'ilike.name_norm': `%${q}%` });
       };
 
       // Строим фильтры для YandexAPI.rest()
@@ -15172,12 +15200,27 @@
       // 🔄 v3.21.0: Используем shared_products вместо shared_products_public (VIEW удалён)
       let data;
       let error;
-      ({ data, error } = await YandexAPI.rest('shared_products', {
-        select: '*',
-        filters,
-        order: 'created_at.desc',
-        limit
-      }));
+      if (barcodeQuery) {
+        try {
+          const primary = await fetchSharedProducts({ 'eq.barcode': barcodeQuery });
+          let aliases = [];
+          try {
+            aliases = await fetchSharedProducts({ 'contains.barcodes': barcodeQuery });
+          } catch (_) { /* rollout fallback: legacy barcode search still works */ }
+          data = mergeRows(primary, aliases);
+          error = null;
+        } catch (e) {
+          data = null;
+          error = e;
+        }
+      } else {
+        ({ data, error } = await YandexAPI.rest('shared_products', {
+          select: '*',
+          filters,
+          order: 'created_at.desc',
+          limit
+        }));
+      }
 
       if (error) {
         err('[SHARED PRODUCTS] Search error:', error);
@@ -15284,7 +15327,8 @@
         category: product.category ?? null,
         portions: product.portions || null,
         description: product.description || null,
-        barcode: normalizeSharedProductBarcode(product.barcode) || null,
+        barcode: normalizeSharedProductBarcodes(product)[0] || null,
+        barcodes: normalizeSharedProductBarcodes(product),
         // Extended fields (v4.4.0)
         sodium100: product.sodium100 ?? null,
         omega3_100: product.omega3_100 ?? null,

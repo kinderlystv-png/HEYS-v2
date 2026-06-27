@@ -35,6 +35,36 @@ BEGIN
   IF to_regclass('public.idx_shared_products_pending_barcode') IS NULL THEN
     RAISE EXCEPTION 'idx_shared_products_pending_barcode is missing';
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'shared_products'
+      AND column_name = 'barcodes'
+      AND data_type = 'ARRAY'
+  ) THEN
+    RAISE EXCEPTION 'public.shared_products.barcodes text[] is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'shared_products_pending'
+      AND column_name = 'barcodes'
+      AND data_type = 'ARRAY'
+  ) THEN
+    RAISE EXCEPTION 'public.shared_products_pending.barcodes text[] is missing';
+  END IF;
+
+  IF to_regclass('public.idx_shared_products_barcodes') IS NULL THEN
+    RAISE EXCEPTION 'idx_shared_products_barcodes is missing';
+  END IF;
+
+  IF to_regclass('public.idx_shared_products_pending_barcodes') IS NULL THEN
+    RAISE EXCEPTION 'idx_shared_products_pending_barcodes is missing';
+  END IF;
 END $$;
 
 \echo 'Checking barcode-aware RPC function signatures...'
@@ -69,6 +99,10 @@ BEGIN
     RAISE EXCEPTION 'create_pending_product_by_session is not barcode-aware';
   END IF;
 
+  IF pending_def NOT LIKE '%v_barcodes%' OR pending_def NOT LIKE '%barcodes%' THEN
+    RAISE EXCEPTION 'create_pending_product_by_session is not barcode-array-aware';
+  END IF;
+
   SELECT pg_get_functiondef(p.oid)
   INTO publish_def
   FROM pg_proc p
@@ -83,6 +117,10 @@ BEGIN
 
   IF publish_def NOT LIKE '%v_barcode%' OR publish_def NOT LIKE '%barcode%' THEN
     RAISE EXCEPTION 'publish_shared_product_by_curator is not barcode-aware';
+  END IF;
+
+  IF publish_def NOT LIKE '%v_barcodes%' OR publish_def NOT LIKE '%barcodes%' THEN
+    RAISE EXCEPTION 'publish_shared_product_by_curator is not barcode-array-aware';
   END IF;
 END $$;
 
@@ -106,5 +144,10 @@ FROM (
   GROUP BY barcode
   HAVING count(*) > 1
 ) d;
+
+SELECT 'shared_products_invalid_barcodes_aliases' AS check_name, count(*) AS rows
+FROM public.shared_products sp
+CROSS JOIN LATERAL unnest(coalesce(sp.barcodes, ARRAY[]::text[])) AS b(code)
+WHERE b.code !~ '^[0-9A-Z]{6,32}$';
 
 \echo 'Barcode schema verification complete.'

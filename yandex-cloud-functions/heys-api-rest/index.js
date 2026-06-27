@@ -328,7 +328,7 @@ const ALLOWED_COLUMNS = {
   // ⚠️  Колонки в lowercase! (badfat100, goodfat100 — NOT camelCase)
   shared_products: [
     'id', 'name', 'name_norm', 'fingerprint',
-    'barcode',
+    'barcode', 'barcodes',
     'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',
     'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',
@@ -344,7 +344,7 @@ const ALLOWED_COLUMNS = {
   // shared_products_pending (table) — pending products for curator review (read-only via REST)
   // ⚠️  Все поля продукта внутри product_data JSONB! Не раскрываем на уровне SQL.
   shared_products_pending: [
-    'id', 'curator_id', 'client_id', 'product_data', 'name_norm', 'fingerprint', 'barcode',
+    'id', 'curator_id', 'client_id', 'product_data', 'name_norm', 'fingerprint', 'barcode', 'barcodes',
     'status', 'reject_reason', 'created_at', 'moderated_at', 'moderated_by'
   ],
   // client_kv_store (table) — KV storage для данных клиентов (куратор sync)
@@ -821,6 +821,10 @@ module.exports.handler = async function (event, context) {
             const placeholders = inValues.map(() => `$${i++}`).join(', ');
             conditions.push(`"${fieldName}" IN (${placeholders})`);
             values.push(...inValues);
+          } else if (key.startsWith('contains.')) {
+            const fieldName = key.replace('contains.', '');
+            conditions.push(`"${fieldName}" @> ARRAY[$${i++}]::text[]`);
+            values.push(value);
           } else if (key.startsWith('is.')) {
             const fieldName = key.replace('is.', '');
             if (value === 'null') {
@@ -866,6 +870,10 @@ module.exports.handler = async function (event, context) {
             const placeholders = inValues.map(() => `$${i++}`).join(', ');
             conditions.push(`"${key}" IN (${placeholders})`);
             values.push(...inValues);
+          } else if (typeof value === 'string' && value.startsWith('contains.')) {
+            const actualValue = value.replace('contains.', '');
+            conditions.push(`"${key}" @> ARRAY[$${i++}]::text[]`);
+            values.push(actualValue);
           } else if (typeof value === 'string' && value.startsWith('is.')) {
             const actualValue = value.replace('is.', '');
             if (actualValue === 'null') {
@@ -1287,7 +1295,7 @@ module.exports.handler = async function (event, context) {
         // 🔐 FIX v2: JSON/JSONB колонки нужно сериализовать в JSON строку
         // 🔐 FIX v3: TEXT[] массивы нужно преобразовывать в PostgreSQL array format
         const JSON_COLUMNS = ['v', 'portions']; // JSONB columns
-        const ARRAY_COLUMNS = ['additives'];    // TEXT[] columns
+        const ARRAY_COLUMNS = ['additives', 'barcodes'];    // TEXT[] columns
 
         // Формируем VALUES для batch insert
         const allValues = [];

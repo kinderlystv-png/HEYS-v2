@@ -13,10 +13,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 MIGRATION="$REPO_ROOT/scripts/db/migrations/2026-06-27_shared_products_barcode.sql"
+ALIASES_MIGRATION="$REPO_ROOT/scripts/db/migrations/2026-06-28_shared_products_barcodes_array.sql"
 CHECK="$REPO_ROOT/scripts/db/check-shared-products-barcode.sql"
 
 echo "Applying shared-products barcode migration..."
 "$SCRIPT_DIR/psql.sh" -v ON_ERROR_STOP=1 -f "$MIGRATION"
+"$SCRIPT_DIR/psql.sh" -v ON_ERROR_STOP=1 -f "$ALIASES_MIGRATION"
 
 echo "Verifying shared-products barcode schema..."
 "$SCRIPT_DIR/psql.sh" -v ON_ERROR_STOP=1 -f "$CHECK"
