@@ -610,6 +610,8 @@
   let _sharedByFingerprint = null;
   let _sharedByNameRef = null;
   let _sharedByName = null;
+  let _sharedByBarcodeRef = null;
+  let _sharedByBarcode = null;
   function _normalizeName(n) {
     return String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е');
   }
@@ -617,17 +619,21 @@
     if (_sharedByFingerprintRef !== sharedById) {
       const byFp = new Map();
       const byName = new Map();
+      const byBarcode = new Map();
       sharedById.forEach((sp) => {
         if (!sp) return;
         if (sp.fingerprint) byFp.set(String(sp.fingerprint), sp);
         if (sp.name) byName.set(_normalizeName(sp.name), sp);
+        if (sp.barcode) byBarcode.set(String(sp.barcode).trim().replace(/[\s-]+/g, '').toUpperCase(), sp);
       });
       _sharedByFingerprint = byFp;
       _sharedByName = byName;
+      _sharedByBarcode = byBarcode;
       _sharedByFingerprintRef = sharedById;
       _sharedByNameRef = sharedById;
+      _sharedByBarcodeRef = sharedById;
     }
-    return { byFingerprint: _sharedByFingerprint, byName: _sharedByName };
+    return { byFingerprint: _sharedByFingerprint, byName: _sharedByName, byBarcode: _sharedByBarcode };
   }
 
   // Generate stable fallback id when legacy product has none.
@@ -673,6 +679,10 @@
           sharedRow = aux.byFingerprint.get(String(p.fingerprint));
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
+        if (!sharedRow && p.barcode) {
+          sharedRow = aux.byBarcode.get(String(p.barcode).trim().replace(/[\s-]+/g, '').toUpperCase());
+          if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
+        }
         if (!sharedRow && p.name) {
           sharedRow = aux.byName.get(_normalizeName(p.name));
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
@@ -688,6 +698,9 @@
         // legacy "Молоко 2,5" matches shared "Молоко 2,5%" but display should keep local).
         if (p.name && p.name !== sharedRow.name) {
           overrides.name = p.name;
+        }
+        if (p.barcode && p.barcode !== sharedRow.barcode) {
+          overrides.barcode = p.barcode;
         }
         if (Array.isArray(p.portions) && p.portions.length > 0) {
           // Portions: store full array as override on any content diff.

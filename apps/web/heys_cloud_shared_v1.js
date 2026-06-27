@@ -251,11 +251,22 @@
       }
     };
 
+    function normalizeSharedProductBarcode(value) {
+      if (value == null) return '';
+      const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
+    }
+
     cloud.searchSharedProducts = async function (query, options = {}) {
-      const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
+      const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;
+      const barcodeQuery = normalizeSharedProductBarcode(barcode) || null;
       const normQuery = (HEYS?.models?.normalizeProductName
         ? HEYS.models.normalizeProductName(query)
         : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+      if (barcode != null && !barcodeQuery) {
+        return { data: [], error: null };
+      }
 
       try {
         const fetchByName = async (nameQ) => {
@@ -273,7 +284,9 @@
 
         const filters = {};
 
-        if (fingerprint) {
+        if (barcodeQuery) {
+          filters['eq.barcode'] = barcodeQuery;
+        } else if (fingerprint) {
           filters['eq.fingerprint'] = fingerprint;
         } else if (normQuery) {
           filters['ilike.name_norm'] = `%${normQuery}%`;
@@ -293,7 +306,7 @@
           return { data: null, error };
         }
 
-        if (!fingerprint && normQuery && Array.isArray(data)) {
+        if (!barcodeQuery && !fingerprint && normQuery && Array.isArray(data)) {
           const baseCount = data.length;
           if (baseCount < 3 && normQuery.length >= 4) {
             const prefix3 = normQuery.slice(0, 3);
@@ -374,6 +387,7 @@
           category: product.category ?? null,
           portions: product.portions ?? null,
           description: product.description ?? null,
+          barcode: normalizeSharedProductBarcode(product.barcode) || null,
           // Extended fields (v4.4.0) — camelCase ↔ snake_case fallback
           sodium100: product.sodium100 ?? null,
           omega3_100: product.omega3_100 ?? null,
@@ -477,9 +491,23 @@
       try {
         const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
           || readStoredValue('heys_session_token', null);
+        let fingerprint = null;
+        let nameNorm = null;
+        try {
+          if (HEYS?.models?.computeProductFingerprint) {
+            fingerprint = await HEYS.models.computeProductFingerprint(product);
+          }
+        } catch (_) { }
+        try {
+          if (HEYS?.models?.normalizeProductName) {
+            nameNorm = HEYS.models.normalizeProductName(product?.name || '');
+          }
+        } catch (_) { }
         const rpcParams = {
           p_name: product.name,
-          p_product_data: product
+          p_product_data: product,
+          p_fingerprint: fingerprint,
+          p_name_norm: nameNorm
         };
         if (sessionToken) rpcParams.p_session_token = sessionToken;
 

@@ -86,6 +86,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch { }
   };
 
+  const normalizeBarcode = (value) => {
+    if (value == null) return '';
+    const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase();
+    const alnum = cleaned.replace(/[^0-9A-Z]/g, '');
+    return alnum.length >= 6 && alnum.length <= 32 ? alnum : '';
+  };
+
+  const getProductBarcode = (product) => normalizeBarcode(
+    product?.barcode ?? product?.ean ?? product?.upc ?? product?.barcode_value
+  );
+
+  const findProductByBarcode = (products, barcode) => {
+    const code = normalizeBarcode(barcode);
+    if (!code || !Array.isArray(products)) return null;
+    return products.find((product) => getProductBarcode(product) === code) || null;
+  };
+
   const lsGet = (key, def) => {
     const utils = U();
     if (HEYS.store?.get) return HEYS.store.get(key, def);
@@ -1147,6 +1164,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       category: product.category || null,
       portions: Array.isArray(product.portions) ? product.portions : null,
       description: product.description || null,
+      barcode: normalizeBarcode(product.barcode) || null,
       sodium100: toNum(product.sodium100, null),
       omega3_100: toNum(product.omega3_100, null),
       omega6_100: toNum(product.omega6_100, null),
@@ -1194,7 +1212,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       harm: toNum(HEYS.models?.normalizeHarm?.(product) ?? product.harm, null),
       category: product.category || null,
       portions: Array.isArray(product.portions) ? product.portions : null,
-      description: product.description || null
+      description: product.description || null,
+      barcode: normalizeBarcode(product.barcode) || null
     };
 
     try {
@@ -2238,6 +2257,107 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function BarcodeScannerModal({ title, subtitle, initialValue = '', onDetected, onClose }) {
+    const [manualValue, setManualValue] = useState(initialValue);
+    const [error, setError] = useState('');
+    const [isCameraReady, setIsCameraReady] = useState(false);
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+      let stream = null;
+      let scanner = null;
+      let cancelled = false;
+
+      const start = async () => {
+        if (!HEYS.barcode?.isSupported?.() || !navigator.mediaDevices?.getUserMedia) {
+          setError('Камера для сканирования недоступна. Можно ввести код вручную.');
+          return;
+        }
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+          if (cancelled) return;
+          const video = videoRef.current;
+          if (!video) return;
+          video.srcObject = stream;
+          await video.play();
+          setIsCameraReady(true);
+          scanner = await HEYS.barcode.startScanning(video, (result) => {
+            const code = normalizeBarcode(result?.value);
+            if (code) onDetected?.(code);
+          });
+          if (!scanner?.success) {
+            setError('Не удалось запустить сканер. Можно ввести код вручную.');
+          }
+        } catch (e) {
+          setError('Камера недоступна. Можно ввести код вручную.');
+        }
+      };
+
+      start();
+
+      return () => {
+        cancelled = true;
+        try { scanner?.stop?.(); } catch (_) { }
+        try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
+      };
+    }, [onDetected]);
+
+    const submitManual = () => {
+      const code = normalizeBarcode(manualValue);
+      if (!code) {
+        setError('Введите штрихкод: минимум 6 символов.');
+        return;
+      }
+      onDetected?.(code);
+    };
+
+    return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
+      React.createElement('div', { className: 'aps-barcode-modal', onClick: (e) => e.stopPropagation() },
+        React.createElement('div', { className: 'aps-barcode-head' },
+          React.createElement('div', null,
+            React.createElement('div', { className: 'aps-barcode-title' }, title || 'Штрихкод'),
+            subtitle && React.createElement('div', { className: 'aps-barcode-subtitle' }, subtitle)
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-barcode-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '×')
+        ),
+        React.createElement('div', { className: 'aps-barcode-camera' },
+          React.createElement('video', {
+            ref: videoRef,
+            className: 'aps-barcode-video',
+            muted: true,
+            playsInline: true
+          }),
+          !isCameraReady && React.createElement('div', { className: 'aps-barcode-camera-empty' }, 'Наведите камеру на штрихкод')
+        ),
+        React.createElement('div', { className: 'aps-barcode-manual' },
+          React.createElement('input', {
+            className: 'aps-barcode-input',
+            value: manualValue,
+            onChange: (e) => setManualValue(e.target.value),
+            inputMode: 'text',
+            autoComplete: 'off',
+            placeholder: 'EAN / UPC'
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-barcode-submit',
+            onClick: submitManual
+          }, 'OK')
+        ),
+        error && React.createElement('div', { className: 'aps-barcode-error' }, error)
+      )
+    );
+  }
+
   function ProductSearchStep({ data, onChange, context }) {
     const initialProductsSyncState = getAddProductInitialSyncState();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
@@ -2273,6 +2393,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       () => (HEYS.store?.getSuggestedPresets?.() || []).length
     );
     const [pendingDeletedProductIds, setPendingDeletedProductIds] = useState(() => new Set());
+    const [barcodeModal, setBarcodeModal] = useState(null);
+    const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
 
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -3146,9 +3268,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [data, onChange, goToStep, updateStepData, modalStepData]);
 
     // Кнопка "Новый продукт" — открытие внешней формы создания
-    const handleNewProduct = useCallback(() => {
+    const handleNewProduct = useCallback((barcode = '') => {
       haptic('medium');
-      onChange({ ...data, searchQuery: search });
+      const normalizedBarcode = normalizeBarcode(barcode);
+      const nextSearchData = {
+        ...data,
+        searchQuery: search,
+        ...(normalizedBarcode ? { scannedBarcode: normalizedBarcode } : {})
+      };
+      onChange(nextSearchData);
+      if (normalizedBarcode && typeof updateStepData === 'function') {
+        updateStepData('search', nextSearchData);
+      }
       // Если есть внутренний шаг создания — перейти на него
       if (goToStep) {
         setTimeout(() => goToStep(1, 'left'), 10);
@@ -3163,7 +3294,108 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           HEYS.StepModal?.close?.();
         }
       }
-    }, [context, goToStep, search, data, onChange]);
+    }, [context, goToStep, search, data, onChange, updateStepData]);
+
+    const saveBarcodeForProduct = useCallback(async (product, rawBarcode) => {
+      const barcode = normalizeBarcode(rawBarcode);
+      if (!product || !barcode) return false;
+      const productId = String(product.id ?? product.product_id ?? product.name ?? '');
+      const sharedId = resolveSharedProductId(product);
+      const localDuplicate = findProductByBarcode(latestProducts, barcode);
+      const localDuplicateId = String(localDuplicate?.id ?? localDuplicate?.product_id ?? localDuplicate?.name ?? '');
+      const localDuplicateSharedId = resolveSharedProductId(localDuplicate);
+      const sameProduct = localDuplicateId === productId
+        || (sharedId && localDuplicateSharedId && String(localDuplicateSharedId) === String(sharedId));
+      if (localDuplicate && localDuplicateId && !sameProduct) {
+        HEYS.Toast?.warning?.(`Этот штрихкод уже привязан к «${localDuplicate.name || 'другому продукту'}»`);
+        return false;
+      }
+
+      if (HEYS.cloud?.searchSharedProducts) {
+        try {
+          const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 });
+          const sharedDuplicate = Array.isArray(result?.data) ? result.data[0] : null;
+          const sharedDuplicateId = String(sharedDuplicate?.id ?? '');
+          if (sharedDuplicate && sharedDuplicateId && sharedDuplicateId !== String(sharedId || '')) {
+            HEYS.Toast?.warning?.(`Этот штрихкод уже есть в общей базе: «${sharedDuplicate.name || 'продукт'}»`);
+            return false;
+          }
+        } catch (_) { }
+      }
+
+      const updatedProduct = {
+        ...product,
+        barcode,
+        updatedAt: Date.now()
+      };
+
+      if (sharedId && isCuratorUser()) {
+        const result = await updateSharedProduct(updatedProduct, sharedId);
+        if (!result.ok) return false;
+        upsertLocalProduct(updatedProduct, false);
+        notifyProductUpdated(updatedProduct);
+        HEYS.Toast?.success?.('Штрихкод сохранён в общей базе');
+        return true;
+      }
+
+      if (isSharedProduct(product) && !isCuratorUser()) {
+        HEYS.Toast?.warning?.('Общий продукт может изменить только куратор');
+        return false;
+      }
+
+      upsertLocalProduct(updatedProduct, true);
+      notifyProductUpdated(updatedProduct);
+      HEYS.Toast?.success?.('Штрихкод сохранён');
+      return true;
+    }, [latestProducts]);
+
+    const resolveBarcodeScan = useCallback(async (rawBarcode, targetProduct = null) => {
+      const barcode = normalizeBarcode(rawBarcode);
+      if (!barcode) {
+        HEYS.Toast?.warning?.('Штрихкод не распознан');
+        return;
+      }
+
+      setBarcodeModal(null);
+
+      if (targetProduct) {
+        await saveBarcodeForProduct(targetProduct, barcode);
+        return;
+      }
+
+      setBarcodeLookupBusy(true);
+      try {
+        const localProduct = findProductByBarcode(latestProducts, barcode);
+        if (localProduct) {
+          HEYS.Toast?.success?.('Продукт найден по штрихкоду');
+          selectProduct(localProduct);
+          return;
+        }
+
+        if (HEYS.cloud?.searchSharedProducts) {
+          const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 });
+          const sharedProduct = Array.isArray(result?.data) ? result.data[0] : null;
+          if (sharedProduct) {
+            HEYS.Toast?.success?.('Продукт найден в общей базе');
+            selectProduct({
+              ...sharedProduct,
+              barcode,
+              _source: 'shared',
+              _fromShared: true
+            });
+            return;
+          }
+        }
+
+        HEYS.Toast?.info?.('Штрихкод не найден. Добавьте продукт, код сохранится автоматически.');
+        handleNewProduct(barcode);
+      } catch (e) {
+        HEYS.Toast?.warning?.('Не удалось проверить общую базу. Можно добавить продукт вручную.');
+        handleNewProduct(barcode);
+      } finally {
+        setBarcodeLookupBusy(false);
+      }
+    }, [latestProducts, selectProduct, handleNewProduct, saveBarcodeForProduct]);
 
     // Обработчик выбора фото
     const handlePhotoSelect = useCallback((e) => {
@@ -3419,6 +3651,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmToneStyle = getHarmToneStyle(harmVal, { surface: 'aps' });
+      const barcode = getProductBarcode(product);
 
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
@@ -3457,6 +3690,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             showUsageCount && React.createElement(React.Fragment, null,
               React.createElement('span', { className: 'aps-meta-sep' }, '·'),
               React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
+            ),
+            barcode && React.createElement(React.Fragment, null,
+              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+              React.createElement('span', { className: 'aps-product-barcode' }, barcode)
             )
           )
         ),
@@ -3467,6 +3704,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'aps-fav-btn' + (isFav ? ' active' : ''),
             onClick: (e) => toggleFavorite(e, pid)
           }, isFav ? '★' : '☆'),
+          canEditProduct(product) && React.createElement('button', {
+            className: 'aps-barcode-btn' + (barcode ? ' active' : ''),
+            onClick: (e) => {
+              e.stopPropagation();
+              setBarcodeModal({ mode: 'product', product });
+            },
+            'aria-label': barcode ? 'Изменить штрихкод продукта' : 'Добавить штрихкод продукта',
+            title: barcode ? 'Изменить штрихкод' : 'Добавить штрихкод'
+          }, '▦'),
           !isFromShared && React.createElement('button', {
             className: 'aps-delete-btn',
             onClick: (e) => handleDeleteProduct(e, product),
@@ -3491,6 +3737,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const canAddPhoto = currentPhotoCount < photoLimit;
 
     return React.createElement('div', { className: 'aps-search-step' },
+      barcodeModal && React.createElement(BarcodeScannerModal, {
+        title: barcodeModal.mode === 'product' ? 'Штрихкод продукта' : 'Сканировать упаковку',
+        subtitle: barcodeModal.mode === 'product'
+          ? (barcodeModal.product?.name || 'Продукт')
+          : 'HEYS найдёт продукт в личной и общей базе',
+        initialValue: barcodeModal.mode === 'product' ? getProductBarcode(barcodeModal.product) : '',
+        onDetected: (code) => resolveBarcodeScan(code, barcodeModal.mode === 'product' ? barcodeModal.product : null),
+        onClose: () => setBarcodeModal(null)
+      }),
       // 🍽️ Overlay «Готовые наборы»
       presetsOpen && React.createElement(MealPresetsOverlay, {
         context,
@@ -3609,6 +3864,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               }
             }, '×')
           ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
+            onClick: () => setBarcodeModal({ mode: 'search' }),
+            disabled: barcodeLookupBusy,
+            'aria-label': 'Сканировать штрихкод',
+            title: 'Сканировать штрихкод'
+          }, barcodeLookupBusy ? '…' : '▦'),
           React.createElement('label', {
             className: 'aps-shared-toggle' + (showSharedProducts ? ' is-active' : ''),
             title: showSharedProducts ? 'Общие продукты включены' : 'Включить общие продукты'
@@ -3805,6 +4068,7 @@ NOVA: 1
   function CreateProductStep({ data, onChange, context, stepData }) {
     // Берём поисковый запрос для предзаполнения названия
     const searchQuery = stepData?.search?.searchQuery || '';
+    const scannedBarcode = normalizeBarcode(stepData?.search?.scannedBarcode || data?.scannedBarcode);
     const [pasteText, setPasteText] = useState('');
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
@@ -4072,17 +4336,19 @@ NOVA: 1
             setError('Не хватает полей: ' + formatMissingFields(aiParsed.missingFields));
             return;
           }
-          setParsedPreview(aiParsed.product);
+          const product = scannedBarcode ? { ...aiParsed.product, barcode: scannedBarcode } : aiParsed.product;
+          setParsedPreview(product);
           setError('');
-          onChangeRef.current?.(prev => ({ ...prev, newProduct: aiParsed.product }));
+          onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
           return;
         }
 
         const parsed = parseProductLine(pasteText);
         if (parsed) {
-          setParsedPreview(parsed);
+          const product = scannedBarcode ? { ...parsed, barcode: scannedBarcode } : parsed;
+          setParsedPreview(product);
           setError('');
-          onChangeRef.current?.(prev => ({ ...prev, newProduct: parsed }));
+          onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
         } else if (looksLikeAi) {
           setParsedPreview(null);
           setError('Не удалось распознать AI-строку. Проверьте формат с ключами.');
@@ -4093,7 +4359,7 @@ NOVA: 1
       }, 150);
 
       return () => clearTimeout(timer);
-    }, [pasteText, parseProductLine, searchQuery, formatMissingFields]);
+    }, [pasteText, parseProductLine, searchQuery, formatMissingFields, scannedBarcode]);
 
     // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
     // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep — но
@@ -4103,7 +4369,8 @@ NOVA: 1
 
       haptic('medium');
 
-      const baseProduct = await ensureProductFingerprint(parsedPreview);
+      const productWithBarcode = scannedBarcode ? { ...parsedPreview, barcode: scannedBarcode } : parsedPreview;
+      const baseProduct = await ensureProductFingerprint(productWithBarcode);
       // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
       // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
       const preparedProduct = createMode === 'oneTime'
@@ -4148,7 +4415,7 @@ NOVA: 1
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, scannedBarcode]);
 
     // Авто-добавление fingerprint для превью (после парсинга)
     useEffect(() => {
@@ -4245,6 +4512,11 @@ NOVA: 1
       searchQuery && React.createElement('div', { className: 'aps-create-search-hint' },
         '🔍 Вы искали: ',
         React.createElement('strong', null, searchQuery)
+      ),
+
+      scannedBarcode && React.createElement('div', { className: 'aps-create-search-hint aps-create-barcode-hint' },
+        '▦ Штрихкод: ',
+        React.createElement('strong', null, scannedBarcode)
       ),
 
       // Инструкция
@@ -4388,6 +4660,7 @@ NOVA: 1
 
       return {
         name: p.name || '',
+        barcode: getProductBarcode(p),
         kcal100: kcal ? String(kcal) : '',
         carbs100: carbs ? String(carbs) : '',
         simple100: simple ? String(simple) : '',
@@ -4509,6 +4782,7 @@ NOVA: 1
       return {
         ...base,
         name,
+        barcode: normalizeBarcode(form.barcode) || null,
         simple100: finalSimple,
         complex100: finalComplex,
         protein100,
@@ -4558,6 +4832,24 @@ NOVA: 1
           onChange: (e) => updateField('name', e.target.value),
           placeholder: 'Название продукта'
         })
+      ),
+
+      React.createElement('div', { className: 'pe-field pe-field--barcode' },
+        React.createElement('label', { className: 'pe-label' }, 'Штрихкод'),
+        React.createElement('div', { className: 'pe-barcode-row' },
+          React.createElement('input', {
+            className: 'pe-input',
+            type: 'text',
+            value: form.barcode,
+            onChange: (e) => updateField('barcode', normalizeBarcode(e.target.value) || e.target.value),
+            placeholder: 'EAN / UPC'
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'pe-barcode-clear',
+            onClick: () => updateField('barcode', '')
+          }, '×')
+        )
       ),
 
       React.createElement('div', { className: 'pe-grid' },
@@ -6641,7 +6933,8 @@ NOVA: 1
             nameChanged ||
             hasNutrientChanges(product, finalProduct) ||
             (product.category || '') !== (finalProduct.category || '') ||
-            (product.description || '') !== (finalProduct.description || '');
+            (product.description || '') !== (finalProduct.description || '') ||
+            getProductBarcode(product) !== getProductBarcode(finalProduct);
 
           const sharedId = resolveSharedProductId(finalProduct);
 

@@ -328,6 +328,7 @@ const ALLOWED_COLUMNS = {
   // ⚠️  Колонки в lowercase! (badfat100, goodfat100 — NOT camelCase)
   shared_products: [
     'id', 'name', 'name_norm', 'fingerprint',
+    'barcode',
     'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',
     'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',
@@ -343,7 +344,7 @@ const ALLOWED_COLUMNS = {
   // shared_products_pending (table) — pending products for curator review (read-only via REST)
   // ⚠️  Все поля продукта внутри product_data JSONB! Не раскрываем на уровне SQL.
   shared_products_pending: [
-    'id', 'curator_id', 'client_id', 'product_data', 'name_norm', 'fingerprint',
+    'id', 'curator_id', 'client_id', 'product_data', 'name_norm', 'fingerprint', 'barcode',
     'status', 'reject_reason', 'created_at', 'moderated_at', 'moderated_by'
   ],
   // client_kv_store (table) — KV storage для данных клиентов (куратор sync)

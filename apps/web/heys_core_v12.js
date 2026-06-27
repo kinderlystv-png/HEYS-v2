@@ -2386,6 +2386,7 @@
         const normalizedProducts = sharedProducts.map((p) => ({
           id: p.id ?? null,
           name: p.name ?? null,
+          barcode: p.barcode ?? null,
           simple100: normalizeValue(p, 'simple100'),
           complex100: normalizeValue(p, 'complex100'),
           protein100: normalizeValue(p, 'protein100'),
@@ -4939,6 +4940,10 @@
           next.shared_origin_id = sharedProduct.id;
           changed = true;
         }
+        if (!next.barcode && sharedProduct.barcode) {
+          next.barcode = sharedProduct.barcode;
+          changed = true;
+        }
         // 🔧 FIX: Синхронизируем portions из shared если local пустой
         const localHasPortions = Array.isArray(next.portions) && next.portions.length > 0;
         const sharedHasPortions = Array.isArray(sharedProduct.portions) && sharedProduct.portions.length > 0;
@@ -5026,6 +5031,7 @@
         gi: toNum(sharedProduct.gi),
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
+        barcode: sharedProduct.barcode || null,
         portions: clonePortions(sharedProduct.portions),
         sodium100: toNum(sharedProduct.sodium100),
         omega3_100: toNum(sharedProduct.omega3_100),

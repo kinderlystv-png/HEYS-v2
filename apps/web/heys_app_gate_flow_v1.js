@@ -1428,7 +1428,10 @@
                                 React.createElement('span', null, `Б:${p.protein100 || 0}`),
                                 React.createElement('span', null, `У:${(p.simple100 || 0) + (p.complex100 || 0)}`),
                                 React.createElement('span', null, `Ж:${(p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)}`),
-                                p.gi && React.createElement('span', null, `ГИ:${p.gi}`)
+                                p.gi && React.createElement('span', null, `ГИ:${p.gi}`),
+                                (p.barcode || item.barcode) && React.createElement('span', {
+                                    title: 'Штрихкод упаковки'
+                                }, `▦ ${p.barcode || item.barcode}`)
                             ),
                             React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10 } },
                                 React.createElement('span', null, `👤 ${clientName}`),

@@ -3991,8 +3991,10 @@ module.exports.handler = async function (event, context) {
       },
       'create_pending_product_by_session': {
         'p_session_token': '::text',
-        'p_product_name': '::text',
-        'p_product_data': '::jsonb'
+        'p_name': '::text',
+        'p_product_data': '::jsonb',
+        'p_fingerprint': '::text',
+        'p_name_norm': '::text'
       },
       // 🔐 P3: Публикация продуктов кураторами
       'publish_shared_product_by_session': {

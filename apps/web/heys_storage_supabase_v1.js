@@ -15125,11 +15125,22 @@
    * @param {Object} options - { limit, excludeBlocklist }
    * @returns {Promise<{data: Array, error: any}>}
    */
+  function normalizeSharedProductBarcode(value) {
+    if (value == null) return '';
+    const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
+  }
+
   cloud.searchSharedProducts = async function (query, options = {}) {
-    const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
+    const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;
+    const barcodeQuery = normalizeSharedProductBarcode(barcode) || null;
     const normQuery = (HEYS?.models?.normalizeProductName
       ? HEYS.models.normalizeProductName(query)
       : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+    if (barcode != null && !barcodeQuery) {
+      return { data: [], error: null };
+    }
 
     try {
       // Внутренний helper: выполнить запрос по name_norm через ilike
@@ -15149,8 +15160,10 @@
       // Строим фильтры для YandexAPI.rest()
       const filters = {};
 
-      // Поиск по fingerprint (точное совпадение) ИЛИ по названию
-      if (fingerprint) {
+      // Поиск по barcode/fingerprint (точное совпадение) ИЛИ по названию
+      if (barcodeQuery) {
+        filters['eq.barcode'] = barcodeQuery;
+      } else if (fingerprint) {
         filters['eq.fingerprint'] = fingerprint;
       } else if (normQuery) {
         filters['ilike.name_norm'] = `%${normQuery}%`;
@@ -15174,7 +15187,7 @@
       // 🆕 Fallback для базовых опечаток (пример: "сава" → "савоярди")
       // Если точный ILIKE по подстроке дал мало результатов, пробуем более широкий префикс.
       // Это дешёвый server-side хак, чтобы покрывать 1-символьные расхождения в конце.
-      if (!fingerprint && normQuery && Array.isArray(data)) {
+      if (!barcodeQuery && !fingerprint && normQuery && Array.isArray(data)) {
         const baseCount = data.length;
         // Триггерим fallback только когда результатов действительно мало
         if (baseCount < 3 && normQuery.length >= 4) {
@@ -15271,6 +15284,7 @@
         category: product.category ?? null,
         portions: product.portions || null,
         description: product.description || null,
+        barcode: normalizeSharedProductBarcode(product.barcode) || null,
         // Extended fields (v4.4.0)
         sodium100: product.sodium100 ?? null,
         omega3_100: product.omega3_100 ?? null,
