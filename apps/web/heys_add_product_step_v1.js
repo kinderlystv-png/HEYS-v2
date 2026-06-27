@@ -2419,8 +2419,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const readyTimerRef = useRef(null);
     const startRequestRef = useRef(false);
     const cameraAutoStartKey = 'heys_barcode_camera_autostart';
+    const isIOSCameraBrowser = () => {
+      const ua = navigator.userAgent || '';
+      return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    };
 
     const shouldAutoStartCamera = useCallback(() => {
+      if (isIOSCameraBrowser()) return false;
       if (HEYS.__barcodeCameraAutoStart === true) return true;
       return readStoredValue(cameraAutoStartKey, false) === true;
     }, []);
@@ -2480,14 +2485,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       try {
         setCameraState('requesting');
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
+        const requestCamera = async (constraints) => navigator.mediaDevices.getUserMedia(constraints);
+        let stream;
+        try {
+          stream = await requestCamera({
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          });
+        } catch (primaryError) {
+          console.warn('[HEYS.barcode] primary camera constraints failed', {
+            name: primaryError?.name,
+            message: primaryError?.message
+          });
+          try {
+            stream = await requestCamera({
+              video: {
+                facingMode: 'environment'
+              },
+              audio: false
+            });
+          } catch (secondaryError) {
+            console.warn('[HEYS.barcode] environment camera fallback failed', {
+              name: secondaryError?.name,
+              message: secondaryError?.message
+            });
+            stream = await requestCamera({ video: true, audio: false });
+          }
+        }
         streamRef.current = stream;
         HEYS.__barcodeCameraAutoStart = true;
         writeStoredValue(cameraAutoStartKey, true);
@@ -2518,8 +2546,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           setError('Не удалось запустить сканер. Можно ввести код вручную.');
         }
       } catch (e) {
+        console.warn('[HEYS.barcode] camera start failed', {
+          name: e?.name,
+          message: e?.message
+        });
         cleanupCamera();
-        setError('Камера недоступна. Можно ввести код вручную.');
+        setError(isIOSCameraBrowser() && window.isSecureContext === false
+          ? 'Камера на iPhone работает только через защищённое соединение. Можно ввести код вручную.'
+          : 'Камера недоступна. Можно ввести код вручную.');
         setCameraState('manual');
       } finally {
         startRequestRef.current = false;
@@ -2577,6 +2611,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             autoPlay: true,
             muted: true,
             playsInline: true,
+            'webkit-playsinline': 'true',
             onLoadedMetadata: () => setCameraState((state) => state === 'manual' ? state : 'ready'),
             onCanPlay: () => setCameraState((state) => state === 'manual' ? state : 'ready'),
             onPlaying: () => setCameraState((state) => state === 'manual' ? state : 'ready')
@@ -2703,6 +2738,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [barcodeManager, setBarcodeManager] = useState(null);
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
     const [barcodeResults, setBarcodeResults] = useState([]);
+    const [barcodeNotice, setBarcodeNotice] = useState(null);
 
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -3536,6 +3572,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const selectProduct = useCallback((product) => {
       haptic('light');
       setBarcodeResults([]);
+      setBarcodeNotice(null);
 
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
@@ -3747,6 +3784,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       setBarcodeModal(null);
       setBarcodeResults([]);
+      setBarcodeNotice(null);
 
       if (targetProduct) {
         const saved = await saveBarcodeForProduct(targetProduct, barcode);
@@ -3804,15 +3842,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return;
         }
 
-        HEYS.Toast?.info?.('Штрихкод не найден. Добавьте продукт, код сохранится автоматически.');
-        handleNewProduct(barcode);
+        setSearchInput('');
+        setSearch('');
+        setBarcodeNotice({
+          type: 'not-found',
+          text: 'По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.'
+        });
+        requestAnimationFrame(() => inputRef.current?.focus());
       } catch (e) {
-        HEYS.Toast?.warning?.('Не удалось проверить общую базу. Можно добавить продукт вручную.');
-        handleNewProduct(barcode);
+        setSearchInput('');
+        setSearch('');
+        setBarcodeNotice({
+          type: 'error',
+          text: 'Не удалось проверить штрихкод. Попробуйте ещё раз или воспользуйтесь поиском по названию.'
+        });
+        requestAnimationFrame(() => inputRef.current?.focus());
       } finally {
         setBarcodeLookupBusy(false);
       }
-    }, [latestProducts, selectProduct, handleNewProduct, saveBarcodeForProduct]);
+    }, [latestProducts, selectProduct, saveBarcodeForProduct]);
 
     // Обработчик выбора фото
     const handlePhotoSelect = useCallback((e) => {
@@ -4292,6 +4340,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onChange: (e) => {
                 setSearchInput(e.target.value);
                 setBarcodeResults([]);
+                setBarcodeNotice(null);
               },
               autoComplete: 'off',
               autoCorrect: 'off',
@@ -4303,12 +4352,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 setSearchInput('');
                 setSearch('');
                 setBarcodeResults([]);
+                setBarcodeNotice(null);
               }
             }, '×'),
             React.createElement('button', {
               type: 'button',
               className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
-              onClick: () => setBarcodeModal({ mode: 'search' }),
+              onClick: () => {
+                setBarcodeNotice(null);
+                setBarcodeModal({ mode: 'search' });
+              },
               disabled: barcodeLookupBusy,
               'aria-label': 'Сканировать штрихкод',
               title: 'Сканировать штрихкод'
@@ -4326,6 +4379,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('span', { className: 'aps-shared-toggle__icon', 'aria-hidden': 'true' }, '🌐'),
             React.createElement('span', { className: 'aps-shared-toggle__label' }, 'Общие')
           )
+        ),
+        barcodeNotice && React.createElement('div', {
+          className: 'aps-barcode-notice' + (barcodeNotice.type === 'error' ? ' is-error' : ''),
+          role: 'status',
+          'aria-live': 'polite'
+        },
+          React.createElement('span', { className: 'aps-barcode-notice__icon', 'aria-hidden': 'true' }, 'i'),
+          React.createElement('span', null, barcodeNotice.text)
         )
       ),
 

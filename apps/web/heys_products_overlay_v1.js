@@ -441,14 +441,14 @@
           const _nrm = String(r.name).trim().toLowerCase();
           if (_tombNames.has(_nrm)) continue;
         }
-        out.push(r);
+        out.push(_withNormalizedBarcodes(r));
         continue;
       }
       const base = sharedById && sharedById.get(String(r.shared_origin_id));
       if (!base) {
         // Shared row missing for a Type A overlay — keep overlay as-is so the row
         // does not vanish from UI. Future shared refresh re-merges.
-        out.push(r);
+        out.push(_withNormalizedBarcodes(r));
         continue;
       }
       // Type A row — merge with shared base. Skip if shared base name is tombstoned
@@ -463,7 +463,7 @@
         fingerprint: r.fingerprint || base.fingerprint,
         user_modified: !!r.user_modified,
       });
-      out.push(merged);
+      out.push(_withNormalizedBarcodes(merged));
     }
 
     // Dev-mode: freeze to fail fast on accidental mutation.
@@ -615,6 +615,38 @@
   function _normalizeName(n) {
     return String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е');
   }
+  function _normalizeBarcode(value) {
+    if (value == null) return '';
+    const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
+  }
+  function _getBarcodes(product) {
+    const raw = [
+      product && product.barcode,
+      ...(Array.isArray(product && product.barcodes) ? product.barcodes : []),
+      product && product.ean,
+      product && product.upc,
+      product && product.barcode_value,
+    ];
+    const seen = new Set();
+    const out = [];
+    raw.forEach(function (value) {
+      const code = _normalizeBarcode(value);
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      out.push(code);
+    });
+    return out;
+  }
+  function _withNormalizedBarcodes(product) {
+    if (!product) return product;
+    const barcodes = _getBarcodes(product);
+    if (barcodes.length === 0) return product;
+    return Object.assign({}, product, {
+      barcode: barcodes[0],
+      barcodes,
+    });
+  }
   function _getSharedAuxIndexes(sharedById) {
     if (_sharedByFingerprintRef !== sharedById) {
       const byFp = new Map();
@@ -624,7 +656,7 @@
         if (!sp) return;
         if (sp.fingerprint) byFp.set(String(sp.fingerprint), sp);
         if (sp.name) byName.set(_normalizeName(sp.name), sp);
-        if (sp.barcode) byBarcode.set(String(sp.barcode).trim().replace(/[\s-]+/g, '').toUpperCase(), sp);
+        _getBarcodes(sp).forEach(function (code) { byBarcode.set(code, sp); });
       });
       _sharedByFingerprint = byFp;
       _sharedByName = byName;
@@ -679,8 +711,12 @@
           sharedRow = aux.byFingerprint.get(String(p.fingerprint));
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
-        if (!sharedRow && p.barcode) {
-          sharedRow = aux.byBarcode.get(String(p.barcode).trim().replace(/[\s-]+/g, '').toUpperCase());
+        if (!sharedRow) {
+          const productBarcodes = _getBarcodes(p);
+          for (let bi = 0; bi < productBarcodes.length; bi++) {
+            sharedRow = aux.byBarcode.get(productBarcodes[bi]);
+            if (sharedRow) break;
+          }
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
         if (!sharedRow && p.name) {
@@ -699,8 +735,13 @@
         if (p.name && p.name !== sharedRow.name) {
           overrides.name = p.name;
         }
-        if (p.barcode && p.barcode !== sharedRow.barcode) {
-          overrides.barcode = p.barcode;
+        const localBarcodes = _getBarcodes(p);
+        const sharedBarcodes = _getBarcodes(sharedRow);
+        const missingLocalBarcodes = localBarcodes.filter(function (code) { return !sharedBarcodes.includes(code); });
+        if (missingLocalBarcodes.length > 0) {
+          const mergedBarcodes = localBarcodes.concat(sharedBarcodes.filter(function (code) { return !localBarcodes.includes(code); }));
+          overrides.barcode = mergedBarcodes[0] || null;
+          overrides.barcodes = mergedBarcodes;
         }
         if (Array.isArray(p.portions) && p.portions.length > 0) {
           // Portions: store full array as override on any content diff.
@@ -1043,6 +1084,8 @@
     _sharedByFingerprint = null;
     _sharedByNameRef = null;
     _sharedByName = null;
+    _sharedByBarcodeRef = null;
+    _sharedByBarcode = null;
   }
 
   HEYS.OverlayStore = {

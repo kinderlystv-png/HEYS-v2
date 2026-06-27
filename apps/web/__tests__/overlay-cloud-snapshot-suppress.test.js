@@ -80,4 +80,54 @@ describe('OverlayStore cloud snapshot sync suppression', () => {
       expect.arrayContaining([expect.objectContaining({ id: 'p2' })])
     );
   });
+
+  it('normalizes legacy barcode override into barcodes in merged view', () => {
+    const { context } = createOverlayHarness();
+    const sharedById = new Map([
+      ['shared-1', { id: 'shared-1', name: 'Ассорти Bombbar протеиновые снеки' }],
+    ]);
+
+    context.HEYS.OverlayStore.writeRaw([
+      {
+        id: 'local-1',
+        shared_origin_id: 'shared-1',
+        overrides: { barcode: '4660298503056' },
+        in_my_list: true,
+      },
+    ]);
+
+    const merged = context.HEYS.OverlayStore.toMergedView(sharedById);
+    expect(merged[0]).toMatchObject({
+      id: 'local-1',
+      barcode: '4660298503056',
+      barcodes: ['4660298503056'],
+    });
+  });
+
+  it('links legacy products to shared rows by any shared barcode alias', () => {
+    const { context } = createOverlayHarness();
+    const sharedById = new Map([
+      ['shared-2', {
+        id: 'shared-2',
+        name: 'Alias product',
+        barcode: '111111',
+        barcodes: ['111111', '222222'],
+      }],
+    ]);
+
+    const result = context.HEYS.OverlayStore.migrate([
+      { id: 'local-2', name: 'Alias product local', barcode: '222222' },
+    ], sharedById);
+
+    expect(result.ok).toBe(true);
+    expect(result.rows[0]).toMatchObject({
+      id: 'local-2',
+      shared_origin_id: 'shared-2',
+    });
+    context.HEYS.OverlayStore.writeRaw(result.rows);
+    expect(context.HEYS.OverlayStore.toMergedView(sharedById)[0]).toMatchObject({
+      barcode: '111111',
+      barcodes: ['111111', '222222'],
+    });
+  });
 });

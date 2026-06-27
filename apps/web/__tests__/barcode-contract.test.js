@@ -80,6 +80,8 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('const getProductBarcodes');
     expect(addProduct).toContain('mergeProductBarcode');
     expect(addProduct).toContain('Штрихкод отправлен на проверку для общей базы');
+    expect(addProduct).toContain('По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
+    expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
     expect(storage).toContain('function normalizeSharedProductBarcode(value)');
     expect(storage).toContain('function normalizeSharedProductBarcodes');
     expect(storage).toContain("replace(/[^0-9A-Z]/g, '')");
