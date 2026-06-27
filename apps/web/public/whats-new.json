@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.27.4e2d8df7",
+      "buildHash": "4e2d8df7",
+      "date": "2026-06-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "prevent duplicate workout log entries",
+      "items": [
+        {
+          "type": "fix",
+          "title": "prevent duplicate workout log entries",
+          "description": "prevent duplicate workout log entries"
+        }
+      ],
+      "coveredCommits": ["4e2d8df7", "f518b4ff"]
+    },
+    {
       "version": "2026.06.27.79e2721d",
       "buildHash": "79e2721d",
       "date": "2026-06-27",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["e0a69d4d", "5efd1f01"]
-    },
-    {
-      "version": "2026.06.21.2f10b8e0",
-      "buildHash": "2f10b8e0",
-      "date": "2026-06-21",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Обучение и демо обновлены",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Старое обучение выключено",
-          "description": "Устаревший тур обучения больше не запускается автоматически или из настроек. В публичном демо убран лишний запрос согласий, а текст лендинга и хронометраж обновлены под текущий сценарий."
-        }
-      ],
-      "coveredCommits": ["2f10b8e0", "b2caba0d", "57230d54"]
     }
   ]
 }
