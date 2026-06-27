@@ -220,8 +220,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     notifyPortionsUpdated(updated, portions);
   };
 
+  const upsertProductOverlayRow = (product, isUserEdit = true) => {
+    if (!product || !isOverlayProductsEnabledForAddStep()) return false;
+    const Overlay = HEYS.OverlayStore;
+    if (!Overlay || typeof Overlay.upsertRow !== 'function' || typeof Overlay.readRaw !== 'function') return false;
+
+    const pid = product.id ?? product.product_id ?? product.name;
+    if (pid == null) return false;
+
+    const rows = Overlay.readRaw() || [];
+    const sharedId = resolveSharedProductId(product);
+    const existingRow = rows.find((row) => {
+      if (!row) return false;
+      if (String(row.id) === String(pid)) return true;
+      return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
+    });
+
+    if (sharedId) {
+      const overrides = {
+        ...(existingRow?.overrides || {})
+      };
+      const barcode = normalizeBarcode(product.barcode);
+      if (barcode) overrides.barcode = barcode;
+      else delete overrides.barcode;
+
+      return Overlay.upsertRow({
+        ...(existingRow || {}),
+        id: existingRow?.id ?? pid,
+        shared_origin_id: sharedId,
+        fingerprint: product.fingerprint || existingRow?.fingerprint || null,
+        overrides,
+        in_my_list: true,
+        user_modified: existingRow?.user_modified === true || product.user_modified === true || !!isUserEdit
+      });
+    }
+
+    return Overlay.upsertRow({
+      ...(existingRow || {}),
+      ...product,
+      id: pid,
+      barcode: normalizeBarcode(product.barcode) || null,
+      _custom: true,
+      in_my_list: true,
+      user_modified: existingRow?.user_modified === true || product.user_modified === true || !!isUserEdit
+    });
+  };
+
   const upsertLocalProduct = (product, isUserEdit = true) => {
-    if (!product) return;
+    if (!product) return { product: null, overlaySaved: false };
     const U = HEYS.utils || {};
     const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
     const pid = String(product.id ?? product.product_id ?? product.name);
@@ -255,6 +301,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (idx !== -1) {
       cascadeMealItemsOnProductUpdate(products[idx], nextProducts[idx]);
     }
+
+    const savedProduct = idx === -1 ? nextProducts[nextProducts.length - 1] : nextProducts[idx];
+    const overlaySaved = upsertProductOverlayRow(savedProduct, isUserEdit);
+    return { product: savedProduct, overlaySaved };
   };
 
   const hasCuratorJwt = () => {
@@ -3423,8 +3473,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (sharedId && isCuratorUser()) {
         const result = await updateSharedProduct(updatedProduct, sharedId);
         if (!result.ok) return false;
-        upsertLocalProduct(updatedProduct, false);
-        notifyProductUpdated(updatedProduct);
+        const localSave = upsertLocalProduct(updatedProduct, false);
+        notifyProductUpdated(localSave.product || updatedProduct);
         HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
         return true;
       }
@@ -3434,9 +3484,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return false;
       }
 
-      upsertLocalProduct(updatedProduct, true);
-      notifyProductUpdated(updatedProduct);
-      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}»`);
+      const localSave = upsertLocalProduct(updatedProduct, true);
+      notifyProductUpdated(localSave.product || updatedProduct);
+      if (isOverlayProductsEnabledForAddStep() && !localSave.overlaySaved) {
+        HEYS.Toast?.warning?.(`Штрихкод ${barcode} сохранён локально, но облачная синхронизация сейчас недоступна`);
+        return true;
+      }
+      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}» и синхронизируется`);
       return true;
     }, [latestProducts]);
 

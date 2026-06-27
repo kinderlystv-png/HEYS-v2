@@ -64,6 +64,9 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain("'aria-label': 'Сканировать штрихкод'");
     expect(addProduct).toContain("'aria-label': barcode ? 'Изменить штрихкод продукта' : 'Добавить штрихкод продукта'");
     expect(addProduct).toContain("HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 })");
+    expect(addProduct).toContain('const upsertProductOverlayRow');
+    expect(addProduct).toContain('Overlay.upsertRow');
+    expect(addProduct).toContain('и синхронизируется');
     expect(storage).toContain('function normalizeSharedProductBarcode(value)');
     expect(storage).toContain("replace(/[^0-9A-Z]/g, '')");
     expect(storage).toContain('cleaned.length >= 6 && cleaned.length <= 32');
