@@ -35,10 +35,11 @@
 
 > **Рядовые агенты whats-new не трогают** — они коммитят source-only (см.
 > «Параллельная работа агентов» в корневом CLAUDE.md). Релизный текст
-> формулирует **интегратор** для одного integration-прохода:
+> формулирует **интегратор** для одного явно разрешённого integration/shipping
+> прохода:
 >
 > ```bash
-> pnpm agents:integrate --branches=auto --yes \
+> pnpm agents:integrate --confirm-integration --branches=auto --yes \
 >   --title="Синхронизация активностей стала устойчивее" \
 >   --items='[{"type":"fix","title":"...","description":"..."}]'
 > ```
@@ -46,10 +47,11 @@
 > `coveredCommits` (какие user-facing коммиты покрыты) проставляется
 > автоматически из push-range.
 
-Для одиночного technical/ручного пуша с явным релизным текстом:
+Для одиночного technical/ручного пуша с явной командой на push и явным релизным
+текстом:
 
 ```bash
-pnpm push:agent -- --title="Синхронизация активностей стала устойчивее" \
+pnpm push:agent -- --confirm-push --title="Синхронизация активностей стала устойчивее" \
   --item-title="Удалённые круги активностей больше не возвращаются из старой копии" \
   --item-description="Если круг активности удалён на одном устройстве, приложение защищает эту правку от старых данных, которые могли прийти во время синхронизации."
 ```
@@ -83,7 +85,7 @@ pnpm push:agent -- --dry-run --no-push --title="..." \
 Для нестандартного remote или ветки:
 
 ```bash
-pnpm push:agent -- --remote=origin --branch=main --title="..." \
+pnpm push:agent -- --confirm-push --remote=origin --branch=main --title="..." \
   --item-title="..." \
   --item-description="..."
 ```
@@ -92,7 +94,7 @@ pnpm push:agent -- --remote=origin --branch=main --title="..." \
 сценария:
 
 ```bash
-pnpm push:agent -- --no-watch --title="..." \
+pnpm push:agent -- --confirm-push --no-watch --title="..." \
   --item-title="..." \
   --item-description="..."
 ```

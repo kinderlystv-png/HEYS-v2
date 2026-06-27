@@ -64,8 +64,10 @@ fetch('https://api.heyslab.ru/auth/curator', {
 
 ### IDOR-защита (session_token pattern)
 
-**Правило:** Никогда не передавать `client_id` напрямую в API. Использовать
-только `*_by_session` RPC-функции с `session_token`:
+**Правило:** Никогда не доверять browser-supplied `client_id` как authority.
+Сервер должен резолвить canonical client через `session_token`, curator
+ownership check или server-issued `context_id`. Для client-session RPC
+использовать `*_by_session` функции с `session_token`:
 
 ```javascript
 // ❌ НЕБЕЗОПАСНО — прямой UUID, IDOR уязвимость

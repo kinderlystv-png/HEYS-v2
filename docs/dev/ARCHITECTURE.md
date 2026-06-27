@@ -19,7 +19,7 @@ HEYS-v2/
 │   ├── heys_storage_layer_v1.js # Storage layer (HEYS.store)
 │   ├── heys_yandex_api_v1.js # API client for Yandex Cloud Functions
 │   └── heys_simple_analytics.js # Minimal performance tracking
-├── apps/landing/          # Next.js 14 landing page (https://heyslab.ru)
+├── apps/landing/          # Next.js 15.5 landing page (https://heyslab.ru)
 ├── yandex-cloud-functions/ # Serverless API (7 функций)
 │   ├── heys-api-rpc/     # PostgreSQL RPC operations
 │   ├── heys-api-rest/    # REST CRUD endpoints
@@ -86,7 +86,7 @@ HEYS-v2/
 | **Subscriptions**   | `heys_subscriptions_v1.js`, `heys_morning_checkin_v1.js`           |
 | **Analytics**       | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`, `heys_cycle_v1.js` |
 | **Legal**           | `heys_consents_v1.js`, `heys_sms_v1.js`, `docs/legal/`             |
-| **Landing**         | `apps/landing/` (Next.js 14, YandexAPI, Telegram)                  |
+| **Landing**         | `apps/landing/` (Next.js 15.5, YandexAPI, Telegram)                |
 | **Models**          | `heys_models_v1.js`                                                |
 | **Storage**         | `heys_storage_layer_v1.js`                                         |
 | **UI**              | `heys_user_v12.js`, `heys_reports_v12.js`                          |

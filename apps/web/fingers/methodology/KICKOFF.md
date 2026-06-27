@@ -88,8 +88,10 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs
 node apps/web/fingers/methodology/tools/school-weights.mjs --check
 ```
 
-Legacy bundle rebuild и браузерный QA (`pnpm dev:local`) запускаются только как
-отдельный integration/release шаг по явной команде.
+Для methodology/source-only правок legacy bundle rebuild и браузерный QA не
+нужны. Если правка затрагивает web/UI runtime, действуют корневые правила:
+scoped local QA через `pnpm bundle:legacy:auto --files=<свои source-файлы>` +
+`pnpm dev:local`; full rebuild/integration/release — только по явной команде.
 
 ## Стратегия: strangler-fig (в том же режиме `fingers`)
 
@@ -126,8 +128,10 @@ Legacy bundle rebuild и браузерный QA (`pnpm dev:local`) запуск
 
 ## Дисциплина git (HEYS-v2 CLAUDE.md)
 
-- Коммит через `pnpm ship "<msg>"`. **`git push` — только по явной команде**
-  пользователя. Approval задачи ≠ approval push.
+- Без отдельной явной команды commit/shipping не stage'ить под commit и не
+  коммитить. Если commit/shipping явно разрешён — выбрать intended scope и
+  коммитить через `pnpm ship "<msg>"`. **`git push` — только по явной команде**
+  пользователя. Approval задачи ≠ approval commit/push.
 - `--no-verify` — только с явного разрешения.
 
 ## Открытый бэклог

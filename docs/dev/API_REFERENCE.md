@@ -1,32 +1,32 @@
 # 🌐 HEYS API Reference
 
-> API Gateway: `https://api.heyslab.ru`
-> Database: Yandex.Cloud PostgreSQL (152-ФЗ compliant)
+> API Gateway: `https://api.heyslab.ru` Database: Yandex.Cloud PostgreSQL
+> (152-ФЗ compliant)
 
 ---
 
 ## Архитектура
 
-| Компонент    | URL                    | Назначение          |
-| ------------ | ---------------------- | ------------------- |
-| **PWA**      | `https://app.heyslab.ru`  | Основное приложение |
-| **Landing**  | `https://heyslab.ru`   | Лендинг             |
-| **API**      | `https://api.heyslab.ru`  | API Gateway         |
+| Компонент    | URL                      | Назначение          |
+| ------------ | ------------------------ | ------------------- |
+| **PWA**      | `https://app.heyslab.ru` | Основное приложение |
+| **Landing**  | `https://heyslab.ru`     | Лендинг             |
+| **API**      | `https://api.heyslab.ru` | API Gateway         |
 | **Database** | `rc1b-*.yandexcloud.net` | PostgreSQL 16       |
 
 ---
 
 ## API Endpoints
 
-| Endpoint            | Метод    | Функция           | Статус |
-| ------------------- | -------- | ----------------- | ------ |
-| `/rpc`              | POST     | heys-api-rpc      | ✅     |
-| `/rest/*`           | GET/POST | heys-api-rest     | ✅     |
-| `/sms`              | POST     | heys-api-sms      | ✅     |
-| `/leads`            | POST     | heys-api-leads    | ✅     |
-| `/health`           | GET      | heys-api-health   | ✅     |
-| `/auth/*`           | POST     | heys-api-auth     | ✅     |
-| `/payments/*`       | *        | heys-api-payments | ⏳     |
+| Endpoint      | Метод    | Функция           | Статус |
+| ------------- | -------- | ----------------- | ------ |
+| `/rpc`        | POST     | heys-api-rpc      | ✅     |
+| `/rest/*`     | GET/POST | heys-api-rest     | ✅     |
+| `/sms`        | POST     | heys-api-sms      | ✅     |
+| `/leads`      | POST     | heys-api-leads    | ✅     |
+| `/health`     | GET      | heys-api-health   | ✅     |
+| `/auth/*`     | POST     | heys-api-auth     | ✅     |
+| `/payments/*` | \*       | heys-api-payments | ⏳     |
 
 ---
 
@@ -66,15 +66,17 @@ const data = await HEYS.YandexAPI.rest('clients', { method: 'GET' });
 
 ## Security Patterns
 
-| Паттерн               | Реализация                                |
-| --------------------- | ----------------------------------------- |
-| **Session-based RPC** | `*_by_session` функции вместо UUID params |
-| **Phone enumeration** | Unified `invalid_credentials` response    |
-| **PIN hashing**       | `pgcrypto.crypt()` с `gen_salt('bf')`     |
-| **Rate limiting**     | `pin_login_attempts` таблица              |
-| **CORS**              | Whitelist: `app.heyslab.ru`, `heyslab.ru` |
+| Паттерн                             | Реализация                                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Server-resolved client identity** | `*_by_session` for client sessions; curator ownership or server-issued `context_id` for other flows |
+| **Phone enumeration**               | Unified `invalid_credentials` response                                                              |
+| **PIN hashing**                     | `pgcrypto.crypt()` с `gen_salt('bf')`                                                               |
+| **Rate limiting**                   | `pin_login_attempts` таблица                                                                        |
+| **CORS**                            | Whitelist: `app.heyslab.ru`, `heyslab.ru`                                                           |
 
-⚠️ **КРИТИЧНО**: Никогда не передавай `client_id` напрямую в RPC — используй `session_token` + `*_by_session` функции!
+⚠️ **КРИТИЧНО**: Никогда не доверяй browser-supplied `client_id` как authority.
+Сервер должен резолвить canonical client через `session_token` + `*_by_session`,
+curator ownership check или server-issued `context_id`.
 
 ---
 

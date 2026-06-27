@@ -168,7 +168,7 @@ Move logic from legacy to modern when all criteria are true:
 
 ```
 apps/web/          - PWA (Vite + React 18), port 3001
-apps/landing/      - Marketing landing (Next.js 14), port 3003
+apps/landing/      - Marketing landing (Next.js 15.5), port 3003
 apps/tg-mini/      - Telegram Mini App, port 3002
 apps/mobile/       - DISABLED (not in active development)
 ```
@@ -236,8 +236,10 @@ Client:
 
 ### IDOR Protection
 
-- All client RPCs use `*_by_session` pattern — `client_id` is never passed
-  directly
+- Browser-supplied `client_id` is never trusted as authority. Server resolves
+  canonical client identity from `session_token`, curator ownership, or a
+  server-issued `context_id`; PIN/client-session RPCs use the `*_by_session`
+  pattern where applicable.
 - Blocked legacy functions: `verify_client_pin`, `get_client_data`,
   `upsert_client_kv`, etc.
 
@@ -278,8 +280,8 @@ attempts.
 | `postboot-2-insights` | all pi\_\*.js                           | ~350 KB     |
 | `postboot-3-ui`       | modals, reports, widgets                | ~256 KB     |
 
-Rebuild: `node scripts/bundle-legacy.mjs`. Local deploy:
-`bash scripts/deploy-frontend.sh`.
+Rebuild: `node scripts/bundle-legacy.mjs`. Local deploy after explicit deploy
+approval: `bash scripts/deploy-frontend.sh --confirm-deploy`.
 
 ### Caching Strategy
 

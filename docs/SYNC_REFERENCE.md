@@ -146,8 +146,10 @@ For complete mode-by-mode behavior (auth, events, gamification, UI gates), see
 
 ### Session-based RPC (IDOR protection)
 
-All client RPC functions use `*_by_session` pattern. `client_id` is **never
-passed directly** -- the server resolves it from `session_token`:
+Client session RPC functions use the `*_by_session` pattern. Browser-supplied
+`client_id` is **never trusted** as authority -- the server resolves canonical
+client identity from `session_token`, curator ownership, or a server-issued
+`context_id` depending on the flow:
 
 ```javascript
 // Correct

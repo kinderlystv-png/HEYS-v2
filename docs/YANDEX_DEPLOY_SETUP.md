@@ -1,6 +1,7 @@
 # 🚀 Настройка деплоя на Yandex Cloud
 
 > Этот документ описывает настройку автоматического деплоя на Yandex Cloud:
+>
 > - **PWA** (apps/web) → `heys-app` bucket → `app.heyslab.ru`
 > - **Landing** (apps/landing) → `heys-static` bucket → `heyslab.ru`
 > - **API** → Cloud Functions → `api.heyslab.ru`
@@ -53,7 +54,7 @@ yc storage bucket create \
   --default-storage-class standard \
   --max-size 1073741824
 
-# Bucket для Landing (heyslab.ru)  
+# Bucket для Landing (heyslab.ru)
 yc storage bucket create \
   --name heys-static \
   --default-storage-class standard \
@@ -114,35 +115,35 @@ yc iam access-key create --service-account-name heys-deploy
 
 ### 🔑 Основные секреты (обязательные)
 
-| Secret Name            | Описание                          | Как получить                           |
-| ---------------------- | --------------------------------- | -------------------------------------- |
-| `YC_ACCESS_KEY_ID`     | Access Key ID сервисного аккаунта | `yc iam access-key create`             |
-| `YC_SECRET_ACCESS_KEY` | Secret Access Key                 | `yc iam access-key create`             |
-| `YC_OAUTH_TOKEN`       | OAuth токен для YC CLI            | `yc config get token`                  |
-| `YC_CLOUD_ID`          | ID облака                         | `yc config get cloud-id`               |
-| `YC_FOLDER_ID`         | ID папки                          | `yc config get folder-id`              |
+| Secret Name            | Описание                          | Как получить               |
+| ---------------------- | --------------------------------- | -------------------------- |
+| `YC_ACCESS_KEY_ID`     | Access Key ID сервисного аккаунта | `yc iam access-key create` |
+| `YC_SECRET_ACCESS_KEY` | Secret Access Key                 | `yc iam access-key create` |
+| `YC_OAUTH_TOKEN`       | OAuth токен для YC CLI            | `yc config get token`      |
+| `YC_CLOUD_ID`          | ID облака                         | `yc config get cloud-id`   |
+| `YC_FOLDER_ID`         | ID папки                          | `yc config get folder-id`  |
 
 ### 🌐 CDN секреты (опционально, для cache invalidation)
 
-| Secret Name           | Описание          | Текущее значение          |
-| --------------------- | ----------------- | ------------------------- |
-| `YC_CDN_PWA_ID`       | CDN для PWA       | `bc8rktbgbmpyezsxnzrn`    |
-| `YC_CDN_LANDING_ID`   | CDN для Landing   | `bc8rk3pnqppsfime3nth`    |
+| Secret Name         | Описание        | Текущее значение       |
+| ------------------- | --------------- | ---------------------- |
+| `YC_CDN_PWA_ID`     | CDN для PWA     | `bc8rktbgbmpyezsxnzrn` |
+| `YC_CDN_LANDING_ID` | CDN для Landing | `bc8rk3pnqppsfime3nth` |
 
 ### ⚡ Cloud Functions секреты (для деплоя функций)
 
-| Secret Name           | Описание                      | Функции которые используют |
-| --------------------- | ----------------------------- | -------------------------- |
-| `PG_HOST`             | PostgreSQL хост               | rpc, rest, leads, auth     |
-| `PG_USER`             | PostgreSQL пользователь       | rpc, rest, leads, auth     |
-| `PG_PASSWORD`         | PostgreSQL пароль             | rpc, rest, leads, auth     |
-| `JWT_SECRET`          | Секрет для JWT токенов        | auth                       |
-| `SMS_API_KEY`         | API ключ SMS.ru               | sms                        |
-| `TELEGRAM_BOT_TOKEN`  | Токен Telegram бота           | leads                      |
-| `TELEGRAM_CHAT_ID`    | Chat ID для уведомлений       | leads                      |
-| `YC_FOLDER_ID`         | ID папки                            | `b1g...`                   |
-| `YC_CDN_RESOURCE_ID`   | ID CDN ресурса (опционально)        | `bc8...`                   |
-| `YC_IAM_TOKEN`         | IAM токен для CDN API (опционально) | Генерируется автоматически |
+| Secret Name          | Описание                            | Функции которые используют |
+| -------------------- | ----------------------------------- | -------------------------- |
+| `PG_HOST`            | PostgreSQL хост                     | rpc, rest, leads, auth     |
+| `PG_USER`            | PostgreSQL пользователь             | rpc, rest, leads, auth     |
+| `PG_PASSWORD`        | PostgreSQL пароль                   | rpc, rest, leads, auth     |
+| `JWT_SECRET`         | Секрет для JWT токенов              | auth                       |
+| `SMS_API_KEY`        | API ключ SMS.ru                     | sms                        |
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram бота                 | leads                      |
+| `TELEGRAM_CHAT_ID`   | Chat ID для уведомлений             | leads                      |
+| `YC_FOLDER_ID`       | ID папки                            | `b1g...`                   |
+| `YC_CDN_RESOURCE_ID` | ID CDN ресурса (опционально)        | `bc8...`                   |
+| `YC_IAM_TOKEN`       | IAM токен для CDN API (опционально) | Генерируется автоматически |
 
 ---
 
@@ -159,15 +160,15 @@ yc iam access-key create --service-account-name heys-deploy
 
 ### Настройки кэширования
 
-| Путь            | TTL           | Описание                    |
-| --------------- | ------------- | --------------------------- |
-| `/*.html`       | 0             | Без кэша для PWA-обновлений |
-| `/sw.js`        | 0             | Service Worker без кэша     |
-| `/build-meta.json` | 0         | Версия приложения (source)  |
-| `/version.json`    | 0         | Legacy fallback             |
-| `/manifest.*`   | 0             | PWA манифест                |
-| `/assets/*`     | 31536000 (1y) | Статика с хэшами            |
-| `/*`            | 86400 (1d)    | Остальное                   |
+| Путь               | TTL           | Описание                    |
+| ------------------ | ------------- | --------------------------- |
+| `/*.html`          | 0             | Без кэша для PWA-обновлений |
+| `/sw.js`           | 0             | Service Worker без кэша     |
+| `/build-meta.json` | 0             | Версия приложения (source)  |
+| `/version.json`    | 0             | Legacy fallback             |
+| `/manifest.*`      | 0             | PWA манифест                |
+| `/assets/*`        | 31536000 (1y) | Статика с хэшами            |
+| `/*`               | 86400 (1d)    | Остальное                   |
 
 ---
 
@@ -213,6 +214,7 @@ heys.app.    CNAME  <CDN_CNAME>.gcdn.co.
 ```bash
 # Откатить на предыдущий коммит
 git revert HEAD
+# Только после явной команды на rollback push.
 git push origin main
 
 # Или вручную загрузить предыдущую версию

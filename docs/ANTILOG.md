@@ -374,7 +374,7 @@ overhead.
 
 ## Бонус: Next.js (apps/landing)
 
-Next.js 14 имеет встроенную опцию — добавить в
+Next.js имеет встроенную опцию — добавить в
 [apps/landing/next.config.js](../apps/landing/next.config.js):
 
 ```js

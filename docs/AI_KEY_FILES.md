@@ -125,5 +125,5 @@
 >   таба при каждом фул-синке).
 > - `heys_app_shell_v1.js` — React `key` у `DayTabWithCloudSync`: должен быть
 >   `'day_' + clientId + '_' + date` (без syncVer).
-> - `scripts/deploy-frontend.sh` — локальный быстрый деплой: пересборка
->   бандлов + upload boot/postboot/react/index/bundle-manifest.
+> - `scripts/deploy-frontend.sh --confirm-deploy` — локальный быстрый деплой:
+>   пересборка бандлов + upload boot/postboot/react/index/bundle-manifest.

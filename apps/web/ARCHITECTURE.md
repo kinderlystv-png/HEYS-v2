@@ -132,7 +132,7 @@ paths when overlay is non-empty.
 | [heys_storage_supabase_v1.js](heys_storage_supabase_v1.js)                         | `cloud.getSharedIndex`, `interceptSetItem`, `applyForegroundHotSyncValue` overlay branch, `CLIENT_SPECIFIC_KEYS`  |
 | [heys_app_tabs_v1.js](heys_app_tabs_v1.js)                                         | `runOverlayMigrationOnce` boot trigger, curator-session orphan-recovery gate, migration v4 self-heal              |
 | [heys_day_utils.js](heys_day_utils.js)                                             | `autoRecoverOnLoad` scopes dayv2 scan to current clientId                                                         |
-| [scripts/lint-shared-cache-writes.mjs](../../scripts/lint-shared-cache-writes.mjs) | pre-commit gate: `_sharedProductsCache =` always pairs with `_invalidateSharedIndex()`                            |
+| [scripts/lint-shared-cache-writes.mjs](../../scripts/lint-shared-cache-writes.mjs) | manual guard (`pnpm lint:shared-cache`): `_sharedProductsCache =` always pairs with `_invalidateSharedIndex()`    |
 
 ---
 
@@ -392,8 +392,9 @@ leaderboard*\*, client_change_markers, pending_products, client_kv_store).
 ### Protected RPC access
 
 Фронт ходит в облако **только** через `HEYS.YandexAPI.rpc()` / `.rest()`.
-Защищённые RPC — это `*_by_session`-варианты + `session_token`; **никогда не
-передавать `client_id` напрямую** (client разрешается из сессии на бэкенде).
+Browser-supplied `client_id` не является authority: сервер резолвит canonical
+client через `session_token`, curator ownership или server-issued `context_id`.
+Для client-session RPC используется `*_by_session` + `session_token`.
 
 ### Migrations
 

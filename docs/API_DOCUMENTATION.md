@@ -38,8 +38,8 @@ await HEYS.YandexAPI.rpc('client_pin_auth', {
 });
 // Returns: { session_token, client_id, name, curator_id }
 
-// Все последующие RPC вызовы используют session_token автоматически
-// (через HEYS.YandexAPI — не передавай client_id напрямую!)
+// Все последующие client-session RPC вызовы используют session_token автоматически.
+// Browser-supplied client_id не является authority: сервер резолвит canonical client.
 ```
 
 ### Кураторы (email + password → JWT)
@@ -56,8 +56,10 @@ fetch('https://api.heyslab.ru/auth/curator', {
 // Дальнейшие API запросы: Authorization: Bearer <JWT>
 ```
 
-> **ПРАВИЛО:** Никогда не передавай `client_id` напрямую в RPC. Всегда используй
-> `*_by_session` pattern с `session_token`.
+> **ПРАВИЛО:** Никогда не доверяй browser-supplied `client_id` как authority.
+> Сервер должен резолвить canonical client через `session_token`, curator
+> ownership check или server-issued `context_id`. Для client-session RPC
+> используй `*_by_session` pattern с `session_token`.
 
 ## 📊 Core APIs
 

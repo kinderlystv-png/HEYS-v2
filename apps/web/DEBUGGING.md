@@ -161,9 +161,11 @@ bug:
 
 ## Common gotchas
 
-1. **Service Worker / Vite cache** can serve stale bundles. After
-   `pnpm bundle:legacy`, restart `pnpm dev:local` (in-memory cache) or use
-   **Incognito** (no SW).
+1. **Service Worker / Vite cache** can serve stale bundles. After a scoped
+   preview rebuild (`pnpm bundle:legacy:auto --files=<your source files>`),
+   restart `pnpm dev:local` (in-memory cache) or use **Incognito** (no SW). Full
+   `pnpm bundle:legacy` is for integration/release scope, not routine local
+   preview.
 
 2. **Bundle hash in DOM ≠ executed code** — verify with
 

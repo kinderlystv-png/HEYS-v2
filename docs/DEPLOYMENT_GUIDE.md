@@ -190,13 +190,14 @@ PWA — статические файлы в Yandex Object Storage.
 **Стандартный путь (CI/CD):**
 
 ```bash
+# Только после явной команды на push/deploy; pre-push guards должны пройти.
 git push origin main
 ```
 
 **Локальный быстрый деплой (все бандлы + index.html):**
 
 ```bash
-bash scripts/deploy-frontend.sh
+bash scripts/deploy-frontend.sh --confirm-deploy
 ```
 
 **Пересборка legacy-бандлов без деплоя:**

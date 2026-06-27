@@ -1111,12 +1111,13 @@ finalMultiplier = foodMult * max(0.1, 1 + (-0.40)) * 1.17
    систематически длиннее реальных (особенно при IR > 1.0 или молочной еде). ✅
    Исправлено в v4.2.4.
 
-9. **Синхронизация хэшей бандлов**: После каждого `pnpm bundle:legacy` хэши
-   бандлов в `apps/web/index.html` обновляются **автоматически** через
-   `syncIndexHtml()` в `scripts/bundle-legacy.mjs`. До v4.2.4 это не делалось —
-   браузер получал 404 на удалённые файлы и весь постбут (включая
-   HEYS.InsulinWave) не загружался. **Никогда** не правь хэши в `index.html`
-   вручную.
+9. **Синхронизация хэшей бандлов**: После legacy bundle rebuild
+   (`pnpm bundle:legacy:auto --files=...` для scoped QA или full
+   `pnpm bundle:legacy` для integration/release) хэши бандлов в
+   `apps/web/index.html` обновляются **автоматически** через `syncIndexHtml()` в
+   `scripts/bundle-legacy.mjs`. До v4.2.4 это не делалось — браузер получал 404
+   на удалённые файлы и весь постбут (включая HEYS.InsulinWave) не загружался.
+   **Никогда** не правь хэши в `index.html` вручную.
 
 10. **SW cache regex**: Сервис-воркер кэширует бандлы по паттерну
     `\.bundle\.[a-f0-9]{12}\.js$` (`sw.js`, строка ≈219). Длина хэша — 12

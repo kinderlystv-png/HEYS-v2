@@ -39,11 +39,16 @@ applyTo: '**/*'
 - Storage keys: `heys_dayv2_*`, `heys_ews_weekly_v1`.
 - `MealItem` has no `category`; use `getProductFromItem(item, pIndex).category`.
 - API: only `HEYS.YandexAPI.rpc()` / `.rest()`; **no Supabase SDK in new code**.
-- localStorage: `U.lsSet()` / `U.lsGet()`; **no raw localStorage**.
-- Protected RPC: `*_by_session` + `session_token`, never pass `client_id`.
+- localStorage: client-scoped data through `U.lsSet()` / `U.lsGet()` or another
+  contracted wrapper. Raw `localStorage.setItem` only for explicit allowlisted
+  unscoped/debug/auth cases.
+- Protected RPC: never trust browser-supplied `client_id`; resolve canonical
+  client server-side via session token, curator ownership, or server-issued
+  `context_id`.
 - Production API: `https://api.heyslab.ru` (never localhost).
 - Logs: `console.info('[HEYS.module] ...')`, no `console.log`.
-- No personal data in logs. No inline styles (Tailwind first).
+- No personal data in logs. Tailwind-first; inline styles only for dynamic
+  values that are awkward/impossible as stable classes.
 
 ## Legacy bundle rebuild
 
@@ -57,15 +62,24 @@ When changing `apps/web/heys_*.js` that affects runtime:
    modals, init, stale cache risk) or by explicit request.
 5. Report which hash updated and what validation was done.
 
-## Push
+## Commit / Push
 
-`pnpm push:safe` — always use instead of `git push`. Never `HUSKY=0 git push`.
-For user-facing releases: `pnpm push:ready`.
+- Do not stage for commit, commit, push, run `pnpm ship`, run `pnpm push:*`, or
+  run `pnpm agents:integrate` without a direct user command.
+- For commit/shipping by explicit command: `git add <intended files>` →
+  `pnpm ship`.
+- If commits already exist without `pnpm ship` or pre-push recommends the
+  non-interactive agent flow, use `pnpm push:agent -- --confirm-push ...`.
+- `pnpm push:safe` is for technical manual/service scenarios, not the normal
+  agent default for user-facing/runtime changes.
+- Never `HUSKY=0 git push`.
 
 ## Commands
 
 - `pnpm dev:web` / `pnpm dev:landing`
 - `pnpm bundle:legacy:auto --files=<paths>`
 - `pnpm type-check` / `pnpm test:run`
-- `pnpm push:safe`
+- `pnpm ship` / `pnpm push:agent -- --confirm-push ...` /
+  `pnpm agents:integrate --confirm-integration` only after direct
+  commit/shipping/integration/push command
 - Cloud functions: `cd yandex-cloud-functions && ./health-check.sh`

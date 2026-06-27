@@ -438,7 +438,8 @@ gate очищает `heys_pin_auth_client`, flush memory, reload.
 1. Всегда использовать `await HEYS.cloud.syncClient(clientId)` как входную точку
 2. Не предполагать, что `_rpcOnlyMode=false` означает curator
 3. Для full-data логики фильтровать `phaseA` (curator flow)
-4. Для security: использовать `*_by_session`, не передавать `client_id` напрямую
+4. Для security: не доверять browser-supplied `client_id`; сервер резолвит
+   canonical client через `*_by_session`, curator ownership или `context_id`
 5. При анализе багов всегда фиксировать mode: curator vs PIN auth
 6. Помнить о PIN > curator приоритете при restore (v52 FIX)
 7. HTML gate и React `LoginScreen` — две разные системы, координируемые через

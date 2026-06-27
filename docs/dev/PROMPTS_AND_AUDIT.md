@@ -118,7 +118,7 @@
 2. **Коммиты только по запросу** — жди команды "коммит" или "пуш"
 3. **Минимум шагов** — используй HMR, не делай лишних действий
 4. **todo.md = только задачи** — выполненное сразу в `done.md`
-5.  **НИКОГДА НЕ ОТКАТЫВАЙ ФАЙЛЫ** без явного согласия!
+5. **НИКОГДА НЕ ОТКАТЫВАЙ ФАЙЛЫ** без явного согласия!
 
 ---
 
@@ -126,7 +126,9 @@
 
 ### При работе с API/RPC:
 
-- ✅ ВСЕГДА используй `*_by_session` функции (не UUID)
+- ✅ Никогда не доверяй browser-supplied `client_id`: резолвь canonical client
+  server-side через `*_by_session`, curator ownership или server-issued
+  `context_id`
 - ✅ Проверяй allowlist в `SECURITY_RUNBOOK.md`
 - ✅ Добавляй rate-limiting для новых endpoints
 - ❌ НЕ используй deprecated функции (`verify_client_pin`, `get_client_data`)
@@ -320,16 +322,16 @@
 
 **При любом изменении кода автоматически проверяй:**
 
-| Если видишь                        | ⚠️ Предупреди                       |
-| ---------------------------------- | ----------------------------------- |
-| `supabase.from()` / `cloud.client` | Используй `HEYS.YandexAPI.rpc()`    |
-| `localStorage.setItem()`           | Используй `U.lsSet()` с namespace   |
-| `console.log()` с данными          | Замени на `HEYS.analytics.track*()` |
-| UUID в параметрах RPC              | Используй `*_by_session` функции    |
-| `fetch()` к внешним API            | Проверь 152-ФЗ compliance           |
-| `style={{}}` в JSX                 | Используй Tailwind классы           |
-| Новая таблица/колонка              | Нужны RLS политики                  |
-| `verify_client_pin`                | Используй `verify_client_pin_v3`    |
+| Если видишь                        | ⚠️ Предупреди                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `supabase.from()` / `cloud.client` | Используй `HEYS.YandexAPI.rpc()`                                               |
+| `localStorage.setItem()`           | Используй `U.lsSet()` с namespace                                              |
+| `console.log()` с данными          | Замени на `HEYS.analytics.track*()`                                            |
+| UUID/client_id в параметрах RPC    | Резолвь client server-side: `*_by_session`, curator ownership или `context_id` |
+| `fetch()` к внешним API            | Проверь 152-ФЗ compliance                                                      |
+| `style={{}}` в JSX                 | Используй Tailwind классы                                                      |
+| Новая таблица/колонка              | Нужны RLS политики                                                             |
+| `verify_client_pin`                | Используй `verify_client_pin_v3`                                               |
 
 ---
 
