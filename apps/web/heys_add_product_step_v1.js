@@ -2483,6 +2483,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [pendingDeletedProductIds, setPendingDeletedProductIds] = useState(() => new Set());
     const [barcodeModal, setBarcodeModal] = useState(null);
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
+    const [barcodeResults, setBarcodeResults] = useState([]);
 
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -3137,6 +3138,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // 🌐 Объединённые результаты: личные + общая база (без дубликатов)
     const combinedResults = useMemo(() => {
+      if (barcodeResults.length > 0) return barcodeResults;
       if (!lc) return [];
 
       // Фильтруем shared тоже по категории (иначе переключатель категории кажется «сломанный»)
@@ -3273,7 +3275,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
 
       return combined.slice(0, 25);
-    }, [searchResults, sharedResults, lc, normalizeSearch, selectedCategory, showSharedProducts]);
+    }, [barcodeResults, searchResults, sharedResults, lc, normalizeSearch, selectedCategory, showSharedProducts]);
 
     const canSuggestSharedSearch = !showSharedProducts && search.trim().length >= 2;
 
@@ -3314,6 +3316,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Выбор продукта — сразу переход на шаг граммов
     const selectProduct = useCallback((product) => {
       haptic('light');
+      setBarcodeResults([]);
 
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
@@ -3422,7 +3425,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!result.ok) return false;
         upsertLocalProduct(updatedProduct, false);
         notifyProductUpdated(updatedProduct);
-        HEYS.Toast?.success?.('Штрихкод сохранён в общей базе');
+        HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
         return true;
       }
 
@@ -3433,7 +3436,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       upsertLocalProduct(updatedProduct, true);
       notifyProductUpdated(updatedProduct);
-      HEYS.Toast?.success?.('Штрихкод сохранён');
+      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}»`);
       return true;
     }, [latestProducts]);
 
@@ -3445,6 +3448,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       setBarcodeModal(null);
+      setBarcodeResults([]);
 
       if (targetProduct) {
         await saveBarcodeForProduct(targetProduct, barcode);
@@ -3453,26 +3457,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       setBarcodeLookupBusy(true);
       try {
-        const localProduct = findProductByBarcode(latestProducts, barcode);
-        if (localProduct) {
+        const localMatches = (Array.isArray(latestProducts) ? latestProducts : [])
+          .filter((product) => getProductBarcode(product) === barcode)
+          .map((product) => ({ ...product, _source: 'personal', _barcodeMatch: true }));
+
+        let sharedMatches = [];
+        if (HEYS.cloud?.searchSharedProducts) {
+          const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 12 });
+          sharedMatches = (Array.isArray(result?.data) ? result.data : [])
+            .map((product) => ({
+              ...normalizeSharedProductForAddStep(product),
+              barcode,
+              _source: 'shared',
+              _fromShared: true,
+              _barcodeMatch: true
+            }))
+            .filter(Boolean);
+        }
+
+        const byKey = new Map();
+        [...localMatches, ...sharedMatches].forEach((product) => {
+          const key = String(product._source || '') + ':' + String(product.id ?? product.product_id ?? product.name ?? '');
+          if (!byKey.has(key)) byKey.set(key, product);
+        });
+        const matches = Array.from(byKey.values());
+
+        if (matches.length === 1) {
           HEYS.Toast?.success?.('Продукт найден по штрихкоду');
-          selectProduct(localProduct);
+          selectProduct(matches[0]);
           return;
         }
 
-        if (HEYS.cloud?.searchSharedProducts) {
-          const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 });
-          const sharedProduct = Array.isArray(result?.data) ? result.data[0] : null;
-          if (sharedProduct) {
-            HEYS.Toast?.success?.('Продукт найден в общей базе');
-            selectProduct({
-              ...sharedProduct,
-              barcode,
-              _source: 'shared',
-              _fromShared: true
-            });
-            return;
-          }
+        if (matches.length > 1) {
+          setSearchInput(barcode);
+          setSearch(barcode);
+          setBarcodeResults(matches);
+          HEYS.Toast?.info?.(`По штрихкоду найдено ${matches.length} варианта. Выберите продукт из списка.`);
+          return;
         }
 
         HEYS.Toast?.info?.('Штрихкод не найден. Добавьте продукт, код сохранится автоматически.');
@@ -3826,9 +3847,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement('div', { className: 'aps-search-step' },
       barcodeModal && React.createElement(BarcodeScannerModal, {
-        title: barcodeModal.mode === 'product' ? 'Штрихкод продукта' : 'Сканировать упаковку',
+        title: barcodeModal.mode === 'product' ? 'Привязать штрихкод' : 'Сканировать упаковку',
         subtitle: barcodeModal.mode === 'product'
-          ? (barcodeModal.product?.name || 'Продукт')
+          ? `К продукту: ${barcodeModal.product?.name || 'Продукт'}`
           : 'HEYS найдёт продукт в личной и общей базе',
         initialValue: barcodeModal.mode === 'product' ? getProductBarcode(barcodeModal.product) : '',
         onDetected: (code) => resolveBarcodeScan(code, barcodeModal.mode === 'product' ? barcodeModal.product : null),
@@ -3939,7 +3960,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               className: 'aps-search-input',
               placeholder: 'Поиск продукта...',
               value: searchInput,
-              onChange: (e) => setSearchInput(e.target.value),
+              onChange: (e) => {
+                setSearchInput(e.target.value);
+                setBarcodeResults([]);
+              },
               autoComplete: 'off',
               autoCorrect: 'off',
               spellCheck: false
@@ -3949,6 +3973,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onClick: () => {
                 setSearchInput('');
                 setSearch('');
+                setBarcodeResults([]);
               }
             }, '×')
           ),
@@ -3981,7 +4006,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         shouldRenderSettledProducts && showSearch && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' },
-            combinedResults.length > 0
+            barcodeResults.length > 0
+              ? `Найдено по штрихкоду: ${barcodeResults.length}`
+              : combinedResults.length > 0
               ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}`
               : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
