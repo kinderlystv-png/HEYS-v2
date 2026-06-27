@@ -2260,31 +2260,82 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function BarcodeScannerModal({ title, subtitle, initialValue = '', onDetected, onClose }) {
     const [manualValue, setManualValue] = useState(initialValue);
     const [error, setError] = useState('');
-    const [isCameraReady, setIsCameraReady] = useState(false);
+    const [cameraState, setCameraState] = useState('requesting');
     const videoRef = useRef(null);
 
     useEffect(() => {
       let stream = null;
       let scanner = null;
       let cancelled = false;
+      let readyTimer = null;
+
+      const markCameraReady = () => {
+        if (!cancelled) setCameraState('ready');
+      };
+
+      const waitForVideo = (video) => new Promise((resolve) => {
+        if (!video) return resolve(false);
+        if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
+        const done = () => {
+          cleanup();
+          resolve(true);
+        };
+        const timeout = () => {
+          cleanup();
+          resolve(false);
+        };
+        const cleanup = () => {
+          video.removeEventListener('loadedmetadata', done);
+          video.removeEventListener('canplay', done);
+          video.removeEventListener('playing', done);
+          if (readyTimer) {
+            clearTimeout(readyTimer);
+            readyTimer = null;
+          }
+        };
+        video.addEventListener('loadedmetadata', done, { once: true });
+        video.addEventListener('canplay', done, { once: true });
+        video.addEventListener('playing', done, { once: true });
+        readyTimer = setTimeout(timeout, 2500);
+      });
 
       const start = async () => {
-        if (!HEYS.barcode?.isSupported?.() || !navigator.mediaDevices?.getUserMedia) {
+        if (!navigator.mediaDevices?.getUserMedia) {
           setError('Камера для сканирования недоступна. Можно ввести код вручную.');
+          setCameraState('manual');
           return;
         }
 
         try {
+          setCameraState('requesting');
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
             audio: false
           });
           if (cancelled) return;
           const video = videoRef.current;
           if (!video) return;
           video.srcObject = stream;
-          await video.play();
-          setIsCameraReady(true);
+          setCameraState('starting');
+          try {
+            await video.play();
+          } catch (_) {
+            // Some mobile browsers resolve playback only after metadata/canplay.
+          }
+          const videoReady = await waitForVideo(video);
+          if (cancelled) return;
+          if (videoReady) markCameraReady();
+          else setCameraState('starting');
+
+          if (!HEYS.barcode?.isSupported?.()) {
+            setError('На этом браузере автосканер недоступен. Камера включена, код можно ввести вручную.');
+            return;
+          }
+
           scanner = await HEYS.barcode.startScanning(video, (result) => {
             const code = normalizeBarcode(result?.value);
             if (code) onDetected?.(code);
@@ -2294,6 +2345,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         } catch (e) {
           setError('Камера недоступна. Можно ввести код вручную.');
+          setCameraState('manual');
         }
       };
 
@@ -2301,6 +2353,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return () => {
         cancelled = true;
+        if (readyTimer) clearTimeout(readyTimer);
         try { scanner?.stop?.(); } catch (_) { }
         try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
       };
@@ -2314,6 +2367,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       onDetected?.(code);
     };
+
+    const cameraHint = cameraState === 'requesting'
+      ? 'Разрешите доступ к камере'
+      : cameraState === 'starting'
+        ? 'Запускаем камеру...'
+        : cameraState === 'manual'
+          ? 'Введите код вручную'
+          : 'Наведите камеру на штрихкод';
 
     return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
       React.createElement('div', { className: 'aps-barcode-modal', onClick: (e) => e.stopPropagation() },
@@ -2333,10 +2394,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('video', {
             ref: videoRef,
             className: 'aps-barcode-video',
+            autoPlay: true,
             muted: true,
-            playsInline: true
+            playsInline: true,
+            onLoadedMetadata: () => setCameraState((state) => state === 'manual' ? state : 'ready'),
+            onCanPlay: () => setCameraState((state) => state === 'manual' ? state : 'ready'),
+            onPlaying: () => setCameraState((state) => state === 'manual' ? state : 'ready')
           }),
-          !isCameraReady && React.createElement('div', { className: 'aps-barcode-camera-empty' }, 'Наведите камеру на штрихкод')
+          React.createElement('div', {
+            className: 'aps-barcode-camera-empty' + (cameraState === 'ready' ? ' is-ready' : '')
+          }, cameraHint)
         ),
         React.createElement('div', { className: 'aps-barcode-manual' },
           React.createElement('input', {

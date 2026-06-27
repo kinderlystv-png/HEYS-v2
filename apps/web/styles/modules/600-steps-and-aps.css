@@ -2635,6 +2635,11 @@
   text-align: center;
 }
 
+.aps-barcode-camera-empty.is-ready {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .aps-barcode-manual {
   display: flex;
   gap: 8px;
