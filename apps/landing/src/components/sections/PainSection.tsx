@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import SectionBadgeBar from '@/components/SectionBadgeBar'
+
 const painPoints = [
     {
         icon: '😴',
@@ -51,12 +53,9 @@ export default function PainSection() {
         <section
             ref={sectionRef}
             id="pain"
-            className="pt-10 sm:pt-16 pb-12 sm:pb-20 bg-white relative"
+            className="pb-12 sm:pb-20 bg-white relative"
         >
-            {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">02 — ВАША СИТУАЦИЯ</span>
-            </div>
+            <SectionBadgeBar>02 — ВАША СИТУАЦИЯ</SectionBadgeBar>
 
             <div className="container mx-auto px-6 sm:px-8">
                 <div className="max-w-3xl mx-auto">
@@ -104,8 +103,7 @@ export default function PainSection() {
                             Если узнали себя — начните с недели Pro.
                         </p>
                         <p className="mt-2 text-[14px] sm:text-[15px] text-[#6b7280] leading-relaxed">
-                            7 дней сопровождения: куратор ведёт дневник, вы видите картину в HEYS.
-                            Без карты и автосписаний.
+                            За неделю куратор перенесёт первые приёмы в дневник, посмотрит ваш ритм и покажет, где день начинает сбиваться.
                         </p>
                         <a
                             href="#trial"
@@ -114,6 +112,9 @@ export default function PainSection() {
                             Оставить заявку на неделю Pro (0 ₽)
                             <span aria-hidden="true">→</span>
                         </a>
+                        <p className="mt-3 text-[12px] text-[#8b95a1]">
+                            Без карты и автосписаний
+                        </p>
                     </div>
                 </div>
             </div>

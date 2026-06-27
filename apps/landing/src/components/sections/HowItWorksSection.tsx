@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import SectionBadgeBar from '@/components/SectionBadgeBar'
+
 const STEPS = [
     {
         number: '01',
@@ -65,11 +67,8 @@ export default function HowItWorksSection() {
 
     return (
         <section ref={sectionRef} id="how-it-works" className="pb-16 md:pb-20 bg-white relative">
-            {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">03 — ВАШ ПЕРВЫЙ МЕСЯЦ</span>
-            </div>
-            <div className="container mx-auto px-4 md:px-6 pt-10">
+            <SectionBadgeBar>03 — ВАШ ПЕРВЫЙ МЕСЯЦ</SectionBadgeBar>
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <div

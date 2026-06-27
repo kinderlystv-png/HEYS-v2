@@ -4,6 +4,7 @@
 import FAQVariantSSR from '@/components/FAQVariantSSR'
 import FooterSSR from '@/components/FooterSSR'
 import PricingSSR from '@/components/PricingSSR'
+import SectionBadgeBar from '@/components/SectionBadgeBar'
 import TrialSSR from '@/components/TrialSSR'
 import type { LandingSectionId, LandingVariant, VariantContent } from '@/config/landing-variants'
 
@@ -99,20 +100,17 @@ function FormatsSection({ content }: { content: VariantContent }) {
   const f = content.formats
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="formats">
-      {/* Sticky Header Badge */}
-      <div className="sticky top-0 z-[100] bg-white/95 border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">08 — ФОРМАТЫ РАБОТЫ</span>
-      </div>
+    <section className="pb-16 md:pb-20 bg-slate-50 border-y border-slate-200 relative" id="formats">
+      <SectionBadgeBar>08 — ФОРМАТЫ РАБОТЫ</SectionBadgeBar>
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={f.eyebrow} title={f.title} />
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-4 md:grid-cols-2">
             {f.cards.map((card, i) => (
               <div
                 key={i}
-                className={`rounded-2xl border p-7 ${card.highlight
+                className={`rounded-2xl border p-5 sm:p-6 ${card.highlight
                     ? 'border-blue-200 bg-gradient-to-b from-blue-50/80 to-white shadow-md relative overflow-hidden'
                     : 'border-slate-200 bg-white/60 shadow-sm opacity-90'
                   }`}
@@ -122,12 +120,12 @@ function FormatsSection({ content }: { content: VariantContent }) {
                     РЕКОМЕНДУЕМ
                   </div>
                 )}
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
-                <p className="text-gray-700 leading-relaxed mb-5">{card.desc}</p>
-                <ul className="space-y-2">
+                <h3 className="mb-2 text-[19px] font-bold leading-snug text-gray-900 sm:text-xl">{card.title}</h3>
+                <p className="mb-4 text-[14px] leading-relaxed text-gray-600 sm:text-[15px]">{card.desc}</p>
+                <ul className="space-y-1.5">
                   {card.points.map((p, j) => (
-                    <li key={j} className="flex items-start gap-3 text-gray-700">
-                      <span className="text-green-600 mt-0.5">✓</span>
+                    <li key={j} className="flex items-start gap-2.5 text-[14px] leading-snug text-gray-600 sm:text-[15px]">
+                      <span className="mt-0.5 text-green-600">✓</span>
                       <span>{p}</span>
                     </li>
                   ))}

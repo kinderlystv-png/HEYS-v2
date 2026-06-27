@@ -1,4 +1,4 @@
-// ObjectionsSection.tsx — Секция "Частые сомнения"
+// ObjectionsSection.tsx — Секция "Частые вопросы"
 // Anchor: #objections
 // 4 продающих возражения в формате аккордеон (отдельно от FAQ)
 
@@ -28,9 +28,9 @@ const objections = [
             'HEYS не заменяет врача или нутрициолога при медицинских показаниях. Отличие в формате: консультация даёт решение на встрече, а в HEYS куратор помогает вести повседневный контекст — дневник, срывы, сон, нагрузку и ритм недели. Вам не нужно каждый раз собирать всё заново: история уже в системе, а куратор видит свежую картину.',
     },
     {
-        question: '«Действительно ли это стоит своих денег?»',
+        question: 'Что именно входит в Pro?',
         answer:
-            'Вы покупаете не приложение, а формат ведения: куратор снимает рутину дневника, видит вашу неделю целиком и помогает удерживать режим без стыда. Приложение нужно, чтобы эта работа была измеримой и не терялась в переписке.',
+            'В Pro оплачивается не доступ к приложению, а работа куратора: он снимает рутину дневника, видит вашу неделю целиком и помогает удерживать режим без стыда. Приложение нужно, чтобы эта работа была измеримой и не терялась в переписке.',
     },
 ]
 
@@ -61,20 +61,16 @@ export default function ObjectionsSection() {
         <section
             ref={sectionRef}
             id="objections"
-            className="pb-16 md:pb-20 bg-white relative"
+            className="py-16 md:py-20 bg-white relative"
         >
-            {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">07 — ЧАСТЫЕ СОМНЕНИЯ</span>
-            </div>
-            <div className="container mx-auto px-4 md:px-6 pt-10">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-3xl mx-auto">
                     {/* Section header */}
                     <h2
                         className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
-                        Частые сомнения
+                        Частые вопросы
                     </h2>
 
                     {/* Accordion */}

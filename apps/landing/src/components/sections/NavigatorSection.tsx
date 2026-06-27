@@ -6,6 +6,8 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
+import SectionBadgeBar from '@/components/SectionBadgeBar'
+
 const causeExamples = [
     {
         icon: '😴',
@@ -198,13 +200,9 @@ export default function NavigatorSection() {
             id="navigator"
             className="relative bg-white pb-16 md:pb-20"
         >
-            <div className="sticky top-0 z-[100] mb-8 w-full border-y border-gray-100/50 bg-white/95 px-6 py-3 text-center shadow-sm">
-                <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-600">
-                    05 — ПОД КАПОТОМ
-                </span>
-            </div>
+            <SectionBadgeBar>05 — ПОД КАПОТОМ</SectionBadgeBar>
 
-            <div className="container mx-auto px-4 pt-10 md:px-6">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="mx-auto max-w-4xl">
                     <h2
                         className={`mb-4 text-center text-2xl font-bold text-gray-900 transition-all duration-700 ease-out md:text-3xl lg:text-4xl ${

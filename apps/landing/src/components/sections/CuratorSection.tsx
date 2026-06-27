@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import SectionBadgeBar from '@/components/SectionBadgeBar'
+
 const cards = [
     {
         icon: '👤',
@@ -46,20 +48,11 @@ export default function CuratorSection() {
         <section
             ref={sectionRef}
             id="curator"
-            className="relative pt-10 sm:pt-16 pb-14 sm:pb-20 bg-white"
+            className="relative pb-14 sm:pb-20 bg-white"
         >
-            <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6">
-                {/* Section badge */}
-                <div
-                    className={`text-center mb-6 sm:mb-8 transition-all duration-700 ease-out ${
-                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-                    }`}
-                >
-                    <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">
-                        01 — КАК УСТРОЕНО
-                    </span>
-                </div>
+            <SectionBadgeBar>01 — КАК УСТРОЕНО</SectionBadgeBar>
 
+            <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6">
                 {/* H2 + short subline */}
                 <div
                     className={`text-center max-w-2xl mx-auto mb-10 sm:mb-14 transition-all duration-700 ease-out ${
