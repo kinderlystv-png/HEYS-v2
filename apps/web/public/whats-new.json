@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.27.b72cda29",
+      "buildHash": "b72cda29",
+      "date": "2026-06-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Выбор продукта по штрихкоду",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Выбор продукта по штрихкоду",
+          "description": "Сканер теперь показывает все продукты с найденным штрихкодом, если совпадений несколько, и явно сообщает, куда сохраняется штрихкод у карточки продукта."
+        }
+      ],
+      "coveredCommits": ["b72cda29"]
+    },
+    {
       "version": "2026.06.27.5f47c44b",
       "buildHash": "5f47c44b",
       "date": "2026-06-27",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["d31def18", "d42ea512", "f319c9d0"]
-    },
-    {
-      "version": "2026.06.25.2baa874f",
-      "buildHash": "2baa874f",
-      "date": "2026-06-25",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Mobility training update",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Адаптивная мобильность",
-          "description": "В режиме мобильности добавлены уровни нагрузки, точные таймеры подходов, расширенные протоколы осанки, голосовые подсказки и изображения упражнений."
-        }
-      ],
-      "coveredCommits": ["2baa874f", "8821a70a"]
     }
   ]
 }
