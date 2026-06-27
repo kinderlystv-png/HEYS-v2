@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.27.5f47c44b",
+      "buildHash": "5f47c44b",
+      "date": "2026-06-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Запуск камеры для штрихкода",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Запуск камеры для штрихкода",
+          "description": "Сканер теперь запускает камеру по явному нажатию внутри окна, чтобы мобильный браузер показывал запрос доступа и сразу включал уже разрешённую камеру."
+        }
+      ],
+      "coveredCommits": ["5f47c44b"]
+    },
+    {
       "version": "2026.06.27.51be034c",
       "buildHash": "51be034c",
       "date": "2026-06-27",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["2baa874f", "8821a70a"]
-    },
-    {
-      "version": "2026.06.25.8821a70a",
-      "buildHash": "8821a70a",
-      "date": "2026-06-25",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Mobility training update",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Адаптивная мобильность",
-          "description": "В режиме мобильности добавлены уровни нагрузки, точные таймеры подходов, расширенные протоколы осанки, голосовые подсказки и изображения упражнений."
-        }
-      ],
-      "coveredCommits": ["8821a70a"]
     }
   ]
 }
