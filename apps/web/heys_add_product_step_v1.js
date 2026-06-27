@@ -21,6 +21,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (isDayTraceDebugEnabled()) console.info(...args);
   }
 
+  function BarcodeScanIcon() {
+    return React.createElement('svg', {
+      className: 'aps-search-barcode-icon',
+      viewBox: '0 0 32 32',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    },
+      React.createElement('path', {
+        d: 'M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 21.3v3a1.9 1.9 0 0 0 1.9 1.9h2.8M26.5 21.3v3a1.9 1.9 0 0 1-1.9 1.9h-2.8',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '1.8'
+      }),
+      React.createElement('path', {
+        d: 'M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '2.15'
+      })
+    );
+  }
+
+  function BarcodeBarsIcon() {
+    return React.createElement('svg', {
+      className: 'aps-product-barcode-icon',
+      viewBox: '0 0 24 24',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    },
+      React.createElement('path', {
+        d: 'M6.6 6.8v10.4M9.2 7.6v8.8M12 6.3v11.4M14.8 7.6v8.8M17.4 6.8v10.4',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '2.05'
+      })
+    );
+  }
+
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
   let globalProductsVersion = 0;
@@ -129,6 +170,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       barcode: barcodes[0] || null,
       barcodes
     };
+  };
+
+  const setProductBarcodes = (product, nextCodes) => {
+    const seen = new Set();
+    const barcodes = (Array.isArray(nextCodes) ? nextCodes : [])
+      .map(normalizeBarcode)
+      .filter((code) => {
+        if (!code || seen.has(code)) return false;
+        seen.add(code);
+        return true;
+      });
+    const next = {
+      ...product,
+      barcode: barcodes[0] || null,
+      barcodes
+    };
+    ['ean', 'upc', 'barcode_value'].forEach((key) => {
+      if (!barcodes.includes(normalizeBarcode(next[key]))) next[key] = null;
+    });
+    return next;
   };
 
   const findProductByBarcode = (products, barcode) => {
@@ -2551,6 +2612,58 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function ProductBarcodeManagerModal({ product, onAdd, onRemove, onRemoveAll, onClose }) {
+    const barcodes = getProductBarcodes(product);
+    const productName = product?.name || 'Продукт';
+
+    return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
+      React.createElement('div', {
+        className: 'aps-barcode-modal aps-barcode-manager-modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        React.createElement('div', { className: 'aps-barcode-head' },
+          React.createElement('div', null,
+            React.createElement('div', { className: 'aps-barcode-title' }, 'Штрихкоды продукта'),
+            React.createElement('div', { className: 'aps-barcode-subtitle' }, productName)
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-barcode-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '×')
+        ),
+        React.createElement('div', { className: 'aps-barcode-manager-list' },
+          barcodes.length > 0
+            ? barcodes.map((code) => React.createElement('div', {
+              key: code,
+              className: 'aps-barcode-manager-row'
+            },
+              React.createElement('span', { className: 'aps-barcode-manager-code' }, code),
+              React.createElement('button', {
+                type: 'button',
+                className: 'aps-barcode-manager-remove',
+                onClick: () => onRemove?.(code)
+              }, 'Удалить')
+            ))
+            : React.createElement('div', { className: 'aps-barcode-manager-empty' }, 'Штрихкоды пока не добавлены')
+        ),
+        React.createElement('div', { className: 'aps-barcode-manager-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-barcode-manager-add',
+            onClick: onAdd
+          }, 'Добавить'),
+          barcodes.length > 0 && React.createElement('button', {
+            type: 'button',
+            className: 'aps-barcode-manager-remove-all',
+            onClick: onRemoveAll
+          }, 'Удалить все')
+        )
+      )
+    );
+  }
+
   function ProductSearchStep({ data, onChange, context }) {
     const initialProductsSyncState = getAddProductInitialSyncState();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
@@ -2587,6 +2700,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
     const [pendingDeletedProductIds, setPendingDeletedProductIds] = useState(() => new Set());
     const [barcodeModal, setBarcodeModal] = useState(null);
+    const [barcodeManager, setBarcodeManager] = useState(null);
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
     const [barcodeResults, setBarcodeResults] = useState([]);
 
@@ -3558,7 +3672,73 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return true;
     }, [latestProducts]);
 
-    const resolveBarcodeScan = useCallback(async (rawBarcode, targetProduct = null) => {
+    const persistProductBarcodes = useCallback(async (product, nextCodes, toastMode = 'update') => {
+      if (!product) return null;
+      const updatedProduct = {
+        ...setProductBarcodes(product, nextCodes),
+        updatedAt: Date.now()
+      };
+      const sharedId = resolveSharedProductId(product);
+
+      if (sharedId && isCuratorUser()) {
+        const result = await updateSharedProduct(updatedProduct, sharedId);
+        if (!result.ok) return null;
+        const localSave = upsertLocalProduct(updatedProduct, false);
+        const saved = localSave.product || updatedProduct;
+        notifyProductUpdated(saved);
+        setProductsVersion(v => v + 1);
+        if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
+        else if (toastMode === 'remove') HEYS.Toast?.success?.('Штрихкод удалён');
+        return saved;
+      }
+
+      if (isSharedProduct(product) && !isCuratorUser()) {
+        HEYS.Toast?.warning?.('Общий продукт может изменить только куратор');
+        return null;
+      }
+
+      const localSave = upsertLocalProduct(updatedProduct, true);
+      const saved = localSave.product || updatedProduct;
+      notifyProductUpdated(saved);
+      setProductsVersion(v => v + 1);
+      if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
+      else if (toastMode === 'remove') HEYS.Toast?.success?.('Штрихкод удалён');
+      return saved;
+    }, []);
+
+    const openProductBarcodeControl = useCallback((e, product) => {
+      e.stopPropagation();
+      if (!getProductBarcodes(product).length) {
+        setBarcodeModal({ mode: 'product', product });
+        return;
+      }
+      setBarcodeManager({ product });
+    }, []);
+
+    const addBarcodeFromManager = useCallback(() => {
+      if (!barcodeManager?.product) return;
+      setBarcodeModal({ mode: 'product', product: barcodeManager.product, returnToManager: true });
+      setBarcodeManager(null);
+    }, [barcodeManager]);
+
+    const removeProductBarcode = useCallback(async (code) => {
+      const product = barcodeManager?.product;
+      const barcode = normalizeBarcode(code);
+      if (!product || !barcode) return;
+      const nextCodes = getProductBarcodes(product).filter((item) => item !== barcode);
+      const saved = await persistProductBarcodes(product, nextCodes, 'remove');
+      if (saved) setBarcodeManager({ product: saved });
+    }, [barcodeManager, persistProductBarcodes]);
+
+    const removeAllProductBarcodes = useCallback(async () => {
+      const product = barcodeManager?.product;
+      if (!product) return;
+      if (!confirm(`Удалить все штрихкоды у «${product.name || 'продукта'}»?`)) return;
+      const saved = await persistProductBarcodes(product, [], 'remove-all');
+      if (saved) setBarcodeManager({ product: saved });
+    }, [barcodeManager, persistProductBarcodes]);
+
+    const resolveBarcodeScan = useCallback(async (rawBarcode, targetProduct = null, options = {}) => {
       const barcode = normalizeBarcode(rawBarcode);
       if (!barcode) {
         HEYS.Toast?.warning?.('Штрихкод не распознан');
@@ -3569,7 +3749,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setBarcodeResults([]);
 
       if (targetProduct) {
-        await saveBarcodeForProduct(targetProduct, barcode);
+        const saved = await saveBarcodeForProduct(targetProduct, barcode);
+        if (saved) setProductsVersion(v => v + 1);
+        if (options.returnToManager) {
+          setBarcodeManager({
+            product: saved
+              ? { ...mergeProductBarcode(targetProduct, barcode), updatedAt: Date.now() }
+              : targetProduct
+          });
+        }
         return;
       }
 
@@ -3939,13 +4127,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, isFav ? '★' : '☆'),
           canEditProduct(product) && React.createElement('button', {
             className: 'aps-barcode-btn' + (barcode ? ' active' : ''),
-            onClick: (e) => {
-              e.stopPropagation();
-              setBarcodeModal({ mode: 'product', product });
-            },
-            'aria-label': barcode ? 'Изменить штрихкод продукта' : 'Добавить штрихкод продукта',
-            title: barcode ? 'Изменить штрихкод' : 'Добавить штрихкод'
-          }, '▦'),
+            onClick: (e) => openProductBarcodeControl(e, product),
+            'aria-label': barcode ? 'Управлять штрихкодами продукта' : 'Добавить штрихкод продукта',
+            title: barcode ? 'Управлять штрихкодами' : 'Добавить штрихкод'
+          }, React.createElement(BarcodeBarsIcon)),
           !isFromShared && React.createElement('button', {
             className: 'aps-delete-btn',
             onClick: (e) => handleDeleteProduct(e, product),
@@ -3971,13 +4156,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement('div', { className: 'aps-search-step' },
       barcodeModal && React.createElement(BarcodeScannerModal, {
-        title: barcodeModal.mode === 'product' ? 'Привязать штрихкод' : 'Сканировать упаковку',
+        title: barcodeModal.mode === 'product'
+          ? (barcodeModal.returnToManager ? 'Добавить штрихкод' : 'Привязать штрихкод')
+          : 'Сканировать упаковку',
         subtitle: barcodeModal.mode === 'product'
           ? `К продукту: ${barcodeModal.product?.name || 'Продукт'}`
           : 'HEYS найдёт продукт в личной и общей базе',
-        initialValue: barcodeModal.mode === 'product' ? getProductBarcode(barcodeModal.product) : '',
-        onDetected: (code) => resolveBarcodeScan(code, barcodeModal.mode === 'product' ? barcodeModal.product : null),
-        onClose: () => setBarcodeModal(null)
+        initialValue: barcodeModal.mode === 'product' && !barcodeModal.returnToManager
+          ? getProductBarcode(barcodeModal.product)
+          : '',
+        onDetected: (code) => resolveBarcodeScan(
+          code,
+          barcodeModal.mode === 'product' ? barcodeModal.product : null,
+          { returnToManager: barcodeModal.returnToManager === true }
+        ),
+        onClose: () => {
+          if (barcodeModal.returnToManager && barcodeModal.product) {
+            setBarcodeManager({ product: barcodeModal.product });
+          }
+          setBarcodeModal(null);
+        }
+      }),
+      barcodeManager && React.createElement(ProductBarcodeManagerModal, {
+        product: barcodeManager.product,
+        onAdd: addBarcodeFromManager,
+        onRemove: removeProductBarcode,
+        onRemoveAll: removeAllProductBarcodes,
+        onClose: () => setBarcodeManager(null)
       }),
       // 🍽️ Overlay «Готовые наборы»
       presetsOpen && React.createElement(MealPresetsOverlay, {
@@ -4107,7 +4312,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               disabled: barcodeLookupBusy,
               'aria-label': 'Сканировать штрихкод',
               title: 'Сканировать штрихкод'
-            }, barcodeLookupBusy ? '…' : '▦')
+            }, barcodeLookupBusy ? '…' : React.createElement(BarcodeScanIcon))
           ),
           React.createElement('label', {
             className: 'aps-shared-toggle' + (showSharedProducts ? ' is-active' : ''),

@@ -35,7 +35,7 @@ apps/web/advice/_other.js:350
 apps/web/advice/_other.js:973
 apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
-apps/web/heys_add_product_step_v1.js:85
+apps/web/heys_add_product_step_v1.js:126
 apps/web/heys_app_auth_init_v1.js:177
 apps/web/heys_app_auth_init_v1.js:90
 apps/web/heys_app_auth_init_v1.js:181

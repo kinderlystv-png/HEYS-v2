@@ -49,6 +49,7 @@ beforeEach(() => {
     dayUtils: { todayISO: () => TODAY },
     // Профиль заполнен → регистрационные шаги не добавляются
     ProfileSteps: { isProfileIncomplete: () => false },
+    Steps: { shouldShowCycleStep: () => true },
   };
   evalScript('../../apps/web/heys_morning_checkin_v1.js');
 });
@@ -117,6 +118,24 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     // хвост на месте
     expect(steps).toEqual(expect.arrayContaining(['cold_exposure', 'supplements', 'morningRoutine']));
     expect(steps).not.toContain('weight'); // заполнен → отфильтрован
+  });
+
+  it('не повторяет cycle-шаг, если розовый день уже сохранён в scoped day', () => {
+    setDay({
+      weightMorning: 90.9,
+      sleepStart: '23:00',
+      sleepEnd: '07:00',
+      sleepQuality: 7,
+      moodMorning: 6,
+      cycleDay: 2,
+    });
+    const profile = { stepsGoal: 6000 };
+
+    const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
+      filterCompleted: true,
+    });
+
+    expect(steps).not.toContain('cycle');
   });
 
   it('requiredOnly включает stepsGoal, если цель шагов не задана', () => {

@@ -384,13 +384,74 @@
   let skipReasonOpening = false;
   let lastMealSignalAt = 0;
   let pendingFollowupAfterProductFlow = false;
+  let morningActivationModalRoot = null;
+  let morningActivationModalRootInstance = null;
+
+  function isMainStepModalOpen() {
+    try {
+      return !!document.getElementById('heys-step-modal-root');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function closeMorningActivationOverlay() {
+    if (morningActivationModalRootInstance) {
+      morningActivationModalRootInstance.unmount();
+      morningActivationModalRootInstance = null;
+    }
+    if (morningActivationModalRoot && morningActivationModalRoot.parentNode) {
+      morningActivationModalRoot.parentNode.removeChild(morningActivationModalRoot);
+    }
+    morningActivationModalRoot = null;
+  }
+
+  function showMorningActivationModal(options) {
+    const shouldStackOverStepModal = isMainStepModalOpen();
+    if (!shouldStackOverStepModal) {
+      HEYS.StepModal.show(options);
+      return true;
+    }
+
+    const ReactDOMRef = global.ReactDOM || window.ReactDOM;
+    if (!HEYS.StepModal?.Component || !ReactDOMRef?.createRoot) {
+      logMorningActivationTrace('[MA.modal] SKIP stacked modal — StepModal.Component/ReactDOM missing');
+      return false;
+    }
+    if (morningActivationModalRoot) {
+      logMorningActivationTrace('[MA.modal] SKIP stacked modal — already open');
+      return false;
+    }
+
+    morningActivationModalRoot = document.createElement('div');
+    morningActivationModalRoot.id = 'heys-morning-activation-modal-root';
+    morningActivationModalRoot.style.position = 'relative';
+    morningActivationModalRoot.style.zIndex = '10000';
+    document.body.appendChild(morningActivationModalRoot);
+    morningActivationModalRootInstance = ReactDOMRef.createRoot(morningActivationModalRoot);
+
+    const handleClose = () => {
+      closeMorningActivationOverlay();
+      options.onClose?.();
+    };
+    const handleComplete = (data) => {
+      closeMorningActivationOverlay();
+      options.onComplete?.(data);
+    };
+
+    morningActivationModalRootInstance.render(React.createElement(HEYS.StepModal.Component, {
+      ...options,
+      onClose: handleClose,
+      onComplete: handleComplete
+    }));
+    return true;
+  }
 
   function maybeOpenMorningActivationSkipReason(trigger = 'unknown', dateKeyArg) {
     const _tag = '[MA.skipReason]';
     if (skipReasonOpening) { logMorningActivationTrace(_tag, 'SKIP: already opening', { trigger }); return; }
     if (!HEYS.StepModal?.show) { logMorningActivationTrace(_tag, 'SKIP: no StepModal', { trigger }); return; }
     if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { logMorningActivationTrace(_tag, 'SKIP: step not registered', { trigger }); return; }
-    if (document.getElementById('heys-step-modal-root')) { logMorningActivationTrace(_tag, 'SKIP: modal root exists', { trigger }); return; }
 
     const currentClientId = getCurrentClientId();
     if (!currentClientId) { logMorningActivationTrace(_tag, 'SKIP: no clientId', { trigger }); return; }
@@ -414,7 +475,7 @@
     logMorningActivationTrace(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
     skipReasonOpening = true;
     try {
-      HEYS.StepModal.show({
+      const opened = showMorningActivationModal({
         steps: ['morning_activation_skip_reason'],
         title: 'Зарядка',
         showProgress: false,
@@ -435,6 +496,7 @@
           skipReasonOpening = false;
         }
       });
+      if (!opened) skipReasonOpening = false;
     } catch (e) {
       skipReasonOpening = false;
       console.warn(_tag, 'show failed', e);
@@ -446,7 +508,6 @@
     if (followupOpening) { logMorningActivationTrace(_tag, 'SKIP: followupOpening=true', { reason }); return; }
     if (!HEYS.StepModal?.show) { logMorningActivationTrace(_tag, 'SKIP: no StepModal.show', { reason }); return; }
     if (!HEYS.StepModal?.registry?.morning_activation_followup) { logMorningActivationTrace(_tag, 'SKIP: step not registered', { reason }); return; }
-    if (document.getElementById('heys-step-modal-root')) { logMorningActivationTrace(_tag, 'SKIP: modal root exists', { reason }); return; }
 
     const currentClientId = getCurrentClientId();
     if (!currentClientId) { logMorningActivationTrace(_tag, 'SKIP: no clientId', { reason }); return; }
@@ -530,7 +591,7 @@
     } catch (_) {
       // sessionStorage may be unavailable
     }
-    HEYS.StepModal.show({
+    const opened = showMorningActivationModal({
       steps: ['morning_activation_followup'],
       title: 'Утренняя зарядка',
       showProgress: false,
@@ -573,6 +634,7 @@
         followupOpening = false;
       }
     });
+    if (!opened) followupOpening = false;
   }
 
   function debugDayStorage(todayKey, currentClientId, altKey) {
@@ -643,6 +705,11 @@
 
   function hasMorningMood(day) {
     return hasPositiveCheckinNumber(day?.moodMorning);
+  }
+
+  function hasCycleDay(day) {
+    const value = Number(day?.cycleDay);
+    return Number.isFinite(value) && value >= 1 && value <= 7;
   }
 
   function hasStepsGoal(profile) {
@@ -904,6 +971,7 @@
         case 'sleepQuality': return !hasSleepQuality(day);
         case 'morning_mood': return !hasMorningMood(day);
         case 'stepsGoal': return !hasStepsGoal(profile);
+        case 'cycle': return !hasCycleDay(day);
         default: return true;
       }
     });

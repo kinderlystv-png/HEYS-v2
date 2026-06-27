@@ -2810,7 +2810,7 @@
     shouldShow: shouldShowCycleStep,
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const day = readDayData(dateKey, {}) || {};
       return {
         cycleDay: day.cycleDay || null,
         _dateKey: dateKey

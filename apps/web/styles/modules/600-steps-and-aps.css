@@ -969,14 +969,25 @@
 
 /* Ряд кнопок действий (Добавить фото + Новый продукт) */
 .aps-action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .aps-action-buttons .aps-new-product-btn {
-  flex: 1;
-  min-width: 112px;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  justify-content: center;
+  gap: 5px;
+  padding-inline: 6px;
+}
+
+.aps-action-buttons .aps-new-product-btn > span:not(.aps-new-icon):not(.aps-ready-sets-badge) {
+  min-width: 0;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
 }
 
 /* Кнопка "Новый продукт" */
@@ -1043,7 +1054,6 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
   padding: 7px 12px;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border: 1.5px solid #fbbf24;
@@ -2029,7 +2039,8 @@
 
 .aps-search-input {
   width: 100%;
-  padding: 10px 36px 10px 12px;
+  min-height: 46px;
+  padding: 12px 106px 12px 12px;
   padding-left: 38px !important;
   font-size: 15px;
   border: 1px solid var(--border);
@@ -2041,33 +2052,47 @@
 }
 
 .aps-search-barcode-btn {
-  flex: 0 0 38px;
-  width: 38px;
-  height: 36px;
-  border: 1px solid rgba(67, 69, 135, 0.24);
-  border-radius: 10px;
-  background: rgba(67, 69, 135, 0.07);
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   color: #434587;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transform: translateY(-50%);
+  line-height: 1;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 @media (hover: hover) {
   .aps-search-barcode-btn:hover {
-    background: rgba(67, 69, 135, 0.12);
-    border-color: rgba(67, 69, 135, 0.42);
+    opacity: 0.82;
   }
 }
 
 .aps-search-barcode-btn:active {
-  transform: scale(0.96);
+  transform: translateY(-50%) scale(0.96);
 }
 
 .aps-search-barcode-btn:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+.aps-search-barcode-icon {
+  width: 32px;
+  height: 32px;
+  display: block;
+  fill: none;
 }
 
 .aps-search-input:focus {
@@ -2078,7 +2103,8 @@
 
 .aps-search-clear {
   position: absolute;
-  right: 12px;
+  right: 64px;
+  z-index: 2;
   width: 24px;
   height: 24px;
   border: none;
@@ -2555,6 +2581,13 @@
   color: #434587;
 }
 
+.aps-product-barcode-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: none;
+}
+
 .aps-barcode-overlay {
   position: fixed;
   inset: 0;
@@ -2684,6 +2717,80 @@
 .aps-barcode-error {
   font-size: 12px;
   color: #b45309;
+}
+
+.aps-barcode-manager-modal {
+  gap: 14px;
+}
+
+.aps-barcode-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aps-barcode-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.aps-barcode-manager-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.aps-barcode-manager-empty {
+  padding: 12px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed rgba(148, 163, 184, 0.38);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.64);
+}
+
+.aps-barcode-manager-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.aps-barcode-manager-add,
+.aps-barcode-manager-remove,
+.aps-barcode-manager-remove-all {
+  min-height: 36px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aps-barcode-manager-add {
+  flex: 1 1 auto;
+  padding: 0 14px;
+  color: #fff;
+  background: #434587;
+}
+
+.aps-barcode-manager-remove,
+.aps-barcode-manager-remove-all {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  color: #dc2626;
+  background: rgba(254, 226, 226, 0.72);
 }
 
 /* Пустое состояние */
