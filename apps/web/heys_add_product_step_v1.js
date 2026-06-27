@@ -2260,104 +2260,115 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function BarcodeScannerModal({ title, subtitle, initialValue = '', onDetected, onClose }) {
     const [manualValue, setManualValue] = useState(initialValue);
     const [error, setError] = useState('');
-    const [cameraState, setCameraState] = useState('requesting');
+    const [cameraState, setCameraState] = useState('idle');
     const videoRef = useRef(null);
+    const streamRef = useRef(null);
+    const scannerRef = useRef(null);
+    const readyTimerRef = useRef(null);
+    const startRequestRef = useRef(false);
 
-    useEffect(() => {
-      let stream = null;
-      let scanner = null;
-      let cancelled = false;
-      let readyTimer = null;
+    const cleanupCamera = useCallback(() => {
+      if (readyTimerRef.current) {
+        clearTimeout(readyTimerRef.current);
+        readyTimerRef.current = null;
+      }
+      try { scannerRef.current?.stop?.(); } catch (_) { }
+      scannerRef.current = null;
+      try { streamRef.current?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
+      streamRef.current = null;
+      try {
+        if (videoRef.current) videoRef.current.srcObject = null;
+      } catch (_) { }
+    }, []);
 
-      const markCameraReady = () => {
-        if (!cancelled) setCameraState('ready');
+    const waitForVideo = useCallback((video) => new Promise((resolve) => {
+      if (!video) return resolve(false);
+      if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
+      const done = () => {
+        cleanup();
+        resolve(true);
       };
+      const timeout = () => {
+        cleanup();
+        resolve(false);
+      };
+      const cleanup = () => {
+        video.removeEventListener('loadedmetadata', done);
+        video.removeEventListener('canplay', done);
+        video.removeEventListener('playing', done);
+        if (readyTimerRef.current) {
+          clearTimeout(readyTimerRef.current);
+          readyTimerRef.current = null;
+        }
+      };
+      video.addEventListener('loadedmetadata', done, { once: true });
+      video.addEventListener('canplay', done, { once: true });
+      video.addEventListener('playing', done, { once: true });
+      readyTimerRef.current = setTimeout(timeout, 2500);
+    }), []);
 
-      const waitForVideo = (video) => new Promise((resolve) => {
-        if (!video) return resolve(false);
-        if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
-        const done = () => {
-          cleanup();
-          resolve(true);
-        };
-        const timeout = () => {
-          cleanup();
-          resolve(false);
-        };
-        const cleanup = () => {
-          video.removeEventListener('loadedmetadata', done);
-          video.removeEventListener('canplay', done);
-          video.removeEventListener('playing', done);
-          if (readyTimer) {
-            clearTimeout(readyTimer);
-            readyTimer = null;
-          }
-        };
-        video.addEventListener('loadedmetadata', done, { once: true });
-        video.addEventListener('canplay', done, { once: true });
-        video.addEventListener('playing', done, { once: true });
-        readyTimer = setTimeout(timeout, 2500);
-      });
+    const startCamera = useCallback(async () => {
+      if (startRequestRef.current) return;
+      startRequestRef.current = true;
+      setError('');
+      cleanupCamera();
 
-      const start = async () => {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          setError('Камера для сканирования недоступна. Можно ввести код вручную.');
-          setCameraState('manual');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError('Камера для сканирования недоступна. Можно ввести код вручную.');
+        setCameraState('manual');
+        startRequestRef.current = false;
+        return;
+      }
+
+      try {
+        setCameraState('requesting');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+        streamRef.current = stream;
+
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        setCameraState('starting');
+        try {
+          await video.play();
+        } catch (_) {
+          // Some mobile browsers resolve playback only after metadata/canplay.
+        }
+        const videoReady = await waitForVideo(video);
+        setCameraState(videoReady ? 'ready' : 'starting');
+
+        if (!HEYS.barcode?.isSupported?.()) {
+          setError('На этом браузере автосканер недоступен. Камера включена, код можно ввести вручную.');
           return;
         }
 
-        try {
-          setCameraState('requesting');
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          });
-          if (cancelled) return;
-          const video = videoRef.current;
-          if (!video) return;
-          video.srcObject = stream;
-          setCameraState('starting');
-          try {
-            await video.play();
-          } catch (_) {
-            // Some mobile browsers resolve playback only after metadata/canplay.
-          }
-          const videoReady = await waitForVideo(video);
-          if (cancelled) return;
-          if (videoReady) markCameraReady();
-          else setCameraState('starting');
-
-          if (!HEYS.barcode?.isSupported?.()) {
-            setError('На этом браузере автосканер недоступен. Камера включена, код можно ввести вручную.');
-            return;
-          }
-
-          scanner = await HEYS.barcode.startScanning(video, (result) => {
-            const code = normalizeBarcode(result?.value);
-            if (code) onDetected?.(code);
-          });
-          if (!scanner?.success) {
-            setError('Не удалось запустить сканер. Можно ввести код вручную.');
-          }
-        } catch (e) {
-          setError('Камера недоступна. Можно ввести код вручную.');
-          setCameraState('manual');
+        const scanner = await HEYS.barcode.startScanning(video, (result) => {
+          const code = normalizeBarcode(result?.value);
+          if (code) onDetected?.(code);
+        });
+        scannerRef.current = scanner;
+        if (!scanner?.success) {
+          setError('Не удалось запустить сканер. Можно ввести код вручную.');
         }
-      };
+      } catch (e) {
+        cleanupCamera();
+        setError('Камера недоступна. Можно ввести код вручную.');
+        setCameraState('manual');
+      } finally {
+        startRequestRef.current = false;
+      }
+    }, [cleanupCamera, onDetected, waitForVideo]);
 
-      start();
-
-      return () => {
-        cancelled = true;
-        if (readyTimer) clearTimeout(readyTimer);
-        try { scanner?.stop?.(); } catch (_) { }
-        try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
-      };
-    }, [onDetected]);
+    useEffect(() => {
+      return cleanupCamera;
+    }, [cleanupCamera]);
 
     const submitManual = () => {
       const code = normalizeBarcode(manualValue);
@@ -2368,13 +2379,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       onDetected?.(code);
     };
 
-    const cameraHint = cameraState === 'requesting'
-      ? 'Разрешите доступ к камере'
-      : cameraState === 'starting'
+    const cameraHint = cameraState === 'idle'
+      ? 'Нажмите «Включить камеру»'
+      : cameraState === 'requesting'
+        ? 'Подтвердите доступ к камере'
+        : cameraState === 'starting'
         ? 'Запускаем камеру...'
         : cameraState === 'manual'
           ? 'Введите код вручную'
           : 'Наведите камеру на штрихкод';
+    const showStartButton = cameraState === 'idle' || cameraState === 'manual';
 
     return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
       React.createElement('div', { className: 'aps-barcode-modal', onClick: (e) => e.stopPropagation() },
@@ -2403,7 +2417,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }),
           React.createElement('div', {
             className: 'aps-barcode-camera-empty' + (cameraState === 'ready' ? ' is-ready' : '')
-          }, cameraHint)
+          },
+            React.createElement('span', null, cameraHint),
+            showStartButton && React.createElement('button', {
+              type: 'button',
+              className: 'aps-barcode-start',
+              onClick: startCamera
+            }, cameraState === 'manual' ? 'Повторить доступ' : 'Включить камеру')
+          )
         ),
         React.createElement('div', { className: 'aps-barcode-manual' },
           React.createElement('input', {
