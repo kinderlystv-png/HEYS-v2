@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.27.4f5be12d",
+      "buildHash": "4f5be12d",
+      "date": "2026-06-27",
+      "kind": "technical",
+      "profile": "technical-general",
+      "title": "Исправления ошибок и улучшение стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили внутренние ошибки и улучшили стабильность",
+          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
+        }
+      ],
+      "coveredCommits": ["4e2d8df7", "f518b4ff"]
+    },
+    {
       "version": "2026.06.27.6d87f9bf",
       "buildHash": "6d87f9bf",
       "date": "2026-06-27",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["1d353c9d", "de9f4da8", "751294c4"]
-    },
-    {
-      "version": "2026.06.23.de9f4da8",
-      "buildHash": "de9f4da8",
-      "date": "2026-06-23",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "адаптировать hero под высоту вкладки на мобильном",
-      "items": [
-        {
-          "type": "fix",
-          "title": "адаптировать hero под высоту вкладки на мобильном",
-          "description": "адаптировать hero под высоту вкладки на мобильном"
-        }
-      ],
-      "coveredCommits": ["de9f4da8", "751294c4"]
     }
   ]
 }
