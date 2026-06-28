@@ -10590,6 +10590,7 @@
                                     day: dayOverride || HEYS.Day?.getDay?.() || day,
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
+                                    barcodeCameraStart: options.barcodeCameraStart || null,
                                     onAdd: ({ product, grams, mealIndex: addMealIndex }) => {
                                         let finalProduct = product;
                                         if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
@@ -10836,11 +10837,11 @@
                                 }, 100);
                             };
 
-                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false) => {
+                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
                                 window.HEYS.ConfirmModal.hide();
                                 const actualIdx = findMealIndex();
                                 if (actualIdx >= 0) {
-                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { startWithBarcodeScanner }), 100);
+                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { startWithBarcodeScanner, barcodeCameraStart }), 100);
                                 }
                             };
 
@@ -10869,7 +10870,12 @@
                                     onClick: (event) => {
                                         event.preventDefault();
                                         event.stopPropagation();
-                                        openFlowAddProduct(multiProductMode, autoRepeatCount, true);
+                                        openFlowAddProduct(
+                                            multiProductMode,
+                                            autoRepeatCount,
+                                            true,
+                                            window.HEYS?.AddProductStep?.createBarcodeCameraStart?.() || null
+                                        );
                                     }
                                 }, renderFlowBarcodeIcon(compact, true))
                             );

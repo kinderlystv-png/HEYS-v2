@@ -127,6 +127,152 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch { }
   };
 
+  const BARCODE_CAMERA_AUTOSTART_KEY = 'heys_barcode_camera_autostart';
+  const BARCODE_CAMERA_REUSE_IDLE_MS = 90000;
+
+  const stopBarcodeCameraStream = (stream) => {
+    try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
+  };
+
+  const isBarcodeCameraStreamLive = (stream) => {
+    try {
+      const tracks = stream?.getVideoTracks?.() || [];
+      return !!stream?.active && tracks.some((track) => track.readyState === 'live');
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const getReusableBarcodeCameraStream = () => {
+    const session = HEYS.__barcodeCameraSession;
+    if (!isBarcodeCameraStreamLive(session?.stream)) return null;
+    if (session.stopTimer) {
+      clearTimeout(session.stopTimer);
+      session.stopTimer = null;
+    }
+    return session.stream;
+  };
+
+  const retainBarcodeCameraStream = (stream) => {
+    if (!isBarcodeCameraStreamLive(stream)) return stream;
+    const existing = HEYS.__barcodeCameraSession;
+    if (existing?.stopTimer) clearTimeout(existing.stopTimer);
+    if (existing?.stream && existing.stream !== stream) stopBarcodeCameraStream(existing.stream);
+    HEYS.__barcodeCameraSession = {
+      stream,
+      retainedAt: Date.now(),
+      stopTimer: null
+    };
+    return stream;
+  };
+
+  const scheduleBarcodeCameraRelease = (stream) => {
+    if (!stream) return;
+    const session = HEYS.__barcodeCameraSession;
+    if (!session || session.stream !== stream) {
+      stopBarcodeCameraStream(stream);
+      return;
+    }
+    if (session.stopTimer) clearTimeout(session.stopTimer);
+    session.stopTimer = setTimeout(() => {
+      const current = HEYS.__barcodeCameraSession;
+      if (current?.stream === stream) {
+        stopBarcodeCameraStream(stream);
+        HEYS.__barcodeCameraSession = null;
+      }
+    }, BARCODE_CAMERA_REUSE_IDLE_MS);
+  };
+
+  const requestBarcodeCameraStream = async (appendDebug = () => { }) => {
+    const requestCamera = async (constraints) => navigator.mediaDevices.getUserMedia(constraints);
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+      appendDebug('getUserMedia.primary.request', { constraints });
+      const stream = await requestCamera(constraints);
+      appendDebug('getUserMedia.primary.success');
+      return stream;
+    } catch (primaryError) {
+      appendDebug('getUserMedia.primary.failed', {
+        error: {
+          name: primaryError?.name || null,
+          message: primaryError?.message || String(primaryError)
+        }
+      });
+      console.warn('[HEYS.barcode] primary camera constraints failed', {
+        name: primaryError?.name,
+        message: primaryError?.message
+      });
+      try {
+        const constraints = {
+          video: {
+            facingMode: 'environment'
+          },
+          audio: false
+        };
+        appendDebug('getUserMedia.environment.request', { constraints });
+        const stream = await requestCamera(constraints);
+        appendDebug('getUserMedia.environment.success');
+        return stream;
+      } catch (secondaryError) {
+        appendDebug('getUserMedia.environment.failed', {
+          error: {
+            name: secondaryError?.name || null,
+            message: secondaryError?.message || String(secondaryError)
+          }
+        });
+        console.warn('[HEYS.barcode] environment camera fallback failed', {
+          name: secondaryError?.name,
+          message: secondaryError?.message
+        });
+        appendDebug('getUserMedia.basic.request', { constraints: { video: true, audio: false } });
+        const stream = await requestCamera({ video: true, audio: false });
+        appendDebug('getUserMedia.basic.success');
+        return stream;
+      }
+    }
+  };
+
+  const createBarcodeCameraStart = () => {
+    if (!navigator.mediaDevices?.getUserMedia) return null;
+    const events = [];
+    const appendDebug = (stage, data = {}) => {
+      events.push({ at: new Date().toISOString(), stage, data });
+    };
+    const reusableStream = getReusableBarcodeCameraStream();
+    const streamPromise = (reusableStream
+      ? Promise.resolve(reusableStream)
+      : requestBarcodeCameraStream(appendDebug))
+      .then((stream) => {
+        HEYS.__barcodeCameraAutoStart = true;
+        writeRawValue(BARCODE_CAMERA_AUTOSTART_KEY, true);
+        return retainBarcodeCameraStream(stream);
+      })
+      .catch((error) => {
+        console.warn('[HEYS.barcode] prestarted camera request failed', {
+          name: error?.name,
+          message: error?.message
+        });
+        throw error;
+      });
+    return {
+      requestedAt: Date.now(),
+      reused: !!reusableStream,
+      events,
+      streamPromise
+    };
+  };
+
+  const stopBarcodeCameraStart = (cameraStart) => {
+    cameraStart?.streamPromise?.then(scheduleBarcodeCameraRelease).catch(() => { });
+  };
+
   const normalizeBarcode = (value) => {
     if (value == null) return '';
     const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase();
@@ -2630,10 +2776,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
-  function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, onDetected, onClose }) {
+  function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, cameraStart = null, onDetected, onClose }) {
     const [manualValue, setManualValue] = useState(initialValue);
     const [error, setError] = useState('');
-    const [cameraState, setCameraState] = useState('idle');
+    const [cameraState, setCameraState] = useState(() => (
+      autoStart === true
+      || !!cameraStart?.streamPromise
+      || HEYS.__barcodeCameraAutoStart === true
+      || readStoredValue(BARCODE_CAMERA_AUTOSTART_KEY, false) === true
+        ? 'requesting'
+        : 'idle'
+    ));
     const [debugCopyState, setDebugCopyState] = useState('');
     const [debugReportText, setDebugReportText] = useState('');
     const videoRef = useRef(null);
@@ -2643,7 +2796,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const debugRefreshTimerRef = useRef(null);
     const startRequestRef = useRef(false);
     const cameraDebugRef = useRef([]);
-    const cameraAutoStartKey = 'heys_barcode_camera_autostart';
     const isIOSCameraBrowser = () => {
       const ua = navigator.userAgent || '';
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2725,8 +2877,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           cameraState,
           error,
           manualValueLength: String(manualValue || '').length,
-          autoStartFlag: readStoredValue(cameraAutoStartKey, null),
-          globalAutoStart: HEYS.__barcodeCameraAutoStart === true
+          autoStartFlag: readStoredValue(BARCODE_CAMERA_AUTOSTART_KEY, null),
+          globalAutoStart: HEYS.__barcodeCameraAutoStart === true,
+          hasPrestartedCamera: !!cameraStart?.streamPromise,
+          prestartedCameraReused: cameraStart?.reused === true,
+          sessionCameraLive: isBarcodeCameraStreamLive(HEYS.__barcodeCameraSession?.stream)
         },
         video: video ? {
           readyState: video.readyState,
@@ -2784,7 +2939,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const shouldAutoStartCamera = useCallback(() => {
       if (autoStart === true) return true;
       if (HEYS.__barcodeCameraAutoStart === true) return true;
-      return readStoredValue(cameraAutoStartKey, false) === true;
+      return readStoredValue(BARCODE_CAMERA_AUTOSTART_KEY, false) === true;
     }, [autoStart]);
 
     const cleanupCamera = useCallback(() => {
@@ -2798,7 +2953,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       try { scannerRef.current?.stop?.(); } catch (_) { }
       scannerRef.current = null;
-      try { streamRef.current?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
+      scheduleBarcodeCameraRelease(streamRef.current);
       streamRef.current = null;
       try {
         if (videoRef.current) videoRef.current.srcObject = null;
@@ -2831,7 +2986,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       readyTimerRef.current = setTimeout(timeout, 2500);
     }), []);
 
-    const startCamera = useCallback(async () => {
+    const startCamera = useCallback(async (prestartedStreamPromise = null) => {
       if (startRequestRef.current) return;
       startRequestRef.current = true;
       cameraDebugRef.current = [];
@@ -2886,59 +3041,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         } catch (devicesError) {
           appendCameraDebug('devices.before.failed', { error: safeCameraError(devicesError) });
         }
-        const requestCamera = async (constraints) => navigator.mediaDevices.getUserMedia(constraints);
         let stream;
-        try {
-          const constraints = {
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          };
-          appendCameraDebug('getUserMedia.primary.request', { constraints });
-          stream = await requestCamera({
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
+        if (prestartedStreamPromise) {
+          appendCameraDebug('getUserMedia.prestarted.await', {
+            requestedAt: cameraStart?.requestedAt || null,
+            events: Array.isArray(cameraStart?.events) ? cameraStart.events : []
           });
-          appendCameraDebug('getUserMedia.primary.success');
-        } catch (primaryError) {
-          appendCameraDebug('getUserMedia.primary.failed', { error: safeCameraError(primaryError) });
-          console.warn('[HEYS.barcode] primary camera constraints failed', {
-            name: primaryError?.name,
-            message: primaryError?.message
+          stream = await prestartedStreamPromise;
+          appendCameraDebug('getUserMedia.prestarted.success');
+        } else {
+          stream = await requestBarcodeCameraStream((stage, data) => {
+            appendCameraDebug(stage, data);
           });
-          try {
-            const constraints = {
-              video: {
-                facingMode: 'environment'
-              },
-              audio: false
-            };
-            appendCameraDebug('getUserMedia.environment.request', { constraints });
-            stream = await requestCamera({
-              video: {
-                facingMode: 'environment'
-              },
-              audio: false
-            });
-            appendCameraDebug('getUserMedia.environment.success');
-          } catch (secondaryError) {
-            appendCameraDebug('getUserMedia.environment.failed', { error: safeCameraError(secondaryError) });
-            console.warn('[HEYS.barcode] environment camera fallback failed', {
-              name: secondaryError?.name,
-              message: secondaryError?.message
-            });
-            appendCameraDebug('getUserMedia.basic.request', { constraints: { video: true, audio: false } });
-            stream = await requestCamera({ video: true, audio: false });
-            appendCameraDebug('getUserMedia.basic.success');
-          }
         }
+        stream = retainBarcodeCameraStream(stream);
         streamRef.current = stream;
         appendCameraDebug('stream.attached', {
           active: !!stream?.active,
@@ -2950,7 +3066,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }))
         });
         HEYS.__barcodeCameraAutoStart = true;
-        writeRawValue(cameraAutoStartKey, true);
+        writeRawValue(BARCODE_CAMERA_AUTOSTART_KEY, true);
 
         const video = videoRef.current;
         if (!video) {
@@ -3034,17 +3150,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       } finally {
         startRequestRef.current = false;
       }
-    }, [appendCameraDebug, buildCameraDebugReport, cameraState, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
+    }, [appendCameraDebug, buildCameraDebugReport, cameraStart, cameraState, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
 
     useEffect(() => {
       return cleanupCamera;
     }, [cleanupCamera]);
 
     useEffect(() => {
+      if (cameraStart?.streamPromise) {
+        startCamera(cameraStart.streamPromise);
+        return undefined;
+      }
       if (!shouldAutoStartCamera()) return undefined;
       const timer = setTimeout(() => startCamera(), 80);
       return () => clearTimeout(timer);
-    }, [shouldAutoStartCamera, startCamera]);
+    }, [cameraStart, shouldAutoStartCamera, startCamera]);
 
     const submitManual = () => {
       const code = normalizeBarcode(manualValue);
@@ -3064,7 +3184,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         : cameraState === 'manual'
           ? 'Введите код вручную'
           : 'Наведите камеру на штрихкод';
-    const showStartButton = cameraState === 'idle' || cameraState === 'manual';
+    const willAutoStart = !!cameraStart?.streamPromise || shouldAutoStartCamera();
+    const showStartButton = cameraState === 'manual' || (cameraState === 'idle' && !willAutoStart);
 
     return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
       React.createElement('div', { className: 'aps-barcode-modal', onClick: (e) => e.stopPropagation() },
@@ -3241,6 +3362,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const { dateKey = '', day: contextDay } = context || {};
     const usageWindowDays = 21;
 
+    const openSearchBarcodeScanner = useCallback((cameraStart = null) => {
+      setBarcodeNotice(null);
+      setBarcodeModal({ mode: 'search', autoStart: true, cameraStart });
+    }, []);
+
     // 🔧 FIX: Реактивное состояние для продуктов с подпиской на синхронизацию
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
@@ -3270,10 +3396,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (startWithBarcodeScannerRef.current || !context?.startWithBarcodeScanner) return;
       startWithBarcodeScannerRef.current = true;
       setTimeout(() => {
-        setBarcodeNotice(null);
-        setBarcodeModal({ mode: 'search', autoStart: true });
+        openSearchBarcodeScanner(context?.barcodeCameraStart || null);
       }, 0);
-    }, [context?.startWithBarcodeScanner]);
+    }, [context?.barcodeCameraStart, context?.startWithBarcodeScanner, openSearchBarcodeScanner]);
 
     // Фиксируем состояние sync на момент открытия: если sync уже завершён,
     // можно рендерить сразу; если нет — ждём финальную версию списка.
@@ -4290,17 +4415,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const openProductBarcodeControl = useCallback(async (e, product) => {
       e.stopPropagation();
+      const cameraStart = getProductBarcodes(product).length ? null : createBarcodeCameraStart();
       const productWithSharedBarcode = await resolveSharedBarcodeProductForAddStep(product);
       if (!getProductBarcodes(productWithSharedBarcode).length) {
-        setBarcodeModal({ mode: 'product', product: productWithSharedBarcode });
+        setBarcodeModal({ mode: 'product', product: productWithSharedBarcode, autoStart: true, cameraStart });
         return;
       }
+      stopBarcodeCameraStart(cameraStart);
       setBarcodeManager({ product: productWithSharedBarcode });
     }, []);
 
     const addBarcodeFromManager = useCallback(() => {
       if (!barcodeManager?.product) return;
-      setBarcodeModal({ mode: 'product', product: barcodeManager.product, returnToManager: true });
+      setBarcodeModal({
+        mode: 'product',
+        product: barcodeManager.product,
+        returnToManager: true,
+        autoStart: true,
+        cameraStart: createBarcodeCameraStart()
+      });
       setBarcodeManager(null);
     }, [barcodeManager]);
 
@@ -4756,6 +4889,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ? getProductBarcode(barcodeModal.product)
           : '',
         autoStart: barcodeModal.autoStart === true,
+        cameraStart: barcodeModal.cameraStart || null,
         onDetected: (code) => resolveBarcodeScan(
           code,
           barcodeModal.mode === 'product' ? barcodeModal.product : null,
@@ -4901,10 +5035,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('button', {
               type: 'button',
               className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
-              onClick: () => {
-                setBarcodeNotice(null);
-                setBarcodeModal({ mode: 'search', autoStart: true });
-              },
+              onClick: () => openSearchBarcodeScanner(createBarcodeCameraStart()),
               disabled: barcodeLookupBusy,
               'aria-label': 'Сканировать штрихкод',
               title: 'Сканировать штрихкод'
@@ -8097,6 +8228,7 @@ NOVA: 1
       initialSearch = '', // 🆕 Предзаполнение поиска (MealRec UX fix)
       initialGrams = 100, // 🆕 v24: Smart Grams Pre-fill (R6, Sprint 1)
       startWithBarcodeScanner = false,
+      barcodeCameraStart = null,
       openPresetsCreate = false, // Открыть сразу в режиме создания набора из текущего приёма
       onAdd,
       onAddMany,
@@ -8214,6 +8346,7 @@ NOVA: 1
         mealId,
         multiProductMode,
         startWithBarcodeScanner,
+        barcodeCameraStart,
         _openPresetsCreate: openPresetsCreate,
         // 🆕 autoRepeat: closure-переменная не сериализуется → contextKey стабилен между шагами
         hasAutoRepeat: autoRepeatRemaining > 0,
@@ -8412,6 +8545,7 @@ NOVA: 1
     show: showAddProductModal,
     showEditGrams: showEditGramsModal,
     showEditProduct: showEditProductModal,
+    createBarcodeCameraStart,
     ProductSearchStep,
     GramsStep,
     PortionsStep,
