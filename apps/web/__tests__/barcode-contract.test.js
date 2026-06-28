@@ -94,6 +94,9 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('aps-barcode-debug-text');
     expect(addProduct).not.toContain('if (isIOSCameraBrowser()) return false;');
     const platformApis = read('apps/web/heys_platform_apis_v1.js');
+    expect(platformApis).toContain('function getBarcodePolyfillGlobal');
+    expect(platformApis).toContain("typeof barcodeDetectorPolyfill !== 'undefined'");
+    expect(platformApis).toContain('getDebugState: getBarcodeDebugState');
     expect(platformApis).toContain('BarcodeDetector polyfill loaded');
     expect(platformApis).toContain('/vendor/barcode/');
     expect(platformApis).toContain('canLoadBarcodePolyfill');

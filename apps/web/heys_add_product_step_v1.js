@@ -2540,7 +2540,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           enumerateDevices: !!navigator.mediaDevices?.enumerateDevices,
           permissionsApi: !!navigator.permissions?.query,
           barcodeDetector: 'BarcodeDetector' in window,
-          barcodePolyfillLoaded: !!window.barcodeDetectorPolyfill,
+          barcodePolyfillLoaded: !!(window.barcodeDetectorPolyfill || HEYS.barcode?.getDebugState?.()?.hasGlobalPolyfill),
+          barcodeDebug: HEYS.barcode?.getDebugState?.() || null,
           heysBarcodeReady: !!HEYS.barcode,
           heysBarcodeSupported: !!HEYS.barcode?.isSupported?.(),
           supportedConstraints: navigator.mediaDevices?.getSupportedConstraints?.() || null
@@ -2804,6 +2805,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return;
         }
 
+        appendCameraDebug('scanner.start.request', {
+          barcodeDebug: HEYS.barcode?.getDebugState?.() || null
+        });
         const scanner = await HEYS.barcode.startScanning(video, (result) => {
           const code = normalizeBarcode(result?.value);
           if (code) onDetected?.(code);
@@ -2811,7 +2815,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         scannerRef.current = scanner;
         appendCameraDebug('scanner.start.result', {
           success: !!scanner?.success,
-          error: scanner?.error || null
+          error: scanner?.error || null,
+          barcodeDebug: HEYS.barcode?.getDebugState?.() || null
         });
         if (!scanner?.success) {
           setError('Не удалось запустить сканер. Можно ввести код вручную.');

@@ -1496,6 +1496,28 @@
     return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
+  function getBarcodePolyfillGlobal() {
+    if (window.barcodeDetectorPolyfill) return window.barcodeDetectorPolyfill;
+    try {
+      // The vendored UMD bundle declares `const barcodeDetectorPolyfill = ...`;
+      // Safari exposes that as a global lexical binding, not as window property.
+      if (typeof barcodeDetectorPolyfill !== 'undefined') return barcodeDetectorPolyfill;
+    } catch (_) { }
+    return null;
+  }
+
+  function getBarcodeDebugState() {
+    const polyfillGlobal = getBarcodePolyfillGlobal();
+    return {
+      hasBarcodeDetector: 'BarcodeDetector' in window,
+      hasWindowPolyfill: !!window.barcodeDetectorPolyfill,
+      hasGlobalPolyfill: !!polyfillGlobal,
+      hasPolyfillClass: !!polyfillGlobal?.BarcodeDetectorPolyfill,
+      canLoadPolyfill: canLoadBarcodePolyfill(),
+      prefersPolyfill: shouldPreferBarcodePolyfill()
+    };
+  }
+
   function loadBarcodeScript(src) {
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-heys-barcode-src="${src}"]`);
@@ -1533,8 +1555,9 @@
       barcodePolyfillPromise = (async () => {
         await loadBarcodeScript(`${BARCODE_POLYFILL_BASE}zbar-wasm.js`);
         await loadBarcodeScript(`${BARCODE_POLYFILL_BASE}barcode-detector-polyfill.js`);
-        const Polyfill = window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill;
+        const Polyfill = getBarcodePolyfillGlobal()?.BarcodeDetectorPolyfill;
         if (!Polyfill) throw new Error('BarcodeDetectorPolyfill not exposed');
+        window.barcodeDetectorPolyfill = getBarcodePolyfillGlobal();
         window.BarcodeDetector = Polyfill;
         console.log('[Barcode] ✅ BarcodeDetector polyfill loaded');
         return true;
@@ -1691,6 +1714,7 @@
   // Экспортируем
   HEYS.barcode = {
     isSupported: () => 'BarcodeDetector' in window || canLoadBarcodePolyfill(),
+    getDebugState: getBarcodeDebugState,
     scanImage: scanBarcodeFromImage,
     startScanning: startBarcodeScanning
   };
