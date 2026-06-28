@@ -2795,11 +2795,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const readyTimerRef = useRef(null);
     const debugRefreshTimerRef = useRef(null);
     const startRequestRef = useRef(false);
+    const autoStartAttemptedRef = useRef(false);
     const cameraDebugRef = useRef([]);
+    const cameraStateRef = useRef(cameraState);
+    const errorRef = useRef(error);
+    const manualValueRef = useRef(manualValue);
+    const cameraStartRef = useRef(cameraStart);
     const isIOSCameraBrowser = () => {
       const ua = navigator.userAgent || '';
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     };
+
+    useEffect(() => {
+      cameraStateRef.current = cameraState;
+    }, [cameraState]);
+
+    useEffect(() => {
+      errorRef.current = error;
+    }, [error]);
+
+    useEffect(() => {
+      manualValueRef.current = manualValue;
+    }, [manualValue]);
+
+    useEffect(() => {
+      cameraStartRef.current = cameraStart;
+    }, [cameraStart]);
 
     const appendCameraDebug = useCallback((stage, data = {}) => {
       try {
@@ -2874,13 +2895,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           supportedConstraints: navigator.mediaDevices?.getSupportedConstraints?.() || null
         },
         state: {
-          cameraState,
-          error,
-          manualValueLength: String(manualValue || '').length,
+          cameraState: cameraStateRef.current,
+          error: errorRef.current,
+          manualValueLength: String(manualValueRef.current || '').length,
           autoStartFlag: readStoredValue(BARCODE_CAMERA_AUTOSTART_KEY, null),
           globalAutoStart: HEYS.__barcodeCameraAutoStart === true,
-          hasPrestartedCamera: !!cameraStart?.streamPromise,
-          prestartedCameraReused: cameraStart?.reused === true,
+          hasPrestartedCamera: !!cameraStartRef.current?.streamPromise,
+          prestartedCameraReused: cameraStartRef.current?.reused === true,
           sessionCameraLive: isBarcodeCameraStreamLive(HEYS.__barcodeCameraSession?.stream)
         },
         video: video ? {
@@ -2901,7 +2922,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         extra
       };
       return JSON.stringify(report, null, 2);
-    }, [cameraState, error, manualValue]);
+    }, []);
 
     const copyCameraDebugReport = useCallback(async (finalStage, extra = {}) => {
       const text = buildCameraDebugReport(finalStage, extra);
@@ -2914,6 +2935,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       } catch (e) {
         appendCameraDebug('clipboard.writeText.failed', { error: safeCameraError(e) });
+      }
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) {
+        setDebugCopyState('Диагностика готова ниже. Зажмите поле и скопируйте вручную.');
+        return false;
       }
       try {
         const temp = document.createElement('textarea');
@@ -2992,7 +3017,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       cameraDebugRef.current = [];
       setDebugCopyState('Собираю диагностику камеры...');
       appendCameraDebug('start.tap', {
-        cameraState,
+        cameraState: cameraStateRef.current,
         isSecureContext: window.isSecureContext,
         href: location.href,
         iosDetected: isIOSCameraBrowser()
@@ -3044,8 +3069,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         let stream;
         if (prestartedStreamPromise) {
           appendCameraDebug('getUserMedia.prestarted.await', {
-            requestedAt: cameraStart?.requestedAt || null,
-            events: Array.isArray(cameraStart?.events) ? cameraStart.events : []
+            requestedAt: cameraStartRef.current?.requestedAt || null,
+            events: Array.isArray(cameraStartRef.current?.events) ? cameraStartRef.current.events : []
           });
           stream = await prestartedStreamPromise;
           appendCameraDebug('getUserMedia.prestarted.success');
@@ -3150,18 +3175,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       } finally {
         startRequestRef.current = false;
       }
-    }, [appendCameraDebug, buildCameraDebugReport, cameraStart, cameraState, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
+    }, [appendCameraDebug, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
 
     useEffect(() => {
       return cleanupCamera;
     }, [cleanupCamera]);
 
     useEffect(() => {
+      try { document.activeElement?.blur?.(); } catch (_) { /* noop */ }
+    }, []);
+
+    useEffect(() => {
+      if (autoStartAttemptedRef.current) return undefined;
       if (cameraStart?.streamPromise) {
+        autoStartAttemptedRef.current = true;
         startCamera(cameraStart.streamPromise);
         return undefined;
       }
       if (!shouldAutoStartCamera()) return undefined;
+      autoStartAttemptedRef.current = true;
       const timer = setTimeout(() => startCamera(), 80);
       return () => clearTimeout(timer);
     }, [cameraStart, shouldAutoStartCamera, startCamera]);
