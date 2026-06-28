@@ -2466,6 +2466,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const streamRef = useRef(null);
     const scannerRef = useRef(null);
     const readyTimerRef = useRef(null);
+    const debugRefreshTimerRef = useRef(null);
     const startRequestRef = useRef(false);
     const cameraDebugRef = useRef([]);
     const cameraAutoStartKey = 'heys_barcode_camera_autostart';
@@ -2615,6 +2616,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (readyTimerRef.current) {
         clearTimeout(readyTimerRef.current);
         readyTimerRef.current = null;
+      }
+      if (debugRefreshTimerRef.current) {
+        clearTimeout(debugRefreshTimerRef.current);
+        debugRefreshTimerRef.current = null;
       }
       try { scannerRef.current?.stop?.(); } catch (_) { }
       scannerRef.current = null;
@@ -2827,6 +2832,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             error: scanner?.error || null
           }
         });
+        if (scanner?.success) {
+          if (debugRefreshTimerRef.current) clearTimeout(debugRefreshTimerRef.current);
+          debugRefreshTimerRef.current = setTimeout(() => {
+            const barcodeDebug = HEYS.barcode?.getDebugState?.() || null;
+            appendCameraDebug('scanner.debug.refresh', { barcodeDebug });
+            setDebugReportText(buildCameraDebugReport('scanner-running', {
+              scanner: { success: true, error: null },
+              barcodeDebug
+            }));
+            setDebugCopyState('Диагностика обновлена ниже. Зажмите поле и скопируйте вручную.');
+          }, 2200);
+        }
       } catch (e) {
         appendCameraDebug('start.failed', { error: safeCameraError(e) });
         console.warn('[HEYS.barcode] camera start failed', {
@@ -2842,7 +2859,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       } finally {
         startRequestRef.current = false;
       }
-    }, [appendCameraDebug, cameraState, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
+    }, [appendCameraDebug, buildCameraDebugReport, cameraState, cleanupCamera, copyCameraDebugReport, onDetected, waitForVideo]);
 
     useEffect(() => {
       return cleanupCamera;

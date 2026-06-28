@@ -90,6 +90,8 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
     expect(addProduct).toContain('HEYS BARCODE CAMERA DEBUG');
     expect(addProduct).toContain('Диагностика камеры скопирована');
+    expect(addProduct).toContain('scanner.debug.refresh');
+    expect(addProduct).toContain('Диагностика обновлена ниже');
     expect(addProduct).toContain('debugReportText');
     expect(addProduct).toContain('aps-barcode-debug-text');
     expect(addProduct).not.toContain('if (isIOSCameraBrowser()) return false;');
@@ -102,6 +104,10 @@ describe('product barcode contract', () => {
     expect(platformApis).toContain("drawCrop('barcode-band'");
     expect(platformApis).toContain("drawCrop('barcode-tight'");
     expect(platformApis).toContain("targets.push({ name: 'video-full'");
+    expect(platformApis).toContain('function decodeEan13Bits');
+    expect(platformApis).toContain('function decodeEan13FromImageSource');
+    expect(platformApis).toContain('fallbackAttempts');
+    expect(platformApis).toContain('ean13-fallback');
     expect(platformApis).toContain('BarcodeDetector polyfill loaded');
     expect(platformApis).toContain('/vendor/barcode/');
     expect(platformApis).toContain('canLoadBarcodePolyfill');

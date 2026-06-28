@@ -1485,8 +1485,33 @@
   let barcodePolyfillPromise = null;
   let barcodeDetectorFormats = [];
   let barcodeScanStats = null;
+  let barcodeFallbackCanvas = null;
   const BARCODE_POLYFILL_BASE = '/vendor/barcode/';
   const PRODUCT_BARCODE_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'];
+  const EAN13_LEFT_ODD = [
+    '0001101', '0011001', '0010011', '0111101', '0100011',
+    '0110001', '0101111', '0111011', '0110111', '0001011'
+  ];
+  const EAN13_LEFT_EVEN = [
+    '0100111', '0110011', '0011011', '0100001', '0011101',
+    '0111001', '0000101', '0010001', '0001001', '0010111'
+  ];
+  const EAN13_RIGHT = [
+    '1110010', '1100110', '1101100', '1000010', '1011100',
+    '1001110', '1010000', '1000100', '1001000', '1110100'
+  ];
+  const EAN13_PARITY_PREFIX = {
+    LLLLLL: '0',
+    LLGLGG: '1',
+    LLGGLG: '2',
+    LLGGGL: '3',
+    LGLLGG: '4',
+    LGGLLG: '5',
+    LGGGLL: '6',
+    LGLGLG: '7',
+    LGLGGL: '8',
+    LGGLGL: '9'
+  };
 
   function canLoadBarcodePolyfill() {
     return typeof document !== 'undefined'
@@ -1602,6 +1627,181 @@
         return targets;
       }
     };
+  }
+
+  function hammingDistance(a, b) {
+    let distance = 0;
+    const len = Math.min(a.length, b.length);
+    for (let i = 0; i < len; i += 1) if (a[i] !== b[i]) distance += 1;
+    return distance + Math.abs(a.length - b.length);
+  }
+
+  function matchEanPattern(bits, patterns) {
+    let best = { digit: -1, distance: Infinity };
+    patterns.forEach((pattern, digit) => {
+      const distance = hammingDistance(bits, pattern);
+      if (distance < best.distance) best = { digit, distance };
+    });
+    return best;
+  }
+
+  function isValidEan13(value) {
+    if (!/^\d{13}$/.test(value)) return false;
+    let sum = 0;
+    for (let i = 0; i < 12; i += 1) {
+      const digit = Number(value[i]);
+      sum += digit * (i % 2 === 0 ? 1 : 3);
+    }
+    const check = (10 - (sum % 10)) % 10;
+    return check === Number(value[12]);
+  }
+
+  function decodeEan13Bits(bits) {
+    if (!bits || bits.length !== 95) return null;
+    const startGuard = hammingDistance(bits.slice(0, 3), '101');
+    const middleGuard = hammingDistance(bits.slice(45, 50), '01010');
+    const endGuard = hammingDistance(bits.slice(92, 95), '101');
+    if (startGuard + middleGuard + endGuard > 2) return null;
+
+    const digits = [];
+    let parity = '';
+    let score = startGuard + middleGuard + endGuard;
+
+    for (let i = 0; i < 6; i += 1) {
+      const chunk = bits.slice(3 + i * 7, 10 + i * 7);
+      const odd = matchEanPattern(chunk, EAN13_LEFT_ODD);
+      const even = matchEanPattern(chunk, EAN13_LEFT_EVEN);
+      const match = odd.distance <= even.distance ? odd : even;
+      const side = odd.distance <= even.distance ? 'L' : 'G';
+      if (match.distance > 2) return null;
+      digits.push(String(match.digit));
+      parity += side;
+      score += match.distance;
+    }
+
+    const prefix = EAN13_PARITY_PREFIX[parity];
+    if (!prefix) return null;
+
+    for (let i = 0; i < 6; i += 1) {
+      const chunk = bits.slice(50 + i * 7, 57 + i * 7);
+      const match = matchEanPattern(chunk, EAN13_RIGHT);
+      if (match.distance > 2) return null;
+      digits.push(String(match.digit));
+      score += match.distance;
+    }
+
+    if (score > 12) return null;
+    const value = prefix + digits.join('');
+    return isValidEan13(value) ? { value, score } : null;
+  }
+
+  function binaryFromImageRow(imageData, width, height, y, bandHeight = 5) {
+    const y0 = Math.max(0, Math.min(height - 1, Math.round(y - bandHeight / 2)));
+    const y1 = Math.max(y0 + 1, Math.min(height, y0 + bandHeight));
+    const values = new Array(width);
+
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let row = y0; row < y1; row += 1) {
+        const idx = (row * width + x) * 4;
+        sum += imageData[idx] * 0.299 + imageData[idx + 1] * 0.587 + imageData[idx + 2] * 0.114;
+      }
+      values[x] = sum / (y1 - y0);
+    }
+
+    const sorted = values.slice().sort((a, b) => a - b);
+    const dark = sorted[Math.floor(sorted.length * 0.12)];
+    const light = sorted[Math.floor(sorted.length * 0.88)];
+    if (!Number.isFinite(dark) || !Number.isFinite(light) || light - dark < 24) return null;
+    const threshold = dark + (light - dark) * 0.52;
+    return values.map((value) => value < threshold ? 1 : 0);
+  }
+
+  function runsFromBinary(binary) {
+    const runs = [];
+    let value = binary[0];
+    let start = 0;
+    for (let i = 1; i <= binary.length; i += 1) {
+      if (i === binary.length || binary[i] !== value) {
+        runs.push({ value, start, end: i, len: i - start });
+        value = binary[i];
+        start = i;
+      }
+    }
+    return runs;
+  }
+
+  function tryDecodeEan13FromBinary(binary) {
+    const runs = runsFromBinary(binary);
+    let best = null;
+    for (let i = 0; i < runs.length - 2; i += 1) {
+      const a = runs[i];
+      const b = runs[i + 1];
+      const c = runs[i + 2];
+      if (a.value !== 1 || b.value !== 0 || c.value !== 1) continue;
+      const moduleGuess = (a.len + b.len + c.len) / 3;
+      if (moduleGuess < 1.4 || moduleGuess > 18) continue;
+
+      for (let scale = 0.78; scale <= 1.28; scale += 0.05) {
+        const moduleWidth = moduleGuess * scale;
+        if (a.start + moduleWidth * 95 >= binary.length) continue;
+        for (let shift = -0.35; shift <= 0.35; shift += 0.18) {
+          const start = a.start + shift * moduleWidth;
+          let bits = '';
+          let ok = true;
+          for (let bit = 0; bit < 95; bit += 1) {
+            const x = Math.round(start + (bit + 0.5) * moduleWidth);
+            if (x < 0 || x >= binary.length) {
+              ok = false;
+              break;
+            }
+            bits += binary[x] ? '1' : '0';
+          }
+          if (!ok) continue;
+          const decoded = decodeEan13Bits(bits);
+          if (decoded && (!best || decoded.score < best.score)) {
+            best = { ...decoded, moduleWidth };
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  function drawSourceToFallbackCanvas(source) {
+    const width = Number(source.videoWidth || source.width || source.clientWidth || 0);
+    const height = Number(source.videoHeight || source.height || source.clientHeight || 0);
+    if (!width || !height) return null;
+    if (!barcodeFallbackCanvas) barcodeFallbackCanvas = document.createElement('canvas');
+    if (barcodeFallbackCanvas.width !== width) barcodeFallbackCanvas.width = width;
+    if (barcodeFallbackCanvas.height !== height) barcodeFallbackCanvas.height = height;
+    const ctx = barcodeFallbackCanvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(source, 0, 0, width, height);
+    return { canvas: barcodeFallbackCanvas, ctx, width, height };
+  }
+
+  function decodeEan13FromImageSource(source) {
+    const frame = drawSourceToFallbackCanvas(source);
+    if (!frame) return null;
+    let image;
+    try {
+      image = frame.ctx.getImageData(0, 0, frame.width, frame.height);
+    } catch (e) {
+      return { error: e?.message || String(e) };
+    }
+
+    const rowFractions = [0.24, 0.30, 0.36, 0.42, 0.48, 0.54, 0.60, 0.66, 0.72];
+    let best = null;
+    for (const fraction of rowFractions) {
+      const binary = binaryFromImageRow(image.data, frame.width, frame.height, frame.height * fraction);
+      if (!binary) continue;
+      const decoded = tryDecodeEan13FromBinary(binary);
+      if (decoded && (!best || decoded.score < best.score)) {
+        best = { ...decoded, row: fraction };
+      }
+    }
+    return best;
   }
 
   function loadBarcodeScript(src) {
@@ -1749,10 +1949,13 @@
     barcodeScanStats = {
       frames: 0,
       attempts: 0,
+      fallbackAttempts: 0,
+      fallbackDetections: 0,
       detections: 0,
       errors: 0,
       lastError: null,
       lastTarget: null,
+      lastFallbackTarget: null,
       lastNoHitAt: null
     };
 
@@ -1779,6 +1982,23 @@
               barcodes = found;
               targetName = target.name;
               break;
+            }
+            if (target.name !== 'video-full') {
+              barcodeScanStats.fallbackAttempts += 1;
+              const fallback = decodeEan13FromImageSource(target.source);
+              if (fallback?.value) {
+                barcodes = [{
+                  rawValue: fallback.value,
+                  format: 'ean_13',
+                  boundingBox: null,
+                  cornerPoints: null
+                }];
+                targetName = `${target.name}:ean13-fallback`;
+                barcodeScanStats.fallbackDetections += 1;
+                barcodeScanStats.lastFallbackTarget = targetName;
+                break;
+              }
+              if (fallback?.error) barcodeScanStats.lastError = fallback.error;
             }
           } catch (targetError) {
             barcodeScanStats.errors += 1;
