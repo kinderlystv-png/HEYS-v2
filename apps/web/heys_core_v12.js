@@ -878,6 +878,8 @@
         .filter(p => (
           isMissing(p?.createdAt) || // 🆕 v4.8.7: sort order
           isMissing(p?.sodium100) ||
+          isMissing(p?.barcode) ||
+          listMissing(p?.barcodes) ||
           isMissing(p?.omega3_100) ||
           isMissing(p?.omega6_100) ||
           isMissing(p?.nova_group) ||
@@ -974,6 +976,8 @@
             };
 
             setIfMissing('sodium100', sharedProduct.sodium100);
+            setIfMissing('barcode', sharedProduct.barcode);
+            setListIfMissing('barcodes', sharedProduct.barcodes);
             setIfMissing('omega3_100', sharedProduct.omega3_100);
             setIfMissing('omega6_100', sharedProduct.omega6_100);
             setIfMissing('nova_group', sharedProduct.nova_group ?? sharedProduct.novaGroup);
@@ -2676,6 +2680,21 @@
             debugInfo.updated.push({ key: 'portions', from: localPortions, to: sharedPortions });
           }
 
+          const localBarcode = local?.barcode;
+          const sharedBarcode = shared?.barcode;
+          if (isEmpty(localBarcode) && !isEmpty(sharedBarcode)) {
+            merged.barcode = sharedBarcode;
+            changed = true;
+            debugInfo.updated.push({ key: 'barcode', from: localBarcode, to: sharedBarcode });
+          }
+          const localBarcodes = local?.barcodes;
+          const sharedBarcodes = shared?.barcodes;
+          if ((!Array.isArray(localBarcodes) || localBarcodes.length === 0) && Array.isArray(sharedBarcodes) && sharedBarcodes.length > 0) {
+            merged.barcodes = sharedBarcodes;
+            changed = true;
+            debugInfo.updated.push({ key: 'barcodes', from: localBarcodes, to: sharedBarcodes });
+          }
+
           // shared_origin_id для связи
           if (!merged.shared_origin_id && shared.id) {
             merged.shared_origin_id = shared.id;
@@ -2813,6 +2832,8 @@
             harm: harm,
             harmScore: harm,
             category: shared.category ?? null,
+            barcode: shared.barcode ?? null,
+            barcodes: Array.isArray(shared.barcodes) ? shared.barcodes : [],
             portions: shared.portions ?? null,
             sodium100: shared.sodium100 ?? null,
             novaGroup: shared.nova_group ?? shared.novaGroup ?? null,
@@ -4944,6 +4965,10 @@
           next.barcode = sharedProduct.barcode;
           changed = true;
         }
+        if ((!Array.isArray(next.barcodes) || next.barcodes.length === 0) && Array.isArray(sharedProduct.barcodes) && sharedProduct.barcodes.length > 0) {
+          next.barcodes = sharedProduct.barcodes;
+          changed = true;
+        }
         // 🔧 FIX: Синхронизируем portions из shared если local пустой
         const localHasPortions = Array.isArray(next.portions) && next.portions.length > 0;
         const sharedHasPortions = Array.isArray(sharedProduct.portions) && sharedProduct.portions.length > 0;
@@ -5032,6 +5057,7 @@
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         barcode: sharedProduct.barcode || null,
+        barcodes: Array.isArray(sharedProduct.barcodes) ? sharedProduct.barcodes.slice() : [],
         portions: clonePortions(sharedProduct.portions),
         sodium100: toNum(sharedProduct.sodium100),
         omega3_100: toNum(sharedProduct.omega3_100),

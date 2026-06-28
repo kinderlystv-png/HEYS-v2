@@ -14976,6 +14976,15 @@
     return _sharedProductsCache || [];
   };
 
+  cloud.updateCachedSharedProduct = function (productId, updates) {
+    if (!productId || !_sharedProductsCache?.length) return false;
+    const idx = _sharedProductsCache.findIndex((p) => String(p?.id) === String(productId));
+    if (idx === -1) return false;
+    _sharedProductsCache[idx] = { ..._sharedProductsCache[idx], ...updates };
+    _invalidateSharedIndex();
+    return true;
+  };
+
   /**
    * Получить все продукты из общей базы (для таблицы)
    * @param {Object} options - { limit, excludeBlocklist }
@@ -15147,6 +15156,61 @@
     });
     return out;
   }
+
+  cloud.addSharedProductBarcode = async function (productId, barcode) {
+    const code = normalizeSharedProductBarcode(barcode);
+    if (!productId || !code) {
+      return { data: null, error: 'invalid_barcode', status: 'error' };
+    }
+
+    try {
+      const curatorUser = cloud.getUser?.();
+      const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
+      const params = {
+        p_product_id: productId,
+        p_barcode: code
+      };
+      const fnName = isCuratorSession && curatorUser?.id
+        ? 'add_shared_product_barcode_by_curator'
+        : 'add_shared_product_barcode_by_session';
+
+      if (fnName === 'add_shared_product_barcode_by_curator') {
+        params.p_curator_id = curatorUser.id;
+      } else {
+        const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
+          || HEYS.utils?.lsGet?.('heys_session_token', null)
+          || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
+        if (sessionToken) params.p_session_token = sessionToken;
+      }
+
+      const { data, error } = await YandexAPI.rpc(fnName, params);
+      if (error) {
+        err('[SHARED PRODUCTS] Barcode attach error:', error);
+        return { data: null, error, status: 'error' };
+      }
+      if (data?.success === false) {
+        return { data: null, error: data.error || data.message || 'barcode_attach_failed', status: data.status || 'error', message: data.message, raw: data };
+      }
+
+      const product = data?.product || null;
+      if (product?.id) {
+        cloud.updateCachedSharedProduct?.(product.id, {
+          barcode: product.barcode || code,
+          barcodes: normalizeSharedProductBarcodes(product)
+        });
+      }
+
+      return {
+        data: product || { id: productId, barcode: code, barcodes: [code] },
+        error: null,
+        status: data?.status || 'updated',
+        raw: data
+      };
+    } catch (e) {
+      err('[SHARED PRODUCTS] Barcode attach unexpected error:', e);
+      return { data: null, error: e.message || String(e), status: 'error' };
+    }
+  };
 
   cloud.searchSharedProducts = async function (query, options = {}) {
     const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;

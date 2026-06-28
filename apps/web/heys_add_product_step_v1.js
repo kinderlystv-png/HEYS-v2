@@ -780,6 +780,73 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return rows.filter((r) => r && r._custom === true);
   };
 
+  const findSharedProductForBarcodeMerge = (product) => {
+    if (!product) return null;
+    const sharedId = resolveSharedProductId(product);
+    const sharedById = HEYS.cloud?.getSharedIndex?.();
+    if (sharedId && sharedById?.get) {
+      const byId = sharedById.get(String(sharedId));
+      if (getProductBarcodes(byId).length > 0) return byId;
+    }
+
+    const cached = HEYS.cloud?.getCachedSharedProducts?.();
+    if (!Array.isArray(cached) || cached.length === 0) return null;
+    const name = normalizeName(product.name);
+    if (!name) return null;
+
+    let match = null;
+    let matches = 0;
+    cached.forEach((shared) => {
+      if (normalizeName(shared?.name) !== name) return;
+      matches += 1;
+      if (matches === 1) match = shared;
+    });
+
+    return matches === 1 && getProductBarcodes(match).length > 0 ? match : null;
+  };
+
+  const mergeSharedBarcodeIntoProductForAddStep = (product) => {
+    if (!product) return product;
+    const productCodes = getProductBarcodes(product);
+    const shared = findSharedProductForBarcodeMerge(product);
+    const sharedCodes = getProductBarcodes(shared);
+    if (sharedCodes.length === 0) return product;
+
+    const mergedCodes = [];
+    [...productCodes, ...sharedCodes].forEach((code) => {
+      if (code && !mergedCodes.includes(code)) mergedCodes.push(code);
+    });
+
+    if (
+      productCodes.length === mergedCodes.length
+      && productCodes.every((code, index) => code === mergedCodes[index])
+      && (product.shared_origin_id || !shared?.id)
+    ) {
+      return product;
+    }
+
+    return {
+      ...product,
+      shared_origin_id: product.shared_origin_id || shared?.id || product.shared_origin_id,
+      barcode: mergedCodes[0] || null,
+      barcodes: mergedCodes
+    };
+  };
+
+  const resolveSharedBarcodeProductForAddStep = async (product) => {
+    let next = mergeSharedBarcodeIntoProductForAddStep(product);
+    if (getProductBarcodes(next).length > 0 || !HEYS.cloud?.getAllSharedProducts) return next;
+
+    try {
+      await HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true });
+      next = mergeSharedBarcodeIntoProductForAddStep(product);
+    } catch (err) {
+      console.warn('[AddProductStep] shared barcode lookup failed', err);
+    }
+
+    return next;
+  };
+
   const toInt = (value, fallback = null) => {
     if (value == null || value === '') return fallback;
     const n = Number(String(value).trim().replace(',', '.'));
@@ -1410,9 +1477,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   };
 
-  const updateSharedProductBarcodes = async (product, sharedIdOverride = null) => {
+  const updateSharedProductBarcodes = async (product, sharedIdOverride = null, options = {}) => {
     const targetId = sharedIdOverride ?? resolveSharedProductId(product) ?? product?.id ?? null;
     if (!product || !targetId) return { ok: false, error: 'missing_shared_id' };
+    const mode = options?.mode || 'replace';
+    const explicitBarcode = normalizeBarcode(options?.barcode);
+    if (mode === 'add' && explicitBarcode && HEYS.cloud?.addSharedProductBarcode) {
+      try {
+        const result = await HEYS.cloud.addSharedProductBarcode(targetId, explicitBarcode);
+        if (result?.error) {
+          console.warn('[HEYS.barcode] shared barcode attach failed', {
+            productId: targetId,
+            error: result.error
+          });
+          return { ok: false, error: result.error, status: result.status, raw: result.raw };
+        }
+        const sharedProduct = {
+          ...product,
+          ...(result?.data || {}),
+          id: targetId
+        };
+        notifySharedProductUpdated(targetId, product.portions, sharedProduct);
+        return { ok: true, product: sharedProduct };
+      } catch (e) {
+        console.warn('[HEYS.barcode] shared barcode attach exception', {
+          productId: targetId,
+          error: e?.message || e
+        });
+        return { ok: false, error: e?.message || e };
+      }
+    }
+
     if (!HEYS?.YandexAPI?.rest) {
       HEYS.Toast?.warning('API недоступен для обновления штрихкодов') || alert('API недоступен для обновления штрихкодов');
       return { ok: false, error: 'api_unavailable' };
@@ -3218,8 +3313,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         clearSearchCache();
       };
 
+      const handleSharedProductsUpdated = () => {
+        initialSyncDoneRef.current = true;
+        setProductsVersion(v => v + 1);
+        clearSearchCache();
+      };
+
       window.addEventListener('heysSyncCompleted', handleSyncComplete);
       window.addEventListener('heys:products-version-changed', handleVersionChanged);
+      window.addEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
 
       // Также подписываемся через HEYS.products.watch если доступен
       let unwatchProducts = () => { };
@@ -3236,9 +3338,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return () => {
         window.removeEventListener('heysSyncCompleted', handleSyncComplete);
         window.removeEventListener('heys:products-version-changed', handleVersionChanged);
+        window.removeEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
         unwatchProducts();
       };
     }, [dateKey, usageWindowDays]);
+
+    useEffect(() => {
+      if (!isOverlayProductsEnabledForAddStep() || !HEYS.cloud?.getAllSharedProducts) return undefined;
+      let cancelled = false;
+      const timer = setTimeout(() => {
+        HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })
+          .then(() => {
+            if (!cancelled) setProductsVersion(v => v + 1);
+          })
+          .catch((err) => {
+            console.warn('[AddProductStep] shared products refresh failed', err);
+          });
+      }, 0);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }, []);
 
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     // productsVersion в зависимостях заставляет пересчитать при синхронизации
@@ -3295,7 +3417,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         : merged;
 
       // [verbose log removed — useMemo DONE drowns the trace channel]
-      return filtered;
+      return filtered.map(mergeSharedBarcodeIntoProductForAddStep);
     }, [context, pendingDeletedProductIds, productsVersion]);
 
     // 🌐 Результаты из общей базы (асинхронный поиск)
@@ -3991,7 +4113,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
 
       if (sharedId) {
-        const result = await updateSharedProductBarcodes(updatedProduct, sharedId);
+        const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode });
         if (!result.ok) {
           if (isSharedProduct(product) && !isCuratorUser()) {
             HEYS.Toast?.warning?.('Не удалось сохранить штрихкод в общей базе');
@@ -4076,13 +4198,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return saved;
     }, []);
 
-    const openProductBarcodeControl = useCallback((e, product) => {
+    const openProductBarcodeControl = useCallback(async (e, product) => {
       e.stopPropagation();
-      if (!getProductBarcodes(product).length) {
-        setBarcodeModal({ mode: 'product', product });
+      const productWithSharedBarcode = await resolveSharedBarcodeProductForAddStep(product);
+      if (!getProductBarcodes(productWithSharedBarcode).length) {
+        setBarcodeModal({ mode: 'product', product: productWithSharedBarcode });
         return;
       }
-      setBarcodeManager({ product });
+      setBarcodeManager({ product: productWithSharedBarcode });
     }, []);
 
     const addBarcodeFromManager = useCallback(() => {
@@ -4439,6 +4562,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Рендер карточки продукта с подсветкой совпадений
     const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false) => {
+      product = mergeSharedBarcodeIntoProductForAddStep(product);
       const pid = String(product.id ?? product.product_id ?? product.name);
       const isFav = favorites.has(pid);
       const isHidden = hiddenProducts.has(pid);

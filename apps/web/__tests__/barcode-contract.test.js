@@ -49,8 +49,21 @@ describe('product barcode contract', () => {
     expect(aliasesMigration).toContain('idx_shared_products_barcodes');
     expect(aliasesMigration).toContain('normalize_product_barcodes');
     expect(aliasesMigration).toContain('coalesce(barcodes, ARRAY[]::text[]) && v_barcodes');
+    const attachMigration = read('scripts/db/migrations/2026-06-28_shared_products_barcode_attach.sql');
+    expect(attachMigration).toContain('add_shared_product_barcode_by_session');
+    expect(attachMigration).toContain('add_shared_product_barcode_by_curator');
+    expect(attachMigration).toContain('barcode_duplicate');
+    expect(attachMigration).toContain('require_client_id');
+    const rpcProductsMigration = read('scripts/db/migrations/2026-06-28_get_shared_products_barcodes.sql');
+    expect(rpcProductsMigration).toContain('DROP FUNCTION IF EXISTS public.get_shared_products');
+    expect(rpcProductsMigration).toContain('barcode TEXT');
+    expect(rpcProductsMigration).toContain('barcodes TEXT[]');
+    expect(rpcProductsMigration).toContain('sp.barcode');
+    expect(rpcProductsMigration).toContain('sp.barcodes');
     expect(migrationApply).toContain('2026-06-27_shared_products_barcode.sql');
     expect(migrationApply).toContain('2026-06-28_shared_products_barcodes_array.sql');
+    expect(migrationApply).toContain('2026-06-28_shared_products_barcode_attach.sql');
+    expect(migrationApply).toContain('2026-06-28_get_shared_products_barcodes.sql');
     expect(migrationApply).toContain('check-shared-products-barcode.sql');
     expect(migrationApply).toContain('-v ON_ERROR_STOP=1');
     expect(rest).toMatch(/shared_products:\s*\[[\s\S]*'barcode'/);
@@ -62,6 +75,10 @@ describe('product barcode contract', () => {
     expect(rpc).toMatch(/'create_pending_product_by_session':\s*\{[\s\S]*'p_name':\s*'::text'/);
     expect(rpc).toMatch(/'create_pending_product_by_session':\s*\{[\s\S]*'p_fingerprint':\s*'::text'/);
     expect(rpc).toMatch(/'create_pending_product_by_session':\s*\{[\s\S]*'p_name_norm':\s*'::text'/);
+    expect(rpc).toContain("'add_shared_product_barcode_by_session'");
+    expect(rpc).toContain("'add_shared_product_barcode_by_curator'");
+    expect(rpc).toMatch(/'add_shared_product_barcode_by_session':\s*\{[\s\S]*'p_product_id':\s*'::uuid'/);
+    expect(rpc).toMatch(/'add_shared_product_barcode_by_curator':\s*\{[\s\S]*'p_curator_id':\s*'::uuid'/);
     expect(rpc).not.toMatch(/'create_pending_product_by_session':\s*\{[\s\S]*'p_product_name'/);
   });
 
@@ -79,12 +96,21 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('и синхронизируется');
     expect(addProduct).toContain('const getProductBarcodes');
     expect(addProduct).toContain('mergeProductBarcode');
+    expect(addProduct).toContain('mergeSharedBarcodeIntoProductForAddStep');
+    expect(addProduct).toContain('resolveSharedBarcodeProductForAddStep');
+    expect(addProduct).toContain('product = mergeSharedBarcodeIntoProductForAddStep(product)');
+    expect(addProduct).toContain('await HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })');
+    expect(addProduct).toContain('const openProductBarcodeControl = useCallback(async');
     expect(addProduct).toContain('const updateSharedProductBarcodes');
+    expect(addProduct).toContain('HEYS.cloud?.addSharedProductBarcode');
+    expect(addProduct).toContain("mode === 'add'");
+    expect(addProduct).toContain("window.addEventListener('heys:shared-products-updated'");
+    expect(addProduct).toContain('HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })');
     expect(addProduct).toContain("select: 'id,name,barcode,barcodes'");
     expect(addProduct).toContain('const payload = { id: targetId, barcode, barcodes };');
     expect(addProduct).toContain('HEYS.cloud?.updateCachedSharedProduct?.(targetId, { barcode, barcodes })');
     expect(addProduct).toContain('if (sharedId) {');
-    expect(addProduct).toContain('const result = await updateSharedProductBarcodes(updatedProduct, sharedId)');
+    expect(addProduct).toContain("const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode })");
     expect(addProduct).toContain('Штрихкод отправлен на проверку для общей базы');
     expect(addProduct).toContain('По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
@@ -125,8 +151,12 @@ describe('product barcode contract', () => {
     expect(storage).toContain('if (barcode != null && !barcodeQuery)');
     expect(storage).toContain('return { data: [], error: null };');
     expect(storage).toContain("'contains.barcodes': barcodeQuery");
+    expect(storage).toContain('cloud.addSharedProductBarcode = async function');
+    expect(storage).toContain("add_shared_product_barcode_by_session");
     expect(cloudShared).toContain('function normalizeSharedProductBarcode(value)');
     expect(cloudShared).toContain('function normalizeSharedProductBarcodes');
+    expect(cloudShared).toContain('cloud.addSharedProductBarcode = async function');
+    expect(cloudShared).toContain("add_shared_product_barcode_by_curator");
     expect(cloudShared).toContain("filters['eq.barcode'] = barcodeQuery");
     expect(cloudShared).toContain("'contains.barcodes': barcodeQuery");
     expect(cloudShared).toContain('barcode: normalizeSharedProductBarcodes(product)[0] || null');
@@ -134,6 +164,11 @@ describe('product barcode contract', () => {
     expect(cloudShared).toContain('p_fingerprint: fingerprint');
     expect(cloudShared).toContain('p_name_norm: nameNorm');
     expect(gateFlow).toContain('p.barcode || item.barcode');
+    const core = read('apps/web/heys_core_v12.js');
+    expect(core).toContain("setIfMissing('barcode', sharedProduct.barcode)");
+    expect(core).toContain("setListIfMissing('barcodes', sharedProduct.barcodes)");
+    expect(core).toContain('barcode: shared.barcode ?? null');
+    expect(core).toContain('barcodes: Array.isArray(shared.barcodes) ? shared.barcodes : []');
   });
 
   it('normalizes shared-product barcodes consistently in both cloud modules', () => {

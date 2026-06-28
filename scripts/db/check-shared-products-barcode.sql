@@ -74,6 +74,9 @@ DECLARE
   pending_args text;
   pending_def text;
   publish_def text;
+  attach_session_def text;
+  attach_curator_def text;
+  shared_result text;
 BEGIN
   SELECT pg_get_function_arguments(p.oid), pg_get_functiondef(p.oid)
   INTO pending_args, pending_def
@@ -121,6 +124,54 @@ BEGIN
 
   IF publish_def NOT LIKE '%v_barcodes%' OR publish_def NOT LIKE '%barcodes%' THEN
     RAISE EXCEPTION 'publish_shared_product_by_curator is not barcode-array-aware';
+  END IF;
+
+  SELECT pg_get_functiondef(p.oid)
+  INTO attach_session_def
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'add_shared_product_barcode_by_session'
+    AND p.oid = to_regprocedure('public.add_shared_product_barcode_by_session(text,uuid,text)');
+
+  IF attach_session_def IS NULL THEN
+    RAISE EXCEPTION 'add_shared_product_barcode_by_session(text,uuid,text) is missing';
+  END IF;
+
+  IF attach_session_def NOT LIKE '%require_client_id%' OR attach_session_def NOT LIKE '%_add_shared_product_barcode%' THEN
+    RAISE EXCEPTION 'add_shared_product_barcode_by_session is not session-safe barcode attach';
+  END IF;
+
+  SELECT pg_get_functiondef(p.oid)
+  INTO attach_curator_def
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'add_shared_product_barcode_by_curator'
+    AND p.oid = to_regprocedure('public.add_shared_product_barcode_by_curator(uuid,uuid,text)');
+
+  IF attach_curator_def IS NULL THEN
+    RAISE EXCEPTION 'add_shared_product_barcode_by_curator(uuid,uuid,text) is missing';
+  END IF;
+
+  IF attach_curator_def NOT LIKE '%p_curator_id%' OR attach_curator_def NOT LIKE '%_add_shared_product_barcode%' THEN
+    RAISE EXCEPTION 'add_shared_product_barcode_by_curator is not curator barcode attach';
+  END IF;
+
+  SELECT pg_get_function_result(p.oid)
+  INTO shared_result
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'get_shared_products'
+    AND p.oid = to_regprocedure('public.get_shared_products(text,integer,integer)');
+
+  IF shared_result IS NULL THEN
+    RAISE EXCEPTION 'get_shared_products(text,integer,integer) is missing';
+  END IF;
+
+  IF shared_result NOT LIKE '%barcode text%' OR shared_result NOT LIKE '%barcodes text[]%' THEN
+    RAISE EXCEPTION 'get_shared_products does not expose barcode/barcodes: %', shared_result;
   END IF;
 END $$;
 

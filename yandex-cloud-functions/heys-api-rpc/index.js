@@ -826,6 +826,8 @@ const ALLOWED_FUNCTIONS = [
   'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
+  'add_shared_product_barcode_by_session', // 🔐 Client-safe append-only barcode attach to shared product
+  'add_shared_product_barcode_by_curator', // 🔐 Curator append-only barcode attach to shared product
   'approve_pending_products_bulk',     // 🚀 P3: массовое одобрение pending'ов куратором (1 RPC вместо N×2)
   'backfill_shared_harm',              // 🔧 2026-05-30: безопасный backfill harm-score (заменил REST upsert с NOT NULL-violation)
   // 'sync_shared_products_by_session', // 🪦 REMOVED 2026-05-24 (plan F17): не вызывается из apps/,
@@ -4004,6 +4006,16 @@ module.exports.handler = async function (event, context) {
       'publish_shared_product_by_curator': {
         'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
+      },
+      'add_shared_product_barcode_by_session': {
+        'p_session_token': '::text',
+        'p_product_id': '::uuid',
+        'p_barcode': '::text'
+      },
+      'add_shared_product_barcode_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_product_id': '::uuid',
+        'p_barcode': '::text'
       },
       // 🔐 Получение shared products
       'get_shared_products': {
