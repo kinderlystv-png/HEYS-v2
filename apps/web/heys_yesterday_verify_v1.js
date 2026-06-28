@@ -42,6 +42,21 @@
   const YESTERDAY_VERIFY_MARKER_VERSION = 1;
   const DayRealDataActions = HEYS.DayRealDataActions || {};
 
+  function readDayDataScoped(dateKey, fallback = null) {
+    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
+    if (typeof reader === 'function') return reader(dateKey, fallback);
+    return lsGet(`heys_dayv2_${dateKey}`, fallback);
+  }
+
+  function writeDayDataScoped(dateKey, dayData) {
+    const writer = HEYS.MorningCheckinUtils?.writeDayV2Scoped;
+    if (typeof writer === 'function') {
+      writer(dateKey, dayData);
+      return;
+    }
+    lsSet(`heys_dayv2_${dateKey}`, dayData);
+  }
+
   /**
    * Получить ключ вчерашнего дня
    * @returns {string} YYYY-MM-DD
@@ -163,7 +178,7 @@
       return null;
     }
 
-    const dayData = lsGet(`heys_dayv2_${dateKey}`, null);
+    const dayData = readDayDataScoped(dateKey, null);
     const profile = lsGet('heys_profile', {}) || {};
     const norms = lsGet('heys_norms', {}) || {};
 
@@ -682,7 +697,7 @@
   }
 
   function getStoredDayData(dateKey) {
-    return lsGet(`heys_dayv2_${dateKey}`, null);
+    return readDayDataScoped(dateKey, null);
   }
 
   function getProductsListForEstimation() {
@@ -1402,13 +1417,14 @@
     const pendingDays = getPendingPastDays().missingDays || [];
     const nowTs = Date.now();
     const quickFillByDate = data.quickFillByDate || {};
+    const affectedKeys = [];
     const applyDayStatusAction = typeof DayRealDataActions.applyDayStatusAction === 'function'
       ? DayRealDataActions.applyDayStatusAction
       : null;
 
     pendingDays.forEach((dayInfo) => {
       const dateKey = dayInfo.date;
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      const dayData = readDayDataScoped(dateKey, { date: dateKey }) || { date: dateKey };
       dayData.isFastingDay = false;
 
       const quickFill = quickFillByDate[dateKey];
@@ -1418,7 +1434,8 @@
         Object.assign(dayData, estimatedPatch);
         markYesterdayVerified(dayData, 'estimated_fill', nowTs);
         dayData.updatedAt = nowTs;
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        writeDayDataScoped(dateKey, dayData);
+        affectedKeys.push(`heys_dayv2_${dateKey}`);
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, source: 'yesterday-verify-estimated', data: dayData }
         }));
@@ -1443,7 +1460,8 @@
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'confirm_real_data', nowTs);
-        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
+        writeDayDataScoped(dateKey, nextDayData);
+        affectedKeys.push(`heys_dayv2_${dateKey}`);
 
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, source: 'yesterday-verify-real-data', data: nextDayData }
@@ -1469,7 +1487,8 @@
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'clear_day', nowTs);
-        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
+        writeDayDataScoped(dateKey, nextDayData);
+        affectedKeys.push(`heys_dayv2_${dateKey}`);
 
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, field: 'meals', value: [], source: 'yesterday-verify-clear', data: nextDayData }
@@ -1492,7 +1511,8 @@
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'fill_later', nowTs);
-        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
+        writeDayDataScoped(dateKey, nextDayData);
+        affectedKeys.push(`heys_dayv2_${dateKey}`);
         try {
           HEYS.analytics?.trackDataOperation?.('yesterday_verify_fill_later', 1, {
             date: dateKey,
@@ -1512,6 +1532,7 @@
       dates: pendingDays.map((day) => day.date),
       estimatedDates: Object.keys(quickFillByDate)
     });
+    return { affectedKeys };
   }
 
   // === Регистрация шага ===
