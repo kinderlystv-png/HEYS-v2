@@ -1086,7 +1086,15 @@
                     // Already reconciled this exact LS items-state? Don't re-apply (loop guard).
                     const lsKey = (lsDay.meals || []).map(m =>
                         (m && m.items || []).map(i => (i && i.id) + ':' + (i && i.grams)).join(',')
-                    ).join('|') + '#w' + (lsDay.waterMl || 0) + '#s' + (lsDay.steps || 0) + '#wt' + (lsDay.weightMorning || 0);
+                    ).join('|')
+                        + '#w' + (lsDay.waterMl || 0)
+                        + '#s' + (lsDay.steps || 0)
+                        + '#wt' + (lsDay.weightMorning || 0)
+                        + '#sq' + (lsDay.sleepQuality || 0)
+                        + '#ss' + (lsDay.sleepStart || '')
+                        + '#se' + (lsDay.sleepEnd || '')
+                        + '#mm' + (lsDay.moodMorning || 0)
+                        + '#wm' + (lsDay.wellbeingMorning || 0);
                     if (lsKey === lastReconciledKey) return;
                     lastReconciledKey = lsKey;
                     // Content differs → apply localStorage AS-IS (it is the synced truth;

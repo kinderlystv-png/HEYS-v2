@@ -491,7 +491,8 @@
     finishLabel = 'Готово', // Текст кнопки на последнем шаге (по умолчанию "Готово")
     freezeVisibleSteps = false,
     requireStepAck = false,
-    onStepSaved = null
+    onStepSaved = null,
+    allowProgressForwardNav = true
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -724,9 +725,13 @@
           if (!(await saveStepConfig(currentConfig, stepData))) return;
           goToStep(currentStepIndex + 1, 'left');
         } else {
-          // Сохраняем все данные
-          for (const config of visibleStepConfigs) {
-            if (!(await saveStepConfig(config, stepData))) return;
+          if (requireStepAck) {
+            if (!(await saveStepConfig(currentConfig, stepData))) return;
+          } else {
+            // Сохраняем все данные
+            for (const config of visibleStepConfigs) {
+              if (!(await saveStepConfig(config, stepData))) return;
+            }
           }
 
           // XP за чек-ин
@@ -969,10 +974,13 @@
                     className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
                     onClick: () => {
                       if (i !== currentStepIndex) {
-                        if (i > currentStepIndex) handleNext();
+                        if (i > currentStepIndex) {
+                          if (allowProgressForwardNav) handleNext();
+                        }
                         else goToStep(i, 'right');
                       }
                     },
+                    disabled: !allowProgressForwardNav && i > currentStepIndex,
                     'aria-label': `Шаг ${i + 1}`
                   })
                 )

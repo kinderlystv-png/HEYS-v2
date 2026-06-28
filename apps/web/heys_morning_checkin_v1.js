@@ -1229,19 +1229,32 @@
     };
   }
 
+  function dispatchMorningCheckinDayRefresh(dateKey, source) {
+    const freshDay = getFreshMorningDay(dateKey);
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: {
+        date: dateKey,
+        source,
+        forceReload: true,
+        data: { ...freshDay, date: dateKey }
+      }
+    }));
+  }
+
   function completeMorningCheckin(plan, onComplete) {
     const todayKey = plan?.dateKey || getTodayKey();
     const currentClientId = plan?.clientId || getCurrentClientId();
 
-    window.dispatchEvent(new CustomEvent('heys:day-updated', {
-      detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
-    }));
-
-    window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
-      detail: { date: todayKey, type: 'morning' }
-    }));
-
     const finish = () => {
+      dispatchMorningCheckinDayRefresh(todayKey, 'morning-checkin-complete');
+      setTimeout(() => {
+        dispatchMorningCheckinDayRefresh(todayKey, 'morning-checkin-complete-delayed');
+      }, 500);
+
+      window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
+        detail: { date: todayKey, type: 'morning' }
+      }));
+
       try {
         const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
         sessionStorage.setItem(sessionKey, 'true');
@@ -1401,9 +1414,10 @@
         showStreak: true,
         showGreeting: true,
         showTip: true,
-        allowSwipe: true,
+        allowSwipe: false,
         freezeVisibleSteps: true,
         requireStepAck: true,
+        allowProgressForwardNav: false,
         onStepSaved: createMorningStepAck(plan)
       });
     }
@@ -1475,8 +1489,10 @@
           steps,
           onComplete: wrappedOnComplete,
           closeOnComplete: 'after',
+          allowSwipe: false,
           freezeVisibleSteps: true,
           requireStepAck: true,
+          allowProgressForwardNav: false,
           onStepSaved: createMorningStepAck(plan)
         });
       }

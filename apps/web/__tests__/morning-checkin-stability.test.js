@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
+const DAY_EFFECTS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_effects.js'), 'utf8');
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 const YESTERDAY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const PROFILE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_profile_step_v1.js'), 'utf8');
@@ -22,11 +23,34 @@ describe('morning check-in stability', () => {
     expect(STEP_MODAL_SRC).toContain('freezeVisibleSteps = false');
     expect(STEP_MODAL_SRC).toContain("options.closeOnComplete === 'after'");
     expect(STEP_MODAL_SRC).toContain('onStepSaved');
+    expect(STEP_MODAL_SRC).toContain('allowProgressForwardNav = true');
     expect(MORNING_SRC).toContain('freezeVisibleSteps: true');
     expect(MORNING_SRC).toContain('requireStepAck: true');
+    expect(MORNING_SRC).toContain('allowSwipe: false');
+    expect(MORNING_SRC).toContain('allowProgressForwardNav: false');
     expect(MORNING_SRC).toContain("closeOnComplete: 'after'");
     expect(MORNING_SRC).toContain('mergeFreshStepsWithUnresolvedProgress');
     expect(MORNING_SRC).toContain("status === 'failed_sync'");
+  });
+
+  it('prevents progress dots from advancing strict morning flow and refreshes final day data with payload', () => {
+    expect(STEP_MODAL_SRC).toContain('if (allowProgressForwardNav) handleNext();');
+    expect(STEP_MODAL_SRC).toContain('disabled: !allowProgressForwardNav && i > currentStepIndex');
+    expect(MORNING_SRC).toContain('function dispatchMorningCheckinDayRefresh');
+    expect(MORNING_SRC).toContain("'morning-checkin-complete-delayed'");
+    expect(MORNING_SRC).toContain('data: { ...freshDay, date: dateKey }');
+  });
+
+  it('keeps strict final completion single-step and waits for final cloud flush before completion events', () => {
+    expect(STEP_MODAL_SRC).toContain('if (requireStepAck) {\n            if (!(await saveStepConfig(currentConfig, stepData))) return;');
+    const completeStart = MORNING_SRC.indexOf('function completeMorningCheckin');
+    const finishStart = MORNING_SRC.indexOf('const finish = () =>', completeStart);
+    const beforeFinish = MORNING_SRC.slice(completeStart, finishStart);
+    expect(beforeFinish).not.toContain('dispatchMorningCheckinDayRefresh');
+    expect(beforeFinish).not.toContain('heys:checkin-complete');
+    expect(DAY_EFFECTS_SRC).toContain("'#sq' + (lsDay.sleepQuality || 0)");
+    expect(DAY_EFFECTS_SRC).toContain("'#mm' + (lsDay.moodMorning || 0)");
+    expect(DAY_EFFECTS_SRC).toContain("'#wm' + (lsDay.wellbeingMorning || 0)");
   });
 
   it('treats explicit no-period cycle answer as completed for today', () => {
