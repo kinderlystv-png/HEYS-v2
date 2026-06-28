@@ -90,6 +90,7 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
     expect(addProduct).toContain('HEYS BARCODE CAMERA DEBUG');
     expect(addProduct).toContain('Диагностика камеры скопирована');
+    expect(addProduct).not.toContain('if (isIOSCameraBrowser()) return false;');
     expect(storage).toContain('function normalizeSharedProductBarcode(value)');
     expect(storage).toContain('function normalizeSharedProductBarcodes');
     expect(storage).toContain("replace(/[^0-9A-Z]/g, '')");

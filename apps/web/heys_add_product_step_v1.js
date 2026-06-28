@@ -2603,7 +2603,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [appendCameraDebug, buildCameraDebugReport]);
 
     const shouldAutoStartCamera = useCallback(() => {
-      if (isIOSCameraBrowser()) return false;
       if (HEYS.__barcodeCameraAutoStart === true) return true;
       return readStoredValue(cameraAutoStartKey, false) === true;
     }, []);
