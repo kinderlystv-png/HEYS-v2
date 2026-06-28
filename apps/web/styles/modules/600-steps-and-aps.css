@@ -2762,6 +2762,17 @@
   color: #b45309;
 }
 
+.aps-barcode-debug-copy {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(67, 69, 135, 0.08);
+  color: #434587;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .aps-barcode-manager-modal {
   gap: 14px;
 }

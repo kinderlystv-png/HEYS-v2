@@ -79,9 +79,17 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('и синхронизируется');
     expect(addProduct).toContain('const getProductBarcodes');
     expect(addProduct).toContain('mergeProductBarcode');
+    expect(addProduct).toContain('const updateSharedProductBarcodes');
+    expect(addProduct).toContain("select: 'id,name,barcode,barcodes'");
+    expect(addProduct).toContain('const payload = { id: targetId, barcode, barcodes };');
+    expect(addProduct).toContain('HEYS.cloud?.updateCachedSharedProduct?.(targetId, { barcode, barcodes })');
+    expect(addProduct).toContain('if (sharedId) {');
+    expect(addProduct).toContain('const result = await updateSharedProductBarcodes(updatedProduct, sharedId)');
     expect(addProduct).toContain('Штрихкод отправлен на проверку для общей базы');
     expect(addProduct).toContain('По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
+    expect(addProduct).toContain('HEYS BARCODE CAMERA DEBUG');
+    expect(addProduct).toContain('Диагностика камеры скопирована');
     expect(storage).toContain('function normalizeSharedProductBarcode(value)');
     expect(storage).toContain('function normalizeSharedProductBarcodes');
     expect(storage).toContain("replace(/[^0-9A-Z]/g, '')");
