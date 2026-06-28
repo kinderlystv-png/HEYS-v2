@@ -488,7 +488,10 @@
     allowSkip = false,
     context = {}, // Контекст для getInitialData (например, dateKey)
     hidePrimaryOnFirst = false,
-    finishLabel = 'Готово' // Текст кнопки на последнем шаге (по умолчанию "Готово")
+    finishLabel = 'Готово', // Текст кнопки на последнем шаге (по умолчанию "Готово")
+    freezeVisibleSteps = false,
+    requireStepAck = false,
+    onStepSaved = null
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -502,6 +505,8 @@
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
     const savedStepSigsRef = useRef({});
+    const frozenVisibleStepConfigsRef = useRef(null);
+    const frozenContextKeyRef = useRef(null);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
 
@@ -516,7 +521,7 @@
       }).filter(Boolean);
     }, [steps]);
 
-    const visibleStepConfigs = useMemo(() => {
+    const computedVisibleStepConfigs = useMemo(() => {
       return stepConfigs.filter(config => {
         if (!config) return false;
         if (typeof config.shouldShow !== 'function') return true;
@@ -528,6 +533,15 @@
         }
       });
     }, [stepConfigs, contextKey, stepData]);
+
+    if (freezeVisibleSteps && (frozenVisibleStepConfigsRef.current === null || frozenContextKeyRef.current !== contextKey)) {
+      frozenContextKeyRef.current = contextKey;
+      frozenVisibleStepConfigsRef.current = computedVisibleStepConfigs;
+    }
+
+    const visibleStepConfigs = freezeVisibleSteps
+      ? (frozenVisibleStepConfigsRef.current || computedVisibleStepConfigs)
+      : computedVisibleStepConfigs;
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
@@ -596,23 +610,48 @@
       }, 2500);
     }, []);
 
+    const normalizeValidationResult = useCallback((result) => {
+      if (result === true || result === undefined || result === null) return { valid: true, message: null };
+      if (result === false) return { valid: false, message: null };
+      if (typeof result === 'string') return { valid: false, message: result };
+      if (typeof result === 'object') {
+        if (result.valid === false) return { valid: false, message: result.error || result.message || null };
+        if (result.valid === true) return { valid: true, message: null };
+      }
+      return { valid: !!result, message: null };
+    }, []);
+
     const saveStepConfig = useCallback(async (config, allStepData) => {
       if (!config || typeof config.save !== 'function') return true;
       const sig = getStepSaveSignature(config, allStepData);
       if (savedStepSigsRef.current[config.id] === sig) return true;
       try {
         const result = config.save(allStepData?.[config.id], context, allStepData);
+        let saveResult = result;
         if (result && typeof result.then === 'function') {
-          await result;
+          saveResult = await result;
+        }
+        if (typeof onStepSaved === 'function') {
+          const ackResult = onStepSaved({
+            stepId: config.id,
+            config,
+            data: allStepData?.[config.id],
+            allStepData,
+            saveResult,
+            context
+          });
+          if (ackResult && typeof ackResult.then === 'function') {
+            await ackResult;
+          }
         }
         savedStepSigsRef.current[config.id] = sig;
         return true;
       } catch (e) {
         console.error('[StepModal] step save failed:', config.id, e);
-        showSaveError('Не удалось сохранить шаг. Попробуйте ещё раз.');
+        showSaveError(requireStepAck ? (e?.message || 'Не удалось сохранить шаг в облако. Попробуйте ещё раз.') : 'Не удалось сохранить шаг. Попробуйте ещё раз.');
         return false;
       }
-    }, [context, getStepSaveSignature, showSaveError]);
+    }, [context, getStepSaveSignature, onStepSaved, requireStepAck, showSaveError]);
 
     useEffect(() => {
       setCurrentStepIndex((i) => {
@@ -652,11 +691,14 @@
       if (savingStep || animating) return;
 
       // Валидация текущего шага
-      if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
+      const validation = currentConfig.validate
+        ? normalizeValidationResult(currentConfig.validate(stepData[currentConfig.id], stepData))
+        : { valid: true, message: null };
+      if (!validation.valid) {
         // Получаем сообщение об ошибке если есть
         const errorMsg = currentConfig.getValidationMessage
           ? currentConfig.getValidationMessage(stepData[currentConfig.id], stepData)
-          : null;
+          : validation.message;
         setValidationMessage(errorMsg);
         // Показываем shake-анимацию при ошибке
         setValidationError(true);
@@ -709,16 +751,22 @@
           }
 
           if (onComplete) {
-            const completionResult = onComplete(stepData);
-            if (completionResult && typeof completionResult.then === 'function') {
-              await completionResult;
+            try {
+              const completionResult = onComplete(stepData);
+              if (completionResult && typeof completionResult.then === 'function') {
+                await completionResult;
+              }
+            } catch (e) {
+              console.error('[StepModal] completion failed:', e);
+              showSaveError(requireStepAck ? (e?.message || 'Не удалось завершить чек-ин. Попробуйте ещё раз.') : 'Не удалось завершить. Попробуйте ещё раз.');
+              return;
             }
           }
         }
       } finally {
         setSavingStep(false);
       }
-    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
@@ -730,6 +778,34 @@
         goToStep(prevIndex, 'right');
       }
     }, [currentStepIndex, goToStep, visibleStepConfigs]);
+
+    const handleSkip = useCallback(async () => {
+      if (savingStep || animating || currentStepIndex >= totalSteps - 1) return;
+      if (requireStepAck && typeof onStepSaved === 'function' && currentConfig) {
+        setSavingStep(true);
+        try {
+          const ackResult = onStepSaved({
+            stepId: currentConfig.id,
+            config: currentConfig,
+            data: stepData[currentConfig.id],
+            allStepData: stepData,
+            saveResult: { skipped: true },
+            skipped: true,
+            context
+          });
+          if (ackResult && typeof ackResult.then === 'function') {
+            await ackResult;
+          }
+        } catch (e) {
+          console.error('[StepModal] step skip failed:', currentConfig.id, e);
+          showSaveError(e?.message || 'Не удалось сохранить пропуск шага. Попробуйте ещё раз.');
+          return;
+        } finally {
+          setSavingStep(false);
+        }
+      }
+      goToStep(currentStepIndex + 1, 'left');
+    }, [savingStep, animating, currentStepIndex, totalSteps, requireStepAck, onStepSaved, currentConfig, stepData, context, goToStep, showSaveError]);
 
     // Swipe handlers — учитываем allowSwipe из конфига шага
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
@@ -944,7 +1020,8 @@
           allowSkip && currentStepIndex < totalSteps - 1 && React.createElement('div', { className: 'mc-buttons mc-buttons--skip-only' },
             React.createElement('button', {
               className: 'mc-btn mc-btn--ghost',
-              onClick: () => goToStep(currentStepIndex + 1, 'left')
+              onClick: handleSkip,
+              disabled: savingStep || animating
             }, 'Пропустить')
           ),
 
@@ -984,10 +1061,22 @@
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
 
-    const handleComplete = (data) => {
-      // Для приёмов пищи и продуктов — прокрутка к дневнику
-      hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
-      options.onComplete && options.onComplete(data);
+    const handleComplete = async (data) => {
+      const closeAfterComplete = options.closeOnComplete === 'after';
+      if (!closeAfterComplete) {
+        // Для приёмов пищи и продуктов — прокрутка к дневнику
+        hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
+      }
+      if (options.onComplete) {
+        const complete = options.onComplete(data);
+        if (complete && typeof complete.then === 'function') {
+          await complete;
+        }
+      }
+      if (closeAfterComplete) {
+        // Для приёмов пищи и продуктов — прокрутка к дневнику
+        hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
+      }
     };
 
     const handleClose = () => {

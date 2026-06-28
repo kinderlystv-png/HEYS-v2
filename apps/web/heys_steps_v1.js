@@ -2649,7 +2649,7 @@
       if (shouldSkip && context?.onNext) {
         // Небольшая задержка чтобы не было мигания
         const timer = setTimeout(() => {
-          onChange({ cycleDay: null, _skipped: true });
+          onChange({ cycleDay: null, cycleStatus: 'skipped', cycleAnsweredAt: Date.now(), _skipped: true });
           context.onNext();
         }, 50);
         return () => clearTimeout(timer);
@@ -2676,7 +2676,7 @@
       } else {
         // Выключаем — сбрасываем и очищаем все связанные дни
         setCycleDay(null);
-        onChange({ cycleDay: null });
+        onChange({ cycleDay: null, cycleStatus: 'none', cycleAnsweredAt: Date.now() });
         setShowDayPicker(false);
 
         // Очищаем связанные дни
@@ -2689,7 +2689,7 @@
     // Выбор дня с автоматическим проставлением всех 7 дней
     const selectDay = useCallback((day) => {
       setCycleDay(day);
-      onChange({ cycleDay: day });
+      onChange({ cycleDay: day, cycleStatus: null, cycleAnsweredAt: Date.now() });
       setShowDayPicker(false);
 
       // Автоматически проставляем все 7 дней
@@ -2813,6 +2813,8 @@
       const day = readDayData(dateKey, {}) || {};
       return {
         cycleDay: day.cycleDay || null,
+        cycleStatus: day.cycleStatus || null,
+        cycleAnsweredAt: day.cycleAnsweredAt || null,
         _dateKey: dateKey
       };
     },
@@ -2830,6 +2832,16 @@
           const day = getFreshDayData(dateKey);
           day.date = dateKey;
           day.cycleDay = cycleDay;
+          day.cycleStatus = null;
+          day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
+          day.updatedAt = Date.now();
+          saveDayData(dateKey, day);
+        }
+        if (HEYS.Cycle && HEYS.Cycle.setCycleDaysAuto) {
+          const day = getFreshDayData(dateKey);
+          day.date = dateKey;
+          day.cycleStatus = null;
+          day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
           day.updatedAt = Date.now();
           saveDayData(dateKey, day);
         }
@@ -2842,6 +2854,17 @@
           const day = getFreshDayData(dateKey);
           day.date = dateKey;
           day.cycleDay = null;
+          day.cycleStatus = 'none';
+          day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
+          day.updatedAt = Date.now();
+          saveDayData(dateKey, day);
+        }
+        if (HEYS.Cycle && HEYS.Cycle.clearCycleDays) {
+          const day = getFreshDayData(dateKey);
+          day.date = dateKey;
+          day.cycleDay = null;
+          day.cycleStatus = data._skipped ? 'skipped' : 'none';
+          day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
           day.updatedAt = Date.now();
           saveDayData(dateKey, day);
         }

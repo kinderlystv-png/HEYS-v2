@@ -73,6 +73,21 @@
     return currentClientId || '';
   }
 
+  function readDayDataScoped(dateKey, fallback = {}) {
+    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
+    if (typeof reader === 'function') return reader(dateKey, fallback);
+    return lsGet(`heys_dayv2_${dateKey}`, fallback);
+  }
+
+  function writeDayDataScoped(dateKey, dayData) {
+    const writer = HEYS.MorningCheckinUtils?.writeDayV2Scoped;
+    if (typeof writer === 'function') {
+      writer(dateKey, dayData);
+      return;
+    }
+    lsSet(`heys_dayv2_${dateKey}`, dayData);
+  }
+
   function syncCurrentClientName(fullName, source, options = {}) {
     const cleanName = String(fullName || '').trim();
     const currentClientId = getCurrentClientId();
@@ -1120,11 +1135,11 @@
 
       // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
       const todayKey = new Date().toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+      const dayData = readDayDataScoped(todayKey, {});
       if (!dayData.weightMorning && updatedProfile.weight) {
         dayData.weightMorning = updatedProfile.weight;
         dayData.updatedAt = Date.now();
-        lsSet(`heys_dayv2_${todayKey}`, dayData);
+        writeDayDataScoped(todayKey, dayData);
         console.log('[ProfileSteps] Weight synced to day data:', updatedProfile.weight, 'kg for', todayKey);
       }
 
@@ -1286,12 +1301,12 @@
     }
 
     const todayKey = new Date().toISOString().slice(0, 10);
-    const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+    const dayData = readDayDataScoped(todayKey, {});
 
     if (!dayData.weightMorning) {
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${todayKey}`, dayData);
+      writeDayDataScoped(todayKey, dayData);
       console.log('[syncWeightToDay] Weight synced to day:', weight, 'kg for', todayKey);
     } else {
       console.log('[syncWeightToDay] Day already has weight:', dayData.weightMorning);

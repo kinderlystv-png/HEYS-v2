@@ -712,6 +712,12 @@
     return Number.isFinite(value) && value >= 1 && value <= 7;
   }
 
+  function hasCycleDecision(day, profile) {
+    if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) return true;
+    if (hasCycleDay(day)) return true;
+    return (day?.cycleStatus === 'none' || day?.cycleStatus === 'skipped') && hasPositiveCheckinNumber(day?.cycleAnsweredAt);
+  }
+
   function hasStepsGoal(profile) {
     return hasPositiveCheckinNumber(profile?.stepsGoal);
   }
@@ -971,7 +977,7 @@
         case 'sleepQuality': return !hasSleepQuality(day);
         case 'morning_mood': return !hasMorningMood(day);
         case 'stepsGoal': return !hasStepsGoal(profile);
-        case 'cycle': return !hasCycleDay(day);
+        case 'cycle': return !hasCycleDecision(day, profile);
         default: return true;
       }
     });
@@ -985,6 +991,281 @@
     }
 
     return filtered;
+  }
+
+  function getScopedClientKey(logicalKey, clientId = getCurrentClientId()) {
+    return clientId ? `heys_${clientId}_${logicalKey}` : logicalKey;
+  }
+
+  function readScopedClientValue(logicalKey, fallback = null, clientId = getCurrentClientId()) {
+    return readStoredValue(getScopedClientKey(logicalKey, clientId), fallback);
+  }
+
+  function writeScopedClientValue(logicalKey, value, clientId = getCurrentClientId()) {
+    const key = getScopedClientKey(logicalKey, clientId);
+    if (HEYS.store?.set) {
+      HEYS.store.set(key, value);
+    } else if (HEYS.utils?.lsSet) {
+      HEYS.utils.lsSet(key, value);
+    }
+  }
+
+  function getMorningProgressKey(dateKey) {
+    return `heys_morning_checkin_progress_v1_${dateKey}`;
+  }
+
+  function createMorningFlowId(dateKey) {
+    return `${dateKey}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function readMorningProgress(dateKey, clientId = getCurrentClientId()) {
+    return readScopedClientValue(getMorningProgressKey(dateKey), null, clientId);
+  }
+
+  function writeMorningProgress(ledger, clientId = getCurrentClientId()) {
+    if (!ledger || !ledger.dateKey) return ledger;
+    writeScopedClientValue(getMorningProgressKey(ledger.dateKey), ledger, clientId);
+    return ledger;
+  }
+
+  function ensureMorningProgress({ dateKey, clientId, flowId, plannedStepIds }) {
+    const existing = readMorningProgress(dateKey, clientId);
+    const samePlan = existing
+      && Array.isArray(existing.plannedStepIds)
+      && existing.plannedStepIds.join('|') === plannedStepIds.join('|');
+    const ledger = samePlan ? existing : {
+      version: 1,
+      clientId,
+      dateKey,
+      flowId: flowId || createMorningFlowId(dateKey),
+      plannedStepIds: plannedStepIds.slice(),
+      steps: {}
+    };
+    plannedStepIds.forEach((id) => {
+      if (!ledger.steps[id]) ledger.steps[id] = { status: 'planned' };
+    });
+    ledger.updatedAt = Date.now();
+    return writeMorningProgress(ledger, clientId);
+  }
+
+  function isUnresolvedProgressStatus(status) {
+    return status === 'failed_sync' || status === 'saved_local' || status === 'editing';
+  }
+
+  function mergeFreshStepsWithUnresolvedProgress(freshSteps, existingLedger) {
+    if (!existingLedger || !Array.isArray(existingLedger.plannedStepIds)) return freshSteps;
+    const freshSet = new Set(freshSteps);
+    const stepsState = existingLedger.steps || {};
+    const merged = [];
+    existingLedger.plannedStepIds.forEach((id) => {
+      const status = stepsState[id]?.status;
+      if (freshSet.has(id) || isUnresolvedProgressStatus(status)) merged.push(id);
+    });
+    freshSteps.forEach((id) => {
+      if (!merged.includes(id)) merged.push(id);
+    });
+    return merged;
+  }
+
+  function markMorningProgressStep(dateKey, stepId, patch, clientId = getCurrentClientId()) {
+    const ledger = readMorningProgress(dateKey, clientId);
+    if (!ledger || !stepId) return null;
+    ledger.steps = ledger.steps || {};
+    ledger.steps[stepId] = {
+      ...(ledger.steps[stepId] || {}),
+      ...patch
+    };
+    ledger.updatedAt = Date.now();
+    return writeMorningProgress(ledger, clientId);
+  }
+
+  function getFreshMorningDay(dateKey) {
+    const dayData = readDayV2ScopedFirst(dateKey, {}) || {};
+    const calendarKey = new Date().toISOString().slice(0, 10);
+    const altDayData = calendarKey !== dateKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
+    return { ...altDayData, ...dayData };
+  }
+
+  function getFreshMorningProfile(clientId = getCurrentClientId()) {
+    return readProfileForceRawScoped(clientId) || readStoredValue('heys_profile', {}) || {};
+  }
+
+  function isMorningStepComplete(stepId, state = {}) {
+    const dateKey = state.dateKey || getTodayKey();
+    const clientId = state.clientId || getCurrentClientId();
+    const day = state.day || getFreshMorningDay(dateKey);
+    const profile = state.profile || getFreshMorningProfile(clientId);
+    switch (stepId) {
+      case 'weight': return hasCheckinWeight(day);
+      case 'sleepTime': return hasSleepTime(day);
+      case 'sleepQuality': return hasSleepQuality(day);
+      case 'morning_mood': return hasMorningMood(day);
+      case 'stepsGoal': return hasStepsGoal(profile);
+      case 'yesterdayVerify': return !shouldShowYesterdayVerifyRequired();
+      case 'cycle': return hasCycleDecision(day, profile);
+      case 'profile-personal':
+      case 'profile-body':
+      case 'profile-goals':
+        return true;
+      case 'profile-metabolism':
+        return !(HEYS.ProfileSteps?.isProfileIncomplete?.(profile));
+      default:
+        return true;
+    }
+  }
+
+  function getAffectedKeysForMorningStep(stepId, dateKey, saveResult) {
+    if (saveResult && Array.isArray(saveResult.affectedKeys)) return saveResult.affectedKeys;
+    if (saveResult && saveResult.skipped) return [];
+    switch (stepId) {
+      case 'stepsGoal':
+      case 'profile-personal':
+      case 'profile-body':
+      case 'profile-goals':
+      case 'profile-metabolism':
+        return ['heys_profile'];
+      case 'yesterdayVerify':
+        return [];
+      case 'cycle':
+        return [`heys_dayv2_${dateKey}`];
+      default:
+        return [`heys_dayv2_${dateKey}`];
+    }
+  }
+
+  async function flushAndMarkMorningStep(stepId, affectedKeys, timeoutMs, opts = {}) {
+    const dateKey = opts.dateKey || getTodayKey();
+    const clientId = opts.clientId || getCurrentClientId();
+    if (opts.skipped) {
+      markMorningProgressStep(dateKey, stepId, {
+        status: 'skipped',
+        savedAt: Date.now(),
+        syncedAt: Date.now(),
+        affectedKeys: affectedKeys || [],
+        error: null
+      }, clientId);
+      return true;
+    }
+
+    markMorningProgressStep(dateKey, stepId, {
+      status: 'saved_local',
+      savedAt: Date.now(),
+      affectedKeys: affectedKeys || [],
+      error: null
+    }, clientId);
+
+    const complete = isMorningStepComplete(stepId, { dateKey, clientId });
+    if (!complete) {
+      const err = new Error('Шаг сохранён не полностью. Проверьте данные и попробуйте ещё раз.');
+      markMorningProgressStep(dateKey, stepId, {
+        status: 'failed_sync',
+        error: err.message
+      }, clientId);
+      throw err;
+    }
+
+    if (!HEYS.cloud || typeof HEYS.cloud.flushPendingQueue !== 'function') {
+      const err = new Error('Синхронизация недоступна. Попробуйте ещё раз.');
+      markMorningProgressStep(dateKey, stepId, {
+        status: 'failed_sync',
+        error: err.message
+      }, clientId);
+      throw err;
+    }
+
+    const flushed = await HEYS.cloud.flushPendingQueue(timeoutMs || 10000);
+    if (!flushed) {
+      const err = new Error('Не удалось дождаться облака. Попробуйте ещё раз.');
+      markMorningProgressStep(dateKey, stepId, {
+        status: 'failed_sync',
+        error: err.message
+      }, clientId);
+      throw err;
+    }
+
+    markMorningProgressStep(dateKey, stepId, {
+      status: 'synced',
+      syncedAt: Date.now(),
+      error: null
+    }, clientId);
+    return true;
+  }
+
+  function buildMorningCheckinPlan(opts = {}) {
+    const dateKey = opts.dateKey || getTodayKey();
+    const clientId = opts.clientId || getCurrentClientId();
+    const profile = opts.profile || getFreshMorningProfile(clientId);
+    const freshSteps = getCheckinSteps(profile, {
+      filterCompleted: opts.filterCompleted !== false,
+      requiredOnly: !!opts.requiredOnly
+    });
+    const existingLedger = readMorningProgress(dateKey, clientId);
+    const steps = mergeFreshStepsWithUnresolvedProgress(freshSteps, existingLedger);
+    const flowId = createMorningFlowId(dateKey);
+    const ledger = ensureMorningProgress({
+      dateKey,
+      clientId,
+      flowId,
+      plannedStepIds: steps
+    });
+    return {
+      dateKey,
+      clientId,
+      profile,
+      steps,
+      flowId: ledger?.flowId || flowId,
+      isRegistrationCheckin: steps.includes('profile-personal')
+    };
+  }
+
+  function createMorningStepAck(plan) {
+    return async ({ stepId, saveResult, skipped }) => {
+      const affectedKeys = getAffectedKeysForMorningStep(stepId, plan.dateKey, saveResult);
+      return flushAndMarkMorningStep(stepId, affectedKeys, 10000, {
+        dateKey: plan.dateKey,
+        clientId: plan.clientId,
+        skipped: !!skipped
+      });
+    };
+  }
+
+  function completeMorningCheckin(plan, onComplete) {
+    const todayKey = plan?.dateKey || getTodayKey();
+    const currentClientId = plan?.clientId || getCurrentClientId();
+
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
+    }));
+
+    window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
+      detail: { date: todayKey, type: 'morning' }
+    }));
+
+    const finish = () => {
+      try {
+        const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
+        sessionStorage.setItem(sessionKey, 'true');
+        sessionStorage.removeItem('heys_morning_checkin_done');
+        sessionStorage.removeItem('heys_morning_supplements_advice_shown');
+      } catch (e) { /* sessionStorage недоступен */ }
+      markMorningProgressStep(todayKey, '__flow__', {
+        status: 'synced',
+        syncedAt: Date.now()
+      }, currentClientId);
+      if (onComplete) onComplete();
+      return true;
+    };
+
+    if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+      return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+        if (!flushed) throw new Error('checkin_sync_timeout');
+        return finish();
+      }).catch((err) => {
+        console.warn('[MorningCheckin] final flushPendingQueue failed:', err?.message || err);
+        throw err;
+      });
+    }
+    return Promise.reject(new Error('checkin_sync_unavailable'));
   }
 
   /**
@@ -1033,84 +1314,30 @@
     // десятые». Аналогично для sleep/mood/stepsGoal — любой шаг с immediate-write
     // или с записью в фоне будет страдать. Список шагов мастера — инвариант
     // сессии: открыли с N шагов → пройдём ровно эти N.
-    const stepsRef = (window.React && typeof window.React.useRef === 'function')
+    const planRef = (window.React && typeof window.React.useRef === 'function')
       ? window.React.useRef(null)
       : { current: null };
-    if (stepsRef.current === null) {
-      const profileForSteps = readStoredValue('heys_profile', {});
+    if (planRef.current === null) {
       // 🆕 TASK-003 follow-up: если shouldShowMorningCheckin открыл визард для
       // восстановления пропавших данных (session-флаг стоял, но core-поля пусты) —
       // показываем только недостающие обязательные шаги, без опционального хвоста.
-      stepsRef.current = getCheckinSteps(profileForSteps, {
-        filterCompleted: true,
+      planRef.current = buildMorningCheckinPlan({
+        source: 'MorningCheckin',
         requiredOnly: !!_reopenRequiredOnly
       });
     }
 
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
-      const steps = stepsRef.current;
+      const plan = planRef.current;
+      const steps = plan.steps;
 
       // Определяем: это регистрационный чек-ин (есть profile-шаги)?
-      const isRegistrationCheckin = steps.includes('profile-personal');
+      const isRegistrationCheckin = plan.isRegistrationCheckin;
 
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
-        const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
-        const currentClientId = getCurrentClientId();
-
-        // 🔔 Устанавливаем флаг СИНХРОННО до любых async/dispatch — гарантия что повторный
-        // shouldShowMorningCheckin (от следующего heysSyncCompleted) увидит флаг и не покажет
-        // визард ещё раз. До 2026-05-31 здесь был TDZ ReferenceError из-за `const todayKey`
-        // ниже по коду → флаг не выставлялся → checkin выпадал повторно.
-        try {
-          const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
-          sessionStorage.setItem(sessionKey, 'true');
-          sessionStorage.removeItem('heys_morning_checkin_done');
-          sessionStorage.removeItem('heys_morning_supplements_advice_shown');
-        } catch (e) { /* sessionStorage недоступен */ }
-
-        // 🔄 Принудительно обновляем данные дня после завершения чек-ина
-        window.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
-        }));
-
-        // 💊 Вызываем событие для обновления советов
-        window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
-          detail: { date: todayKey, type: 'morning' }
-        }));
-
-        const finish = () => {
-          if (onComplete) onComplete();
-          return true;
-        };
-
-        // ☁️ Для первого входа это fail-closed: чек-ин считается завершённым
-        // только после cloud ack. Для ежедневного чек-ина оставляем мягкий
-        // background flush, чтобы не блокировать постоянных пользователей.
-        try {
-          if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-            const flush = HEYS.cloud.flushPendingQueue(5000).then((flushed) => {
-              if (!flushed && isRegistrationCheckin) throw new Error('checkin_sync_timeout');
-              return flushed;
-            });
-            if (isRegistrationCheckin) {
-              return flush.then(finish).catch((err) => {
-                console.warn('[MorningCheckin] first-login flushPendingQueue failed:', err?.message || err);
-                throw err;
-              });
-            }
-            flush.catch((err) => {
-              console.warn('[MorningCheckin] flushPendingQueue failed (non-fatal):', err?.message);
-            });
-          } else if (isRegistrationCheckin) {
-            return Promise.reject(new Error('checkin_sync_unavailable'));
-          }
-        } catch (e) {
-          if (isRegistrationCheckin) return Promise.reject(e);
-        }
-
-        return finish();
+        return completeMorningCheckin(plan, onComplete);
       };
 
       // Edge case: после filterCompleted список пуст (race: shouldShow вернул true,
@@ -1174,7 +1401,10 @@
         showStreak: true,
         showGreeting: true,
         showTip: true,
-        allowSwipe: true
+        allowSwipe: true,
+        freezeVisibleSteps: true,
+        requireStepAck: true,
+        onStepSaved: createMorningStepAck(plan)
       });
     }
 
@@ -1204,11 +1434,16 @@
   HEYS.MorningCheckinUtils = HEYS.MorningCheckinUtils || {};
   HEYS.MorningCheckinUtils.readProfileForceRawScoped = readProfileForceRawScoped;
   HEYS.MorningCheckinUtils.readDayV2ScopedFirst = readDayV2ScopedFirst;
+  HEYS.MorningCheckinUtils.writeDayV2Scoped = writeDayV2ScopedAndLegacy;
   HEYS.MorningCheckinUtils.shouldOpenMorningActivationFollowup = shouldOpenMorningActivationFollowup;
   HEYS.MorningCheckinUtils.dayHasMorningActivationSyncedActivity = dayHasMorningActivationSyncedActivity;
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
   HEYS.MorningCheckinUtils.getCheckinSteps = getCheckinSteps;
   HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
+  HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
+  HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
+  HEYS.MorningCheckinUtils.flushAndMarkMorningStep = flushAndMarkMorningStep;
+  HEYS.MorningCheckinUtils.readMorningProgress = readMorningProgress;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
 
@@ -1222,52 +1457,27 @@
     // Полный утренний чек-ин
     morning: (onComplete) => {
       if (HEYS.StepModal) {
-        const profile = readStoredValue('heys_profile', {});
-        const steps = getCheckinSteps(profile);
-
-        // Определяем: это регистрационный чек-ин (есть profile-шаги)?
-        const isRegistrationCheckin = steps.includes('profile-personal');
+        const plan = buildMorningCheckinPlan({
+          source: 'showCheckin.morning',
+          requiredOnly: false
+        });
+        const steps = plan.steps;
 
         // Обёртка для onComplete: обновляем данные дня
         const wrappedOnComplete = () => {
-          const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
-          const currentClientId = getCurrentClientId();
-
-          if (isRegistrationCheckin) {
+          if (plan.isRegistrationCheckin) {
             console.log('[showCheckin.morning] ✅ Registration checkin completed');
           }
-
-          // 🔔 Флаг СИНХРОННО до любого async — иначе повторный shouldShow от следующего sync покажет визард ещё раз
-          try {
-            const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
-            sessionStorage.setItem(sessionKey, 'true');
-            sessionStorage.removeItem('heys_morning_checkin_done');
-            sessionStorage.removeItem('heys_morning_supplements_advice_shown');
-          } catch (e) { /* sessionStorage недоступен */ }
-
-          window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
-          }));
-
-          window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
-            detail: { date: todayKey, type: 'morning' }
-          }));
-
-          // ☁️ Принудительный flush — данные чек-ина не должны теряться если пользователь закроет вкладку
-          try {
-            if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-              HEYS.cloud.flushPendingQueue(5000).catch((err) => {
-                console.warn('[showCheckin.morning] flushPendingQueue failed (non-fatal):', err?.message);
-              });
-            }
-          } catch (e) { /* cloud module недоступен */ }
-
-          if (onComplete) onComplete();
+          return completeMorningCheckin(plan, onComplete);
         };
 
         HEYS.StepModal.show({
           steps,
-          onComplete: wrappedOnComplete
+          onComplete: wrappedOnComplete,
+          closeOnComplete: 'after',
+          freezeVisibleSteps: true,
+          requireStepAck: true,
+          onStepSaved: createMorningStepAck(plan)
         });
       }
     },
