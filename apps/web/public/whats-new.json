@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.28.6e36befb",
+      "buildHash": "6e36befb",
+      "date": "2026-06-28",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Исправление сканера штрихкодов на iPhone",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Сканер штрихкодов на iPhone",
+          "description": "Исправлена загрузка fallback-сканера для Safari на iPhone: камера открывается, а слой распознавания корректно подхватывает локальный WASM-polyfill."
+        }
+      ],
+      "coveredCommits": ["6e36befb"]
+    },
+    {
       "version": "2026.06.28.ddc40571",
       "buildHash": "ddc40571",
       "date": "2026-06-28",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["b72cda29"]
-    },
-    {
-      "version": "2026.06.27.5f47c44b",
-      "buildHash": "5f47c44b",
-      "date": "2026-06-27",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Запуск камеры для штрихкода",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Запуск камеры для штрихкода",
-          "description": "Сканер теперь запускает камеру по явному нажатию внутри окна, чтобы мобильный браузер показывал запрос доступа и сразу включал уже разрешённую камеру."
-        }
-      ],
-      "coveredCommits": ["5f47c44b"]
     }
   ]
 }
