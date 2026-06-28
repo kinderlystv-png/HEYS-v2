@@ -2630,7 +2630,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
-  function BarcodeScannerModal({ title, subtitle, initialValue = '', onDetected, onClose }) {
+  function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, onDetected, onClose }) {
     const [manualValue, setManualValue] = useState(initialValue);
     const [error, setError] = useState('');
     const [cameraState, setCameraState] = useState('idle');
@@ -2782,9 +2782,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [appendCameraDebug, buildCameraDebugReport]);
 
     const shouldAutoStartCamera = useCallback(() => {
+      if (autoStart === true) return true;
       if (HEYS.__barcodeCameraAutoStart === true) return true;
       return readStoredValue(cameraAutoStartKey, false) === true;
-    }, []);
+    }, [autoStart]);
 
     const cleanupCamera = useCallback(() => {
       if (readyTimerRef.current) {
@@ -3270,7 +3271,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       startWithBarcodeScannerRef.current = true;
       setTimeout(() => {
         setBarcodeNotice(null);
-        setBarcodeModal({ mode: 'search' });
+        setBarcodeModal({ mode: 'search', autoStart: true });
       }, 0);
     }, [context?.startWithBarcodeScanner]);
 
@@ -4754,6 +4755,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         initialValue: barcodeModal.mode === 'product' && !barcodeModal.returnToManager
           ? getProductBarcode(barcodeModal.product)
           : '',
+        autoStart: barcodeModal.autoStart === true,
         onDetected: (code) => resolveBarcodeScan(
           code,
           barcodeModal.mode === 'product' ? barcodeModal.product : null,
@@ -4901,7 +4903,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               className: 'aps-search-barcode-btn' + (barcodeLookupBusy ? ' is-busy' : ''),
               onClick: () => {
                 setBarcodeNotice(null);
-                setBarcodeModal({ mode: 'search' });
+                setBarcodeModal({ mode: 'search', autoStart: true });
               },
               disabled: barcodeLookupBusy,
               'aria-label': 'Сканировать штрихкод',

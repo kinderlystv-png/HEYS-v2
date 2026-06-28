@@ -101,8 +101,9 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('const matches = dedupeBarcodeMatches([...localMatches, ...sharedMatches], barcode);');
     expect(addProduct).not.toContain("String(product._source || '') + ':'");
     expect(addProduct).toContain('startWithBarcodeScanner');
-    expect(addProduct).toContain("setBarcodeModal({ mode: 'search' })");
     expect(addProduct).toContain('BarcodeScanIcon,');
+    expect(addProduct).toContain("setBarcodeModal({ mode: 'search', autoStart: true })");
+    expect(addProduct).toContain('autoStart: barcodeModal.autoStart === true');
     expect(addProduct).toContain('resolveSharedBarcodeProductForAddStep');
     expect(addProduct).toContain('product = mergeSharedBarcodeIntoProductForAddStep(product)');
     expect(addProduct).toContain('await HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })');
