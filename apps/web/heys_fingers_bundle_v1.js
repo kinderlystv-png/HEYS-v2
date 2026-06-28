@@ -108,19 +108,21 @@
         items.map(function (item) {
           const active = props.value === item.id;
           const count = Number(item.count) || 0;
+          const countLabel = item.countLabel || item.statusLabel || String(count);
+          const empty = item.empty === true || count === 0;
           return h('button', {
             key: item.id,
             type: 'button',
             role: 'tab',
             'aria-selected': active,
-            className: prefixClass(prefix, '-goalsel__btn') + (active ? ' is-active' : '') + (count === 0 ? ' is-empty' : ''),
+            className: prefixClass(prefix, '-goalsel__btn') + (active ? ' is-active' : '') + (empty ? ' is-empty' : '') + (item.statusLabel ? ' has-status' : ''),
             'data-goal': item.id,
-            title: count ? count + ' протоколов' : undefined,
+            title: item.title || (count ? count + ' планов' : undefined),
             onClick: function () { props.onChange && props.onChange(item.id); }
           },
             h('span', { className: prefixClass(prefix, '-goalsel__emoji'), 'aria-hidden': 'true' }, item.icon || '🎯'),
             h('span', { className: prefixClass(prefix, '-goalsel__text') }, item.label || item.id),
-            h('span', { className: prefixClass(prefix, '-goalsel__count'), 'aria-label': count + ' протоколов' }, count)
+            h('span', { className: prefixClass(prefix, '-goalsel__count'), 'aria-label': item.statusLabel || count + ' планов' }, countLabel)
           );
         })
       )
@@ -201,7 +203,7 @@
         props.className
       ),
       'data-training-runner': 'guided',
-      'aria-label': props.ariaLabel || 'Ведомая тренировка'
+      'aria-label': props.ariaLabel || 'Тренировка с сопровождением'
     },
       h('div', { className: prefixClass(prefix, '-guided__hero') },
         h('div', { className: prefixClass(prefix, '-guided__visual') },
@@ -215,7 +217,7 @@
             : h('div', { className: prefixClass(prefix, '-guided__fallback'), 'aria-hidden': 'true' }, props.fallbackIcon || '•')
         ),
         h('div', { className: prefixClass(prefix, '-guided__body') },
-          h('div', { className: prefixClass(prefix, '-guided__kicker') }, props.kicker || 'Ведомая тренировка'),
+          h('div', { className: prefixClass(prefix, '-guided__kicker') }, props.kicker || 'Тренировка с сопровождением'),
           h('h3', { className: prefixClass(prefix, '-guided__title') }, props.title || 'Упражнение'),
           props.instruction ? h('p', { className: prefixClass(prefix, '-guided__instruction') }, props.instruction) : null,
           metrics.length ? h('div', { className: prefixClass(prefix, '-guided__metric') },

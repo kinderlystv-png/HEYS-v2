@@ -117,17 +117,17 @@ apps/web/heys_day_utils.js:48
 apps/web/heys_day_utils.js:484
 apps/web/heys_day_hooks.js:39
 # fingers bundle — regen after eca96299 feat(fingers) shifted line numbers
-apps/web/heys_fingers_bundle_v1.js:2648
-apps/web/heys_fingers_bundle_v1.js:2730
-apps/web/heys_fingers_bundle_v1.js:9558
-apps/web/heys_fingers_bundle_v1.js:10078
-apps/web/heys_fingers_bundle_v1.js:10760
-apps/web/heys_fingers_bundle_v1.js:11162
-apps/web/heys_fingers_bundle_v1.js:13323
-apps/web/heys_fingers_bundle_v1.js:14911
-apps/web/heys_fingers_bundle_v1.js:16425
-apps/web/heys_fingers_bundle_v1.js:18756
-apps/web/heys_fingers_bundle_v1.js:26848
+apps/web/heys_fingers_bundle_v1.js:2650
+apps/web/heys_fingers_bundle_v1.js:2732
+apps/web/heys_fingers_bundle_v1.js:9560
+apps/web/heys_fingers_bundle_v1.js:10080
+apps/web/heys_fingers_bundle_v1.js:10762
+apps/web/heys_fingers_bundle_v1.js:11164
+apps/web/heys_fingers_bundle_v1.js:13325
+apps/web/heys_fingers_bundle_v1.js:14913
+apps/web/heys_fingers_bundle_v1.js:16427
+apps/web/heys_fingers_bundle_v1.js:18758
+apps/web/heys_fingers_bundle_v1.js:26850
 # mobility bundle — active-session snapshot is local-only recovery state
 apps/web/heys_mobility_bundle_v1.js:2650
 apps/web/heys_mobility_bundle_v1.js:2732
