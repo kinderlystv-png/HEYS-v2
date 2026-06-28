@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.28.36cbde67",
+      "buildHash": "36cbde67",
+      "date": "2026-06-28",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Штрихкоды в общей базе",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Штрихкоды продукта обновляются для всех",
+          "description": "Клиент и куратор могут привязать штрихкод к общему продукту; код сохраняется в общей базе и доступен другим пользователям."
+        }
+      ],
+      "coveredCommits": ["36cbde67"]
+    },
+    {
       "version": "2026.06.28.205f849b",
       "buildHash": "205f849b",
       "date": "2026-06-28",
@@ -131,22 +147,6 @@
     {
       "version": "2026.06.27.4f5be12d",
       "buildHash": "4f5be12d",
-      "date": "2026-06-27",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ],
-      "coveredCommits": ["4e2d8df7", "f518b4ff"]
-    },
-    {
-      "version": "2026.06.27.6d87f9bf",
-      "buildHash": "6d87f9bf",
       "date": "2026-06-27",
       "kind": "technical",
       "profile": "technical-general",
