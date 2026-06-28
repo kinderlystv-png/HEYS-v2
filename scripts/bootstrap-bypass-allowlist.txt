@@ -101,13 +101,13 @@ apps/web/heys_core_v12.js:5386
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_core_bundle_v1.js:2197
 apps/web/heys_day_core_bundle_v1.js:3927
-apps/web/heys_day_core_bundle_v1.js:4443
+apps/web/heys_day_core_bundle_v1.js:4451
 apps/web/heys_day_core_bundle_v1.js:489
 apps/web/heys_day_core_bundle_v1.js:53
 apps/web/heys_day_orphan_alert.js:142
 apps/web/heys_event_log_v1.js:204
 apps/web/heys_day_effects.js:717
-apps/web/heys_day_effects.js:1233
+apps/web/heys_day_effects.js:1241
 apps/web/heys_day_engagement_effects.js:114
 apps/web/heys_day_insights_data_v1.js:830
 apps/web/heys_day_meals_chart_ui_v1.js:296

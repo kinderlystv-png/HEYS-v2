@@ -2461,6 +2461,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [error, setError] = useState('');
     const [cameraState, setCameraState] = useState('idle');
     const [debugCopyState, setDebugCopyState] = useState('');
+    const [debugReportText, setDebugReportText] = useState('');
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const scannerRef = useRef(null);
@@ -2539,6 +2540,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           enumerateDevices: !!navigator.mediaDevices?.enumerateDevices,
           permissionsApi: !!navigator.permissions?.query,
           barcodeDetector: 'BarcodeDetector' in window,
+          barcodePolyfillLoaded: !!window.barcodeDetectorPolyfill,
           heysBarcodeReady: !!HEYS.barcode,
           heysBarcodeSupported: !!HEYS.barcode?.isSupported?.(),
           supportedConstraints: navigator.mediaDevices?.getSupportedConstraints?.() || null
@@ -2572,6 +2574,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const copyCameraDebugReport = useCallback(async (finalStage, extra = {}) => {
       const text = buildCameraDebugReport(finalStage, extra);
+      setDebugReportText(text);
       try {
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
@@ -2593,11 +2596,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         temp.select();
         const ok = document.execCommand('copy');
         document.body.removeChild(temp);
-        setDebugCopyState(ok ? 'Диагностика камеры скопирована' : 'Не удалось скопировать диагностику');
+        setDebugCopyState(ok ? 'Диагностика камеры скопирована' : 'Диагностика готова ниже. Зажмите поле и скопируйте вручную.');
         return ok;
       } catch (e) {
         appendCameraDebug('clipboard.fallback.failed', { error: safeCameraError(e) });
-        setDebugCopyState('Не удалось скопировать диагностику');
+        setDebugCopyState('Диагностика готова ниже. Зажмите поле и скопируйте вручную.');
         return false;
       }
     }, [appendCameraDebug, buildCameraDebugReport]);
@@ -2923,6 +2926,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           role: 'status',
           'aria-live': 'polite'
         }, debugCopyState),
+        debugReportText && React.createElement('textarea', {
+          className: 'aps-barcode-debug-text',
+          value: debugReportText,
+          readOnly: true,
+          rows: 4,
+          onFocus: (e) => e.target.select(),
+          onClick: (e) => e.target.select(),
+          'aria-label': 'Диагностика камеры'
+        }),
         error && React.createElement('div', { className: 'aps-barcode-error' }, error)
       )
     );

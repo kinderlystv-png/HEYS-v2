@@ -1482,22 +1482,97 @@
   // === Barcode Detection API ===
   // Сканирование штрих-кодов продуктов с камеры
   let barcodeDetector = null;
+  let barcodePolyfillPromise = null;
+  const BARCODE_POLYFILL_BASE = '/vendor/barcode/';
 
-  async function initBarcodeDetector() {
-    if (!('BarcodeDetector' in window)) {
-      console.log('[Barcode] BarcodeDetector API not supported');
+  function canLoadBarcodePolyfill() {
+    return typeof document !== 'undefined'
+      && typeof WebAssembly !== 'undefined'
+      && typeof Promise !== 'undefined';
+  }
+
+  function shouldPreferBarcodePolyfill() {
+    const ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function loadBarcodeScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-heys-barcode-src="${src}"]`);
+      if (existing?.dataset.loaded === 'true') return resolve();
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.heysBarcodeSrc = src;
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      };
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureBarcodeDetectorAvailable({ allowPolyfill = true, forcePolyfill = false } = {}) {
+    try {
+      if (!forcePolyfill && !shouldPreferBarcodePolyfill() && 'BarcodeDetector' in window && typeof BarcodeDetector.getSupportedFormats === 'function') {
+        await BarcodeDetector.getSupportedFormats();
+        return true;
+      }
+    } catch (nativeError) {
+      console.warn('[Barcode] native BarcodeDetector check failed', nativeError?.message || nativeError);
+    }
+
+    if (!allowPolyfill || !canLoadBarcodePolyfill()) return false;
+    if (!barcodePolyfillPromise) {
+      barcodePolyfillPromise = (async () => {
+        await loadBarcodeScript(`${BARCODE_POLYFILL_BASE}zbar-wasm.js`);
+        await loadBarcodeScript(`${BARCODE_POLYFILL_BASE}barcode-detector-polyfill.js`);
+        const Polyfill = window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill;
+        if (!Polyfill) throw new Error('BarcodeDetectorPolyfill not exposed');
+        window.BarcodeDetector = Polyfill;
+        console.log('[Barcode] ✅ BarcodeDetector polyfill loaded');
+        return true;
+      })().catch((error) => {
+        barcodePolyfillPromise = null;
+        console.warn('[Barcode] polyfill load failed', error?.message || error);
+        return false;
+      });
+    }
+    return barcodePolyfillPromise;
+  }
+
+  async function initBarcodeDetector(options = {}) {
+    if (!(await ensureBarcodeDetectorAvailable(options))) {
+      console.log('[Barcode] BarcodeDetector API/polyfill not available');
       return null;
     }
 
     try {
       // Получаем поддерживаемые форматы
-      const formats = await BarcodeDetector.getSupportedFormats();
+      let formats = await BarcodeDetector.getSupportedFormats();
       console.log('[Barcode] Supported formats:', formats);
 
       // Создаём детектор для типичных продуктовых штрих-кодов
-      const productFormats = formats.filter(f =>
+      let productFormats = formats.filter(f =>
         ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(f)
       );
+
+      if (productFormats.length === 0 && options.allowPolyfill !== false) {
+        console.log('[Barcode] Native detector has no product formats, trying polyfill');
+        if (await ensureBarcodeDetectorAvailable({ allowPolyfill: true, forcePolyfill: true })) {
+          formats = await BarcodeDetector.getSupportedFormats();
+          console.log('[Barcode] Polyfill supported formats:', formats);
+          productFormats = formats.filter(f =>
+            ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(f)
+          );
+        }
+      }
 
       if (productFormats.length === 0) {
         console.log('[Barcode] No product barcode formats supported');
@@ -1609,12 +1684,13 @@
     };
   }
 
-  // Проверяем поддержку при старте
-  initBarcodeDetector();
+  // Проверяем native-поддержку при старте без загрузки WASM. Polyfill грузится
+  // только по явному запуску сканера.
+  initBarcodeDetector({ allowPolyfill: false });
 
   // Экспортируем
   HEYS.barcode = {
-    isSupported: () => 'BarcodeDetector' in window,
+    isSupported: () => 'BarcodeDetector' in window || canLoadBarcodePolyfill(),
     scanImage: scanBarcodeFromImage,
     startScanning: startBarcodeScanning
   };
