@@ -97,6 +97,12 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('const getProductBarcodes');
     expect(addProduct).toContain('mergeProductBarcode');
     expect(addProduct).toContain('mergeSharedBarcodeIntoProductForAddStep');
+    expect(addProduct).toContain('const dedupeBarcodeMatches');
+    expect(addProduct).toContain('const matches = dedupeBarcodeMatches([...localMatches, ...sharedMatches], barcode);');
+    expect(addProduct).not.toContain("String(product._source || '') + ':'");
+    expect(addProduct).toContain('startWithBarcodeScanner');
+    expect(addProduct).toContain("setBarcodeModal({ mode: 'search' })");
+    expect(addProduct).toContain('BarcodeScanIcon,');
     expect(addProduct).toContain('resolveSharedBarcodeProductForAddStep');
     expect(addProduct).toContain('product = mergeSharedBarcodeIntoProductForAddStep(product)');
     expect(addProduct).toContain('await HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })');
@@ -136,6 +142,19 @@ describe('product barcode contract', () => {
     expect(platformApis).toContain('ean13-fallback');
     expect(platformApis).toContain('BarcodeDetector polyfill loaded');
     expect(platformApis).toContain('/vendor/barcode/');
+
+    const dayMeals = read('apps/web/day/_meals.js');
+    expect(dayMeals).toContain('const renderFlowBarcodeIcon');
+    expect(dayMeals).toContain('startWithBarcodeScanner: options.startWithBarcodeScanner === true');
+    expect(dayMeals).toContain('const renderFlowBarcodeButton');
+    expect(dayMeals).toContain('className: \'flow-selection-btn__barcode-tap\'');
+    expect(dayMeals).toContain('openFlowAddProduct(multiProductMode, autoRepeatCount, true)');
+    expect(dayMeals).toContain('onClick: () => openFlowAddProduct(multiProductMode, 0, false)');
+    expect(dayMeals).toContain('onClick: () => openFlowAddProduct(true, n, false)');
+    expect(dayMeals).toContain('`Еще ${n}`');
+    expect(dayMeals).not.toContain('`Добавить ${n}`');
+    expect(dayMeals).toContain('window.HEYS?.AddProductStep?.BarcodeScanIcon');
+    expect(dayMeals).toContain('handleFlowRepeatRecent');
     expect(platformApis).toContain('canLoadBarcodePolyfill');
     expect(platformApis).toContain('shouldPreferBarcodePolyfill');
     expect(platformApis).toContain('initBarcodeDetector({ allowPolyfill: false })');

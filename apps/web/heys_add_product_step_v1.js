@@ -833,6 +833,85 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
   };
 
+  const barcodeProductSignature = (product, barcode) => {
+    const code = normalizeBarcode(barcode);
+    const name = normalizeName(product?.name);
+    if (!code || !name) return '';
+
+    const carbs100 = toNum(product?.carbs100, toNum(product?.simple100, 0) + toNum(product?.complex100, 0));
+    const fat100 = toNum(product?.fat100,
+      toNum(product?.badFat100 ?? product?.badfat100, 0)
+      + toNum(product?.goodFat100 ?? product?.goodfat100, 0)
+      + toNum(product?.trans100, 0)
+    );
+
+    return [
+      code,
+      name,
+      Math.round(toNum(product?.kcal100, 0)),
+      Math.round(toNum(product?.protein100, 0) * 10) / 10,
+      Math.round(fat100 * 10) / 10,
+      Math.round(carbs100 * 10) / 10
+    ].join('|');
+  };
+
+  const barcodeProductKeys = (product, barcode) => {
+    const keys = [];
+    const id = product?.id ?? product?.product_id ?? null;
+    const sharedId = resolveSharedProductId(product);
+    const signature = barcodeProductSignature(product, barcode);
+
+    if (id != null) keys.push(`id:${String(id)}`);
+    if (sharedId != null) keys.push(`shared:${String(sharedId)}`);
+    if (signature) keys.push(`sig:${signature}`);
+
+    return keys;
+  };
+
+  const mergeBarcodeMatchProducts = (left, right, barcode) => {
+    const primary = left?._source === 'personal' || right?._source !== 'personal' ? left : right;
+    const secondary = primary === left ? right : left;
+    const codes = [];
+    [barcode, ...getProductBarcodes(primary), ...getProductBarcodes(secondary)].forEach((value) => {
+      const code = normalizeBarcode(value);
+      if (code && !codes.includes(code)) codes.push(code);
+    });
+
+    const sharedId = resolveSharedProductId(primary) || resolveSharedProductId(secondary);
+    return {
+      ...primary,
+      shared_origin_id: primary?.shared_origin_id || sharedId || primary?.shared_origin_id,
+      barcode: codes[0] || null,
+      barcodes: codes,
+      _barcodeMatch: true
+    };
+  };
+
+  const dedupeBarcodeMatches = (matches, barcode) => {
+    const out = [];
+    const keyToIndex = new Map();
+
+    (Array.isArray(matches) ? matches : []).forEach((product) => {
+      const keys = barcodeProductKeys(product, barcode);
+      const existingIndex = keys
+        .map((key) => keyToIndex.get(key))
+        .find((index) => index != null);
+
+      if (existingIndex == null) {
+        const nextIndex = out.length;
+        out.push(product);
+        keys.forEach((key) => keyToIndex.set(key, nextIndex));
+        return;
+      }
+
+      const merged = mergeBarcodeMatchProducts(out[existingIndex], product, barcode);
+      out[existingIndex] = merged;
+      barcodeProductKeys(merged, barcode).forEach((key) => keyToIndex.set(key, existingIndex));
+    });
+
+    return out;
+  };
+
   const resolveSharedBarcodeProductForAddStep = async (product) => {
     let next = mergeSharedBarcodeIntoProductForAddStep(product);
     if (getProductBarcodes(next).length > 0 || !HEYS.cloud?.getAllSharedProducts) return next;
@@ -3149,6 +3228,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
     const [barcodeResults, setBarcodeResults] = useState([]);
     const [barcodeNotice, setBarcodeNotice] = useState(null);
+    const startWithBarcodeScannerRef = useRef(false);
 
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -3184,6 +3264,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return () => clearTimeout(timer);
     }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
+
+    useEffect(() => {
+      if (startWithBarcodeScannerRef.current || !context?.startWithBarcodeScanner) return;
+      startWithBarcodeScannerRef.current = true;
+      setTimeout(() => {
+        setBarcodeNotice(null);
+        setBarcodeModal({ mode: 'search' });
+      }, 0);
+    }, [context?.startWithBarcodeScanner]);
 
     // Фиксируем состояние sync на момент открытия: если sync уже завершён,
     // можно рендерить сразу; если нет — ждём финальную версию списка.
@@ -4277,12 +4366,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             .filter(Boolean);
         }
 
-        const byKey = new Map();
-        [...localMatches, ...sharedMatches].forEach((product) => {
-          const key = String(product._source || '') + ':' + String(product.id ?? product.product_id ?? product.name ?? '');
-          if (!byKey.has(key)) byKey.set(key, product);
-        });
-        const matches = Array.from(byKey.values());
+        const matches = dedupeBarcodeMatches([...localMatches, ...sharedMatches], barcode);
 
         if (matches.length === 1) {
           HEYS.Toast?.success?.('Продукт найден по штрихкоду');
@@ -8010,6 +8094,7 @@ NOVA: 1
       autoRepeatCount = 0, // 🆕 «Подряд N продуктов» — молча повторяет выбор N раз без summary
       initialSearch = '', // 🆕 Предзаполнение поиска (MealRec UX fix)
       initialGrams = 100, // 🆕 v24: Smart Grams Pre-fill (R6, Sprint 1)
+      startWithBarcodeScanner = false,
       openPresetsCreate = false, // Открыть сразу в режиме создания набора из текущего приёма
       onAdd,
       onAddMany,
@@ -8126,6 +8211,7 @@ NOVA: 1
         mealIndex,
         mealId,
         multiProductMode,
+        startWithBarcodeScanner,
         _openPresetsCreate: openPresetsCreate,
         // 🆕 autoRepeat: closure-переменная не сериализуется → contextKey стабилен между шагами
         hasAutoRepeat: autoRepeatRemaining > 0,
@@ -8331,6 +8417,7 @@ NOVA: 1
     ProductEditBasicStep,
     ProductEditExtraStep,
     HarmSelectStep,
+    BarcodeScanIcon,
     getCategoryIcon,
     computeSmartProducts,
     updateSharedProduct,
