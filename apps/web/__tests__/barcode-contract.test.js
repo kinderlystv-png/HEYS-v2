@@ -97,6 +97,11 @@ describe('product barcode contract', () => {
     expect(platformApis).toContain('function getBarcodePolyfillGlobal');
     expect(platformApis).toContain("typeof barcodeDetectorPolyfill !== 'undefined'");
     expect(platformApis).toContain('getDebugState: getBarcodeDebugState');
+    expect(platformApis).toContain('function createBarcodeFrameSampler');
+    expect(platformApis).toContain("drawCrop('visible-crop'");
+    expect(platformApis).toContain("drawCrop('barcode-band'");
+    expect(platformApis).toContain("drawCrop('barcode-tight'");
+    expect(platformApis).toContain("targets.push({ name: 'video-full'");
     expect(platformApis).toContain('BarcodeDetector polyfill loaded');
     expect(platformApis).toContain('/vendor/barcode/');
     expect(platformApis).toContain('canLoadBarcodePolyfill');

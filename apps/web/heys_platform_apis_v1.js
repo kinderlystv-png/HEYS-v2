@@ -1483,7 +1483,10 @@
   // Сканирование штрих-кодов продуктов с камеры
   let barcodeDetector = null;
   let barcodePolyfillPromise = null;
+  let barcodeDetectorFormats = [];
+  let barcodeScanStats = null;
   const BARCODE_POLYFILL_BASE = '/vendor/barcode/';
+  const PRODUCT_BARCODE_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'];
 
   function canLoadBarcodePolyfill() {
     return typeof document !== 'undefined'
@@ -1514,7 +1517,90 @@
       hasGlobalPolyfill: !!polyfillGlobal,
       hasPolyfillClass: !!polyfillGlobal?.BarcodeDetectorPolyfill,
       canLoadPolyfill: canLoadBarcodePolyfill(),
-      prefersPolyfill: shouldPreferBarcodePolyfill()
+      prefersPolyfill: shouldPreferBarcodePolyfill(),
+      formats: barcodeDetectorFormats,
+      scan: barcodeScanStats
+    };
+  }
+
+  function clampRect(rect, width, height) {
+    const x = Math.max(0, Math.min(width - 1, Math.round(rect.x)));
+    const y = Math.max(0, Math.min(height - 1, Math.round(rect.y)));
+    const w = Math.max(1, Math.min(width - x, Math.round(rect.w)));
+    const h = Math.max(1, Math.min(height - y, Math.round(rect.h)));
+    return { x, y, w, h };
+  }
+
+  function getVisibleVideoRect(videoElement) {
+    const vw = videoElement.videoWidth || 0;
+    const vh = videoElement.videoHeight || 0;
+    if (!vw || !vh) return null;
+
+    const boxW = videoElement.clientWidth || 4;
+    const boxH = videoElement.clientHeight || 3;
+    const sourceRatio = vw / vh;
+    const boxRatio = boxW / boxH;
+
+    if (sourceRatio > boxRatio) {
+      const w = vh * boxRatio;
+      return clampRect({ x: (vw - w) / 2, y: 0, w, h: vh }, vw, vh);
+    }
+
+    const h = vw / boxRatio;
+    return clampRect({ x: 0, y: (vh - h) / 2, w: vw, h }, vw, vh);
+  }
+
+  function createBarcodeFrameSampler(videoElement) {
+    const canvases = new Map();
+    const getCanvas = (name, width, height) => {
+      let item = canvases.get(name);
+      if (!item) {
+        const canvas = document.createElement('canvas');
+        item = { canvas, ctx: canvas.getContext('2d', { willReadFrequently: true }) };
+        canvases.set(name, item);
+      }
+      if (item.canvas.width !== width) item.canvas.width = width;
+      if (item.canvas.height !== height) item.canvas.height = height;
+      return item;
+    };
+
+    const drawCrop = (name, rect, maxWidth = 960) => {
+      const vw = videoElement.videoWidth || 0;
+      const vh = videoElement.videoHeight || 0;
+      if (!vw || !vh || !rect?.w || !rect?.h) return null;
+      const source = clampRect(rect, vw, vh);
+      const scale = Math.min(1, maxWidth / source.w);
+      const dw = Math.max(1, Math.round(source.w * scale));
+      const dh = Math.max(1, Math.round(source.h * scale));
+      const item = getCanvas(name, dw, dh);
+      if (!item.ctx) return null;
+      item.ctx.drawImage(videoElement, source.x, source.y, source.w, source.h, 0, 0, dw, dh);
+      return { name, source: item.canvas };
+    };
+
+    return {
+      targets() {
+        const visible = getVisibleVideoRect(videoElement);
+        const targets = [];
+        if (visible) {
+          const barcodeBand = {
+            x: visible.x + visible.w * 0.04,
+            y: visible.y + visible.h * 0.18,
+            w: visible.w * 0.92,
+            h: visible.h * 0.64
+          };
+          const barcodeTight = {
+            x: visible.x + visible.w * 0.08,
+            y: visible.y + visible.h * 0.28,
+            w: visible.w * 0.84,
+            h: visible.h * 0.48
+          };
+          [drawCrop('visible-crop', visible), drawCrop('barcode-band', barcodeBand), drawCrop('barcode-tight', barcodeTight)]
+            .forEach((target) => { if (target) targets.push(target); });
+        }
+        targets.push({ name: 'video-full', source: videoElement });
+        return targets;
+      }
     };
   }
 
@@ -1582,18 +1668,14 @@
       console.log('[Barcode] Supported formats:', formats);
 
       // Создаём детектор для типичных продуктовых штрих-кодов
-      let productFormats = formats.filter(f =>
-        ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(f)
-      );
+      let productFormats = formats.filter(f => PRODUCT_BARCODE_FORMATS.includes(f));
 
       if (productFormats.length === 0 && options.allowPolyfill !== false) {
         console.log('[Barcode] Native detector has no product formats, trying polyfill');
         if (await ensureBarcodeDetectorAvailable({ allowPolyfill: true, forcePolyfill: true })) {
           formats = await BarcodeDetector.getSupportedFormats();
           console.log('[Barcode] Polyfill supported formats:', formats);
-          productFormats = formats.filter(f =>
-            ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(f)
-          );
+          productFormats = formats.filter(f => PRODUCT_BARCODE_FORMATS.includes(f));
         }
       }
 
@@ -1603,6 +1685,7 @@
       }
 
       barcodeDetector = new BarcodeDetector({ formats: productFormats });
+      barcodeDetectorFormats = productFormats;
       console.log('[Barcode] ✅ Detector initialized with formats:', productFormats);
       return barcodeDetector;
     } catch (e) {
@@ -1661,16 +1744,53 @@
     let scanning = true;
     let lastDetectedCode = null;
     let lastDetectedTime = 0;
+    let lastScanFrameTime = 0;
+    const sampler = createBarcodeFrameSampler(videoElement);
+    barcodeScanStats = {
+      frames: 0,
+      attempts: 0,
+      detections: 0,
+      errors: 0,
+      lastError: null,
+      lastTarget: null,
+      lastNoHitAt: null
+    };
 
     const scanFrame = async () => {
       if (!scanning || videoElement.paused || videoElement.ended) return;
 
       try {
-        const barcodes = await barcodeDetector.detect(videoElement);
+        const nowFrame = Date.now();
+        if (nowFrame - lastScanFrameTime < 140) {
+          requestAnimationFrame(scanFrame);
+          return;
+        }
+        lastScanFrameTime = nowFrame;
+        barcodeScanStats.frames += 1;
+
+        let barcodes = [];
+        let targetName = null;
+        const targets = sampler.targets();
+        for (const target of targets) {
+          try {
+            barcodeScanStats.attempts += 1;
+            const found = await barcodeDetector.detect(target.source);
+            if (found.length > 0) {
+              barcodes = found;
+              targetName = target.name;
+              break;
+            }
+          } catch (targetError) {
+            barcodeScanStats.errors += 1;
+            barcodeScanStats.lastError = targetError?.message || String(targetError);
+          }
+        }
 
         if (barcodes.length > 0) {
           const barcode = barcodes[0];
           const now = Date.now();
+          barcodeScanStats.detections += 1;
+          barcodeScanStats.lastTarget = targetName || 'unknown';
 
           // Debounce — не срабатываем на один и тот же код чаще чем раз в 2 секунды
           if (barcode.rawValue !== lastDetectedCode || (now - lastDetectedTime) > 2000) {
@@ -1689,9 +1809,12 @@
               bounds: barcode.boundingBox
             });
           }
+        } else {
+          barcodeScanStats.lastNoHitAt = new Date().toISOString();
         }
       } catch (e) {
-        // Игнорируем ошибки отдельных кадров
+        barcodeScanStats.errors += 1;
+        barcodeScanStats.lastError = e?.message || String(e);
       }
 
       if (scanning) {
