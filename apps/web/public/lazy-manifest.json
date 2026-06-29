@@ -16,11 +16,11 @@
     "builtAt": "2026-06-29T10:55:00.899Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.a6656ccc8719.js",
-    "hash": "a6656ccc8719",
-    "sourceFingerprint": "73d4c11545fd",
+    "file": "postboot-3-ui-lazy.bundle.f83ec1761e86.js",
+    "hash": "f83ec1761e86",
+    "sourceFingerprint": "197fdabfa2dc",
     "fileCount": 52,
-    "size": 2637732,
-    "builtAt": "2026-06-29T11:56:05.559Z"
+    "size": 2639831,
+    "builtAt": "2026-06-29T15:32:10.387Z"
   }
 }
