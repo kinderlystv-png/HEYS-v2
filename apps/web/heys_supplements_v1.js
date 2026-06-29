@@ -2443,6 +2443,15 @@
     sciencePopupRootInstance.render(renderSciencePopup(suppId, closePopup));
   }
 
+  function isDiarySupplementsPanelEnabled() {
+    try {
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      return profile.showDiarySupplementsPanel !== false;
+    } catch (_) {
+      return true;
+    }
+  }
+
   /**
    * Рендер карточки витаминов для вкладки статистики
    * Переработанная версия — чистая, интуитивная, с кнопкой "Мой курс"
@@ -2452,6 +2461,7 @@
   function renderSupplementsCard(props) {
     const { dateKey, onForceUpdate } = props || {};
     if (!dateKey) return null;
+    if (!isDiarySupplementsPanelEnabled()) return null;
 
     const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
 

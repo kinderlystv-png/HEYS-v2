@@ -38,6 +38,27 @@
     return `${h}ч ${m}м`;
   };
 
+  const ACTIVITY_CONTEXT_ICONS = {
+    peri: '🔥',
+    post: '💪',
+    pre: '⚡',
+    steps: '🚶',
+    morning: '🌅',
+    double: '🏆',
+    fasted: '⚡',
+    default: '🏋️'
+  };
+
+  const ACTIVITY_CONTEXT_COMPACT_TITLES = {
+    peri: 'Во время тренировки',
+    post: 'Эффект тренировки',
+    pre: 'Перед тренировкой',
+    steps: 'Активный день',
+    morning: 'Утренний буст',
+    double: 'Двойная нагрузка',
+    fasted: 'Натощак'
+  };
+
 
   // === 🏋️ HELPER: ПЛАШКА ACTIVITY CONTEXT (используется в нескольких местах) ===
   const renderActivityContextBadge = (activityContext, options = {}) => {
@@ -45,18 +66,7 @@
 
     const { compact = false, emphasis = 'default' } = options;
 
-    // Иконки по типу контекста
-    const icons = {
-      peri: '🔥',
-      post: '💪',
-      pre: '⚡',
-      steps: '🚶',
-      morning: '🌅',
-      double: '🏆',
-      fasted: '⚡',
-      default: '🏋️'
-    };
-    const icon = icons[activityContext.type] || icons.default;
+    const icon = ACTIVITY_CONTEXT_ICONS[activityContext.type] || ACTIVITY_CONTEXT_ICONS.default;
 
     // Человекопонятные заголовки по типу
     const titles = {
@@ -141,6 +151,48 @@
           React.createElement('span', { className: 'activity-context-badge__metric-label' }, 'вред')
         )
       )
+    );
+  };
+
+  const renderWaveImpactChips = (data) => {
+    const chips = [];
+    const activityContext = data?.activityContext;
+
+    if (activityContext && activityContext.type !== 'none') {
+      chips.push({
+        key: 'activity',
+        icon: ACTIVITY_CONTEXT_ICONS[activityContext.type] || ACTIVITY_CONTEXT_ICONS.default,
+        text: ACTIVITY_CONTEXT_COMPACT_TITLES[activityContext.type] || 'Эффект'
+      });
+      if (activityContext.waveBonus) {
+        chips.push({
+          key: 'wave',
+          text: Math.abs(activityContext.waveBonus * 100).toFixed(0) + '% быстрее'
+        });
+      }
+      if (activityContext.harmMultiplier && activityContext.harmMultiplier < 1) {
+        chips.push({
+          key: 'harm',
+          text: '−' + Math.round((1 - activityContext.harmMultiplier) * 100) + '% вред'
+        });
+      }
+    } else {
+      if (data?.hasWorkoutBonus) chips.push({ key: 'workout', icon: '🏃', text: Math.abs(Math.round(data.workoutBonus * 100)) + '% быстрее' });
+      if (data?.hasStepsBonus) chips.push({ key: 'steps', icon: '🚶', text: Math.abs(Math.round(data.stepsBonus * 100)) + '% быстрее' });
+      if (data?.hasNeatBonus) chips.push({ key: 'neat', icon: '🏠', text: Math.abs(Math.round(data.neatBonus * 100)) + '% быстрее' });
+      if (data?.hasNDTE && data.ndteWaveReduction > 0) chips.push({ key: 'ndte', icon: '🔥', text: Math.round(data.ndteWaveReduction * 100) + '% быстрее' });
+    }
+
+    if (!chips.length) return null;
+
+    return React.createElement('div', { className: 'insulin-wave-impact-chips' },
+      chips.map(chip => React.createElement('span', {
+        key: chip.key,
+        className: 'insulin-wave-impact-chip'
+      },
+        chip.icon && React.createElement('span', { className: 'insulin-wave-impact-chip__icon' }, chip.icon),
+        React.createElement('span', null, chip.text)
+      ))
     );
   };
 
@@ -950,6 +1002,7 @@
     // При липолизе: большой зелёный блок с таймером жиросжигания
     if (isLipolysis) {
       return React.createElement('div', {
+        className: 'insulin-wave-progress-card',
         style: {
           background: lipolysisGradient,
           borderRadius: '16px',
@@ -972,19 +1025,13 @@
             textShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }
         }, formatLipolysisTime(lipolysisMinutes)),
-        // Плашка тренировки (если эффект от тренировки ускорил выход в липолиз)
-        data.activityContext && React.createElement('div', { style: { marginTop: '12px' } },
-          renderActivityContextBadge(data.activityContext, { compact: true, emphasis: 'contrast' })
-        )
+        renderWaveImpactChips(data)
       );
     }
 
     // При активной волне: большой таймер обратного отсчёта
-    return React.createElement(React.Fragment, null,
-      // Плашка тренировки (если есть) — ПОД таймером
-      data.activityContext && data.activityContext.type !== 'none' && renderActivityContextBadge(data.activityContext, { compact: false, showDesc: true }),
-      // Синий блок с таймером
-      React.createElement('div', {
+    return React.createElement('div', {
+        className: 'insulin-wave-progress-card',
         style: {
           background: 'linear-gradient(135deg, #3b82f6 0%, #3b82f6 50%, #3b82f6 100%)',
           borderRadius: '16px',
@@ -997,6 +1044,7 @@
         React.createElement('div', {
           style: { fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', fontWeight: '500' }
         }, '⏱ Жиросжигание начнётся через'),
+        renderWaveImpactChips(data),
         // Большие цифры таймера
         React.createElement('div', {
           style: {
@@ -1044,8 +1092,7 @@
         ),
         // График волны
         renderWaveChart(data)
-      )
-    );
+      );
   };
 
 

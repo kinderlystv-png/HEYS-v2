@@ -724,6 +724,15 @@
   --iw-bg-to: rgba(253, 230, 138, 0.72);
 }
 
+.insulin-wave-indicator.insulin-wave-indicator--bare {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+
 /* Статичный фон — без анимации для снижения отвлечения */
 .insulin-wave-bg {
   position: absolute;
@@ -886,6 +895,36 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: height 0.3s ease;
   margin-bottom: 8px;
+}
+
+.insulin-wave-impact-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.insulin-wave-impact-chip {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.insulin-wave-impact-chip__icon {
+  font-size: 12px;
+  line-height: 1;
 }
 
 .insulin-wave-bar {
@@ -1150,6 +1189,264 @@
   padding: 4px 8px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 6px;
+}
+
+.day-wave-overview {
+  margin: var(--heys-diary-stack-gap, 14px) 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(29, 112, 183, 0.14);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(226, 236, 242, 0.9) 0%, rgba(226, 236, 242, 0) 42%),
+    rgba(248, 250, 252, 0.82);
+}
+
+.day-wave-overview--warn {
+  border-color: rgba(245, 158, 11, 0.22);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(254, 243, 199, 0.82) 0%, rgba(254, 243, 199, 0) 44%),
+    rgba(255, 251, 235, 0.68);
+}
+
+.day-wave-overview--soft {
+  border-color: rgba(29, 112, 183, 0.18);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(226, 236, 242, 0.88) 0%, rgba(226, 236, 242, 0) 44%),
+    rgba(248, 250, 252, 0.76);
+}
+
+.day-wave-overview--high {
+  border-color: rgba(239, 68, 68, 0.2);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(254, 226, 226, 0.9) 0%, rgba(254, 226, 226, 0) 44%),
+    rgba(255, 247, 247, 0.72);
+}
+
+.day-wave-overview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.day-wave-overview__title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: #172033;
+  font-size: 13.5px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.day-wave-overview__status {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(29, 112, 183, 0.1);
+  color: #1d70b7;
+  font-size: 10.5px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.day-wave-overview--warn .day-wave-overview__status {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.day-wave-overview--high .day-wave-overview__status {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.day-wave-overview__canvas {
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(241, 245, 249, 0.55) 100%);
+}
+
+.day-wave-overview__axis {
+  stroke: rgba(148, 163, 184, 0.48);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.day-wave-overview__lipolysis-zone {
+  fill: rgba(34, 197, 94, 0.075);
+  stroke: rgba(34, 197, 94, 0.16);
+  stroke-width: 1;
+}
+
+.day-wave-overview__lipolysis-label {
+  fill: rgba(22, 101, 52, 0.58);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.day-wave-overview__target-window {
+  stroke: rgba(29, 112, 183, 0.42);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 4 4;
+}
+
+.day-wave-overview__interaction-zone {
+  stroke-width: 1;
+}
+
+.day-wave-overview__interaction-zone--overlap {
+  fill: rgba(239, 68, 68, 0.11);
+  stroke: rgba(239, 68, 68, 0.22);
+}
+
+.day-wave-overview__interaction-zone--extension,
+.day-wave-overview__interaction-zone--boost {
+  fill: rgba(245, 158, 11, 0.075);
+  stroke: rgba(245, 158, 11, 0.16);
+}
+
+.day-wave-overview__interaction-zone--micro {
+  fill: rgba(148, 163, 184, 0.08);
+  stroke: rgba(148, 163, 184, 0.14);
+}
+
+.day-wave-overview__wave {
+  opacity: 0.28;
+  stroke-width: 1.5;
+}
+
+.day-wave-overview__wave.is-active {
+  opacity: 0.42;
+  stroke-width: 2;
+}
+
+.day-wave-overview__meal circle {
+  fill: #fff;
+  stroke: #3b82f6;
+  stroke-width: 1.6;
+}
+
+.day-wave-overview__meal text {
+  font-size: 8px;
+  dominant-baseline: middle;
+}
+
+.day-wave-overview__time {
+  fill: #64748b;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.day-wave-overview__overlaps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  color: #92400e;
+  font-size: 10.5px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.day-wave-overview__interaction-label--overlap {
+  color: #b91c1c;
+}
+
+.day-wave-overview__interaction-label--extension,
+.day-wave-overview__interaction-label--boost {
+  color: #92400e;
+}
+
+.day-wave-overview__interaction-label--micro {
+  color: #64748b;
+}
+
+[data-theme="dark"] .day-wave-overview {
+  border-color: rgba(82, 160, 216, 0.18);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(29, 112, 183, 0.18) 0%, rgba(29, 112, 183, 0) 44%),
+    rgba(15, 23, 42, 0.66);
+}
+
+[data-theme="dark"] .day-wave-overview--warn {
+  border-color: rgba(245, 158, 11, 0.24);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(120, 53, 15, 0.24) 0%, rgba(120, 53, 15, 0) 44%),
+    rgba(15, 23, 42, 0.68);
+}
+
+[data-theme="dark"] .day-wave-overview--soft {
+  border-color: rgba(82, 160, 216, 0.2);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(29, 112, 183, 0.16) 0%, rgba(29, 112, 183, 0) 44%),
+    rgba(15, 23, 42, 0.66);
+}
+
+[data-theme="dark"] .day-wave-overview--high {
+  border-color: rgba(239, 68, 68, 0.24);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(127, 29, 29, 0.24) 0%, rgba(127, 29, 29, 0) 44%),
+    rgba(15, 23, 42, 0.68);
+}
+
+[data-theme="dark"] .day-wave-overview__title {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .day-wave-overview__canvas {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.62);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .day-wave-overview__axis {
+  stroke: rgba(148, 163, 184, 0.34);
+}
+
+[data-theme="dark"] .day-wave-overview__lipolysis-zone {
+  fill: rgba(34, 197, 94, 0.09);
+  stroke: rgba(74, 222, 128, 0.14);
+}
+
+[data-theme="dark"] .day-wave-overview__lipolysis-label {
+  fill: rgba(134, 239, 172, 0.5);
+}
+
+[data-theme="dark"] .day-wave-overview__target-window {
+  stroke: rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .day-wave-overview__interaction-zone--overlap {
+  fill: rgba(239, 68, 68, 0.13);
+  stroke: rgba(248, 113, 113, 0.2);
+}
+
+[data-theme="dark"] .day-wave-overview__interaction-zone--extension,
+[data-theme="dark"] .day-wave-overview__interaction-zone--boost {
+  fill: rgba(245, 158, 11, 0.1);
+  stroke: rgba(251, 191, 36, 0.16);
+}
+
+[data-theme="dark"] .day-wave-overview__interaction-zone--micro {
+  fill: rgba(148, 163, 184, 0.09);
+  stroke: rgba(203, 213, 225, 0.12);
+}
+
+[data-theme="dark"] .day-wave-overview__meal circle {
+  fill: #0f172a;
+  stroke: #60a5fa;
+}
+
+[data-theme="dark"] .day-wave-overview__time {
+  fill: #94a3b8;
+}
+
+[data-theme="dark"] .day-wave-overview__overlaps {
+  color: #fbbf24;
 }
 
 /* Пульсация активной волны */

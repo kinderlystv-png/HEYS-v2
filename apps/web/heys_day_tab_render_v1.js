@@ -74,6 +74,7 @@
                 addMeal: ctx.addMeal,
                 day: ctx.day,
                 mealsUI: ctx.mealsUI,
+                dailyWaveOverview: ctx.dailyWaveOverview,
                 daySummary: ctx.daySummary,
                 caloricDebt: ctx.caloricDebt,
                 eatenKcal: ctx.eatenKcal,

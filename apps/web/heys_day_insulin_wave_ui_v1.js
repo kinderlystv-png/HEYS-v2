@@ -600,7 +600,7 @@
       }),
       // Сама карточка с мягким shake при приближении липолиза
       React.createElement('div', {
-        className: 'insulin-wave-indicator widget-shadow-diary-glass widget-outline-diary-glass insulin-' + insulinWaveData.status + (shouldShake ? ' shake-subtle' : '') + (insulinExpanded ? ' expanded' : ''),
+        className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (shouldShake ? ' shake-subtle' : '') + (insulinExpanded ? ' widget-shadow-diary-glass widget-outline-diary-glass expanded' : ' insulin-wave-indicator--bare'),
         id: 'tour-insulin-wave',
         style: {
           margin: '8px 0',
@@ -612,12 +612,12 @@
       },
 
         // Анимированный фон волны
-        React.createElement('div', { className: 'insulin-wave-bg' }),
+        insulinExpanded && React.createElement('div', { className: 'insulin-wave-bg' }),
 
         // Контент
         React.createElement('div', { className: 'insulin-wave-content' },
           // Header: иконка + label + статус
-          React.createElement('div', { className: 'insulin-wave-header' },
+          insulinExpanded && React.createElement('div', { className: 'insulin-wave-header' },
             React.createElement('div', { className: 'insulin-wave-left' },
               React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
               React.createElement('span', { className: 'insulin-wave-label' },
@@ -634,7 +634,7 @@
           renderProgressBar(),
 
           // 🆕 v4.1.4: Мини-легенда компонентов + научный popup
-          insulinWaveData.wavePhases && React.createElement('div', {
+          insulinExpanded && insulinWaveData.wavePhases && React.createElement('div', {
             style: {
               display: 'flex',
               justifyContent: 'center',
@@ -692,10 +692,10 @@
           ),
 
           // Подсказка
-          insulinWaveData.subtext && React.createElement('div', { className: 'insulin-wave-suggestion' }, insulinWaveData.subtext),
+          insulinExpanded && insulinWaveData.subtext && React.createElement('div', { className: 'insulin-wave-suggestion' }, insulinWaveData.subtext),
 
           // 🏆 При липолизе: рекорд + streak + ккал
-          insulinWaveData.status === 'lipolysis' && React.createElement('div', {
+          insulinExpanded && insulinWaveData.status === 'lipolysis' && React.createElement('div', {
             className: 'lipolysis-stats',
             style: {
               display: 'flex',
@@ -748,7 +748,7 @@
           ),
 
           // 🆕 v3.2.1: Аутофагия — показываем при активной фазе
-          insulinWaveData.autophagy && insulinWaveData.isAutophagyActive && React.createElement('div', {
+          insulinExpanded && insulinWaveData.autophagy && insulinWaveData.isAutophagyActive && React.createElement('div', {
             className: 'autophagy-status',
             style: {
               display: 'flex',
@@ -792,7 +792,7 @@
           ),
 
           // 🆕 v3.2.1: Холодовое воздействие — если активно
-          insulinWaveData.hasColdExposure && React.createElement('div', {
+          insulinExpanded && insulinWaveData.hasColdExposure && React.createElement('div', {
             className: 'cold-exposure-badge',
             style: {
               display: 'flex',
@@ -813,7 +813,7 @@
           ),
 
           // 🆕 v3.2.1: Добавки — если есть
-          insulinWaveData.hasSupplements && React.createElement('div', {
+          insulinExpanded && insulinWaveData.hasSupplements && React.createElement('div', {
             className: 'supplements-badge',
             style: {
               display: 'flex',

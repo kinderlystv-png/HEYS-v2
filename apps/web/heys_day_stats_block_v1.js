@@ -251,6 +251,7 @@
             setMealQualityPopup,
             newMealAnimatingIndex,
             showFirstPerfectAchievement,
+            insulinWaveData,
             U
         }) || null;
 

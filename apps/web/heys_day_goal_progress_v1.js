@@ -193,11 +193,17 @@
       React.createElement('div', {
         className: 'goal-progress-bar goal-progress-bar--' + progressTone + (ratio >= 0.9 && ratio <= 1.1 ? ' pulse-perfect' : ratio > 1.25 ? ' shake-excess' : '')
       },
+        React.createElement('div', {
+          id: 'day-remaining-heading',
+          className: 'goal-progress-card-heading'
+        }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
         React.createElement('div', { className: 'goal-progress-header' },
-          React.createElement('span', {
-            className: 'goal-progress-title',
-            style: { color: titleColor }
-          }, titleIcon + ' ' + titleText),
+          React.createElement('div', { className: 'goal-progress-title-group' },
+            React.createElement('span', {
+              className: 'goal-progress-title',
+              style: { color: titleColor }
+            }, titleIcon + ' ' + titleText)
+          ),
           React.createElement('span', { className: 'goal-progress-stats' },
             React.createElement('span', {
               className: 'goal-eaten-wrap',

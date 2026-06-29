@@ -130,6 +130,8 @@
         const [promptValues, setPromptValues] = useState({});
         const [collapsedById, setCollapsedById] = useState({});
         const [paramsCollapsedById, setParamsCollapsedById] = useState({});
+        const [deleteModeChecklistId, setDeleteModeChecklistId] = useState(null);
+        const [selectedDeleteIds, setSelectedDeleteIds] = useState({});
         const selectedPresetDef = useMemo(
             () => CHECKLIST_PRESETS.find((preset) => preset.id === selectedPresetId) || CHECKLIST_PRESETS[0],
             [selectedPresetId],
@@ -263,6 +265,52 @@
                 patch.removedPresetIds = removed;
             }
             state.updateChecklist(checklist.id, patch);
+        };
+
+        const deleteSavedItems = (checklist, itemIds, options = {}) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return;
+            const ids = Array.from(new Set((Array.isArray(itemIds) ? itemIds : [itemIds])
+                .filter((id) => id != null)
+                .map(String)));
+            const removeGroups = Array.isArray(options.removeGroups) && options.removeGroups.length > 0
+                ? new Set(options.removeGroups.map((group) => (
+                    normalizeChecklistGroupName(group).toLocaleLowerCase('ru-RU')
+                )))
+                : null;
+            if (ids.length === 0 && !removeGroups) return;
+            const removeSet = new Set(ids);
+            const currentItems = Array.isArray(checklist.items) ? checklist.items : [];
+            const items = currentItems.filter((entry) => !removeSet.has(String(entry?.id)));
+            const patch = { items };
+            if (removeGroups) {
+                patch.customGroups = getChecklistCustomGroups(checklist)
+                    .filter((group) => !removeGroups.has(group.toLocaleLowerCase('ru-RU')));
+            }
+            if (getChecklistPreset(checklist)) {
+                const removed = Array.isArray(checklist.removedPresetIds)
+                    ? checklist.removedPresetIds.map(String)
+                    : [];
+                ids.forEach((id) => {
+                    if (!isCustomChecklistItemId(id) && !removed.includes(id)) removed.push(id);
+                });
+                patch.removedPresetIds = removed;
+            }
+            state.updateChecklist(checklist.id, patch);
+            setSelectedDeleteIds((current) => {
+                if (deleteModeChecklistId !== checklist.id) return current;
+                const next = { ...current };
+                ids.forEach((id) => { delete next[id]; });
+                return next;
+            });
+        };
+
+        const deleteSavedSection = (checklist, groupName) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return;
+            const groupKey = normalizeChecklistGroupName(groupName).toLocaleLowerCase('ru-RU');
+            const ids = (Array.isArray(checklist.items) ? checklist.items : [])
+                .filter((entry) => normalizeChecklistGroupName(entry?.group).toLocaleLowerCase('ru-RU') === groupKey)
+                .map((entry) => entry.id);
+            deleteSavedItems(checklist, ids, { removeGroups: [groupName] });
         };
 
         const editSavedItem = (checklist, itemId) => {
@@ -455,6 +503,48 @@
                 confirmLabel: 'Сохранить',
                 fields: [{ key: 'group', placeholder: 'Название раздела', value: currentGroup }],
                 onSubmit: (values) => applySectionRename(checklist, currentGroup, values.group),
+            });
+        };
+
+        const isBulkDeleteMode = (checklist) => deleteModeChecklistId === checklist?.id;
+
+        const toggleBulkDeleteMode = (checklist) => {
+            const checklistId = checklist?.id;
+            if (!checklistId) return;
+            if (deleteModeChecklistId === checklistId) {
+                setDeleteModeChecklistId(null);
+                setSelectedDeleteIds({});
+                return;
+            }
+            setDeleteModeChecklistId(checklistId);
+            setSelectedDeleteIds({});
+        };
+
+        const toggleBulkDeleteItem = (itemId) => {
+            const id = String(itemId);
+            setSelectedDeleteIds((current) => {
+                const next = { ...current };
+                if (next[id]) delete next[id];
+                else next[id] = true;
+                return next;
+            });
+        };
+
+        const selectedBulkDeleteIds = () => Object.keys(selectedDeleteIds).filter((id) => selectedDeleteIds[id]);
+
+        const confirmBulkDelete = (checklist) => {
+            const ids = selectedBulkDeleteIds();
+            if (!checklist || ids.length === 0) return;
+            requestConfirm({
+                title: 'Удалить выбранное',
+                message: ids.length + ' ' + (ids.length === 1 ? 'пункт будет удалён' : ids.length <= 4 ? 'пункта будут удалены' : 'пунктов будут удалены') + ' из этого чек-листа.',
+                confirmLabel: 'Удалить',
+                danger: true,
+                onConfirm: () => {
+                    deleteSavedItems(checklist, ids);
+                    setDeleteModeChecklistId(null);
+                    setSelectedDeleteIds({});
+                },
             });
         };
 
@@ -814,17 +904,24 @@
             return done + '/' + items.length + ' собрано';
         };
 
-        const renderItem = (entry, onToggle, keyPrefix, onDelete, onEdit) => h('div', {
+        const renderItem = (entry, onToggle, keyPrefix, options) => {
+            const opts = options || {};
+            return h('div', {
             key: keyPrefix + entry.id,
-            className: 'planning-checklists-screen__item-row',
+            className: 'planning-checklists-screen__item-row' + (opts.bulkDeleteMode ? ' is-bulk-delete-mode' : ''),
         },
             h('label', {
-                className: 'planning-checklists-screen__item' + (entry.done ? ' is-done' : ''),
+                className: 'planning-checklists-screen__item'
+                    + (entry.done ? ' is-done' : '')
+                    + (opts.bulkDeleteMode ? ' is-bulk-delete-item' : ''),
             },
                 h('input', {
                     type: 'checkbox',
-                    checked: entry.done === true,
-                    onChange: () => onToggle(entry.id),
+                    checked: opts.bulkDeleteMode ? opts.isSelected === true : entry.done === true,
+                    onChange: () => {
+                        if (opts.bulkDeleteMode) opts.onSelect?.(entry.id);
+                        else onToggle(entry.id);
+                    },
                 }),
                 h('span', { className: 'planning-checklists-screen__item-text' },
                     entry.quantity && h('span', { className: 'planning-checklists-screen__item-qty' }, entry.quantity),
@@ -832,21 +929,22 @@
                     entry.note && h('span', { className: 'planning-checklists-screen__item-note' }, entry.note),
                 ),
             ),
-            onEdit && h('button', {
+            !opts.bulkDeleteMode && opts.onEdit && h('button', {
                 type: 'button',
                 className: 'planning-checklists-screen__item-edit',
-                onClick: () => onEdit(entry.id),
+                onClick: () => opts.onEdit(entry.id),
                 'aria-label': 'Редактировать пункт',
                 title: 'Редактировать пункт',
             }, '✎'),
-            onDelete && h('button', {
+            !opts.bulkDeleteMode && opts.onDelete && h('button', {
                 type: 'button',
                 className: 'planning-checklists-screen__item-delete',
-                onClick: () => onDelete(entry.id),
+                onClick: () => opts.onDelete(entry.id),
                 'aria-label': 'Удалить пункт',
                 title: 'Удалить пункт',
             }, '×'),
         );
+        };
 
         const renderGroups = (items, onToggle, keyPrefix, options) => {
             const opts = options || {};
@@ -865,6 +963,13 @@
                                 'aria-label': 'Редактировать раздел «' + section.group + '»',
                                 title: 'Редактировать раздел',
                             }, '✎'),
+                            typeof opts.onDeleteGroup === 'function' && h('button', {
+                                type: 'button',
+                                className: 'planning-checklists-screen__group-delete',
+                                onClick: () => opts.onDeleteGroup(section.group, section.items),
+                                'aria-label': 'Удалить раздел «' + section.group + '»',
+                                title: 'Удалить раздел',
+                            }, '×'),
                             typeof opts.onAddToGroup === 'function' && h('button', {
                                 type: 'button',
                                 className: 'planning-checklists-screen__group-add',
@@ -875,7 +980,13 @@
                         ),
                     ),
                     h('div', { className: 'planning-checklists-screen__group-list' },
-                        section.items.map((entry) => renderItem(entry, onToggle, keyPrefix, opts.onDelete, opts.onEditItem)),
+                        section.items.map((entry) => renderItem(entry, onToggle, keyPrefix, {
+                            onDelete: opts.onDelete,
+                            onEdit: opts.onEditItem,
+                            bulkDeleteMode: opts.bulkDeleteMode === true,
+                            isSelected: !!opts.selectedIds?.[String(entry.id)],
+                            onSelect: opts.onSelectItem,
+                        })),
                     ),
                 )),
             );
@@ -1329,6 +1440,8 @@
                         const isCollapsed = collapsedById[checklist.id] != null
                             ? collapsedById[checklist.id] === true
                             : checklist.collapsed === true;
+                        const bulkDeleteMode = isBulkDeleteMode(checklist);
+                        const bulkSelectedCount = bulkDeleteMode ? selectedBulkDeleteIds().length : 0;
                         return h('div', {
                             key: checklist.id,
                             className: 'planning-checklists-screen__card widget-shadow-diary-glass widget-outline-diary-glass' + (isCollapsed ? ' is-collapsed' : ''),
@@ -1376,6 +1489,21 @@
                                 onClick: () => openAddSectionModal(checklist),
                                 disabled: typeof state?.updateChecklist !== 'function',
                             }, '+ Добавить раздел'),
+                            !isCollapsed && h('div', { className: 'planning-checklists-screen__bulk-delete' },
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-checklists-screen__bulk-toggle' + (bulkDeleteMode ? ' is-active' : ''),
+                                    onClick: () => toggleBulkDeleteMode(checklist),
+                                    disabled: typeof state?.updateChecklist !== 'function' || !Array.isArray(checklist.items) || checklist.items.length === 0,
+                                    'aria-pressed': bulkDeleteMode ? 'true' : 'false',
+                                }, bulkDeleteMode ? 'Отмена' : 'Удалить несколько'),
+                                bulkDeleteMode && h('button', {
+                                    type: 'button',
+                                    className: 'planning-checklists-screen__bulk-confirm',
+                                    onClick: () => confirmBulkDelete(checklist),
+                                    disabled: bulkSelectedCount === 0,
+                                }, bulkSelectedCount > 0 ? 'Удалить ' + bulkSelectedCount : 'Удалить выбранное'),
+                            ),
                             !isCollapsed && renderGroups(
                                 checklist.items || [],
                                 (itemId) => toggleSavedItem(checklist, itemId),
@@ -1398,6 +1526,19 @@
                                     onEditItem: (itemId) => editSavedItem(checklist, itemId),
                                     onAddToGroup: (group) => openAddItemModal(checklist, group),
                                     onEditGroup: (group) => renameSavedSection(checklist, group),
+                                    onDeleteGroup: (group, groupItems) => {
+                                        const count = Array.isArray(groupItems) ? groupItems.length : 0;
+                                        requestConfirm({
+                                            title: 'Удалить раздел',
+                                            message: 'Раздел «' + group + '» и ' + count + ' ' + (count === 1 ? 'пункт' : count <= 4 ? 'пункта' : 'пунктов') + ' будут удалены из этого чек-листа.',
+                                            confirmLabel: 'Удалить',
+                                            danger: true,
+                                            onConfirm: () => deleteSavedSection(checklist, group),
+                                        });
+                                    },
+                                    bulkDeleteMode,
+                                    selectedIds: bulkDeleteMode ? selectedDeleteIds : {},
+                                    onSelectItem: toggleBulkDeleteItem,
                                 },
                             ),
                         );

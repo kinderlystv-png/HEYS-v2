@@ -2486,6 +2486,7 @@
             M,
             goalProgressBar,
             mealsChart,
+            dailyWaveOverview: HEYS.dayMealsChartUI?.renderDailyWaveOverview?.({ React, insulinWaveData }) || null,
             insulinWaveData,
             insulinExpanded,
             setInsulinExpanded,

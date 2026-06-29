@@ -3564,6 +3564,139 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 || TASKS_HOME_SUBTAB_OPTIONS[0]
                 || null;
         }, [TASKS_HOME_SUBTAB_OPTIONS, resolvedDefaultTasksSubtab]);
+        const DIARY_PANEL_VISIBILITY_OPTIONS = [
+            {
+                key: 'scoreRiskTrend',
+                field: 'showDiaryScoreRiskTrendPanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Оценка, риск и тренд',
+                enabledHint: 'Показывается над карточками дня',
+                disabledHint: 'Скрыт из дневника',
+                titleOn: 'Скрыть оценку дня, риск и тренд',
+                titleOff: 'Показать оценку дня, риск и тренд',
+            },
+            {
+                key: 'fiber',
+                field: 'showDiaryFiberPanel',
+                eventName: 'heys:diary-fiber-panel-visibility-changed',
+                label: 'Карточка клетчатки',
+                enabledHint: 'Показывается над остатком дня',
+                disabledHint: 'Можно вернуть в любой момент',
+                titleOn: 'Скрыть карточку клетчатки в дневнике',
+                titleOff: 'Показать карточку клетчатки в дневнике',
+            },
+            {
+                key: 'water',
+                field: 'showDiaryWaterPanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Карточка воды',
+                enabledHint: 'Показывает прогресс воды за день',
+                disabledHint: 'Скрыта из дневника',
+                titleOn: 'Скрыть карточку воды',
+                titleOff: 'Показать карточку воды',
+            },
+            {
+                key: 'insulinWave',
+                field: 'showDiaryInsulinWavePanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Карточка волны',
+                enabledHint: 'Показывает текущую инсулиновую волну',
+                disabledHint: 'Скрыта из дневника',
+                titleOn: 'Скрыть карточку текущей волны',
+                titleOff: 'Показать карточку текущей волны',
+            },
+            {
+                key: 'planner',
+                field: 'showDiaryPlannerPanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Карточка планера',
+                enabledHint: 'Планирует питание на остаток дня',
+                disabledHint: 'Скрыта из дневника',
+                titleOn: 'Скрыть карточку планера в дневнике',
+                titleOff: 'Показать карточку планера в дневнике',
+            },
+            {
+                key: 'supplements',
+                field: 'showDiarySupplementsPanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Карточка витаминов',
+                enabledHint: 'Показывается в дневнике',
+                disabledHint: 'Скрыта из дневника',
+                titleOn: 'Скрыть карточку витаминов в дневнике',
+                titleOff: 'Показать карточку витаминов в дневнике',
+            },
+            {
+                key: 'distribution',
+                field: 'showDiaryDistributionPanel',
+                eventName: 'heys:diary-optional-panels-visibility-changed',
+                label: 'Карточка распределения',
+                enabledHint: 'Показывает распределение приёмов',
+                disabledHint: 'Скрыта из дневника',
+                titleOn: 'Скрыть карточку распределения в дневнике',
+                titleOff: 'Показать карточку распределения в дневнике',
+            },
+        ];
+        const readDiaryPanelsVisibility = React.useCallback(() => {
+            try {
+                const profile = window.HEYS?.utils?.lsGet?.('heys_profile', {}) || {};
+                return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
+                    acc[option.key] = profile[option.field] !== false;
+                    return acc;
+                }, {});
+            } catch (_) {
+                return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
+                    acc[option.key] = true;
+                    return acc;
+                }, {});
+            }
+        }, []);
+        const [diaryPanelsVisibility, setDiaryPanelsVisibility] = React.useState(readDiaryPanelsVisibility);
+
+        React.useEffect(() => {
+            const handleVisibilitySync = (event) => {
+                setDiaryPanelsVisibility(readDiaryPanelsVisibility());
+            };
+            window.addEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilitySync);
+            window.addEventListener('heys:diary-optional-panels-visibility-changed', handleVisibilitySync);
+            window.addEventListener('heys:profile-updated', handleVisibilitySync);
+            return () => {
+                window.removeEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilitySync);
+                window.removeEventListener('heys:diary-optional-panels-visibility-changed', handleVisibilitySync);
+                window.removeEventListener('heys:profile-updated', handleVisibilitySync);
+            };
+        }, [readDiaryPanelsVisibility]);
+
+        const handleToggleDiaryPanel = (option, nextEnabled) => {
+            try {
+                const U = window.HEYS?.utils;
+                const profile = U?.lsGet?.('heys_profile', {}) || {};
+                const updatedProfile = {
+                    ...profile,
+                    [option.field]: nextEnabled !== false,
+                };
+                U?.lsSet?.('heys_profile', updatedProfile);
+                setDiaryPanelsVisibility((prev) => ({
+                    ...prev,
+                    [option.key]: nextEnabled !== false,
+                }));
+                window.dispatchEvent(new CustomEvent(option.eventName, {
+                    detail: {
+                        field: option.field,
+                        enabled: nextEnabled !== false,
+                    }
+                }));
+                window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+                    detail: {
+                        field: option.field,
+                        fields: [option.field],
+                        source: 'tab-settings',
+                    }
+                }));
+                HEYS.dayUtils?.haptic?.('light');
+            } catch (_) {
+                // silent
+            }
+        };
 
         const handlePickHomeTab = (nextTab) => {
             try {
@@ -3956,55 +4089,107 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             defaultTab === 'tasks' && currentTasksHomeOption && React.createElement('div', {
                                 className: 'widgets-home-tab-picker__current-subtab',
                             }, `Внутри задач откроется: ${currentTasksHomeOption.label}`),
-                            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
-                                HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
-                                    key: option.key,
-                                    type: 'button',
-                                    className: `widgets-home-tab-picker__option ${defaultTab === option.key ? 'active' : ''}`,
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        handlePickHomeTab(option.key);
-                                    },
-                                    'aria-pressed': defaultTab === option.key,
-                                    title: `Сделать домашней вкладкой: ${option.label}`,
-                                },
-                                    React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
-                                    React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                                    defaultTab === option.key && React.createElement('span', {
-                                        className: 'widgets-home-tab-picker__option-badge',
-                                        'aria-hidden': 'true',
-                                    }, '🏠')
-                                ))
-                            ),
-                            defaultTab === 'tasks' && canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
-                                className: 'widgets-home-tab-picker__subtabs',
-                            },
-                                React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Подвкладка задач'),
-                                React.createElement('div', {
-                                    className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
-                                }, 'Что открыть внутри задач по умолчанию'),
-                                React.createElement('div', {
-                                    className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
-                                },
-                                    TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                            React.createElement('div', { className: 'widgets-home-tab-picker__layout' },
+                                React.createElement('div', { className: 'widgets-home-tab-picker__options' },
+                                    HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
                                         key: option.key,
                                         type: 'button',
-                                        className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                        className: `widgets-home-tab-picker__option ${defaultTab === option.key ? 'active' : ''}`,
                                         onClick: (e) => {
                                             e.stopPropagation();
-                                            handlePickTasksHomeSubtab(option.key);
+                                            handlePickHomeTab(option.key);
                                         },
-                                        'aria-pressed': resolvedDefaultTasksSubtab === option.key,
-                                        title: `Открывать внутри задач: ${option.label}`,
+                                        'aria-pressed': defaultTab === option.key,
+                                        title: `Сделать домашней вкладкой: ${option.label}`,
                                     },
                                         React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
                                         React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                                        resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                        defaultTab === option.key && React.createElement('span', {
                                             className: 'widgets-home-tab-picker__option-badge',
                                             'aria-hidden': 'true',
                                         }, '🏠')
                                     ))
+                                ),
+                                defaultTab === 'tasks' && canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__subtabs',
+                                },
+                                    React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Подвкладка задач'),
+                                    React.createElement('div', {
+                                        className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
+                                    }, 'Что открыть внутри задач'),
+                                    React.createElement('div', {
+                                        className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
+                                    },
+                                        TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                                            key: option.key,
+                                            type: 'button',
+                                            className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                            onClick: (e) => {
+                                                e.stopPropagation();
+                                                handlePickTasksHomeSubtab(option.key);
+                                            },
+                                            'aria-pressed': resolvedDefaultTasksSubtab === option.key,
+                                            title: `Открывать внутри задач: ${option.label}`,
+                                        },
+                                            React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                            React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                                            resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                                className: 'widgets-home-tab-picker__option-badge',
+                                                'aria-hidden': 'true',
+                                            }, '🏠')
+                                        ))
+                                    )
                                 )
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-diary-wrap',
+                            role: 'group',
+                            'aria-label': 'Настройки дневника',
+                            onClick: (e) => e.stopPropagation(),
+                        },
+                        React.createElement('div', { className: 'tab-settings-diary-card' },
+                            React.createElement('div', { className: 'tab-settings-diary-card__head' },
+                                React.createElement('span', { className: 'tab-settings-diary-card__title' }, 'Дневник'),
+                                React.createElement('span', { className: 'tab-settings-diary-card__status' },
+                                    DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
+                                        + '/'
+                                        + DIARY_PANEL_VISIBILITY_OPTIONS.length
+                                        + ' включено'
+                                )
+                            ),
+                            React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
+                                DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
+                                    const enabled = diaryPanelsVisibility[option.key] !== false;
+                                    return React.createElement('button', {
+                                        key: option.key,
+                                        type: 'button',
+                                        className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
+                                        role: 'switch',
+                                        'aria-checked': enabled ? 'true' : 'false',
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            handleToggleDiaryPanel(option, !enabled);
+                                        },
+                                        title: enabled ? option.titleOn : option.titleOff,
+                                    },
+                                        React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
+                                            React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
+                                            React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
+                                                enabled ? option.enabledHint : option.disabledHint
+                                            )
+                                        ),
+                                        React.createElement('span', {
+                                            className: 'tab-settings-diary-toggle__switch',
+                                            'aria-hidden': 'true'
+                                        },
+                                            React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
+                                        )
+                                    );
+                                })
                             )
                         )
                     )

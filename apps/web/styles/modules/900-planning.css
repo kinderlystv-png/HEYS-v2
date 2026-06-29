@@ -806,6 +806,14 @@
     min-width: 0;
 }
 
+.planning-checklists-screen__item-row.is-bulk-delete-mode {
+    gap: 4px;
+}
+
+.planning-checklists-screen__item.is-bulk-delete-item input[type="checkbox"] {
+    accent-color: #dc2626;
+}
+
 .planning-checklists-screen__item-edit,
 .planning-checklists-screen__item-delete {
     flex: 0 0 auto;
@@ -863,7 +871,8 @@
 }
 
 .planning-checklists-screen__group-edit,
-.planning-checklists-screen__group-add {
+.planning-checklists-screen__group-add,
+.planning-checklists-screen__group-delete {
     flex: 0 0 auto;
     display: grid;
     place-items: center;
@@ -884,9 +893,64 @@
     font-size: 12px;
 }
 
+.planning-checklists-screen__group-delete {
+    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(254, 242, 242, 0.9);
+    color: #dc2626;
+    font-size: 16px;
+}
+
 .planning-checklists-screen__group-edit:hover,
-.planning-checklists-screen__group-add:hover {
+.planning-checklists-screen__group-add:hover,
+.planning-checklists-screen__group-delete:hover {
     background: color-mix(in srgb, var(--planning-checklist-group-bg) 58%, #fff 42%);
+}
+
+.planning-checklists-screen__group-delete:hover {
+    background: rgba(254, 226, 226, 0.96);
+}
+
+.planning-checklists-screen__bulk-delete {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 8px 0 7px;
+}
+
+.planning-checklists-screen__bulk-toggle,
+.planning-checklists-screen__bulk-confirm {
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.planning-checklists-screen__bulk-toggle {
+    border: 1px solid rgba(244, 114, 182, 0.26);
+    background: rgba(253, 242, 248, 0.94);
+    color: #be185d;
+}
+
+.planning-checklists-screen__bulk-toggle.is-active {
+    border-color: rgba(100, 116, 139, 0.22);
+    background: rgba(248, 250, 252, 0.92);
+    color: #475569;
+}
+
+.planning-checklists-screen__bulk-confirm {
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    background: rgba(254, 242, 242, 0.94);
+    color: #dc2626;
+}
+
+.planning-checklists-screen__bulk-toggle:disabled,
+.planning-checklists-screen__bulk-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .planning-checklists-screen__empty-add {

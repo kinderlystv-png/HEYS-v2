@@ -2473,12 +2473,37 @@
         };
     }
 
+    function getCompactMealActivityContext(meal, dayData, allMeals, pIndex) {
+        if (!HEYS.InsulinWave?.calculateActivityContext) return null;
+        if (!meal?.time || !meal?.items?.length) return null;
+
+        const [mealHour, mealMinute] = String(meal.time || '').split(':').map(Number);
+        if (Number.isNaN(mealHour) || Number.isNaN(mealMinute)) return null;
+
+        const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
+        return HEYS.InsulinWave.calculateActivityContext({
+            mealTimeMin: mealHour * 60 + mealMinute,
+            mealKcal: totals.kcal || 0,
+            trainings: dayData?.trainings || [],
+            householdMin: dayData?.householdMin || 0,
+            steps: dayData?.steps || 0,
+            allMeals,
+        });
+    }
+
+    function getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, dayData, allMeals) {
+        if (!getMealQualityScore || !meal?.items?.length) return null;
+        const activityContext = getCompactMealActivityContext(meal, dayData, allMeals, pIndex);
+        return getMealQualityScore(meal, mealTypeInfo?.type, optimum || 2000, pIndex, activityContext);
+    }
+
     function renderCollapsedMealPlaque(params) {
         const {
             meal,
             mealIndex,
             mealNumber,
             mealTypeInfo,
+            mealQuality,
             onExpand,
         } = params || {};
         const timeText = formatMealTime(meal?.time || '') || '—';
@@ -2488,10 +2513,19 @@
         const productsLabel = productsCount === 1
             ? '1 продукт'
             : (productsCount >= 2 && productsCount <= 4 ? productsCount + ' продукта' : productsCount + ' продуктов');
+        const qualityColor = mealQuality?.color || null;
+        const qualityStyle = qualityColor
+            ? {
+                background: qualityColor + '1F',
+                borderColor: qualityColor + '33',
+                boxShadow: '0 2px 8px ' + qualityColor + '18',
+            }
+            : undefined;
 
         return React.createElement('button', {
             type: 'button',
             className: 'meal-collapsed-plaque' + typeClass,
+            style: qualityStyle,
             onClick: onExpand,
             'aria-expanded': 'false',
             'aria-label': `Раскрыть приём ${mealNumber}: ${timeText}, ${typeName}, ${productsLabel}`,
@@ -2587,6 +2621,9 @@
             const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
             const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
+            const compactMealQuality = shouldRenderCollapsedPlaque
+                ? getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, day, sourceMeals)
+                : null;
 
             if (shouldRenderCollapsedPlaque) {
                 return React.createElement('div', {
@@ -2601,6 +2638,7 @@
                         mealIndex: mi,
                         mealNumber,
                         mealTypeInfo,
+                        mealQuality: compactMealQuality,
                         onExpand: () => toggleMealExpand(mi, sourceMeals),
                     })
                 );
@@ -3012,6 +3050,318 @@
     // Meals chart UI
     // =========================
     const MealsChartUI = {};
+
+    function formatWaveTime(minutes) {
+        if (!Number.isFinite(minutes)) return '--:--';
+        const normalized = ((Math.round(minutes) % 1440) + 1440) % 1440;
+        return String(Math.floor(normalized / 60)).padStart(2, '0') + ':' + String(normalized % 60).padStart(2, '0');
+    }
+
+    function formatWaveDuration(minutes) {
+        const value = Math.max(0, Math.round(Number(minutes) || 0));
+        const hours = Math.floor(value / 60);
+        const mins = value % 60;
+        if (hours > 0 && mins > 0) return hours + 'ч ' + mins + 'м';
+        if (hours > 0) return hours + 'ч';
+        return mins + 'м';
+    }
+
+    function pluralRu(value, one, few, many) {
+        const abs = Math.abs(Number(value) || 0);
+        const lastTwo = abs % 100;
+        const last = abs % 10;
+        if (lastTwo >= 11 && lastTwo <= 14) return value + ' ' + many;
+        if (last === 1) return value + ' ' + one;
+        if (last >= 2 && last <= 4) return value + ' ' + few;
+        return value + ' ' + many;
+    }
+
+    function getWaveColor(wave) {
+        const gi = Number(wave?.gi);
+        if (Number.isFinite(gi)) {
+            if (gi <= 35) return '#22c55e';
+            if (gi <= 55) return '#eab308';
+            if (gi <= 70) return '#f97316';
+            return '#ef4444';
+        }
+        return '#3b82f6';
+    }
+
+    function getWaveLoad(wave) {
+        const gl = Number(wave?.gl);
+        const duration = Math.max(1, Number(wave?.duration) || 180);
+        const durationFactor = Math.max(0.45, Math.min(1.8, duration / 180));
+        if (Number.isFinite(gl) && gl > 0) return gl * durationFactor;
+        return duration / 60;
+    }
+
+    function classifyWaveInteraction(prev, current) {
+        const overlapMinutes = Math.max(0, prev.endMin - current.startMin);
+        if (overlapMinutes <= 0) return null;
+
+        const extensionMinutes = Math.max(0, current.endMin - prev.endMin);
+        const contained = current.endMin <= prev.endMin + 20;
+        const prevLoad = Math.max(1, getWaveLoad(prev));
+        const currentLoad = Math.max(0, getWaveLoad(current));
+        const loadRatio = currentLoad / prevLoad;
+        const currentGl = Number(current?.gl);
+        const startProgress = Math.max(0, Math.min(1, (current.startMin - prev.startMin) / Math.max(1, prev.duration || (prev.endMin - prev.startMin))));
+        const isMicro = (Number.isFinite(currentGl) && currentGl < 5) || currentLoad < 4.5;
+        const isSmallAddition = (Number.isFinite(currentGl) && currentGl < 10) || loadRatio <= 0.38;
+        const startsInTail = startProgress >= 0.65;
+
+        let type = 'overlap';
+        if (isMicro) {
+            type = 'micro';
+        } else if (contained) {
+            type = 'boost';
+        } else if (isSmallAddition || startsInTail || extensionMinutes < 45) {
+            type = 'extension';
+        }
+
+        return {
+            type,
+            from: prev,
+            to: current,
+            startMin: current.startMin,
+            endMin: Math.min(prev.endMin, current.endMin),
+            overlapMinutes,
+            extensionMinutes,
+            loadRatio,
+            startProgress,
+        };
+    }
+
+    function renderDailyWaveOverview({ React, insulinWaveData }) {
+        const rawHistory = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
+        const waves = rawHistory
+            .map((wave, index) => {
+                const startMin = Number(wave?.startMin);
+                const endMin = Number(wave?.endMin);
+                if (!Number.isFinite(startMin) || !Number.isFinite(endMin) || endMin <= startMin) return null;
+                return {
+                    ...wave,
+                    _index: index,
+                    startMin,
+                    endMin,
+                    duration: Number(wave?.duration) || (endMin - startMin),
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+        if (waves.length === 0) return null;
+
+        const interactions = [];
+        for (let idx = 1; idx < waves.length; idx += 1) {
+            const prev = waves[idx - 1];
+            const current = waves[idx];
+            const interaction = classifyWaveInteraction(prev, current);
+            if (interaction) interactions.push(interaction);
+        }
+        const overlaps = interactions.filter((item) => item.type === 'overlap');
+        const extensions = interactions.filter((item) => item.type === 'extension');
+
+        const firstStart = Math.min(...waves.map((wave) => wave.startMin));
+        const lastEnd = Math.max(...waves.map((wave) => wave.endMin));
+        const rangeStart = Math.max(0, firstStart - 25);
+        const rangeEnd = Math.max(rangeStart + 90, lastEnd + 35);
+        const totalRange = Math.max(1, rangeEnd - rangeStart);
+        const svgW = 320;
+        const svgH = 132;
+        const padX = 14;
+        const baseline = 88;
+        const minToX = (minutes) => padX + ((minutes - rangeStart) / totalRange) * (svgW - padX * 2);
+        const maxOverlap = overlaps.reduce((max, item) => Math.max(max, item.overlapMinutes), 0);
+        const totalOverlap = overlaps.reduce((sum, item) => sum + item.overlapMinutes, 0);
+        const meaningfulExtensions = extensions.filter((item) => Math.max(item.extensionMinutes || 0, item.overlapMinutes || 0) >= 45);
+        const visibleInteractions = overlaps.concat(meaningfulExtensions);
+        const totalExtension = meaningfulExtensions.reduce((sum, item) => sum + Math.max(1, item.extensionMinutes || item.overlapMinutes), 0);
+        const tone = maxOverlap >= 90 ? 'high' : overlaps.length > 0 ? 'warn' : meaningfulExtensions.length > 0 ? 'soft' : 'ok';
+        let statusText = 'без критичных';
+        if (overlaps.length > 0) {
+            statusText = 'нахлёст ' + formatWaveDuration(totalOverlap);
+        } else if (meaningfulExtensions.length > 0) {
+            statusText = 'продление ' + formatWaveDuration(totalExtension);
+        }
+        const mergedWaveWindows = waves.reduce((acc, wave) => {
+            const last = acc[acc.length - 1];
+            if (!last || wave.startMin > last.endMin) {
+                acc.push({ startMin: wave.startMin, endMin: wave.endMin });
+                return acc;
+            }
+            last.endMin = Math.max(last.endMin, wave.endMin);
+            return acc;
+        }, []);
+        const lipolysisZones = [];
+        for (let idx = 1; idx < mergedWaveWindows.length; idx += 1) {
+            const prev = mergedWaveWindows[idx - 1];
+            const current = mergedWaveWindows[idx];
+            const gapStart = prev.endMin;
+            const gapEnd = current.startMin;
+            if (gapEnd - gapStart < 35) continue;
+            lipolysisZones.push({ startMin: gapStart, endMin: gapEnd, duration: gapEnd - gapStart });
+        }
+        const idealGapMin = 180;
+        const idealGapMax = 240;
+        const targetWindows = waves.slice(0, -1)
+            .map((wave, index) => ({
+                _index: index,
+                startMin: wave.startMin + idealGapMin,
+                endMin: wave.startMin + idealGapMax,
+            }))
+            .filter((window) => window.endMin >= rangeStart && window.startMin <= rangeEnd);
+
+        const buildWavePath = (wave, waveIndex) => {
+            const x1 = Math.max(padX, Math.min(svgW - padX, minToX(wave.startMin)));
+            const x2 = Math.max(padX, Math.min(svgW - padX, minToX(wave.endMin)));
+            const width = Math.max(10, x2 - x1);
+            const lift = Math.min(42, Math.max(20, 16 + (Number(wave.duration) || width) / 10));
+            const laneShift = (waveIndex % 3) * 5;
+            const baseY = baseline - laneShift;
+            const points = [];
+            for (let step = 0; step <= 12; step += 1) {
+                const t = step / 12;
+                const x = x1 + width * t;
+                const crest = Math.sin(Math.PI * t);
+                const shoulder = 0.18 + 0.82 * crest;
+                const y = baseY - lift * shoulder;
+                points.push([x, y]);
+            }
+            const line = points.map((point, idx) => (idx === 0 ? 'M ' : 'L ') + point[0].toFixed(1) + ' ' + point[1].toFixed(1)).join(' ');
+            return line + ' L ' + x2.toFixed(1) + ' ' + baseY.toFixed(1) + ' L ' + x1.toFixed(1) + ' ' + baseY.toFixed(1) + ' Z';
+        };
+
+        return React.createElement('section', {
+            className: 'day-wave-overview day-wave-overview--' + tone,
+            'aria-label': 'Все инсулиновые волны за день'
+        },
+            React.createElement('div', { className: 'day-wave-overview__head' },
+                React.createElement('div', { className: 'day-wave-overview__title' },
+                    React.createElement('span', { 'aria-hidden': 'true' }, '〰️'),
+                    React.createElement('span', null, 'Волны за день')
+                ),
+                React.createElement('span', { className: 'day-wave-overview__status' }, statusText)
+            ),
+            React.createElement('div', { className: 'day-wave-overview__canvas' },
+                React.createElement('svg', {
+                    width: '100%',
+                    height: svgH,
+                    viewBox: '0 0 ' + svgW + ' ' + svgH,
+                    role: 'img',
+                    'aria-label': 'График инсулиновых волн за день'
+                },
+                    lipolysisZones.map((zone, index) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(zone.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(zone.endMin)));
+                        const width = Math.max(0, x2 - x1);
+                        if (width < 5) return null;
+                        return React.createElement('g', {
+                            key: 'lipolysis-' + index,
+                            className: 'day-wave-overview__lipolysis'
+                        },
+                            React.createElement('rect', {
+                                className: 'day-wave-overview__lipolysis-zone',
+                                x: x1,
+                                y: 22,
+                                width,
+                                height: 76,
+                                rx: 10
+                            }),
+                            width >= 48 && React.createElement('text', {
+                                x: x1 + width / 2,
+                                y: 35,
+                                textAnchor: 'middle',
+                                className: 'day-wave-overview__lipolysis-label'
+                            }, 'липолиз')
+                        );
+                    }),
+                    targetWindows.map((window) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(window.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(window.endMin)));
+                        const width = Math.max(0, x2 - x1);
+                        if (width < 5) return null;
+                        return React.createElement('line', {
+                            key: 'target-window-' + window._index,
+                            className: 'day-wave-overview__target-window',
+                            x1,
+                            y1: 106,
+                            x2,
+                            y2: 106
+                        });
+                    }),
+                    React.createElement('line', {
+                        x1: padX,
+                        y1: baseline,
+                        x2: svgW - padX,
+                        y2: baseline,
+                        className: 'day-wave-overview__axis'
+                    }),
+                    visibleInteractions.map((interaction, index) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(interaction.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(interaction.endMin)));
+                        return React.createElement('rect', {
+                            key: 'interaction-' + index,
+                            className: 'day-wave-overview__interaction-zone day-wave-overview__interaction-zone--' + interaction.type,
+                            x: x1,
+                            y: 18,
+                            width: Math.max(4, x2 - x1),
+                            height: 82,
+                            rx: 8
+                        });
+                    }),
+                    waves.map((wave, index) => {
+                        const color = getWaveColor(wave);
+                        return React.createElement('path', {
+                            key: 'wave-path-' + wave._index,
+                            className: 'day-wave-overview__wave' + (wave.isActive ? ' is-active' : ''),
+                            d: buildWavePath(wave, index),
+                            style: {
+                                '--wave-color': color,
+                                fill: color,
+                                stroke: color,
+                            }
+                        });
+                    }),
+                    waves.map((wave) => {
+                        const x = Math.max(padX, Math.min(svgW - padX, minToX(wave.startMin)));
+                        const label = formatWaveTime(wave.startMin);
+                        return React.createElement('g', {
+                            key: 'wave-meal-' + wave._index,
+                            className: 'day-wave-overview__meal'
+                        },
+                            React.createElement('circle', { cx: x, cy: baseline, r: 6 }),
+                            React.createElement('text', {
+                                x,
+                                y: baseline + 4,
+                                textAnchor: 'middle'
+                            }, '🍽'),
+                            React.createElement('text', {
+                                x,
+                                y: svgH - 9,
+                                textAnchor: 'middle',
+                                className: 'day-wave-overview__time'
+                            }, label)
+                        );
+                    })
+                )
+            ),
+            visibleInteractions.length > 0 && React.createElement('div', { className: 'day-wave-overview__overlaps' },
+                visibleInteractions.slice(0, 3).map((interaction, index) => {
+                    const label = interaction.type === 'overlap'
+                        ? 'нахлёст ' + formatWaveDuration(interaction.overlapMinutes)
+                        : 'продление ' + formatWaveDuration(Math.max(1, interaction.extensionMinutes || interaction.overlapMinutes));
+                    return React.createElement('span', {
+                        key: 'interaction-label-' + index,
+                        className: 'day-wave-overview__interaction-label day-wave-overview__interaction-label--' + interaction.type
+                    }, formatWaveTime(interaction.from.startMin) + ' → ' + formatWaveTime(interaction.to.startMin) + ': ' + label);
+                })
+            )
+        );
+    }
+
+    MealsChartUI.renderDailyWaveOverview = renderDailyWaveOverview;
+
     MealsChartUI.renderMealsChart = function renderMealsChart({
         React,
         mealsChartData,
