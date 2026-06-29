@@ -184,6 +184,51 @@
         return 25;
     }
 
+    function roundFiberValue(value) {
+        return Math.round((Number(value) || 0) * 10) / 10;
+    }
+
+    function getFiberContributions(dayData, pIndex, app, eatenFiber) {
+        const models = app?.models || {};
+        const getProductFromItem = models.getProductFromItem || app?.dayUtils?.getProductFromItem;
+        const per100 = models.per100 || app?.dayUtils?.per100;
+        const byKey = new Map();
+
+        (dayData?.meals || []).forEach(function eachMeal(meal) {
+            (meal?.items || []).forEach(function eachItem(item) {
+                const grams = Number(item?.grams) || 0;
+                if (grams <= 0) return;
+
+                const product = typeof getProductFromItem === 'function'
+                    ? (getProductFromItem(item, pIndex) || item)
+                    : item;
+                const per = typeof per100 === 'function'
+                    ? per100(product || {})
+                    : { fiber100: Number(product?.fiber100 ?? item?.fiber100) || 0 };
+                const fiber = roundFiberValue(((Number(per?.fiber100) || 0) * grams) / 100);
+                if (fiber <= 0) return;
+
+                const name = String(product?.name || item?.name || 'Продукт').trim() || 'Продукт';
+                const key = String(product?.id || item?.product_id || item?.productId || name).toLowerCase();
+                const current = byKey.get(key) || { name, grams: 0, fiber: 0 };
+                current.grams += grams;
+                current.fiber = roundFiberValue(current.fiber + fiber);
+                byKey.set(key, current);
+            });
+        });
+
+        const items = Array.from(byKey.values())
+            .filter(function hasFiber(item) { return item.fiber > 0; })
+            .sort(function sortByFiber(a, b) { return b.fiber - a.fiber || a.name.localeCompare(b.name, 'ru'); });
+        const knownFiber = roundFiberValue(items.reduce(function sumFiber(sum, item) { return sum + item.fiber; }, 0));
+        const missingFiber = roundFiberValue((Number(eatenFiber) || 0) - knownFiber);
+        if (missingFiber > 0.4) {
+            items.push({ name: 'Другие продукты', grams: 0, fiber: missingFiber, isFallback: true });
+        }
+
+        return items;
+    }
+
     function getDiaryFiberPanelComponent(React) {
         if (_DiaryFiberPanel) return _DiaryFiberPanel;
 
@@ -195,11 +240,14 @@
         ];
 
         _DiaryFiberPanel = React.memo(function DiaryFiberPanel(props) {
-            const { dayTot, normAbs } = props || {};
+            const { app, dayData, dayTot, normAbs, pIndex } = props || {};
             const [expanded, setExpanded] = React.useState(false);
 
             const eaten = Math.max(0, Number(dayTot?.fiber) || 0);
             const target = Math.max(1, getSafeFiberTarget(dayTot, normAbs));
+            const contributions = React.useMemo(function computeFiberContributions() {
+                return getFiberContributions(dayData, pIndex, app, eaten);
+            }, [dayData, pIndex, app, eaten]);
             const remaining = Math.max(0, target - eaten);
             const pct = Math.max(0, Math.round((eaten / target) * 100));
             const cappedPct = Math.min(100, pct);
@@ -248,15 +296,42 @@
                         ? 'Осталось примерно ' + Math.ceil(remaining) + ' г. Увеличивайте постепенно и держите воду рядом.'
                         : 'Сегодня клетчатка в норме. Дальше достаточно не перегружать день.'
                 ),
-                expanded && React.createElement('div', { className: 'diary-fiber-panel__sources' },
-                    fiberSources.map(function renderSource(source) {
-                        return React.createElement('div', { key: source.title, className: 'diary-fiber-panel__source' },
-                            React.createElement('span', { className: 'diary-fiber-panel__source-icon', 'aria-hidden': 'true' }, source.icon),
-                            React.createElement('span', { className: 'diary-fiber-panel__source-title' }, source.title),
-                            React.createElement('span', { className: 'diary-fiber-panel__source-note' }, source.note),
-                            React.createElement('span', { className: 'diary-fiber-panel__source-grams' }, source.grams)
-                        );
-                    })
+                expanded && React.createElement('div', { className: 'diary-fiber-panel__details' },
+                    React.createElement('div', { className: 'diary-fiber-panel__earned' },
+                        React.createElement('div', { className: 'diary-fiber-panel__section-head' },
+                            React.createElement('span', { className: 'diary-fiber-panel__section-title' }, 'Уже набрано сегодня'),
+                            React.createElement('strong', { className: 'diary-fiber-panel__section-total' }, roundFiberValue(eaten) + ' г')
+                        ),
+                        contributions.length > 0
+                            ? React.createElement('div', { className: 'diary-fiber-panel__earned-list' },
+                                contributions.map(function renderContribution(item) {
+                                    return React.createElement('div', {
+                                        key: item.name + ':' + item.fiber,
+                                        className: 'diary-fiber-panel__earned-row' + (item.isFallback ? ' diary-fiber-panel__earned-row--fallback' : '')
+                                    },
+                                        React.createElement('span', { className: 'diary-fiber-panel__earned-name' }, item.name),
+                                        !item.isFallback && React.createElement('span', { className: 'diary-fiber-panel__earned-grams' }, Math.round(item.grams) + ' г продукта'),
+                                        React.createElement('strong', { className: 'diary-fiber-panel__earned-fiber' }, item.fiber + ' г')
+                                    );
+                                })
+                            )
+                            : React.createElement('div', { className: 'diary-fiber-panel__empty' }, 'Пока нет продуктов с заметной клетчаткой.')
+                    ),
+                    React.createElement('div', { className: 'diary-fiber-panel__source-block' },
+                        React.createElement('div', { className: 'diary-fiber-panel__section-head' },
+                            React.createElement('span', { className: 'diary-fiber-panel__section-title' }, 'Чем добрать эффективнее')
+                        ),
+                        React.createElement('div', { className: 'diary-fiber-panel__sources' },
+                            fiberSources.map(function renderSource(source) {
+                                return React.createElement('div', { key: source.title, className: 'diary-fiber-panel__source' },
+                                    React.createElement('span', { className: 'diary-fiber-panel__source-icon', 'aria-hidden': 'true' }, source.icon),
+                                    React.createElement('span', { className: 'diary-fiber-panel__source-title' }, source.title),
+                                    React.createElement('span', { className: 'diary-fiber-panel__source-note' }, source.note),
+                                    React.createElement('span', { className: 'diary-fiber-panel__source-grams' }, source.grams)
+                                );
+                            })
+                        )
+                    )
                 )
             );
         });
@@ -634,8 +709,11 @@
                 pIndex
             }),
             React.createElement(DiaryFiberPanel, {
+                app,
+                dayData: day,
                 dayTot,
-                normAbs
+                normAbs,
+                pIndex
             }),
             React.createElement('h2', {
                 id: 'day-remaining-heading',
