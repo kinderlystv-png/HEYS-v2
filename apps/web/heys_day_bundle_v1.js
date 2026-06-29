@@ -5750,6 +5750,20 @@
       onAddMore(currentDay);
     }
 
+    if (modalResult === 'finish' || modalResult === false) {
+      try {
+        window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+          detail: {
+            source: 'day-add-product-summary',
+            dateKey: currentDay?.date || null,
+            mealIndex
+          }
+        }));
+      } catch (_) {
+        // ignore
+      }
+    }
+
     // 🆕 add-2 / add-3 / add-4 → autoRepeat
     if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
       const repeatCount = parseInt(modalResult.slice(4), 10);

@@ -292,9 +292,13 @@
   }
 
   function shouldOpenMorningActivationFollowup(dayData) {
-    const hasMealsWithItems = countMealsWithItems(dayData) > 0;
+    const mealCount = countMealsWithItems(dayData);
+    const hasMealsWithItems = mealCount > 0;
     const firstMealTime = getFirstMealTime(dayData);
     const maStatus = dayData?.morningActivation?.status;
+    const snoozeAtRaw = dayData?.morningActivation?.followupSnoozeUntilMealCount;
+    const snoozeAt = Number(snoozeAtRaw);
+    const hasActiveSnooze = snoozeAtRaw != null && Number.isFinite(snoozeAt) && mealCount <= snoozeAt;
     const maClearedByUser = isMorningActivationClearedByUser(dayData);
     const hasSynced = dayHasMorningActivationSyncedActivity(dayData);
     const trainings = (dayData?.trainings || []).map(t => ({
@@ -304,7 +308,9 @@
     }));
     logMorningActivationTrace('[MA.should] CHECK', {
       hasMealsWithItems,
+      mealCount,
       maStatus,
+      followupSnoozeUntilMealCount: snoozeAtRaw,
       maClearedByUser,
       hasSynced,
       trainings,
@@ -313,6 +319,10 @@
     if (!hasMealsWithItems) {
       logMorningActivationTrace('[MA.should] SKIP — no meals with items');
       return { ok: false, firstMealTime: null };
+    }
+    if (hasActiveSnooze) {
+      logMorningActivationTrace('[MA.should] SKIP — followup snoozed until next meal add', { mealCount, snoozeAt });
+      return { ok: false, firstMealTime };
     }
     if (maStatus === 'missed') {
       logMorningActivationTrace('[MA.should] SKIP — morningActivation missed');
@@ -383,7 +393,6 @@
   let followupOpening = false;
   let skipReasonOpening = false;
   let lastMealSignalAt = 0;
-  let pendingFollowupAfterProductFlow = false;
   let morningActivationModalRoot = null;
   let morningActivationModalRootInstance = null;
 
@@ -548,15 +557,15 @@
         logMorningActivationTrace(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, clearedByUser, reason });
         return;
       }
-      const userActionReasons = ['product-added', 'stepmodal-closed'];
+      const userActionReasons = ['meal-flow-finished'];
       if (!userActionReasons.includes(reason)) {
         logMorningActivationTrace(_tag, 'GUARD: kept (not user action)', { guard: followupSessionGuard, mealCount, reason });
         return;
       }
-      if (reason === 'stepmodal-closed') {
+      if (reason === 'meal-flow-finished') {
         const signalAgeMs = Date.now() - lastMealSignalAt;
         if (!(Number.isFinite(signalAgeMs) && signalAgeMs >= 0 && signalAgeMs <= 2500)) {
-          logMorningActivationTrace(_tag, 'GUARD: kept (stepmodal-closed without recent meal signal)', {
+          logMorningActivationTrace(_tag, 'GUARD: kept (meal-flow-finished without recent meal signal)', {
             guard: followupSessionGuard,
             mealCount,
             signalAgeMs
@@ -602,7 +611,7 @@
       context: { dateKey: todayKey, firstMealTime: check.firstMealTime, reason },
       onClose: () => {
         const fresh = readDayV2ScopedFirst(todayKey, {}) || {};
-        const mc = countMealsWithItems(fresh);
+        const mc = Math.max(countMealsWithItems(fresh), mealCount || 0);
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: mc
         }, 'morning-activation-followup-dismiss');
@@ -1654,17 +1663,12 @@
     if (detail?.source === 'morning-activation-followup') return;
     if (detail?.source === 'morning-activation-sync') return;
     if (detail?.source === 'morning-activation-skip-reason') return;
-    // Only trigger followup if we are inside an active product-add flow.
-    // Background sync (local-write, HOT events) must NOT open the modal on their own.
-    if (!pendingFollowupAfterProductFlow) return;
-    logMorningActivationTrace('[MA.event] day-updated (product-flow) →', detail?.source, { field: detail?.field });
-    setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
+    // Background sync and product-row writes must NOT open the charge modal.
+    // Follow-up is triggered only by explicit meal-flow finish below.
   });
 
   window.addEventListener('heysProductAdded', () => {
-    lastMealSignalAt = Date.now();
-    pendingFollowupAfterProductFlow = true;
-    logMorningActivationTrace('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
+    logMorningActivationTrace('[MA.event] heysProductAdded — followup waits for meal-flow finish');
     setTimeout(() => maybeOpenMorningActivationSkipReason('product-added'), 240);
   });
 
@@ -1673,18 +1677,20 @@
     setTimeout(() => maybeOpenMorningActivationSkipReason('missed-save', dk), 90);
   });
 
-  document.addEventListener('heys-stepmodal-closed', () => {
-    logMorningActivationTrace('[MA.event] heys-stepmodal-closed', { pendingFollowupAfterProductFlow });
-    if (!pendingFollowupAfterProductFlow) {
-      logMorningActivationTrace('[MA.event] heys-stepmodal-closed SKIP — not a product-add flow');
+  window.addEventListener('heys:meal-flow-finished', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail.dateKey || getTodayKey();
+    if (dateKey !== getTodayKey()) {
+      logMorningActivationTrace('[MA.event] meal-flow-finished SKIP — another date', { dateKey });
       return;
     }
-    pendingFollowupAfterProductFlow = false;
-    setTimeout(() => maybeOpenMorningActivationFollowup('stepmodal-closed'), 220);
+    lastMealSignalAt = Date.now();
+    logMorningActivationTrace('[MA.event] heys:meal-flow-finished', detail);
+    setTimeout(() => maybeOpenMorningActivationFollowup('meal-flow-finished'), 220);
   });
 
   // module-init trigger removed: at page-load localStorage may not yet contain today's day data
-  // (HOT sync writes arrive later). The modal must only appear after a product-add flow.
+  // (HOT sync writes arrive later). The modal must only appear after explicit meal-flow finish.
 
   // console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
 

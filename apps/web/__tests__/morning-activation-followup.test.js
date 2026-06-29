@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const originalHEYS = global.HEYS;
@@ -10,6 +12,8 @@ const originalCustomEvent = global.CustomEvent;
 const originalReact = global.React;
 const originalReactDOM = global.ReactDOM;
 const originalSessionStorage = global.sessionStorage;
+const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
+const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 
 function loadModule(overrides = {}) {
   global.HEYS = {
@@ -19,6 +23,9 @@ function loadModule(overrides = {}) {
     },
     utils: {
       getCurrentClientId: () => 'client-1',
+    },
+    dayUtils: {
+      todayISO: () => '2026-06-09',
     },
     ...(overrides.HEYS || {}),
   };
@@ -71,6 +78,8 @@ describe('morning activation followup decision', () => {
     delete global.dispatchEvent;
     vi.useRealTimers();
     vi.restoreAllMocks();
+    cleanup();
+    localStorage.clear();
   });
 
   it('does not reopen when morning activation is done even if the generated training is absent', () => {
@@ -99,7 +108,31 @@ describe('morning activation followup decision', () => {
     expect(result.firstMealTime).toBe('09:00');
   });
 
-  it('stacks the followup over an active StepModal instead of replacing it', () => {
+  it('does not reopen after Сделаю позже until another meal is added', () => {
+    const utils = loadModule();
+
+    const snoozedNow = utils.shouldOpenMorningActivationFollowup(mealDay({
+      morningActivation: {
+        status: 'pending',
+        followupSnoozeUntilMealCount: 1,
+      },
+    }));
+    const afterNextMeal = utils.shouldOpenMorningActivationFollowup(mealDay({
+      meals: [
+        { id: 'meal-1', time: '09:00', items: [{ id: 'item-1' }] },
+        { id: 'meal-2', time: '13:00', items: [{ id: 'item-2' }] },
+      ],
+      morningActivation: {
+        status: 'pending',
+        followupSnoozeUntilMealCount: 1,
+      },
+    }));
+
+    expect(snoozedNow.ok).toBe(false);
+    expect(afterNextMeal.ok).toBe(true);
+  });
+
+  it('waits for meal-flow finish before stacking the followup over an active StepModal', () => {
     vi.useFakeTimers();
     const listeners = {};
     const documentListeners = {};
@@ -158,6 +191,12 @@ describe('morning activation followup decision', () => {
 
     listeners.heysProductAdded?.();
     documentListeners['heys-stepmodal-closed']?.();
+    vi.advanceTimersByTime(500);
+
+    expect(stepModalShow).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+
+    listeners['heys:meal-flow-finished']?.({ detail: { dateKey: '2026-06-09', source: 'test' } });
     vi.advanceTimersByTime(220);
 
     expect(stepModalShow).not.toHaveBeenCalled();
@@ -165,5 +204,71 @@ describe('morning activation followup decision', () => {
     expect(render).toHaveBeenCalledTimes(1);
     expect(appended[0].id).toBe('heys-morning-activation-modal-root');
     expect(render.mock.calls[0][0].props.steps).toEqual(['morning_activation_followup']);
+  });
+
+  it('adds a regular first-half training from the charge followup modal', () => {
+    const dateKey = '2026-06-09';
+    const clientId = 'client-1';
+    const day = mealDay({ date: dateKey });
+    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
+    localStorage.setItem(scopedKey, JSON.stringify(day));
+
+    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
+    global.window = domWindow;
+    global.document = domWindow.document;
+    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
+    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
+    global.React = React;
+    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
+    domWindow.React = React;
+    domWindow.ReactDOM = global.ReactDOM;
+    domWindow.HEYS = {
+      currentClientId: clientId,
+      utils: {
+        getCurrentClientId: () => clientId,
+      },
+      dayUtils: {
+        todayISO: () => dateKey,
+      },
+    };
+    global.CustomEvent = class CustomEvent {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    };
+    global.HEYS = domWindow.HEYS;
+    domWindow.CustomEvent = global.CustomEvent;
+    const dispatchSpy = vi.fn();
+    domWindow.dispatchEvent = dispatchSpy;
+
+    // eslint-disable-next-line no-new-func
+    new Function(STEP_MODAL_SRC)();
+    // eslint-disable-next-line no-new-func
+    new Function(STEPS_SRC)();
+
+    const onNext = vi.fn();
+    const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
+    render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onNext } }));
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Вместо зарядки: тренировка в первой половине дня',
+    }));
+
+    const saved = JSON.parse(localStorage.getItem(scopedKey));
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(saved.morningActivation.status).toBe('done');
+    expect(saved.morningActivation.replacement).toBe('first_half_training');
+    expect(saved.trainings).toHaveLength(1);
+    expect(saved.trainings[0]).toMatchObject({
+      type: 'strength',
+      time: '09:00',
+      activityLabel: 'Тренировка в первой половине дня',
+      source: 'morning_activation_replacement',
+    });
+    expect(saved.trainings[0].source).not.toBe('morning_activation');
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:day-updated',
+    }));
   });
 });

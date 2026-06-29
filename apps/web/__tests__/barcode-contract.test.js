@@ -103,10 +103,11 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('startWithBarcodeScanner');
     expect(addProduct).toContain('createBarcodeCameraStart');
     expect(addProduct).toContain('requestBarcodeCameraStream');
-    expect(addProduct).toContain('BARCODE_CAMERA_REUSE_IDLE_MS');
-    expect(addProduct).toContain('getReusableBarcodeCameraStream');
     expect(addProduct).toContain('retainBarcodeCameraStream');
     expect(addProduct).toContain('scheduleBarcodeCameraRelease');
+    expect(addProduct).toContain('stopBarcodeCameraStream(stream);');
+    expect(addProduct).toContain('cleanupCamera();');
+    expect(addProduct).not.toContain('BARCODE_CAMERA_REUSE_IDLE_MS');
     expect(addProduct).toContain('sessionCameraLive');
     expect(addProduct).toContain('cameraStart: barcodeModal.cameraStart || null');
     expect(addProduct).toContain('BarcodeScanIcon,');
@@ -135,8 +136,10 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('Диагностика камеры скопирована');
     expect(addProduct).toContain('scanner.debug.refresh');
     expect(addProduct).toContain('Диагностика обновлена ниже');
-    expect(addProduct).toContain('debugReportText');
-    expect(addProduct).toContain('aps-barcode-debug-text');
+    expect(addProduct).toContain('aps-barcode-debug-dot');
+    expect(addProduct).toContain('manual-copy');
+    expect(addProduct).not.toContain('aps-barcode-debug-copy');
+    expect(addProduct).not.toContain('aps-barcode-debug-text');
     expect(addProduct).not.toContain('if (isIOSCameraBrowser()) return false;');
     const platformApis = read('apps/web/heys_platform_apis_v1.js');
     expect(platformApis).toContain('function getBarcodePolyfillGlobal');

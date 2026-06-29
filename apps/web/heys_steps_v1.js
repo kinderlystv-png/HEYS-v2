@@ -4207,6 +4207,18 @@
           React.createElement('button', {
             style: {
               ...actionBtnStyle,
+              border: '1px solid rgba(29,112,183,0.35)',
+              background: 'rgba(29,112,183,0.10)',
+              color: '#1D70B7'
+            },
+            onClick: () => {
+              saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
+              context?.onNext?.();
+            }
+          }, 'Вместо зарядки: тренировка в первой половине дня'),
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
               border: '1px solid rgba(244,63,94,0.35)',
               background: 'rgba(244,63,94,0.10)',
               color: '#be123c'
@@ -4382,6 +4394,75 @@
             )
         )
     );
+  }
+
+  function getFirstHalfTrainingTime(firstMealTime) {
+    const parsed = parseTimeToMinutes(firstMealTime);
+    if (Number.isFinite(parsed) && parsed < 12 * 60) return firstMealTime;
+    return '11:00';
+  }
+
+  function saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue) {
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = getFreshDayData(dateKey);
+    dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
+    removeMorningActivationArtifacts(dayData);
+
+    const trainingEntry = {
+      z: [0, 45, 0, 0],
+      time: getFirstHalfTrainingTime(firstMealTimeValue),
+      type: 'strength',
+      activityLabel: 'Тренировка в первой половине дня',
+      source: 'morning_activation_replacement',
+      comment: 'Вместо утренней зарядки'
+    };
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
+    const emptyIndex = trainings.findIndex((training) => {
+      const totalMinutes = Array.isArray(training?.z)
+        ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
+        : 0;
+      return totalMinutes === 0 && !training?.type && !training?.activityLabel;
+    });
+    if (emptyIndex >= 0) {
+      trainings[emptyIndex] = trainingEntry;
+    } else {
+      trainings.push(trainingEntry);
+    }
+    dayData.trainings = trainings;
+
+    const nextState = normalizeMorningActivationState(dateKey, dayData);
+    dayData.morningActivation = {
+      ...(dayData.morningActivation || {}),
+      ...nextState,
+      status: 'done',
+      intensity: null,
+      postState: null,
+      postEffect: null,
+      firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
+      decidedAt: Date.now(),
+      followupSnoozeUntilMealCount: null,
+      replacement: 'first_half_training'
+    };
+    dayData.updatedAt = Date.now();
+    saveDayData(dateKey, dayData);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'morningActivation',
+          source: 'morning-activation-first-half-training',
+          forceReload: true,
+          data: { ...dayData, date: dateKey }
+        }
+      }));
+    }
+    return dayData;
   }
 
   // ============================================================

@@ -128,10 +128,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   const BARCODE_CAMERA_AUTOSTART_KEY = 'heys_barcode_camera_autostart';
-  const BARCODE_CAMERA_REUSE_IDLE_MS = 90000;
 
   const stopBarcodeCameraStream = (stream) => {
     try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
+    try {
+      const session = HEYS.__barcodeCameraSession;
+      if (session?.stream === stream) {
+        if (session.stopTimer) clearTimeout(session.stopTimer);
+        HEYS.__barcodeCameraSession = null;
+      }
+    } catch (_) { }
   };
 
   const isBarcodeCameraStreamLive = (stream) => {
@@ -141,16 +147,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch (_) {
       return false;
     }
-  };
-
-  const getReusableBarcodeCameraStream = () => {
-    const session = HEYS.__barcodeCameraSession;
-    if (!isBarcodeCameraStreamLive(session?.stream)) return null;
-    if (session.stopTimer) {
-      clearTimeout(session.stopTimer);
-      session.stopTimer = null;
-    }
-    return session.stream;
   };
 
   const retainBarcodeCameraStream = (stream) => {
@@ -167,20 +163,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   const scheduleBarcodeCameraRelease = (stream) => {
-    if (!stream) return;
-    const session = HEYS.__barcodeCameraSession;
-    if (!session || session.stream !== stream) {
-      stopBarcodeCameraStream(stream);
-      return;
-    }
-    if (session.stopTimer) clearTimeout(session.stopTimer);
-    session.stopTimer = setTimeout(() => {
-      const current = HEYS.__barcodeCameraSession;
-      if (current?.stream === stream) {
-        stopBarcodeCameraStream(stream);
-        HEYS.__barcodeCameraSession = null;
-      }
-    }, BARCODE_CAMERA_REUSE_IDLE_MS);
+    stopBarcodeCameraStream(stream);
   };
 
   const requestBarcodeCameraStream = async (appendDebug = () => { }) => {
@@ -245,10 +228,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const appendDebug = (stage, data = {}) => {
       events.push({ at: new Date().toISOString(), stage, data });
     };
-    const reusableStream = getReusableBarcodeCameraStream();
-    const streamPromise = (reusableStream
-      ? Promise.resolve(reusableStream)
-      : requestBarcodeCameraStream(appendDebug))
+    const streamPromise = requestBarcodeCameraStream(appendDebug)
       .then((stream) => {
         HEYS.__barcodeCameraAutoStart = true;
         writeRawValue(BARCODE_CAMERA_AUTOSTART_KEY, true);
@@ -263,7 +243,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     return {
       requestedAt: Date.now(),
-      reused: !!reusableStream,
+      reused: false,
       events,
       streamPromise
     };
@@ -2787,8 +2767,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? 'requesting'
         : 'idle'
     ));
-    const [debugCopyState, setDebugCopyState] = useState('');
-    const [debugReportText, setDebugReportText] = useState('');
+    const [, setDebugCopyState] = useState('');
+    const [, setDebugReportText] = useState('');
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const scannerRef = useRef(null);
@@ -3131,7 +3111,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
         const scanner = await HEYS.barcode.startScanning(video, (result) => {
           const code = normalizeBarcode(result?.value);
-          if (code) onDetected?.(code);
+          if (code) {
+            cleanupCamera();
+            onDetected?.(code);
+          }
         });
         scannerRef.current = scanner;
         appendCameraDebug('scanner.start.result', {
@@ -3271,19 +3254,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onClick: submitManual
           }, 'OK')
         ),
-        debugCopyState && React.createElement('div', {
-          className: 'aps-barcode-debug-copy',
-          role: 'status',
-          'aria-live': 'polite'
-        }, debugCopyState),
-        debugReportText && React.createElement('textarea', {
-          className: 'aps-barcode-debug-text',
-          value: debugReportText,
-          readOnly: true,
-          rows: 4,
-          onFocus: (e) => e.target.select(),
-          onClick: (e) => e.target.select(),
-          'aria-label': 'Диагностика камеры'
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-barcode-debug-dot',
+          onClick: () => copyCameraDebugReport('manual-copy', { source: 'debug-dot' }),
+          'aria-label': 'Скопировать диагностику камеры',
+          title: 'Скопировать диагностику камеры'
         }),
         error && React.createElement('div', { className: 'aps-barcode-error' }, error)
       )
@@ -7745,6 +7721,18 @@ NOVA: 1
         };
 
         const finishMeal = () => {
+          try {
+            window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+              detail: {
+                source: 'add-product-step',
+                dateKey: context?.dateKey || null,
+                mealIndex: context?.mealIndex ?? null,
+                mealId: context?.mealId ?? null
+              }
+            }));
+          } catch (_) {
+            // ignore
+          }
           HEYS.StepModal.hide({ scrollToDiary: true });
         };
 
