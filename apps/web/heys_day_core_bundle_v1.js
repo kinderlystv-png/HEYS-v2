@@ -3282,6 +3282,11 @@
         : null;
 
     // v69 FIX: Read from scoped dayv2 key first, fallback to unscoped for legacy
+    function matchesDayV2Date(value, dateStr) {
+        if (!value || typeof value !== 'object') return false;
+        return !value.date || !dateStr || String(value.date) === String(dateStr);
+    }
+
     function readDayV2(dateStr, lsGet) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
 
@@ -3296,7 +3301,7 @@
             const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(scopedKey);
             const v = lsGet(scopedKey, null);
-            if (v) {
+            if (matchesDayV2Date(v, dateStr)) {
                 result = { key: scopedKey, value: v };
             }
         }
@@ -3304,7 +3309,7 @@
             const unscopedKey = 'heys_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(unscopedKey);
             const v = lsGet(unscopedKey, null);
-            result = v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+            result = matchesDayV2Date(v, dateStr) ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
         }
 
         if (_readDayV2Cache) _readDayV2Cache.set(cacheKey, result);
@@ -4939,6 +4944,11 @@
             setGrams
         } = deps;
 
+        function matchesDateKey(dayData, dateKey) {
+            if (!dayData || typeof dayData !== 'object') return false;
+            return !dayData.date || !dateKey || String(dayData.date) === String(dateKey);
+        }
+
         /**
          * Свежий day из scoped LS текущего клиента (инв. №9 — только scoped, без
          * cross-client fallback на unscoped). Читаем после invalidate, чтобы поймать
@@ -4951,11 +4961,11 @@
                     const scopedKey = 'heys_' + cid + '_dayv2_' + dateKey;
                     try { HEYS.store?.invalidate?.(scopedKey); } catch (_) { /* noop */ }
                     const v = typeof lsGet === 'function' ? lsGet(scopedKey, null) : null;
-                    return (v && typeof v === 'object') ? v : null;
+                    return matchesDateKey(v, dateKey) ? v : null;
                 }
                 // Нет client-scope (редко): unscoped как единственный путь
                 const v = typeof lsGet === 'function' ? lsGet('heys_dayv2_' + dateKey, null) : null;
-                return (v && typeof v === 'object') ? v : null;
+                return matchesDateKey(v, dateKey) ? v : null;
             } catch (_) {
                 return null;
             }
@@ -4966,13 +4976,13 @@
             const storedDay = typeof lsGet === 'function' ? lsGet(baseKey, null) : null;
             const runtimeDay = typeof HEYS?.Day?.getDay === 'function' ? HEYS.Day.getDay() : null;
 
-            let snapshot = day && typeof day === 'object' ? day : {};
+            let snapshot = matchesDateKey(day, date) ? day : {};
 
-            if (storedDay && typeof storedDay === 'object' && (storedDay.updatedAt || 0) > (snapshot.updatedAt || 0)) {
+            if (matchesDateKey(storedDay, date) && (storedDay.updatedAt || 0) > (snapshot.updatedAt || 0)) {
                 snapshot = storedDay;
             }
 
-            if (runtimeDay && typeof runtimeDay === 'object' && (runtimeDay.updatedAt || 0) >= (snapshot.updatedAt || 0)) {
+            if (matchesDateKey(runtimeDay, date) && (runtimeDay.updatedAt || 0) >= (snapshot.updatedAt || 0)) {
                 snapshot = runtimeDay;
             }
 
@@ -4991,6 +5001,13 @@
 
         function persistDaySnapshotImmediately(nextDayData) {
             if (!nextDayData || typeof nextDayData !== 'object') return;
+            if (!matchesDateKey(nextDayData, date)) {
+                console.warn('[HEYS.dayHandlers] persistDaySnapshotImmediately ABORT: date mismatch', {
+                    date,
+                    payloadDate: nextDayData.date
+                });
+                return;
+            }
 
             // 🛡️ TASK-003 анти-клоббер (последний рубеж): даже если caller собрал снапшот
             // мимо getLatestDaySnapshot, не теряем subjective-поля чекина, присутствующие
