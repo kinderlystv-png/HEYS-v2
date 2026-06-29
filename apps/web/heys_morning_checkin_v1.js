@@ -146,31 +146,46 @@
    *  cross-client contamination когда курaтор работает с несколькими клиентами
    *  в одной сессии (incident 2026-05-29 21:16: Александра's dayv2 залились
    *  в Poplanton'a через unscoped legacy path). */
+  function normalizeDayForDate(dateKey, dayData, sourceLabel) {
+    const base = dayData && typeof dayData === 'object' ? dayData : {};
+    if (base.date && dateKey && String(base.date) !== String(dateKey)) {
+      console.warn(sourceLabel + ' ABORT: date mismatch', {
+        dateKey,
+        payloadDate: base.date,
+        mealsCount: Array.isArray(base.meals) ? base.meals.length : 0
+      });
+      return null;
+    }
+    return base.date ? base : { ...base, date: dateKey };
+  }
+
   function writeDayV2ScopedAndLegacy(dateKey, dayData) {
+    const safeDayData = normalizeDayForDate(dateKey, dayData, '[HEYS.morning] writeDayV2Scoped');
+    if (!safeDayData) return false;
     const cid = getCurrentClientId();
     if (cid) {
       const scopedKey = `heys_${cid}_dayv2_${dateKey}`;
       if (HEYS.store?.set) {
-        HEYS.store.set(scopedKey, dayData);
+        HEYS.store.set(scopedKey, safeDayData);
       } else if (HEYS.utils?.lsSet) {
-        HEYS.utils.lsSet(scopedKey, dayData);
+        HEYS.utils.lsSet(scopedKey, safeDayData);
       }
       try {
         if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
           HEYS.dayCache.notifyDateUpdated(dateKey);
         }
       } catch (_) { /* ignore */ }
-      return;
+      return true;
     }
     // Fallback: нет clientId (редкий pre-auth case) — только тогда unscoped.
     const unscopedKey = `heys_dayv2_${dateKey}`;
     if (HEYS.store?.set) {
-      HEYS.store.set(unscopedKey, dayData);
+      HEYS.store.set(unscopedKey, safeDayData);
     } else if (HEYS.utils?.lsSet) {
-      HEYS.utils.lsSet(unscopedKey, dayData);
+      HEYS.utils.lsSet(unscopedKey, safeDayData);
     } else {
       try {
-        localStorage.setItem(unscopedKey, JSON.stringify(dayData));
+        localStorage.setItem(unscopedKey, JSON.stringify(safeDayData));
       } catch (_) {
         // Fallback storage is unavailable
       }
@@ -182,6 +197,7 @@
     } catch (_) {
       // ignore
     }
+    return true;
   }
 
   /** Как mergeDayMealsPreferLiveIfRicher в heys_steps_v1.js — не терять новый продукт в React перед патчем MA. */

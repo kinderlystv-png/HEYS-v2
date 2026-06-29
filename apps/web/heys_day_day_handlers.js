@@ -34,6 +34,11 @@
             setGrams
         } = deps;
 
+        function matchesDateKey(dayData, dateKey) {
+            if (!dayData || typeof dayData !== 'object') return false;
+            return !dayData.date || !dateKey || String(dayData.date) === String(dateKey);
+        }
+
         /**
          * Свежий day из scoped LS текущего клиента (инв. №9 — только scoped, без
          * cross-client fallback на unscoped). Читаем после invalidate, чтобы поймать
@@ -46,11 +51,11 @@
                     const scopedKey = 'heys_' + cid + '_dayv2_' + dateKey;
                     try { HEYS.store?.invalidate?.(scopedKey); } catch (_) { /* noop */ }
                     const v = typeof lsGet === 'function' ? lsGet(scopedKey, null) : null;
-                    return (v && typeof v === 'object') ? v : null;
+                    return matchesDateKey(v, dateKey) ? v : null;
                 }
                 // Нет client-scope (редко): unscoped как единственный путь
                 const v = typeof lsGet === 'function' ? lsGet('heys_dayv2_' + dateKey, null) : null;
-                return (v && typeof v === 'object') ? v : null;
+                return matchesDateKey(v, dateKey) ? v : null;
             } catch (_) {
                 return null;
             }
@@ -61,13 +66,13 @@
             const storedDay = typeof lsGet === 'function' ? lsGet(baseKey, null) : null;
             const runtimeDay = typeof HEYS?.Day?.getDay === 'function' ? HEYS.Day.getDay() : null;
 
-            let snapshot = day && typeof day === 'object' ? day : {};
+            let snapshot = matchesDateKey(day, date) ? day : {};
 
-            if (storedDay && typeof storedDay === 'object' && (storedDay.updatedAt || 0) > (snapshot.updatedAt || 0)) {
+            if (matchesDateKey(storedDay, date) && (storedDay.updatedAt || 0) > (snapshot.updatedAt || 0)) {
                 snapshot = storedDay;
             }
 
-            if (runtimeDay && typeof runtimeDay === 'object' && (runtimeDay.updatedAt || 0) >= (snapshot.updatedAt || 0)) {
+            if (matchesDateKey(runtimeDay, date) && (runtimeDay.updatedAt || 0) >= (snapshot.updatedAt || 0)) {
                 snapshot = runtimeDay;
             }
 
@@ -86,6 +91,13 @@
 
         function persistDaySnapshotImmediately(nextDayData) {
             if (!nextDayData || typeof nextDayData !== 'object') return;
+            if (!matchesDateKey(nextDayData, date)) {
+                console.warn('[HEYS.dayHandlers] persistDaySnapshotImmediately ABORT: date mismatch', {
+                    date,
+                    payloadDate: nextDayData.date
+                });
+                return;
+            }
 
             // 🛡️ TASK-003 анти-клоббер (последний рубеж): даже если caller собрал снапшот
             // мимо getLatestDaySnapshot, не теряем subjective-поля чекина, присутствующие
@@ -687,4 +699,3 @@
     };
 
 })(window);
-

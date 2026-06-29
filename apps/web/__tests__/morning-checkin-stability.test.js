@@ -9,6 +9,9 @@ const DAY_EFFECTS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_eff
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 const YESTERDAY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const PROFILE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_profile_step_v1.js'), 'utf8');
+const DAY_HANDLERS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_day_handlers.js'), 'utf8');
+const DAY_EFFECTS_SRC_DIRECT = fs.readFileSync(path.resolve(__dirname, '../heys_day_effects.js'), 'utf8');
+const STORAGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
 
 describe('morning check-in stability', () => {
   it('freezes visible step configs before save-driven shouldShow changes can shift indexes', () => {
@@ -66,5 +69,28 @@ describe('morning check-in stability', () => {
     expect(PROFILE_SRC).toContain('writeDayDataScoped(todayKey');
     expect(PROFILE_SRC).toContain('HEYS.MorningCheckinUtils?.writeDayV2Scoped');
     expect(MORNING_SRC).toContain('HEYS.MorningCheckinUtils.writeDayV2Scoped = writeDayV2ScopedAndLegacy');
+  });
+
+  it('does not let step saves seed today from a richer live day with another date', () => {
+    expect(STEPS_SRC).toContain('function matchesDateKey(dayData, dateKey)');
+    expect(STEPS_SRC).toContain('if (matchesDateKey(liveDay, dateKey))');
+    expect(STEPS_SRC).toContain('if (matchesDateKey(scopedData, dateKey))');
+    expect(STEPS_SRC).toContain('if (matchesDateKey(unscopedData, dateKey))');
+    expect(STEPS_SRC).toContain('if (matchesDateKey(rawLocal, dateKey))');
+    expect(STEPS_SRC).toContain('[HEYS.steps] saveDayData');
+    expect(STEPS_SRC).toContain('if (!safeDayData) return false;');
+  });
+
+  it('guards dayv2 writes and sync from key/payload date mismatches', () => {
+    expect(MORNING_SRC).toContain('[HEYS.morning] writeDayV2Scoped');
+    expect(PROFILE_SRC).toContain('[HEYS.profileSteps] writeDayDataScoped ABORT: date mismatch');
+    expect(YESTERDAY_SRC).toContain('[HEYS.yesterdayVerify] writeDayDataScoped ABORT: date mismatch');
+    expect(DAY_HANDLERS_SRC).toContain('[HEYS.dayHandlers] persistDaySnapshotImmediately ABORT: date mismatch');
+    expect(DAY_EFFECTS_SRC_DIRECT).toContain('function matchesDayV2Date(value, dateStr)');
+    expect(STORAGE_SRC).toContain('function shouldBlockDayV2DateMismatch(key, value, source)');
+    expect(STORAGE_SRC).toContain("shouldBlockDayV2DateMismatch(k, value, 'saveClientKey')");
+    expect(STORAGE_SRC).toContain("shouldBlockDayV2DateMismatch(key, valueToStore, 'delta-light')");
+    expect(STORAGE_SRC).toContain("shouldBlockDayV2DateMismatch(localKey, valueToStore, 'yandex-sync')");
+    expect(STORAGE_SRC).toContain("shouldBlockDayV2DateMismatch(key, valueToStore, 'bootstrap')");
   });
 });

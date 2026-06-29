@@ -49,12 +49,20 @@
   }
 
   function writeDayDataScoped(dateKey, dayData) {
+    if (dayData && dayData.date && dateKey && String(dayData.date) !== String(dateKey)) {
+      console.warn('[HEYS.yesterdayVerify] writeDayDataScoped ABORT: date mismatch', {
+        dateKey,
+        payloadDate: dayData.date
+      });
+      return false;
+    }
+    const safeDayData = dayData && dayData.date ? dayData : { ...(dayData || {}), date: dateKey };
     const writer = HEYS.MorningCheckinUtils?.writeDayV2Scoped;
     if (typeof writer === 'function') {
-      writer(dateKey, dayData);
-      return;
+      return writer(dateKey, safeDayData);
     }
-    lsSet(`heys_dayv2_${dateKey}`, dayData);
+    lsSet(`heys_dayv2_${dateKey}`, safeDayData);
+    return true;
   }
 
   /**

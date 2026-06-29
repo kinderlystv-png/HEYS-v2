@@ -203,6 +203,58 @@ describe('HEYS.dayDayHandlers water persistence', () => {
     expect(global.HEYS.Day.requestFlush).toHaveBeenCalledTimes(1);
   });
 
+  it('does not seed the selected date from a mismatched runtime or stored day', () => {
+    let currentDay = {
+      date: '2025-12-11',
+      meals: [{ id: 'yesterday-meal', items: [{ id: 'i1' }] }],
+      waterMl: 900,
+      updatedAt: 1734000000000
+    };
+
+    global.HEYS.Day.getDay.mockImplementation(() => currentDay);
+    global.HEYS.dayUtils.lsGet.mockReturnValue({
+      date: '2025-12-11',
+      meals: [{ id: 'stored-yesterday', items: [{ id: 'i2' }] }],
+      waterMl: 1200,
+      updatedAt: 1734000001000
+    });
+
+    const setDay = vi.fn((updater) => {
+      currentDay = updater(currentDay);
+      return currentDay;
+    });
+
+    const handlers = global.HEYS.dayDayHandlers.createDayHandlers({
+      setDay,
+      day: currentDay,
+      date: '2025-12-12',
+      prof: {},
+      setShowWaterDrop: vi.fn(),
+      setWaterAddedAnim: vi.fn(),
+      showConfetti: false,
+      setShowConfetti: vi.fn(),
+      waterGoal: 2000,
+      setEditGramsTarget: vi.fn(),
+      setEditGramsValue: vi.fn(),
+      setGrams: vi.fn()
+    });
+
+    handlers.addWater(100, {
+      skipScroll: true,
+      playSound: false,
+      showScreenFill: false,
+      pulseWaterWidget: false,
+      showSourceBadge: false,
+      showSourceDrop: false
+    });
+
+    const savedDay = global.HEYS.dayUtils.lsSet.mock.calls[0][1];
+    expect(global.HEYS.dayUtils.lsSet).toHaveBeenCalledWith('heys_dayv2_2025-12-12', expect.any(Object));
+    expect(savedDay.date).toBe('2025-12-12');
+    expect(savedDay.waterMl).toBe(100);
+    expect(savedDay.meals).toBeUndefined();
+  });
+
   it('water preset click calls addWater synchronously', () => {
     global.React = {
       createElement: (type, props, ...children) => ({

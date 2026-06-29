@@ -345,6 +345,24 @@
     return rightUpdated > leftUpdated ? right : left;
   }
 
+  function matchesDateKey(dayData, dateKey) {
+    if (!dayData || typeof dayData !== 'object') return false;
+    return !dayData.date || !dateKey || String(dayData.date) === String(dateKey);
+  }
+
+  function normalizeDayForDate(dateKey, dayData, sourceLabel) {
+    const base = dayData && typeof dayData === 'object' ? dayData : {};
+    if (base.date && dateKey && String(base.date) !== String(dateKey)) {
+      console.warn(sourceLabel + ' ABORT: date mismatch', {
+        dateKey,
+        payloadDate: base.date,
+        mealsCount: Array.isArray(base.meals) ? base.meals.length : 0
+      });
+      return null;
+    }
+    return base.date ? base : { ...base, date: dateKey };
+  }
+
   function flushDayTabBeforeRead() {
     try {
       if (typeof HEYS.Day?.requestFlush === 'function') {
@@ -409,7 +427,7 @@
     let result = readDayData(dateKey, {}) || {};
     try {
       const liveDay = HEYS.Day?.getDay?.();
-      if (liveDay && typeof liveDay === 'object') {
+      if (matchesDateKey(liveDay, dateKey)) {
         result = pickRicherDayData(result, liveDay);
       }
     } catch (_) {
@@ -418,16 +436,16 @@
     const scopedKey = getScopedDayKey(dateKey);
     if (scopedKey) {
       const scopedData = lsGet(scopedKey, null);
-      if (scopedData && typeof scopedData === 'object') {
+      if (matchesDateKey(scopedData, dateKey)) {
         result = pickRicherDayData(result, scopedData);
       }
     }
     const unscopedData = lsGet(getUnscopedDayKey(dateKey), null);
-    if (unscopedData && typeof unscopedData === 'object') {
+    if (matchesDateKey(unscopedData, dateKey)) {
       result = pickRicherDayData(result, unscopedData);
     }
     const rawLocal = readDayFromRawLocalStorage(dateKey);
-    if (rawLocal && typeof rawLocal === 'object') {
+    if (matchesDateKey(rawLocal, dateKey)) {
       result = pickRicherDayData(result, rawLocal);
     }
     return result && typeof result === 'object' ? result : {};
@@ -457,6 +475,8 @@
   }
 
   function saveDayData(dateKey, dayData) {
+    const safeDayData = normalizeDayForDate(dateKey, dayData, '[HEYS.steps] saveDayData');
+    if (!safeDayData) return false;
     const scopedKey = getScopedDayKey(dateKey);
     const notifyDayCache = () => {
       try {
@@ -469,9 +489,9 @@
     };
     if (scopedKey) {
       if (HEYS.store?.set) {
-        HEYS.store.set(scopedKey, dayData);
+        HEYS.store.set(scopedKey, safeDayData);
       } else {
-        lsSet(scopedKey, dayData);
+        lsSet(scopedKey, safeDayData);
       }
       // 🛡️ P0 (2026-05-18 incident): когда scoped key есть, НЕ пишем unscoped.
       // Unscoped — global LS shared между всеми клиентами одного браузера.
@@ -480,16 +500,17 @@
       // несколькими клиентами в одной сессии. Legacy модули которые читают
       // unscoped должны быть обновлены на scoped path (через HEYS.store).
       notifyDayCache();
-      return;
+      return true;
     }
     // Только если нет client-scope (нет авторизации/инициализации) — пишем
     // unscoped как fallback. Это редкий случай — обычно scope есть.
     if (HEYS.store?.set) {
-      HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
+      HEYS.store.set(getUnscopedDayKey(dateKey), safeDayData);
     } else {
-      lsSet(getUnscopedDayKey(dateKey), dayData);
+      lsSet(getUnscopedDayKey(dateKey), safeDayData);
     }
     notifyDayCache();
+    return true;
   }
 
   const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';

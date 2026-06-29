@@ -72,6 +72,11 @@
         : null;
 
     // v69 FIX: Read from scoped dayv2 key first, fallback to unscoped for legacy
+    function matchesDayV2Date(value, dateStr) {
+        if (!value || typeof value !== 'object') return false;
+        return !value.date || !dateStr || String(value.date) === String(dateStr);
+    }
+
     function readDayV2(dateStr, lsGet) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
 
@@ -86,7 +91,7 @@
             const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(scopedKey);
             const v = lsGet(scopedKey, null);
-            if (v) {
+            if (matchesDayV2Date(v, dateStr)) {
                 result = { key: scopedKey, value: v };
             }
         }
@@ -94,7 +99,7 @@
             const unscopedKey = 'heys_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(unscopedKey);
             const v = lsGet(unscopedKey, null);
-            result = v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+            result = matchesDayV2Date(v, dateStr) ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
         }
 
         if (_readDayV2Cache) _readDayV2Cache.set(cacheKey, result);

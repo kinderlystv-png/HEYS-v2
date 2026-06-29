@@ -2696,12 +2696,33 @@
   }
 
   /** Получить дату из ключа dayv2_YYYY-MM-DD */
+  function getDateKeyFromDayKey(key) {
+    const match = String(key || '').match(/(?:^|_)dayv2_(\d{4}-\d{2}-\d{2})$/);
+    return match ? match[1] : '';
+  }
+
   function getDateFromDayKey(key) {
-    const match = key.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
-    if (match) {
-      return new Date(match[1]);
+    const dateKey = getDateKeyFromDayKey(key);
+    if (dateKey) {
+      return new Date(dateKey);
     }
     return null;
+  }
+
+  function shouldBlockDayV2DateMismatch(key, value, source) {
+    const dateKey = getDateKeyFromDayKey(key);
+    if (!dateKey || !value || typeof value !== 'object' || !value.date) return false;
+    if (String(value.date) === dateKey) return false;
+    logCritical(`🛡️ [DAYV2 DATE] BLOCKED ${source || 'write'}: key=${key} payload.date=${value.date}`);
+    try {
+      console.warn('[HEYS.storage] dayv2 date mismatch blocked', {
+        source,
+        key,
+        keyDate: dateKey,
+        payloadDate: value.date
+      });
+    } catch (_) { /* noop */ }
+    return true;
   }
 
   function getDayAgeDaysFromKey(key, nowTs = Date.now()) {
@@ -3221,6 +3242,7 @@
   }
 
   function writeDayKeyWithQuotaGuard(key, valueToSave, options = {}) {
+    if (shouldBlockDayV2DateMismatch(key, valueToSave, options.source || 'writeDayKeyWithQuotaGuard')) return false;
     const hydratedValue = ensureDayV2ComputedTotals(valueToSave);
     const rawValue = JSON.stringify(hydratedValue);
     const written = safeSetItem(key, rawValue, {
@@ -6100,6 +6122,7 @@
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными
           const isDayKey = key.includes('dayv2_');
           if (isDayKey) {
+            if (shouldBlockDayV2DateMismatch(key, valueToStore, 'bootstrap')) return;
             const existingRaw = ls.getItem(key);
             if (existingRaw) {
               try {
@@ -6283,6 +6306,7 @@
 
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными (аналогично bootstrapClientSync)
           if (isDayKey) {
+            if (shouldBlockDayV2DateMismatch(localKey, valueToStore, 'yandex-sync')) return;
             const existingRaw = ls.getItem(localKey);
             if (existingRaw) {
               try {
@@ -7970,6 +7994,7 @@
               let valueToStore = __decompDelta.value;
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
+              if (key.includes('dayv2_') && shouldBlockDayV2DateMismatch(key, valueToStore, 'delta-light')) return;
 
               // 🛡️ Anti-empty-profile guard (симметрично с Phase A ~6410 и saveClientKey ~9893):
               // если cloud отдал {} для profile-ключа, а local LS уже содержит валидный
@@ -11626,6 +11651,7 @@
       if (typeof value !== 'object' || value === null) {
         return;
       }
+      if (shouldBlockDayV2DateMismatch(k, value, 'saveClientKey')) return;
       // 🚨 ЗАЩИТА ОТ HMR: НЕ сохраняем день без updatedAt (признак что это HMR-сброс, а не реальное изменение)
       // Если есть updatedAt — это реальное изменение пользователем, разрешаем сохранение (даже пустого дня)
       // HMR-чек выполняется ДО stamping чтобы инжект timestamp не мог обойти guard.
@@ -13192,7 +13218,8 @@
         } catch (_) { /* parse error — proceed normally */ }
         const wroteDay = writeDayKeyWithQuotaGuard(scopedKey, value, {
           preserveRecentDuringHydration: true,
-          nowTs: Date.now()
+          nowTs: Date.now(),
+          source: source || 'hot-sync'
         });
         if (!wroteDay) return false;
       } else if (baseKey === 'heys_game') {
