@@ -837,6 +837,19 @@
     return dayData;
   }
 
+  function notifyMorningActivationFollowupCompleted(dateKey, source) {
+    try {
+      window.dispatchEvent(new CustomEvent('heys:morning-activation-followup-completed', {
+        detail: {
+          dateKey,
+          source: source || 'morning-activation-followup'
+        }
+      }));
+    } catch (_) {
+      // ignore
+    }
+  }
+
   function removeMorningActivationArtifacts(dayData) {
     const maZoneSignatures = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
     const trainingZoneSignature = (training) => {
@@ -4110,6 +4123,7 @@
         status: 'missed',
         intensity: null
       });
+      notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-missed');
       context?.onNext?.();
       try {
         setTimeout(() => {
@@ -4163,6 +4177,7 @@
       } catch (e) {
         console.warn('[HEYS.steps] recordMorningActivationDone failed:', e);
       }
+      notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-done');
       context?.onNext?.();
     };
 
@@ -4472,6 +4487,7 @@
     };
     dayData.updatedAt = Date.now();
     saveDayData(dateKey, dayData);
+    notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-replacement');
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: {

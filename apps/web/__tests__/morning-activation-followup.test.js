@@ -151,6 +151,73 @@ describe('morning activation followup decision', () => {
     expect(afterNextMeal.ok).toBe(true);
   });
 
+  it('closes an already-open followup when completion event confirms terminal state', () => {
+    vi.useFakeTimers();
+    const listeners = {};
+    const dayData = mealDay({
+      morningActivation: {
+        status: 'done',
+        intensity: 'high',
+        followupSnoozeUntilMealCount: null,
+      },
+      trainings: [{ source: 'morning_activation' }],
+    });
+    const storeSet = vi.fn();
+    const stepModalHide = vi.fn();
+    const sessionSet = vi.fn();
+
+    loadModule({
+      HEYS: {
+        currentClientId: 'client-1',
+        store: {
+          readSafe: vi.fn((key, fallback) => (
+            key === 'heys_client-1_dayv2_2026-06-09' ? dayData : fallback
+          )),
+          set: storeSet,
+        },
+        utils: {
+          getCurrentClientId: () => 'client-1',
+        },
+        StepModal: {
+          hide: stepModalHide,
+        },
+      },
+      addEventListener: vi.fn((type, handler) => {
+        listeners[type] = handler;
+      }),
+      document: {
+        addEventListener: vi.fn(),
+        getElementById: vi.fn((id) => (id === 'heys-step-modal-root' ? {} : null)),
+        dispatchEvent: vi.fn(),
+      },
+      sessionStorage: {
+        getItem: vi.fn(() => null),
+        setItem: sessionSet,
+        removeItem: vi.fn(),
+      },
+    });
+
+    listeners['heys:morning-activation-followup-completed']?.({
+      detail: { dateKey: '2026-06-09', source: 'test' },
+    });
+    vi.advanceTimersByTime(0);
+
+    expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
+    expect(storeSet).toHaveBeenCalledWith(
+      'heys_client-1_dayv2_2026-06-09',
+      expect.objectContaining({
+        morningActivation: expect.objectContaining({
+          status: 'done',
+          followupSnoozeUntilMealCount: null,
+        }),
+      })
+    );
+    expect(sessionSet).toHaveBeenCalledWith(
+      'heys_morning_activation_followup_guard_client-1_2026-06-09',
+      String(Number.MAX_SAFE_INTEGER)
+    );
+  });
+
   it('waits for meal-flow finish before stacking the followup over an active StepModal', () => {
     vi.useFakeTimers();
     const listeners = {};
@@ -288,6 +355,13 @@ describe('morning activation followup decision', () => {
     expect(saved.trainings[0].source).not.toBe('morning_activation');
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
       type: 'heys:day-updated',
+    }));
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:morning-activation-followup-completed',
+      detail: expect.objectContaining({
+        dateKey,
+        source: 'morning-activation-replacement',
+      }),
     }));
   });
 });

@@ -663,6 +663,51 @@
     if (!opened) followupOpening = false;
   }
 
+  function markMorningActivationFollowupCompleted(dateKey, source = 'morning-activation-followup-completed') {
+    const todayKey = getTodayKey();
+    const effectiveDateKey = dateKey || todayKey;
+    const currentClientId = getCurrentClientId();
+    const dayData = readDayV2ScopedFirst(effectiveDateKey, {}) || {};
+    const ma = dayData?.morningActivation || {};
+    const hasTerminalState = ma.status === 'done' || ma.status === 'missed';
+    const hasReplacement = ma.replacement === 'first_half_training'
+      || (Array.isArray(dayData?.trainings) && dayData.trainings.some((t) => t?.source === 'morning_activation_replacement'));
+    if (!hasTerminalState && !hasReplacement) {
+      logMorningActivationTrace('[MA.followup] completion event ignored — no terminal state', {
+        dateKey: effectiveDateKey,
+        status: ma.status,
+        source
+      });
+      return;
+    }
+
+    closeMorningActivationOverlay();
+    try {
+      if (typeof HEYS.StepModal?.hide === 'function' && isMainStepModalOpen()) {
+        HEYS.StepModal.hide({ scrollToDiary: false });
+      }
+    } catch (_) {
+      // ignore close fallback errors
+    }
+    persistMorningActivationPatch(effectiveDateKey, {
+      followupSnoozeUntilMealCount: null
+    }, 'morning-activation-followup-complete');
+    try {
+      const mealCount = countMealsWithItems(dayData);
+      const guardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${effectiveDateKey}`;
+      sessionStorage.setItem(guardKey, String(Number.MAX_SAFE_INTEGER));
+      logMorningActivationTrace('[MA.followup] completed via event', {
+        dateKey: effectiveDateKey,
+        mealCount,
+        status: ma.status,
+        source
+      });
+    } catch (_) {
+      // sessionStorage may be unavailable
+    }
+    followupOpening = false;
+  }
+
   function debugDayStorage(todayKey, currentClientId, altKey) {
     // DEBUG функция закомментирована для чистоты консоли
     return;
@@ -1704,6 +1749,13 @@
     lastMealSignalAt = Date.now();
     logMorningActivationTrace('[MA.event] heys:meal-flow-finished', detail);
     setTimeout(() => maybeOpenMorningActivationFollowup('meal-flow-finished'), 220);
+  });
+
+  window.addEventListener('heys:morning-activation-followup-completed', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail.dateKey || getTodayKey();
+    if (dateKey !== getTodayKey()) return;
+    setTimeout(() => markMorningActivationFollowupCompleted(dateKey, detail.source || 'event'), 0);
   });
 
   // module-init trigger removed: at page-load localStorage may not yet contain today's day data
