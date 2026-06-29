@@ -421,6 +421,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var hIntensity = hActivation.intensity || 'super_light';
       var hWeight = MORNING_ACTIVATION_CASCADE_BONUS[hIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
       var hSort = parseTime(hActivation.firstMealTime || '') || 610;
+      var hIsReplacement = hActivation.replacement === 'first_half_training';
       evts.push({
         type: 'morning_activation',
         icon: EVENT_ICONS.morningActivation,
@@ -428,7 +429,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         weight: hWeight,
         time: hActivation.firstMealTime || null,
         sortKey: hSort,
-        label: 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[hIntensity] || 'суперлегкая')
+        label: hIsReplacement
+          ? 'Тренировка вместо зарядки'
+          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[hIntensity] || 'суперлегкая')
       });
     }
 
@@ -2477,6 +2480,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var activationIntensity = morningActivation.intensity || 'super_light';
       var activationRaw = MORNING_ACTIVATION_CASCADE_BONUS[activationIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
       var activationWeight = activationRaw * activationConfidence;
+      var activationIsReplacement = morningActivation.replacement === 'first_half_training';
       rawWeights.morningActivation = activationRaw;
       score += activationWeight;
       var activationTimeMins = parseTime(morningActivation.firstMealTime || '');
@@ -2485,7 +2489,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         time: morningActivation.firstMealTime || null,
         positive: true,
         icon: EVENT_ICONS.morningActivation,
-        label: 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[activationIntensity] || 'суперлегкая'),
+        label: activationIsReplacement
+          ? 'Тренировка вместо зарядки'
+          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[activationIntensity] || 'суперлегкая'),
         sortKey: activationTimeMins !== null ? activationTimeMins : 610,
         weight: activationWeight
       });

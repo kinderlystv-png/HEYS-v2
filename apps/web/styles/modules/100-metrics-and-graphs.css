@@ -6502,6 +6502,11 @@
   color: #16a34a;
 }
 
+.activity-charge-card-status--replacement {
+  background: rgba(59, 130, 246, 0.14);
+  color: #2563eb;
+}
+
 .activity-charge-card .compact-trainings {
   gap: 0;
 }
@@ -6573,6 +6578,11 @@
   padding: 10px 12px;
 }
 
+.ma-done-notice-card--replacement {
+  border-color: rgba(59, 130, 246, 0.22);
+  background: rgba(239, 246, 255, 0.82);
+}
+
 .ma-done-notice-icon {
   flex: 0 0 auto;
   font-size: 16px;
@@ -6582,6 +6592,10 @@
   color: #166534;
   font-size: 14px;
   font-weight: 800;
+}
+
+.ma-done-notice-card--replacement .ma-done-notice-text {
+  color: #1d4ed8;
 }
 
 /* Правая колонка: быт + кнопка */

@@ -6,6 +6,7 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   const MA_ZONE_SIGS_MONTH = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+  const MA_REPLACEMENT_FIRST_HALF_TRAINING = 'first_half_training';
 
   const MA_SKIP_REASON_LABEL_FALLBACK = {
     no_time: 'Не было времени',
@@ -162,6 +163,11 @@
       const household = Array.isArray(day?.householdActivities) ? day.householdActivities : [];
       if (household.some((h) => h && h.source === 'morning_activation')) return true;
       return false;
+    })();
+    const isMorningActivationReplacement = (() => {
+      if (day?.morningActivation?.replacement === MA_REPLACEMENT_FIRST_HALF_TRAINING) return true;
+      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+      return trainings.some((t) => t && t.source === 'morning_activation_replacement');
     })();
 
     const showMaSkippedChargeNotice = day?.morningActivation?.status === 'missed' && !hasMorningActivationDone;
@@ -419,15 +425,15 @@
             className: 'activity-charge-card-status activity-charge-card-status--missed'
           }, 'пропущено'),
           showMaDoneChargeNotice && React.createElement('span', {
-            className: 'activity-charge-card-status activity-charge-card-status--done'
-          }, 'сделано')
+            className: 'activity-charge-card-status ' + (isMorningActivationReplacement ? 'activity-charge-card-status--replacement' : 'activity-charge-card-status--done')
+          }, isMorningActivationReplacement ? 'тренировка' : 'сделано')
         ),
         showMaDoneChargeNotice && React.createElement('div', {
-          className: 'ma-done-notice-card',
+          className: 'ma-done-notice-card' + (isMorningActivationReplacement ? ' ma-done-notice-card--replacement' : ''),
           role: 'status'
         },
-          React.createElement('span', { className: 'ma-done-notice-icon', 'aria-hidden': 'true' }, '✅'),
-          React.createElement('span', { className: 'ma-done-notice-text' }, 'Сегодня выполнено')
+          React.createElement('span', { className: 'ma-done-notice-icon', 'aria-hidden': 'true' }, isMorningActivationReplacement ? '🏋️' : '✅'),
+          React.createElement('span', { className: 'ma-done-notice-text' }, isMorningActivationReplacement ? 'Тренировка вместо зарядки' : 'Сегодня выполнено')
         ),
         showMaSkippedChargeNotice && React.createElement('div', {
           className: 'ma-skip-notice-card',

@@ -2415,6 +2415,10 @@
       return false;
     }
 
+    function isMorningActivationReplacementTraining(training) {
+      return !!(training && typeof training === 'object' && training.source === 'morning_activation_replacement');
+    }
+
     function getTrainingDisplayLabel(training, trainingType, index) {
       if (isMorningActivationTraining(training)) return 'Зарядка';
       const customLabel = typeof training?.activityLabel === 'string'
@@ -2522,7 +2526,7 @@
       const previousTrainings = safeTrainings.map(cloneTraining);
       const previousVisibleTrainings = safeVisibleTrainings;
       const removedTraining = previousTrainings[ti] || emptyTraining;
-      const removedMorningActivation = isMorningActivationTraining(removedTraining);
+      const removedMorningActivation = isMorningActivationTraining(removedTraining) || isMorningActivationReplacementTraining(removedTraining);
       const previousMorningActivation = removedMorningActivation
         ? { ...(HEYS.Day?.getDay?.()?.morningActivation || {}) }
         : null;
@@ -2546,8 +2550,11 @@
               if (removedMorningActivation) {
                 nextDay.morningActivation = {
                   ...(prevDay.morningActivation || {}),
+                  status: 'pending',
+                  replacement: null,
                   clearedByUser: true,
-                  clearedAt: nextDay.updatedAt
+                  clearedAt: nextDay.updatedAt,
+                  followupSnoozeUntilMealCount: null
                 };
               }
               return nextDay;

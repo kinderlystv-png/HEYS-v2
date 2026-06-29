@@ -272,6 +272,7 @@
     const foundTraining = trainings.find((t) => {
       if (!t) return false;
       if (t.source === 'morning_activation') return true;
+      if (t.source === 'morning_activation_replacement') return true;
       const label = typeof t.activityLabel === 'string' ? t.activityLabel.trim().toLowerCase() : '';
       if (label === 'зарядка') return true;
       // Тренировка добавлена вручную через пикер: strength + zone-сигнатура зарядки + без кастомного названия

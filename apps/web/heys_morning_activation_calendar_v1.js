@@ -12,6 +12,7 @@
   const CALENDAR_VIEW_KEY = 'morningActivationCalendarView';
   const VIEW_28_DAYS = 'last_28_days';
   const VIEW_MONTH = 'calendar_month';
+  const REPLACEMENT_FIRST_HALF_TRAINING = 'first_half_training';
 
   function profileLsGet() {
     const u = HEYS.utils || {};
@@ -139,8 +140,16 @@
       postState: normalizePostState(stored.postState, null),
       postEffect: stored.postEffect && typeof stored.postEffect === 'object' ? stored.postEffect : null,
       copyId: stored.copyId || null,
-      decidedAt: stored.decidedAt || null
+      decidedAt: stored.decidedAt || null,
+      replacement: stored.replacement || null
     };
+  }
+
+  function hasMorningActivationReplacementEvidence(dayData) {
+    if (!dayData || typeof dayData !== 'object') return false;
+    if (dayData.morningActivation?.replacement === REPLACEMENT_FIRST_HALF_TRAINING) return true;
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
+    return trainings.some((t) => t && t.source === 'morning_activation_replacement');
   }
 
   /** Align with activity card: charge logged as training/household counts as done for habit calendar. */
@@ -164,6 +173,7 @@
     const dayData = (typeof readDayFn === 'function' ? readDayFn(dateKey) : null) || {};
     const state = normalizeMorningActivationState(dateKey, dayData, readDayFn);
     if (state.status === 'missed') return 'missed';
+    if (state.replacement === REPLACEMENT_FIRST_HALF_TRAINING || hasMorningActivationReplacementEvidence(dayData)) return 'replacement';
     if (state.status === 'done') return 'done';
     if (hasMorningActivationEvidence(dayData)) return 'done';
     // Будущие даты (режим «Месяц») — без окраски
@@ -237,11 +247,13 @@
       grid.push({ isEmpty: true, id: `tail-${grid.length}` });
     }
 
-    const doneCount = dayEntries.filter((item) => item.status === 'done').length;
+    const doneCount = dayEntries.filter((item) => item.status === 'done' || item.status === 'replacement').length;
+    const replacementCount = dayEntries.filter((item) => item.status === 'replacement').length;
     const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
     return {
       grid,
       doneCount,
+      replacementCount,
       missedCount,
       viewMode: isMonthView ? VIEW_MONTH : VIEW_28_DAYS,
       title: isMonthView
@@ -355,9 +367,14 @@
           }
           const rowStatus = cell.status === 'done'
             ? 'is-done'
-            : (cell.status === 'missed' ? 'is-missed' : 'is-neutral');
+            : (cell.status === 'replacement' ? 'is-replacement' : (cell.status === 'missed' ? 'is-missed' : 'is-neutral'));
           const weekend = isWeekendDateKey(cell.dateKey);
-          const title = `${cell.dateKey}: ${cell.status === 'done' ? 'сделано' : (cell.status === 'missed' ? 'пропущено' : 'нет отметки')}`;
+          const statusTitle = cell.status === 'done'
+            ? 'сделано'
+            : (cell.status === 'replacement'
+              ? 'тренировка вместо зарядки'
+              : (cell.status === 'missed' ? 'пропущено' : 'нет отметки'));
+          const title = `${cell.dateKey}: ${statusTitle}`;
           return React.createElement('div', {
             key: cell.id,
             className: 'ma-habit-cal-cell ' + rowStatus + (cell.isToday ? ' is-today' : '') + (weekend ? ' is-weekend' : ''),
@@ -372,6 +389,7 @@
       ),
       React.createElement('div', { className: 'ma-habit-cal-footer' },
         React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
+        calendarData.replacementCount > 0 && React.createElement('span', null, `Тренировкой: ${calendarData.replacementCount}`),
         React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
       )
     );
@@ -384,6 +402,7 @@
     saveMorningActivationCalendarViewPreference,
     VIEW_28_DAYS,
     VIEW_MONTH,
-    WEEKDAY_SHORT
+    WEEKDAY_SHORT,
+    REPLACEMENT_FIRST_HALF_TRAINING
   };
 })(window);

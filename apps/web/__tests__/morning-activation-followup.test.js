@@ -108,6 +108,25 @@ describe('morning activation followup decision', () => {
     expect(result.firstMealTime).toBe('09:00');
   });
 
+  it('does not reopen when first-half training replacement is the synced activity evidence', () => {
+    const utils = loadModule();
+
+    const result = utils.shouldOpenMorningActivationFollowup(mealDay({
+      trainings: [{
+        type: 'strength',
+        activityLabel: 'Тренировка в первой половине дня',
+        source: 'morning_activation_replacement',
+        z: [0, 45, 0, 0],
+      }],
+      morningActivation: {
+        status: 'pending',
+        firstMealTime: '09:00',
+      },
+    }));
+
+    expect(result.ok).toBe(false);
+  });
+
   it('does not reopen after Сделаю позже until another meal is added', () => {
     const utils = loadModule();
 
