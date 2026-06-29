@@ -9,6 +9,7 @@ const originalReact = global.React;
 const originalWindowReact = window.React;
 const originalRequestAnimationFrame = global.requestAnimationFrame;
 const originalWindowRequestAnimationFrame = window.requestAnimationFrame;
+const originalWindowDispatchEvent = window.dispatchEvent;
 
 function loadModule() {
   const srcPath = path.resolve(__dirname, '../heys_day_add_product.js');
@@ -125,6 +126,9 @@ describe('Meal preset bulk add', () => {
       createElement: (type, props, ...children) => ({ type, props: props || {}, children })
     };
 
+    if (typeof window.dispatchEvent !== 'function') {
+      window.dispatchEvent = () => true;
+    }
     dispatchEventSpy = vi.spyOn(window, 'dispatchEvent').mockImplementation(() => true);
 
     loadModule();
@@ -139,6 +143,7 @@ describe('Meal preset bulk add', () => {
     window.React = originalWindowReact;
     global.requestAnimationFrame = originalRequestAnimationFrame;
     window.requestAnimationFrame = originalWindowRequestAnimationFrame;
+    window.dispatchEvent = originalWindowDispatchEvent;
   });
 
   it('adds all preset products with one state update and one forced flush', () => {
@@ -188,10 +193,19 @@ describe('Meal preset bulk add', () => {
     expect(window.HEYS.Day.setBlockCloudUpdates).toHaveBeenCalledWith(1781692230000);
     expect(window.HEYS.Day.setLastLoadedUpdatedAt).toHaveBeenCalledWith(1781692227000);
     expect(window.HEYS.Day.markPendingMutation).toHaveBeenCalledWith('2026-06-17');
-    expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchEventSpy).toHaveBeenCalledTimes(2);
     expect(dispatchEventSpy.mock.calls[0][0].detail.count).toBe(4);
     expect(dispatchEventSpy.mock.calls[0][0].detail.source).toBe('day-add-products-bulk');
     expect(dispatchEventSpy.mock.calls[0][0].detail.products).toHaveLength(4);
+    expect(dispatchEventSpy.mock.calls[1][0]).toEqual(expect.objectContaining({
+      type: 'heys:meal-flow-finished',
+      detail: expect.objectContaining({
+        source: 'day-add-products-bulk',
+        dateKey: '2026-06-17',
+        mealIndex: 0,
+        count: 4,
+      }),
+    }));
 
     vi.runAllTimers();
 
@@ -249,6 +263,49 @@ describe('Meal preset bulk add', () => {
     expect(currentDay.meals[1].items).toHaveLength(0);
   });
 
+  it('dispatches meal-flow-finished after a single product add', () => {
+    const setDay = vi.fn((updater) => {
+      currentDay = updater(currentDay);
+      return currentDay;
+    });
+
+    const button = window.HEYS.dayComponents.MealAddProduct({
+      mi: 0,
+      products: [],
+      date: '2026-06-17',
+      day: currentDay,
+      setDay,
+      isCurrentMeal: true,
+      multiProductMode: false
+    });
+
+    button.props.onClick();
+
+    const modalOptions = window.HEYS.AddProductStep.show.mock.calls[0][0];
+    modalOptions.onAdd({
+      mealIndex: 0,
+      mealId: 'meal-1',
+      product: makeProduct('p-single', 'Chicken fillet'),
+      grams: 120
+    });
+
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heysProductAdded',
+    }));
+
+    vi.advanceTimersByTime(160);
+
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:meal-flow-finished',
+      detail: expect.objectContaining({
+        source: 'day-add-product-single',
+        dateKey: '2026-06-17',
+        mealIndex: 0,
+        mealId: 'meal-1',
+      }),
+    }));
+  });
+
   it('wires the ready-sets overlay to onAddMany as the primary apply path', () => {
     const source = readAddProductStepSource();
 
@@ -258,6 +315,9 @@ describe('Meal preset bulk add', () => {
     expect(source).toContain("pushAddTrace('🧩 Preset bulk -> onAddMany'");
     expect(source).toContain('context.onAddMany({');
     expect(source).toContain("console.warn('[HEYS.presets] ⚠️ onAddMany missing, falling back to sequential onAdd')");
+    expect(source).toContain('dispatchMealFlowFinishedFromContext');
+    expect(source).toContain("'add-product-step-autorepeat-complete'");
+    expect(source).toContain("'add-product-step-preset-complete'");
   });
 
   it('keeps public addProductToMeal return value tied to the mutation result', () => {
@@ -276,6 +336,8 @@ describe('Meal preset bulk add', () => {
     expect(mealsSource).toContain('addProductsToMealRef.current = addProductsToMeal;');
     expect(mealsSource).toContain('onAddMany: ({ entries, mealIndex: addMealIndex = targetMealIndex');
     expect(mealsSource).toContain("source: options?.source || 'day-add-products-to-meal'");
+    expect(mealsSource).toContain("source: 'day-inline-add-product-single'");
+    expect(mealsSource).toContain('dispatchMealFlowFinished({');
     expect(mealsSource).toContain('productIds: items.map((item) => item.product_id)');
     expect(tabSource).toContain('addProductsToMeal,');
     expect(effectsSource).toContain('HEYS.Day.addProductsToMeal = (mi, entries, options) =>');

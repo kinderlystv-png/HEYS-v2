@@ -170,6 +170,17 @@
     } catch (_) { }
   }
 
+  function dispatchMealFlowFinished(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+        detail: {
+          source: 'day-add-product-single',
+          ...(detail || {})
+        }
+      }));
+    } catch (_) { }
+  }
+
   // ✅ Общий helper: summary-модалка для multiProductMode
   async function showMultiProductSummary({
     day,
@@ -821,6 +832,13 @@
           origin: _origin || 'bulk',
           source: 'day-add-products-bulk'
         });
+        dispatchMealFlowFinished({
+          source: 'day-add-products-bulk',
+          dateKey: currentDay?.date || date || null,
+          mealIndex: targetMealIndex,
+          mealId: targetMealId || null,
+          count: newItems.length
+        });
       };
 
       const handleAdd = ({ product, grams, mealIndex, mealId, _traceId, _origin, _presetBatch }) => {
@@ -1004,7 +1022,32 @@
         // 🆕 R-INS-PRESET-AS-ONE (2026-05-14): preset items handled by handleAddAll —
         // оно само закрывает overlay/модалку, не нужно показывать summary N раз.
         if (_presetBatch) {
+          const batchIndex = Number(_presetBatch?.index);
+          const batchTotal = Number(_presetBatch?.total);
+          if (Number.isFinite(batchIndex) && Number.isFinite(batchTotal) && batchIndex + 1 >= batchTotal) {
+            setTimeout(() => {
+              const latestDayForFinish = HEYS.Day?.getDay?.() || currentDay || {};
+              dispatchMealFlowFinished({
+                source: 'day-add-product-preset-fallback',
+                dateKey: latestDayForFinish?.date || date || null,
+                mealIndex,
+                mealId,
+                count: batchTotal
+              });
+            }, 160);
+          }
           return;
+        }
+
+        if (!activeMultiProductMode) {
+          setTimeout(() => {
+            const latestDayForFinish = HEYS.Day?.getDay?.() || currentDay || {};
+            dispatchMealFlowFinished({
+              dateKey: latestDayForFinish?.date || date || null,
+              mealIndex,
+              mealId
+            });
+          }, 160);
         }
 
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {

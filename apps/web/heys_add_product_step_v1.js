@@ -21,6 +21,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (isDayTraceDebugEnabled()) console.info(...args);
   }
 
+  function dispatchMealFlowFinishedFromContext(source, context, extra = {}) {
+    try {
+      window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+        detail: {
+          source,
+          dateKey: context?.dateKey || HEYS.Day?.getDay?.()?.date || null,
+          mealIndex: context?.mealIndex ?? null,
+          mealId: context?.mealId ?? null,
+          ...extra,
+        },
+      }));
+    } catch (_) {
+      // ignore
+    }
+  }
+
   function BarcodeScanIcon() {
     return React.createElement('svg', {
       className: 'aps-search-barcode-icon',
@@ -2385,6 +2401,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
 
           // autoRepeat исчерпан ИЛИ обычный режим → закрываем всю модалку
+          dispatchMealFlowFinishedFromContext('add-product-step-preset-complete', context, {
+            count: itemCount,
+            presetName: presetName || null,
+          });
           if (HEYS.StepModal?.hide) {
             HEYS.StepModal.hide({ scrollToDiary: true });
           } else {
@@ -7790,6 +7810,7 @@ NOVA: 1
         if (context?.hasAutoRepeat && typeof context?.consumeAutoRepeatStep === 'function') {
           const remaining = context.consumeAutoRepeatStep();
           if (remaining <= 0) {
+            dispatchMealFlowFinishedFromContext('add-product-step-autorepeat-complete', context);
             HEYS.StepModal.hide({ scrollToDiary: true });
             return;
           }
@@ -8626,6 +8647,13 @@ NOVA: 1
               mealIndex,
               mealId
             });
+            setTimeout(() => {
+              dispatchMealFlowFinishedFromContext('add-product-step-complete', {
+                ...context,
+                mealIndex,
+                mealId,
+              });
+            }, 160);
           } catch (error) {
             pushAddTrace('❌ onAdd callback failed (onComplete)', {
               traceId,

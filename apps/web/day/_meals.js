@@ -41,6 +41,17 @@
             + '-' + String(d.getDate()).padStart(2, '0');
     }
 
+    function dispatchMealFlowFinished(detail) {
+        try {
+            window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+                detail: {
+                    source: 'day-meals',
+                    ...(detail || {}),
+                },
+            }));
+        } catch (_) { /* noop */ }
+    }
+
     // =========================
     // MealCard
     // =========================
@@ -3983,6 +3994,16 @@
                                             if (scrollToDiaryHeading) scrollToDiaryHeading();
                                             return;
                                         }
+                                        if (!multiProductMode) {
+                                            setTimeout(() => {
+                                                dispatchMealFlowFinished({
+                                                    source: 'day-inline-add-product-single',
+                                                    dateKey: newDayData?.date || date || null,
+                                                    mealIndex: addMealIndex,
+                                                    mealId: newDayData?.meals?.[addMealIndex]?.id || null,
+                                                });
+                                            }, 160);
+                                        }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
                                             // Build updated day inline: setDay is async and
                                             // HEYS.Day.getDay() (dayRef.current) won't reflect
@@ -4621,6 +4642,12 @@
                     source: 'day-add-product-to-meal'
                 }
             }));
+            dispatchMealFlowFinished({
+                source: 'day-add-product-to-meal',
+                dateKey: newDayData?.date || date || null,
+                mealIndex: mi,
+                mealId: newDayData?.meals?.[mi]?.id || null,
+            });
             emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: mi, productId: item.product_id });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
@@ -4712,6 +4739,14 @@
                     origin: options?.origin || 'batch',
                 }
             }));
+            dispatchMealFlowFinished({
+                source: options?.source || 'day-add-products-to-meal',
+                dateKey: newDayData?.date || date || null,
+                mealIndex: mi,
+                mealId: newDayData?.meals?.[mi]?.id || null,
+                count: items.length,
+                origin: options?.origin || 'batch',
+            });
             emitPlannerReplanRequest('PRODUCT_ADDED', {
                 mealIndex: mi,
                 productId: items[0]?.product_id,
