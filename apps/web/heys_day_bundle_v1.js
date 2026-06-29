@@ -9246,12 +9246,37 @@
         };
     }
 
+    function getCompactMealActivityContext(meal, dayData, allMeals, pIndex) {
+        if (!HEYS.InsulinWave?.calculateActivityContext) return null;
+        if (!meal?.time || !meal?.items?.length) return null;
+
+        const [mealHour, mealMinute] = String(meal.time || '').split(':').map(Number);
+        if (Number.isNaN(mealHour) || Number.isNaN(mealMinute)) return null;
+
+        const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
+        return HEYS.InsulinWave.calculateActivityContext({
+            mealTimeMin: mealHour * 60 + mealMinute,
+            mealKcal: totals.kcal || 0,
+            trainings: dayData?.trainings || [],
+            householdMin: dayData?.householdMin || 0,
+            steps: dayData?.steps || 0,
+            allMeals,
+        });
+    }
+
+    function getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, dayData, allMeals) {
+        if (!getMealQualityScore || !meal?.items?.length) return null;
+        const activityContext = getCompactMealActivityContext(meal, dayData, allMeals, pIndex);
+        return getMealQualityScore(meal, mealTypeInfo?.type, optimum || 2000, pIndex, activityContext);
+    }
+
     function renderCollapsedMealPlaque(params) {
         const {
             meal,
             mealIndex,
             mealNumber,
             mealTypeInfo,
+            mealQuality,
             onExpand,
         } = params || {};
         const timeText = formatMealTime(meal?.time || '') || '—';
@@ -9261,10 +9286,19 @@
         const productsLabel = productsCount === 1
             ? '1 продукт'
             : (productsCount >= 2 && productsCount <= 4 ? productsCount + ' продукта' : productsCount + ' продуктов');
+        const qualityColor = mealQuality?.color || null;
+        const qualityStyle = qualityColor
+            ? {
+                background: qualityColor + '1F',
+                borderColor: qualityColor + '33',
+                boxShadow: '0 2px 8px ' + qualityColor + '18',
+            }
+            : undefined;
 
         return React.createElement('button', {
             type: 'button',
             className: 'meal-collapsed-plaque' + typeClass,
+            style: qualityStyle,
             onClick: onExpand,
             'aria-expanded': 'false',
             'aria-label': `Раскрыть приём ${mealNumber}: ${timeText}, ${typeName}, ${productsLabel}`,
@@ -9360,6 +9394,9 @@
             const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
             const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
+            const compactMealQuality = shouldRenderCollapsedPlaque
+                ? getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, day, sourceMeals)
+                : null;
 
             if (shouldRenderCollapsedPlaque) {
                 return React.createElement('div', {
@@ -9374,6 +9411,7 @@
                         mealIndex: mi,
                         mealNumber,
                         mealTypeInfo,
+                        mealQuality: compactMealQuality,
                         onExpand: () => toggleMealExpand(mi, sourceMeals),
                     })
                 );
@@ -9785,6 +9823,318 @@
     // Meals chart UI
     // =========================
     const MealsChartUI = {};
+
+    function formatWaveTime(minutes) {
+        if (!Number.isFinite(minutes)) return '--:--';
+        const normalized = ((Math.round(minutes) % 1440) + 1440) % 1440;
+        return String(Math.floor(normalized / 60)).padStart(2, '0') + ':' + String(normalized % 60).padStart(2, '0');
+    }
+
+    function formatWaveDuration(minutes) {
+        const value = Math.max(0, Math.round(Number(minutes) || 0));
+        const hours = Math.floor(value / 60);
+        const mins = value % 60;
+        if (hours > 0 && mins > 0) return hours + 'ч ' + mins + 'м';
+        if (hours > 0) return hours + 'ч';
+        return mins + 'м';
+    }
+
+    function pluralRu(value, one, few, many) {
+        const abs = Math.abs(Number(value) || 0);
+        const lastTwo = abs % 100;
+        const last = abs % 10;
+        if (lastTwo >= 11 && lastTwo <= 14) return value + ' ' + many;
+        if (last === 1) return value + ' ' + one;
+        if (last >= 2 && last <= 4) return value + ' ' + few;
+        return value + ' ' + many;
+    }
+
+    function getWaveColor(wave) {
+        const gi = Number(wave?.gi);
+        if (Number.isFinite(gi)) {
+            if (gi <= 35) return '#22c55e';
+            if (gi <= 55) return '#eab308';
+            if (gi <= 70) return '#f97316';
+            return '#ef4444';
+        }
+        return '#3b82f6';
+    }
+
+    function getWaveLoad(wave) {
+        const gl = Number(wave?.gl);
+        const duration = Math.max(1, Number(wave?.duration) || 180);
+        const durationFactor = Math.max(0.45, Math.min(1.8, duration / 180));
+        if (Number.isFinite(gl) && gl > 0) return gl * durationFactor;
+        return duration / 60;
+    }
+
+    function classifyWaveInteraction(prev, current) {
+        const overlapMinutes = Math.max(0, prev.endMin - current.startMin);
+        if (overlapMinutes <= 0) return null;
+
+        const extensionMinutes = Math.max(0, current.endMin - prev.endMin);
+        const contained = current.endMin <= prev.endMin + 20;
+        const prevLoad = Math.max(1, getWaveLoad(prev));
+        const currentLoad = Math.max(0, getWaveLoad(current));
+        const loadRatio = currentLoad / prevLoad;
+        const currentGl = Number(current?.gl);
+        const startProgress = Math.max(0, Math.min(1, (current.startMin - prev.startMin) / Math.max(1, prev.duration || (prev.endMin - prev.startMin))));
+        const isMicro = (Number.isFinite(currentGl) && currentGl < 5) || currentLoad < 4.5;
+        const isSmallAddition = (Number.isFinite(currentGl) && currentGl < 10) || loadRatio <= 0.38;
+        const startsInTail = startProgress >= 0.65;
+
+        let type = 'overlap';
+        if (isMicro) {
+            type = 'micro';
+        } else if (contained) {
+            type = 'boost';
+        } else if (isSmallAddition || startsInTail || extensionMinutes < 45) {
+            type = 'extension';
+        }
+
+        return {
+            type,
+            from: prev,
+            to: current,
+            startMin: current.startMin,
+            endMin: Math.min(prev.endMin, current.endMin),
+            overlapMinutes,
+            extensionMinutes,
+            loadRatio,
+            startProgress,
+        };
+    }
+
+    function renderDailyWaveOverview({ React, insulinWaveData }) {
+        const rawHistory = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
+        const waves = rawHistory
+            .map((wave, index) => {
+                const startMin = Number(wave?.startMin);
+                const endMin = Number(wave?.endMin);
+                if (!Number.isFinite(startMin) || !Number.isFinite(endMin) || endMin <= startMin) return null;
+                return {
+                    ...wave,
+                    _index: index,
+                    startMin,
+                    endMin,
+                    duration: Number(wave?.duration) || (endMin - startMin),
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+        if (waves.length === 0) return null;
+
+        const interactions = [];
+        for (let idx = 1; idx < waves.length; idx += 1) {
+            const prev = waves[idx - 1];
+            const current = waves[idx];
+            const interaction = classifyWaveInteraction(prev, current);
+            if (interaction) interactions.push(interaction);
+        }
+        const overlaps = interactions.filter((item) => item.type === 'overlap');
+        const extensions = interactions.filter((item) => item.type === 'extension');
+
+        const firstStart = Math.min(...waves.map((wave) => wave.startMin));
+        const lastEnd = Math.max(...waves.map((wave) => wave.endMin));
+        const rangeStart = Math.max(0, firstStart - 25);
+        const rangeEnd = Math.max(rangeStart + 90, lastEnd + 35);
+        const totalRange = Math.max(1, rangeEnd - rangeStart);
+        const svgW = 320;
+        const svgH = 132;
+        const padX = 14;
+        const baseline = 88;
+        const minToX = (minutes) => padX + ((minutes - rangeStart) / totalRange) * (svgW - padX * 2);
+        const maxOverlap = overlaps.reduce((max, item) => Math.max(max, item.overlapMinutes), 0);
+        const totalOverlap = overlaps.reduce((sum, item) => sum + item.overlapMinutes, 0);
+        const meaningfulExtensions = extensions.filter((item) => Math.max(item.extensionMinutes || 0, item.overlapMinutes || 0) >= 45);
+        const visibleInteractions = overlaps.concat(meaningfulExtensions);
+        const totalExtension = meaningfulExtensions.reduce((sum, item) => sum + Math.max(1, item.extensionMinutes || item.overlapMinutes), 0);
+        const tone = maxOverlap >= 90 ? 'high' : overlaps.length > 0 ? 'warn' : meaningfulExtensions.length > 0 ? 'soft' : 'ok';
+        let statusText = 'без критичных';
+        if (overlaps.length > 0) {
+            statusText = 'нахлёст ' + formatWaveDuration(totalOverlap);
+        } else if (meaningfulExtensions.length > 0) {
+            statusText = 'продление ' + formatWaveDuration(totalExtension);
+        }
+        const mergedWaveWindows = waves.reduce((acc, wave) => {
+            const last = acc[acc.length - 1];
+            if (!last || wave.startMin > last.endMin) {
+                acc.push({ startMin: wave.startMin, endMin: wave.endMin });
+                return acc;
+            }
+            last.endMin = Math.max(last.endMin, wave.endMin);
+            return acc;
+        }, []);
+        const lipolysisZones = [];
+        for (let idx = 1; idx < mergedWaveWindows.length; idx += 1) {
+            const prev = mergedWaveWindows[idx - 1];
+            const current = mergedWaveWindows[idx];
+            const gapStart = prev.endMin;
+            const gapEnd = current.startMin;
+            if (gapEnd - gapStart < 35) continue;
+            lipolysisZones.push({ startMin: gapStart, endMin: gapEnd, duration: gapEnd - gapStart });
+        }
+        const idealGapMin = 180;
+        const idealGapMax = 240;
+        const targetWindows = waves.slice(0, -1)
+            .map((wave, index) => ({
+                _index: index,
+                startMin: wave.startMin + idealGapMin,
+                endMin: wave.startMin + idealGapMax,
+            }))
+            .filter((window) => window.endMin >= rangeStart && window.startMin <= rangeEnd);
+
+        const buildWavePath = (wave, waveIndex) => {
+            const x1 = Math.max(padX, Math.min(svgW - padX, minToX(wave.startMin)));
+            const x2 = Math.max(padX, Math.min(svgW - padX, minToX(wave.endMin)));
+            const width = Math.max(10, x2 - x1);
+            const lift = Math.min(42, Math.max(20, 16 + (Number(wave.duration) || width) / 10));
+            const laneShift = (waveIndex % 3) * 5;
+            const baseY = baseline - laneShift;
+            const points = [];
+            for (let step = 0; step <= 12; step += 1) {
+                const t = step / 12;
+                const x = x1 + width * t;
+                const crest = Math.sin(Math.PI * t);
+                const shoulder = 0.18 + 0.82 * crest;
+                const y = baseY - lift * shoulder;
+                points.push([x, y]);
+            }
+            const line = points.map((point, idx) => (idx === 0 ? 'M ' : 'L ') + point[0].toFixed(1) + ' ' + point[1].toFixed(1)).join(' ');
+            return line + ' L ' + x2.toFixed(1) + ' ' + baseY.toFixed(1) + ' L ' + x1.toFixed(1) + ' ' + baseY.toFixed(1) + ' Z';
+        };
+
+        return React.createElement('section', {
+            className: 'day-wave-overview day-wave-overview--' + tone,
+            'aria-label': 'Все инсулиновые волны за день'
+        },
+            React.createElement('div', { className: 'day-wave-overview__head' },
+                React.createElement('div', { className: 'day-wave-overview__title' },
+                    React.createElement('span', { 'aria-hidden': 'true' }, '〰️'),
+                    React.createElement('span', null, 'Волны за день')
+                ),
+                React.createElement('span', { className: 'day-wave-overview__status' }, statusText)
+            ),
+            React.createElement('div', { className: 'day-wave-overview__canvas' },
+                React.createElement('svg', {
+                    width: '100%',
+                    height: svgH,
+                    viewBox: '0 0 ' + svgW + ' ' + svgH,
+                    role: 'img',
+                    'aria-label': 'График инсулиновых волн за день'
+                },
+                    lipolysisZones.map((zone, index) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(zone.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(zone.endMin)));
+                        const width = Math.max(0, x2 - x1);
+                        if (width < 5) return null;
+                        return React.createElement('g', {
+                            key: 'lipolysis-' + index,
+                            className: 'day-wave-overview__lipolysis'
+                        },
+                            React.createElement('rect', {
+                                className: 'day-wave-overview__lipolysis-zone',
+                                x: x1,
+                                y: 22,
+                                width,
+                                height: 76,
+                                rx: 10
+                            }),
+                            width >= 48 && React.createElement('text', {
+                                x: x1 + width / 2,
+                                y: 35,
+                                textAnchor: 'middle',
+                                className: 'day-wave-overview__lipolysis-label'
+                            }, 'липолиз')
+                        );
+                    }),
+                    targetWindows.map((window) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(window.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(window.endMin)));
+                        const width = Math.max(0, x2 - x1);
+                        if (width < 5) return null;
+                        return React.createElement('line', {
+                            key: 'target-window-' + window._index,
+                            className: 'day-wave-overview__target-window',
+                            x1,
+                            y1: 106,
+                            x2,
+                            y2: 106
+                        });
+                    }),
+                    React.createElement('line', {
+                        x1: padX,
+                        y1: baseline,
+                        x2: svgW - padX,
+                        y2: baseline,
+                        className: 'day-wave-overview__axis'
+                    }),
+                    visibleInteractions.map((interaction, index) => {
+                        const x1 = Math.max(padX, Math.min(svgW - padX, minToX(interaction.startMin)));
+                        const x2 = Math.max(padX, Math.min(svgW - padX, minToX(interaction.endMin)));
+                        return React.createElement('rect', {
+                            key: 'interaction-' + index,
+                            className: 'day-wave-overview__interaction-zone day-wave-overview__interaction-zone--' + interaction.type,
+                            x: x1,
+                            y: 18,
+                            width: Math.max(4, x2 - x1),
+                            height: 82,
+                            rx: 8
+                        });
+                    }),
+                    waves.map((wave, index) => {
+                        const color = getWaveColor(wave);
+                        return React.createElement('path', {
+                            key: 'wave-path-' + wave._index,
+                            className: 'day-wave-overview__wave' + (wave.isActive ? ' is-active' : ''),
+                            d: buildWavePath(wave, index),
+                            style: {
+                                '--wave-color': color,
+                                fill: color,
+                                stroke: color,
+                            }
+                        });
+                    }),
+                    waves.map((wave) => {
+                        const x = Math.max(padX, Math.min(svgW - padX, minToX(wave.startMin)));
+                        const label = formatWaveTime(wave.startMin);
+                        return React.createElement('g', {
+                            key: 'wave-meal-' + wave._index,
+                            className: 'day-wave-overview__meal'
+                        },
+                            React.createElement('circle', { cx: x, cy: baseline, r: 6 }),
+                            React.createElement('text', {
+                                x,
+                                y: baseline + 4,
+                                textAnchor: 'middle'
+                            }, '🍽'),
+                            React.createElement('text', {
+                                x,
+                                y: svgH - 9,
+                                textAnchor: 'middle',
+                                className: 'day-wave-overview__time'
+                            }, label)
+                        );
+                    })
+                )
+            ),
+            visibleInteractions.length > 0 && React.createElement('div', { className: 'day-wave-overview__overlaps' },
+                visibleInteractions.slice(0, 3).map((interaction, index) => {
+                    const label = interaction.type === 'overlap'
+                        ? 'нахлёст ' + formatWaveDuration(interaction.overlapMinutes)
+                        : 'продление ' + formatWaveDuration(Math.max(1, interaction.extensionMinutes || interaction.overlapMinutes));
+                    return React.createElement('span', {
+                        key: 'interaction-label-' + index,
+                        className: 'day-wave-overview__interaction-label day-wave-overview__interaction-label--' + interaction.type
+                    }, formatWaveTime(interaction.from.startMin) + ' → ' + formatWaveTime(interaction.to.startMin) + ': ' + label);
+                })
+            )
+        );
+    }
+
+    MealsChartUI.renderDailyWaveOverview = renderDailyWaveOverview;
+
     MealsChartUI.renderMealsChart = function renderMealsChart({
         React,
         mealsChartData,
@@ -12552,8 +12902,17 @@
     let _LazyMount = null;
     let _DiaryCompactSummary = null;
     let _DiaryFiberPanel = null;
+    let _DiaryOptionalPanels = null;
+    let _DiaryPanelGate = null;
 
     const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
+    const FIBER_PANEL_PROFILE_FIELD = 'showDiaryFiberPanel';
+    const SCORE_RISK_TREND_PANEL_PROFILE_FIELD = 'showDiaryScoreRiskTrendPanel';
+    const WATER_PANEL_PROFILE_FIELD = 'showDiaryWaterPanel';
+    const PLANNER_PANEL_PROFILE_FIELD = 'showDiaryPlannerPanel';
+    const SUPPLEMENTS_PANEL_PROFILE_FIELD = 'showDiarySupplementsPanel';
+    const DISTRIBUTION_PANEL_PROFILE_FIELD = 'showDiaryDistributionPanel';
+    const INSULIN_WAVE_PANEL_PROFILE_FIELD = 'showDiaryInsulinWavePanel';
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -12602,6 +12961,81 @@
         } catch (_) {
             // noop
         }
+    }
+
+    function getDiaryPanelVisibilitySource(profile, field) {
+        const stored = window.HEYS?.utils?.lsGet?.('heys_profile', {}) || {};
+        if (stored && typeof stored === 'object' && Object.prototype.hasOwnProperty.call(stored, field)) {
+            return stored;
+        }
+        return profile && typeof profile === 'object' ? profile : stored;
+    }
+
+    function readDiaryFiberPanelEnabled(profile) {
+        const source = getDiaryPanelVisibilitySource(profile, FIBER_PANEL_PROFILE_FIELD);
+        return source?.[FIBER_PANEL_PROFILE_FIELD] !== false;
+    }
+
+    function readDiaryPanelEnabled(profile, field) {
+        const source = getDiaryPanelVisibilitySource(profile, field);
+        return source?.[field] !== false;
+    }
+
+    function getDiaryPanelGateComponent(React) {
+        if (_DiaryPanelGate) return _DiaryPanelGate;
+
+        _DiaryPanelGate = React.memo(function DiaryPanelGate(props) {
+            const { profile, field, children } = props || {};
+            const [enabled, setEnabled] = React.useState(function initDiaryPanelGateEnabled() {
+                return readDiaryPanelEnabled(profile, field);
+            });
+
+            React.useEffect(function syncDiaryPanelGateFromProfile() {
+                setEnabled(readDiaryPanelEnabled(profile, field));
+            }, [profile?.[field], field]);
+
+            React.useEffect(function listenDiaryPanelGateVisibility() {
+                const sync = function syncDiaryPanelGateVisibility() {
+                    setEnabled(readDiaryPanelEnabled(null, field));
+                };
+                window.addEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                window.addEventListener('heys:profile-updated', sync);
+                return function cleanupDiaryPanelGateVisibility() {
+                    window.removeEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                    window.removeEventListener('heys:profile-updated', sync);
+                };
+            }, [field]);
+
+            if (!enabled) return null;
+            return React.createElement(React.Fragment, null, children);
+        });
+
+        return _DiaryPanelGate;
+    }
+
+    function writeDiaryFiberPanelEnabled(enabled) {
+        const utils = window.HEYS?.utils;
+        const currentProfile = utils?.lsGet?.('heys_profile', {}) || {};
+        const updatedProfile = {
+            ...currentProfile,
+            [FIBER_PANEL_PROFILE_FIELD]: enabled !== false,
+        };
+        utils?.lsSet?.('heys_profile', updatedProfile);
+        try {
+            window.dispatchEvent(new CustomEvent('heys:diary-fiber-panel-visibility-changed', {
+                detail: { enabled: enabled !== false }
+            }));
+            window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+                detail: {
+                    field: FIBER_PANEL_PROFILE_FIELD,
+                    fields: [FIBER_PANEL_PROFILE_FIELD],
+                    source: 'diary-fiber-panel',
+                }
+            }));
+        } catch (_) {
+            // noop
+        }
+        return updatedProfile;
     }
 
     function getSafeNormAbs(app, profile, pIndex, normAbs) {
@@ -12730,6 +13164,14 @@
         return Math.round((Number(value) || 0) * 10) / 10;
     }
 
+    function addDaysISO(dateStr, delta) {
+        const base = /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || ''))
+            ? new Date(String(dateStr) + 'T12:00:00')
+            : new Date();
+        base.setDate(base.getDate() + delta);
+        return base.toISOString().slice(0, 10);
+    }
+
     function getFiberContributions(dayData, pIndex, app, eatenFiber) {
         const models = app?.models || {};
         const getProductFromItem = models.getProductFromItem || app?.dayUtils?.getProductFromItem;
@@ -12771,6 +13213,125 @@
         return items;
     }
 
+    function classifyFiberContribution(name) {
+        const text = String(name || '').toLowerCase();
+        const soluble = /(овс|овся|ячмен|перлов|чечев|фасол|нут|горох|боб|яблок|груш|ягод|черник|малин|смород|слив|цитрус|апельс|псиллиум|семя|лен|чиа)/i.test(text);
+        const insoluble = /(греч|рис|булгур|киноа|хлеб|цельн|отруб|капуст|брокк|морков|огур|томат|салат|зелень|перец|кабач|баклаж|картоф|свекл)/i.test(text);
+        if (soluble && insoluble) return { soluble: 0.5, insoluble: 0.5 };
+        if (soluble) return { soluble: 0.7, insoluble: 0.3 };
+        if (insoluble) return { soluble: 0.3, insoluble: 0.7 };
+        return { soluble: 0.45, insoluble: 0.55 };
+    }
+
+    function getFiberTypeSummary(contributions) {
+        let soluble = 0;
+        let insoluble = 0;
+        (contributions || []).forEach(function eachContribution(item) {
+            const fiber = Number(item?.fiber) || 0;
+            if (fiber <= 0) return;
+            const ratio = item?.isFallback ? { soluble: 0.45, insoluble: 0.55 } : classifyFiberContribution(item.name);
+            soluble += fiber * ratio.soluble;
+            insoluble += fiber * ratio.insoluble;
+        });
+        const total = soluble + insoluble;
+        if (total <= 0) {
+            return { solublePct: 0, insolublePct: 0, label: 'типы: овёс + овощи' };
+        }
+        const solublePct = Math.round((soluble / total) * 100);
+        const insolublePct = Math.max(0, 100 - solublePct);
+        return {
+            solublePct,
+            insolublePct,
+            label: 'раствор. ' + solublePct + '% · грубая ' + insolublePct + '%'
+        };
+    }
+
+    function getFiberSoftPlan(eaten, target) {
+        const remaining = Math.max(0, (Number(target) || 0) - (Number(eaten) || 0));
+        if (remaining <= 0.4) {
+            return { label: 'норма без перегруза', addToday: 0, note: 'Сегодня достаточно не перегружать день.' };
+        }
+        const pct = target > 0 ? (eaten / target) * 100 : 0;
+        const softAdd = remaining > 8 || pct < 45 ? Math.min(6, remaining) : Math.min(remaining, 8);
+        const rounded = Math.max(1, Math.ceil(softAdd));
+        return {
+            label: 'мягко +' + rounded + ' г сегодня',
+            addToday: rounded,
+            note: remaining > rounded + 1
+                ? 'Остальное лучше добрать постепенно за неделю.'
+                : 'Осталось немного: можно закрыть норму сегодня.'
+        };
+    }
+
+    function isLikelyFiberProductName(name) {
+        const text = String(name || '').trim().toLowerCase();
+        if (!text) return false;
+        if (/оценоч|расч[её]т|завтрак|обед|ужин|перекус|ночной|при[её]м/.test(text)) return false;
+        return true;
+    }
+
+    function getDayFiberTotal(dayData, pIndex, app, fallbackTotal) {
+        if (!dayData || typeof dayData !== 'object') return Number(fallbackTotal) || 0;
+        if (Number(dayData?.totals?.fiber) > 0) return Number(dayData.totals.fiber) || 0;
+        if (Number(dayData?.dayTot?.fiber) > 0) return Number(dayData.dayTot.fiber) || 0;
+        const mealTotals = app?.models?.mealTotals;
+        if (typeof mealTotals === 'function') {
+            return roundFiberValue((dayData.meals || []).reduce(function sumMeals(sum, meal) {
+                const mt = mealTotals(meal, pIndex) || {};
+                return sum + (Number(mt.fiber) || 0);
+            }, 0));
+        }
+        const contributions = getFiberContributions(dayData, pIndex, app, 0);
+        return roundFiberValue(contributions.reduce(function sumContributions(sum, item) {
+            return sum + (Number(item.fiber) || 0);
+        }, 0));
+    }
+
+    function getFiberWeekSummary(dateKey, dayData, dayTot, target, pIndex, app) {
+        const loadDay = app?.dayUtils?.loadDay;
+        const days = [];
+        const sourceTotals = new Map();
+
+        for (let i = 6; i >= 0; i -= 1) {
+            const iso = addDaysISO(dateKey, -i);
+            const data = i === 0 ? dayData : (typeof loadDay === 'function' ? loadDay(iso) : null);
+            const fallbackFiber = i === 0 ? Number(dayTot?.fiber) || 0 : 0;
+            const fiber = roundFiberValue(getDayFiberTotal(data, pIndex, app, fallbackFiber));
+            const hasData = !!(data && Array.isArray(data.meals) && data.meals.some(function hasItems(meal) {
+                return Array.isArray(meal?.items) && meal.items.length > 0;
+            }));
+            if (hasData || fiber > 0) {
+                getFiberContributions(data, pIndex, app, fiber).forEach(function collectSource(item) {
+                    if (!item?.name || item.isFallback) return;
+                    if (!isLikelyFiberProductName(item.name)) return;
+                    sourceTotals.set(item.name, roundFiberValue((sourceTotals.get(item.name) || 0) + (Number(item.fiber) || 0)));
+                });
+            }
+            days.push({ date: iso, fiber, hasData });
+        }
+
+        const dataDays = days.filter(function hasDay(day) { return day.hasData || day.fiber > 0; });
+        const denominator = dataDays.length || days.length || 1;
+        const avg = roundFiberValue(days.reduce(function sumDays(sum, day) { return sum + day.fiber; }, 0) / denominator);
+        const underDays = days.filter(function isUnder(day) { return day.fiber > 0 && day.fiber < target; }).length;
+        let underStreak = 0;
+        for (let i = days.length - 1; i >= 0; i -= 1) {
+            if (days[i].fiber > 0 && days[i].fiber < target) underStreak += 1;
+            else if (days[i].fiber >= target) break;
+        }
+        const best = Array.from(sourceTotals.entries())
+            .sort(function sortSources(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0], 'ru'); })[0];
+
+        return {
+            days,
+            avg,
+            avgGap: roundFiberValue(Math.max(0, target - avg)),
+            underDays,
+            underStreak,
+            bestSource: best ? { name: best[0], fiber: best[1] } : null
+        };
+    }
+
     function getDiaryFiberPanelComponent(React) {
         if (_DiaryFiberPanel) return _DiaryFiberPanel;
 
@@ -12782,14 +13343,46 @@
         ];
 
         _DiaryFiberPanel = React.memo(function DiaryFiberPanel(props) {
-            const { app, dayData, dayTot, normAbs, pIndex } = props || {};
+            const { app, dateKey, dayData, dayTot, normAbs, pIndex, profile } = props || {};
             const [expanded, setExpanded] = React.useState(false);
+            const [enabled, setEnabled] = React.useState(function initFiberPanelEnabled() {
+                return readDiaryFiberPanelEnabled(profile);
+            });
+
+            React.useEffect(function syncFiberPanelVisibilityFromProfile() {
+                setEnabled(readDiaryFiberPanelEnabled(profile));
+            }, [profile]);
+
+            React.useEffect(function listenFiberPanelVisibility() {
+                const handleVisibilityChange = function handleVisibilityChange(event) {
+                    if (typeof event?.detail?.enabled === 'boolean') {
+                        setEnabled(event.detail.enabled);
+                    } else {
+                        setEnabled(readDiaryFiberPanelEnabled());
+                    }
+                };
+                window.addEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilityChange);
+                window.addEventListener('heys:profile-updated', handleVisibilityChange);
+                return function cleanupVisibilityListener() {
+                    window.removeEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilityChange);
+                    window.removeEventListener('heys:profile-updated', handleVisibilityChange);
+                };
+            }, []);
 
             const eaten = Math.max(0, Number(dayTot?.fiber) || 0);
             const target = Math.max(1, getSafeFiberTarget(dayTot, normAbs));
             const contributions = React.useMemo(function computeFiberContributions() {
                 return getFiberContributions(dayData, pIndex, app, eaten);
             }, [dayData, pIndex, app, eaten]);
+            const fiberTypeSummary = React.useMemo(function computeFiberTypeSummary() {
+                return getFiberTypeSummary(contributions);
+            }, [contributions]);
+            const softPlan = React.useMemo(function computeFiberSoftPlan() {
+                return getFiberSoftPlan(eaten, target);
+            }, [eaten, target]);
+            const weekSummary = React.useMemo(function computeFiberWeekSummary() {
+                return getFiberWeekSummary(dateKey || dayData?.date, dayData, dayTot, target, pIndex, app);
+            }, [dateKey, dayData, dayTot, target, pIndex, app]);
             const remaining = Math.max(0, target - eaten);
             const pct = Math.max(0, Math.round((eaten / target) * 100));
             const cappedPct = Math.min(100, pct);
@@ -12800,6 +13393,8 @@
                     : pct >= 40
                         ? { label: 'Есть база', tone: 'mid' }
                         : { label: 'Нужно добрать', tone: 'low' };
+
+            if (!enabled) return null;
 
             return React.createElement('section', {
                 className: 'diary-fiber-panel diary-fiber-panel--' + status.tone + (expanded ? ' is-expanded' : ''),
@@ -12833,12 +13428,37 @@
                         style: { width: cappedPct + '%' }
                     })
                 ),
+                React.createElement('div', { className: 'diary-fiber-panel__quick' },
+                    React.createElement('span', { className: 'diary-fiber-panel__chip diary-fiber-panel__chip--soft' }, softPlan.label),
+                    React.createElement('span', { className: 'diary-fiber-panel__chip diary-fiber-panel__chip--type' }, fiberTypeSummary.label)
+                ),
                 React.createElement('div', { className: 'diary-fiber-panel__hint' },
                     remaining > 0
-                        ? 'Осталось примерно ' + Math.ceil(remaining) + ' г. Увеличивайте постепенно и держите воду рядом.'
+                        ? 'Осталось примерно ' + Math.ceil(remaining) + ' г. ' + softPlan.note
                         : 'Сегодня клетчатка в норме. Дальше достаточно не перегружать день.'
                 ),
                 expanded && React.createElement('div', { className: 'diary-fiber-panel__details' },
+                    React.createElement('div', { className: 'diary-fiber-panel__week' },
+                        React.createElement('div', { className: 'diary-fiber-panel__section-head' },
+                            React.createElement('span', { className: 'diary-fiber-panel__section-title' }, 'Паттерн за 7 дней'),
+                            React.createElement('strong', { className: 'diary-fiber-panel__section-total' }, weekSummary.avg + ' г/день')
+                        ),
+                        React.createElement('div', { className: 'diary-fiber-panel__week-bars', 'aria-hidden': 'true' },
+                            weekSummary.days.map(function renderWeekDay(day) {
+                                const height = Math.max(8, Math.min(100, Math.round((day.fiber / target) * 100)));
+                                return React.createElement('span', {
+                                    key: day.date,
+                                    className: 'diary-fiber-panel__week-bar' + (day.fiber >= target ? ' is-done' : ''),
+                                    style: { height: height + '%' }
+                                });
+                            })
+                        ),
+                        React.createElement('div', { className: 'diary-fiber-panel__week-facts' },
+                            React.createElement('span', null, 'Недобор: ' + weekSummary.underDays + ' из 7 дней'),
+                            React.createElement('span', null, weekSummary.avgGap > 0 ? 'Обычно не хватает ' + weekSummary.avgGap + ' г' : 'Средняя норма закрыта'),
+                            React.createElement('span', null, weekSummary.bestSource ? 'Лучший источник: ' + weekSummary.bestSource.name : 'Лучший источник появится после 2-3 дней')
+                        )
+                    ),
                     React.createElement('div', { className: 'diary-fiber-panel__earned' },
                         React.createElement('div', { className: 'diary-fiber-panel__section-head' },
                             React.createElement('span', { className: 'diary-fiber-panel__section-title' }, 'Уже набрано сегодня'),
@@ -12873,12 +13493,129 @@
                                 );
                             })
                         )
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'diary-fiber-panel__hide',
+                        onClick: function hideFiberPanel() {
+                            writeDiaryFiberPanelEnabled(false);
+                            setEnabled(false);
+                        }
+                    },
+                        React.createElement('span', { 'aria-hidden': 'true' }, '✕'),
+                        React.createElement('span', null, 'Скрыть карточку')
                     )
                 )
             );
         });
 
         return _DiaryFiberPanel;
+    }
+
+    function getDiaryOptionalPanelsComponent(React) {
+        if (_DiaryOptionalPanels) return _DiaryOptionalPanels;
+
+        _DiaryOptionalPanels = React.memo(function DiaryOptionalPanels(props) {
+            const {
+                app,
+                dateKey,
+                dayData,
+                profile,
+                pIndex,
+                dayTot,
+                normAbs,
+                displayOptimum,
+                optimum,
+                mealsChart,
+                ensureSupplementsModule,
+                deferredSlot,
+            } = props || {};
+            const [visibility, setVisibility] = React.useState(function initDiaryOptionalPanels() {
+                return {
+                    planner: readDiaryPanelEnabled(profile, PLANNER_PANEL_PROFILE_FIELD),
+                    supplements: readDiaryPanelEnabled(profile, SUPPLEMENTS_PANEL_PROFILE_FIELD),
+                    distribution: readDiaryPanelEnabled(profile, DISTRIBUTION_PANEL_PROFILE_FIELD),
+                };
+            });
+
+            React.useEffect(function syncDiaryOptionalPanelsFromProfile() {
+                setVisibility({
+                    planner: readDiaryPanelEnabled(profile, PLANNER_PANEL_PROFILE_FIELD),
+                    supplements: readDiaryPanelEnabled(profile, SUPPLEMENTS_PANEL_PROFILE_FIELD),
+                    distribution: readDiaryPanelEnabled(profile, DISTRIBUTION_PANEL_PROFILE_FIELD),
+                });
+            }, [profile?.showDiaryPlannerPanel, profile?.showDiarySupplementsPanel, profile?.showDiaryDistributionPanel]);
+
+            React.useEffect(function listenDiaryOptionalPanelsVisibility() {
+                const sync = function syncDiaryOptionalPanelsVisibility() {
+                    setVisibility({
+                        planner: readDiaryPanelEnabled(null, PLANNER_PANEL_PROFILE_FIELD),
+                        supplements: readDiaryPanelEnabled(null, SUPPLEMENTS_PANEL_PROFILE_FIELD),
+                        distribution: readDiaryPanelEnabled(null, DISTRIBUTION_PANEL_PROFILE_FIELD),
+                    });
+                };
+                window.addEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                window.addEventListener('heys:profile-updated', sync);
+                return function cleanupDiaryOptionalPanelsVisibility() {
+                    window.removeEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                    window.removeEventListener('heys:profile-updated', sync);
+                };
+            }, []);
+
+            const showPlannerPanel = visibility.planner !== false;
+            const showSupplementsPanel = visibility.supplements !== false;
+            const showDistributionPanel = visibility.distribution !== false;
+            const mealRecReady = showPlannerPanel && !!app?.MealRecCard?.renderCard && !!app?.InsightsPI?.mealRecommender?.recommend;
+            const mealRecCard = mealRecReady ? (app.MealRecCard.renderCard({
+                React,
+                day: dayData,
+                prof: profile,
+                pIndex,
+                dayTot,
+                normAbs,
+                optimum: displayOptimum || optimum
+            }) || null) : null;
+
+            if (mealRecCard) {
+                if (!window.__heysLoggedMealRecRendered) {
+                    window.__heysLoggedMealRecRendered = true;
+                    console.info('[HEYS.diary] ✅ Meal rec card rendered');
+                    try {
+                        if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
+                            window.dispatchEvent(new CustomEvent('heys:diary-rendered', {
+                                detail: { mealRecRendered: true },
+                            }));
+                        }
+                    } catch (_) {}
+                }
+            } else if (mealRecReady) {
+                if (!window.__heysLoggedMealRecNull) {
+                    window.__heysLoggedMealRecNull = true;
+                    console.info('[HEYS.diary] ℹ️ Meal rec card: no recommendation');
+                }
+            }
+
+            const supplementsReady = showSupplementsPanel && !!app?.Supplements?.renderCard;
+            if (showSupplementsPanel && !supplementsReady) ensureSupplementsModule?.();
+
+            const supplementsCard = showSupplementsPanel && supplementsReady && dateKey ? (app.Supplements.renderCard({
+                dateKey,
+                dayData,
+                onForceUpdate: () => {
+                    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                        detail: { date: dateKey, source: 'supplements-update', forceReload: true }
+                    }));
+                }
+            }) || null) : null;
+
+            return React.createElement(React.Fragment, null,
+                showPlannerPanel && deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 180, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
+                showSupplementsPanel && deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 140, '💊', 'Подготавливаем план добавок на сегодня'),
+                showDistributionPanel && mealsChart
+            );
+        });
+
+        return _DiaryOptionalPanels;
     }
 
     function getDiaryCompactSummaryComponent(React) {
@@ -12896,6 +13633,25 @@
             } = props || {};
 
             const [trendPeriodDays, setTrendPeriodDays] = React.useState(getStoredHealthTrendPeriod);
+            const [enabled, setEnabled] = React.useState(function initScoreRiskTrendPanelEnabled() {
+                return readDiaryPanelEnabled(profile, SCORE_RISK_TREND_PANEL_PROFILE_FIELD);
+            });
+
+            React.useEffect(function syncScoreRiskTrendPanelFromProfile() {
+                setEnabled(readDiaryPanelEnabled(profile, SCORE_RISK_TREND_PANEL_PROFILE_FIELD));
+            }, [profile?.showDiaryScoreRiskTrendPanel]);
+
+            React.useEffect(function listenScoreRiskTrendPanelVisibility() {
+                const sync = function syncScoreRiskTrendPanelVisibility() {
+                    setEnabled(readDiaryPanelEnabled(null, SCORE_RISK_TREND_PANEL_PROFILE_FIELD));
+                };
+                window.addEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                window.addEventListener('heys:profile-updated', sync);
+                return function cleanupScoreRiskTrendPanelVisibility() {
+                    window.removeEventListener('heys:diary-optional-panels-visibility-changed', sync);
+                    window.removeEventListener('heys:profile-updated', sync);
+                };
+            }, []);
 
             const summary = React.useMemo(function computeSummary() {
                 return getSafeDayScoreSummary(app, {
@@ -12925,6 +13681,7 @@
                 });
             }, []);
 
+            if (!enabled) return null;
             if (!dayScoreResult && !riskRadarResult && !healthTrendResult) return null;
 
             return React.createElement('section', {
@@ -13008,6 +13765,7 @@
             addMeal,
             day,
             mealsUI,
+            dailyWaveOverview,
             daySummary,
             caloricDebt,
             eatenKcal,
@@ -13069,61 +13827,18 @@
             optimum
         }) || null;
 
-
-        const mealRecReady = !!app.MealRecCard?.renderCard && !!app.InsightsPI?.mealRecommender?.recommend;
-        const mealRecCard = mealRecReady ? (app.MealRecCard.renderCard({
-            React,
-            day,
-            prof,
-            pIndex,
-            dayTot,
-            normAbs,
-            optimum: displayOptimum || optimum
-        }) || null) : null;
-
-        if (mealRecCard) {
-            if (!window.__heysLoggedMealRecRendered) {
-                window.__heysLoggedMealRecRendered = true;
-                console.info('[HEYS.diary] ✅ Meal rec card rendered');
-                // Demo-perf marker: this is the last heavy card on the diary;
-                // when it renders we can say the demo is fully loaded.
-                try {
-                    if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
-                        window.dispatchEvent(new CustomEvent('heys:diary-rendered', {
-                            detail: { mealRecRendered: true },
-                        }));
-                    }
-                } catch (_) {}
-            }
-        } else if (mealRecReady) {
-            // Only log when module loaded but no recommendation (not when still loading)
-            if (!window.__heysLoggedMealRecNull) {
-                window.__heysLoggedMealRecNull = true;
-                console.info('[HEYS.diary] ℹ️ Meal rec card: no recommendation');
-            }
-        }
-
         const dateKey = date
             || day?.date
             || app.models?.todayISO?.()
             || new Date().toISOString().slice(0, 10);
-        const supplementsReady = !!app.Supplements?.renderCard;
-        if (!supplementsReady) ensureSupplementsModule();
-        const supplementsCard = supplementsReady && dateKey ? (app.Supplements.renderCard({
-            dateKey,
-            dayData: day,
-            onForceUpdate: () => {
-                window.dispatchEvent(new CustomEvent('heys:day-updated', {
-                    detail: { date: dateKey, source: 'supplements-update', forceReload: true }
-                }));
-            }
-        }) || null) : null;
 
         // PERF R16: LazyMount — IntersectionObserver gate for below-fold slots.
         // Component type is stable (defined once at module scope via getLazyMount).
         const LazyMount = getLazyMount(React);
         const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
         const DiaryFiberPanel = getDiaryFiberPanelComponent(React);
+        const DiaryOptionalPanels = getDiaryOptionalPanelsComponent(React);
+        const DiaryPanelGate = getDiaryPanelGateComponent(React);
 
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
@@ -13252,33 +13967,39 @@
             }),
             React.createElement(DiaryFiberPanel, {
                 app,
+                dateKey,
                 dayData: day,
                 dayTot,
                 normAbs,
-                pIndex
+                pIndex,
+                profile: prof
             }),
-            React.createElement('h2', {
-                id: 'day-remaining-heading',
-                style: {
-                    fontSize: '24px',
-                    fontWeight: '800',
-                    color: 'var(--text, #1e293b)',
-                    margin: '12px 0 16px 0',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    textAlign: 'center',
-                    scrollMarginTop: '150px'
-                }
-            }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
-            waterCard,
+            React.createElement(DiaryPanelGate, {
+                profile: prof,
+                field: WATER_PANEL_PROFILE_FIELD,
+            }, waterCard),
             refeedCard,
             // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
             React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 460 },
-                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 180, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
-                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 140, '💊', 'Подготавливаем план добавок на сегодня'),
-                mealsChart,
-                insulinIndicator
+                React.createElement(DiaryOptionalPanels, {
+                    app,
+                    dateKey,
+                    dayData: day,
+                    profile: prof,
+                    pIndex,
+                    dayTot,
+                    normAbs,
+                    displayOptimum,
+                    optimum,
+                    mealsChart,
+                    ensureSupplementsModule,
+                    deferredSlot,
+                }),
+                React.createElement(DiaryPanelGate, {
+                    profile: prof,
+                    field: INSULIN_WAVE_PANEL_PROFILE_FIELD,
+                }, insulinIndicator)
             ),
             React.createElement('div', {
                 className: 'diary-section-separator diary-section-separator--full-width',
@@ -13388,6 +14109,7 @@
                     key: 'meal-sticky-bar',
                 }),
                 mealsUI,
+                dailyWaveOverview,
                 daySummary,
                 React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
                     React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
