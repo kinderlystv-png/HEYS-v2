@@ -2635,6 +2635,28 @@
     }
   }
 
+  async function createPendingSharedProductChange(request = {}) {
+    try {
+      const product = request.product_data || request.productData || {};
+      const sessionRpc = buildSessionRpcParams({
+        p_request_type: request.request_type || request.type,
+        p_target_product_id: request.target_product_id || request.targetProductId,
+        p_product_data: product,
+        p_name: request.name || product.name || '',
+        p_name_norm: request.name_norm || request.nameNorm || null,
+        p_fingerprint: request.fingerprint || product.fingerprint || null
+      });
+      if (!sessionRpc.ok) {
+        return { data: null, error: { message: 'No session token' } };
+      }
+
+      return await rpc('create_pending_shared_product_change_by_session', sessionRpc.params);
+    } catch (e) {
+      err('createPendingSharedProductChange failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 💳 PAYMENTS МЕТОДЫ (ЮKassa)
   // ═══════════════════════════════════════════════════════════════════
@@ -2933,6 +2955,7 @@
     // 🏭 Products
     getSharedProducts,
     createPendingProduct,
+    createPendingSharedProductChange,
 
     // KV Store (REST-based для надёжности)
     saveKV,

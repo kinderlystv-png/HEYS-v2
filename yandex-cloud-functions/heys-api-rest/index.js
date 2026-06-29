@@ -328,7 +328,7 @@ const ALLOWED_COLUMNS = {
   // ⚠️  Колонки в lowercase! (badfat100, goodfat100 — NOT camelCase)
   shared_products: [
     'id', 'name', 'name_norm', 'fingerprint',
-    'barcode', 'barcodes',
+    'barcode', 'barcodes', 'variant_of',
     'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',
     'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',

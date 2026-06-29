@@ -15568,6 +15568,60 @@
     }
   };
 
+  cloud.createPendingSharedProductChange = async function (clientId, request = {}) {
+    try {
+      const product = request.product_data || request.productData || {};
+      const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
+        || HEYS.utils?.lsGet?.('heys_session_token', null)
+        || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
+      const host = global.location && global.location.hostname || '';
+      const hasCookieSession = !!cloud.isPinAuthClient?.() ||
+        (!!host && host !== 'localhost' && host !== '127.0.0.1');
+      if (!sessionToken && !hasCookieSession) {
+        return { data: null, error: 'No session token', status: 'error', message: 'Нет активной сессии PIN-клиента' };
+      }
+
+      let fingerprint = request.fingerprint || product.fingerprint || null;
+      let nameNorm = request.name_norm || request.nameNorm || null;
+      try {
+        if (!fingerprint && HEYS?.models?.computeProductFingerprint) {
+          fingerprint = await HEYS.models.computeProductFingerprint(product);
+        }
+      } catch (_) { /* fallback to null */ }
+      try {
+        if (!nameNorm && HEYS?.models?.normalizeProductName) {
+          nameNorm = HEYS.models.normalizeProductName(product?.name || request.name || '');
+        }
+      } catch (_) { /* fallback to null */ }
+
+      const rpcParams = {
+        p_request_type: request.request_type || request.type,
+        p_target_product_id: request.target_product_id || request.targetProductId,
+        p_product_data: product,
+        p_name: request.name || product.name || '',
+        p_fingerprint: fingerprint,
+        p_name_norm: nameNorm
+      };
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const { data, error } = await YandexAPI.rpc('create_pending_shared_product_change_by_session', rpcParams);
+
+      if (error) {
+        err('[SHARED PRODUCTS] Pending change create error:', error);
+        return { data: null, error, status: 'error', message: (error && error.message) || String(error) };
+      }
+
+      return {
+        data,
+        error: null,
+        status: data?.status || 'pending',
+        message: data?.message || ''
+      };
+    } catch (e) {
+      err('[SHARED PRODUCTS] Pending change unexpected error:', e);
+      return { data: null, error: e.message, status: 'error', message: e.message };
+    }
+  };
+
   /**
    * Получить pending-заявки куратора
    * @returns {Promise<{data: Array, error: any}>}
@@ -15606,14 +15660,131 @@
    * @param {Object} productData - Данные продукта из заявки
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
+  function getPendingSharedRequest(productData) {
+    const request = productData?._pendingRequest || productData?._sharedChange || null;
+    if (!request || typeof request !== 'object') return null;
+    const type = request.type || request.request_type;
+    if (!type) return null;
+    return {
+      ...request,
+      type,
+      target_product_id: request.target_product_id || request.targetProductId || productData?.variant_of || productData?.shared_origin_id || null
+    };
+  }
+
+  function compactSharedProductPatch(productData, options = {}) {
+    const barcodes = normalizeSharedProductBarcodes(productData);
+    const patch = {
+      name: productData.name || undefined,
+      name_norm: productData.name
+        ? (HEYS.models?.normalizeProductName?.(productData.name) || String(productData.name).toLowerCase().trim())
+        : undefined,
+      simple100: productData.simple100,
+      complex100: productData.complex100,
+      protein100: productData.protein100,
+      badfat100: productData.badFat100 ?? productData.badfat100,
+      goodfat100: productData.goodFat100 ?? productData.goodfat100,
+      trans100: productData.trans100,
+      fiber100: productData.fiber100,
+      gi: productData.gi,
+      harm: productData.harm ?? productData.harmScore,
+      category: productData.category,
+      portions: Array.isArray(productData.portions) ? productData.portions : productData.portions,
+      description: productData.description,
+      barcode: barcodes[0] || null,
+      barcodes,
+      sodium100: productData.sodium100,
+      omega3_100: productData.omega3_100,
+      omega6_100: productData.omega6_100,
+      nova_group: productData.nova_group ?? productData.novaGroup,
+      additives: productData.additives,
+      nutrient_density: productData.nutrient_density ?? productData.nutrientDensity,
+      is_organic: productData.is_organic ?? productData.isOrganic,
+      is_whole_grain: productData.is_whole_grain ?? productData.isWholeGrain,
+      is_fermented: productData.is_fermented ?? productData.isFermented,
+      is_raw: productData.is_raw ?? productData.isRaw,
+      vitamin_a: productData.vitamin_a ?? productData.vitaminA,
+      vitamin_c: productData.vitamin_c ?? productData.vitaminC,
+      vitamin_d: productData.vitamin_d ?? productData.vitaminD,
+      vitamin_e: productData.vitamin_e ?? productData.vitaminE,
+      vitamin_k: productData.vitamin_k ?? productData.vitaminK,
+      vitamin_b1: productData.vitamin_b1 ?? productData.vitaminB1,
+      vitamin_b2: productData.vitamin_b2 ?? productData.vitaminB2,
+      vitamin_b3: productData.vitamin_b3 ?? productData.vitaminB3,
+      vitamin_b6: productData.vitamin_b6 ?? productData.vitaminB6,
+      vitamin_b9: productData.vitamin_b9 ?? productData.vitaminB9,
+      vitamin_b12: productData.vitamin_b12 ?? productData.vitaminB12,
+      calcium: productData.calcium,
+      iron: productData.iron,
+      magnesium: productData.magnesium,
+      phosphorus: productData.phosphorus,
+      potassium: productData.potassium,
+      zinc: productData.zinc,
+      selenium: productData.selenium,
+      iodine: productData.iodine
+    };
+    if (options.barcodesOnly) {
+      return { barcode: patch.barcode, barcodes: patch.barcodes };
+    }
+    Object.keys(patch).forEach((key) => {
+      if (patch[key] === undefined) delete patch[key];
+    });
+    return patch;
+  }
+
+  async function applyPendingSharedProductChange(productData, request) {
+    const targetId = request?.target_product_id;
+    if (!targetId) {
+      return { data: null, error: 'missing_target_product_id', status: 'error' };
+    }
+
+    if (request.type === 'variant_create') {
+      const publishResult = await cloud.publishToShared({
+        ...productData,
+        variant_of: targetId
+      });
+      if (publishResult.error && publishResult.status !== 'exists') return publishResult;
+      const sharedId = publishResult.data?.id;
+      if (sharedId) {
+        const { error } = await YandexAPI.rest('shared_products', {
+          method: 'PATCH',
+          filters: { 'eq.id': sharedId },
+          data: { variant_of: targetId },
+          select: 'id,variant_of'
+        });
+        if (error) return { data: null, error, status: 'error' };
+      }
+      _sharedProductsCacheTime = 0;
+      return { data: publishResult.data, error: null, status: 'approved', variant: true, existing: publishResult.status === 'exists' };
+    }
+
+    const patch = compactSharedProductPatch(productData, { barcodesOnly: request.type === 'barcode_update' });
+    const { data, error } = await YandexAPI.rest('shared_products', {
+      method: 'PATCH',
+      filters: { 'eq.id': targetId },
+      data: patch,
+      select: 'id,name,barcode,barcodes'
+    });
+    if (error) return { data: null, error, status: 'error' };
+
+    if (request.type === 'barcode_update') {
+      HEYS.cloud?.updateCachedSharedProduct?.(targetId, patch);
+    } else {
+      _sharedProductsCacheTime = 0;
+    }
+    return { data: Array.isArray(data) ? data[0] : data, error: null, status: 'approved' };
+  }
+
   cloud.approvePendingProduct = async function (pendingId, productData) {
     if (!user) {
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
 
     try {
-      // 1. Публикуем продукт в shared
-      const publishResult = await cloud.publishToShared(productData);
+      const sharedRequest = getPendingSharedRequest(productData);
+      const publishResult = sharedRequest
+        ? await applyPendingSharedProductChange(productData, sharedRequest)
+        : await cloud.publishToShared(productData);
 
       if (publishResult.error && publishResult.status !== 'exists') {
         return publishResult;
@@ -15655,7 +15826,8 @@
         data: publishResult.data,
         error: null,
         status: 'approved',
-        existing: publishResult.status === 'exists'
+        existing: publishResult.status === 'exists' || publishResult.existing === true,
+        variant: publishResult.variant === true
       };
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);

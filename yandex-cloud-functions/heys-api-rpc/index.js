@@ -824,6 +824,7 @@ const ALLOWED_FUNCTIONS = [
   // === PRODUCTS (read-only или с модерацией) ===
   'get_shared_products',
   'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
+  'create_pending_shared_product_change_by_session', // 🔐 PIN-клиент: правка общей базы через модерацию
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
   'add_shared_product_barcode_by_session', // 🔐 Client-safe append-only barcode attach to shared product
@@ -3997,6 +3998,15 @@ module.exports.handler = async function (event, context) {
         'p_product_data': '::jsonb',
         'p_fingerprint': '::text',
         'p_name_norm': '::text'
+      },
+      'create_pending_shared_product_change_by_session': {
+        'p_session_token': '::text',
+        'p_request_type': '::text',
+        'p_target_product_id': '::uuid',
+        'p_product_data': '::jsonb',
+        'p_name': '::text',
+        'p_name_norm': '::text',
+        'p_fingerprint': '::text'
       },
       // 🔐 P3: Публикация продуктов кураторами
       'publish_shared_product_by_session': {
