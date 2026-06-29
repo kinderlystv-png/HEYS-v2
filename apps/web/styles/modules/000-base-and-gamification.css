@@ -9752,6 +9752,26 @@ body:has(.tabs.tabs--settings-open) :is(
   /* Сбрасываем margin из 600-steps-and-aps.css */
 }
 
+.meal-header-inside--collapse-toggle {
+  cursor: pointer;
+  transition: filter 160ms ease, transform 120ms ease;
+}
+
+@media (hover: hover) {
+  .meal-header-inside--collapse-toggle:hover {
+    filter: brightness(0.985);
+  }
+}
+
+.meal-header-inside--collapse-toggle:active {
+  transform: translateY(1px);
+}
+
+.meal-header-inside--collapse-toggle:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.45);
+  outline-offset: 2px;
+}
+
 /* Время приёма внутри карточки */
 .meal-time-badge-inside {
   background: #fef3c7;
@@ -9847,6 +9867,159 @@ body:has(.tabs.tabs--settings-open) :is(
   overflow: visible;
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
+}
+
+.meal-with-number--collapsed {
+  margin-bottom: 0;
+}
+
+.meal-collapsed-plaque {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 36px minmax(64px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
+  color: #1f2937;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+@media (hover: hover) {
+  .meal-collapsed-plaque:hover {
+    border-color: rgba(148, 163, 184, 0.75);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+  }
+}
+
+.meal-collapsed-plaque:active {
+  transform: translateY(0);
+}
+
+.meal-collapsed-plaque:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.45);
+  outline-offset: 2px;
+}
+
+.meal-collapsed-plaque__number {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+}
+
+.meal-collapsed-plaque__time {
+  justify-self: start;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meal-collapsed-plaque__type {
+  min-width: 0;
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-collapsed-plaque__count {
+  justify-self: end;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.meal-collapsed-plaque.meal-type-breakfast {
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(255, 237, 213, 0.98) 100%);
+  border-color: rgba(254, 215, 170, 0.9);
+}
+
+.meal-collapsed-plaque.meal-type-breakfast .meal-collapsed-plaque__time,
+.meal-collapsed-plaque.meal-type-breakfast .meal-collapsed-plaque__number {
+  color: #c2410c;
+}
+
+.meal-collapsed-plaque.meal-type-lunch {
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.98) 0%, rgba(220, 252, 231, 0.98) 100%);
+  border-color: rgba(187, 247, 208, 0.9);
+}
+
+.meal-collapsed-plaque.meal-type-lunch .meal-collapsed-plaque__time,
+.meal-collapsed-plaque.meal-type-lunch .meal-collapsed-plaque__number {
+  color: #15803d;
+}
+
+.meal-collapsed-plaque.meal-type-dinner {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.98) 0%, rgba(219, 234, 254, 0.98) 100%);
+  border-color: rgba(191, 219, 254, 0.9);
+}
+
+.meal-collapsed-plaque.meal-type-dinner .meal-collapsed-plaque__time,
+.meal-collapsed-plaque.meal-type-dinner .meal-collapsed-plaque__number {
+  color: #1d4ed8;
+}
+
+.meal-collapsed-plaque.meal-type-snack,
+.meal-collapsed-plaque.meal-type-snack1,
+.meal-collapsed-plaque.meal-type-snack2,
+.meal-collapsed-plaque.meal-type-snack3 {
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.98) 0%, rgba(243, 244, 246, 0.98) 100%);
+  border-color: rgba(229, 231, 235, 0.95);
+}
+
+.meal-collapsed-plaque.meal-type-night {
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.98) 0%, rgba(224, 231, 255, 0.98) 100%);
+  border-color: rgba(199, 210, 254, 0.9);
+}
+
+.meal-collapsed-plaque.meal-type-night .meal-collapsed-plaque__time,
+.meal-collapsed-plaque.meal-type-night .meal-collapsed-plaque__number {
+  color: #4f46e5;
+}
+
+@media (max-width: 420px) {
+  .meal-collapsed-plaque {
+    grid-template-columns: 34px minmax(58px, auto) minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .meal-collapsed-plaque__type {
+    font-size: 14px;
+  }
+
+  .meal-collapsed-plaque__count {
+    font-size: 11px;
+    padding: 4px 7px;
+  }
 }
 
 /* 🎯 R-DAY-STICKY-V2 (2026-05-15): отдельный fixed-bar поверх списка приёмов.

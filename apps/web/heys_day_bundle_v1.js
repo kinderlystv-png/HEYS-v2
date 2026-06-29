@@ -7230,7 +7230,19 @@
             // Добавить N, + Добавить несколько) рендерятся вперемешку). Возвращаю
             // оригинальное position: relative — шапка работает как раньше, но без sticky.
             React.createElement('div', {
-                className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
+                className: 'meal-header-inside meal-type-' + mealTypeInfo.type + (isExpanded && !isCurrentMeal ? ' meal-header-inside--collapse-toggle' : ''),
+                onClick: isExpanded && !isCurrentMeal ? () => onToggleExpand(mealIndex, allMeals) : undefined,
+                role: isExpanded && !isCurrentMeal ? 'button' : undefined,
+                tabIndex: isExpanded && !isCurrentMeal ? 0 : undefined,
+                onKeyDown: isExpanded && !isCurrentMeal
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onToggleExpand(mealIndex, allMeals);
+                        }
+                    }
+                    : undefined,
+                'aria-label': isExpanded && !isCurrentMeal ? 'Свернуть приём' : undefined,
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
@@ -7256,11 +7268,19 @@
                 },
                     timeDisplay && React.createElement('span', {
                         className: 'meal-time-badge-inside',
-                        onClick: () => openTimeEditor(mealIndex),
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            openTimeEditor(mealIndex);
+                        },
                         title: 'Изменить время',
                         style: { fontSize: '15px', padding: '6px 14px', fontWeight: '700', flexShrink: 0 },
                     }, timeDisplay),
-                    React.createElement('div', { className: 'meal-type-wrapper', style: { flex: 1, display: 'flex', justifyContent: 'center' } },
+                    React.createElement('div', {
+                        className: 'meal-type-wrapper',
+                        onClick: (event) => event.stopPropagation(),
+                        onKeyDown: (event) => event.stopPropagation(),
+                        style: { flex: 1, display: 'flex', justifyContent: 'center' },
+                    },
                         React.createElement('span', { className: 'meal-type-label', style: { fontSize: '16px', fontWeight: '700', padding: '4px 12px' } },
                             mealTypeInfo.icon + ' ' + mealTypeInfo.name,
                             React.createElement('span', { className: 'meal-type-arrow' }, ' ▾'),
@@ -7268,7 +7288,10 @@
                         React.createElement('select', {
                             className: 'meal-type-select',
                             value: manualType || '',
+                            onClick: (event) => event.stopPropagation(),
+                            onKeyDown: (event) => event.stopPropagation(),
                             onChange: (e) => {
+                                e.stopPropagation();
                                 changeMealType(e.target.value || null);
                             },
                             title: 'Изменить тип приёма',
@@ -9193,6 +9216,68 @@
     // =========================
     // Meals list
     // =========================
+    function getCompactMealTypeInfo(mealIndex, meal, allMeals, pIndex) {
+        const manualType = meal?.mealType;
+        if (manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]) {
+            return { type: manualType, name: U.MEAL_TYPES[manualType].name || 'Приём' };
+        }
+
+        const time = String(meal?.time || '');
+        const hourRaw = Number(time.split(':')[0]);
+        if (Number.isFinite(hourRaw)) {
+            const hour = hourRaw >= 24 ? hourRaw - 24 : hourRaw;
+            let type = 'snack3';
+            if (hour >= 6 && hour < 10) type = 'breakfast';
+            else if (hour >= 10 && hour < 12) type = 'snack1';
+            else if (hour >= 12 && hour < 15) type = 'lunch';
+            else if (hour >= 15 && hour < 18) type = 'snack2';
+            else if (hour >= 18 && hour < 21) type = 'dinner';
+            else if (hour >= 21 || hour < 3) type = 'night';
+
+            if (U.MEAL_TYPES && U.MEAL_TYPES[type]) {
+                return { type, name: U.MEAL_TYPES[type].name || 'Приём' };
+            }
+        }
+
+        const autoTypeInfo = getMealType(mealIndex, meal, allMeals, pIndex);
+        return {
+            type: autoTypeInfo?.type || 'snack',
+            name: autoTypeInfo?.label || meal?.name || 'Приём',
+        };
+    }
+
+    function renderCollapsedMealPlaque(params) {
+        const {
+            meal,
+            mealIndex,
+            mealNumber,
+            mealTypeInfo,
+            onExpand,
+        } = params || {};
+        const timeText = formatMealTime(meal?.time || '') || '—';
+        const typeName = mealTypeInfo?.name || meal?.name || 'Приём';
+        const typeClass = mealTypeInfo?.type ? ' meal-type-' + mealTypeInfo.type : '';
+        const productsCount = Array.isArray(meal?.items) ? meal.items.length : 0;
+        const productsLabel = productsCount === 1
+            ? '1 продукт'
+            : (productsCount >= 2 && productsCount <= 4 ? productsCount + ' продукта' : productsCount + ' продуктов');
+
+        return React.createElement('button', {
+            type: 'button',
+            className: 'meal-collapsed-plaque' + typeClass,
+            onClick: onExpand,
+            'aria-expanded': 'false',
+            'aria-label': `Раскрыть приём ${mealNumber}: ${timeText}, ${typeName}, ${productsLabel}`,
+            'data-meal-index': mealIndex,
+            'data-meal-time': meal?.time || '',
+        },
+            React.createElement('span', { className: 'meal-collapsed-plaque__number' }, mealNumber),
+            React.createElement('span', { className: 'meal-collapsed-plaque__time' }, timeText),
+            React.createElement('span', { className: 'meal-collapsed-plaque__type' }, typeName),
+            React.createElement('span', { className: 'meal-collapsed-plaque__count' }, productsLabel)
+        );
+    }
+
     function renderMealsList(params) {
         const {
             sortedMealsForDisplay,
@@ -9272,6 +9357,26 @@
             const mealNumber = sortedTotal - absoluteDisplayIndex;
             const isFirst = absoluteDisplayIndex === 0;
             const isCurrentMeal = isFirst && !isMealStale(meal, nowMinutes);
+            const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
+            const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
+
+            if (shouldRenderCollapsedPlaque) {
+                return React.createElement('div', {
+                    key: meal.id + '_' + (meal.mealType || 'auto') + '_collapsed',
+                    className: 'meal-with-number meal-with-number--collapsed',
+                    style: {
+                        marginTop: isFirst ? '0' : '12px',
+                    },
+                },
+                    renderCollapsedMealPlaque({
+                        meal,
+                        mealIndex: mi,
+                        mealNumber,
+                        mealTypeInfo,
+                        onExpand: () => toggleMealExpand(mi, sourceMeals),
+                    })
+                );
+            }
 
             return React.createElement('div', {
                 key: meal.id + '_' + (meal.mealType || 'auto'),
@@ -10244,26 +10349,10 @@
     // Meal expand state
     // =========================
     function useMealExpandState(params) {
-        const { date } = params || {};
         if (!React) return {};
 
-        const expandedMealsKey = 'heys_expandedMeals_' + date;
-
         const [manualExpandedStale, setManualExpandedStale] = React.useState({});
-        const [expandedMeals, setExpandedMeals] = React.useState(() => {
-            try {
-                const cached = sessionStorage.getItem(expandedMealsKey);
-                return cached ? JSON.parse(cached) : {};
-            } catch (e) {
-                return {};
-            }
-        });
-
-        React.useEffect(() => {
-            try {
-                sessionStorage.setItem(expandedMealsKey, JSON.stringify(expandedMeals));
-            } catch (e) { }
-        }, [expandedMeals, expandedMealsKey]);
+        const [expandedMeals, setExpandedMeals] = React.useState({});
 
         const isMealStale = React.useCallback((meal, nowMinutesOverride) => {
             if (!meal || !meal.time) return false;
@@ -10278,7 +10367,7 @@
 
             const mealMinutes = (hours * 60) + minutes;
             const diffMinutes = nowMinutes - mealMinutes;
-            return diffMinutes > 30;
+            return diffMinutes > 20;
         }, []);
 
         const toggleMealExpand = React.useCallback((mealIndex, meals) => {
