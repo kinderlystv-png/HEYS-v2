@@ -3447,11 +3447,11 @@
         };
         const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
         const mealKcal = Math.round(totals.kcal || 0);
+        const isToday = date === _getTodayISO();
         const isStale = isMealStale(meal);
-        const isCurrentMeal = displayIndex === 0 && !isStale;
+        const isCurrentMeal = isToday && displayIndex === 0 && !isStale;
 
         // «Повторить как вчера» — загружаем данные только для пустых приёмов на сегодня
-        const isToday = date === _getTodayISO();
         const isEmpty = (meal.items || []).length === 0;
         const canRepeatYesterday = isToday && isEmpty && typeof onRepeatYesterday === 'function';
 
@@ -5736,6 +5736,7 @@
         }
 
         const sourceMeals = Array.isArray(day?.meals) ? day.meals : [];
+        const isToday = date === _getTodayISO();
         const mealIndexById = new Map();
         for (let idx = 0; idx < sourceMeals.length; idx += 1) {
             const mealId = sourceMeals[idx]?.id;
@@ -5761,7 +5762,7 @@
             const sortedTotal = totalMealsCount > 0 ? totalMealsCount : sortedMealsForDisplay.length;
             const mealNumber = sortedTotal - absoluteDisplayIndex;
             const isFirst = absoluteDisplayIndex === 0;
-            const isCurrentMeal = isFirst && !isMealStale(meal, nowMinutes);
+            const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
             const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
 
@@ -8955,6 +8956,7 @@
     // Solution: lazy-init once with the React instance captured on first call.
     let _LazyMount = null;
     let _DiaryCompactSummary = null;
+    let _DiaryFiberPanel = null;
 
     const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
     function getLazyMount(React) {
@@ -9117,6 +9119,96 @@
             console.warn('[HEYS.diary] Health trend summary unavailable', error?.message || error);
             return null;
         }
+    }
+
+    function getSafeFiberTarget(dayTot, normAbs) {
+        const explicitTarget = Number(normAbs?.fiber) || 0;
+        if (explicitTarget > 0) return explicitTarget;
+
+        const kcalTarget = Number(normAbs?.kcal) || Number(dayTot?.kcal) || 0;
+        if (kcalTarget > 0) return (kcalTarget / 1000) * 14;
+
+        return 25;
+    }
+
+    function getDiaryFiberPanelComponent(React) {
+        if (_DiaryFiberPanel) return _DiaryFiberPanel;
+
+        const fiberSources = [
+            { icon: '🥦', title: 'Овощи', note: 'К каждому основному приёму', grams: '5-8 г' },
+            { icon: '🫘', title: 'Бобовые', note: 'Чечевица, фасоль, нут', grams: '8-12 г' },
+            { icon: '🌾', title: 'Цельные злаки', note: 'Овсянка, гречка, цельнозерновой хлеб', grams: '4-7 г' },
+            { icon: '🫐', title: 'Ягоды и фрукты', note: 'Ягоды, яблоко, груша', grams: '3-6 г' }
+        ];
+
+        _DiaryFiberPanel = React.memo(function DiaryFiberPanel(props) {
+            const { dayTot, normAbs } = props || {};
+            const [expanded, setExpanded] = React.useState(false);
+
+            const eaten = Math.max(0, Number(dayTot?.fiber) || 0);
+            const target = Math.max(1, getSafeFiberTarget(dayTot, normAbs));
+            const remaining = Math.max(0, target - eaten);
+            const pct = Math.max(0, Math.round((eaten / target) * 100));
+            const cappedPct = Math.min(100, pct);
+            const status = pct >= 100
+                ? { label: 'Норма закрыта', tone: 'done' }
+                : pct >= 70
+                    ? { label: 'Почти добрали', tone: 'good' }
+                    : pct >= 40
+                        ? { label: 'Есть база', tone: 'mid' }
+                        : { label: 'Нужно добрать', tone: 'low' };
+
+            return React.createElement('section', {
+                className: 'diary-fiber-panel diary-fiber-panel--' + status.tone + (expanded ? ' is-expanded' : ''),
+                'aria-label': 'Панель управления клетчаткой'
+            },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'diary-fiber-panel__summary',
+                    onClick: function toggleFiberPanel() {
+                        setExpanded(function toggle(value) { return !value; });
+                    },
+                    'aria-expanded': expanded ? 'true' : 'false'
+                },
+                    React.createElement('span', { className: 'diary-fiber-panel__icon', 'aria-hidden': 'true' }, '🌿'),
+                    React.createElement('span', { className: 'diary-fiber-panel__main' },
+                        React.createElement('span', { className: 'diary-fiber-panel__eyebrow' }, 'Клетчатка'),
+                        React.createElement('span', { className: 'diary-fiber-panel__title' }, status.label)
+                    ),
+                    React.createElement('span', { className: 'diary-fiber-panel__numbers' },
+                        React.createElement('strong', null, Math.round(eaten)),
+                        React.createElement('span', null, ' / ' + Math.round(target) + ' г')
+                    ),
+                    React.createElement('span', { className: 'diary-fiber-panel__more' },
+                        expanded ? 'Скрыть' : 'Подробнее',
+                        React.createElement('span', { className: 'diary-fiber-panel__chevron', 'aria-hidden': 'true' }, expanded ? '⌃' : '⌄')
+                    )
+                ),
+                React.createElement('div', { className: 'diary-fiber-panel__bar', 'aria-hidden': 'true' },
+                    React.createElement('span', {
+                        className: 'diary-fiber-panel__fill',
+                        style: { width: cappedPct + '%' }
+                    })
+                ),
+                React.createElement('div', { className: 'diary-fiber-panel__hint' },
+                    remaining > 0
+                        ? 'Осталось примерно ' + Math.ceil(remaining) + ' г. Увеличивайте постепенно и держите воду рядом.'
+                        : 'Сегодня клетчатка в норме. Дальше достаточно не перегружать день.'
+                ),
+                expanded && React.createElement('div', { className: 'diary-fiber-panel__sources' },
+                    fiberSources.map(function renderSource(source) {
+                        return React.createElement('div', { key: source.title, className: 'diary-fiber-panel__source' },
+                            React.createElement('span', { className: 'diary-fiber-panel__source-icon', 'aria-hidden': 'true' }, source.icon),
+                            React.createElement('span', { className: 'diary-fiber-panel__source-title' }, source.title),
+                            React.createElement('span', { className: 'diary-fiber-panel__source-note' }, source.note),
+                            React.createElement('span', { className: 'diary-fiber-panel__source-grams' }, source.grams)
+                        );
+                    })
+                )
+            );
+        });
+
+        return _DiaryFiberPanel;
     }
 
     function getDiaryCompactSummaryComponent(React) {
@@ -9361,6 +9453,7 @@
         // Component type is stable (defined once at module scope via getLazyMount).
         const LazyMount = getLazyMount(React);
         const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
+        const DiaryFiberPanel = getDiaryFiberPanelComponent(React);
 
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
@@ -9486,6 +9579,10 @@
                 dayTot,
                 normAbs,
                 pIndex
+            }),
+            React.createElement(DiaryFiberPanel, {
+                dayTot,
+                normAbs
             }),
             React.createElement('h2', {
                 id: 'day-remaining-heading',

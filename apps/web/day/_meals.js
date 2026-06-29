@@ -269,11 +269,11 @@
         };
         const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
         const mealKcal = Math.round(totals.kcal || 0);
+        const isToday = date === _getTodayISO();
         const isStale = isMealStale(meal);
-        const isCurrentMeal = displayIndex === 0 && !isStale;
+        const isCurrentMeal = isToday && displayIndex === 0 && !isStale;
 
         // «Повторить как вчера» — загружаем данные только для пустых приёмов на сегодня
-        const isToday = date === _getTodayISO();
         const isEmpty = (meal.items || []).length === 0;
         const canRepeatYesterday = isToday && isEmpty && typeof onRepeatYesterday === 'function';
 
@@ -2558,6 +2558,7 @@
         }
 
         const sourceMeals = Array.isArray(day?.meals) ? day.meals : [];
+        const isToday = date === _getTodayISO();
         const mealIndexById = new Map();
         for (let idx = 0; idx < sourceMeals.length; idx += 1) {
             const mealId = sourceMeals[idx]?.id;
@@ -2583,7 +2584,7 @@
             const sortedTotal = totalMealsCount > 0 ? totalMealsCount : sortedMealsForDisplay.length;
             const mealNumber = sortedTotal - absoluteDisplayIndex;
             const isFirst = absoluteDisplayIndex === 0;
-            const isCurrentMeal = isFirst && !isMealStale(meal, nowMinutes);
+            const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
             const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
 
