@@ -1247,6 +1247,22 @@
             try { window.dispatchEvent(new CustomEvent('heys:pending-products-updated')); } catch (_) {}
         };
 
+        const getPendingRequest = (item) => {
+            const request = item?.product_data?._pendingRequest || item?.product_data?._sharedChange || null;
+            if (!request || typeof request !== 'object') return null;
+            const type = request.type || request.request_type;
+            return type ? { ...request, type } : null;
+        };
+
+        const getPendingLabel = (item) => {
+            const request = getPendingRequest(item);
+            if (!request) return 'Новый продукт';
+            if (request.type === 'variant_create') return 'Новый вариант';
+            if (request.type === 'barcode_update') return 'Штрихкоды';
+            if (request.type === 'product_update') return 'Исправление';
+            return 'Правка';
+        };
+
         const approvePending = async (item) => {
             try {
                 const result = await window.HEYS?.cloud?.approvePendingProduct?.(item.id, item.product_data);
@@ -1265,8 +1281,10 @@
                 const name = item.product_data?.name || item.name_norm;
                 if (result?.existing) {
                     window.HEYS?.Toast?.info?.(`Продукт "${name}" уже существует в общей базе`);
+                } else if (result?.variant) {
+                    window.HEYS?.Toast?.success?.(`Вариант "${name}" добавлен в общую базу`);
                 } else {
-                    window.HEYS?.Toast?.success?.(`Продукт "${name}" добавлен в общую базу!`);
+                    window.HEYS?.Toast?.success?.(`Заявка "${name}" одобрена`);
                 }
                 notifyUpdated();
             } catch (err) {
@@ -1277,12 +1295,13 @@
         // Bulk approve: батчами по 10, чтобы был визуальный прогресс
         // (BATCH=10 чтобы 30 заявок → 3 шага ≈ 600-900мс, юзер видит counter).
         const approveAllPending = async () => {
-            if (pending.length === 0 || bulkProgress) return;
-            const confirmed = window.confirm(`Одобрить все ${pending.length} заявок? Дубликаты по fingerprint будут помечены approved без повторного INSERT.`);
+            const bulkItems = pending.filter(item => !getPendingRequest(item));
+            if (bulkItems.length === 0 || bulkProgress) return;
+            const confirmed = window.confirm(`Одобрить ${bulkItems.length} заявок на новые продукты? Дубликаты по fingerprint будут помечены approved без повторного INSERT.`);
             if (!confirmed) return;
 
             const BATCH_SIZE = 10;
-            const all = pending.slice();
+            const all = bulkItems.slice();
             let totalApproved = 0, totalExisting = 0, totalRace = 0, totalFailed = 0;
             const allErrors = [];
             setBulkProgress({ total: all.length, done: 0 });
@@ -1375,6 +1394,8 @@
             );
         }
 
+        const bulkEligibleCount = pending.filter(item => !getPendingRequest(item)).length;
+
         return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
             // Bulk-approve панель: счётчик заявок + кнопка «Одобрить все».
             React.createElement('div', {
@@ -1387,25 +1408,26 @@
                 React.createElement('div', { style: { fontSize: 13, color: '#475569' } },
                     bulkProgress
                         ? `Обрабатываю ${bulkProgress.done}/${bulkProgress.total}...`
-                        : `Заявок на модерацию: ${pending.length}`
+                        : `Заявок на модерацию: ${pending.length}${bulkEligibleCount !== pending.length ? ` · новых продуктов для массового approve: ${bulkEligibleCount}` : ''}`
                 ),
                 React.createElement('button', {
                     onClick: approveAllPending,
-                    disabled: !!bulkProgress || pending.length === 0,
-                    title: 'Одобрить все заявки сразу',
+                    disabled: !!bulkProgress || bulkEligibleCount === 0,
+                    title: bulkEligibleCount === 0 ? 'Массовое одобрение доступно только для новых продуктов' : 'Одобрить новые продукты сразу',
                     style: {
                         padding: '8px 14px', borderRadius: 8, border: 'none',
-                        background: bulkProgress ? '#cbd5e1' : '#16a34a',
+                        background: bulkProgress || bulkEligibleCount === 0 ? '#cbd5e1' : '#16a34a',
                         color: '#fff', fontWeight: 600, fontSize: 13,
                         cursor: bulkProgress ? 'wait' : 'pointer',
-                        opacity: pending.length === 0 ? 0.5 : 1,
+                        opacity: bulkEligibleCount === 0 ? 0.5 : 1,
                         display: 'flex', alignItems: 'center', gap: 6
                     }
-                }, bulkProgress ? '⏳ Обрабатываю...' : `✅ Одобрить все (${pending.length})`)
+                }, bulkProgress ? '⏳ Обрабатываю...' : `✅ Одобрить новые (${bulkEligibleCount})`)
             ),
             pending.map(item => {
                 const p = item.product_data || {};
                 const clientName = clientMap[item.client_id] || item.client_id?.slice(0, 8) || '—';
+                const pendingLabel = getPendingLabel(item);
                 return React.createElement('div', {
                     key: item.id,
                     style: {
@@ -1419,6 +1441,19 @@
                     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
                         React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                             React.createElement('div', {
+                                style: {
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '2px 8px',
+                                    borderRadius: 999,
+                                    background: pendingLabel === 'Новый вариант' ? '#e0e7ff' : pendingLabel === 'Штрихкоды' ? '#dbeafe' : '#f1f5f9',
+                                    color: '#334155',
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    marginBottom: 6
+                                }
+                            }, pendingLabel),
+                            React.createElement('div', {
                                 style: { fontWeight: 600, fontSize: 15, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
                             }, p.name || item.name_norm),
                             React.createElement('div', {
@@ -1431,7 +1466,7 @@
                                 p.gi && React.createElement('span', null, `ГИ:${p.gi}`),
                                 (p.barcode || item.barcode) && React.createElement('span', {
                                     title: 'Штрихкод упаковки'
-                                }, `▦ ${p.barcode || item.barcode}`)
+                                }, `▦ ${p.barcode || item.barcode}${Array.isArray(p.barcodes) && p.barcodes.length > 1 ? ` +${p.barcodes.length - 1}` : ''}`)
                             ),
                             React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10 } },
                                 React.createElement('span', null, `👤 ${clientName}`),

@@ -575,7 +575,76 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const canEditProduct = (product) => {
     if (!product) return false;
     if (!isSharedProduct(product)) return true;
-    return isCuratorUser() || !!product.is_mine;
+    return true;
+  };
+
+  const notifyPendingProductsUpdatedForAddStep = () => {
+    try { window.dispatchEvent(new CustomEvent('heys:pending-product-created')); } catch (_) { /* noop */ }
+    try { window.dispatchEvent(new CustomEvent('heys:pending-products-updated')); } catch (_) { /* noop */ }
+    try {
+      const bc = new BroadcastChannel('heys_pending_products');
+      bc.postMessage({ type: 'pending-created', at: Date.now() });
+      setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+    } catch (_) { /* noop */ }
+  };
+
+  const submitSharedProductChangeRequest = async (type, product, targetSharedId, meta = {}) => {
+    if (!product || !targetSharedId) return { ok: false, error: 'missing_target' };
+    const pendingProduct = {
+      ...product,
+      ...(type === 'variant_create' ? { variant_of: targetSharedId } : {}),
+      _pendingRequest: {
+        type,
+        target_product_id: targetSharedId,
+        summary: meta.summary || null
+      }
+    };
+    const request = {
+      type,
+      targetProductId: targetSharedId,
+      productData: pendingProduct,
+      name: pendingProduct.name || product.name || ''
+    };
+    const result = HEYS.cloud?.createPendingSharedProductChange
+      ? await HEYS.cloud.createPendingSharedProductChange(null, request)
+      : await HEYS.YandexAPI?.createPendingSharedProductChange?.(request);
+    const status = result?.status || result?.data?.status;
+    if (status === 'pending' || status === 'pending_dup') {
+      notifyPendingProductsUpdatedForAddStep();
+      return { ok: true, status };
+    }
+    return {
+      ok: false,
+      error: result?.message || result?.error?.message || result?.error || 'pending_failed'
+    };
+  };
+
+  const chooseSharedEditRequestType = (original, updated) => {
+    const nameChanged = String(original?.name || '') !== String(updated?.name || '');
+    const promptText = nameChanged
+      ? 'Как отправить изменение в общую базу?\n1 — создать новый вариант/SKU на основе общего продукта\n2 — предложить исправление текущего общего продукта\nПусто или Отмена — оставить только у себя'
+      : 'Предложить изменение куратору для общей базы?\n1 — да, исправить текущий общий продукт\nПусто или Отмена — оставить только у себя';
+    const answer = window.prompt(promptText, nameChanged ? '1' : '1');
+    if (answer === null || String(answer).trim() === '') return null;
+    const normalized = String(answer).trim();
+    if (nameChanged && normalized === '1') return 'variant_create';
+    if (normalized === '1' || normalized === '2') return 'product_update';
+    return null;
+  };
+
+  const makeLocalVariantCandidate = (product, originalProduct) => {
+    const next = { ...product };
+    if (isSharedProduct(originalProduct)) {
+      next.id = uuid();
+    }
+    delete next.shared_origin_id;
+    delete next.sharedId;
+    delete next._sharedId;
+    delete next._fromShared;
+    delete next.is_shared;
+    if (next._source === 'shared') delete next._source;
+    next._custom = true;
+    return next;
   };
 
   const notifyPortionsUpdated = (product, portions) => {
@@ -4335,6 +4404,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         updatedAt: Date.now()
       };
 
+      if (sharedId && !isCuratorUser()) {
+        const localSave = upsertLocalProduct(updatedProduct, true);
+        const saved = localSave.product || updatedProduct;
+        notifyProductUpdated(saved);
+        setProductsVersion(v => v + 1);
+        if (confirm('Штрихкод сохранён в личной базе. Предложить куратору добавить его в общую базу?')) {
+          const pending = await submitSharedProductChangeRequest('barcode_update', saved, sharedId, {
+            summary: `barcode ${barcode}`
+          });
+          if (pending.ok) {
+            HEYS.Toast?.info?.('Штрихкод отправлен куратору на проверку');
+          } else {
+            HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+          }
+        } else {
+          HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён только в личной базе`);
+        }
+        return true;
+      }
+
       if (sharedId) {
         const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode });
         if (!result.ok) {
@@ -4391,6 +4480,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         updatedAt: Date.now()
       };
       const sharedId = resolveSharedProductId(product);
+
+      if (sharedId && !isCuratorUser()) {
+        const localSave = upsertLocalProduct(updatedProduct, true);
+        const saved = localSave.product || updatedProduct;
+        notifyProductUpdated(saved);
+        setProductsVersion(v => v + 1);
+        const actionText = toastMode === 'remove-all' ? 'удаление всех штрихкодов' : 'изменение штрихкодов';
+        if (confirm(`Сохранено в личной базе. Предложить куратору ${actionText} в общей базе?`)) {
+          const pending = await submitSharedProductChangeRequest('barcode_update', saved, sharedId, {
+            summary: actionText
+          });
+          if (pending.ok) {
+            HEYS.Toast?.info?.('Изменение штрихкодов отправлено куратору');
+          } else {
+            HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+          }
+        } else if (toastMode === 'remove-all') {
+          HEYS.Toast?.success?.('Все штрихкоды удалены только в личной базе');
+        } else if (toastMode === 'remove') {
+          HEYS.Toast?.success?.('Штрихкод удалён только в личной базе');
+        }
+        return saved;
+      }
 
       if (sharedId) {
         const result = await updateSharedProductBarcodes(updatedProduct, sharedId);
@@ -8168,11 +8280,32 @@ NOVA: 1
                 }
               }
             } else {
-              upsertLocalProduct(finalProduct, true);
-              notifyProductUpdated(finalProduct);
+              const requestType = chooseSharedEditRequestType(product, finalProduct);
+              const localProduct = requestType === 'variant_create' || (!requestType && nameChanged)
+                ? makeLocalVariantCandidate(finalProduct, product)
+                : finalProduct;
+              const localSave = upsertLocalProduct(localProduct, true);
+              const saved = localSave.product || finalProduct;
+              notifyProductUpdated(saved);
               if (nameChanged) {
                 HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
                   console.log('[HEYS] Product renamed, cascaded to meals');
+              }
+              if (requestType) {
+                const pending = await submitSharedProductChangeRequest(requestType, saved, sharedId, {
+                  summary: requestType === 'variant_create' ? 'create variant' : 'product update'
+                });
+                if (pending.ok) {
+                  HEYS.Toast?.info?.(
+                    requestType === 'variant_create'
+                      ? 'Вариант продукта отправлен куратору'
+                      : 'Изменение общей базы отправлено куратору'
+                  );
+                } else {
+                  HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+                }
+              } else {
+                HEYS.Toast?.success?.('Изменение сохранено только в личной базе');
               }
             }
           } else {
@@ -8182,6 +8315,34 @@ NOVA: 1
             if (nameChanged) {
               HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
                 console.log('[HEYS] Product renamed, cascaded to meals');
+            }
+            if (sharedId && !isCuratorUser()) {
+              const requestType = chooseSharedEditRequestType(product, finalProduct);
+              if (requestType) {
+                const requestProduct = requestType === 'variant_create'
+                  ? makeLocalVariantCandidate(finalProduct, product)
+                  : finalProduct;
+                if (requestProduct !== finalProduct) {
+                  saveLocalProduct(requestProduct);
+                  notifyProductUpdated(requestProduct);
+                }
+                const pending = await submitSharedProductChangeRequest(requestType, requestProduct, sharedId, {
+                  summary: requestType === 'variant_create' ? 'create variant' : 'product update'
+                });
+                if (pending.ok) {
+                  HEYS.Toast?.info?.(
+                    requestType === 'variant_create'
+                      ? 'Вариант продукта отправлен куратору'
+                      : 'Изменение общей базы отправлено куратору'
+                  );
+                } else {
+                  HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+                }
+              } else if (nameChanged) {
+                const localVariant = makeLocalVariantCandidate(finalProduct, product);
+                saveLocalProduct(localVariant);
+                notifyProductUpdated(localVariant);
+              }
             }
           }
 
