@@ -78,6 +78,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function PencilEditIcon() {
+    return React.createElement('svg', {
+      className: 'aps-product-edit-icon',
+      viewBox: '0 0 24 24',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    },
+      React.createElement('path', {
+        d: 'M12 20h9'
+      }),
+      React.createElement('path', {
+        d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'
+      })
+    );
+  }
+
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
   let globalProductsVersion = 0;
@@ -4919,7 +4935,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [context]);
 
     // Рендер карточки продукта с подсветкой совпадений
-    const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false) => {
+    const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false, showEditAction = false) => {
       product = mergeSharedBarcodeIntoProductForAddStep(product);
       const pid = String(product.id ?? product.product_id ?? product.name);
       const isFav = favorites.has(pid);
@@ -4994,6 +5010,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': barcode ? 'Управлять штрихкодами продукта' : 'Добавить штрихкод продукта',
             title: barcode ? 'Управлять штрихкодами' : 'Добавить штрихкод'
           }, React.createElement(BarcodeBarsIcon)),
+          showEditAction && canEditProduct(product) && React.createElement('button', {
+            type: 'button',
+            className: 'aps-edit-product-btn',
+            onClick: (e) => {
+              e.stopPropagation();
+              haptic('light');
+              showEditProductModal(product);
+            },
+            'aria-label': 'Редактировать продукт',
+            title: 'Редактировать продукт'
+          }, React.createElement(PencilEditIcon)),
           !isFromShared && React.createElement('button', {
             className: 'aps-delete-btn',
             onClick: (e) => handleDeleteProduct(e, product),
@@ -5217,7 +5244,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            combinedResults.map(p => renderProductCard(p, true, false, true))
+            combinedResults.map(p => renderProductCard(p, true, false, true, true))
           ),
           // Пустой результат
           combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
@@ -5996,10 +6023,26 @@ NOVA: 1
     }, [sourceProduct]);
 
     const [form, setForm] = useState(initialForm);
+    const [nutrientsExpanded, setNutrientsExpanded] = useState(false);
+    const initialPortions = useMemo(() => {
+      const list = Array.isArray(sourceProduct?.portions) ? sourceProduct.portions : [];
+      return list.map((portion) => ({
+        name: String(portion?.name || ''),
+        grams: portion?.grams ?? ''
+      }));
+    }, [sourceProduct]);
+    const [portionRows, setPortionRows] = useState(initialPortions);
+    const [portionError, setPortionError] = useState('');
+    const autoPortions = useMemo(() => getAutoPortions(form.name || sourceProduct?.name), [form.name, sourceProduct?.name]);
 
     useEffect(() => {
       setForm(initialForm);
     }, [initialForm]);
+
+    useEffect(() => {
+      setPortionRows(initialPortions);
+      setPortionError('');
+    }, [initialPortions]);
 
     const updateField = useCallback((key, value) => {
       setForm((prev) => ({
@@ -6007,6 +6050,59 @@ NOVA: 1
         [key]: value
       }));
     }, []);
+
+    const addPortionRow = useCallback(() => {
+      haptic('light');
+      setPortionRows((prev) => [...prev, { name: '', grams: '' }]);
+      setPortionError('');
+    }, []);
+
+    const applyAutoPortions = useCallback(() => {
+      if (!autoPortions?.length) return;
+      haptic('light');
+      setPortionRows(autoPortions.map((portion) => ({
+        name: String(portion?.name || ''),
+        grams: portion?.grams ?? ''
+      })));
+      setPortionError('');
+    }, [autoPortions]);
+
+    const updatePortionRow = useCallback((index, field, value) => {
+      setPortionRows((prev) => prev.map((portion, i) => (
+        i === index ? { ...portion, [field]: value } : portion
+      )));
+      setPortionError('');
+    }, []);
+
+    const removePortionRow = useCallback((index) => {
+      haptic('light');
+      setPortionRows((prev) => prev.filter((_, i) => i !== index));
+      setPortionError('');
+    }, []);
+
+    const validatePortions = useCallback(() => {
+      const normalized = [];
+      let hasInvalid = false;
+
+      portionRows.forEach((portion) => {
+        const name = String(portion?.name || '').trim();
+        const rawGrams = String(portion?.grams ?? '').trim();
+        if (!name && !rawGrams) return;
+
+        const grams = Number(rawGrams.replace(',', '.'));
+        if (!name || !Number.isFinite(grams) || grams <= 0) {
+          hasInvalid = true;
+          return;
+        }
+
+        normalized.push({ name, grams });
+      });
+
+      return {
+        ok: !hasInvalid,
+        portions: normalized
+      };
+    }, [portionRows]);
 
     const isInvalidNumber = useCallback((value) => {
       if (value == null || value === '') return false;
@@ -6049,7 +6145,7 @@ NOVA: 1
       };
     }, [form]);
 
-    const buildUpdatedProduct = useCallback(() => {
+    const buildUpdatedProduct = useCallback((nextPortions = null) => {
       const base = sourceProduct || {};
       const name = String(form.name || base.name || '').trim() || 'Без названия';
       const simple100 = toNum(form.simple100, 0);
@@ -6115,26 +6211,33 @@ NOVA: 1
         fiber100,
         gi,
         harm,
+        portions: Array.isArray(nextPortions) ? nextPortions : normalizePortions(portionRows),
         carbs100,
         fat100,
         kcal100
       };
-    }, [form, sourceProduct]);
+    }, [form, sourceProduct, portionRows]);
 
     const handleNext = useCallback(() => {
       if (!sourceProduct) return;
       haptic('light');
-      const updatedProduct = buildUpdatedProduct();
-      onChange({ ...data, product: updatedProduct });
+      const portionsResult = validatePortions();
+      if (!portionsResult.ok) {
+        setPortionError('Заполните название и граммы порции');
+        return;
+      }
+
+      const updatedProduct = buildUpdatedProduct(portionsResult.portions);
+      onChange({ ...data, product: updatedProduct, portions: portionsResult.portions });
 
       if (updateStepData) {
-        updateStepData('edit_basic', { product: updatedProduct });
+        updateStepData('edit_basic', { product: updatedProduct, portions: portionsResult.portions });
         updateStepData('edit_extra', { product: updatedProduct });
-        updateStepData('portions', { product: updatedProduct });
+        updateStepData('portions', { product: updatedProduct, portions: portionsResult.portions });
       }
 
       setTimeout(() => goToStep?.(1, 'left'), 120);
-    }, [sourceProduct, buildUpdatedProduct, onChange, data, updateStepData, goToStep]);
+    }, [sourceProduct, validatePortions, buildUpdatedProduct, onChange, data, updateStepData, goToStep]);
 
     if (!sourceProduct) {
       return React.createElement('div', { className: 'pe-empty' }, 'Нет продукта для редактирования');
@@ -6143,7 +6246,7 @@ NOVA: 1
     return React.createElement('div', { className: 'pe-step' },
       React.createElement('div', { className: 'pe-step-header' },
         React.createElement('span', { className: 'pe-step-icon' }, '✏️'),
-        React.createElement('span', { className: 'pe-step-title' }, 'Название и 12 основных')
+        React.createElement('span', { className: 'pe-step-title' }, 'Название и КБЖУ')
       ),
 
       React.createElement('div', { className: 'pe-field' },
@@ -6188,39 +6291,6 @@ NOVA: 1
           })
         ),
         React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Углеводы (100г)'),
-          React.createElement('input', {
-            className: 'pe-input' + (isInvalidNumber(form.carbs100) ? ' pe-input--error' : ''),
-            type: 'text',
-            inputMode: 'numeric',
-            value: form.carbs100,
-            onChange: (e) => updateField('carbs100', e.target.value),
-            placeholder: '0'
-          })
-        ),
-        React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Простые (100г)'),
-          React.createElement('input', {
-            className: 'pe-input' + (isInvalidNumber(form.simple100) ? ' pe-input--error' : ''),
-            type: 'text',
-            inputMode: 'numeric',
-            value: form.simple100,
-            onChange: (e) => updateField('simple100', e.target.value),
-            placeholder: '0'
-          })
-        ),
-        React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Сложные (100г)'),
-          React.createElement('input', {
-            className: 'pe-input' + (isInvalidNumber(form.complex100) ? ' pe-input--error' : ''),
-            type: 'text',
-            inputMode: 'numeric',
-            value: form.complex100,
-            onChange: (e) => updateField('complex100', e.target.value),
-            placeholder: '0'
-          })
-        ),
-        React.createElement('div', { className: 'pe-field' },
           React.createElement('label', { className: 'pe-label' }, 'Белок (100г)'),
           React.createElement('input', {
             className: 'pe-input' + (isInvalidNumber(form.protein100) ? ' pe-input--error' : ''),
@@ -6242,6 +6312,55 @@ NOVA: 1
             placeholder: '0'
           })
         ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Углеводы (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.carbs100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.carbs100,
+            onChange: (e) => updateField('carbs100', e.target.value),
+            placeholder: '0'
+          })
+        )
+      ),
+
+      React.createElement('div', {
+        className: 'pe-section pe-section--accordion' + (nutrientsExpanded ? ' is-open' : '')
+      },
+        React.createElement('button', {
+          type: 'button',
+          className: 'pe-accordion-toggle',
+          onClick: () => setNutrientsExpanded((value) => !value),
+          'aria-expanded': nutrientsExpanded ? 'true' : 'false'
+        },
+          React.createElement('span', { className: 'pe-section-title' }, 'Нутриенты'),
+          React.createElement('span', { className: 'pe-accordion-hint' }, 'детализация'),
+          React.createElement('span', { className: 'pe-accordion-chevron', 'aria-hidden': 'true' }, nutrientsExpanded ? '⌃' : '⌄')
+        ),
+        nutrientsExpanded && React.createElement('div', { className: 'pe-grid pe-grid--nutrients' },
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Простые (100г)'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.simple100) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.simple100,
+              onChange: (e) => updateField('simple100', e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Сложные (100г)'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.complex100) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.complex100,
+              onChange: (e) => updateField('complex100', e.target.value),
+              placeholder: '0'
+            })
+          ),
         React.createElement('div', { className: 'pe-field' },
           React.createElement('label', { className: 'pe-label' }, 'Вредные жиры (100г)'),
           React.createElement('input', {
@@ -6308,6 +6427,60 @@ NOVA: 1
             placeholder: '0'
           })
         )
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section pe-portions-block' },
+        React.createElement('div', { className: 'pe-portions-head' },
+          React.createElement('div', null,
+            React.createElement('div', { className: 'pe-section-title' }, 'Порции'),
+            React.createElement('div', { className: 'pe-portions-subtitle' }, 'Как продукт обычно добавляют в дневник')
+          ),
+          autoPortions?.length > 0 && React.createElement('button', {
+            type: 'button',
+            className: 'pe-portions-template-btn',
+            onClick: applyAutoPortions
+          }, 'Шаблон')
+        ),
+        React.createElement('div', { className: 'pe-portions-list' },
+          portionRows.length === 0 && React.createElement('div', { className: 'pe-portions-empty' },
+            'Порций пока нет'
+          ),
+          portionRows.map((portion, index) =>
+            React.createElement('div', { className: 'pe-portions-row', key: index },
+              React.createElement('input', {
+                className: 'pe-input pe-portions-name',
+                value: portion.name,
+                onChange: (e) => updatePortionRow(index, 'name', e.target.value),
+                placeholder: 'Например: 1 ложка'
+              }),
+              React.createElement('div', { className: 'pe-portions-grams' },
+                React.createElement('input', {
+                  className: 'pe-input pe-portions-grams-input',
+                  type: 'text',
+                  inputMode: 'numeric',
+                  value: portion.grams,
+                  onChange: (e) => updatePortionRow(index, 'grams', e.target.value),
+                  placeholder: 'г'
+                }),
+                React.createElement('span', { className: 'pe-portions-grams-unit' }, 'г')
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'pe-portions-remove-btn',
+                onClick: () => removePortionRow(index),
+                'aria-label': 'Удалить порцию',
+                title: 'Удалить порцию'
+              }, '×')
+            )
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'pe-portions-add-btn',
+          onClick: addPortionRow
+        }, '+ Добавить порцию'),
+        portionError && React.createElement('div', { className: 'pe-portions-error' }, portionError)
       ),
 
       React.createElement('div', { className: 'pe-preview' },
@@ -6690,15 +6863,18 @@ NOVA: 1
     useEscapeToClose(closeModal, true);
 
     // Ищем продукт из всех возможных источников
-    const product = context?.editProduct
+    const product = stepData?.edit_extra?.product
+      || stepData?.edit_basic?.product
+      || stepData?.portions?.product
+      || context?.editProduct
       || stepData?.grams?.selectedProduct  // Продукт с шага граммов
       || stepData?.search?.selectedProduct // Продукт с шага поиска
       || stepData?.create?.newProduct
       || stepData?.create?.selectedProduct
-      || stepData?.portions?.product
       || data?.selectedProduct;
 
     const autoPortions = useMemo(() => getAutoPortions(product?.name), [product?.name]);
+    const explicitPortions = Array.isArray(stepData?.portions?.portions) ? stepData.portions.portions : null;
 
     const toEditablePortions = useCallback((list) => {
       const base = Array.isArray(list) ? list : [];
@@ -6709,6 +6885,7 @@ NOVA: 1
     }, []);
 
     const [portions, setPortions] = useState(() => {
+      if (explicitPortions) return toEditablePortions(explicitPortions);
       if (product?.portions?.length) return toEditablePortions(product.portions);
       if (autoPortions?.length) return toEditablePortions(autoPortions);
       return [];
@@ -6724,6 +6901,11 @@ NOVA: 1
       if (userTouchedRef.current) return;
       if (portions.length > 0) return;
 
+      if (explicitPortions) {
+        setPortions(toEditablePortions(explicitPortions));
+        return;
+      }
+
       if (product?.portions?.length) {
         setPortions(toEditablePortions(product.portions));
         return;
@@ -6732,7 +6914,7 @@ NOVA: 1
       if (autoPortions?.length) {
         setPortions(toEditablePortions(autoPortions));
       }
-    }, [product, autoPortions, portions.length, toEditablePortions]);
+    }, [product, explicitPortions, autoPortions, portions.length, toEditablePortions]);
 
     const handleAddPortion = useCallback(() => {
       haptic('light');
@@ -8220,7 +8402,7 @@ NOVA: 1
         {
           id: 'edit_basic',
           title: 'Основные',
-          hint: 'Название и 12 полей',
+          hint: 'Название, КБЖУ и порции',
           icon: '✏️',
           component: ProductEditBasicStep,
           validate: () => true,

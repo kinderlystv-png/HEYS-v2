@@ -2548,21 +2548,29 @@
 .aps-product-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   flex-shrink: 0;
+}
+
+.aps-product-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 /* Кнопка удаления — маленькая */
 .aps-delete-btn {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: var(--color-gray-400);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
-  border-radius: 6px;
+  border-radius: 7px;
   opacity: 0.4;
 }
 
@@ -2579,15 +2587,15 @@
 }
 
 .aps-fav-btn {
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: #d1d5db;
-  font-size: 20px;
+  font-size: 17px;
   cursor: pointer;
   transition: all 0.15s;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 @media (hover: hover) {
@@ -2602,15 +2610,15 @@
 }
 
 .aps-barcode-btn {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: #94a3b8;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.15s;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 @media (hover: hover) {
@@ -2624,11 +2632,45 @@
   color: #434587;
 }
 
+.aps-edit-product-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 7px;
+}
+
+@media (hover: hover) {
+  .aps-edit-product-btn:hover {
+    background: rgba(29, 112, 183, 0.09);
+    color: #1d70b7;
+  }
+}
+
+.aps-edit-product-btn:active {
+  transform: scale(0.92);
+}
+
 .aps-product-barcode-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   display: block;
   fill: none;
+}
+
+.aps-product-edit-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .aps-barcode-overlay {

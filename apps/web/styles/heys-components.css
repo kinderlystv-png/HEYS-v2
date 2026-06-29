@@ -3603,6 +3603,153 @@ body.tour-active .ios-pwa-banner {
   display: none;
 }
 
+.pe-section--accordion {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pe-accordion-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pe-accordion-toggle .pe-section-title {
+  flex: 1;
+}
+
+.pe-accordion-hint {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  text-transform: none;
+}
+
+.pe-accordion-chevron {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pe-section--accordion .pe-grid {
+  padding: 0 10px 10px;
+}
+
+.pe-portions-block {
+  gap: 10px;
+}
+
+.pe-portions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pe-portions-subtitle {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+.pe-portions-template-btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d70b7;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pe-portions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pe-portions-empty {
+  padding: 9px 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+}
+
+.pe-portions-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px 34px;
+  gap: 6px;
+  align-items: center;
+}
+
+.pe-portions-grams {
+  position: relative;
+}
+
+.pe-portions-grams-input {
+  width: 100%;
+  padding-right: 24px;
+}
+
+.pe-portions-grams-unit {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.pe-portions-remove-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #ef4444;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pe-portions-add-btn {
+  width: 100%;
+  min-height: 40px;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d70b7;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pe-portions-error {
+  color: #b91c1c;
+  font-size: 12px;
+  text-align: center;
+}
+
 .pe-section-title {
   font-size: 12px;
   font-weight: 700;
@@ -3741,6 +3888,30 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .pe-section-title {
   color: #9ca3af;
+}
+
+[data-theme="dark"] .pe-accordion-chevron {
+  background: #0f172a;
+  border-color: #1f2937;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pe-portions-template-btn,
+[data-theme="dark"] .pe-portions-add-btn {
+  background: rgba(29, 112, 183, 0.16);
+  border-color: rgba(82, 160, 216, 0.35);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .pe-portions-empty {
+  border-color: #334155;
+  color: #64748b;
+}
+
+[data-theme="dark"] .pe-portions-remove-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
 }
 
 [data-theme="dark"] .pe-input,
@@ -5395,15 +5566,15 @@ body.tour-active .ios-pwa-banner {
 
 /* === APS: hide product button === */
 .aps-hide-btn {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: var(--color-gray-400);
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-radius: 8px;
+  border-radius: 7px;
   opacity: 0.6;
 }
 
@@ -5426,15 +5597,15 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-delete-btn {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: rgba(239, 68, 68, 0.12);
   color: #dc2626;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-radius: 8px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
