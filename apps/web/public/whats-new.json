@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.29.2fcf17c3",
+      "buildHash": "2fcf17c3",
+      "date": "2026-06-29",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "show fiber sources in diary",
+      "items": [
+        {
+          "type": "feat",
+          "title": "show fiber sources in diary",
+          "description": "show fiber sources in diary"
+        }
+      ],
+      "coveredCommits": ["2fcf17c3"]
+    },
+    {
       "version": "2026.06.29.eba282cc",
       "buildHash": "eba282cc",
       "date": "2026-06-29",
@@ -140,22 +156,6 @@
         }
       ],
       "coveredCommits": ["b331ce9a"]
-    },
-    {
-      "version": "2026.06.28.3cdfb443",
-      "buildHash": "3cdfb443",
-      "date": "2026-06-28",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Улучшено добавление продуктов по штрихкоду",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Штрихкод как отдельная зона",
-          "description": "В модалке добавления продуктов обычный клик открывает поиск, а отдельная светлая зона со штрихкодом сразу запускает сканер."
-        }
-      ],
-      "coveredCommits": ["3cdfb443"]
     }
   ]
 }
