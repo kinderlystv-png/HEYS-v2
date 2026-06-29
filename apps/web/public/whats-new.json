@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.29.9c36fa04",
+      "buildHash": "9c36fa04",
+      "date": "2026-06-29",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Добавление продуктов завершается корректно",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Дневник получает завершение добавления",
+          "description": "После одиночного добавления, готового набора или пакетного добавления продуктов приложение корректно завершает сценарий и может вернуть пользователя к дневнику."
+        }
+      ],
+      "coveredCommits": ["9c36fa04"]
+    },
+    {
       "version": "2026.06.29.33572996",
       "buildHash": "33572996",
       "date": "2026-06-29",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["5fe0672b"]
-    },
-    {
-      "version": "2026.06.28.6e36befb",
-      "buildHash": "6e36befb",
-      "date": "2026-06-28",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Исправление сканера штрихкодов на iPhone",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Сканер штрихкодов на iPhone",
-          "description": "Исправлена загрузка fallback-сканера для Safari на iPhone: камера открывается, а слой распознавания корректно подхватывает локальный WASM-polyfill."
-        }
-      ],
-      "coveredCommits": ["6e36befb"]
     }
   ]
 }
