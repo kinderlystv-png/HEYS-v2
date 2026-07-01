@@ -76,10 +76,11 @@
     const [email, setEmail] = useState(initialEmail || '');
     const [password, setPassword] = useState(initialPassword || '');
 
-    const [busy, setBusy] = useState(false);
-    const [err, setErr] = useState('');
-    const [clientDiag, setClientDiag] = useState(null);
-    const curatorAutoLoginTriedRef = useRef(false);
+	    const [busy, setBusy] = useState(false);
+	    const [err, setErr] = useState('');
+	    const [clientDiag, setClientDiag] = useState(null);
+	    const [supportOpen, setSupportOpen] = useState(false);
+	    const curatorAutoLoginTriedRef = useRef(false);
 
     const auth = HEYS.auth;
     const autoCuratorLoginEnabled = autoCuratorLogin === true && curatorAutologinConfig && curatorAutologinConfig.enabled === true;
@@ -269,9 +270,9 @@
       }
     }
 
-    useEffect(() => {
-      if (!autoCuratorLoginEnabled) return;
-      if (mode !== 'curator') return;
+	    useEffect(() => {
+	      if (!autoCuratorLoginEnabled) return;
+	      if (mode !== 'curator') return;
       if (busy) return;
       if (!isCuratorAutologinArmed()) return;
       if (curatorAutoLoginTriedRef.current) return;
@@ -292,9 +293,19 @@
           isAutologin: true,
         });
       }, 80);
+	      return () => clearTimeout(timer);
+	    }, [autoCuratorLoginEnabled, busy, email, mode, password]);
 
-      return () => clearTimeout(timer);
-    }, [autoCuratorLoginEnabled, busy, email, mode, password]);
+	    useEffect(() => {
+	      if (!supportOpen) return undefined;
+	      const onKeyDown = (e) => {
+	        if (e && e.key === 'Escape') setSupportOpen(false);
+	      };
+	      try { global.document && global.document.addEventListener('keydown', onKeyDown); } catch (_) { }
+	      return () => {
+	        try { global.document && global.document.removeEventListener('keydown', onKeyDown); } catch (_) { }
+	      };
+	    }, [supportOpen]);
 
     const greeting = (() => {
       const h = new Date().getHours();
@@ -339,18 +350,93 @@
         children,
       );
 
-    const GhostBtn = (p, children) =>
-      React.createElement(
-        'button',
+	    const GhostBtn = (p, children) =>
+	      React.createElement(
+	        'button',
         {
           ...p,
           type: p.type || 'button',
           className: 'heys-auth-btn heys-auth-btn--ghost ' + (p.className || ''),
         },
-        children,
-      );
+	        children,
+	      );
 
-    function renderStart() {
+	    function renderSupportPopup() {
+	      if (!supportOpen) return null;
+	      return React.createElement(
+	        'div',
+	        {
+	          className: 'heys-auth-support-backdrop',
+	          role: 'dialog',
+	          'aria-modal': 'true',
+	          'aria-labelledby': 'heys-auth-support-title',
+	          onClick: () => setSupportOpen(false),
+	        },
+	        React.createElement(
+	          'div',
+	          {
+	            className: 'heys-auth-support-panel',
+	            onClick: (e) => e.stopPropagation(),
+	          },
+	          React.createElement(
+	            'button',
+	            {
+	              type: 'button',
+	              className: 'heys-auth-support-close',
+	              'aria-label': 'Закрыть',
+	              onClick: () => setSupportOpen(false),
+	            },
+	            '×',
+	          ),
+	          React.createElement('div', { id: 'heys-auth-support-title', className: 'heys-auth-support-title' }, 'Поддержка HEYS'),
+	          React.createElement('div', { className: 'heys-auth-support-text' }, 'Если PIN не подходит или его нужно сбросить, напишите нам или позвоните.'),
+	          React.createElement(
+	            'a',
+	            {
+	              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support_bot',
+	              target: '_blank',
+	              rel: 'noopener noreferrer',
+	              className: 'heys-auth-support-action',
+	            },
+	            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support_bot',
+	          ),
+	          React.createElement(
+	            'a',
+	            {
+	              href: 'tel:+79624556111',
+	              className: 'heys-auth-support-action',
+	            },
+	            '+7 962 455-61-11',
+	          ),
+	        ),
+	      );
+	    }
+
+	    function renderAdminShortcut() {
+	      if (mode !== 'client') return null;
+	      return React.createElement(
+	        'button',
+	        {
+	          type: 'button',
+	          className: 'heys-auth-admin-shortcut',
+	          'aria-label': 'Вход для админа',
+	          title: 'Вход для админа',
+	          onClick: () => {
+	            setErr('');
+	            armCuratorAutologin();
+	            setMode('curator');
+	          },
+	        },
+	        React.createElement(
+	          'svg',
+	          { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+	          React.createElement('path', { d: 'M12 3l7 3v5c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V6l7-3z' }),
+	          React.createElement('path', { d: 'M9.5 11.5l1.8 1.8 3.7-4' }),
+	        ),
+	      );
+	    }
+
+	    function renderStart() {
       return Card(
         React.createElement(
           'div',
@@ -408,7 +494,7 @@
         // Автофокус на PIN после ввода 10 цифр
         if (newDigits.length === 10) {
           setTimeout(() => {
-            try { pinRefs.current[0] && pinRefs.current[0].focus(); } catch (_) { }
+            focusPinInput(getNextPinIndex(pinDigits));
           }, 50);
         }
       };
@@ -420,6 +506,81 @@
           setPhoneMasked(phoneDigits.slice(0, -1));
         }
       };
+
+      const usesTouchKeypad = () => {
+        try {
+          return !!(global.matchMedia && global.matchMedia('(pointer: coarse)').matches);
+        } catch (_) {
+          return false;
+        }
+      };
+
+      const focusPinInput = (idx) => {
+        const input = pinRefs.current && pinRefs.current[idx];
+        if (!input) return;
+        if (usesTouchKeypad()) {
+          try {
+            if (global.document && global.document.activeElement) global.document.activeElement.blur();
+          } catch (_) { }
+          return;
+        }
+        try { input.focus(); } catch (_) { }
+      };
+
+      const getNextPinIndex = (digits) => {
+        const arr = (digits || pinDigits || []).slice(0, 4);
+        for (let i = 0; i < 4; i++) {
+          if (!arr[i]) return i;
+        }
+        return 3;
+      };
+
+      const applyPinDigits = (nextDigits, changedIndex, changedDigit) => {
+        const arr = (nextDigits || []).slice(0, 4);
+        while (arr.length < 4) arr.push('');
+        setErr('');
+        setPinDigits(arr);
+        if (typeof changedIndex === 'number') {
+          if (changedDigit) showPinOverlayDigit(changedIndex, changedDigit, 1200);
+          else clearHidePinDigit(changedIndex);
+        }
+        return arr;
+      };
+
+      const maybeLoginWithPin = (nextDigits) => {
+        const nextPin = (nextDigits || []).join('');
+        const isPinValid = auth && auth.validatePin(nextPin);
+        if (clientPhoneValid && isPinValid && !busy) {
+          setTimeout(() => handleClientLogin(nextPin), 100);
+        }
+      };
+
+      const appendPinDigit = (digit) => {
+        if (busy || !/^\d$/.test(String(digit)) || (pinDigits || []).every(Boolean)) return;
+        const idx = getNextPinIndex(pinDigits);
+        const arr = (pinDigits || []).slice(0, 4);
+        while (arr.length < 4) arr.push('');
+        arr[idx] = String(digit);
+        const next = applyPinDigits(arr, idx, String(digit));
+        if (idx < 3) focusPinInput(idx + 1);
+        maybeLoginWithPin(next);
+      };
+
+      const erasePinDigit = () => {
+        if (busy) return;
+        const arr = (pinDigits || []).slice(0, 4);
+        while (arr.length < 4) arr.push('');
+        for (let i = 3; i >= 0; i--) {
+          if (arr[i]) {
+            arr[i] = '';
+            applyPinDigits(arr, i, '');
+            focusPinInput(i);
+            return;
+          }
+        }
+      };
+
+      const activePinIndex = isPinComplete ? -1 : getNextPinIndex(pinDigits);
 
       return Card(
         // Заголовок
@@ -494,22 +655,16 @@
                     onChange: (e) => {
                       setErr('');
                       const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
-                      const arr = (pinDigits || []).slice(0, 4);
+                      let arr = (pinDigits || []).slice(0, 4);
                       while (arr.length < 4) arr.push('');
                       arr[i] = v;
-                      setPinDigits(arr);
-                      if (v) showPinOverlayDigit(i, v, 1200);
-                      else clearHidePinDigit(i);
+                      arr = applyPinDigits(arr, i, v);
                       if (v && i < 3) {
-                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) { }
+                        focusPinInput(i + 1);
                       }
                       // Автоматический вход после ввода последней цифры PIN
                       if (v && i === 3) {
-                        const newPin = arr.join('');
-                        const isPinValid = auth && auth.validatePin(newPin);
-                        if (clientPhoneValid && isPinValid && !busy) {
-                          setTimeout(() => handleClientLogin(newPin), 100);
-                        }
+                        maybeLoginWithPin(arr);
                       }
                     },
                     onKeyDown: (e) => {
@@ -520,9 +675,8 @@
                           const arr = (pinDigits || []).slice(0, 4);
                           while (arr.length < 4) arr.push('');
                           arr[i - 1] = '';
-                          setPinDigits(arr);
-                          clearHidePinDigit(i - 1);
-                          try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) { }
+                          applyPinDigits(arr, i - 1, '');
+                          focusPinInput(i - 1);
                           return;
                         }
                         if (cur) {
@@ -530,18 +684,17 @@
                           const arr = (pinDigits || []).slice(0, 4);
                           while (arr.length < 4) arr.push('');
                           arr[i] = '';
-                          setPinDigits(arr);
-                          clearHidePinDigit(i);
+                          applyPinDigits(arr, i, '');
                           return;
                         }
                       }
                       if (e.key === 'ArrowLeft' && i > 0) {
                         e.preventDefault();
-                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) { }
+                        focusPinInput(i - 1);
                       }
                       if (e.key === 'ArrowRight' && i < 3) {
                         e.preventDefault();
-                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) { }
+                        focusPinInput(i + 1);
                       }
                       if (e.key === 'Enter' && canClientLogin) {
                         handleClientLogin();
@@ -562,11 +715,12 @@
                           }
                           setPinDigits(arr);
                           const nextIdx = Math.min(3, digits.length);
-                          try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) { }
+                          focusPinInput(nextIdx);
+                          maybeLoginWithPin(arr);
                         }
                       } catch (_) { }
                     },
-                    className: 'heys-auth-pin-input ' + (isPinComplete ? 'is-complete' : isFilled ? 'is-filled' : ''),
+                    className: 'heys-auth-pin-input ' + (isPinComplete ? 'is-complete' : isFilled ? 'is-filled' : '') + (i === activePinIndex ? ' is-active' : ''),
                   }),
                   (overlay && overlay.d)
                     ? React.createElement(
@@ -592,6 +746,45 @@
             ),
           ),
 
+          React.createElement(
+            'div',
+            { className: 'heys-auth-keypad', 'aria-label': 'Цифровая клавиатура PIN' },
+            [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
+              React.createElement(
+                'button',
+                {
+                  key: 'pin_key_' + n,
+                  type: 'button',
+                  className: 'heys-auth-key',
+                  onClick: () => appendPinDigit(String(n)),
+                },
+                String(n),
+              )
+            ),
+            React.createElement('span', { key: 'pin_key_spacer', className: 'heys-auth-key-spacer', 'aria-hidden': 'true' }),
+            React.createElement(
+              'button',
+              {
+                key: 'pin_key_0',
+                type: 'button',
+                className: 'heys-auth-key',
+                onClick: () => appendPinDigit('0'),
+              },
+              '0',
+            ),
+            React.createElement(
+              'button',
+              {
+                key: 'pin_key_backspace',
+                type: 'button',
+                className: 'heys-auth-key heys-auth-key--muted',
+                'aria-label': 'Удалить цифру PIN',
+                onClick: erasePinDigit,
+              },
+              '⌫',
+            ),
+          ),
+
           err && React.createElement('div', { className: 'heys-auth-error' }, err),
           clientDiag && React.createElement(
             'div',
@@ -613,53 +806,28 @@
             { type: 'submit', disabled: !canClientLogin },
             busy ? '⏳ Вход...' : 'Войти →',
           ),
-        ),
-        React.createElement(
-          'div',
-          { className: 'heys-auth-meta mt-6 space-y-3 text-center text-sm' },
-          // Подсказка по сбросу PIN — без отдельного UI flow (минимальная
-          // реализация P0-G). Клиент пишет куратору в Telegram-личку,
-          // куратор сбрасывает PIN через админ-панель.
-          React.createElement(
-            'div',
-            { className: 'heys-auth-meta-strong' },
-            'Не помните PIN? Напишите куратору — он его сбросит:',
-          ),
-          React.createElement(
-            'a',
-            {
-              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support_bot',
-              target: '_blank',
-              rel: 'noopener noreferrer',
-              className: 'heys-auth-link block',
-            },
-            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support_bot',
-          ),
-          React.createElement('div', { className: 'mt-4' }, 'Или позвоните в поддержку:'),
-          React.createElement(
-            'a',
-            {
-              href: 'tel:+79624556111',
-              className: 'heys-auth-link block',
-            },
-            '+7 962 455-61-11',
-          ),
-          React.createElement(
-            'button',
-            {
-              type: 'button',
-              className: 'heys-auth-link-btn mt-3',
-              onClick: () => {
-                setErr('');
-                armCuratorAutologin();
-                setMode('curator');
-              }
-            },
-            'Вход для куратора →',
-          ),
-        ),
-      );
-    }
+	        ),
+	        React.createElement(
+	          'div',
+	          { className: 'heys-auth-footer-row' },
+	          React.createElement(
+	            'div',
+	            { className: 'heys-auth-support-line' },
+	            'Забыли PIN? ',
+	            React.createElement(
+	              'button',
+	              {
+	                type: 'button',
+	                className: 'heys-auth-support-link',
+	                onClick: () => setSupportOpen(true),
+	              },
+	              'Обратитесь в поддержку.',
+	            ),
+	          ),
+	        ),
+	        renderSupportPopup(),
+	      );
+	    }
 
     function renderCuratorLogin() {
       return Card(
@@ -732,12 +900,13 @@
         : mode === 'client'
           ? renderClientLogin()
           : renderCuratorLogin(),
-      React.createElement(
-        'div',
-        { className: 'heys-auth-version mt-6 text-xs font-medium tracking-wider font-mono' },
-        'v' + (HEYS.version || 'dev'),
-      ),
-    );
+	      React.createElement(
+	        'div',
+	        { className: 'heys-auth-version mt-6 text-xs font-medium tracking-wider font-mono' },
+	        'v' + (HEYS.version || 'dev'),
+	      ),
+	      renderAdminShortcut(),
+	    );
   }
 
   HEYS.LoginScreen = LoginScreen;
