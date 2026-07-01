@@ -1,352 +1,828 @@
-# HEYS iOS Unlisted App Plan
+# HEYS iOS Unlisted App Implementation Runbook
 
 Дата: 2026-07-01
 
 ## Суть
 
-Рабочий путь для iOS: собрать HEYS как нормальное iOS-приложение через текущий
-Expo/EAS-контур, пройти App Review, затем запросить у Apple unlisted
-distribution и отправлять клиентам прямую ссылку на App Store.
+Для iOS идем не через рассылку `.ipa`, а через нормальное приложение в App
+Store: собираем HEYS mobile shell на Expo/React Native, добавляем app-like
+функции поверх веб-продукта, проходим App Review, запрашиваем у Apple unlisted
+distribution и даем клиентам прямую ссылку на App Store.
 
-Это не рассылка `.ipa` как файла. На iOS такой сценарий не подходит для
-клиентского production: установка ограничена устройствами, TestFlight остается
-beta-каналом, Enterprise Program предназначен для внутренних сотрудников, а не
-для внешних клиентов.
+Unlisted link решает дистрибуцию, но не приватность. Приватность и права доступа
+должны оставаться внутри HEYS: auth, PIN/session, роли, client/curator context и
+серверные проверки.
 
-## Что такое unlisted app
+## Решение
 
-Unlisted app - это обычное приложение в App Store, которое:
+Выбранный релизный канал:
 
-- не показывается в поиске, категориях, чартах, рекомендациях и обычных списках
-  App Store;
-- открывается и устанавливается по прямой ссылке;
-- обновляется через App Store как обычное приложение;
-- проходит обычный App Review;
-- не является приватной защитой: если ссылку переслали, страницу приложения тоже
-  можно открыть.
+- iOS production: App Store + unlisted app link.
+- iOS beta: TestFlight, только для тестирования.
+- Android preview: APK/AAB контур остается отдельным и не является моделью для
+  iOS.
 
-Защиту доступа надо делать внутри HEYS: аккаунт, PIN, роли, права
-клиента/куратора, серверная проверка доступа.
+Отклоненные каналы:
 
-## Почему не просто PWA -> IPA -> клиенту
+| Канал                             | Почему не базовый путь                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `.ipa` файлом клиенту             | Не работает как Android APK: нужна подпись, provisioning и доверенный способ установки.                   |
+| Ad Hoc                            | Подходит для ограниченного тестирования на зарегистрированных устройствах, не для клиентского production. |
+| TestFlight                        | Beta-канал, не постоянная поставка клиентам.                                                              |
+| Enterprise                        | Для внутренних сотрудников организации, не для внешних клиентов HEYS.                                     |
+| Apple Business Manager Custom App | Хорош для B2B-организаций, но требует ABM-процесса у клиента; можно рассмотреть позже.                    |
 
-| Вариант                           | Что реально происходит                                            | Подходит для клиентов                              |
-| --------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------- |
-| `.ipa` напрямую                   | Нужна подпись и доверенная схема установки                        | Нет                                                |
-| Ad Hoc                            | Только зарегистрированные устройства, лимиты Apple по устройствам | Нет для нормального масштаба                       |
-| TestFlight                        | До 10 000 внешних тестеров, beta/review-процесс                   | Только временное тестирование                      |
-| Enterprise                        | In-house distribution для сотрудников организации                 | Нет для внешних клиентов                           |
-| Apple Business Manager Custom App | Частное B2B-распространение по организациям                       | Да, если клиентская организация работает через ABM |
-| Unlisted App Store app            | App Store-установка по прямой ссылке                              | Да, лучший базовый вариант                         |
+## Текущий контур в репозитории
 
-## Выбранная стратегия
+Факты по текущему состоянию `apps/mobile`:
 
-Базовый сценарий:
+- Приложение уже существует как Expo/React Native app.
+- Навигация построена через `expo-router`.
+- Есть `app.json`, `eas.json`, `.easignore`, Android-профили и базовые assets.
+- iOS `bundleIdentifier` и `buildNumber` пока не заданы.
+- Production EAS-профиль сейчас описывает Android app bundle, без явной
+  iOS-конфигурации.
+- Текущий UI - ранний каркас: index screen, login screen и простой API client.
+- Зависимостей для controlled WebView, secure token storage, биометрии и push
+  сейчас нет.
 
-1. Использовать существующее приложение `apps/mobile` как iOS-контур.
-2. Не делать "голый сайт в WebView". Apple guideline 4.2 требует, чтобы
-   приложение было больше, чем repackaged website.
-3. Собрать app-like shell: нативный старт, авторизация/сессия, понятные
-   состояния сети, настройки аккаунта, ссылка на поддержку, удаление аккаунта,
-   privacy/legal entry points.
-4. Основной HEYS-интерфейс на первом этапе можно открывать внутри controlled
-   WebView, если оболочка дает реальную app-like ценность и не выглядит как
-   браузерная вкладка.
-5. Пройти TestFlight для внутренней проверки.
-6. Подать production build в App Review с пометкой, что приложение предназначено
-   для unlisted distribution.
-7. После готовности или публикации запросить unlisted app link у Apple.
-8. Клиентам отправлять App Store-ссылку, а доступ к данным закрывать
-   HEYS-аккаунтом.
+Вывод: не создавать новый mobile-проект. Надо довести `apps/mobile` до iOS
+release shell и затем подключить web app внутри controlled WebView.
 
-## Текущий стартовый контур
-
-В проекте уже есть `apps/mobile`:
-
-- Expo / React Native приложение;
-- EAS config в `apps/mobile/eas.json`;
-- Android preview APK уже описан в `apps/mobile/BUILD_README.md`;
-- iOS production-конфигурация пока не доведена до релизного состояния;
-- текущие экраны выглядят как ранний каркас, не как готовый клиентский app.
-
-Вывод: начинать надо не с нового репозитория, а с доведения `apps/mobile` до iOS
-release shell.
-
-## Архитектура первого iOS-релиза
+## Релизная архитектура
 
 ### 1. Native shell
 
-Минимальный набор нативных экранов:
+Native shell - это не "обертка ради иконки", а слой приложения, который отвечает
+за поведение iOS-продукта:
 
+- старт приложения;
 - splash/loading;
-- login/session restore;
-- connection error / maintenance;
-- account/settings;
-- support/contact;
-- privacy policy / terms links;
+- восстановление сессии;
+- login/logout;
+- offline/error/maintenance states;
+- settings/account;
+- support/privacy/terms;
 - account deletion entry point;
-- version/build diagnostics.
+- app version/build diagnostics;
+- controlled WebView container.
 
-Зачем: это снижает риск отказа как "просто сайт в оболочке" и дает пользователю
-нормальное поведение приложения.
+Этот слой нужен и пользователю, и App Review: приложение должно выглядеть как
+app, а не как вкладка Safari.
 
-### 2. Controlled WebView для HEYS web app
+### 2. Controlled WebView
 
-Если основной продукт остается вебом, WebView должен быть контролируемым:
+WebView допустим для основного HEYS-интерфейса, если он контролируемый:
 
-- открывает только разрешенные HEYS-домены;
-- не превращается в общий браузер;
-- корректно обрабатывает deep links;
-- показывает нативные ошибки сети;
-- не хранит секреты в обычном localStorage, если используются mobile tokens;
-- имеет понятный logout;
-- не ломает PIN/curator/client контекст.
+- открывает только allowlist HEYS-доменов;
+- не показывает пользователю общий адресный браузер;
+- перехватывает внешние ссылки и открывает их явно через system browser;
+- не позволяет произвольные навигации на чужие домены;
+- умеет показать native offline/error state;
+- получает auth через безопасный session exchange, а не через long-lived token в
+  query/localStorage;
+- не смешивает client/curator/PIN контексты.
 
-Технически понадобится добавить зависимость вроде `react-native-webview`, но
-решение по токенам надо принять до кода.
+Планируемая зависимость: `react-native-webview`.
 
-### 3. Auth и сессии
+### 3. Auth и security
 
-Нельзя просто "зашить" веб-сессию без модели безопасности.
+Предпочтительный контракт:
 
-Нужны решения:
+1. Native login получает mobile session у HEYS API.
+2. Refresh/access token хранится в iOS Keychain через `expo-secure-store`.
+3. Для WebView native app запрашивает у backend короткоживущий one-time web
+   session exchange token.
+4. WebView открывает HEYS URL для mobile session exchange.
+5. Server выставляет HttpOnly/Secure cookie или другой web-session механизм и
+   редиректит в приложение.
+6. Logout чистит native secure storage, web cookies/session и серверную сессию.
 
-- как мобильный клиент получает токен;
-- где хранит токен: предпочтительно secure storage, не plain localStorage;
-- как WebView получает авторизацию: cookie, deep link token exchange или
-  backend-issued mobile session;
-- как инвалидируется сессия при logout;
-- что происходит при смене клиента у куратора;
-- как не нарушить текущий invariant: cloud/server остаются источником правды по
-  client/context.
+Чего избегать:
 
-### 4. Обновления
+- long-lived token в URL;
+- token в WebView localStorage;
+- token injection через JS как основной механизм;
+- доверие к `client_id`, пришедшему из браузера/native слоя, как к authority;
+- silent login без понятного logout.
 
-Надо разделить два типа обновлений:
+Планируемые зависимости:
 
-- Web-контент HEYS может обновляться на сервере без нового App Store review.
-- Нативная оболочка, permissions, capabilities, auth-модель и App Store metadata
-  обновляются через новую версию приложения.
+- обязательная: `expo-secure-store`;
+- optional для Face ID/Touch ID unlock: `expo-local-authentication`.
 
-Для первого релиза лучше не полагаться на сложные OTA-механизмы, пока не
-закреплен App Review-контур.
+Биометрия не заменяет серверную авторизацию. Она только защищает локальный
+доступ к уже выданной сессии.
 
-## App Review readiness
+### 4. Deep links
 
-Перед отправкой в Apple должны быть готовы:
+Deep links нужны для app-like UX и будущих клиентских сценариев:
 
-- production App Store bundle id, например `com.heys.app`, не dev package;
-- App Store Connect app record;
-- Apple Developer Program account;
-- app name, subtitle, description, keywords;
-- иконка, screenshots, preview metadata;
-- support URL;
-- privacy policy URL;
-- terms URL, если используется;
-- понятная форма удаления аккаунта или запуск удаления аккаунта из приложения;
-- demo account для reviewer;
-- Review Notes: что это HEYS, кому предназначено, как войти, что приложение
-  intended for unlisted distribution;
-- privacy nutrition labels в App Store Connect;
-- age rating;
-- проверка медицинских/нутрициологических формулировок: без обещаний лечения,
-  диагноза или медицинского результата.
+- открыть приглашение клиента;
+- открыть экран входа/восстановления;
+- открыть конкретный client/session context после auth;
+- вернуться из email/payment/support flow.
 
-Если в приложении появится сторонний social login, надо отдельно проверить
-требование Sign in with Apple. Если вход только email/password или
-PIN/сессионный доступ без social login, этот риск ниже.
+Минимум для первого релиза:
 
-## План работ
+- custom scheme, например `heys://`;
+- universal links для production-домена, если домен и Apple Associated Domains
+  готовы;
+- route guard: deep link не должен открывать клиентские данные без auth.
 
-### Фаза 0. Решение по каналу
+`expo-linking` уже есть в зависимостях, но routing contract еще надо описать и
+реализовать.
 
-Результат: зафиксировано, что iOS идет через App Store unlisted, не через
-рассылку `.ipa`.
+### 5. Offline states
 
-Проверка готовности:
+Offline в первом iOS-релизе не означает "полный офлайн-редактор". Минимальный
+релизный уровень:
 
-- выбран Apple Developer account;
-- выбран production bundle id;
-- понятна целевая аудитория: прямые клиенты HEYS, кураторы или оба сегмента;
-- принято решение: приложение бесплатное, доступ монетизируется вне App Store
-  через HEYS-аккаунт, либо нужна отдельная IAP-проверка.
+- app стартует без белого экрана;
+- показывает понятное native offline состояние;
+- дает retry;
+- не создает локальные writes без явного sync-контракта;
+- не показывает устаревшие данные как актуальные, если это может навредить
+  решению пользователя.
 
-### Фаза 1. Технический дизайн mobile shell
+Полный offline-write режим - отдельная задача, потому что он затрагивает sync,
+конфликты и client-scoped storage.
 
-Результат: короткая спецификация mobile shell до кода.
+### 6. Push notifications
 
-Нужно описать:
+Push добавлять только при понятном продуктовом сценарии. "Чтобы было нативно" -
+плохая причина.
 
-- какие URL открывает WebView;
-- какие URL запрещены;
-- auth flow;
-- logout flow;
-- restore session flow;
-- error states;
-- account deletion flow;
-- что остается нативным, а что остается вебом;
-- как тестируется client/curator/PIN сценарий.
+Допустимые сценарии для первого или второго релиза:
 
-### Фаза 2. iOS config в Expo/EAS
+- куратор обновил план/комментарий;
+- клиенту назначено действие;
+- важное напоминание по agreed schedule;
+- сервисное уведомление о доступе/сессии.
 
-Результат: `apps/mobile` умеет собирать iOS production build.
+Если push входит в релиз, нужны:
 
-Ожидаемые изменения:
+- `expo-notifications`;
+- APNs credentials;
+- backend registration device token;
+- user consent/settings;
+- unsubscribe/disable flow;
+- privacy policy update;
+- TestFlight smoke на реальном устройстве.
 
-- добавить `ios.bundleIdentifier`;
-- добавить `ios.buildNumber`;
-- проверить display name;
-- настроить `eas.json` для iOS production;
-- настроить credentials/certificates/profiles через EAS;
-- проверить, что Android APK/AAB контур не сломан.
+Если сценарий не выбран, push остается в backlog и не нужен для первого App
+Review.
+
+## App-like value checklist
+
+Этот checklist нужен, чтобы снизить риск отказа по Apple guideline 4.2.
+
+| Требование              | Минимум для HEYS iOS                                                        |
+| ----------------------- | --------------------------------------------------------------------------- |
+| Splash/icon             | Production icon, splash, display name без `dev`.                            |
+| Native state management | Loading, restoring session, offline, maintenance, forbidden navigation.     |
+| Controlled navigation   | WebView allowlist, external link handling, no address bar/browser behavior. |
+| Auth                    | Native login/session restore/logout, secure token storage.                  |
+| Deep links              | `heys://` и/или universal links с auth guard.                               |
+| Account area            | Settings, support, privacy, account deletion entry point.                   |
+| Security                | Keychain/SecureStore, no long-lived tokens in URL/localStorage.             |
+| Optional biometrics     | Face ID/Touch ID unlock for existing local session.                         |
+| Optional push           | Only with a real user-facing notification scenario.                         |
+| Reviewability           | Demo account, review notes, screenshots showing real app usage.             |
+
+## Целевые файлы и модули
+
+Текущие файлы, которые likely будут изменены при реализации:
+
+| Path                                     | Роль                                                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `apps/mobile/package.json`               | Добавить mobile dependencies и scripts при необходимости.                                    |
+| `apps/mobile/app.json`                   | iOS bundle id, build number, scheme, associated domains, permissions, icons/splash metadata. |
+| `apps/mobile/eas.json`                   | iOS preview/production profiles и submit config.                                             |
+| `apps/mobile/app/_layout.tsx`            | Root navigation, auth guards, app-level providers.                                           |
+| `apps/mobile/app/index.tsx`              | Entry routing: restore session -> web app или login.                                         |
+| `apps/mobile/app/auth/login.tsx`         | Native login flow или временная точка входа.                                                 |
+| `apps/mobile/src/features/auth/api.ts`   | Auth API contract, token/session exchange.                                                   |
+| `apps/mobile/src/services/api-client.ts` | API base URL, request errors, auth headers.                                                  |
+| `apps/mobile/assets/*`                   | Production icon/splash/adaptive assets.                                                      |
+
+Новые planned modules:
+
+| Planned path                              | Назначение                                              |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `apps/mobile/app/web/index.tsx`           | Controlled WebView screen.                              |
+| `apps/mobile/app/settings/index.tsx`      | Account/settings/support/privacy/account deletion.      |
+| `apps/mobile/src/features/session/`       | Secure session storage, restore, logout.                |
+| `apps/mobile/src/features/webview/`       | URL allowlist, navigation policy, web session exchange. |
+| `apps/mobile/src/features/deeplink/`      | Deep link parsing and auth guard.                       |
+| `apps/mobile/src/features/notifications/` | Only if push scenario is approved.                      |
+| `apps/mobile/src/features/biometrics/`    | Optional Face ID/Touch ID unlock.                       |
+| `apps/mobile/src/shared/config/urls.ts`   | Production/staging HEYS URLs and allowlists.            |
+
+Имена модулей можно адаптировать под финальный стиль, но функциональные границы
+лучше сохранить.
+
+## План реализации
+
+### Фаза 0. Архитектурное решение
+
+Цель: зафиксировать, что строим iOS App Store unlisted app, а не
+IPA/TestFlight-as-production.
+
+Конкретные изменения:
+
+- Обновить этот runbook при смене решения.
+- Зафиксировать production domain для WebView.
+- Зафиксировать bundle id, например `com.heys.mobile` или другой финальный id
+  без `.dev`.
+- Зафиксировать, для кого первый релиз: клиент, куратор или оба.
+- Решить вопрос оплаты: внешний доступ по HEYS-аккаунту или IAP review needed.
+
+Критерий готовности:
+
+- Есть один выбранный iOS distribution path.
+- Есть owner Apple Developer account.
+- Есть production/staging domain mapping.
+- Есть решение, входит ли push в первый релиз.
+
+Проверка:
+
+- Review этого раздела владельцем продукта.
+- Проверка, что App Store access не зависит от "секретности" unlisted link.
+
+Риски:
+
+- Если не решить оплату заранее, можно получить App Review blocker по IAP.
+- Если не выбрать аудиторию, shell станет размытым и будет похож на браузер.
+
+### Фаза 1. iOS Expo/EAS config
+
+Цель: подготовить `apps/mobile` к iOS preview/production build.
+
+Конкретные изменения:
+
+- В `apps/mobile/app.json`:
+  - добавить `ios.bundleIdentifier`;
+  - добавить `ios.buildNumber`;
+  - проверить `expo.name` и display name;
+  - добавить `scheme`;
+  - при готовности universal links добавить `ios.associatedDomains`;
+  - проверить `icon` и `splash`.
+- В `apps/mobile/eas.json`:
+  - добавить iOS-specific preview profile;
+  - добавить iOS-specific production profile;
+  - проверить `submit.production` для App Store Connect.
+- В assets:
+  - заменить placeholder icon/splash на production assets, если текущие не
+    финальные.
+
+Критерий готовности:
+
+- `app.json` содержит production iOS identity.
+- `eas.json` явно поддерживает iOS production build.
+- Android preview/production profiles не сломаны.
 
 Проверка:
 
 ```bash
 cd apps/mobile
+npx expo config --type public
 eas build --profile production --platform ios
 ```
 
-Команда требует Expo/Apple credentials и может упереться в 2FA, это единственная
-часть, где может понадобиться ручное подтверждение владельца аккаунта.
+Для локального smoke до EAS:
 
-### Фаза 3. Реализация app-like shell
+```bash
+cd apps/mobile
+npm run ios
+```
 
-Результат: приложение выглядит и ведет себя как iOS app, а не как браузерная
-вкладка.
+Риски:
 
-Нужно сделать:
+- EAS iOS build требует Apple credentials и может упереться в 2FA.
+- Bundle id после App Store record нельзя менять без последствий для релизного
+  контура.
+- Нельзя использовать dev id вроде `com.heys.mobile.dev` для production app.
 
-- нативный root layout;
-- WebView screen с allowlist доменов;
-- loading/offline/error screens;
-- settings/account screen;
-- support/privacy/legal links;
-- logout;
-- account deletion entry point;
-- build/version display;
-- basic analytics/error logging, если уже есть безопасный канал.
+### Фаза 2. Native shell
+
+Цель: сделать приложение app-like до подключения основного web flow.
+
+Конкретные изменения:
+
+- `app/_layout.tsx`: добавить app providers, скрыть лишние headers там, где
+  нужен native shell.
+- `app/index.tsx`: заменить placeholder на boot flow:
+  - restore session;
+  - если session valid -> `app/web`;
+  - если session missing -> `app/auth/login`;
+  - если network/backend issue -> native error state.
+- Добавить `app/settings/index.tsx`:
+  - account info;
+  - logout;
+  - support link;
+  - privacy policy link;
+  - terms link, если есть;
+  - account deletion entry point;
+  - app version/build.
+- Добавить reusable native states:
+  - loading;
+  - offline;
+  - maintenance;
+  - unauthorized;
+  - forbidden navigation.
+
+Критерий готовности:
+
+- App cold start не показывает пустой экран.
+- Login/session restore/logout проходят через native UX.
+- Настройки и support/legal entry points доступны без поиска.
+- Приложение не выглядит как один WebView на весь экран без нативного поведения.
 
 Проверка:
 
-- iOS simulator smoke;
-- physical iPhone smoke;
-- cold start;
-- login;
-- session restore;
+```bash
+cd apps/mobile
+npm run ios
+```
+
+Ручной smoke:
+
+- first launch;
+- failed network;
+- backend unavailable;
+- login screen;
+- settings screen;
 - logout;
-- offline mode;
-- forbidden external URL handling;
-- curator/client context switch;
-- PIN/client flow, если входит в релиз.
+- app restart.
 
-### Фаза 4. Compliance и App Store metadata
+Риски:
 
-Результат: App Store Connect готов к review.
+- Слишком тонкий shell оставит риск отказа по guideline 4.2.
+- Избыточный native rewrite затянет релиз. Первый релиз должен быть shell +
+  controlled WebView, не полный переписанный HEYS.
 
-Нужно подготовить:
+### Фаза 3. Auth и security
 
-- App Privacy answers;
-- support/privacy URLs;
-- screenshots;
-- description без overpromise;
-- review demo credentials;
-- review notes;
-- возрастной рейтинг;
-- список permissions и объяснений;
-- проверку account deletion.
+Цель: сделать безопасную мобильную сессию без хранения long-lived секретов в
+WebView.
 
-Особое внимание:
+Конкретные изменения:
 
-- если HEYS обрабатывает питание/здоровье, тексты не должны обещать медицинский
-  эффект;
-- если есть персональные данные, privacy policy должна прямо покрывать mobile
-  app;
-- если есть платный доступ, надо проверить, не требует ли конкретный сценарий
-  Apple IAP.
+- `package.json`: добавить `expo-secure-store`.
+- `src/features/session/`:
+  - `saveSession`;
+  - `loadSession`;
+  - `clearSession`;
+  - `refreshSession`;
+  - `getWebSessionExchangeToken`.
+- `src/features/auth/api.ts`:
+  - убрать placeholder endpoint comment;
+  - описать реальные login/refresh/logout/session-exchange endpoints.
+- `src/services/api-client.ts`:
+  - добавить auth headers из native session;
+  - добавить timeout/error mapping;
+  - не падать на module load только из-за отсутствия env в небоевом контексте,
+    если это мешает тестам.
+- Web/backend contract:
+  - endpoint для one-time session exchange token;
+  - token TTL;
+  - single-use guarantee;
+  - server-side session/cookie setup for WebView.
 
-### Фаза 5. TestFlight
+Критерий готовности:
 
-Результат: build проверен до публичного review.
+- Token хранится в SecureStore/Keychain.
+- Logout чистит native session и WebView session.
+- WebView не получает long-lived token в query/localStorage.
+- Session restore работает после app restart.
+- Server, а не native/WebView, остается authority по client/context.
 
-Порядок:
+Проверка:
 
-1. Загрузить iOS build в App Store Connect.
-2. Прогнать internal TestFlight.
-3. При необходимости открыть external TestFlight для ограниченной группы.
-4. Закрыть blocker bugs.
+- Unit-level checks для session storage, если тестовый контур есть.
+- Manual smoke:
+  - login;
+  - kill app;
+  - reopen;
+  - logout;
+  - invalid token;
+  - expired exchange token;
+  - curator switches client context.
 
-TestFlight не считается каналом для постоянной клиентской поставки.
+Риски:
 
-### Фаза 6. App Review и unlisted request
+- Неправильный bridge между native и web может создать session leak.
+- Если WebView пишет токены в localStorage, безопасность становится слабее, чем
+  в обычном web.
+- Если native слой передает `client_id` как authority, можно нарушить
+  server-side context invariant.
 
-Результат: приложение одобрено и доступно по прямой ссылке.
+### Фаза 4. WebView integration
 
-Порядок:
+Цель: подключить HEYS web app как controlled product surface.
 
-1. Submit app for App Review.
-2. В Review Notes указать, что приложение предназначено для unlisted
-   distribution.
-3. Убедиться, что app не beta/prerelease.
-4. Подать Apple request на unlisted app distribution.
-5. После подтверждения Apple сохранить прямую ссылку.
-6. Добавить эту ссылку в клиентский onboarding/playbook.
+Конкретные изменения:
 
-Важно: Apple может отказать в unlisted request, если приложение не отправлено на
-review или находится в beta/prerelease состоянии.
+- `package.json`: добавить `react-native-webview`.
+- `app/web/index.tsx`: WebView screen.
+- `src/features/webview/allowedHosts.ts`: allowlist production/staging hosts.
+- `src/features/webview/navigationPolicy.ts`:
+  - allow HEYS URLs;
+  - block unknown schemes;
+  - open external support/legal links intentionally;
+  - prevent file/data/javascript navigations unless explicitly needed.
+- `src/features/webview/sessionExchange.ts`:
+  - получить one-time web session token;
+  - открыть exchange URL;
+  - обработать success/failure redirect.
+- Native error states:
+  - no network;
+  - auth expired;
+  - forbidden URL;
+  - backend maintenance.
 
-### Фаза 7. Клиентская выдача
+Критерий готовности:
 
-Результат: клиент получает простую инструкцию установки.
+- WebView открывает только HEYS allowlist.
+- External URL не открывается внутри product WebView без решения.
+- Ошибка сети не выглядит как белый экран WebView.
+- Reload/retry работает.
+- Login и logout синхронизированы между native и web.
 
-Клиентский flow:
+Проверка:
 
-1. Клиент получает App Store link.
-2. Устанавливает HEYS.
-3. Входит по аккаунту/доступу HEYS.
-4. Получает только свои данные и разрешенные роли.
+- Manual smoke на simulator и real iPhone:
+  - successful web session;
+  - reload;
+  - back/forward behavior;
+  - external link;
+  - forbidden URL;
+  - offline -> online;
+  - expired web session.
+- Проверка allowlist через targeted unit test или ручные test URLs.
 
-Нельзя считать ссылку секретом. Секретом являются учетная запись, PIN/session,
-серверные права и контекст клиента.
+Риски:
 
-## Definition of Done
+- Если разрешить произвольные URL, приложение станет general browser.
+- Если web app рассчитывает только на browser localStorage, надо аккуратно
+  согласовать с mobile session.
+- Если основной web app не responsive на iPhone, App Review screenshots и UX
+  будут слабыми.
 
-iOS unlisted release считается готовым, когда:
+### Фаза 5. Deep links
 
-- `apps/mobile` собирается в iOS production build;
-- build проходит smoke на реальном iPhone;
-- авторизация, logout и restore session работают стабильно;
-- WebView не открывает произвольные внешние домены;
-- client/curator/PIN контексты не смешиваются;
-- есть support/privacy/account deletion entry points;
-- App Store metadata заполнена;
-- TestFlight smoke пройден;
-- App Review пройден;
-- Apple unlisted link получен;
-- клиентская инструкция установки готова.
+Цель: дать iOS-приложению нормальные входные сценарии, а не только ручной запуск
+и логин.
 
-## Основные риски
+Конкретные изменения:
 
-| Риск                         | Почему важен                                                 | Как снизить                                                   |
-| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| Отказ по guideline 4.2       | Apple не любит repackaged website                            | Делать native shell и app-like UX                             |
-| Auth между WebView и web app | Можно сломать сессии или безопасность                        | Сначала описать token/session contract                        |
-| IAP-риск                     | Apple может требовать IAP для цифрового платного функционала | До review описать модель оплаты и доступа                     |
-| Health/nutrition claims      | Можно получить review/legal issues                           | Убрать медицинские обещания, оставить аккуратные формулировки |
-| Account deletion             | Apple требует возможность инициировать удаление аккаунта     | Добавить entry point в app                                    |
-| Ссылка не приватна           | Unlisted app доступен всем, у кого есть ссылка               | Доступ закрывать backend auth/roles                           |
-| 2FA/credentials              | EAS iOS build требует Apple-доступы                          | Заранее подготовить Account Holder/Admin                      |
+- `app.json`: добавить `scheme`, например `heys`.
+- При готовом домене:
+  - настроить Associated Domains;
+  - добавить apple-app-site-association на web domain.
+- `src/features/deeplink/`:
+  - parse incoming URL;
+  - map route;
+  - auth guard;
+  - fallback route.
 
-## Что не входит в первый релиз без отдельного решения
+Минимальные route types:
 
-- Enterprise distribution;
-- Ad Hoc distribution клиентам;
-- Apple Business Manager Custom App;
-- полноценный нативный rewrite всего HEYS;
-- push notifications, если нет конкретного сценария;
-- In-App Purchases, если доступ продается и учитывается вне App Store;
-- App Clips;
-- Apple Watch/iPad-специфичные версии.
+- `heys://login`;
+- `heys://open/client/<id>` или безопасный аналог без raw authority;
+- `heys://support`;
+- universal links для приглашений/возврата из email.
+
+Критерий готовности:
+
+- Deep link не открывает приватный экран без auth.
+- Unknown links безопасно отклоняются.
+- После login пользователь попадает в нужный безопасный target.
+
+Проверка:
+
+```bash
+cd apps/mobile
+npx uri-scheme open "heys://login" --ios
+```
+
+Ручной smoke:
+
+- link на logout state;
+- link на logged-in state;
+- malformed link;
+- expired invite/session link.
+
+Риски:
+
+- Raw client id в deep link нельзя считать правом доступа.
+- Universal links требуют серверный файл и правильный domain ownership.
+
+### Фаза 6. Optional biometrics
+
+Цель: добавить Face ID/Touch ID только как удобный unlock локальной сессии.
+
+Конкретные изменения:
+
+- `package.json`: добавить `expo-local-authentication`, если фича входит в
+  релиз.
+- `src/features/biometrics/`:
+  - capability check;
+  - opt-in setting;
+  - unlock before session restore;
+  - fallback to password/login;
+  - disable on logout.
+
+Критерий готовности:
+
+- Биометрия включается только пользователем.
+- Отказ/ошибка Face ID не блокирует аккаунт навсегда.
+- Logout отключает локальный unlock.
+
+Проверка:
+
+- real iPhone smoke:
+  - opt in;
+  - successful Face ID;
+  - failed/cancelled Face ID;
+  - fallback login;
+  - logout.
+
+Риски:
+
+- Нельзя презентовать биометрию как замену auth.
+- Simulator не доказывает полное поведение Face ID.
+
+### Фаза 7. Optional push notifications
+
+Цель: добавить push только при утвержденном продуктовом сценарии.
+
+Конкретные изменения, если push входит в релиз:
+
+- `package.json`: добавить `expo-notifications`.
+- `app.json`: добавить iOS notification config при необходимости.
+- Backend:
+  - registration endpoint для device token;
+  - user notification preferences;
+  - unsubscribe/disable;
+  - APNs/Expo notification send path;
+  - audit/logging для отправок.
+- `app/settings/index.tsx`: notification preferences.
+
+Критерий готовности:
+
+- Пользователь явно дает permission.
+- Push имеет понятную пользу, не маркетинговый шум.
+- Можно выключить уведомления.
+- Privacy policy покрывает push/device token.
+
+Проверка:
+
+- real iPhone TestFlight smoke:
+  - first permission prompt;
+  - token registration;
+  - receive notification;
+  - tap notification -> correct deep link;
+  - disable notifications.
+
+Риски:
+
+- Push почти всегда требует real device, simulator недостаточен.
+- Без сценария push увеличит review/privacy scope без пользы.
+
+### Фаза 8. App Store compliance
+
+Цель: подготовить приложение к review без сюрпризов.
+
+Конкретные изменения:
+
+- App Store Connect:
+  - app record;
+  - app name/subtitle/description;
+  - screenshots;
+  - support URL;
+  - privacy policy URL;
+  - age rating;
+  - App Privacy answers;
+  - review demo credentials;
+  - review notes.
+- `app/settings/index.tsx`:
+  - privacy policy;
+  - terms;
+  - support;
+  - account deletion entry point.
+- Copy:
+  - убрать медицинские overpromise;
+  - не обещать лечение/диагноз/гарантированный результат;
+  - показать, что HEYS помогает вести питание/сопровождение, а не заменяет
+    врача.
+
+Review Notes должны объяснять:
+
+- приложение предназначено для ограниченной аудитории HEYS;
+- после review будет запрошен unlisted distribution;
+- как reviewer войдет;
+- какие сценарии проверить;
+- если WebView используется, какие native функции реализованы.
+
+Критерий готовности:
+
+- Reviewer может пройти главный сценарий без связи с владельцем проекта.
+- Account deletion можно инициировать из приложения.
+- Screenshots показывают реальное использование, не только splash/login.
+- App metadata не вводит в заблуждение.
+
+Проверка:
+
+- Dry run по App Store Connect checklist.
+- Smoke с demo account.
+- Проверка всех support/privacy/legal links.
+- Проверка account deletion flow.
+
+Риски:
+
+- Account deletion blocker.
+- Guideline 4.2 blocker.
+- Health/nutrition wording blocker.
+- IAP/payment blocker.
+- Sign in with Apple risk, если появятся сторонние social login providers.
+
+### Фаза 9. TestFlight
+
+Цель: проверить build до production review.
+
+Конкретные изменения:
+
+- Загрузить build в App Store Connect.
+- Настроить internal testers.
+- При необходимости открыть external TestFlight для ограниченной группы.
+- Завести release checklist по найденным blocker bugs.
+
+Критерий готовности:
+
+- Internal TestFlight smoke пройден.
+- External TestFlight пройден, если нужен.
+- Нет blocker bugs по login/session/WebView/offline/settings/account deletion.
+
+Проверка:
+
+- TestFlight install на реальном iPhone.
+- Cold start.
+- Login.
+- Session restore.
+- WebView main flow.
+- Deep links.
+- Offline/retry.
+- Logout.
+- Account deletion entry point.
+
+Риски:
+
+- TestFlight build может пройти beta review, но это не гарантирует production
+  App Review.
+- Нельзя оставлять TestFlight как постоянный канал клиентской установки.
+
+### Фаза 10. App Review и unlisted request
+
+Цель: получить production approval и прямую unlisted ссылку.
+
+Конкретные изменения:
+
+- Submit production build for App Review.
+- В Review Notes указать intended unlisted distribution.
+- После готовности/approval подать Apple request на unlisted app distribution.
+- После approval сохранить final App Store link.
+- Добавить ссылку в клиентский onboarding/playbook.
+
+Критерий готовности:
+
+- App Review approved.
+- Apple unlisted request approved.
+- App distribution method изменен на Unlisted.
+- Direct App Store link проверен на iPhone.
+
+Проверка:
+
+- Открыть ссылку на iPhone.
+- Установить app по ссылке.
+- Проверить, что app не нужен через TestFlight.
+- Проверить login demo/real account.
+
+Риски:
+
+- Apple отклонит unlisted request, если app не submitted/approved или в
+  beta/prerelease.
+- Apple может запросить пояснения по аудитории и назначению.
+- Unlisted link можно переслать, поэтому доступ внутри app обязателен.
+
+### Фаза 11. Клиентская выдача
+
+Цель: дать клиенту простой установочный flow.
+
+Конкретные изменения:
+
+- Подготовить клиентскую инструкцию:
+  - открыть App Store link;
+  - установить HEYS;
+  - войти по HEYS-доступу;
+  - включить push/biometrics, если фича есть;
+  - куда писать в поддержку.
+- Добавить инструкцию в клиентский onboarding/playbook.
+- Добавить support macro для типовых проблем:
+  - ссылка не открывается;
+  - app недоступен в регионе;
+  - forgot password/PIN;
+  - нет доступа к клиенту/куратору.
+
+Критерий готовности:
+
+- Новый клиент может установить app без TestFlight, UDID и `.ipa`.
+- Доступ к данным закрыт HEYS auth/roles.
+- Support понимает, как помогать с установкой.
+
+Проверка:
+
+- Пройти flow на чистом iPhone/Apple ID.
+- Проверить региональную доступность.
+- Проверить support links.
+
+Риски:
+
+- Если app доступен не во всех нужных регионах, часть клиентов не сможет
+  установить.
+- Если клиент думает, что ссылка секретная, будет ложное ощущение безопасности.
+
+## Definition of Done для релиза
+
+iOS unlisted release готов, когда выполнено все ниже:
+
+- `apps/mobile` собирает iOS production build.
+- `app.json` содержит production iOS identity, scheme и корректные assets.
+- `eas.json` содержит понятный iOS production/submit path.
+- Native shell реализует boot, loading, offline/error, settings,
+  support/privacy/account deletion.
+- Auth хранит mobile session в SecureStore/Keychain.
+- WebView использует allowlist и не является general browser.
+- Web session exchange не передает long-lived token в URL/localStorage.
+- Deep links имеют auth guard.
+- Logout чистит native и web session.
+- Client/curator/PIN контексты не смешиваются.
+- App Store metadata заполнена.
+- Demo account работает для reviewer.
+- Account deletion можно инициировать из app.
+- TestFlight smoke пройден на реальном iPhone.
+- App Review пройден.
+- Apple unlisted link получен и проверен.
+- Клиентская инструкция установки готова.
+
+## Что нельзя делать
+
+- Нельзя строить iOS production-дистрибуцию через рассылку `.ipa`.
+- Нельзя считать TestFlight постоянным клиентским каналом.
+- Нельзя считать unlisted link приватной защитой.
+- Нельзя делать "просто сайт в WebView" без native shell и app-like функций.
+- Нельзя хранить long-lived token в WebView localStorage или query string.
+- Нельзя открывать произвольные внешние URL внутри product WebView.
+- Нельзя доверять raw `client_id` из native/WebView/deep link как праву доступа.
+- Нельзя добавлять push "для галочки" без сценария, consent и настроек
+  отключения.
+- Нельзя обещать медицинский результат, диагноз или лечение в App Store copy.
+- Нельзя обходить IAP-правила, если выбранная модель оплаты попадает под Apple
+  digital goods policy.
+- Нельзя трогать `apps/web/public` generated bundles как часть этой
+  mobile-задачи.
+
+## Первый практический backlog для кодера
+
+1. Обновить `apps/mobile/app.json` под iOS production identity.
+2. Добавить iOS profiles в `apps/mobile/eas.json`.
+3. Добавить `react-native-webview` и `expo-secure-store`.
+4. Сделать `src/features/session/` и secure session restore/logout.
+5. Сделать native boot flow в `app/index.tsx`.
+6. Сделать `app/web/index.tsx` с URL allowlist и native error states.
+7. Сделать `app/settings/index.tsx` с support/privacy/account deletion/logout.
+8. Описать backend contract для one-time web session exchange.
+9. Добавить deep link scheme и route guard.
+10. Прогнать simulator smoke.
+11. Прогнать real iPhone/TestFlight smoke.
+12. Подготовить App Store metadata и Review Notes.
+
+## Проверенные факты
+
+| Claim                                                                                                                            | Source          | Verify command                                                                                | Result                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------- | ---------------------- |
+| `apps/mobile` существует как Expo/React Native app.                                                                              | local files     | `sed -n '1,220p' apps/mobile/package.json`                                                    | Confirmed: dependencies include `expo`, `react-native`, `expo-router`. |
+| `expo-router` используется для текущей навигации.                                                                                | local files     | `sed -n '1,180p' apps/mobile/app/_layout.tsx`                                                 | Confirmed: imports `Stack` from `expo-router`.                         |
+| В `app.json` нет iOS `bundleIdentifier` и `buildNumber`.                                                                         | local files     | `sed -n '1,220p' apps/mobile/app.json`                                                        | Confirmed: `ios` сейчас содержит только `supportsTablet`.              |
+| Android package сейчас dev-like: `com.heys.mobile.dev`.                                                                          | local files     | `sed -n '1,220p' apps/mobile/app.json`                                                        | Confirmed.                                                             |
+| `eas.json` production сейчас содержит Android `app-bundle`, но не iOS-specific config.                                           | local files     | `sed -n '1,220p' apps/mobile/eas.json`                                                        | Confirmed.                                                             |
+| Текущий mobile UI - каркас index/login, не релизный shell.                                                                       | local files     | `sed -n '1,180p' apps/mobile/app/index.tsx && sed -n '1,220p' apps/mobile/app/auth/login.tsx` | Confirmed: simple centered index and basic login form.                 |
+| `react-native-webview`, `expo-secure-store`, `expo-local-authentication`, `expo-notifications` пока не подключены.               | local grep      | `grep -R "react-native-webview\\                                                              | expo-secure-store\\                                                    | expo-local-authentication\\ | expo-notifications" -n apps/mobile/package.json apps/mobile/app apps/mobile/src` | Confirmed: no matches. |
+| Apple unlisted apps are discoverable only by direct link and do not appear in categories/recommendations/charts/search/listings. | Apple Developer | Official docs linked below.                                                                   | Confirmed in Apple Unlisted App Distribution docs.                     |
+| Apple says unlisted requests are declined if app has not been submitted to App Review or is beta/prerelease.                     | Apple Developer | Official docs linked below.                                                                   | Confirmed in Apple Unlisted App Distribution docs.                     |
+| Apple guideline 4.2 requires app features/content/UI beyond a repackaged website.                                                | Apple Developer | Official guidelines linked below.                                                             | Confirmed in App Review Guidelines 4.2.                                |
+| Apps with account creation must let users initiate account deletion in the app.                                                  | Apple Developer | Official support article linked below.                                                        | Confirmed in Apple account deletion guidance.                          |
 
 ## Официальные источники
 
@@ -358,5 +834,5 @@ iOS unlisted release считается готовым, когда:
   https://developer.apple.com/app-store/review/guidelines/
 - Apple: TestFlight external testers -
   https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/
-- Apple: Account deletion requirement -
+- Apple: Offering account deletion in your app -
   https://developer.apple.com/support/offering-account-deletion-in-your-app/
