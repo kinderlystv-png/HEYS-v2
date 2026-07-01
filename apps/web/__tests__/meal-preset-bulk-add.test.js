@@ -97,7 +97,8 @@ describe('Meal preset bulk add', () => {
       },
       products: {
         getAll: vi.fn(() => []),
-        addFromShared: vi.fn()
+        addFromShared: vi.fn(),
+        ensureMealProductReady: vi.fn(async (product) => ({ ok: true, product }))
       },
       store: {
         get: vi.fn((key, fallback) => fallback),
@@ -146,7 +147,7 @@ describe('Meal preset bulk add', () => {
     window.dispatchEvent = originalWindowDispatchEvent;
   });
 
-  it('adds all preset products with one state update and one forced flush', () => {
+  it('adds all preset products with one state update and one forced flush', async () => {
     const setDay = vi.fn((updater) => {
       currentDay = updater(currentDay);
       return currentDay;
@@ -173,7 +174,7 @@ describe('Meal preset bulk add', () => {
       makeProduct('p4', 'Savoiardi')
     ];
 
-    modalOptions.onAddMany({
+    await modalOptions.onAddMany({
       mealIndex: 0,
       entries: products.map((product) => ({ product, grams: product.grams })),
       _origin: 'preset-apply-bulk',
@@ -213,7 +214,7 @@ describe('Meal preset bulk add', () => {
     expect(window.HEYS.Day.requestFlush).toHaveBeenCalledWith({ force: true });
   });
 
-  it('adds a product by stable meal id when duplicate meal names reorder', () => {
+  it('adds a product by stable meal id when duplicate meal names reorder', async () => {
     currentDay = {
       date: '2026-06-17',
       meals: [
@@ -249,7 +250,7 @@ describe('Meal preset bulk add', () => {
       meals: [currentDay.meals[1], currentDay.meals[0]]
     };
 
-    modalOptions.onAdd({
+    await modalOptions.onAdd({
       mealIndex: 1,
       mealId: 'meal-late',
       product: makeProduct('p-late', 'Chicken fillet'),
@@ -263,7 +264,7 @@ describe('Meal preset bulk add', () => {
     expect(currentDay.meals[1].items).toHaveLength(0);
   });
 
-  it('dispatches meal-flow-finished after a single product add', () => {
+  it('dispatches meal-flow-finished after a single product add', async () => {
     const setDay = vi.fn((updater) => {
       currentDay = updater(currentDay);
       return currentDay;
@@ -282,7 +283,7 @@ describe('Meal preset bulk add', () => {
     button.props.onClick();
 
     const modalOptions = window.HEYS.AddProductStep.show.mock.calls[0][0];
-    modalOptions.onAdd({
+    await modalOptions.onAdd({
       mealIndex: 0,
       mealId: 'meal-1',
       product: makeProduct('p-single', 'Chicken fillet'),
@@ -323,7 +324,7 @@ describe('Meal preset bulk add', () => {
   it('keeps public addProductToMeal return value tied to the mutation result', () => {
     const source = readDayEffectsSource();
 
-    expect(source).toContain('const didAdd = addProductToMeal(mi, productWithGrams);');
+    expect(source).toContain('const didAdd = await addProductToMeal(mi, productWithGrams);');
     expect(source).toContain('return didAdd !== false;');
   });
 
@@ -334,21 +335,22 @@ describe('Meal preset bulk add', () => {
 
     expect(mealsSource).toContain('const addProductsToMeal = React.useCallback');
     expect(mealsSource).toContain('addProductsToMealRef.current = addProductsToMeal;');
-    expect(mealsSource).toContain('onAddMany: ({ entries, mealIndex: addMealIndex = targetMealIndex');
+    expect(mealsSource).toContain('onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex');
+    expect(mealsSource).toContain('ensureMealProductReady');
     expect(mealsSource).toContain("source: options?.source || 'day-add-products-to-meal'");
     expect(mealsSource).toContain("source: 'day-inline-add-product-single'");
     expect(mealsSource).toContain('dispatchMealFlowFinished({');
     expect(mealsSource).toContain('productIds: items.map((item) => item.product_id)');
     expect(tabSource).toContain('addProductsToMeal,');
-    expect(effectsSource).toContain('HEYS.Day.addProductsToMeal = (mi, entries, options) =>');
-    expect(effectsSource).toContain('const didAdd = addProductsToMeal(mi, entries, options || {});');
+    expect(effectsSource).toContain('HEYS.Day.addProductsToMeal = async (mi, entries, options) =>');
+    expect(effectsSource).toContain('const didAdd = await addProductsToMeal(mi, entries, options || {});');
   });
 
   it('uses one batch add call for selected meal recommendations', () => {
     const source = readMealRecCardSource();
 
     expect(source).toContain('const showBulkMealPicker = (selectedProducts, onMealSelected) =>');
-    expect(source).toContain('const success = HEYS.Day.addProductsToMeal(mealIndex, entries, {');
+    expect(source).toContain('const success = await HEYS.Day.addProductsToMeal(mealIndex, entries, {');
     expect(source).toContain("source: 'meal-rec-selected-products'");
     expect(source).not.toContain('selectedProducts.forEach((product, idx) =>');
     expect(source).not.toContain('}, idx * 100)');

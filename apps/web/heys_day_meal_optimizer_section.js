@@ -53,13 +53,14 @@
             });
         }, [recommendations]);
 
-        const handleAddProduct = React.useCallback((product, ruleId) => {
+        const handleAddProduct = React.useCallback(async (product, ruleId) => {
             if (!addProductToMeal || !product || !MO) return;
 
             const portion = MO.getSmartPortion(product);
             const productWithGrams = { ...product, grams: portion.grams };
 
-            addProductToMeal(mealIndex, productWithGrams);
+            const didAdd = await addProductToMeal(mealIndex, productWithGrams);
+            if (didAdd === false) return;
 
             MO.trackUserAction({
                 type: 'accept',

@@ -4602,14 +4602,191 @@
       } catch (_) { /* noop */ }
       return result;
     },
-    /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
-    getById: (id) => {
-      if (id == null || id === '') return null;
-      const sid = String(id);
-      const all = HEYS.products.getAll?.() || [];
-      return all.find((p) => String(p?.id ?? p?.product_id ?? '') === sid) || null;
-    },
-    setAll: (arr, opts = {}) => {
+	    /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
+	    getById: (id) => {
+	      if (id == null || id === '') return null;
+	      const sid = String(id);
+	      const all = HEYS.products.getAll?.() || [];
+	      return all.find((p) => String(p?.id ?? p?.product_id ?? '') === sid) || null;
+	    },
+	    ensurePersonalProductCommitted: async (product, opts = {}) => {
+	      if (!product) return { ok: false, product: null, reason: 'missing_product' };
+	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
+
+	      const now = Date.now();
+	      const uid = HEYS.utils?.uid || ((prefix = 'p_') => prefix + now + '_' + Math.random().toString(36).slice(2, 8));
+	      const overlayOn = !!(HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2'));
+	      const normalizeName = (name) => String(name || '').trim().toLowerCase();
+	      const productIdOf = (p) => p?.id ?? p?.product_id ?? p?.name;
+	      const sharedIdOf = (p) => p?.shared_origin_id || p?.sharedOriginId || (p?._fromShared && p?.id) || (p?.is_shared && p?.id) || null;
+	      const hasRowForProduct = (rows, p) => {
+	        const pid = productIdOf(p);
+	        const sharedId = sharedIdOf(p);
+	        return Array.isArray(rows) && rows.some((row) => {
+	          if (!row) return false;
+	          if (pid != null && row.id != null && String(row.id) === String(pid)) return true;
+	          return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
+	        });
+	      };
+	      const buildOverlayRow = (p, existingRow) => {
+	        const pid = productIdOf(p);
+	        const sharedId = sharedIdOf(p);
+	        if (sharedId) {
+	          const overrides = { ...(existingRow?.overrides || {}) };
+	          const barcodes = Array.isArray(p.barcodes)
+	            ? p.barcodes.filter(Boolean).map(String)
+	            : (p.barcode ? [String(p.barcode)] : []);
+	          const barcode = barcodes[0] || '';
+	          if (barcode) overrides.barcode = barcode;
+	          else delete overrides.barcode;
+	          if (barcodes.length) overrides.barcodes = barcodes;
+	          else delete overrides.barcodes;
+	          return {
+	            ...(existingRow || {}),
+	            id: existingRow?.id ?? pid,
+	            shared_origin_id: sharedId,
+	            fingerprint: p.fingerprint || existingRow?.fingerprint || null,
+	            overrides,
+	            in_my_list: true,
+	            user_modified: existingRow?.user_modified === true || p.user_modified === true || !!opts.isUserEdit
+	          };
+	        }
+	        return {
+	          ...(existingRow || {}),
+	          ...p,
+	          id: pid,
+	          _custom: true,
+	          in_my_list: true,
+	          user_modified: existingRow?.user_modified === true || p.user_modified !== false
+	        };
+	      };
+	      const upsertRowInto = (rows, row) => {
+	        const nextRows = Array.isArray(rows) ? rows.slice() : [];
+	        const idx = nextRows.findIndex((existing) => {
+	          if (!existing || !row) return false;
+	          if (existing.id != null && row.id != null && String(existing.id) === String(row.id)) return true;
+	          return row.shared_origin_id && existing.shared_origin_id
+	            && String(existing.shared_origin_id) === String(row.shared_origin_id);
+	        });
+	        if (idx >= 0) nextRows[idx] = { ...nextRows[idx], ...row };
+	        else nextRows.push(row);
+	        return nextRows;
+	      };
+
+	      const products = HEYS.products.getAll?.() || [];
+	      let committedProduct = { ...product };
+	      if (committedProduct.id == null) committedProduct.id = uid('p_');
+	      if (!committedProduct.createdAt && !committedProduct.created_at) committedProduct.createdAt = now;
+	      committedProduct.updatedAt = committedProduct.updatedAt || now;
+
+	      const pid = String(productIdOf(committedProduct));
+	      const byIdIndex = products.findIndex((p) => String(productIdOf(p)) === pid);
+	      const byNameIndex = byIdIndex >= 0 ? -1 : products.findIndex((p) =>
+	        normalizeName(p?.name) && normalizeName(p?.name) === normalizeName(committedProduct.name)
+	      );
+	      const idx = byIdIndex >= 0 ? byIdIndex : byNameIndex;
+	      let nextProducts = products.slice();
+	      if (idx >= 0) {
+	        const existing = products[idx];
+	        committedProduct = {
+	          ...existing,
+	          ...committedProduct,
+	          id: productIdOf(existing) || committedProduct.id,
+	          user_modified: existing.user_modified === true || committedProduct.user_modified !== false
+	        };
+	        nextProducts[idx] = committedProduct;
+	      } else {
+	        committedProduct = {
+	          ...committedProduct,
+	          user_modified: committedProduct.user_modified !== false
+	        };
+	        nextProducts.push(committedProduct);
+	      }
+
+	      if (!overlayOn) {
+	        HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	        return { ok: true, product: committedProduct, reason: 'overlay_disabled' };
+	      }
+
+	      const Overlay = HEYS.OverlayStore;
+	      if (!Overlay || typeof Overlay.readRaw !== 'function' || typeof Overlay.writeRaw !== 'function') {
+	        return { ok: false, product: committedProduct, reason: 'overlay_unavailable' };
+	      }
+	      const localRows = Overlay.readRaw() || [];
+	      if (!opts.forceCloudAck && hasRowForProduct(localRows, committedProduct)) {
+	        HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	        return { ok: true, product: committedProduct, reason: 'already_committed' };
+	      }
+
+	      const clientId = opts.clientId
+	        || HEYS.cloud?.getCurrentClientId?.()
+	        || HEYS.currentClientId
+	        || null;
+	      const YandexAPI = HEYS.YandexAPI;
+	      if (!clientId) return { ok: false, product: committedProduct, reason: 'missing_client_id' };
+	      if (!YandexAPI || typeof YandexAPI.saveKV !== 'function' || typeof YandexAPI.getKV !== 'function') {
+	        return { ok: false, product: committedProduct, reason: 'cloud_api_unavailable' };
+	      }
+
+	      const sharedId = sharedIdOf(committedProduct);
+	      const existingRow = localRows.find((row) => {
+	        if (!row) return false;
+	        if (row.id != null && String(row.id) === String(productIdOf(committedProduct))) return true;
+	        return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
+	      });
+	      const nextRows = upsertRowInto(localRows, buildOverlayRow(committedProduct, existingRow));
+	      const contextId = opts.contextId || HEYS.cloud?.snapshotWriteContext?.()?.contextId || null;
+	      const saveResult = await YandexAPI.saveKV(clientId, 'heys_products_overlay_v2', nextRows, contextId);
+	      if (!saveResult || saveResult.success === false || saveResult.error) {
+	        return { ok: false, product: committedProduct, reason: saveResult?.error || 'cloud_save_failed' };
+	      }
+
+	      const readback = await YandexAPI.getKV(clientId, 'heys_products_overlay_v2');
+	      if (readback?.error) return { ok: false, product: committedProduct, reason: readback.error };
+	      const cloudRows = Array.isArray(readback?.data) ? readback.data : [];
+	      if (!hasRowForProduct(cloudRows, committedProduct)) {
+	        return { ok: false, product: committedProduct, reason: 'cloud_readback_missing_product' };
+	      }
+
+	      const wroteLocal = Overlay.writeRaw(cloudRows, { skipCloudSync: true, source: 'personal-product-commit-cloud-ack' });
+	      if (!wroteLocal) return { ok: false, product: committedProduct, reason: 'local_overlay_apply_failed' };
+	      HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	      try {
+	        window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+	          detail: { productId: productIdOf(committedProduct), product: committedProduct }
+	        }));
+	      } catch (_) { /* noop */ }
+	      return { ok: true, product: committedProduct, reason: 'cloud_ack' };
+	    },
+	    ensureMealProductReady: async (product, opts = {}) => {
+	      if (!product) return { ok: false, product: null, reason: 'missing_product' };
+	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
+	      let finalProduct = product;
+	      let forceCloudAck = !!opts.forceCloudAck || opts.requireCommit === true;
+	      if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
+	        const cloned = HEYS.products.addFromShared?.(product);
+	        if (cloned) {
+	          finalProduct = cloned;
+	          forceCloudAck = true;
+	        }
+	      }
+	      const Overlay = HEYS.OverlayStore;
+	      const rows = Overlay?.readRaw?.() || [];
+	      const pid = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+	      const sharedId = finalProduct.shared_origin_id || finalProduct.sharedOriginId || null;
+	      const hasRow = Array.isArray(rows) && rows.some((row) => {
+	        if (!row) return false;
+	        if (pid != null && row.id != null && String(row.id) === String(pid)) return true;
+	        return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
+	      });
+	      if (hasRow && !forceCloudAck) return { ok: true, product: finalProduct, reason: 'overlay_present' };
+	      return HEYS.products.ensurePersonalProductCommitted(finalProduct, {
+	        ...opts,
+	        forceCloudAck,
+	        source: opts.source || 'meal-product-ready'
+	      });
+	    },
+	    setAll: (arr, opts = {}) => {
       const newLen = arr?.length || 0;
       const source = opts.source || 'unknown';
 

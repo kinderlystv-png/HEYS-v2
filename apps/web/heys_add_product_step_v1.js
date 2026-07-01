@@ -411,7 +411,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return result;
   };
 
-  const saveProductPortions = (product, portions) => {
+	  const saveProductPortions = async (product, portions) => {
     console.info('[HEYS.portions] 📥 saveProductPortions ВЫЗВАН', {
       productId: product?.id ?? product?.product_id ?? product?.name,
       productName: product?.name,
@@ -428,50 +428,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const pid = String(product.id ?? product.product_id ?? product.name);
     const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
 
-    if (idx === -1) {
-      console.warn('[HEYS.portions] ⚠️ Продукт не найден в базе, сохраняю через upsert', {
-        productId: pid
-      });
-      upsertLocalProduct({ ...product, portions }, false);
-      return;
-    }
+	    if (idx === -1) {
+	      console.warn('[HEYS.portions] ⚠️ Продукт не найден в базе, сохраняю через upsert', {
+	        productId: pid
+	      });
+	      const commit = await commitPersonalProduct({ ...product, portions }, false, 'product-portions');
+	      if (!commit.ok) {
+	        showProductCommitError(commit.reason);
+	        return null;
+	      }
+	      notifyPortionsUpdated(commit.product, portions);
+	      return commit.product;
+	    }
 
     const updated = {
       ...products[idx],
       portions
     };
 
-    const nextProducts = [...products];
-    nextProducts[idx] = updated;
-
-    if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts, { source: 'edit-product' });
-    } else if (HEYS.store?.set) {
-      HEYS.store.set('heys_products', nextProducts);
-    }
+		    const commit = await commitPersonalProduct(updated, false, 'product-portions');
+	    if (!commit.ok) {
+	      showProductCommitError(commit.reason);
+	      return null;
+	    }
+	    const savedProduct = commit.product || updated;
 
     console.info('[HEYS.portions] 📣 Отправляем событие heys:local-product-updated', {
-      productId: updated.id,
-      productName: updated.name,
+	      productId: savedProduct.id,
+	      productName: savedProduct.name,
       portionsCount: portions.length,
       shared_origin_id: updated.shared_origin_id
     });
     window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
       detail: {
-        productId: updated.id ?? updated.product_id ?? updated.name,
-        product: updated,
+	        productId: savedProduct.id ?? savedProduct.product_id ?? savedProduct.name,
+	        product: savedProduct,
         portions,
         sharedId: updated.shared_origin_id
       }
     }));
 
     console.info('[HEYS.portions] 📣 Отправляем событие heys:product-portions-updated', {
-      productId: updated.id ?? updated.product_id ?? updated.name,
-      productName: updated.name,
+	      productId: savedProduct.id ?? savedProduct.product_id ?? savedProduct.name,
+	      productName: savedProduct.name,
       portionsCount: portions.length
     });
-    notifyPortionsUpdated(updated, portions);
-  };
+	    notifyPortionsUpdated(savedProduct, portions);
+	    return savedProduct;
+	  };
 
   const upsertProductOverlayRow = (product, isUserEdit = true) => {
     if (!product || !isOverlayProductsEnabledForAddStep()) return false;
@@ -523,8 +527,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   };
 
-  const upsertLocalProduct = (product, isUserEdit = true) => {
-    if (!product) return { product: null, overlaySaved: false };
+	  const upsertLocalProduct = (product, isUserEdit = true) => {
+	    if (!product) return { product: null, overlaySaved: false };
     const U = HEYS.utils || {};
     const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
     const pid = String(product.id ?? product.product_id ?? product.name);
@@ -560,9 +564,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const savedProduct = idx === -1 ? nextProducts[nextProducts.length - 1] : nextProducts[idx];
-    const overlaySaved = upsertProductOverlayRow(savedProduct, isUserEdit);
-    return { product: savedProduct, overlaySaved };
-  };
+	    const overlaySaved = upsertProductOverlayRow(savedProduct, isUserEdit);
+	    return { product: savedProduct, overlaySaved };
+	  };
+
+	  const showProductCommitError = (reason) => {
+	    console.warn('[HEYS.products] personal product commit blocked', { reason });
+	    HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+	  };
+
+	  const commitPersonalProduct = async (product, isUserEdit = true, source = 'add-product-step') => {
+	    if (!product) return { ok: false, product: null, reason: 'missing_product' };
+	    if (product._oneTime) return { ok: true, product, reason: 'one_time' };
+	    if (HEYS.products?.ensurePersonalProductCommitted) {
+	      return HEYS.products.ensurePersonalProductCommitted(product, {
+	        isUserEdit,
+	        forceCloudAck: true,
+	        source
+	      });
+	    }
+	    const localSave = upsertLocalProduct(product, isUserEdit);
+	    return {
+	      ok: !isOverlayProductsEnabledForAddStep() || !!localSave.overlaySaved,
+	      product: localSave.product || product,
+	      reason: localSave.overlaySaved ? 'overlay_saved' : 'overlay_unavailable'
+	    };
+	  };
 
   const hasCuratorJwt = () => {
     try {
@@ -1210,13 +1237,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   };
 
-  const saveLocalProduct = (product, isUserEdit = true) => {
-    if (!product) return;
-    const U = HEYS.utils || {};
-    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
-    const pid = String(product.id ?? product.product_id ?? product.name);
-    const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
-    if (idx === -1) return;
+	  const saveLocalProduct = async (product, isUserEdit = true) => {
+	    if (!product) return { ok: false, product: null, reason: 'missing_product' };
+	    const U = HEYS.utils || {};
+	    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+	    const pid = String(product.id ?? product.product_id ?? product.name);
+	    const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
+	    if (idx === -1) return commitPersonalProduct(product, isUserEdit, 'create-product-step');
 
     const existing = products[idx];
     const nextProducts = [...products];
@@ -1230,26 +1257,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       user_modified: existing.user_modified === true || shouldMarkModified
     };
 
-    if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts, { source: 'create-product-step' });
-    } else if (HEYS.store?.set) {
-      HEYS.store.set('heys_products', nextProducts);
-    }
+	    const commit = await commitPersonalProduct(nextProducts[idx], isUserEdit, 'create-product-step');
+	    if (!commit.ok) return commit;
 
     // 📝 Event log (plan Wave 5.3, F-EL Batch C): product-create or product-edit
     try {
       const eventKind = shouldMarkModified ? 'product-edit' : 'product-create';
       window.HEYS?.eventLog?.write(
         eventKind,
-        `${nextProducts[idx]?.name || 'product'} ${shouldMarkModified ? 'updated' : 'created'}`,
-        { productId: nextProducts[idx]?.id, name: nextProducts[idx]?.name },
-        'create-product-step'
-      );
-    } catch (_) { /* noop */ }
+	        `${commit.product?.name || 'product'} ${shouldMarkModified ? 'updated' : 'created'}`,
+	        { productId: commit.product?.id, name: commit.product?.name },
+	        'create-product-step'
+	      );
+	    } catch (_) { /* noop */ }
 
-    // v4.8.0: Cascade update to MealItems in all days
-    cascadeMealItemsOnProductUpdate(existing, nextProducts[idx]);
-  };
+	    // v4.8.0: Cascade update to MealItems in all days
+	    cascadeMealItemsOnProductUpdate(existing, commit.product || nextProducts[idx]);
+	    return commit;
+	  };
 
   /**
    * v4.8.0: Cascade MealItem updates when product is renamed/edited
@@ -1910,14 +1935,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           };
 
           const sharedId = resolveSharedProductId(product);
-          if (isCuratorUser() && sharedId) {
-            const result = await updateSharedProductPortions(sharedId, normalized, updatedProduct);
-            if (result.ok) {
-              upsertLocalProduct(updatedProduct, false);
-              notifyPortionsUpdated(updatedProduct, normalized);
-            }
-            return;
-          }
+	          if (isCuratorUser() && sharedId) {
+	            const result = await updateSharedProductPortions(sharedId, normalized, updatedProduct);
+	            if (result.ok) {
+	              const commit = await commitPersonalProduct(updatedProduct, false, 'product-portions-shared');
+	              if (!commit.ok) {
+	                showProductCommitError(commit.reason);
+	                return;
+	              }
+	              notifyPortionsUpdated(commit.product || updatedProduct, normalized);
+	            }
+	            return;
+	          }
 
           if (isSharedProduct(product)) {
             if (isCuratorUser()) {
@@ -1930,21 +1959,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 });
                 return;
               }
-              const result = await updateSharedProductPortions(resolvedSharedId, normalized, updatedProduct);
-              if (result.ok) {
-                upsertLocalProduct(updatedProduct, false);
-                notifyPortionsUpdated(updatedProduct, normalized);
-              }
-              return;
-            }
+	              const result = await updateSharedProductPortions(resolvedSharedId, normalized, updatedProduct);
+	              if (result.ok) {
+	                const commit = await commitPersonalProduct(updatedProduct, false, 'product-portions-shared');
+	                if (!commit.ok) {
+	                  showProductCommitError(commit.reason);
+	                  return;
+	                }
+	                notifyPortionsUpdated(commit.product || updatedProduct, normalized);
+	              }
+	              return;
+	            }
 
-            upsertLocalProduct(updatedProduct, true);
-            notifyPortionsUpdated(updatedProduct, normalized);
-            return;
-          }
+	            const commit = await commitPersonalProduct(updatedProduct, true, 'product-portions');
+	            if (!commit.ok) {
+	              showProductCommitError(commit.reason);
+	              return;
+	            }
+	            notifyPortionsUpdated(commit.product || updatedProduct, normalized);
+	            return;
+	          }
 
-          saveProductPortions(updatedProduct, normalized);
-          notifyPortionsUpdated(updatedProduct, normalized);
+	          await saveProductPortions(updatedProduct, normalized);
         }
       },
       showGreeting: false,
@@ -2321,7 +2357,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const itemsToAdd = previewItems.filter(item => !item._excluded);
       if (itemsToAdd.length === 0 || isApplyingPreset) return;
       setIsApplyingPreset(true);
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
           const entries = itemsToAdd.map((item) => ({
             product: {
@@ -2354,7 +2390,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               productNames: entries.map((entry) => entry.product.name || null),
               presetName: selectedPreset?.name || null
             });
-            context.onAddMany({
+            const didAdd = await context.onAddMany({
               entries,
               mealIndex: context?.mealIndex,
               mealId: context?.mealId,
@@ -2362,9 +2398,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               _origin: 'preset-apply-bulk',
               _presetName: selectedPreset?.name || null
             });
+            if (didAdd === false) throw new Error('preset_bulk_add_blocked');
           } else {
             console.warn('[HEYS.presets] ⚠️ onAddMany missing, falling back to sequential onAdd');
-            entries.forEach((entry, idx) => {
+            for (let idx = 0; idx < entries.length; idx += 1) {
+              const entry = entries[idx];
               const itemTraceId = createAddTraceId(`preset-${idx + 1}`);
               pushAddTrace('🧩 Preset item -> onAdd (fallback)', {
                 traceId: itemTraceId,
@@ -2375,7 +2413,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 productName: entry.product.name || null,
                 _presetBatch: { index: idx, total: entries.length }
               });
-              context?.onAdd?.({
+              if (typeof context?.onAdd !== 'function') throw new Error('preset_onadd_missing');
+              const didAdd = await context.onAdd({
                 product: entry.product,
                 grams: entry.grams,
                 mealIndex: context?.mealIndex,
@@ -2384,7 +2423,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 _origin: 'preset-apply',
                 _presetBatch: { index: idx, total: entries.length }
               });
-            });
+              if (didAdd === false) throw new Error('preset_item_add_blocked');
+            }
           }
           const itemCount = itemsToAdd.length;
           const presetName = selectedPreset?.name;
@@ -4440,9 +4480,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         updatedAt: Date.now()
       };
 
-      if (sharedId && !isCuratorUser()) {
-        const localSave = upsertLocalProduct(updatedProduct, true);
-        const saved = localSave.product || updatedProduct;
+	      if (sharedId && !isCuratorUser()) {
+	        const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+	        if (!localSave.ok) {
+	          showProductCommitError(localSave.reason);
+	          return false;
+	        }
+	        const saved = localSave.product || updatedProduct;
         notifyProductUpdated(saved);
         setProductsVersion(v => v + 1);
         if (confirm('Штрихкод сохранён в личной базе. Предложить куратору добавить его в общую базу?')) {
@@ -4454,11 +4498,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           } else {
             HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
           }
-        } else {
-          HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён только в личной базе`);
-        }
-        return true;
-      }
+	        } else {
+	          HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён только в личной базе`);
+	        }
+	        return true;
+	      }
 
       if (sharedId) {
         const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode });
@@ -4467,30 +4511,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             HEYS.Toast?.warning?.('Не удалось сохранить штрихкод в общей базе');
             return false;
           }
-        } else {
-          const localSave = upsertLocalProduct(updatedProduct, false);
-          notifyProductUpdated(localSave.product || updatedProduct);
-          HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
-          return true;
-        }
-      }
+	        } else {
+	          const localSave = await commitPersonalProduct(updatedProduct, false, 'barcode-update-shared');
+	          if (!localSave.ok) {
+	            showProductCommitError(localSave.reason);
+	            return false;
+	          }
+	          notifyProductUpdated(localSave.product || updatedProduct);
+	          HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
+	          return true;
+	        }
+	      }
 
-      if (sharedId && isCuratorUser()) {
-        const result = await updateSharedProduct(updatedProduct, sharedId);
-        if (!result.ok) return false;
-        const localSave = upsertLocalProduct(updatedProduct, false);
-        notifyProductUpdated(localSave.product || updatedProduct);
-        HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
-        return true;
-      }
+	      if (sharedId && isCuratorUser()) {
+	        const result = await updateSharedProduct(updatedProduct, sharedId);
+	        if (!result.ok) return false;
+	        const localSave = await commitPersonalProduct(updatedProduct, false, 'barcode-update-shared');
+	        if (!localSave.ok) {
+	          showProductCommitError(localSave.reason);
+	          return false;
+	        }
+	        notifyProductUpdated(localSave.product || updatedProduct);
+	        HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
+	        return true;
+	      }
 
       if (isSharedProduct(product) && !isCuratorUser()) {
         HEYS.Toast?.warning?.('Общий продукт может изменить только куратор');
         return false;
       }
 
-      const localSave = upsertLocalProduct(updatedProduct, true);
-      notifyProductUpdated(localSave.product || updatedProduct);
+	      const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+	      if (!localSave.ok) {
+	        showProductCommitError(localSave.reason);
+	        return false;
+	      }
+	      notifyProductUpdated(localSave.product || updatedProduct);
       if (HEYS.cloud?.createPendingProduct) {
         HEYS.cloud.createPendingProduct(null, localSave.product || updatedProduct)
           .then((result) => {
@@ -4501,12 +4557,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           })
           .catch(() => { });
       }
-      if (isOverlayProductsEnabledForAddStep() && !localSave.overlaySaved) {
-        HEYS.Toast?.warning?.(`Штрихкод ${barcode} сохранён локально, но облачная синхронизация сейчас недоступна`);
-        return true;
-      }
-      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}» и синхронизируется`);
-      return true;
+	      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}» и синхронизируется`);
+	      return true;
     }, [latestProducts]);
 
     const persistProductBarcodes = useCallback(async (product, nextCodes, toastMode = 'update') => {
@@ -4517,9 +4569,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
       const sharedId = resolveSharedProductId(product);
 
-      if (sharedId && !isCuratorUser()) {
-        const localSave = upsertLocalProduct(updatedProduct, true);
-        const saved = localSave.product || updatedProduct;
+	      if (sharedId && !isCuratorUser()) {
+	        const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+	        if (!localSave.ok) {
+	          showProductCommitError(localSave.reason);
+	          return null;
+	        }
+	        const saved = localSave.product || updatedProduct;
         notifyProductUpdated(saved);
         setProductsVersion(v => v + 1);
         const actionText = toastMode === 'remove-all' ? 'удаление всех штрихкодов' : 'изменение штрихкодов';
@@ -4546,8 +4602,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           HEYS.Toast?.warning?.('Не удалось обновить штрихкоды в общей базе');
           return null;
         }
-        const localSave = upsertLocalProduct(updatedProduct, false);
-        const saved = localSave.product || updatedProduct;
+	        const localSave = await commitPersonalProduct(updatedProduct, false, 'barcode-update-shared');
+	        if (!localSave.ok) {
+	          showProductCommitError(localSave.reason);
+	          return null;
+	        }
+	        const saved = localSave.product || updatedProduct;
         notifyProductUpdated(saved);
         setProductsVersion(v => v + 1);
         if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
@@ -4560,8 +4620,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return null;
       }
 
-      const localSave = upsertLocalProduct(updatedProduct, true);
-      const saved = localSave.product || updatedProduct;
+	      const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+	      if (!localSave.ok) {
+	        showProductCommitError(localSave.reason);
+	        return null;
+	      }
+	      const saved = localSave.product || updatedProduct;
       notifyProductUpdated(saved);
       setProductsVersion(v => v + 1);
       if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
@@ -5414,11 +5478,19 @@ NOVA: 1
   function CreateProductStep({ data, onChange, context, stepData }) {
     // Берём поисковый запрос для предзаполнения названия
     const searchQuery = stepData?.search?.searchQuery || '';
-    const scannedBarcode = normalizeBarcode(stepData?.search?.scannedBarcode || data?.scannedBarcode);
+    const initialBarcode = normalizeBarcode(
+      stepData?.create?.barcode
+      || stepData?.search?.scannedBarcode
+      || data?.barcode
+      || data?.scannedBarcode
+    );
     const [pasteText, setPasteText] = useState('');
+    const [barcodeInput, setBarcodeInput] = useState(initialBarcode);
+    const [barcodeModal, setBarcodeModal] = useState(null);
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
     const textareaRef = useRef(null);
+    const effectiveBarcode = normalizeBarcode(barcodeInput);
 
     // 📥 Режим добавления: 'persist' (в базу — дефолт) | 'oneTime' (разово, без записи)
     const [createMode, setCreateMode] = useState(() => stepData?.create?.mode || 'persist');
@@ -5447,14 +5519,21 @@ NOVA: 1
       const draft = HEYS.store?.get?.(draftKey, null) ?? utils.lsGet?.(draftKey, null);
       if (!draft || pasteText) return;
       if (draft.pasteText != null) setPasteText(draft.pasteText);
+      if (!barcodeInput && draft.barcode != null) setBarcodeInput(normalizeBarcode(draft.barcode) || draft.barcode);
       if (typeof draft.publishToShared === 'boolean') setPublishToShared(draft.publishToShared);
     }, []);
+
+    useEffect(() => {
+      if (!initialBarcode || barcodeInput) return;
+      setBarcodeInput(initialBarcode);
+    }, [initialBarcode, barcodeInput]);
 
     useEffect(() => {
       const utils = U();
       const timer = setTimeout(() => {
         const payload = {
           pasteText,
+          barcode: effectiveBarcode,
           publishToShared
         };
         if (HEYS.store?.set) {
@@ -5467,7 +5546,7 @@ NOVA: 1
       }, 500);
 
       return () => clearTimeout(timer);
-    }, [pasteText, publishToShared]);
+    }, [pasteText, effectiveBarcode, publishToShared]);
 
     const MISSING_FIELD_LABELS = {
       kcal100: 'Ккал',
@@ -5682,7 +5761,7 @@ NOVA: 1
             setError('Не хватает полей: ' + formatMissingFields(aiParsed.missingFields));
             return;
           }
-          const product = scannedBarcode ? mergeProductBarcode(aiParsed.product, scannedBarcode) : aiParsed.product;
+          const product = effectiveBarcode ? mergeProductBarcode(aiParsed.product, effectiveBarcode) : aiParsed.product;
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -5691,7 +5770,7 @@ NOVA: 1
 
         const parsed = parseProductLine(pasteText);
         if (parsed) {
-          const product = scannedBarcode ? mergeProductBarcode(parsed, scannedBarcode) : parsed;
+          const product = effectiveBarcode ? mergeProductBarcode(parsed, effectiveBarcode) : parsed;
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -5705,7 +5784,26 @@ NOVA: 1
       }, 150);
 
       return () => clearTimeout(timer);
-    }, [pasteText, parseProductLine, searchQuery, formatMissingFields, scannedBarcode]);
+    }, [pasteText, parseProductLine, searchQuery, formatMissingFields, effectiveBarcode]);
+
+    const openCreateBarcodeScanner = useCallback(() => {
+      haptic('light');
+      setBarcodeModal({
+        autoStart: true,
+        cameraStart: createBarcodeCameraStart()
+      });
+    }, []);
+
+    const handleCreateBarcodeDetected = useCallback((code) => {
+      const barcode = normalizeBarcode(code);
+      if (!barcode) {
+        HEYS.Toast?.warning?.('Штрихкод не распознан');
+        return;
+      }
+      setBarcodeInput(barcode);
+      setBarcodeModal(null);
+      HEYS.Toast?.success?.('Штрихкод добавлен к новому продукту');
+    }, []);
 
     // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
     // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep — но
@@ -5715,7 +5813,7 @@ NOVA: 1
 
       haptic('medium');
 
-      const productWithBarcode = scannedBarcode ? mergeProductBarcode(parsedPreview, scannedBarcode) : parsedPreview;
+      const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;
       const baseProduct = await ensureProductFingerprint(productWithBarcode);
       // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
       // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
@@ -5735,7 +5833,8 @@ NOVA: 1
         newProduct: preparedProduct,
         selectedProduct: preparedProduct,
         grams: 100,
-        mode: createMode
+        mode: createMode,
+        barcode: effectiveBarcode
       });
 
       // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
@@ -5744,7 +5843,15 @@ NOVA: 1
       // Для oneTime — принудительно false (продукт в общую базу не предлагаем).
       const effectivePublishToShared = createMode === 'oneTime' ? false : !!publishToShared;
       if (updateStepData) {
-        updateStepData('create', { mode: createMode, publishToShared: effectivePublishToShared });
+        updateStepData('create', {
+          ...data,
+          newProduct: preparedProduct,
+          selectedProduct: preparedProduct,
+          grams: 100,
+          mode: createMode,
+          publishToShared: effectivePublishToShared,
+          barcode: effectiveBarcode
+        });
         updateStepData('harm', {
           product: preparedProduct,
           mode: createMode
@@ -5761,7 +5868,7 @@ NOVA: 1
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, scannedBarcode]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, effectiveBarcode]);
 
     // Авто-добавление fingerprint для превью (после парсинга)
     useEffect(() => {
@@ -5818,6 +5925,15 @@ NOVA: 1
     }, [aiPromptText]);
 
     return React.createElement('div', { className: 'aps-create-step' },
+      barcodeModal && React.createElement(BarcodeScannerModal, {
+        title: 'Сканировать штрихкод',
+        subtitle: 'Код будет сохранён у нового продукта',
+        initialValue: effectiveBarcode,
+        autoStart: barcodeModal.autoStart === true,
+        cameraStart: barcodeModal.cameraStart || null,
+        onDetected: handleCreateBarcodeDetected,
+        onClose: () => setBarcodeModal(null)
+      }),
       // Заголовок
       React.createElement('div', { className: 'aps-create-header' },
         React.createElement('span', { className: 'aps-create-icon' }, '➕'),
@@ -5860,9 +5976,37 @@ NOVA: 1
         React.createElement('strong', null, searchQuery)
       ),
 
-      scannedBarcode && React.createElement('div', { className: 'aps-create-search-hint aps-create-barcode-hint' },
-        '▦ Штрихкод: ',
-        React.createElement('strong', null, scannedBarcode)
+      React.createElement('div', { className: 'aps-create-barcode-field' },
+        React.createElement('label', { className: 'aps-create-barcode-label' }, 'Штрихкод'),
+        React.createElement('div', { className: 'aps-create-barcode-row' },
+          React.createElement('input', {
+            className: 'aps-create-barcode-input',
+            type: 'text',
+            inputMode: 'text',
+            autoComplete: 'off',
+            value: barcodeInput,
+            onChange: (e) => setBarcodeInput(normalizeBarcode(e.target.value) || e.target.value),
+            placeholder: 'EAN / UPC'
+          }),
+          barcodeInput && React.createElement('button', {
+            type: 'button',
+            className: 'aps-create-barcode-clear',
+            onClick: () => setBarcodeInput(''),
+            'aria-label': 'Очистить штрихкод',
+            title: 'Очистить штрихкод'
+          }, '×'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-create-barcode-scan',
+            onClick: openCreateBarcodeScanner
+          },
+            React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
+            React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
+          )
+        ),
+        React.createElement('div', { className: 'aps-create-barcode-note' },
+          effectiveBarcode ? 'Этот код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
+        )
       ),
 
       // Инструкция
@@ -6963,7 +7107,7 @@ NOVA: 1
       setPortions(toEditablePortions(autoPortions));
     }, [autoPortions, toEditablePortions]);
 
-    const handleContinue = useCallback(() => {
+	    const handleContinue = useCallback(async () => {
       console.info('[HEYS.portions] 🔵 handleContinue START', {
         productId: product?.id ?? product?.product_id ?? null,
         productName: product?.name,
@@ -7031,19 +7175,23 @@ NOVA: 1
         });
       }
 
-      if (context?.isEditMode) {
-        // Why: сохраняем пустой массив тоже — это явное действие юзера «убрать все порции».
-        saveProductPortions(updatedProduct, normalized);
-      }
+	      if (context?.isEditMode) {
+	        // Why: сохраняем пустой массив тоже — это явное действие юзера «убрать все порции».
+	        const saved = await saveProductPortions(updatedProduct, normalized);
+	        if (!saved) return;
+	      }
 
-      if (context?.onFinish) {
+	      if (context?.onFinish) {
         console.info('[HEYS.portions] ✅ Завершение шага порций', {
           productId: product?.id ?? product?.product_id ?? null,
           normalizedCount: normalized.length
         });
-        context.onFinish({ product: updatedProduct, portions: normalized });
-        if (HEYS.StepModal?.hide) {
-          HEYS.StepModal.hide();
+	        const finishResult = context.onFinish({ product: updatedProduct, portions: normalized });
+	        if (finishResult && typeof finishResult.then === 'function') {
+	          await finishResult;
+	        }
+	        if (HEYS.StepModal?.hide) {
+	          HEYS.StepModal.hide();
         }
         return;
       }
@@ -7323,7 +7471,7 @@ NOVA: 1
     }, [selectedHarm]);
 
     // Выбрать вариант, СОХРАНИТЬ ПРОДУКТ и перейти дальше
-    const selectAndContinue = useCallback((harm) => {
+	    const selectAndContinue = useCallback(async (harm) => {
       haptic('light');
       setSelectedHarm(harm);
 
@@ -7356,9 +7504,9 @@ NOVA: 1
         updatedProduct.id = uid('oneoff_');
         console.info('[HarmSelectStep] ⚡ One-time product (НЕ сохраняем в базу):', updatedProduct.name, 'id:', updatedProduct.id);
       }
-      if (updatedProduct && !isOneTime) {
-        const U = HEYS.utils || {};
-        const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+	      if (updatedProduct && !isOneTime) {
+	        const U = HEYS.utils || {};
+	        const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
 
         // CRITICAL: ensure id is set BEFORE save. Without id, OverlayStore.migrate
         // filters the product out (id == null guard) → product disappears from overlay.
@@ -7369,35 +7517,58 @@ NOVA: 1
 
         // Проверка на дубликат
         const normName = (updatedProduct.name || '').trim().toLowerCase();
-        const existingPersonal = products.find(p =>
-          (p.name || '').trim().toLowerCase() === normName
-        );
+	        const existingPersonal = products.find(p =>
+	          (p.name || '').trim().toLowerCase() === normName
+	        );
 
-        if (!existingPersonal) {
-          // 🆕 v4.8.0: Удаляем из игнор-листа если был там
-          if (HEYS.deletedProducts?.remove) {
-            HEYS.deletedProducts.remove(updatedProduct.name, updatedProduct.id);
-          }
+	        if (!existingPersonal) {
+	          // 🆕 v4.8.0: Удаляем из игнор-листа если был там
+	          if (HEYS.deletedProducts?.remove) {
+	            HEYS.deletedProducts.remove(updatedProduct.name, updatedProduct.id);
+	          }
+	        } else {
+	          console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
+	          // Используем существующий ID
+	          updatedProduct.id = existingPersonal.id;
+	          // 🆕 Обновляем updatedAt чтобы продукт поднялся вверх в списке
+	          updatedProduct.updatedAt = Date.now();
+	        }
 
-          const newProducts = [...products, updatedProduct];
-          if (HEYS.products?.setAll) {
-            HEYS.products.setAll(newProducts, { source: 'harm-select-add' });
-          } else if (HEYS.store?.set) {
-            HEYS.store.set('heys_products', newProducts);
-            console.log('[HarmSelectStep] ✅ Сохранён через store с harm:', harm);
-          }
-        } else {
-          console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
-          // Используем существующий ID
-          updatedProduct.id = existingPersonal.id;
-          // 🆕 Обновляем updatedAt чтобы продукт поднялся вверх в списке
-          const touchedExisting = { ...existingPersonal, updatedAt: Date.now() };
-          const touchedProducts = products.map(p => p.id === existingPersonal.id ? touchedExisting : p);
-          if (HEYS.products?.setAll) {
-            HEYS.products.setAll(touchedProducts, { source: 'harm-select-update' });
-            console.info('[HarmSelectStep] 🔄 Обновлён updatedAt у продукта:', existingPersonal.name);
-          }
-        }
+	        const commit = await commitPersonalProduct(updatedProduct, true, existingPersonal ? 'harm-select-update' : 'harm-select-add');
+	        if (!commit.ok) {
+	          showProductCommitError(commit.reason);
+	          try {
+	            window.HEYS?.eventLog?.write?.(
+	              'product-persist-blocked',
+	              `${updatedProduct.name || 'product'} blocked (${commit.reason || 'unknown'})`,
+	              { productId: updatedProduct.id, name: updatedProduct.name, reason: commit.reason },
+	              'harm-select'
+	            );
+	          } catch (_) { /* noop */ }
+	          return;
+	        }
+	        Object.assign(updatedProduct, commit.product || {});
+	        if (updateStepData) {
+	          updateStepData('create', {
+	            ...stepData?.create,
+	            newProduct: updatedProduct,
+	            selectedProduct: updatedProduct
+	          });
+	          updateStepData('grams', {
+	            ...(stepData?.grams || {}),
+	            selectedProduct: updatedProduct,
+	            grams: stepData?.create?.grams || stepData?.grams?.grams || 100
+	          });
+	        }
+	        console.info('[HarmSelectStep] ✅ Продукт сохранён в canonical overlay с cloud ack:', updatedProduct.name);
+	        try {
+	          window.HEYS?.eventLog?.write?.(
+	            'product-persist-ok',
+	            `${updatedProduct.name || 'product'} committed`,
+	            { productId: updatedProduct.id, name: updatedProduct.name },
+	            'harm-select'
+	          );
+	        } catch (_) { /* noop */ }
 
         // 🔄 Orphan recovery
         if (HEYS.orphanProducts?.recalculate) {
@@ -8456,11 +8627,15 @@ NOVA: 1
 
           const sharedId = resolveSharedProductId(finalProduct);
 
-          if (isCuratorUser() && sharedId && portionsChanged && !otherChanged) {
-            const result = await updateSharedProductPortions(sharedId, finalProduct.portions || [], finalProduct);
-            if (result.ok) {
-              upsertLocalProduct(finalProduct, false);
-              notifyProductUpdated(finalProduct);
+	          if (isCuratorUser() && sharedId && portionsChanged && !otherChanged) {
+	            const result = await updateSharedProductPortions(sharedId, finalProduct.portions || [], finalProduct);
+	            if (result.ok) {
+	              const commit = await commitPersonalProduct(finalProduct, false, 'edit-product-shared');
+	              if (!commit.ok) {
+	                showProductCommitError(commit.reason);
+	                return;
+	              }
+	              notifyProductUpdated(commit.product || finalProduct);
               if (nameChanged) {
                 HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
                   console.log('[HEYS] Product renamed, cascaded to meals');
@@ -8471,11 +8646,15 @@ NOVA: 1
           }
 
           if (isSharedProduct(product)) {
-            if (isCuratorUser()) {
-              const result = await updateSharedProduct(finalProduct);
-              if (result.ok) {
-                upsertLocalProduct(finalProduct, false);
-                notifyProductUpdated(finalProduct);
+	            if (isCuratorUser()) {
+	              const result = await updateSharedProduct(finalProduct);
+	              if (result.ok) {
+	                const commit = await commitPersonalProduct(finalProduct, false, 'edit-product-shared');
+	                if (!commit.ok) {
+	                  showProductCommitError(commit.reason);
+	                  return;
+	                }
+	                notifyProductUpdated(commit.product || finalProduct);
                 // v4.8.0: Show cascade notification for shared products
                 if (nameChanged) {
                   HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
@@ -8484,11 +8663,15 @@ NOVA: 1
               }
             } else {
               const requestType = chooseSharedEditRequestType(product, finalProduct);
-              const localProduct = requestType === 'variant_create' || (!requestType && nameChanged)
-                ? makeLocalVariantCandidate(finalProduct, product)
-                : finalProduct;
-              const localSave = upsertLocalProduct(localProduct, true);
-              const saved = localSave.product || finalProduct;
+	              const localProduct = requestType === 'variant_create' || (!requestType && nameChanged)
+	                ? makeLocalVariantCandidate(finalProduct, product)
+	                : finalProduct;
+	              const localSave = await commitPersonalProduct(localProduct, true, 'edit-product');
+	              if (!localSave.ok) {
+	                showProductCommitError(localSave.reason);
+	                return;
+	              }
+	              const saved = localSave.product || finalProduct;
               notifyProductUpdated(saved);
               if (nameChanged) {
                 HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
@@ -8510,10 +8693,14 @@ NOVA: 1
               } else {
                 HEYS.Toast?.success?.('Изменение сохранено только в личной базе');
               }
-            }
-          } else {
-            saveLocalProduct(finalProduct);
-            notifyProductUpdated(finalProduct);
+	            }
+	          } else {
+	            const localSave = await saveLocalProduct(finalProduct);
+	            if (!localSave?.ok) {
+	              showProductCommitError(localSave?.reason || 'product_save_failed');
+	              return;
+	            }
+	            notifyProductUpdated(localSave.product || finalProduct);
             // v4.8.0: Show cascade notification for local products
             if (nameChanged) {
               HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
@@ -8522,13 +8709,17 @@ NOVA: 1
             if (sharedId && !isCuratorUser()) {
               const requestType = chooseSharedEditRequestType(product, finalProduct);
               if (requestType) {
-                const requestProduct = requestType === 'variant_create'
-                  ? makeLocalVariantCandidate(finalProduct, product)
-                  : finalProduct;
-                if (requestProduct !== finalProduct) {
-                  saveLocalProduct(requestProduct);
-                  notifyProductUpdated(requestProduct);
-                }
+	                const requestProduct = requestType === 'variant_create'
+	                  ? makeLocalVariantCandidate(finalProduct, product)
+	                  : finalProduct;
+	                if (requestProduct !== finalProduct) {
+	                  const variantSave = await saveLocalProduct(requestProduct);
+	                  if (!variantSave?.ok) {
+	                    showProductCommitError(variantSave?.reason || 'product_save_failed');
+	                    return;
+	                  }
+	                  notifyProductUpdated(variantSave.product || requestProduct);
+	                }
                 const pending = await submitSharedProductChangeRequest(requestType, requestProduct, sharedId, {
                   summary: requestType === 'variant_create' ? 'create variant' : 'product update'
                 });
@@ -8541,11 +8732,15 @@ NOVA: 1
                 } else {
                   HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
                 }
-              } else if (nameChanged) {
-                const localVariant = makeLocalVariantCandidate(finalProduct, product);
-                saveLocalProduct(localVariant);
-                notifyProductUpdated(localVariant);
-              }
+	              } else if (nameChanged) {
+	                const localVariant = makeLocalVariantCandidate(finalProduct, product);
+	                const variantSave = await saveLocalProduct(localVariant);
+	                if (!variantSave?.ok) {
+	                  showProductCommitError(variantSave?.reason || 'product_save_failed');
+	                  return;
+	                }
+	                notifyProductUpdated(variantSave.product || localVariant);
+	              }
             }
           }
 
@@ -8779,11 +8974,12 @@ NOVA: 1
       showStreak: false,
       showTip: false,
       showProgress: true,
-      allowSwipe: false,
-      hidePrimaryOnFirst: true,
-      finishLabel: 'Добавить', // Кнопка на последнем шаге
-      title: '', // Убрали — и так очевидно
-      onComplete: (stepData) => {
+	      allowSwipe: false,
+	      hidePrimaryOnFirst: true,
+	      finishLabel: 'Добавить', // Кнопка на последнем шаге
+	      title: '', // Убрали — и так очевидно
+	      closeOnComplete: 'after',
+	      onComplete: async (stepData) => {
         // console.log('[AddProductStep] onComplete stepData:', stepData);
 
         // Данные шагов
@@ -8795,17 +8991,26 @@ NOVA: 1
         // ВАЖНО: create проверяется перед search, т.к. при создании нового продукта 
         // stepData.grams может не успеть обновиться из-за React batching
         // newProduct — это поле которое всегда устанавливается при создании
-        const selectedProduct = gramsData.selectedProduct
-          || createData.newProduct
-          || createData.selectedProduct
-          || searchData.selectedProduct;
-        const grams = gramsData.grams || createData.grams || searchData.grams || 100;
+	        let selectedProduct = gramsData.selectedProduct
+	          || createData.newProduct
+	          || createData.selectedProduct
+	          || searchData.selectedProduct;
+	        const grams = gramsData.grams || createData.grams || searchData.grams || 100;
 
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
 
-        if (selectedProduct && grams) {
-          const traceId = createAddTraceId('stepmodal-complete');
-          const payload = {
+	        if (selectedProduct && grams) {
+	          const ready = await HEYS.products?.ensureMealProductReady?.(selectedProduct, {
+	            source: 'add-product-complete',
+	            requireCommit: !!(createData.newProduct && !selectedProduct._oneTime)
+	          });
+	          if (ready && !ready.ok) {
+	            showProductCommitError(ready.reason);
+	            throw new Error('product_commit_failed');
+	          }
+	          if (ready?.product) selectedProduct = ready.product;
+	          const traceId = createAddTraceId('stepmodal-complete');
+	          const payload = {
             product: selectedProduct,
             grams: grams,
             mealIndex,
@@ -8821,10 +9026,13 @@ NOVA: 1
             productId: selectedProduct.id ?? selectedProduct.product_id ?? null,
             productName: selectedProduct.name || null,
             source: selectedProduct._source || (selectedProduct._fromShared ? 'shared' : 'personal')
-          });
-          try {
-            onAdd?.(payload);
-            pushAddTrace('✅ onAdd callback completed (onComplete)', {
+	          });
+	          try {
+	            const addResult = onAdd?.(payload);
+	            if (addResult && typeof addResult.then === 'function') {
+	              await addResult;
+	            }
+	            pushAddTrace('✅ onAdd callback completed (onComplete)', {
               traceId,
               mealIndex,
               mealId
@@ -8836,14 +9044,15 @@ NOVA: 1
                 mealId,
               });
             }, 160);
-          } catch (error) {
-            pushAddTrace('❌ onAdd callback failed (onComplete)', {
-              traceId,
-              mealIndex,
-              mealId,
-              error: error?.message || error
-            }, 'error');
-          }
+	          } catch (error) {
+	            pushAddTrace('❌ onAdd callback failed (onComplete)', {
+	              traceId,
+	              mealIndex,
+	              mealId,
+	              error: error?.message || error
+	            }, 'error');
+	            throw error;
+	          }
 
           // Product-add events are emitted by the day mutation after a successful write.
         } else {

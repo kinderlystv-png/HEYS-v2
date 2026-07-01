@@ -678,17 +678,31 @@
         });
       };
 
-      const handleAddMany = ({ entries, mealIndex: targetMealIndex = mi, mealId: targetMealId = null, _traceId, _origin, _presetName } = {}) => {
-        const items = Array.isArray(entries) ? entries : [];
-        const traceId = _traceId || `daybulk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-        const prepared = items
-          .map((entry) => {
-            const product = entry?.product || entry;
-            const grams = entry?.grams || product?.grams || 100;
-            if (!product) return null;
-            return { product, grams, ...buildMealItemFromProduct(product, grams) };
-          })
-          .filter(Boolean);
+	      const handleAddMany = async ({ entries, mealIndex: targetMealIndex = mi, mealId: targetMealId = null, _traceId, _origin, _presetName } = {}) => {
+	        const items = Array.isArray(entries) ? entries : [];
+	        const traceId = _traceId || `daybulk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+	        const prepared = [];
+	        for (const entry of items) {
+	          const product = entry?.product || entry;
+	          const grams = entry?.grams || product?.grams || 100;
+	          if (!product) continue;
+	          const ready = await HEYS.products?.ensureMealProductReady?.(product, {
+	            source: 'day-add-product-bulk',
+	            requireCommit: true
+	          });
+	          if (ready && !ready.ok) {
+	            HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+	            console.warn('[HEYS.day] bulk product add blocked before day write', {
+	              traceId,
+	              reason: ready.reason,
+	              productId: product?.id ?? product?.product_id ?? null,
+	              productName: product?.name || null
+	            });
+	            return false;
+	          }
+	          const safeProduct = ready?.product || product;
+	          prepared.push({ product: safeProduct, grams, ...buildMealItemFromProduct(safeProduct, grams) });
+	        }
 
         if (prepared.length === 0) {
           emitAddTrace('⚠️ bulk add skipped — no valid items', {
@@ -841,8 +855,8 @@
         });
       };
 
-      const handleAdd = ({ product, grams, mealIndex, mealId, _traceId, _origin, _presetBatch }) => {
-        const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+	      const handleAdd = async ({ product, grams, mealIndex, mealId, _traceId, _origin, _presetBatch }) => {
+	        const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
         try {
           logDayTrace('[HEYS.day-trace] 1/8 handleAdd entry', {
@@ -869,8 +883,23 @@
           productName: product?.name || null,
           source: product?._source || (product?._fromShared ? 'shared' : 'personal')
         });
-        const built = buildMealItemFromProduct(product, grams);
-        const { finalProduct, productId, newItem, itemHasNutrients } = built;
+	        const ready = await HEYS.products?.ensureMealProductReady?.(product, {
+	          source: 'day-add-product',
+	          requireCommit: true
+	        });
+	        if (ready && !ready.ok) {
+	          HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+	          console.warn('[HEYS.day] product add blocked before day write', {
+	            traceId,
+	            reason: ready.reason,
+	            productId: product?.id ?? product?.product_id ?? null,
+	            productName: product?.name || null
+	          });
+	          return false;
+	        }
+	        const safeProduct = ready?.product || product;
+	        const built = buildMealItemFromProduct(safeProduct, grams);
+	        const { finalProduct, productId, newItem, itemHasNutrients } = built;
 
         // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
         const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
@@ -1007,7 +1036,7 @@
 
         try { navigator.vibrate?.(10); } catch (e) { }
 
-        dispatchProductAdded({ product, grams, origin: _origin || 'single' });
+	        dispatchProductAdded({ product: finalProduct || safeProduct, grams, origin: _origin || 'single' });
 
         // ⚡ Skip grams-tracking для разовых продуктов: их productId уникален и
         // никогда не повторится → запись в last_grams/grams_history засоряет LS

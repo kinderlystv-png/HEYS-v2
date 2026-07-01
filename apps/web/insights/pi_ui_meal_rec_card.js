@@ -1470,7 +1470,7 @@
                     dateKey: day?.date || new Date().toISOString().slice(0, 10),
                     initialSearch: searchQuery, // 🆕 Блокер 1: предзаполняем поиск
                     initialGrams: suggestion.grams || 100, // 🆕 v14: R6 (Sprint 1) — передаём рекомендованные ML граммы
-                    onAdd: ({ product: addedProduct, grams, mealIndex }) => {
+                    onAdd: async ({ product: addedProduct, grams, mealIndex }) => {
                         _releaseProcessing();
                         console.info(`[MEAL] ✅ Product selected:`, addedProduct.name, `(${grams}г) to meal ${mealIndex}`);
 
@@ -1478,14 +1478,16 @@
                         // This is the SAME handler used by the regular diary flow.
                         // It handles: shared product cloning, harm normalization, setDay, animation, heysProductAdded event
                         if (HEYS?.Day?.addProductToMeal) {
-                            const success = HEYS.Day.addProductToMeal(mealIndex, addedProduct, grams);
+                            const success = await HEYS.Day.addProductToMeal(mealIndex, addedProduct, grams);
                             if (success) {
                                 console.info(`[MEAL] ✅ addProductToMeal succeeded for meal ${mealIndex}`);
                             } else {
                                 console.error(`[MEAL] ❌ addProductToMeal returned false for meal ${mealIndex}`);
+                                return false;
                             }
                         } else {
                             console.error(`[MEAL] ❌ HEYS.Day.addProductToMeal not available!`);
+                            return false;
                         }
 
                         // Feedback: markFollowed
@@ -1709,7 +1711,7 @@
             document.body.appendChild(overlay);
         };
 
-        const addSelectedProductsToMeal = (selectedProducts, mealIndex) => {
+        const addSelectedProductsToMeal = async (selectedProducts, mealIndex) => {
             const { HEYS } = global;
             if (!HEYS?.Day?.addProductsToMeal) {
                 console.error(`${LOG_PREFIX} ❌ HEYS.Day.addProductsToMeal not available`);
@@ -1735,7 +1737,7 @@
                 return false;
             }
 
-            const success = HEYS.Day.addProductsToMeal(mealIndex, entries, {
+            const success = await HEYS.Day.addProductsToMeal(mealIndex, entries, {
                 source: 'meal-rec-selected-products',
                 origin: 'meal-rec-bulk-selected'
             });
@@ -1804,8 +1806,8 @@
             }
 
             console.info(`${LOG_PREFIX} [BULK ADD] 🎁 Adding ${selectedProducts.length} selected products`);
-            showBulkMealPicker(selectedProducts, (mealIndex) => {
-                if (addSelectedProductsToMeal(selectedProducts, mealIndex)) {
+            showBulkMealPicker(selectedProducts, async (mealIndex) => {
+                if (await addSelectedProductsToMeal(selectedProducts, mealIndex)) {
                     setCheckedProducts({});
                     console.info(`${LOG_PREFIX} [BULK ADD] ✅ Cleared selection`);
                 }
@@ -1826,8 +1828,8 @@
             }
 
             console.info(`${LOG_PREFIX} [BULK ADD] 🎁 Adding ${selectedProducts.length} selected products (flat mode)`);
-            showBulkMealPicker(selectedProducts, (mealIndex) => {
-                if (addSelectedProductsToMeal(selectedProducts, mealIndex)) {
+            showBulkMealPicker(selectedProducts, async (mealIndex) => {
+                if (await addSelectedProductsToMeal(selectedProducts, mealIndex)) {
                     setCheckedProducts({});
                 }
             });

@@ -4326,14 +4326,24 @@
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
                                     barcodeCameraStart: options.barcodeCameraStart || null,
-                                    onAdd: ({ product, grams, mealIndex: addMealIndex }) => {
-                                        let finalProduct = product;
-                                        if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
-                                            const cloned = HEYS.products?.addFromShared?.(product);
-                                            if (cloned) {
-                                                finalProduct = cloned;
-                                            }
-                                        }
+	                                    onAdd: async ({ product, grams, mealIndex: addMealIndex }) => {
+	                                        let finalProduct = product;
+	                                        const ready = await HEYS.products?.ensureMealProductReady?.(product, {
+	                                            source: 'day-inline-add-product',
+	                                            requireCommit: true
+	                                        });
+	                                        if (ready && !ready.ok) {
+	                                            HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+	                                            console.warn('[HEYS.day] product add blocked before day write', {
+	                                                reason: ready.reason,
+	                                                productId: product?.id ?? product?.product_id ?? null,
+	                                                productName: product?.name || null
+	                                            });
+	                                            return false;
+	                                        }
+	                                        if (ready?.product) {
+	                                            finalProduct = ready.product;
+	                                        }
 
                                         const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
                                         // 🆕 v2.8.2: Трекаем использование для сортировки по популярности
@@ -4484,19 +4494,42 @@
                                         }
                                         if (scrollToDiaryHeading) scrollToDiaryHeading();
                                     },
-                                    onAddMany: ({ entries, mealIndex: addMealIndex = targetMealIndex, _origin, _presetName } = {}) => {
-                                        const addMany = addProductsToMealRef.current;
-                                        if (typeof addMany !== 'function') {
+	                                    onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex, _origin, _presetName } = {}) => {
+	                                        const addMany = addProductsToMealRef.current;
+	                                        if (typeof addMany !== 'function') {
                                             console.warn('[HEYS.day] ⚠️ addProductsToMeal unavailable for inline preset bulk add', {
                                                 mealIndex: addMealIndex,
                                                 presetName: _presetName || null
                                             });
-                                            return false;
-                                        }
-                                        const didAdd = addMany(addMealIndex, entries, {
-                                            source: 'day-inline-add-products-bulk',
-                                            origin: _origin || 'preset-apply-bulk',
-                                            presetName: _presetName || null,
+	                                            return false;
+	                                        }
+	                                        const safeEntries = [];
+	                                        for (const entry of Array.isArray(entries) ? entries : []) {
+	                                            const product = entry?.product || entry;
+	                                            const ready = await HEYS.products?.ensureMealProductReady?.(product, {
+	                                                source: 'day-inline-add-products-bulk',
+	                                                requireCommit: true
+	                                            });
+	                                            if (ready && !ready.ok) {
+	                                                HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+	                                                console.warn('[HEYS.day] bulk product add blocked before day write', {
+	                                                    reason: ready.reason,
+	                                                    productId: product?.id ?? product?.product_id ?? null,
+	                                                    productName: product?.name || null
+	                                                });
+	                                                return false;
+	                                            }
+	                                            if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+	                                                safeEntries.push({ ...entry, product: ready?.product || product });
+	                                            } else {
+	                                                safeEntries.push(ready?.product || product);
+	                                            }
+	                                        }
+	                                        const didAdd = await addMany(addMealIndex, safeEntries, {
+	                                            source: 'day-inline-add-products-bulk',
+	                                            origin: _origin || 'preset-apply-bulk',
+	                                            presetName: _presetName || null,
+	                                            productCommitVerified: true,
                                         });
                                         if (didAdd !== false && scrollToDiaryHeading) scrollToDiaryHeading();
                                         return didAdd !== false;
@@ -4565,9 +4598,13 @@
                                 setTimeout(() => {
                                     HEYS.CopyMealModal.showRecentList({
                                         recentEntries: fresh,
-                                        onPick: (pickedMeal) => {
+                                        onPick: async (pickedMeal) => {
                                             if (!pickedMeal || !(pickedMeal.items || []).length) return;
-                                            const cloned = pickedMeal.items.map(it => ({ ...it, id: uid('it_') }));
+                                            const cloned = await ensureDiaryItemsReadyForDayWrite(
+                                                pickedMeal.items.map(it => ({ ...it, id: uid('it_') })),
+                                                'flow_repeat_recent_meal',
+                                            );
+                                            if (!cloned || cloned.length === 0) return;
                                             markUndoWindow(3000);
                                             const baseDay = dayRef.current || {};
                                             const newMeals = (baseDay.meals || []).map((m, i) =>
@@ -4835,7 +4872,7 @@
                     );
                 } catch (_) { /* noop */ }
             }
-        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields]);
+        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields, ensureDiaryItemsReadyForDayWrite]);
 
         const replanEmitTimersRef = React.useRef({});
 
@@ -4934,6 +4971,87 @@
             });
         }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
+        const ensureProductReadyForDayWrite = React.useCallback(async (product, source) => {
+            if (!product) return { ok: false, product: null, reason: 'missing_product' };
+            if (product._oneTime) return { ok: true, product, reason: 'one_time' };
+            if (typeof HEYS.products?.ensureMealProductReady !== 'function') {
+                return { ok: false, product, reason: 'commit_gate_missing' };
+            }
+            return HEYS.products.ensureMealProductReady(product, {
+                source: source || 'day-write',
+                requireCommit: true,
+            });
+        }, []);
+
+        const ensureDiaryItemsReadyForDayWrite = React.useCallback(async (items, source) => {
+            const out = [];
+            for (const item of (Array.isArray(items) ? items : [])) {
+                if (!item) continue;
+                if (item._oneTime) {
+                    out.push(item);
+                    continue;
+                }
+                const product = {
+                    id: item.product_id || undefined,
+                    product_id: item.product_id || undefined,
+                    name: item.name,
+                    grams: item.grams || 100,
+                    kcal100: item.kcal100,
+                    protein100: item.protein100,
+                    carbs100: item.carbs100,
+                    fat100: item.fat100,
+                    simple100: item.simple100,
+                    complex100: item.complex100,
+                    badFat100: item.badFat100,
+                    goodFat100: item.goodFat100,
+                    trans100: item.trans100,
+                    fiber100: item.fiber100,
+                    gi: item.gi,
+                    harm: item.harm,
+                    barcode: item.barcode || null,
+                    barcodes: Array.isArray(item.barcodes) ? item.barcodes : undefined,
+                };
+                const ready = await ensureProductReadyForDayWrite(product, source || 'day-copy-item');
+                if (!ready?.ok) {
+                    HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+                    console.warn('[HEYS.day] copied item blocked before day write', {
+                        reason: ready?.reason || 'unknown',
+                        source: source || 'day-copy-item',
+                        productId: product.id ?? product.product_id ?? null,
+                        productName: product.name || null,
+                    });
+                    return null;
+                }
+                const committed = ready.product || product;
+                out.push({
+                    ...item,
+                    product_id: committed.id ?? committed.product_id ?? item.product_id,
+                    name: committed.name || item.name,
+                    kcal100: committed.kcal100 ?? item.kcal100,
+                    protein100: committed.protein100 ?? item.protein100,
+                    carbs100: committed.carbs100 ?? item.carbs100,
+                    fat100: committed.fat100 ?? item.fat100,
+                    simple100: committed.simple100 ?? item.simple100,
+                    complex100: committed.complex100 ?? item.complex100,
+                    badFat100: committed.badFat100 ?? item.badFat100,
+                    goodFat100: committed.goodFat100 ?? item.goodFat100,
+                    trans100: committed.trans100 ?? item.trans100,
+                    fiber100: committed.fiber100 ?? item.fiber100,
+                    gi: committed.gi ?? committed.gi100 ?? item.gi,
+                    harm: HEYS.models?.normalizeHarm?.(committed) ?? item.harm,
+                });
+            }
+            return out;
+        }, [ensureProductReadyForDayWrite]);
+
+        const prepareCopiedDiaryItem = React.useCallback(async (item, source) => {
+            const readyItems = await ensureDiaryItemsReadyForDayWrite(
+                item ? [{ ...item, id: uid('it_') }] : [],
+                source || 'copy_item_to_target',
+            );
+            return readyItems?.[0] || null;
+        }, [ensureDiaryItemsReadyForDayWrite]);
+
         const buildAddProductItem = React.useCallback((p) => {
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
@@ -4962,7 +5080,7 @@
             return { finalProduct, item };
         }, []);
 
-        const addProductToMeal = React.useCallback((mi, p) => {
+        const addProductToMeal = React.useCallback(async (mi, p, options = {}) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
                 return false;
@@ -4983,7 +5101,23 @@
                 });
             } catch (_) { /* noop */ }
 
-            const { finalProduct, item } = buildAddProductItem(p);
+            let safeProduct = p;
+            if (options.productCommitVerified !== true) {
+                const ready = await ensureProductReadyForDayWrite(p, options.source || 'day-add-product-to-meal');
+                if (!ready?.ok) {
+                    HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+                    console.warn('[HEYS.day] product add blocked before low-level day write', {
+                        reason: ready?.reason || 'unknown',
+                        mealIndex: mi,
+                        productId: p?.id ?? p?.product_id ?? null,
+                        productName: p?.name || null,
+                    });
+                    return false;
+                }
+                safeProduct = ready.product || p;
+            }
+
+            const { finalProduct, item } = buildAddProductItem(safeProduct);
             if (finalProduct !== p) {
                 try {
                     logDayTrace('[HEYS.day-trace] 2/8 cloned from shared', {
@@ -5090,15 +5224,40 @@
             });
             emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: mi, productId: item.product_id });
             return true;
-        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
+        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
 
-        const addProductsToMeal = React.useCallback((mi, entries, options = {}) => {
+        const addProductsToMeal = React.useCallback(async (mi, entries, options = {}) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
                 return false;
             }
 
-            const prepared = (Array.isArray(entries) ? entries : [])
+            const safeEntries = [];
+            for (const entry of (Array.isArray(entries) ? entries : [])) {
+                const product = entry?.product || entry;
+                if (!product) continue;
+                let safeProduct = product;
+                if (options.productCommitVerified !== true) {
+                    const ready = await ensureProductReadyForDayWrite(product, options.source || options.origin || 'day-add-products-to-meal');
+                    if (!ready?.ok) {
+                        HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
+                        console.warn('[HEYS.day] bulk product add blocked before low-level day write', {
+                            reason: ready?.reason || 'unknown',
+                            mealIndex: mi,
+                            productId: product?.id ?? product?.product_id ?? null,
+                            productName: product?.name || null,
+                            source: options?.source || options?.origin || 'unknown',
+                        });
+                        return false;
+                    }
+                    safeProduct = ready.product || product;
+                }
+                safeEntries.push(entry && typeof entry === 'object' && !Array.isArray(entry)
+                    ? { ...entry, product: safeProduct }
+                    : safeProduct);
+            }
+
+            const prepared = safeEntries
                 .map((entry) => {
                     const product = entry?.product || entry;
                     const grams = entry?.grams || product?.grams || 100;
@@ -5197,7 +5356,7 @@
                 itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
             });
             return true;
-        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
+        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
         addProductsToMealRef.current = addProductsToMeal;
 
         const setGrams = React.useCallback((mi, itId, g) => {
@@ -5324,13 +5483,17 @@
             });
         }, [haptic, setDay, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
-        const repeatYesterdayMeal = React.useCallback((mealIndex, yMeal) => {
+        const repeatYesterdayMeal = React.useCallback(async (mealIndex, yMeal) => {
             if (!yMeal || !(yMeal.items || []).length) return;
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast?.('Копирование продуктов недоступно');
                 return;
             }
-            const cloned = (yMeal.items || []).map(it => ({ ...it, id: uid('it_') }));
+            const cloned = await ensureDiaryItemsReadyForDayWrite(
+                (yMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
+                'repeat_yesterday_meal',
+            );
+            if (!cloned || cloned.length === 0) return;
             markUndoWindow(3000);
             const baseDay = dayRef.current || {};
             const newMeals = (baseDay.meals || []).map((m, i) =>
@@ -5340,7 +5503,7 @@
             persistDayData(updated, 'repeat_yesterday_meal');
             setDay(() => updated);
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
-        }, [setDay, markUndoWindow, persistDayData]);
+        }, [setDay, markUndoWindow, persistDayData, ensureDiaryItemsReadyForDayWrite]);
 
         const saveAsPreset = React.useCallback((mealIndex) => {
             const meal = (day.meals || [])[mealIndex];
@@ -5377,15 +5540,18 @@
             setTimeout(tryScroll, 200);
         }, [date]);
 
-        const copyItemsToMeal = React.useCallback((srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
+        const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Копирование продуктов недоступно');
                 return;
             }
             const tgtDate = targetDate || date;
             const src = dayRef.current?.meals?.[srcMealIndex];
-            const cloned = cloneItemsFromMeal(src, itemIds, gramsMap);
-            if (cloned.length === 0) return;
+            const cloned = await ensureDiaryItemsReadyForDayWrite(
+                cloneItemsFromMeal(src, itemIds, gramsMap),
+                'copy_items_to_meal',
+            );
+            if (!cloned || cloned.length === 0) return;
 
             const writeIntoTarget = (existingDay) => {
                 const meals = existingDay?.meals || [];
@@ -5430,7 +5596,7 @@
 
             HEYS.Toast?.success?.(`Скопировано: ${itemIds.length}`);
             navigateAndScrollToMeal(tgtDate, dstMealId);
-        }, [setDay, markUndoWindow, persistDayData, date, navigateAndScrollToMeal]);
+        }, [setDay, markUndoWindow, persistDayData, date, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite]);
 
         const openCopyMealModal = React.useCallback((srcMealIndex) => {
             const meal = dayRef.current?.meals?.[srcMealIndex];
@@ -5457,13 +5623,16 @@
                 sourceDate,
                 targetDate: todayStr,
                 targetMeals,
-                onCopyToExisting: (itemIds, dstIdx, gramsMap) => {
-                    copyItemsToMeal(srcMealIndex, itemIds, dstIdx, todayStr, gramsMap);
+                onCopyToExisting: async (itemIds, dstIdx, gramsMap) => {
+                    await copyItemsToMeal(srcMealIndex, itemIds, dstIdx, todayStr, gramsMap);
                 },
-                onCopyToNew: (itemIds, gramsMap) => {
+                onCopyToNew: async (itemIds, gramsMap) => {
                     // Snapshot ДО открытия wizard — фиксирует source.items на момент клика
-                    const cloned = cloneItemsFromMeal(meal, itemIds, gramsMap);
-                    if (cloned.length === 0) return;
+                    const cloned = await ensureDiaryItemsReadyForDayWrite(
+                        cloneItemsFromMeal(meal, itemIds, gramsMap),
+                        'copy_items_to_new_meal',
+                    );
+                    if (!cloned || cloned.length === 0) return;
 
                     const completeWithItems = (newMealRaw) => {
                         const newMeal = { ...newMealRaw, items: cloned };
@@ -5535,7 +5704,7 @@
                     }, 100);
                 },
             });
-        }, [date, pIndex, getProductFromItem, prof, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal]);
+        }, [date, pIndex, getProductFromItem, prof, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite]);
 
         const buildDaysWithMeals = React.useCallback((opts) => {
             const includeEmpty = !!(opts && opts.includeEmpty);
@@ -5589,9 +5758,10 @@
             return true;
         }, [date, setDay, markUndoWindow, persistDayData]);
 
-        const createNewMealAndAddItem = React.useCallback((params) => {
+        const createNewMealAndAddItem = React.useCallback(async (params) => {
             const { srcDate, srcMealId, srcItem, srcItemIndex, mode, todayStr } = params;
-            const dstItem = { ...srcItem, id: uid('it_') };
+            const dstItem = await prepareCopiedDiaryItem(srcItem, mode + '_item_to_new_meal');
+            if (!dstItem) return;
 
             const completeWithNewMeal = (newMealRaw) => {
                 const newMeal = { ...newMealRaw, items: [dstItem] };
@@ -5692,7 +5862,7 @@
                     });
                 }
             }, 100);
-        }, [date, writeDay, pIndex, getProductFromItem, prof, navigateAndScrollToMeal, recalculateOrphanProducts, haptic]);
+        }, [date, writeDay, pIndex, getProductFromItem, prof, navigateAndScrollToMeal, recalculateOrphanProducts, haptic, prepareCopiedDiaryItem]);
 
         const moveItem = React.useCallback((srcMealIndex, srcItemId) => {
             if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
@@ -5727,13 +5897,13 @@
                 todayDateStr: _getTodayISO(),
                 pIndex,
                 getProductFromItem,
-                onPick: ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
+                onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                         HEYS.Paywall.showBlockedToast?.('Перенос недоступен');
                         return;
                     }
                     if (createNewMeal) {
-                        createNewMealAndAddItem({
+                        await createNewMealAndAddItem({
                             srcDate,
                             srcMealId,
                             srcItem,
@@ -5743,7 +5913,8 @@
                         });
                         return;
                     }
-                    const dstItem = { ...srcItem, id: uid('it_') };
+                    const dstItem = await prepareCopiedDiaryItem(srcItem, 'move_item_to_target');
+                    if (!dstItem) return;
 
                     const writeOk = writeDay(dstDate, (existing) => {
                         const meals = existing.meals || [];
@@ -5803,7 +5974,7 @@
                     });
                 },
             });
-        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, recalculateOrphanProducts, createNewMealAndAddItem]);
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, recalculateOrphanProducts, createNewMealAndAddItem, prepareCopiedDiaryItem]);
 
         const copyItem = React.useCallback((srcMealIndex, srcItemId) => {
             if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
@@ -5835,13 +6006,13 @@
                 todayDateStr: _getTodayISO(),
                 pIndex,
                 getProductFromItem,
-                onPick: ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
+                onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                         HEYS.Paywall.showBlockedToast?.('Копирование недоступно');
                         return;
                     }
                     if (createNewMeal) {
-                        createNewMealAndAddItem({
+                        await createNewMealAndAddItem({
                             srcDate,
                             srcMealId: srcMeal.id,
                             srcItem,
@@ -5851,7 +6022,8 @@
                         });
                         return;
                     }
-                    const dstItem = { ...srcItem, id: uid('it_') };
+                    const dstItem = await prepareCopiedDiaryItem(srcItem, 'copy_item_to_target');
+                    if (!dstItem) return;
                     const writeOk = writeDay(dstDate, (existing) => {
                         const meals = existing.meals || [];
                         const idx = dstMealId
@@ -5889,9 +6061,9 @@
                     }
                 },
             });
-        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal]);
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal, prepareCopiedDiaryItem]);
 
-        const moveMealToDate = React.useCallback((srcMealIndex, dstDate) => {
+        const moveMealToDate = React.useCallback(async (srcMealIndex, dstDate) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast?.('Перенос приёма недоступен');
                 return;
@@ -5905,10 +6077,15 @@
             }
             const srcMealId = srcMeal.id;
             const srcMealClone = JSON.parse(JSON.stringify(srcMeal));
+            const preparedItems = await ensureDiaryItemsReadyForDayWrite(
+                (srcMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
+                'move_meal_to_target',
+            );
+            if (!preparedItems || preparedItems.length !== (srcMeal.items || []).length) return;
             const dstMeal = {
                 ...srcMeal,
                 id: uid('m_'),
-                items: (srcMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
+                items: preparedItems,
             };
 
             const writeOk = writeDay(dstDate, (existing) => {
@@ -5952,7 +6129,7 @@
                 duration: 4000,
                 action: { label: 'Отменить', onClick: undo },
             });
-        }, [date, haptic, buildDaysWithMeals, writeDay]);
+        }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 
         const openMoveMealModal = React.useCallback((srcMealIndex) => {
             if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
@@ -5972,7 +6149,7 @@
                 sourceDate: date,
                 sourceLabel,
                 daysWithMeals: buildDaysWithMeals({ includeEmpty: true }),
-                onPick: ({ dstDate }) => moveMealToDate(srcMealIndex, dstDate),
+                onPick: async ({ dstDate }) => moveMealToDate(srcMealIndex, dstDate),
             });
         }, [date, buildDaysWithMeals, moveMealToDate]);
 

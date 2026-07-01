@@ -4531,7 +4531,7 @@
         // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
         React.useEffect(() => {
             HEYS.Day = HEYS.Day || {};
-            HEYS.Day.addProductToMeal = (mi, product, grams) => {
+            HEYS.Day.addProductToMeal = async (mi, product, grams) => {
                 // Валидация
                 if (typeof mi !== 'number' || mi < 0) {
                     console.warn('[HEYS.Day.addProductToMeal] Invalid meal index:', mi);
@@ -4543,7 +4543,7 @@
                 }
                 // Добавляем продукт
                 const productWithGrams = grams ? { ...product, grams } : product;
-                const didAdd = addProductToMeal(mi, productWithGrams);
+                const didAdd = await addProductToMeal(mi, productWithGrams);
                 return didAdd !== false;
             };
             return () => {
@@ -4556,7 +4556,7 @@
         React.useEffect(() => {
             HEYS.Day = HEYS.Day || {};
             if (typeof addProductsToMeal !== 'function') return;
-            HEYS.Day.addProductsToMeal = (mi, entries, options) => {
+            HEYS.Day.addProductsToMeal = async (mi, entries, options) => {
                 if (typeof mi !== 'number' || mi < 0) {
                     console.warn('[HEYS.Day.addProductsToMeal] Invalid meal index:', mi);
                     return false;
@@ -4565,7 +4565,7 @@
                     console.warn('[HEYS.Day.addProductsToMeal] Invalid entries:', entries);
                     return false;
                 }
-                const didAdd = addProductsToMeal(mi, entries, options || {});
+                const didAdd = await addProductsToMeal(mi, entries, options || {});
                 return didAdd !== false;
             };
             return () => {
