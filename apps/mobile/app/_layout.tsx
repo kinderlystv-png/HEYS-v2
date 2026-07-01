@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth/logout" options={{ title: 'Выход' }} />
         <Stack.Screen name="web/index" options={{ title: 'HEYS' }} />
         <Stack.Screen name="settings/index" options={{ title: 'Настройки' }} />
+        <Stack.Screen name="settings/account-deletion" options={{ title: 'Удаление аккаунта' }} />
       </Stack>
     </>
   );

@@ -52,6 +52,14 @@ type ClientSessionVerifyResponse = {
   };
 };
 
+type DeleteAccountResponse = {
+  delete_my_account?: {
+    error?: string;
+    success?: boolean;
+  };
+  error?: string;
+};
+
 export type WebSessionExchangeResponse = {
   exchange_url?: string;
   expires_at?: number;
@@ -165,6 +173,22 @@ export async function logoutSession(session: MobileSession): Promise<void> {
   }
 
   await apiClient.post('/auth/curator-logout', undefined, { token: session.accessToken });
+}
+
+export async function deleteAccount(session: MobileSession): Promise<void> {
+  if (session.kind !== 'client') {
+    throw new Error('Удаление аккаунта доступно только клиентскому входу.');
+  }
+
+  const response = await apiClient.post<DeleteAccountResponse>(
+    '/rpc?fn=delete_my_account',
+    { p_session_token: session.accessToken },
+    { token: session.accessToken, timeoutMs: 15000 }
+  );
+  const result = response?.delete_my_account;
+  if (response?.error || result?.error || result?.success !== true) {
+    throw new Error(response?.error || result?.error || 'Не удалось удалить аккаунт.');
+  }
 }
 
 export async function requestWebSessionExchange(

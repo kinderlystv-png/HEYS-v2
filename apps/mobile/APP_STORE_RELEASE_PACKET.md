@@ -147,8 +147,8 @@ service quality. Do not claim medical diagnosis or treatment.
 - Confirm App Privacy answers against production data flows.
 - Keep backend services live during review.
 - Confirm `/auth/mobile/session-exchange` live happy path on iPhone.
-- Confirm account deletion entry point opens and explains the in-app deletion
-  path.
+- Confirm native account deletion screen opens from Settings and deletes only
+  after explicit confirmation.
 - Confirm release audience and provide a safe demo phone/PIN for review.
 - Add Review Notes that the app is intended for unlisted distribution after
   approval.

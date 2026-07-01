@@ -12,7 +12,7 @@ import * as Application from 'expo-application';
 import { useRouter } from 'expo-router';
 
 import { canUseBiometrics } from '../../src/features/biometrics';
-import { ACCOUNT_DELETION_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../../src/shared/config/urls';
+import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../../src/shared/config/urls';
 import { loadStoredSession, saveStoredSession } from '../../src/features/session/storage';
 import type { StoredSession } from '../../src/features/session/types';
 import { colors, PrimaryButton, Screen } from '../../src/shared/ui/shell';
@@ -88,7 +88,7 @@ export default function SettingsScreen() {
           <PrimaryButton label="Поддержка" onPress={() => openUrl(SUPPORT_URL)} secondary />
           <PrimaryButton label="Политика конфиденциальности" onPress={() => openUrl(PRIVACY_URL)} secondary />
           <PrimaryButton label="Пользовательское соглашение" onPress={() => openUrl(TERMS_URL)} secondary />
-          <PrimaryButton label="Удаление аккаунта" onPress={() => openUrl(ACCOUNT_DELETION_URL)} secondary />
+          <PrimaryButton label="Удаление аккаунта" onPress={() => router.push('/settings/account-deletion')} secondary />
         </View>
 
         <View style={styles.section}>
