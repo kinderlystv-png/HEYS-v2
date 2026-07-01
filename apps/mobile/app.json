@@ -45,7 +45,7 @@
         "supportUrl": "https://t.me/heyslab_support_bot",
         "privacyUrl": "https://app.heyslab.ru/docs/privacy-policy.md",
         "termsUrl": "https://app.heyslab.ru/docs/user-agreement.md",
-        "accountDeletionUrl": "https://app.heyslab.ru/docs/privacy-policy.md"
+        "accountDeletionUrl": "https://app.heyslab.ru/docs/account-deletion.md"
       },
       "eas": {
         "projectId": "863ddd39-1876-4b1a-8d6a-26a225543352"

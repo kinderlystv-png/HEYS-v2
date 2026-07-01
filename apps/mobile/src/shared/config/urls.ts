@@ -47,7 +47,7 @@ export const TERMS_URL = fromEnvOrExtra(
 export const ACCOUNT_DELETION_URL = fromEnvOrExtra(
   process.env.EXPO_PUBLIC_ACCOUNT_DELETION_URL,
   mobileExtra.accountDeletionUrl,
-  PRIVACY_URL
+  `${HEYS_WEB_URL}/docs/account-deletion.md`
 );
 
 export const WEB_SESSION_EXCHANGE_PATH =
