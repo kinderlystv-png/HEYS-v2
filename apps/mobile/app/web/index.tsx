@@ -25,8 +25,8 @@ export default function WebScreen() {
         return;
       }
 
-      const authenticatedUrl = await getAuthenticatedWebUrl(session);
-      setSourceUrl(params.path ? getInitialWebUrl(params.path) : authenticatedUrl);
+      const authenticatedUrl = await getAuthenticatedWebUrl(session, params.path);
+      setSourceUrl(authenticatedUrl);
     } catch (err) {
       const fallback = getUnauthenticatedWebUrl();
       setSourceUrl(fallback);
