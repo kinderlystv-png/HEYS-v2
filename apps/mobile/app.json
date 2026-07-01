@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "HEYS Mobile",
+    "name": "HEYS",
     "slug": "mobile",
     "owner": "poplanton",
     "version": "1.0.0",
@@ -17,8 +17,9 @@
     "ios": {
       "bundleIdentifier": "com.heys.mobile",
       "buildNumber": "1",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
+        "CFBundleDisplayName": "HEYS",
         "NSFaceIDUsageDescription": "HEYS uses Face ID to unlock your existing mobile session on this device."
       }
     },

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#2b6f6b"/>
+  <circle cx="512" cy="512" r="332" fill="#f8fbf8"/>
+  <circle cx="512" cy="512" r="284" fill="none" stroke="#bdd8cf" stroke-width="18"/>
+  <path d="M282 688c68-86 144-126 229-126 87 0 166 40 231 126" fill="none" stroke="#bdd8cf" stroke-width="30" stroke-linecap="round"/>
+  <text x="512" y="548" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="166" font-weight="800" letter-spacing="7" fill="#174844">HEYS</text>
+</svg>
