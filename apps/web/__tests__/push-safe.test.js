@@ -14,7 +14,9 @@ describe('push-safe guardrails', () => {
     });
 
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain('requires explicit --confirm-push');
-    expect(result.stderr).toContain('HUSKY=0 git push');
+    expect(result.stderr).toContain('push:safe is deprecated');
+    expect(result.stderr).toContain('pnpm push:preflight');
+    expect(result.stderr).toContain('pnpm push:agent -- --confirm-push');
+    expect(result.stderr).toContain('HUSKY=0 is not a normal push flow');
   });
 });
