@@ -51,16 +51,19 @@
 текстом:
 
 ```bash
+pnpm push:preflight
 pnpm push:agent -- --confirm-push --title="Синхронизация активностей стала устойчивее" \
   --item-title="Удалённые круги активностей больше не возвращаются из старой копии" \
   --item-description="Если круг активности удалён на одном устройстве, приложение защищает эту правку от старых данных, которые могли прийти во время синхронизации."
 ```
 
-Команда сначала проверит `What's New`, при необходимости добавит entry и
-follow-up commit с автоматическим `coveredCommits`, затем выполнит `git push` с
-активными pre-push guards и дождётся зелёного `Deploy to Yandex Cloud` для
-свежего `HEAD`. Если в staging уже лежат не-release файлы, команда остановится,
-чтобы случайно не включить их в follow-up commit для `What's New`.
+`push:preflight` заранее проверит локальные blockers и прогреет Vitest cache.
+`push:agent` затем проверит `What's New`, при необходимости добавит entry и
+follow-up commit с автоматическим `coveredCommits`, повторит preflight перед
+`git push`, выполнит push с активными pre-push guards и дождётся зелёного
+`Deploy to Yandex Cloud` для свежего `HEAD`. Если в staging уже лежат не-release
+файлы, команда остановится, чтобы случайно не включить их в follow-up commit для
+`What's New`.
 
 Получить готовый шаблон команды:
 
@@ -73,6 +76,9 @@ pnpm push:agent -- --print-command
 ```bash
 pnpm push:agent -- --status
 ```
+
+`pnpm push:safe` deprecated и не должен использоваться как shortcut: `HUSKY=0`
+не является нормальным push-flow.
 
 Проверить без commit и push:
 

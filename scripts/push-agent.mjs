@@ -24,6 +24,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
+const BUNDLE_SIZE = path.join(__dirname, 'lint-bundle-size.mjs');
+const LEGACY_BUNDLES = path.join(__dirname, 'verify-legacy-bundles.mjs');
+const VITEST_CACHE = path.join(__dirname, 'pre-push-vitest-cache.mjs');
 const RELEASE_META_PATH_RE = /^apps\/web\/public\/whats-new(?:\.json|\/)/;
 const DEFAULT_DEPLOY_WORKFLOW = 'Deploy to Yandex Cloud';
 
@@ -284,7 +287,10 @@ function buildSuggestedCommand() {
 }
 
 function printSuggestedCommandAndExit() {
-  writeLine('Suggested non-interactive command:');
+  writeLine('Recommended preflight:');
+  writeLine('pnpm push:preflight');
+  writeLine('');
+  writeLine('Then push with:');
   writeLine(buildSuggestedCommand());
   writeLine('');
   writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
@@ -390,6 +396,33 @@ function waitForDeploy({ branch, headSha }) {
   writeLine('Deploy is green.');
 }
 
+function summarizeCommandOutput(text) {
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const preferred = [...lines]
+    .reverse()
+    .find((line) => /\b(?:OK|passed|found|hit|miss|sync|within|пределах)\b/i.test(line));
+  return preferred || lines.at(-1) || 'completed';
+}
+
+function printSummaryGate(label, command, commandArgs) {
+  const result = run(command, commandArgs, { stdio: 'pipe' });
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const state = result.status === 0 ? 'ok' : 'not ready';
+  writeLine(`  ${label}: ${state} - ${summarizeCommandOutput(output)}`);
+  return result.status === 0;
+}
+
+function printPreflightSummary() {
+  writeLine('');
+  writeLine('Preflight summary:');
+  printSummaryGate('bundle-size', process.execPath, [BUNDLE_SIZE]);
+  printSummaryGate('legacy bundles', process.execPath, [LEGACY_BUNDLES, '--ref=HEAD']);
+  printSummaryGate('Vitest cache', process.execPath, [VITEST_CACHE, '--status']);
+}
+
 function printStatusAndExit() {
   const targetHash = getGitOutput(['rev-parse', '--short=8', 'HEAD']) || '<unknown>';
   const { remote, branch } = getPushTarget();
@@ -426,6 +459,7 @@ function printStatusAndExit() {
     writeLine('  not ready');
     writeLine(`  suggested command: ${buildSuggestedCommand()}`);
   }
+  printPreflightSummary();
   process.exit(0);
 }
 
@@ -538,6 +572,12 @@ function push() {
     dirtyLines.slice(0, 20).forEach((line) => writeLine(`  ${line}`));
     if (dirtyLines.length > 20) writeLine(`  ...and ${dirtyLines.length - 20} more`);
     writeLine('');
+  }
+
+  if (!hasFlag('--dry-run')) {
+    writeLine('Running push preflight before git push...');
+    const preflight = run('pnpm', ['push:preflight'], { mutates: true });
+    if (preflight.status !== 0) process.exit(preflight.status || 1);
   }
 
   const { remote, branch } = getPushTarget();

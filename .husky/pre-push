@@ -72,30 +72,51 @@ else
 fi
 
 echo "🔍 Проверка прямых localStorage.setItem (Phase 3 lint gate, warn-only)..."
-node scripts/lint-direct-localstorage-writes.mjs || {
+localstorage_output=$(node scripts/lint-direct-localstorage-writes.mjs 2>&1)
+localstorage_status=$?
+if [ "$localstorage_status" -eq 0 ]; then
+  printf '%s\n' "$localstorage_output" | tail -n 2
+else
+  printf '%s\n' "$localstorage_output"
   echo "❌ localStorage lint завершился с ошибкой (новые нелистованные вызовы). Push отменён."
   exit 1
-}
+fi
 
 echo "🔒 Проверка unscoped writes к per-client keys (anti-pollution guard)..."
-node scripts/lint-unscoped-client-writes.mjs || {
+unscoped_output=$(node scripts/lint-unscoped-client-writes.mjs 2>&1)
+unscoped_status=$?
+if [ "$unscoped_status" -eq 0 ]; then
+  printf '%s\n' "$unscoped_output" | tail -n 3
+else
+  printf '%s\n' "$unscoped_output"
   echo "❌ Найден unscoped write к client-specific ключу. Это primary pollution vector"
   echo "   (см. incident fc1ce544: Александра → Poplanton)."
   echo "💡 Исправь scoped key через HEYS.utils.lsSet или добавь в allowlist:"
   echo "   scripts/unscoped-client-writes-allowlist.txt"
   exit 1
-}
+fi
 
 echo "🔒 Проверка raw sessionStorage.clear() (drop fence preservation guard)..."
-node scripts/lint-raw-session-clear.mjs || {
+raw_session_output=$(node scripts/lint-raw-session-clear.mjs 2>&1)
+raw_session_status=$?
+if [ "$raw_session_status" -eq 0 ]; then
+  printf '%s\n' "$raw_session_output" | tail -n 2
+else
+  printf '%s\n' "$raw_session_output"
   echo "❌ Найден raw sessionStorage.clear() — сносит heys_drop_fence_*."
   echo "💡 Используй clearSessionStoragePreservingDropFences() или inline preserve,"
   echo "   либо добавь сайт в scripts/raw-session-clear-allowlist.txt с обоснованием."
   exit 1
-}
+fi
 
 echo "🔍 Проверка React.startTransition counter (anti-pattern guard, warn-only)..."
-node scripts/lint-react-start-transition.mjs || true
+react_transition_output=$(node scripts/lint-react-start-transition.mjs 2>&1)
+react_transition_status=$?
+if [ "$react_transition_status" -eq 0 ]; then
+  printf '%s\n' "$react_transition_output" | tail -n 1
+else
+  printf '%s\n' "$react_transition_output"
+fi
 
 echo "📦 Проверка bundle size budget (P0-D, +5% guard)..."
 node scripts/lint-bundle-size.mjs || {
@@ -134,33 +155,12 @@ echo "🧪 Запуск полного test suite..."
 # от transient-flake из-за shared global state (config `isolate: false`).
 # Если тест падает на ВТОРОЙ попытке — push всё равно блокируется, реальные
 # регрессии не маскируются.
-#
-# 2026-05-28: source-SHA cache. Большая доля retry-пушей сегодня (allowlist
-# drift, whats-new bump, etc.) не трогает test-input файлы. Считаем SHA от
-# source-tree apps/web; если совпадает с last-pass — skip vitest.
-# Cache рушим при любой test-relevant правке, не маскирует регрессии.
-CACHE_FILE=".husky/.test-cache-last-pass"
-SRC_HASH=$(find apps/web \
-  \( -name "*.js" -o -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.cjs" \) \
-  -not -path "*/dist/*" \
-  -not -path "*/public/*" \
-  -not -path "*/node_modules/*" \
-  -not -path "*/.cache/*" \
-  -not -path "*/coverage/*" \
-  2>/dev/null | LC_ALL=C sort | xargs shasum -a 256 2>/dev/null | shasum -a 256 | cut -c1-16)
-
-if [ -n "$SRC_HASH" ] && [ -f "$CACHE_FILE" ] && [ "$(cat "$CACHE_FILE")" = "$SRC_HASH" ]; then
-  echo "⚡ Source SHA не изменился с прошлого green run ($SRC_HASH) — skip vitest."
-else
-  (cd apps/web && node_modules/.bin/vitest run --retry=1)
-  if [ $? -ne 0 ]; then
-    echo "❌ Тесты не прошли! Push отменён."
-    rm -f "$CACHE_FILE"
-    exit 1
-  fi
-  if [ -n "$SRC_HASH" ]; then
-    echo "$SRC_HASH" > "$CACHE_FILE"
-  fi
-fi
+# 2026-07-01: source-SHA cache вынесен в общий helper, чтобы `push:preflight`
+# и pre-push считали один и тот же cache hit/miss. Full apps/web Vitest остаётся
+# обязательным на cache miss; preflight только прогревает этот cache заранее.
+node scripts/pre-push-vitest-cache.mjs --run-if-needed || {
+  echo "❌ Тесты не прошли! Push отменён."
+  exit 1
+}
 
 echo "✅ Все тесты прошли!"

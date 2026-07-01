@@ -440,9 +440,11 @@ git worktree remove .claude/worktrees/<task>   # ОБЯЗАТЕЛЬНО посл
 
 ### Legacy push-инструменты (избегай)
 
-`pnpm push:agent` / `pnpm push:safe` / `pnpm push:ready` — старые multi-step
-flows. Дефолт = `ship`. Эти команды трогай только когда ship не подходит
-(например коммиты уже сделаны без ship'a).
+`pnpm push:agent` / `pnpm push:ready` — fallback multi-step flows. Дефолт =
+`ship`. Эти команды трогай только когда ship не подходит (например коммиты уже
+сделаны без ship'a). Перед fallback push запускай `pnpm push:preflight`, чтобы
+заранее прогреть локальные guards. `pnpm push:safe` deprecated: `HUSKY=0` не
+является нормальным push-flow.
 
 **Dev-цикл «увидеть свою правку без коммита»**: `pnpm dev:web` грузит хеш-бандлы
 из `public/` как статику (без HMR). Чтобы увидеть свою правку —

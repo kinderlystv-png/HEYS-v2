@@ -75,6 +75,7 @@
     "prepare-release:check": "node scripts/prepare-release.mjs --check",
     "privacy:marketing": "node scripts/lint-marketing-privacy-metadata.mjs",
     "push:agent": "node scripts/push-agent.mjs",
+    "push:preflight": "node scripts/push-preflight.mjs",
     "push:ready": "node scripts/release-prepare-and-commit.mjs",
     "push:safe": "node scripts/push-safe.mjs",
     "release": "pnpm run build:packages && changeset publish",
