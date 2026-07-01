@@ -13,9 +13,8 @@ import { useRouter } from 'expo-router';
 
 import { canUseBiometrics } from '../../src/features/biometrics';
 import { getNotificationReadiness, requestNotificationPermission } from '../../src/features/notifications';
-import { logoutCurator } from '../../src/features/auth/api';
 import { ACCOUNT_DELETION_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../../src/shared/config/urls';
-import { clearStoredSession, loadStoredSession, saveStoredSession } from '../../src/features/session/storage';
+import { loadStoredSession, saveStoredSession } from '../../src/features/session/storage';
 import type { StoredSession } from '../../src/features/session/types';
 import { colors, PrimaryButton, Screen } from '../../src/shared/ui/shell';
 
@@ -67,14 +66,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const logout = async () => {
-    const token = session?.accessToken;
-    if (token) {
-      await logoutCurator(token).catch(() => undefined);
-    }
-    await clearStoredSession();
-    router.replace('/auth/login');
-  };
+  const logout = () => router.replace('/auth/logout');
 
   return (
     <Screen>
