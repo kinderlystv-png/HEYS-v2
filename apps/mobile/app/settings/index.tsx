@@ -83,13 +83,6 @@ export default function SettingsScreen() {
           <Switch onValueChange={toggleBiometrics} value={biometricsEnabled} />
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>Push-уведомления</Text>
-            <Text style={styles.rowBody}>Будут включены после появления согласованного сценария сопровождения.</Text>
-          </View>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Поддержка и документы</Text>
           <PrimaryButton label="Поддержка" onPress={() => openUrl(SUPPORT_URL)} secondary />
