@@ -1,41 +1,116 @@
 import React, { useState } from 'react';
-import { Alert, Button, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
 import { login } from '../../src/features/auth/api';
+import { saveStoredSession } from '../../src/features/session/storage';
+import { colors, FieldLabel, PrimaryButton, Screen } from '../../src/shared/ui/shell';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [needsMfa, setNeedsMfa] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    if (!email || !password) return Alert.alert('Ошибка', 'Заполните поля');
+    if (!email || !password) return Alert.alert('Ошибка', 'Заполните email и пароль');
     
     try {
       setLoading(true);
-      const res = await login({ email, password });
-      console.log('Login success:', res);
-      Alert.alert('Успех', 'Вы авторизованы');
-      router.back();
+      const session = await login({ email, mfa_code: mfaCode || undefined, password });
+      await saveStoredSession(session);
+      router.replace('/web');
     } catch (error: any) {
-      Alert.alert('Ошибка', error?.message || 'Не удалось войти');
+      const message = error?.message || 'Не удалось войти';
+      if (/mfa/i.test(message)) setNeedsMfa(true);
+      Alert.alert('Ошибка входа', message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 24, marginBottom: 24 }}>Вход в HEYS</Text>
-      
-      <Text>Email</Text>
-      <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" 
-        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginBottom: 16 }} />
-      <Text>Пароль</Text>
-      <TextInput value={password} onChangeText={setPassword} secureTextEntry
-        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginBottom: 24 }} />
-      <Button title={loading ? 'Входим...' : 'Войти'} onPress={onSubmit} disabled={loading} />
-    </View>
+    <Screen>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <Text style={styles.title}>Вход в HEYS</Text>
+        <Text style={styles.subtitle}>Доступ к данным закрыт аккаунтом и серверными правами.</Text>
+
+        <View style={styles.form}>
+          <FieldLabel>Email</FieldLabel>
+          <TextInput
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            style={styles.input}
+            textContentType="username"
+            value={email}
+          />
+
+          <FieldLabel>Пароль</FieldLabel>
+          <TextInput
+            autoComplete="password"
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+            textContentType="password"
+            value={password}
+          />
+
+          {needsMfa ? (
+            <>
+              <FieldLabel>MFA-код</FieldLabel>
+              <TextInput
+                keyboardType="number-pad"
+                onChangeText={setMfaCode}
+                style={styles.input}
+                value={mfaCode}
+              />
+            </>
+          ) : null}
+
+          <PrimaryButton disabled={loading} label={loading ? 'Входим...' : 'Войти'} onPress={onSubmit} />
+        </View>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  form: {
+    gap: 8,
+    marginTop: 26,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: 16,
+    marginBottom: 12,
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 16,
+    lineHeight: 23,
+    marginTop: 8,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: 0,
+  },
+});
