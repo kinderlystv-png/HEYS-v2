@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.07.01.0004148f",
+      "buildHash": "0004148f",
+      "date": "2026-07-01",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Подготовлен iOS mobile shell",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Заложена основа iOS-приложения",
+          "description": "Добавлены iOS/EAS настройки, mobile URL-конфиг, безопасное хранение сессии, биометрия, deep links, WebView navigation policy и typed API client."
+        }
+      ]
+    },
+    {
       "version": "2026.07.01.a4142eb3",
       "buildHash": "a4142eb3",
       "date": "2026-07-01",
@@ -139,22 +154,6 @@
           "description": "Клиент может сохранить уточнение продукта у себя и отправить куратору предложение для общей базы: новый вариант, исправление карточки или штрихкод."
         }
       ]
-    },
-    {
-      "version": "2026.06.29.9c8d562a",
-      "buildHash": "9c8d562a",
-      "date": "2026-06-29",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Сканер штрихкодов корректно выключает камеру",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Камера останавливается после считывания",
-          "description": "После успешного сканирования или закрытия модалки видеопоток сразу выключается, а диагностика скрыта за маленькой точкой копирования."
-        }
-      ],
-      "coveredCommits": ["9c8d562a"]
     }
   ]
 }
