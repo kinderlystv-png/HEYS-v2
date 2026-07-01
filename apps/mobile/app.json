@@ -5,6 +5,7 @@
     "owner": "poplanton",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "heys",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -14,7 +15,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.heys.mobile",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "HEYS uses Face ID to unlock your existing mobile session on this device."
+      }
     },
     "android": {
       "package": "com.heys.mobile.dev",
@@ -25,10 +31,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE"
-      ]
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,6 +39,13 @@
     "extra": {
       "router": {
         "appRoot": "./app"
+      },
+      "mobile": {
+        "webUrl": "https://app.heyslab.ru",
+        "supportUrl": "https://t.me/heyslab_support_bot",
+        "privacyUrl": "https://app.heyslab.ru/docs/privacy-policy.md",
+        "termsUrl": "https://app.heyslab.ru/docs/user-agreement.md",
+        "accountDeletionUrl": "https://app.heyslab.ru/docs/privacy-policy.md"
       },
       "eas": {
         "projectId": "863ddd39-1876-4b1a-8d6a-26a225543352"
