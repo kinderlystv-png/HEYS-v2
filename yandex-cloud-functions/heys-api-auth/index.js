@@ -25,6 +25,7 @@ const path = require('path');
 // Это защищает от stale env при деплое без перезапуска инстансов
 // ═══════════════════════════════════════════════════════════════════════════
 const JWT_EXPIRES_IN = 24 * 60 * 60; // 24 часа в секундах
+const CLIENT_SESSION_EXPIRES_IN = 30 * 24 * 60 * 60; // 30 дней в секундах
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🛡️ Startup env validation — логируем проблемы сразу при cold start
@@ -432,6 +433,10 @@ function getCookieValue(cookieHeader, name) {
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest();
+}
+
+function isJwtLikeToken(token) {
+  return typeof token === 'string' && token.split('.').length === 3;
 }
 
 function getCuratorTokenFromRequest(event) {
@@ -872,14 +877,6 @@ async function handleMobileSessionExchange(body, event, curatorToken, jwtSecret)
     return { statusCode: 401, body: JSON.stringify({ error: 'Authorization required' }) };
   }
 
-  const auth = verifyJwt(curatorToken, jwtSecret);
-  if (!auth.valid) {
-    return { statusCode: 401, body: JSON.stringify({ error: auth.error }) };
-  }
-  if (auth.payload.role !== 'curator') {
-    return { statusCode: 403, body: JSON.stringify({ error: 'Curator role required' }) };
-  }
-
   const returnUrl = body?.return_url || 'https://app.heyslab.ru/';
   if (!isAllowedMobileWebReturnUrl(returnUrl)) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid return_url' }) };
@@ -891,16 +888,50 @@ async function handleMobileSessionExchange(body, event, curatorToken, jwtSecret)
 
   const client = await getClient();
   try {
+    let subject;
+    if (isJwtLikeToken(curatorToken)) {
+      const auth = verifyJwt(curatorToken, jwtSecret);
+      if (!auth.valid) {
+        return { statusCode: 401, body: JSON.stringify({ error: auth.error }) };
+      }
+      if (auth.payload.role !== 'curator') {
+        return { statusCode: 403, body: JSON.stringify({ error: 'Curator role required' }) };
+      }
+      subject = { kind: 'curator', curatorId: auth.payload.sub };
+    } else {
+      const session = await client.query(
+        `SELECT client_id
+           FROM public.client_sessions
+          WHERE token_hash = digest($1, 'sha256')
+            AND revoked_at IS NULL
+            AND expires_at > NOW()`,
+        [curatorToken]
+      );
+      const row = session.rows?.[0];
+      if (!row?.client_id) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'Invalid client session' }) };
+      }
+      subject = { kind: 'client', clientId: row.client_id };
+    }
+
     await client.query(
       `DELETE FROM public.mobile_web_session_exchanges
        WHERE expires_at < NOW() - INTERVAL '10 minutes'
           OR consumed_at < NOW() - INTERVAL '10 minutes'`
     );
-    await client.query(
-      `INSERT INTO public.mobile_web_session_exchanges(token_hash, curator_id, return_url, expires_at)
-       VALUES($1, $2, $3, NOW() + ($4::INT * INTERVAL '1 second'))`,
-      [hashToken(exchangeToken), auth.payload.sub, returnUrl, MOBILE_WEB_EXCHANGE_TTL]
-    );
+    if (subject.kind === 'curator') {
+      await client.query(
+        `INSERT INTO public.mobile_web_session_exchanges(token_hash, curator_id, return_url, expires_at)
+         VALUES($1, $2, $3, NOW() + ($4::INT * INTERVAL '1 second'))`,
+        [hashToken(exchangeToken), subject.curatorId, returnUrl, MOBILE_WEB_EXCHANGE_TTL]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO public.mobile_web_session_exchanges(token_hash, client_id, return_url, expires_at)
+         VALUES($1, $2, $3, NOW() + ($4::INT * INTERVAL '1 second'))`,
+        [hashToken(exchangeToken), subject.clientId, returnUrl, MOBILE_WEB_EXCHANGE_TTL]
+      );
+    }
 
     return {
       statusCode: 200,
@@ -950,9 +981,51 @@ async function handleMobileSessionExchangeConsume(event, jwtSecret) {
       [hashToken(token), returnUrl]
     );
 
-    const row = result.rows?.[0];
+    let row = result.rows?.[0];
+    if (!row) {
+      const clientResult = await client.query(
+        `UPDATE public.mobile_web_session_exchanges e
+         SET consumed_at = NOW()
+         FROM public.clients cl
+         WHERE e.token_hash = $1
+           AND e.client_id = cl.id
+           AND e.return_url = $2
+           AND e.consumed_at IS NULL
+           AND e.expires_at > NOW()
+         RETURNING e.client_id, e.return_url`,
+        [hashToken(token), returnUrl]
+      );
+      row = clientResult.rows?.[0];
+    }
+
     if (!row) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Invalid or expired exchange token' }) };
+    }
+
+    if (row.client_id) {
+      const webSessionToken = crypto.randomUUID();
+      await client.query(
+        `INSERT INTO public.client_sessions(token_hash, client_id, expires_at, user_agent, ip_address)
+         VALUES(digest($1, 'sha256'), $2, NOW() + ($3::INT * INTERVAL '1 second'), $4, NULL)`,
+        [webSessionToken, row.client_id, CLIENT_SESSION_EXPIRES_IN, 'HEYS Mobile WebView']
+      );
+
+      const cookies = [
+        `heys_session_token=${encodeURIComponent(webSessionToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${CLIENT_SESSION_EXPIRES_IN}`,
+        ...CLEAR_CURATOR_JWT_COOKIES,
+      ];
+
+      return {
+        statusCode: 302,
+        headers: {
+          Location: returnUrl,
+          'Set-Cookie': cookies[0],
+        },
+        multiValueHeaders: {
+          'Set-Cookie': cookies,
+        },
+        body: '',
+      };
     }
 
     const accessToken = createJwt({
@@ -960,12 +1033,19 @@ async function handleMobileSessionExchangeConsume(event, jwtSecret) {
       role: 'curator',
       sub: row.curator_id,
     }, jwtSecret);
+    const cookies = [
+      `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`,
+      ...CLEAR_CLIENT_SESSION_COOKIES,
+    ];
 
     return {
       statusCode: 302,
       headers: {
         Location: returnUrl,
-        'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`,
+        'Set-Cookie': cookies[0],
+      },
+      multiValueHeaders: {
+        'Set-Cookie': cookies,
       },
       body: '',
     };

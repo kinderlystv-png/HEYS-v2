@@ -3,16 +3,17 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 
-import { logoutCurator } from '../../src/features/auth/api';
+import { logoutSession } from '../../src/features/auth/api';
 import { clearStoredSession, loadStoredSession } from '../../src/features/session/storage';
 import { API_URL } from '../../src/shared/config/urls';
 import { ScreenState } from '../../src/shared/ui/shell';
 
-const WEB_LOGOUT_URL = `${API_URL}/auth/curator-logout`;
+const WEB_LOGOUT_URLS = [`${API_URL}/auth/client-logout`, `${API_URL}/auth/curator-logout`];
 
 export default function LogoutScreen() {
   const router = useRouter();
   const webViewRef = useRef<WebView>(null);
+  const completedWebClearUrlsRef = useRef(new Set<string>());
   const finishedRef = useRef(false);
   const [webLogoutStarted, setWebLogoutStarted] = useState(false);
 
@@ -30,14 +31,21 @@ export default function LogoutScreen() {
     router.replace('/auth/login');
   }, [router]);
 
+  const markWebLogoutDone = useCallback((url: string) => {
+    if (completedWebClearUrlsRef.current.has(url)) return;
+    completedWebClearUrlsRef.current.add(url);
+    if (completedWebClearUrlsRef.current.size >= WEB_LOGOUT_URLS.length) {
+      finishLogout().catch(() => undefined);
+    }
+  }, [finishLogout]);
+
   useEffect(() => {
     let cancelled = false;
 
     async function revokeNativeSession() {
       const session = await loadStoredSession();
-      const token = session?.accessToken;
-      if (token) {
-        await logoutCurator(token).catch(() => undefined);
+      if (session?.accessToken) {
+        await logoutSession(session).catch(() => undefined);
       }
       if (!cancelled) setWebLogoutStarted(true);
     }
@@ -64,21 +72,23 @@ export default function LogoutScreen() {
         title="Выходим из HEYS"
       />
       {webLogoutStarted ? (
-        <WebView
-          ref={webViewRef}
-          onError={() => finishLogout().catch(() => undefined)}
-          onHttpError={() => finishLogout().catch(() => undefined)}
-          onLoadEnd={() => finishLogout().catch(() => undefined)}
-          source={{
-            body: '{}',
-            headers: { 'Content-Type': 'application/json' },
-            method: 'POST',
-            uri: WEB_LOGOUT_URL,
-          }}
-          style={{ height: 1, opacity: 0, width: 1 }}
-        />
+        WEB_LOGOUT_URLS.map((url, index) => (
+          <WebView
+            key={url}
+            ref={index === 0 ? webViewRef : undefined}
+            onError={() => markWebLogoutDone(url)}
+            onHttpError={() => markWebLogoutDone(url)}
+            onLoadEnd={() => markWebLogoutDone(url)}
+            source={{
+              body: '{}',
+              headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+              uri: url,
+            }}
+            style={{ height: 1, opacity: 0, width: 1 }}
+          />
+        ))
       ) : null}
     </View>
   );
 }
-

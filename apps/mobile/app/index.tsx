@@ -38,7 +38,7 @@ export default function Index() {
           return;
         }
 
-        await verifySession(session.accessToken);
+        await verifySession(session);
         if (!cancelled) router.replace('/web');
       } catch (err) {
         await clearStoredSession();

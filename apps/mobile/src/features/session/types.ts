@@ -1,3 +1,5 @@
+export type SessionKind = 'client' | 'curator';
+
 export type SessionUser = {
   email?: string;
   id: string;
@@ -9,6 +11,7 @@ export type MobileSession = {
   accessToken: string;
   createdAt: number;
   expiresAt?: number;
+  kind: SessionKind;
   tokenType: string;
   user?: SessionUser;
 };

@@ -67,6 +67,12 @@ export default function SettingsScreen() {
   };
 
   const logout = () => router.replace('/auth/logout');
+  const accountLabel = session?.user?.email || session?.user?.name || 'Активный аккаунт не найден';
+  const roleLabel = session?.kind === 'client'
+    ? 'Клиент'
+    : session?.kind === 'curator'
+      ? 'Куратор'
+      : session?.user?.role || 'Роль не указана';
 
   return (
     <Screen>
@@ -78,8 +84,8 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Аккаунт</Text>
-          <Text style={styles.value}>{session?.user?.email || 'Активный аккаунт не найден'}</Text>
-          <Text style={styles.value}>{session?.user?.role ? `Роль: ${session.user.role}` : 'Роль не указана'}</Text>
+          <Text style={styles.value}>{accountLabel}</Text>
+          <Text style={styles.value}>Роль: {roleLabel}</Text>
         </View>
 
         <View style={styles.row}>
