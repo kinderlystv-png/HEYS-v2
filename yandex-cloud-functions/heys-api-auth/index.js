@@ -177,14 +177,14 @@ function base64UrlDecode(str) {
   return Buffer.from(str, 'base64').toString();
 }
 
-function createJwt(payload, jwtSecret) {
+function createJwt(payload, jwtSecret, expiresIn = JWT_EXPIRES_IN) {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
 
   const fullPayload = {
     ...payload,
     iat: now,
-    exp: now + JWT_EXPIRES_IN
+    exp: now + expiresIn
   };
 
   const headerB64 = base64UrlEncode(JSON.stringify(header));
@@ -447,6 +447,15 @@ const CLEAR_CURATOR_JWT_COOKIES = [
   'heys_curator_jwt=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
   'heys_curator_jwt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
 ];
+const MOBILE_WEB_EXCHANGE_TTL = 60;
+const MOBILE_WEB_ALLOWED_RETURN_HOSTS = new Set([
+  'app.heyslab.ru',
+  'heyslab.ru',
+  'www.heyslab.ru',
+  'heys-static.website.yandexcloud.net',
+  'heys-v2-web.vercel.app',
+  ...(ALLOW_LOCALHOST_ORIGINS ? ['localhost', '127.0.0.1'] : []),
+]);
 
 function withClearCookies(result, cookies) {
   return {
@@ -828,6 +837,105 @@ function handleCuratorLogout() {
     statusCode: 200,
     body: JSON.stringify({ ok: true }),
   }, CLEAR_CURATOR_JWT_COOKIES);
+}
+
+function isAllowedMobileWebReturnUrl(value) {
+  if (!value || typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' && !(ALLOW_LOCALHOST_ORIGINS && url.protocol === 'http:')) {
+      return false;
+    }
+    return MOBILE_WEB_ALLOWED_RETURN_HOSTS.has(url.hostname.toLowerCase());
+  } catch (_e) {
+    return false;
+  }
+}
+
+function buildRequestOrigin(event) {
+  const headers = event.headers || {};
+  const proto = headers['x-forwarded-proto'] || headers['X-Forwarded-Proto'] || 'https';
+  const host = headers.host || headers.Host || 'api.heyslab.ru';
+  return `${proto}://${host}`;
+}
+
+function handleMobileSessionExchange(body, event, curatorToken, jwtSecret) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  if (!curatorToken) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Authorization required' }) };
+  }
+
+  const auth = verifyJwt(curatorToken, jwtSecret);
+  if (!auth.valid) {
+    return { statusCode: 401, body: JSON.stringify({ error: auth.error }) };
+  }
+  if (auth.payload.role !== 'curator') {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Curator role required' }) };
+  }
+
+  const returnUrl = body?.return_url || 'https://app.heyslab.ru/';
+  if (!isAllowedMobileWebReturnUrl(returnUrl)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid return_url' }) };
+  }
+
+  const exchangeToken = createJwt({
+    email: auth.payload.email,
+    purpose: 'mobile_web_exchange',
+    role: 'curator',
+    sub: auth.payload.sub,
+  }, jwtSecret, MOBILE_WEB_EXCHANGE_TTL);
+  const origin = buildRequestOrigin(event);
+  const exchangeUrl = `${origin}/auth/mobile/session-exchange/consume?token=${encodeURIComponent(exchangeToken)}&return_url=${encodeURIComponent(returnUrl)}`;
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      exchange_url: exchangeUrl,
+      expires_at: Math.floor(Date.now() / 1000) + MOBILE_WEB_EXCHANGE_TTL,
+    }),
+  };
+}
+
+function handleMobileSessionExchangeConsume(event, jwtSecret) {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const query = event.queryStringParameters || {};
+  const token = query.token;
+  const returnUrl = query.return_url || 'https://app.heyslab.ru/';
+  if (!token || typeof token !== 'string') {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Token required' }) };
+  }
+  if (!isAllowedMobileWebReturnUrl(returnUrl)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid return_url' }) };
+  }
+
+  const auth = verifyJwt(token, jwtSecret);
+  if (!auth.valid) {
+    return { statusCode: 401, body: JSON.stringify({ error: auth.error }) };
+  }
+  if (auth.payload.purpose !== 'mobile_web_exchange' || auth.payload.role !== 'curator') {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Invalid exchange token' }) };
+  }
+
+  const accessToken = createJwt({
+    email: auth.payload.email,
+    role: 'curator',
+    sub: auth.payload.sub,
+  }, jwtSecret);
+
+  return {
+    statusCode: 302,
+    headers: {
+      Location: returnUrl,
+      'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`,
+    },
+    body: '',
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1392,6 +1500,18 @@ module.exports.handler = async function (event, context) {
       break;
     case 'curator-logout':
       result = handleCuratorLogout();
+      break;
+    case 'mobile':
+      if (mfaAction === 'session-exchange' && pathParts[3] === 'consume') {
+        result = handleMobileSessionExchangeConsume(event, JWT_SECRET);
+      } else if (mfaAction === 'session-exchange') {
+        result = handleMobileSessionExchange(body, event, curatorToken, JWT_SECRET);
+      } else {
+        result = {
+          statusCode: 404,
+          body: JSON.stringify({ error: 'Unknown mobile auth action', path, action, mfaAction })
+        };
+      }
       break;
     case 'clients':
       // 🔐 Требует JWT авторизации
