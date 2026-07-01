@@ -219,6 +219,28 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/mobile/session-exchange:
+    post:
+      summary: Issue short-lived mobile WebView session exchange URL
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for mobile session exchange
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/mobile/session-exchange/consume:
+    get:
+      summary: Consume mobile WebView session exchange token
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   /auth/register:
     post:
       summary: Register new curator (admin only)
