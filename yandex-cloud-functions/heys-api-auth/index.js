@@ -430,6 +430,10 @@ function getCookieValue(cookieHeader, name) {
   return null;
 }
 
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest();
+}
+
 function getCuratorTokenFromRequest(event) {
   const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
@@ -859,7 +863,7 @@ function buildRequestOrigin(event) {
   return `${proto}://${host}`;
 }
 
-function handleMobileSessionExchange(body, event, curatorToken, jwtSecret) {
+async function handleMobileSessionExchange(body, event, curatorToken, jwtSecret) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
@@ -881,25 +885,42 @@ function handleMobileSessionExchange(body, event, curatorToken, jwtSecret) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid return_url' }) };
   }
 
-  const exchangeToken = createJwt({
-    email: auth.payload.email,
-    purpose: 'mobile_web_exchange',
-    role: 'curator',
-    sub: auth.payload.sub,
-  }, jwtSecret, MOBILE_WEB_EXCHANGE_TTL);
   const origin = buildRequestOrigin(event);
+  const exchangeToken = crypto.randomBytes(32).toString('base64url');
   const exchangeUrl = `${origin}/auth/mobile/session-exchange/consume?token=${encodeURIComponent(exchangeToken)}&return_url=${encodeURIComponent(returnUrl)}`;
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      exchange_url: exchangeUrl,
-      expires_at: Math.floor(Date.now() / 1000) + MOBILE_WEB_EXCHANGE_TTL,
-    }),
-  };
+  const client = await getClient();
+  try {
+    await client.query(
+      `DELETE FROM public.mobile_web_session_exchanges
+       WHERE expires_at < NOW() - INTERVAL '10 minutes'
+          OR consumed_at < NOW() - INTERVAL '10 minutes'`
+    );
+    await client.query(
+      `INSERT INTO public.mobile_web_session_exchanges(token_hash, curator_id, return_url, expires_at)
+       VALUES($1, $2, $3, NOW() + ($4::INT * INTERVAL '1 second'))`,
+      [hashToken(exchangeToken), auth.payload.sub, returnUrl, MOBILE_WEB_EXCHANGE_TTL]
+    );
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        exchange_url: exchangeUrl,
+        expires_at: Math.floor(Date.now() / 1000) + MOBILE_WEB_EXCHANGE_TTL,
+      }),
+    };
+  } catch (e) {
+    console.error('[AUTH] mobile session exchange issue error:', e.message);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Mobile session exchange failed' }),
+    };
+  } finally {
+    client.release();
+  }
 }
 
-function handleMobileSessionExchangeConsume(event, jwtSecret) {
+async function handleMobileSessionExchangeConsume(event, jwtSecret) {
   if (event.httpMethod !== 'GET') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
@@ -914,28 +935,49 @@ function handleMobileSessionExchangeConsume(event, jwtSecret) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid return_url' }) };
   }
 
-  const auth = verifyJwt(token, jwtSecret);
-  if (!auth.valid) {
-    return { statusCode: 401, body: JSON.stringify({ error: auth.error }) };
-  }
-  if (auth.payload.purpose !== 'mobile_web_exchange' || auth.payload.role !== 'curator') {
-    return { statusCode: 403, body: JSON.stringify({ error: 'Invalid exchange token' }) };
-  }
+  const client = await getClient();
+  try {
+    const result = await client.query(
+      `UPDATE public.mobile_web_session_exchanges e
+       SET consumed_at = NOW()
+       FROM public.curators c
+       WHERE e.token_hash = $1
+         AND e.curator_id = c.id
+         AND e.return_url = $2
+         AND e.consumed_at IS NULL
+         AND e.expires_at > NOW()
+       RETURNING e.curator_id, e.return_url, c.email`,
+      [hashToken(token), returnUrl]
+    );
 
-  const accessToken = createJwt({
-    email: auth.payload.email,
-    role: 'curator',
-    sub: auth.payload.sub,
-  }, jwtSecret);
+    const row = result.rows?.[0];
+    if (!row) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid or expired exchange token' }) };
+    }
 
-  return {
-    statusCode: 302,
-    headers: {
-      Location: returnUrl,
-      'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`,
-    },
-    body: '',
-  };
+    const accessToken = createJwt({
+      email: row.email,
+      role: 'curator',
+      sub: row.curator_id,
+    }, jwtSecret);
+
+    return {
+      statusCode: 302,
+      headers: {
+        Location: returnUrl,
+        'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`,
+      },
+      body: '',
+    };
+  } catch (e) {
+    console.error('[AUTH] mobile session exchange consume error:', e.message);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Mobile session exchange consume failed' }),
+    };
+  } finally {
+    client.release();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1503,9 +1545,9 @@ module.exports.handler = async function (event, context) {
       break;
     case 'mobile':
       if (mfaAction === 'session-exchange' && pathParts[3] === 'consume') {
-        result = handleMobileSessionExchangeConsume(event, JWT_SECRET);
+        result = await handleMobileSessionExchangeConsume(event, JWT_SECRET);
       } else if (mfaAction === 'session-exchange') {
-        result = handleMobileSessionExchange(body, event, curatorToken, JWT_SECRET);
+        result = await handleMobileSessionExchange(body, event, curatorToken, JWT_SECRET);
       } else {
         result = {
           statusCode: 404,
