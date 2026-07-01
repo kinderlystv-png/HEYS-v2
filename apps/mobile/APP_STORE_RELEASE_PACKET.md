@@ -108,13 +108,13 @@ actions.
 
 Prepare screenshots from a real iPhone or TestFlight build.
 
-| Slot | Screen                                                          |
-| ---- | --------------------------------------------------------------- |
-| 1    | Native login screen                                             |
-| 2    | HEYS diary or main web app screen after session exchange        |
-| 3    | Settings with account, Face ID/Touch ID and notification status |
-| 4    | Support/privacy/terms/account deletion entry points             |
-| 5    | Native loading or offline/error state                           |
+| Slot | Screen                                                   |
+| ---- | -------------------------------------------------------- |
+| 1    | Native login screen                                      |
+| 2    | HEYS diary or main web app screen after session exchange |
+| 3    | Settings with account, Face ID/Touch ID and legal links  |
+| 4    | Support/privacy/terms/account deletion entry points      |
+| 5    | Native loading or offline/error state                    |
 
 Do not use screenshots with personal health details from a real client. Use a
 demo account with safe sample data.
