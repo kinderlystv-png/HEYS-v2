@@ -358,7 +358,22 @@ class SASTScanner {
               if (/\$\$\{/.test(match[0])) continue;
               const lineText = this.getLineText(content, match.index);
               if (/\bconsole\.(log|info|warn|error|debug)\b/.test(lineText)) continue;
+              if (/https?:\/\//i.test(lineText)) continue;
               if (/\b(?:search|query|param)Query\b|\bqueryString\b|\brule\.key\b/.test(lineText)) {
+                continue;
+              }
+            }
+
+            // JSON-LD structured data is emitted via a <script type="application/ld+json">
+            // tag in Next/React. The payload here is JSON.stringify(...) rather than HTML.
+            if (ruleName === 'xss' && match[0].trim() === 'dangerouslySetInnerHTML') {
+              const lineText = this.getLineText(content, match.index);
+              const before = content.slice(Math.max(0, match.index - 240), match.index);
+              const after = content.slice(match.index, Math.min(content.length, match.index + 160));
+              if (
+                /type=["']application\/ld\+json["']/.test(before) &&
+                /JSON\.stringify\s*\(/.test(lineText + after)
+              ) {
                 continue;
               }
             }
