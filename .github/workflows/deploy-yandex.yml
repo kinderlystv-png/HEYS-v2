@@ -635,6 +635,7 @@ jobs:
 
       - name: Invalidate CDN cache
         continue-on-error: true
+        timeout-minutes: 4
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
@@ -657,11 +658,17 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
+          purge_cdn() {
+            if ! timeout 45s yc cdn cache purge "$@"; then
+              echo "⚠️ CDN purge skipped or timed out: $*"
+            fi
+          }
+
           # === PWA CDN Invalidation ===
           echo "🔄 Purging CDN cache for PWA..."
 
           # Критичные файлы (без кэша)
-          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+          purge_cdn --resource-id "$CDN_PWA_ID" \
             --path "/" \
             --path "/index.html" \
             --path "/sw.js" \
@@ -670,11 +677,11 @@ jobs:
             --path "/version.json" \
             --path "/build-meta.json" \
             --path "/whats-new.json" \
-            --path "/react-bundle.js" || true
+            --path "/react-bundle.js"
 
           # === Demo CDN Invalidation ===
           echo "🔄 Purging CDN cache for Demo PWA..."
-          yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+          purge_cdn --resource-id "$CDN_DEMO_ID" \
             --path "/" \
             --path "/index.html" \
             --path "/sw.js" \
@@ -683,7 +690,7 @@ jobs:
             --path "/version.json" \
             --path "/build-meta.json" \
             --path "/whats-new.json" \
-            --path "/react-bundle.js" || true
+            --path "/react-bundle.js"
 
           # ВСЕ кастомные JS файлы — динамический список!
           echo "🔄 Purging all heys_*.js files..."
@@ -697,8 +704,8 @@ jobs:
           done
 
           if [ -n "$JS_PATHS" ]; then
-            yc cdn cache purge --resource-id "$CDN_PWA_ID" $JS_PATHS || true
-            yc cdn cache purge --resource-id "$CDN_DEMO_ID" $JS_PATHS || true
+            purge_cdn --resource-id "$CDN_PWA_ID" $JS_PATHS
+            purge_cdn --resource-id "$CDN_DEMO_ID" $JS_PATHS
           fi
 
           # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
@@ -706,26 +713,26 @@ jobs:
           DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/dist/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
           echo "  Legal docs version: ${DOCS_VERSION:-unknown}"
 
-          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+          purge_cdn --resource-id "$CDN_PWA_ID" \
             --path "/docs/user-agreement.md" \
             --path "/docs/privacy-policy.md" \
             --path "/docs/consent-forms.md" \
-            --path "/docs/chat-rules.md" || true
+            --path "/docs/chat-rules.md"
 
           # Версионированные пути юридики
           if [ -n "$DOCS_VERSION" ]; then
-            yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+            purge_cdn --resource-id "$CDN_PWA_ID" \
               --path "/docs/v${DOCS_VERSION}/user-agreement.md" \
               --path "/docs/v${DOCS_VERSION}/privacy-policy.md" \
               --path "/docs/v${DOCS_VERSION}/consent-forms.md" \
-              --path "/docs/v${DOCS_VERSION}/chat-rules.md" || true
+              --path "/docs/v${DOCS_VERSION}/chat-rules.md"
           fi
 
           # === Landing CDN Invalidation ===
           echo "🔄 Purging CDN cache for Landing..."
-          yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
+          purge_cdn --resource-id "$CDN_LANDING_ID" \
             --path "/" \
-            --path "/index.html" || true
+            --path "/index.html"
 
           echo "✅ CDN cache purged for all critical paths"
 
@@ -861,6 +868,7 @@ jobs:
 
       - name: Invalidate CDN cache
         continue-on-error: true
+        timeout-minutes: 3
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
@@ -877,19 +885,25 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
+          purge_cdn() {
+            if ! timeout 45s yc cdn cache purge "$@"; then
+              echo "⚠️ CDN purge skipped or timed out: $*"
+            fi
+          }
+
           # Базовые 2 файла + директория whats-new/* для скриншотов релиз-заметок.
           # CDN-провайдер интерпретирует /whats-new/* как wildcard на префикс —
           # инвалидирует все объекты под этим путём. Иначе при замене существующего
           # скрина с тем же именем CDN бы отдавал старую версию до естественной
           # экспирации (cache-control: immutable max-age=1y).
-          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+          purge_cdn --resource-id "$CDN_PWA_ID" \
             --path "/whats-new.json" \
             --path "/build-meta.json" \
-            --path "/whats-new/*" || true
-          yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+            --path "/whats-new/*"
+          purge_cdn --resource-id "$CDN_DEMO_ID" \
             --path "/whats-new.json" \
             --path "/build-meta.json" \
-            --path "/whats-new/*" || true
+            --path "/whats-new/*"
 
       - name: Fast-path summary
         run: |
