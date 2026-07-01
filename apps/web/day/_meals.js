@@ -4872,7 +4872,7 @@
                     );
                 } catch (_) { /* noop */ }
             }
-        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields, ensureDiaryItemsReadyForDayWrite]);
+        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields]);
 
         const replanEmitTimersRef = React.useRef({});
 
