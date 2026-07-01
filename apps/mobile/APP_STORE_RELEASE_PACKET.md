@@ -16,7 +16,7 @@ Apple Developer.
 | Primary category     | Health & Fitness                                                  |
 | Secondary category   | Food & Drink или Productivity                                     |
 | Distribution intent  | Public App Store review, then Apple unlisted distribution request |
-| Audience             | Existing HEYS clients and curators with issued HEYS access        |
+| Audience             | Existing HEYS users with issued access                            |
 | Support URL          | `https://t.me/heyslab_support_bot`                                |
 | Privacy URL          | `https://app.heyslab.ru/docs/privacy-policy.md`                   |
 | Terms URL            | `https://app.heyslab.ru/docs/user-agreement.md`                   |
@@ -63,6 +63,11 @@ web-части HEYS, настройки, поддержка и юридичес�
 ## Review Notes
 
 Use this text in App Review Notes after adding real demo credentials.
+
+Before submitting a client-facing build, resolve the current auth scope: native
+login uses curator email/password. A client-facing release needs either an
+approved curator-only first scope or native PIN login with client WebView
+session exchange.
 
 ```text
 HEYS is a nutrition diary and curator support app for an existing HEYS audience.
@@ -142,5 +147,7 @@ service quality. Do not claim medical diagnosis or treatment.
 - Confirm `/auth/mobile/session-exchange` live happy path on iPhone.
 - Confirm account deletion entry point opens and explains the in-app deletion
   path.
+- Confirm release audience. For a client-facing release, add native PIN login or
+  document why the first iOS build is curator-only.
 - Add Review Notes that the app is intended for unlisted distribution after
   approval.
