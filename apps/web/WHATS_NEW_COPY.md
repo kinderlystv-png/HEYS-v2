@@ -51,15 +51,13 @@
 текстом:
 
 ```bash
-pnpm push:preflight
 pnpm push:agent -- --confirm-push --title="Синхронизация активностей стала устойчивее" \
   --item-title="Удалённые круги активностей больше не возвращаются из старой копии" \
   --item-description="Если круг активности удалён на одном устройстве, приложение защищает эту правку от старых данных, которые могли прийти во время синхронизации."
 ```
 
-`push:preflight` заранее проверит локальные blockers и прогреет Vitest cache.
-`push:agent` затем проверит `What's New`, при необходимости добавит entry и
-follow-up commit с автоматическим `coveredCommits`, повторит preflight перед
+`push:agent` проверит `What's New`, при необходимости добавит entry и follow-up
+commit с автоматическим `coveredCommits`, запустит `pnpm push:preflight` перед
 `git push`, выполнит push с активными pre-push guards и дождётся зелёного
 `Deploy to Yandex Cloud` для свежего `HEAD`. Если в staging уже лежат не-release
 файлы, команда остановится, чтобы случайно не включить их в follow-up commit для
@@ -78,7 +76,8 @@ pnpm push:agent -- --status
 ```
 
 `pnpm push:safe` deprecated и не должен использоваться как shortcut: `HUSKY=0`
-не является нормальным push-flow.
+не является нормальным push-flow. `pnpm push:preflight` можно запускать отдельно
+только как диагностику локальных blockers.
 
 Проверить без commit и push:
 

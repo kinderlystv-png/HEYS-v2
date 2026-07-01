@@ -20,9 +20,11 @@ function printGuidance(write) {
   write('push:safe is deprecated and no longer performs mutating pushes.');
   write('');
   write('Use the safe flow instead:');
-  write('  1) pnpm push:preflight');
-  write('  2) pnpm push:agent -- --print-command');
-  write('  3) pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."');
+  write('  pnpm push:agent -- --print-command');
+  write('  pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."');
+  write('');
+  write('push:agent runs pnpm push:preflight automatically before git push.');
+  write('Optional diagnostic only: pnpm push:preflight');
   write('');
   write('HUSKY=0 is not a normal push flow for HEYS.');
 }

@@ -373,23 +373,19 @@ Quick hint: `feat|fix|perf` коммиты всегда требуют entry в
 `chore(release): bump whats-new build hash to <HASH>`).
 
 Если commits уже сделаны без `pnpm ship` или pre-push hook прямо рекомендует
-non-interactive agent flow, сначала прогрей локальные guards:
-
-```bash
-pnpm push:preflight
-```
-
-Затем используй `pnpm push:agent`. Сначала сформулируй короткий текст по
-[apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md), затем:
+non-interactive agent flow, используй `pnpm push:agent`. Сначала сформулируй
+короткий текст по [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md),
+затем:
 
 ```bash
 pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."
 ```
 
 Для проверки без commit/push добавь `--dry-run --no-push`. Если нужна готовая
-команда-шаблон, запусти `pnpm push:agent -- --print-command`. `push:safe`
-deprecated и не является безопасным обходом hooks; `HUSKY=0` не использовать как
-обычный push-flow.
+команда-шаблон, запусти `pnpm push:agent -- --print-command`. `push:agent` сам
+запускает `pnpm push:preflight` перед `git push`; отдельно `push:preflight`
+нужен только для диагностики. `push:safe` deprecated и не является безопасным
+обходом hooks; `HUSKY=0` не использовать как обычный push-flow.
 
 ---
 

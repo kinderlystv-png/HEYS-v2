@@ -287,11 +287,11 @@ function buildSuggestedCommand() {
 }
 
 function printSuggestedCommandAndExit() {
-  writeLine('Recommended preflight:');
-  writeLine('pnpm push:preflight');
-  writeLine('');
-  writeLine('Then push with:');
+  writeLine('Suggested non-interactive command:');
   writeLine(buildSuggestedCommand());
+  writeLine('');
+  writeLine('Note: this command runs pnpm push:preflight automatically before git push.');
+  writeLine('Optional diagnostic only: pnpm push:preflight');
   writeLine('');
   writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
   process.exit(0);
