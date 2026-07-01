@@ -12,7 +12,6 @@ import * as Application from 'expo-application';
 import { useRouter } from 'expo-router';
 
 import { canUseBiometrics } from '../../src/features/biometrics';
-import { getNotificationReadiness, requestNotificationPermission } from '../../src/features/notifications';
 import { ACCOUNT_DELETION_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../../src/shared/config/urls';
 import { loadStoredSession, saveStoredSession } from '../../src/features/session/storage';
 import type { StoredSession } from '../../src/features/session/types';
@@ -22,15 +21,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [session, setSession] = useState<StoredSession | null>(null);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
-  const [notificationsLabel, setNotificationsLabel] = useState('Проверяем');
 
   useEffect(() => {
     loadStoredSession().then((stored) => {
       setSession(stored);
       setBiometricsEnabled(Boolean(stored?.biometricUnlockEnabled));
-    });
-    getNotificationReadiness().then((readiness) => {
-      setNotificationsLabel(readiness.granted ? 'Разрешены' : 'Не включены');
     });
   }, []);
 
@@ -56,14 +51,6 @@ export default function SettingsScreen() {
     await saveStoredSession(nextSession);
     setSession(nextSession);
     setBiometricsEnabled(enabled);
-  };
-
-  const enableNotifications = async () => {
-    const readiness = await requestNotificationPermission();
-    setNotificationsLabel(readiness.granted ? 'Разрешены' : 'Не включены');
-    if (!readiness.granted) {
-      Alert.alert('Уведомления не включены', 'Их можно включить позже в настройках iOS.');
-    }
   };
 
   const logout = () => router.replace('/auth/logout');
@@ -99,9 +86,8 @@ export default function SettingsScreen() {
         <View style={styles.row}>
           <View style={styles.rowText}>
             <Text style={styles.rowTitle}>Push-уведомления</Text>
-            <Text style={styles.rowBody}>Статус: {notificationsLabel}. Включать только для полезных сценариев.</Text>
+            <Text style={styles.rowBody}>Будут включены после появления согласованного сценария сопровождения.</Text>
           </View>
-          <PrimaryButton label="Включить" onPress={enableNotifications} secondary style={styles.smallButton} />
         </View>
 
         <View style={styles.section}>
@@ -169,9 +155,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     fontWeight: '800',
-  },
-  smallButton: {
-    minHeight: 42,
   },
   subtitle: {
     color: colors.muted,
