@@ -341,7 +341,31 @@
         }
     }
 
-    function lsSet(key, value) {
+    function getPlanningClientId() {
+        try {
+            if (HEYS.currentClientId) return HEYS.currentClientId;
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') return HEYS.cloud.getClientId();
+            return localStorage.getItem('heys_client_current') || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function scopePlanningKey(key) {
+        const clientId = getPlanningClientId();
+        if (!clientId || typeof key !== 'string') return key;
+        if (/^heys_[0-9a-f-]{36}_/i.test(key)) return key;
+        if (key.startsWith('heys_')) return `heys_${clientId}_${key.slice('heys_'.length)}`;
+        if (key.startsWith('day_')) return `day_${clientId}_${key.slice('day_'.length)}`;
+        return key;
+    }
+
+    function lsSet(key, value, opts) {
+        if (opts?.sync === false && HEYS.cloud && typeof HEYS.cloud.writeLocalKvWithoutMirror === 'function') {
+            HEYS.cloud.writeLocalKvWithoutMirror(scopePlanningKey(key), value);
+            emitPlanningUpdated('storage:set', { key });
+            return;
+        }
         if (typeof U.lsSet === 'function') {
             U.lsSet(key, value);
             emitPlanningUpdated('storage:set', { key });
@@ -463,7 +487,7 @@
         const options = opts || {};
         const sync = options.sync !== false && CRITICAL_PLANNING_KEYS.has(key);
         const localOnly = LOCAL_ONLY_PLANNING_KEYS.has(key);
-        lsSet(key, value);
+        lsSet(key, value, { sync });
         if (localOnly) {
             pushPlanningPersistHistory({ key, reason: options.reason || 'local-only', sync: false, status: 'local-only' });
             return value;

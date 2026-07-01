@@ -18,8 +18,11 @@ function installReactStub() {
     };
 }
 
-function installHeys({ syncStatus = 'synced' } = {}) {
+function installHeys({ syncStatus = 'synced', mirrorLsSet = false } = {}) {
     const saveClientKey = vi.fn();
+    const writeLocalKvWithoutMirror = vi.fn((key, value) => {
+        window.localStorage.setItem(key, JSON.stringify(value));
+    });
     window.HEYS = {
         currentClientId: 'client-1',
         utils: {
@@ -29,15 +32,17 @@ function installHeys({ syncStatus = 'synced' } = {}) {
             },
             lsSet: (key, value) => {
                 window.localStorage.setItem(key, JSON.stringify(value));
+                if (mirrorLsSet) saveClientKey(key, value);
             },
         },
         cloud: {
             getClientId: () => 'client-1',
             getSyncStatus: vi.fn(() => syncStatus),
             saveClientKey,
+            writeLocalKvWithoutMirror,
         },
     };
-    return { saveClientKey };
+    return { saveClientKey, writeLocalKvWithoutMirror };
 }
 
 function loadPlanningStore() {
@@ -102,6 +107,21 @@ describe('planning sync-aware persistence', () => {
 
         expect(didQueue).toBe(true);
         expect(saveClientKey).toHaveBeenCalledWith('heys_planning_chrono_entries', merged);
+    });
+
+    it('does not mirror cloud-refresh planning writes back into upload queue', () => {
+        const { saveClientKey, writeLocalKvWithoutMirror } = installHeys({ mirrorLsSet: true });
+        const Store = loadPlanningStore();
+        const cloudEntries = [{ id: 'cloud-entry', activityId: 'a1', minutes: 10, date: '2026-07-01' }];
+
+        Store.saveChronoEntries(cloudEntries, { sync: false, reason: 'cloud-refresh' });
+
+        expect(writeLocalKvWithoutMirror).toHaveBeenCalledWith(
+            'heys_client-1_planning_chrono_entries',
+            cloudEntries,
+        );
+        expect(saveClientKey).not.toHaveBeenCalled();
+        expect(JSON.parse(window.localStorage.getItem('heys_client-1_planning_chrono_entries'))).toEqual(cloudEntries);
     });
 
     it('keeps the storage hot-sync merge rescue wired before idempotent return', () => {
