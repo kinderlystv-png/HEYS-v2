@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.02.a1ee9e5d",
+      "buildHash": "a1ee9e5d",
+      "date": "2026-07-02",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Шапка аккуратнее помещается на телефоне",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Верхняя строка больше не обрезается",
+          "description": "В компактной шапке убрали дублирующий счётчик очков и ужали элементы, чтобы уровень, прогресс и кнопки помещались на узких экранах."
+        }
+      ],
+      "coveredCommits": ["a1ee9e5d"]
+    },
+    {
       "version": "2026.07.02.9edfb497",
       "buildHash": "9edfb497",
       "date": "2026-07-02",
@@ -146,21 +162,6 @@
         "9dc41a72",
         "b258fbb1",
         "e9fd12a0"
-      ]
-    },
-    {
-      "version": "2026.07.01.0004148f",
-      "buildHash": "0004148f",
-      "date": "2026-07-01",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Подготовлен iOS mobile shell",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Заложена основа iOS-приложения",
-          "description": "Добавлены iOS/EAS настройки, mobile URL-конфиг, безопасное хранение сессии, биометрия, deep links, WebView navigation policy и typed API client."
-        }
       ]
     }
   ]
