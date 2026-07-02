@@ -13528,17 +13528,22 @@ body.tour-active .ios-pwa-banner {
 /* === AUTH SURFACES ===================================================== */
 
 .heys-auth-shell {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  justify-content: center !important;
+  overflow-y: auto;
+  padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
+  padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
+  background: linear-gradient(145deg, #4964c7 0%, #2f5fd7 46%, #434587 100%);
 }
 
 .heys-auth-card {
   position: relative;
   width: 100%;
   max-width: 360px;
-  border-radius: 28px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.72);
   background: rgba(255, 255, 255, 0.95);
-  padding: 28px;
+  margin: 0 auto;
+  padding: 24px;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -13548,7 +13553,7 @@ body.tour-active .ios-pwa-banner {
 .heys-auth-title {
   color: #0f172a;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .heys-auth-brand {
@@ -13556,7 +13561,53 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-auth-title {
-  font-size: 28px;
+  font-size: 22px;
+  font-weight: 650;
+  color: #475569;
+}
+
+.heys-auth-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.heys-auth-mark {
+  display: block;
+  width: 92px;
+  flex: 0 0 auto;
+  margin: 0;
+  line-height: 0;
+}
+
+.heys-auth-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: contrast(1.12) saturate(1.06) drop-shadow(0 8px 14px rgba(29, 112, 183, 0.1));
+}
+
+.heys-auth-card form.space-y-6 {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.heys-auth-card form.space-y-6 > :not([hidden]) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.heys-auth-card form.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0 !important;
+}
+
+.heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 10px !important;
+  margin-bottom: 0 !important;
 }
 
 .heys-auth-subtitle,
@@ -13583,17 +13634,23 @@ body.tour-active .ios-pwa-banner {
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    transform 0.18s ease;
 }
 
-.heys-auth-field:focus-within {
+.heys-auth-field:focus-within,
+.heys-auth-field.is-active {
   border-color: rgba(96, 165, 250, 0.82);
   box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
 }
 
 .heys-auth-field.is-complete {
-  border-color: #22c55e;
-  background: #f0fdf4;
+  border-color: rgba(82, 160, 216, 0.72);
+  background: #f3f9fd;
+}
+
+.heys-auth-field.is-confirm-pulse {
+  animation: heys-auth-phone-confirm 0.22s ease-out;
 }
 
 .heys-auth-prefix {
@@ -13607,6 +13664,19 @@ body.tour-active .ios-pwa-banner {
 .heys-auth-input {
   color: #0f172a;
   font-family: inherit;
+}
+
+.heys-auth-phone-input {
+  width: min(224px, calc(100% - 42px)) !important;
+  font-size: clamp(23px, 6.4vw, 26px) !important;
+  line-height: clamp(29px, 7.2vw, 32px) !important;
+  height: clamp(29px, 7.2vw, 32px) !important;
+  letter-spacing: 0 !important;
+}
+
+.heys-auth-field > .heys-auth-prefix {
+  font-size: clamp(23px, 6.4vw, 26px) !important;
+  line-height: clamp(29px, 7.2vw, 32px) !important;
 }
 
 .heys-auth-phone-input::placeholder,
@@ -13640,6 +13710,36 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.heys-auth-pin-section {
+  margin-top: 0;
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease,
+    transform 0.2s ease;
+}
+
+.heys-auth-pin-section.is-muted {
+  opacity: 0.48;
+  filter: saturate(0.72);
+}
+
+.heys-auth-pin-section.is-muted .heys-auth-label {
+  color: #94a3b8;
+}
+
+.heys-auth-pin-section.is-active {
+  opacity: 1;
+  filter: none;
+}
+
+.heys-auth-pin-section.is-active .heys-auth-label {
+  color: #1d70b7;
+}
+
+.heys-auth-pin-section.is-muted .heys-auth-pin-input {
+  background: #f8fafc;
 }
 
 .heys-auth-pin-box {
@@ -13693,16 +13793,115 @@ body.tour-active .ios-pwa-banner {
   box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
 }
 
+.heys-auth-pin-input.is-error {
+  animation: heys-auth-pin-error-shake 0.34s ease-out;
+  border-color: #f472b6;
+  background: #fff1f7;
+  box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.16);
+}
+
+.heys-auth-error.is-pin-error {
+  position: fixed;
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
+  left: 50%;
+  z-index: 10020;
+  width: min(320px, calc(100vw - 48px));
+  animation: heys-auth-error-pop 0.22s ease-out;
+  border-color: #fbcfe8;
+  background: #fff5f9;
+  box-shadow: 0 14px 32px rgba(190, 24, 93, 0.14);
+  color: #be185d;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+@keyframes heys-auth-pin-error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  55% {
+    transform: translateX(4px);
+  }
+
+  78% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes heys-auth-error-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes heys-auth-phone-confirm {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.015);
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes heys-auth-status-pulse {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heys-auth-field.is-confirm-pulse,
+  .heys-auth-pin-input.is-error,
+  .heys-auth-error.is-pin-error,
+  .heys-auth-status-dot {
+    animation: none;
+  }
+}
+
 .heys-auth-keypad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  max-width: 252px;
-  margin: 14px auto 20px;
+  gap: 6px;
+  width: min(100%, 276px);
+  max-width: 276px;
+  margin: 24px auto 28px !important;
+}
+
+.heys-auth-card form.space-y-6 > .heys-auth-keypad {
+  margin-top: 24px !important;
+  margin-bottom: 28px !important;
+}
+
+.heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+  margin-top: 24px !important;
 }
 
 .heys-auth-key {
-  min-height: 48px;
+  width: 100%;
+  min-height: 52px;
   border: 1px solid #dbe4f0;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
@@ -13731,11 +13930,187 @@ body.tour-active .ios-pwa-banner {
 
 .heys-auth-key--muted {
   color: #64748b;
-  font-size: 20px;
+  font-size: 21px;
+}
+
+@media (min-width: 768px) {
+  .heys-auth-keypad {
+    width: min(100%, 236px);
+    max-width: 236px;
+    gap: 6px;
+    margin: 18px auto 22px !important;
+  }
+
+  .heys-auth-key {
+    min-height: 46px;
+    border-radius: 12px;
+    font-size: 20px;
+  }
+
+  .heys-auth-pin-box {
+    width: 52px;
+    height: 64px;
+  }
+
+  .heys-auth-key-spacer {
+    min-height: 46px;
+  }
+}
+
+@media (max-height: 760px) {
+  .heys-auth-shell {
+    padding-top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px)) !important;
+    padding-bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) + 10px)) !important;
+  }
+
+  .heys-auth-card {
+    padding: 18px !important;
+    border-radius: 22px;
+  }
+
+  .heys-auth-heading {
+    gap: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .heys-auth-mark {
+    width: 76px;
+  }
+
+  .heys-auth-title {
+    font-size: 19px;
+  }
+
+  .heys-auth-card form.space-y-6 {
+    gap: 9px;
+  }
+
+  .heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 8px !important;
+  }
+
+  .heys-auth-label {
+    font-size: 14px;
+  }
+
+  .heys-auth-field {
+    padding: 9px 12px !important;
+  }
+
+  .heys-auth-pin-box {
+    width: 48px !important;
+    height: 58px !important;
+  }
+
+  .heys-auth-pin-input,
+  .heys-auth-pin-overlay {
+    font-size: 28px;
+  }
+
+  .heys-auth-keypad {
+    width: min(100%, 246px);
+    max-width: 246px;
+    gap: 5px;
+    margin-top: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .heys-auth-card form.space-y-6 > .heys-auth-keypad,
+  .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+    margin-top: 12px !important;
+  }
+
+  .heys-auth-key,
+  .heys-auth-key-spacer {
+    min-height: 44px;
+  }
+
+  .heys-auth-key {
+    font-size: 20px;
+  }
+
+  .heys-auth-footer-row {
+    margin-top: 10px;
+  }
+
+  .heys-auth-support-line {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-height: 690px) {
+  .heys-auth-card {
+    padding: 16px !important;
+  }
+
+  .heys-auth-heading {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .heys-auth-mark {
+    width: 70px;
+  }
+
+  .heys-auth-title {
+    font-size: 18px;
+  }
+
+  .heys-auth-card form.space-y-6 {
+    gap: 8px;
+  }
+
+  .heys-auth-field {
+    padding: 8px 10px !important;
+  }
+
+  .heys-auth-phone-input,
+  .heys-auth-field > .heys-auth-prefix {
+    font-size: clamp(21px, 6vw, 23px) !important;
+    line-height: 27px !important;
+    height: 27px !important;
+  }
+
+  .heys-auth-pin-box {
+    width: 44px !important;
+    height: 52px !important;
+  }
+
+  .heys-auth-pin-input,
+  .heys-auth-pin-overlay {
+    font-size: 26px;
+  }
+
+  .heys-auth-keypad {
+    width: min(100%, 234px);
+    max-width: 234px;
+    margin-top: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .heys-auth-card form.space-y-6 > .heys-auth-keypad,
+  .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+    margin-top: 8px !important;
+  }
+
+  .heys-auth-key,
+  .heys-auth-key-spacer {
+    min-height: 44px;
+  }
+
+  .heys-auth-footer-row {
+    margin-top: 8px;
+  }
 }
 
 .heys-auth-key-spacer {
-  min-height: 48px;
+  min-height: 52px;
+}
+
+@media (min-width: 768px) {
+  .heys-auth-key-spacer {
+    min-height: 46px;
+  }
 }
 
 .heys-auth-footer-row {
@@ -13744,7 +14119,7 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   justify-content: center;
   min-height: 20px;
-  margin-top: 14px;
+  margin-top: 20px;
 }
 
 .heys-auth-support-line {
@@ -13890,6 +14265,56 @@ body.tour-active .ios-pwa-banner {
   color: #dc2626;
 }
 
+.heys-auth-submit-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.heys-auth-status {
+  position: fixed;
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
+  left: 50%;
+  z-index: 10020;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid rgba(82, 160, 216, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 32px rgba(29, 112, 183, 0.14);
+  color: #2f5f8f;
+  font-size: 13px;
+  font-weight: 650;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.heys-auth-status.is-visible {
+  display: flex;
+  animation: heys-auth-error-pop 0.22s ease-out;
+}
+
+.heys-auth-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #52a0d8;
+  box-shadow: 0 0 0 4px rgba(82, 160, 216, 0.14);
+  animation: heys-auth-status-pulse 0.9s ease-in-out infinite;
+}
+
 .heys-auth-diagnostics {
   border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -13928,9 +14353,16 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-auth-btn--primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, #4b5fca, #434587);
   color: #ffffff;
-  box-shadow: 0 18px 40px -24px rgba(37, 99, 235, 0.78);
+  box-shadow: 0 18px 40px -24px rgba(67, 69, 135, 0.78);
+}
+
+.heys-auth-btn--backup {
+  border: 1px solid rgba(67, 69, 135, 0.22);
+  background: rgba(67, 69, 135, 0.1);
+  color: #434587;
+  box-shadow: none;
 }
 
 .heys-auth-btn--secondary {
@@ -13991,7 +14423,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-auth-version {
+  position: absolute;
+  left: 50%;
+  bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 14px));
+  margin-top: 0 !important;
   color: rgba(255, 255, 255, 0.38);
+  transform: translateX(-50%);
 }
 
 [data-theme="dark"] .heys-auth-shell {
@@ -14011,6 +14448,10 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .heys-auth-label,
 [data-theme="dark"] .heys-auth-prefix {
   color: #f8fafc;
+}
+
+[data-theme="dark"] .heys-auth-mark {
+  color: #c7d2fe;
 }
 
 [data-theme="dark"] .heys-auth-subtitle,
@@ -14043,6 +14484,10 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .heys-auth-pin-input.is-complete {
   background: rgba(16, 185, 129, 0.14);
   border-color: rgba(52, 211, 153, 0.55);
+}
+
+[data-theme="dark"] .heys-auth-pin-section.is-muted .heys-auth-pin-input {
+  background: rgba(15, 23, 42, 0.56);
 }
 
 [data-theme="dark"] .heys-auth-pin-input.is-filled {
@@ -14102,6 +14547,13 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .heys-auth-btn--primary {
   box-shadow: 0 20px 40px -24px rgba(59, 130, 246, 0.75);
+}
+
+[data-theme="dark"] .heys-auth-btn--backup {
+  border-color: rgba(199, 210, 254, 0.2);
+  background: rgba(199, 210, 254, 0.1);
+  color: #c7d2fe;
+  box-shadow: none;
 }
 
 [data-theme="dark"] .heys-auth-btn--secondary {
