@@ -11,6 +11,7 @@
  * Usage:
  *   pnpm push:preflight
  *   pnpm push:preflight -- --skip-tests
+ *   pnpm push:preflight -- --diagnostics
  */
 
 import path from 'node:path';
@@ -159,11 +160,13 @@ function main() {
     if (!runGate(label, command, commandArgs, options || {})) failures += 1;
   }
 
-  writeLine('');
-  writeLine('Info: React.startTransition counter is optional diagnostics, not a blocking pre-push gate.');
-  runGate('   React.startTransition counter', 'node', ['scripts/lint-react-start-transition.mjs'], {
-    compactSuccess: true,
-  });
+  if (args.has('--diagnostics')) {
+    writeLine('');
+    writeLine('Diagnostics: React.startTransition counter is not a blocking pre-push gate.');
+    runGate('   React.startTransition counter', 'node', ['scripts/lint-react-start-transition.mjs'], {
+      compactSuccess: true,
+    });
+  }
 
   failures = runTestsIfNeeded({ failures });
 

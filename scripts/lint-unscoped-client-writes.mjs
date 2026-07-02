@@ -112,6 +112,39 @@ function listDir(dir) {
     return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
+function listScanFiles() {
+    const relFiles = [];
+    for (const target of SCAN_TARGETS) {
+        let entries;
+        try { entries = listDir(target.dir); } catch (_) { continue; }
+        for (const entry of entries) {
+            if (target.match(entry)) relFiles.push(`${target.dir}/${entry}`);
+        }
+    }
+    return relFiles;
+}
+
+function grepRefSetItemLines(relFiles) {
+    if (!relFiles.length) return [];
+    let output = '';
+    try {
+        output = execFileSync(
+            'git',
+            ['grep', '-n', '-E', 'localStorage\\.setItem[[:space:]]*\\(', REF, '--', ...relFiles],
+            {
+                cwd: ROOT,
+                encoding: 'utf8',
+                maxBuffer: 16 * 1024 * 1024,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            },
+        );
+    } catch (error) {
+        if (error.status === 1) return [];
+        throw error;
+    }
+    return output.split(/\r?\n/).filter(Boolean);
+}
+
 // ── Read allowlist ────────────────────────────────────────────────────────
 const allowlist = new Set();
 try {
@@ -132,33 +165,32 @@ function isClientSpecificKey(key) {
 }
 
 // ── Walk file ─────────────────────────────────────────────────────────────
+function* findViolationsInLine(line, lineNumber) {
+    SETITEM_REGEX.lastIndex = 0;
+    SETITEM_TEMPLATE_REGEX.lastIndex = 0;
+
+    let m;
+    while ((m = SETITEM_REGEX.exec(line)) !== null) {
+        const key = m[2];
+        if (isClientSpecificKey(key)) {
+            yield { line: lineNumber, key, snippet: line.trim() };
+        }
+    }
+
+    while ((m = SETITEM_TEMPLATE_REGEX.exec(line)) !== null) {
+        const keyPrefix = m[1];
+        if (isClientSpecificKey(keyPrefix)) {
+            yield { line: lineNumber, key: `\`${keyPrefix}\${...}\``, snippet: line.trim() };
+        }
+    }
+}
+
 function* findViolationsInFile(relPath) {
     const content = readText(relPath);
     const lines = content.split('\n');
 
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-        const line = lines[lineIdx];
-
-        // Reset regex global state per line.
-        SETITEM_REGEX.lastIndex = 0;
-        SETITEM_TEMPLATE_REGEX.lastIndex = 0;
-
-        // Literal string key.
-        let m;
-        while ((m = SETITEM_REGEX.exec(line)) !== null) {
-            const key = m[2];
-            if (isClientSpecificKey(key)) {
-                yield { line: lineIdx + 1, key, snippet: line.trim() };
-            }
-        }
-
-        // Template literal с prefix (e.g., `heys_dayv2_${date}`).
-        while ((m = SETITEM_TEMPLATE_REGEX.exec(line)) !== null) {
-            const keyPrefix = m[1];
-            if (isClientSpecificKey(keyPrefix)) {
-                yield { line: lineIdx + 1, key: `\`${keyPrefix}\${...}\``, snippet: line.trim() };
-            }
-        }
+        yield* findViolationsInLine(lines[lineIdx], lineIdx + 1);
     }
 }
 
@@ -166,18 +198,35 @@ function* findViolationsInFile(relPath) {
 const violations = [];
 const allowlistedHits = [];
 
-for (const target of SCAN_TARGETS) {
-    let entries;
-    try { entries = listDir(target.dir); } catch (_) { continue; }
-    for (const entry of entries) {
-        if (!target.match(entry)) continue;
-        const relPath = `${target.dir}/${entry}`;
-        for (const v of findViolationsInFile(relPath)) {
+if (REF) {
+    for (const line of grepRefSetItemLines(listScanFiles())) {
+        const match = /^(?:[^:]+:)?([^:]+):(\d+):(.*)$/.exec(line);
+        if (!match) continue;
+        const relPath = match[1];
+        const lineNumber = Number(match[2]);
+        for (const v of findViolationsInLine(match[3], lineNumber)) {
             const key = `${relPath}:${v.line}`;
             if (allowlist.has(key)) {
                 allowlistedHits.push({ ...v, file: relPath });
             } else {
                 violations.push({ ...v, file: relPath });
+            }
+        }
+    }
+} else {
+    for (const target of SCAN_TARGETS) {
+        let entries;
+        try { entries = listDir(target.dir); } catch (_) { continue; }
+        for (const entry of entries) {
+            if (!target.match(entry)) continue;
+            const relPath = `${target.dir}/${entry}`;
+            for (const v of findViolationsInFile(relPath)) {
+                const key = `${relPath}:${v.line}`;
+                if (allowlist.has(key)) {
+                    allowlistedHits.push({ ...v, file: relPath });
+                } else {
+                    violations.push({ ...v, file: relPath });
+                }
             }
         }
     }

@@ -77,7 +77,9 @@ pnpm push:agent -- --status
 `pnpm push:safe` deprecated и не должен использоваться как shortcut: `HUSKY=0`
 не является нормальным push-flow. `pnpm push:preflight` можно запускать отдельно
 как прогрев/диагностику локальных blockers; для старого one-command поведения
-добавь к `push:agent` флаг `--preflight`.
+добавь к `push:agent` флаг `--preflight`. Расширенные warn-only diagnostics,
+например счётчик `React.startTransition`, запускаются через
+`pnpm push:preflight -- --diagnostics`.
 
 Проверить без commit и push:
 

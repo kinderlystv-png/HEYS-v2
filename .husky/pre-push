@@ -9,7 +9,12 @@
 echo "📝 Проверка What's New для текущего deploy/push..."
 
 check_status=0
-pnpm prepare-release:check || check_status=$?
+current_head=$(git rev-parse HEAD 2>/dev/null || true)
+if [ -n "$HEYS_PUSH_AGENT_PRECHECKED_HEAD" ] && [ "$HEYS_PUSH_AGENT_PRECHECKED_HEAD" = "$current_head" ]; then
+  echo "✅ What's New уже проверен push:agent для HEAD ${current_head}."
+else
+  pnpm prepare-release:check || check_status=$?
+fi
 
 if [ -t 1 ]; then
   echo ""

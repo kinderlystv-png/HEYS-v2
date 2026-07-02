@@ -90,7 +90,7 @@ function run(command, commandArgs, options = {}) {
     stdio: options.stdio || 'inherit',
     encoding: options.encoding || 'utf8',
     shell: false,
-    env: process.env,
+    env: options.env ? { ...process.env, ...options.env } : process.env,
   });
   return result;
 }
@@ -588,7 +588,10 @@ function push() {
 
   const { remote, branch } = getPushTarget();
   const headSha = getGitOutput(['rev-parse', 'HEAD']);
-  const result = runGit(['push', remote, branch], { mutates: true });
+  const result = runGit(['push', remote, branch], {
+    mutates: true,
+    env: { HEYS_PUSH_AGENT_PRECHECKED_HEAD: headSha },
+  });
   if (result.status !== 0) process.exit(result.status || 1);
   waitForDeploy({ branch, headSha });
 }

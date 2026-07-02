@@ -86,6 +86,39 @@ function listDir(dir) {
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
+function listScanFiles() {
+  const relFiles = [];
+  for (const { dir, match } of SCAN_TARGETS) {
+    let files;
+    try { files = listDir(dir); } catch (_) { continue; }
+    for (const file of files) {
+      if (match(file)) relFiles.push(`${dir}/${file}`);
+    }
+  }
+  return relFiles;
+}
+
+function grepRefMatches(relFiles) {
+  if (!relFiles.length) return [];
+  let output = '';
+  try {
+    output = execFileSync(
+      'git',
+      ['grep', '-n', '-E', 'localStorage\\.setItem[[:space:]]*\\(', REF, '--', ...relFiles],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        maxBuffer: 16 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+  } catch (error) {
+    if (error.status === 1) return [];
+    throw error;
+  }
+  return output.split(/\r?\n/).filter(Boolean);
+}
+
 // ── Read allowlist ─────────────────────────────────────────────────────────
 const allowlist = new Set();
 try {
@@ -102,21 +135,30 @@ try {
 // ── Scan ───────────────────────────────────────────────────────────────────
 const hits = [];
 
-for (const { dir, match } of SCAN_TARGETS) {
-  let files;
-  try { files = listDir(dir); } catch (_) { continue; }
+if (REF) {
+  for (const line of grepRefMatches(listScanFiles())) {
+    const match = /^(?:[^:]+:)?([^:]+):(\d+):(.*)$/.exec(line);
+    if (!match) continue;
+    const ref = `${match[1]}:${match[2]}`;
+    hits.push({ ref, listed: allowlist.has(ref), snippet: match[3].trim().slice(0, 100) });
+  }
+} else {
+  for (const { dir, match } of SCAN_TARGETS) {
+    let files;
+    try { files = listDir(dir); } catch (_) { continue; }
 
-  for (const file of files) {
-    if (!match(file)) continue;
-    const relPath = `${dir}/${file}`;
-    let content;
-    try { content = readText(relPath); } catch (_) { continue; }
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (PATTERN.test(lines[i])) {
-        const ref = `${relPath}:${i + 1}`;
-        const listed = allowlist.has(ref);
-        hits.push({ ref, listed, snippet: lines[i].trim().slice(0, 100) });
+    for (const file of files) {
+      if (!match(file)) continue;
+      const relPath = `${dir}/${file}`;
+      let content;
+      try { content = readText(relPath); } catch (_) { continue; }
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (PATTERN.test(lines[i])) {
+          const ref = `${relPath}:${i + 1}`;
+          const listed = allowlist.has(ref);
+          hits.push({ ref, listed, snippet: lines[i].trim().slice(0, 100) });
+        }
       }
     }
   }
