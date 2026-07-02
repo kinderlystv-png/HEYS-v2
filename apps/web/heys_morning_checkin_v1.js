@@ -1085,6 +1085,54 @@
     return `heys_morning_checkin_progress_v1_${dateKey}`;
   }
 
+  const MORNING_CORE_STEPS = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
+  const MORNING_STEP_LABELS = {
+    weight: 'вес',
+    sleepTime: 'сон',
+    sleepQuality: 'качество сна',
+    morning_mood: 'самочувствие',
+    stepsGoal: 'цель шагов',
+    yesterdayVerify: 'проверка вчера',
+    refeedDay: 'загрузочный день',
+    cycle: 'цикл',
+    measurements: 'замеры',
+    cold_exposure: 'холод',
+    supplements: 'добавки',
+    morningRoutine: 'финал',
+    __flow__: 'чек-ин'
+  };
+
+  function emitMorningCheckinStatus(dateKey, clientId, reason) {
+    try {
+      const status = getMorningCheckinStatus(dateKey, clientId);
+      window.dispatchEvent(new CustomEvent('heys:morning-checkin-status', {
+        detail: { reason, status }
+      }));
+      return status;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function traceMorningCheckin(event, meta = {}) {
+    try {
+      const payload = {
+        event,
+        dateKey: meta.dateKey || getTodayKey(),
+        client: String(meta.clientId || getCurrentClientId() || '').slice(0, 8) || null,
+        flowId: meta.flowId || null,
+        stepId: meta.stepId || null,
+        status: meta.status || null,
+        error: meta.error || null,
+        plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : undefined,
+        affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : undefined
+      };
+      console.warn('[CHECKIN.flow]', payload);
+    } catch (_) {
+      // Trace must never affect check-in.
+    }
+  }
+
   function createMorningFlowId(dateKey) {
     return `${dateKey}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -1116,7 +1164,15 @@
       if (!ledger.steps[id]) ledger.steps[id] = { status: 'planned' };
     });
     ledger.updatedAt = Date.now();
-    return writeMorningProgress(ledger, clientId);
+    const written = writeMorningProgress(ledger, clientId);
+    traceMorningCheckin(samePlan ? 'plan_reused' : 'plan_created', {
+      dateKey,
+      clientId,
+      flowId: written?.flowId,
+      plannedStepIds
+    });
+    emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created');
+    return written;
   }
 
   function isUnresolvedProgressStatus(status) {
@@ -1147,7 +1203,18 @@
       ...patch
     };
     ledger.updatedAt = Date.now();
-    return writeMorningProgress(ledger, clientId);
+    const written = writeMorningProgress(ledger, clientId);
+    traceMorningCheckin('step_status', {
+      dateKey,
+      clientId,
+      flowId: written?.flowId,
+      stepId,
+      status: ledger.steps[stepId]?.status,
+      error: ledger.steps[stepId]?.error || null,
+      affectedKeys: ledger.steps[stepId]?.affectedKeys || []
+    });
+    emitMorningCheckinStatus(dateKey, clientId, 'step_status');
+    return written;
   }
 
   function getFreshMorningDay(dateKey) {
@@ -1159,6 +1226,87 @@
 
   function getFreshMorningProfile(clientId = getCurrentClientId()) {
     return readProfileForceRawScoped(clientId) || readStoredValue('heys_profile', {}) || {};
+  }
+
+  function getMorningCorePresence(day, profile) {
+    return {
+      weight: hasCheckinWeight(day),
+      sleepTime: hasSleepTime(day),
+      sleepQuality: hasSleepQuality(day),
+      morningMood: hasMorningMood(day),
+      stepsGoal: hasStepsGoal(profile)
+    };
+  }
+
+  function countMorningStepStatuses(steps) {
+    return steps.reduce((acc, row) => {
+      const s = row.status || 'unknown';
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  function summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone }) {
+    const flowStatus = ledger?.steps?.__flow__?.status || null;
+    const failed = steps.find((row) => row.status === 'failed_sync');
+    const unresolved = steps.find((row) => isUnresolvedProgressStatus(row.status));
+    const allCorePresent = Object.values(corePresence || {}).every(Boolean);
+    if (flowStatus === 'synced') return { state: 'complete', label: 'чек-ин завершён' };
+    if (flowStatus === 'failed_sync') return { state: 'failed', label: 'ошибка финальной синхронизации' };
+    if (flowStatus === 'saved_local') return { state: 'in_progress', label: 'финальная синхронизация' };
+    if (flowStatus === 'closed') return { state: 'closed', label: 'чек-ин прерван' };
+    if (failed) return { state: 'failed', label: `ошибка: ${MORNING_STEP_LABELS[failed.id] || failed.id}` };
+    if (unresolved) return { state: 'in_progress', label: `сохраняется: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };
+    if (allCorePresent && sessionDone) return { state: 'core_done', label: 'обязательные шаги на месте' };
+    if (ledger) return { state: 'open', label: 'чек-ин открыт/не завершён' };
+    if (allCorePresent) return { state: 'data_present', label: 'данные есть, flow неизвестен' };
+    return { state: 'missing', label: 'чек-ин не завершён' };
+  }
+
+  function getMorningCheckinStatus(dateKey = getTodayKey(), clientId = getCurrentClientId()) {
+    const ledger = readMorningProgress(dateKey, clientId);
+    const day = getFreshMorningDay(dateKey);
+    const profile = getFreshMorningProfile(clientId);
+    const corePresence = getMorningCorePresence(day, profile);
+    const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds.slice() : [];
+    const stepIds = plannedStepIds.length
+      ? plannedStepIds
+      : MORNING_CORE_STEPS.filter((id) => !isMorningStepComplete(id, { dateKey, clientId, day, profile }));
+    const steps = stepIds.map((id) => {
+      const row = ledger?.steps?.[id] || {};
+      return {
+        id,
+        label: MORNING_STEP_LABELS[id] || id,
+        status: row.status || (isMorningStepComplete(id, { dateKey, clientId, day, profile }) ? 'data_present' : 'missing'),
+        savedAt: row.savedAt || null,
+        syncedAt: row.syncedAt || null,
+        error: row.error || null,
+        completeByData: isMorningStepComplete(id, { dateKey, clientId, day, profile })
+      };
+    });
+    const sessionKey = getCheckinSessionKey(clientId, dateKey);
+    let sessionDone = false;
+    try {
+      sessionDone = sessionStorage.getItem(sessionKey) === 'true';
+    } catch (_) {
+      sessionDone = false;
+    }
+    const summary = summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone });
+    return {
+      version: 1,
+      dateKey,
+      clientId,
+      flowId: ledger?.flowId || null,
+      state: summary.state,
+      label: summary.label,
+      sessionDone,
+      updatedAt: ledger?.updatedAt || null,
+      flowStatus: ledger?.steps?.__flow__?.status || null,
+      plannedStepIds,
+      counts: countMorningStepStatuses(steps),
+      corePresence,
+      steps
+    };
   }
 
   function isMorningStepComplete(stepId, state = {}) {
@@ -1292,6 +1440,13 @@
   function createMorningStepAck(plan) {
     return async ({ stepId, saveResult, skipped }) => {
       const affectedKeys = getAffectedKeysForMorningStep(stepId, plan.dateKey, saveResult);
+      traceMorningCheckin(skipped ? 'step_skip_ack_start' : 'step_ack_start', {
+        dateKey: plan.dateKey,
+        clientId: plan.clientId,
+        flowId: plan.flowId,
+        stepId,
+        affectedKeys
+      });
       return flushAndMarkMorningStep(stepId, affectedKeys, 10000, {
         dateKey: plan.dateKey,
         clientId: plan.clientId,
@@ -1315,6 +1470,16 @@
   function completeMorningCheckin(plan, onComplete) {
     const todayKey = plan?.dateKey || getTodayKey();
     const currentClientId = plan?.clientId || getCurrentClientId();
+    markMorningProgressStep(todayKey, '__flow__', {
+      status: 'saved_local',
+      savedAt: Date.now(),
+      error: null
+    }, currentClientId);
+    traceMorningCheckin('flow_final_flush_start', {
+      dateKey: todayKey,
+      clientId: currentClientId,
+      flowId: plan?.flowId
+    });
 
     const finish = () => {
       dispatchMorningCheckinDayRefresh(todayKey, 'morning-checkin-complete');
@@ -1336,6 +1501,12 @@
         status: 'synced',
         syncedAt: Date.now()
       }, currentClientId);
+      traceMorningCheckin('flow_complete', {
+        dateKey: todayKey,
+        clientId: currentClientId,
+        flowId: plan?.flowId,
+        status: 'synced'
+      });
       if (onComplete) onComplete();
       return true;
     };
@@ -1345,10 +1516,32 @@
         if (!flushed) throw new Error('checkin_sync_timeout');
         return finish();
       }).catch((err) => {
+        markMorningProgressStep(todayKey, '__flow__', {
+          status: 'failed_sync',
+          error: err?.message || String(err || 'checkin_sync_failed')
+        }, currentClientId);
+        traceMorningCheckin('flow_failed', {
+          dateKey: todayKey,
+          clientId: currentClientId,
+          flowId: plan?.flowId,
+          status: 'failed_sync',
+          error: err?.message || String(err || 'checkin_sync_failed')
+        });
         console.warn('[MorningCheckin] final flushPendingQueue failed:', err?.message || err);
         throw err;
       });
     }
+    markMorningProgressStep(todayKey, '__flow__', {
+      status: 'failed_sync',
+      error: 'checkin_sync_unavailable'
+    }, currentClientId);
+    traceMorningCheckin('flow_failed', {
+      dateKey: todayKey,
+      clientId: currentClientId,
+      flowId: plan?.flowId,
+      status: 'failed_sync',
+      error: 'checkin_sync_unavailable'
+    });
     return Promise.reject(new Error('checkin_sync_unavailable'));
   }
 
@@ -1461,7 +1654,20 @@
           }
           return;
         }
-        const proceed = () => { if (typeof onClose === 'function') onClose(); };
+        const proceed = () => {
+          markMorningProgressStep(plan.dateKey, '__flow__', {
+            status: 'closed',
+            closedAt: Date.now(),
+            error: null
+          }, plan.clientId);
+          traceMorningCheckin('flow_closed_by_user', {
+            dateKey: plan.dateKey,
+            clientId: plan.clientId,
+            flowId: plan.flowId,
+            status: 'closed'
+          });
+          if (typeof onClose === 'function') onClose();
+        };
         const cm = HEYS && HEYS.ConfirmModal;
         if (cm && typeof cm.confirmAction === 'function') {
           cm.confirmAction({
@@ -1529,8 +1735,17 @@
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
   HEYS.MorningCheckinUtils.flushAndMarkMorningStep = flushAndMarkMorningStep;
   HEYS.MorningCheckinUtils.readMorningProgress = readMorningProgress;
+  HEYS.MorningCheckinUtils.getMorningCheckinStatus = getMorningCheckinStatus;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
+  HEYS.MorningCheckinDebug = HEYS.MorningCheckinDebug || {};
+  HEYS.MorningCheckinDebug.getStatus = getMorningCheckinStatus;
+  HEYS.MorningCheckinDebug.readProgress = readMorningProgress;
+  HEYS.MorningCheckinDebug.dump = function dumpMorningCheckinStatus(dateKey, clientId) {
+    const status = getMorningCheckinStatus(dateKey, clientId);
+    console.warn('[CHECKIN.flow] status_dump', status);
+    return status;
+  };
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));

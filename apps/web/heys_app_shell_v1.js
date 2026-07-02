@@ -598,6 +598,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const [displayStatus, setDisplayStatus] = React.useState(cloudStatus);
         const lastSyncedAtRef = React.useRef(null);
         const syncFadeTimerRef = React.useRef(null);
+        const [checkinStatus, setCheckinStatus] = React.useState(null);
 
         React.useEffect(() => {
             if (!showClientDropdown) return;
@@ -1327,6 +1328,28 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return () => clearTimeout(syncFadeTimerRef.current);
         }, [cloudStatus]);
 
+        React.useEffect(() => {
+            const refresh = (event) => {
+                try {
+                    const status = event?.detail?.status || HEYS?.MorningCheckinDebug?.getStatus?.();
+                    setCheckinStatus(status && typeof status === 'object' ? status : null);
+                } catch (_) {
+                    setCheckinStatus(null);
+                }
+            };
+            refresh();
+            window.addEventListener('heys:morning-checkin-status', refresh);
+            window.addEventListener('heys:checkin-complete', refresh);
+            window.addEventListener('heys:day-updated', refresh);
+            window.addEventListener('heysSyncCompleted', refresh);
+            return () => {
+                window.removeEventListener('heys:morning-checkin-status', refresh);
+                window.removeEventListener('heys:checkin-complete', refresh);
+                window.removeEventListener('heys:day-updated', refresh);
+                window.removeEventListener('heysSyncCompleted', refresh);
+            };
+        }, [clientIdValue, todayISO]);
+
         const isBackgroundQueuedState = showPendingSyncBanner && displayStatus === 'syncing';
         const effectiveDisplayStatus = isBackgroundQueuedState ? 'queued' : displayStatus;
         const haptic = HEYS?.haptic || (() => { });
@@ -1342,6 +1365,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const handleSyncBadgeClick = () => {
             if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline' || effectiveDisplayStatus === 'session') return;
             haptic('light');
+            const rt = {};
+            let currentCheckinStatus = null;
             // Build and copy comprehensive debug snapshot to clipboard
             try {
                 const now = new Date();
@@ -1353,8 +1378,25 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     const det = e.details ? ' ' + JSON.stringify(e.details) : '';
                     return `[HEYS.sync] ${t} ${e.type || ''}${det}`;
                 });
+                const formatCheckinStatusLines = (status) => {
+                    if (!status) return ['  (MorningCheckinDebug unavailable)'];
+                    const lines = [];
+                    const age = status.updatedAt ? `${Date.now() - status.updatedAt}ms ago` : '—';
+                    lines.push(`  state: ${status.state} · ${status.label}`);
+                    lines.push(`  date: ${status.dateKey}  flowId: ${status.flowId || '—'}  flowStatus: ${status.flowStatus || '—'}  updated: ${age}`);
+                    lines.push(`  sessionDone: ${!!status.sessionDone}  counts: ${JSON.stringify(status.counts || {})}`);
+                    lines.push(`  corePresence: ${JSON.stringify(status.corePresence || {})}`);
+                    lines.push('  --- steps (id | status | data | error) ---');
+                    (status.steps || []).forEach((step) => {
+                        lines.push(`  ${String(step.id).padEnd(18)} | ${String(step.status || '—').padEnd(12)} | data=${step.completeByData ? 'Y' : 'N'} | ${step.error || '—'}`);
+                    });
+                    return lines;
+                };
+                currentCheckinStatus = (() => {
+                    try { return HEYS?.MorningCheckinDebug?.getStatus?.() || checkinStatus || null; }
+                    catch (_) { return checkinStatus || null; }
+                })();
                 // Runtime state
-                const rt = {};
                 try {
                     const _rr = HEYS?.cloud?.getRoutingStatus?.();
                     rt.status = (_rr && typeof _rr === 'object') ? JSON.stringify(_rr) : (_rr || effectiveDisplayStatus);
@@ -1490,6 +1532,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     } else {
                         extraLines.push('  (no day data in LS)');
                     }
+
+                    pushHeader('Morning check-in control');
+                    formatCheckinStatusLines(currentCheckinStatus).forEach(line => extraLines.push(line));
 
                     // === Day React state vs LS divergence (render-desync diagnostics, Phase B) ===
                     pushHeader('Day React state vs LS divergence');
@@ -2202,6 +2247,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     online: typeof navigator !== 'undefined' ? navigator.onLine : null,
                     location: typeof location !== 'undefined' ? location.href : null,
                 });
+                console.log('=== Morning check-in control ===');
+                console.log(currentCheckinStatus || '(MorningCheckinDebug unavailable)');
                 console.log('=== Current day (DayTab state if accessible) ===');
                 const dayDate = (() => {
                     try {
@@ -3177,6 +3224,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
+                        const checkinTitle = checkinStatus
+                            ? `Чек-ин: ${checkinStatus.label}${checkinStatus.flowStatus ? ` (${checkinStatus.flowStatus})` : ''}`
+                            : '';
                         let baseTitle;
                         if (effectiveDisplayStatus === 'syncing') {
                             baseTitle = syncProgress?.total > 1
@@ -3213,6 +3263,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         } else {
                             baseTitle = 'Нажмите для синхронизации';
                         }
+                        if (checkinTitle) baseTitle += ` · ${checkinTitle}`;
                         return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
                     })(),
                     onClick: handleSyncBadgeClick,

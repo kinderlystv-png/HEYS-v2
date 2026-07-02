@@ -376,6 +376,27 @@
         } catch (_) { /* trace must never break app */ }
       });
     } catch (_) { /* noop */ }
+    try {
+      var checkinFlushTimer = 0;
+      global.addEventListener('heys:morning-checkin-status', function (ev) {
+        try {
+          var status = ev && ev.detail && ev.detail.status;
+          console.warn('[CHECKIN.trace] status_event', {
+            reason: ev && ev.detail && ev.detail.reason,
+            state: status && status.state,
+            label: status && status.label,
+            date: status && status.dateKey,
+            flowStatus: status && status.flowStatus,
+            counts: status && status.counts
+          });
+          if (checkinFlushTimer) clearTimeout(checkinFlushTimer);
+          checkinFlushTimer = setTimeout(function () {
+            checkinFlushTimer = 0;
+            flush('checkin-status');
+          }, 350);
+        } catch (_) { /* trace must never break app */ }
+      });
+    } catch (_) { /* noop */ }
 
     // Storage-level trace: ловит фактические dayv2 writes, включая bypass через
     // сохранённый originalSetItem в storage bridge. Важно патчить prototype: сам
