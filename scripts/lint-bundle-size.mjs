@@ -18,14 +18,23 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const BASELINE_PATH = resolve(ROOT, 'apps/web/__perf_baselines__/boot-split-baselines.json');
-const MANIFEST_PATH = resolve(ROOT, 'apps/web/public/bundle-manifest.json');
+const BASELINE_REL = 'apps/web/__perf_baselines__/boot-split-baselines.json';
+const MANIFEST_REL = 'apps/web/public/bundle-manifest.json';
+const BASELINE_PATH = resolve(ROOT, BASELINE_REL);
+const MANIFEST_PATH = resolve(ROOT, MANIFEST_REL);
 const TRACKED_BUNDLES = ['boot-init', 'boot-core', 'boot-calc', 'boot-day', 'boot-app'];
 const UPDATE_MODE = process.argv.includes('--update-baseline');
+const REF = getCliOption('--ref');
+
+function getCliOption(name) {
+    const prefix = `${name}=`;
+    const arg = process.argv.find((item) => item.startsWith(prefix));
+    return arg ? arg.slice(prefix.length).trim() : '';
+}
 
 function fmtSize(bytes) {
     if (bytes < 1024) return `${bytes}B`;
@@ -34,6 +43,19 @@ function fmtSize(bytes) {
 }
 
 function loadJSON(path) {
+    if (REF) {
+        const relPath = path === BASELINE_PATH ? BASELINE_REL : MANIFEST_REL;
+        try {
+            return JSON.parse(execFileSync('git', ['show', `${REF}:${relPath}`], {
+                cwd: ROOT,
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'pipe'],
+            }));
+        } catch {
+            console.error(`[bundle-size-guard] ❌ Файл не найден в ${REF}: ${relPath}`);
+            process.exit(1);
+        }
+    }
     if (!existsSync(path)) {
         console.error(`[bundle-size-guard] ❌ Файл не найден: ${path}`);
         process.exit(1);
@@ -77,6 +99,11 @@ function updateBaseline(baseline, currentSizes) {
 }
 
 function main() {
+    if (UPDATE_MODE && REF) {
+        console.error('[bundle-size-guard] ❌ --update-baseline нельзя использовать вместе с --ref.');
+        process.exit(2);
+    }
+
     const baseline = loadJSON(BASELINE_PATH);
     const manifest = loadJSON(MANIFEST_PATH);
     const current = getCurrentSizes(manifest);

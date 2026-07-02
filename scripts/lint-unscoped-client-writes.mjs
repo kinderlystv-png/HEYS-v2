@@ -26,8 +26,8 @@
  *   с обязательным комментарием выше why это OK.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { resolve, relative } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const ALLOWLIST_REL = 'scripts/unscoped-client-writes-allowlist.txt';
@@ -92,6 +92,7 @@ function gitRead(relPath) {
     return execFileSync('git', ['show', `${REF}:${relPath}`], {
         cwd: ROOT,
         encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
 }
@@ -105,6 +106,7 @@ function listDir(dir) {
     const output = execFileSync('git', ['ls-tree', '--name-only', `${REF}:${dir}`], {
         cwd: ROOT,
         encoding: 'utf8',
+        maxBuffer: 4 * 1024 * 1024,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);

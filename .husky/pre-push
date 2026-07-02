@@ -72,7 +72,7 @@ else
 fi
 
 echo "🔍 Проверка прямых localStorage.setItem (Phase 3 lint gate, warn-only)..."
-localstorage_output=$(node scripts/lint-direct-localstorage-writes.mjs 2>&1)
+localstorage_output=$(node scripts/lint-direct-localstorage-writes.mjs --ref=HEAD 2>&1)
 localstorage_status=$?
 if [ "$localstorage_status" -eq 0 ]; then
   printf '%s\n' "$localstorage_output" | tail -n 2
@@ -83,7 +83,7 @@ else
 fi
 
 echo "🔒 Проверка unscoped writes к per-client keys (anti-pollution guard)..."
-unscoped_output=$(node scripts/lint-unscoped-client-writes.mjs 2>&1)
+unscoped_output=$(node scripts/lint-unscoped-client-writes.mjs --ref=HEAD 2>&1)
 unscoped_status=$?
 if [ "$unscoped_status" -eq 0 ]; then
   printf '%s\n' "$unscoped_output" | tail -n 3
@@ -97,7 +97,7 @@ else
 fi
 
 echo "🔒 Проверка raw sessionStorage.clear() (drop fence preservation guard)..."
-raw_session_output=$(node scripts/lint-raw-session-clear.mjs 2>&1)
+raw_session_output=$(node scripts/lint-raw-session-clear.mjs --ref=HEAD 2>&1)
 raw_session_status=$?
 if [ "$raw_session_status" -eq 0 ]; then
   printf '%s\n' "$raw_session_output" | tail -n 2
@@ -109,17 +109,8 @@ else
   exit 1
 fi
 
-echo "🔍 Проверка React.startTransition counter (anti-pattern guard, warn-only)..."
-react_transition_output=$(node scripts/lint-react-start-transition.mjs 2>&1)
-react_transition_status=$?
-if [ "$react_transition_status" -eq 0 ]; then
-  printf '%s\n' "$react_transition_output" | tail -n 1
-else
-  printf '%s\n' "$react_transition_output"
-fi
-
 echo "📦 Проверка bundle size budget (P0-D, +5% guard)..."
-node scripts/lint-bundle-size.mjs || {
+node scripts/lint-bundle-size.mjs --ref=HEAD || {
   echo "❌ Bundle size guard: critical-path бандл вырос >+5% от baseline. Push отменён."
   echo "💡 Если рост оправдан — добавь [bundle-size-ok] в commit message."
   exit 1

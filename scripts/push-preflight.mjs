@@ -5,6 +5,8 @@
  * Runs the predictable local blockers before `git push`, without creating
  * commits and without pushing. When tests pass, it warms the same source-SHA
  * cache used by `.husky/pre-push`, so the following push can skip Vitest.
+ * Blocking gates mirror `.husky/pre-push` and inspect committed `HEAD`, not
+ * unrelated dirty worktree files from parallel agents.
  *
  * Usage:
  *   pnpm push:preflight
@@ -134,22 +136,22 @@ function main() {
     [
       '2) direct localStorage writes',
       'node',
-      ['scripts/lint-direct-localstorage-writes.mjs'],
+      ['scripts/lint-direct-localstorage-writes.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
     [
       '3) unscoped client writes',
       'node',
-      ['scripts/lint-unscoped-client-writes.mjs'],
+      ['scripts/lint-unscoped-client-writes.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
     [
       '4) raw sessionStorage.clear guard',
       'node',
-      ['scripts/lint-raw-session-clear.mjs'],
+      ['scripts/lint-raw-session-clear.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
-    ['5) bundle size budget', 'node', ['scripts/lint-bundle-size.mjs']],
+    ['5) bundle size budget', 'node', ['scripts/lint-bundle-size.mjs', '--ref=HEAD']],
     ['6) legacy bundles match HEAD', 'node', ['scripts/verify-legacy-bundles.mjs', '--ref=HEAD']],
   ];
 
@@ -158,7 +160,7 @@ function main() {
   }
 
   writeLine('');
-  writeLine('Info: React.startTransition guard is warn-only in pre-push.');
+  writeLine('Info: React.startTransition counter is optional diagnostics, not a blocking pre-push gate.');
   runGate('   React.startTransition counter', 'node', ['scripts/lint-react-start-transition.mjs'], {
     compactSuccess: true,
   });

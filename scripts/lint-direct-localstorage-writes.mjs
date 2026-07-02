@@ -66,6 +66,7 @@ function gitRead(relPath) {
   return execFileSync('git', ['show', `${REF}:${relPath}`], {
     cwd: ROOT,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
@@ -79,6 +80,7 @@ function listDir(dir) {
   const output = execFileSync('git', ['ls-tree', '--name-only', `${REF}:${dir}`], {
     cwd: ROOT,
     encoding: 'utf8',
+    maxBuffer: 4 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
