@@ -16,6 +16,7 @@ const {
   getStatusShortLines,
   parseCliArgs,
   shouldWatchDeploy,
+  shouldRunPreflight,
 } = await import(scriptUrl);
 
 describe('push-agent CLI helpers', () => {
@@ -133,6 +134,12 @@ describe('push-agent CLI helpers', () => {
   it('watches deploys by default only for main pushes', () => {
     expect(shouldWatchDeploy('main')).toBe(true);
     expect(shouldWatchDeploy('feature/test')).toBe(false);
+  });
+
+  it('runs preflight only when explicitly requested for a mutating push', () => {
+    expect(shouldRunPreflight(new Set())).toBe(false);
+    expect(shouldRunPreflight(new Set(['--preflight']))).toBe(true);
+    expect(shouldRunPreflight(new Set(['--preflight', '--dry-run']))).toBe(false);
   });
 
   it('uses the Yandex deploy workflow as the default watch target', () => {

@@ -11,6 +11,7 @@
  *   pnpm push:agent -- --dry-run --title="..." --item-title="..." --item-description="..."
  *   pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."
  *   pnpm push:agent -- --confirm-push --remote=origin --branch=main ...
+ *   pnpm push:agent -- --confirm-push --preflight ...
  *   pnpm push:agent -- --status
  *   pnpm push:agent -- --print-command
  *   pnpm push:agent -- --confirm-push --no-push ...
@@ -58,6 +59,10 @@ function writeError(text = '') {
 
 function hasFlag(name) {
   return cli.flags.has(name);
+}
+
+function shouldRunPreflight(flags = cli.flags) {
+  return flags.has('--preflight') && !flags.has('--dry-run');
 }
 
 function getOption(name) {
@@ -290,8 +295,9 @@ function printSuggestedCommandAndExit() {
   writeLine('Suggested non-interactive command:');
   writeLine(buildSuggestedCommand());
   writeLine('');
-  writeLine('Note: this command runs pnpm push:preflight automatically before git push.');
-  writeLine('Optional diagnostic only: pnpm push:preflight');
+  writeLine('Note: git push still runs the normal .husky/pre-push guards.');
+  writeLine('Optional warm-up before push: pnpm push:preflight');
+  writeLine('Optional one-command warm-up: add --preflight.');
   writeLine('');
   writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
   process.exit(0);
@@ -574,7 +580,7 @@ function push() {
     writeLine('');
   }
 
-  if (!hasFlag('--dry-run')) {
+  if (shouldRunPreflight()) {
     writeLine('Running push preflight before git push...');
     const preflight = run('pnpm', ['push:preflight'], { mutates: true });
     if (preflight.status !== 0) process.exit(preflight.status || 1);
@@ -613,5 +619,6 @@ export {
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
   shouldWatchDeploy,
+  shouldRunPreflight,
   parseCliArgs,
 };

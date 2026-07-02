@@ -23,8 +23,8 @@ function printGuidance(write) {
   write('  pnpm push:agent -- --print-command');
   write('  pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."');
   write('');
-  write('push:agent runs pnpm push:preflight automatically before git push.');
-  write('Optional diagnostic only: pnpm push:preflight');
+  write('git push still runs the normal .husky/pre-push guards.');
+  write('Optional warm-up before push: pnpm push:preflight');
   write('');
   write('HUSKY=0 is not a normal push flow for HEYS.');
 }

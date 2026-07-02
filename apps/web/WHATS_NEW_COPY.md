@@ -57,11 +57,10 @@ pnpm push:agent -- --confirm-push --title="Синхронизация актив
 ```
 
 `push:agent` проверит `What's New`, при необходимости добавит entry и follow-up
-commit с автоматическим `coveredCommits`, запустит `pnpm push:preflight` перед
-`git push`, выполнит push с активными pre-push guards и дождётся зелёного
-`Deploy to Yandex Cloud` для свежего `HEAD`. Если в staging уже лежат не-release
-файлы, команда остановится, чтобы случайно не включить их в follow-up commit для
-`What's New`.
+commit с автоматическим `coveredCommits`, выполнит push с активными pre-push
+guards и дождётся зелёного `Deploy to Yandex Cloud` для свежего `HEAD`. Если в
+staging уже лежат не-release файлы, команда остановится, чтобы случайно не
+включить их в follow-up commit для `What's New`.
 
 Получить готовый шаблон команды:
 
@@ -77,7 +76,8 @@ pnpm push:agent -- --status
 
 `pnpm push:safe` deprecated и не должен использоваться как shortcut: `HUSKY=0`
 не является нормальным push-flow. `pnpm push:preflight` можно запускать отдельно
-только как диагностику локальных blockers.
+как прогрев/диагностику локальных blockers; для старого one-command поведения
+добавь к `push:agent` флаг `--preflight`.
 
 Проверить без commit и push:
 
