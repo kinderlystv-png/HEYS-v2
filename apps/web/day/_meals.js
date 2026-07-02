@@ -1766,44 +1766,49 @@
                         })(),
                     );
                 }),
-                productActionSheet && React.createElement('div', {
-                    className: 'mpc-action-sheet-backdrop',
-                    onClick: () => {
-                        if (productActionSheetIgnoreNextBackdropClickRef.current) {
-                            productActionSheetIgnoreNextBackdropClickRef.current = false;
-                            return;
-                        }
-                        if (Date.now() - (productActionSheet.openedAt || 0) < 350) return;
-                        closeProductActionSheet();
-                    },
-                    onContextMenu: (e) => {
-                        e.preventDefault();
-                        closeProductActionSheet();
-                    },
-                },
-                    React.createElement('div', {
-                        className: 'mpc-action-sheet',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                        React.createElement('div', { className: 'mpc-action-sheet__title' }, productActionSheet.title),
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'mpc-action-sheet__btn',
-                            onClick: () => openProductEditorFromSheet('product'),
+                productActionSheet && (() => {
+                    const overlay = React.createElement('div', {
+                        className: 'mpc-action-sheet-backdrop',
+                        onClick: () => {
+                            if (productActionSheetIgnoreNextBackdropClickRef.current) {
+                                productActionSheetIgnoreNextBackdropClickRef.current = false;
+                                return;
+                            }
+                            if (Date.now() - (productActionSheet.openedAt || 0) < 350) return;
+                            closeProductActionSheet();
                         },
-                            React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '✏️'),
-                            React.createElement('span', null, 'Редактировать продукт')
-                        ),
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'mpc-action-sheet__btn',
-                            onClick: () => openProductEditorFromSheet('barcode'),
+                        onContextMenu: (e) => {
+                            e.preventDefault();
+                            closeProductActionSheet();
                         },
-                            React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '▦'),
-                            React.createElement('span', null, 'Редактировать штрихкод')
+                    },
+                        React.createElement('div', {
+                            className: 'mpc-action-sheet',
+                            onClick: (e) => e.stopPropagation(),
+                        },
+                            React.createElement('div', { className: 'mpc-action-sheet__title' }, productActionSheet.title),
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'mpc-action-sheet__btn',
+                                onClick: () => openProductEditorFromSheet('product'),
+                            },
+                                React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '✏️'),
+                                React.createElement('span', null, 'Редактировать продукт')
+                            ),
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'mpc-action-sheet__btn',
+                                onClick: () => openProductEditorFromSheet('barcode'),
+                            },
+                                React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '▦'),
+                                React.createElement('span', null, 'Редактировать штрихкод')
+                            )
                         )
-                    )
-                ),
+                    );
+                    return ReactDOM?.createPortal && global.document?.body
+                        ? ReactDOM.createPortal(overlay, global.document.body)
+                        : overlay;
+                })(),
 
                 (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
                     meal.photos.map((photo, photoIndex) => {
