@@ -226,6 +226,23 @@ paths:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/products-export:
+    get:
+      summary: Export shared + curator client products (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    post:
+      summary: Export shared + curator client products (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for products export
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   /auth/clients:
     get:
       summary: Get curator's clients list (requires JWT)

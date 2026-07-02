@@ -1430,6 +1430,424 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🥗 PRODUCTS EXPORT — Curator-only aggregate export
+// ═══════════════════════════════════════════════════════════════════════════
+
+function normalizeExportText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeExportBarcode(value) {
+  return String(value || '').replace(/\D+/g, '').trim();
+}
+
+function cleanProductForExport(value, seen) {
+  if (value == null) return value;
+  if (Array.isArray(value)) return value.map((item) => cleanProductForExport(item, seen));
+  if (typeof value !== 'object') return value;
+  if (value instanceof Date) return value.toISOString();
+
+  const refs = seen || new WeakSet();
+  if (refs.has(value)) return null;
+  refs.add(value);
+
+  const out = {};
+  Object.entries(value).forEach(([key, item]) => {
+    if (key === 'portions') return;
+    out[key] = cleanProductForExport(item, refs);
+  });
+  refs.delete(value);
+  return out;
+}
+
+function exportProductName(product) {
+  return String(product?.name || product?.overrides?.name || '').trim();
+}
+
+function exportProductBrand(product) {
+  return String(product?.brand || product?.overrides?.brand || '').trim();
+}
+
+function collectProductBarcodes(product) {
+  const values = [];
+  if (product?.barcode) values.push(product.barcode);
+  if (product?.overrides?.barcode) values.push(product.overrides.barcode);
+  if (Array.isArray(product?.barcodes)) values.push(...product.barcodes);
+  if (Array.isArray(product?.overrides?.barcodes)) values.push(...product.overrides.barcodes);
+  return Array.from(new Set(values.map(normalizeExportBarcode).filter(Boolean)));
+}
+
+function deriveProductIdentityKeys(product, fallbackSeed) {
+  const keys = [];
+  collectProductBarcodes(product).forEach((code) => keys.push(`barcode:${code}`));
+
+  const fingerprint = String(product?.fingerprint || product?.overrides?.fingerprint || '').trim();
+  if (fingerprint) keys.push(`fingerprint:${fingerprint}`);
+
+  const name = normalizeExportText(exportProductName(product) || product?.name_norm);
+  const brand = normalizeExportText(exportProductBrand(product));
+  if (name) keys.push(`name:${brand}|${name}`);
+
+  if (keys.length === 0 && fallbackSeed) keys.push(`row:${fallbackSeed}`);
+  return Array.from(new Set(keys));
+}
+
+function productCompletenessScore(product) {
+  if (!product || typeof product !== 'object') return 0;
+  return Object.entries(product).reduce((score, [key, value]) => {
+    if (key === 'portions' || value == null || value === '') return score;
+    if (Array.isArray(value)) return score + (value.length ? 2 : 0);
+    if (typeof value === 'object') return score + Object.keys(value).length;
+    return score + 1;
+  }, 0);
+}
+
+function parseProductKvValue(value) {
+  if (Array.isArray(value)) return { products: value, skipped: null };
+  if (value && typeof value === 'object') {
+    if (Array.isArray(value.products)) return { products: value.products, skipped: null };
+    if (Array.isArray(value.items)) return { products: value.items, skipped: null };
+    return { products: [], skipped: 'object_without_product_array' };
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        return parseProductKvValue(JSON.parse(trimmed));
+      } catch (_) {
+        return { products: [], skipped: 'invalid_json_string' };
+      }
+    }
+    return { products: [], skipped: 'string_payload' };
+  }
+  return { products: [], skipped: value == null ? 'empty_payload' : typeof value };
+}
+
+function normalizeProductKvKey(key) {
+  return String(key || '').replace(/^heys_[0-9a-f-]{36}_/i, 'heys_');
+}
+
+function isProductKvExportKey(key) {
+  const normalized = normalizeProductKvKey(key);
+  if (normalized === 'heys_products' || normalized === 'heys_products_overlay_v2') return true;
+  if (normalized.startsWith('heys_products_rpc_tail')) return true;
+  if (normalized.startsWith('heys_products_overlay_v2_rpc_tail')) return true;
+  return false;
+}
+
+function mergeOverlayProductForExport(row, sharedById) {
+  if (!row || typeof row !== 'object') return row;
+  if (row._custom) return row;
+
+  const sharedId = row.shared_origin_id || row.sharedOriginId || row.shared_id || row.sharedId;
+  const shared = sharedId && sharedById ? sharedById.get(String(sharedId)) : null;
+  if (!shared) return Object.assign({}, row, row.overrides || {});
+
+  return Object.assign({}, shared, row.overrides || {}, {
+    id: row.id || shared.id,
+    shared_origin_id: sharedId,
+    fingerprint: row.fingerprint || shared.fingerprint || null,
+    user_modified: !!row.user_modified
+  });
+}
+
+function makeProductsExportBuilder() {
+  let nextGroupId = 1;
+  const groups = new Map();
+  const keyToGroupId = new Map();
+
+  function mergeGroups(targetId, sourceId) {
+    if (targetId === sourceId) return;
+    const target = groups.get(targetId);
+    const source = groups.get(sourceId);
+    if (!target || !source || source.inactive) return;
+
+    source.identity_keys.forEach((key) => {
+      target.identity_keys.push(key);
+      keyToGroupId.set(key, targetId);
+    });
+    source.presence.forEach((presence) => addPresence(target, presence));
+    source.sourceProducts.forEach((entry) => target.sourceProducts.push(entry));
+    if (source._rank > target._rank || (source._rank === target._rank && source._score > target._score)) {
+      target.product = source.product;
+      target.name = source.name;
+      target.brand = source.brand;
+      target._rank = source._rank;
+      target._score = source._score;
+    }
+    source.inactive = true;
+  }
+
+  function addPresence(group, presence) {
+    const key = [
+      presence.source,
+      presence.database,
+      presence.client_id || '',
+      presence.product_id || '',
+      presence.row_id || ''
+    ].join('|');
+    if (!group._presenceKeys.has(key)) {
+      group._presenceKeys.add(key);
+      group.presence.push(presence);
+    }
+  }
+
+  function add(product, presence, rank, sourceProduct) {
+    if (!product || typeof product !== 'object') return;
+
+    const fallbackSeed = [
+      presence.source,
+      presence.database,
+      presence.client_id || '',
+      presence.product_id || '',
+      presence.row_id || ''
+    ].join(':');
+    const clean = cleanProductForExport(product);
+    const sourceClean = cleanProductForExport(sourceProduct || product);
+    const identityKeys = deriveProductIdentityKeys(clean, fallbackSeed);
+    const existingIds = Array.from(new Set(identityKeys.map((key) => keyToGroupId.get(key)).filter(Boolean)));
+    const groupId = existingIds[0] || nextGroupId++;
+
+    if (!groups.has(groupId)) {
+      groups.set(groupId, {
+        _rank: -1,
+        _score: -1,
+        _presenceKeys: new Set(),
+        identity_keys: [],
+        sourceProducts: [],
+        presence: [],
+        product: null,
+        name: '',
+        brand: ''
+      });
+    }
+
+    existingIds.slice(1).forEach((otherId) => mergeGroups(groupId, otherId));
+
+    const group = groups.get(groupId);
+    identityKeys.forEach((key) => {
+      if (!group.identity_keys.includes(key)) group.identity_keys.push(key);
+      keyToGroupId.set(key, groupId);
+    });
+
+    const score = productCompletenessScore(clean);
+    if (rank > group._rank || (rank === group._rank && score > group._score)) {
+      group.product = clean;
+      group.name = exportProductName(clean);
+      group.brand = exportProductBrand(clean);
+      group._rank = rank;
+      group._score = score;
+    }
+
+    addPresence(group, presence);
+    group.sourceProducts.push({ presence, product: sourceClean, _rank: rank, _score: score });
+  }
+
+  function build() {
+    const sourceProducts = [];
+    const products = Array.from(groups.values())
+      .filter((group) => !group.inactive)
+      .map((group, index) => {
+        const exportId = `product_${String(index + 1).padStart(5, '0')}`;
+        const sourceRefs = [];
+        let canonicalSourceId = null;
+        let canonicalRank = -1;
+        let canonicalScore = -1;
+        group.sourceProducts.forEach((entry, sourceIndex) => {
+          const sourceId = `${exportId}_source_${String(sourceIndex + 1).padStart(3, '0')}`;
+          sourceRefs.push(sourceId);
+          if (entry._rank > canonicalRank || (entry._rank === canonicalRank && entry._score > canonicalScore)) {
+            canonicalSourceId = sourceId;
+            canonicalRank = entry._rank;
+            canonicalScore = entry._score;
+          }
+          sourceProducts.push({
+            source_id: sourceId,
+            export_id: exportId,
+            presence: entry.presence,
+            product: entry.product
+          });
+        });
+        const personalClientIds = Array.from(new Set(
+          group.presence
+            .filter((presence) => presence.source === 'personal' && presence.client_id)
+            .map((presence) => presence.client_id)
+        ));
+        return {
+          export_id: exportId,
+          identity_keys: Array.from(new Set(group.identity_keys)).sort(),
+          name: group.name || exportProductName(group.product),
+          brand: group.brand || exportProductBrand(group.product) || null,
+          canonical_source_id: canonicalSourceId || sourceRefs[0] || null,
+          source_refs: sourceRefs,
+          presence: group.presence,
+          present_in: {
+            shared: group.presence.some((presence) => presence.source === 'shared'),
+            pending: group.presence.some((presence) => presence.source === 'pending'),
+            personal_client_ids: personalClientIds
+          },
+          sources_count: group.presence.length
+        };
+      })
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+    return { products, sourceProducts };
+  }
+
+  return { add, build };
+}
+
+async function handleExportProducts(curatorId) {
+  console.info('[ProductsExport] START', { curatorId });
+  const client = await getClient();
+
+  try {
+    const [clientsResult, sharedResult, pendingResult, kvResult] = await Promise.all([
+      client.query(
+        `SELECT id, name
+           FROM clients
+          WHERE curator_id = $1
+          ORDER BY name NULLS LAST, id`,
+        [curatorId]
+      ),
+      client.query(`SELECT * FROM shared_products ORDER BY name NULLS LAST, id`),
+      client.query(
+        `SELECT *
+           FROM shared_products_pending
+          WHERE curator_id = $1
+          ORDER BY created_at DESC NULLS LAST, id`,
+        [curatorId]
+      ),
+      client.query(
+        `SELECT kv.client_id,
+                c.name AS client_name,
+                kv.k,
+                kv.v,
+                kv.updated_at
+           FROM client_kv_store kv
+           JOIN clients c ON c.id = kv.client_id
+          WHERE c.curator_id = $1
+            AND (
+              kv.k IN ('heys_products', 'heys_products_overlay_v2')
+              OR kv.k ~ '^heys_[0-9a-f-]{36}_products$'
+              OR kv.k ~ '^heys_[0-9a-f-]{36}_products_overlay_v2$'
+              OR kv.k LIKE 'heys_products_rpc_tail%'
+              OR kv.k LIKE 'heys_products_overlay_v2_rpc_tail%'
+            )
+          ORDER BY c.name NULLS LAST, kv.client_id, kv.k`,
+        [curatorId]
+      )
+    ]);
+
+    const sharedById = new Map(sharedResult.rows.map((row) => [String(row.id), row]));
+    const builder = makeProductsExportBuilder();
+    const skippedKvRows = [];
+    let sourceProductsTotal = 0;
+
+    sharedResult.rows.forEach((row) => {
+      builder.add(row, {
+        source: 'shared',
+        database: 'shared_products',
+        row_id: row.id,
+        product_id: row.id,
+        label: 'Общая база'
+      }, 100);
+      sourceProductsTotal++;
+    });
+
+    pendingResult.rows.forEach((row) => {
+      const productData = row.product_data && typeof row.product_data === 'object' ? row.product_data : {};
+      const product = Object.assign({}, productData, {
+        id: productData.id || row.id,
+        barcode: productData.barcode || row.barcode || null,
+        barcodes: productData.barcodes || row.barcodes || null,
+        fingerprint: productData.fingerprint || row.fingerprint || null,
+        name_norm: productData.name_norm || row.name_norm || null
+      });
+      builder.add(product, {
+        source: 'pending',
+        database: 'shared_products_pending',
+        row_id: row.id,
+        product_id: product.id || row.id,
+        client_id: row.client_id || null,
+        label: 'Очередь модерации'
+      }, 60);
+      sourceProductsTotal++;
+    });
+
+    kvResult.rows.forEach((row) => {
+      if (!isProductKvExportKey(row.k)) {
+        skippedKvRows.push({ client_id: row.client_id, key: row.k, reason: 'non_product_key' });
+        return;
+      }
+      const parsed = parseProductKvValue(row.v);
+      if (parsed.skipped) {
+        skippedKvRows.push({ client_id: row.client_id, key: row.k, reason: parsed.skipped });
+        return;
+      }
+
+      const normalizedKey = normalizeProductKvKey(row.k);
+      const isOverlay = normalizedKey === 'heys_products_overlay_v2' || normalizedKey.startsWith('heys_products_overlay_v2_rpc_tail');
+      parsed.products.forEach((rawProduct, index) => {
+        if (!rawProduct || typeof rawProduct !== 'object') return;
+        const product = isOverlay ? mergeOverlayProductForExport(rawProduct, sharedById) : rawProduct;
+        builder.add(product, {
+          source: 'personal',
+          database: `client_kv_store:${row.k}`,
+          row_id: rawProduct.id || `${row.k}:${index}`,
+          product_id: product?.id || rawProduct.id || null,
+          client_id: row.client_id,
+          client_name: row.client_name || null,
+          label: row.client_name ? `Личная база: ${row.client_name}` : `Личная база: ${row.client_id}`,
+          updated_at: row.updated_at || null
+        }, isOverlay ? 80 : 70, isOverlay ? rawProduct : product);
+        sourceProductsTotal++;
+      });
+    });
+
+    const exportPayload = builder.build();
+    const products = exportPayload.products;
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        ok: true,
+        schema: 'heys-products-cloud-export-v1',
+        exportedAt: new Date().toISOString(),
+        scope: 'curator_clients_plus_shared_catalog',
+        curator_id: curatorId,
+        summary: {
+          clients: clientsResult.rows.length,
+          shared_products: sharedResult.rows.length,
+          pending_products: pendingResult.rows.length,
+          kv_product_rows: kvResult.rows.length,
+          source_products: sourceProductsTotal,
+          unique_products: products.length,
+          skipped_kv_rows: skippedKvRows.length
+        },
+        clients: clientsResult.rows,
+        skippedKvRows,
+        products,
+        sourceProducts: exportPayload.sourceProducts
+      })
+    };
+  } catch (e) {
+    console.error('[ProductsExport] ERROR:', e.message, e.stack);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
+  } finally {
+    client.release();
+  }
+}
+
 async function handleRegister(body, jwtSecret) {
   const { email, password, name } = body;
 
@@ -1635,6 +2053,31 @@ module.exports.handler = async function (event, context) {
         };
       }
       break;
+    case 'products-export':
+      if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
+        result = { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed for products-export' }) };
+      } else if (!curatorToken) {
+        result = {
+          statusCode: 401,
+          body: JSON.stringify({ error: 'Authorization required' })
+        };
+      } else {
+        const jwtResult = verifyJwt(curatorToken, JWT_SECRET);
+        if (!jwtResult.valid) {
+          result = {
+            statusCode: 401,
+            body: JSON.stringify({ error: jwtResult.error })
+          };
+        } else if (jwtResult.payload.role !== 'curator') {
+          result = {
+            statusCode: 403,
+            body: JSON.stringify({ error: 'Curator role required' })
+          };
+        } else {
+          result = await handleExportProducts(jwtResult.payload.sub);
+        }
+      }
+      break;
     case 'clients':
       // 🔐 Требует JWT авторизации
       if (!curatorToken) {
@@ -1712,5 +2155,10 @@ module.exports._test = {
   decryptMfaSecret,
   makeOtpAuthUrl,
   isAccountLocked,
-  accountLockRetryAfter
+  accountLockRetryAfter,
+  cleanProductForExport,
+  deriveProductIdentityKeys,
+  isProductKvExportKey,
+  mergeOverlayProductForExport,
+  makeProductsExportBuilder
 };

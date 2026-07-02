@@ -625,6 +625,7 @@
     const [allSharedProducts, setAllSharedProducts] = React.useState([]);
     const [allSharedLoading, setAllSharedLoading] = React.useState(false);
     const [sharedExportCount, setSharedExportCount] = React.useState(null);
+    const [cloudProductsExportCount, setCloudProductsExportCount] = React.useState(null);
     // Pending заявки (для куратора)
     const [pendingProducts, setPendingProducts] = React.useState([]);
     const [pendingLoading, setPendingLoading] = React.useState(false);
@@ -2466,6 +2467,62 @@
       }
     }
 
+    async function exportAllCloudProducts() {
+      try {
+        const isLocalBrowserDev = (
+          typeof window !== 'undefined' &&
+          typeof location !== 'undefined' &&
+          (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        );
+        const apiUrl = isLocalBrowserDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
+        const token = HEYS.YandexAPI?.getCuratorToken?.();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        HEYS.Toast?.info('Готовим экспорт всех продуктов cloud…');
+        const response = await fetch(`${apiUrl}/auth/products-export`, {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        });
+        const exportData = await response.json().catch(() => null);
+
+        if (!response.ok || !exportData?.ok) {
+          const message = exportData?.error || `HTTP ${response.status}`;
+          throw new Error(message);
+        }
+
+        const summary = exportData.summary || {};
+        setCloudProductsExportCount(summary.unique_products ?? null);
+
+        const buildDatedFileName = window.HEYS?.ExportUtils?.buildDatedFileName;
+        const fileName = buildDatedFileName
+          ? buildDatedFileName('heys-cloud-products-all')
+          : `heys-cloud-products-all-${new Date().toISOString().slice(0, 10)}.json`;
+        const downloadJSON = window.HEYS?.ExportUtils?.downloadJSON;
+        if (downloadJSON) {
+          downloadJSON({ data: exportData, fileName });
+        } else {
+          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        HEYS.Toast?.success(
+          `Экспортировано ${summary.unique_products || 0} уникальных продуктов из ${summary.source_products || 0} записей`
+        ) || alert(`Экспортировано ${summary.unique_products || 0} уникальных продуктов`);
+      } catch (err) {
+        HEYS.analytics?.trackError?.(err, { context: 'ration:exportAllCloudProducts' });
+        HEYS.Toast?.error(`Ошибка экспорта cloud-продуктов: ${err?.message || 'unknown'}`) || alert('Ошибка экспорта cloud-продуктов');
+      }
+    }
+
     // Функция восстановления продуктов из общей базы (для всех клиентов)
     async function restoreFromSharedBase() {
       if (HEYS._syncingFromShared) {
@@ -4011,7 +4068,7 @@
                 ),
 
                 // Общая база для AI
-                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' } },
                   React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
                     React.createElement('span', { style: { fontSize: '14px' } }, '🌐'),
                     React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'Общая база для AI'),
@@ -4022,6 +4079,22 @@
                   React.createElement('button', {
                     className: 'btn',
                     onClick: exportSharedProductsForAI,
+                    style: { padding: '4px 10px', fontSize: '11px' }
+                  }, 'Скачать')
+                ),
+
+                // Все продукты из cloud-баз куратора + shared
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', { style: { fontSize: '14px' } }, '☁️'),
+                    React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'Все продукты cloud'),
+                    cloudProductsExportCount != null && React.createElement('span', {
+                      style: { fontSize: '10px', background: '#dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '4px', marginLeft: '4px' }
+                    }, cloudProductsExportCount)
+                  ),
+                  React.createElement('button', {
+                    className: 'btn',
+                    onClick: exportAllCloudProducts,
                     style: { padding: '4px 10px', fontSize: '11px' }
                   }, 'Скачать')
                 )

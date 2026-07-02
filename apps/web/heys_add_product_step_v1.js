@@ -9043,6 +9043,239 @@ NOVA: 1
     });
   }
 
+  const getProductsForStandaloneBarcodeEditor = () => {
+    const U = HEYS.utils || {};
+    return HEYS.products?.getAll?.()
+      || HEYS.store?.get?.('heys_products', [])
+      || U.lsGet?.('heys_products', [])
+      || [];
+  };
+
+  const saveStandaloneBarcodeForProduct = async (product, rawBarcode) => {
+    const barcode = normalizeBarcode(rawBarcode);
+    if (!product || !barcode) return null;
+    const latestProducts = getProductsForStandaloneBarcodeEditor();
+    const productId = String(product.id ?? product.product_id ?? product.name ?? '');
+    const sharedId = resolveSharedProductId(product);
+    const localDuplicate = findProductByBarcode(latestProducts, barcode);
+    const localDuplicateId = String(localDuplicate?.id ?? localDuplicate?.product_id ?? localDuplicate?.name ?? '');
+    const localDuplicateSharedId = resolveSharedProductId(localDuplicate);
+    const sameProduct = localDuplicateId === productId
+      || (sharedId && localDuplicateSharedId && String(localDuplicateSharedId) === String(sharedId));
+
+    if (localDuplicate && localDuplicateId && !sameProduct) {
+      HEYS.Toast?.warning?.(`Этот штрихкод уже привязан к «${localDuplicate.name || 'другому продукту'}»`);
+      return null;
+    }
+
+    if (HEYS.cloud?.searchSharedProducts) {
+      try {
+        const result = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 });
+        const sharedDuplicate = Array.isArray(result?.data) ? result.data[0] : null;
+        const sharedDuplicateId = String(sharedDuplicate?.id ?? '');
+        if (sharedDuplicate && sharedDuplicateId && sharedDuplicateId !== String(sharedId || '')) {
+          HEYS.Toast?.warning?.(`Этот штрихкод уже есть в общей базе: «${sharedDuplicate.name || 'продукт'}»`);
+          return null;
+        }
+      } catch (_) { }
+    }
+
+    const updatedProduct = {
+      ...mergeProductBarcode(product, barcode),
+      updatedAt: Date.now()
+    };
+
+    if (sharedId && !isCuratorUser()) {
+      const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+      if (!localSave.ok) {
+        showProductCommitError(localSave.reason);
+        return null;
+      }
+      const saved = localSave.product || updatedProduct;
+      notifyProductUpdated(saved);
+      if (confirm('Штрихкод сохранён в личной базе. Предложить куратору добавить его в общую базу?')) {
+        const pending = await submitSharedProductChangeRequest('barcode_update', saved, sharedId, {
+          summary: `barcode ${barcode}`
+        });
+        if (pending.ok) HEYS.Toast?.info?.('Штрихкод отправлен куратору на проверку');
+        else HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+      } else {
+        HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён только в личной базе`);
+      }
+      return saved;
+    }
+
+    if (sharedId) {
+      const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode });
+      if (!result.ok) {
+        HEYS.Toast?.warning?.('Не удалось сохранить штрихкод в общей базе');
+        return null;
+      }
+      const localSave = await commitPersonalProduct(updatedProduct, false, 'barcode-update-shared');
+      if (!localSave.ok) {
+        showProductCommitError(localSave.reason);
+        return null;
+      }
+      const saved = localSave.product || updatedProduct;
+      notifyProductUpdated(saved);
+      HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в общей базе для «${product.name || 'продукта'}»`);
+      return saved;
+    }
+
+    if (isSharedProduct(product) && !isCuratorUser()) {
+      HEYS.Toast?.warning?.('Общий продукт может изменить только куратор');
+      return null;
+    }
+
+    const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+    if (!localSave.ok) {
+      showProductCommitError(localSave.reason);
+      return null;
+    }
+    const saved = localSave.product || updatedProduct;
+    notifyProductUpdated(saved);
+    if (HEYS.cloud?.createPendingProduct) {
+      HEYS.cloud.createPendingProduct(null, saved).catch(() => { });
+    }
+    HEYS.Toast?.success?.(`Штрихкод ${barcode} сохранён в личной базе для «${product.name || 'продукта'}» и синхронизируется`);
+    return saved;
+  };
+
+  const persistStandaloneProductBarcodes = async (product, nextCodes, toastMode = 'update') => {
+    if (!product) return null;
+    const updatedProduct = {
+      ...setProductBarcodes(product, nextCodes),
+      updatedAt: Date.now()
+    };
+    const sharedId = resolveSharedProductId(product);
+
+    if (sharedId && !isCuratorUser()) {
+      const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+      if (!localSave.ok) {
+        showProductCommitError(localSave.reason);
+        return null;
+      }
+      const saved = localSave.product || updatedProduct;
+      notifyProductUpdated(saved);
+      const actionText = toastMode === 'remove-all' ? 'удаление всех штрихкодов' : 'изменение штрихкодов';
+      if (confirm(`Сохранено в личной базе. Предложить куратору ${actionText} в общей базе?`)) {
+        const pending = await submitSharedProductChangeRequest('barcode_update', saved, sharedId, {
+          summary: actionText
+        });
+        if (pending.ok) HEYS.Toast?.info?.('Изменение штрихкодов отправлено куратору');
+        else HEYS.Toast?.warning?.('Лично сохранено, но заявку отправить не удалось: ' + pending.error);
+      } else if (toastMode === 'remove-all') {
+        HEYS.Toast?.success?.('Все штрихкоды удалены только в личной базе');
+      } else if (toastMode === 'remove') {
+        HEYS.Toast?.success?.('Штрихкод удалён только в личной базе');
+      }
+      return saved;
+    }
+
+    if (sharedId) {
+      const result = await updateSharedProductBarcodes(updatedProduct, sharedId);
+      if (!result.ok) {
+        HEYS.Toast?.warning?.('Не удалось обновить штрихкоды в общей базе');
+        return null;
+      }
+      const localSave = await commitPersonalProduct(updatedProduct, false, 'barcode-update-shared');
+      if (!localSave.ok) {
+        showProductCommitError(localSave.reason);
+        return null;
+      }
+      const saved = localSave.product || updatedProduct;
+      notifyProductUpdated(saved);
+      if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
+      else if (toastMode === 'remove') HEYS.Toast?.success?.('Штрихкод удалён');
+      return saved;
+    }
+
+    if (isSharedProduct(product) && !isCuratorUser()) {
+      HEYS.Toast?.warning?.('Общий продукт может изменить только куратор');
+      return null;
+    }
+
+    const localSave = await commitPersonalProduct(updatedProduct, true, 'barcode-update');
+    if (!localSave.ok) {
+      showProductCommitError(localSave.reason);
+      return null;
+    }
+    const saved = localSave.product || updatedProduct;
+    notifyProductUpdated(saved);
+    if (toastMode === 'remove-all') HEYS.Toast?.success?.('Все штрихкоды удалены');
+    else if (toastMode === 'remove') HEYS.Toast?.success?.('Штрихкод удалён');
+    return saved;
+  };
+
+  function StandaloneBarcodeEditor({ product, onClose }) {
+    const [currentProduct, setCurrentProduct] = useState(product);
+    const [scanner, setScanner] = useState(null);
+    const [busy, setBusy] = useState(false);
+
+    const openScanner = useCallback(() => {
+      if (busy) return;
+      setScanner({
+        cameraStart: createBarcodeCameraStart()
+      });
+    }, [busy]);
+
+    const closeScanner = useCallback(() => {
+      if (scanner?.cameraStart) stopBarcodeCameraStart(scanner.cameraStart);
+      setScanner(null);
+    }, [scanner]);
+
+    const handleDetected = useCallback(async (code) => {
+      if (busy) return;
+      setBusy(true);
+      const saved = await saveStandaloneBarcodeForProduct(currentProduct, code);
+      if (saved) {
+        setCurrentProduct(saved);
+        setScanner(null);
+      }
+      setBusy(false);
+    }, [busy, currentProduct]);
+
+    const removeBarcode = useCallback(async (code) => {
+      if (busy) return;
+      const barcode = normalizeBarcode(code);
+      if (!barcode) return;
+      setBusy(true);
+      const nextCodes = getProductBarcodes(currentProduct).filter((item) => item !== barcode);
+      const saved = await persistStandaloneProductBarcodes(currentProduct, nextCodes, 'remove');
+      if (saved) setCurrentProduct(saved);
+      setBusy(false);
+    }, [busy, currentProduct]);
+
+    const removeAll = useCallback(async () => {
+      if (busy) return;
+      if (!confirm(`Удалить все штрихкоды у «${currentProduct?.name || 'продукта'}»?`)) return;
+      setBusy(true);
+      const saved = await persistStandaloneProductBarcodes(currentProduct, [], 'remove-all');
+      if (saved) setCurrentProduct(saved);
+      setBusy(false);
+    }, [busy, currentProduct]);
+
+    if (scanner) {
+      return React.createElement(BarcodeScannerModal, {
+        title: 'Добавить штрихкод',
+        subtitle: `К продукту: ${currentProduct?.name || 'Продукт'}`,
+        initialValue: '',
+        autoStart: true,
+        cameraStart: scanner.cameraStart || null,
+        onDetected: handleDetected,
+        onClose: closeScanner
+      });
+    }
+
+    return React.createElement(ProductBarcodeManagerModal, {
+      product: currentProduct,
+      onAdd: openScanner,
+      onRemove: removeBarcode,
+      onRemoveAll: removeAll,
+      onClose
+    });
+  }
+
   function showEditBarcodeModal(productOrOptions = {}, maybeOptions = {}) {
     let product = productOrOptions;
     let options = maybeOptions;
@@ -9052,12 +9285,47 @@ NOVA: 1
       product = productOrOptions.product;
     }
 
-    return showEditProductModal({
-      ...(options || {}),
+    if (!product) {
+      HEYS.Toast?.warning?.('Продукт не найден');
+      return null;
+    }
+
+    if (!global.document || !global.ReactDOM) {
+      return showEditProductModal({
+        ...(options || {}),
+        product,
+        initialStep: 0,
+        focusField: 'barcode'
+      });
+    }
+
+    const container = global.document.createElement('div');
+    container.className = 'heys-standalone-barcode-editor-root';
+    global.document.body.appendChild(container);
+    let root = null;
+
+    const close = () => {
+      try {
+        if (root?.unmount) root.unmount();
+        else if (global.ReactDOM?.unmountComponentAtNode) global.ReactDOM.unmountComponentAtNode(container);
+      } catch (_) { }
+      if (container.parentNode) container.parentNode.removeChild(container);
+      options?.onClose?.();
+    };
+
+    const element = React.createElement(StandaloneBarcodeEditor, {
       product,
-      initialStep: 0,
-      focusField: 'barcode'
+      onClose: close
     });
+
+    if (global.ReactDOM.createRoot) {
+      root = global.ReactDOM.createRoot(container);
+      root.render(element);
+    } else if (global.ReactDOM.render) {
+      global.ReactDOM.render(element, container);
+    }
+
+    return close;
   }
 
   function createAddTraceId(origin = 'unknown') {
