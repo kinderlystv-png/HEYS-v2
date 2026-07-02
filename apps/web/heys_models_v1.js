@@ -1033,17 +1033,8 @@
    * @param {Product} product - Объект продукта
    * @returns {Promise<string>} - SHA-256 fingerprint (hex)
    */
-  async function computeProductFingerprint(product) {
-    if (!product) return '';
-
-    // Нормализация имени: lowercase, trim, collapse whitespace
-    const namePart = (product.name || '')
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ');
-
-    // Округление нутриентов до 1 знака для стабильности
-    const nutrientsPart = [
+  function getProductFingerprintNutrientsPart(product) {
+    return [
       round1(product.simple100 || 0),
       round1(product.complex100 || 0),
       round1(product.protein100 || 0),
@@ -1054,9 +1045,9 @@
       round1(product.gi || 0),
       round1(product.harm || 0)
     ].join('|');
+  }
 
-    const combined = `${namePart}::${nutrientsPart}`;
-
+  async function hashProductFingerprintString(combined) {
     // SHA-256 через Web Crypto API
     try {
       const encoder = new TextEncoder();
@@ -1075,6 +1066,37 @@
       }
       return Math.abs(hash).toString(16).padStart(8, '0');
     }
+  }
+
+  async function computeProductFingerprint(product) {
+    if (!product) return '';
+
+    // Нормализация имени: lowercase, trim, collapse whitespace
+    const namePart = (product.name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+
+    // Округление нутриентов до 1 знака для стабильности
+    const nutrientsPart = getProductFingerprintNutrientsPart(product);
+
+    const combined = `${namePart}::${nutrientsPart}`;
+    return hashProductFingerprintString(combined);
+  }
+
+  async function computeProductBrandFingerprint(product) {
+    if (!product) return '';
+    const brandPart = String(product.brand || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (!brandPart) return '';
+    const namePart = (product.name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+    const nutrientsPart = getProductFingerprintNutrientsPart(product);
+    return hashProductFingerprintString(`${namePart}::${brandPart}::${nutrientsPart}`);
   }
 
   /**
@@ -1131,6 +1153,7 @@
   }
 
   M.computeProductFingerprint = computeProductFingerprint;
+  M.computeProductBrandFingerprint = computeProductBrandFingerprint;
   M.normalizeProductName = normalizeProductName;
 
   // Harm field normalization (v4.3.0)
@@ -1208,6 +1231,7 @@
     };
 
     add('name', ['название', 'продукт', 'product', 'name']);
+    add('brand', ['бренд', 'фирма', 'производитель', 'brand', 'manufacturer']);
 
     add('kcal100', ['ккал', 'калории', 'энергия']);
     add('carbs100', ['углеводы', 'углеводывсего', 'углеводыобщие', 'carbs']);
@@ -1345,6 +1369,14 @@
 
       if (field === 'name') {
         result.name = rawValue.trim();
+        return;
+      }
+
+      if (field === 'brand') {
+        const brand = rawValue.trim().replace(/\s+/g, ' ');
+        if (brand && !['нет', 'no', 'none', '-', '—'].includes(brand.toLowerCase())) {
+          result.brand = brand;
+        }
         return;
       }
 
@@ -1511,6 +1543,7 @@ NOVA:X|Na:X|Chol:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|
 Вред: X
 
 ОПЦИОНАЛЬНО (если знаешь — добавь):
+Бренд: X
 Натрий: X
 Холестерин: X
 Омега-3: X
@@ -1540,7 +1573,9 @@ NOVA: 1-4
 Калий: X
 Цинк: X
 Селен: X
-Йод: X`;
+Йод: X
+
+Если в исходном названии есть бренд/производитель, вынеси его в "Бренд", а в "Название" оставь чистое название продукта без бренда. Если бренд не очевиден, строку "Бренд" можно не добавлять.`;
   }
 
   /**

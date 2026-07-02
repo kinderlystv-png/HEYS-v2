@@ -257,6 +257,16 @@
       return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
     }
 
+    function normalizeSharedProductBrand(value) {
+      const brand = String(value || '').trim().replace(/\s+/g, ' ');
+      return brand || null;
+    }
+
+    function normalizeSharedProductBrandFingerprint(value) {
+      const fingerprint = String(value || '').trim();
+      return /^[a-f0-9]{64}$/i.test(fingerprint) ? fingerprint.toLowerCase() : null;
+    }
+
     function normalizeSharedProductBarcodes(product, primaryBarcode = null) {
       const raw = [
         primaryBarcode,
@@ -329,8 +339,11 @@
     };
 
     cloud.searchSharedProducts = async function (query, options = {}) {
-      const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;
+      const { limit = 50, excludeBlocklist = true, fingerprint = null, brandFingerprint = null, barcode = null } = options;
       const barcodeQuery = normalizeSharedProductBarcode(barcode) || null;
+      const brandFingerprintQuery = normalizeSharedProductBrandFingerprint(
+        brandFingerprint || options.brand_fingerprint
+      );
       const normQuery = (HEYS?.models?.normalizeProductName
         ? HEYS.models.normalizeProductName(query)
         : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
@@ -368,6 +381,8 @@
 
         if (barcodeQuery) {
           filters['eq.barcode'] = barcodeQuery;
+        } else if (brandFingerprintQuery) {
+          filters['eq.brand_fingerprint'] = brandFingerprintQuery;
         } else if (fingerprint) {
           filters['eq.fingerprint'] = fingerprint;
         } else if (normQuery) {
@@ -384,6 +399,14 @@
               aliases = await fetchSharedProducts({ 'contains.barcodes': barcodeQuery });
             } catch (_) { /* rollout fallback: legacy barcode search still works */ }
             data = mergeRows(primary, aliases);
+            error = null;
+          } catch (e) {
+            data = null;
+            error = e;
+          }
+        } else if (brandFingerprintQuery) {
+          try {
+            data = await fetchSharedProducts({ 'eq.brand_fingerprint': brandFingerprintQuery });
             error = null;
           } catch (e) {
             data = null;
@@ -460,6 +483,9 @@
 
       try {
         const fingerprint = await HEYS.models.computeProductFingerprint(product);
+        const brandFingerprint = normalizeSharedProductBrand(product.brand) && HEYS.models.computeProductBrandFingerprint
+          ? await HEYS.models.computeProductBrandFingerprint(product)
+          : null;
         const name_norm = HEYS.models.normalizeProductName(product.name);
 
         const curatorId = user?.id;
@@ -471,7 +497,9 @@
 
         const productData = {
           name: product.name,
+          brand: normalizeSharedProductBrand(product.brand),
           fingerprint,
+          brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint),
           simple100: product.simple100 ?? 0,
           complex100: product.complex100 ?? 0,
           protein100: product.protein100 ?? 0,
@@ -590,10 +618,16 @@
         const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
           || readStoredValue('heys_session_token', null);
         let fingerprint = null;
+        let brandFingerprint = null;
         let nameNorm = null;
         try {
           if (HEYS?.models?.computeProductFingerprint) {
             fingerprint = await HEYS.models.computeProductFingerprint(product);
+          }
+        } catch (_) { }
+        try {
+          if (normalizeSharedProductBrand(product?.brand) && HEYS?.models?.computeProductBrandFingerprint) {
+            brandFingerprint = await HEYS.models.computeProductBrandFingerprint(product);
           }
         } catch (_) { }
         try {
@@ -603,7 +637,11 @@
         } catch (_) { }
         const rpcParams = {
           p_name: product.name,
-          p_product_data: product,
+          p_product_data: {
+            ...product,
+            brand: normalizeSharedProductBrand(product.brand),
+            brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)
+          },
           p_fingerprint: fingerprint,
           p_name_norm: nameNorm
         };
@@ -635,10 +673,16 @@
         const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
           || readStoredValue('heys_session_token', null);
         let fingerprint = request.fingerprint || product.fingerprint || null;
+        let brandFingerprint = request.brand_fingerprint || request.brandFingerprint || product.brand_fingerprint || product.brandFingerprint || null;
         let nameNorm = request.name_norm || request.nameNorm || null;
         try {
           if (!fingerprint && HEYS?.models?.computeProductFingerprint) {
             fingerprint = await HEYS.models.computeProductFingerprint(product);
+          }
+        } catch (_) { }
+        try {
+          if (!brandFingerprint && normalizeSharedProductBrand(product?.brand) && HEYS?.models?.computeProductBrandFingerprint) {
+            brandFingerprint = await HEYS.models.computeProductBrandFingerprint(product);
           }
         } catch (_) { }
         try {
@@ -649,7 +693,11 @@
         const rpcParams = {
           p_request_type: request.request_type || request.type,
           p_target_product_id: request.target_product_id || request.targetProductId,
-          p_product_data: product,
+          p_product_data: {
+            ...product,
+            brand: normalizeSharedProductBrand(product.brand),
+            brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)
+          },
           p_name: request.name || product.name || '',
           p_fingerprint: fingerprint,
           p_name_norm: nameNorm
@@ -720,6 +768,8 @@
       const barcodes = normalizeSharedProductBarcodes(productData);
       const patch = {
         name: productData.name || undefined,
+        brand: normalizeSharedProductBrand(productData.brand) || undefined,
+        brand_fingerprint: normalizeSharedProductBrandFingerprint(productData.brand_fingerprint || productData.brandFingerprint) || undefined,
         name_norm: productData.name
           ? (HEYS.models?.normalizeProductName?.(productData.name) || String(productData.name).toLowerCase().trim())
           : undefined,
@@ -794,7 +844,7 @@
             method: 'PATCH',
             filters: { 'eq.id': sharedId },
             data: { variant_of: targetId },
-            select: 'id,variant_of'
+          select: 'id,brand,brand_fingerprint,variant_of'
           });
           if (error) return { data: null, error, status: 'error' };
         }
@@ -807,7 +857,7 @@
         method: 'PATCH',
         filters: { 'eq.id': targetId },
         data: patch,
-        select: 'id,name,barcode,barcodes'
+      select: 'id,name,brand,brand_fingerprint,barcode,barcodes'
       });
       if (error) return { data: null, error, status: 'error' };
 

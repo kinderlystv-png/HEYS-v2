@@ -327,7 +327,7 @@ const ALLOWED_COLUMNS = {
   // Для "public API" клиенты запрашивают select=id,name,... БЕЗ авторства
   // ⚠️  Колонки в lowercase! (badfat100, goodfat100 — NOT camelCase)
   shared_products: [
-    'id', 'name', 'name_norm', 'fingerprint',
+    'id', 'name', 'brand', 'brand_fingerprint', 'name_norm', 'fingerprint',
     'barcode', 'barcodes', 'variant_of',
     'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',

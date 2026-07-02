@@ -40,7 +40,7 @@
       const cloned = window.HEYS?.products?.addFromShared?.(product);
       if (cloned) return cloned;
     }
-    return product;
+    return product || {};
   }
 
   function buildMealItemFromProduct(product, grams) {
@@ -52,6 +52,8 @@
       id: uid('it_'),
       product_id: finalProduct?.id ?? finalProduct?.product_id,
       name: finalProduct?.name,
+      brand: finalProduct.brand || null,
+      brand_fingerprint: finalProduct.brand_fingerprint || finalProduct.brandFingerprint || null,
       fingerprint: finalProduct?.fingerprint,
       grams: grams || 100,
       portions: Array.isArray(finalProduct?.portions) ? finalProduct.portions.map(p => ({ ...p })) : undefined,

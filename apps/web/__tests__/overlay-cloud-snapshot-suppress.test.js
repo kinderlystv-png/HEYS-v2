@@ -37,6 +37,7 @@ function createOverlayHarness() {
       },
       cloud: {
         getCurrentClientId: vi.fn(() => 'client-1'),
+        getSharedIndex: vi.fn(() => new Map()),
         saveClientKey,
       },
     },
@@ -104,6 +105,33 @@ describe('OverlayStore cloud snapshot sync suppression', () => {
     });
   });
 
+  it('merges brand from shared row and respects brand override', () => {
+    const { context } = createOverlayHarness();
+    const sharedById = new Map([
+      ['shared-brand', { id: 'shared-brand', name: 'Йогурт греческий', brand: 'Простоквашино' }],
+    ]);
+
+    context.HEYS.OverlayStore.writeRaw([
+      {
+        id: 'local-brand',
+        shared_origin_id: 'shared-brand',
+        in_my_list: true,
+      },
+      {
+        id: 'local-brand-override',
+        shared_origin_id: 'shared-brand',
+        overrides: { brand: 'Локальный бренд' },
+        in_my_list: true,
+      },
+    ]);
+
+    const merged = context.HEYS.OverlayStore.toMergedView(sharedById);
+    expect(merged).toEqual([
+      expect.objectContaining({ id: 'local-brand', brand: 'Простоквашино' }),
+      expect.objectContaining({ id: 'local-brand-override', brand: 'Локальный бренд' }),
+    ]);
+  });
+
   it('links legacy products to shared rows by any shared barcode alias', () => {
     const { context } = createOverlayHarness();
     const sharedById = new Map([
@@ -129,5 +157,54 @@ describe('OverlayStore cloud snapshot sync suppression', () => {
       barcode: '111111',
       barcodes: ['111111', '222222'],
     });
+  });
+
+  it('drops TypeB cloud clones when a matching shared TypeA row exists', () => {
+    const { context, storeData } = createOverlayHarness();
+    const sharedById = new Map([
+      ['shared-coffee', { id: 'shared-coffee', name: 'Кофе растворимый с молоком 2,5' }],
+    ]);
+    context.HEYS.cloud.getSharedIndex = vi.fn(() => sharedById);
+
+    const result = context.HEYS.OverlayStore.applyCloudSnapshot([
+      { id: 'local-shared', shared_origin_id: 'shared-coffee', in_my_list: true },
+      { id: 'old-custom', _custom: true, name: 'Кофе растворимый с молоком 2,5', in_my_list: true },
+    ], { source: 'test-dirty-cloud' });
+
+    expect(result.applied).toBe(true);
+    expect(storeData.get('heys_products_overlay_v2')).toEqual([
+      expect.objectContaining({ id: 'local-shared', shared_origin_id: 'shared-coffee' }),
+    ]);
+  });
+
+  it('keeps synthetic estimated quickfill rows out of overlay storage', () => {
+    const { context, storeData } = createOverlayHarness();
+    const synthetic = {
+      id: 'estimated_quickfill_2026-07-02_0',
+      _custom: true,
+      virtualProduct: true,
+      skipProductRestore: true,
+      name: 'Завтрак · оценочно 155%',
+    };
+
+    expect(context.HEYS.OverlayStore.upsertRow(synthetic)).toBe(false);
+    expect(context.HEYS.OverlayStore.writeRaw([
+      synthetic,
+      { id: 'real-product', _custom: true, name: 'Реальный продукт', in_my_list: true },
+    ])).toBe(true);
+
+    expect(storeData.get('heys_products_overlay_v2')).toEqual([
+      expect.objectContaining({ id: 'real-product' }),
+    ]);
+
+    const migrated = context.HEYS.OverlayStore.migrate([
+      synthetic,
+      { id: 'legacy-real', name: 'Legacy real' },
+    ], new Map([['shared-real', { id: 'shared-real', name: 'Legacy real' }]]));
+
+    expect(migrated.ok).toBe(true);
+    expect(migrated.rows).toEqual([
+      expect.objectContaining({ id: 'legacy-real', shared_origin_id: 'shared-real' }),
+    ]);
   });
 });

@@ -170,16 +170,16 @@ apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
 apps/web/heys_planning_schedule_v1.js:4416
 apps/web/heys_planning_schedule_v1.js:4417
-apps/web/heys_planning_store_v1.js:375
+apps/web/heys_planning_store_v1.js:428
 apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:205
 apps/web/heys_platform_apis_v1.js:609
 apps/web/heys_predictive_insights_v1.js:48
-apps/web/heys_products_overlay_v1.js:534
-apps/web/heys_products_overlay_v1.js:1008
-apps/web/heys_products_overlay_v1.js:1009
-apps/web/heys_products_overlay_v1.js:1010
-apps/web/heys_products_overlay_v1.js:1069
+apps/web/heys_products_overlay_v1.js:555
+apps/web/heys_products_overlay_v1.js:1032
+apps/web/heys_products_overlay_v1.js:1033
+apps/web/heys_products_overlay_v1.js:1034
+apps/web/heys_products_overlay_v1.js:1093
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1191
@@ -225,10 +225,10 @@ apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4810
 apps/web/heys_widgets_ui_v1.js:7039
-apps/web/heys_yesterday_verify_v1.js:1148
-apps/web/heys_yesterday_verify_v1.js:1146
+apps/web/heys_yesterday_verify_v1.js:1180
+apps/web/heys_yesterday_verify_v1.js:1178
 apps/web/heys_yesterday_verify_v1.js:36
-apps/web/heys_yesterday_verify_v1.js:414
+apps/web/heys_yesterday_verify_v1.js:446
 apps/web/insights/pi_early_warning.js:1237
 apps/web/insights/pi_early_warning.js:1782
 apps/web/insights/pi_early_warning.js:803
@@ -249,7 +249,7 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1612
+apps/web/heys_storage_layer_v1.js:1618
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не

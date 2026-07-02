@@ -351,6 +351,115 @@
             paddingLeft: '12px',
         };
         const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
+        const [productActionSheet, setProductActionSheet] = React.useState(null);
+        const productLongPressTimerRef = React.useRef(null);
+        const productLongPressStartRef = React.useRef(null);
+        const productActionSheetIgnoreNextBackdropClickRef = React.useRef(false);
+
+        const isProductActionInteractiveTarget = React.useCallback((target) => {
+            const el = target && target.nodeType === 1 ? target : target?.parentElement;
+            if (!el || typeof el.closest !== 'function') return false;
+            return !!el.closest('button, input, textarea, select, option, label, a, summary, [role="button"], [data-product-action-ignore="true"]');
+        }, []);
+
+        const clearProductLongPress = React.useCallback(() => {
+            if (productLongPressTimerRef.current) {
+                clearTimeout(productLongPressTimerRef.current);
+                productLongPressTimerRef.current = null;
+            }
+            productLongPressStartRef.current = null;
+        }, []);
+
+        React.useEffect(() => clearProductLongPress, [clearProductLongPress]);
+
+        const buildEditableProductFromMealItem = React.useCallback((item, product) => {
+            const base = product || {};
+            const merged = {
+                ...item,
+                ...base,
+                id: base.id ?? base.product_id ?? item?.product_id ?? item?.productId ?? item?.id,
+                product_id: base.product_id ?? base.id ?? item?.product_id ?? item?.productId ?? item?.id,
+                name: base.name || item?.name || '',
+                brand: base.brand || item?.brand || null,
+                brand_fingerprint: base.brand_fingerprint || base.brandFingerprint || item?.brand_fingerprint || item?.brandFingerprint || null,
+                barcode: base.barcode || item?.barcode || null,
+                barcodes: Array.isArray(base.barcodes)
+                    ? base.barcodes
+                    : (Array.isArray(item?.barcodes) ? item.barcodes : undefined),
+            };
+            return merged.name ? merged : null;
+        }, []);
+
+        const openProductActionSheet = React.useCallback((eventLike, item, product) => {
+            const editableProduct = buildEditableProductFromMealItem(item, product);
+            if (!editableProduct) return;
+            if (item?._oneTime || editableProduct?._oneTime) {
+                HEYS.Toast?.info?.('Разовый продукт нужно сначала сохранить в базу');
+                return;
+            }
+            const x = Number(eventLike?.clientX) || Math.round((window.innerWidth || 390) / 2);
+            const y = Number(eventLike?.clientY) || Math.round((window.innerHeight || 844) * 0.55);
+            clearProductLongPress();
+            productActionSheetIgnoreNextBackdropClickRef.current = true;
+            if (HEYS.dayUtils?.haptic) HEYS.dayUtils.haptic('light');
+            setProductActionSheet({
+                product: editableProduct,
+                title: editableProduct.name || 'Продукт',
+                x,
+                y,
+                openedAt: Date.now(),
+            });
+        }, [buildEditableProductFromMealItem, clearProductLongPress]);
+
+        const beginProductLongPress = React.useCallback((event, item, product) => {
+            if (isProductActionInteractiveTarget(event?.target)) return;
+            const point = event?.touches?.[0] || event;
+            if (!point) return;
+            clearProductLongPress();
+            productLongPressStartRef.current = { x: point.clientX, y: point.clientY };
+            productLongPressTimerRef.current = setTimeout(() => {
+                openProductActionSheet(point, item, product);
+            }, 560);
+        }, [clearProductLongPress, isProductActionInteractiveTarget, openProductActionSheet]);
+
+        const moveProductLongPress = React.useCallback((event) => {
+            const start = productLongPressStartRef.current;
+            const point = event?.touches?.[0] || event;
+            if (!start || !point) return;
+            const dx = Math.abs(point.clientX - start.x);
+            const dy = Math.abs(point.clientY - start.y);
+            if (dx > 10 || dy > 10) clearProductLongPress();
+        }, [clearProductLongPress]);
+
+        const openProductContextMenu = React.useCallback((event, item, product) => {
+            if (isProductActionInteractiveTarget(event?.target)) return;
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            openProductActionSheet(event, item, product);
+        }, [isProductActionInteractiveTarget, openProductActionSheet]);
+
+        const closeProductActionSheet = React.useCallback(() => {
+            setProductActionSheet(null);
+            clearProductLongPress();
+        }, [clearProductLongPress]);
+
+        const openProductEditorFromSheet = React.useCallback((mode) => {
+            const product = productActionSheet?.product;
+            if (!product) return;
+            closeProductActionSheet();
+            setTimeout(() => {
+                const api = HEYS.AddProductStep;
+                if (mode === 'barcode' && api?.showEditBarcode) {
+                    api.showEditBarcode({ product });
+                    return;
+                }
+                if (api?.showEditProduct) {
+                    api.showEditProduct(product);
+                    return;
+                }
+                HEYS.Toast?.warning?.('Редактор продукта недоступен');
+            }, 80);
+        }, [closeProductActionSheet, productActionSheet]);
 
         const InsulinWave = HEYS.InsulinWave || {};
         const IWUtils = InsulinWave.utils || {};
@@ -1466,7 +1575,21 @@
                         ? window.HEYS.__memoFindAlt(p, products, findAlternative)
                         : findAlternative(p, products);
 
-                    const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
+                    const cardContent = React.createElement('div', {
+                        className: 'mpc mpc--longpress',
+                        style: harmToneStyle || undefined,
+                        onTouchStart: (e) => beginProductLongPress(e, it, p),
+                        onTouchMove: moveProductLongPress,
+                        onTouchEnd: clearProductLongPress,
+                        onTouchCancel: clearProductLongPress,
+                        onMouseDown: (e) => {
+                            if (e.button === 0) beginProductLongPress(e, it, p);
+                        },
+                        onMouseMove: moveProductLongPress,
+                        onMouseUp: clearProductLongPress,
+                        onMouseLeave: clearProductLongPress,
+                        onContextMenu: (e) => openProductContextMenu(e, it, p),
+                    },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
                             React.createElement('span', { className: 'mpc-name' },
@@ -1645,6 +1768,48 @@
                         })(),
                     );
                 }),
+                productActionSheet && React.createElement('div', {
+                    className: 'mpc-action-sheet-backdrop',
+                    onClick: () => {
+                        if (productActionSheetIgnoreNextBackdropClickRef.current) {
+                            productActionSheetIgnoreNextBackdropClickRef.current = false;
+                            return;
+                        }
+                        if (Date.now() - (productActionSheet.openedAt || 0) < 350) return;
+                        closeProductActionSheet();
+                    },
+                    onContextMenu: (e) => {
+                        e.preventDefault();
+                        closeProductActionSheet();
+                    },
+                },
+                    React.createElement('div', {
+                        className: 'mpc-action-sheet',
+                        style: {
+                            left: Math.min(Math.max(productActionSheet.x || 0, 12), Math.max(12, (window.innerWidth || 390) - 236)) + 'px',
+                            top: Math.min(Math.max(productActionSheet.y || 0, 72), Math.max(72, (window.innerHeight || 844) - 148)) + 'px',
+                        },
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                        React.createElement('div', { className: 'mpc-action-sheet__title' }, productActionSheet.title),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'mpc-action-sheet__btn',
+                            onClick: () => openProductEditorFromSheet('product'),
+                        },
+                            React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '✏️'),
+                            React.createElement('span', null, 'Редактировать продукт')
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'mpc-action-sheet__btn',
+                            onClick: () => openProductEditorFromSheet('barcode'),
+                        },
+                            React.createElement('span', { className: 'mpc-action-sheet__icon', 'aria-hidden': 'true' }, '▦'),
+                            React.createElement('span', null, 'Редактировать штрихкод')
+                        )
+                    )
+                ),
 
                 (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
                     meal.photos.map((photo, photoIndex) => {
@@ -4360,6 +4525,8 @@
                                             id: uid('it_'),
                                             product_id: finalProduct.id ?? finalProduct.product_id,
                                             name: finalProduct.name,
+                                            brand: finalProduct.brand || null,
+                                            brand_fingerprint: finalProduct.brand_fingerprint || finalProduct.brandFingerprint || null,
                                             grams: grams || 100,
                                             ...(finalProduct.kcal100 !== undefined && {
                                                 kcal100: computeTEFKcal100(finalProduct),
@@ -5066,6 +5233,8 @@
                 id: uid('it_'),
                 product_id: finalProduct.id ?? finalProduct.product_id,
                 name: finalProduct.name,
+                brand: finalProduct.brand || null,
+                brand_fingerprint: finalProduct.brand_fingerprint || finalProduct.brandFingerprint || null,
                 grams: finalProduct.grams || 100,
                 kcal100: finalProduct.kcal100,
                 protein100: finalProduct.protein100,

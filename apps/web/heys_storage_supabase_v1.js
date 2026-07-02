@@ -244,6 +244,7 @@
 
     // Советы (advice)
     'heys_advice_settings',   // Настройки (автопоказ, звук)
+    'heys_advice_disclaimer_accepted_v1',
     'heys_advice_read_today',
     'heys_advice_hidden_today',
     'heys_first_meal_tip',
@@ -15175,6 +15176,16 @@
     return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
   }
 
+  function normalizeSharedProductBrand(value) {
+    const brand = String(value || '').trim().replace(/\s+/g, ' ');
+    return brand || null;
+  }
+
+  function normalizeSharedProductBrandFingerprint(value) {
+    const fingerprint = String(value || '').trim();
+    return /^[a-f0-9]{64}$/i.test(fingerprint) ? fingerprint.toLowerCase() : null;
+  }
+
   function normalizeSharedProductBarcodes(product, primaryBarcode = null) {
     const raw = [
       primaryBarcode,
@@ -15248,8 +15259,11 @@
   };
 
   cloud.searchSharedProducts = async function (query, options = {}) {
-    const { limit = 50, excludeBlocklist = true, fingerprint = null, barcode = null } = options;
+    const { limit = 50, excludeBlocklist = true, fingerprint = null, brandFingerprint = null, barcode = null } = options;
     const barcodeQuery = normalizeSharedProductBarcode(barcode) || null;
+    const brandFingerprintQuery = normalizeSharedProductBrandFingerprint(
+      brandFingerprint || options.brand_fingerprint
+    );
     const normQuery = (HEYS?.models?.normalizeProductName
       ? HEYS.models.normalizeProductName(query)
       : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
@@ -15283,6 +15297,11 @@
         if (!q) return [];
         return fetchSharedProducts({ 'ilike.name_norm': `%${q}%` });
       };
+      const fetchByBrand = async (brandQ) => {
+        const q = (brandQ || '').toString().trim();
+        if (!q) return [];
+        return fetchSharedProducts({ 'ilike.brand': `%${q}%` });
+      };
 
       // Строим фильтры для YandexAPI.rest()
       const filters = {};
@@ -15290,6 +15309,8 @@
       // Поиск по barcode/fingerprint (точное совпадение) ИЛИ по названию
       if (barcodeQuery) {
         filters['eq.barcode'] = barcodeQuery;
+      } else if (brandFingerprintQuery) {
+        filters['eq.brand_fingerprint'] = brandFingerprintQuery;
       } else if (fingerprint) {
         filters['eq.fingerprint'] = fingerprint;
       } else if (normQuery) {
@@ -15307,6 +15328,27 @@
             aliases = await fetchSharedProducts({ 'contains.barcodes': barcodeQuery });
           } catch (_) { /* rollout fallback: legacy barcode search still works */ }
           data = mergeRows(primary, aliases);
+          error = null;
+        } catch (e) {
+          data = null;
+          error = e;
+        }
+      } else if (brandFingerprintQuery) {
+        try {
+          data = await fetchSharedProducts({ 'eq.brand_fingerprint': brandFingerprintQuery });
+          error = null;
+        } catch (e) {
+          data = null;
+          error = e;
+        }
+      } else if (normQuery) {
+        try {
+          const byName = await fetchSharedProducts(filters);
+          let byBrand = [];
+          try {
+            byBrand = await fetchByBrand(normQuery);
+          } catch (_) { /* rollout fallback: brand column may not exist before migration */ }
+          data = mergeRows(byName, byBrand);
           error = null;
         } catch (e) {
           data = null;
@@ -15399,6 +15441,9 @@
     try {
       // Вычисляем fingerprint
       const fingerprint = await HEYS.models.computeProductFingerprint(product);
+      const brandFingerprint = normalizeSharedProductBrand(product.brand) && HEYS.models.computeProductBrandFingerprint
+        ? await HEYS.models.computeProductBrandFingerprint(product)
+        : null;
       const name_norm = HEYS.models.normalizeProductName(product.name);
 
       // 🔐 P3: Для куратора используем user.id напрямую (JWT auth)
@@ -15413,7 +15458,9 @@
       // 🔐 P3: Используем RPC вместо REST (REST теперь read-only)
       const productData = {
         name: product.name,
+        brand: normalizeSharedProductBrand(product.brand),
         fingerprint,
+        brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint),
         simple100: product.simple100 || 0,
         complex100: product.complex100 || 0,
         protein100: product.protein100 || 0,
@@ -15564,12 +15611,18 @@
 
       // 🔍 Вычисляем fingerprint и name_norm на клиенте (нужны серверу для дедупа)
       let fingerprint = null;
+      let brandFingerprint = null;
       let nameNorm = null;
       try {
         if (HEYS?.models?.computeProductFingerprint) {
           fingerprint = await HEYS.models.computeProductFingerprint(product);
         }
       } catch (_) { /* fallback to null — сервер сам резолвит */ }
+      try {
+        if (normalizeSharedProductBrand(product?.brand) && HEYS?.models?.computeProductBrandFingerprint) {
+          brandFingerprint = await HEYS.models.computeProductBrandFingerprint(product);
+        }
+      } catch (_) { /* fallback to null */ }
       try {
         if (HEYS?.models?.normalizeProductName) {
           nameNorm = HEYS.models.normalizeProductName(product?.name || '');
@@ -15578,7 +15631,11 @@
 
       const rpcParams = {
         p_name: product.name,
-        p_product_data: product,
+        p_product_data: {
+          ...product,
+          brand: normalizeSharedProductBrand(product.brand),
+          brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)
+        },
         p_fingerprint: fingerprint,
         p_name_norm: nameNorm
       };
@@ -15617,10 +15674,16 @@
       }
 
       let fingerprint = request.fingerprint || product.fingerprint || null;
+      let brandFingerprint = request.brand_fingerprint || request.brandFingerprint || product.brand_fingerprint || product.brandFingerprint || null;
       let nameNorm = request.name_norm || request.nameNorm || null;
       try {
         if (!fingerprint && HEYS?.models?.computeProductFingerprint) {
           fingerprint = await HEYS.models.computeProductFingerprint(product);
+        }
+      } catch (_) { /* fallback to null */ }
+      try {
+        if (!brandFingerprint && normalizeSharedProductBrand(product?.brand) && HEYS?.models?.computeProductBrandFingerprint) {
+          brandFingerprint = await HEYS.models.computeProductBrandFingerprint(product);
         }
       } catch (_) { /* fallback to null */ }
       try {
@@ -15632,7 +15695,11 @@
       const rpcParams = {
         p_request_type: request.request_type || request.type,
         p_target_product_id: request.target_product_id || request.targetProductId,
-        p_product_data: product,
+        p_product_data: {
+          ...product,
+          brand: normalizeSharedProductBrand(product.brand),
+          brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)
+        },
         p_name: request.name || product.name || '',
         p_fingerprint: fingerprint,
         p_name_norm: nameNorm
@@ -15711,6 +15778,8 @@
     const barcodes = normalizeSharedProductBarcodes(productData);
     const patch = {
       name: productData.name || undefined,
+      brand: normalizeSharedProductBrand(productData.brand) || undefined,
+      brand_fingerprint: normalizeSharedProductBrandFingerprint(productData.brand_fingerprint || productData.brandFingerprint) || undefined,
       name_norm: productData.name
         ? (HEYS.models?.normalizeProductName?.(productData.name) || String(productData.name).toLowerCase().trim())
         : undefined,
@@ -15785,7 +15854,7 @@
           method: 'PATCH',
           filters: { 'eq.id': sharedId },
           data: { variant_of: targetId },
-          select: 'id,variant_of'
+          select: 'id,brand,brand_fingerprint,variant_of'
         });
         if (error) return { data: null, error, status: 'error' };
       }
@@ -15798,7 +15867,7 @@
       method: 'PATCH',
       filters: { 'eq.id': targetId },
       data: patch,
-      select: 'id,name,barcode,barcodes'
+      select: 'id,name,brand,brand_fingerprint,barcode,barcodes'
     });
     if (error) return { data: null, error, status: 'error' };
 

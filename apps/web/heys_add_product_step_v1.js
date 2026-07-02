@@ -314,6 +314,80 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const getProductBarcode = (product) => getProductBarcodes(product)[0] || '';
 
+  const normalizeProductBrand = (value) => {
+    const brand = String(value || '').trim().replace(/\s+/g, ' ');
+    return brand || '';
+  };
+
+  const getProductBrand = (product) => normalizeProductBrand(
+    product?.brand ?? product?.overrides?.brand
+  );
+
+  const normalizeBrandCompare = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9]+/gi, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  const shouldDisplayProductBrand = (product) => {
+    const brand = getProductBrand(product);
+    if (!brand) return false;
+    const nameNorm = normalizeBrandCompare(product?.name);
+    const brandNorm = normalizeBrandCompare(brand);
+    if (!nameNorm || !brandNorm) return true;
+    return !(nameNorm === brandNorm || nameNorm.startsWith(brandNorm + ' ') || nameNorm.endsWith(' ' + brandNorm));
+  };
+
+  const KNOWN_BRAND_EXTRACTION_RULES = [
+    'Nestlé Хрутка',
+    'Nestle Хрутка',
+    'Простоквашино',
+    'Ясно Солнышко',
+    'Хрутка',
+    'Bombbar',
+    'Levro',
+    'Raffaello',
+    'Savoiardi'
+  ];
+
+  const escapeRegExp = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const removeBrandFromProductName = (name, brand, options = {}) => {
+    const rawName = String(name || '').trim().replace(/\s+/g, ' ');
+    const rawBrand = normalizeProductBrand(brand);
+    if (!rawName || !rawBrand) return rawName;
+    const brandPattern = rawBrand.split(/\s+/).map(escapeRegExp).join('\\s+');
+    const edgePattern = new RegExp(`(^|[\\s"«„“”'()\\[\\]{}.,;:–—-]+)(${brandPattern})(?=$|[\\s"»“”'()\\[\\]{}.,;:–—-]+)`, 'i');
+    if (!options.allowMiddle) {
+      const startPattern = new RegExp(`^\\s*(${brandPattern})(?=$|[\\s"»“”'()\\[\\]{}.,;:–—-]+)`, 'i');
+      const endPattern = new RegExp(`(^|[\\s"«„“”'()\\[\\]{}.,;:–—-]+)(${brandPattern})\\s*$`, 'i');
+      const startClean = rawName.replace(startPattern, '').trim().replace(/\s+/g, ' ');
+      if (startClean !== rawName && startClean) return startClean;
+      const endClean = rawName.replace(endPattern, ' ').trim().replace(/\s+/g, ' ');
+      return endClean && endClean !== rawName ? endClean : rawName;
+    }
+    const cleaned = rawName.replace(edgePattern, ' ').trim().replace(/\s+/g, ' ');
+    return cleaned || rawName;
+  };
+
+  const extractKnownBrandFromProductName = (name, options = {}) => {
+    const rawName = String(name || '').trim().replace(/\s+/g, ' ');
+    if (!rawName) return null;
+    for (const brand of KNOWN_BRAND_EXTRACTION_RULES) {
+      const cleanName = removeBrandFromProductName(rawName, brand, options);
+      if (cleanName && cleanName !== rawName) {
+        return { brand, name: cleanName };
+      }
+    }
+    return null;
+  };
+
+  const getProductSearchText = (product, normalizeFn) => {
+    const normalize = normalizeFn || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
+    return normalize([product?.name, getProductBrand(product)].filter(Boolean).join(' '));
+  };
+
   const hasProductBarcode = (product, barcode) => {
     const code = normalizeBarcode(barcode);
     return !!code && getProductBarcodes(product).includes(code);
@@ -503,6 +577,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       else delete overrides.barcode;
       if (barcodes.length) overrides.barcodes = barcodes;
       else delete overrides.barcodes;
+      const brand = normalizeProductBrand(product.brand);
+      if (brand) overrides.brand = brand;
+      else delete overrides.brand;
 
       return Overlay.upsertRow({
         ...(existingRow || {}),
@@ -519,6 +596,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ...(existingRow || {}),
       ...product,
       id: pid,
+      brand: normalizeProductBrand(product.brand) || null,
       barcode: getProductBarcode(product) || null,
       barcodes: getProductBarcodes(product),
       _custom: true,
@@ -983,6 +1061,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return {
       ...p,
+      brand: normalizeProductBrand(p.brand) || null,
+      brand_fingerprint: p.brand_fingerprint || p.brandFingerprint || null,
       protein100,
       simple100,
       complex100,
@@ -1289,8 +1369,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Check if name changed (main reason for cascade)
     const nameChanged = oldProduct.name !== newProduct.name;
+    const brandChanged = normalizeProductBrand(oldProduct.brand) !== normalizeProductBrand(newProduct.brand);
     const nutrientsChanged = hasNutrientChanges(oldProduct, newProduct);
-    if (!nameChanged && !nutrientsChanged) return;
+    if (!nameChanged && !brandChanged && !nutrientsChanged) return;
 
     const U = HEYS.utils || {};
     // Find all day keys (with or without clientId prefix)
@@ -1312,19 +1393,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         }
         const day = readStoredValue(key, null);
-        if (!day || !day.meals) continue;
+        if (!day || !Array.isArray(day.meals)) continue;
 
         let dayChanged = false;
 
         for (const meal of day.meals) {
-          if (!meal.items) continue;
-          for (const item of meal.items) {
+          const mealItems = Array.isArray(meal?.items) ? meal.items : [];
+          for (const item of mealItems) {
             // Match by product_id (primary key for cascade)
             const itemPid = String(item.product_id ?? item.productId ?? '');
             if (itemPid === pid) {
               // Update name if changed
               if (nameChanged) {
                 item.name = newProduct.name;
+              }
+              if (brandChanged) {
+                const nextBrand = normalizeProductBrand(newProduct.brand);
+                if (nextBrand) item.brand = nextBrand;
+                else delete item.brand;
               }
               // Update inline nutrients if changed
               if (nutrientsChanged) {
@@ -1463,10 +1549,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!oldProduct) continue; // Skip new products (no history to update)
 
       const nameChanged = oldProduct.name !== newProduct.name;
+      const brandChanged = normalizeProductBrand(oldProduct.brand) !== normalizeProductBrand(newProduct.brand);
       const nutrientsChanged = hasNutrientChanges(oldProduct, newProduct);
 
-      if (nameChanged || nutrientsChanged) {
-        changesMap.set(pid, { old: oldProduct, new: newProduct, nameChanged, nutrientsChanged });
+      if (nameChanged || brandChanged || nutrientsChanged) {
+        changesMap.set(pid, { old: oldProduct, new: newProduct, nameChanged, brandChanged, nutrientsChanged });
       }
     }
 
@@ -1528,15 +1615,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
 
           const day = readStoredValue(key, null);
-          if (!day || !day.meals) continue;
+          if (!day || !Array.isArray(day.meals)) continue;
 
           let dayChanged = false;
 
           for (let mi = 0; mi < day.meals.length; mi++) {
             const meal = day.meals[mi];
-            if (!meal.items) continue;
-            for (let ii = 0; ii < meal.items.length; ii++) {
-              const item = meal.items[ii];
+            const mealItems = Array.isArray(meal?.items) ? meal.items : [];
+            for (let ii = 0; ii < mealItems.length; ii++) {
+              const item = mealItems[ii];
               const itemPid = String(item.product_id ?? item.productId ?? '');
               const change = changesMap.get(itemPid);
 
@@ -1547,6 +1634,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 if (nameChanged) {
                   item.name = newProduct.name;
+                }
+                if (change.brandChanged) {
+                  const nextBrand = normalizeProductBrand(newProduct.brand);
+                  if (nextBrand) item.brand = nextBrand;
+                  else delete item.brand;
                 }
 
                 if (nutrientsChanged) {
@@ -1694,9 +1786,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return { ok: false };
     }
 
+    const productBrand = normalizeProductBrand(product.brand);
+    const brandFingerprint = productBrand && HEYS.models?.computeProductBrandFingerprint
+      ? await HEYS.models.computeProductBrandFingerprint(product)
+      : null;
+
     const payload = {
       id: targetId,
       name: product.name || null,
+      brand: productBrand || null,
+      brand_fingerprint: brandFingerprint || null,
       name_norm: normalizeName(product.name),
       fingerprint: fingerprint,
       simple100: toNum(product.simple100, 0),
@@ -1748,6 +1847,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const minimalPayload = {
       id: targetId,
       name: product.name || null,
+      brand: productBrand || null,
+      brand_fingerprint: brandFingerprint || null,
       name_norm: normalizeName(product.name),
       fingerprint: fingerprint,
       simple100: toNum(product.simple100, 0),
@@ -1772,7 +1873,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         data: payload,
         upsert: true,
         onConflict: 'id',
-        select: 'id,name'
+        select: 'id,name,brand,brand_fingerprint'
       });
 
       if (primary?.error?.code === 500) {
@@ -1784,7 +1885,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           data: minimalPayload,
           upsert: true,
           onConflict: 'id',
-          select: 'id,name'
+          select: 'id,name,brand,brand_fingerprint'
         });
         if (fallback.error) {
           HEYS.Toast?.error('Ошибка обновления: ' + fallback.error) || alert('Ошибка обновления: ' + fallback.error);
@@ -2494,6 +2595,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }));
     };
 
+    const multiplyActivePreviewItems = (multiplier = 2) => {
+      setPreviewItems((items) => items.map((item) => {
+        if (item._excluded) return item;
+        const currentGrams = Math.max(5, Number(item.grams) || 100);
+        return { ...item, grams: Math.max(5, Math.round(currentGrams * multiplier)) };
+      }));
+    };
+
     const setItemGrams = (idx, val) => {
       const raw = String(val ?? '').trim();
       if (raw === '') {
@@ -2663,6 +2772,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const active = previewItems.filter(i => !i._excluded);
       const totalKcal = active.reduce((s, i) => s + calcKcal(i), 0);
       return React.createElement('div', { className: 'mpr-preview' },
+        React.createElement('div', { className: 'mpr-preview-set-tools' },
+          React.createElement('div', { className: 'mpr-preview-set-tools__copy' },
+            React.createElement('span', { className: 'mpr-preview-set-tools__label' }, 'Весь набор'),
+            React.createElement('span', { className: 'mpr-preview-set-tools__hint' }, 'умножить все активные позиции')
+          ),
+          React.createElement('button', {
+            className: 'mpr-preview-set-tools__double',
+            onClick: () => multiplyActivePreviewItems(2),
+            disabled: active.length === 0,
+            title: 'Умножить граммы всех активных продуктов на 2'
+          }, '×2')
+        ),
         React.createElement('div', { className: 'mpr-preview-items' },
           previewItems.map((item, idx) =>
             React.createElement('div', {
@@ -4168,13 +4289,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Fallback с нормализацией ё→е (только если SmartSearch не дал результатов)
         if (!results.length) {
           results = latestProducts.filter(p =>
-            normalizeSearch(p.name).includes(lc)
+            getProductSearchText(p, normalizeSearch).includes(lc)
           );
 
           // Сортировка ТОЛЬКО для fallback — SmartSearch уже отсортирован по relevance!
           results.sort((a, b) => {
-            const aName = normalizeSearch(a.name);
-            const bName = normalizeSearch(b.name);
+            const aName = getProductSearchText(a, normalizeSearch);
+            const bName = getProductSearchText(b, normalizeSearch);
             const aStartsWith = aName.startsWith(lc) ? 0 : 1;
             const bStartsWith = bName.startsWith(lc) ? 0 : 1;
             if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
@@ -4240,7 +4361,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const pushCandidate = (p, source) => {
         if (!p) return;
         // Используем имя как есть, если нормализация вернула пустоту (защита от агрессивной очистки)
-        let nameNorm = normalizeSearch(p.name || '');
+        let nameNorm = getProductSearchText(p, normalizeSearch);
         if (!nameNorm && p.name) nameNorm = p.name.toLowerCase().trim();
 
         if (!nameNorm) return;
@@ -5013,6 +5134,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const harmToneStyle = getHarmToneStyle(harmVal, { surface: 'aps' });
       const barcode = getProductBarcode(product);
       const barcodeCount = getProductBarcodes(product).length;
+      const productBrand = getProductBrand(product);
+      const showProductBrand = shouldDisplayProductBrand(product);
 
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
@@ -5021,6 +5144,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const highlightedName = lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
         ? HEYS.SmartSearchWithTypos.renderHighlightedText(product.name, search, React)
         : product.name;
+      const highlightedBrand = showProductBrand && lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
+        ? HEYS.SmartSearchWithTypos.renderHighlightedText(productBrand, search, React)
+        : productBrand;
 
       return React.createElement('div', {
         key: pid,
@@ -5042,6 +5168,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               className: 'aps-shared-badge'
             }, '🌐')
           ),
+          showProductBrand && React.createElement('div', { className: 'aps-product-brand' }, highlightedBrand),
           React.createElement('div', { className: 'aps-product-meta' },
             React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
             React.createElement('span', { className: 'aps-meta-sep' }, '·'),
@@ -5400,6 +5527,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 Вред: X
 
 ОПЦИОНАЛЬНО (если знаешь — добавь):
+Бренд: X
 Натрий: X
 Холестерин: X
 Омега-3: X
@@ -5429,9 +5557,12 @@ NOVA: 1-4
 Калий: X
 Цинк: X
 Селен: X
-Йод: X`;
+Йод: X
+
+Если в исходном названии есть бренд/производитель, вынеси его в "Бренд", а в "Название" оставь чистое название продукта без бренда. Если бренд не очевиден, строку "Бренд" можно не добавлять.`;
 
   const CREATE_PRODUCT_AI_EXAMPLE = `Название: Перец болгарский свежий
+Бренд:
 Ккал: 31
 Углеводы: 6
 Простые: 4
@@ -5486,6 +5617,7 @@ NOVA: 1
     );
     const [pasteText, setPasteText] = useState('');
     const [barcodeInput, setBarcodeInput] = useState(initialBarcode);
+    const [brandInput, setBrandInput] = useState(() => normalizeProductBrand(stepData?.create?.brand || data?.brand));
     const [barcodeModal, setBarcodeModal] = useState(null);
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
@@ -5520,6 +5652,7 @@ NOVA: 1
       if (!draft || pasteText) return;
       if (draft.pasteText != null) setPasteText(draft.pasteText);
       if (!barcodeInput && draft.barcode != null) setBarcodeInput(normalizeBarcode(draft.barcode) || draft.barcode);
+      if (!brandInput && draft.brand != null) setBrandInput(normalizeProductBrand(draft.brand));
       if (typeof draft.publishToShared === 'boolean') setPublishToShared(draft.publishToShared);
     }, []);
 
@@ -5534,6 +5667,7 @@ NOVA: 1
         const payload = {
           pasteText,
           barcode: effectiveBarcode,
+          brand: normalizeProductBrand(brandInput),
           publishToShared
         };
         if (HEYS.store?.set) {
@@ -5546,7 +5680,7 @@ NOVA: 1
       }, 500);
 
       return () => clearTimeout(timer);
-    }, [pasteText, effectiveBarcode, publishToShared]);
+    }, [pasteText, effectiveBarcode, brandInput, publishToShared]);
 
     const MISSING_FIELD_LABELS = {
       kcal100: 'Ккал',
@@ -5729,12 +5863,22 @@ NOVA: 1
 
     // Асинхронное вычисление fingerprint для локального продукта
     const ensureProductFingerprint = useCallback(async (product) => {
-      if (!product || product.fingerprint) return product;
+      if (!product) return product;
+      const needsBrandFingerprint = !!normalizeProductBrand(product.brand)
+        && !(product.brand_fingerprint || product.brandFingerprint);
+      if (product.fingerprint && !needsBrandFingerprint) return product;
       if (!HEYS.models?.computeProductFingerprint) return product;
       try {
-        const fingerprint = await HEYS.models.computeProductFingerprint(product);
+        const fingerprint = product.fingerprint || await HEYS.models.computeProductFingerprint(product);
         if (!fingerprint) return product;
-        return { ...product, fingerprint };
+        const brandFingerprint = needsBrandFingerprint && HEYS.models.computeProductBrandFingerprint
+          ? await HEYS.models.computeProductBrandFingerprint(product)
+          : (product.brand_fingerprint || product.brandFingerprint || null);
+        return {
+          ...product,
+          fingerprint,
+          brand_fingerprint: brandFingerprint || null
+        };
       } catch {
         return product;
       }
@@ -5761,7 +5905,10 @@ NOVA: 1
             setError('Не хватает полей: ' + formatMissingFields(aiParsed.missingFields));
             return;
           }
-          const product = effectiveBarcode ? mergeProductBarcode(aiParsed.product, effectiveBarcode) : aiParsed.product;
+          const productBase = effectiveBarcode ? mergeProductBarcode(aiParsed.product, effectiveBarcode) : aiParsed.product;
+          const effectiveBrand = normalizeProductBrand(brandInput) || normalizeProductBrand(productBase.brand);
+          if (!brandInput && effectiveBrand) setBrandInput(effectiveBrand);
+          const product = { ...productBase, brand: effectiveBrand || null };
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -5770,7 +5917,10 @@ NOVA: 1
 
         const parsed = parseProductLine(pasteText);
         if (parsed) {
-          const product = effectiveBarcode ? mergeProductBarcode(parsed, effectiveBarcode) : parsed;
+          const productBase = effectiveBarcode ? mergeProductBarcode(parsed, effectiveBarcode) : parsed;
+          const effectiveBrand = normalizeProductBrand(brandInput) || normalizeProductBrand(productBase.brand);
+          if (!brandInput && effectiveBrand) setBrandInput(effectiveBrand);
+          const product = { ...productBase, brand: effectiveBrand || null };
           setParsedPreview(product);
           setError('');
           onChangeRef.current?.(prev => ({ ...prev, newProduct: product }));
@@ -5784,7 +5934,16 @@ NOVA: 1
       }, 150);
 
       return () => clearTimeout(timer);
-    }, [pasteText, parseProductLine, searchQuery, formatMissingFields, effectiveBarcode]);
+    }, [pasteText, parseProductLine, searchQuery, formatMissingFields, effectiveBarcode, brandInput]);
+
+    useEffect(() => {
+      if (!parsedPreview) return;
+      const nextBrand = normalizeProductBrand(brandInput);
+      if (normalizeProductBrand(parsedPreview.brand) === nextBrand) return;
+      const next = { ...parsedPreview, brand: nextBrand || null };
+      setParsedPreview(next);
+      onChangeRef.current?.((prev) => ({ ...prev, newProduct: next }));
+    }, [brandInput, parsedPreview?.brand]);
 
     const openCreateBarcodeScanner = useCallback(() => {
       haptic('light');
@@ -5814,7 +5973,11 @@ NOVA: 1
       haptic('medium');
 
       const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;
-      const baseProduct = await ensureProductFingerprint(productWithBarcode);
+      const productWithBrand = {
+        ...productWithBarcode,
+        brand: normalizeProductBrand(brandInput) || null
+      };
+      const baseProduct = await ensureProductFingerprint(productWithBrand);
       // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
       // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
       const preparedProduct = createMode === 'oneTime'
@@ -5834,7 +5997,8 @@ NOVA: 1
         selectedProduct: preparedProduct,
         grams: 100,
         mode: createMode,
-        barcode: effectiveBarcode
+        barcode: effectiveBarcode,
+        brand: normalizeProductBrand(brandInput)
       });
 
       // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
@@ -5850,7 +6014,8 @@ NOVA: 1
           grams: 100,
           mode: createMode,
           publishToShared: effectivePublishToShared,
-          barcode: effectiveBarcode
+          barcode: effectiveBarcode,
+          brand: normalizeProductBrand(brandInput)
         });
         updateStepData('harm', {
           product: preparedProduct,
@@ -5868,7 +6033,7 @@ NOVA: 1
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, effectiveBarcode]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, effectiveBarcode, brandInput]);
 
     // Авто-добавление fingerprint для превью (после парсинга)
     useEffect(() => {
@@ -5923,6 +6088,27 @@ NOVA: 1
         HEYS.Toast?.warning?.('Не удалось скопировать промпт');
       }
     }, [aiPromptText]);
+
+    const createBrandSuggestion = useMemo(() => {
+      if (normalizeProductBrand(brandInput)) return null;
+      const sourceName = parsedPreview?.name || searchQuery;
+      return extractKnownBrandFromProductName(sourceName, { allowMiddle: true });
+    }, [brandInput, parsedPreview?.name, searchQuery]);
+
+    const applyCreateBrandSuggestion = useCallback(() => {
+      if (!createBrandSuggestion) return;
+      haptic('light');
+      setBrandInput(createBrandSuggestion.brand);
+      if (parsedPreview) {
+        const next = {
+          ...parsedPreview,
+          name: createBrandSuggestion.name,
+          brand: createBrandSuggestion.brand
+        };
+        setParsedPreview(next);
+        onChangeRef.current?.((prev) => ({ ...prev, newProduct: next }));
+      }
+    }, [createBrandSuggestion, parsedPreview]);
 
     return React.createElement('div', { className: 'aps-create-step' },
       barcodeModal && React.createElement(BarcodeScannerModal, {
@@ -6009,12 +6195,32 @@ NOVA: 1
         )
       ),
 
+      React.createElement('div', { className: 'aps-create-brand-field' },
+        React.createElement('label', { className: 'aps-create-brand-label' }, 'Бренд'),
+        React.createElement('input', {
+          className: 'aps-create-brand-input',
+          type: 'text',
+          autoComplete: 'organization',
+          value: brandInput,
+          onChange: (e) => setBrandInput(e.target.value),
+          placeholder: 'Например: Простоквашино'
+        }),
+        React.createElement('div', { className: 'aps-create-brand-note' },
+          brandInput ? 'Бренд будет показан отдельно от названия.' : 'Необязательно: оставьте пустым для обычных продуктов.'
+        ),
+        createBrandSuggestion && React.createElement('button', {
+          type: 'button',
+          className: 'aps-brand-extract-btn',
+          onClick: applyCreateBrandSuggestion
+        }, `Вынести «${createBrandSuggestion.brand}» из названия`)
+      ),
+
       // Инструкция
       React.createElement('div', { className: 'aps-create-hint' },
         'Вставьте строку с данными продукта (12 обязательных + опциональные):',
         React.createElement('br'),
         React.createElement('span', { className: 'aps-create-format' },
-          'Название: …\nКкал: …\nУглеводы: …\nПростые: …\nСложные: …\nБелок: …\nЖиры: …\nВредные жиры: …\nПолезные жиры: …\nТранс-жиры: …\nКлетчатка: …\nГИ: …\nВред: …\n+ Холестерин, витамины, минералы (опц)'
+          'Название: …\nБренд: … (опц)\nКкал: …\nУглеводы: …\nПростые: …\nСложные: …\nБелок: …\nЖиры: …\nВредные жиры: …\nПолезные жиры: …\nТранс-жиры: …\nКлетчатка: …\nГИ: …\nВред: …\n+ Холестерин, витамины, минералы (опц)'
         )
       ),
 
@@ -6032,8 +6238,8 @@ NOVA: 1
         ref: textareaRef,
         className: 'aps-create-textarea',
         placeholder: searchQuery
-          ? `Название: ${searchQuery}\nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0\nХолестерин: 0`
-          : 'Название: Овсянка на воде\nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0\nХолестерин: 0',
+          ? `Название: ${searchQuery}\nБренд: \nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0\nХолестерин: 0`
+          : 'Название: Овсянка на воде\nБренд: \nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0\nХолестерин: 0',
         value: pasteText,
         onChange: (e) => setPasteText(e.target.value),
         rows: 8
@@ -6062,6 +6268,7 @@ NOVA: 1
       parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
         React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
         React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
+        shouldDisplayProductBrand(parsedPreview) && React.createElement('div', { className: 'aps-preview-brand' }, getProductBrand(parsedPreview)),
         // Основные макросы
         React.createElement('div', { className: 'aps-preview-macros' },
           React.createElement('span', { className: 'aps-preview-kcal' }, parsedPreview.kcal100 + ' ккал'),
@@ -6150,6 +6357,7 @@ NOVA: 1
 
       return {
         name: p.name || '',
+        brand: getProductBrand(p),
         barcode: getProductBarcode(p),
         kcal100: kcal ? String(kcal) : '',
         carbs100: carbs ? String(carbs) : '',
@@ -6167,6 +6375,7 @@ NOVA: 1
     }, [sourceProduct]);
 
     const [form, setForm] = useState(initialForm);
+    const barcodeInputRef = useRef(null);
     const [nutrientsExpanded, setNutrientsExpanded] = useState(false);
     const initialPortions = useMemo(() => {
       const list = Array.isArray(sourceProduct?.portions) ? sourceProduct.portions : [];
@@ -6178,6 +6387,16 @@ NOVA: 1
     const [portionRows, setPortionRows] = useState(initialPortions);
     const [portionError, setPortionError] = useState('');
     const autoPortions = useMemo(() => getAutoPortions(form.name || sourceProduct?.name), [form.name, sourceProduct?.name]);
+    const brandSuggestion = useMemo(() => {
+      if (normalizeProductBrand(form.brand)) return null;
+      return extractKnownBrandFromProductName(form.name, { allowMiddle: true });
+    }, [form.name, form.brand]);
+    const brandNameCleanup = useMemo(() => {
+      const brand = normalizeProductBrand(form.brand);
+      if (!brand) return null;
+      const cleanName = removeBrandFromProductName(form.name, brand, { allowMiddle: true });
+      return cleanName && cleanName !== form.name ? { brand, name: cleanName } : null;
+    }, [form.name, form.brand]);
 
     useEffect(() => {
       setForm(initialForm);
@@ -6188,12 +6407,40 @@ NOVA: 1
       setPortionError('');
     }, [initialPortions]);
 
+    useEffect(() => {
+      if (context?.focusField !== 'barcode') return;
+      const timer = setTimeout(() => {
+        barcodeInputRef.current?.focus?.();
+        barcodeInputRef.current?.select?.();
+      }, 180);
+      return () => clearTimeout(timer);
+    }, [context?.focusField]);
+
     const updateField = useCallback((key, value) => {
       setForm((prev) => ({
         ...prev,
         [key]: value
       }));
     }, []);
+
+    const applyBrandSuggestion = useCallback(() => {
+      if (!brandSuggestion) return;
+      haptic('light');
+      setForm((prev) => ({
+        ...prev,
+        name: brandSuggestion.name,
+        brand: brandSuggestion.brand
+      }));
+    }, [brandSuggestion]);
+
+    const applyBrandNameCleanup = useCallback(() => {
+      if (!brandNameCleanup) return;
+      haptic('light');
+      setForm((prev) => ({
+        ...prev,
+        name: brandNameCleanup.name
+      }));
+    }, [brandNameCleanup]);
 
     const addPortionRow = useCallback(() => {
       haptic('light');
@@ -6292,6 +6539,7 @@ NOVA: 1
     const buildUpdatedProduct = useCallback((nextPortions = null) => {
       const base = sourceProduct || {};
       const name = String(form.name || base.name || '').trim() || 'Без названия';
+      const brand = normalizeProductBrand(form.brand);
       const simple100 = toNum(form.simple100, 0);
       const complex100 = toNum(form.complex100, 0);
       const protein100 = toNum(form.protein100, 0);
@@ -6344,6 +6592,7 @@ NOVA: 1
       return {
         ...base,
         name,
+        brand: brand || null,
         barcode: barcodes[0] || null,
         barcodes,
         simple100: finalSimple,
@@ -6404,10 +6653,32 @@ NOVA: 1
         })
       ),
 
+      React.createElement('div', { className: 'pe-field' },
+        React.createElement('label', { className: 'pe-label' }, 'Бренд'),
+        React.createElement('input', {
+          className: 'pe-input',
+          type: 'text',
+          value: form.brand,
+          onChange: (e) => updateField('brand', e.target.value),
+          placeholder: 'Например: Простоквашино'
+        }),
+        brandSuggestion && React.createElement('button', {
+          type: 'button',
+          className: 'pe-brand-tool',
+          onClick: applyBrandSuggestion
+        }, `Вынести «${brandSuggestion.brand}» из названия`),
+        brandNameCleanup && React.createElement('button', {
+          type: 'button',
+          className: 'pe-brand-tool',
+          onClick: applyBrandNameCleanup
+        }, 'Убрать бренд из названия')
+      ),
+
       React.createElement('div', { className: 'pe-field pe-field--barcode' },
         React.createElement('label', { className: 'pe-label' }, 'Штрихкод'),
         React.createElement('div', { className: 'pe-barcode-row' },
           React.createElement('input', {
+            ref: barcodeInputRef,
             className: 'pe-input',
             type: 'text',
             value: form.barcode,
@@ -7517,8 +7788,10 @@ NOVA: 1
 
         // Проверка на дубликат
         const normName = (updatedProduct.name || '').trim().toLowerCase();
+        const normBrand = normalizeProductBrand(updatedProduct.brand).toLowerCase();
 	        const existingPersonal = products.find(p =>
 	          (p.name || '').trim().toLowerCase() === normName
+            && normalizeProductBrand(p.brand).toLowerCase() === normBrand
 	        );
 
 	        if (!existingPersonal) {
@@ -7592,13 +7865,21 @@ NOVA: 1
             isProcessingPublishRef.current = true;
             (async () => {
               try {
-                // 🔍 Дедуп: возможно похожий уже в shared (по fingerprint)
+                // 🔍 Дедуп: брендовые продукты сравниваем точным v2-ключом, legacy fingerprint — только fallback.
                 let fingerprint = null;
+                let brandFingerprint = null;
                 if (HEYS.models?.computeProductFingerprint) {
                   try { fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct); } catch (_) { /* noop */ }
-                  if (fingerprint && HEYS.cloud.searchSharedProducts) {
+                  try {
+                    if (normalizeProductBrand(updatedProduct.brand) && HEYS.models.computeProductBrandFingerprint) {
+                      brandFingerprint = await HEYS.models.computeProductBrandFingerprint(updatedProduct);
+                    }
+                  } catch (_) { /* noop */ }
+                  if ((brandFingerprint || fingerprint) && HEYS.cloud.searchSharedProducts) {
                     try {
-                      const existing = await HEYS.cloud.searchSharedProducts('', { fingerprint, limit: 1 });
+                      const existing = await HEYS.cloud.searchSharedProducts('', brandFingerprint
+                        ? { brandFingerprint, limit: 1 }
+                        : { fingerprint, limit: 1 });
                       if (existing?.data?.length > 0) {
                         const existingName = existing.data[0]?.name || updatedProduct.name;
                         console.info('[HarmSelectStep] ℹ️ Похожий уже в shared:', existingName);
@@ -8331,7 +8612,8 @@ NOVA: 1
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
       let total = 0;
       (dayData.meals || []).forEach(m => {
-        (m.items || []).forEach(it => {
+        const items = Array.isArray(m?.items) ? m.items : [];
+        items.forEach(it => {
           const g = it.grams || 100;
           const pid = it.product_id || it.name;
           const prod = (context?.products || []).find(p => (p.id || p.name) === pid);
@@ -8551,7 +8833,7 @@ NOVA: 1
       product = productOrOptions.product;
     }
 
-    const { initialStep = 0, onSave, onClose } = options || {};
+    const { initialStep = 0, focusField = null, onSave, onClose } = options || {};
 
     if (!product) {
       HEYS.Toast?.warning('Продукт не найден') || alert('Продукт не найден');
@@ -8603,6 +8885,7 @@ NOVA: 1
         isEditMode: true,
         isProductEditor: true,
         editProduct: product,
+        focusField,
         onFinish: async ({ product: updatedProduct, portions }) => {
           const finalProduct = {
             ...product,
@@ -8757,6 +9040,23 @@ NOVA: 1
       finishLabel: 'Готово',
       title: '',
       onClose
+    });
+  }
+
+  function showEditBarcodeModal(productOrOptions = {}, maybeOptions = {}) {
+    let product = productOrOptions;
+    let options = maybeOptions;
+
+    if (productOrOptions && typeof productOrOptions === 'object' && productOrOptions.product) {
+      options = productOrOptions;
+      product = productOrOptions.product;
+    }
+
+    return showEditProductModal({
+      ...(options || {}),
+      product,
+      initialStep: 0,
+      focusField: 'barcode'
     });
   }
 
@@ -9146,6 +9446,7 @@ NOVA: 1
     show: showAddProductModal,
     showEditGrams: showEditGramsModal,
     showEditProduct: showEditProductModal,
+    showEditBarcode: showEditBarcodeModal,
     createBarcodeCameraStart,
     ProductSearchStep,
     GramsStep,

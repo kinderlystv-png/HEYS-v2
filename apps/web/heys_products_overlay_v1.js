@@ -37,6 +37,21 @@
     _mergedViewSharedRef = null;
   }
 
+  function isSyntheticProductRow(row) {
+    if (!row || typeof row !== 'object') return false;
+    const id = String(row.id != null ? row.id : '');
+    const productId = String(row.product_id != null ? row.product_id : (row.productId != null ? row.productId : ''));
+    const name = String(row.name || (row.overrides && row.overrides.name) || '');
+    return !!(
+      row.virtualProduct === true ||
+      row.skipProductRestore === true ||
+      row.skipOrphanTracking === true ||
+      id.indexOf('estimated_') === 0 ||
+      productId.indexOf('estimated_') === 0 ||
+      name.indexOf('· оценочно ') >= 0
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────────────
   // Raw store I/O (no merging). Per-client via Store layer scoping.
   // ─────────────────────────────────────────────────────────────────────
@@ -69,6 +84,9 @@
   function writeRaw(rows, opts) {
     if (!Array.isArray(rows)) return false;
     try {
+      if (rows.some(isSyntheticProductRow)) {
+        rows = rows.filter(function (r) { return !isSyntheticProductRow(r); });
+      }
       // 🪦 SHRINK-GUARD (plan F4, 2026-05-24): дублирующая защита уровня overlay.
       // setAll имеет такой же guard (heys_core_v12.js), но removeRow/upsertRow/
       // migrate пишут НАПРЯМУЮ в writeRaw, минуя setAll → guard нужен здесь тоже.
@@ -112,7 +130,7 @@
                 } catch (_) { /* noop */ }
                 return false;
               };
-              var untombstoned = removed.filter(function (it) { return !isTomb(it); });
+              var untombstoned = removed.filter(function (it) { return !isTomb(it) && !isSyntheticProductRow(it); });
               if (untombstoned.length > 0) {
                 try {
                   console.warn('[OverlayStore] writeRaw BLOCKED — silent product loss attempted', {
@@ -172,6 +190,7 @@
   // ─────────────────────────────────────────────────────────────────────
   function applyCloudSnapshot(incomingRows, opts) {
     if (!Array.isArray(incomingRows)) return { applied: false, reason: 'not-array' };
+    incomingRows = incomingRows.filter(function (r) { return !isSyntheticProductRow(r); });
     const source = (opts && opts.source) || 'unknown';
 
     // 🛡️ 2026-05-30 Wave 3 audit (G11): bootstrap race window guard.
@@ -268,7 +287,7 @@
           var sm = _autoAux.byName.get(_normalizeName(r.name));
           if (!sm) return r;
           var sid = String(sm.id);
-          if (_autoCoveredSO.has(sid)) return r; // уже есть TypeA с таким SO — не дублируем
+          if (_autoCoveredSO.has(sid)) return null; // уже есть TypeA с таким SO — TypeB-клон не сохраняем
           _autoCoveredSO.add(sid);
           _autolinkedCount++;
           var nr = Object.assign({}, r);
@@ -276,13 +295,14 @@
           nr.shared_origin_id = sm.id;
           return nr;
         });
+        deduped = deduped.filter(Boolean);
       }
     } catch (_al) { try { console.warn('[OverlayStore] autolink err', _al); } catch (_) {} }
 
     const incomingIds = new Set(deduped.map(function (r) { return String(r && r.id != null ? r.id : ''); }));
     const pendingLocalCustoms = Array.isArray(current)
       ? current.filter(function (r) {
-          return r && r._custom === true && !incomingIds.has(String(r.id));
+          return r && r._custom === true && !isSyntheticProductRow(r) && !incomingIds.has(String(r.id));
         })
       : [];
 
@@ -432,6 +452,7 @@
     const out = [];
     for (const r of rows) {
       if (!r) continue;
+      if (isSyntheticProductRow(r)) continue;
       if (r.in_my_list === false) continue; // soft-removed; getById may bypass this
       // Tombstone defense: skip rows whose id matches a deleted entry
       if (_tombIds && r.id != null && _tombIds.has(String(r.id))) continue;
@@ -544,6 +565,7 @@
   // ─────────────────────────────────────────────────────────────────────
   function upsertRow(row) {
     if (!row || row.id == null) return false;
+    if (isSyntheticProductRow(row)) return false;
     const rows = readRaw();
     const idx = rows.findIndex(r => {
       if (!r) return false;
@@ -588,6 +610,7 @@
   //  - PRESERVES every `id` (essential for dayv2 stamp resolution).
   // ─────────────────────────────────────────────────────────────────────
   const NUTRIENT_FIELDS = [
+    'brand',
     'kcal100', 'protein100', 'fat100', 'carbs100',
     'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
     'iron', 'calcium', 'magnesium', 'phosphorus', 'potassium', 'sodium100',
@@ -694,6 +717,7 @@
     let idGenerated = 0; // products that lacked an id (legacy data) — we generated one
     for (const p of flatArr) {
       if (!p) continue;
+      if (isSyntheticProductRow(p)) continue;
       // CRITICAL: if id is missing, generate stable fallback. Otherwise migrate would drop the row,
       // leaving legacy data orphaned in localStorage with no overlay representation.
       if (p.id == null) {

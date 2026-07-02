@@ -174,6 +174,8 @@ CREATE TABLE IF NOT EXISTS shared_products (
     
     -- Product info
     name TEXT NOT NULL,
+    brand TEXT,
+    brand_fingerprint TEXT,
     name_norm TEXT NOT NULL,
     fingerprint TEXT NOT NULL,
     
@@ -200,6 +202,8 @@ CREATE TABLE IF NOT EXISTS shared_products (
 
 -- Indexes for shared_products
 CREATE INDEX IF NOT EXISTS idx_shared_products_fingerprint ON shared_products(fingerprint);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shared_products_brand_fingerprint_unique ON shared_products(brand_fingerprint) WHERE brand_fingerprint IS NOT NULL AND brand_fingerprint <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shared_products_fingerprint_brandless_unique ON shared_products(fingerprint) WHERE COALESCE(NULLIF(TRIM(brand), ''), '') = '' AND COALESCE(NULLIF(brand_fingerprint, ''), '') = '';
 CREATE INDEX IF NOT EXISTS idx_shared_products_name_norm ON shared_products(name_norm);
 CREATE INDEX IF NOT EXISTS idx_shared_products_created_by_user ON shared_products(created_by_user_id) WHERE created_by_user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_shared_products_created_by_client ON shared_products(created_by_client_id) WHERE created_by_client_id IS NOT NULL;
