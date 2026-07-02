@@ -137,6 +137,8 @@
                 '[HEYS.products]': 'sync',
                 /* 🪵 TEMP: day-trace + addProduct logs in sync group for debug session */
                 '[HEYS.day-trace]': 'sync',
+                '[HEYS.trace]': 'sync',
+                '[HEYS.chrono.trace]': 'sync',
                 '[HEYS.addProduct]': 'sync',
                 '[HEYS.dayRealData]': 'sync',
                 '[HEYS.addTrace]': 'sync',
@@ -951,10 +953,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.6e0661ef0828.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.5f1d4ceb83ce.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.fc59b015278c.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.84929ef49693.js" as="script" />
     <link rel="preload" href="boot-day.bundle.adc64182db88.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.24051f122364.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.dccebc7a97b0.js" as="script" />
     <link rel="preload" href="boot-init.bundle.dd4545585722.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1758,38 +1760,38 @@
 
     <!-- Шаг 2: Статичный HTML логин-оверлей -->
     <div id="heys-login-gate" class="heys-auth-shell"
-        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#1d4ed8);padding:20px 20px 40px;overflow-y:auto">
+        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#4964c7 0%,#2f5fd7 46%,#434587 100%);padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto">
 
 	        <!-- Экран: client (телефон + PIN) — показывается сразу -->
 	        <div id="hlg-screen-client">
 	            <div class="heys-auth-card"
-	                style="position:relative;width:100%;max-width:360px;border-radius:16px;background:rgba(255,255,255,0.95);padding:28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
-                <div style="text-align:center;margin-bottom:28px">
-                    <div class="heys-auth-title"
-                        style="font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
-                        👋 Привет!</div>
-                    <div class="heys-auth-subtitle"
-                        style="margin-top:4px;font-size:15px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
-                        Вход для клиентов</div>
-                </div>
+	                style="position:relative;width:100%;max-width:360px;border-radius:24px;background:rgba(255,255,255,0.95);padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
+	                <div class="heys-auth-heading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;margin-bottom:24px">
+                        <div class="heys-auth-mark" aria-label="HEYS lab">
+                            <img src="heys-logo-hero-blue.png" alt="" loading="eager" decoding="async" />
+                        </div>
+	                    <div id="hlg-greeting-client" class="heys-auth-title"
+	                        style="font-size:22px;font-weight:650;letter-spacing:0;color:#475569;font-family:system-ui,-apple-system,sans-serif">
+	                        Вход клиента</div>
+	                </div>
                 <form id="hlg-client-form" onsubmit="event.preventDefault(); hlgClientLogin();">
                     <!-- Телефон -->
-                    <div style="margin-bottom:20px">
+                    <div style="margin-bottom:16px">
                         <div class="heys-auth-label"
                             style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
                             Телефон</div>
-                        <div id="hlg-phone-wrap" class="heys-auth-field"
+                        <div id="hlg-phone-wrap" class="heys-auth-field is-active"
                             style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
                             <span class="phone-prefix-large heys-auth-prefix"
                                 style="font-weight:700;color:#334155;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif;user-select:none">+7</span>
                             <input id="hlg-phone" type="tel" inputmode="numeric" autocomplete="tel"
                                 placeholder="(999) 123-45-67" maxlength="15"
                                 class="phone-input-large heys-auth-phone-input"
-                                style="width:195px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
+                                style="width:224px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
                         </div>
                     </div>
                     <!-- PIN -->
-                    <div style="margin-bottom:20px">
+                    <div id="hlg-pin-section" class="heys-auth-pin-section is-muted" style="margin-bottom:16px">
                         <div class="heys-auth-label"
                             style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
                             PIN-код</div>
@@ -1842,15 +1844,16 @@
                     <div id="hlg-client-err" class="heys-auth-error"
                         style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
                     </div>
-                    <!-- Кнопка -->
-                    <button id="hlg-client-submit" class="heys-auth-btn heys-auth-btn--primary" type="submit" disabled
-                        style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);opacity:0.5;font-family:system-ui,-apple-system,sans-serif;transition:opacity 0.2s">Войти
-                        →</button>
+                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="submit" disabled aria-label="Войти"></button>
                 </form>
 		                <div class="heys-auth-footer-row">
 		                    <div class="heys-auth-support-line">Забыли PIN? <button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button">Обратитесь в поддержку.</button></div>
 		                </div>
 		            </div>
+                    <div id="hlg-client-status" class="heys-auth-status" role="status" aria-live="polite">
+                        <span class="heys-auth-status-dot" aria-hidden="true"></span>
+                        <span>Проверяем PIN</span>
+                    </div>
 		        </div>
 
         <!-- Экран: curator (email + пароль) -->
@@ -1860,7 +1863,7 @@
                 <div style="text-align:center;margin-bottom:24px">
                     <div style="font-size:36px;margin-bottom:6px">🍎</div>
                     <div class="heys-auth-brand"
-                        style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
+                        style="font-size:24px;font-weight:800;letter-spacing:0;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
                         HEYS</div>
                     <div class="heys-auth-subtitle"
                         style="margin-top:4px;font-size:14px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
@@ -1915,7 +1918,7 @@
 
 		        <!-- Версия внизу -->
         <div id="hlg-version" class="heys-auth-version"
-            style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:0.05em">
+            style="position:absolute;left:50%;bottom:max(14px,calc(env(safe-area-inset-bottom,0px) + 14px));transform:translateX(-50%);font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:0.05em">
         </div>
     </div>
 
@@ -1948,10 +1951,214 @@
             }
         }
 
+        @keyframes hlg-pin-error-shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-4px);
+            }
+
+            55% {
+                transform: translateX(4px);
+            }
+
+            78% {
+                transform: translateX(-2px);
+            }
+        }
+
+        @keyframes hlg-error-pop {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-6px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0) scale(1);
+            }
+        }
+
+        @keyframes hlg-phone-confirm {
+            0% {
+                transform: scale(1);
+            }
+
+            45% {
+                transform: scale(1.015);
+                box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.18);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes hlg-status-pulse {
+            0%, 100% {
+                opacity: 0.55;
+                transform: scale(0.88);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .heys-auth-mark {
+            display: block;
+            width: 92px;
+            flex: 0 0 auto;
+            margin: 0;
+            line-height: 0;
+        }
+
+        .heys-auth-mark img {
+            display: block;
+            width: 100%;
+            height: auto;
+            filter: contrast(1.12) saturate(1.06) drop-shadow(0 8px 14px rgba(29, 112, 183, 0.1));
+        }
+
+        .heys-auth-submit-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            margin: -1px !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            clip: rect(0 0 0 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        .heys-auth-status {
+            position: fixed;
+            top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
+            left: 50%;
+            z-index: 10020;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: max-content;
+            max-width: calc(100vw - 48px);
+            min-height: 38px;
+            padding: 9px 14px;
+            border: 1px solid rgba(82, 160, 216, 0.22);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 14px 32px rgba(29, 112, 183, 0.14);
+            color: #2f5f8f;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 13px;
+            font-weight: 650;
+            pointer-events: none;
+            transform: translateX(-50%);
+        }
+
+        .heys-auth-status.is-visible {
+            display: flex;
+            animation: hlg-error-pop 0.22s ease-out;
+        }
+
+        .heys-auth-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #52a0d8;
+            box-shadow: 0 0 0 4px rgba(82, 160, 216, 0.14);
+            animation: hlg-status-pulse 0.9s ease-in-out infinite;
+        }
+
+        .heys-auth-card form.space-y-6 {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .heys-auth-card form.space-y-6 > :not([hidden]) {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .heys-auth-card form.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 0 !important;
+        }
+
+        .heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 10px !important;
+            margin-bottom: 0 !important;
+        }
+
         /* PIN overlay — анимированная цифра поверх поля */
         .hlg-pin-ov-active {
             display: flex !important;
             animation: hlg-pin-appear 1.2s ease forwards;
+        }
+
+        .hlg-pin-error {
+            animation: hlg-pin-error-shake 0.34s ease-out;
+            border-color: #f472b6 !important;
+            background: #fff1f7 !important;
+            box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.16) !important;
+        }
+
+        #hlg-client-err.is-pin-error {
+            position: fixed !important;
+            top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+            left: 50% !important;
+            z-index: 10020 !important;
+            width: min(320px, calc(100vw - 48px)) !important;
+            animation: hlg-error-pop 0.22s ease-out;
+            border-color: #fbcfe8 !important;
+            background: #fff5f9 !important;
+            box-shadow: 0 14px 32px rgba(190, 24, 93, 0.14) !important;
+            color: #be185d !important;
+            pointer-events: none !important;
+            transform: translateX(-50%) !important;
+        }
+
+        #hlg-phone-wrap.is-confirm-pulse {
+            animation: hlg-phone-confirm 0.22s ease-out;
+        }
+
+        #hlg-pin-section {
+            transition: opacity 0.2s ease, filter 0.2s ease;
+        }
+
+        #hlg-pin-section.is-muted {
+            opacity: 0.48;
+            filter: saturate(0.72);
+        }
+
+        #hlg-pin-section.is-muted .heys-auth-label {
+            color: #94a3b8 !important;
+        }
+
+        #hlg-pin-section.is-active {
+            opacity: 1;
+            filter: none;
+        }
+
+        #hlg-pin-section.is-active .heys-auth-label {
+            color: #1d70b7 !important;
+        }
+
+        #hlg-pin-section.is-muted .heys-auth-pin-input {
+            background: #f8fafc !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #hlg-phone-wrap.is-confirm-pulse,
+            .hlg-pin-error,
+            #hlg-client-err.is-pin-error,
+            .heys-auth-status-dot {
+                animation: none !important;
+            }
         }
 
         /* Подсветка активного PIN поля */
@@ -1965,8 +2172,8 @@
 
         /* Готовый телефон */
         #hlg-phone-wrap.phone-complete {
-            border-color: #22c55e !important;
-            background: #f0fdf4 !important;
+            border-color: rgba(82, 160, 216, 0.72) !important;
+            background: #f3f9fd !important;
         }
 
         /* Готовый PIN */
@@ -1976,8 +2183,10 @@
         }
 
         /* Фокус телефон */
-        #hlg-phone-wrap:focus-within {
+        #hlg-phone-wrap:focus-within,
+        #hlg-phone-wrap.is-active {
             border-color: #60a5fa !important;
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.25);
         }
 
         /* Placeholder телефона */
@@ -1988,10 +2197,11 @@
 
         /* Принудительный размер шрифта телефона (перебивает глобальные !important) */
         #hlg-phone {
-            font-size: clamp(16px, 5.2vw, 28px) !important;
-            line-height: clamp(22px, 6.2vw, 34px) !important;
-            height: clamp(22px, 6.2vw, 34px) !important;
-            letter-spacing: -0.01em !important;
+            width: min(224px, calc(100% - 42px)) !important;
+            font-size: clamp(23px, 6.4vw, 26px) !important;
+            line-height: clamp(29px, 7.2vw, 32px) !important;
+            height: clamp(29px, 7.2vw, 32px) !important;
+            letter-spacing: 0 !important;
             padding: 0 !important;
             min-height: 0 !important;
             border: none !important;
@@ -2001,8 +2211,8 @@
         }
 
         #hlg-phone-wrap>span {
-            font-size: clamp(16px, 5.2vw, 28px) !important;
-            line-height: clamp(22px, 6.2vw, 34px) !important;
+            font-size: clamp(23px, 6.4vw, 26px) !important;
+            line-height: clamp(29px, 7.2vw, 32px) !important;
         }
 
         .heys-auth-card {
@@ -2037,7 +2247,11 @@
             box-shadow: none !important;
         }
 
-        .heys-auth-field.is-complete,
+        .heys-auth-field.is-complete {
+            border-color: rgba(82, 160, 216, 0.72) !important;
+            background: #f3f9fd !important;
+        }
+
         .heys-auth-pin-input.is-complete {
             border-color: #22c55e !important;
             background: #f0fdf4 !important;
@@ -2052,16 +2266,34 @@
             box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
         }
 
+        .heys-auth-btn--backup {
+            border: 1px solid rgba(67, 69, 135, 0.22) !important;
+            background: rgba(67, 69, 135, 0.1) !important;
+            color: #434587 !important;
+            box-shadow: none !important;
+        }
+
 	        .heys-auth-keypad {
 	            display: grid;
 	            grid-template-columns: repeat(3, minmax(0, 1fr));
-	            gap: 8px;
-	            margin: 14px auto 20px;
-	            max-width: 252px;
+	            gap: 6px;
+                width: min(100%, 276px);
+	            margin: 24px auto 28px !important;
+	            max-width: 276px;
 	        }
 
+            .heys-auth-card form.space-y-6 > .heys-auth-keypad {
+                margin-top: 24px !important;
+                margin-bottom: 28px !important;
+            }
+
+            .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+                margin-top: 24px !important;
+            }
+
         .heys-auth-key {
-            min-height: 48px;
+            width: 100%;
+            min-height: 52px;
             border-radius: 14px;
             border: 1px solid #dbe4f0;
             background: rgba(255, 255, 255, 0.92);
@@ -2084,17 +2316,42 @@
 
         .heys-auth-key--muted {
             color: #64748b;
-            font-size: 20px;
+            font-size: 21px;
+        }
+
+        @media (min-width: 768px) {
+            .heys-auth-keypad {
+                width: min(100%, 236px);
+                max-width: 236px;
+                gap: 6px;
+                margin: 18px auto 22px !important;
+            }
+
+            .heys-auth-key {
+                min-height: 46px;
+                border-radius: 12px;
+                font-size: 20px;
+            }
+
+            .heys-auth-key-spacer {
+                min-height: 46px;
+            }
         }
 
 	        .heys-auth-key-spacer {
-	            min-height: 48px;
+	            min-height: 52px;
 	        }
+
+            @media (min-width: 768px) {
+                .heys-auth-key-spacer {
+                    min-height: 46px;
+                }
+            }
 
 	        .heys-auth-footer-row {
 	            position: relative;
 	            min-height: 20px;
-	            margin-top: 14px;
+	            margin-top: 20px;
 	            display: flex;
 	            align-items: center;
 	            justify-content: center;
@@ -2119,6 +2376,154 @@
 	            font-weight: 650;
 	            text-decoration: none;
 	        }
+
+            @media (max-height: 760px) {
+                #heys-login-gate {
+                    padding-top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px)) !important;
+                    padding-bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) + 10px)) !important;
+                }
+
+                .heys-auth-card {
+                    padding: 18px !important;
+                    border-radius: 22px !important;
+                }
+
+                .heys-auth-heading {
+                    gap: 12px !important;
+                    margin-bottom: 14px !important;
+                }
+
+                .heys-auth-mark {
+                    width: 76px !important;
+                }
+
+                .heys-auth-title {
+                    font-size: 19px !important;
+                }
+
+                .heys-auth-card form.space-y-6 {
+                    gap: 9px !important;
+                }
+
+                .heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                    margin-top: 8px !important;
+                }
+
+                .heys-auth-label {
+                    font-size: 14px !important;
+                }
+
+                .heys-auth-field {
+                    padding: 9px 12px !important;
+                }
+
+                .heys-auth-pin-box {
+                    width: 48px !important;
+                    height: 58px !important;
+                }
+
+                .heys-auth-pin-input,
+                .heys-auth-pin-overlay {
+                    font-size: 28px !important;
+                }
+
+                .heys-auth-keypad {
+                    width: min(100%, 246px) !important;
+                    max-width: 246px !important;
+                    gap: 5px !important;
+                    margin-top: 12px !important;
+                    margin-bottom: 14px !important;
+                }
+
+                .heys-auth-card form.space-y-6 > .heys-auth-keypad,
+                .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+                    margin-top: 12px !important;
+                }
+
+                .heys-auth-key,
+                .heys-auth-key-spacer {
+                    min-height: 44px !important;
+                }
+
+                .heys-auth-key {
+                    font-size: 20px !important;
+                }
+
+                .heys-auth-footer-row {
+                    margin-top: 10px !important;
+                }
+
+                .heys-auth-support-line {
+                    font-size: 12.5px !important;
+                }
+            }
+
+            @media (max-height: 690px) {
+                .heys-auth-card {
+                    padding: 16px !important;
+                }
+
+                .heys-auth-heading {
+                    gap: 10px !important;
+                    margin-bottom: 12px !important;
+                }
+
+                .heys-auth-mark {
+                    width: 70px !important;
+                }
+
+                .heys-auth-title {
+                    font-size: 18px !important;
+                }
+
+                .heys-auth-card form.space-y-6 {
+                    gap: 8px !important;
+                }
+
+                .heys-auth-field {
+                    padding: 8px 10px !important;
+                }
+
+                #hlg-phone,
+                #hlg-phone-wrap > span,
+                .heys-auth-phone-input,
+                .heys-auth-field > .heys-auth-prefix {
+                    font-size: clamp(21px, 6vw, 23px) !important;
+                    line-height: 27px !important;
+                    height: 27px !important;
+                }
+
+                .heys-auth-pin-box {
+                    width: 44px !important;
+                    height: 52px !important;
+                }
+
+                .heys-auth-pin-input,
+                .heys-auth-pin-overlay {
+                    font-size: 26px !important;
+                }
+
+                .heys-auth-keypad {
+                    width: min(100%, 234px) !important;
+                    max-width: 234px !important;
+                    margin-top: 8px !important;
+                    margin-bottom: 10px !important;
+                }
+
+                .heys-auth-card form.space-y-6 > .heys-auth-keypad,
+                .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
+                    margin-top: 8px !important;
+                }
+
+                .heys-auth-key,
+                .heys-auth-key-spacer {
+                    min-height: 44px !important;
+                }
+
+                .heys-auth-footer-row {
+                    margin-top: 8px !important;
+                }
+            }
 
 	        .heys-auth-admin-shortcut {
 	            position: absolute;
@@ -2624,6 +3029,10 @@
             // ─── Состояние ─────────────────────────────────────────────────
             var phoneDigits = ''; // 10 цифр без 7
             var pinDigits = ['', '', '', ''];
+            var activeEntry = 'phone';
+            var invalidPinActive = false;
+            var invalidPinTimers = { reset: null, clear: null };
+            var phonePulseTimer = null;
             var currentScreen = 'start';
             var isBusy = false;
             // ─── Экраны ─────────────────────────────────────────────────────
@@ -2642,11 +3051,19 @@
                 if (screen === 'client') {
                     setTimeout(function () {
                         var ph = document.getElementById('hlg-phone');
-                        if (ph && !phoneDigits) ph.focus();
-                        else if (ph && phoneDigits.length === 10) {
-                            focusPinInput(0);
-                        } else if (ph) ph.focus();
-                    }, 50);
+	                        if (ph && !phoneDigits) {
+	                            activeEntry = 'phone';
+	                            updatePhoneStyles();
+	                            updatePinStyles();
+	                            ph.focus();
+	                        }
+	                        else if (ph && phoneDigits.length === 10) {
+	                            activeEntry = 'pin';
+	                            updatePhoneStyles();
+	                            updatePinStyles();
+	                            focusPinInput(0);
+	                        } else if (ph) ph.focus();
+	                    }, 50);
                 }
                 if (screen === 'curator') {
                     setTimeout(function () {
@@ -2688,12 +3105,12 @@
 
 	            // ─── Приветствие по времени суток ───────────────────────────────
 	            function getGreeting() {
-                var h = new Date().getHours();
-                if (h >= 5 && h < 12) return '🌅 Доброе утро!';
-                if (h >= 12 && h < 18) return '☀️ Добрый день!';
-                if (h >= 18 && h < 23) return '🌆 Добрый вечер!';
-                return '🌙 Доброй ночи!';
-            }
+	                var h = new Date().getHours();
+	                if (h >= 5 && h < 12) return 'Доброе утро';
+	                if (h >= 12 && h < 18) return 'Добрый день';
+	                if (h >= 18 && h < 23) return 'Добрый вечер';
+	                return 'Доброй ночи';
+	            }
 
             // ─── Обновление кнопки Войти ────────────────────────────────────
             function updateClientSubmit() {
@@ -2703,6 +3120,7 @@
                 var pinOk = pinDigits.every(function (d) { return d.length === 1; });
                 var canLogin = phoneOk && pinOk && !isBusy;
                 btn.disabled = !canLogin;
+                btn.style.opacity = canLogin ? '1' : '0.5';
             }
 
             function hlgUsesTouchKeypad() {
@@ -2715,6 +3133,18 @@
 
             function focusPinInput(idx) {
                 var inp = document.getElementById('hlg-pin-' + idx);
+                if (!inp) return;
+                if (hlgUsesTouchKeypad()) {
+                    if (document.activeElement && document.activeElement !== document.body) {
+                        try { document.activeElement.blur(); } catch (_) { }
+                    }
+                    return;
+                }
+                inp.focus();
+            }
+
+            function focusPhoneInput() {
+                var inp = document.getElementById('hlg-phone');
                 if (!inp) return;
                 if (hlgUsesTouchKeypad()) {
                     if (document.activeElement && document.activeElement !== document.body) {
@@ -2740,6 +3170,104 @@
                 }
             }
 
+            function updatePhoneStyles() {
+                var wrap = document.getElementById('hlg-phone-wrap');
+                if (!wrap) return;
+                wrap.classList.toggle('is-complete', phoneDigits.length === 10);
+                wrap.classList.toggle('phone-complete', phoneDigits.length === 10);
+                wrap.classList.toggle('is-active', activeEntry === 'phone');
+            }
+
+            function pulsePhoneComplete() {
+                var wrap = document.getElementById('hlg-phone-wrap');
+                if (!wrap) return;
+                if (phonePulseTimer) clearTimeout(phonePulseTimer);
+                wrap.classList.remove('is-confirm-pulse');
+                void wrap.offsetWidth;
+                wrap.classList.add('is-confirm-pulse');
+                phonePulseTimer = setTimeout(function () {
+                    wrap.classList.remove('is-confirm-pulse');
+                    phonePulseTimer = null;
+                }, 220);
+            }
+
+            function hapticInvalidPin() {
+                try {
+                    if (navigator && typeof navigator.vibrate === 'function') navigator.vibrate(35);
+                } catch (_) { }
+            }
+
+            function setActiveEntry(next) {
+                activeEntry = next === 'pin' ? 'pin' : 'phone';
+                updatePhoneStyles();
+                updatePinStyles();
+            }
+
+            function appendPhoneDigit(digit) {
+                if (isBusy || !/^\d$/.test(String(digit)) || phoneDigits.length >= 10) return;
+                phoneDigits = (phoneDigits + String(digit)).slice(0, 10);
+                var inp = document.getElementById('hlg-phone');
+                if (inp) inp.value = formatPhoneBody(phoneDigits);
+                hlgSetClientErr('');
+                if (phoneDigits.length === 10) {
+                    pulsePhoneComplete();
+                    setActiveEntry('pin');
+                    setTimeout(function () { focusPinInput(getNextPinIndex()); }, 50);
+                } else {
+                    setActiveEntry('phone');
+                }
+                updateClientSubmit();
+            }
+
+            function erasePhoneDigit() {
+                if (isBusy || phoneDigits.length <= 0) return;
+                phoneDigits = phoneDigits.slice(0, -1);
+                var inp = document.getElementById('hlg-phone');
+                if (inp) inp.value = formatPhoneBody(phoneDigits);
+                hlgSetClientErr('');
+                setActiveEntry('phone');
+                focusPhoneInput();
+                updateClientSubmit();
+            }
+
+            function resetPinToFirstSlot() {
+                for (var i = 0; i < 4; i++) {
+                    pinDigits[i] = '';
+                    var inp = document.getElementById('hlg-pin-' + i);
+                    if (inp) {
+                        inp.value = '';
+                        inp.classList.remove('hlg-pin-error');
+                    }
+                    clearPinOverlay(i);
+                }
+                setActiveEntry('pin');
+                updateClientSubmit();
+                setTimeout(function () { focusPinInput(0); }, 50);
+            }
+
+            function showInvalidPinFeedback() {
+                if (invalidPinTimers.reset) clearTimeout(invalidPinTimers.reset);
+                if (invalidPinTimers.clear) clearTimeout(invalidPinTimers.clear);
+                hlgSetClientErr('PIN не подошёл', { pinError: true });
+                setActiveEntry('pin');
+                hapticInvalidPin();
+                invalidPinActive = true;
+                for (var i = 0; i < 4; i++) {
+                    var inp = document.getElementById('hlg-pin-' + i);
+                    if (!inp) continue;
+                    inp.classList.remove('hlg-pin-error');
+                    void inp.offsetWidth;
+                    inp.classList.add('hlg-pin-error');
+                }
+                invalidPinTimers.reset = setTimeout(function () {
+                    resetPinToFirstSlot();
+                    invalidPinActive = false;
+                }, 360);
+                invalidPinTimers.clear = setTimeout(function () {
+                    hlgSetClientErr('');
+                }, 1800);
+            }
+
             function setPinDigit(idx, digit) {
                 var inp = document.getElementById('hlg-pin-' + idx);
                 pinDigits[idx] = digit;
@@ -2752,7 +3280,13 @@
             }
 
             function appendPinDigit(digit) {
+                if (phoneDigits.length !== 10) {
+                    appendPhoneDigit(digit);
+                    return;
+                }
+                if (invalidPinActive) return;
                 if (isBusy || pinDigits.every(function (d) { return d.length === 1; }) || !/^\d$/.test(String(digit))) return;
+                setActiveEntry('pin');
                 var idx = getNextPinIndex();
                 setPinDigit(idx, String(digit));
                 if (idx < 3) focusPinInput(idx + 1);
@@ -2761,12 +3295,22 @@
 
             function erasePinDigit() {
                 if (isBusy) return;
+                if (invalidPinActive) return;
+                setActiveEntry('pin');
                 for (var i = 3; i >= 0; i--) {
                     if (pinDigits[i]) {
                         setPinDigit(i, '');
                         focusPinInput(i);
                         return;
                     }
+                }
+                if (phoneDigits.length === 10) {
+                    phoneDigits = phoneDigits.slice(0, -1);
+                    var inp = document.getElementById('hlg-phone');
+                    if (inp) inp.value = formatPhoneBody(phoneDigits);
+                    setActiveEntry('phone');
+                    focusPhoneInput();
+                    updateClientSubmit();
                 }
             }
 
@@ -2802,8 +3346,13 @@
 
             // ─── Обновление стилей PIN полей ────────────────────────────────
             function updatePinStyles() {
-                var allFilled = pinDigits.every(function (d) { return d.length === 1; });
-                var activeIdx = allFilled ? -1 : getNextPinIndex();
+	                var allFilled = pinDigits.every(function (d) { return d.length === 1; });
+	                var activeIdx = activeEntry === 'pin' && !allFilled ? getNextPinIndex() : -1;
+                var section = document.getElementById('hlg-pin-section');
+                if (section) {
+                    section.classList.toggle('is-muted', phoneDigits.length !== 10);
+                    section.classList.toggle('is-active', activeEntry === 'pin');
+                }
                 for (var i = 0; i < 4; i++) {
                     var el = document.getElementById('hlg-pin-' + i);
                     if (!el) continue;
@@ -2820,6 +3369,7 @@
                 if (!inp) return;
 
                 inp.addEventListener('input', function (e) {
+                    var wasComplete = phoneDigits.length === 10;
                     var raw = inp.value.replace(/\D/g, '').slice(0, 10);
                     // Mobile-фикс: на Android keydown не отдаёт key==='Backspace',
                     // backspace приходит только через input. Если стёрся только
@@ -2832,39 +3382,52 @@
                     }
                     phoneDigits = raw;
                     inp.value = formatPhoneBody(raw);
-                    wrap.classList.toggle('is-complete', raw.length === 10);
+	                    updatePhoneStyles();
                     // Сбрасываем ошибку
                     hlgSetClientErr('');
                     updateClientSubmit();
                     // Авто-переход на PIN
-                    if (raw.length === 10) {
-                        setTimeout(function () {
-                            focusPinInput(getNextPinIndex());
-                        }, 50);
-                    }
-                });
+	                    if (raw.length === 10) {
+                            if (!wasComplete) pulsePhoneComplete();
+	                        setActiveEntry('pin');
+	                        setTimeout(function () {
+	                            focusPinInput(getNextPinIndex());
+	                        }, 50);
+	                    } else {
+	                        setActiveEntry('phone');
+	                    }
+	                });
 
-                inp.addEventListener('keydown', function (e) {
+	                inp.addEventListener('keydown', function (e) {
                     if (e.key === 'Backspace' && phoneDigits.length > 0) {
                         e.preventDefault();
-                        phoneDigits = phoneDigits.slice(0, -1);
-                        inp.value = formatPhoneBody(phoneDigits);
-                        var wrap2 = document.getElementById('hlg-phone-wrap');
-                        if (wrap2) wrap2.classList.toggle('is-complete', phoneDigits.length === 10);
-                        updateClientSubmit();
-                    }
-                });
-            }
+	                        phoneDigits = phoneDigits.slice(0, -1);
+	                        inp.value = formatPhoneBody(phoneDigits);
+	                        setActiveEntry('phone');
+	                        updateClientSubmit();
+	                    }
+	                });
+
+	                inp.addEventListener('focus', function () { setActiveEntry('phone'); });
+	                inp.addEventListener('click', function () { setActiveEntry('phone'); });
+	            }
 
             // ─── Инициализация PIN полей ────────────────────────────────────
             function initPinInputs() {
                 for (var i = 0; i < 4; i++) {
                     (function (idx) {
                         var inp = document.getElementById('hlg-pin-' + idx);
-                        if (!inp) return;
+	                        if (!inp) return;
+	                        inp.addEventListener('focus', function () { setActiveEntry(phoneDigits.length === 10 ? 'pin' : 'phone'); });
+	                        inp.addEventListener('click', function () { setActiveEntry(phoneDigits.length === 10 ? 'pin' : 'phone'); });
 
-                        inp.addEventListener('input', function (e) {
-                            var v = inp.value.replace(/\D/g, '').slice(0, 1);
+	                        inp.addEventListener('input', function (e) {
+	                            if (phoneDigits.length !== 10) {
+	                                inp.value = '';
+	                                setActiveEntry('phone');
+	                                return;
+	                            }
+	                            var v = inp.value.replace(/\D/g, '').slice(0, 1);
                             inp.value = v;
                             setPinDigit(idx, v);
                             // Авто-переход вперёд
@@ -2877,7 +3440,11 @@
                             }
                         });
 
-                        inp.addEventListener('keydown', function (e) {
+	                        inp.addEventListener('keydown', function (e) {
+	                            if (phoneDigits.length !== 10) {
+	                                setActiveEntry('phone');
+	                                return;
+	                            }
                             if (e.key === 'Backspace') {
                                 if (!pinDigits[idx] && idx > 0) {
                                     e.preventDefault();
@@ -2941,17 +3508,22 @@
                 keypad.addEventListener('click', function (e) {
                     var key = e.target && e.target.closest ? e.target.closest('[data-pin-key]') : null;
                     var backspace = e.target && e.target.closest ? e.target.closest('[data-pin-backspace]') : null;
-                    if (key) appendPinDigit(key.getAttribute('data-pin-key') || '');
-                    else if (backspace) erasePinDigit();
-                });
-            }
+	                    if (key) appendPinDigit(key.getAttribute('data-pin-key') || '');
+	                    else if (backspace) {
+	                        if (activeEntry === 'phone' || phoneDigits.length !== 10) erasePhoneDigit();
+	                        else erasePinDigit();
+	                    }
+	                });
+	            }
 
             // ─── Показ ошибок ──────────────────────────────────────────────
-            function hlgSetClientErr(msg) {
+            function hlgSetClientErr(msg, options) {
+                options = options || {};
                 var el = document.getElementById('hlg-client-err');
                 if (!el) return;
+                el.classList.toggle('is-pin-error', !!options.pinError);
                 if (msg) { el.textContent = msg; el.style.display = ''; }
-                else { el.style.display = 'none'; el.textContent = ''; }
+                else { el.style.display = 'none'; el.textContent = ''; el.classList.remove('is-pin-error'); }
             }
             function hlgSetCuratorErr(msg) {
                 var el = document.getElementById('hlg-curator-err');
@@ -2964,14 +3536,16 @@
             function hlgSetBusy(busy, submitId, label) {
                 isBusy = busy;
                 var btn = document.getElementById(submitId);
+                var clientStatus = submitId === 'hlg-client-submit' ? document.getElementById('hlg-client-status') : null;
+                if (clientStatus) clientStatus.classList.toggle('is-visible', !!busy);
                 if (!btn) return;
                 if (busy) {
                     btn.classList.add('loading');
                     btn.disabled = true;
-                    btn.textContent = '⏳ Вход...';
+                    btn.textContent = clientStatus ? '' : 'Входим...';
                 } else {
                     btn.classList.remove('loading');
-                    btn.textContent = label || 'Войти →';
+                    btn.textContent = clientStatus ? '' : (label || 'Войти →');
                     updateClientSubmit();
                 }
             }
@@ -3072,7 +3646,7 @@
                     return;
                 }
 
-                hlgSetBusy(true, 'hlg-client-submit', 'Войти →');
+                hlgSetBusy(true, 'hlg-client-submit', 'Войти');
 
                 // Anti-timing delay (350-600ms, как в heys_auth_v1.js)
                 var delay = 350 + Math.floor(Math.random() * 250);
@@ -3094,13 +3668,13 @@
                             if (!res.ok || !row || !row.success) {
                                 registerFail('login', phone);
                                 var serverErr = row && row.error;
-                                if (serverErr === 'rate_limited') {
-                                    hlgSetClientErr('Слишком много попыток. Попробуйте позже.');
-                                } else {
-                                    hlgSetClientErr('Телефон или PIN неверные');
-                                }
-                                hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
-                                return;
+	                                if (serverErr === 'rate_limited') {
+	                                    hlgSetClientErr('Слишком много попыток. Попробуйте позже.');
+		                                } else {
+		                                    showInvalidPinFeedback();
+		                                }
+	                                hlgSetBusy(false, 'hlg-client-submit', 'Войти');
+	                                return;
                             }
 
                             var clientId = row.client_id;
@@ -3108,10 +3682,10 @@
                             var clientName = row.name || row.client_name || '';
 
                             if (!clientId || !sessionToken) {
-                                registerFail('login', phone);
-                                hlgSetClientErr('Телефон или PIN неверные');
-                                hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
-                                return;
+	                                registerFail('login', phone);
+		                                showInvalidPinFeedback();
+	                                hlgSetBusy(false, 'hlg-client-submit', 'Войти');
+	                                return;
                             }
 
 	                            var finishClientLogin = function () {
@@ -3163,7 +3737,7 @@
                         .catch(function (e) {
                             registerFail('login', phone);
                             hlgSetClientErr(navigator.onLine ? 'Ошибка соединения. Попробуйте ещё раз.' : 'Нет подключения к интернету');
-                            hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
+                            hlgSetBusy(false, 'hlg-client-submit', 'Войти');
                         });
                 }, delay);
             };
@@ -3324,10 +3898,10 @@
                     return;
                 }
 
-                // Приветствие
-                var greeting = getGreeting();
-                var grCur = document.getElementById('hlg-greeting-curator');
-                if (grCur) grCur.textContent = greeting;
+	                // Приветствие
+	                var greeting = getGreeting();
+	                var grCur = document.getElementById('hlg-greeting-curator');
+	                if (grCur) grCur.textContent = greeting;
 
                 // Версия
                 var verEl = document.getElementById('hlg-version');
@@ -3581,10 +4155,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.6e0661ef0828.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.5f1d4ceb83ce.js"></script>
+    <script defer src="boot-core.bundle.fc59b015278c.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.84929ef49693.js"></script>
     <script defer src="boot-day.bundle.adc64182db88.js"></script>
-    <script defer src="boot-app.bundle.24051f122364.js"></script>
+    <script defer src="boot-app.bundle.dccebc7a97b0.js"></script>
     <script defer src="boot-init.bundle.dd4545585722.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -3645,11 +4219,11 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.d4110df623bb.js',
+                'postboot-1-game-lazy.bundle.5c6c0d8ecd06.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-2-insights-lazy.bundle.fa39ace5cf00.js',
+                'postboot-2-insights-lazy.bundle.87ac8412985d.js',
                 'postboot-3-ui-eager.bundle.2da300f79259.js',
-                'postboot-3-ui-lazy.bundle.d36c755565c3.js'
+                'postboot-3-ui-lazy.bundle.af1a36c81e33.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;
