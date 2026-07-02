@@ -1770,10 +1770,16 @@
 }
 
 .planning-tab:has(.planning-tasks-screen) .planning-subnav-shell {
-    /* Резерв = ровно под главные табы. Подменю и scale-fab pointer-events:none —
-       они визуально накладываются на низ контента, но клики проходят сквозь них. */
-    flex: 0 0 var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)));
-    min-height: var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)));
+    /* Резерв под главные табы + нижнюю строку подвкладок/FAB-ов.
+       Иначе последние действия задачника оказываются под fixed subnav. */
+    flex: 0 0 calc(
+        var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)))
+        + var(--planning-subnav-height, 44px)
+    );
+    min-height: calc(
+        var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)))
+        + var(--planning-subnav-height, 44px)
+    );
 }
 
 /* Фоновая полоса под FAB-рядом (подменю слева + scale-fab справа) — чтобы контент
@@ -2986,11 +2992,11 @@
 .planning-action-menu-overlay {
     position: fixed;
     inset: 0;
-    z-index: 220;
+    z-index: 10030;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: calc(18px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 14px calc(10px + env(safe-area-inset-bottom, 0px));
     background:
         linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.32) 100%);
     -webkit-backdrop-filter: blur(8px) saturate(1.08);
@@ -2999,8 +3005,8 @@
 
 .planning-action-menu {
     position: relative;
-    width: min(366px, calc(100vw - 36px));
-    max-height: min(78vh, 560px);
+    width: min(366px, calc(100vw - 28px));
+    max-height: min(92dvh, calc(100vh - 20px), 640px);
     overflow: hidden;
     border-radius: 24px;
     border: 1px solid rgba(255, 255, 255, 0.78);
@@ -3077,7 +3083,7 @@
     display: flex;
     flex-direction: column;
     gap: 13px;
-    max-height: calc(min(78vh, 560px) - 68px);
+    max-height: calc(min(92dvh, calc(100vh - 20px), 640px) - 68px);
     overflow-y: auto;
     padding: 13px 14px 15px;
 }
@@ -3240,6 +3246,95 @@
     text-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
 }
 
+.planning-clear-tasks-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10040;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background:
+        radial-gradient(circle at 50% 16%, rgba(254, 202, 202, 0.34), transparent 34%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.42) 0%, rgba(15, 23, 42, 0.64) 100%);
+    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.planning-clear-tasks-modal {
+    width: min(360px, calc(100vw - 32px));
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 24px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 247, 247, 0.96) 100%);
+    box-shadow:
+        0 28px 70px rgba(15, 23, 42, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    padding: 18px;
+}
+
+.planning-clear-tasks-modal__icon {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.planning-clear-tasks-modal__copy {
+    margin-top: 12px;
+}
+
+.planning-clear-tasks-modal__title {
+    margin: 0;
+    color: var(--planning-text);
+    font-size: 20px;
+    font-weight: 850;
+    line-height: 1.18;
+}
+
+.planning-clear-tasks-modal__text {
+    margin: 8px 0 0;
+    color: var(--planning-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.planning-clear-tasks-modal__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.planning-clear-tasks-modal__cancel,
+.planning-clear-tasks-modal__confirm {
+    min-height: 42px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.planning-clear-tasks-modal__cancel {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--planning-muted);
+}
+
+.planning-clear-tasks-modal__confirm {
+    border: 1px solid rgba(220, 38, 38, 0.72);
+    background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(220, 38, 38, 0.22);
+}
+
 @media (hover: hover) {
   .planning-action-menu__close:hover,
   .planning-action-menu__item:hover {
@@ -3252,6 +3347,18 @@
 
   .planning-action-menu__swatch:hover:not(:disabled) {
     transform: scale(1.05);
+}
+
+  .planning-clear-tasks-btn:hover:not(:disabled) {
+    border-color: rgba(239, 68, 68, 0.22);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0) 100%),
+        rgba(254, 242, 242, 0.56);
+    color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow:
+        0 10px 22px rgba(15, 23, 42, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 }
 
@@ -3295,6 +3402,69 @@
 
 .planning-add-project .planning-quick-input {
     flex: 1;
+}
+
+.planning-clear-tasks-bar {
+    padding: 10px 0 0;
+}
+
+.planning-clear-tasks-btn {
+    width: 100%;
+    min-height: 48px;
+    border: 1px dashed rgba(148, 163, 184, 0.34);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0) 100%),
+        rgba(248, 250, 252, 0.72);
+    color: var(--planning-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    cursor: pointer;
+    text-align: left;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.planning-clear-tasks-btn:disabled {
+    cursor: default;
+    opacity: 0.54;
+    filter: grayscale(0.18);
+}
+
+.planning-clear-tasks-btn__icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.planning-clear-tasks-btn__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.planning-clear-tasks-btn__label {
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+.planning-clear-tasks-btn__meta {
+    color: var(--planning-muted-soft, #94a3b8);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.2;
 }
 
 .planning-tasks-scale-fab {
@@ -8550,6 +8720,25 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+[data-theme="dark"] .planning-clear-tasks-btn {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0) 100%),
+        rgba(15, 23, 42, 0.58);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: rgba(226, 232, 240, 0.7);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .planning-clear-tasks-btn__icon {
+    background: rgba(148, 163, 184, 0.12);
+    color: rgba(203, 213, 225, 0.72);
+}
+
+[data-theme="dark"] .planning-clear-tasks-btn__meta {
+    color: rgba(148, 163, 184, 0.72);
+}
+
 [data-theme="dark"] .planning-action-menu__close {
     background: rgba(15, 23, 42, 0.74);
     border-color: rgba(148, 163, 184, 0.16);
@@ -8568,6 +8757,32 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     box-shadow:
         0 6px 14px rgba(2, 6, 23, 0.34),
         inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .planning-clear-tasks-modal-overlay {
+    background:
+        radial-gradient(circle at 50% 16%, rgba(127, 29, 29, 0.4), transparent 36%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.62) 0%, rgba(2, 6, 23, 0.82) 100%);
+}
+
+[data-theme="dark"] .planning-clear-tasks-modal {
+    background:
+        linear-gradient(180deg, rgba(30, 41, 59, 0.97) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.62),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .planning-clear-tasks-modal__icon {
+    background: rgba(248, 113, 113, 0.14);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .planning-clear-tasks-modal__cancel {
+    background: rgba(15, 23, 42, 0.74);
+    border-color: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
 }
 
 @media (hover: hover) {

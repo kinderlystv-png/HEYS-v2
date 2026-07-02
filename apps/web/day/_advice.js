@@ -1384,26 +1384,50 @@
     const dayAdviceListUI = {};
 
     // ═════════════════════════════════════════════════════════════════
-    // ⚕️ Phase 6 (2026-05-30): Medical disclaimer (one-time, LS-tracked)
+    // ⚕️ Phase 6 (2026-05-30): Medical disclaimer (one-time, synced)
     //
     // Юзер должен один раз acknowledge что советы основаны на
     // peer-reviewed research, но не заменяют врача. После accept'a —
-    // не показывается. Reset через DevTools localStorage если нужно.
+    // не показывается и синкается как advice-key.
     // ═════════════════════════════════════════════════════════════════
 
     const MEDICAL_DISCLAIMER_KEY = 'heys_advice_disclaimer_accepted_v1';
 
+    function isMedicalDisclaimerAcceptedValue(value) {
+        return value === true || value === 1 || value === '1' || value === 'true';
+    }
+
     function isMedicalDisclaimerAccepted() {
-        try { return localStorage.getItem(MEDICAL_DISCLAIMER_KEY) === '1'; }
-        catch (e) { return true; /* on error — assume accepted, не блокируем UI */ }
+        try {
+            if (HEYS.store?.get) {
+                const fromStore = HEYS.store.get(MEDICAL_DISCLAIMER_KEY, null);
+                if (fromStore !== null && fromStore !== undefined) {
+                    return isMedicalDisclaimerAcceptedValue(fromStore);
+                }
+            }
+            if (HEYS.utils?.lsGet) {
+                const fromLs = HEYS.utils.lsGet(MEDICAL_DISCLAIMER_KEY, null);
+                if (fromLs !== null && fromLs !== undefined) {
+                    return isMedicalDisclaimerAcceptedValue(fromLs);
+                }
+            }
+            const raw = localStorage.getItem(MEDICAL_DISCLAIMER_KEY);
+            if (raw == null) return false;
+            try { return isMedicalDisclaimerAcceptedValue(JSON.parse(raw)); }
+            catch (_) { return isMedicalDisclaimerAcceptedValue(raw); }
+        } catch (e) {
+            return true; /* on error — assume accepted, не блокируем UI */
+        }
     }
 
     function acceptMedicalDisclaimer() {
         try {
-            if (window.HEYS?.utils?.lsSet) {
-                window.HEYS.utils.lsSet(MEDICAL_DISCLAIMER_KEY, '1');
+            if (HEYS.store?.set) {
+                HEYS.store.set(MEDICAL_DISCLAIMER_KEY, true);
+            } else if (HEYS.utils?.lsSet) {
+                HEYS.utils.lsSet(MEDICAL_DISCLAIMER_KEY, true);
             } else {
-                localStorage.setItem(MEDICAL_DISCLAIMER_KEY, '1');
+                localStorage.setItem(MEDICAL_DISCLAIMER_KEY, 'true');
             }
         } catch (e) { /* noop */ }
     }
@@ -1540,26 +1564,26 @@
                 renderMedicalDisclaimer(React),
                 React.createElement('div', { className: 'advice-list-header' },
                     React.createElement('div', { className: 'advice-list-header-top' },
-                        React.createElement('span', null, `💡 Советы (${activeCount})`),
+                        React.createElement('span', { className: 'advice-list-title' }, `💡 Советы (${activeCount})`),
                         React.createElement('div', { className: 'advice-list-header-actions' },
                             adviceTraceAvailable && React.createElement('button', {
-                                className: 'advice-list-dismiss-all',
+                                className: 'advice-list-header-link',
                                 onClick: copyAdviceTrace,
                                 title: 'Скопировать технический лог принятия решений по советам',
                             },
                                 adviceTraceCopyState === 'success'
-                                    ? '✅ Лог скопирован'
+                                    ? 'Скопировано'
                                     : adviceTraceCopyState === 'error'
-                                        ? '⚠️ Ошибка копии'
-                                        : '📋 Техлог'
+                                        ? 'Ошибка'
+                                        : 'Техлог'
                             ),
                             adviceDiagnostics && React.createElement('button', {
-                                className: 'advice-list-dismiss-all advice-list-dismiss-all--diagnostics',
+                                className: 'advice-list-header-link',
                                 onClick: openAdviceDiagnostics,
                                 title: 'Показать компактную диагностику advice engine',
-                            }, '📊 Диагностика'),
+                            }, 'Диагностика'),
                             activeCount > 1 && React.createElement('button', {
-                                className: 'advice-list-dismiss-all',
+                                className: 'advice-list-header-link advice-list-header-link--read-all',
                                 onClick: handleDismissAll,
                                 disabled: dismissAllAnimation,
                                 title: 'Пометить все советы прочитанными',

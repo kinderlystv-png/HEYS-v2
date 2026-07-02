@@ -45,6 +45,10 @@
     ]);
     const _planningCloudMeta = new Map();
     const _planningPersistHistory = [];
+    const PLANNING_READBACK_RECENT_WRITE_MS = 15000;
+    const PLANNING_READBACK_DEBOUNCE_MS = 750;
+    let _planningReadbackTimer = 0;
+    let _lastPlanningReadback = null;
 
     const CHRONO_TOMBSTONE_TTL_MS = 180 * 86400000;
 
@@ -351,6 +355,55 @@
         }
     }
 
+    function summarizeChronoEntryForTrace(entry) {
+        if (!entry || typeof entry !== 'object') return null;
+        return {
+            id: entry.id ? String(entry.id) : null,
+            activityId: entry.activityId ? String(entry.activityId) : null,
+            date: entry.date ? String(entry.date) : null,
+            minutes: Math.round(Number(entry.minutes) || 0),
+            at: entry.at || null,
+            createdAt: entry.createdAt || null,
+        };
+    }
+
+    function summarizeChronoEntriesForTrace(entries) {
+        const arr = Array.isArray(entries) ? entries : [];
+        const last = arr.length ? arr[arr.length - 1] : null;
+        return {
+            entriesLen: arr.length,
+            totalMinutes: arr.reduce((sum, item) => sum + Math.max(0, Math.round(Number(item && item.minutes) || 0)), 0),
+            lastEntry: summarizeChronoEntryForTrace(last),
+        };
+    }
+
+    function traceChrono(event, payload, level) {
+        try {
+            const flowId = payload?.flowId
+                || (HEYS.LogTrace && typeof HEYS.LogTrace.lastFlowId === 'function'
+                    ? HEYS.LogTrace.lastFlowId('[HEYS.chrono.trace]', 5000)
+                    : null);
+            const body = {
+                event,
+                source: 'planning-store',
+                client: String(getPlanningClientId() || '').slice(0, 8) || null,
+                flowId,
+                ...(payload || {}),
+            };
+            if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
+                HEYS.LogTrace.trace(level || 'info', '[HEYS.chrono.trace]', body);
+                return;
+            }
+            const fn = level === 'warn' ? console.warn : (level === 'error' ? console.error : console.info);
+            fn('[HEYS.chrono.trace]', body);
+            setTimeout(() => {
+                try {
+                    if (HEYS.LogTrace && typeof HEYS.LogTrace.flush === 'function') HEYS.LogTrace.flush();
+                } catch (_) { /* noop */ }
+            }, 300);
+        } catch (_) { /* trace must never break planning */ }
+    }
+
     function scopePlanningKey(key) {
         const clientId = getPlanningClientId();
         if (!clientId || typeof key !== 'string') return key;
@@ -477,6 +530,12 @@
                     .find((item) => item.key === key && item.sync && (Date.now() - item.ts) < 5000);
                 if (status !== 'pending' && !recent) {
                     console.warn('[HEYS.planning] chrono entries changed but no pending/recent sync marker; force enqueue', { key, reason, status });
+                    traceChrono('entries_queue_guard_force_enqueue', {
+                        key,
+                        reason: reason || 'chrono-entry-queue-guard',
+                        syncStatus: status,
+                        ...(summarizeChronoEntriesForTrace(value)),
+                    }, 'warn');
                     enqueuePlanningKeyForSync(key, value, reason || 'chrono-entry-queue-guard');
                 }
             } catch (_) { /* noop */ }
@@ -493,7 +552,34 @@
             return value;
         }
         if (sync) {
-            enqueuePlanningKeyForSync(key, value, options.reason || 'planning-save');
+            const enqueued = enqueuePlanningKeyForSync(key, value, options.reason || 'planning-save');
+            if (key === KEYS.CHRONO_ENTRIES) {
+                let syncStatus = 'unknown';
+                try {
+                    syncStatus = HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function'
+                        ? HEYS.cloud.getSyncStatus(key)
+                        : 'unknown';
+                } catch (_) { /* noop */ }
+                traceChrono('entries_persist_enqueued', {
+                    key,
+                    flowId: options.flowId || null,
+                    reason: options.reason || 'planning-save',
+                    status: enqueued ? 'queued' : 'not-queued',
+                    syncStatus,
+                    ...(summarizeChronoEntriesForTrace(value)),
+                });
+                try {
+                    if (HEYS.LogTrace && typeof HEYS.LogTrace.verifyKvWrite === 'function') {
+                        HEYS.LogTrace.verifyKvWrite({
+                            prefix: '[HEYS.chrono.trace]',
+                            flowId: options.flowId || null,
+                            key,
+                            expectedSummary: valueSummary(value),
+                            delayMs: 2500,
+                        });
+                    }
+                } catch (_) { /* readback trace must never break planning */ }
+            }
             verifyChronoEntriesQueued(key, value, options.reason || 'planning-save');
         } else {
             pushPlanningPersistHistory({ key, reason: options.reason || 'cloud-apply', sync: false, status: 'local-write' });
@@ -871,6 +957,30 @@
         saveTasks(tasks);
         const slots = getSlots().filter((slot) => slot.taskId !== id);
         saveSlots(slots);
+    }
+
+    function deleteTasks(ids, opts) {
+        const idSet = new Set((Array.isArray(ids) ? ids : []).filter(Boolean));
+        const projectIdsToDelete = new Set((Array.isArray(opts?.deleteProjectIds) ? opts.deleteProjectIds : []).filter(Boolean));
+        if (!idSet.size && !projectIdsToDelete.size) return 0;
+        const tasks = getTasks()
+            .filter((task) => !idSet.has(task.id))
+            .map((task) => ({
+                ...task,
+                projectId: projectIdsToDelete.has(task.projectId) ? undefined : task.projectId,
+                blockedByTaskIds: Array.isArray(task.blockedByTaskIds)
+                    ? task.blockedByTaskIds.filter((entry) => !idSet.has(entry))
+                    : [],
+                parentTaskId: idSet.has(task.parentTaskId) ? undefined : task.parentTaskId,
+                updatedAt: nowISO(),
+            }));
+        if (projectIdsToDelete.size) {
+            saveProjects(getProjects().filter((project) => !projectIdsToDelete.has(project.id)));
+        }
+        saveTasks(tasks);
+        saveSlots(getSlots().filter((slot) => !idSet.has(slot.taskId)));
+        saveLinks(getLinks().filter((link) => !idSet.has(link.fromId) && !idSet.has(link.toId)));
+        return idSet.size || projectIdsToDelete.size;
     }
 
     function reorderTasks(sourceId, targetId) {
@@ -1344,18 +1454,37 @@
     }
 
     function saveChronoEntries(entries, opts) {
-        persistPlanningKey(KEYS.CHRONO_ENTRIES, filterChronoEntries(entries), {
+        const filtered = filterChronoEntries(entries);
+        persistPlanningKey(KEYS.CHRONO_ENTRIES, filtered, {
             reason: opts?.reason || 'chrono-entries-save',
             sync: opts?.sync,
+            flowId: opts?.flowId || null,
         });
     }
 
     function addChronoEntry(input) {
         const activityId = input?.activityId;
         const minutes = Math.round(Number(input?.minutes) || 0);
-        if (!activityId || minutes <= 0) return null;
+        const flowId = input?.flowId || null;
+        if (!activityId || minutes <= 0) {
+            traceChrono('entry_create_rejected', {
+                flowId,
+                reason: 'invalid_input',
+                hasActivityId: !!activityId,
+                minutes,
+            }, 'warn');
+            return null;
+        }
         const activity = getChronoActivities().find((a) => a.id === activityId);
-        if (!activity) return null;
+        if (!activity) {
+            traceChrono('entry_create_rejected', {
+                flowId,
+                reason: 'unknown_activity',
+                activityId: String(activityId),
+                minutes,
+            }, 'warn');
+            return null;
+        }
         const createdAt = input?.createdAt || nowISO();
         const at = input?.at || createdAt;
         const entry = {
@@ -1374,21 +1503,41 @@
         if (input?.displayGroupId) entry.displayGroupId = String(input.displayGroupId);
         if (input?.displayStartAt) entry.displayStartAt = String(input.displayStartAt);
         if (input?.displayEndAt) entry.displayEndAt = String(input.displayEndAt);
-        saveChronoEntries(getChronoEntries().concat(entry));
+        const entries = getChronoEntries();
+        const nextEntries = entries.concat(entry);
+        saveChronoEntries(nextEntries, { reason: 'chrono-entry-create', flowId });
+        traceChrono('entry_created', {
+            flowId,
+            entry: summarizeChronoEntryForTrace(entry),
+            entriesLen: nextEntries.length,
+        });
         return entry;
     }
 
     function updateChronoEntry(id, patch) {
-        if (!id) return null;
+        if (!id) {
+            traceChrono('entry_update_rejected', { reason: 'missing_id' }, 'warn');
+            return null;
+        }
         const entries = getChronoEntries();
         const index = entries.findIndex((e) => e.id === id);
-        if (index === -1) return null;
+        if (index === -1) {
+            traceChrono('entry_update_rejected', { reason: 'not_found', entryId: String(id) }, 'warn');
+            return null;
+        }
         const current = entries[index];
         const next = { ...current, updatedAt: nowISO() };
 
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'minutes')) {
             const minutes = Math.round(Number(patch.minutes) || 0);
-            if (minutes <= 0) return null;
+            if (minutes <= 0) {
+                traceChrono('entry_update_rejected', {
+                    reason: 'invalid_minutes',
+                    entryId: String(id),
+                    minutes,
+                }, 'warn');
+                return null;
+            }
             next.minutes = minutes;
         }
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'date')) {
@@ -1397,7 +1546,14 @@
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'activityId')) {
             const activityId = patch.activityId ? String(patch.activityId) : '';
             const activity = getChronoActivities().find((a) => a.id === activityId);
-            if (!activity) return null;
+            if (!activity) {
+                traceChrono('entry_update_rejected', {
+                    reason: 'unknown_activity',
+                    entryId: String(id),
+                    activityId,
+                }, 'warn');
+                return null;
+            }
             next.activityId = activityId;
         }
         ['at', 'createdAt', 'displayStartAt', 'displayEndAt', 'displayGroupId'].forEach((key) => {
@@ -1408,7 +1564,12 @@
         });
 
         entries[index] = next;
-        saveChronoEntries(entries);
+        saveChronoEntries(entries, { reason: 'chrono-entry-update' });
+        traceChrono('entry_updated', {
+            previous: summarizeChronoEntryForTrace(current),
+            entry: summarizeChronoEntryForTrace(next),
+            entriesLen: entries.length,
+        });
         return next;
     }
 
@@ -1456,9 +1617,20 @@
     }
 
     function deleteChronoEntry(id) {
-        if (!id) return;
+        if (!id) {
+            traceChrono('entry_delete_rejected', { reason: 'missing_id' }, 'warn');
+            return;
+        }
+        const entries = getChronoEntries();
+        const removed = entries.find((e) => e && e.id === id) || null;
+        const nextEntries = entries.filter((e) => e.id !== id);
         addChronoTombstone('entry', id, 'delete-entry');
-        saveChronoEntries(getChronoEntries().filter((e) => e.id !== id));
+        saveChronoEntries(nextEntries, { reason: 'chrono-entry-delete' });
+        traceChrono(removed ? 'entry_deleted' : 'entry_delete_noop', {
+            entryId: String(id),
+            removed: summarizeChronoEntryForTrace(removed),
+            entriesLen: nextEntries.length,
+        }, removed ? 'info' : 'warn');
     }
 
     // Убирает время занятия за конкретный набор дат (текущий день/неделю), НЕ удаляя
@@ -1660,6 +1832,47 @@
         return _cloudPullDoneClientId === current;
     }
 
+    function getRecentPlanningSyncPersist(maxAgeMs) {
+        const now = Date.now();
+        return _planningPersistHistory
+            .slice()
+            .reverse()
+            .find((item) => item
+                && item.sync
+                && CRITICAL_PLANNING_KEYS.has(item.key)
+                && (now - item.ts) <= (maxAgeMs || PLANNING_READBACK_RECENT_WRITE_MS)) || null;
+    }
+
+    function schedulePlanningReadback(reason) {
+        const recent = getRecentPlanningSyncPersist(PLANNING_READBACK_RECENT_WRITE_MS);
+        if (!recent) return false;
+        if (_planningReadbackTimer) clearTimeout(_planningReadbackTimer);
+        _planningReadbackTimer = setTimeout(function () {
+            _planningReadbackTimer = 0;
+            const startedAt = Date.now();
+            refreshPlanningFromCloud().then(function (res) {
+                _lastPlanningReadback = {
+                    ts: Date.now(),
+                    reason: reason || 'data-uploaded',
+                    sourceKey: recent.key,
+                    ok: !!(res && res.ok),
+                    result: res && (res.reason || res.error || 'ok'),
+                    ms: Date.now() - startedAt,
+                };
+            }).catch(function (error) {
+                _lastPlanningReadback = {
+                    ts: Date.now(),
+                    reason: reason || 'data-uploaded',
+                    sourceKey: recent.key,
+                    ok: false,
+                    result: error?.message || String(error),
+                    ms: Date.now() - startedAt,
+                };
+            });
+        }, PLANNING_READBACK_DEBOUNCE_MS);
+        return true;
+    }
+
     function refreshPlanningFromCloud() {
         const YandexAPI = HEYS.YandexAPI;
         const Store = HEYS.Planning && HEYS.Planning.Store;
@@ -1814,6 +2027,7 @@
             addTask: (title, opts) => { const task = addTask(title, opts); refresh(); return task; },
             updateTask: (id, patch) => { const task = updateTask(id, patch); refresh(); return task; },
             deleteTask: (id) => { deleteTask(id); refresh(); },
+            deleteTasks: (ids, opts) => { const count = deleteTasks(ids, opts); if (count) refresh(); return count; },
             reorderTasks: (sourceId, targetId) => { const nextTasks = reorderTasks(sourceId, targetId); refresh(); return nextTasks; },
             addSlot: (opts) => { const slot = addSlot(opts); refresh(); return slot; },
             addSlotBatch: (optsList) => { const list = addSlotBatch(optsList); refresh(); return list; },
@@ -1919,9 +2133,11 @@
 
     function getPlanningSyncParitySnapshot() {
         const keys = Array.from(CRITICAL_PLANNING_KEYS).concat([KEYS.CHRONO_TIMER]);
+        const now = Date.now();
         return {
             clientId: getPlanningCloudClientId() || null,
-            generatedAt: Date.now(),
+            generatedAt: now,
+            lastReadback: _lastPlanningReadback,
             keys: keys.map((key) => {
                 const localValue = readPlanningValueForParity(key);
                 const local = valueSummary(localValue);
@@ -1939,14 +2155,36 @@
                     .slice()
                     .reverse()
                     .find((item) => item.key === key) || null;
+                const hasArrayDiff = diff.localOnlyIds.length > 0 || diff.remoteOnlyIds.length > 0;
+                const cloudAgeMs = cloud && cloud.seenAt ? now - cloud.seenAt : null;
+                const lastPersistAgeMs = lastPersist && lastPersist.ts ? now - lastPersist.ts : null;
+                const awaitingReadback = hasArrayDiff
+                    && lastPersist
+                    && lastPersist.sync
+                    && lastPersistAgeMs != null
+                    && lastPersistAgeMs <= PLANNING_READBACK_RECENT_WRITE_MS
+                    && (!cloud || !cloud.seenAt || cloud.seenAt < lastPersist.ts);
+                let confirmStatus = 'unknown';
+                if (LOCAL_ONLY_PLANNING_KEYS.has(key)) {
+                    confirmStatus = 'local-only';
+                } else if (!cloud) {
+                    confirmStatus = 'no-cloud-readback';
+                } else if (hasArrayDiff) {
+                    confirmStatus = awaitingReadback ? 'pending-readback' : 'mismatch';
+                } else {
+                    confirmStatus = 'confirmed';
+                }
                 return {
                     key,
                     class: LOCAL_ONLY_PLANNING_KEYS.has(key)
                         ? 'localOnly'
                         : (MERGEABLE_PLANNING_KEYS.has(key) ? 'criticalClientKey+mergeableArray' : 'criticalClientKey'),
                     status,
+                    confirmStatus,
                     local,
                     cloud,
+                    cloudAgeMs,
+                    lastPersistAgeMs,
                     localOnlyCount: diff.localOnlyIds.length,
                     remoteOnlyCount: diff.remoteOnlyIds.length,
                     localOnlyIds: diff.localOnlyIds.slice(0, 20),
@@ -1976,6 +2214,7 @@
         notePlanningCloudValue,
         describePlanningArrayDiff,
         enqueuePlanningMergeRescue,
+        schedulePlanningReadback,
         getProjects,
         saveProjects,
         addProject,
@@ -1986,6 +2225,7 @@
         addTask,
         updateTask,
         deleteTask,
+        deleteTasks,
         reorderTasks,
         getSlots,
         saveSlots,
@@ -2101,6 +2341,9 @@
                     detail: { source: 'phase-a', initial: true, clientId: cid },
                 }));
             } catch (e) { /* noop */ }
+        });
+        window.addEventListener('heys:data-uploaded', function () {
+            schedulePlanningReadback('data-uploaded');
         });
     }
 })();

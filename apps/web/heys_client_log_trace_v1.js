@@ -52,6 +52,9 @@
   var ringDropped = 0;
   var lastFlushAt = 0;
   var flushInProgress = false;
+  var recentTraces = [];
+  var RECENT_TRACE_MAX = 250;
+  var readbackTimers = {};
 
   // ⚡ PERF A2 (2026-06-13): бюджетная сериализация. Раньше каждый console.* с
   // объектом шёл в полный JSON.stringify (цена платится ДО обрезки по
@@ -147,6 +150,223 @@
     return { message: msg, args: extras.length ? extras : null };
   }
 
+  function makeFlowId(scope) {
+    var prefix = String(scope || 'flow').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'flow';
+    return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  }
+
+  function extractTraceMeta(args) {
+    var prefix = args && typeof args[0] === 'string' ? args[0] : '';
+    var body = args && args[1] && typeof args[1] === 'object' && !Array.isArray(args[1]) ? args[1] : null;
+    return {
+      prefix: prefix,
+      event: body && body.event ? String(body.event) : null,
+      source: body && body.source ? String(body.source) : null,
+      flowId: body && body.flowId ? String(body.flowId) : null,
+      body: body
+    };
+  }
+
+  function rememberTrace(level, args) {
+    try {
+      var meta = extractTraceMeta(args);
+      if (!meta.prefix || meta.prefix.indexOf('[HEYS.') !== 0) return;
+      recentTraces.push({
+        at: Date.now(),
+        ts: new Date().toISOString(),
+        level: level,
+        prefix: meta.prefix,
+        event: meta.event,
+        source: meta.source,
+        flowId: meta.flowId,
+        body: meta.body
+      });
+      if (recentTraces.length > RECENT_TRACE_MAX) {
+        recentTraces.splice(0, recentTraces.length - RECENT_TRACE_MAX);
+      }
+    } catch (_) { /* noop */ }
+  }
+
+  function stableHash(value) {
+    var raw = '';
+    try { raw = JSON.stringify(value); } catch (_) { raw = String(value); }
+    var hash = 2166136261 >>> 0;
+    for (var i = 0; i < raw.length; i++) {
+      hash ^= raw.charCodeAt(i);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    return hash.toString(16);
+  }
+
+  function summarizeValue(value) {
+    var kind = value === null ? 'null' : (Array.isArray(value) ? 'array' : typeof value);
+    var out = { kind: kind, hash: stableHash(value) };
+    if (Array.isArray(value)) {
+      out.length = value.length;
+      out.last = value.length ? summarizeSmallObject(value[value.length - 1]) : null;
+    } else if (value && typeof value === 'object') {
+      out.keys = Object.keys(value).slice(0, 20);
+      if (Object.prototype.hasOwnProperty.call(value, 'updatedAt')) out.updatedAt = value.updatedAt;
+    }
+    return out;
+  }
+
+  function summarizeSmallObject(value) {
+    if (!value || typeof value !== 'object') return value == null ? null : String(value).slice(0, 80);
+    var out = {};
+    ['id', 'activityId', 'date', 'minutes', 'at', 'createdAt', 'updatedAt'].forEach(function (k) {
+      if (Object.prototype.hasOwnProperty.call(value, k)) out[k] = value[k];
+    });
+    return out;
+  }
+
+  function summarizeSyncHealth() {
+    var H = global.HEYS || {};
+    var cloud = H.cloud || {};
+    var stats = {
+      client: String(getClientId() || '').slice(0, 8) || null,
+      online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+      logTrace: {
+        buffered: ring.length,
+        dropped: ringDropped,
+        recent: recentTraces.length,
+        lastFlushAgeMs: lastFlushAt ? Date.now() - lastFlushAt : null
+      }
+    };
+    try {
+      stats.cloud = {
+        status: typeof cloud.getStatus === 'function' ? cloud.getStatus() : null,
+        routing: typeof cloud.getRoutingStatus === 'function' ? cloud.getRoutingStatus() : null,
+        pending: typeof cloud.getPendingCount === 'function' ? cloud.getPendingCount() : null,
+        pendingDetails: typeof cloud.getPendingDetails === 'function' ? cloud.getPendingDetails() : null,
+        syncing: typeof cloud.isSyncing === 'function' ? !!cloud.isSyncing() : null,
+        uploading: typeof cloud.isUploadInProgress === 'function' ? !!cloud.isUploadInProgress() : null,
+        queue: typeof cloud.getQueueDebug === 'function' ? cloud.getQueueDebug() : null,
+        retry: typeof cloud.getRetryDebug === 'function' ? cloud.getRetryDebug() : null
+      };
+    } catch (_) { /* noop */ }
+    try {
+      stats.yandex = H.YandexAPI && typeof H.YandexAPI._debug === 'function' ? H.YandexAPI._debug() : null;
+    } catch (_) { /* noop */ }
+    return stats;
+  }
+
+  function exportSnapshot() {
+    var lines = [];
+    var now = new Date();
+    lines.push('=== HEYS Log Trace Snapshot @ ' + now.toISOString() + ' ===');
+    lines.push('session: ' + SESSION_ID);
+    lines.push('endpoint: ' + ENDPOINT);
+    try { lines.push('health: ' + JSON.stringify(summarizeSyncHealth())); } catch (_) {}
+    lines.push('');
+    lines.push('=== Recent Trace Events (' + recentTraces.length + ') ===');
+    recentTraces.slice(-120).forEach(function (row) {
+      var age = Date.now() - row.at;
+      var body = row.body;
+      var compact = '';
+      try { compact = JSON.stringify(body); } catch (_) { compact = String(body || ''); }
+      lines.push([
+        row.ts,
+        row.level,
+        row.prefix,
+        row.flowId || '-',
+        row.event || '-',
+        row.source || '-',
+        age + 'ms',
+        compact.slice(0, 900)
+      ].join(' | '));
+    });
+    return lines.join('\n');
+  }
+
+  function lastFlowId(prefix, maxAgeMs) {
+    var now = Date.now();
+    var age = Math.max(250, Number(maxAgeMs) || 5000);
+    for (var i = recentTraces.length - 1; i >= 0; i--) {
+      var row = recentTraces[i];
+      if (!row || !row.flowId) continue;
+      if (prefix && row.prefix !== prefix) continue;
+      if (now - row.at > age) break;
+      return row.flowId;
+    }
+    return null;
+  }
+
+  function readCloudKv(clientId, key) {
+    var H = global.HEYS || {};
+    if (!clientId || !key || !H.YandexAPI || typeof H.YandexAPI.getKV !== 'function') {
+      return Promise.resolve({ ok: false, error: 'yandex_api_unavailable' });
+    }
+    return H.YandexAPI.getKV(clientId, key).then(function (res) {
+      if (res && res.error) return { ok: false, error: res.error };
+      return { ok: true, value: res ? res.data : null };
+    }).catch(function (error) {
+      return { ok: false, error: error && (error.message || String(error)) };
+    });
+  }
+
+  function verifyKvWrite(opts) {
+    try {
+      opts = opts || {};
+      var key = opts.key ? String(opts.key) : '';
+      var prefix = opts.prefix || '[HEYS.trace]';
+      var flowId = opts.flowId || null;
+      var delayMs = Math.max(500, Math.min(15000, Number(opts.delayMs) || 2500));
+      var clientId = opts.clientId || getClientId();
+      if (!key || !clientId) {
+        trace('warn', prefix, {
+          event: 'cloud_readback_skipped',
+          source: 'logtrace-readback',
+          flowId: flowId,
+          key: key || null,
+          reason: !key ? 'missing_key' : 'missing_client'
+        });
+        return null;
+      }
+      var timerKey = String(clientId) + '\u0000' + key + '\u0000' + (flowId || '');
+      if (readbackTimers[timerKey]) clearTimeout(readbackTimers[timerKey]);
+      readbackTimers[timerKey] = setTimeout(function () {
+        delete readbackTimers[timerKey];
+        readCloudKv(clientId, key).then(function (res) {
+          if (!res.ok) {
+            trace('warn', prefix, {
+              event: 'cloud_readback_error',
+              source: 'logtrace-readback',
+              flowId: flowId,
+              key: key,
+              client: String(clientId).slice(0, 8),
+              error: String(res.error || 'unknown').slice(0, 240)
+            });
+            return;
+          }
+          var actual = summarizeValue(res.value);
+          var expected = opts.expectedSummary || null;
+          var ok = !!res.value;
+          if (expected && expected.hash && actual && actual.hash) ok = ok && expected.hash === actual.hash;
+          if (expected && expected.length != null && actual && actual.length != null) ok = ok && expected.length === actual.length;
+          trace(ok ? 'info' : 'warn', prefix, {
+            event: ok ? 'cloud_readback_ok' : 'cloud_readback_mismatch',
+            source: 'logtrace-readback',
+            flowId: flowId,
+            key: key,
+            client: String(clientId).slice(0, 8),
+            expected: expected,
+            actual: actual
+          });
+        });
+      }, delayMs);
+      return timerKey;
+    } catch (error) {
+      trace('warn', (opts && opts.prefix) || '[HEYS.trace]', {
+        event: 'cloud_readback_schedule_error',
+        source: 'logtrace-readback',
+        flowId: opts && opts.flowId || null,
+        error: error && (error.message || String(error))
+      });
+      return null;
+    }
+  }
+
   function push(level, args) {
     try {
       var c = captureArgs(args);
@@ -161,6 +381,7 @@
         client_ts: new Date().toISOString(),
         page_url: typeof location !== 'undefined' ? location.href.slice(0, 1000) : null
       });
+      rememberTrace(level, args);
     } catch (_) { /* never throw из console patch */ }
   }
 
@@ -266,6 +487,19 @@
     }
   }
 
+  function trace(level) {
+    var lvl = (level === 'warn' || level === 'error' || level === 'debug' || level === 'log') ? level : 'info';
+    var args = Array.prototype.slice.call(arguments, 1);
+    try { push(lvl, args); } catch (_) {}
+    try {
+      var out = orig[lvl] || orig.info || orig.log;
+      if (typeof out === 'function') out.apply(console, args);
+    } catch (_) {}
+    setTimeout(function () {
+      try { flush('trace-direct'); } catch (_) {}
+    }, 250);
+  }
+
   // Periodic flush
   setInterval(function () {
     if (ring.length > 0 && Date.now() - lastFlushAt > FLUSH_INTERVAL_MS - 1000) {
@@ -286,11 +520,20 @@
   global.HEYS = global.HEYS || {};
   global.HEYS.LogTrace = {
     flush: function () { flush('manual'); },
+    trace: trace,
+    makeFlowId: makeFlowId,
+    lastFlowId: lastFlowId,
+    verifyKvWrite: verifyKvWrite,
+    summarizeValue: summarizeValue,
+    recent: function () { return recentTraces.slice(); },
+    exportSnapshot: exportSnapshot,
+    health: summarizeSyncHealth,
     stats: function () {
       return {
         buffered: ring.length,
         dropped: ringDropped,
         lastFlushAt: lastFlushAt,
+        recentTraces: recentTraces.length,
         sessionId: SESSION_ID,
         endpoint: ENDPOINT
       };
@@ -346,6 +589,34 @@
         if (!raw) raw = global.localStorage.getItem('heys_dayv2_' + date);
         return raw ? JSON.parse(raw) : null;
       } catch (_) { return null; }
+    }
+    function isChronoEntriesKey(k) {
+      return /(?:^|_)planning_chrono_entries$/.test(String(k || ''));
+    }
+    function summarizeChronoEntriesValue(v) {
+      var arr = null;
+      try {
+        arr = typeof v === 'string' ? JSON.parse(v) : v;
+      } catch (_) {
+        arr = null;
+      }
+      if (!Array.isArray(arr)) return { kind: arr === null ? 'null' : typeof arr, entriesLen: null };
+      var total = 0;
+      for (var i = 0; i < arr.length; i++) total += Math.max(0, Math.round(Number(arr[i] && arr[i].minutes) || 0));
+      var last = arr.length ? arr[arr.length - 1] : null;
+      return {
+        kind: 'array',
+        entriesLen: arr.length,
+        totalMinutes: total,
+        lastEntry: last ? {
+          id: last.id ? String(last.id) : null,
+          activityId: last.activityId ? String(last.activityId) : null,
+          date: last.date ? String(last.date) : null,
+          minutes: Math.round(Number(last.minutes) || 0),
+          at: last.at || null,
+          createdAt: last.createdAt || null
+        } : null
+      };
     }
     var SUBJ = ['sleepStart', 'sleepEnd', 'sleepQuality', 'sleepHours', 'moodMorning', 'wellbeingMorning', 'stressMorning', 'weightMorning'];
     var prevByDate = {};
@@ -408,6 +679,18 @@
         var previousByDate = prevByDate;
         var tracedSetItem = function (k, v) {
           var ret = rawSetItem.apply(this, arguments);
+          try {
+            if (isChronoEntriesKey(k)) {
+              trace('info', '[HEYS.chrono.trace]', {
+                event: 'storage_chrono_entries_write',
+                source: 'storage-setItem',
+                flowId: lastFlowId('[HEYS.chrono.trace]', 4000),
+                key: String(k || '').slice(0, 140),
+                bytes: typeof v === 'string' ? v.length : null,
+                summary: summarizeChronoEntriesValue(v)
+              });
+            }
+          } catch (_) { /* trace must never break storage */ }
           try {
             var date = getDayDateFromKey(k);
             if (!date) return ret;

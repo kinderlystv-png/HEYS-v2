@@ -43,9 +43,7 @@
   const DayRealDataActions = HEYS.DayRealDataActions || {};
 
   function readDayDataScoped(dateKey, fallback = null) {
-    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
-    if (typeof reader === 'function') return reader(dateKey, fallback);
-    return lsGet(`heys_dayv2_${dateKey}`, fallback);
+    return readDayDataUnscopedAware(dateKey, fallback);
   }
 
   function writeDayDataScoped(dateKey, dayData) {
@@ -115,23 +113,57 @@
     return HEYS.currentClientId || '';
   }
 
+  function hasCurrentClientScopedNamespace(clientId = getCurrentClientId()) {
+    if (!clientId) return false;
+    const prefix = `heys_${clientId}_`;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(prefix)) return true;
+      }
+    } catch (_) { }
+    return false;
+  }
+
+  function shouldUseUnscopedLegacyDays(clientId = getCurrentClientId()) {
+    return !clientId || !hasCurrentClientScopedNamespace(clientId);
+  }
+
+  function readDayDataUnscopedAware(dateKey, fallback = null) {
+    const clientId = getCurrentClientId();
+    const allowUnscopedFallback = shouldUseUnscopedLegacyDays(clientId);
+    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
+    if (typeof reader === 'function') {
+      return reader(dateKey, fallback, { allowUnscopedFallback });
+    }
+    if (clientId) {
+      const scoped = lsGet(`heys_${clientId}_dayv2_${dateKey}`, null);
+      if (scoped && typeof scoped === 'object') return scoped;
+      if (!allowUnscopedFallback) return fallback;
+    }
+    return lsGet(`heys_dayv2_${dateKey}`, fallback);
+  }
+
   function listTrackedDayKeys() {
-    const result = new Set();
+    const scopedResult = new Set();
+    const legacyResult = new Set();
     const currentClientId = getCurrentClientId();
+    const useLegacyDays = shouldUseUnscopedLegacyDays(currentClientId);
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key || !key.includes('dayv2_')) continue;
         const isScopedForCurrentClient = currentClientId && key.startsWith(`heys_${currentClientId}_dayv2_`);
         const isUnscopedLegacy = key.startsWith('heys_dayv2_');
-        if (!isScopedForCurrentClient && !isUnscopedLegacy) continue;
+        if (!isScopedForCurrentClient && !(useLegacyDays && isUnscopedLegacy)) continue;
         const match = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
         if (match && match[1]) {
-          result.add(match[1]);
+          if (isScopedForCurrentClient) scopedResult.add(match[1]);
+          else legacyResult.add(match[1]);
         }
       }
     } catch (e) { }
-    return Array.from(result).sort();
+    return Array.from(scopedResult.size > 0 || !useLegacyDays ? scopedResult : legacyResult).sort();
   }
 
   function isExplicitlyVerified(dayData) {

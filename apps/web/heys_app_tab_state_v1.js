@@ -52,22 +52,67 @@
         } catch (_) { return {}; }
     }
 
+    function tryParseStoredValue(raw, fallback) {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw !== 'string') return raw;
+
+        let str = raw;
+        if (str.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
+            try { return window.HEYS.store.decompress(str); } catch (_) { }
+        }
+
+        try { return JSON.parse(str); } catch (_) { return str; }
+    }
+
+    function readBootClientId() {
+        try {
+            const U = window.HEYS?.utils;
+            const currentClientId = U?.getCurrentClientId?.() || window.HEYS?.currentClientId;
+            if (currentClientId) return String(currentClientId);
+
+            const storedCurrentClient = tryParseStoredValue(localStorage.getItem('heys_client_current'), null);
+            if (storedCurrentClient) return String(storedCurrentClient);
+
+            const pinAuthClient = tryParseStoredValue(localStorage.getItem('heys_pin_auth_client'), null);
+            if (pinAuthClient) return String(pinAuthClient);
+        } catch (_) { }
+
+        return '';
+    }
+
+    function readScopedProfileFromLS(clientId) {
+        if (!clientId) return null;
+
+        try {
+            const profile = tryParseStoredValue(localStorage.getItem(`heys_${clientId}_profile`), null);
+            return profile && typeof profile === 'object' ? profile : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function readDefaultProfile() {
+        const scopedProfile = readScopedProfileFromLS(readBootClientId());
+        if (scopedProfile) return scopedProfile;
+
+        const U = window.HEYS?.utils;
+        return U?.lsGet?.('heys_profile', {}) || readProfileFromLS();
+    }
+
     const useTabState = ({ React }) => {
         const getDefaultTabFromProfile = () => {
-            const U = window.HEYS?.utils;
-            const profile = U?.lsGet?.('heys_profile', {}) || readProfileFromLS();
+            const profile = readDefaultProfile();
             return resolveHomeTab(profile.defaultTab);
         };
 
         const getDefaultTasksSubtabFromProfile = () => {
-            const U = window.HEYS?.utils;
-            const profile = U?.lsGet?.('heys_profile', {}) || readProfileFromLS();
+            const profile = readDefaultProfile();
             return resolveHomeTasksSubtab(profile.defaultTasksSubtab);
         };
 
-        const [defaultTab, setDefaultTabState] = React.useState(() => resolveHomeTab(readProfileFromLS().defaultTab));
-        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(() => resolveHomeTasksSubtab(readProfileFromLS().defaultTasksSubtab));
-        const [tab, rawSetTab] = React.useState(() => resolveHomeTab(readProfileFromLS().defaultTab));
+        const [defaultTab, setDefaultTabState] = React.useState(() => getDefaultTabFromProfile());
+        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(() => getDefaultTasksSubtabFromProfile());
+        const [tab, rawSetTab] = React.useState(() => getDefaultTabFromProfile());
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
         const defaultTabRef = React.useRef(defaultTab);
         const defaultTasksSubtabRef = React.useRef(defaultTasksSubtab);
@@ -197,7 +242,7 @@
             const handleClientChanged = (e) => {
                 const cid = e?.detail?.clientId;
                 if (!cid) return;
-                syncDefaultTabFromProfile('client change');
+                syncDefaultTabFromProfile('client change', { followCurrentTab: true });
             };
             window.addEventListener('heys:client-changed', handleClientChanged);
             return () => window.removeEventListener('heys:client-changed', handleClientChanged);

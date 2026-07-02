@@ -268,6 +268,10 @@
                 const pending = HEYS?.cloud?.getPendingCount?.() || 0;
                 const status = HEYS?.cloud?.getStatus?.() || 'unknown';
                 const cloudClientId = HEYS?.cloud?.getClientId?.() || '';
+                const traceStats = HEYS?.LogTrace?.stats?.() || {};
+                const traceHealth = HEYS?.LogTrace?.health?.() || {};
+                const recentTraces = HEYS?.LogTrace?.recent?.() || [];
+                const healthCloud = traceHealth.cloud || {};
 
                 // Получаем clientId из разных источников
                 const lsClientId = localStorage.getItem('heys_client_current') || '';
@@ -330,9 +334,23 @@
                   <b style="color:#0ff;">📡 Sync Status</b><br>
                   Status: <span style="color:${status === 'online' ? '#0f0' : '#f00'}">${status}</span><br>
                   Pending: ${pending}<br>
+                  Uploading: ${healthCloud.uploading ?? '—'} · Syncing: ${healthCloud.syncing ?? '—'}<br>
+                  LogTrace: ${traceStats.buffered ?? '?'} buffered · ${traceStats.recentTraces ?? recentTraces.length} recent · dropped ${traceStats.dropped ?? 0}<br>
                   Cloud Client: ${cloudClientId ? cloudClientId.slice(0, 8) + '...' : '<span style="color:#f00">NOT SET</span>'}<br>
                   LS Client: ${lsClientId ? lsClientId.slice(0, 8) + '...' : '<span style="color:#f00">NOT SET</span>'}<br>
                   Total LS keys: ${allKeys.length}
+                </div>
+
+                <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
+                  <b style="color:#0ff;">🧭 Trace Viewer (last 12)</b><br>
+                  ${recentTraces.slice(-12).reverse().map(e =>
+                    `<div style="border-bottom:1px solid #333;padding:2px 0;">
+                      <span style="color:#888">${new Date(e.at || Date.now()).toLocaleTimeString()}</span>
+                      <b>${this._esc(e.prefix || '')}</b>
+                      <span style="color:#ff0">${this._esc(e.flowId || '—')}</span>
+                      ${this._esc(e.event || '—')}
+                    </div>`
+                  ).join('') || '<span style="color:#888">Empty</span>'}
                 </div>
                 
                 <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
@@ -365,6 +383,18 @@
                     style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
                     📋 Copy Log
                   </button>
+                  <button onclick="HEYS.debugPanel.copyTraceSnapshot();" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    🧾 Export Trace
+                  </button>
+                  <button onclick="HEYS.debugPanel.showTraceViewer();" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    🧭 Trace Viewer
+                  </button>
+                  <button onclick="HEYS.debugPanel.showHealth();" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    🩺 Health
+                  </button>
                   <button onclick="HEYS.debugPanel.showDayData();" 
                     style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
                     📅 Show Day JSON
@@ -395,6 +425,44 @@
                     this.hide();
                     setTimeout(() => this.show(), 100);
                 }
+            },
+
+            _esc(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            },
+
+            async copyTraceSnapshot() {
+                const text = HEYS?.LogTrace?.exportSnapshot?.() || 'HEYS.LogTrace unavailable';
+                try {
+                    await navigator.clipboard?.writeText(text);
+                    HEYS.Toast?.success?.('Trace snapshot скопирован');
+                } catch (_) {
+                    console.log(text);
+                    alert('Не удалось скопировать. Snapshot выведен в console.');
+                }
+            },
+
+            showTraceViewer() {
+                const traces = HEYS?.LogTrace?.recent?.() || [];
+                const lines = traces.slice(-60).reverse().map((e) => {
+                    const body = (() => {
+                        try { return JSON.stringify(e.body || {}); } catch (_) { return ''; }
+                    })();
+                    return `${new Date(e.at || Date.now()).toLocaleTimeString()} | ${e.level || ''} | ${e.prefix || ''} | ${e.flowId || '—'} | ${e.event || '—'} | ${body.slice(0, 500)}`;
+                });
+                const msg = lines.length ? lines.join('\n') : 'Trace viewer empty';
+                console.log('[HEYS.trace.viewer]', traces);
+                alert(msg.slice(0, 5000));
+            },
+
+            showHealth() {
+                const health = HEYS?.LogTrace?.health?.() || {};
+                console.log('[HEYS.trace.health]', health);
+                alert(JSON.stringify(health, null, 2).slice(0, 5000));
             },
 
             showDayData() {

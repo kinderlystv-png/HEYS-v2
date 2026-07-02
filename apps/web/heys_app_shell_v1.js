@@ -2066,10 +2066,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             : null;
                         if (planningParity && Array.isArray(planningParity.keys)) {
                             pushKV('clientId', planningParity.clientId);
+                            pushKV('lastReadback', planningParity.lastReadback || null);
                             planningParity.keys.forEach((row) => {
                                 const local = row.local || {};
                                 const cloud = row.cloud || {};
-                                extraLines.push(`  ${row.key}: class=${row.class} status=${row.status} local=${local.length ?? local.kind}:${local.hash || '—'} cloud=${cloud.length ?? cloud.kind ?? '—'}:${cloud.hash || '—'} localOnly=${row.localOnlyCount || 0} remoteOnly=${row.remoteOnlyCount || 0}`);
+                                const cloudAge = Number.isFinite(row.cloudAgeMs) ? ` cloudAge=${row.cloudAgeMs}ms` : '';
+                                const persistAge = Number.isFinite(row.lastPersistAgeMs) ? ` lastPersistAge=${row.lastPersistAgeMs}ms` : '';
+                                extraLines.push(`  ${row.key}: class=${row.class} status=${row.status} confirm=${row.confirmStatus || 'unknown'} local=${local.length ?? local.kind}:${local.hash || '—'} cloud=${cloud.length ?? cloud.kind ?? '—'}:${cloud.hash || '—'} localOnly=${row.localOnlyCount || 0} remoteOnly=${row.remoteOnlyCount || 0}${cloudAge}${persistAge}`);
+                                if ((row.localOnlyCount || 0) > 0 || (row.remoteOnlyCount || 0) > 0) {
+                                    extraLines.push(`    diff localOnlyIds=${(row.localOnlyIds || []).join(',') || '—'} remoteOnlyIds=${(row.remoteOnlyIds || []).join(',') || '—'}`);
+                                }
+                                if (row.lastPersist && ((row.localOnlyCount || 0) > 0 || row.confirmStatus === 'pending-readback')) {
+                                    extraLines.push(`    lastPersist key=${row.lastPersist.key} status=${row.lastPersist.status || '—'} reason=${row.lastPersist.reason || '—'} sync=${row.lastPersist.sync ? 'Y' : 'N'}`);
+                                }
                                 if (row.key === 'heys_planning_chrono_timer') {
                                     extraLines.push('    note: localOnly=true (active stopwatch is not uploaded by design)');
                                 }
@@ -2180,6 +2189,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     extraLines.push('!! extra diag failed: ' + (deepErr?.message || deepErr));
                 }
 
+                const traceSnapshot = (() => {
+                    try { return HEYS?.LogTrace?.exportSnapshot?.() || ''; }
+                    catch (_) { return ''; }
+                })();
                 const lines = [
                     `=== HEYS Sync Debug Snapshot @ ${ts} ===`,
                     `status:       ${rt.status}`,
@@ -2202,6 +2215,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     '',
                     `=== Sync Log (${logLines.length} entries) ===`,
                     ...(logLines.length ? logLines : ['[HEYS.sync] (пусто)']),
+                    '',
+                    `=== Log Trace Snapshot ===`,
+                    traceSnapshot || '(HEYS.LogTrace unavailable)',
                 ];
                 const text = lines.join('\n');
                 if (navigator?.clipboard?.writeText) {
@@ -3770,8 +3786,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         const handlePickTasksHomeSubtab = (nextSubtab) => {
             try {
-                setDefaultTab('tasks', { tasksSubtab: nextSubtab });
-                switchTabWithUndoCommit('tasks', `home-picker-tasks-${nextSubtab}-switch`);
+                setDefaultTab(defaultTab, { tasksSubtab: nextSubtab });
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -4161,13 +4176,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                         }, '🏠')
                                     ))
                                 ),
-                                defaultTab === 'tasks' && canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
+                                canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
                                     className: 'widgets-home-tab-picker__subtabs',
                                 },
-                                    React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Подвкладка задач'),
+                                    React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Старт задач'),
                                     React.createElement('div', {
                                         className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
-                                    }, 'Что открыть внутри задач'),
+                                    }, 'Что открыть при входе в задачи'),
                                     React.createElement('div', {
                                         className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
                                     },

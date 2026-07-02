@@ -7,6 +7,8 @@ const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_mod
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
 const DAY_EFFECTS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_effects.js'), 'utf8');
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
+const SUPPLEMENTS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_supplements_v1.js'), 'utf8');
+const IW_CONSTANTS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_iw_constants.js'), 'utf8');
 const YESTERDAY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const PROFILE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_profile_step_v1.js'), 'utf8');
 const DAY_HANDLERS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_day_handlers.js'), 'utf8');
@@ -60,7 +62,21 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("day?.cycleStatus === 'none'");
     expect(MORNING_SRC).toContain('cycleAnsweredAt');
     expect(STEPS_SRC).toContain("cycleStatus: 'none'");
+    expect(STEPS_SRC).toContain('} else if (cycleDay == null) {');
     expect(STEPS_SRC).toContain('cycleAnsweredAt');
+  });
+
+  it('keeps optional morning steps aligned with visible saves and explicit empty answers', () => {
+    expect(MORNING_SRC).toContain('function shouldIncludeRefeedStep');
+    expect(MORNING_SRC).toContain('HEYS.Refeed?.shouldShowRefeedStep?.() === true');
+    expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
+    expect(MORNING_SRC).toContain('checkin_incomplete_steps');
+    expect(MORNING_SRC).toContain("case 'supplements': return Array.isArray(day?.supplementsPlanned);");
+    expect(STEPS_SRC).toContain("reason: 'empty_measurements'");
+    expect(STEPS_SRC).toContain("type: 'none'");
+    expect(SUPPLEMENTS_SRC).toContain("Object.prototype.hasOwnProperty.call(dayData, 'supplementsPlanned')");
+    expect(SUPPLEMENTS_SRC).toContain('completed: true');
+    expect(IW_CONSTANTS_SRC).toContain("if (exposureType === 'none')");
   });
 
   it('routes yesterdayVerify and registration day writes through scoped helpers', () => {

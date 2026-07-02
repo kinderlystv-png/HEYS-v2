@@ -50,6 +50,35 @@
     const TOAST_TIMEOUT_MS = 5000;
     const CHRONO_DAY_START_HOUR = Planning.Constants?.CALENDAR_START_HOUR || 3;
 
+    function traceChronoUi(event, payload, level) {
+        try {
+            const clientId = HEYS.currentClientId
+                || (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function' ? HEYS.cloud.getClientId() : '');
+            const flowId = payload?.flowId
+                || (HEYS.LogTrace && typeof HEYS.LogTrace.lastFlowId === 'function'
+                    ? HEYS.LogTrace.lastFlowId('[HEYS.chrono.trace]', 5000)
+                    : null);
+            const body = {
+                event,
+                source: 'chrono-ui',
+                client: String(clientId || '').slice(0, 8) || null,
+                flowId,
+                ...(payload || {}),
+            };
+            if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
+                HEYS.LogTrace.trace(level || 'info', '[HEYS.chrono.trace]', body);
+                return;
+            }
+            const fn = level === 'warn' ? console.warn : (level === 'error' ? console.error : console.info);
+            fn('[HEYS.chrono.trace]', body);
+            setTimeout(() => {
+                try {
+                    if (HEYS.LogTrace && typeof HEYS.LogTrace.flush === 'function') HEYS.LogTrace.flush();
+                } catch (_) { /* noop */ }
+            }, 300);
+        } catch (_) { /* trace must never break chrono UI */ }
+    }
+
     const CHRONO_CATEGORIES = [
         { id: 'focus', label: 'Фокус', short: 'Фокус', tone: 'blue' },
         { id: 'growth', label: 'Рост', short: 'Рост', tone: 'green' },
@@ -2561,7 +2590,7 @@
         );
     }
 
-    function ChronoUntrackedAllocationPanel({ draft, activities, onChange, onParallelChange, onConfirm, onConfirmNow, onCancel }) {
+    function ChronoUntrackedAllocationPanel({ draft, activities, onChange, onParallelChange, onRemove, onConfirm, onConfirmNow, onCancel }) {
         const steps = buildUntrackedSteps(draft, activities);
         const flowRef = useRef(null);
         useEffect(() => {
@@ -2608,6 +2637,13 @@
                 h('div', { className: 'chrono-untracked-flow__single-row' },
                     h('span', { className: 'chrono-untracked-flow__activity' },
                         `${steps[0].activity.emoji || '·'} ${steps[0].activity.name || 'Занятие'}`),
+                    h('button', {
+                        type: 'button',
+                        className: 'chrono-untracked-flow__remove',
+                        onClick: () => onRemove && onRemove(steps[0].id),
+                        'aria-label': `Убрать ${steps[0].activity.name || 'занятие'} из распределения`,
+                        title: 'Убрать',
+                    }, '×'),
                     canToggleParallel && h('button', {
                         type: 'button',
                         className: 'chrono-untracked-flow__parallel-toggle' + (steps[0].isParallel ? ' active' : ''),
@@ -2640,6 +2676,13 @@
                         h('span', { className: 'chrono-untracked-flow__slider-top' },
                             h('span', { className: 'chrono-untracked-flow__activity' },
                                 `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`),
+                            h('button', {
+                                type: 'button',
+                                className: 'chrono-untracked-flow__remove',
+                                onClick: () => onRemove && onRemove(step.id),
+                                'aria-label': `Убрать ${step.activity.name || 'занятие'} из распределения`,
+                                title: 'Убрать',
+                            }, '×'),
                             showParallelToggle && h('button', {
                                 type: 'button',
                                 className: 'chrono-untracked-flow__parallel-toggle' + (isParallel ? ' active' : ''),
@@ -4386,12 +4429,28 @@
         }, []);
 
         const persistChronoSegment = useCallback((activityId, minutes, options = {}) => {
-            if (!activityId || minutes <= 0) return { entry: null, ids: [] };
+            if (!activityId || minutes <= 0) {
+                traceChronoUi('ui_persist_segment_rejected', {
+                    reason: 'invalid_input',
+                    hasActivityId: !!activityId,
+                    minutes: Math.round(Number(minutes) || 0),
+                    activeDate,
+                }, 'warn');
+                return { entry: null, ids: [] };
+            }
             const parallelActivityId = options && options.parallelActivityId;
             const hasParallel = parallelActivityId && parallelActivityId !== activityId;
             const parallelGroupId = options && options.parallelGroupId
                 ? options.parallelGroupId
                 : (hasParallel ? `parallel_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` : '');
+            traceChronoUi('ui_persist_segment_start', {
+                flowId: options && options.flowId || null,
+                activityId,
+                activeDate,
+                minutes: Math.round(Number(minutes) || 0),
+                hasParallel: !!hasParallel,
+                sourceFlow: options && options.sourceFlow || 'duration',
+            });
             const entryTiming = {};
             if (options && options.at) entryTiming.at = options.at;
             if (options && options.createdAt) entryTiming.createdAt = options.createdAt;
@@ -4402,6 +4461,7 @@
                 activityId,
                 date: activeDate,
                 minutes,
+                flowId: options && options.flowId || null,
                 parallelGroupId,
                 ...entryTiming,
             });
@@ -4412,20 +4472,50 @@
                     activityId: parallelActivityId,
                     date: activeDate,
                     minutes,
+                    flowId: options && options.flowId || null,
                     parallelGroupId,
                     ...entryTiming,
                 });
                 if (parallelEntry && parallelEntry.id) ids.push(parallelEntry.id);
             }
+            traceChronoUi(entry && entry.id ? 'ui_persist_segment_saved' : 'ui_persist_segment_no_entry', {
+                flowId: options && options.flowId || null,
+                activityId,
+                activeDate,
+                minutes: Math.round(Number(minutes) || 0),
+                entryId: entry && entry.id || null,
+                ids,
+                hasParallel: !!hasParallel,
+                sourceFlow: options && options.sourceFlow || 'duration',
+            }, entry && entry.id ? 'info' : 'warn');
             return { entry, ids };
         }, [state, activeDate]);
 
         const handleAddMinutes = useCallback((minutes, options = {}) => {
-            if (!durationTarget || minutes <= 0) return;
+            if (!durationTarget || minutes <= 0) {
+                traceChronoUi('ui_add_minutes_rejected', {
+                    reason: !durationTarget ? 'missing_duration_target' : 'invalid_minutes',
+                    minutes: Math.round(Number(minutes) || 0),
+                    activeDate,
+                }, 'warn');
+                return;
+            }
             const isUntrackedConfirming = !!(untrackedDraft && untrackedDraft.confirming);
+            const flowId = options.flowId
+                || (HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function'
+                    ? HEYS.LogTrace.makeFlowId(isUntrackedConfirming ? 'chrono-untracked-step' : 'chrono-add')
+                    : `chrono-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`);
             const currentConfirmIndex = Math.max(0, Number(untrackedDraft && untrackedDraft.confirmIndex) || 0);
             const currentStep = isUntrackedConfirming ? untrackedSteps[currentConfirmIndex] : null;
             const parallelActivityId = isUntrackedConfirming ? '' : options && options.parallelActivityId;
+            traceChronoUi('ui_add_minutes_submit', {
+                flowId,
+                activityId: durationTarget.id,
+                activeDate,
+                minutes: Math.round(Number(minutes) || 0),
+                flow: isUntrackedConfirming ? 'untracked-confirm-step' : 'duration-modal',
+                confirmIndex: isUntrackedConfirming ? currentConfirmIndex : null,
+            });
             const sharedUntrackedTiming = isUntrackedConfirming
                 && untrackedDraft
                 && Array.isArray(untrackedDraft.selectedIds)
@@ -4447,7 +4537,9 @@
                 }
                 : {});
             const { entry, ids } = persistChronoSegment(durationTarget.id, minutes, {
+                flowId,
                 parallelActivityId,
+                sourceFlow: isUntrackedConfirming ? 'untracked-confirm-step' : 'duration-modal',
                 ...entryTiming,
             });
             if (entry && entry.id) {
@@ -4471,9 +4563,18 @@
                 return false;
             }
             return undefined;
-        }, [durationTarget, untrackedDraft, untrackedSteps, persistChronoSegment]);
+        }, [durationTarget, untrackedDraft, untrackedSteps, persistChronoSegment, activeDate]);
 
         const handleUntrackedApplyNow = useCallback(() => {
+            const flowId = HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function'
+                ? HEYS.LogTrace.makeFlowId('chrono-untracked')
+                : `chrono-untracked-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+            traceChronoUi('ui_untracked_apply_now_submit', {
+                flowId,
+                activeDate,
+                steps: untrackedSteps.length,
+                draftMinutes: Math.round(Number(untrackedDraft && untrackedDraft.minutes) || 0),
+            }, untrackedSteps.length ? 'info' : 'warn');
             if (!untrackedSteps.length) return;
             const sharedTiming = untrackedDraft
                 && Array.isArray(untrackedDraft.selectedIds)
@@ -4493,6 +4594,8 @@
                 const minutes = Math.max(0, Math.round(Number(step.minutes) || 0));
                 if (!step.activity || !step.activity.id || minutes <= 0) return;
                 const { entry, ids } = persistChronoSegment(step.activity.id, minutes, {
+                    flowId,
+                    sourceFlow: 'untracked-apply-now',
                     ...(sharedTiming || {
                         at: Number.isFinite(step.startMs) ? new Date(step.startMs).toISOString() : undefined,
                         createdAt: Number.isFinite(step.endMs) ? new Date(step.endMs).toISOString() : undefined,
@@ -4522,10 +4625,16 @@
                     key: lastSaved.entry.id,
                 });
             }
+            traceChronoUi(saved.length ? 'ui_untracked_apply_now_saved' : 'ui_untracked_apply_now_no_entries', {
+                flowId,
+                activeDate,
+                savedCount: saved.length,
+                entryIds: saved.flatMap((item) => item.ids || []),
+            }, saved.length ? 'info' : 'warn');
             setUntrackedDraft(null);
             setDurationTarget(null);
             setDurationInitialMinutes(null);
-        }, [untrackedSteps, persistChronoSegment, untrackedDraft]);
+        }, [untrackedSteps, persistChronoSegment, untrackedDraft, activeDate]);
 
         const handleUndo = useCallback(() => {
             if (!toast) return;
@@ -4602,20 +4711,39 @@
         }, [state]);
 
         const handleTimerAccept = useCallback((minutes) => {
-            if (!timer) return;
+            if (!timer) {
+                traceChronoUi('ui_timer_accept_rejected', { reason: 'missing_timer', minutes }, 'warn');
+                return;
+            }
+            const flowId = HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function'
+                ? HEYS.LogTrace.makeFlowId('chrono-timer-accept')
+                : `chrono-timer-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+            traceChronoUi('ui_timer_accept_submit', {
+                flowId,
+                activityId: timer.activityId,
+                minutes: Math.round(Number(minutes) || 0),
+                activeDate,
+            });
             const entry = state.addChronoEntry({
                 activityId: timer.activityId,
                 date: Utils.chronoDateStr?.(timer.startMs ? new Date(timer.startMs) : undefined) || Utils.dateStr(),
                 minutes,
+                flowId,
                 at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });
+            traceChronoUi(entry && entry.id ? 'ui_timer_accept_saved' : 'ui_timer_accept_no_entry', {
+                flowId,
+                activityId: timer.activityId,
+                minutes: Math.round(Number(minutes) || 0),
+                entryId: entry && entry.id || null,
+            }, entry && entry.id ? 'info' : 'warn');
             if (entry && entry.id) {
                 setToast({ id: entry.id, minutes });
                 setRecentBadge({ activityId: timer.activityId, minutes, key: entry.id });
             }
             state.clearChronoTimer();
             setTimerCompleteShown(false);
-        }, [timer, state]);
+        }, [timer, state, activeDate]);
 
         const handleTimerAdjust = useCallback(() => {
             if (!timer || !timerActivity) return;
@@ -4640,20 +4768,39 @@
         }, [state]);
 
         const handleTimerStopSave = useCallback((minutes) => {
-            if (!timer) return;
+            if (!timer) {
+                traceChronoUi('ui_timer_stop_save_rejected', { reason: 'missing_timer', minutes }, 'warn');
+                return;
+            }
+            const flowId = HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function'
+                ? HEYS.LogTrace.makeFlowId('chrono-timer-stop')
+                : `chrono-timer-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+            traceChronoUi('ui_timer_stop_save_submit', {
+                flowId,
+                activityId: timer.activityId,
+                minutes: Math.round(Number(minutes) || 0),
+                activeDate,
+            });
             const entry = state.addChronoEntry({
                 activityId: timer.activityId,
                 date: Utils.chronoDateStr?.(timer.startMs ? new Date(timer.startMs) : undefined) || Utils.dateStr(),
                 minutes,
+                flowId,
                 at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });
+            traceChronoUi(entry && entry.id ? 'ui_timer_stop_save_saved' : 'ui_timer_stop_save_no_entry', {
+                flowId,
+                activityId: timer.activityId,
+                minutes: Math.round(Number(minutes) || 0),
+                entryId: entry && entry.id || null,
+            }, entry && entry.id ? 'info' : 'warn');
             if (entry && entry.id) {
                 setToast({ id: entry.id, minutes });
                 setRecentBadge({ activityId: timer.activityId, minutes, key: entry.id });
             }
             state.clearChronoTimer();
             setTimerStopOpen(false);
-        }, [timer, state]);
+        }, [timer, state, activeDate]);
 
         const handleTimerStopDiscard = useCallback(() => {
             state.clearChronoTimer();
@@ -4838,6 +4985,27 @@
             });
         }, []);
 
+        const handleUntrackedRemove = useCallback((activityId) => {
+            setUntrackedDraft((current) => {
+                if (!current || current.confirming || !activityId) return current;
+                const selectedIds = Array.isArray(current.selectedIds)
+                    ? current.selectedIds.filter((id) => id && id !== activityId)
+                    : [];
+                const parallelIds = normalizeUntrackedParallelIds(current, selectedIds);
+                return {
+                    ...current,
+                    selectedIds,
+                    parallelIds,
+                    allocations: distributeUntrackedDraftAllocations(
+                        current.minutes,
+                        selectedIds,
+                        parallelIds,
+                        current.allocations,
+                    ),
+                };
+            });
+        }, []);
+
         const handleUntrackedCancel = useCallback(() => {
             setUntrackedDraft(null);
             setDurationTarget(null);
@@ -4978,6 +5146,7 @@
                 activities,
                 onChange: handleUntrackedAllocationChange,
                 onParallelChange: handleUntrackedParallelChange,
+                onRemove: handleUntrackedRemove,
                 onConfirm: handleUntrackedConfirm,
                 onConfirmNow: handleUntrackedApplyNow,
                 onCancel: handleUntrackedCancel,

@@ -124,6 +124,69 @@ describe('planning sync-aware persistence', () => {
         expect(JSON.parse(window.localStorage.getItem('heys_client-1_planning_chrono_entries'))).toEqual(cloudEntries);
     });
 
+    it('bulk-deletes tasks with slots, links, and dependency references', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+
+        const emptyingProject = Store.addProject('Emptying project');
+        const historyOnlyProject = Store.addProject('History only project');
+        const keptProject = Store.addProject('Kept project');
+        const parent = Store.addTask('Parent', { status: 'in_progress' });
+        const child = Store.addTask('Child', { parentTaskId: parent.id, status: 'in_progress' });
+        const projectTask = Store.addTask('Project task', { projectId: emptyingProject.id, status: 'in_progress' });
+        const history = Store.addTask('History', { projectId: historyOnlyProject.id, status: 'done', blockedByTaskIds: [parent.id, child.id] });
+        const keep = Store.addTask('Keep', { projectId: keptProject.id, status: 'in_progress' });
+        Store.addSlot({ taskId: parent.id, title: 'Parent slot' });
+        Store.addSlot({ taskId: projectTask.id, title: 'Project slot' });
+        Store.addSlot({ taskId: history.id, title: 'History slot' });
+        Store.addSlot({ taskId: keep.id, title: 'Keep slot' });
+        Store.addLink(parent.id, history.id, { relation: 'related', fromType: 'task', toType: 'task' });
+        Store.addLink(keep.id, child.id, { relation: 'related', fromType: 'task', toType: 'task' });
+
+        const count = Store.deleteTasks([parent.id, child.id, projectTask.id], {
+            deleteProjectIds: [emptyingProject.id, historyOnlyProject.id],
+        });
+
+        expect(count).toBe(3);
+        expect(Store.getProjects()).toEqual([
+            expect.objectContaining({ id: keptProject.id, name: 'Kept project' }),
+        ]);
+        const remainingTasks = Store.getTasks();
+        const remainingHistory = remainingTasks.find((task) => task.id === history.id);
+        expect(remainingTasks).toEqual(expect.arrayContaining([
+            expect.objectContaining({ id: history.id, blockedByTaskIds: [] }),
+            expect.objectContaining({ id: keep.id, projectId: keptProject.id }),
+        ]));
+        expect(remainingHistory).not.toHaveProperty('projectId');
+        expect(remainingTasks).toHaveLength(2);
+        expect(Store.getSlots()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ taskId: history.id, title: 'History slot' }),
+            expect.objectContaining({ taskId: keep.id, title: 'Keep slot' }),
+        ]));
+        expect(Store.getSlots()).toHaveLength(2);
+        expect(Store.getLinks()).toEqual([]);
+    });
+
+    it('can delete empty task groups without deleting history tasks', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+
+        const historyOnlyProject = Store.addProject('History only project');
+        const history = Store.addTask('History', { projectId: historyOnlyProject.id, status: 'done' });
+        Store.addSlot({ taskId: history.id, title: 'History slot' });
+
+        const count = Store.deleteTasks([], { deleteProjectIds: [historyOnlyProject.id] });
+
+        expect(count).toBe(1);
+        expect(Store.getProjects()).toEqual([]);
+        const remainingHistory = Store.getTasks()[0];
+        expect(remainingHistory).toEqual(expect.objectContaining({ id: history.id, status: 'done' }));
+        expect(remainingHistory).not.toHaveProperty('projectId');
+        expect(Store.getSlots()).toEqual([
+            expect.objectContaining({ taskId: history.id, title: 'History slot' }),
+        ]);
+    });
+
     it('keeps the storage hot-sync merge rescue wired before idempotent return', () => {
         const rescueIdx = storageSource.indexOf('enqueuePlanningMergeRescue(baseKey, mergedArr');
         const idempotentIdx = storageSource.indexOf('if (currentRaw === reserialized) return false; // idempotent no-op; rescue above handles local-only parity');

@@ -24,7 +24,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     try {
       if (global.__HEYS_INSIGHTS_DEBUG === true) return true;
       if (global.location?.search?.includes('heysInsightsDebug=1')) return true;
-      if (global.localStorage?.getItem('heys_insights_debug') === '1') return true;
+      if (global.localStorage?.getItem('heys_insights_debug') === 'enabled') return true;
     } catch (_) { }
     return false;
   }
@@ -38,18 +38,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
     logger(`[HEYS.insights.debug] ${message}`);
   }
-
-  (function ensureInsightsDebugForLocalDev() {
-    try {
-      const hostname = global.location?.hostname;
-      const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
-      if (!isLocalDev) return;
-      if (global.localStorage?.getItem('heys_insights_debug') == null) {
-        global.localStorage.setItem('heys_insights_debug', '1');
-        console.info('[HEYS.insights] 🧪 Local insights debug enabled (heys_insights_debug=1)');
-      }
-    } catch (_) { }
-  })();
 
   // === КОНСТАНТЫ (из pi_constants.js) ===
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
@@ -1449,7 +1437,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     enable: function () {
       try {
         global.__HEYS_INSIGHTS_DEBUG = true;
-        global.localStorage?.setItem('heys_insights_debug', '1');
+        global.localStorage?.setItem('heys_insights_debug', 'enabled');
         console.info('[HEYS.insights] ✅ Debug enabled');
       } catch (_) { }
       return true;

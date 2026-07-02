@@ -1267,8 +1267,9 @@
     const normalizedSupplements = normalizePlannedSupplementsList(supplements);
     const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
     const prevPlanned = normalizePlannedSupplementsList(dayData.supplementsPlanned);
+    const hasStoredPlan = Object.prototype.hasOwnProperty.call(dayData, 'supplementsPlanned');
 
-    if (arePlannedSupplementsEqual(normalizedSupplements, prevPlanned)) {
+    if (hasStoredPlan && arePlannedSupplementsEqual(normalizedSupplements, prevPlanned)) {
       return false;
     }
 
@@ -1305,6 +1306,7 @@
     const profile = getProfileSafe();
     const shouldSyncDay = options.syncDay !== false;
     const targetDateKey = options.dateKey || new Date().toISOString().slice(0, 10);
+    const profileChanged = !arePlannedSupplementsEqual(normalizedSupplements, profile.plannedSupplements);
 
     // 📝 Event log (plan Wave 5.3, F-EL Batch B): supplement-plan
     try {
@@ -1316,7 +1318,7 @@
       );
     } catch (_) { /* noop */ }
 
-    if (!arePlannedSupplementsEqual(normalizedSupplements, profile.plannedSupplements)) {
+    if (profileChanged) {
       profile.plannedSupplements = normalizedSupplements;
       saveProfileSafe(profile, 'plannedSupplements');
     }
@@ -1330,13 +1332,21 @@
       }
     }));
 
+    let daySynced = false;
     if (shouldSyncDay) {
-      syncPlannedSupplementsToDay(targetDateKey, normalizedSupplements, options.source || 'supplements-profile-sync');
+      daySynced = syncPlannedSupplementsToDay(targetDateKey, normalizedSupplements, options.source || 'supplements-profile-sync');
     }
+
+    const affectedKeys = [];
+    if (profileChanged) affectedKeys.push('heys_profile');
+    if (shouldSyncDay) affectedKeys.push(`heys_dayv2_${targetDateKey}`);
 
     return {
       plannedSupplements: normalizedSupplements,
       dateKey: shouldSyncDay ? targetDateKey : null,
+      affectedKeys,
+      completed: true,
+      daySynced,
     };
   }
 

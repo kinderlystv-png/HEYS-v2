@@ -13,7 +13,7 @@ function depsChanged(prevDeps, nextDeps) {
     return nextDeps.some((dep, index) => dep !== prevDeps[index]);
 }
 
-function createFakeReact() {
+function createFakeReact({ runEffects = true } = {}) {
     const state = [];
     const refs = [];
     const effects = [];
@@ -52,7 +52,7 @@ function createFakeReact() {
             const prev = effects[index];
             if (!prev || depsChanged(prev.deps, deps)) {
                 if (prev?.cleanup) prev.cleanup();
-                const cleanup = effect() || undefined;
+                const cleanup = runEffects ? (effect() || undefined) : undefined;
                 effects[index] = {
                     deps: Array.isArray(deps) ? [...deps] : null,
                     cleanup,
@@ -127,10 +127,58 @@ describe('HEYS default tab sync regression', () => {
 
     afterEach(() => {
         fakeReact?.cleanup?.();
+        window.localStorage.removeItem('heys_profile');
+        window.localStorage.removeItem('heys_client_current');
+        window.localStorage.removeItem('heys_pin_auth_client');
+        window.localStorage.removeItem('heys_client-1_profile');
+        window.localStorage.removeItem('heys_client-2_profile');
         window.HEYS = originalHEYS;
         window.React = originalReact;
         window.DEV = originalDEV;
         vi.restoreAllMocks();
+    });
+
+    it('uses scoped profile on first render instead of stale raw localStorage', () => {
+        window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' }));
+        profileStore.setProfile({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' });
+        fakeReact = createFakeReact({ runEffects: false });
+        window.React = fakeReact;
+
+        const tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+        expect(tabState.tab).toBe('tasks');
+    });
+
+    it('uses boot-scoped profile before HEYS.currentClientId is restored', () => {
+        window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' }));
+        window.localStorage.setItem('heys_client_current', JSON.stringify('client-1'));
+        window.localStorage.setItem('heys_client-1_profile', JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
+        profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
+        fakeReact = createFakeReact({ runEffects: false });
+        window.React = fakeReact;
+
+        const tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+        expect(tabState.tab).toBe('tasks');
+    });
+
+    it('uses PIN-auth scoped profile before HEYS.currentClientId is restored', () => {
+        window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' }));
+        window.localStorage.setItem('heys_pin_auth_client', 'client-2');
+        window.localStorage.setItem('heys_client-2_profile', JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
+        profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
+        fakeReact = createFakeReact({ runEffects: false });
+        window.React = fakeReact;
+
+        const tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+        expect(tabState.tab).toBe('tasks');
     });
 
     it('marks pending sync flag and stores defaultTab when widgets change home tab', () => {
@@ -162,6 +210,25 @@ describe('HEYS default tab sync regression', () => {
         expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('checklists');
     });
 
+    it('stores defaultTasksSubtab without forcing tasks as home tab', () => {
+        profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
+        let tabState = mountTabState(fakeReact);
+
+        tabState.setDefaultTab('diary', { tasksSubtab: 'chrono' });
+        tabState = renderTabState(fakeReact);
+
+        expect(profileStore.utils.lsSet).toHaveBeenCalledWith('heys_profile', expect.objectContaining({
+            defaultTab: 'diary',
+            defaultTasksSubtab: 'chrono',
+        }));
+        expect(window.HEYS._pendingProfileSyncFlags?.defaultTab).toEqual(expect.objectContaining({
+            requestedTab: 'diary',
+            requestedTasksSubtab: 'chrono',
+        }));
+        expect(tabState.defaultTab).toBe('diary');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+    });
+
     it('follows synced defaultTab when current tab still matches stale startup tab', () => {
         let tabState = mountTabState(fakeReact);
 
@@ -181,6 +248,51 @@ describe('HEYS default tab sync regression', () => {
 
         expect(tabState.defaultTab).toBe('diary');
         expect(tabState.tab).toBe('diary');
+    });
+
+    it('follows scoped defaultTab after client changes while still on stale startup tab', () => {
+        profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
+        let tabState = mountTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('diary');
+        expect(tabState.tab).toBe('diary');
+
+        profileStore.setProfile({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' });
+        window.dispatchEvent(new CustomEvent('heys:client-changed', {
+            detail: {
+                clientId: 'client-2',
+            },
+        }));
+
+        tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+        expect(tabState.tab).toBe('tasks');
+    });
+
+    it('does not override manually switched tab on client defaultTab update', () => {
+        profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
+        let tabState = mountTabState(fakeReact);
+
+        tabState.setTab('stats');
+        tabState = renderTabState(fakeReact);
+
+        expect(tabState.tab).toBe('stats');
+        expect(tabState.defaultTab).toBe('diary');
+
+        profileStore.setProfile({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' });
+        window.dispatchEvent(new CustomEvent('heys:client-changed', {
+            detail: {
+                clientId: 'client-2',
+            },
+        }));
+
+        tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('chrono');
+        expect(tabState.tab).toBe('stats');
     });
 
     it('re-reads defaultTasksSubtab from profile updates', () => {

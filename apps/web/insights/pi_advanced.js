@@ -20,7 +20,7 @@
       if (HEYS.PredictiveInsights?.debug?.isEnabled?.()) return true;
       if (global.__HEYS_INSIGHTS_DEBUG === true) return true;
       if (global.location?.search?.includes('heysInsightsDebug=1')) return true;
-      if (global.localStorage?.getItem('heys_insights_debug') === '1') return true;
+      if (global.localStorage?.getItem('heys_insights_debug') === 'enabled') return true;
     } catch (_) { }
     return false;
   }

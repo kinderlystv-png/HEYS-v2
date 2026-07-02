@@ -2124,7 +2124,7 @@
         const insightsDebugEnabled = (() => {
           try {
             return window.__HEYS_INSIGHTS_DEBUG === true ||
-              window.localStorage?.getItem('heys_insights_debug') === '1' ||
+              window.localStorage?.getItem('heys_insights_debug') === 'enabled' ||
               window.location?.search?.includes('heysInsightsDebug=1');
           } catch (_) {
             return false;

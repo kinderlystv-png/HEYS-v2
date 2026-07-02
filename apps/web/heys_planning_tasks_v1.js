@@ -1090,6 +1090,61 @@
         );
     }
 
+    function ClearActiveTasksModal({ count, projectCount, onConfirm, onClose }) {
+        React.useEffect(() => {
+            const handleKeyDown = (event) => {
+                if (event.key === 'Escape') onClose();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [onClose]);
+
+        const modalNode = h('div', {
+            className: 'planning-clear-tasks-modal-overlay',
+            onClick: (event) => {
+                if (event.target === event.currentTarget) onClose();
+            },
+        },
+            h('div', {
+                className: 'planning-clear-tasks-modal',
+                role: 'alertdialog',
+                'aria-modal': 'true',
+                'aria-label': 'Очистить активные задачи',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-clear-tasks-modal__icon', 'aria-hidden': 'true' }, '🗑'),
+                h('div', { className: 'planning-clear-tasks-modal__copy' },
+                    h('h2', { className: 'planning-clear-tasks-modal__title' }, 'Очистить задачник?'),
+                    h('p', { className: 'planning-clear-tasks-modal__text' },
+                        count > 0
+                            ? h(React.Fragment, null, 'Будут удалены активные задачи: ', h('strong', null, String(count)))
+                            : 'Активных задач нет',
+                        projectCount > 0
+                            ? h(React.Fragment, null, '. Группы без активных задач тоже будут удалены: ', h('strong', null, String(projectCount)))
+                            : null,
+                        '. Завершённые и отменённые задачи останутся в истории.',
+                    ),
+                ),
+                h('div', { className: 'planning-clear-tasks-modal__actions' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-clear-tasks-modal__cancel',
+                        onClick: onClose,
+                    }, 'Отмена'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-clear-tasks-modal__confirm',
+                        onClick: onConfirm,
+                    }, 'Удалить активные'),
+                ),
+            ),
+        );
+
+        return ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined'
+            ? ReactDOM.createPortal(modalNode, document.body)
+            : modalNode;
+    }
+
     function getDueDatePreset(isoDate, todayIso, tomorrowIso) {
         if (!isoDate) return '';
         if (isoDate === todayIso) return 'today';
@@ -2261,6 +2316,7 @@
         const [showQuickDurationPicker, setShowQuickDurationPicker] = useState(false);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
         const [tasksUiScale, setTasksUiScale] = useState(readSavedTasksUiScale);
+        const [clearActiveOpen, setClearActiveOpen] = useState(false);
 
         React.useEffect(() => {
             try {
@@ -2290,9 +2346,26 @@
         ), [filterStatus, filterPriority, filterProject, filterDueBucket]);
         const forceShowCompleted = filterStatus === 'done';
         const visibleTasks = useMemo(() => state.tasks.filter((task) => !pendingDeletedTaskIds.has(task.id)), [state.tasks, pendingDeletedTaskIds]);
+        const clearableActiveTasks = useMemo(() => visibleTasks.filter((task) => !isTaskTerminal(task)), [visibleTasks]);
+        const clearableActiveCount = clearableActiveTasks.length;
         const taskLookup = useMemo(() => new Map(state.tasks.map((task) => [task.id, task])), [state.tasks]);
         const visibleTaskChildrenMap = useMemo(() => buildTaskChildrenMap(visibleTasks), [visibleTasks]);
         const resolvedTaskProjectIds = useMemo(() => buildResolvedTaskProjectMap(state.tasks, activeProjects), [activeProjects, state.tasks]);
+        const clearableEmptyProjectIds = useMemo(() => {
+            const deletedTaskIds = new Set(clearableActiveTasks.map((task) => task.id).filter(Boolean));
+            const projectIdsWithRemainingActiveTasks = new Set();
+            state.tasks.forEach((task) => {
+                if (!task?.id || deletedTaskIds.has(task.id)) return;
+                if (isTaskTerminal(task)) return;
+                const projectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || task.projectId;
+                if (projectId) projectIdsWithRemainingActiveTasks.add(projectId);
+            });
+            return activeProjects
+                .filter((project) => project?.id && !projectIdsWithRemainingActiveTasks.has(project.id))
+                .map((project) => project.id);
+        }, [activeProjects, clearableActiveTasks, resolvedTaskProjectIds, state.tasks]);
+        const clearableEmptyProjectCount = clearableEmptyProjectIds.length;
+        const canClearTaskBoard = clearableActiveCount > 0 || clearableEmptyProjectCount > 0;
         const taskNeedingProjectRepair = useMemo(() => state.tasks.find((task) => {
             const currentProjectId = task.projectId || undefined;
             const resolvedProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds);
@@ -2590,6 +2663,24 @@
             setFilterDueBucket('all');
         };
 
+        const handleConfirmClearActiveTasks = () => {
+            const ids = clearableActiveTasks.map((task) => task.id).filter(Boolean);
+            if (ids.length === 0 && clearableEmptyProjectIds.length === 0) {
+                setClearActiveOpen(false);
+                return;
+            }
+            if (typeof state.deleteTasks === 'function') {
+                state.deleteTasks(ids, { deleteProjectIds: clearableEmptyProjectIds });
+            } else {
+                ids.forEach((id) => state.deleteTask(id));
+                clearableEmptyProjectIds.forEach((projectId) => state.deleteProject(projectId));
+            }
+            setPendingDeletedTaskIds(new Set());
+            setPendingDeletedProjectIds(new Set());
+            setSelectedTaskId(null);
+            setClearActiveOpen(false);
+        };
+
         return h('div', { className: 'planning-tasks-screen' },
             h('div', { className: 'planning-tasks-header' },
                 h('section', { ref: quickAddCardRef },
@@ -2763,6 +2854,27 @@
                 }),
                 h('button', { type: 'button', className: 'planning-add-btn planning-add-btn--project', onClick: handleAddProject }, '+ Проект'),
             ),
+            h('div', { className: 'planning-clear-tasks-bar' },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-clear-tasks-btn',
+                    disabled: !canClearTaskBoard,
+                    onClick: () => setClearActiveOpen(true),
+                    'aria-label': canClearTaskBoard
+                        ? ('Очистить задачник: активных задач ' + clearableActiveCount + ', групп ' + clearableEmptyProjectCount)
+                        : 'Нет активных задач и групп для очистки',
+                },
+                    h('span', { className: 'planning-clear-tasks-btn__icon', 'aria-hidden': 'true' }, '🗑'),
+                    h('span', { className: 'planning-clear-tasks-btn__copy' },
+                        h('span', { className: 'planning-clear-tasks-btn__label' }, 'Очистить задачник'),
+                        h('span', { className: 'planning-clear-tasks-btn__meta' },
+                            canClearTaskBoard
+                                ? ('Активных задач: ' + clearableActiveCount + (clearableEmptyProjectCount > 0 ? ' · групп: ' + clearableEmptyProjectCount : ''))
+                                : 'Нечего очищать',
+                        ),
+                    ),
+                ),
+            ),
             (() => {
                 const scaleControl = h('div', {
                     className: 'planning-tasks-scale-fab',
@@ -2814,6 +2926,12 @@
                 onSelect: handleQuickDueDateChange,
                 onClear: () => handleQuickDueDateChange(''),
                 onClose: () => setShowQuickCalendar(false),
+            }),
+            clearActiveOpen && h(ClearActiveTasksModal, {
+                count: clearableActiveCount,
+                projectCount: clearableEmptyProjectCount,
+                onConfirm: handleConfirmClearActiveTasks,
+                onClose: () => setClearActiveOpen(false),
             }),
         );
     }

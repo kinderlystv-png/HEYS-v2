@@ -809,6 +809,14 @@
     return HEYS.YesterdayVerify.shouldShow();
   }
 
+  function shouldIncludeRefeedStep() {
+    try {
+      return HEYS.Refeed?.shouldShowRefeedStep?.() === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /** Отсутствуют ли core-поля утреннего чек-ина (вес/время сна/качество/настроение) в дне. */
   function coreCheckinDataMissing(mergedDay) {
     const d = mergedDay || {};
@@ -1005,8 +1013,11 @@
     steps.push('morning_mood');
     steps.push('stepsGoal');
 
-    // 3. 🔄 Загрузочный день (Refeed) — опциональный, после required-блока
-    steps.push('refeedDay');
+    // 3. 🔄 Загрузочный день (Refeed) — опциональный, после required-блока.
+    // Добавляем только когда сам шаг реально будет видимым в StepModal.
+    if (shouldIncludeRefeedStep()) {
+      steps.push('refeedDay');
+    }
 
     // 4. Условные шаги (cycle, measurements)
     // Для cycle: показываем если cycleTrackingEnabled=true ИЛИ если это регистрация (шаг спросит сам)
@@ -1246,17 +1257,43 @@
     }, {});
   }
 
+  function isMorningStatusTerminal(row) {
+    const status = row?.status || 'missing';
+    return status === 'synced'
+      || status === 'skipped'
+      || status === 'data_present'
+      || row?.completeByData === true;
+  }
+
+  function getBlockingMorningSteps({ ledger, dateKey, clientId }) {
+    const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds : [];
+    if (!plannedStepIds.length) return [];
+    const day = getFreshMorningDay(dateKey);
+    const profile = getFreshMorningProfile(clientId);
+    return plannedStepIds.map((id) => {
+      const row = ledger?.steps?.[id] || {};
+      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      return {
+        id,
+        status: row.status || (completeByData ? 'data_present' : 'missing'),
+        completeByData
+      };
+    }).filter((row) => !isMorningStatusTerminal(row));
+  }
+
   function summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone }) {
     const flowStatus = ledger?.steps?.__flow__?.status || null;
     const failed = steps.find((row) => row.status === 'failed_sync');
     const unresolved = steps.find((row) => isUnresolvedProgressStatus(row.status));
+    const blocking = steps.find((row) => !isMorningStatusTerminal(row));
     const allCorePresent = Object.values(corePresence || {}).every(Boolean);
+    if (failed) return { state: 'failed', label: `ошибка: ${MORNING_STEP_LABELS[failed.id] || failed.id}` };
+    if (unresolved) return { state: 'in_progress', label: `сохраняется: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };
+    if (flowStatus === 'synced' && blocking) return { state: 'open', label: `не завершён: ${MORNING_STEP_LABELS[blocking.id] || blocking.id}` };
     if (flowStatus === 'synced') return { state: 'complete', label: 'чек-ин завершён' };
     if (flowStatus === 'failed_sync') return { state: 'failed', label: 'ошибка финальной синхронизации' };
     if (flowStatus === 'saved_local') return { state: 'in_progress', label: 'финальная синхронизация' };
     if (flowStatus === 'closed') return { state: 'closed', label: 'чек-ин прерван' };
-    if (failed) return { state: 'failed', label: `ошибка: ${MORNING_STEP_LABELS[failed.id] || failed.id}` };
-    if (unresolved) return { state: 'in_progress', label: `сохраняется: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };
     if (allCorePresent && sessionDone) return { state: 'core_done', label: 'обязательные шаги на месте' };
     if (ledger) return { state: 'open', label: 'чек-ин открыт/не завершён' };
     if (allCorePresent) return { state: 'data_present', label: 'данные есть, flow неизвестен' };
@@ -1314,6 +1351,7 @@
     const clientId = state.clientId || getCurrentClientId();
     const day = state.day || getFreshMorningDay(dateKey);
     const profile = state.profile || getFreshMorningProfile(clientId);
+    if (state.saveResult?.completed === true) return true;
     switch (stepId) {
       case 'weight': return hasCheckinWeight(day);
       case 'sleepTime': return hasSleepTime(day);
@@ -1321,7 +1359,17 @@
       case 'morning_mood': return hasMorningMood(day);
       case 'stepsGoal': return hasStepsGoal(profile);
       case 'yesterdayVerify': return !shouldShowYesterdayVerifyRequired();
+      case 'refeedDay': return typeof day?.isRefeedDay === 'boolean';
       case 'cycle': return hasCycleDecision(day, profile);
+      case 'measurements': {
+        const m = day?.measurements;
+        return !!m && ['waist', 'hips', 'thigh', 'biceps'].some((k) => hasPositiveCheckinNumber(m?.[k]));
+      }
+      case 'cold_exposure': return !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
+      case 'supplements': return Array.isArray(day?.supplementsPlanned);
+      case 'morningRoutine':
+      case 'welcome':
+        return true;
       case 'profile-personal':
       case 'profile-body':
       case 'profile-goals':
@@ -1373,7 +1421,7 @@
       error: null
     }, clientId);
 
-    const complete = isMorningStepComplete(stepId, { dateKey, clientId });
+    const complete = isMorningStepComplete(stepId, { dateKey, clientId, saveResult: opts.saveResult });
     if (!complete) {
       const err = new Error('Шаг сохранён не полностью. Проверьте данные и попробуйте ещё раз.');
       markMorningProgressStep(dateKey, stepId, {
@@ -1440,7 +1488,8 @@
   function createMorningStepAck(plan) {
     return async ({ stepId, saveResult, skipped }) => {
       const affectedKeys = getAffectedKeysForMorningStep(stepId, plan.dateKey, saveResult);
-      traceMorningCheckin(skipped ? 'step_skip_ack_start' : 'step_ack_start', {
+      const isSkipped = !!(skipped || saveResult?.skipped);
+      traceMorningCheckin(isSkipped ? 'step_skip_ack_start' : 'step_ack_start', {
         dateKey: plan.dateKey,
         clientId: plan.clientId,
         flowId: plan.flowId,
@@ -1450,7 +1499,8 @@
       return flushAndMarkMorningStep(stepId, affectedKeys, 10000, {
         dateKey: plan.dateKey,
         clientId: plan.clientId,
-        skipped: !!skipped
+        skipped: isSkipped,
+        saveResult
       });
     };
   }
@@ -1482,6 +1532,13 @@
     });
 
     const finish = () => {
+      const ledger = readMorningProgress(todayKey, currentClientId);
+      const blocking = getBlockingMorningSteps({ ledger, dateKey: todayKey, clientId: currentClientId });
+      if (blocking.length) {
+        const labels = blocking.map((row) => MORNING_STEP_LABELS[row.id] || row.id).join(', ');
+        throw new Error(`checkin_incomplete_steps:${labels}`);
+      }
+
       dispatchMorningCheckinDayRefresh(todayKey, 'morning-checkin-complete');
       setTimeout(() => {
         dispatchMorningCheckinDayRefresh(todayKey, 'morning-checkin-complete-delayed');

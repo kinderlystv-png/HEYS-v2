@@ -2879,7 +2879,7 @@
           day.updatedAt = Date.now();
           saveDayData(dateKey, day);
         }
-      } else if (cycleDay === null) {
+      } else if (cycleDay == null) {
         // Очищаем все связанные дни цикла
         if (HEYS.Cycle && HEYS.Cycle.clearCycleDays) {
           HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
@@ -2919,6 +2919,10 @@
           updatedAt: Date.now()
         }
       }));
+      return {
+        affectedKeys: [`heys_dayv2_${dateKey}`],
+        completed: true
+      };
     },
     xpAction: 'cycle_logged'
   });
@@ -3197,35 +3201,45 @@
       dayData.date = dateKey;
       const hasData = ['waist', 'hips', 'thigh', 'biceps'].some(k => data[k] !== null && data[k] !== undefined && !Number.isNaN(data[k]));
 
-      if (hasData) {
-        const newUpdatedAt = Date.now();
-        dayData.measurements = {
-          waist: data.waist ?? null,
-          hips: data.hips ?? null,
-          thigh: data.thigh ?? null,
-          biceps: data.biceps ?? null,
-          measuredAt: dateKey
+      if (!hasData) {
+        return {
+          skipped: true,
+          reason: 'empty_measurements',
+          affectedKeys: []
         };
-        dayData.updatedAt = newUpdatedAt;
-        saveDayData(dateKey, dayData);
-
-        // Триггер облачной синхронизации
-        window.dispatchEvent(new CustomEvent('heys:data-saved', {
-          detail: { key: `day:${dateKey}`, type: 'measurements' }
-        }));
-
-        // Уведомляем DayTab о изменении (с forceReload)
-        window.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: {
-            date: dateKey,
-            field: 'measurements',
-            value: dayData.measurements,
-            source: 'measurements-step',
-            updatedAt: newUpdatedAt,
-            forceReload: true
-          }
-        }));
       }
+
+      const newUpdatedAt = Date.now();
+      dayData.measurements = {
+        waist: data.waist ?? null,
+        hips: data.hips ?? null,
+        thigh: data.thigh ?? null,
+        biceps: data.biceps ?? null,
+        measuredAt: dateKey
+      };
+      dayData.updatedAt = newUpdatedAt;
+      saveDayData(dateKey, dayData);
+
+      // Триггер облачной синхронизации
+      window.dispatchEvent(new CustomEvent('heys:data-saved', {
+        detail: { key: `day:${dateKey}`, type: 'measurements' }
+      }));
+
+      // Уведомляем DayTab о изменении (с forceReload)
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'measurements',
+          value: dayData.measurements,
+          source: 'measurements-step',
+          updatedAt: newUpdatedAt,
+          forceReload: true
+        }
+      }));
+      return {
+        affectedKeys: [`heys_dayv2_${dateKey}`],
+        completed: true
+      };
     },
     xpAction: 'measurements_logged'
   });
@@ -3462,13 +3476,15 @@
       if (data.coldType && data.coldType !== 'none') {
         dayData.coldExposure = {
           type: data.coldType,
-          time: data.coldTime
+          time: data.coldTime,
+          answeredAt: Date.now()
         };
       } else {
-        // Если выбрано "нет" — удаляем холод
-        if (dayData.coldExposure) {
-          delete dayData.coldExposure;
-        }
+        dayData.coldExposure = {
+          type: 'none',
+          time: null,
+          answeredAt: Date.now()
+        };
       }
 
       dayData.updatedAt = Date.now();
@@ -3480,6 +3496,10 @@
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'coldExposure', source: 'cold-exposure-step' }
       }));
+      return {
+        affectedKeys: [`heys_dayv2_${dateKey}`],
+        completed: true
+      };
     },
     xpAction: 'cold_exposure_logged'
   });
@@ -4637,11 +4657,10 @@
       const selected = Array.isArray(data?.selected) ? data.selected : [];
 
       if (HEYS.Supplements && HEYS.Supplements.savePlanned) {
-        HEYS.Supplements.savePlanned(selected, {
+        return HEYS.Supplements.savePlanned(selected, {
           dateKey,
           source: 'supplements-step-save'
         });
-        return;
       }
 
       const dayData = getFreshDayData(dateKey);
@@ -4660,6 +4679,10 @@
           }
         }));
       }
+      return {
+        affectedKeys: [`heys_dayv2_${dateKey}`],
+        completed: true
+      };
     },
     xpAction: 'supplements_planned'
   });

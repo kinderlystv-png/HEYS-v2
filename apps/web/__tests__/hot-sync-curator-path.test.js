@@ -95,6 +95,7 @@ describe('client-specific storage allowlist', () => {
     'heys_meal_presets_v1',
     'heys_suggested_presets_v1',
     'heys_suggested_presets_dismissed_v1',
+    'heys_advice_disclaimer_accepted_v1',
   ])('syncs %s as per-client storage', (key) => {
     expect(keysArea).toContain(`'${key}'`);
   });

@@ -346,6 +346,40 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(mockStorage._store[scopedSessionKey]).toBeUndefined();
     expect(mockStorage._store.heys_cleanup_scoped_uikeys_v2).toBe('1');
   });
+
+  test('preset suggestion engine skips null meals and nameless items', () => {
+    const setRaw = (key, value) => {
+      const raw = JSON.stringify(value);
+      mockStorage._store[key] = raw;
+      mockStorage[key] = raw;
+    };
+    const dayPayload = (date) => ({
+      date,
+      meals: [
+        null,
+        {
+          id: `meal-${date}`,
+          items: [
+            null,
+            { product_id: 'nameless-product', grams: 10 },
+            { product_id: 'coffee', name: 'Кофе американо', grams: 200, kcal100: 2 },
+            { product_id: 'milk', name: 'Молоко 2,5', grams: 100, kcal100: 50 },
+          ],
+        },
+      ],
+    });
+    setRaw('heys_dayv2_2026-07-01', dayPayload('2026-07-01'));
+    setRaw('heys_dayv2_2026-07-02', dayPayload('2026-07-02'));
+
+    const store = loadStorageLayer();
+    const count = store.runPresetSuggestionEngine({ minFrequency: 2 });
+
+    expect(count).toBe(1);
+    const suggestions = store.getSuggestedPresets();
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].items.map((item) => item.name)).toEqual(['Кофе американо', 'Молоко 2,5']);
+    expect(suggestions[0].items.some((item) => !item.name)).toBe(false);
+  });
 });
 
 describe('HEYS.store caching', () => {

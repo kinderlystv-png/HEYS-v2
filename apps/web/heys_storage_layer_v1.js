@@ -1028,11 +1028,18 @@
     var comboMap = new Map();
 
     // -- Хелпер для нормализации продуктов и создания сигнатуры --
+    function isValidPresetItem(item) {
+      if (!item || typeof item !== 'object') return false;
+      var id = item.product_id || item.productId || item.id;
+      var name = String(item.name || '').trim();
+      return !!(id && name);
+    }
+
     function getComboSignature(items) {
       var uMap = new Map();
-      items.forEach(function (item) {
+      (Array.isArray(items) ? items : []).filter(isValidPresetItem).forEach(function (item) {
         var n = String(item.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '');
-        var fallbackId = String(item.product_id || item.id);
+        var fallbackId = String(item.product_id || item.productId || item.id);
         var key = n || fallbackId;
         if (!uMap.has(key)) uMap.set(key, item);
       });
@@ -1044,7 +1051,7 @@
       });
 
       var signature = uniqueItems.map(function (i) {
-        return String(i.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(i.product_id || i.id);
+        return String(i.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(i.product_id || i.productId || i.id);
       }).join('|');
 
       return { uniqueItems: uniqueItems, signature: signature };
@@ -1052,7 +1059,7 @@
 
     // -- Нормализованный ключ продукта (для gramsHistory) --
     function normalizedItemKey(item) {
-      return String(item.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(item.product_id || item.id);
+      return String(item.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(item.product_id || item.productId || item.id);
     }
 
     // -- Извлечение граммов из item (только валидные числа > 0) --
@@ -1097,10 +1104,9 @@
 
     // --- Собираем все приёмы пищи ---
     allDays.forEach(function (day) {
-      (day.meals || []).forEach(function (meal) {
-        var items = (meal.items || []).filter(function (item) {
-          return item.product_id || item.id;
-        });
+      (Array.isArray(day.meals) ? day.meals : []).forEach(function (meal) {
+        if (!meal || !Array.isArray(meal.items)) return;
+        var items = meal.items.filter(isValidPresetItem);
 
         // Получаем уникальные продукты и сигнатуру по ИМЕНИ (или ID)
         var comboData = getComboSignature(items);
@@ -1132,8 +1138,8 @@
             gramsHistory: initGramsHistory,
             sampleItems: uniqueItems.map(function (item) {
               return {
-                product_id: item.product_id || item.id,
-                name: item.name || '',
+                product_id: item.product_id || item.productId || item.id,
+                name: String(item.name || '').trim(),
                 grams: 100,
                 kcal100: item.kcal100 || 0,
                 protein100: item.protein100 || 0,

@@ -2708,6 +2708,9 @@
 
     const { coldExposure } = day;
     const exposureType = coldExposure.type || 'coldShower';
+    if (exposureType === 'none') {
+      return { hasCold: false, type: 'none', bonus: 0, desc: null };
+    }
     const config = I.COLD_EXPOSURE_BONUS[exposureType] || I.COLD_EXPOSURE_BONUS.coldShower;
 
     // Проверяем время — эффект длится ~5 часов
