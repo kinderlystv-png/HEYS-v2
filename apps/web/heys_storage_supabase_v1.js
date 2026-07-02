@@ -238,6 +238,9 @@
     'heys_norms',
     'heys_ratio_zones',       // Настройки цветовых зон ratio
     'heys_grams_history',     // История введённых граммов (для автокомплита)
+    'heys_meal_presets_v1',   // Готовые наборы для добавления продуктов в приём
+    'heys_suggested_presets_v1',
+    'heys_suggested_presets_dismissed_v1',
 
     // Советы (advice)
     'heys_advice_settings',   // Настройки (автопоказ, звук)
@@ -7563,6 +7566,11 @@
                 // при первом рендере dashboard — без него виджеты раскладываются по
                 // дефолту и перестраиваются когда полный sync приземлит layout.
                 'heys_widget_layout_v1', 'heys_widget_layout_meta_v1',
+                // Meal presets: нужны в add-product flow сразу после входа/переключения клиента,
+                // иначе пользователь видит пустой список готовых наборов до следующего HOT-sync.
+                'heys_meal_presets_v1',
+                'heys_suggested_presets_v1',
+                'heys_suggested_presets_dismissed_v1',
                 // Stage 6 (2026-06-14): planning (projects/tasks/slots/links + chrono).
                 // До этого planning ключи попадали только в Phase B paginated fetch —
                 // вкладка Задачи показывала пустоту/placeholder-круги до прихода

@@ -126,6 +126,7 @@ describe('storage registry — Phase 1 surface', () => {
     const names = list.map(p => p.name);
     expect(names).toContain('insights_feedback');
     expect(names).toContain('hidden_products');
+    expect(names).toContain('meal_presets');
     expect(names).toContain('advice_trace_day');
     expect(names).toContain('perf_log');
     expect(names).toContain('products_pre_overlay_snapshot');
@@ -144,6 +145,10 @@ describe('storage registry — Phase 1 surface', () => {
     const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
     expect(HEYS.storageRegistry.match(`heys_${cid}_insights_feedback_breakfast`)?.name)
       .toBe('insights_feedback');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_meal_presets_v1`)?.name)
+      .toBe('meal_presets');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_suggested_presets_v1`)?.name)
+      .toBe('meal_presets');
     expect(HEYS.storageRegistry.match(`heys_${cid}_dayv2_2026-04-26`)?.name)
       .toBe('dayv2');
     expect(HEYS.storageRegistry.match(`heys_${cid}_perf_log`)?.name).toBe('perf_log');

@@ -236,6 +236,12 @@
     cloudSync: 'merge', pruneStrategy: 'sliding-window',
     description: 'Per-client dismissed product IDs (cloud-merged Set).',
   });
+  register('meal_presets', {
+    pattern: /^heys_[a-f0-9-]{36}_(meal_presets_v1|suggested_presets_v1|suggested_presets_dismissed_v1)$/,
+    scope: 'per-client', maxSize: 128 * KB, maxAge: 0,
+    cloudSync: 'mirror', pruneStrategy: 'manual',
+    description: 'Per-client saved and suggested meal presets for add-product flow.',
+  });
 
   // Advice subsystem.
   register('advice_trace_day', {

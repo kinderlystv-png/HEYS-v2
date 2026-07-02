@@ -114,6 +114,9 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     'heys_game',
     'heys_subscription_status',
     'heys_widget_layout_v1',
+    'heys_meal_presets_v1',
+    'heys_suggested_presets_v1',
+    'heys_suggested_presets_dismissed_v1',
   ];
 
   // Локализуем блок `const criticalBaseKeys = [...]` динамически — line-numbers

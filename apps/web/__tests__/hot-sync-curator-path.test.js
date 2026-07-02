@@ -83,3 +83,19 @@ describe('foreground hot-sync server-revision gate', () => {
     expect(source).toContain('checkpoint: Number(_lastMarkerCheckRevision) || 0');
   });
 });
+
+describe('client-specific storage allowlist', () => {
+  const keysStart = source.indexOf('const CLIENT_SPECIFIC_KEYS = [');
+  if (keysStart < 0) {
+    throw new Error('Test setup: CLIENT_SPECIFIC_KEYS block not found');
+  }
+  const keysArea = source.slice(keysStart, keysStart + 3000);
+
+  it.each([
+    'heys_meal_presets_v1',
+    'heys_suggested_presets_v1',
+    'heys_suggested_presets_dismissed_v1',
+  ])('syncs %s as per-client storage', (key) => {
+    expect(keysArea).toContain(`'${key}'`);
+  });
+});
