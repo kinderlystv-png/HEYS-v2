@@ -18,6 +18,7 @@ coverage/
 
 # Local pre-push test cache (per-developer; tracks SHA of last green vitest)
 .husky/.test-cache-last-pass
+.husky/.test-cache-last-pass-*
 
 # nyc test coverage
 .nyc_output

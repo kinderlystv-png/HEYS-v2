@@ -107,7 +107,7 @@ function runTestsIfNeeded({ failures }) {
   writeLine('');
   writeLine('7) Vitest pre-push cache');
 
-  const statusArgs = ['scripts/pre-push-vitest-cache.mjs', '--status'];
+  const statusArgs = ['scripts/pre-push-vitest-cache.mjs', '--status', '--ref=HEAD'];
   const status = runCaptured('node', statusArgs);
   printCapturedOutput(status);
   if (status.status !== 0) return failures + 1;
@@ -120,7 +120,7 @@ function runTestsIfNeeded({ failures }) {
 
   if (!isMiss) return failures;
 
-  const runStatus = run('node', ['scripts/pre-push-vitest-cache.mjs', '--run-if-needed']);
+  const runStatus = run('node', ['scripts/pre-push-vitest-cache.mjs', '--run-if-needed', '--ref=HEAD']);
   if (runStatus !== 0) return failures + 1;
   return failures;
 }

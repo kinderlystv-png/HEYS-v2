@@ -154,7 +154,7 @@ echo "🧪 Запуск полного test suite..."
 # 2026-07-01: source-SHA cache вынесен в общий helper, чтобы `push:preflight`
 # и pre-push считали один и тот же cache hit/miss. Full apps/web Vitest остаётся
 # обязательным на cache miss; preflight только прогревает этот cache заранее.
-node scripts/pre-push-vitest-cache.mjs --run-if-needed || {
+node scripts/pre-push-vitest-cache.mjs --run-if-needed --ref=HEAD || {
   echo "❌ Тесты не прошли! Push отменён."
   exit 1
 }

@@ -426,7 +426,7 @@ function printPreflightSummary() {
   writeLine('Preflight summary:');
   printSummaryGate('bundle-size', process.execPath, [BUNDLE_SIZE]);
   printSummaryGate('legacy bundles', process.execPath, [LEGACY_BUNDLES, '--ref=HEAD']);
-  printSummaryGate('Vitest cache', process.execPath, [VITEST_CACHE, '--status']);
+  printSummaryGate('Vitest cache', process.execPath, [VITEST_CACHE, '--status', '--ref=HEAD']);
 }
 
 function printStatusAndExit() {
