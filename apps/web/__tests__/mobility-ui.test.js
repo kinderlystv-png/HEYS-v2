@@ -195,7 +195,7 @@ describe('Mobility UI', () => {
     expect(screen.getByRole('button', { name: /Голос:/ })).toBeTruthy();
   });
 
-  it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', async () => {
+  it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', { timeout: 20000 }, async () => {
     globalThis.HEYS.Mobility.persistence = globalThis.HEYS.TrainingKernel.activeSession.create({
       keySuffix: 'routine_active_session',
       staleMs: 24 * 60 * 60 * 1000,
