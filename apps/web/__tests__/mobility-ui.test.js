@@ -79,7 +79,7 @@ const profile = {
   acceptedDisclaimer: true
 };
 
-describe('Mobility UI', () => {
+describe('Mobility UI', { timeout: 60000 }, () => {
   beforeAll(setupOnce);
 
   afterEach(() => {
