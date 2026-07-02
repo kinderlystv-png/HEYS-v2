@@ -428,14 +428,17 @@ function getCorsHeaders(origin) {
   };
 
   // 🔐 Только разрешённые origin получают ACAO
-  const isAllowed = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
-  if (isAllowed) {
+  if (isAllowedOrigin(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
   }
   // Без Origin (серверный запрос) — не блокируем
   // С неразрешённым Origin — браузер заблокирует
 
   return headers;
+}
+
+function isAllowedOrigin(origin) {
+  return !!origin && ALLOWED_ORIGINS.includes(origin);
 }
 
 module.exports.handler = async function (event, context) {
@@ -454,7 +457,7 @@ module.exports.handler = async function (event, context) {
 
   // 🔐 P0: Explicit 403 for disallowed browser origins
   // Server-to-server (origin === null) is allowed
-  if (origin && !ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
+  if (origin && !isAllowedOrigin(origin)) {
     return {
       statusCode: 403,
       headers: {

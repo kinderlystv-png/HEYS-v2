@@ -82,8 +82,7 @@ function App() {
         debugLogger.info('Активирован браузерный режим (моки)', { 
           USE_MOCKS, 
           isDevMode, 
-          hasInitData: Boolean(initData),
-          initDataPreview: initData?.substring(0, 50) 
+          hasInitData: Boolean(initData)
         });
         setSession(buildDevSession());
         setAuthState('authorized');
@@ -281,24 +280,6 @@ function App() {
         )}
         {!webApp && <div>Данные недоступны в браузерном режиме</div>}
       </div>
-
-      {/* InitData для отладки */}
-      {initData && (
-        <div style={{ 
-          padding: '16px', 
-          background: 'var(--tg-theme-secondary-bg-color, #f0f0f0)',
-          borderRadius: '8px',
-          fontSize: '11px',
-          fontFamily: 'monospace',
-          wordBreak: 'break-all',
-          lineHeight: '1.4'
-        }}>
-          <div style={{ fontWeight: '600', marginBottom: '8px', fontFamily: 'sans-serif' }}>
-            🔐 InitData (для проверки на backend):
-          </div>
-          {initData}
-        </div>
-      )}
 
       <div style={{ 
         padding: '16px', 

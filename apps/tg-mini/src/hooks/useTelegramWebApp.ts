@@ -58,10 +58,6 @@ export function useTelegramWebApp() {
         // eslint-disable-next-line no-console
         console.log('Color Scheme:', tg.colorScheme);
         // eslint-disable-next-line no-console
-        console.log('Init Data:', tg.initData || '(empty)');
-        // eslint-disable-next-line no-console
-        console.log('User:', tg.initDataUnsafe.user || '(none)');
-        // eslint-disable-next-line no-console
         console.log('Theme Params:', tg.themeParams);
       }
     } else {

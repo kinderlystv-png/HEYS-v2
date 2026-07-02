@@ -25,9 +25,8 @@ const ALLOWED_ORIGINS = [
 ];
 
 function getCorsHeaders(origin) {
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin?.startsWith(allowed));
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+  const isAllowed = isAllowedOrigin(origin);
+  const headers = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
@@ -40,6 +39,16 @@ function getCorsHeaders(origin) {
     // SEC-005 (2026-06-08): CSP на JSON-ответ — defense-in-depth.
     'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
   };
+
+  if (isAllowed) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
+
+function isAllowedOrigin(origin) {
+  return !!origin && ALLOWED_ORIGINS.includes(origin);
 }
 
 module.exports.handler = async function (event, context) {
@@ -53,6 +62,14 @@ module.exports.handler = async function (event, context) {
       statusCode: 204,
       headers: corsHeaders,
       body: ''
+    };
+  }
+
+  if (origin && !isAllowedOrigin(origin)) {
+    return {
+      statusCode: 403,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'cors_denied' })
     };
   }
 

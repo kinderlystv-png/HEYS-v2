@@ -53,9 +53,8 @@ function normalizePhone(phone) {
 }
 
 function getCorsHeaders(origin) {
-  const isAllowed = ALLOWED_ORIGINS.some((allowed) => origin?.startsWith(allowed));
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+  const isAllowed = isAllowedOrigin(origin);
+  const headers = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
@@ -68,6 +67,16 @@ function getCorsHeaders(origin) {
     // SEC-005 (2026-06-08): CSP на JSON-ответ — defense-in-depth.
     'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
   };
+
+  if (isAllowed) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
+
+function isAllowedOrigin(origin) {
+  return !!origin && ALLOWED_ORIGINS.includes(origin);
 }
 
 async function sendTelegramNotification(lead) {
@@ -257,8 +266,8 @@ module.exports.handler = async function (event, context) {
   // на ALLOWED_ORIGINS[0] для запрещённых origin'ов — браузер блокировал чтение
   // ответа, но lead УЖЕ был залит в БД + Telegram-уведомление ушло (CSRF).
   // Server-to-server (origin === '') допустим, как в heys-api-rest.
-  const isAllowedOrigin = !origin || ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
-  if (!isAllowedOrigin) {
+  const canAcceptOrigin = !origin || isAllowedOrigin(origin);
+  if (!canAcceptOrigin) {
     return {
       statusCode: 403,
       headers: corsHeaders,

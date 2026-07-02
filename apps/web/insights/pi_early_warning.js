@@ -1132,13 +1132,13 @@
 
                 // Attempt 1: HEYS.auth API
                 sessionToken = HEYS.auth?.getSessionToken?.();
-                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${String(sessionToken).slice(0, 16)}...` : 'NOT FOUND');
+                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? 'found' : 'NOT FOUND');
                 if (!isValidToken(sessionToken)) sessionToken = null;
 
                 // Attempt 2: Direct localStorage read
                 if (!sessionToken) {
                     const raw = localStorage.getItem('heys_session_token');
-                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 40)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? 'found' : 'NOT FOUND');
                     if (raw && isValidToken(raw)) {
                         try {
                             const parsed = JSON.parse(raw);
@@ -1152,7 +1152,7 @@
                 // Attempt 3: Using HEYS.utils.lsGet (namespace-aware)
                 if (!sessionToken && typeof HEYS?.utils?.lsGet === 'function') {
                     const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
-                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? 'found' : 'NOT FOUND');
                     if (isValidToken(tokenViaUtils)) {
                         sessionToken = tokenViaUtils;
                     }
@@ -1165,7 +1165,7 @@
                         const cid = String(clientId).replace(/"/g, '');
                         const namespacedKey = `heys_${cid}_session_token`;
                         const namespacedToken = localStorage.getItem(namespacedKey);
-                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}` : `NOT FOUND at ${namespacedKey}`);
                         if (namespacedToken && isValidToken(namespacedToken)) {
                             try {
                                 const parsed = JSON.parse(namespacedToken);
@@ -1182,7 +1182,7 @@
                 // Attempt 5: Curator session (for curator access)
                 if (!sessionToken) {
                     const curatorToken = localStorage.getItem('heys_curator_session');
-                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
                     if (isValidToken(curatorToken)) {
                         sessionToken = curatorToken;
                     }
@@ -1194,7 +1194,7 @@
                     throw new Error('No session token available');
                 }
 
-                console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
+                console.info('ews / weekly ✅ token.final:', sessionToken ? 'using bearer token' : 'using HttpOnly cookie');
                 console.info('ews / weekly ☁️ load.cloud.start');
                 const { data: cloudData, error: cloudError } = await Promise.race([
                     HEYS.YandexAPI.rpc('get_weekly_snapshots_by_session', withWeeklySessionToken({
@@ -1331,13 +1331,13 @@
 
                 // Attempt 1: HEYS.auth API
                 sessionToken = HEYS.auth?.getSessionToken?.();
-                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${sessionToken.slice(0, 16)}...` : 'NOT FOUND');
+                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? 'found' : 'NOT FOUND');
                 if (!isValidToken(sessionToken)) sessionToken = null;
 
                 // Attempt 2: localStorage direct (JSON.parse safe)
                 if (!sessionToken) {
                     const raw = localStorage.getItem('heys_session_token');
-                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 16)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? 'found' : 'NOT FOUND');
                     if (raw && isValidToken(raw)) {
                         try {
                             const parsed = JSON.parse(raw);
@@ -1351,7 +1351,7 @@
                 // Attempt 3: HEYS.utils.lsGet (namespace-aware)
                 if (!sessionToken) {
                     const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
-                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? 'found' : 'NOT FOUND');
                     if (isValidToken(tokenViaUtils)) {
                         sessionToken = tokenViaUtils;
                     }
@@ -1363,7 +1363,7 @@
                     if (cid) {
                         const namespacedKey = `heys_${cid}_session_token`;
                         const namespacedToken = localStorage.getItem(namespacedKey);
-                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}` : `NOT FOUND at ${namespacedKey}`);
                         if (namespacedToken && isValidToken(namespacedToken)) {
                             try {
                                 const parsed = JSON.parse(namespacedToken);
@@ -1380,7 +1380,7 @@
                 // Attempt 5: Curator session (alternative auth mechanism)
                 if (!sessionToken) {
                     const curatorToken = localStorage.getItem('heys_curator_session');
-                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
                     if (isValidToken(curatorToken)) {
                         sessionToken = curatorToken;
                     }
@@ -1393,7 +1393,7 @@
                     return;
                 }
 
-                console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
+                console.info('ews / weekly ✅ token.final:', sessionToken ? 'using bearer token' : 'using HttpOnly cookie');
                 console.info('ews / weekly ☁️ save.cloud.start:', {
                     weekStart: currentWeekSnapshot.weekStart
                 });
@@ -1673,13 +1673,13 @@
 
                         // Attempt 1: HEYS.auth API
                         sessionToken = HEYS.auth?.getSessionToken?.();
-                        console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${String(sessionToken).slice(0, 16)}...` : 'NOT FOUND');
+                        console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? 'found' : 'NOT FOUND');
                         if (!isValidToken(sessionToken)) sessionToken = null;
 
                         // Attempt 2: localStorage direct (JSON.parse safe)
                         if (!sessionToken) {
                             const raw = localStorage.getItem('heys_session_token');
-                            console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 16)}...` : 'NOT FOUND');
+                            console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? 'found' : 'NOT FOUND');
                             if (raw && isValidToken(raw)) {
                                 try {
                                     const parsed = JSON.parse(raw);
@@ -1693,7 +1693,7 @@
                         // Attempt 3: HEYS.utils.lsGet (namespace-aware)
                         if (!sessionToken) {
                             const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
-                            console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                            console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? 'found' : 'NOT FOUND');
                             if (isValidToken(tokenViaUtils)) {
                                 sessionToken = tokenViaUtils;
                             }
@@ -1705,7 +1705,7 @@
                             if (cid) {
                                 const namespacedKey = `heys_${cid}_session_token`;
                                 const namespacedToken = localStorage.getItem(namespacedKey);
-                                console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                                console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}` : `NOT FOUND at ${namespacedKey}`);
                                 if (namespacedToken && isValidToken(namespacedToken)) {
                                     try {
                                         const parsed = JSON.parse(namespacedToken);
@@ -1722,7 +1722,7 @@
                         // Attempt 5: Curator session (alternative auth mechanism)
                         if (!sessionToken) {
                             const curatorToken = localStorage.getItem('heys_curator_session');
-                            console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                            console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
                             if (isValidToken(curatorToken)) {
                                 sessionToken = curatorToken;
                             }
@@ -1735,7 +1735,7 @@
                             continue;
                         }
 
-                        console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
+                        console.info('ews / weekly ✅ token.final:', sessionToken ? 'using bearer token' : 'using HttpOnly cookie');
 
                         const { data: result, error: cloudError } = await HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', withWeeklySessionToken({
                             p_week_start: snapshot.weekStart,
