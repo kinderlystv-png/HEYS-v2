@@ -1,0 +1,2346 @@
+{
+  "applied": false,
+  "reason": "legacy_products_dedupe_2026_07_02",
+  "summary": {
+    "clients": 3,
+    "duplicate_groups": 136,
+    "aliases_to_remove": 64,
+    "product_rows_to_remove": 136,
+    "affected_day_rows": 2,
+    "tail_rows_to_remove": 2
+  },
+  "clients": [
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "before_products": 317,
+      "after_products": 306,
+      "duplicate_groups": [
+        {
+          "key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+          "canonical": {
+            "id": "yb35krf6",
+            "name": "Треугольники лососевые в панировке",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_ua3yfa",
+              "name": "Треугольники лососевые в панировке",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+          "canonical": {
+            "id": "pzrbc39j",
+            "name": "Рис с овощами (Вега-Рис)",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778274307177_xb2psz",
+              "name": "Рис с овощами (Вега-Рис)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+          "canonical": {
+            "id": "mgkej9n1",
+            "name": "Курица в сливках с брокколи",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778277267122_fsk91w",
+              "name": "Курица в сливках с брокколи",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+          "canonical": {
+            "id": "t956hr9z",
+            "name": "Фасоль в томатном соусе агрокомплекс",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_xkamjl",
+              "name": "Фасоль в томатном соусе агрокомплекс",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+          "canonical": {
+            "id": "o53fe4v9",
+            "name": "Яйцо варёное",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "c98yq6pu",
+              "name": "Яйцо варёное",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+          "canonical": {
+            "id": "bj7f7zns",
+            "name": "Сыр моцарелла Bonfesto",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_qvxdrx",
+              "name": "Сыр моцарелла Bonfesto",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+          "canonical": {
+            "id": "m3z1ske0",
+            "name": "Творожный сыр 30 самокат",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "vuyypj7i",
+              "name": "Творожный сыр 30 самокат",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+          "canonical": {
+            "id": "kx3no29t",
+            "name": "Сыр твёрдый классический",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "3q0vke1j",
+              "name": "Сыр твёрдый классический",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+          "canonical": {
+            "id": "6saa81vk",
+            "name": "Сыр Рикотта",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_cvvy6a",
+              "name": "Сыр Рикотта",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+          "canonical": {
+            "id": "p_1778341946689_n0frzu",
+            "name": "Куриные крылышки шашлык",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778341835910_686yfl",
+              "name": "Куриные крылышки шашлык",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876",
+          "canonical": {
+            "id": "65k8qlaq",
+            "name": "Картофель фри",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048884_qovwc4",
+              "name": "Картофель фри",
+              "refs": 0
+            }
+          ]
+        }
+      ],
+      "product_rows_to_remove": 11,
+      "aliases_to_remove": [
+        {
+          "oldId": "p_1769271889661_ua3yfa",
+          "newId": "yb35krf6"
+        },
+        {
+          "oldId": "p_1778274307177_xb2psz",
+          "newId": "pzrbc39j"
+        },
+        {
+          "oldId": "p_1778277267122_fsk91w",
+          "newId": "mgkej9n1"
+        },
+        {
+          "oldId": "p_1769271889661_xkamjl",
+          "newId": "t956hr9z"
+        },
+        {
+          "oldId": "c98yq6pu",
+          "newId": "o53fe4v9"
+        },
+        {
+          "oldId": "p_1769271889661_qvxdrx",
+          "newId": "bj7f7zns"
+        },
+        {
+          "oldId": "vuyypj7i",
+          "newId": "m3z1ske0"
+        },
+        {
+          "oldId": "3q0vke1j",
+          "newId": "kx3no29t"
+        },
+        {
+          "oldId": "p_1769271889661_cvvy6a",
+          "newId": "6saa81vk"
+        },
+        {
+          "oldId": "p_1778341835910_686yfl",
+          "newId": "p_1778341946689_n0frzu"
+        },
+        {
+          "oldId": "restored_1778342048884_qovwc4",
+          "newId": "65k8qlaq"
+        }
+      ],
+      "affected_day_keys": [],
+      "tail_keys_to_remove": []
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "before_products": 275,
+      "after_products": 255,
+      "duplicate_groups": [
+        {
+          "key": "fp:e03d4f5591175a804bc146f12129194bfcbb74468aab6ef6c078643d0995e079",
+          "canonical": {
+            "id": "wynf21dn",
+            "name": "Куриное филе запечённое",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "vlgfvaid",
+              "name": "Куриное филе запечённое",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:d64fb2a78cca79abc8a3e741cc00987c1c730b84e97bf5f99618e54f09950297",
+          "canonical": {
+            "id": "5s9d34oq",
+            "name": "Молоко ультрапастеризованное 3.5",
+            "refs": 23
+          },
+          "aliases": [
+            {
+              "id": "cl208oqv",
+              "name": "Молоко ультрапастеризованное 3.5",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:424caad996b0b1e4d54ebae11dd0e9590431b964d41db537a03e6d9792ecd72b",
+          "canonical": {
+            "id": "x7f7pox8",
+            "name": "Сироп для кофе (классический сахарный)",
+            "refs": 22
+          },
+          "aliases": [
+            {
+              "id": "els6jsdn",
+              "name": "Сироп для кофе (классический сахарный)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:0ef8774abf764dfc06515e99a8d088ef3160919f1475ffc8e33d28eb30746448",
+          "canonical": {
+            "id": "feeurdis",
+            "name": "Творожный сыр 60",
+            "refs": 15
+          },
+          "aliases": [
+            {
+              "id": "d0xgfozn",
+              "name": "Творожный сыр 60",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+          "canonical": {
+            "id": "yb35krf6",
+            "name": "Треугольники лососевые в панировке",
+            "refs": 7
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_ua3yfa",
+              "name": "Треугольники лососевые в панировке",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:918cb84cbdc501781b83c5495ab2b999e2ac17485a1f44d252d694cdb3d3d80b",
+          "canonical": {
+            "id": "19tyqk3s",
+            "name": "Лапша соба варёная",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "9v9d11yo",
+              "name": "Лапша соба варёная",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+          "canonical": {
+            "id": "pzrbc39j",
+            "name": "Рис с овощами (Вега-Рис)",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778274307177_xb2psz",
+              "name": "Рис с овощами (Вега-Рис)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+          "canonical": {
+            "id": "mgkej9n1",
+            "name": "Курица в сливках с брокколи",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778277267122_fsk91w",
+              "name": "Курица в сливках с брокколи",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:62bbc289106b9255084895c8a91ceba7f953925f1e9bae1c3e0021025e4513b0",
+          "canonical": {
+            "id": "9rc4xlss",
+            "name": "Кофе американо",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "qzldiyz2",
+              "name": "Кофе американо",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+          "canonical": {
+            "id": "t956hr9z",
+            "name": "Фасоль в томатном соусе агрокомплекс",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_xkamjl",
+              "name": "Фасоль в томатном соусе агрокомплекс",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "bfp:34baf8a2c257c41ac06e29b2b08d2127e87759aff77a385ec93bdd8cfeddd0e4",
+          "canonical": {
+            "id": "776ddp9j",
+            "name": "Батончик протеиновый шоколад-фундук",
+            "refs": 6
+          },
+          "aliases": [
+            {
+              "id": "6kuy8iz6",
+              "name": "Батончик протеиновый шоколад-фундук",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+          "canonical": {
+            "id": "o53fe4v9",
+            "name": "Яйцо варёное",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "c98yq6pu",
+              "name": "Яйцо варёное",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+          "canonical": {
+            "id": "bj7f7zns",
+            "name": "Сыр моцарелла Bonfesto",
+            "refs": 9
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_qvxdrx",
+              "name": "Сыр моцарелла Bonfesto",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:c721126bbe09069d436f83195c83e7bbcbc0eaaa2ae293f5692ed9d8ffdcda49",
+          "canonical": {
+            "id": "y0p7bh0i",
+            "name": "Филе индейки запечённое",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "fxdksbnl",
+              "name": "Филе индейки запечённое",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+          "canonical": {
+            "id": "m3z1ske0",
+            "name": "Творожный сыр 30 самокат",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "vuyypj7i",
+              "name": "Творожный сыр 30 самокат",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+          "canonical": {
+            "id": "kx3no29t",
+            "name": "Сыр твёрдый классический",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "3q0vke1j",
+              "name": "Сыр твёрдый классический",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+          "canonical": {
+            "id": "6saa81vk",
+            "name": "Сыр Рикотта",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_cvvy6a",
+              "name": "Сыр Рикотта",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "bfp:1f9abfa434f340264c92ce262080fe703014af4c30e9427652b9bb6c63ed6d5a",
+          "canonical": {
+            "id": "p_1778312781134_182f1e",
+            "name": "Ветчина, из филе индейки 400 г",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "p_1778273124718_ec81af",
+              "name": "Ветчина, из филе индейки 400 г",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+          "canonical": {
+            "id": "p_1778341946689_n0frzu",
+            "name": "Куриные крылышки шашлык",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778341835910_686yfl",
+              "name": "Куриные крылышки шашлык",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876",
+          "canonical": {
+            "id": "65k8qlaq",
+            "name": "Картофель фри",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048884_qovwc4",
+              "name": "Картофель фри",
+              "refs": 0
+            }
+          ]
+        }
+      ],
+      "product_rows_to_remove": 20,
+      "aliases_to_remove": [
+        {
+          "oldId": "vlgfvaid",
+          "newId": "wynf21dn"
+        },
+        {
+          "oldId": "cl208oqv",
+          "newId": "5s9d34oq"
+        },
+        {
+          "oldId": "els6jsdn",
+          "newId": "x7f7pox8"
+        },
+        {
+          "oldId": "d0xgfozn",
+          "newId": "feeurdis"
+        },
+        {
+          "oldId": "p_1769271889661_ua3yfa",
+          "newId": "yb35krf6"
+        },
+        {
+          "oldId": "9v9d11yo",
+          "newId": "19tyqk3s"
+        },
+        {
+          "oldId": "p_1778274307177_xb2psz",
+          "newId": "pzrbc39j"
+        },
+        {
+          "oldId": "p_1778277267122_fsk91w",
+          "newId": "mgkej9n1"
+        },
+        {
+          "oldId": "qzldiyz2",
+          "newId": "9rc4xlss"
+        },
+        {
+          "oldId": "p_1769271889661_xkamjl",
+          "newId": "t956hr9z"
+        },
+        {
+          "oldId": "6kuy8iz6",
+          "newId": "776ddp9j"
+        },
+        {
+          "oldId": "c98yq6pu",
+          "newId": "o53fe4v9"
+        },
+        {
+          "oldId": "p_1769271889661_qvxdrx",
+          "newId": "bj7f7zns"
+        },
+        {
+          "oldId": "fxdksbnl",
+          "newId": "y0p7bh0i"
+        },
+        {
+          "oldId": "vuyypj7i",
+          "newId": "m3z1ske0"
+        },
+        {
+          "oldId": "3q0vke1j",
+          "newId": "kx3no29t"
+        },
+        {
+          "oldId": "p_1769271889661_cvvy6a",
+          "newId": "6saa81vk"
+        },
+        {
+          "oldId": "p_1778273124718_ec81af",
+          "newId": "p_1778312781134_182f1e"
+        },
+        {
+          "oldId": "p_1778341835910_686yfl",
+          "newId": "p_1778341946689_n0frzu"
+        },
+        {
+          "oldId": "restored_1778342048884_qovwc4",
+          "newId": "65k8qlaq"
+        }
+      ],
+      "affected_day_keys": ["heys_dayv2_2026-07-02"],
+      "tail_keys_to_remove": ["heys_products_rpc_tail_1"]
+    },
+    {
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "before_products": 408,
+      "after_products": 303,
+      "duplicate_groups": [
+        {
+          "key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+          "canonical": {
+            "id": "p_1778341946689_n0frzu",
+            "name": "Куриные крылышки шашлык",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1778341835910_686yfl",
+              "name": "Куриные крылышки шашлык",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876",
+          "canonical": {
+            "id": "65k8qlaq",
+            "name": "Картофель фри",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048884_qovwc4",
+              "name": "Картофель фри",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:f4fbcc6bc5498f5d08cad89dd2d3fc9f6212ca27383e71356046bb080e9f253b",
+          "canonical": {
+            "id": "w5trm0so",
+            "name": "Пшеничные гренки Самокат, тайский перец",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "w5trm0so",
+              "name": "Пшеничные гренки Самокат, тайский перец",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:a086fe6ec33f9420b4a208ddb797fa9cff1546689ebb5a5b4a8536625cc79d41",
+          "canonical": {
+            "id": "restored_1778342048885_3evwdk",
+            "name": "Салат курица яйцо горошек йогурт",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048885_3evwdk",
+              "name": "Салат курица яйцо горошек йогурт",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:7d0d7396eef94945c07166119ce11edf97de49d10b5dcc987e726567f5de7841",
+          "canonical": {
+            "id": "restored_1778342048885_yqcvgs",
+            "name": "Сырники из творога 5% жареные",
+            "refs": 10
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048885_yqcvgs",
+              "name": "Сырники из творога 5% жареные",
+              "refs": 10
+            }
+          ]
+        },
+        {
+          "key": "fp:901298144e56066bd949cf6931120766d1068c133db42a2f3d2c6150f56775a0",
+          "canonical": {
+            "id": "p_1769271889661_8j8xhq",
+            "name": "Творожный сыр с авокадо и зеленью",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_8j8xhq",
+              "name": "Творожный сыр с авокадо и зеленью",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:ccff8499fd0c6250f9ecb6e64c80550ecff8defb0de90099eaae521f4617fd7a",
+          "canonical": {
+            "id": "p_1769271889661_ombfoa",
+            "name": "Удон с курицей в подливе",
+            "refs": 8
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_ombfoa",
+              "name": "Удон с курицей в подливе",
+              "refs": 8
+            }
+          ]
+        },
+        {
+          "key": "fp:92c88870af8ebe969091e133f797e319429092112786ff260d6d6dd8b81af43f",
+          "canonical": {
+            "id": "restored_1778342048885_1guale",
+            "name": "Блины с творогом (кулинария)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048885_1guale",
+              "name": "Блины с творогом (кулинария)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:16b40796d6790c6eb1b32cc657ead88ac77d307bc329694ebeaf439fd27f876a",
+          "canonical": {
+            "id": "48264005-fce2-48b6-8336-1c70568e9c1f",
+            "name": "Стейк говяжий на гриле",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "48264005-fce2-48b6-8336-1c70568e9c1f",
+              "name": "Стейк говяжий на гриле",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:85ec2d73ecad1053ddcd70accf63bf2b3bbd85b2915f26fb5e50c321b3c65202",
+          "canonical": {
+            "id": "f6a4d810-3935-44cd-b6ba-8a8c45810c22",
+            "name": "Плов с курицей",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "f6a4d810-3935-44cd-b6ba-8a8c45810c22",
+              "name": "Плов с курицей",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:fe4573e30d0dba0cd8beac816128e71be41c5bc4b8e63f6a72e3dbdfd4a0f50c",
+          "canonical": {
+            "id": "8fcaf9db-c188-493f-a56c-0f5b8bdd71e3",
+            "name": "Торт стандартный (бисквитный с кремом)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "8fcaf9db-c188-493f-a56c-0f5b8bdd71e3",
+              "name": "Торт стандартный (бисквитный с кремом)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:6d4895c1b956b0837880784d8fa60883df9680eca7ae545b8239fe87191b1310",
+          "canonical": {
+            "id": "restored_1778342048885_ogyrnk",
+            "name": "Индейка тушёная в подливе",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048885_ogyrnk",
+              "name": "Индейка тушёная в подливе",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:6c96d648a62a53e0b8d27d0c1a85300b793978c97c55b693f68bf89214381383",
+          "canonical": {
+            "id": "restored_1778342048885_kckken",
+            "name": "SNAQ FABRIQ Snaqfer Wafer Stick Milk & Cashew",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778342048885_kckken",
+              "name": "SNAQ FABRIQ Snaqfer Wafer Stick Milk & Cashew",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:65b5ea53186c8dfa392ef8f8f694ffb204a0993bfa79a16ae6c658c474cb60cb",
+          "canonical": {
+            "id": "lrb9njk7",
+            "name": "Соус барбекю Heinz томатный",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "lrb9njk7",
+              "name": "Соус барбекю Heinz томатный",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:456596f0389e75ec3a8f6702ebb35ec03d9093f848c2af69299743118d3d472f",
+          "canonical": {
+            "id": "4dkujjbg",
+            "name": "Солёные палочки Lorenz Saltletts",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "4dkujjbg",
+              "name": "Солёные палочки Lorenz Saltletts",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:c721126bbe09069d436f83195c83e7bbcbc0eaaa2ae293f5692ed9d8ffdcda49",
+          "canonical": {
+            "id": "fxdksbnl",
+            "name": "Филе индейки запечённое",
+            "refs": 8
+          },
+          "aliases": [
+            {
+              "id": "fxdksbnl",
+              "name": "Филе индейки запечённое",
+              "refs": 8
+            }
+          ]
+        },
+        {
+          "key": "fp:6f948d8af1573cda2f2349911fe488b4131be614999c33251fa8b6dff3570b6f",
+          "canonical": {
+            "id": "p_1769271889662_tysrhn",
+            "name": "Хлеб белый",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889662_tysrhn",
+              "name": "Хлеб белый",
+              "refs": 3
+            }
+          ]
+        },
+        {
+          "key": "fp:b03aac290ae6f2be8308613ab1bc8aff01b7b0d1aba386efcbeb9dc22aabce3f",
+          "canonical": {
+            "id": "restored_1778420219534_gpixva",
+            "name": "Батончик миндальный Nut&Go",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_gpixva",
+              "name": "Батончик миндальный Nut&Go",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:bbd31fcb241f2ee9fbf9ffd139cdf66061d86381d3bdb32eb9737a8dc6a1c67d",
+          "canonical": {
+            "id": "6eo7hdcl",
+            "name": "Пельмени с маслом классические",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "6eo7hdcl",
+              "name": "Пельмени с маслом классические",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:088e486cff9cc9b870d2e41cec80ab1c3d56b87b6cfa5c9969c0d78219db28a8",
+          "canonical": {
+            "id": "restored_1778420219534_vg84aw",
+            "name": "Краковская колбаса",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_vg84aw",
+              "name": "Краковская колбаса",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:ebeeceb3c9f3bcb3350185d254e5c863cc82a40d0c228790a1405a450e7ab9b2",
+          "canonical": {
+            "id": "qnt643fe",
+            "name": "Филе куриной грудки (гриль без масла)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "qnt643fe",
+              "name": "Филе куриной грудки (гриль без масла)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:64b433e30430769798eb9c5cbce85b47dba6bf215b1432df78bfa2d6b0e8067a",
+          "canonical": {
+            "id": "mrnuenrp",
+            "name": "Суп овощной с фрикадельками",
+            "refs": 15
+          },
+          "aliases": [
+            {
+              "id": "mrnuenrp",
+              "name": "Суп овощной с фрикадельками",
+              "refs": 15
+            }
+          ]
+        },
+        {
+          "key": "fp:901be12d6968d543472b9d372672de2ccb4388fc73dd916a21b2ddcc5c6327c6",
+          "canonical": {
+            "id": "5273m24j",
+            "name": "Киндер Сюрприз",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "5273m24j",
+              "name": "Киндер Сюрприз",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:ef204cb59b43f1c12e073d1b8534b329a8525e95cdead3c4047837d22b8a7e19",
+          "canonical": {
+            "id": "restored_1778420219534_inxxfb",
+            "name": "Пудинг молочный карамельный 3%",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_inxxfb",
+              "name": "Пудинг молочный карамельный 3%",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:e6854987f76c83a7d65bec460c9df6fb112b4b5660f9039b14e7796d4d442741",
+          "canonical": {
+            "id": "p_1769271889661_0q3gxf",
+            "name": "Сникерс",
+            "refs": 15
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_0q3gxf",
+              "name": "Сникерс",
+              "refs": 15
+            }
+          ]
+        },
+        {
+          "key": "fp:754c1aa794d23391fc75d0fb0ca7e0e58b7a609d1039cf028c861cd3d639574a",
+          "canonical": {
+            "id": "p_1769271889661_g6w9z1",
+            "name": "Соус для макарон «Болоньезе» PIKADOR",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_g6w9z1",
+              "name": "Соус для макарон «Болоньезе» PIKADOR",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:f90168d9e4d3f58e7b50703e5cbb96e7fe7db4edc5afd85b7aaf6bce018a01fe",
+          "canonical": {
+            "id": "restored_1778420219534_x5c4gq",
+            "name": "Салат с копчёной курицей, корейской морковью и кукурузой (йогурт+горчица)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_x5c4gq",
+              "name": "Салат с копчёной курицей, корейской морковью и кукурузой (йогурт+горчица)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:c228bf0105caf32abe8615bdf34dc28d94b99fa467b04737b795a4a197c9a3e4",
+          "canonical": {
+            "id": "restored_1778420219534_4u3jmq",
+            "name": "Наггетсы из индейки «Вязанка»",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_4u3jmq",
+              "name": "Наггетсы из индейки «Вязанка»",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:7a22124123e83eb45ab19d098f91435b59bbc3047b6c78a7b3adebf1dd358a0e",
+          "canonical": {
+            "id": "restored_1778420219534_e7q5fr",
+            "name": "Сухарики ржаные «Дон Крутон» чеснок",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_e7q5fr",
+              "name": "Сухарики ржаные «Дон Крутон» чеснок",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:b9f7b4c100666c4340df4469dfef1f75e16be0c3d9708fb0de9ccbcda989eeb2",
+          "canonical": {
+            "id": "restored_1778420219534_7lgwj1",
+            "name": "Квас «И.И. Обломов» пастеризованный фильтрованный",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_7lgwj1",
+              "name": "Квас «И.И. Обломов» пастеризованный фильтрованный",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:3b060f9dedc8ab2183019b6d83bccca149f11d1d589ae5d165e36b7d0b62598f",
+          "canonical": {
+            "id": "p_1769271889663_x8sj9o",
+            "name": "Яблочный пирог",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889663_x8sj9o",
+              "name": "Яблочный пирог",
+              "refs": 3
+            }
+          ]
+        },
+        {
+          "key": "fp:1541064f0836f4277a8c9f5775f49ad5c8bb1d8ca75c58e97bca72bfe396e7f1",
+          "canonical": {
+            "id": "a8ajk5lq",
+            "name": "Утка запечённая (без кожи и костей)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "a8ajk5lq",
+              "name": "Утка запечённая (без кожи и костей)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:df93723d7cac7171fba185b70d5050898c5cafe2c5ce475108fee2df6e30d792",
+          "canonical": {
+            "id": "restored_1778420219534_r43hi1",
+            "name": "Рулетики с крабовыми палочками в лаваше (йогурт, майонез, яйцо, огурец)",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_r43hi1",
+              "name": "Рулетики с крабовыми палочками в лаваше (йогурт, майонез, яйцо, огурец)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:7666a1941bedc16d8519e70f0389712af79f4f57d4e2f5dba9159a39ab450923",
+          "canonical": {
+            "id": "restored_1778420219534_dvpbk6",
+            "name": "Овощи микс (помидор, огурец, перец, капуста квашеная)",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_dvpbk6",
+              "name": "Овощи микс (помидор, огурец, перец, капуста квашеная)",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:1e391c5f440e9b45ca6a8aef8e8b638aad8bcf53e407159b92772f68eda2c66a",
+          "canonical": {
+            "id": "b22c850d-ad1f-4e96-9952-1d91ed99309a",
+            "name": "Мясо по-французски (картофель, фарш, майонез, сметана, сыр)",
+            "refs": 5
+          },
+          "aliases": [
+            {
+              "id": "b22c850d-ad1f-4e96-9952-1d91ed99309a",
+              "name": "Мясо по-французски (картофель, фарш, майонез, сметана, сыр)",
+              "refs": 5
+            }
+          ]
+        },
+        {
+          "key": "fp:8c89b342dc0881ed67e6b7677df847db7254326a5b73e70e8dd79f41f3470710",
+          "canonical": {
+            "id": "p_1769271889661_z5smwq",
+            "name": "Сливки 10",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_z5smwq",
+              "name": "Сливки 10",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:d3d3b48927c613fa82a4c81cdfdde58c37d2e3cd13e55bfeebc26323a5752819",
+          "canonical": {
+            "id": "201940f0-6995-446b-a9e1-ab80f6c8a144",
+            "name": "Салат айсберг",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "201940f0-6995-446b-a9e1-ab80f6c8a144",
+              "name": "Салат айсберг",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:1f9d511513fe56c51f06327cef5fcce83277c6e070a08e95969804d1b819cba2",
+          "canonical": {
+            "id": "restored_1778420219534_t2uqh2",
+            "name": "Биг Спешиал ролл Перец гриль",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_t2uqh2",
+              "name": "Биг Спешиал ролл Перец гриль",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:984fbdb66ecbbc851af67e35b409d2f5f5f1a2612f853fea60b9e6290aa25d1f",
+          "canonical": {
+            "id": "restored_1778420219534_3tuu1k",
+            "name": "Котлеты домашние (говядина+свинина), жареные",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_3tuu1k",
+              "name": "Котлеты домашние (говядина+свинина), жареные",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:da1bbfb9014371044ae8418ab681fbc30a7255bd9d7941f366f0a6f8e1ebbdba",
+          "canonical": {
+            "id": "restored_1778420219534_l1r10q",
+            "name": "Энергетический напиток с сахаром",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_l1r10q",
+              "name": "Энергетический напиток с сахаром",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:c36cd04b20f0fb09051fb117ef17f42117a70e117045ba70ad3c0a498bc8dc7e",
+          "canonical": {
+            "id": "j8lp89ir",
+            "name": "Шоколадка Super",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "j8lp89ir",
+              "name": "Шоколадка Super",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:6ca14d4d9d54bb710a532c238feedd2c3778bb1edb85b248d33586c609806a1d",
+          "canonical": {
+            "id": "p_1769271889662_0yrrs1",
+            "name": "Чипсы Lay's с солью",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889662_0yrrs1",
+              "name": "Чипсы Lay's с солью",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:e422c04d47fd0b7a08d9b3e53dc80ee9753493dd3f813689042743657dcea8a7",
+          "canonical": {
+            "id": "restored_1778420219534_xk7o01",
+            "name": "Селёдка маринованная солёная",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_xk7o01",
+              "name": "Селёдка маринованная солёная",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:f4c59e69f84d15eb1fadeaf6aac6402b07d382e256b3e2cbe2a8a99ca4f95d8c",
+          "canonical": {
+            "id": "restored_1778420219534_wv0lj8",
+            "name": "кулич Аютинский с варёной сгущёнкой",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_wv0lj8",
+              "name": "кулич Аютинский с варёной сгущёнкой",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:bb6a5fc4344d8ace9b6cc9f09a73b045ac5c98dc61835c349caca22d101fedaa",
+          "canonical": {
+            "id": "nvsbr5cw",
+            "name": "Цветная капуста отварная",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "nvsbr5cw",
+              "name": "Цветная капуста отварная",
+              "refs": 4
+            }
+          ]
+        },
+        {
+          "key": "fp:b32a99604cc0ed1c29d6ef61da170a3323e77d52b101dbb934da6ef39c64a874",
+          "canonical": {
+            "id": "restored_1778420219534_80rku8",
+            "name": "Индейка тушёная (консервы)",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_80rku8",
+              "name": "Индейка тушёная (консервы)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:d2fb970ed813bf9e0c088f551a5014e690c219294760356fdb8f794e9608a64e",
+          "canonical": {
+            "id": "p_1769271889661_npq45z",
+            "name": "Соус чесночный низкокалорийный",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889661_npq45z",
+              "name": "Соус чесночный низкокалорийный",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:55f38010556ab401edd47d2ba6eec8e0edfb6eb3c9dba40b06c9b68185e5f11a",
+          "canonical": {
+            "id": "bbcc0b29-0a2e-4a58-8249-3aea33e417cd",
+            "name": "Шаурма классическая с курицей и соусами",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "bbcc0b29-0a2e-4a58-8249-3aea33e417cd",
+              "name": "Шаурма классическая с курицей и соусами",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:9107e52dbab2ba4ade790e0c1028a1974678db9974e71d094ffcb62e83ccc5b1",
+          "canonical": {
+            "id": "restored_1778420219534_1moj2m",
+            "name": "Эклер с заварным кремом",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219534_1moj2m",
+              "name": "Эклер с заварным кремом",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:498dbc5b4deb48f427b80e76b41727c6d8aa40c7b96e68c77ecb827c37a444ec",
+          "canonical": {
+            "id": "restored_1778420219535_s3zzhm",
+            "name": "Сельдь маринованная",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219535_s3zzhm",
+              "name": "Сельдь маринованная",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:1cccc08c08fcb2eca3d13eebb6dd63779da635eb4e32ca39d841d7d0ee6cac4d",
+          "canonical": {
+            "id": "restored_1778420219535_xctexh",
+            "name": "Урбеч из мякоти кокоса (100%)",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219535_xctexh",
+              "name": "Урбеч из мякоти кокоса (100%)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:10dfea888fcf3bfd419ad245823e713637e4a30b7142e14a0df4986b098ff90f",
+          "canonical": {
+            "id": "4euwc0oi",
+            "name": "Тунец консервированный жёлтопёрый",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "4euwc0oi",
+              "name": "Тунец консервированный жёлтопёрый",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:ac4e4c22c5026e5256bda9a2101e58b05b05d2c264079220b23ce6e75b44e967",
+          "canonical": {
+            "id": "restored_1778420219535_cqcheu",
+            "name": "Молочный крем в вафельной трубочке Самокат",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219535_cqcheu",
+              "name": "Молочный крем в вафельной трубочке Самокат",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:79a419d64e15e0c60ac2cd667768cd8c4cfc8afc16bd2009bf86a8b953e7d39a",
+          "canonical": {
+            "id": "restored_1778420219535_zyohbh",
+            "name": "Печенье Бегемотик Бонди обогащённое кальцием, с 5 месяцев",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "restored_1778420219535_zyohbh",
+              "name": "Печенье Бегемотик Бонди обогащённое кальцием, с 5 месяцев",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:bdc351f323199956c52877f426a6e922306fb96212b7254f90e184a515cc24e9",
+          "canonical": {
+            "id": "xl075yc2",
+            "name": "Кофе растворимый с молоком 2,5",
+            "refs": 208
+          },
+          "aliases": [
+            {
+              "id": "xl075yc2",
+              "name": "Кофе растворимый с молоком 2,5",
+              "refs": 208
+            }
+          ]
+        },
+        {
+          "key": "fp:0ef8774abf764dfc06515e99a8d088ef3160919f1475ffc8e33d28eb30746448",
+          "canonical": {
+            "id": "d0xgfozn",
+            "name": "Творожный сыр 60",
+            "refs": 110
+          },
+          "aliases": [
+            {
+              "id": "d0xgfozn",
+              "name": "Творожный сыр 60",
+              "refs": 110
+            }
+          ]
+        },
+        {
+          "key": "fp:1df6604002711be4a7c3e65485eef177f179dfa7e231ca857b8ffa4c8acab25c",
+          "canonical": {
+            "id": "677hejes",
+            "name": "Салат",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "677hejes",
+              "name": "Салат",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:e03d4f5591175a804bc146f12129194bfcbb74468aab6ef6c078643d0995e079",
+          "canonical": {
+            "id": "vlgfvaid",
+            "name": "Куриное филе запечённое",
+            "refs": 19
+          },
+          "aliases": [
+            {
+              "id": "vlgfvaid",
+              "name": "Куриное филе запечённое",
+              "refs": 19
+            }
+          ]
+        },
+        {
+          "key": "fp:918cb84cbdc501781b83c5495ab2b999e2ac17485a1f44d252d694cdb3d3d80b",
+          "canonical": {
+            "id": "9v9d11yo",
+            "name": "Лапша соба варёная",
+            "refs": 49
+          },
+          "aliases": [
+            {
+              "id": "9v9d11yo",
+              "name": "Лапша соба варёная",
+              "refs": 49
+            }
+          ]
+        },
+        {
+          "key": "fp:d64fb2a78cca79abc8a3e741cc00987c1c730b84e97bf5f99618e54f09950297",
+          "canonical": {
+            "id": "cl208oqv",
+            "name": "Молоко ультрапастеризованное 3.5",
+            "refs": 54
+          },
+          "aliases": [
+            {
+              "id": "cl208oqv",
+              "name": "Молоко ультрапастеризованное 3.5",
+              "refs": 54
+            }
+          ]
+        },
+        {
+          "key": "fp:62bbc289106b9255084895c8a91ceba7f953925f1e9bae1c3e0021025e4513b0",
+          "canonical": {
+            "id": "qzldiyz2",
+            "name": "Кофе американо",
+            "refs": 50
+          },
+          "aliases": [
+            {
+              "id": "qzldiyz2",
+              "name": "Кофе американо",
+              "refs": 50
+            }
+          ]
+        },
+        {
+          "key": "fp:424caad996b0b1e4d54ebae11dd0e9590431b964d41db537a03e6d9792ecd72b",
+          "canonical": {
+            "id": "els6jsdn",
+            "name": "Сироп для кофе (классический сахарный)",
+            "refs": 45
+          },
+          "aliases": [
+            {
+              "id": "els6jsdn",
+              "name": "Сироп для кофе (классический сахарный)",
+              "refs": 45
+            }
+          ]
+        },
+        {
+          "key": "fp:df3f9041f9b3ec9d5b90d3f4dfe3e1bfbd90fbf9ea562635346b846033728b6f",
+          "canonical": {
+            "id": "pm4hicwl",
+            "name": "Кузя кукурузные палочки сладкие",
+            "refs": 15
+          },
+          "aliases": [
+            {
+              "id": "pm4hicwl",
+              "name": "Кузя кукурузные палочки сладкие",
+              "refs": 15
+            }
+          ]
+        },
+        {
+          "key": "fp:34fb5e739d1b85fd1a765c8319dd8517652689b0d2863d03a24bd03796e7e746",
+          "canonical": {
+            "id": "ruujl3vw",
+            "name": "Профитроли",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "ruujl3vw",
+              "name": "Профитроли",
+              "refs": 2
+            }
+          ]
+        },
+        {
+          "key": "fp:bd47a452428b2091407cc18e46a74e4956eb9e1e9308dc73cb4cb81e549a12f8",
+          "canonical": {
+            "id": "2qyuh2bd",
+            "name": "Ветчина из индейки Черкизово",
+            "refs": 7
+          },
+          "aliases": [
+            {
+              "id": "2qyuh2bd",
+              "name": "Ветчина из индейки Черкизово",
+              "refs": 7
+            }
+          ]
+        },
+        {
+          "key": "fp:885a5034856d312d463cd94b49cc5a3b0ed9eac22be03d7568791bff9ec64977",
+          "canonical": {
+            "id": "3tii3az9",
+            "name": "Сахар белый",
+            "refs": 16
+          },
+          "aliases": [
+            {
+              "id": "3tii3az9",
+              "name": "Сахар белый",
+              "refs": 16
+            }
+          ]
+        },
+        {
+          "key": "fp:85f45c8c2a56feed87c47b93355529ffa18b14f014bd5576a8ca6707f5c64c70",
+          "canonical": {
+            "id": "6bggfoey",
+            "name": "Блины классические",
+            "refs": 12
+          },
+          "aliases": [
+            {
+              "id": "n5bkt9gc",
+              "name": "Блины классические",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:cbd0e37bc631dbb1f889f7733c14483cd9e134c29cc96d390da9b3eacb3b5c4c",
+          "canonical": {
+            "id": "opj0bh7h",
+            "name": "Сгущённое молоко",
+            "refs": 14
+          },
+          "aliases": [
+            {
+              "id": "a67grvv2",
+              "name": "Сгущённое молоко",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:3e7ededc16c83c8a501c839781d9ad3d3c99e4939c36563f35479fa8b72860f4",
+          "canonical": {
+            "id": "m7ak9i4m",
+            "name": "Масло сливочное 82,5",
+            "refs": 35
+          },
+          "aliases": [
+            {
+              "id": "7b74upsx",
+              "name": "Масло сливочное 82,5",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:0fd32ef5a989de4701748eda21d91409c874c21477f313e3d8cb8dbb9e144a48",
+          "canonical": {
+            "id": "nrk7m4wk",
+            "name": "Котлеты из филе индейки (обжарка 30 сек, доведение в кипятке)",
+            "refs": 23
+          },
+          "aliases": [
+            {
+              "id": "n9lfwvxu",
+              "name": "Котлеты из филе индейки (обжарка 30 сек, доведение в кипятке)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:c14be66937cbe43d4bfbdc45724ac0f6494a1ec6c3ffd1747e2dc1951a96eb25",
+          "canonical": {
+            "id": "2x3p3w3s",
+            "name": "Майонез Провансаль",
+            "refs": 27
+          },
+          "aliases": [
+            {
+              "id": "97dfcjsx",
+              "name": "Майонез Провансаль",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:818d94db5925292354432936df380778bd52c99c1b379aa2f75587566b690c88",
+          "canonical": {
+            "id": "5noxkuct",
+            "name": "Гранола шоколадная Самокат",
+            "refs": 12
+          },
+          "aliases": [
+            {
+              "id": "6n8e67w7",
+              "name": "Гранола шоколадная Самокат",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:cb9d0f53983007c8d74b8ce2016174708c4e2b5ce73925674cf71a03bcb1c3cf",
+          "canonical": {
+            "id": "2i0cf0hj",
+            "name": "Люля куриные на гриле",
+            "refs": 9
+          },
+          "aliases": [
+            {
+              "id": "xcvoop2m",
+              "name": "Люля куриные на гриле",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:23d6a2918a86085bf1b9568319115fd7f65473af6e5085ca888ab6151b76c6df",
+          "canonical": {
+            "id": "wr2q0jk7",
+            "name": "Авокадо",
+            "refs": 11
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889659_1ffudt",
+              "name": "Авокадо",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:32bbb2a7fce7af8d97acf3429b65befa61ebb2ac6dce8789febe6812c037cea1",
+          "canonical": {
+            "id": "t1nidfcx",
+            "name": "Печёночный паштет из индейки (классический)",
+            "refs": 5
+          },
+          "aliases": [
+            {
+              "id": "a4iu3mjz",
+              "name": "Печёночный паштет из индейки (классический)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:f5d6bf450d1425cc7b405597e5c42fadb67820afb9535816789b781ca71bd7e1",
+          "canonical": {
+            "id": "zfr5hq3w",
+            "name": "Soj Marshick Marshmallow 20 протеина солёная карамель",
+            "refs": 6
+          },
+          "aliases": [
+            {
+              "id": "3ebamkoo",
+              "name": "Soj Marshick Marshmallow 20 протеина солёная карамель",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:069f8ae3621f44cef942ae7d28d0446d13a44e7b240b716ea102ebdabade84fc",
+          "canonical": {
+            "id": "wk8gihvq",
+            "name": "Гавайский микс (овощи с рисом)",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "v3elu27r",
+              "name": "Гавайский микс (овощи с рисом)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:2c4143c2bd73f412e2b9aa308bb841454baaf89e424e9ef725b085b650f32ed2",
+          "canonical": {
+            "id": "967v1y9z",
+            "name": "Пончик глазированный с ванильной начинкой (FitnessShock)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "dads029e",
+              "name": "Пончик глазированный с ванильной начинкой (FitnessShock)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:21e99d5ff97ae10ed3075021756bfd0b00eabea7f44256a76a6b1bb2412edafd",
+          "canonical": {
+            "id": "4gufivt7",
+            "name": "Изюм",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "48cdgwjm",
+              "name": "Изюм",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:7f2648bf1fa2539d4f8e047de9d5f7d85d872517a6d6397154c4c66d89b959fe",
+          "canonical": {
+            "id": "5gysf8ii",
+            "name": "Напиток «Шорле яблочный»",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "lntb4m7u",
+              "name": "Напиток «Шорле яблочный»",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:441859b3057c9dcc6e7b47fb7e14ffd97e1515fc3d15e647442ab9a30041f641",
+          "canonical": {
+            "id": "xedkzyxn",
+            "name": "Лаваш тонкий",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "20xu73ex",
+              "name": "Лаваш тонкий",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:ec81560ab2d5b1b7f7f9789e6c2645da69b3d7db8a18b5ebd0742a6a7577189a",
+          "canonical": {
+            "id": "3nyuh46g",
+            "name": "Банан",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "m9rhzib7",
+              "name": "Банан",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:fb9fd4ce3bff64a467ca8e60fbb7ac8d8aab2d75cf35cbcb461579229bd112b7",
+          "canonical": {
+            "id": "pcb9d90b",
+            "name": "Бедро индейки запеченное без кожи",
+            "refs": 8
+          },
+          "aliases": [
+            {
+              "id": "h46kdtfa",
+              "name": "Бедро индейки запеченное без кожи",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:1833f9fc26447b5b6928accc0ae7c78818f463f57f0cd5866cf0fb7ff1b74073",
+          "canonical": {
+            "id": "swrirnby",
+            "name": "Бризоль куриная ЕКСЕЛЬ",
+            "refs": 5
+          },
+          "aliases": [
+            {
+              "id": "p4a93irj",
+              "name": "Бризоль куриная ЕКСЕЛЬ",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:886980ff4bf887c8c1794cd419130fdd0858ca1b87febfc8bfdda7a98b43db5b",
+          "canonical": {
+            "id": "106z8hba",
+            "name": "Грецкий орех",
+            "refs": 5
+          },
+          "aliases": [
+            {
+              "id": "45abzjvp",
+              "name": "Грецкий орех",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:8e780524776e7f7b20202c016317f9f17bf677ece5c5a2e39d86eab5cd09e2c0",
+          "canonical": {
+            "id": "ddt3x7bo",
+            "name": "Икра красная лососевая солёная",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "ch33k2s2",
+              "name": "Икра красная лососевая солёная",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:33932b240f1cbd9d69cc83196a0365b271fa9bb1d9b7949dcf28451aa08571f0",
+          "canonical": {
+            "id": "anhdvaf1",
+            "name": "Булгур с овощами ЕКСЕЛЬ",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "n0ctapic",
+              "name": "Булгур с овощами ЕКСЕЛЬ",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:9bdeab5e9599fae9d6938bfde280871299f44d515c2a2dd597b074d9bcffc8d6",
+          "canonical": {
+            "id": "jdojt847",
+            "name": "Картофельное пюре",
+            "refs": 9
+          },
+          "aliases": [
+            {
+              "id": "xoyf8lw1",
+              "name": "Картофельное пюре",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:55e3a6c0b30f8c776dd2a4058f077d7225a612703197099780b25c0a8f248350",
+          "canonical": {
+            "id": "u8klt7dd",
+            "name": "Рис бурый с диким (отварной)",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "y46apskp",
+              "name": "Рис бурый с диким (отварной)",
+              "refs": 1
+            }
+          ]
+        },
+        {
+          "key": "fp:79889d6d6c93fdb5941f6bc768633210b46da6a1331659c3fae701b553d0f113",
+          "canonical": {
+            "id": "ayyxqbvk",
+            "name": "Мороженое ванильное Самокат без сахара (вафельный стаканчик)",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "j7jhegqv",
+              "name": "Мороженое ванильное Самокат без сахара (вафельный стаканчик)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:f868fa3290e24a57098242bcfa75c6c767be9a4e2c4aa83eaf8920d8e0cbe0ac",
+          "canonical": {
+            "id": "uqu065f9",
+            "name": "Кабачковые оладьи (кабачок, яйцо, мука)",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "cwn0mry2",
+              "name": "Кабачковые оладьи (кабачок, яйцо, мука)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:ba229d7c33541cfbf9ba13a3f967f42342f389d2673998af58d3404c0fb564da",
+          "canonical": {
+            "id": "44r7yg8p",
+            "name": "Белёвская пастила классическая",
+            "refs": 4
+          },
+          "aliases": [
+            {
+              "id": "2oh08q5l",
+              "name": "Белёвская пастила классическая",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:008e4c959ee10a95549005fdda4d8f458733a53f1c8d7bd6afc709952101c92b",
+          "canonical": {
+            "id": "l6294vzb",
+            "name": "Котлеты растительные со вкусом курицы Hi",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "t27d3w81",
+              "name": "Котлеты растительные со вкусом курицы Hi",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:f9562d4588f43672245c678afad82b8de500697f965baabc213d61eaadb85c54",
+          "canonical": {
+            "id": "trny6y0y",
+            "name": "Грибы тушёные в сливках",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "p_1769271889660_1ulalm",
+              "name": "Грибы тушёные в сливках",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:918c9c8d691cd851486371be5891bbf00cc021005119af96c100004ec2bb0734",
+          "canonical": {
+            "id": "0389bk7p",
+            "name": "Мука пшеничная",
+            "refs": 3
+          },
+          "aliases": [
+            {
+              "id": "6z8jp4dx",
+              "name": "Мука пшеничная",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:80089d01deac30193cc2dc4fce7af09bc2dae74ae85a288fd4fa3a874a9f4ca1",
+          "canonical": {
+            "id": "4k18ejov",
+            "name": "Мюсли-батончик KERLL злаковый с протеином и вкусом карамели без добавления сахара",
+            "refs": 2
+          },
+          "aliases": [
+            {
+              "id": "pyp52grr",
+              "name": "Мюсли-батончик KERLL злаковый с протеином и вкусом карамели без добавления сахара",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:3ec4003825964af6b50fa3fa6b79f3f66448176a8427c2925d06a9caf26843ea",
+          "canonical": {
+            "id": "2dltczqn",
+            "name": "Ананасы консервированные (в собственном соку)",
+            "refs": 1
+          },
+          "aliases": [
+            {
+              "id": "ozwt1e4a",
+              "name": "Ананасы консервированные (в собственном соку)",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:e58ba7c11160f8fde2a4c85035be6207ef35da5a9853644121095e46d6d3032f",
+          "canonical": {
+            "id": "2dqn7jrp",
+            "name": "Chikalab Chika Layers карамель и арахис Чикалаб",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "2dqn7jrp",
+              "name": "Chikalab Chika Layers карамель и арахис Чикалаб",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:9a6cd8cb1b0cfffae497101c6e162663de1914611f7b8610e2f194a6b7e4d950",
+          "canonical": {
+            "id": "hmcruhiq",
+            "name": "Овощной суп с вермишелью",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "hmcruhiq",
+              "name": "Овощной суп с вермишелью",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:85cefea1be368340082308b0c4042797c274fe24c5cbccf5b02b9c0d9cdb7fa3",
+          "canonical": {
+            "id": "ihp4pzwk",
+            "name": "Перец сладкий на гриле",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "ihp4pzwk",
+              "name": "Перец сладкий на гриле",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:e5579d7d7276b1c4b37d6c25be097e386ed198181029130851da5b55b3a5bb6e",
+          "canonical": {
+            "id": "n952ml1j",
+            "name": "Апельсин",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "n952ml1j",
+              "name": "Апельсин",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:c3ca1c6b68d81a766568257fb9780b2268774d31915e51758efa0776b8244a77",
+          "canonical": {
+            "id": "qj482xo7",
+            "name": "Chika Layers фундук и карамель чикалаб",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "qj482xo7",
+              "name": "Chika Layers фундук и карамель чикалаб",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:c4de0580d6c5d1e8555b11e14cf6d10c1bd577b298ff465b4167cd6222d929a5",
+          "canonical": {
+            "id": "v5rwrgly",
+            "name": "Лосось слабосолёный",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "v5rwrgly",
+              "name": "Лосось слабосолёный",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:cc704f9add610f5054f6456a7b9d9cfa94a5c39124cce0dba7628677f0085035",
+          "canonical": {
+            "id": "x4atovff",
+            "name": "Котлеты морковные Алина",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "x4atovff",
+              "name": "Котлеты морковные Алина",
+              "refs": 0
+            }
+          ]
+        },
+        {
+          "key": "fp:22902ae9cbc2e3220067bdf7a3307e1339e35e493ca3b19bdbf0c8f04c612ede",
+          "canonical": {
+            "id": "7jb9bnfd",
+            "name": "Лосось-ролл с творожным сыром",
+            "refs": 0
+          },
+          "aliases": [
+            {
+              "id": "7jb9bnfd",
+              "name": "Лосось-ролл с творожным сыром",
+              "refs": 0
+            }
+          ]
+        }
+      ],
+      "product_rows_to_remove": 105,
+      "aliases_to_remove": [
+        {
+          "oldId": "p_1778341835910_686yfl",
+          "newId": "p_1778341946689_n0frzu"
+        },
+        {
+          "oldId": "restored_1778342048884_qovwc4",
+          "newId": "65k8qlaq"
+        },
+        {
+          "oldId": "n5bkt9gc",
+          "newId": "6bggfoey"
+        },
+        {
+          "oldId": "a67grvv2",
+          "newId": "opj0bh7h"
+        },
+        {
+          "oldId": "7b74upsx",
+          "newId": "m7ak9i4m"
+        },
+        {
+          "oldId": "n9lfwvxu",
+          "newId": "nrk7m4wk"
+        },
+        {
+          "oldId": "97dfcjsx",
+          "newId": "2x3p3w3s"
+        },
+        {
+          "oldId": "6n8e67w7",
+          "newId": "5noxkuct"
+        },
+        {
+          "oldId": "xcvoop2m",
+          "newId": "2i0cf0hj"
+        },
+        {
+          "oldId": "p_1769271889659_1ffudt",
+          "newId": "wr2q0jk7"
+        },
+        {
+          "oldId": "a4iu3mjz",
+          "newId": "t1nidfcx"
+        },
+        {
+          "oldId": "3ebamkoo",
+          "newId": "zfr5hq3w"
+        },
+        {
+          "oldId": "v3elu27r",
+          "newId": "wk8gihvq"
+        },
+        {
+          "oldId": "dads029e",
+          "newId": "967v1y9z"
+        },
+        {
+          "oldId": "48cdgwjm",
+          "newId": "4gufivt7"
+        },
+        {
+          "oldId": "lntb4m7u",
+          "newId": "5gysf8ii"
+        },
+        {
+          "oldId": "20xu73ex",
+          "newId": "xedkzyxn"
+        },
+        {
+          "oldId": "m9rhzib7",
+          "newId": "3nyuh46g"
+        },
+        {
+          "oldId": "h46kdtfa",
+          "newId": "pcb9d90b"
+        },
+        {
+          "oldId": "p4a93irj",
+          "newId": "swrirnby"
+        },
+        {
+          "oldId": "45abzjvp",
+          "newId": "106z8hba"
+        },
+        {
+          "oldId": "ch33k2s2",
+          "newId": "ddt3x7bo"
+        },
+        {
+          "oldId": "n0ctapic",
+          "newId": "anhdvaf1"
+        },
+        {
+          "oldId": "xoyf8lw1",
+          "newId": "jdojt847"
+        },
+        {
+          "oldId": "y46apskp",
+          "newId": "u8klt7dd"
+        },
+        {
+          "oldId": "j7jhegqv",
+          "newId": "ayyxqbvk"
+        },
+        {
+          "oldId": "cwn0mry2",
+          "newId": "uqu065f9"
+        },
+        {
+          "oldId": "2oh08q5l",
+          "newId": "44r7yg8p"
+        },
+        {
+          "oldId": "t27d3w81",
+          "newId": "l6294vzb"
+        },
+        {
+          "oldId": "p_1769271889660_1ulalm",
+          "newId": "trny6y0y"
+        },
+        {
+          "oldId": "6z8jp4dx",
+          "newId": "0389bk7p"
+        },
+        {
+          "oldId": "pyp52grr",
+          "newId": "4k18ejov"
+        },
+        {
+          "oldId": "ozwt1e4a",
+          "newId": "2dltczqn"
+        }
+      ],
+      "affected_day_keys": ["heys_dayv2_2025-12-16"],
+      "tail_keys_to_remove": ["heys_products_rpc_tail_1"]
+    }
+  ]
+}

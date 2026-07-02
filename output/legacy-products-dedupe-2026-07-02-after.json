@@ -1,0 +1,13 @@
+{
+  "applied": false,
+  "reason": "legacy_products_dedupe_2026_07_02",
+  "summary": {
+    "clients": 0,
+    "duplicate_groups": 0,
+    "aliases_to_remove": 0,
+    "product_rows_to_remove": 0,
+    "affected_day_rows": 0,
+    "tail_rows_to_remove": 0
+  },
+  "clients": []
+}

@@ -1,0 +1,229 @@
+{
+  "summary": {
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_2:safe_candidate": 4,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_4:safe_candidate": 2,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_4:needs_review_numeric_tail": 1,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_5:safe_candidate": 2,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_5:needs_review_numeric_tail": 4,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_6:safe_candidate": 4,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_7:safe_candidate": 3,
+    "client_kv_store:heys_products_overlay_v2_rpc_tail_7:needs_review_numeric_tail": 1
+  },
+  "duplicate_summary": {
+    "legacy_heys_products_groups": 0,
+    "legacy_heys_products_coffee_groups": 0
+  },
+  "candidates": [
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_2",
+      "product_id": "p_1778273124718_ec81af",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_2",
+      "product_id": "4119957d901c400dbde84518987e8575",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_2",
+      "product_id": "4ede96d1-7145-419d-8246-f1093f6823bc",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_2",
+      "product_id": "4rr7vn5y",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_4",
+      "product_id": "fdpri6g3",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_4",
+      "product_id": "grzc886o",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_4",
+      "product_id": "le2jkv3s",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "m203tfi7",
+      "old_name": "Печенье Bombbar Protein Cookie шоколадный брауни 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie шоколадный брауни 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "m9p5gziz",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "nfgva91b",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "p_1769271889660_0bg8ie",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "p_1769271889660_8s7zes",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_5",
+      "product_id": "p_1769271889660_aboxxa",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_6",
+      "product_id": "p_1769271889661_iq0g6b",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_6",
+      "product_id": "p_1769271889661_jnv2vr",
+      "old_name": "Протеин Levro Whey Supreme (Snickers)",
+      "proposed_brand": "Levro",
+      "proposed_name": "Протеин Whey Supreme (Snickers)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_6",
+      "product_id": "p_1777416315360_u8ck9o",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_6",
+      "product_id": "p_1778499175032_jb86td",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_7",
+      "product_id": "vvk4p245",
+      "old_name": "Топпинг Bombbar сгущёнка без сахара",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Топпинг сгущёнка без сахара",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_7",
+      "product_id": "yhi0ptt0",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_7",
+      "product_id": "yo42a80j",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products_overlay_v2_rpc_tail_7",
+      "product_id": "p_1783007964499_jofefw",
+      "old_name": "Хлопья кукурузные Nestlé Хрутка",
+      "proposed_brand": "Nestlé Хрутка",
+      "proposed_name": "Хлопья кукурузные",
+      "status": "safe_candidate"
+    }
+  ],
+  "legacy_duplicate_groups": []
+}

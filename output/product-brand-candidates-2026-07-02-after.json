@@ -1,0 +1,538 @@
+{
+  "summary": {},
+  "duplicate_summary": {
+    "legacy_heys_products_groups": 24,
+    "legacy_heys_products_coffee_groups": 0
+  },
+  "candidates": [],
+  "legacy_duplicate_groups": [
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "yb35krf6",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_ua3yfa",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "pzrbc39j",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778274307177_xb2psz",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "mgkej9n1",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778277267122_fsk91w",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "t956hr9z",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_xkamjl",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "o53fe4v9",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "c98yq6pu",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "bj7f7zns",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_qvxdrx",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "m3z1ske0",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "vuyypj7i",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "kx3no29t",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "3q0vke1j",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "6saa81vk",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_cvvy6a",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "restored_1778342048884_qovwc4",
+          "name": "Картофель фри",
+          "brand": "",
+          "fingerprint": "a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "65k8qlaq",
+          "name": "Картофель фри",
+          "brand": "",
+          "fingerprint": "a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "yb35krf6",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_ua3yfa",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "pzrbc39j",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778274307177_xb2psz",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "mgkej9n1",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778277267122_fsk91w",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "t956hr9z",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_xkamjl",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:843ec8fa7449c1df35bf4fecc0d63c1deebbbfcc64e49feff9c9001642c5738c",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "776ddp9j",
+          "name": "Батончик протеиновый шоколад-фундук",
+          "brand": "Bombbar",
+          "fingerprint": "843ec8fa7449c1df35bf4fecc0d63c1deebbbfcc64e49feff9c9001642c5738c"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "6kuy8iz6",
+          "name": "Батончик протеиновый шоколад-фундук",
+          "brand": "Bombbar",
+          "fingerprint": "843ec8fa7449c1df35bf4fecc0d63c1deebbbfcc64e49feff9c9001642c5738c"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "o53fe4v9",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "c98yq6pu",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "bj7f7zns",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_qvxdrx",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "m3z1ske0",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "vuyypj7i",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "kx3no29t",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "3q0vke1j",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "6saa81vk",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_cvvy6a",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:77d791417426ece1e64a9aa7d01c13218a78a60ac77b3869721c485c9119981c",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778312781134_182f1e",
+          "name": "Ветчина, из филе индейки 400 г",
+          "brand": "Индилайт",
+          "fingerprint": "77d791417426ece1e64a9aa7d01c13218a78a60ac77b3869721c485c9119981c"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778273124718_ec81af",
+          "name": "Ветчина, из филе индейки 400 г",
+          "brand": "Индилайт",
+          "fingerprint": "77d791417426ece1e64a9aa7d01c13218a78a60ac77b3869721c485c9119981c"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    },
+    {
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1144 @@
+{
+  "summary": {
+    "shared_products:table:safe_candidate": 14,
+    "shared_products:table:needs_review_numeric_tail": 4,
+    "client_kv_store:heys_products:needs_review_numeric_tail": 5,
+    "client_kv_store:heys_products:safe_candidate": 37
+  },
+  "duplicate_summary": {
+    "legacy_heys_products_groups": 24,
+    "legacy_heys_products_coffee_groups": 0
+  },
+  "candidates": [
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "7b5f6100-44f0-44a1-81da-9f489554818c",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "55b5c304-d6c0-4ee4-8415-3ac6750cb623",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "42b96837-34f5-4ddb-8982-2001298ca420",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "8d4fa6d6-0cf8-487f-b6f7-114ffb23209b",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "4f298899-3dd2-4298-8811-56d7dc4bd25e",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "b48f0786-0585-47c3-9380-eb857075b6ae",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "e803a540-f703-47d6-b097-65d3a1c5d7f0",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "fde9a0cb-9670-404a-ab12-10d3a7f2f817",
+      "old_name": "Молоко 1,5 Простоквашино",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Молоко 1,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "33bfb5e5-5764-4954-9f5f-51efff47200a",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "6a464bf2-2466-4876-8041-9d7e1fe62f71",
+      "old_name": "Печенье Bombbar Protein Cookie фисташка 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie фисташка 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "2aa8931b-e83f-4962-b9c4-3d125f801a28",
+      "old_name": "Печенье Bombbar Protein Cookie шоколадный брауни 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie шоколадный брауни 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "5c8a4855-32d0-4f19-a2b6-d1ab553375a9",
+      "old_name": "Протеин Levro Whey Supreme (Snickers)",
+      "proposed_brand": "Levro",
+      "proposed_name": "Протеин Whey Supreme (Snickers)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "9cb76f3b-b304-43c3-b43f-46602165a8d9",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "147ccedd-99e2-40de-9a1a-c25a8edbe5af",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "a0cc56dd-7346-40d8-83c6-56cf67e254f7",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "a1aa2c6b-752c-4ca9-9557-3e5981cc4838",
+      "old_name": "Сосиски Индилайт Лайт",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Сосиски Лайт",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "18ec3571-68c1-48a3-89d1-2abc20c99516",
+      "old_name": "Творог Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Творог 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "shared_products",
+      "client_id": null,
+      "key": null,
+      "product_id": "c915ecd8-d8f7-45fa-b175-6f52325788f1",
+      "old_name": "Топпинг Bombbar сгущёнка без сахара",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Топпинг сгущёнка без сахара",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "qv43p18g",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "grzc886o",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "e83ktnl4",
+      "old_name": "Печенье Bombbar Protein Cookie фисташка 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie фисташка 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "9ijhd5oi",
+      "old_name": "Печенье Bombbar Protein Cookie шоколадный брауни 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie шоколадный брауни 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "ck0z00fq",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "87kmfy89",
+      "old_name": "Протеин Levro Whey Supreme (Snickers)",
+      "proposed_brand": "Levro",
+      "proposed_name": "Протеин Whey Supreme (Snickers)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "776ddp9j",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "g7re7xd8",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_182f1e",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_e10d48",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "p_1778273124718_ec81af",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "3pl073ao",
+      "old_name": "Топпинг Bombbar сгущёнка без сахара",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Топпинг сгущёнка без сахара",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "restored_1778420219534_a02gre",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "restored_1778420219535_e6p8uu",
+      "old_name": "Сосиски Индилайт Лайт",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Сосиски Лайт",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "e803a540-f703-47d6-b097-65d3a1c5d7f0",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "key": "heys_products",
+      "product_id": "6kuy8iz6",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "qv43p18g",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "grzc886o",
+      "old_name": "Греческий йогурт Простоквашино 2",
+      "proposed_brand": "Простоквашино",
+      "proposed_name": "Греческий йогурт 2",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "e83ktnl4",
+      "old_name": "Печенье Bombbar Protein Cookie фисташка 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie фисташка 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "9ijhd5oi",
+      "old_name": "Печенье Bombbar Protein Cookie шоколадный брауни 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie шоколадный брауни 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "ck0z00fq",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "87kmfy89",
+      "old_name": "Протеин Levro Whey Supreme (Snickers)",
+      "proposed_brand": "Levro",
+      "proposed_name": "Протеин Whey Supreme (Snickers)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "776ddp9j",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "g7re7xd8",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_182f1e",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_e10d48",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "p_1778273124718_ec81af",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "3pl073ao",
+      "old_name": "Топпинг Bombbar сгущёнка без сахара",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Топпинг сгущёнка без сахара",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "6kuy8iz6",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_182f1e",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "p_1778312781134_e10d48",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое (копия)",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое (копия)",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "p_1778273124718_ec81af",
+      "old_name": "Ветчина Индилайт, из филе индейки 400 г",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Ветчина, из филе индейки 400 г",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "3pl073ao",
+      "old_name": "Топпинг Bombbar сгущёнка без сахара",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Топпинг сгущёнка без сахара",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "6kuy8iz6",
+      "old_name": "Батончик Bombbar протеиновый шоколад-фундук",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Батончик протеиновый шоколад-фундук",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "restored_1778420219534_a02gre",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "restored_1778420219535_e6p8uu",
+      "old_name": "Сосиски Индилайт Лайт",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Сосиски Лайт",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "fgafclqc",
+      "old_name": "Овсяные хлопья Ясно Солнышко №2",
+      "proposed_brand": "Ясно Солнышко",
+      "proposed_name": "Овсяные хлопья №2",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "0omtbdz4",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "59sn3fgq",
+      "old_name": "Кефир 2,5 Кубанский молочник",
+      "proposed_brand": "Кубанский молочник",
+      "proposed_name": "Кефир 2,5",
+      "status": "needs_review_numeric_tail"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "opqwsqr8",
+      "old_name": "Ассорти Bombbar протеиновые снеки",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Ассорти протеиновые снеки",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "vxqiffml",
+      "old_name": "Печенье Bombbar Protein Cookie шоколадный брауни 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie шоколадный брауни 25 протеина",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "e83ktnl4",
+      "old_name": "Печенье Bombbar Protein Cookie фисташка 25 протеина",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Печенье Protein Cookie фисташка 25 протеина",
+      "status": "safe_candidate"
+    }
+  ],
+  "legacy_duplicate_groups": [
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "yb35krf6",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_ua3yfa",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "pzrbc39j",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778274307177_xb2psz",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "mgkej9n1",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778277267122_fsk91w",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "t956hr9z",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_xkamjl",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "776ddp9j",
+          "name": "Батончик Bombbar протеиновый шоколад-фундук",
+          "brand": "",
+          "fingerprint": "feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "6kuy8iz6",
+          "name": "Батончик Bombbar протеиновый шоколад-фундук",
+          "brand": "",
+          "fingerprint": "feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "o53fe4v9",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "c98yq6pu",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "bj7f7zns",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_qvxdrx",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "m3z1ske0",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "vuyypj7i",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "kx3no29t",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "3q0vke1j",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "6saa81vk",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1769271889661_cvvy6a",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    },
+    {
+      "client_id": "22222222-2222-2222-2222-222222222222",
+      "duplicate_key": "fp:a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "restored_1778342048884_qovwc4",
+          "name": "Картофель фри",
+          "brand": "",
+          "fingerprint": "a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876"
+        },
+        {
+          "client_id": "22222222-2222-2222-2222-222222222222",
+          "product_id": "65k8qlaq",
+          "name": "Картофель фри",
+          "brand": "",
+          "fingerprint": "a4c2e22b2be9fa5a89987818cd8a37a3f5354a7f511ace81b51b6c1ad8ac8876"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "yb35krf6",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_ua3yfa",
+          "name": "Треугольники лососевые в панировке",
+          "brand": "",
+          "fingerprint": "b719b5840e00ac7d69df4a5fd096d83d3b6fd4b9957a6d4fe1032a4d1be2724e"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "pzrbc39j",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778274307177_xb2psz",
+          "name": "Рис с овощами (Вега-Рис)",
+          "brand": "",
+          "fingerprint": "5cb8ec5dc96dc14ca7f37cf6d94d9b3717b1628f58ddf136d31eb8b9c73d6dfd"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "mgkej9n1",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778277267122_fsk91w",
+          "name": "Курица в сливках с брокколи",
+          "brand": "",
+          "fingerprint": "4b8ab3e4b14c74cf3b7945d149edf9e3c56460521158fb23911421790175186f"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "t956hr9z",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_xkamjl",
+          "name": "Фасоль в томатном соусе агрокомплекс",
+          "brand": "",
+          "fingerprint": "84cd6adb4f70eaeaef675ae918fc08425a5b57112624a2e15c86f30f4a1a6ac4"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "776ddp9j",
+          "name": "Батончик Bombbar протеиновый шоколад-фундук",
+          "brand": "",
+          "fingerprint": "feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "6kuy8iz6",
+          "name": "Батончик Bombbar протеиновый шоколад-фундук",
+          "brand": "",
+          "fingerprint": "feea360d4458f4d933d1c6c0aa6f9ccc3cf7d39e202bbb86b57e06f56d128657"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "o53fe4v9",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "c98yq6pu",
+          "name": "Яйцо варёное",
+          "brand": "",
+          "fingerprint": "623cfeedd517e9364c7a6528fb5568f43f075c1a988d1fd7667efc60bcee698d"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "bj7f7zns",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_qvxdrx",
+          "name": "Сыр моцарелла Bonfesto",
+          "brand": "",
+          "fingerprint": "1027e7c4f701cdcd198986c5670d6dead75551ae31931e62d33ff680cf2cfa60"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "m3z1ske0",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "vuyypj7i",
+          "name": "Творожный сыр 30 самокат",
+          "brand": "",
+          "fingerprint": "fdf7b42dd1ba3415a0b817e21beb773d8d622717ddcfc18605a38c5f878dcbaa"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "kx3no29t",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "3q0vke1j",
+          "name": "Сыр твёрдый классический",
+          "brand": "",
+          "fingerprint": "d31c6658eac9adced63d857af7e0ae14fddbe94f801db86a85fb44805469615a"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "6saa81vk",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1769271889661_cvvy6a",
+          "name": "Сыр Рикотта",
+          "brand": "",
+          "fingerprint": "a0e49c392d6850c443b7d6a7d816e10d71c93ef1ecce87532c570f7d8c71c87a"
+        }
+      ]
+    },
+    {
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    },
+    {
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "duplicate_key": "fp:8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff",
+      "rows_count": 2,
+      "coffee": false,
+      "rows": [
+        {
+          "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+          "product_id": "p_1778341946689_n0frzu",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        },
+        {
+          "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+          "product_id": "p_1778341835910_686yfl",
+          "name": "Куриные крылышки шашлык",
+          "brand": "",
+          "fingerprint": "8379e71dddc0c05f9a393f4335df3c2dd97c02f61c623615f67ebb14135d63ff"
+        }
+      ]
+    }
+  ]
+}

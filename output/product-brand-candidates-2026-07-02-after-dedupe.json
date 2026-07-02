@@ -1,0 +1,72 @@
+{
+  "summary": {
+    "client_kv_store:heys_products:safe_candidate": 6
+  },
+  "duplicate_summary": {
+    "legacy_heys_products_groups": 0,
+    "legacy_heys_products_coffee_groups": 0
+  },
+  "candidates": [
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "restored_1778420219534_a02gre",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "restored_1778420219535_e6p8uu",
+      "old_name": "Сосиски Индилайт Лайт",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Сосиски Лайт",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "4545ee50-4f5f-4fc0-b862-7ca45fa1bafc",
+      "key": "heys_products",
+      "product_id": "e803a540-f703-47d6-b097-65d3a1c5d7f0",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "restored_1778420219534_a02gre",
+      "old_name": "Протеиновый молочный коктейль Bombbar ванильное мороженое",
+      "proposed_brand": "Bombbar",
+      "proposed_name": "Протеиновый молочный коктейль ванильное мороженое",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "restored_1778420219535_e6p8uu",
+      "old_name": "Сосиски Индилайт Лайт",
+      "proposed_brand": "Индилайт",
+      "proposed_name": "Сосиски Лайт",
+      "status": "safe_candidate"
+    },
+    {
+      "scope": "client_kv_store",
+      "client_id": "ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a",
+      "key": "heys_products",
+      "product_id": "e803a540-f703-47d6-b097-65d3a1c5d7f0",
+      "old_name": "Конфеты Raffaello",
+      "proposed_brand": "Raffaello",
+      "proposed_name": "Конфеты",
+      "status": "safe_candidate"
+    }
+  ],
+  "legacy_duplicate_groups": []
+}
