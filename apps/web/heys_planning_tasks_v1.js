@@ -26,6 +26,8 @@
     const TASKS_UI_SCALE_MAX = 1.4;
     const TASKS_UI_SCALE_STEP = 0.05;
     const TASKS_UI_SCALE_DEFAULT = 0.8;
+    const TASKS_LONG_PRESS_MS = 520;
+    const TASKS_LONG_PRESS_MOVE_TOLERANCE = 10;
 
     function clampTasksUiScale(value) {
         if (!Number.isFinite(value)) return TASKS_UI_SCALE_DEFAULT;
@@ -585,242 +587,6 @@
             }));
     }
 
-    function ColorShuffleIcon() {
-        return h('svg', {
-            className: 'planning-project-group__color-icon',
-            viewBox: '0 0 20 20',
-            fill: 'none',
-            stroke: 'currentColor',
-            strokeWidth: '1.7',
-            'aria-hidden': 'true',
-        },
-            h('path', {
-                d: 'M5.2 12.7 9.6 7.1a1.8 1.8 0 0 1 2.9.1l2 2.8a1.8 1.8 0 0 1-1.5 2.8H7a1.8 1.8 0 0 1-1.8-1.8Z',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-            }),
-            h('circle', { cx: '7', cy: '7', r: '1.6' }),
-            h('circle', { cx: '14.4', cy: '5.6', r: '1.4' }),
-            h('path', {
-                d: 'M13.4 14.9h.01',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-            }),
-        );
-    }
-
-    function resolvePaletteFloatingBounds(anchorNode) {
-        const viewportPadding = 12;
-        const fallbackBounds = {
-            top: viewportPadding,
-            bottom: Math.max(viewportPadding, (typeof window !== 'undefined' ? window.innerHeight : 0) - viewportPadding),
-        };
-
-        if (!anchorNode || typeof window === 'undefined' || typeof document === 'undefined') {
-            return fallbackBounds;
-        }
-
-        let bounds = { ...fallbackBounds };
-        const bottomTabsNode = document.querySelector('.tabs');
-        const bottomTabsRect = bottomTabsNode?.getBoundingClientRect?.();
-        if (bottomTabsRect && Number.isFinite(bottomTabsRect.top) && bottomTabsRect.top < bounds.bottom) {
-            bounds.bottom = Math.max(bounds.top, Math.round(bottomTabsRect.top - viewportPadding));
-        }
-
-        const ownerGroup = anchorNode.closest('.planning-project-group');
-        const parentProjectGroup = ownerGroup?.classList?.contains('planning-project-group--subgroup')
-            ? ownerGroup.parentElement?.closest('.planning-project-group')
-            : null;
-
-        if (parentProjectGroup) {
-            const parentRect = parentProjectGroup.getBoundingClientRect();
-            bounds.top = Math.max(bounds.top, Math.round(parentRect.top + viewportPadding));
-            bounds.bottom = Math.min(bounds.bottom, Math.round(parentRect.bottom - viewportPadding));
-        }
-
-        if (bounds.bottom < bounds.top) {
-            return fallbackBounds;
-        }
-
-        return bounds;
-    }
-
-    function resolvePaletteFloatingPosition(anchorRect, panelRect, bounds) {
-        const viewportPadding = 12;
-        const offset = 8;
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const panelWidth = Math.max(0, Math.round(panelRect?.width || 0));
-        const panelHeight = Math.max(0, Math.round(panelRect?.height || 0));
-        const boundaryTop = Math.max(viewportPadding, Math.round(bounds?.top || viewportPadding));
-        const boundaryBottom = Math.max(boundaryTop, Math.round(bounds?.bottom || 0));
-        const minLeft = viewportPadding;
-        const maxLeft = Math.max(viewportPadding, viewportWidth - viewportPadding - panelWidth);
-        const preferredLeft = Math.round((anchorRect?.right || 0) - panelWidth);
-        const spaceBelow = Math.max(0, boundaryBottom - (anchorRect?.bottom || 0) - offset);
-        const spaceAbove = Math.max(0, (anchorRect?.top || 0) - boundaryTop - offset);
-        const shouldOpenUpward = panelHeight > spaceBelow && spaceAbove > spaceBelow;
-        const preferredTop = shouldOpenUpward
-            ? Math.round((anchorRect?.top || 0) - panelHeight - offset)
-            : Math.round((anchorRect?.bottom || 0) + offset);
-        const minTop = boundaryTop;
-        const maxTop = Math.max(boundaryTop, boundaryBottom - panelHeight);
-
-        return {
-            left: clamp(preferredLeft, minLeft, maxLeft),
-            top: clamp(preferredTop, minTop, maxTop),
-            placement: shouldOpenUpward ? 'top' : 'bottom',
-        };
-    }
-
-    function isPaletteInteractionTarget(root, target) {
-        if (!root || !target) return false;
-        if (root.contains(target)) return true;
-
-        const ownerId = root.getAttribute('data-planning-palette-owner');
-        if (!ownerId) return false;
-
-        const elementTarget = target.nodeType === 1 ? target : target.parentElement;
-        if (!elementTarget || typeof elementTarget.closest !== 'function') return false;
-
-        const ownerNode = elementTarget.closest('[data-planning-palette-owner]');
-        return !!(ownerNode && ownerNode.getAttribute('data-planning-palette-owner') === ownerId);
-    }
-
-    function ColorPalettePicker({
-        pickerRef,
-        isOpen,
-        currentColor,
-        occupiedColors,
-        hasAvailableColors,
-        title,
-        onToggle,
-        onPick,
-    }) {
-        const normalizedCurrent = normalizePaletteHex(currentColor);
-        const paletteOwnerRef = useRef('planning-palette-' + Math.random().toString(36).slice(2));
-        const palettePanelRef = useRef(null);
-        const [floatingPaletteState, setFloatingPaletteState] = useState({
-            left: 12,
-            top: 12,
-            placement: 'bottom',
-            ready: false,
-        });
-
-        React.useLayoutEffect(() => {
-            if (!isOpen || !ReactDOM) {
-                setFloatingPaletteState((current) => (
-                    current.ready
-                        ? { ...current, ready: false }
-                        : current
-                ));
-                return undefined;
-            }
-
-            const updatePosition = () => {
-                const root = pickerRef?.current;
-                const panel = palettePanelRef.current;
-                if (!root || !panel || typeof window === 'undefined') return;
-
-                const anchor = root.querySelector('.planning-project-group__color-btn') || root;
-                const bounds = resolvePaletteFloatingBounds(anchor);
-                const nextPosition = resolvePaletteFloatingPosition(
-                    anchor.getBoundingClientRect(),
-                    panel.getBoundingClientRect(),
-                    bounds,
-                );
-
-                setFloatingPaletteState((current) => {
-                    if (
-                        current.left === nextPosition.left
-                        && current.top === nextPosition.top
-                        && current.placement === nextPosition.placement
-                        && current.ready
-                    ) {
-                        return current;
-                    }
-                    return { ...nextPosition, ready: true };
-                });
-            };
-
-            let rafId = 0;
-            const scheduleUpdate = () => {
-                if (rafId) return;
-                rafId = requestAnimationFrame(() => { rafId = 0; updatePosition(); });
-            };
-            updatePosition();
-            window.addEventListener('resize', scheduleUpdate);
-            window.addEventListener('scroll', scheduleUpdate, true);
-            return () => {
-                if (rafId) cancelAnimationFrame(rafId);
-                window.removeEventListener('resize', scheduleUpdate);
-                window.removeEventListener('scroll', scheduleUpdate, true);
-            };
-        }, [isOpen, pickerRef]);
-
-        const paletteNode = h('div', {
-            className: 'planning-project-group__palette' + (ReactDOM ? ' planning-project-group__palette--floating' : ''),
-            ref: palettePanelRef,
-            'data-planning-palette-owner': paletteOwnerRef.current,
-            'data-planning-palette-placement': floatingPaletteState.placement,
-            style: ReactDOM
-                ? {
-                    left: floatingPaletteState.left + 'px',
-                    top: floatingPaletteState.top + 'px',
-                    visibility: floatingPaletteState.ready ? 'visible' : 'hidden',
-                }
-                : undefined,
-            onClick: (event) => event.stopPropagation(),
-        },
-            h('div', { className: 'planning-project-group__palette-title' }, title || 'Цвет группы'),
-            h('div', { className: 'planning-project-group__palette-grid' },
-                PROJECT_COLORS.map((color) => {
-                    const normalized = normalizePaletteHex(color);
-                    const disabled = !!(hasAvailableColors && occupiedColors.has(normalized));
-                    const active = normalized === normalizedCurrent;
-
-                    return h('button', {
-                        key: color,
-                        type: 'button',
-                        className: 'planning-project-group__swatch' + (active ? ' active' : '') + (disabled ? ' disabled' : ''),
-                        style: { '--planning-swatch-color': color },
-                        title: disabled ? 'Уже используется другой группой' : ('Выбрать ' + color),
-                        'aria-label': disabled ? ('Цвет ' + color + ' уже используется') : ('Выбрать цвет ' + color),
-                        disabled,
-                        onClick: (event) => {
-                            event.stopPropagation();
-                            if (disabled) return;
-                            onPick(color);
-                        },
-                    },
-                        active && h('span', { className: 'planning-project-group__swatch-check' }, '✓'),
-                    );
-                }),
-            ),
-        );
-
-        return h('div', {
-            className: 'planning-project-group__color-picker',
-            ref: pickerRef,
-            'data-planning-palette-owner': paletteOwnerRef.current,
-            onClick: (event) => event.stopPropagation(),
-        },
-            h('button', {
-                type: 'button',
-                className: 'planning-project-group__color-btn' + (isOpen ? ' active' : ''),
-                title: title || 'Выбрать цвет группы',
-                'aria-label': title || 'Выбрать цвет группы',
-                'aria-expanded': isOpen ? 'true' : 'false',
-                onClick: (event) => {
-                    event.stopPropagation();
-                    onToggle();
-                },
-            },
-                h(ColorShuffleIcon),
-            ),
-            isOpen && (ReactDOM ? ReactDOM.createPortal(paletteNode, document.body) : paletteNode),
-        );
-    }
-
     function DurationFieldButton({ value, placeholder, kicker, compact, minimal, onClick }) {
         const formattedValue = formatDurationLabel(value);
         const compactValue = formatDurationCompactLabel(value);
@@ -975,7 +741,7 @@
             : (isDone ? (STATUS_CONFIG.done?.icon || '●') : (STATUS_CONFIG.todo?.icon || '○'));
         const label = isCancelled
             ? 'Задача отменена'
-            : (isDone ? 'Задача завершена' : 'Завершить задачу');
+            : (isDone ? 'Вернуть задачу в работу' : 'Завершить задачу');
 
         return h('button', {
             className: 'planning-status-toggle' + (isTerminal ? ' is-terminal' : ''),
@@ -983,13 +749,13 @@
             'data-swipe-ignore': 'true',
             'aria-label': label,
             title: label,
-            disabled: isTerminal,
+            disabled: isCancelled,
             onPointerDown: (event) => event.stopPropagation(),
             onTouchStart: (event) => event.stopPropagation(),
             onClick: (event) => {
                 event.stopPropagation();
-                if (isTerminal) return;
-                onUpdate(task.id, { status: 'done' });
+                if (isCancelled) return;
+                onUpdate(task.id, { status: isDone ? 'in_progress' : 'done' });
             },
         }, icon);
     }
@@ -1150,6 +916,178 @@
         }
 
         return badges;
+    }
+
+    function getElementFromEventTarget(target) {
+        if (!target) return null;
+        return target.nodeType === 1 ? target : target.parentElement;
+    }
+
+    function isPlanningLongPressBlocked(target) {
+        const element = getElementFromEventTarget(target);
+        if (!element || typeof element.closest !== 'function') return false;
+        return !!element.closest(
+            '.planning-status-toggle, .planning-completed-toggle, .planning-inline-input, .planning-action-menu, input, textarea, select, [contenteditable="true"]',
+        );
+    }
+
+    function usePlanningLongPressMenu() {
+        const [isOpen, setIsOpen] = useState(false);
+        const timerRef = useRef(null);
+        const startPointRef = useRef(null);
+        const suppressClickRef = useRef(false);
+
+        const clearTimer = () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+            startPointRef.current = null;
+        };
+
+        const openMenu = () => {
+            clearTimer();
+            suppressClickRef.current = true;
+            setIsOpen(true);
+        };
+
+        const closeMenu = () => {
+            clearTimer();
+            setIsOpen(false);
+            window.setTimeout(() => {
+                suppressClickRef.current = false;
+            }, 0);
+        };
+
+        React.useEffect(() => clearTimer, []);
+
+        return {
+            isOpen,
+            closeMenu,
+            handlers: {
+                onPointerDownCapture: (event) => {
+                    if (event.pointerType === 'mouse' || event.button !== 0 || isPlanningLongPressBlocked(event.target)) return;
+                    clearTimer();
+                    startPointRef.current = { x: event.clientX, y: event.clientY };
+                    timerRef.current = window.setTimeout(openMenu, TASKS_LONG_PRESS_MS);
+                },
+                onPointerMoveCapture: (event) => {
+                    const startPoint = startPointRef.current;
+                    if (!startPoint) return;
+                    const distance = Math.hypot(event.clientX - startPoint.x, event.clientY - startPoint.y);
+                    if (distance > TASKS_LONG_PRESS_MOVE_TOLERANCE) clearTimer();
+                },
+                onPointerUpCapture: clearTimer,
+                onPointerCancelCapture: clearTimer,
+                onClickCapture: (event) => {
+                    if (!suppressClickRef.current) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    suppressClickRef.current = false;
+                },
+                onContextMenu: (event) => {
+                    if (isPlanningLongPressBlocked(event.target)) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openMenu();
+                },
+            },
+        };
+    }
+
+    function PlanningActionMenu({ isOpen, title, subtitle, onClose, children }) {
+        React.useEffect(() => {
+            if (!isOpen) return undefined;
+            const handleKeyDown = (event) => {
+                if (event.key === 'Escape') onClose();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [isOpen, onClose]);
+
+        if (!isOpen) return null;
+
+        const menuNode = h('div', {
+            className: 'planning-action-menu-overlay',
+            onClick: (event) => {
+                if (event.target === event.currentTarget) onClose();
+            },
+        },
+            h('div', {
+                className: 'planning-action-menu',
+                role: 'menu',
+                'aria-label': title || 'Действия',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-action-menu__header' },
+                    h('div', { className: 'planning-action-menu__copy' },
+                        h('div', { className: 'planning-action-menu__title' }, title || 'Действия'),
+                        subtitle && h('div', { className: 'planning-action-menu__subtitle' }, subtitle),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-action-menu__close',
+                        'aria-label': 'Закрыть',
+                        onClick: onClose,
+                    }, '×'),
+                ),
+                h('div', { className: 'planning-action-menu__body' }, children),
+            ),
+        );
+
+        return ReactDOM && typeof document !== 'undefined'
+            ? ReactDOM.createPortal(menuNode, document.body)
+            : menuNode;
+    }
+
+    function PlanningActionButton({ icon, label, meta, tone, disabled, onClick }) {
+        return h('button', {
+            type: 'button',
+            className: 'planning-action-menu__item' + (tone ? (' planning-action-menu__item--' + tone) : ''),
+            role: 'menuitem',
+            disabled,
+            onClick,
+        },
+            icon && h('span', { className: 'planning-action-menu__item-icon', 'aria-hidden': 'true' }, icon),
+            h('span', { className: 'planning-action-menu__item-copy' },
+                h('span', { className: 'planning-action-menu__item-label' }, label),
+                meta && h('span', { className: 'planning-action-menu__item-meta' }, meta),
+            ),
+        );
+    }
+
+    function PlanningActionMenuSection({ title, children }) {
+        return h('div', { className: 'planning-action-menu__section' },
+            title && h('div', { className: 'planning-action-menu__section-title' }, title),
+            children,
+        );
+    }
+
+    function PlanningActionColorGrid({ title, currentColor, occupiedColors, onPick }) {
+        const normalizedCurrent = normalizePaletteHex(currentColor);
+        return h(PlanningActionMenuSection, { title },
+            h('div', { className: 'planning-action-menu__swatches' },
+                PROJECT_COLORS.map((color) => {
+                    const normalized = normalizePaletteHex(color);
+                    const active = normalized && normalized === normalizedCurrent;
+                    const disabled = !!(normalized && occupiedColors?.has(normalized) && !active);
+                    return h('button', {
+                        key: color,
+                        type: 'button',
+                        className: 'planning-action-menu__swatch'
+                            + (active ? ' active' : '')
+                            + (disabled ? ' disabled' : ''),
+                        style: { '--planning-swatch-color': normalized || color },
+                        disabled,
+                        title: disabled ? 'Цвет уже используется' : 'Выбрать цвет',
+                        'aria-label': disabled ? 'Цвет уже используется' : 'Выбрать цвет',
+                        onClick: () => {
+                            if (!disabled && normalized) onPick(normalized);
+                        },
+                    }, active ? h('span', { className: 'planning-action-menu__swatch-check' }, '✓') : null);
+                }),
+            ),
+        );
     }
 
     function getDueDatePreset(isoDate, todayIso, tomorrowIso) {
@@ -1342,16 +1280,19 @@
             onSelect,
             onStartQuickAddSubtask,
             onDropTask,
-            extraActions,
-            actionsClassName,
+            renderExtraMenuContent,
+            visibleActions,
         } = props;
 
         const [editing, setEditing] = useState(false);
         const [draftTitle, setDraftTitle] = useState(task.title);
+        const actionMenu = usePlanningLongPressMenu();
         const isDone = task.status === 'done' || task.status === 'cancelled';
         const isUrgent = task.priority === 'p!';
         const metaBadges = buildTaskMetaBadges(task);
-        const trailingActions = React.Children.toArray(extraActions);
+        const parentGroupLabel = buildParentGroupLabel(task, taskLookup);
+        const menuTitle = (parentGroupLabel ? 'Группа: ' : 'Задача: ') + (String(task.title || '').trim() || 'Без названия');
+        const menuSubtitle = parentGroupLabel || 'Удерживайте строку для управления задачей.';
 
         const stopSwipeCapture = (event) => {
             event.stopPropagation();
@@ -1369,8 +1310,10 @@
         const rowContent = h('div', {
             className: 'planning-task-row'
                 + (isDone ? ' planning-task-row--done' : '')
-                + (isUrgent ? ' planning-task-row--priority-urgent' : ''),
+                + (isUrgent ? ' planning-task-row--priority-urgent' : '')
+                + (actionMenu.isOpen ? ' planning-task-row--menu-open' : ''),
             draggable: !isMobile,
+            ...actionMenu.handlers,
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ taskId: task.id }));
@@ -1442,51 +1385,57 @@
                         ),
                     ),
             ),
-            h('div', {
-                className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : ''),
+            visibleActions && h('div', {
+                className: 'planning-task-row__visible-actions',
                 'data-swipe-ignore': 'true',
                 onPointerDown: stopSwipeCapture,
                 onTouchStart: stopSwipeCapture,
+            }, visibleActions),
+            h(PlanningActionMenu, {
+                isOpen: actionMenu.isOpen,
+                title: menuTitle,
+                subtitle: menuSubtitle,
+                onClose: actionMenu.closeMenu,
             },
-                trailingActions,
-                h('button', {
-                    type: 'button',
-                    className: 'planning-icon-btn planning-icon-btn--subtask',
-                    'data-swipe-ignore': 'true',
-                    title: 'Добавить подзадачу',
-                    onPointerDown: stopSwipeCapture,
-                    onTouchStart: stopSwipeCapture,
-                    onClick: (event) => {
-                        event.stopPropagation();
-                        onStartQuickAddSubtask(task);
-                    },
-                }, '↳'),
-                h('button', {
-                    type: 'button',
-                    className: 'planning-icon-btn planning-icon-btn--edit',
-                    'data-swipe-ignore': 'true',
-                    title: 'Редактировать задачу',
-                    'aria-label': 'Редактировать задачу',
-                    onPointerDown: stopSwipeCapture,
-                    onTouchStart: stopSwipeCapture,
-                    onClick: (event) => {
-                        event.stopPropagation();
-                        onSelect(task.id);
-                    },
-                }, '✎'),
-                h('button', {
-                    type: 'button',
-                    className: 'planning-icon-btn planning-icon-btn--danger',
-                    'data-swipe-ignore': 'true',
-                    title: 'Удалить задачу',
-                    'aria-label': 'Удалить задачу',
-                    onPointerDown: stopSwipeCapture,
-                    onTouchStart: stopSwipeCapture,
-                    onClick: (event) => {
-                        event.stopPropagation();
-                        onDelete(task.id);
-                    },
-                }, '🗑'),
+                typeof renderExtraMenuContent === 'function' ? renderExtraMenuContent(actionMenu.closeMenu) : null,
+                h(PlanningActionMenuSection, { title: 'Задача' },
+                    h(PlanningActionButton, {
+                        icon: '↳',
+                        label: 'Добавить подзадачу',
+                        tone: 'create',
+                        onClick: () => {
+                            actionMenu.closeMenu();
+                            onStartQuickAddSubtask(task);
+                        },
+                    }),
+                    h(PlanningActionButton, {
+                        icon: '✎',
+                        label: 'Переименовать',
+                        tone: 'edit',
+                        onClick: () => {
+                            actionMenu.closeMenu();
+                            setEditing(true);
+                        },
+                    }),
+                    h(PlanningActionButton, {
+                        icon: '▣',
+                        label: 'Открыть карточку',
+                        tone: 'open',
+                        onClick: () => {
+                            actionMenu.closeMenu();
+                            onSelect(task.id);
+                        },
+                    }),
+                    h(PlanningActionButton, {
+                        icon: '🗑',
+                        label: 'Удалить',
+                        tone: 'danger',
+                        onClick: () => {
+                            actionMenu.closeMenu();
+                            onDelete(task.id);
+                        },
+                    }),
+                ),
             ),
         );
 
@@ -1541,9 +1490,7 @@
             forceShowCompleted,
         } = props;
 
-        const [showColorPalette, setShowColorPalette] = useState(false);
         const [showCompleted, setShowCompleted] = useState(false);
-        const colorPickerRef = useRef(null);
         const subgroupColor = normalizePaletteHex(task.subprojectColor) || '#94a3b8';
         const toneVars = useMemo(() => buildScopedToneVars(subgroupColor), [subgroupColor]);
         const directChildren = childrenMap.get(task.id) || [];
@@ -1566,51 +1513,32 @@
             }),
             [occupiedColors],
         );
-
-        React.useEffect(() => {
-            if (!showColorPalette) return undefined;
-            const handlePointerDown = (event) => {
-                const root = colorPickerRef.current;
-                if (!root || isPaletteInteractionTarget(root, event.target)) return;
-                setShowColorPalette(false);
-            };
-            window.addEventListener('pointerdown', handlePointerDown);
-            return () => window.removeEventListener('pointerdown', handlePointerDown);
-        }, [showColorPalette]);
-
-        const subgroupActions = [];
-
-        if (completedCount > 0 && !forceShowCompleted) {
-            subgroupActions.push(h('button', {
-                key: 'completed-toggle',
+        const completedToggle = completedCount > 0 && !forceShowCompleted
+            ? h('button', {
                 type: 'button',
                 className: 'planning-completed-toggle' + (showCompleted ? ' active' : ''),
-                title: showCompleted ? 'Скрыть завершённые задачи подпроекта' : 'Показать завершённые задачи подпроекта',
+                title: showCompleted ? 'Скрыть завершённые задачи группы' : 'Показать завершённые задачи группы',
                 onClick: (event) => {
                     event.stopPropagation();
                     setShowCompleted((value) => !value);
                 },
-            }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedCount)));
-        }
+            }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedCount))
+            : null;
 
-        subgroupActions.push(h(ColorPalettePicker, {
-            key: 'color-picker',
-            pickerRef: colorPickerRef,
-            isOpen: showColorPalette,
-            currentColor: subgroupColor,
-            occupiedColors,
-            hasAvailableColors,
-            title: 'Цвет подпроекта',
-            onToggle: () => setShowColorPalette((value) => !value),
-            onPick: (color) => {
-                onUpdateTask(task.id, { subprojectColor: color });
-                setShowColorPalette(false);
-            },
-        }));
+        const renderSubgroupMenuContent = (closeMenu) => h(React.Fragment, null,
+            h(PlanningActionColorGrid, {
+                title: hasAvailableColors ? 'Цвет группы' : 'Цвет группы · все цвета заняты',
+                currentColor: subgroupColor,
+                occupiedColors,
+                onPick: (color) => {
+                    onUpdateTask(task.id, { subprojectColor: color });
+                    closeMenu();
+                },
+            }),
+        );
 
         return h('section', {
-            className: 'planning-project-group planning-project-group--subgroup'
-                + (showColorPalette ? ' planning-project-group--palette-open' : ''),
+            className: 'planning-project-group planning-project-group--subgroup',
             style: toneVars,
         },
             h('div', { className: 'planning-task-group__header' },
@@ -1624,8 +1552,8 @@
                     onSelect: onSelectTask,
                     onStartQuickAddSubtask,
                     onDropTask: onReorderTasks,
-                    extraActions: subgroupActions,
-                    actionsClassName: 'planning-task-row__actions--group',
+                    renderExtraMenuContent: renderSubgroupMenuContent,
+                    visibleActions: completedToggle,
                 }),
             ),
             h('div', { className: 'planning-project-group__tasks planning-task-group__tasks' },
@@ -1687,9 +1615,8 @@
         } = props;
 
         const [collapsed, setCollapsed] = useState(false);
-        const [showColorPalette, setShowColorPalette] = useState(false);
         const [showCompleted, setShowCompleted] = useState(false);
-        const colorPickerRef = useRef(null);
+        const actionMenu = usePlanningLongPressMenu();
         const projectTone = normalizePaletteHex(project.color) || '#94a3b8';
         const toneVars = useMemo(() => buildScopedToneVars(projectTone), [projectTone]);
         const occupiedColors = useMemo(() => new Set(
@@ -1710,34 +1637,22 @@
         const completedTaskCount = useMemo(() => tasks.filter((task) => isTaskTerminal(task)).length, [tasks]);
         const revealCompleted = !!(forceShowCompleted || showCompleted);
 
-        React.useEffect(() => {
-            if (!showColorPalette) return undefined;
-            const handlePointerDown = (event) => {
-                const root = colorPickerRef.current;
-                if (!root || isPaletteInteractionTarget(root, event.target)) return;
-                setShowColorPalette(false);
-            };
-            window.addEventListener('pointerdown', handlePointerDown);
-            return () => window.removeEventListener('pointerdown', handlePointerDown);
-        }, [showColorPalette]);
-
-        const handleQuickAddClick = (event) => {
-            event.stopPropagation();
+        const handleQuickAddProject = () => {
             onStartQuickAddProject(project.id === '__none__' ? '' : project.id);
         };
 
-        const handleDeleteProjectClick = (event) => {
-            event.stopPropagation();
+        const handleDeleteProject = () => {
             if (project.id === '__none__' || typeof onDeleteProject !== 'function') return;
             onDeleteProject(project.id);
         };
 
         return h('section', {
-            className: 'planning-project-group' + (showColorPalette ? ' planning-project-group--palette-open' : ''),
+            className: 'planning-project-group' + (actionMenu.isOpen ? ' planning-project-group--menu-open' : ''),
             style: toneVars,
         },
             h('div', {
                 className: 'planning-project-group__header',
+                ...actionMenu.handlers,
                 onClick: () => setCollapsed((value) => !value),
             },
                 h('span', {
@@ -1746,47 +1661,64 @@
                 }),
                 h('span', { className: 'planning-project-group__name' }, project.name),
                 h('span', { className: 'planning-project-group__count' }, '(' + activeTaskCount + ')'),
-                h('div', {
-                    className: 'planning-project-group__header-actions',
-                    onClick: (event) => event.stopPropagation(),
-                },
-                    completedTaskCount > 0 && !forceShowCompleted && h('button', {
-                        type: 'button',
-                        className: 'planning-completed-toggle' + (showCompleted ? ' active' : ''),
-                        title: showCompleted ? 'Скрыть завершённые задачи проекта' : 'Показать завершённые задачи проекта',
-                        onClick: (event) => {
-                            event.stopPropagation();
-                            setShowCompleted((value) => !value);
-                        },
-                    }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedTaskCount)),
-                    project.id !== '__none__' && h(ColorPalettePicker, {
-                        pickerRef: colorPickerRef,
-                        isOpen: showColorPalette,
-                        currentColor: projectTone,
-                        occupiedColors,
-                        hasAvailableColors,
-                        title: 'Цвет категории',
-                        onToggle: () => setShowColorPalette((value) => !value),
-                        onPick: (color) => {
-                            onUpdateProject(project.id, { color });
-                            setShowColorPalette(false);
+                completedTaskCount > 0 && !forceShowCompleted && h('button', {
+                    type: 'button',
+                    className: 'planning-completed-toggle' + (showCompleted ? ' active' : ''),
+                    title: showCompleted ? 'Скрыть завершённые задачи проекта' : 'Показать завершённые задачи проекта',
+                    onPointerDown: (event) => event.stopPropagation(),
+                    onTouchStart: (event) => event.stopPropagation(),
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        setShowCompleted((value) => !value);
+                    },
+                }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedTaskCount)),
+                h('span', { className: 'planning-project-group__chevron' + (collapsed ? ' collapsed' : '') }, '▾'),
+            ),
+            h(PlanningActionMenu, {
+                isOpen: actionMenu.isOpen,
+                title: 'Группа: ' + (project.name || 'Без проекта'),
+                subtitle: 'Управление группой задач',
+                onClose: actionMenu.closeMenu,
+            },
+                h(PlanningActionMenuSection, { title: 'Группа' },
+                    h(PlanningActionButton, {
+                        icon: collapsed ? '▾' : '▴',
+                        label: collapsed ? 'Развернуть группу' : 'Свернуть группу',
+                        tone: 'view',
+                        onClick: () => {
+                            setCollapsed((value) => !value);
+                            actionMenu.closeMenu();
                         },
                     }),
-                    h('button', {
-                        type: 'button',
-                        className: 'planning-project-group__quick-add-btn',
-                        title: project.id === '__none__' ? 'Добавить задачу без проекта' : ('Добавить задачу в «' + project.name + '»'),
-                        onClick: handleQuickAddClick,
-                    }, '+ Задача'),
-                    project.id !== '__none__' && h('button', {
-                        type: 'button',
-                        className: 'planning-project-group__action-btn planning-project-group__action-btn--danger',
-                        title: 'Удалить проект «' + project.name + '» и перенести его задачи в «Без проекта»',
-                        'aria-label': 'Удалить проект «' + project.name + '»',
-                        onClick: handleDeleteProjectClick,
-                    }, '🗑'),
+                    h(PlanningActionButton, {
+                        icon: '+',
+                        label: project.id === '__none__' ? 'Добавить задачу без проекта' : 'Добавить задачу в группу',
+                        tone: 'create',
+                        onClick: () => {
+                            handleQuickAddProject();
+                            actionMenu.closeMenu();
+                        },
+                    }),
+                    project.id !== '__none__' && h(PlanningActionButton, {
+                        icon: '🗑',
+                        label: 'Удалить группу',
+                        meta: 'Задачи перейдут в «Без проекта»',
+                        tone: 'danger',
+                        onClick: () => {
+                            handleDeleteProject();
+                            actionMenu.closeMenu();
+                        },
+                    }),
                 ),
-                h('span', { className: 'planning-project-group__chevron' + (collapsed ? ' collapsed' : '') }, '▾'),
+                project.id !== '__none__' && h(PlanningActionColorGrid, {
+                    title: hasAvailableColors ? 'Цвет группы' : 'Цвет группы · все цвета заняты',
+                    currentColor: projectTone,
+                    occupiedColors,
+                    onPick: (color) => {
+                        onUpdateProject(project.id, { color });
+                        actionMenu.closeMenu();
+                    },
+                }),
             ),
             !collapsed && h('div', { className: 'planning-project-group__tasks' },
                 activeTopLevelTasks.map((task) => h(TaskBranch, {

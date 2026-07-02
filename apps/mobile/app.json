@@ -20,7 +20,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "CFBundleDisplayName": "HEYS",
-        "NSFaceIDUsageDescription": "HEYS uses Face ID to unlock your existing mobile session on this device."
+        "NSFaceIDUsageDescription": "HEYS uses Face ID to unlock your existing mobile session on this device.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -51,7 +52,6 @@
       "eas": {
         "projectId": "863ddd39-1876-4b1a-8d6a-26a225543352"
       }
-    },
-    "owner": "poplanton"
+    }
   }
 }

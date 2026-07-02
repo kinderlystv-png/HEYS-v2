@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'react-native';
 
 import { parseDeepLink } from '../src/features/deeplink/routes';
+import { colors } from '../src/shared/ui/shell';
 
 function DeepLinkHandler() {
   const router = useRouter();
@@ -30,6 +32,7 @@ function DeepLinkHandler() {
 export default function RootLayout() {
   return (
     <>
+      <StatusBar backgroundColor={colors.surface} barStyle="dark-content" translucent={false} />
       <DeepLinkHandler />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ title: 'HEYS' }} />
