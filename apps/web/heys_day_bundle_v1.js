@@ -7236,8 +7236,6 @@
             setProductActionSheet({
                 product: editableProduct,
                 title: editableProduct.name || 'Продукт',
-                x,
-                y,
                 openedAt: Date.now(),
             });
         }, [buildEditableProductFromMealItem, clearProductLongPress]);
@@ -8616,10 +8614,6 @@
                 },
                     React.createElement('div', {
                         className: 'mpc-action-sheet',
-                        style: {
-                            left: Math.min(Math.max(productActionSheet.x || 0, 12), Math.max(12, (window.innerWidth || 390) - 236)) + 'px',
-                            top: Math.min(Math.max(productActionSheet.y || 0, 72), Math.max(72, (window.innerHeight || 844) - 148)) + 'px',
-                        },
                         onClick: (e) => e.stopPropagation(),
                     },
                         React.createElement('div', { className: 'mpc-action-sheet__title' }, productActionSheet.title),

@@ -14505,16 +14505,20 @@ html.heys-bg-paused *::after {
   position: fixed;
   inset: 0;
   z-index: 2147482000;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(2px);
 }
 
 .mpc-action-sheet {
-  position: fixed;
   z-index: 2147482001;
-  width: 224px;
+  width: min(300px, calc(100vw - 36px));
   padding: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 14px 38px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(14px);
