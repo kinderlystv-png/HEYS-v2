@@ -3855,10 +3855,12 @@ td:first-child input {
 }
 
 .game-bar {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: max-content minmax(14px, 1fr) max-content;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -3892,6 +3894,8 @@ td:first-child input {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 104px;
   position: relative;
 }
 
@@ -3899,6 +3903,7 @@ td:first-child input {
   font-weight: 600;
   font-size: 13px;
   white-space: nowrap;
+  min-width: 0;
   line-height: 1.1;
 }
 
@@ -3970,7 +3975,7 @@ td:first-child input {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   overflow: hidden;
-  min-width: 40px;
+  min-width: 0;
   /* Уменьшили для лучшего сжатия */
   position: relative;
 }
@@ -4113,8 +4118,9 @@ td:first-child input {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
+  min-width: 0;
   transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
@@ -6456,13 +6462,36 @@ td:first-child input {
 
 /* Mobile: compact gamification bar */
 @media (max-width: 400px) {
-  .game-bar {
-    gap: 6px;
+  .hdr-top.hdr-gamification {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
-  .game-xp {
-    display: none;
-    /* Скрыть XP счётчик на очень узких экранах */
+  .game-bar {
+    grid-template-columns: max-content minmax(10px, 1fr) max-content;
+    gap: 4px;
+  }
+
+  .game-level-group {
+    gap: 3px;
+    max-width: 88px;
+  }
+
+  .game-level-text {
+    font-size: 12px;
+  }
+
+  .game-bar-slots {
+    gap: 4px;
+  }
+
+  .game-daily-mult {
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+
+  .game-streak {
+    font-size: 13px;
   }
 
   .game-level {
@@ -6481,6 +6510,49 @@ td:first-child input {
   .game-rank-badge {
     font-size: 8px;
     padding: 1px 4px;
+  }
+}
+
+@media (max-width: 340px) {
+  .hdr-top.hdr-gamification {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .game-bar {
+    gap: 3px;
+  }
+
+  .game-level-group {
+    max-width: 74px;
+  }
+
+  .game-rank-badge {
+    max-width: 38px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .game-bar-slots {
+    gap: 3px;
+  }
+
+  .game-daily-mult {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .hdr-gamification .game-expand-btn,
+  .hdr-gamification .push-badge,
+  .hdr-gamification .hdr-theme-btn {
+    width: 26px !important;
+    min-width: 26px !important;
+    height: 26px !important;
+  }
+
+  .game-daily-bonus {
+    max-width: 22px;
   }
 }
 

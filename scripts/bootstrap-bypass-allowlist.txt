@@ -136,12 +136,12 @@ apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
 apps/web/heys_exercise_catalog_v1.js:170
 apps/web/heys_feature_flags_v1.js:95
-apps/web/heys_gamification_bar_v1.js:1422
+apps/web/heys_gamification_bar_v1.js:1415
+apps/web/heys_gamification_bar_v1.js:1416
+apps/web/heys_gamification_bar_v1.js:1417
 apps/web/heys_gamification_bar_v1.js:1423
 apps/web/heys_gamification_bar_v1.js:1424
-apps/web/heys_gamification_bar_v1.js:1430
-apps/web/heys_gamification_bar_v1.js:1431
-apps/web/heys_gamification_bar_v1.js:1432
+apps/web/heys_gamification_bar_v1.js:1425
 apps/web/heys_gamification_v1.js:1585
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41

@@ -3413,7 +3413,7 @@
 
   function flyToBar(sourceEl, xpAmount) {
     // Находим target — gamification bar в header
-    const target = document.querySelector('.hdr-gamification .game-xp') ||
+    const target = document.querySelector('.hdr-gamification .game-progress') ||
       document.querySelector('.hdr-gamification');
     if (!target) return;
 

@@ -1387,13 +1387,6 @@
                         title: 'Забрать ежедневный бонус!'
                     }, '🎁'),
 
-                    // XP counter
-                    React.createElement('span', {
-                        className: `game-xp ${!levelGuardActive && isXPCounting ? 'counting' : ''} ${!levelGuardActive && bigXpGlow ? 'big-gain' : ''}`
-                    }, levelGuardActive
-                        ? React.createElement('span', { className: 'game-xp__skeleton' }, '?/?')
-                        : `${progress.current}/${progress.required}`
-                    )
                 ),
 
                 // Expand button — всегда виден
