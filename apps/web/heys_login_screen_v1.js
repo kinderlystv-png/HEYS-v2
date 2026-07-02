@@ -552,6 +552,7 @@
       const phoneDigits = phoneMasked.replace(/\D/g, '').slice(0, 10);
       const isPhoneComplete = phoneDigits.length === 10;
       const isPinComplete = (pinDigits || []).every(Boolean);
+      const touchKeypad = usesTouchKeypad();
 
       // Обработчик ввода телефона
 	      const handlePhoneInput = (e) => {
@@ -729,6 +730,7 @@
                 inputMode: 'numeric',
                 autoComplete: 'tel',
                 autoFocus: true,
+                readOnly: touchKeypad,
                 placeholder: '(999) 123-45-67',
                 value: formatPhoneBody(phoneDigits),
                 onChange: handlePhoneInput,
@@ -765,6 +767,7 @@
                     inputMode: 'numeric',
                     pattern: '[0-9]*',
                     autoComplete: i === 0 ? 'one-time-code' : 'off',
+                    readOnly: touchKeypad,
                     maxLength: 1,
                     value: digit,
                     // Скрываем текст input пока показывается overlay (иначе видна «маленькая цифра» браузера)
