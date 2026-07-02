@@ -19,7 +19,9 @@ describe('personal product commit gate contract', () => {
     expect(core).toContain("YandexAPI.saveKV(clientId, 'heys_products_overlay_v2'");
     expect(core).toContain("YandexAPI.getKV(clientId, 'heys_products_overlay_v2')");
     expect(core).toContain("Overlay.writeRaw(cloudRows, { skipCloudSync: true");
-    expect(core).toContain('cloud_readback_missing_product');
+    expect(core).toContain('cloud_save_ack_pending_readback');
+    expect(core).toContain('cloud_save_queued_after_413');
+    expect(core).toContain('visible_product_present');
     expect(core).toContain('ensureMealProductReady');
   });
 
@@ -30,6 +32,7 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('await commitPersonalProduct(updatedProduct, true');
     expect(addProduct).toContain("closeOnComplete: 'after'");
     expect(addProduct).toContain('await HEYS.products?.ensureMealProductReady?.(selectedProduct');
+    expect(addProduct).toContain('productCommitVerified: ready?.ok === true');
     expect(addProduct).toContain('throw new Error(\'product_commit_failed\')');
     expect(addProduct).toContain('throw error;');
     expect(addProduct).not.toContain('штрихкод сохранён локально, но облачная синхронизация сейчас недоступна');
@@ -68,6 +71,7 @@ describe('personal product commit gate contract', () => {
     expect(dayMeals).toContain('Продукт не сохранён в базу. Запись в дневник не добавлена');
 
     expect(dayAddProduct).toContain('await HEYS.products?.ensureMealProductReady?.(product');
+    expect(dayAddProduct).toContain("reason: 'already_verified'");
     expect(dayAddProduct).toContain('day-add-product-bulk');
     expect(dayAddProduct).toContain('Продукт не сохранён в базу. Запись в дневник не добавлена');
 

@@ -4619,6 +4619,8 @@
 	      const normalizeName = (name) => String(name || '').trim().toLowerCase();
 	      const productIdOf = (p) => p?.id ?? p?.product_id ?? p?.name;
 	      const sharedIdOf = (p) => p?.shared_origin_id || p?.sharedOriginId || (p?._fromShared && p?.id) || (p?.is_shared && p?.id) || null;
+	      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	      const isPayloadTooLargeError = (err) => /413|payload too large|request entity too large/i.test(String(err || ''));
 	      const hasRowForProduct = (rows, p) => {
 	        const pid = productIdOf(p);
 	        const sharedId = sharedIdOf(p);
@@ -4738,14 +4740,40 @@
 	      const contextId = opts.contextId || HEYS.cloud?.snapshotWriteContext?.()?.contextId || null;
 	      const saveResult = await YandexAPI.saveKV(clientId, 'heys_products_overlay_v2', nextRows, contextId);
 	      if (!saveResult || saveResult.success === false || saveResult.error) {
-	        return { ok: false, product: committedProduct, reason: saveResult?.error || 'cloud_save_failed' };
+	        const reason = saveResult?.error || 'cloud_save_failed';
+	        if (isPayloadTooLargeError(reason)) {
+	          const wroteLocalQueued = Overlay.writeRaw(nextRows, { source: 'personal-product-commit-413-queued' });
+	          if (!wroteLocalQueued) return { ok: false, product: committedProduct, reason: 'local_overlay_apply_failed' };
+	          HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	          try {
+	            window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+	              detail: { productId: productIdOf(committedProduct), product: committedProduct }
+	            }));
+	          } catch (_) { /* noop */ }
+	          return { ok: true, product: committedProduct, reason: 'cloud_save_queued_after_413' };
+	        }
+	        return { ok: false, product: committedProduct, reason };
 	      }
 
-	      const readback = await YandexAPI.getKV(clientId, 'heys_products_overlay_v2');
+	      let readback = await YandexAPI.getKV(clientId, 'heys_products_overlay_v2');
 	      if (readback?.error) return { ok: false, product: committedProduct, reason: readback.error };
-	      const cloudRows = Array.isArray(readback?.data) ? readback.data : [];
+	      let cloudRows = Array.isArray(readback?.data) ? readback.data : [];
 	      if (!hasRowForProduct(cloudRows, committedProduct)) {
-	        return { ok: false, product: committedProduct, reason: 'cloud_readback_missing_product' };
+	        await sleep(180);
+	        readback = await YandexAPI.getKV(clientId, 'heys_products_overlay_v2');
+	        if (readback?.error) return { ok: false, product: committedProduct, reason: readback.error };
+	        cloudRows = Array.isArray(readback?.data) ? readback.data : [];
+	      }
+	      if (!hasRowForProduct(cloudRows, committedProduct)) {
+	        const wroteLocalFromSaveAck = Overlay.writeRaw(nextRows, { skipCloudSync: true, source: 'personal-product-commit-save-ack' });
+	        if (!wroteLocalFromSaveAck) return { ok: false, product: committedProduct, reason: 'local_overlay_apply_failed' };
+	        HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	        try {
+	          window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+	            detail: { productId: productIdOf(committedProduct), product: committedProduct }
+	          }));
+	        } catch (_) { /* noop */ }
+	        return { ok: true, product: committedProduct, reason: 'cloud_save_ack_pending_readback' };
 	      }
 
 	      const wroteLocal = Overlay.writeRaw(cloudRows, { skipCloudSync: true, source: 'personal-product-commit-cloud-ack' });
@@ -4762,12 +4790,11 @@
 	      if (!product) return { ok: false, product: null, reason: 'missing_product' };
 	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
 	      let finalProduct = product;
-	      let forceCloudAck = !!opts.forceCloudAck || opts.requireCommit === true;
+	      let forceCloudAck = !!opts.forceCloudAck;
 	      if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
 	        const cloned = HEYS.products.addFromShared?.(product);
 	        if (cloned) {
 	          finalProduct = cloned;
-	          forceCloudAck = true;
 	        }
 	      }
 	      const Overlay = HEYS.OverlayStore;
@@ -4780,9 +4807,30 @@
 	        return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
 	      });
 	      if (hasRow && !forceCloudAck) return { ok: true, product: finalProduct, reason: 'overlay_present' };
+	      if (!forceCloudAck && opts.requireCommit === true) {
+	        const visible = (() => {
+	          try {
+	            if (pid != null && typeof HEYS.products.getById === 'function') {
+	              const byId = HEYS.products.getById(pid);
+	              if (byId) return byId;
+	            }
+	            const all = HEYS.products.getAll?.() || [];
+	            const pname = String(finalProduct.name || '').trim().toLowerCase();
+	            return Array.isArray(all) ? (all.find((row) => {
+	              if (!row) return false;
+	              const rid = row.id ?? row.product_id ?? row.name;
+	              if (pid != null && rid != null && String(rid) === String(pid)) return true;
+	              return pname && String(row.name || '').trim().toLowerCase() === pname;
+	            }) || null) : null;
+	          } catch (_) {
+	            return null;
+	          }
+	        })();
+	        if (visible) return { ok: true, product: visible, reason: 'visible_product_present' };
+	      }
 	      return HEYS.products.ensurePersonalProductCommitted(finalProduct, {
 	        ...opts,
-	        forceCloudAck,
+	        forceCloudAck: forceCloudAck || opts.requireCommit === true,
 	        source: opts.source || 'meal-product-ready'
 	      });
 	    },

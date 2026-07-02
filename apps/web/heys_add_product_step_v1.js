@@ -9015,6 +9015,7 @@ NOVA: 1
             grams: grams,
             mealIndex,
             mealId,
+            productCommitVerified: ready?.ok === true,
             _traceId: traceId,
             _origin: 'stepmodal-complete'
           };

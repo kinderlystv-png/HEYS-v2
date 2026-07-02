@@ -4326,12 +4326,14 @@
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
                                     barcodeCameraStart: options.barcodeCameraStart || null,
-	                                    onAdd: async ({ product, grams, mealIndex: addMealIndex }) => {
+	                                    onAdd: async ({ product, grams, mealIndex: addMealIndex, productCommitVerified }) => {
 	                                        let finalProduct = product;
-	                                        const ready = await HEYS.products?.ensureMealProductReady?.(product, {
-	                                            source: 'day-inline-add-product',
-	                                            requireCommit: true
-	                                        });
+	                                        const ready = productCommitVerified === true
+	                                            ? { ok: true, product, reason: 'already_verified' }
+	                                            : await HEYS.products?.ensureMealProductReady?.(product, {
+	                                                source: 'day-inline-add-product',
+	                                                requireCommit: true
+	                                            });
 	                                        if (ready && !ready.ok) {
 	                                            HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
 	                                            console.warn('[HEYS.day] product add blocked before day write', {

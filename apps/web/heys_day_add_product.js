@@ -855,7 +855,7 @@
         });
       };
 
-	      const handleAdd = async ({ product, grams, mealIndex, mealId, _traceId, _origin, _presetBatch }) => {
+	      const handleAdd = async ({ product, grams, mealIndex, mealId, productCommitVerified, _traceId, _origin, _presetBatch }) => {
 	        const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
         try {
@@ -883,10 +883,12 @@
           productName: product?.name || null,
           source: product?._source || (product?._fromShared ? 'shared' : 'personal')
         });
-	        const ready = await HEYS.products?.ensureMealProductReady?.(product, {
-	          source: 'day-add-product',
-	          requireCommit: true
-	        });
+	        const ready = productCommitVerified === true
+	          ? { ok: true, product, reason: 'already_verified' }
+	          : await HEYS.products?.ensureMealProductReady?.(product, {
+	            source: 'day-add-product',
+	            requireCommit: true
+	          });
 	        if (ready && !ready.ok) {
 	          HEYS.Toast?.error?.('Продукт не сохранён в базу. Запись в дневник не добавлена, попробуйте ещё раз.');
 	          console.warn('[HEYS.day] product add blocked before day write', {
