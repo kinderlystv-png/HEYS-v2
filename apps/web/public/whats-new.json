@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.02.5c885d37",
+      "buildHash": "5c885d37",
+      "date": "2026-07-02",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Действия с продуктом стали аккуратнее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Меню продукта открывается по центру",
+          "description": "При долгом нажатии на продукт в дневнике меню действий теперь появляется как аккуратное модальное окно по центру экрана, без риска уехать к краям."
+        }
+      ],
+      "coveredCommits": ["5c885d37"]
+    },
+    {
       "version": "2026.07.02.ac2d915d",
       "buildHash": "ac2d915d",
       "date": "2026-07-02",
@@ -136,21 +152,6 @@
     {
       "version": "2026.07.02.5dbfb4a2",
       "buildHash": "5dbfb4a2",
-      "date": "2026-07-02",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Технические улучшения качества",
-      "items": [
-        {
-          "type": "improvement",
-          "title": "Улучшили внутренние процессы",
-          "description": "Мы обновили внутренние инструменты и проверки, чтобы релизы были стабильнее и предсказуемее."
-        }
-      ]
-    },
-    {
-      "version": "2026.07.02.11a61ad0",
-      "buildHash": "11a61ad0",
       "date": "2026-07-02",
       "kind": "technical",
       "profile": "technical-infra-tests",
