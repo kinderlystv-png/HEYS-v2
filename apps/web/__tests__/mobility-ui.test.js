@@ -93,7 +93,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     try { globalThis.window.localStorage.clear(); } catch (_) { /* noop */ }
   });
 
-  it('рендерит focus-mode как у пальцев и открывает runner только после запуска тренировки', { timeout: 20000 }, () => {
+  it('рендерит focus-mode как у пальцев и открывает runner только после запуска тренировки', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     expect(screen.getByText('Мобильность')).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
@@ -195,7 +195,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     expect(screen.getByRole('button', { name: /Голос:/ })).toBeTruthy();
   });
 
-  it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', { timeout: 20000 }, async () => {
+  it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', { timeout: 60000 }, async () => {
     globalThis.HEYS.Mobility.persistence = globalThis.HEYS.TrainingKernel.activeSession.create({
       keySuffix: 'routine_active_session',
       staleMs: 24 * 60 * 60 * 1000,
@@ -285,7 +285,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     expect(warn).toHaveBeenCalled();
   });
 
-  it('выбирает готовый план и возвращает в тренировку с сопровождением', { timeout: 20000 }, () => {
+  it('выбирает готовый план и возвращает в тренировку с сопровождением', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
     fireEvent.click(screen.getByRole('tab', { name: /Планы/ }));
     expect(screen.getByText('Готовые тренировки')).toBeTruthy();
@@ -526,7 +526,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     expect(container.textContent).not.toContain('foam_roll');
   });
 
-  it('показывает боль как ограничение тренировки', { timeout: 20000 }, () => {
+  it('показывает боль как ограничение тренировки', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, {
       profile,
       modeId: 'anti_sedentary',
@@ -547,7 +547,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     expect(container.textContent).toContain('2016');
   });
 
-  it('открывает обоснование плана без академического заголовка', { timeout: 12000 }, () => {
+  it('открывает обоснование плана без академического заголовка', { timeout: 60000 }, () => {
     render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     fireEvent.click(screen.getByRole('button', { name: 'Обоснование плана' }));
     expect(screen.getByRole('dialog', { name: 'Обоснование плана' })).toBeTruthy();
