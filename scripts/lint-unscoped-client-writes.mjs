@@ -25,11 +25,14 @@
  *   Для каждого legitimate case (pre-auth fallback без clientId) — entry
  *   с обязательным комментарием выше why это OK.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const ALLOWLIST_FILE = resolve(ROOT, 'scripts/unscoped-client-writes-allowlist.txt');
+const ALLOWLIST_REL = 'scripts/unscoped-client-writes-allowlist.txt';
+const ALLOWLIST_FILE = resolve(ROOT, ALLOWLIST_REL);
+const REF = getCliOption('--ref');
 
 // Per-client keys — должны быть scoped как heys_<clientId>_<keyname>.
 // Если кто-то пишет 'heys_profile' (unscoped) напрямую — это pollution risk:
@@ -79,16 +82,44 @@ const SCAN_TARGETS = [
     { dir: 'apps/web/day', match: (f) => f.endsWith('.js') },
 ];
 
+function getCliOption(name) {
+    const prefix = `${name}=`;
+    const arg = process.argv.find((item) => item.startsWith(prefix));
+    return arg ? arg.slice(prefix.length).trim() : '';
+}
+
+function gitRead(relPath) {
+    return execFileSync('git', ['show', `${REF}:${relPath}`], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+    });
+}
+
+function readText(relPath) {
+    return REF ? gitRead(relPath) : readFileSync(resolve(ROOT, relPath), 'utf8');
+}
+
+function listDir(dir) {
+    if (!REF) return readdirSync(resolve(ROOT, dir));
+    const output = execFileSync('git', ['ls-tree', '--name-only', `${REF}:${dir}`], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
 // ── Read allowlist ────────────────────────────────────────────────────────
 const allowlist = new Set();
-if (existsSync(ALLOWLIST_FILE)) {
-    const lines = readFileSync(ALLOWLIST_FILE, 'utf8').split('\n');
+try {
+    const lines = readText(ALLOWLIST_REL).split('\n');
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) continue;
         allowlist.add(trimmed);
     }
-}
+} catch {}
 
 // ── Detect if key matches per-client pattern ──────────────────────────────
 function isClientSpecificKey(key) {
@@ -99,8 +130,8 @@ function isClientSpecificKey(key) {
 }
 
 // ── Walk file ─────────────────────────────────────────────────────────────
-function* findViolationsInFile(filePath) {
-    const content = readFileSync(filePath, 'utf8');
+function* findViolationsInFile(relPath) {
+    const content = readText(relPath);
     const lines = content.split('\n');
 
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -134,14 +165,12 @@ const violations = [];
 const allowlistedHits = [];
 
 for (const target of SCAN_TARGETS) {
-    const dir = resolve(ROOT, target.dir);
-    if (!existsSync(dir)) continue;
-    const entries = readdirSync(dir);
+    let entries;
+    try { entries = listDir(target.dir); } catch (_) { continue; }
     for (const entry of entries) {
         if (!target.match(entry)) continue;
-        const filePath = resolve(dir, entry);
-        const relPath = relative(ROOT, filePath);
-        for (const v of findViolationsInFile(filePath)) {
+        const relPath = `${target.dir}/${entry}`;
+        for (const v of findViolationsInFile(relPath)) {
             const key = `${relPath}:${v.line}`;
             if (allowlist.has(key)) {
                 allowlistedHits.push({ ...v, file: relPath });

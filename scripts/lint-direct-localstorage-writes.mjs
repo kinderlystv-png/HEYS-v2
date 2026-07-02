@@ -28,13 +28,16 @@
  * (not a bypass), so no extra grep needed at this phase. Phase 5 re-audits.
  */
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const ALLOWLIST_FILE = resolve(ROOT, 'scripts/bootstrap-bypass-allowlist.txt');
+const ALLOWLIST_REL = 'scripts/bootstrap-bypass-allowlist.txt';
+const ALLOWLIST_FILE = resolve(ROOT, ALLOWLIST_REL);
 const STRICT = process.argv.includes('--strict');
 const AUTO_FIX = process.argv.includes('--auto-fix');
+const REF = getCliOption('--ref');
 const PATTERN = /localStorage\.setItem\s*\(/;
 
 // Files excluded from scan (generated bundles or intentional interceptors).
@@ -53,15 +56,43 @@ const SCAN_TARGETS = [
   { dir: 'apps/web/insights', match: (f) => f.endsWith('.js') },
 ];
 
+function getCliOption(name) {
+  const prefix = `${name}=`;
+  const arg = process.argv.find((item) => item.startsWith(prefix));
+  return arg ? arg.slice(prefix.length).trim() : '';
+}
+
+function gitRead(relPath) {
+  return execFileSync('git', ['show', `${REF}:${relPath}`], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+function readText(relPath) {
+  return REF ? gitRead(relPath) : readFileSync(resolve(ROOT, relPath), 'utf8');
+}
+
+function listDir(dir) {
+  if (!REF) return readdirSync(resolve(ROOT, dir));
+  const output = execFileSync('git', ['ls-tree', '--name-only', `${REF}:${dir}`], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
 // ── Read allowlist ─────────────────────────────────────────────────────────
 const allowlist = new Set();
-if (existsSync(ALLOWLIST_FILE)) {
-  const lines = readFileSync(ALLOWLIST_FILE, 'utf8').split('\n');
+try {
+  const lines = readText(ALLOWLIST_REL).split('\n');
   for (const line of lines) {
     const t = line.trim();
     if (t && !t.startsWith('#')) allowlist.add(t);
   }
-} else {
+} catch {
   process.stderr.write(`[WARN]  Allowlist not found: ${ALLOWLIST_FILE}\n`);
   process.stderr.write(`        Run with --generate-allowlist to create it.\n`);
 }
@@ -70,19 +101,18 @@ if (existsSync(ALLOWLIST_FILE)) {
 const hits = [];
 
 for (const { dir, match } of SCAN_TARGETS) {
-  const fullDir = resolve(ROOT, dir);
   let files;
-  try { files = readdirSync(fullDir); } catch (_) { continue; }
+  try { files = listDir(dir); } catch (_) { continue; }
 
   for (const file of files) {
     if (!match(file)) continue;
-    const fullPath = resolve(fullDir, file);
+    const relPath = `${dir}/${file}`;
     let content;
-    try { content = readFileSync(fullPath, 'utf8'); } catch (_) { continue; }
+    try { content = readText(relPath); } catch (_) { continue; }
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       if (PATTERN.test(lines[i])) {
-        const ref = `${relative(ROOT, fullPath)}:${i + 1}`;
+        const ref = `${relPath}:${i + 1}`;
         const listed = allowlist.has(ref);
         hits.push({ ref, listed, snippet: lines[i].trim().slice(0, 100) });
       }
@@ -98,7 +128,7 @@ for (const { dir, match } of SCAN_TARGETS) {
 //
 // Если count не совпадает — что-то реальное (новый setItem или удалённый):
 // auto-fix НЕ применяется, hook отчитывается как раньше.
-if (AUTO_FIX) {
+if (AUTO_FIX && !REF) {
   const hitsByFile = new Map();
   for (const hit of hits) {
     const file = hit.ref.split(':')[0];
