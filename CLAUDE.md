@@ -446,6 +446,14 @@ git worktree remove .claude/worktrees/<task>   # ОБЯЗАТЕЛЬНО посл
 `git push`; отдельный `push:preflight` нужен только для диагностики локальных
 guards. `pnpm push:safe` deprecated: `HUSKY=0` не является нормальным push-flow.
 
+Если пользователь прямо просит commit+push/push, не делай заведомо падающий
+пробный `git push` перед подготовкой релиза. До первого push сразу выбери
+штатный shipping flow: `pnpm ship` для одного staged shipping-коммита или
+`pnpm push:agent -- --confirm-push ...` для уже сделанных/сгруппированных
+коммитов. Заранее учитывай gates, которые всё равно сработают на pre-push:
+`prepare-release:check` / What's New, `verify:legacy-bundles`,
+localStorage/session guards, bundle-size guard и web tests cache.
+
 **Dev-цикл «увидеть свою правку без коммита»**: `pnpm dev:web` грузит хеш-бандлы
 из `public/` как статику (без HMR). Чтобы увидеть свою правку —
 `pnpm bundle:legacy:auto --files=<твои>` и reload. После `ship`'a этот ручной

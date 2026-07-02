@@ -360,6 +360,22 @@ each.
 инструкции (что добавить, какой формат, какие файлы). Никогда `--no-verify` без
 явного разрешения пользователя.
 
+Если пользователь прямо просит commit+push/push на HEYS, не делай заведомо
+падающий пробный `git push` перед подготовкой релиза. До первого push сразу
+выбери штатный shipping flow:
+
+- если scope ещё staged/не закоммичен и подходит один shipping-коммит —
+  `pnpm ship`;
+- если осмысленные коммиты уже сделаны вручную или их несколько —
+  `pnpm push:agent -- --confirm-push ...` с текстом по
+  [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md).
+
+Заранее закрой известные pre-push gates, а не узнавай о них через failed push:
+`prepare-release:check` / What's New, `verify:legacy-bundles`,
+localStorage/session guards, bundle-size guard и web tests cache. Если
+`push:agent` выбран, он сам запускает нужный pre-push/preflight путь; отдельный
+ручной `git push` до него не нужен.
+
 `legacy-sync` не должен auto-stash/restore чужой dirty scope. Если dirty
 generated-файл мешает integration rebuild, hook останавливается и показывает
 safe options; агент не прячет и не откатывает чужие файлы без прямой команды.
