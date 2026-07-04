@@ -1285,6 +1285,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       .replace(/ё/g, 'е');
   };
 
+  const normalizePickerDedupeName = (product) => {
+    const rawName = String(product?.name || product?.title || '').trim();
+    if (!rawName) return '';
+    const brand = getProductBrand(product);
+    const name = brand
+      ? removeBrandFromProductName(rawName, brand, { allowMiddle: true })
+      : rawName;
+    return normalizeName(name)
+      .replace(/[«»"“”„'`]/g, '')
+      .replace(/[()[\]{}.,;:]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const getPickerDedupeKey = (product) => {
+    if (!product) return '';
+    const sharedId = product.shared_origin_id ?? product.sharedId ?? product._sharedId;
+    if (sharedId != null && String(sharedId).trim()) return 'shared:' + String(sharedId).trim();
+
+    const barcodes = getProductBarcodes(product);
+    if (barcodes.length > 0) return 'barcode:' + barcodes.slice().sort()[0];
+
+    const fingerprint = product.fingerprint ?? product.productFingerprint;
+    if (fingerprint != null && String(fingerprint).trim()) return 'fingerprint:' + String(fingerprint).trim();
+
+    const name = normalizePickerDedupeName(product);
+    if (!name) return '';
+    const brand = normalizeBrandCompare(getProductBrand(product));
+    return 'name:' + (brand ? brand + '|' : '') + name;
+  };
+
+  const dedupeProductsForPicker = (products) => {
+    if (!Array.isArray(products) || products.length === 0) return [];
+    const seen = new Set();
+    const out = [];
+    products.forEach((product) => {
+      const key = getPickerDedupeKey(product);
+      const fallbackKey = key || 'id:' + String(product?.id ?? product?.product_id ?? product?.name ?? out.length);
+      if (seen.has(fallbackKey)) return;
+      seen.add(fallbackKey);
+      out.push(product);
+    });
+    return out;
+  };
+
   const notifyProductUpdated = (product) => {
     if (!product) return;
     window.dispatchEvent(new CustomEvent('heys:product-updated', {
@@ -2250,7 +2295,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
       });
 
-    return sorted.slice(0, 20);
+    return dedupeProductsForPicker(sorted).slice(0, 20);
   }
 
   // === Категории для фильтрации ===
@@ -4237,7 +4282,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (aTs !== bTs) return bTs - aTs;
         return String(a?.name || '').localeCompare(String(b?.name || ''), 'ru');
       });
-      return sorted.slice(0, 24);
+      return dedupeProductsForPicker(sorted).slice(0, 24);
     }, [latestProducts, hiddenProducts, favorites]);
 
     useEffect(() => {

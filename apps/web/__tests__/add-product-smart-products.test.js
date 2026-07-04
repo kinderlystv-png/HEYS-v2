@@ -1,0 +1,99 @@
+import fs from 'fs';
+import path from 'path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const originalHEYS = global.HEYS;
+const originalWindowHEYS = window.HEYS;
+const originalReact = global.React;
+const originalWindowReact = window.React;
+
+function loadAddProductStep() {
+  const srcPath = path.resolve(__dirname, '../heys_add_product_step_v1.js');
+  eval(fs.readFileSync(srcPath, 'utf8'));
+}
+
+function installReactStub() {
+  const stub = {
+    createElement: (type, props, ...children) => ({ type, props: props || {}, children }),
+    memo: (component) => component,
+    useCallback: (fn) => fn,
+    useContext: () => null,
+    useDeferredValue: (value) => value,
+    useEffect: () => {},
+    useMemo: (fn) => fn(),
+    useRef: (value) => ({ current: value }),
+    useState: (value) => [typeof value === 'function' ? value() : value, () => {}],
+  };
+  global.React = stub;
+  window.React = stub;
+}
+
+function installHeysStub() {
+  const heys = {
+    StepModal: {},
+    models: {
+      normalizeProductName: (name) => String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/ё/g, 'е'),
+    },
+    store: {
+      get: vi.fn((_, fallback) => fallback),
+      set: vi.fn(),
+    },
+    utils: {},
+  };
+  global.HEYS = heys;
+  window.HEYS = heys;
+}
+
+describe('AddProductStep smart products', () => {
+  const now = Date.parse('2026-07-05T12:00:00Z');
+
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    installReactStub();
+    installHeysStub();
+    loadAddProductStep();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    global.HEYS = originalHEYS;
+    window.HEYS = originalWindowHEYS;
+    global.React = originalReact;
+    window.React = originalWindowReact;
+  });
+
+  it('keeps one card for duplicate shared products with different local ids', () => {
+    const products = [
+      { id: 'local-milk-a', shared_origin_id: 'shared-milk', name: 'Молоко 2,5', updatedAt: now },
+      { id: 'local-milk-b', shared_origin_id: 'shared-milk', name: 'Молоко 2,5', updatedAt: now - 1000 },
+      { id: 'bread', name: 'Хлеб тостовый', updatedAt: now },
+    ];
+
+    const result = window.HEYS.AddProductStep.computeSmartProducts(products, '2026-07-05', {
+      usageStats: new Map(),
+      daysWindow: 21,
+    });
+
+    expect(result.map((product) => product.id)).toEqual(['local-milk-a', 'bread']);
+  });
+
+  it('keeps one card for custom products with the same normalized display name', () => {
+    const products = [
+      { id: 'bread-a', name: 'Хлеб тостовый «Премиум суперсемечковый»', updatedAt: now },
+      { id: 'bread-b', name: 'Хлеб тостовый Премиум суперсемечковый', updatedAt: now - 1000 },
+      { id: 'milk', name: 'Молоко 2,5', updatedAt: now },
+    ];
+
+    const result = window.HEYS.AddProductStep.computeSmartProducts(products, '2026-07-05', {
+      usageStats: new Map(),
+      daysWindow: 21,
+    });
+
+    expect(result.map((product) => product.id)).toEqual(['milk', 'bread-a']);
+  });
+});
