@@ -268,7 +268,6 @@
     const next = normalizeEventRows(rows);
     if (U.lsSet) U.lsSet(STORAGE_KEY, next);
     else if (HEYS.store?.set) HEYS.store.set(STORAGE_KEY, next);
-    else global.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     try {
       global.dispatchEvent(new CustomEvent('heys:hunger-energy-status-updated', { detail: next }));
     } catch (_) {}
