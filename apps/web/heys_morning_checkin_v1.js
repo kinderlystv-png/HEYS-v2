@@ -809,9 +809,17 @@
     return HEYS.YesterdayVerify.shouldShow();
   }
 
-  function shouldIncludeRefeedStep() {
+  function shouldIncludeRefeedStep(profile, dateKey = getTodayKey()) {
     try {
-      return HEYS.Refeed?.shouldShowRefeedStep?.() === true;
+      if (HEYS.Refeed?.shouldShowRefeedStep?.() !== true) return false;
+
+      const day = readDayV2ScopedFirst(dateKey, {}) || {};
+      if (typeof day?.isRefeedDay === 'boolean') return false;
+
+      const effectiveProfile = profile || getFreshMorningProfile(getCurrentClientId()) || {};
+      const hasRecommendation = HEYS.caloricDebt?.needsRefeed === true;
+      const allowManual = effectiveProfile.allowManualRefeed === true;
+      return hasRecommendation || allowManual;
     } catch (_) {
       return false;
     }
@@ -1015,7 +1023,7 @@
 
     // 3. 🔄 Загрузочный день (Refeed) — опциональный, после required-блока.
     // Добавляем только когда сам шаг реально будет видимым в StepModal.
-    if (shouldIncludeRefeedStep()) {
+    if (shouldIncludeRefeedStep(profile)) {
       steps.push('refeedDay');
     }
 
@@ -1359,7 +1367,7 @@
       case 'morning_mood': return hasMorningMood(day);
       case 'stepsGoal': return hasStepsGoal(profile);
       case 'yesterdayVerify': return !shouldShowYesterdayVerifyRequired();
-      case 'refeedDay': return typeof day?.isRefeedDay === 'boolean';
+      case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);
       case 'cycle': return hasCycleDecision(day, profile);
       case 'measurements': {
         const m = day?.measurements;

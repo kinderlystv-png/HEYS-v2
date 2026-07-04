@@ -68,7 +68,10 @@ describe('morning check-in stability', () => {
 
   it('keeps optional morning steps aligned with visible saves and explicit empty answers', () => {
     expect(MORNING_SRC).toContain('function shouldIncludeRefeedStep');
-    expect(MORNING_SRC).toContain('HEYS.Refeed?.shouldShowRefeedStep?.() === true');
+    expect(MORNING_SRC).toContain('HEYS.Refeed?.shouldShowRefeedStep?.() !== true');
+    expect(MORNING_SRC).toContain('effectiveProfile.allowManualRefeed === true');
+    expect(MORNING_SRC).toContain('HEYS.caloricDebt?.needsRefeed === true');
+    expect(MORNING_SRC).toContain("case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);");
     expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
     expect(MORNING_SRC).toContain('checkin_incomplete_steps');
     expect(MORNING_SRC).toContain("case 'supplements': return Array.isArray(day?.supplementsPlanned);");
