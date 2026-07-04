@@ -16,12 +16,12 @@
     "builtAt": "2026-07-02T20:56:13.882Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.5387cdca1936.js",
-    "hash": "5387cdca1936",
-    "sourceFingerprint": "cf673b8df0a6",
+    "file": "boot-day.bundle.1510ca98d361.js",
+    "hash": "1510ca98d361",
+    "sourceFingerprint": "196842881edb",
     "fileCount": 60,
-    "size": 736419,
-    "builtAt": "2026-07-04T22:27:17.514Z"
+    "size": 736358,
+    "builtAt": "2026-07-04T22:35:47.267Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.eabed5a06103.js",
