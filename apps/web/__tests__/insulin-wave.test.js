@@ -46,6 +46,8 @@ const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
 const mainContent = fs.readFileSync(mainPath, 'utf8');
 eval(mainContent);
 
+const uiPath = path.resolve(__dirname, '../heys_iw_ui.js');
+
 describe('Insulin Wave Module (Critical)', () => {
   const IW = global.HEYS.InsulinWave;
   // Access internal functions via __internals for v3 compatibility
@@ -288,6 +290,47 @@ describe('Insulin Wave Module (Critical)', () => {
       // Combined: -40% × 1.50 × 1.15 = -69% → capped at -60%
       expect(context.waveBonus).toBeLessThanOrEqual(-0.5);
       expect(context.waveBonus).toBeGreaterThanOrEqual(-0.65);
+    });
+  });
+
+  describe('Insulin Wave UI resilience', () => {
+    it('renders expanded section when legacy wave data has no GI category', () => {
+      const originalReact = global.React;
+      const originalDocument = global.document;
+      const originalUI = global.HEYS.InsulinWave.UI;
+
+      global.document = {
+        documentElement: {
+          getAttribute: () => null
+        }
+      };
+      global.React = {
+        useState: (initial) => [initial, () => { }],
+        createElement: (type, props, ...children) => {
+          if (typeof type === 'function') return type({ ...(props || {}), children });
+          return { type, props: props || {}, children };
+        }
+      };
+
+      try {
+        const uiContent = fs.readFileSync(uiPath, 'utf8');
+        eval(uiContent);
+
+        expect(() => {
+          global.HEYS.InsulinWave.UI.renderExpandedSection({
+            avgGI: 0,
+            glycemicLoad: 0,
+            status: 'active',
+            waveHistory: []
+          });
+        }).not.toThrow();
+      } finally {
+        global.React = originalReact;
+        if (originalDocument === undefined) delete global.document;
+        else global.document = originalDocument;
+        if (originalUI === undefined) delete global.HEYS.InsulinWave.UI;
+        else global.HEYS.InsulinWave.UI = originalUI;
+      }
     });
   });
 });

@@ -29,6 +29,12 @@
   const renderWaveChart = Graph?.renderWaveChart;
   const NDTE = HEYS.InsulinWave?.NDTE;
   const renderNDTEBadge = NDTE?.renderNDTEBadge;
+  const DEFAULT_GI_CATEGORY = {
+    id: 'medium',
+    color: '#eab308',
+    text: 'Средний ГИ',
+    desc: 'нормальная'
+  };
 
   const formatLipolysisTime = (minutes) => {
     if (minutes < 60) return `${minutes} мин`;
@@ -999,7 +1005,7 @@
 
     const countdown = formatCountdown(remainingMinutes, seconds);
 
-    // При липолизе: большой зелёный блок с таймером жиросжигания
+    // Low-wave state: show timing without fat-burning promises.
     if (isLipolysis) {
       return React.createElement('div', {
         className: 'insulin-wave-progress-card',
@@ -1014,7 +1020,7 @@
       },
         React.createElement('div', {
           style: { fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', fontWeight: '500' }
-        }, '🔥 Жиросжигание активно'),
+        }, 'Низкая волна сейчас'),
         React.createElement('div', {
           style: {
             fontSize: '36px',
@@ -1043,7 +1049,7 @@
       },
         React.createElement('div', {
           style: { fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', fontWeight: '500' }
-        }, '⏱ Жиросжигание начнётся через'),
+        }, 'До низкой волны примерно'),
         renderWaveImpactChips(data),
         // Большие цифры таймера
         React.createElement('div', {
@@ -1229,7 +1235,11 @@
   // === МИНИМАЛИСТИЧНЫЙ EXPANDED v2 (React Component) ===
   const ExpandedSectionComponent = ({ data }) => {
     const [expandedMetric, setExpandedMetric] = React.useState('wave'); // 'wave' | 'gi' | 'gl' | null — волна раскрыта по умолчанию
-    const giCat = data.giCategory;
+    const giCat = data?.giCategory || DEFAULT_GI_CATEGORY;
+    const waveHoursValue = Number(data?.insulinWaveHours);
+    const waveHoursLabel = Number.isFinite(waveHoursValue)
+      ? `${Math.round(waveHoursValue * 10) / 10}ч`
+      : '—';
 
     const isDark = typeof document !== 'undefined' &&
       document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1373,7 +1383,7 @@
             formula: formula,
             result: `= ${waveHours}ч`,
             items: modifiers.map(m => ({ label: `${m.icon} ${m.name}`, value: m.value, desc: m.desc })),
-            desc: 'Время, пока инсулин высокий и жир не сжигается'
+            desc: 'Время, пока инсулиновая волна остаётся высокой'
           };
         }
         case 'gi':
@@ -1424,7 +1434,7 @@
           onClick: () => toggleMetric('wave')
         },
           React.createElement('div', { style: metricValueStyle },
-            `${Math.round(data.insulinWaveHours * 10) / 10}ч`
+            waveHoursLabel
           ),
           React.createElement('div', { style: metricLabelStyle }, 'волна ⓘ')
         ),
@@ -1579,9 +1589,9 @@
                   data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626')
           }
         },
-          data.gapQuality === 'excellent' ? '✓ Отлично!' :
-            data.gapQuality === 'good' ? '👍 Хорошо' :
-              data.gapQuality === 'moderate' ? '→ Можно лучше' : '⚠️ Слишком часто'
+          data.gapQuality === 'excellent' ? 'Спокойный ритм' :
+            data.gapQuality === 'good' ? 'Ритм ок' :
+              data.gapQuality === 'moderate' ? 'Близко по времени' : 'Волны перекрываются'
         )
       ),
 
@@ -1605,7 +1615,7 @@
               : (isDark ? '#94a3b8' : '#475569'),
             marginBottom: '6px'
           }
-        }, data.status === 'lipolysis' ? '🔥 Жиросжигание' : '💡 Сейчас'),
+        }, data.status === 'lipolysis' ? 'Низкая волна' : 'Сейчас'),
         React.createElement('div', {
           style: {
             fontSize: '14px',
@@ -1614,8 +1624,8 @@
           }
         },
           data.status === 'lipolysis'
-            ? 'Каждая минута без еды = сжигание жира'
-            : 'Инсулин высокий → жир запасается'
+            ? 'Это спокойный промежуток между приёмами. Решение о еде зависит от голода, риска и восстановления.'
+            : 'Еда ещё может обрабатываться. Не делай вывод по волне без контекста.'
         ),
         // Подсказка
         React.createElement('div', {
@@ -1628,8 +1638,8 @@
             flexWrap: 'wrap'
           }
         },
-          React.createElement('span', null, '💧 Вода ок'),
-          data.status !== 'lipolysis' && React.createElement('span', null, '🚫 Еда продлит волну')
+          React.createElement('span', null, 'Вода ок'),
+          data.status !== 'lipolysis' && React.createElement('span', null, 'Еда решается по контексту')
         )
       ),
 

@@ -9,7 +9,7 @@
     const heys = HEYS || window.HEYS || {};
     const IW = heys.InsulinWave;
     const d = insulinWaveData;
-    const hasFatBurning = d.fatBurningWindowMin > 0;
+    const hasLowWaveGap = d.fatBurningWindowMin > 0;
     const stillActive = d.fatBurningStillActive || false;
 
     const formatDur = function (min) {
@@ -20,24 +20,24 @@
       return m + ' мин';
     };
 
-    // Рекорд
+    // Historical best gap, kept as data but not framed as a fasting achievement.
     var recordMin = d.lipolysisRecord?.minutes || 0;
     var isRecord = d.isRecord;
 
     // Результат дня — оценка
     var scoreBg, scoreColor, scoreEmoji, scoreLabel;
     if (stillActive) {
-      scoreBg = 'rgba(34, 197, 94, 0.15)'; scoreColor = '#16a34a'; scoreEmoji = '🔥'; scoreLabel = 'Липолиз ещё идёт — держись!';
-    } else if (!hasFatBurning) {
-      scoreBg = 'rgba(239, 68, 68, 0.1)'; scoreColor = '#dc2626'; scoreEmoji = '😔'; scoreLabel = 'Без жиросжигания';
+      scoreBg = 'rgba(34, 197, 94, 0.15)'; scoreColor = '#16a34a'; scoreEmoji = '🌿'; scoreLabel = 'Низкая волна продолжается';
+    } else if (!hasLowWaveGap) {
+      scoreBg = 'rgba(239, 68, 68, 0.1)'; scoreColor = '#dc2626'; scoreEmoji = '📊'; scoreLabel = 'Волны перекрывали день';
     } else if (d.fatBurningWindowMin >= 8 * 60) {
-      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#16a34a'; scoreEmoji = '🌟'; scoreLabel = 'Отличный результат!';
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#16a34a'; scoreEmoji = '🌿'; scoreLabel = 'Длинный спокойный промежуток';
     } else if (d.fatBurningWindowMin >= 5 * 60) {
-      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#22c55e'; scoreEmoji = '👍'; scoreLabel = 'Хороший результат';
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#22c55e'; scoreEmoji = '🌿'; scoreLabel = 'Умеренный промежуток';
     } else if (d.fatBurningWindowMin >= 3 * 60) {
-      scoreBg = 'rgba(234, 179, 8, 0.1)'; scoreColor = '#ca8a04'; scoreEmoji = '👌'; scoreLabel = 'Нормально';
+      scoreBg = 'rgba(234, 179, 8, 0.1)'; scoreColor = '#ca8a04'; scoreEmoji = '⏱'; scoreLabel = 'Короткий промежуток';
     } else {
-      scoreBg = 'rgba(249, 115, 22, 0.1)'; scoreColor = '#ea580c'; scoreEmoji = '💡'; scoreLabel = 'Можно лучше';
+      scoreBg = 'rgba(249, 115, 22, 0.1)'; scoreColor = '#ea580c'; scoreEmoji = '💡'; scoreLabel = 'Еда была близко по времени';
     }
 
     // История волн для прошлого дня (без маркера "Сейчас")
@@ -95,9 +95,9 @@
         // Header
         React.createElement('div', { className: 'insulin-wave-header' },
           React.createElement('div', { className: 'insulin-wave-left' },
-            React.createElement('span', { className: 'insulin-wave-icon' }, hasFatBurning ? '🔥' : '📊'),
+            React.createElement('span', { className: 'insulin-wave-icon' }, hasLowWaveGap ? '🌿' : '📊'),
             React.createElement('span', { className: 'insulin-wave-label' },
-              stillActive ? 'Жир сжигается!' : hasFatBurning ? 'Жир сжигался' : 'Инсулиновая волна'
+              stillActive ? 'Низкая волна сейчас' : hasLowWaveGap ? 'Промежуток низкой волны' : 'Инсулиновая волна'
             ),
             React.createElement('span', { style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } },
               insulinExpanded ? '▲' : '▼'
@@ -111,7 +111,7 @@
             className: 'insulin-wave-bar',
             style: {
               width: '100%',
-              background: hasFatBurning
+              background: hasLowWaveGap
                 ? 'linear-gradient(90deg, #22c55e, #10b981, #059669)'
                 : 'linear-gradient(90deg, #94a3b8, #cbd5e1)',
               height: '28px',
@@ -126,14 +126,14 @@
               textShadow: '0 1px 3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', zIndex: 2
             }
           },
-            hasFatBurning
+            hasLowWaveGap
               ? React.createElement(React.Fragment, null,
                 React.createElement('span', null, formatDur(d.fatBurningWindowMin)),
                 React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } },
-                  stillActive ? 'и продолжается!' : 'жиросжигание'
+                  stillActive ? 'промежуток продолжается' : 'низкая волна'
                 )
               )
-              : React.createElement('span', { style: { fontSize: '12px', fontWeight: '600' } }, 'Весь день под инсулином')
+              : React.createElement('span', { style: { fontSize: '12px', fontWeight: '600' } }, 'Волны перекрывали день')
           )
         ),
 
@@ -150,7 +150,7 @@
         ),
 
         // Статистика: окно, kcal, рекорд
-        hasFatBurning && React.createElement('div', {
+        hasLowWaveGap && React.createElement('div', {
           className: 'lipolysis-stats',
           style: {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -168,18 +168,11 @@
                 : (d.endTime || '') + ' → утро'
             )
           ),
-          // Kcal
-          d.fatBurningKcal > 0 && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' } },
-            React.createElement('span', null, '💪'),
-            React.createElement('span', { style: { fontWeight: '600' } },
-              '~' + d.fatBurningKcal + ' ккал'
-            )
-          ),
-          // Рекорд
+          // Best historical gap, not a fasting streak or achievement prompt.
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: isRecord ? '#f59e0b' : '#64748b' } },
-            React.createElement('span', null, isRecord ? '🏆' : '🎯'),
+            React.createElement('span', null, '⏱'),
             React.createElement('span', { style: { fontWeight: isRecord ? '700' : '500' } },
-              isRecord ? 'Рекорд!' : 'Рек: ' + formatDur(recordMin)
+              isRecord ? 'Самый длинный промежуток' : 'История: ' + formatDur(recordMin)
             )
           )
         ),
@@ -224,7 +217,7 @@
     if (!insulinWaveData) return null;
     if (isMobile && mobileSubTab !== 'diary') return null;
 
-    // 📅 Прошлый день — показываем итоги жиросжигания
+    // Past day: show low-wave timing without fasting or fat-burning claims.
     if (insulinWaveData.isPastDay) {
       return _renderPastDayIndicator({ React, insulinWaveData, insulinExpanded, setInsulinExpanded, HEYS });
     }
@@ -294,7 +287,7 @@
           }
         }),
         !isLipolysis && React.createElement('div', { className: 'insulin-wave-animation' }),
-        // При липолизе: крупный таймер 🔥
+        // При низкой волне: крупный таймер промежутка
         isLipolysis ? React.createElement('div', {
           className: 'lipolysis-timer-display',
           style: {
@@ -305,9 +298,9 @@
           }
         },
           React.createElement('span', null, formatLipolysisTime(lipolysisMinutes)),
-          React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } }, 'жиросжигание')
+          React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } }, 'низкая волна')
         )
-          // При активной волне: время до липолиза
+          // При активной волне: время до низкой волны
           : React.createElement('div', {
             style: {
               position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
@@ -317,7 +310,7 @@
             }
           },
             React.createElement('span', { style: { fontSize: '12px' } }, '⏱'),
-            React.createElement('span', null, 'до липолиза: ' + formatRemaining(remainingMinutes))
+            React.createElement('span', null, 'до низкой волны: ' + formatRemaining(remainingMinutes))
           )
       );
     };
@@ -518,7 +511,7 @@
               }
             }, `~${insulinLevel.level} µЕд/мл • ${insulinLevel.desc}`),
 
-            // Подсказка о жиросжигании
+            // Neutral low-wave estimate
             insulinLevel.lipolysisPct < 100 && React.createElement('div', {
               style: {
                 fontSize: '11px',
@@ -526,7 +519,7 @@
                 textAlign: 'center',
                 marginTop: '4px'
               }
-            }, `Жиросжигание: ~${insulinLevel.lipolysisPct}%`)
+            }, `Низкая волна: ~${insulinLevel.lipolysisPct}%`)
           );
         })(),
 
@@ -578,11 +571,11 @@
               color: insulinWaveData.gapQuality === 'excellent' ? '#166534' : insulinWaveData.gapQuality === 'good' ? '#854d0e' : insulinWaveData.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
             }
           },
-            insulinWaveData.gapQuality === 'excellent' ? '🌟 Отлично! Выдерживаешь оптимальные промежутки' :
-              insulinWaveData.gapQuality === 'good' ? '👍 Хорошо! Почти идеальные промежутки' :
-                insulinWaveData.gapQuality === 'moderate' ? '😐 Можно лучше. Попробуй увеличить gap' :
-                  insulinWaveData.gapQuality === 'needs-work' ? '⚠️ Ешь слишком часто. Дай организму переварить' :
-                    '📈 Продолжай вести дневник для статистики'
+            insulinWaveData.gapQuality === 'excellent' ? 'Ритм сегодня спокойный' :
+              insulinWaveData.gapQuality === 'good' ? 'Ритм близок к спокойному' :
+                insulinWaveData.gapQuality === 'moderate' ? 'Приёмы идут близко по времени' :
+                  insulinWaveData.gapQuality === 'needs-work' ? 'Волны часто перекрываются' :
+                    'Данных пока мало'
           )
         ),
 
@@ -621,7 +614,7 @@
             React.createElement('div', { className: 'insulin-wave-left' },
               React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
               React.createElement('span', { className: 'insulin-wave-label' },
-                insulinWaveData.status === 'lipolysis' ? 'Липолиз активен!' : 'Инсулиновая волна'
+                insulinWaveData.status === 'lipolysis' ? 'Низкая волна' : 'Инсулиновая волна'
               ),
               // Expand indicator
               React.createElement('span', {
@@ -694,7 +687,7 @@
           // Подсказка
           insulinExpanded && insulinWaveData.subtext && React.createElement('div', { className: 'insulin-wave-suggestion' }, insulinWaveData.subtext),
 
-          // 🏆 При липолизе: рекорд + streak + ккал
+          // При низкой волне: показываем длительность без рекордов, streaks и kcal-обещаний.
           insulinExpanded && insulinWaveData.status === 'lipolysis' && React.createElement('div', {
             className: 'lipolysis-stats',
             style: {
@@ -709,40 +702,17 @@
               gap: '8px'
             }
           },
-            // Рекорд
             React.createElement('div', {
               style: {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                color: insulinWaveData.isNewRecord ? '#f59e0b' : '#64748b'
+                color: '#64748b'
               }
             },
-              React.createElement('span', null, insulinWaveData.isNewRecord ? '🏆' : '🎯'),
-              React.createElement('span', { style: { fontWeight: insulinWaveData.isNewRecord ? '700' : '500' } },
-                insulinWaveData.isNewRecord
-                  ? 'Новый рекорд!'
-                  : 'Рекорд: ' + formatLipolysisTime(insulinWaveData.lipolysisRecord?.minutes || 0)
-              )
-            ),
-            // Streak
-            insulinWaveData.lipolysisStreak?.current > 0 && React.createElement('div', {
-              style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#22c55e' }
-            },
-              React.createElement('span', null, '🔥'),
+              React.createElement('span', null, '⏱'),
               React.createElement('span', { style: { fontWeight: '600' } },
-                insulinWaveData.lipolysisStreak.current + ' ' +
-                (insulinWaveData.lipolysisStreak.current === 1 ? 'день' :
-                  insulinWaveData.lipolysisStreak.current < 5 ? 'дня' : 'дней')
-              )
-            ),
-            // Примерно сожжённые ккал
-            insulinWaveData.lipolysisKcal > 0 && React.createElement('div', {
-              style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' }
-            },
-              React.createElement('span', null, '💪'),
-              React.createElement('span', { style: { fontWeight: '600' } },
-                '~' + insulinWaveData.lipolysisKcal + ' ккал'
+                'Промежуток: ' + formatLipolysisTime(insulinWaveData.lipolysisMinutes || 0)
               )
             )
           ),
@@ -768,7 +738,7 @@
               }, insulinWaveData.autophagy.label),
               React.createElement('div', {
                 style: { fontSize: '11px', color: '#64748b' }
-              }, 'Клеточное очищение • ' + Math.round(insulinWaveData.currentFastingHours || 0) + 'ч голода')
+              }, 'Долгая пауза без еды • ' + Math.round(insulinWaveData.currentFastingHours || 0) + 'ч')
             ),
             // Прогресс-бар внутри фазы
             React.createElement('div', {

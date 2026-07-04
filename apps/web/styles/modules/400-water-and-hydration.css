@@ -904,8 +904,10 @@ body.widgets-edit-mode .fab-group .water-fab {
 
 body.planning-tab-active .fab-group .meal-fab,
 body.planning-tab-active .fab-group .water-fab,
+body.planning-tab-active .fab-group .hunger-energy-fab,
 body.planning-tab-active .water-fab,
-body.planning-tab-active .meal-fab {
+body.planning-tab-active .meal-fab,
+body.planning-tab-active .hunger-energy-fab {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;

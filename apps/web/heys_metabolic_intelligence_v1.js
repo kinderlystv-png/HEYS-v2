@@ -625,7 +625,7 @@
             nextPhase: null,
             timeToLipolysis: 0,
             isLipolysis: true,
-            details: 'Липолиз активен — жиросжигание'
+            details: 'Низкая волна активна'
           };
         } else if (waveData) {
           const hoursRemaining = (waveData.remaining || 0) / 60;
@@ -639,7 +639,7 @@
             nextPhase: phase === 'anabolic' ? 'transitional' : 'catabolic',
             timeToLipolysis: Math.max(0, hoursRemaining),
             isLipolysis: false,
-            details: `До липолиза: ${Math.round(waveData.remaining || 0)} мин`
+            details: `До низкой волны: ${Math.round(waveData.remaining || 0)} мин`
           };
         }
       } catch (e) {
@@ -689,8 +689,8 @@
       timeToLipolysis,
       isLipolysis: hoursSinceLastMeal >= 5,
       details: hoursSinceLastMeal >= 5
-        ? 'Липолиз активен'
-        : `До липолиза: ${Math.round(timeToLipolysis * 60)} мин`
+        ? 'Низкая волна активна'
+        : `До низкой волны: ${Math.round(timeToLipolysis * 60)} мин`
     };
   }
 
@@ -1141,11 +1141,11 @@
     // Метаболическая фаза
     if (metabolicPhase.isLipolysis) {
       steps.push({
-        id: 'extend_lipolysis',
-        label: 'Продли липолиз',
+        id: 'low_wave_context',
+        label: 'Оцени состояние перед едой',
         etaMin: null,
-        expectedEffect: 'Максимум жиросжигания',
-        why: 'Каждая минута без еды = сжигание жира',
+        expectedEffect: 'Решение по голоду, риску и восстановлению',
+        why: 'Низкая волна сама по себе не означает, что еду нужно откладывать',
         priority: 3
       });
     }

@@ -385,7 +385,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 reportsFullscreenModal,
 
-                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && !offlineColdStart && React.createElement('div', {
+                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement('div', {
                     className: 'fab-group',
                     id: 'tour-fab-buttons'
                 },
@@ -400,7 +400,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     React.createElement('button', {
                         className: 'meal-fab',
                         onClick: () => {
-                            if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
+                            if (mobileSubTab !== 'diary' && window.HEYS?.App?.setTab) {
                                 window.HEYS.App.setTab('diary');
                                 setTimeout(() => {
                                     const heading = document.getElementById('diary-heading');
@@ -419,6 +419,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         },
                         'aria-label': 'Добавить приём пищи'
                     }, '🍽️'),
+                    window.HEYS?.HungerEnergyStatusModal?.FabButton
+                        ? React.createElement(window.HEYS.HungerEnergyStatusModal.FabButton, {
+                            key: 'hunger-fab',
+                            context: {
+                                source: 'day-fab',
+                                date,
+                                day,
+                                prof,
+                                eatenKcal,
+                                optimum,
+                                caloricDebt
+                            }
+                        })
+                        : React.createElement('button', {
+                            className: 'hunger-energy-fab',
+                            onClick: () => window.HEYS?.HungerEnergyStatusModal?.show?.({
+                                source: 'day-fab',
+                                date,
+                                day,
+                                prof,
+                                eatenKcal,
+                                optimum,
+                                caloricDebt
+                            }),
+                            'aria-label': 'Открыть оценку голода'
+                        }, '◒'),
                     window.HEYS?.Messenger?.FabButton
                         ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
                         : React.createElement('button', {

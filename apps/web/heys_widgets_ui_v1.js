@@ -1754,11 +1754,11 @@
       return React.createElement(InsulinWaveOvernightContent, { widget, data, d, isShort });
     }
 
-    // Главный заголовок — что происходит с жиром сейчас
+    // Главный заголовок — нейтральный статус волны без обещаний жиросжигания.
     const mainLabel = isLipolysis
-      ? (isNightTime ? 'Жир сжигается' : 'Жир сжигается')
-      : status === 'decline' ? 'Жир начнёт сжигаться'
-        : 'Жир накапливается';
+      ? (isNightTime ? 'Низкая волна' : 'Низкая волна')
+      : status === 'decline' ? 'Волна снижается'
+        : 'Волна активна';
 
     const mainLabelColor = isLipolysis
       ? '#22c55e'
@@ -1776,7 +1776,7 @@
           : `ещё ${Math.round(remaining)} мин`)
         : '—';
 
-    // Сколько минут уже идёт липолиз (по endTime как времени старта)
+    // Сколько минут уже идёт низкая волна (по endTime как времени старта)
     const calcLipolysisElapsed = (et) => {
       if (!et) return 0;
       const [h, m] = et.split(':').map(Number);
@@ -1789,14 +1789,14 @@
       return diff > 720 ? 0 : diff; // не больше 12ч
     };
     const lipolysisMin = isLipolysis ? calcLipolysisElapsed(endTime) : 0;
-    // ~70 ккал/ч из жира при базовом обмене
+    // Rough energy estimate, kept neutral in UI copy.
     const lipolysisKcal = Math.round(lipolysisMin * 1.15);
 
     const subText = isLipolysis
       ? (lipolysisKcal > 3
-        ? `~${lipolysisKcal} ккал жира сожжено`
-        : (isNightTime ? 'Ночной липолиз' : 'Не ешь — жир уходит'))
-      : (endTime ? `Липолиз начнётся в ${endTime}` : 'Ждём снижения инсулина');
+        ? `~${lipolysisKcal} ккал могли идти из запасов`
+        : (isNightTime ? 'Ночная низкая волна' : 'Спокойный промежуток'))
+      : (endTime ? `Низкая волна около ${endTime}` : 'Ждём снижения волны');
     const subTextColor = isLipolysis ? '#22c55e' : '#eab308';
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
@@ -1880,7 +1880,7 @@
         },
           React.createElement('div', {
             style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-          }, 'Жир сжигается'),
+          }, 'Низкая волна'),
           React.createElement('div', {
             style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
           }, durationLabel)
@@ -1894,7 +1894,7 @@
     },
       React.createElement('div', {
         style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-      }, 'Жир сжигается'),
+      }, 'Низкая волна'),
       React.createElement('div', {
         style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
       }, durationLabel),
@@ -1909,12 +1909,12 @@
         }, lipolysisKcal > 0 ? `~${lipolysisKcal} ккал сейчас` : 'Липолиз идёт'),
         recordLabel ? React.createElement('div', {
           style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
-        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+        }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
       )
     );
   }
 
-  // === Past-day insulin wave: итоги жиросжигания ===
+  // === Past-day insulin wave: итоги низкой волны ===
   function InsulinWavePastDayContent({ widget, data, d, isShort }) {
     const windowH = data.fatBurningWindowH || 0;
     const windowM = data.fatBurningWindowM || 0;
@@ -1929,8 +1929,8 @@
       : `${windowM}м`;
 
     const headerText = stillActive
-      ? 'Жир сжигается'
-      : windowMin > 0 ? 'Жир сжигался' : 'Нет окна';
+      ? 'Низкая волна'
+      : windowMin > 0 ? 'Был промежуток' : 'Нет промежутка';
 
     // Рекорд
     const recordMin = record.minutes || 0;
@@ -1985,10 +1985,10 @@
       },
         React.createElement('div', {
           style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
-        }, stillActive ? `~${kcal} ккал и растёт` : kcal > 0 ? `~${kcal} ккал сожжено` : 'Без жиросжигания'),
+        }, stillActive ? `~${kcal} ккал могли идти из запасов` : kcal > 0 ? `~${kcal} ккал из запасов` : 'Без низкой волны'),
         !stillActive && recordLabel ? React.createElement('div', {
           style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
-        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+        }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
       )
     );
   }
@@ -7336,6 +7336,22 @@
             onClick: (e) => handleAddWater(200, e.currentTarget),
             'aria-label': 'Добавить стакан воды'
           }, '🥛'),
+          window.HEYS?.HungerEnergyStatusModal?.FabButton
+            ? React.createElement(window.HEYS.HungerEnergyStatusModal.FabButton, {
+                key: 'hunger-fab',
+                context: {
+                  source: 'widgets-fab',
+                  date: selectedDate || new Date().toISOString().slice(0, 10)
+                }
+              })
+            : React.createElement('button', {
+                className: 'hunger-energy-fab',
+                onClick: () => window.HEYS?.HungerEnergyStatusModal?.show?.({
+                  source: 'widgets-fab',
+                  date: selectedDate || new Date().toISOString().slice(0, 10)
+                }),
+                'aria-label': 'Открыть оценку голода'
+              }, '◒'),
           window.HEYS?.Messenger?.FabButton
             ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
             : React.createElement('button', {

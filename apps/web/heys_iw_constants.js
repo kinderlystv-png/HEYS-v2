@@ -727,8 +727,8 @@
       recommendations.push({
         type: 'fat_burning',
         minutes: fatBurningAt,
-        text: `Жиросжигание начнётся через ${fatBurningAt} мин`,
-        icon: '🔥'
+        text: `Низкая волна ожидается через ${fatBurningAt} мин`,
+        icon: '🌿'
       });
     }
 
@@ -769,7 +769,7 @@
       summary += `Через 1 час: ${p60.label.toLowerCase()}. `;
     }
     if (fatBurningAt) {
-      summary += `Жиросжигание: с ${fatBurningAt} мин.`;
+      summary += `Низкая волна: с ${fatBurningAt} мин.`;
     }
 
     return summary.trim();
@@ -2652,8 +2652,8 @@
       none: { minHours: 0, maxHours: 12, label: 'Пищеварение', color: '#94a3b8', icon: '🍽️' },
       early: { minHours: 12, maxHours: 16, label: 'Низкий инсулин (переход)', color: '#eab308', icon: '⏳' },
       active: { minHours: 16, maxHours: 24, label: 'Кетоз вероятен', color: '#22c55e', icon: '🔄' },
-      deep: { minHours: 24, maxHours: 48, label: 'Углублённый пост', color: '#10b981', icon: '✨' },
-      extended: { minHours: 48, maxHours: Infinity, label: 'Продлённый пост', color: '#3b82f6', icon: '🌟' }
+      deep: { minHours: 24, maxHours: 48, label: 'Долгая пауза без еды', color: '#10b981', icon: '⏱' },
+      extended: { minHours: 48, maxHours: Infinity, label: 'Очень долгая пауза', color: '#3b82f6', icon: '⏱' }
     },
     minHoursToShow: 12,
     // Бонусы как ЭВРИСТИКА (не из RCT). Снижены с +5/+10/+15/+18 до

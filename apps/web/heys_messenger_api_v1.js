@@ -12,6 +12,8 @@
     typeof location !== 'undefined' &&
     /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   const API_URL = isLocalBrowserDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
+  const disableLocalFabUnreadPolling = () =>
+    isLocalBrowserDev && global.__HEYS_ENABLE_LOCAL_MESSENGER_POLLING !== true;
 
   // ── Bearer token (клиент session или JWT куратора, копия из heys_push_v1) ──
   function getBearerToken() {
@@ -368,6 +370,7 @@
 
   function startFabUnreadPolling() {
     if (_fabPolling) return;
+    if (disableLocalFabUnreadPolling()) return;
     if (!getBearerToken()) return;
     _fabPolling = true;
     void refreshFabUnread();
