@@ -486,7 +486,7 @@
     try {
       const next = (Array.isArray(queue) ? queue : []).slice(-MAX_ACK_QUEUE_ITEMS);
       if (next.length === 0) localStorage.removeItem(ACK_QUEUE_KEY);
-      else localStorage.setItem(ACK_QUEUE_KEY, JSON.stringify(next));
+      else HEYS.utils?.lsSet?.(ACK_QUEUE_KEY, JSON.stringify(next));
     } catch (_) {}
   }
 

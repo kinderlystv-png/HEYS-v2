@@ -40,7 +40,7 @@ apps/web/heys_app_auth_init_v1.js:177
 apps/web/heys_app_auth_init_v1.js:90
 apps/web/heys_app_auth_init_v1.js:181
 apps/web/heys_app_auth_init_v1.js:331
-apps/web/heys_app_auth_init_v1.js:362
+apps/web/heys_app_auth_init_v1.js:367
 apps/web/heys_app_auth_init_v1.js:518
 apps/web/heys_app_auth_init_v1.js:657
 apps/web/heys_app_auth_init_v1.js:658
@@ -257,11 +257,11 @@ apps/web/advice/_core.js:3290
 apps/web/heys_planning_chrono_v1.js:3004
 # auth cookie-session hints and bootstrap login writes — intentionally happen
 # before Store/Overlay wrappers are fully available.
-apps/web/heys_app_auth_init_v1.js:385
-apps/web/heys_app_auth_init_v1.js:701
-apps/web/heys_app_auth_init_v1.js:702
-apps/web/heys_app_auth_init_v1.js:704
-apps/web/heys_app_auth_init_v1.js:778
+apps/web/heys_app_auth_init_v1.js:390
+apps/web/heys_app_auth_init_v1.js:706
+apps/web/heys_app_auth_init_v1.js:707
+apps/web/heys_app_auth_init_v1.js:709
+apps/web/heys_app_auth_init_v1.js:783
 apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371

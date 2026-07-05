@@ -44,6 +44,9 @@ function loadBanner({ url = '/' } = {}) {
       getMyCuratorChangelogSince: vi.fn(),
       ackCuratorChangelog: vi.fn().mockResolvedValue({ ok: true }),
     },
+    utils: {
+      lsSet: vi.fn((key, value) => Storage.prototype.setItem.call(window.localStorage, key, value)),
+    },
     ui: {
       switchTab: vi.fn(),
       setSelectedDate: vi.fn(),
