@@ -420,6 +420,17 @@
     return best;
   }
 
+  function getLatestDayUpdatedAt(dateKey) {
+    const candidates = [
+      readDayData(dateKey, null),
+      readDayFromRawLocalStorage(dateKey)
+    ];
+    return candidates.reduce((max, day) => {
+      const updatedAt = Number(day?.updatedAt) || 0;
+      return updatedAt > max ? updatedAt : max;
+    }, 0);
+  }
+
   function getFreshDayData(dateKey) {
     flushDayTabBeforeRead();
     invalidateDayReadCaches(dateKey);
@@ -821,7 +832,7 @@
       ...(dayData.morningActivation || {}),
       ...nextState
     };
-    dayData.updatedAt = Date.now();
+    dayData.updatedAt = Math.max(Date.now(), getLatestDayUpdatedAt(dateKey) + 1);
     saveDayData(dateKey, dayData);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -4505,7 +4516,7 @@
       followupSnoozeUntilMealCount: null,
       replacement: 'first_half_training'
     };
-    dayData.updatedAt = Date.now();
+    dayData.updatedAt = Math.max(Date.now(), getLatestDayUpdatedAt(dateKey) + 1);
     saveDayData(dateKey, dayData);
     notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-replacement');
     if (typeof window !== 'undefined') {
@@ -4744,6 +4755,10 @@
       if (data?.selectedCopyId) {
         persistMorningActivationState(dateKey, { copyId: data.selectedCopyId }, 'morning-routine-save');
       }
+      return {
+        completed: true,
+        affectedKeys: data?.selectedCopyId ? [`heys_dayv2_${dateKey}`] : []
+      };
     },
     xpAction: 'morning_routine_completed'
   });

@@ -124,6 +124,13 @@
     console.error('[HEYS.api] ❌', ...args);
   }
 
+  function isExpectedPassiveSessionAuthFailure(fnName, status, data) {
+    if (status !== 401) return false;
+    if (!['get_subscription_status_by_session', 'get_my_curator_changelog_since'].includes(fnName)) return false;
+    const message = String(data?.error || data?.message || data?.reason || '').toLowerCase();
+    return message.includes('invalid_session') || message.includes('invalid_or_expired_session') || message.includes('no session token');
+  }
+
   /**
    * 🔁 Phase A SWR invalidation: уведомить SW что cache для GET /rest/client_kv_store
    * больше не валиден. Вызывается после успешных write-операций (saveKV / batchSaveKV /
@@ -424,15 +431,23 @@
       const data = await response.json();
 
       if (!response.ok) {
-        try {
-          console.error('[HEYS.api] ❌ RPC failed', {
+        if (!isExpectedPassiveSessionAuthFailure(fnName, response.status, data)) {
+          try {
+            console.error('[HEYS.api] ❌ RPC failed', {
+              fn: fnName,
+              code: response.status,
+              message: data?.error || 'RPC error',
+              details: data?.details,
+              rawKeys: data ? Object.keys(data) : []
+            });
+          } catch (_) { }
+        } else {
+          log('RPC passive session unavailable', {
             fn: fnName,
             code: response.status,
-            message: data?.error || 'RPC error',
-            details: data?.details,
-            rawKeys: data ? Object.keys(data) : []
+            message: data?.error || data?.message || data?.reason || 'RPC error'
           });
-        } catch (_) { }
+        }
         return {
           data: null,
           error: {

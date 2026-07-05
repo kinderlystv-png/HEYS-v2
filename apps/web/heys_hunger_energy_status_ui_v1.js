@@ -11,6 +11,7 @@
   const EVENT_SCHEMA_VERSION = 1;
   const MAX_EVENTS = 120;
   const TREND_WINDOW_MIN = 360;
+  const HUNGER_TIMELINE_DAY_START_HOUR = 6;
   const DEFAULT_DRAFT = { hungerLevel: 5, hungerVisual: 5, hungerTrend: 'unknown' };
 
   let modalRoot = null;
@@ -193,6 +194,15 @@
     }
   }
 
+  function hasActiveMorningCheckin() {
+    try {
+      const status = HEYS.MorningCheckinDebug?.getStatus?.();
+      return status && status.sessionDone !== true && ['open', 'in_progress', 'failed'].includes(status.state);
+    } catch (_) {
+      return false;
+    }
+  }
+
   function scheduleAutoOpen(reason, attempt = 0) {
     if (autoOpenTimer) clearTimeout(autoOpenTimer);
     autoOpenTimer = setTimeout(() => {
@@ -205,6 +215,10 @@
       if (!readAutoOpenEnabled()) return;
       if (!hasAppShellMounted() && attempt < 24) {
         scheduleAutoOpen(reason, attempt + 1);
+        return;
+      }
+      if (hasActiveMorningCheckin()) {
+        if (attempt < 24) scheduleAutoOpen(reason, attempt + 1);
         return;
       }
       if (global.document?.body?.classList?.contains('hunger-energy-modal-open')) return;
@@ -226,10 +240,12 @@
     const onProgress = (event) => {
       if (event?.detail?.phase === 'ready') scheduleAutoOpen('app-ready');
     };
+    const onCheckinComplete = () => scheduleAutoOpen('checkin-complete');
 
     global.addEventListener?.('heys:client-changed', onClientReady);
     global.addEventListener?.('heysSyncCompleted', onSyncCompleted);
     global.addEventListener?.('heys:progress', onProgress);
+    global.addEventListener?.('heys:checkin-complete', onCheckinComplete);
     setTimeout(() => scheduleAutoOpen('boot'), 0);
   }
 
@@ -285,6 +301,26 @@
     return row;
   }
 
+  function updateEvent(id, patchOrUpdater) {
+    if (!id) return null;
+    let updated = null;
+    const next = readEvents().map((row) => {
+      if (row?.id !== id) return row;
+      const patch = typeof patchOrUpdater === 'function' ? patchOrUpdater(row) : patchOrUpdater;
+      updated = normalizeEventRow({
+        ...row,
+        ...(patch || {}),
+        id: row.id,
+        updatedAt: patch?.updatedAt || nowIso(),
+        syncStatus: 'queued'
+      });
+      return updated;
+    });
+    if (!updated) return null;
+    writeEvents(next);
+    return updated;
+  }
+
   function minutesSince(dateTime) {
     if (!dateTime) return null;
     const t = Date.parse(dateTime);
@@ -316,6 +352,23 @@
     const dayOffset = Math.floor(rawHour / 24);
     const hour = rawHour % 24;
     return addDays(date, dayOffset) + 'T' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00';
+  }
+
+  function parseClockMinutes(value) {
+    const match = /^(\d{1,2}):(\d{2})/.exec(String(value || ''));
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return hours * 60 + minutes;
+  }
+
+  function sleepTimeToDateTime(date, value, dayOffset) {
+    const minutes = parseClockMinutes(value);
+    if (minutes == null) return null;
+    const hour = Math.floor(minutes / 60) % 24;
+    const minute = minutes % 60;
+    return addDays(date, dayOffset || 0) + 'T' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00';
   }
 
   function getOptionDay(opts) {
@@ -413,6 +466,11 @@
     return Number.isFinite(t) ? t : Date.parse(todayKey() + 'T00:00:00');
   }
 
+  function hungerTimelineStartTs(date) {
+    const t = Date.parse(String(date || todayKey()) + 'T' + String(HUNGER_TIMELINE_DAY_START_HOUR).padStart(2, '0') + ':00:00');
+    return Number.isFinite(t) ? t : dayStartTs(date);
+  }
+
   function collectMealTimeline(date, primaryDay) {
     const rows = [];
     const seen = new Set();
@@ -443,30 +501,104 @@
       if (!Number.isFinite(t) || !Number.isFinite(hungerLevel)) return null;
       return {
         type: 'hunger',
+        id: row.id,
         t,
         level: Math.max(1, Math.min(10, Math.round(hungerLevel))),
+        recordedAt: row.recordedAt || row.createdAt,
         label: 'голод ' + Math.round(hungerLevel) + '/10 ' + formatShortTime(t)
       };
     }).filter(Boolean).sort((a, b) => a.t - b.t);
   }
 
-  function buildSparkTimeline({ date, day, draft }) {
+  function buildTimelineTicks(scaleStart, scaleEnd, xOf) {
+    const spanHours = Math.max(1, (scaleEnd - scaleStart) / (60 * 60 * 1000));
+    const intervalHours = spanHours > 12 ? 3 : 2;
+    const tick = new Date(scaleStart);
+    if (!Number.isFinite(tick.getTime())) return [];
+    tick.setMinutes(0, 0, 0);
+    const remainder = tick.getHours() % intervalHours;
+    if (remainder !== 0 || tick.getTime() < scaleStart) {
+      tick.setHours(tick.getHours() + ((intervalHours - remainder) || intervalHours));
+    }
+    const rows = [];
+    while (tick.getTime() <= scaleEnd) {
+      const t = tick.getTime();
+      if (t >= scaleStart) rows.push({ t, x: Math.max(18, Math.min(302, xOf(t))), label: formatShortTime(t) });
+      tick.setHours(tick.getHours() + intervalHours);
+      if (rows.length > 12) break;
+    }
+    return rows;
+  }
+
+  function resolveSleepInterval(date, primaryDay) {
+    const candidate = getRecentDayCandidates(date, primaryDay)
+      .filter((entry) => entry.date === date)
+      .map((entry) => entry.day)
+      .find((day) => parseClockMinutes(day?.sleepStart) != null && parseClockMinutes(day?.sleepEnd) != null);
+    if (!candidate) return null;
+    const startMin = parseClockMinutes(candidate.sleepStart);
+    const endMin = parseClockMinutes(candidate.sleepEnd);
+    const crossesMidnight = startMin > endMin;
+    const startAt = sleepTimeToDateTime(date, candidate.sleepStart, crossesMidnight ? -1 : 0);
+    const endAt = sleepTimeToDateTime(date, candidate.sleepEnd, 0);
+    const start = timestampOf(startAt);
+    const end = timestampOf(endAt);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    return { start, end, source: 'sleep', sleepStart: candidate.sleepStart, sleepEnd: candidate.sleepEnd };
+  }
+
+  function buildNightBands(sleepInterval, scaleStart, scaleEnd, xOf) {
+    if (!sleepInterval) return [];
+    const start = Math.max(sleepInterval.start, scaleStart);
+    const end = Math.min(sleepInterval.end, scaleEnd);
+    if (end <= start) return [];
+    const x1 = Math.max(18, Math.min(302, xOf(start)));
+    const x2 = Math.max(18, Math.min(302, xOf(end)));
+    if (x2 - x1 < 3) return [];
+    return [{ x: x1, width: x2 - x1, source: sleepInterval.source }];
+  }
+
+  function buildSparkLinePoints(hungerPoints, meals) {
+    if (hungerPoints.length < 2) return hungerPoints;
+    const mealMarkers = safeArray(meals).slice().sort((a, b) => a.t - b.t);
+    const rows = [hungerPoints[0]];
+    for (let index = 1; index < hungerPoints.length; index += 1) {
+      const prev = hungerPoints[index - 1];
+      const next = hungerPoints[index];
+      const meal = mealMarkers.find((item) => item.t > prev.t && item.t < next.t);
+      if (meal && Math.abs(meal.x - prev.x) > 1 && Math.abs(next.x - meal.x) > 1) {
+        rows.push({
+          type: 'meal-hold',
+          t: meal.t,
+          level: prev.level,
+          x: meal.x,
+          y: prev.y,
+          color: prev.color
+        });
+      }
+      rows.push(next);
+    }
+    return rows;
+  }
+
+  function buildSparkTimeline({ date, day, draft, editTarget }) {
     const now = Date.now();
     const timelineDate = date || todayKey();
-    const start = dayStartTs(timelineDate);
-    const yesterday = addDays(timelineDate, -1);
     const meals = collectMealTimeline(date, day);
     const hunger = collectHungerTimeline();
     const todayMeals = meals.filter((item) => localDateKeyFromTs(item.t) === timelineDate && item.t <= now);
-    const yesterdayLastMeal = meals
-      .filter((item) => localDateKeyFromTs(item.t) === yesterday && item.t < start)
+    const lastTodayMeal = todayMeals.slice().sort((a, b) => b.t - a.t)[0];
+    const lastMeal = lastTodayMeal || meals
+      .filter((item) => item.t <= now)
       .sort((a, b) => b.t - a.t)[0];
-    const visibleMeals = todayMeals.length > 0 ? todayMeals : (yesterdayLastMeal ? [yesterdayLastMeal] : []);
-    const visibleHunger = hunger.filter((item) => localDateKeyFromTs(item.t) === timelineDate && item.t <= now);
+    const shouldShowSleepContext = !lastTodayMeal;
+    const visibleMeals = lastMeal ? [lastMeal] : [];
+    const hungerStart = hungerTimelineStartTs(timelineDate);
+    const visibleHunger = hunger.filter((item) => localDateKeyFromTs(item.t) === timelineDate && item.t >= hungerStart && item.t <= now);
     const previewLevel = Math.max(1, Math.min(10, Math.round(Number(draft?.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
     const preview = { type: 'preview', t: now, level: previewLevel, label: 'сейчас ' + previewLevel + '/10' };
-    const hungerPoints = visibleHunger.concat(preview).sort((a, b) => a.t - b.t);
-    const visibleItems = hungerPoints.length > 1 ? hungerPoints : visibleMeals.concat(hungerPoints);
+    const hungerPoints = visibleHunger.concat(editTarget?.id ? [] : [preview]).sort((a, b) => a.t - b.t);
+    const visibleItems = visibleMeals.concat(hungerPoints);
     const firstVisible = Math.min(...visibleItems.map((item) => item.t));
     const lastVisible = Math.max(...visibleItems.map((item) => item.t));
     const span = Math.max(1, lastVisible - firstVisible);
@@ -476,14 +608,38 @@
     const range = Math.max(1, scaleEnd - scaleStart);
     const xOf = (t) => 18 + ((t - scaleStart) / range) * 284;
     const yOf = (level) => 10 + ((10 - level) / 9) * 48;
-    const path = hungerPoints.map((point, index) => {
-      const x = Math.max(18, Math.min(302, xOf(point.t))).toFixed(1);
-      const y = yOf(point.level).toFixed(1);
-      return (index ? 'L' : 'M') + x + ' ' + y;
-    }).join(' ');
+    const sleepInterval = shouldShowSleepContext ? resolveSleepInterval(timelineDate, day) : null;
+    const coloredHungerPoints = hungerPoints.map((item) => {
+      const isEditing = !!editTarget?.id && item.id === editTarget.id;
+      const level = isEditing
+        ? Math.max(1, Math.min(10, Math.round(Number(editTarget.hungerLevel) || item.level)))
+        : item.level;
+      const x = Math.max(18, Math.min(302, xOf(item.t)));
+      return {
+        ...item,
+        level,
+        type: isEditing ? 'edit-preview' : item.type,
+        isEditing,
+        x,
+        y: yOf(level),
+        color: getHungerTone(level).main
+      };
+    });
+    const coloredMeals = visibleMeals.map((item) => ({ ...item, x: Math.max(18, Math.min(302, xOf(item.t))) }));
+    const linePoints = buildSparkLinePoints(coloredHungerPoints, coloredMeals);
+    const path = linePoints.length > 1 ? linePoints.map((point, index) => {
+      return (index ? 'L' : 'M') + point.x.toFixed(1) + ' ' + point.y.toFixed(1);
+    }).join(' ') : '';
     return {
-      meals: visibleMeals.map((item) => ({ ...item, x: Math.max(18, Math.min(302, xOf(item.t))) })),
-      hungerPoints: hungerPoints.map((item) => ({ ...item, x: Math.max(18, Math.min(302, xOf(item.t))), y: yOf(item.level) })),
+      meals: coloredMeals,
+      hungerPoints: coloredHungerPoints,
+      lineStops: linePoints.map((item) => ({
+        offset: Math.max(0, Math.min(100, ((item.x - 18) / 284) * 100)),
+        color: item.color
+      })),
+      ticks: buildTimelineTicks(scaleStart, scaleEnd, xOf),
+      nightBands: buildNightBands(sleepInterval, scaleStart, scaleEnd, xOf),
+      sleepInterval,
       path,
       hasHistory: visibleMeals.length > 0 || visibleHunger.length > 0
     };
@@ -931,15 +1087,54 @@
     );
   }
 
-  function TimelineSpark({ date, day, draft, hint }) {
-    const data = buildSparkTimeline({ date, day, draft });
+  function TimelineSpark({ date, day, draft, hint, editingEventId, onEditPoint }) {
+    const data = buildSparkTimeline({
+      date,
+      day,
+      draft,
+      editTarget: editingEventId ? { id: editingEventId, hungerLevel: draft?.hungerLevel } : null
+    });
+    const gradientId = 'hes-hunger-spark-gradient';
+    const canEditPoint = (point) => point?.id && point.type !== 'preview';
+    const handlePointKey = (event, point) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      onEditPoint?.(point);
+    };
     return h('div', {
       className: 'hes-spark',
-      role: 'img',
+      role: onEditPoint ? 'group' : 'img',
       'aria-label': 'Связь прошлых оценок голода и приёмов пищи'
     },
-      h('svg', { className: 'hes-spark__svg', viewBox: '0 0 320 78', focusable: 'false', 'aria-hidden': 'true' },
+      h('svg', {
+        className: 'hes-spark__svg',
+        viewBox: '0 0 320 86',
+        focusable: 'false',
+        'aria-hidden': onEditPoint ? undefined : 'true'
+      },
+        data.lineStops.length > 1 && h('defs', null,
+          h('linearGradient', { id: gradientId, x1: 18, y1: 0, x2: 302, y2: 0, gradientUnits: 'userSpaceOnUse' },
+            data.lineStops.map((stop, index) => h('stop', {
+              key: 'stop-' + index,
+              offset: stop.offset.toFixed(1) + '%',
+              stopColor: stop.color
+            }))
+          )
+        ),
+        data.nightBands.map((band, index) => h('rect', {
+          key: 'night-' + index,
+          className: 'hes-spark__night',
+          x: band.x,
+          y: 18,
+          width: band.width,
+          height: 46,
+          rx: 7
+        })),
         h('line', { className: 'hes-spark__axis', x1: 18, y1: 64, x2: 302, y2: 64 }),
+        data.ticks.map((tick, index) => h('g', { key: 'tick-' + index, className: 'hes-spark__tick' },
+          h('line', { x1: tick.x, y1: 62, x2: tick.x, y2: 67 }),
+          h('text', { x: tick.x, y: 78, textAnchor: 'middle' }, tick.label)
+        )),
         data.meals.map((meal, index) => h('line', {
           key: 'meal-' + index,
           className: 'hes-spark__meal-line',
@@ -948,21 +1143,52 @@
           x2: meal.x,
           y2: 64
         })),
-        data.path && h('path', { className: 'hes-spark__line', d: data.path }),
-        data.hungerPoints.map((point, index) => h('circle', {
-          key: point.type + '-' + index,
-          className: point.type === 'preview' ? 'hes-spark__point hes-spark__point--preview' : 'hes-spark__point',
-          cx: point.x,
-          cy: point.y,
-          r: point.type === 'preview' ? 6 : 5
-        }))
+        data.path && h('path', { className: 'hes-spark__line', d: data.path, style: { stroke: 'url(#' + gradientId + ')' } }),
+        data.hungerPoints.map((point, index) => {
+          const editable = canEditPoint(point);
+          const className = [
+            'hes-spark__point',
+            point.type === 'preview' ? 'hes-spark__point--preview' : '',
+            editable ? 'is-editable' : '',
+            point.isEditing ? 'is-editing' : ''
+          ].filter(Boolean).join(' ');
+          const visibleCircle = h('circle', {
+            className,
+            cx: point.x,
+            cy: point.y,
+            r: point.type === 'preview' ? 6 : point.isEditing ? 6 : 5,
+            style: point.type === 'preview'
+              ? { stroke: point.color }
+              : { fill: point.color }
+          });
+          if (!editable) return React.cloneElement(visibleCircle, { key: point.type + '-' + index });
+          return h('g', {
+            key: point.id || (point.type + '-' + index),
+            className: 'hes-spark__point-button',
+            role: 'button',
+            tabIndex: 0,
+            'aria-label': 'Изменить оценку голода ' + point.level + '/10, ' + formatShortTime(point.t),
+            onClick: () => onEditPoint?.(point),
+            onKeyDown: (event) => handlePointKey(event, point)
+          },
+            visibleCircle,
+            h('circle', {
+              className: 'hes-spark__point-hit',
+              cx: point.x,
+              cy: point.y,
+              r: 14
+            })
+          );
+        })
       ),
       h('div', { className: 'hes-spark__legend' },
-        h('span', null, h('i', { className: 'hes-spark__legend-dot hes-spark__legend-dot--hunger' }), 'голод'),
-        h('span', null, h('i', { className: 'hes-spark__legend-line hes-spark__legend-line--meal' }), 'еда'),
+        h('span', { className: 'hes-spark__legend-items' },
+          h('span', null, h('i', { className: 'hes-spark__legend-dot hes-spark__legend-dot--hunger' }), 'голод'),
+          h('span', null, h('i', { className: 'hes-spark__legend-line hes-spark__legend-line--meal' }), 'еда')
+        ),
+        hint && h('span', { className: 'hes-spark__hint' }, hint),
         !data.hasHistory && h('span', { className: 'hes-spark__muted' }, 'история появится после записей')
-      ),
-      hint && h('div', { className: 'hes-spark__hint' }, hint)
+      )
     );
   }
 
@@ -1010,7 +1236,7 @@
       if (context?.todayMealCount === 0) return 'Сегодня еда ещё не найдена';
       return null;
     }
-    return 'После последней еды прошло ' + formatShortDuration(hours * 60);
+    return 'с последней еды ' + formatShortDuration(hours * 60);
   }
 
   function getRecommendationTitle(decision) {
@@ -1499,6 +1725,8 @@
     const [isDragging, setIsDragging] = React.useState(false);
     const [outcomeSaved, setOutcomeSaved] = React.useState(null);
     const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(() => readAutoOpenEnabled());
+    const [contextRefreshSeq, setContextRefreshSeq] = React.useState(0);
+    const [editTarget, setEditTarget] = React.useState(null);
     setModalState = setState;
 
     React.useEffect(() => {
@@ -1512,8 +1740,30 @@
       setIsDragging(false);
       setOutcomeSaved(null);
       setAutoOpenEnabledState(readAutoOpenEnabled());
+      setContextRefreshSeq(0);
+      setEditTarget(null);
       return () => document.body.classList.remove('hunger-energy-modal-open');
     }, [state]);
+
+    React.useEffect(() => {
+      if (!state) return undefined;
+      const refresh = () => setContextRefreshSeq((seq) => seq + 1);
+      const timers = [60, 250, 900].map((delay) => setTimeout(refresh, delay));
+      const onProgress = (event) => {
+        if (!event?.detail?.phase || event.detail.phase === 'ready') refresh();
+      };
+      global.addEventListener?.('heysSyncCompleted', refresh);
+      global.addEventListener?.('heys:client-changed', refresh);
+      global.addEventListener?.('heys:hunger-energy-status-updated', refresh);
+      global.addEventListener?.('heys:progress', onProgress);
+      return () => {
+        timers.forEach((timer) => clearTimeout(timer));
+        global.removeEventListener?.('heysSyncCompleted', refresh);
+        global.removeEventListener?.('heys:client-changed', refresh);
+        global.removeEventListener?.('heys:hunger-energy-status-updated', refresh);
+        global.removeEventListener?.('heys:progress', onProgress);
+      };
+    }, [state?._openId]);
 
     React.useEffect(() => {
       const refreshAutoOpen = () => setAutoOpenEnabledState(readAutoOpenEnabled());
@@ -1538,7 +1788,7 @@
     const activeDraft = draft?._openId === stateOpenId
       ? draft
       : { ...(state._initialDraft || DEFAULT_DRAFT), _openId: stateOpenId };
-    const timelineDay = resolveDayData(state);
+    const timelineDay = resolveDayData({ ...state, _contextRefreshSeq: contextRefreshSeq });
     const timelineDate = state.date || timelineDay.date || todayKey();
     const baseContext = buildContextFromDay({ ...state, date: timelineDate, day: timelineDay });
     const context = { ...baseContext, ...contextPatch };
@@ -1551,12 +1801,15 @@
       safetyFlags: activeDraft.safetyFlags
     };
     const previewDecision = HEYS.HungerEnergyStatus.assessHungerEvent(input, context);
-    const requiredInputs = isDragging ? [] : getRequiredInputs(previewDecision, activeDraft);
+    const isEditingEvent = !!editTarget?.id;
+    const requiredInputs = isDragging || isEditingEvent ? [] : getRequiredInputs(previewDecision, activeDraft);
     const hasRequiredInputs = requiredInputs.length > 0;
     const activeDecision = result?.decision || previewDecision;
     const modalMode = result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
     const actionTone = getHungerTone(activeDraft.hungerVisual ?? activeDraft.hungerLevel);
-    const hungerChangeNote = getHungerChangeNote(activeDraft, context);
+    const hungerChangeNote = isEditingEvent
+      ? 'Правка оценки ' + formatShortTime(editTarget.t)
+      : getHungerChangeNote(activeDraft, context);
     const lastMealHint = getLastMealHint(context);
 
     function patchDraft(patch) {
@@ -1581,6 +1834,62 @@
         ...input,
         safetyFlags: Array.isArray(activeDraft.safetyFlags) ? activeDraft.safetyFlags : []
       };
+    }
+
+    function startEditPoint(point) {
+      if (!point?.id) return;
+      const level = Math.max(1, Math.min(10, Math.round(Number(point.level) || DEFAULT_DRAFT.hungerLevel)));
+      setResult(null);
+      setDetailsOpen(false);
+      setCopyDone(false);
+      setOutcomeSaved(null);
+      setContextPatch({});
+      setEditTarget({
+        id: point.id,
+        t: point.t,
+        recordedAt: point.recordedAt,
+        originalLevel: level
+      });
+      setDraft({
+        ...DEFAULT_DRAFT,
+        hungerLevel: level,
+        hungerVisual: level,
+        _openId: stateOpenId
+      });
+    }
+
+    function cancelEditPoint() {
+      setEditTarget(null);
+      setDraft({ ...getInitialDraftForState(state), _openId: stateOpenId });
+      setContextPatch({});
+    }
+
+    function saveEditedPoint() {
+      if (!editTarget?.id) return;
+      const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+      const editedAt = nowIso();
+      updateEvent(editTarget.id, (row) => {
+        const previousLevel = Number(row.hungerLevel ?? row.input?.hungerLevel);
+        return {
+          hungerLevel: level,
+          hungerStatus: HUNGER_STATUS_COPY[level] || null,
+          input: {
+            ...(row.input || {}),
+            hungerLevel: level
+          },
+          editHistory: safeArray(row.editHistory).concat({
+            at: editedAt,
+            field: 'hungerLevel',
+            from: Number.isFinite(previousLevel) ? Math.round(previousLevel) : null,
+            to: level
+          }).slice(-8),
+          editedAt,
+          updatedAt: editedAt
+        };
+      });
+      setEditTarget(null);
+      setDraft({ ...getInitialDraftForState(state), _openId: stateOpenId });
+      setContextRefreshSeq((seq) => seq + 1);
     }
 
     function fixHunger() {
@@ -1657,6 +1966,7 @@
       setDetailsOpen(false);
       setCopyDone(false);
       setOutcomeSaved(null);
+      setEditTarget(null);
     }
 
     function recordOutcome(outcome) {
@@ -1758,8 +2068,20 @@
             missingInputs: isDragging ? [] : requiredInputs,
             onPatch: patchDraft
           }),
-          h(TimelineSpark, { date: timelineDate, day: timelineDay, draft: activeDraft, hint: lastMealHint })
-        ) : h('div', { className: 'hes-result' },
+          isEditingEvent && h('div', { className: 'hes-edit-note' },
+            h('strong', null, 'Редактируется прошлая точка'),
+            h('span', null, 'Время записи останется прежним')
+          ),
+          h(TimelineSpark, {
+            date: timelineDate,
+            day: timelineDay,
+            draft: activeDraft,
+            hint: lastMealHint,
+            editingEventId: editTarget?.id,
+            onEditPoint: startEditPoint
+          })
+        ) : null,
+        result ? h('div', { className: 'hes-result' },
           (hungerChangeNote || lastMealHint) && h('div', { className: 'hes-context-summary' },
             hungerChangeNote && h('span', null, hungerChangeNote),
             lastMealHint && h('span', null, lastMealHint)
@@ -1815,14 +2137,27 @@
             h(DebugSummary, { result }),
             h('pre', null, JSON.stringify(result.log, null, 2))
           )
-        ),
+        ) : null,
         h('footer', { className: 'hes-actions' },
-          !result ? h('button', {
+          !result ? (isEditingEvent ? [
+            h('button', {
+              key: 'cancel-edit',
+              type: 'button',
+              className: 'hes-secondary',
+              onClick: cancelEditPoint
+            }, 'Отмена'),
+            h('button', {
+              key: 'save-edit',
+              type: 'button',
+              className: 'hes-primary',
+              onClick: saveEditedPoint
+            }, 'Сохранить правку')
+          ] : h('button', {
             type: 'button',
             className: 'hes-primary',
             disabled: hasRequiredInputs,
             onClick: fixHunger
-          }, hasRequiredInputs ? 'Ответь на уточнение' : 'Зафиксировать голод') : [
+          }, hasRequiredInputs ? 'Ответь на уточнение' : 'Зафиксировать голод')) : [
             h('button', {
               key: 'again',
               type: 'button',
@@ -1851,10 +2186,10 @@
 .fab-group .hunger-energy-fab:active{transform:scale(.94)}
 .hes-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.26);display:flex;align-items:flex-end;justify-content:flex-end;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 .hes-sheet{width:min(440px,calc(100vw - 24px));max-height:min(720px,calc(100dvh - 28px));overflow:auto;background:rgba(255,255,255,.98);color:#172033;border:1px solid rgba(67,69,135,.14);border-radius:18px;box-shadow:0 24px 64px rgba(15,23,42,.24);animation:hesIn .18s ease-out}
-.hes-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 16px 8px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px)}
-.hes-head>div:first-child{min-width:0}
+.hes-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 16px 8px 18px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px)}
+.hes-head>div:first-child{min-width:0;display:flex;align-items:center;min-height:44px}
 .hes-head__actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.hes-kicker{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#434587}
+.hes-kicker{font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1.15;text-transform:uppercase;color:#434587}
 .hes-head h3{margin:2px 0 0;font-size:20px;line-height:1.15;color:#172033}
 .hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#f1f5f9;color:#475569;font-size:20px;cursor:pointer}
 .hes-auto-toggle{min-height:36px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#f8fbff;color:#475569;padding:0 8px;cursor:pointer;user-select:none}
@@ -1895,7 +2230,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-auto-toggle__switch{background:#334155;box-shadow:inset 0 0 0 1px rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-auto-toggle input:checked+.hes-auto-toggle__switch{background:#6366f1}
 @keyframes hesIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-@media (max-width:520px){.hes-backdrop{padding:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}.hes-sheet{width:100%;max-height:calc(100dvh - 20px);border-radius:18px 18px 0 0}.hes-head{padding:14px 12px 8px}.hes-slider{grid-template-columns:42px 1fr;min-height:246px}.hes-slider__range{height:162px}.hes-actions{padding:0 12px 12px}.hes-primary,.hes-secondary{flex:1}}
+@media (max-width:520px){.hes-backdrop{padding:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}.hes-sheet{width:100%;max-height:calc(100dvh - 20px);border-radius:18px 18px 0 0}.hes-head{min-height:58px;padding:14px 12px 8px 14px}.hes-slider{grid-template-columns:42px 1fr;min-height:246px}.hes-slider__range{height:162px}.hes-actions{padding:0 12px 12px}.hes-primary,.hes-secondary{flex:1}}
 .hes-input{padding:10px 18px 12px;display:flex;flex-direction:column;gap:12px;align-items:stretch}
 .hes-input .hes-slider{min-height:0;border:0;background:transparent;padding:6px 2px 2px;display:grid;grid-template-columns:1fr 68px 1fr;grid-template-rows:auto auto auto auto;column-gap:0;row-gap:7px;align-items:center;justify-content:center}
 .hes-slider__value{grid-column:1/-1;grid-row:1;font-size:58px;font-weight:900;color:#434587;line-height:.92;text-align:center}
@@ -1912,21 +2247,32 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-prompt.is-visible{opacity:1}
 .hes-prompt__title{font-size:14px;font-weight:850;line-height:1.25;color:#7c2d12;margin-bottom:8px}
 .hes-chip{min-height:52px;border-radius:14px;font-size:13px}
-.hes-spark{height:94px;box-sizing:border-box;position:relative;border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#f8fbff;padding:7px 10px 7px}
+.hes-spark{height:108px;box-sizing:border-box;position:relative;border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#f8fbff;padding:7px 10px 8px}
 .hes-spark__svg{display:block;width:100%;height:100%;overflow:visible}
+.hes-spark__night{fill:#172033;opacity:.09}
 .hes-spark__axis{stroke:#e3ebf6;stroke-width:2;stroke-linecap:round}
+.hes-spark__tick line{stroke:#c8d5e6;stroke-width:1;stroke-linecap:round}
+.hes-spark__tick text{fill:#94a3b8;font-size:8px;font-weight:800}
 .hes-spark__line{fill:none;stroke:#434587;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 .hes-spark__point{fill:#434587;stroke:#fff;stroke-width:2.4}
 .hes-spark__point--preview{fill:#ffffff;stroke:#434587;stroke-width:3}
+.hes-spark__point-button{cursor:pointer;outline:none}
+.hes-spark__point-button:focus-visible .hes-spark__point{stroke:#172033;stroke-width:3.4}
+.hes-spark__point.is-editing{stroke:#434587;stroke-width:3.4}
+.hes-spark__point-hit{fill:transparent;stroke:transparent;pointer-events:all}
 .hes-spark__meal-line{stroke:#f08a74;stroke-width:2;stroke-linecap:round;stroke-dasharray:3 5;opacity:.58}
-.hes-spark__legend{position:absolute;left:10px;top:7px;display:flex;align-items:center;gap:8px;min-height:16px;font-size:10px;font-weight:800;color:#64748b;background:rgba(248,251,255,.78);border-radius:999px;padding:2px 6px;backdrop-filter:blur(6px)}
+.hes-spark__legend{position:absolute;left:10px;right:10px;top:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:16px;font-size:10px;font-weight:800;color:#64748b;pointer-events:none}
+.hes-spark__legend-items,.hes-spark__hint{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:rgba(248,251,255,.78);padding:2px 6px;backdrop-filter:blur(6px)}
 .hes-spark__legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .hes-spark__legend-dot{width:6px;height:6px;border-radius:999px;display:inline-block}
 .hes-spark__legend-dot--hunger{background:#434587}
 .hes-spark__legend-line{width:10px;height:12px;display:inline-block;position:relative}
 .hes-spark__legend-line::before{content:"";position:absolute;left:4px;top:0;bottom:0;border-left:2px dashed #f08a74;border-radius:999px;opacity:.82}
 .hes-spark__muted{margin-left:auto;color:#94a3b8;font-weight:750}
-.hes-spark__hint{position:absolute;left:10px;right:10px;bottom:6px;display:inline-flex;align-items:center;width:max-content;max-width:calc(100% - 20px);border-radius:999px;background:rgba(255,255,255,.84);color:#64748b;font-size:10px;font-weight:850;line-height:1.2;padding:3px 7px;box-shadow:0 1px 4px rgba(15,23,42,.06);backdrop-filter:blur(6px)}
+.hes-spark__hint{margin-left:auto;max-width:150px;overflow:hidden;text-overflow:ellipsis;color:#64748b;font-size:10px;font-weight:850;line-height:1.2}
+.hes-edit-note{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#64748b;font-size:11px;font-weight:800;line-height:1.25}
+.hes-edit-note strong{color:#434587;font-size:12px}
+.hes-edit-note span{text-align:right}
 .hes-result{padding:10px 18px 132px;display:flex;flex-direction:column;gap:12px}
 .hes-context-summary{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;flex-direction:column;gap:4px;color:#475569;font-size:12px;font-weight:850;line-height:1.3}
 .hes-verdict{border-radius:16px;background:#eef6ff;border:1px solid rgba(29,112,183,.14);padding:14px;display:flex;flex-direction:column;gap:7px}
@@ -1984,9 +2330,15 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-outcome__chips button.is-active{background:#434587;color:#fff;border-color:#434587}
 [data-theme="dark"] .hes-spark{background:#172033;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-spark__axis{stroke:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-spark__night{fill:#020617;opacity:.26}
+[data-theme="dark"] .hes-spark__tick line{stroke:rgba(226,236,242,.18)}
+[data-theme="dark"] .hes-spark__tick text{fill:#94a3b8}
+[data-theme="dark"] .hes-spark__point-button:focus-visible .hes-spark__point{stroke:#f8fafc}
 [data-theme="dark"] .hes-slider__track::before{background:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-slider__change,[data-theme="dark"] .hes-context-summary{background:#172033;color:#cbd5e1;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-spark__hint{background:rgba(17,24,39,.82);color:#cbd5e1}
+[data-theme="dark"] .hes-edit-note{background:#172033;border-color:rgba(226,236,242,.12);color:#cbd5e1}
+[data-theme="dark"] .hes-edit-note strong{color:#c7d2fe}
 @keyframes hesFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media (max-width:520px){.hes-input{padding:8px 14px 8px}.hes-result{padding:8px 14px 132px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr}.hes-actions{padding:0 14px 14px}}
 `;
@@ -2048,11 +2400,13 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     readEvents,
     writeEvents,
     addEvent,
+    updateEvent,
     buildHistorySignals
   };
 
   HEYS.HungerEnergyStatusAdapter = {
     buildContextFromDay,
+    buildSparkTimeline,
     compactDecision
   };
 

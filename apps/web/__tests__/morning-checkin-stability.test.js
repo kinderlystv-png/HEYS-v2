@@ -82,6 +82,35 @@ describe('morning check-in stability', () => {
     expect(IW_CONSTANTS_SRC).toContain("if (exposureType === 'none')");
   });
 
+  it('reopens an interrupted morning flow when only optional tail steps remain', () => {
+    expect(MORNING_SRC).toContain('const existingProgress = readMorningProgress(todayKey, currentClientId);');
+    expect(MORNING_SRC).toContain("flowStatus !== 'closed' && flowStatus !== 'synced'");
+    expect(MORNING_SRC).toContain('const blockingSteps = getBlockingMorningSteps({');
+    expect(MORNING_SRC).toContain('Resuming open flow with unfinished steps');
+  });
+
+  it('keeps the final morning routine step blocking until the user confirms it', () => {
+    expect(MORNING_SRC).toContain("case 'morningRoutine':\n        return false;");
+    expect(STEPS_SRC).toContain("registerStep('morningRoutine'");
+    expect(STEPS_SRC).toContain('completed: true');
+    expect(STEPS_SRC).toContain('affectedKeys: data?.selectedCopyId ? [`heys_dayv2_${dateKey}`] : []');
+  });
+
+  it('keeps check-in trace useful without warning-only happy path noise', () => {
+    expect(MORNING_SRC).toContain("plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null");
+    expect(MORNING_SRC).toContain("affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null");
+    expect(MORNING_SRC).toContain("HEYS.LogTrace.trace(level, '[CHECKIN.flow]', payload)");
+    expect(MORNING_SRC).toContain("const level = isProblem ? 'warn' : 'info';");
+  });
+
+  it('emits morning status from the freshly written ledger and avoids no-op progress rewrites', () => {
+    expect(MORNING_SRC).toContain('const status = getMorningCheckinStatus(dateKey, clientId, opts.ledger);');
+    expect(MORNING_SRC).toContain('let changed = !samePlan;');
+    expect(MORNING_SRC).toContain('const written = changed ? writeMorningProgress(ledger, clientId) : ledger;');
+    expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created', { ledger: written });");
+    expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });");
+  });
+
   it('routes yesterdayVerify and registration day writes through scoped helpers', () => {
     expect(YESTERDAY_SRC).toContain('writeDayDataScoped(dateKey');
     expect(YESTERDAY_SRC).toContain('HEYS.MorningCheckinUtils?.writeDayV2Scoped');
@@ -98,6 +127,12 @@ describe('morning check-in stability', () => {
     expect(STEPS_SRC).toContain('if (matchesDateKey(rawLocal, dateKey))');
     expect(STEPS_SRC).toContain('[HEYS.steps] saveDayData');
     expect(STEPS_SRC).toContain('if (!safeDayData) return false;');
+  });
+
+  it('keeps morning activation follow-up writes newer than pending day flushes', () => {
+    expect(STEPS_SRC).toContain('function getLatestDayUpdatedAt(dateKey)');
+    expect(STEPS_SRC).toContain('dayData.updatedAt = Math.max(Date.now(), getLatestDayUpdatedAt(dateKey) + 1);');
+    expect(MORNING_SRC).toContain('dayData.updatedAt = Math.max(Date.now(), _latestUpdatedAt + 1);');
   });
 
   it('guards dayv2 writes and sync from key/payload date mismatches', () => {

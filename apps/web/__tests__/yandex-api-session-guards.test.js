@@ -454,6 +454,22 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(JSON.parse(options.body)).toEqual({ p_since: null });
   });
 
+  it('does not console.error expected passive session 401 responses', async () => {
+    const api = loadYandexAPI({ hasPinCookieSession: true });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch.mockResolvedValue(createJsonResponse(
+      { error: 'invalid_session', reason: 'invalid_session' },
+      { ok: false, status: 401 },
+    ));
+
+    const subscriptionResult = await api.rpc('get_subscription_status_by_session', {});
+    const changelogResult = await api.rpc('get_my_curator_changelog_since', {});
+
+    expect(subscriptionResult.error).toMatchObject({ message: 'invalid_session', code: 401 });
+    expect(changelogResult.error).toMatchObject({ message: 'invalid_session', code: 401 });
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it('curator-only RPC can use HttpOnly curator cookie on production host', async () => {
     const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
     global.fetch.mockResolvedValue(createJsonResponse([]));

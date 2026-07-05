@@ -897,6 +897,24 @@
       // fall through — ниже pending наберётся и вернём true
     }
 
+    const existingProgress = readMorningProgress(todayKey, currentClientId);
+    const flowStatus = existingProgress?.steps?.__flow__?.status || null;
+    if (existingProgress && flowStatus !== 'closed' && flowStatus !== 'synced') {
+      const blockingSteps = getBlockingMorningSteps({
+        ledger: existingProgress,
+        dateKey: todayKey,
+        clientId: currentClientId
+      });
+      if (blockingSteps.length > 0) {
+        console.warn('[MorningCheckin] ↩️ Resuming open flow with unfinished steps', {
+          flowId: existingProgress.flowId,
+          blockingSteps: blockingSteps.map((row) => row.id),
+          flowStatus
+        });
+        return true;
+      }
+    }
+
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
     // Force-raw read минуя Store.get memory cache (закрывает race под VPN).
@@ -1121,9 +1139,9 @@
     __flow__: 'чек-ин'
   };
 
-  function emitMorningCheckinStatus(dateKey, clientId, reason) {
+  function emitMorningCheckinStatus(dateKey, clientId, reason, opts = {}) {
     try {
-      const status = getMorningCheckinStatus(dateKey, clientId);
+      const status = getMorningCheckinStatus(dateKey, clientId, opts.ledger);
       window.dispatchEvent(new CustomEvent('heys:morning-checkin-status', {
         detail: { reason, status }
       }));
@@ -1143,10 +1161,19 @@
         stepId: meta.stepId || null,
         status: meta.status || null,
         error: meta.error || null,
-        plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : undefined,
-        affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : undefined
+        plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null,
+        affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null
       };
-      console.warn('[CHECKIN.flow]', payload);
+      const isProblem = event === 'flow_failed'
+        || event === 'flow_closed_by_user'
+        || payload.status === 'failed_sync'
+        || !!payload.error;
+      const level = isProblem ? 'warn' : 'info';
+      if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
+        HEYS.LogTrace.trace(level, '[CHECKIN.flow]', payload);
+      } else {
+        console.warn('[CHECKIN.flow]', payload);
+      }
     } catch (_) {
       // Trace must never affect check-in.
     }
@@ -1179,18 +1206,22 @@
       plannedStepIds: plannedStepIds.slice(),
       steps: {}
     };
+    let changed = !samePlan;
     plannedStepIds.forEach((id) => {
-      if (!ledger.steps[id]) ledger.steps[id] = { status: 'planned' };
+      if (!ledger.steps[id]) {
+        ledger.steps[id] = { status: 'planned' };
+        changed = true;
+      }
     });
-    ledger.updatedAt = Date.now();
-    const written = writeMorningProgress(ledger, clientId);
+    if (changed) ledger.updatedAt = Date.now();
+    const written = changed ? writeMorningProgress(ledger, clientId) : ledger;
     traceMorningCheckin(samePlan ? 'plan_reused' : 'plan_created', {
       dateKey,
       clientId,
       flowId: written?.flowId,
       plannedStepIds
     });
-    emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created');
+    emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created', { ledger: written });
     return written;
   }
 
@@ -1232,7 +1263,7 @@
       error: ledger.steps[stepId]?.error || null,
       affectedKeys: ledger.steps[stepId]?.affectedKeys || []
     });
-    emitMorningCheckinStatus(dateKey, clientId, 'step_status');
+    emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });
     return written;
   }
 
@@ -1308,8 +1339,8 @@
     return { state: 'missing', label: 'чек-ин не завершён' };
   }
 
-  function getMorningCheckinStatus(dateKey = getTodayKey(), clientId = getCurrentClientId()) {
-    const ledger = readMorningProgress(dateKey, clientId);
+  function getMorningCheckinStatus(dateKey = getTodayKey(), clientId = getCurrentClientId(), ledgerOverride = null) {
+    const ledger = ledgerOverride || readMorningProgress(dateKey, clientId);
     const day = getFreshMorningDay(dateKey);
     const profile = getFreshMorningProfile(clientId);
     const corePresence = getMorningCorePresence(day, profile);
@@ -1376,6 +1407,7 @@
       case 'cold_exposure': return !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
       case 'supplements': return Array.isArray(day?.supplementsPlanned);
       case 'morningRoutine':
+        return false;
       case 'welcome':
         return true;
       case 'profile-personal':
