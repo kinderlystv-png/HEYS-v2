@@ -953,10 +953,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.6af4781cd91b.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.d8eb6c7d24ad.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.3a417c660ef9.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.eabed5a06103.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.0bb346681da3.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.cd01dabf4466.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.abfa75fa5e76.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.10e152a13c71.js" as="script" />
     <link rel="preload" href="boot-init.bundle.dd4545585722.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1760,7 +1760,7 @@
 
     <!-- Шаг 2: Статичный HTML логин-оверлей -->
     <div id="heys-login-gate" class="heys-auth-shell"
-        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#4964c7 0%,#2f5fd7 46%,#434587 100%);padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto">
+        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#4964c7 0%,#2f5fd7 46%,#434587 100%);padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto;opacity:0;pointer-events:none;transition:opacity 0.14s ease;will-change:opacity">
 
 	        <!-- Экран: client (телефон + PIN) — показывается сразу -->
 	        <div id="hlg-screen-client">
@@ -1774,11 +1774,11 @@
 	                        style="font-size:22px;font-weight:650;letter-spacing:0;color:#475569;font-family:system-ui,-apple-system,sans-serif">
 	                        Вход клиента</div>
 	                </div>
-                <form id="hlg-client-form" onsubmit="event.preventDefault(); hlgClientLogin();">
+                <form id="hlg-client-form" class="space-y-6" onsubmit="event.preventDefault(); hlgClientLogin();">
                     <!-- Телефон -->
-                    <div style="margin-bottom:16px">
+                    <div class="space-y-3">
                         <div class="heys-auth-label"
-                            style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                            style="text-align:center;font-size:15px;line-height:24px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
                             Телефон</div>
                         <div id="hlg-phone-wrap" class="heys-auth-field is-active"
                             style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
@@ -1791,11 +1791,11 @@
                         </div>
                     </div>
                     <!-- PIN -->
-                    <div id="hlg-pin-section" class="heys-auth-pin-section is-muted" style="margin-bottom:16px">
+                    <div id="hlg-pin-section" class="heys-auth-pin-section is-muted space-y-3">
                         <div class="heys-auth-label"
-                            style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                            style="text-align:center;font-size:15px;line-height:24px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
                             PIN-код</div>
-                        <div class="heys-auth-pin-grid" style="display:flex;justify-content:center;gap:12px">
+                        <div class="heys-auth-pin-grid">
                             <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
                                 <input id="hlg-pin-0" class="heys-auth-pin-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" maxlength="1" autocomplete="one-time-code"
@@ -1825,20 +1825,20 @@
                                     style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
                             </div>
                         </div>
-                        <div id="hlg-pin-keypad" class="heys-auth-keypad" aria-label="Цифровая клавиатура PIN">
-                            <button type="button" class="heys-auth-key" data-pin-key="1">1</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="2">2</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="3">3</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="4">4</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="5">5</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="6">6</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="7">7</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="8">8</button>
-                            <button type="button" class="heys-auth-key" data-pin-key="9">9</button>
-                            <span class="heys-auth-key-spacer" aria-hidden="true"></span>
-                            <button type="button" class="heys-auth-key" data-pin-key="0">0</button>
-                            <button type="button" class="heys-auth-key heys-auth-key--muted" data-pin-backspace aria-label="Удалить цифру PIN">⌫</button>
-                        </div>
+                    </div>
+                    <div id="hlg-pin-keypad" class="heys-auth-keypad" aria-label="Цифровая клавиатура PIN">
+                        <button type="button" class="heys-auth-key" data-pin-key="1">1</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="2">2</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="3">3</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="4">4</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="5">5</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="6">6</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="7">7</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="8">8</button>
+                        <button type="button" class="heys-auth-key" data-pin-key="9">9</button>
+                        <span class="heys-auth-key-spacer" aria-hidden="true"></span>
+                        <button type="button" class="heys-auth-key" data-pin-key="0">0</button>
+                        <button type="button" class="heys-auth-key heys-auth-key--muted" data-pin-backspace aria-label="Удалить цифру PIN">⌫</button>
                     </div>
                     <!-- Ошибка -->
                     <div id="hlg-client-err" class="heys-auth-error"
@@ -1908,19 +1908,28 @@
 		            </div>
 		        </div>
 
-	        <button id="hlg-admin-shortcut" onclick="hlgOpenCuratorScreen()" class="heys-auth-admin-shortcut" type="button"
-	            aria-label="Вход для куратора" title="Вход для куратора">
-	            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-	                <path d="M12 3l7 3v5c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V6l7-3z" />
-	                <path d="M9.5 11.5l1.8 1.8 3.7-4" />
-	            </svg>
-	        </button>
-
-		        <!-- Версия внизу -->
-        <div id="hlg-version" class="heys-auth-version"
-            style="position:absolute;left:50%;bottom:max(14px,calc(env(safe-area-inset-bottom,0px) + 14px));transform:translateX(-50%);font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:0.05em">
-        </div>
+		        <!-- Служебный вход внизу -->
+        <button id="hlg-service-entry" class="heys-auth-version" onclick="hlgOpenCuratorScreen()" type="button"
+            aria-label="Служебный вход" title="Служебный вход"
+            style="position:absolute;left:50%;bottom:max(14px,calc(env(safe-area-inset-bottom,0px) + 14px));transform:translateX(-50%);border:0;background:transparent;padding:4px 8px;font-size:11px;color:rgba(255,255,255,0.24);font-family:monospace;letter-spacing:0.05em;cursor:pointer">
+            служебный вход
+        </button>
     </div>
+
+    <script>
+        (function () {
+            var delayMs = 500;
+            window.__heysLoginGateRevealDelayMs = delayMs;
+            setTimeout(function () {
+                var gate = document.getElementById('heys-login-gate');
+                if (!gate || window.__heysReturningUser || window.__heysHasSession) return;
+                if (gate.style.display === 'none') return;
+                gate.style.opacity = '1';
+                gate.style.pointerEvents = 'auto';
+                gate.setAttribute('data-visible', 'true');
+            }, delayMs);
+        })();
+    </script>
 
     <!-- Dark mode стили для логин-оверлея -->
     <style>
@@ -2525,43 +2534,6 @@
                 }
             }
 
-	        .heys-auth-admin-shortcut {
-	            position: absolute;
-	            right: 22px;
-	            bottom: 22px;
-	            z-index: 2;
-	            width: 40px;
-	            height: 40px;
-	            display: inline-flex;
-	            align-items: center;
-	            justify-content: center;
-	            border: 1px solid rgba(255, 255, 255, 0.12);
-	            border-radius: 14px;
-	            background: rgba(255, 255, 255, 0.06);
-	            color: rgba(255, 255, 255, 0.42);
-	            cursor: pointer;
-	            box-shadow: none;
-	            transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-	            -webkit-tap-highlight-color: transparent;
-	        }
-
-	        .heys-auth-admin-shortcut svg {
-	            width: 20px;
-	            height: 20px;
-	            fill: none;
-	            stroke: currentColor;
-	            stroke-width: 2;
-	            stroke-linecap: round;
-	            stroke-linejoin: round;
-	        }
-
-	        .heys-auth-admin-shortcut:active {
-	            transform: scale(0.96);
-	            border-color: rgba(255, 255, 255, 0.22);
-	            background: rgba(255, 255, 255, 0.12);
-	            color: rgba(255, 255, 255, 0.64);
-	        }
-
 	        .heys-auth-support-backdrop {
 	            position: fixed;
 	            inset: 0;
@@ -3039,8 +3011,8 @@
 	            window.hlgShowScreen = function (screen) {
 	                document.getElementById('hlg-screen-client').style.display = screen === 'client' ? '' : 'none';
 	                document.getElementById('hlg-screen-curator').style.display = screen === 'curator' ? '' : 'none';
-	                var adminShortcut = document.getElementById('hlg-admin-shortcut');
-	                if (adminShortcut) adminShortcut.style.display = screen === 'client' ? 'inline-flex' : 'none';
+	                var serviceEntry = document.getElementById('hlg-service-entry');
+	                if (serviceEntry) serviceEntry.style.display = screen === 'client' ? '' : 'none';
 	                currentScreen = screen;
                 // v9.11: Export current screen globally so React LoginScreen can inherit user's choice
                 window.__hlgCurrentScreen = screen;
@@ -3903,15 +3875,6 @@
 	                var grCur = document.getElementById('hlg-greeting-curator');
 	                if (grCur) grCur.textContent = greeting;
 
-                // Версия
-                var verEl = document.getElementById('hlg-version');
-                if (verEl) {
-                    try {
-                        var v = (window.HEYS && window.HEYS.version) || '';
-                        if (v) verEl.textContent = 'v' + v;
-                    } catch (_) { }
-                }
-
                 // Показываем форму клиента сразу
                 hlgShowScreen('client');
 
@@ -4155,10 +4118,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.6af4781cd91b.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.d8eb6c7d24ad.js"></script>
-    <script defer src="boot-day.bundle.3a417c660ef9.js"></script>
-    <script defer src="boot-app.bundle.eabed5a06103.js"></script>
+    <script defer src="boot-core.bundle.0bb346681da3.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.cd01dabf4466.js"></script>
+    <script defer src="boot-day.bundle.abfa75fa5e76.js"></script>
+    <script defer src="boot-app.bundle.10e152a13c71.js"></script>
     <script defer src="boot-init.bundle.dd4545585722.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -4219,11 +4182,11 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.0ecbe27baa99.js',
+                'postboot-1-game-lazy.bundle.7023b7767bc2.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
                 'postboot-2-insights-lazy.bundle.87ac8412985d.js',
                 'postboot-3-ui-eager.bundle.2da300f79259.js',
-                'postboot-3-ui-lazy.bundle.d94ec02694fa.js'
+                'postboot-3-ui-lazy.bundle.c7a4932c99be.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

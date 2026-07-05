@@ -3761,6 +3761,12 @@
                 return true;
             }).length;
         }, [meal, totals, dayData, profile, products, pIndex]);
+        const showHeaderCollapseButton = isExpanded && (meal.items || []).length > 0;
+        const hasHeaderBadges = !!(
+            showHeaderCollapseButton
+            || (resolvedActivityContext && resolvedActivityContext.type !== 'none')
+            || mealQuality?.mealRoleStatus
+        );
 
         return React.createElement('div', {
             className: mealCardClass,
@@ -3808,7 +3814,7 @@
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '6px',
                         width: '100%',
                     },
                 },
@@ -3819,52 +3825,53 @@
                             openTimeEditor(mealIndex);
                         },
                         title: 'Изменить время',
-                        style: { fontSize: '15px', padding: '6px 14px', fontWeight: '700', flexShrink: 0 },
+                        style: { fontSize: '14px', padding: '6px 12px', fontWeight: '700', flexShrink: 0 },
                     }, timeDisplay),
-                    React.createElement('div', {
-                        className: 'meal-type-wrapper',
-                        onClick: (event) => event.stopPropagation(),
-                        onKeyDown: (event) => event.stopPropagation(),
-                        style: { flex: 1, display: 'flex', justifyContent: 'center' },
-                    },
-                        React.createElement('span', { className: 'meal-type-label', style: { fontSize: '16px', fontWeight: '700', padding: '4px 12px' } },
-                            mealTypeInfo.icon + ' ' + mealTypeInfo.name,
-                            React.createElement('span', { className: 'meal-type-arrow' }, ' ▾'),
-                        ),
-                        React.createElement('select', {
-                            className: 'meal-type-select',
-                            value: manualType || '',
+                    React.createElement('div', { className: 'meal-type-center' },
+                        React.createElement('div', {
+                            className: 'meal-type-wrapper',
                             onClick: (event) => event.stopPropagation(),
                             onKeyDown: (event) => event.stopPropagation(),
-                            onChange: (e) => {
-                                e.stopPropagation();
-                                changeMealType(e.target.value || null);
-                            },
-                            title: 'Изменить тип приёма',
-                        }, [
-                            { value: '', label: '🔄 Авто' },
-                            { value: 'breakfast', label: '🍳 Завтрак' },
-                            { value: 'snack1', label: '🍎 Перекус' },
-                            { value: 'lunch', label: '🍲 Обед' },
-                            { value: 'snack2', label: '🥜 Перекус' },
-                            { value: 'dinner', label: '🍽️ Ужин' },
-                            { value: 'snack3', label: '🧀 Перекус' },
-                            { value: 'night', label: '🌙 Ночной' },
-                        ].map((opt) =>
-                            React.createElement('option', { key: opt.value, value: opt.value }, opt.label),
-                        )),
+                        },
+                            React.createElement('span', { className: 'meal-type-label', style: { fontSize: '14px', fontWeight: '700', padding: '4px 8px' } },
+                                mealTypeInfo.icon + ' ' + mealTypeInfo.name,
+                                React.createElement('span', { className: 'meal-type-arrow' }, ' ▾'),
+                            ),
+                            React.createElement('select', {
+                                className: 'meal-type-select',
+                                value: manualType || '',
+                                onClick: (event) => event.stopPropagation(),
+                                onKeyDown: (event) => event.stopPropagation(),
+                                onChange: (e) => {
+                                    e.stopPropagation();
+                                    changeMealType(e.target.value || null);
+                                },
+                                title: 'Изменить тип приёма',
+                            }, [
+                                { value: '', label: '🔄 Авто' },
+                                { value: 'breakfast', label: '🍳 Завтрак' },
+                                { value: 'snack1', label: '🍎 Перекус' },
+                                { value: 'lunch', label: '🍲 Обед' },
+                                { value: 'snack2', label: '🥜 Перекус' },
+                                { value: 'dinner', label: '🍽️ Ужин' },
+                                { value: 'snack3', label: '🧀 Перекус' },
+                                { value: 'night', label: '🌙 Ночной' },
+                            ].map((opt) =>
+                                React.createElement('option', { key: opt.value, value: opt.value }, opt.label),
+                            )),
+                        ),
                     ),
-                    React.createElement('span', { className: 'meal-kcal-badge-inside', style: { fontSize: '15px', padding: '6px 14px', flexShrink: 0 } },
+                    React.createElement('span', { className: 'meal-kcal-badge-inside', style: { fontSize: '14px', padding: '6px 10px', flexShrink: 0 } },
                         mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал',
                     ),
                 ),
-                (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
+                hasHeaderBadges && React.createElement('div', {
                     className: 'meal-header-badges-row',
                     style: {
                         display: 'flex',
-                        flexWrap: 'wrap',
+                        flexWrap: 'nowrap',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '6px',
                         width: '100%',
                     },
                 },
@@ -3872,6 +3879,10 @@
                         className: 'activity-context-badge',
                         title: resolvedActivityContext.desc,
                         style: {
+                            minHeight: '28px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             fontSize: '12px',
                             padding: '4px 8px',
                             borderRadius: '8px',
@@ -3880,6 +3891,8 @@
                             border: '1px solid ' + activityContextTone.border,
                             fontWeight: '600',
                             flexShrink: 0,
+                            lineHeight: 1,
+                            marginBottom: 0,
                             whiteSpace: 'nowrap',
                         },
                     }, resolvedActivityContext.badge || ''),
@@ -3909,11 +3922,26 @@
                                         : '#1d4ed8',
                             fontWeight: '700',
                             flexShrink: 0,
+                            minHeight: '28px',
+                            lineHeight: 1,
                             whiteSpace: 'nowrap',
                         },
                     },
                         React.createElement('span', { style: { fontSize: '13px' } }, mealQuality.mealRoleStatus.icon),
                         React.createElement('span', null, mealQuality.mealRoleStatus.shortLabel),
+                    ),
+                    showHeaderCollapseButton && React.createElement('button', {
+                        type: 'button',
+                        className: 'meal-header-collapse-btn',
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            onToggleExpand(mealIndex, allMeals);
+                        },
+                        'aria-label': 'Свернуть приём',
+                        title: 'Свернуть приём',
+                    },
+                        React.createElement('span', { className: 'meal-header-collapse-btn__icon', 'aria-hidden': 'true' }, '⌃'),
+                        React.createElement('span', { className: 'meal-header-collapse-btn__label' }, 'Свернуть'),
                     ),
                 ),
             ),
