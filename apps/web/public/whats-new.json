@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.05.4434fa1e",
+      "buildHash": "4434fa1e",
+      "date": "2026-07-05",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "stabilize check-ins and hunger prompts",
+      "items": [
+        {
+          "type": "fix",
+          "title": "stabilize check-ins and hunger prompts",
+          "description": "stabilize check-ins and hunger prompts"
+        }
+      ],
+      "coveredCommits": ["4434fa1e"]
+    },
+    {
       "version": "2026.07.05.e1aed670",
       "buildHash": "e1aed670",
       "date": "2026-07-05",
@@ -170,22 +186,6 @@
           "description": "Pre-push и preflight теперь сверяют тестовый cache и guard-сканы с committed HEAD, чтобы незакоммиченные локальные файлы не искажали проверку."
         }
       ]
-    },
-    {
-      "version": "2026.07.02.a1ee9e5d",
-      "buildHash": "a1ee9e5d",
-      "date": "2026-07-02",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Шапка аккуратнее помещается на телефоне",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Верхняя строка больше не обрезается",
-          "description": "В компактной шапке убрали дублирующий счётчик очков и ужали элементы, чтобы уровень, прогресс и кнопки помещались на узких экранах."
-        }
-      ],
-      "coveredCommits": ["a1ee9e5d"]
     }
   ]
 }
