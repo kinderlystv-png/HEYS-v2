@@ -143,6 +143,57 @@ async function recordHeartbeat(client, task) {
   }
 }
 
+const OPS_RUNBOOKS = {
+  heartbeat_stale: {
+    runbook_title: 'Проверить maintenance triggers и logs',
+    runbook_command: 'pnpm ops:heys:status --strict',
+  },
+  backup_gap: {
+    runbook_title: 'Проверить backup_run_log и heys-client-daily-backup',
+    runbook_command: 'pnpm ops:heys:status --strict',
+  },
+  telegram_webhook_auto_fix: {
+    runbook_title: 'Проверить Telegram webhook state',
+    runbook_command: 'pnpm ops:heys:fix-safe --strict',
+  },
+};
+
+async function recordOpsIncident(client, eventKey, severity, title, details) {
+  try {
+    const payload = { ...(OPS_RUNBOOKS[eventKey] || {}), ...(details || {}) };
+    await client.query(
+      `SELECT public.record_ops_incident($1, $2, $3, $4, $5::jsonb)`,
+      ['heys-maintenance', eventKey, severity || 'warn', title, JSON.stringify(payload)]
+    );
+  } catch (e) {
+    console.warn('[ops-incident] record failed:', eventKey, e.message);
+  }
+}
+
+async function resolveOpsIncident(client, eventKey) {
+  try {
+    await client.query(
+      `SELECT public.resolve_ops_incident($1, $2)`,
+      ['heys-maintenance', eventKey]
+    );
+  } catch (e) {
+    console.warn('[ops-incident] resolve failed:', eventKey, e.message);
+  }
+}
+
+async function claimOpsIncidentNotification(client, eventKey, minInterval = '1 hour', escalateAfter = '6 hours') {
+  try {
+    const res = await client.query(
+      `SELECT public.claim_ops_incident_notification($1, $2, $3::interval, $4::interval) AS result`,
+      ['heys-maintenance', eventKey, minInterval, escalateAfter]
+    );
+    return res.rows[0]?.result || { notify: false, reason: 'empty_result' };
+  } catch (e) {
+    console.warn('[ops-incident] claim failed:', eventKey, e.message);
+    return { notify: true, reason: 'claim_failed' };
+  }
+}
+
 async function checkHeartbeats(client) {
   // Stale = last_ok_at older than its max_silence. Atomically latch
   // stale_alerted_at (re-alert at most once / 6h) so a 5-min watcher cadence
@@ -163,7 +214,16 @@ async function checkHeartbeats(client) {
     console.warn('[heartbeat] check failed:', e.message);
     return;
   }
-  if (stale.length === 0) return;
+  if (stale.length === 0) {
+    await resolveOpsIncident(client, 'heartbeat_stale');
+    return;
+  }
+  await recordOpsIncident(client, 'heartbeat_stale', 'critical', 'Maintenance heartbeat stale', { stale });
+  const claim = await claimOpsIncidentNotification(client, 'heartbeat_stale', '1 hour', '6 hours');
+  if (!claim.notify) {
+    console.log('[ops-incident] heartbeat_stale notification skipped:', claim.reason || 'deduped');
+    return;
+  }
   // Severity растёт с длительностью молчания: >72h (3× типового порога 25h) —
   // это не рутинный «один таск чихнул», а затяжная авария. Меняем заголовок и
   // помечаем строки 🔴, чтобы 157h визуально не читался как 25h (alert fatigue).
@@ -179,6 +239,45 @@ async function checkHeartbeats(client) {
     stale.map((r) => `• \`${r.task}\` молчит ${r.silent_h}h _(порог ${r.max_silence})_${r.silent_h >= 72 ? ' 🔴' : ''}`).join('\n') +
     `\n\n_Проверь Yandex Cloud → Functions → triggers и логи heys-maintenance._`
   );
+}
+
+async function syncBackupHeartbeat(client) {
+  try {
+	    const res = await client.query(`
+	      SELECT COALESCE(
+	               MAX(run_at) FILTER (WHERE status IN ('ok', 'partial')),
+	               '2000-01-01'::timestamptz
+	             ) AS last_ok_at,
+	             round(extract(epoch FROM now() - COALESCE(
+	               MAX(run_at) FILTER (WHERE status IN ('ok', 'partial')),
+	               '2000-01-01'::timestamptz
+	             )) / 3600)::int AS hours_ago
+	        FROM backup_run_log
+	       WHERE run_at > now() - interval '14 days'
+	    `);
+	    const backupRow = res.rows[0] || {};
+	    await client.query(
+	      `INSERT INTO maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+         VALUES ('backup_chain', $1, NULL, interval '30 hours')
+       ON CONFLICT (task) DO UPDATE
+         SET last_ok_at = EXCLUDED.last_ok_at,
+             stale_alerted_at = CASE
+               WHEN EXCLUDED.last_ok_at >= now() - maintenance_heartbeat.max_silence THEN NULL
+               ELSE maintenance_heartbeat.stale_alerted_at
+             END,
+             max_silence = interval '30 hours'`,
+	      [backupRow.last_ok_at],
+	    );
+	    if (Number(backupRow.hours_ago || 9999) > 30) {
+	      await recordOpsIncident(client, 'backup_gap', 'critical', 'Backup chain gap', {
+	        hours_ago: Number(backupRow.hours_ago || 9999),
+	      });
+	    } else {
+	      await resolveOpsIncident(client, 'backup_gap');
+	    }
+	  } catch (e) {
+    console.warn('[heartbeat] backup sync failed:', e.message);
+  }
 }
 
 /**
@@ -754,6 +853,146 @@ async function kvHealthCheck(client) {
   return { findings, summary };
 }
 
+async function fetchTelegramWebhookInfoSafe(label, token) {
+  if (!token || String(token).startsWith('__IN_LOCKBOX__')) {
+    return { label, status: 'unknown' };
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    const info = data.result || {};
+    return {
+      label,
+      status: data.ok ? 'ok' : 'error',
+      pending: Number(info.pending_update_count || 0),
+      webhook: Boolean(info.url),
+      last_error: info.last_error_message || null,
+    };
+  } catch (e) {
+    return { label, status: 'error', error: e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function deleteTelegramWebhookSafe(label, token) {
+  if (!token || String(token).startsWith('__IN_LOCKBOX__')) {
+    return { label, ok: false, skipped: 'token_missing' };
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`, {
+      method: 'POST',
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { label, ok: Boolean(data.ok), description: data.description || null };
+  } catch (e) {
+    return { label, ok: false, error: e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function buildOpsHealthBlock(client) {
+  const lines = [];
+  let hasProblem = false;
+
+  try {
+    const staleRes = await client.query(`
+      SELECT task,
+             round(extract(epoch FROM now() - last_ok_at) / 60)::int AS minutes_ago,
+             max_silence::text AS max_silence,
+             (last_ok_at < now() - max_silence) AS stale
+        FROM maintenance_heartbeat
+       ORDER BY task
+    `);
+    const stale = staleRes.rows.filter((r) => r.stale);
+    const botRows = staleRes.rows.filter((r) => /^telegram_.*_poll$/.test(r.task));
+    if (stale.length > 0) {
+      hasProblem = true;
+      lines.push(`🚨 stale: ${stale.map((r) => `${r.task} ${r.minutes_ago}m`).join(', ')}`);
+    } else {
+      const botAges = botRows.length
+        ? `; bot poll ${botRows.map((r) => `${r.task.replace('telegram_', '').replace('_poll', '')} ${r.minutes_ago}m`).join(', ')}`
+        : '; bot poll heartbeat pending';
+      lines.push(`✅ heartbeats fresh${botAges}`);
+      if (botRows.length === 0) hasProblem = true;
+    }
+  } catch (e) {
+    hasProblem = true;
+    lines.push(`⚠️ heartbeat check: ${_mdEscape(e.message.slice(0, 80))}`);
+  }
+
+  try {
+    const backupRes = await client.query(`
+      SELECT run_at,
+             round(extract(epoch FROM now() - run_at) / 3600)::int AS hours_ago,
+             status,
+             success_count,
+             error_count
+        FROM backup_run_log
+       ORDER BY run_at DESC
+       LIMIT 1
+    `);
+    const b = backupRes.rows[0];
+    if (!b) {
+      hasProblem = true;
+      lines.push('🚨 backup: no runs');
+    } else if (b.status !== 'ok' || b.hours_ago > 30 || Number(b.error_count || 0) > 0) {
+      hasProblem = true;
+      lines.push(`🚨 backup: ${b.status}, ${b.hours_ago}h ago, errors=${b.error_count}`);
+    } else {
+      lines.push(`✅ backup ${b.hours_ago}h ago (${b.success_count} ok)`);
+    }
+  } catch (e) {
+    hasProblem = true;
+    lines.push(`⚠️ backup check: ${_mdEscape(e.message.slice(0, 80))}`);
+  }
+
+  const tgTargets = [
+    { label: 'support', token: process.env.TELEGRAM_BOT_TOKEN },
+    { label: 'client', token: process.env.TELEGRAM_CLIENT_BOT_TOKEN },
+    { label: 'start', token: process.env.HEYS_START_BOT_TOKEN },
+  ];
+  let tgChecks = await Promise.all(tgTargets.map((target) => fetchTelegramWebhookInfoSafe(target.label, target.token)));
+  const webhookOn = tgChecks.filter((r) => r.status === 'ok' && r.webhook);
+  if (webhookOn.length > 0) {
+    const remediations = [];
+    for (const item of webhookOn) {
+      const target = tgTargets.find((t) => t.label === item.label);
+      remediations.push(await deleteTelegramWebhookSafe(item.label, target?.token));
+    }
+    await recordOpsIncident(client, 'telegram_webhook_auto_fix', 'warn', 'Telegram webhook auto-remediation', {
+      remediations: remediations.map((r) => ({ label: r.label, ok: r.ok, skipped: r.skipped || null })),
+    });
+    lines.push(`🛠 Telegram webhook auto-fix: ${remediations.map((r) => `${r.label}=${r.ok ? 'ok' : 'failed'}`).join(', ')}`);
+    tgChecks = await Promise.all(tgTargets.map((target) => fetchTelegramWebhookInfoSafe(target.label, target.token)));
+  } else {
+    await resolveOpsIncident(client, 'telegram_webhook_auto_fix');
+  }
+  const tgBad = tgChecks.filter((r) => r.status === 'ok' && (r.pending > 0 || r.webhook || r.last_error));
+  const tgUnknown = tgChecks.filter((r) => r.status !== 'ok');
+  if (tgBad.length > 0) {
+    hasProblem = true;
+    lines.push(`🚨 Telegram: ${tgBad.map((r) => `${r.label} pending=${r.pending} webhook=${r.webhook ? 'on' : 'off'}`).join(', ')}`);
+  } else if (tgUnknown.length > 0) {
+    lines.push(`ℹ️ Telegram queue: ${tgChecks.filter((r) => r.status === 'ok').map((r) => `${r.label}=0`).join(', ') || 'none checked'}; unknown ${tgUnknown.map((r) => r.label).join(', ')}`);
+  } else {
+    lines.push('✅ Telegram queues 0, webhooks off');
+  }
+
+  const commit = process.env.HEYS_DEPLOY_COMMIT || 'unknown';
+  lines.push(`deploy ${_mdEscape(commit)}`);
+
+  return `🧭 *Ops health*: ${hasProblem ? '⚠️ проверить' : '✅ ok'}\n${lines.join('\n')}`;
+}
+
 /**
  * Ежедневный отчёт в Telegram — активность клиентов + trial queue + KV health summary.
  * Trigger: daily_report (07:00 МСК = 04:00 UTC).
@@ -800,6 +1039,13 @@ async function dailyReport(client, once) {
     }
   } catch (e) {
     activityBlock = `👥 *Активность*: ⚠️ ${e.message.slice(0, 80)}`;
+  }
+
+  let opsBlock = '';
+  try {
+    opsBlock = await buildOpsHealthBlock(client);
+  } catch (e) {
+    opsBlock = `🧭 *Ops health*: ⚠️ ${_mdEscape(e.message.slice(0, 80))}`;
   }
 
   // 2. Trial queue stats
@@ -1005,6 +1251,7 @@ async function dailyReport(client, once) {
   const parts = [
     `📊 *Утренний отчёт HEYS* — ${dateStr}`,
     activityBlock,
+    opsBlock,
     newClientsBlock,
     churnBlock,
     expiringBlock,
@@ -1223,10 +1470,28 @@ module.exports.handler = async (event, context) => {
     // are computed at most once even when an 'all' trigger runs both the cleanup
     // phase and the daily report. Fresh per invocation (NOT module-level — the
     // serverless container is reused and would serve stale results).
-    const _memo = {};
-    const once = (key, fn) => (_memo[key] ??= fn());
+	    const _memo = {};
+	    const once = (key, fn) => (_memo[key] ??= fn());
 
-    // Determine which tasks to run
+	    if (triggerId === 'ops_canary') {
+	      const ping = await client.query(`
+	        SELECT now() AS db_time,
+	               (SELECT count(*)::int FROM maintenance_heartbeat) AS heartbeat_count
+	      `);
+	      await recordHeartbeat(client, 'ops_canary');
+	      return {
+	        statusCode: 200,
+	        body: JSON.stringify({
+	          success: true,
+	          trigger_id: triggerId,
+	          db_time: ping.rows[0]?.db_time,
+	          heartbeat_count: ping.rows[0]?.heartbeat_count,
+	          timestamp: new Date().toISOString(),
+	        }),
+	      };
+	    }
+
+	    // Determine which tasks to run
     const runTrialQueue = triggerId === 'trial_queue' || triggerId === 'all' || triggerId === 'default';
     const runCleanup = triggerId === 'daily_cleanup' || triggerId === 'all';
     // KV health: ежедневно (daily trigger без явного id) + on-demand
@@ -1436,6 +1701,7 @@ module.exports.handler = async (event, context) => {
     // (stale_alerted_at, re-alert ≤1/6h) защищает от двойной отправки, поэтому
     // повтор на trial_queue/all-инвокациях безвреден. Внешнего watchdog'а это не
     // заменяет (падение всей функции/Yandex по-прежнему = тишина) — см. handoff.
+    await syncBackupHeartbeat(client);
     await checkHeartbeats(client);
 
     return {

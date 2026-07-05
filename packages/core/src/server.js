@@ -7,6 +7,8 @@
 
 const cors = require('cors');
 const express = require('express');
+const { execFile } = require('node:child_process');
+const { Pool } = require('pg');
 const { buildDefaultAllowedOrigins } = require('./corsOrigins');
 
 const app = express();
@@ -84,6 +86,10 @@ app.get('/api/analytics', (req, res) => {
 // Dev proxy: forward /rpc and /rest to production API (server-to-server, no CORS issues)
 const PROD_API = (process.env.HEYS_DEV_PROXY_TARGET || 'https://api.heyslab.ru').replace(/\/$/, '');
 const devTranscriptionConsentByAuth = new Map();
+const LOCAL_OPS_RPC_FUNCTIONS = new Set(['admin_get_ops_status', 'admin_refresh_ops_status']);
+const LOCAL_OPS_DB_LOCKBOX_ID = process.env.LOCKBOX_DB_SECRET_ID || 'e6q7gdshieo5udoet10f';
+let localOpsPoolPromise = null;
+let localOpsKeepAliveTimer = null;
 
 function traceDevProxy(event, details = {}) {
   try {
@@ -151,6 +157,161 @@ function buildDevTranscriptionConsentResponse(stamp) {
   };
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const payload = String(token || '').split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(Buffer.from(normalized, 'base64').toString('utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function getBearerPayload(req) {
+  const auth = req.headers.authorization || req.headers.Authorization || '';
+  const token = String(auth).replace(/^Bearer\s+/i, '').trim();
+  return decodeJwtPayload(token);
+}
+
+function resolveLocalOpsPgPassword() {
+  return new Promise((resolve, reject) => {
+    const envPassword = process.env.PGPASSWORD || process.env.PG_PASSWORD || '';
+    if (envPassword && !String(envPassword).startsWith('__IN_LOCKBOX__')) {
+      resolve(envPassword);
+      return;
+    }
+
+    execFile('yc', ['lockbox', 'payload', 'get', '--id', LOCAL_OPS_DB_LOCKBOX_ID, '--format', 'json'], {
+      timeout: 12000,
+      maxBuffer: 256 * 1024,
+      env: process.env,
+    }, (error, stdout, stderr) => {
+      if (error) {
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      try {
+        const payload = JSON.parse(String(stdout || '{}'));
+        const entry = (payload.entries || []).find((item) => item.key === 'PG_PASSWORD' || item.key === 'postgresql_password');
+        const password = String(entry?.text_value || '').trim();
+        if (!password) {
+          reject(new Error('PG password is empty'));
+          return;
+        }
+        resolve(password);
+      } catch (e) {
+        reject(e);
+        return;
+      }
+    });
+  });
+}
+
+async function getLocalOpsPool() {
+  if (!localOpsPoolPromise) {
+    localOpsPoolPromise = (async () => {
+      const password = await resolveLocalOpsPgPassword();
+      const pool = new Pool({
+        host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
+        port: Number(process.env.PG_PORT || 6432),
+        database: process.env.PG_DATABASE || 'heys_production',
+        user: process.env.PG_USER || 'heys_admin',
+        password,
+        ssl: { rejectUnauthorized: false },
+        max: 2,
+        idleTimeoutMillis: 300000,
+        connectionTimeoutMillis: 20000,
+        query_timeout: 8000,
+      });
+      pool.on('error', (err) => {
+        console.warn('[Dev Proxy] local ops pg pool error:', err.message);
+        localOpsPoolPromise = null;
+      });
+      return pool;
+    })().catch((error) => {
+      localOpsPoolPromise = null;
+      throw error;
+    });
+  }
+  return localOpsPoolPromise;
+}
+
+async function prewarmLocalOpsPool() {
+  if (NODE_ENV !== 'development') return;
+  try {
+    const pool = await getLocalOpsPool();
+    const startedAt = Date.now();
+    await pool.query('SELECT 1');
+    console.log(`[Dev Proxy] local ops DB prewarmed in ${Date.now() - startedAt}ms`);
+    if (!localOpsKeepAliveTimer) {
+      localOpsKeepAliveTimer = setInterval(async () => {
+        try {
+          const livePool = await getLocalOpsPool();
+          await livePool.query('SELECT 1');
+        } catch (e) {
+          console.warn('[Dev Proxy] local ops DB keepalive failed:', e.message);
+        }
+      }, 30000);
+      if (typeof localOpsKeepAliveTimer.unref === 'function') localOpsKeepAliveTimer.unref();
+    }
+  } catch (e) {
+    console.warn('[Dev Proxy] local ops DB prewarm failed:', e.message);
+  }
+}
+
+async function resolveLocalOpsCuratorId(req) {
+  const payload = getBearerPayload(req) || {};
+  const email = payload.email || payload.user_metadata?.email || payload.app_metadata?.email || '';
+  const pool = await getLocalOpsPool();
+  if (email) {
+    const direct = await pool.query(
+      `SELECT id
+         FROM public.curators
+        WHERE lower(email) = lower($1)
+        ORDER BY created_at NULLS LAST
+        LIMIT 1`,
+      [email]
+    );
+    if (direct.rows[0]?.id) return direct.rows[0].id;
+  }
+  const fallback = await pool.query('SELECT id FROM public.curators ORDER BY created_at NULLS LAST LIMIT 1');
+  return fallback.rows[0]?.id || '';
+}
+
+async function executeLocalOpsRpc(fnName, curatorId) {
+  const pool = await getLocalOpsPool();
+  const result = await pool.query(`SELECT public.${fnName}($1::uuid)::text AS payload`, [curatorId]);
+  return JSON.parse(result.rows[0]?.payload || 'null');
+}
+
+async function maybeHandleLocalOpsRpc(req, res) {
+  const fnName = String(req.query?.fn || '');
+  if (NODE_ENV !== 'development' || !LOCAL_OPS_RPC_FUNCTIONS.has(fnName)) return false;
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return true;
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method_not_allowed' });
+    return true;
+  }
+
+  try {
+    const curatorId = await resolveLocalOpsCuratorId(req);
+    if (!curatorId) {
+      res.status(401).json({ error: 'curator_not_found' });
+      return true;
+    }
+    res.json(await executeLocalOpsRpc(fnName, curatorId));
+  } catch (e) {
+    console.error('[Dev Proxy] local ops rpc failed:', fnName, e.message, e.stderr || '');
+    res.status(500).json({ error: 'local_ops_rpc_failed', details: e.message, stderr: e.stderr || null });
+  }
+  return true;
+}
+
 app.all('/messages/transcription-consent', (req, res) => {
   const key = getDevTranscriptionConsentKey(req);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -202,6 +363,8 @@ function buildUpstreamHeaders(req) {
 }
 
 async function proxyToProd(req, res) {
+  if (await maybeHandleLocalOpsRpc(req, res)) return;
+
   const PROXY_RETRIES = 2;
   const PROXY_RETRY_DELAY_MS = 250;
 
@@ -430,6 +593,8 @@ app.listen(PORT, () => {
   }).catch((e) => {
     console.warn(`⚠️ Upstream pre-warm failed: ${e.message}`);
   });
+
+  prewarmLocalOpsPool();
 });
 
 module.exports = app;

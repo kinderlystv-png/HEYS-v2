@@ -283,8 +283,8 @@ async function answerCallbackQueryFast(queryId, bot = 'start') {
   if (!queryId) return;
   const token =
     bot === 'start'
-      ? process.env.HEYS_START_BOT_TOKEN
-      : process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+      ? HEYS_START_BOT_TOKEN
+      : TELEGRAM_BOT_TOKEN;
   if (!token || isLockboxPlaceholder(token)) return;
 
   try {
@@ -389,6 +389,26 @@ async function releasePollLease(lockName, owner) {
         AND metadata->>'owner' = $2`,
     [leaseKey, owner],
   );
+}
+
+async function recordPollHeartbeat(lockName, summary = {}) {
+  const task = lockName === 'heys-start-bot'
+    ? 'telegram_start_poll'
+    : 'telegram_client_poll';
+  try {
+    await queryWithFreshClient(
+      `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+         VALUES ($1, now(), NULL, interval '3 minutes')
+       ON CONFLICT (task) DO UPDATE
+         SET last_ok_at = now(),
+             stale_alerted_at = NULL,
+             max_silence = interval '3 minutes'`,
+      [task],
+    );
+    console.log(`[${lockName}] heartbeat ok`, JSON.stringify(summary));
+  } catch (e) {
+    console.warn(`[${lockName}] heartbeat failed:`, e.message);
+  }
 }
 
 async function withPollLease(lockName, leaseMs, run) {
@@ -1059,6 +1079,7 @@ async function handleStartBotCallback(query) {
   const data = query?.data || '';
 
   if (!chatId || !messageId) return jsonResponse(200, { ok: true });
+  await ensureRuntimeConfig();
   await answerCallbackQueryFast(query.id, START_BOT);
 
   if (data.startsWith('qs|')) {
@@ -1229,6 +1250,7 @@ async function runStartBotPoll(payload = {}) {
   let processed = 0;
   let delivered = 0;
   let lastUpdateId = null;
+  let getUpdatesOk = false;
 
   while (Date.now() + 1500 < deadline) {
     const remainingMs = deadline - Date.now();
@@ -1243,6 +1265,7 @@ async function runStartBotPoll(payload = {}) {
         limit: 20,
         allowed_updates: ['message', 'callback_query'],
       }, START_BOT, (timeoutSec + 3) * 1000);
+      getUpdatesOk = true;
     } catch (e) {
       console.warn('[HEYS Start] poll getUpdates failed:', e.message);
       if (Date.now() + 1500 >= deadline) break;
@@ -1276,12 +1299,17 @@ async function runStartBotPoll(payload = {}) {
     }
   }
 
+  const durationMs = Date.now() - startedAt;
+  if (getUpdatesOk) {
+    await recordPollHeartbeat('heys-start-bot', { processed, delivered, duration_ms: durationMs });
+  }
+
   return jsonResponse(200, {
     ok: true,
     poll: 'heys-start-bot',
     processed,
     delivered,
-    duration_ms: Date.now() - startedAt,
+    duration_ms: durationMs,
   });
 }
 
@@ -1297,6 +1325,7 @@ async function runClientBotPoll(payload = {}) {
   let processed = 0;
   let delivered = 0;
   let lastUpdateId = null;
+  let getUpdatesOk = false;
 
   while (Date.now() + 1500 < deadline) {
     const remainingMs = deadline - Date.now();
@@ -1311,6 +1340,7 @@ async function runClientBotPoll(payload = {}) {
         limit: 20,
         allowed_updates: ['message'],
       }, 'client', (timeoutSec + 3) * 1000);
+      getUpdatesOk = true;
     } catch (e) {
       console.warn('[BOT] client poll getUpdates failed:', e.message);
       if (Date.now() + 1500 >= deadline) break;
@@ -1344,12 +1374,17 @@ async function runClientBotPoll(payload = {}) {
     }
   }
 
+  const durationMs = Date.now() - startedAt;
+  if (getUpdatesOk) {
+    await recordPollHeartbeat('heys-client-bot', { processed, delivered, duration_ms: durationMs });
+  }
+
   return jsonResponse(200, {
     ok: true,
     poll: 'heys-client-bot',
     processed,
     delivered,
-    duration_ms: Date.now() - startedAt,
+    duration_ms: durationMs,
   });
 }
 

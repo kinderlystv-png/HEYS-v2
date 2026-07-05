@@ -1,7 +1,7 @@
 #!/bin/bash
 # 🚀 Centralized Deployment Script for Yandex Cloud Functions
 # Reads secrets from .env file and deploys all functions with consistent configuration
-# Usage: ./deploy-all.sh [function-name] [--skip-checks] [--skip-health] [--ci]
+# Usage: ./deploy-all.sh [function-name] [--group api|automations|all] [--dry-run] [--skip-checks] [--skip-health] [--ci]
 # v2.1 — adds CI mode for safe predeploy validation in GitHub Actions
 
 set -e  # Exit on error
@@ -21,21 +21,47 @@ CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
 
 # Parse flags
 TARGET_FUNC=""
+DEPLOY_GROUP="all"
 SKIP_CHECKS=false
 SKIP_HEALTH=false
 CI_MODE=false
 FORCE_DIRTY=false
+DRY_RUN=false
 
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+    arg="$1"
     case "$arg" in
         --skip-checks) SKIP_CHECKS=true ;;
         --skip-health) SKIP_HEALTH=true ;;
         --ci) CI_MODE=true ;;
         --force-dirty) FORCE_DIRTY=true ;;
+        --dry-run) DRY_RUN=true ;;
+        --group)
+            shift
+            if [ $# -eq 0 ]; then
+                echo -e "${RED}--group requires one of: api, automations, all${NC}"
+                exit 1
+            fi
+            DEPLOY_GROUP="$1"
+            ;;
+        --group=*)
+            DEPLOY_GROUP="${arg#--group=}"
+            ;;
         -*) echo -e "${RED}Unknown flag: $arg${NC}"; exit 1 ;;
         *) TARGET_FUNC="$arg" ;;
     esac
+    shift
 done
+
+case "$DEPLOY_GROUP" in
+    api|automations|all) ;;
+    *) echo -e "${RED}Unknown group: $DEPLOY_GROUP (expected api, automations, all)${NC}"; exit 1 ;;
+esac
+
+if [ -n "$TARGET_FUNC" ] && [ "$DEPLOY_GROUP" != "all" ]; then
+    echo -e "${RED}Use either a single function name or --group, not both.${NC}"
+    exit 1
+fi
 
 # Check if .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -79,12 +105,110 @@ for var in "${required_vars[@]}"; do
 done
 
 echo -e "${GREEN}✅ All required variables loaded${NC}"
-echo -e "${BLUE}🔐 PG_PASSWORD: ${PG_PASSWORD:0:4}...${PG_PASSWORD: -4}${NC}"
+echo -e "${BLUE}🔐 PG_PASSWORD: configured${NC}"
 
 payments_env_ready() {
     [ -n "$YUKASSA_SHOP_ID" ] &&
         [ -n "$YUKASSA_SECRET_KEY" ] &&
         [ -n "$YUKASSA_WEBHOOK_SECRET" ]
+}
+
+API_FUNCTIONS=(
+    heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health
+    heys-api-payments heys-api-push heys-api-messages heys-api-photos
+    heys-cron-speechkit-transcribe
+)
+
+AUTOMATION_FUNCTIONS=(
+    heys-bot-client heys-maintenance heys-client-daily-backup
+    heys-cron-security-alerts heys-cron-reminders heys-cron-trial-drip
+    heys-cron-photo-cleanup
+)
+
+selected_functions() {
+    if [ -n "$TARGET_FUNC" ]; then
+        echo "$TARGET_FUNC"
+        return
+    fi
+
+    case "$DEPLOY_GROUP" in
+        api)
+            printf '%s\n' "${API_FUNCTIONS[@]}"
+            ;;
+        automations)
+            printf '%s\n' "${AUTOMATION_FUNCTIONS[@]}"
+            ;;
+        all)
+            printf '%s\n' "${API_FUNCTIONS[@]}" "${AUTOMATION_FUNCTIONS[@]}"
+            ;;
+    esac
+}
+
+current_git_commit() {
+    git -C "$SCRIPT_DIR" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown"
+}
+
+current_deployed_at() {
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+sql_quote() {
+    local value="${1:-}"
+    value="${value//\'/}"
+    printf "'%s'" "$value"
+}
+
+record_deploy_receipt() {
+    local status="${1:-ok}"
+    local canary_ok="${2:-null}"
+    local psql_script="$SCRIPT_DIR/../scripts/db/psql.sh"
+    local commit actor
+    commit="$(current_git_commit)"
+    actor="${USER:-agent}"
+
+    if [ ! -x "$psql_script" ]; then
+        echo -e "${YELLOW}⚠️  deploy receipt skipped: scripts/db/psql.sh not found${NC}"
+        return 0
+    fi
+
+    if "$psql_script" -X -q -c "SELECT public.record_ops_deploy_receipt($(sql_quote "$DEPLOY_GROUP"), $(sql_quote "$commit"), $(sql_quote "$status"), $canary_ok, $(sql_quote "$actor"), jsonb_build_object('source', 'deploy-all', 'group', $(sql_quote "$DEPLOY_GROUP")))" >/dev/null; then
+        echo -e "${GREEN}🧾 Deploy receipt recorded: group=$DEPLOY_GROUP commit=$commit status=$status canary=$canary_ok${NC}"
+    else
+        echo -e "${YELLOW}⚠️  deploy receipt write failed (deploy already completed)${NC}"
+    fi
+}
+
+env_key_names() {
+    local flags="$1"
+    printf '%s\n' "$flags" | tr ' ' '\n' | awk '/^--environment$/ { next } /^[-_A-Za-z0-9]+=/{ sub(/=.*/, "", $0); print }' | sort -u
+}
+
+assert_env_flags_no_plaintext_secrets() {
+    local func_name=$1
+    local flags="$2"
+    local key value violations=()
+
+    while IFS= read -r item; do
+        key="${item%%=*}"
+        value="${item#*=}"
+        if [[ "$key" =~ (TOKEN|SECRET|PASSWORD|PRIVATE_KEY)$ || "$key" =~ (TOKEN|SECRET|PASSWORD|PRIVATE_KEY)_ ]]; then
+            case "$key" in
+                *_SHA256|LOCKBOX_*_SECRET_ID|HEYS_DEPLOY_COMMIT|HEYS_DEPLOYED_AT|HEYS_DEPLOY_GROUP)
+                    continue
+                    ;;
+            esac
+            if [[ "$value" == __IN_LOCKBOX__* ]]; then
+                continue
+            fi
+            violations+=("$key")
+        fi
+    done < <(printf '%s\n' "$flags" | tr ' ' '\n' | grep -E '^[-_A-Za-z0-9]+=' || true)
+
+    if [ ${#violations[@]} -gt 0 ]; then
+        echo -e "${RED}❌ Refuse to deploy $func_name: plaintext secret env detected: ${violations[*]}${NC}"
+        echo -e "${YELLOW}   Put these values in Lockbox and deploy only placeholders/hashes.${NC}"
+        exit 1
+    fi
 }
 
 # Validate per-function secrets
@@ -298,15 +422,13 @@ build_env_flags() {
     # Telegram bots: existing client PIN/notification bot + HEYS Start quiz bot.
     # Keep tokens separate: TELEGRAM_CLIENT_BOT_TOKEN serves /bot/webhook,
     # HEYS_START_BOT_TOKEN serves /start-bot/webhook.
-    # Prefer webhook secret hashes in runtime env: Telegram sends the raw secret
-    # in a header, and the function can verify it without storing the raw value.
+    # Strict ops default: tokens and raw cron/webhook secrets come from Lockbox
+    # only. Runtime env may carry only non-secret config and webhook secret hashes.
     if [[ "$func_name" == "heys-bot-client" ]]; then
         local k
-        for k in TELEGRAM_CLIENT_BOT_TOKEN HEYS_START_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET_SHA256 HEYS_START_WEBHOOK_SECRET_SHA256 INTERNAL_CRON_TOKEN APP_URL; do
+        for k in TELEGRAM_WEBHOOK_SECRET_SHA256 HEYS_START_WEBHOOK_SECRET_SHA256 APP_URL; do
             _add "$k"
         done
-        if [ -z "$TELEGRAM_WEBHOOK_SECRET_SHA256" ]; then _add TELEGRAM_WEBHOOK_SECRET; fi
-        if [ -z "$HEYS_START_WEBHOOK_SECRET_SHA256" ]; then _add HEYS_START_WEBHOOK_SECRET; fi
     fi
 
     # Web Push (VAPID) — api-push, cron-reminders, api-messages.
@@ -352,7 +474,7 @@ deploy_function() {
     # This check refuses to deploy if the function's source dir has uncommitted
     # changes vs HEAD. Skip in CI (clean checkout by definition) or with
     # --force-dirty for genuine emergency hotpatches.
-    if [ "$CI_MODE" != true ] && [ "$FORCE_DIRTY" != true ]; then
+    if [ "$CI_MODE" != true ] && [ "$FORCE_DIRTY" != true ] && [ "$DRY_RUN" != true ]; then
         # Run from repo root so git sees correct relative paths.
         REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"
         if [ -n "$REPO_ROOT" ]; then
@@ -371,6 +493,53 @@ deploy_function() {
                 return 1
             fi
         fi
+    fi
+
+    # Validate required secrets for this function
+    validate_function_env "$func_name"
+
+    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_env_ready; then
+        if [ "$CI_MODE" = true ] && [ -z "$TARGET_FUNC" ]; then
+            echo -e "${YELLOW}⏭️  Skipping $func_name in CI — YUKASSA secrets are not configured${NC}"
+            return 0
+        fi
+
+        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID, YUKASSA_SECRET_KEY and YUKASSA_WEBHOOK_SECRET are required for $func_name${NC}"
+        exit 1
+    fi
+
+    # Build environment flags before touching per-function files so --dry-run is read-only.
+    env_flags=$(build_env_flags "$func_name")
+    env_flags+=" --environment HEYS_DEPLOY_COMMIT=$(current_git_commit)"
+    env_flags+=" --environment HEYS_DEPLOYED_AT=$(current_deployed_at)"
+    env_flags+=" --environment HEYS_DEPLOY_GROUP=${TARGET_FUNC:-$DEPLOY_GROUP}"
+    assert_env_flags_no_plaintext_secrets "$func_name" "$env_flags"
+
+    # Service account для чтения Lockbox. Прикрепляется ко ВСЕМ функциям кроме
+    # heys-api-health (она ничего не читает из Lockbox).
+    # SA heys-function-invoker имеет lockbox.payloadViewer на heys-app-secrets,
+    # heys-database, heys-s3.
+    sa_flag=""
+    if [[ "$func_name" != "heys-api-health" ]]; then
+        sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
+    fi
+
+    # Concurrency: API-функции и Telegram bot получают concurrency=4 — один контейнер
+    # обслуживает до 4 параллельных запросов. Подняли с 2 → 4 (2026-06-15)
+    # для запаса под burst/cold-start.
+    local concurrency_flag=""
+    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ || "$func_name" == "heys-bot-client" ]]; then
+        concurrency_flag="--concurrency 4"
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${BLUE}🧪 Dry-run $func_name${NC}"
+        echo "   runtime=$runtime entrypoint=$entrypoint memory=$memory timeout=$timeout"
+        if [ -n "$concurrency_flag" ]; then echo "   $concurrency_flag"; fi
+        if [ -n "$sa_flag" ]; then echo "   service-account=aje85rjgpj4nk9m384ek"; fi
+        echo "   env keys:"
+        env_key_names "$env_flags" | sed 's/^/      /'
+        return 0
     fi
 
     echo ""
@@ -415,47 +584,6 @@ deploy_function() {
             echo -e "${RED}❌ ERROR: merge source not found at $SRC${NC}"
             exit 1
         fi
-    fi
-
-    # Validate required secrets for this function
-    validate_function_env "$func_name"
-
-    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_env_ready; then
-        if [ "$CI_MODE" = true ] && [ -z "$TARGET_FUNC" ]; then
-            echo -e "${YELLOW}⏭️  Skipping $func_name in CI — YUKASSA secrets are not configured${NC}"
-            cd "$SCRIPT_DIR"
-            return 0
-        fi
-
-        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID, YUKASSA_SECRET_KEY and YUKASSA_WEBHOOK_SECRET are required for $func_name${NC}"
-        exit 1
-    fi
-    
-    # Build environment flags
-    env_flags=$(build_env_flags "$func_name")
-
-    # Service account для чтения Lockbox. Прикрепляется ко ВСЕМ функциям кроме
-    # heys-api-health (она ничего не читает из Lockbox).
-    # SA heys-function-invoker имеет lockbox.payloadViewer на heys-app-secrets,
-    # heys-database, heys-s3.
-    sa_flag=""
-    if [[ "$func_name" != "heys-api-health" ]]; then
-        sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
-    fi
-
-    # Concurrency: API-функции и Telegram bot получают concurrency=4 — один контейнер
-    # обслуживает до 4 параллельных запросов. Подняли с 2 → 4 (2026-06-15)
-    # для запаса под burst/cold-start: при всплеске (напр. хвост sync-инцидента)
-    # YC не успевал масштабировать инстансы → ALB/gateway отдавал 429 Too Many
-    # Requests с дефолтным CORS '*', который браузер не читает при
-    # credentials:include → клиент видел «CORS/Failed to fetch» и слепо ретраил.
-    # Для heys-bot-client это важно из-за Telegram webhook: быстрые ветки не
-    # должны ждать за одним долгим contact/PIN DB-запросом. DB pool сам ограничит
-    # тяжёлые ветки, а простые webhook responses останутся параллельными.
-    # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
-    local concurrency_flag=""
-    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ || "$func_name" == "heys-bot-client" ]]; then
-        concurrency_flag="--concurrency 4"
     fi
 
     # Pre-build zip with explicit exclusions.
@@ -565,38 +693,54 @@ if [ -n "$TARGET_FUNC" ]; then
     if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
         SHOULD_UPDATE_GATEWAY=true
     fi
-    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ]; then
+    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ]; then
         ensure_speechkit_trigger
     fi
 else
-    # Deploy all functions
-    echo -e "${YELLOW}🚀 Deploying all functions...${NC}"
-    # heys-api-sms удалён 2026-05-22 (см. apps/web/heys_consents_v1.js:53) — исключён
-    # из auto-deploy чтобы CI не падал с "function not found"
-    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments heys-api-push heys-api-messages heys-api-photos; do
+    echo -e "${YELLOW}🚀 Deploy group: $DEPLOY_GROUP${NC}"
+    while IFS= read -r func_name; do
+        [ -z "$func_name" ] && continue
         deploy_function "$func_name"
-    done
-
-    # Pilot worker is separated from the API loop so legacy regression guards
-    # keep protecting the cookie-auth API deploy set verbatim.
-    for func_name in heys-cron-speechkit-transcribe; do
-        deploy_function "$func_name"
-    done
-    ensure_speechkit_trigger
+    done < <(selected_functions)
+    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
+        ensure_speechkit_trigger
+    fi
     
     echo ""
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}✅ All functions deployed successfully!${NC}"
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    SHOULD_UPDATE_GATEWAY=true
-fi
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${GREEN}✅ Dry-run completed for group: $DEPLOY_GROUP${NC}"
+    else
+        echo -e "${GREEN}✅ Deploy group completed successfully: $DEPLOY_GROUP${NC}"
+    fi
+	    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+	    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]]; then
+	        SHOULD_UPDATE_GATEWAY=true
+	    fi
+	    if [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$SKIP_HEALTH" != true ]; then
+	        echo ""
+	        echo -e "${BLUE}🧪 Running automation canaries...${NC}"
+	        if node "$SCRIPT_DIR/check-heys-ops-status.cjs" --canary --strict; then
+	            echo -e "${GREEN}✅ Automation canaries PASSED${NC}"
+	            record_deploy_receipt "ok" "true"
+	        else
+	            echo -e "${RED}❌ Automation canaries FAILED${NC}"
+	            record_deploy_receipt "failed" "false"
+	            exit 1
+	        fi
+	    elif [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
+	        record_deploy_receipt "ok" "null"
+	    fi
+	fi
 
-if [ "$SHOULD_UPDATE_GATEWAY" = true ]; then
+if [ "$SHOULD_UPDATE_GATEWAY" = true ] && [ "$DRY_RUN" != true ]; then
     update_api_gateway
 fi
 
 # ─── Post-deploy: health check ──────────────────────────────────────
-if [ "$SKIP_HEALTH" = true ]; then
+if [ "$DRY_RUN" = true ]; then
+    echo -e "${YELLOW}⏭️  Dry-run: skipping gateway update and health check${NC}"
+elif [ "$SKIP_HEALTH" = true ]; then
     echo -e "${YELLOW}⏭️  Skipping health check (--skip-health)${NC}"
 else
     echo ""

@@ -20,9 +20,17 @@
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 
-const BOT_API_URL = process.env.BOT_API_URL || 'https://api.heyslab.ru';
-const INTERNAL_CRON_TOKEN = process.env.INTERNAL_CRON_TOKEN;
-const APP_URL = process.env.APP_URL || 'https://app.heyslab.ru';
+function getBotApiUrl() {
+  return process.env.BOT_API_URL || 'https://api.heyslab.ru';
+}
+
+function getInternalCronToken() {
+  return process.env.INTERNAL_CRON_TOKEN;
+}
+
+function getAppUrl() {
+  return process.env.APP_URL || 'https://app.heyslab.ru';
+}
 
 // ⚠️ 152-ФЗ: имя клиента (ПДн) НЕ передаём через Telegram API
 // (серверы api.telegram.org за пределами РФ). Текст обезличен, поэтому
@@ -72,16 +80,16 @@ function dripText(stage, daysLeft) {
 
 function dripButtons(stage) {
   return {
-    inline_keyboard: [[{ text: '🚀 Открыть HEYS', url: APP_URL }]],
+    inline_keyboard: [[{ text: '🚀 Открыть HEYS', url: getAppUrl() }]],
   };
 }
 
 async function sendBotMessage(chatId, text, replyMarkup) {
-  const res = await fetch(`${BOT_API_URL}/bot/send`, {
+  const res = await fetch(`${getBotApiUrl()}/bot/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Cron-Token': INTERNAL_CRON_TOKEN,
+      'X-Internal-Cron-Token': getInternalCronToken(),
     },
     body: JSON.stringify({ chat_id: chatId, text, reply_markup: replyMarkup }),
   });
@@ -97,7 +105,7 @@ module.exports.handler = async function (event, context) {
   const started = Date.now();
   console.log(`[CRON-DRIP] started at ${new Date().toISOString()}`);
 
-  if (!INTERNAL_CRON_TOKEN) {
+  if (!getInternalCronToken()) {
     console.error('[CRON-DRIP] INTERNAL_CRON_TOKEN not set');
     return { statusCode: 500, body: JSON.stringify({ error: 'missing token' }) };
   }
