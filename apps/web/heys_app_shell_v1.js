@@ -385,6 +385,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         // null = ещё не загрузили, { subscribed, permission, capable, needsInstall, busy }
         const [pushStatus, setPushStatus] = React.useState(null);
         const [pushBusy, setPushBusy] = React.useState(false);
+        const [showOpsDashboard, setShowOpsDashboard] = React.useState(false);
+        const [opsDashboard, setOpsDashboard] = React.useState(null);
+        const [opsLoading, setOpsLoading] = React.useState(false);
+        const [opsError, setOpsError] = React.useState('');
+        const [opsLastCheck, setOpsLastCheck] = React.useState(null);
+        const [opsCheckMessage, setOpsCheckMessage] = React.useState('');
 
         // Portal target: push-badge живёт в state app_shell, но рендерится слева от 🌙
         // в GamificationBar. См. heys_gamification_bar_v1.js → #push-badge-slot.
@@ -429,6 +435,362 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             window.addEventListener('focus', onFocus);
             return () => { cancelled = true; window.removeEventListener('focus', onFocus); };
         }, []);
+
+        const loadOpsDashboard = React.useCallback(async () => {
+            if (!window.HEYS?.YandexAPI?.rpc) {
+                setOpsError('Ops API недоступен');
+                return;
+            }
+            setOpsLoading(true);
+            setOpsError('');
+            setOpsCheckMessage('Загружаем текущий статус...');
+            const startedAt = Date.now();
+            try {
+                console.info('[HEYS.ops.dashboard] request:start', { fn: 'admin_get_ops_status', refresh: false });
+                const res = await window.HEYS.YandexAPI.rpc('admin_get_ops_status', {});
+                if (res?.error) throw new Error(res.error.message || 'Ops API error');
+                const data = res?.data?.admin_get_ops_status || res?.data || null;
+                const tookMs = Date.now() - startedAt;
+                setOpsDashboard(data);
+                setOpsLastCheck({ at: Date.now(), fn: 'admin_get_ops_status', tookMs, ok: data?.ok === true });
+                setOpsCheckMessage(`Статус загружен за ${tookMs} ms`);
+                console.info('[HEYS.ops.dashboard] request:success', { fn: 'admin_get_ops_status', tookMs, ok: data?.ok === true, open: data?.counts?.open_incidents, backup: data?.backup?.status || null });
+            } catch (e) {
+                const tookMs = Date.now() - startedAt;
+                setOpsError(e?.message || 'Не удалось загрузить ops статус');
+                setOpsLastCheck({ at: Date.now(), fn: 'admin_get_ops_status', tookMs, ok: false, error: true });
+                setOpsCheckMessage(`Проверка не завершилась: ${e?.message || 'ошибка'}`);
+                console.error('[HEYS.ops.dashboard] request:error', { fn: 'admin_get_ops_status', tookMs, message: e?.message || String(e) });
+            } finally {
+                setOpsLoading(false);
+            }
+        }, []);
+
+        const refreshOpsDashboard = React.useCallback(async () => {
+            if (!window.HEYS?.YandexAPI?.rpc) {
+                setOpsError('Ops API недоступен');
+                return;
+            }
+            setOpsLoading(true);
+            setOpsError('');
+            setOpsCheckMessage('Запускаем серверную проверку...');
+            const startedAt = Date.now();
+            try {
+                console.info('[HEYS.ops.dashboard] request:start', { fn: 'admin_refresh_ops_status', refresh: true });
+                const res = await window.HEYS.YandexAPI.rpc('admin_refresh_ops_status', {});
+                if (res?.error && /not allowed/i.test(res.error.message || '')) {
+                    const fallback = await window.HEYS.YandexAPI.rpc('admin_get_ops_status', {});
+                    if (fallback?.error) throw new Error(fallback.error.message || 'Ops API error');
+                    const fallbackData = fallback?.data?.admin_get_ops_status || fallback?.data || null;
+                    const tookMs = Date.now() - startedAt;
+                    setOpsDashboard(fallbackData);
+                    setOpsLastCheck({ at: Date.now(), fn: 'admin_get_ops_status', tookMs, ok: fallbackData?.ok === true, fallback: true });
+                    setOpsCheckMessage(`Показан текущий статус за ${tookMs} ms`);
+                    setOpsError('Refresh ещё не задеплоен на API; показан текущий статус');
+                    console.info('[HEYS.ops.dashboard] request:fallback', { tookMs, open: fallbackData?.counts?.open_incidents, backup: fallbackData?.backup?.status || null });
+                    return;
+                }
+                if (res?.error) throw new Error(res.error.message || 'Ops API error');
+                const data = res?.data?.admin_refresh_ops_status || res?.data || null;
+                const tookMs = Date.now() - startedAt;
+                setOpsDashboard(data);
+                setOpsLastCheck({ at: Date.now(), fn: 'admin_refresh_ops_status', tookMs, ok: data?.ok === true });
+                setOpsCheckMessage(`Проверка завершена за ${tookMs} ms`);
+                console.info('[HEYS.ops.dashboard] request:success', { fn: 'admin_refresh_ops_status', tookMs, ok: data?.ok === true, open: data?.counts?.open_incidents, backup: data?.backup?.status || null });
+            } catch (e) {
+                const tookMs = Date.now() - startedAt;
+                setOpsError(e?.message || 'Не удалось проверить ops статус');
+                setOpsLastCheck({ at: Date.now(), fn: 'admin_refresh_ops_status', tookMs, ok: false, error: true });
+                setOpsCheckMessage(`Проверка не завершилась: ${e?.message || 'ошибка'}`);
+                console.error('[HEYS.ops.dashboard] request:error', { fn: 'admin_refresh_ops_status', tookMs, message: e?.message || String(e) });
+            } finally {
+                setOpsLoading(false);
+            }
+        }, []);
+
+        const openOpsDashboard = React.useCallback(() => {
+            setShowOpsDashboard(true);
+            void loadOpsDashboard();
+        }, [loadOpsDashboard]);
+
+        const opsLabelStyle = { fontSize: 12, color: 'var(--muted)', marginBottom: 6 };
+        const opsValueStyle = { fontSize: 20, fontWeight: 750, marginBottom: 3 };
+        const opsHintStyle = { fontSize: 12, color: 'var(--muted)' };
+        const opsCardStyle = (ok) => ({
+            padding: 14,
+            borderRadius: 12,
+            border: ok ? '1px solid #bbf7d0' : '1px solid #fecdd3',
+            background: ok ? '#f0fdf4' : '#fff1f2',
+            color: ok ? '#14532d' : '#991b1b'
+        });
+
+        const renderOpsDashboardModal = () => {
+            if (!showOpsDashboard) return null;
+            const statusOk = opsDashboard?.ok === true;
+            const backup = opsDashboard?.backup || null;
+            const heartbeats = Array.isArray(opsDashboard?.heartbeats) ? opsDashboard.heartbeats : [];
+            const incidents = Array.isArray(opsDashboard?.incidents) ? opsDashboard.incidents : [];
+            const deploys = Array.isArray(opsDashboard?.deploys) ? opsDashboard.deploys : [];
+            const openIncidents = incidents.filter((item) => item.status === 'open');
+            const staleHeartbeats = heartbeats.filter((item) => item.stale);
+            const shortCommit = (value) => String(value || 'unknown').slice(0, 8);
+            const lastCheckTime = opsLastCheck?.at ? new Date(opsLastCheck.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+            const renderRunbook = (item) => {
+                const details = item?.details || {};
+                const title = details.runbook_title;
+                const command = details.runbook_command;
+                const url = details.runbook_url;
+                if (!title && !command && !url) return null;
+                return React.createElement('div', {
+                    style: {
+                        marginTop: 8,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 6,
+                        alignItems: 'center',
+                        fontSize: 12,
+                        color: 'var(--muted)'
+                    }
+                },
+                    title && React.createElement('span', null, title),
+                    command && React.createElement('code', {
+                        style: {
+                            padding: '3px 6px',
+                            borderRadius: 6,
+                            background: 'rgba(15, 23, 42, 0.07)',
+                            color: 'var(--text)',
+                            fontSize: 12
+                        }
+                    }, command),
+                    url && React.createElement('a', {
+                        href: url,
+                        target: '_blank',
+                        rel: 'noreferrer',
+                        style: { color: 'var(--accent)', textDecoration: 'none' }
+                    }, 'runbook')
+                );
+            };
+
+            return React.createElement('div', {
+                className: 'ops-dashboard-backdrop',
+                role: 'presentation',
+                onClick: () => setShowOpsDashboard(false),
+                style: {
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 2200,
+                    background: 'rgba(15, 23, 42, 0.42)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 16
+                }
+            },
+                React.createElement('div', {
+                    className: 'ops-dashboard-modal',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'Ops dashboard',
+                    onClick: (e) => e.stopPropagation(),
+                    style: {
+                        width: 'min(920px, calc(100vw - 32px))',
+                        maxHeight: 'min(760px, calc(100vh - 32px))',
+                        overflow: 'auto',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 16,
+                        boxShadow: '0 24px 80px rgba(15, 23, 42, 0.28)'
+                    }
+                },
+                    React.createElement('div', {
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            padding: '18px 20px',
+                            borderBottom: '1px solid var(--border)'
+                        }
+                    },
+                        React.createElement('div', null,
+                            React.createElement('div', {
+                                style: { fontSize: 18, fontWeight: 700, marginBottom: 3 }
+                            }, 'Ops dashboard'),
+                            React.createElement('div', {
+                                style: { fontSize: 13, color: 'var(--muted)' }
+                            }, statusOk ? 'Серверные проверки без активных инцидентов' : 'Есть пункты, требующие внимания')
+                        ),
+                        React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: loadOpsDashboard,
+                                disabled: opsLoading,
+                                style: {
+                                    minHeight: 36,
+                                    padding: '8px 12px',
+                                    borderRadius: 10,
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg)',
+                                    color: 'var(--text)',
+                                    cursor: opsLoading ? 'default' : 'pointer'
+                                }
+                            }, opsLoading ? 'Обновляем' : 'Обновить'),
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: refreshOpsDashboard,
+                                disabled: opsLoading,
+                                style: {
+                                    minHeight: 36,
+                                    padding: '8px 12px',
+                                    borderRadius: 10,
+                                    border: '1px solid #86efac',
+	                                    background: '#f0fdf4',
+	                                    color: '#14532d',
+	                                    cursor: opsLoading ? 'default' : 'pointer',
+                                        opacity: opsLoading ? 0.72 : 1
+	                                }
+	                            }, opsLoading ? 'Проверяем...' : 'Проверить сейчас'),
+                            React.createElement('button', {
+                                type: 'button',
+                                'aria-label': 'Закрыть Ops dashboard',
+                                onClick: () => setShowOpsDashboard(false),
+                                style: {
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 10,
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg)',
+                                    color: 'var(--text)',
+                                    cursor: 'pointer'
+                                }
+                            }, '×')
+                        )
+	                    ),
+	                    React.createElement('div', { style: { padding: 20, display: 'grid', gap: 14 } },
+	                        opsError && React.createElement('div', {
+                            style: {
+                                padding: 12,
+                                borderRadius: 10,
+                                background: '#fff1f2',
+                                color: '#991b1b',
+                                border: '1px solid #fecdd3',
+                                fontSize: 13
+	                            }
+	                        }, opsError),
+                            (opsLoading || opsCheckMessage || lastCheckTime) && React.createElement('div', {
+                                role: 'status',
+                                'aria-live': 'polite',
+                                style: {
+                                    padding: '10px 12px',
+                                    borderRadius: 10,
+                                    border: '1px solid var(--border)',
+                                    background: opsLoading ? 'var(--bg)' : 'rgba(15, 23, 42, 0.04)',
+                                    color: 'var(--text)',
+                                    fontSize: 13,
+                                    display: 'grid',
+                                    gap: 2
+                                }
+                            },
+                                React.createElement('div', { style: { fontWeight: 700 } }, opsLoading ? 'Проверка выполняется' : (opsLastCheck?.error ? 'Последняя проверка завершилась ошибкой' : 'Последняя проверка завершена')),
+                                React.createElement('div', { style: { color: 'var(--muted)' } }, opsCheckMessage || (lastCheckTime ? `Обновлено в ${lastCheckTime}` : '')),
+                                opsLastCheck && React.createElement('div', {
+                                    style: {
+                                        color: 'var(--muted)',
+                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                        overflowWrap: 'anywhere'
+                                    }
+                                }, `${opsLastCheck.fn || 'ops'} · ${lastCheckTime || '—'} · ${opsLastCheck.tookMs || 0} ms`)
+                            ),
+	                        React.createElement('div', {
+                            style: {
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                gap: 10
+                            }
+                        },
+                            React.createElement('div', { className: 'ops-dashboard-card', style: opsCardStyle(statusOk) },
+                                React.createElement('div', { style: opsLabelStyle }, 'Deploy / incidents'),
+                                React.createElement('div', { style: opsValueStyle }, statusOk ? 'OK' : `${openIncidents.length} open`),
+                                React.createElement('div', { style: opsHintStyle }, 'По данным БД timeline')
+                            ),
+                            React.createElement('div', { className: 'ops-dashboard-card', style: opsCardStyle(!backup || backup.status !== 'ok' || Number(backup.hours_ago || 999) > 30 ? false : true) },
+                                React.createElement('div', { style: opsLabelStyle }, 'Backup'),
+                                React.createElement('div', { style: opsValueStyle }, backup ? `${backup.status} · ${backup.hours_ago}h` : 'нет данных'),
+                                React.createElement('div', { style: opsHintStyle }, backup ? `errors ${backup.error_count || 0}` : 'backup_run_log пуст')
+                            ),
+                            React.createElement('div', { className: 'ops-dashboard-card', style: opsCardStyle(staleHeartbeats.length === 0) },
+                                React.createElement('div', { style: opsLabelStyle }, 'Heartbeats'),
+                                React.createElement('div', { style: opsValueStyle }, staleHeartbeats.length ? `${staleHeartbeats.length} stale` : 'fresh'),
+                                React.createElement('div', { style: opsHintStyle }, `${heartbeats.length} задач`)
+                            )
+                        ),
+                        React.createElement('div', { style: { display: 'grid', gap: 8 } },
+                            React.createElement('div', { style: { fontWeight: 700 } }, 'Активные инциденты'),
+                            openIncidents.length === 0
+                                ? React.createElement('div', { style: { color: 'var(--muted)', fontSize: 13 } }, 'Активных инцидентов нет')
+                                : openIncidents.slice(0, 8).map((item) => React.createElement('div', {
+                                    key: `${item.source}:${item.event_key}`,
+                                    style: {
+                                        padding: 12,
+                                        borderRadius: 10,
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg)'
+                                    }
+                                },
+                                    React.createElement('div', { style: { fontWeight: 650, marginBottom: 4 } }, item.title),
+                                    React.createElement('div', { style: { fontSize: 12, color: 'var(--muted)' } },
+                                        `${item.source} · ${item.severity} · ${item.occurrence_count || 1} раз`
+                                    ),
+                                    renderRunbook(item)
+                                ))
+                        ),
+                        React.createElement('div', { style: { display: 'grid', gap: 8 } },
+                            React.createElement('div', { style: { fontWeight: 700 } }, 'Deploy receipts'),
+                            deploys.length === 0
+                                ? React.createElement('div', { style: { color: 'var(--muted)', fontSize: 13 } }, 'Пока нет записей о deploy')
+                                : deploys.slice(0, 5).map((item, index) => React.createElement('div', {
+                                    key: `${item.deployed_at || index}:${item.deploy_group}`,
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: 'minmax(120px, 1fr) minmax(90px, auto) minmax(80px, auto)',
+                                        gap: 10,
+                                        alignItems: 'center',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid var(--border)',
+                                        fontSize: 13
+                                    }
+                                },
+                                    React.createElement('span', null, `${item.deploy_group || 'unknown'} · ${shortCommit(item.deploy_commit)}`),
+                                    React.createElement('span', { style: { color: item.status === 'ok' ? '#166534' : '#991b1b' } }, item.status || 'unknown'),
+                                    React.createElement('span', { style: { color: item.canary_ok === false ? '#991b1b' : 'var(--muted)' } },
+                                        item.canary_ok == null ? 'canary n/a' : (item.canary_ok ? 'canary ok' : 'canary failed')
+                                    )
+                                ))
+                        ),
+                        React.createElement('div', { style: { display: 'grid', gap: 8 } },
+                            React.createElement('div', { style: { fontWeight: 700 } }, 'Heartbeats'),
+                            heartbeats.slice(0, 10).map((item) => React.createElement('div', {
+                                key: item.task,
+                                style: {
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    padding: '8px 0',
+                                    borderBottom: '1px solid var(--border)',
+                                    fontSize: 13
+                                }
+                            },
+                                React.createElement('span', null, item.task),
+                                React.createElement('span', { style: { color: item.stale ? '#991b1b' : 'var(--muted)' } },
+                                    item.stale ? `stale · ${item.minutes_ago}m` : `${item.minutes_ago}m`
+                                )
+                            ))
+                        )
+                    )
+                )
+            );
+        };
         // Собирает полный отладочный отчёт о состоянии push-подписки.
         // Цель — пользователь может одним тапом скопировать всё в буфер и прислать.
         const buildPushDiagnostic = async (subscribeResult, exception) => {
@@ -2756,6 +3118,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             fallbackDateStr: selectedDate || resolvedTodayISO
         });
 
+        React.useEffect(() => {
+            if (!window.HEYS) window.HEYS = {};
+            if (!window.HEYS.ui) window.HEYS.ui = {};
+            window.HEYS.ui.setSelectedDate = (nextDate) => {
+                if (typeof nextDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) return;
+                selectDateWithPrefetch(nextDate, { reason: 'curator-review-open-day' });
+            };
+            return () => {
+                try {
+                    if (window.HEYS?.ui?.setSelectedDate) delete window.HEYS.ui.setSelectedDate;
+                } catch (_) {}
+            };
+        }, [selectDateWithPrefetch]);
+
         const commitPendingUndoBeforeContextChange = (reason, meta) => {
             try {
                 if (!HEYS?.Undo?.pending) return;
@@ -3232,9 +3608,29 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             ]
                     ),
 
-                ),
-                // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
-                React.createElement('div', {
+	                ),
+	                !isRpcMode && cloudUser && React.createElement('button', {
+	                    key: 'ops-dashboard',
+	                    type: 'button',
+	                    className: 'hdr-ops-dashboard-btn',
+	                    title: 'Ops dashboard',
+	                    onClick: openOpsDashboard,
+	                    style: {
+	                        minWidth: 36,
+	                        height: 36,
+	                        borderRadius: 10,
+	                        border: '1px solid var(--border)',
+	                        background: 'var(--card)',
+	                        color: 'var(--text)',
+	                        display: 'inline-flex',
+	                        alignItems: 'center',
+	                        justifyContent: 'center',
+	                        fontSize: 15,
+	                        cursor: 'pointer'
+	                    }
+	                }, 'Ops'),
+	                // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
+	                React.createElement('div', {
                     key: 'cloudsync',
                     className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
@@ -3464,19 +3860,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     ),
                     React.createElement('div', { className: 'sync-pending-banner__count', 'aria-hidden': 'true' }, pendingCount)
                 ),
-                visiblePendingActionItems.length > 0 && React.createElement(
-                    'div',
-                    { className: 'sync-pending-banner__items' },
-                    visiblePendingActionItems.map((item) => React.createElement(
+	                visiblePendingActionItems.length > 0 && React.createElement(
+	                    'div',
+	                    { className: 'sync-pending-banner__items' },
+	                    visiblePendingActionItems.map((item) => React.createElement(
                         'div',
                         { key: item.id, className: 'sync-pending-banner__item' },
                         React.createElement('span', { className: 'sync-pending-banner__item-icon', 'aria-hidden': 'true' }, item.icon || '💾'),
                         React.createElement('span', { className: 'sync-pending-banner__item-label' }, item.title || 'Изменения'),
                         item.scopeLabel && React.createElement('span', { className: 'sync-pending-banner__item-scope' }, item.scopeLabel)
-                    ))
-                )
-            )
-        );
+	                    ))
+	                )
+	            ),
+	            renderOpsDashboardModal()
+	        );
     }
 
     function AppTabsNav(props) {

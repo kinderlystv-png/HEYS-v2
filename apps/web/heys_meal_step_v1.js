@@ -1236,10 +1236,25 @@
    * Показать модалку добавления приёма пищи
    * @param {Object} options
    * @param {string} options.dateKey - Дата (YYYY-MM-DD)
+   * @param {string} [options.time] - Начальное время приёма (HH:MM)
    * @param {Function} options.onComplete - Callback после создания
    */
+  function parseInitialMealTime(value) {
+    const match = /^(\d{1,2}):(\d{2})/.exec(String(value || ''));
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return {
+      initialHourIndex: hourToWheelIndex(hours % 24),
+      initialMinutes: Math.max(0, Math.min(59, minutes)),
+      initialMealType: getMealTypeByHour(hours)
+    };
+  }
+
   function showAddMealModal(options = {}) {
     const dateKey = options.dateKey || new Date().toISOString().slice(0, 10);
+    const initialTime = parseInitialMealTime(options.time || options.initialTime);
 
     HEYS.StepModal.show({
       steps: ['mealTime', 'mealMood'],
@@ -1257,7 +1272,8 @@
         trainings: options.trainings,
         deficitPct: options.deficitPct,
         prof: options.prof,
-        dayData: options.dayData
+        dayData: options.dayData,
+        ...(initialTime || {})
       },
       onComplete: (stepData) => {
         // Создаём приём

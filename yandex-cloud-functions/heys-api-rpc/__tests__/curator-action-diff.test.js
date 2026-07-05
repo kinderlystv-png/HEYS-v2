@@ -144,6 +144,70 @@ test('meal fallback key (time+name) when no id', () => {
   assert.equal(actions[0].type, 'meal_item_added');
 });
 
+test('meal item changed: grams change emits meal_item_changed', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [{ id: 'it_1', product_id: 'p_1', name: 'Рис', grams: 100 }] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [{ id: 'it_1', product_id: 'p_1', name: 'Рис', grams: 120 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'meal_item_changed');
+  assert.equal(actions[0].meal_id, 'm_1');
+  assert.equal(actions[0].item_id, 'it_1');
+  assert.equal(actions[0].product_id, 'p_1');
+  assert.equal(actions[0].from_grams, 100);
+  assert.equal(actions[0].to_grams, 120);
+});
+
+test('meal item changed: same item id with changed name emits meal_item_changed', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Рис', grams: 100 }] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Гречка', grams: 100 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'meal_item_changed');
+  assert.equal(actions[0].from_name, 'Рис');
+  assert.equal(actions[0].to_name, 'Гречка');
+});
+
+test('meal item removed: partial item removal emits meal_item_removed', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [
+      { id: 'it_1', product_id: 'p_1', name: 'Рис', grams: 100 },
+      { id: 'it_2', product_id: 'p_2', name: 'Курица', grams: 150 },
+    ] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [
+      { id: 'it_1', product_id: 'p_1', name: 'Рис', grams: 100 },
+    ] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'meal_item_removed');
+  assert.equal(actions[0].count, 1);
+  assert.deepStrictEqual(actions[0].items, [
+    { name: 'Курица', item_id: 'it_2', product_id: 'p_2', grams: 150 },
+  ]);
+});
+
+test('meal removed: full meal clear still emits meal_removed', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [{ id: 'it_1', name: 'Рис', grams: 100 }] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'meal_removed');
+});
+
 // ─── trainings ──────────────────────────────────────────────────────
 
 test('training added (empty slot → filled)', () => {

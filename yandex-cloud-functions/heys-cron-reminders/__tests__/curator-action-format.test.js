@@ -47,12 +47,16 @@ test('bucketize counts each action type', () => {
     { type: 'training_added', kind: 'бег' },
     { type: 'weight_set', from: 89, to: 90 },
     { type: 'meal_item_added', count: 3 },
+    { type: 'meal_item_changed' },
+    { type: 'meal_item_removed', count: 2 },
     { type: 'norms_changed', fields: ['kcal', 'prot'] },
   ]);
   assert.equal(b.meals_added, 2);
   assert.equal(b.trainings_added, 1);
   assert.deepStrictEqual(b.weight, { from: 89, to: 90 });
   assert.equal(b.meal_items_added, 3);
+  assert.equal(b.meal_items_changed, 1);
+  assert.equal(b.meal_items_removed, 2);
   assert.deepStrictEqual(b.norms_fields, ['kcal', 'prot']);
 });
 
@@ -112,6 +116,19 @@ test('formatBody: только норм без других — "обновле�
 test('formatBody: meal_items_added без meal_added', () => {
   const body = formatBody(bucketize([{ type: 'meal_item_added', count: 4 }]));
   assert.equal(body, '+4 продукта');
+});
+
+test('formatBody: meal + product edit mixed', () => {
+  const body = formatBody(bucketize([
+    { type: 'meal_added', name: 'A' },
+    { type: 'meal_item_added', count: 2 },
+  ]));
+  assert.equal(body, '+1 приём пищи, +2 продукта');
+});
+
+test('formatBody: meal_item_changed and removed', () => {
+  assert.equal(formatBody(bucketize([{ type: 'meal_item_changed' }])), 'изменены порции');
+  assert.equal(formatBody(bucketize([{ type: 'meal_item_removed', count: 2 }])), '−2 продукта');
 });
 
 // ─── helpers ────────────────────────────────────────────────────────

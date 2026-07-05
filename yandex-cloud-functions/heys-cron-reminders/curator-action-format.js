@@ -51,6 +51,8 @@ function bucketize(actions) {
     meals_added: 0,
     meals_removed: 0,
     meal_items_added: 0,
+    meal_items_changed: 0,
+    meal_items_removed: 0,
     trainings_added: 0,
     trainings_removed: 0,
     weight: null,      // {from, to}
@@ -68,6 +70,8 @@ function bucketize(actions) {
       case 'meal_added':       b.meals_added++; break;
       case 'meal_removed':     b.meals_removed++; break;
       case 'meal_item_added':  b.meal_items_added += (a.count || 1); break;
+      case 'meal_item_changed': b.meal_items_changed += (a.count || 1); break;
+      case 'meal_item_removed': b.meal_items_removed += (a.count || 1); break;
       case 'training_added':   b.trainings_added++; break;
       case 'training_removed': b.trainings_removed++; break;
       case 'weight_set':       b.weight = { from: a.from, to: a.to }; break;
@@ -99,14 +103,17 @@ function formatBody(b) {
   if (!b) return 'Куратор внёс изменения. Загляни в приложение.';
   const parts = [];
 
-  const totalMealsAdded = b.meals_added + (b.meal_items_added > 0 ? 0 : 0);
-  // Считаем приёмы пищи + дописанные в существующие.
   if (b.meals_added > 0) {
     parts.push(`+${b.meals_added} ${pluralRu(b.meals_added, 'приём пищи', 'приёма пищи', 'приёмов пищи')}`);
   }
-  if (b.meal_items_added > 0 && b.meals_added === 0) {
-    // Если приёмов не добавили, но докинули продуктов — отдельно.
+  if (b.meal_items_added > 0) {
     parts.push(`+${b.meal_items_added} ${pluralRu(b.meal_items_added, 'продукт', 'продукта', 'продуктов')}`);
+  }
+  if (b.meal_items_changed > 0) {
+    parts.push('изменены порции');
+  }
+  if (b.meal_items_removed > 0) {
+    parts.push(`−${b.meal_items_removed} ${pluralRu(b.meal_items_removed, 'продукт', 'продукта', 'продуктов')}`);
   }
   if (b.meals_removed > 0) {
     parts.push(`−${b.meals_removed} ${pluralRu(b.meals_removed, 'приём', 'приёма', 'приёмов')}`);
@@ -147,7 +154,9 @@ function formatBody(b) {
   }
   // Cap 3 parts to keep notification short
   if (parts.length > 3) {
-    const total = b.meals_added + b.trainings_added + (b.weight ? 1 : 0) + (b.sleep != null ? 1 : 0)
+    const total = b.meals_added + b.meal_items_added + b.meal_items_removed
+      + (b.meal_items_changed > 0 ? 1 : 0)
+      + b.trainings_added + (b.weight ? 1 : 0) + (b.sleep != null ? 1 : 0)
       + (b.steps != null ? 1 : 0) + (b.water != null ? 1 : 0)
       + b.norms_fields.length + b.profile_fields.length;
     return `+${total} ${pluralRu(total, 'изменение', 'изменения', 'изменений')} от куратора`;

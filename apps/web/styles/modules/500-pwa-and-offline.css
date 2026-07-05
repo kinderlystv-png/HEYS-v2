@@ -3240,7 +3240,7 @@
 }
 
 /* ========================================================
-   CURATOR ACTIONS — top banner + modal
+   CURATOR ACTIONS — review modal
    ======================================================== */
 
 .ca-banner {
@@ -3332,7 +3332,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(16px + var(--safe-area-top)) calc(12px + var(--safe-area-right)) calc(16px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
+  padding: calc(16px + var(--safe-area-top)) calc(clamp(24px, 7vw, 32px) + var(--safe-area-right)) calc(16px + var(--safe-area-bottom)) calc(clamp(24px, 7vw, 32px) + var(--safe-area-left));
   transition: background 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease;
   pointer-events: none;
 }
@@ -3350,26 +3350,56 @@
   max-height: calc(100dvh - 32px - var(--safe-area-top) - var(--safe-area-bottom));
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, var(--color-white) 0%, #f8fafc 100%);
-  border-radius: 20px;
+  background: var(--color-white);
+  border: 1px solid rgba(67, 69, 135, 0.12);
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.28);
 }
 
 .ca-modal__header {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 16px 12px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 18px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.ca-modal__header-icon { font-size: 22px; }
-.ca-modal__header-title {
+.ca-modal__header-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(67, 69, 135, 0.08);
+  color: #434587;
+}
+
+.ca-modal__header-svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.ca-modal__header-copy {
   flex: 1;
+  min-width: 0;
+}
+
+.ca-modal__header-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--color-slate-900);
+  line-height: 1.25;
+}
+
+.ca-modal__header-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-slate-500);
 }
 
 .ca-modal__close {
@@ -3384,14 +3414,27 @@
   font-size: 13px;
   color: var(--color-slate-500);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .ca-modal__close:active { background: rgba(0, 0, 0, 0.12); }
+
+.ca-modal__summary {
+  margin: 14px 18px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(67, 69, 135, 0.14);
+  border-radius: 12px;
+  background: rgba(226, 236, 242, 0.55);
+  color: var(--color-slate-800);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
 
 .ca-modal__content {
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 14px 16px;
+  padding: 14px 18px;
 }
 
 .ca-modal__group { margin-bottom: 14px; }
@@ -3413,10 +3456,14 @@
 }
 
 .ca-modal__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 10px;
   margin-bottom: 4px;
-  background: rgba(99, 102, 241, 0.06);
-  border-left: 3px solid rgba(99, 102, 241, 0.4);
+  background: rgba(226, 236, 242, 0.45);
+  border-left: 3px solid rgba(67, 69, 135, 0.42);
   border-radius: 8px;
   font-size: 13px;
   color: var(--color-slate-800);
@@ -3424,16 +3471,24 @@
   list-style: none;
 }
 
+.ca-modal__item-text {
+  min-width: 0;
+}
+
 .ca-modal__meal-card {
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: rgba(99, 102, 241, 0.06);
-  border-left: 3px solid rgba(99, 102, 241, 0.55);
+  background: rgba(226, 236, 242, 0.45);
+  border-left: 3px solid rgba(67, 69, 135, 0.5);
   border-radius: 10px;
   list-style: none;
 }
 
 .ca-modal__meal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 13px;
   font-weight: 700;
   color: var(--color-slate-900);
@@ -3468,34 +3523,96 @@
 }
 
 [data-theme="dark"] .ca-modal__meal-card {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(82, 160, 216, 0.1);
 }
 [data-theme="dark"] .ca-modal__meal-head { color: var(--color-slate-100); }
 [data-theme="dark"] .ca-modal__meal-product { color: var(--color-slate-300); }
 [data-theme="dark"] .ca-modal__item-grams { color: var(--color-slate-500); }
 
+.ca-modal__more-note,
+.ca-modal__empty {
+  margin: 10px 0 0;
+  color: var(--color-slate-500);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .ca-modal__footer {
-  padding: 12px 16px;
+  padding: 12px 18px calc(12px + var(--safe-area-bottom));
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
-  justify-content: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.ca-modal__later-btn,
+.ca-modal__ack-btn {
+  min-height: 44px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ca-modal__show-btn {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid rgba(47, 125, 91, 0.18);
+  border-radius: 9px;
+  background: rgba(47, 125, 91, 0.07);
+  color: #25694c;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ca-modal__later-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(67, 69, 135, 0.18);
+  background: var(--color-white);
+  color: var(--color-slate-600);
 }
 
 .ca-modal__ack-btn {
   flex: 1;
-  padding: 11px 18px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: 1px solid #2f7d5b;
+  background: #2f7d5b;
   color: var(--color-white);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
 }
+
+.ca-modal__show-btn:active,
+.ca-modal__later-btn:active,
 .ca-modal__ack-btn:active { transform: scale(0.97); opacity: 0.9; }
+.ca-modal__show-btn:focus-visible,
+.ca-modal__later-btn:focus-visible,
+.ca-modal__ack-btn:focus-visible,
+.ca-modal__close:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.35);
+  outline-offset: 2px;
+}
 .ca-modal__ack-btn:disabled { opacity: 0.6; cursor: default; }
+
+.ca-scroll-highlight {
+  animation: ca-scroll-highlight 1.8s ease-out;
+}
+
+@keyframes ca-scroll-highlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 125, 91, 0.42);
+    outline: 2px solid rgba(47, 125, 91, 0.55);
+    outline-offset: 2px;
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(47, 125, 91, 0);
+    outline: 2px solid rgba(47, 125, 91, 0);
+    outline-offset: 7px;
+  }
+}
 
 [data-theme="dark"] .ca-banner {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
@@ -3508,19 +3625,47 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .ca-modal { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+[data-theme="dark"] .ca-modal {
+  background: #111827;
+  border-color: rgba(255, 255, 255, 0.08);
+}
 [data-theme="dark"] .ca-modal__header { border-color: rgba(255, 255, 255, 0.06); }
+[data-theme="dark"] .ca-modal__header-icon {
+  background: rgba(82, 160, 216, 0.14);
+  color: #9cc9ea;
+}
 [data-theme="dark"] .ca-modal__header-title { color: var(--color-slate-100); }
+[data-theme="dark"] .ca-modal__header-subtitle { color: var(--color-slate-400); }
 [data-theme="dark"] .ca-modal__close {
   background: rgba(255, 255, 255, 0.1);
   color: var(--color-slate-400);
 }
+[data-theme="dark"] .ca-modal__summary {
+  background: rgba(82, 160, 216, 0.1);
+  border-color: rgba(82, 160, 216, 0.22);
+  color: var(--color-slate-100);
+}
 [data-theme="dark"] .ca-modal__date { color: var(--color-slate-500); }
 [data-theme="dark"] .ca-modal__item {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(82, 160, 216, 0.1);
   color: var(--color-slate-200);
 }
 [data-theme="dark"] .ca-modal__footer { border-color: rgba(255, 255, 255, 0.06); }
+[data-theme="dark"] .ca-modal__show-btn {
+  background: rgba(58, 155, 112, 0.12);
+  border-color: rgba(58, 155, 112, 0.24);
+  color: #9ddbbf;
+}
+[data-theme="dark"] .ca-modal__later-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-slate-300);
+}
+
+[data-theme="dark"] .ca-modal__ack-btn {
+  border-color: #3a9b70;
+  background: #3a9b70;
+}
 
 /* MODULE 06 — PWA & Offline
  * Scope: install banners, offline/empty states, service prompts.

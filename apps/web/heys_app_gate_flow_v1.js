@@ -142,6 +142,12 @@
         const status = getEffectiveSubscriptionStatus(client);
         const badge = getSubscriptionBadge(client);
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU') : '—';
+        const unwrapRpcResult = (res, fnName) => {
+            if (res && typeof res === 'object' && res[fnName] && typeof res[fnName] === 'object') {
+                return res[fnName];
+            }
+            return res;
+        };
         const h = React.createElement;
 
         const closeModal = () => { setOpen(false); setView('main'); setAccessResult(null); };
@@ -312,11 +318,12 @@
             console.info('[HEYS.subs] ➕ Продление подписки', { clientId: client.id, clientName: client.name, months });
             setLoading(true);
             try {
-                const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_extend_subscription', {
+                const { data: rawRes, error } = await HEYS.YandexAPI?.rpc?.('admin_extend_subscription', {
                     p_curator_id: curatorId,
                     p_client_id: client.id,
                     p_months: months
                 }) || {};
+                const res = unwrapRpcResult(rawRes, 'admin_extend_subscription');
                 if (error) {
                     console.error('[HEYS.subs] ❌ RPC error при продлении', { error: error.message, clientId: client.id });
                     HEYS.Toast?.error?.(error.message || 'Ошибка продления');
@@ -400,10 +407,11 @@
             }
             setLoading(true);
             try {
-                const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_cancel_subscription', {
+                const { data: rawRes, error } = await HEYS.YandexAPI?.rpc?.('admin_cancel_subscription', {
                     p_curator_id: curatorId,
                     p_client_id: client.id
                 }) || {};
+                const res = unwrapRpcResult(rawRes, 'admin_cancel_subscription');
                 if (error) {
                     console.error('[HEYS.subs] ❌ RPC error при сбросе', { error: error.message, clientId: client.id });
                     HEYS.Toast?.error?.(error.message || 'Ошибка сброса');
@@ -1503,6 +1511,316 @@
         );
     }
 
+    function OpsDashboardButton() {
+        const [open, setOpen] = React.useState(false);
+        const [loading, setLoading] = React.useState(false);
+        const [error, setError] = React.useState('');
+        const [status, setStatus] = React.useState(null);
+        const [lastCheck, setLastCheck] = React.useState(null);
+        const [checkMessage, setCheckMessage] = React.useState('');
+        const autoCheckStartedRef = React.useRef(false);
+        const h = React.createElement;
+
+        const load = React.useCallback(async (refresh) => {
+            if (!HEYS.YandexAPI?.rpc) {
+                setError('Ops API недоступен');
+                return;
+            }
+            setLoading(true);
+            setError('');
+            setCheckMessage(refresh ? 'Запускаем серверную проверку...' : 'Загружаем текущий статус...');
+            const startedAt = Date.now();
+            const fnName = refresh ? 'admin_refresh_ops_status' : 'admin_get_ops_status';
+            try {
+                console.info('[HEYS.ops.dashboard] request:start', { fn: fnName, refresh: Boolean(refresh) });
+            } catch (_) { }
+            try {
+                const res = await HEYS.YandexAPI.rpc(fnName, {});
+                if (res?.error && refresh && /not allowed/i.test(res.error.message || '')) {
+                    const fallback = await HEYS.YandexAPI.rpc('admin_get_ops_status', {});
+                    if (fallback?.error) throw new Error(fallback.error.message || 'Ops API error');
+                    const fallbackData = fallback?.data?.admin_get_ops_status || fallback?.data || null;
+                    const tookMs = Date.now() - startedAt;
+                    setStatus(fallbackData);
+                    setLastCheck({ at: Date.now(), fn: 'admin_get_ops_status', tookMs, ok: fallbackData?.ok === true, fallback: true });
+                    setCheckMessage(`Показан текущий статус за ${tookMs} ms`);
+                    setError('Refresh ещё не задеплоен на API; показан текущий статус');
+                    try {
+                        console.info('[HEYS.ops.dashboard] request:fallback', { tookMs, open: fallbackData?.counts?.open_incidents, backup: fallbackData?.backup?.status || null });
+                    } catch (_) { }
+                    return;
+                }
+                if (res?.error) throw new Error(res.error.message || 'Ops API error');
+                const data = res?.data?.[fnName] || res?.data || null;
+                const tookMs = Date.now() - startedAt;
+                setStatus(data);
+                setLastCheck({ at: Date.now(), fn: fnName, tookMs, ok: data?.ok === true, fallback: false });
+                setCheckMessage(refresh ? `Проверка завершена за ${tookMs} ms` : `Статус загружен за ${tookMs} ms`);
+                try {
+                    console.info('[HEYS.ops.dashboard] request:success', { fn: fnName, tookMs, ok: data?.ok === true, open: data?.counts?.open_incidents, backup: data?.backup?.status || null });
+                } catch (_) { }
+            } catch (e) {
+                const tookMs = Date.now() - startedAt;
+                setError(e?.message || 'Не удалось загрузить Ops');
+                setLastCheck({ at: Date.now(), fn: fnName, tookMs, ok: false, error: true });
+                setCheckMessage(`Проверка не завершилась: ${e?.message || 'ошибка'}`);
+                try {
+                    console.error('[HEYS.ops.dashboard] request:error', { fn: fnName, tookMs, message: e?.message || String(e) });
+                } catch (_) { }
+            } finally {
+                setLoading(false);
+            }
+        }, []);
+
+        React.useEffect(() => {
+            if (autoCheckStartedRef.current) return;
+            autoCheckStartedRef.current = true;
+            const timer = setTimeout(() => { void load(true); }, 150);
+            return () => clearTimeout(timer);
+        }, [load]);
+
+        const openDashboard = () => {
+            setOpen(true);
+            if (!status && !loading) void load(false);
+        };
+
+        const backup = status?.backup || null;
+        const heartbeats = Array.isArray(status?.heartbeats) ? status.heartbeats : [];
+        const incidents = Array.isArray(status?.incidents) ? status.incidents : [];
+        const deploys = Array.isArray(status?.deploys) ? status.deploys : [];
+        const openIncidents = incidents.filter((item) => item.status === 'open');
+        const staleHeartbeats = heartbeats.filter((item) => item.stale);
+        const ok = status?.ok === true;
+        const lastCheckTime = lastCheck?.at ? new Date(lastCheck.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+        const openCount = Number(status?.counts?.open_incidents ?? openIncidents.length ?? 0);
+        const criticalCount = Number(status?.counts?.critical_open ?? openIncidents.filter((item) => item.severity === 'critical').length ?? 0);
+        const staleCount = Number(status?.counts?.stale_heartbeats ?? staleHeartbeats.length ?? 0);
+        const backupBad = Boolean(status && (!backup || backup.status !== 'ok' || Number(backup.hours_ago || 999) > 30));
+        const issueScore = openCount + staleCount + (backupBad ? 1 : 0);
+        const systemHealth = (() => {
+            if (loading && !status) return { tone: 'checking', label: 'Проверяем', hint: 'Идёт автопроверка', dot: '#60a5fa', bg: 'rgba(239,246,255,0.16)', border: 'rgba(147,197,253,0.42)', color: '#dbeafe' };
+            if (error && !status) return { tone: 'critical', label: 'Ошибка', hint: error, dot: '#f87171', bg: 'rgba(254,242,242,0.16)', border: 'rgba(248,113,113,0.42)', color: '#fee2e2' };
+            if (!status) return { tone: 'unknown', label: 'Система', hint: 'Статус ещё не загружен', dot: '#cbd5e1', bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.28)', color: '#fff' };
+            if (ok) return { tone: 'ok', label: 'OK', hint: 'Все проверки зелёные', dot: '#4ade80', bg: 'rgba(240,253,244,0.16)', border: 'rgba(134,239,172,0.48)', color: '#dcfce7' };
+            if (issueScore >= 3 || (backupBad && staleCount > 0)) return { tone: 'critical', label: 'Критично', hint: `${openCount} open`, dot: '#f87171', bg: 'rgba(254,242,242,0.16)', border: 'rgba(248,113,113,0.46)', color: '#fee2e2' };
+            return { tone: 'warning', label: 'Внимание', hint: `${openCount || criticalCount || issueScore} open`, dot: '#facc15', bg: 'rgba(254,249,195,0.16)', border: 'rgba(250,204,21,0.48)', color: '#fef9c3' };
+        })();
+        const card = (good) => ({
+            padding: 12,
+            borderRadius: 10,
+            border: good ? '1px solid #bbf7d0' : '1px solid #fecdd3',
+            background: good ? '#f0fdf4' : '#fff1f2',
+            color: good ? '#14532d' : '#991b1b'
+        });
+        const renderRunbook = (item) => {
+            const details = item?.details || {};
+            if (!details.runbook_title && !details.runbook_command) return null;
+            return h('div', { style: { marginTop: 8, display: 'grid', gap: 4, color: '#64748b', fontSize: 12 } },
+                details.runbook_title && h('span', null, details.runbook_title),
+                details.runbook_command && h('code', {
+                    style: {
+                        padding: '4px 6px',
+                        borderRadius: 6,
+                        background: '#f1f5f9',
+                        color: '#0f172a',
+                        overflowWrap: 'anywhere'
+                    }
+                }, details.runbook_command)
+            );
+        };
+
+	        return h(React.Fragment, null,
+	            h('button', {
+	                type: 'button',
+	                title: `Статус системы: ${systemHealth.label}`,
+	                'aria-label': `Статус системы: ${systemHealth.label}. Открыть Ops dashboard`,
+	                onClick: openDashboard,
+	                style: {
+	                    minHeight: 34,
+	                    minWidth: 118,
+	                    padding: '5px 9px',
+	                    borderRadius: 8,
+	                    border: `1px solid ${systemHealth.border}`,
+	                    background: systemHealth.bg,
+	                    color: systemHealth.color,
+	                    cursor: 'pointer',
+	                    fontSize: 11,
+	                    fontWeight: 700,
+	                    display: 'inline-flex',
+	                    alignItems: 'center',
+	                    justifyContent: 'center',
+                        gap: 7,
+                        lineHeight: 1.1
+	                }
+	            },
+                    h('span', {
+                        'aria-hidden': 'true',
+                        style: {
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: systemHealth.dot,
+                            boxShadow: `0 0 0 3px ${systemHealth.dot}24`,
+                            flex: '0 0 auto'
+                        }
+                    }),
+                    h('span', { style: { display: 'grid', gap: 1, textAlign: 'left' } },
+                        h('span', { style: { opacity: 0.82, fontSize: 10 } }, 'Система'),
+                        h('span', null, systemHealth.label)
+                    )
+                ),
+            open && h('div', {
+                role: 'presentation',
+                onClick: () => setOpen(false),
+                style: {
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 13000,
+                    background: 'rgba(15, 23, 42, 0.48)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 14
+                }
+            },
+                h('div', {
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'Ops dashboard',
+                    onClick: (e) => e.stopPropagation(),
+                    style: {
+                        width: 'min(560px, calc(100vw - 28px))',
+                        maxHeight: 'min(760px, calc(100vh - 28px))',
+                        overflow: 'auto',
+                        borderRadius: 16,
+                        background: '#fff',
+                        color: '#0f172a',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 24px 80px rgba(15,23,42,0.34)'
+                    }
+                },
+                    h('div', {
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            padding: '16px 18px',
+                            borderBottom: '1px solid #e2e8f0'
+                        }
+                    },
+                        h('div', null,
+                            h('div', { style: { fontWeight: 800, fontSize: 17 } }, 'Ops dashboard'),
+                            h('div', { style: { color: '#64748b', fontSize: 12, marginTop: 2 } },
+                                ok ? 'Серверные проверки без активных инцидентов' : 'Есть пункты, требующие внимания'
+                            )
+                        ),
+                        h('div', { style: { display: 'flex', gap: 8 } },
+                            h('button', {
+                                type: 'button',
+                                onClick: () => load(true),
+                                disabled: loading,
+                                style: {
+                                    minHeight: 34,
+                                    padding: '7px 10px',
+                                    borderRadius: 8,
+	                                    border: '1px solid #86efac',
+	                                    background: '#f0fdf4',
+	                                    color: '#14532d',
+	                                    cursor: loading ? 'default' : 'pointer',
+                                        opacity: loading ? 0.72 : 1,
+	                                    fontWeight: 700
+	                                }
+	                            }, loading ? 'Проверяем...' : 'Проверить сейчас'),
+                            h('button', {
+                                type: 'button',
+                                'aria-label': 'Закрыть Ops dashboard',
+                                onClick: () => setOpen(false),
+                                style: {
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 8,
+                                    border: '1px solid #e2e8f0',
+                                    background: '#fff',
+                                    color: '#0f172a',
+                                    cursor: 'pointer',
+                                    fontSize: 18
+                                }
+                            }, '×')
+                        )
+	                    ),
+	                    h('div', { style: { padding: 18, display: 'grid', gap: 12 } },
+	                        error && h('div', { style: { ...card(false), fontSize: 13 } }, error),
+                            (loading || checkMessage || lastCheckTime) && h('div', {
+                                role: 'status',
+                                'aria-live': 'polite',
+                                style: {
+                                    padding: '9px 10px',
+                                    borderRadius: 10,
+                                    border: '1px solid #e2e8f0',
+                                    background: loading ? '#f8fafc' : '#f1f5f9',
+                                    color: '#334155',
+                                    fontSize: 12,
+                                    display: 'grid',
+                                    gap: 2
+                                }
+	                            },
+	                                h('div', { style: { fontWeight: 700 } }, loading ? 'Проверка выполняется' : (lastCheck?.error ? 'Последняя проверка завершилась ошибкой' : 'Последняя проверка завершена')),
+	                                h('div', null, checkMessage || (lastCheckTime ? `Обновлено в ${lastCheckTime}` : '')),
+                                    lastCheck && h('div', { style: { color: '#64748b', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', overflowWrap: 'anywhere' } },
+                                        `${lastCheck.fn || 'ops'} · ${lastCheckTime || '—'} · ${lastCheck.tookMs || 0} ms`
+                                    )
+	                            ),
+	                        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 8 } },
+                            h('div', { style: card(ok) },
+                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Status'),
+                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, ok ? 'OK' : `${openIncidents.length} open`)
+                            ),
+                            h('div', { style: card(backup && backup.status === 'ok' && Number(backup.hours_ago || 999) <= 30) },
+                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Backup'),
+                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, backup ? `${backup.status} · ${backup.hours_ago}h` : 'нет данных')
+                            ),
+                            h('div', { style: card(staleHeartbeats.length === 0) },
+                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Heartbeats'),
+                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, staleHeartbeats.length ? `${staleHeartbeats.length} stale` : 'fresh')
+                            )
+                        ),
+                        h('div', { style: { display: 'grid', gap: 8 } },
+                            h('div', { style: { fontWeight: 800 } }, 'Активные инциденты'),
+                            openIncidents.length === 0
+                                ? h('div', { style: { color: '#64748b', fontSize: 13 } }, loading ? 'Загружаем...' : 'Активных инцидентов нет')
+                                : openIncidents.slice(0, 6).map((item) => h('div', {
+                                    key: `${item.source}:${item.event_key}`,
+                                    style: {
+                                        padding: 10,
+                                        borderRadius: 10,
+                                        border: '1px solid #e2e8f0',
+                                        background: '#f8fafc'
+                                    }
+                                },
+                                    h('div', { style: { fontWeight: 700, marginBottom: 3 } }, item.title),
+                                    h('div', { style: { color: '#64748b', fontSize: 12 } }, `${item.source} · ${item.severity} · ${item.occurrence_count || 1} раз`),
+                                    renderRunbook(item)
+                                ))
+                        ),
+                        h('div', { style: { display: 'grid', gap: 8 } },
+                            h('div', { style: { fontWeight: 800 } }, 'Deploy receipts'),
+                            deploys.length === 0
+                                ? h('div', { style: { color: '#64748b', fontSize: 13 } }, 'Пока нет записей о deploy')
+                                : deploys.slice(0, 4).map((item, index) => h('div', {
+                                    key: `${item.deployed_at || index}:${item.deploy_group}`,
+                                    style: { display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, padding: '7px 0', borderBottom: '1px solid #e2e8f0' }
+                                },
+                                    h('span', null, `${item.deploy_group || 'unknown'} · ${String(item.deploy_commit || 'unknown').slice(0, 8)}`),
+                                    h('span', { style: { color: item.status === 'ok' ? '#166534' : '#991b1b' } }, item.status || 'unknown')
+                                ))
+                        )
+                    )
+                )
+            )
+        );
+    }
+
     function buildGate(props) {
         const {
             clientId,
@@ -1726,29 +2044,32 @@
                                                 )
                                             )
                                         ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => {
-                                                    console.info('[HEYS.gate] 🚪 Выход куратора');
-                                                    handleSignOut();
+                                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+                                            React.createElement(OpsDashboardButton),
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    onClick: () => {
+                                                        console.info('[HEYS.gate] 🚪 Выход куратора');
+                                                        handleSignOut();
+                                                    },
+                                                    title: 'Выйти',
+                                                    style: {
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: 8,
+                                                        border: '1px solid rgba(255,255,255,0.25)',
+                                                        background: 'rgba(255,255,255,0.08)',
+                                                        color: '#fff',
+                                                        cursor: 'pointer',
+                                                        fontSize: 16,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }
                                                 },
-                                                title: 'Выйти',
-                                                style: {
-                                                    width: 32,
-                                                    height: 32,
-                                                    borderRadius: 8,
-                                                    border: '1px solid rgba(255,255,255,0.25)',
-                                                    background: 'rgba(255,255,255,0.08)',
-                                                    color: '#fff',
-                                                    cursor: 'pointer',
-                                                    fontSize: 16,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }
-                                            },
-                                            '←'
+                                                '←'
+                                            )
                                         )
                                     ),
                                     // Tabs в хедере

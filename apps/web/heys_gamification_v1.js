@@ -1056,6 +1056,9 @@
 
     const { limit = 50, offset = 0 } = options;
     const { sessionToken, curatorToken, clientId, hasCookieSession } = getAuditContext();
+    if (!sessionToken && !hasCookieSession && (!isCuratorSession || !clientId)) {
+      return { items: [], total: 0, skipped: true, reason: 'auth_context_not_ready' };
+    }
     logAuditInfo('rpc:request', {
       limit,
       offset,
@@ -4854,32 +4857,36 @@
             detail: { ...immediateStats, isInitialLoad: true, reason: 'cloud_load_complete' }
           }));
 
-          // 🚀 PERF v7.0: Defer audit — runs AFTER DayTab sync finishes (5s)
-          // ensureAuditConsistency does 3-6 sequential RPC calls (~2-4s)
-          // competing with bootstrapClientSync for API bandwidth
-          console.info('[🎮 Gamification] 🚀 PERF v7.0: Audit deferred 5s (not blocking DayTab sync)');
-          setTimeout(async () => {
-            const auditTrace = startGameSyncTrace('deferredAudit');
-            _suppressUIUpdates = true;
-            try {
-              await ensureAuditConsistency('curator-load');
-            } catch (e) {
-              console.error('[🎮 Gamification] ❌ Deferred audit failed:', e);
-              endGameSyncTrace(auditTrace, 'error', { error: String(e) });
-              return;
-            } finally {
-              _suppressUIUpdates = false;
-            }
-            if (!_data) _data = loadData();
-            const auditStats = game.getStats();
-            if (auditStats.totalXP !== immediateStats.totalXP || auditStats.level !== immediateStats.level) {
-              console.info('[🎮 Gamification] 🔄 Audit reconciliation: XP', immediateStats.totalXP, '→', auditStats.totalXP);
-              window.dispatchEvent(new CustomEvent('heysGameUpdate', {
-                detail: { ...auditStats, isInitialLoad: true, reason: 'audit_reconciliation' }
-              }));
-            }
-            endGameSyncTrace(auditTrace, 'ok', { reason: 'deferred_audit_complete' });
-          }, 5000);
+          if (getAuditContext().clientId) {
+            // 🚀 PERF v7.0: Defer audit — runs AFTER DayTab sync finishes (5s)
+            // ensureAuditConsistency does 3-6 sequential RPC calls (~2-4s)
+            // competing with bootstrapClientSync for API bandwidth
+            console.info('[🎮 Gamification] 🚀 PERF v7.0: Audit deferred 5s (not blocking DayTab sync)');
+            setTimeout(async () => {
+              const auditTrace = startGameSyncTrace('deferredAudit');
+              _suppressUIUpdates = true;
+              try {
+                await ensureAuditConsistency('curator-load');
+              } catch (e) {
+                console.error('[🎮 Gamification] ❌ Deferred audit failed:', e);
+                endGameSyncTrace(auditTrace, 'error', { error: String(e) });
+                return;
+              } finally {
+                _suppressUIUpdates = false;
+              }
+              if (!_data) _data = loadData();
+              const auditStats = game.getStats();
+              if (auditStats.totalXP !== immediateStats.totalXP || auditStats.level !== immediateStats.level) {
+                console.info('[🎮 Gamification] 🔄 Audit reconciliation: XP', immediateStats.totalXP, '→', auditStats.totalXP);
+                window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+                  detail: { ...auditStats, isInitialLoad: true, reason: 'audit_reconciliation' }
+                }));
+              }
+              endGameSyncTrace(auditTrace, 'ok', { reason: 'deferred_audit_complete' });
+            }, 5000);
+          } else {
+            gameSyncTraceStep(syncTrace, 'audit:skipped_no_client');
+          }
 
           endGameSyncTrace(syncTrace, 'ok', { mode: 'curator', reason: 'storage_layer_flow' });
           return true;

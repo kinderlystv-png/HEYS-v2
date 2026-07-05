@@ -145,15 +145,64 @@ function itemGrams(it) {
   return isNumber(g) ? g : null;
 }
 
+function itemProductId(it) {
+  return it?.product_id ?? it?.productId ?? it?.product?.id ?? it?.product?.product_id ?? null;
+}
+
+function itemIdentityKey(it) {
+  if (!it || typeof it !== 'object') return null;
+  if (it.id) return `id:${it.id}`;
+  const productId = itemProductId(it);
+  if (productId) return `product:${productId}`;
+  const name = itemName(it);
+  return name && name !== '?' ? `name:${name}` : null;
+}
+
+function mealBaseAction(type, meal) {
+  const a = {
+    type,
+    meal_label: mealTypeLabel(meal),
+    meal_name: meal?.name || mealTypeLabel(meal),
+  };
+  if (meal?.id) a.meal_id = meal.id;
+  if (meal?.time) a.time = meal.time;
+  return a;
+}
+
 // Сжатый список items для payload: name + grams, без 30 жиро-витаминных полей.
 function mealItemsSummary(items, maxItems = 12) {
   const arr = safeArr(items);
   return arr.slice(0, maxItems).map((it) => {
     const obj = { name: itemName(it) };
+    if (it?.id) obj.item_id = it.id;
+    const productId = itemProductId(it);
+    if (productId) obj.product_id = productId;
     const g = itemGrams(it);
     if (g !== null) obj.grams = g;
     return obj;
   });
+}
+
+function buildItemChangedAction(meal, oldItem, newItem) {
+  const oldName = itemName(oldItem);
+  const newName = itemName(newItem);
+  const oldGrams = itemGrams(oldItem);
+  const newGrams = itemGrams(newItem);
+  const a = mealBaseAction('meal_item_changed', meal);
+  const itemId = newItem?.id || oldItem?.id;
+  const productId = itemProductId(newItem) || itemProductId(oldItem);
+  if (itemId) a.item_id = itemId;
+  if (productId) a.product_id = productId;
+  a.name = newName || oldName || '?';
+  if (oldName !== newName) {
+    a.from_name = oldName;
+    a.to_name = newName;
+  }
+  if (oldGrams !== null && newGrams !== null && Math.abs(oldGrams - newGrams) >= 0.5) {
+    a.from_grams = oldGrams;
+    a.to_grams = newGrams;
+  }
+  return (a.from_name !== undefined || a.from_grams !== undefined) ? a : null;
 }
 
 // ─── dayv2 diff ──────────────────────────────────────────────────────
@@ -180,13 +229,9 @@ function diffMeals(oldMeals, newMeals, actions) {
     if (!oldMeal) {
       // Meal added (только если есть items, иначе пустой плейсхолдер).
       if (newItemsLen > 0) {
-        const a = {
-          type: 'meal_added',
-          meal_label: mealTypeLabel(nm),
-          name: mealTypeLabel(nm), // backward-compat для banner / push
-          items: mealItemsSummary(newItems),
-        };
-        if (nm.time) a.time = nm.time;
+        const a = mealBaseAction('meal_added', nm);
+        a.name = mealTypeLabel(nm); // backward-compat для banner / push
+        a.items = mealItemsSummary(newItems);
         const total = mealTotalKcal(nm);
         if (total !== null) a.kcal = total;
         actions.push(a);
@@ -199,35 +244,56 @@ function diffMeals(oldMeals, newMeals, actions) {
 
     if (oldItemsLen === 0 && newItemsLen > 0) {
       // Был пустой meal — стал заполнен → "added"
-      const a = {
-        type: 'meal_added',
-        meal_label: mealTypeLabel(nm),
-        name: mealTypeLabel(nm),
-        items: mealItemsSummary(newItems),
-      };
-      if (nm.time) a.time = nm.time;
+      const a = mealBaseAction('meal_added', nm);
+      a.name = mealTypeLabel(nm);
+      a.items = mealItemsSummary(newItems);
       const total = mealTotalKcal(nm);
       if (total !== null) a.kcal = total;
       actions.push(a);
-    } else if (newItemsLen > oldItemsLen) {
-      // Добавлены items к уже непустому meal'у — дописываем какие именно.
-      const oldItemKeys = new Set(oldItems.map((it) => `${itemName(it)}|${itemGrams(it)}`));
-      const added = [];
-      for (const it of newItems) {
-        const key = `${itemName(it)}|${itemGrams(it)}`;
-        if (!oldItemKeys.has(key)) added.push(it);
-      }
-      const a = {
-        type: 'meal_item_added',
-        meal_label: mealTypeLabel(nm),
-        meal_name: nm.name || mealTypeLabel(nm),
-        items: mealItemsSummary(added),
-        count: added.length || (newItemsLen - oldItemsLen),
-      };
-      if (nm.time) a.time = nm.time;
-      actions.push(a);
     } else if (newItemsLen < oldItemsLen && newItemsLen === 0) {
       actions.push({ type: 'meal_removed', name: mealTypeLabel(oldMeal) });
+    } else {
+      const oldItemsByKey = new Map();
+      const newItemsByKey = new Map();
+      for (const it of oldItems) {
+        const key = itemIdentityKey(it);
+        if (key && !oldItemsByKey.has(key)) oldItemsByKey.set(key, it);
+      }
+      for (const it of newItems) {
+        const key = itemIdentityKey(it);
+        if (key && !newItemsByKey.has(key)) newItemsByKey.set(key, it);
+      }
+
+      const added = [];
+      for (const it of newItems) {
+        const key = itemIdentityKey(it);
+        if (!key || !oldItemsByKey.has(key)) added.push(it);
+      }
+      if (added.length > 0) {
+        const a = mealBaseAction('meal_item_added', nm);
+        a.items = mealItemsSummary(added);
+        a.count = added.length;
+        actions.push(a);
+      }
+
+      const removed = [];
+      for (const it of oldItems) {
+        const key = itemIdentityKey(it);
+        if (!key || !newItemsByKey.has(key)) removed.push(it);
+      }
+      if (removed.length > 0) {
+        const a = mealBaseAction('meal_item_removed', nm);
+        a.items = mealItemsSummary(removed);
+        a.count = removed.length;
+        actions.push(a);
+      }
+
+      for (const [key, oldItem] of oldItemsByKey) {
+        const newItem = newItemsByKey.get(key);
+        if (!newItem) continue;
+        const changed = buildItemChangedAction(nm, oldItem, newItem);
+        if (changed) actions.push(changed);
+      }
     }
   }
 
@@ -397,9 +463,10 @@ module.exports = {
     mealKey,
     mealTypeLabel,
     mealLabel,
-    mealTotalKcal,
-    mealKcal,
-    mealItemsSummary,
-    isEmptyTraining,
-  },
-};
+	    mealTotalKcal,
+	    mealKcal,
+	    mealItemsSummary,
+	    itemIdentityKey,
+	    isEmptyTraining,
+	  },
+	};

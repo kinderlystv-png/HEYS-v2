@@ -444,7 +444,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 caloricDebt
                             }),
                             'aria-label': 'Открыть оценку голода'
-                        }, '◒'),
+                        }, React.createElement('svg', {
+                            className: 'hes-fab-icon',
+                            viewBox: '0 0 24 24',
+                            focusable: 'false',
+                            'aria-hidden': 'true'
+                        },
+                            React.createElement('circle', { cx: 12, cy: 12, r: 8.2 }),
+                            React.createElement('path', { d: 'M8.4 12h7.2' })
+                        )),
                     window.HEYS?.Messenger?.FabButton
                         ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
                         : React.createElement('button', {

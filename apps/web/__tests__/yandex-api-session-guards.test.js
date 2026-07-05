@@ -438,6 +438,8 @@ describe('HEYS.YandexAPI session-safe access', () => {
     global.fetch.mockResolvedValue(createJsonResponse({
       ok: true,
       since: '2026-06-16T00:00:00.000Z',
+      server_now: '2026-06-16T00:10:00.000Z',
+      has_more: true,
       entries: [],
     }));
 
@@ -446,12 +448,67 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(result).toEqual({
       ok: true,
       since: '2026-06-16T00:00:00.000Z',
+      server_now: '2026-06-16T00:10:00.000Z',
+      has_more: true,
       entries: [],
     });
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toContain('/rpc?fn=get_my_curator_changelog_since');
     expect(options.credentials).toBe('include');
     expect(JSON.parse(options.body)).toEqual({ p_since: null });
+  });
+
+  it('curator changelog ack can send specific entry ids', async () => {
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      sessionToken: 'pin-session',
+    });
+    global.fetch.mockResolvedValue(createJsonResponse({
+      ok: true,
+      acked_until: '2026-07-05T10:00:00.000Z',
+      acked_ids: ['11111111-1111-4111-8111-111111111111'],
+    }));
+
+    const result = await api.ackCuratorChangelog({
+      entryIds: ['11111111-1111-4111-8111-111111111111'],
+      untilTs: '2026-07-05T10:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      acked_until: '2026-07-05T10:00:00.000Z',
+      acked_ids: ['11111111-1111-4111-8111-111111111111'],
+    });
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rpc?fn=ack_curator_changelog');
+    expect(JSON.parse(options.body)).toEqual({
+      p_session_token: 'pin-session',
+      p_until_ts: '2026-07-05T10:00:00.000Z',
+      p_entry_ids: ['11111111-1111-4111-8111-111111111111'],
+    });
+  });
+
+  it('curator changelog ack keeps old timestamp call compatible', async () => {
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      sessionToken: 'pin-session',
+    });
+    global.fetch.mockResolvedValue(createJsonResponse({
+      ok: true,
+      acked_until: '2026-07-05T10:00:00.000Z',
+    }));
+
+    const result = await api.ackCuratorChangelog('2026-07-05T10:00:00.000Z');
+
+    expect(result).toEqual({
+      ok: true,
+      acked_until: '2026-07-05T10:00:00.000Z',
+    });
+    const [, options] = global.fetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      p_session_token: 'pin-session',
+      p_until_ts: '2026-07-05T10:00:00.000Z',
+    });
   });
 
   it('does not console.error expected passive session 401 responses', async () => {

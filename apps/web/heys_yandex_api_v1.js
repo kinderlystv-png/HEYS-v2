@@ -372,6 +372,8 @@
     'admin_regenerate_pin',           // 🆕 авто-перевыпуск PIN+pin_token
     'admin_clear_telegram_binding',    // Сброс chat_id, если ссылку открыл не клиент
     'admin_get_client_access_link',    // Получение текущей Telegram-ссылки одного клиента
+    'admin_get_ops_status',            // Ops dashboard summary without secrets
+    'admin_refresh_ops_status',         // Ops dashboard server-side refresh
 
     // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',
@@ -1837,9 +1839,13 @@
    * Session-only (PIN-клиент). Возвращает { ok, since, entries: [...] }.
    * Каждая entry: { id, curator_id, keys, actions: {actions:[...]}, created_at }.
    */
-  async function getMyCuratorChangelogSince(p_since = null) {
+  async function getMyCuratorChangelogSince(p_since = null, opts = {}) {
     try {
-      const sessionRpc = buildSessionRpcParams({ p_since });
+      const params = { p_since };
+      if (opts && typeof opts === 'object') {
+        if (opts.limit != null) params.p_limit = opts.limit;
+      }
+      const sessionRpc = buildSessionRpcParams(params);
       if (!sessionRpc.ok) return { ok: false, error: 'No session token', entries: [] };
       const result = await rpc('get_my_curator_changelog_since', sessionRpc.params);
       if (result.error) {
@@ -1853,21 +1859,39 @@
         }
       }
       if (!data || data.ok === false) return { ok: false, error: data?.error || 'unknown', entries: [] };
-      return { ok: true, since: data.since, entries: Array.isArray(data.entries) ? data.entries : [] };
+      return {
+        ok: true,
+        since: data.since,
+        server_now: data.server_now || null,
+        has_more: data.has_more === true,
+        entries: Array.isArray(data.entries) ? data.entries : [],
+      };
     } catch (e) {
       return { ok: false, error: e.message, entries: [] };
     }
   }
 
   /**
-   * Подтвердить просмотр curator-changes до момента p_until_ts (ISO).
+   * Подтвердить просмотр curator-changes.
+   * Новый shape: { entryIds, untilTs }. Старый вызов ackCuratorChangelog(iso)
+   * сохраняется для backward compatibility.
    * Идемпотентно. Возвращает { ok, acked_until }.
    */
-  async function ackCuratorChangelog(p_until_ts = null) {
+  async function ackCuratorChangelog(input = null) {
     try {
-      const sessionRpc = buildSessionRpcParams({
-        p_until_ts: p_until_ts || new Date().toISOString(),
-      });
+      let params;
+      if (input && typeof input === 'object' && !Array.isArray(input)) {
+        const entryIds = Array.isArray(input.entryIds) ? input.entryIds.filter(Boolean) : [];
+        params = {
+          p_until_ts: input.untilTs || input.p_until_ts || new Date().toISOString(),
+        };
+        if (entryIds.length > 0) params.p_entry_ids = entryIds;
+      } else {
+        params = {
+          p_until_ts: input || new Date().toISOString(),
+        };
+      }
+      const sessionRpc = buildSessionRpcParams(params);
       if (!sessionRpc.ok) return { ok: false, error: 'No session token' };
       const result = await rpc('ack_curator_changelog', sessionRpc.params);
       if (result.error) {

@@ -10075,14 +10075,99 @@ body:has(.tabs.tabs--settings-open) :is(
 }
 
 /* Калории приёма — справа */
+.meal-type-center {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
 .meal-kcal-badge-inside {
-  margin-left: auto;
   background: #e2e8f0;
   color: #475569;
   font-weight: 700;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 8px;
+  text-align: center;
+}
+
+.meal-header-badges-row {
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  overflow: hidden;
+}
+
+.meal-header-badges-row > * {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.meal-header-badges-row .activity-context-badge {
+  margin-bottom: 0;
+}
+
+.meal-header-collapse-btn {
+  width: auto;
+  min-width: 82px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid rgba(29, 112, 183, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1d70b7;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(29, 112, 183, 0.10);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.meal-header-collapse-btn__icon {
+  font-size: 15px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.meal-header-collapse-btn__label {
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .meal-header-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(29, 112, 183, 0.34);
+    box-shadow: 0 2px 6px rgba(29, 112, 183, 0.14);
+  }
+}
+
+.meal-header-collapse-btn:active {
+  transform: translateY(1px);
+}
+
+.meal-header-collapse-btn:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.45);
+  outline-offset: 2px;
+}
+
+.meal-header-badges-row .meal-header-collapse-btn {
+  margin-left: auto;
 }
 
 /* Стили для разных типов приёмов пищи ВНУТРИ карточки */

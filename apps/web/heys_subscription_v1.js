@@ -122,6 +122,17 @@
     }
   };
 
+  const hasClientSessionSignal = () => {
+    try {
+      return !!HEYS.auth?.getSessionToken?.()
+        || !!readGlobalValue('heys_pin_auth_client', null)
+        || !!readGlobalValue('heys_pin_cookie_session_hint', null)
+        || !!readGlobalValue('heys_session_token', null);
+    } catch (_) {
+      return false;
+    }
+  };
+
   const removeCacheValue = (key) => {
     try {
       if (HEYS.store?.set) HEYS.store.set(key, null);
@@ -215,6 +226,11 @@
     // HttpOnly cookie carrier, so absence of a readable token is not logout.
     const sessionToken = HEYS.auth?.getSessionToken?.();
     if (isCuratorSession()) {
+      const localStatus = getLocalSubscriptionStatus();
+      setCachedStatus(localStatus);
+      return localStatus;
+    }
+    if (!hasClientSessionSignal()) {
       const localStatus = getLocalSubscriptionStatus();
       setCachedStatus(localStatus);
       return localStatus;

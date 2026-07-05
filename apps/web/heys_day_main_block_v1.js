@@ -69,6 +69,7 @@
             React.createElement('td', null, React.createElement('input', {
               type: 'number',
               step: '0.1',
+              'data-curator-target': 'weight',
               value: day?.weightMorning ? Math.round(day.weightMorning * 10) / 10 : '',
               onChange: e => {
                 const newWeight = +e.target.value || '';

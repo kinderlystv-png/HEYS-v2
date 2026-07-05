@@ -162,7 +162,7 @@
               ? '💡 Попробуй: без экранов за час, прохладная комната'
               : null;
 
-            return React.createElement('div', { className: 'sleep-card' },
+            return React.createElement('div', { className: 'sleep-card', 'data-curator-target': 'sleep' },
               React.createElement('div', { className: 'sleep-card-header' },
                 React.createElement('span', { className: 'sleep-card-icon' }, '🌙'),
                 React.createElement('span', { className: 'sleep-card-title' }, 'Сон')

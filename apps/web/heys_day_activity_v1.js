@@ -202,7 +202,7 @@
       openTrainingPicker?.(visibleTrainings || 0);
     };
 
-    return React.createElement('div', { className: 'compact-activity activity-section' },
+    return React.createElement('div', { className: 'compact-activity activity-section', 'data-curator-target': 'activity' },
       React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
 
       React.createElement('div', { className: 'activity-cards-row activity-cards-row--top' },
@@ -328,7 +328,7 @@
       ),
 
       // Слайдер шагов с зоной защиты от свайпа
-      React.createElement('div', { className: 'activity-steps-card widget-shadow-diary-glass widget-outline-diary-glass' },
+      React.createElement('div', { className: 'activity-steps-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'steps' },
         React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
           React.createElement('div', { className: 'steps-slider-header' },
             React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
@@ -417,7 +417,8 @@
       regularTrainingsBlock,
 
       showChargeCard && React.createElement('div', {
-        className: 'activity-charge-card compact-card widget-shadow-diary-glass widget-outline-diary-glass'
+        className: 'activity-charge-card compact-card widget-shadow-diary-glass widget-outline-diary-glass',
+        'data-curator-target': 'training'
       },
         React.createElement('div', { className: 'activity-charge-card-head' },
           React.createElement('span', { className: 'activity-charge-card-title' }, '⚡ Зарядка'),
@@ -460,7 +461,7 @@
       ),
 
       // Тренировки за последние 30 дней (сводка)
-      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'training' },
         React.createElement('div', { className: 'month-trainings-card-header' },
           React.createElement('span', { className: 'month-trainings-card-title' }, '📋 Тренировки за 30 дней')
         ),

@@ -490,27 +490,22 @@
 	      );
 	    }
 
-	    function renderAdminShortcut() {
+	    function renderServiceEntry() {
 	      if (mode !== 'client') return null;
 	      return React.createElement(
 	        'button',
 	        {
 	          type: 'button',
-	          className: 'heys-auth-admin-shortcut',
-	          'aria-label': 'Вход для админа',
-	          title: 'Вход для админа',
+	          className: 'heys-auth-version heys-auth-service-entry mt-6 text-xs font-medium tracking-wider font-mono',
+	          'aria-label': 'Служебный вход',
+	          title: 'Служебный вход',
 	          onClick: () => {
 	            setErr('');
 	            armCuratorAutologin();
 	            setMode('curator');
 	          },
 	        },
-	        React.createElement(
-	          'svg',
-	          { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
-	          React.createElement('path', { d: 'M12 3l7 3v5c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V6l7-3z' }),
-	          React.createElement('path', { d: 'M9.5 11.5l1.8 1.8 3.7-4' }),
-	        ),
+	        'служебный вход',
 	      );
 	    }
 
@@ -687,8 +682,8 @@
       return React.createElement(
         React.Fragment,
         null,
-        Card(
-          // Заголовок
+	        Card(
+	          // Заголовок
 	        React.createElement(
 	          'div',
 	          { className: 'heys-auth-heading text-center' },
@@ -1020,12 +1015,7 @@
         : mode === 'client'
           ? renderClientLogin()
           : renderCuratorLogin(),
-	      React.createElement(
-	        'div',
-	        { className: 'heys-auth-version mt-6 text-xs font-medium tracking-wider font-mono' },
-	        'v' + (HEYS.version || 'dev'),
-	      ),
-	      renderAdminShortcut(),
+	      renderServiceEntry(),
 	    );
   }
 

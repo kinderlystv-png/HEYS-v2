@@ -11,6 +11,22 @@ const { getPool } = require('./shared/db-pool');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
+function curatorActionDateFromKey(key) {
+  const m = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function attachCuratorActionKeyMeta(actions, key) {
+  if (!Array.isArray(actions)) return [];
+  const date = curatorActionDateFromKey(key);
+  return actions.map((action) => {
+    if (!action || typeof action !== 'object') return action;
+    const next = { ...action, key };
+    if (date && !next.date) next.date = date;
+    return next;
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Ticket B: ключи курaторской UI-сессии — никогда не должны попадать в
 // `client_kv_store`. Server-side гейт для всех write-paths (merge_save_*,
@@ -936,6 +952,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_regenerate_pin',             // 🆕 Перевыпуск PIN+pin_token (P0.7)
   'admin_clear_telegram_binding',      // Сброс chat_id, если ссылку открыл не клиент
   'admin_get_client_access_link',      // Получить текущую Telegram-ссылку клиента без client-list leakage
+  'admin_get_ops_status',              // Curator-only ops dashboard summary (no secrets)
+  'admin_refresh_ops_status',           // Curator-only ops dashboard server-side refresh
 
   // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
@@ -965,6 +983,8 @@ const CURATOR_AUDIT_SKIP = new Set([
   'admin_get_trial_queue_list',
   'admin_get_leads',
   'admin_get_queue_stats',
+  'admin_get_ops_status',
+  'admin_refresh_ops_status',
   'admin_update_queue_settings',
   'create_client_with_pin',          // новый клиент — нет existing target
   'delete_gamification_events_by_curator',  // bulk delete по event_ids, не client
@@ -3116,6 +3136,7 @@ module.exports.handler = async function (event, context) {
             const oldV = cur.rows[0]?.v ?? null;
             const payload = computeCuratorActionPayload(oldV, mergedValue, k);
             if (payload && Array.isArray(payload.actions) && payload.actions.length > 0) {
+              const actionsWithMeta = attachCuratorActionKeyMeta(payload.actions, k);
               await client.query(
                 `INSERT INTO client_data_changelog (client_id, curator_id, keys_updated, actions)
                  VALUES ($1::uuid, $2::uuid, $3::text[], $4::jsonb)`,
@@ -3123,7 +3144,7 @@ module.exports.handler = async function (event, context) {
                   resolvedClientId,
                   curatorId,
                   [k],
-                  JSON.stringify(payload),
+                  JSON.stringify({ actions: actionsWithMeta }),
                 ]
               );
             }
@@ -3210,6 +3231,7 @@ module.exports.handler = async function (event, context) {
           : new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       }
 
+      const serverNowRes = await client.query('SELECT NOW() AS server_now');
       const rowsRes = await client.query(
         `SELECT id, curator_id, keys_updated, actions, created_at
            FROM client_data_changelog
@@ -3217,9 +3239,13 @@ module.exports.handler = async function (event, context) {
             AND acked_at IS NULL
             AND created_at > $2::timestamptz
           ORDER BY created_at DESC
-          LIMIT 100`,
+          LIMIT 101`,
         [resolvedClientId, sinceTs]
       );
+      const rows = rowsRes.rows || [];
+      const hasMore = rows.length > 100;
+      const visibleRows = hasMore ? rows.slice(0, 100) : rows;
+      const serverNow = serverNowRes.rows?.[0]?.server_now;
 
       try { client.release(); } catch (_) { /* ignore */ }
       return {
@@ -3228,7 +3254,9 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({
           ok: true,
           since: sinceTs,
-          entries: rowsRes.rows.map((r) => ({
+          server_now: serverNow instanceof Date ? serverNow.toISOString() : serverNow,
+          has_more: hasMore,
+          entries: visibleRows.map((r) => ({
             id: r.id,
             curator_id: r.curator_id,
             keys: r.keys_updated,
@@ -3241,10 +3269,14 @@ module.exports.handler = async function (event, context) {
 
     // 📝 SPECIAL: ack_curator_changelog
     // Клиент отмечает изменения куратора как прочитанные.
-    // Идемпотентно: апдейтит last_seen_at = GREATEST(coalesce, p_until_ts).
+    // Идемпотентно: новый клиент шлёт p_entry_ids, старый — p_until_ts.
     if (fnName === 'ack_curator_changelog') {
       const sessionToken = params.p_session_token;
       const untilTsRaw = params.p_until_ts;
+      const entryIdsRaw = Array.isArray(params.p_entry_ids) ? params.p_entry_ids : [];
+      const entryIds = entryIdsRaw
+        .filter((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id))
+        .slice(0, 100);
       if (!sessionToken) {
         try { client.release(); } catch (_) { /* ignore */ }
         return {
@@ -3268,6 +3300,72 @@ module.exports.handler = async function (event, context) {
           statusCode: 401,
           headers: corsHeaders,
           body: JSON.stringify({ ok: false, error: 'invalid_session' })
+        };
+      }
+
+      if (entryIds.length > 0) {
+        let ackedUntil = null;
+        await client.query('BEGIN');
+        try {
+          const targetRes = await client.query(
+            `SELECT MAX(created_at) AS max_created_at
+               FROM client_data_changelog
+              WHERE client_id = $1::uuid
+                AND id = ANY($2::uuid[])`,
+            [resolvedClientId, entryIds]
+          );
+          const maxCreatedAt = targetRes.rows?.[0]?.max_created_at || null;
+
+          await client.query(
+            `UPDATE client_data_changelog
+                SET acked_at = NOW()
+              WHERE client_id = $1::uuid
+                AND id = ANY($2::uuid[])
+                AND acked_at IS NULL`,
+            [resolvedClientId, entryIds]
+          );
+
+          if (maxCreatedAt) {
+            const remainingRes = await client.query(
+              `SELECT 1
+                 FROM client_data_changelog
+                WHERE client_id = $1::uuid
+                  AND acked_at IS NULL
+                  AND created_at <= ($2::timestamptz + INTERVAL '1 millisecond')
+                LIMIT 1`,
+              [resolvedClientId, maxCreatedAt]
+            );
+            if ((remainingRes.rows || []).length === 0) {
+              await client.query(
+                `UPDATE clients
+                    SET curator_actions_last_seen_at = GREATEST(
+                      COALESCE(curator_actions_last_seen_at, 'epoch'::timestamptz),
+                      ($2::timestamptz + INTERVAL '1 millisecond')
+                    )
+                  WHERE id = $1::uuid`,
+                [resolvedClientId, maxCreatedAt]
+              );
+            }
+            ackedUntil = maxCreatedAt instanceof Date ? maxCreatedAt.toISOString() : maxCreatedAt;
+          }
+
+          await client.query('COMMIT');
+        } catch (ackErr) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          try { client.release(true); } catch (_) { /* noop */ }
+          console.error('[ack_curator_changelog] failed:', ackErr.message);
+          return {
+            statusCode: 500,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: ackErr.message })
+          };
+        }
+
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: true, acked_until: ackedUntil, acked_ids: entryIds })
         };
       }
 
@@ -3567,7 +3665,7 @@ module.exports.handler = async function (event, context) {
           const newV = it.v;
           const payload = computeCuratorActionPayload(oldV, newV, it.k);
           if (payload && Array.isArray(payload.actions) && payload.actions.length > 0) {
-            allActions.push(...payload.actions);
+            allActions.push(...attachCuratorActionKeyMeta(payload.actions, it.k));
             loggedKeys.push(it.k);
           }
         }
@@ -4162,10 +4260,16 @@ module.exports.handler = async function (event, context) {
         'p_rejection_reason': '::text',
         'p_curator_id': '::uuid'
       },
-      'admin_get_queue_stats': {
-        'p_curator_id': '::uuid'
-      },
-      'admin_update_queue_settings': {
+	      'admin_get_queue_stats': {
+	        'p_curator_id': '::uuid'
+	      },
+	      'admin_get_ops_status': {
+	        'p_curator_id': '::uuid'
+	      },
+	      'admin_refresh_ops_status': {
+	        'p_curator_id': '::uuid'
+	      },
+	      'admin_update_queue_settings': {
         'p_is_accepting': '::boolean',
         'p_max_active': '::int',
         'p_offer_window_minutes': '::int',

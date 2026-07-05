@@ -312,6 +312,11 @@
             if (gate && gate.style.display === 'none') {
                 gate.style.display = 'flex';
             }
+            if (gate) {
+                gate.style.opacity = '1';
+                gate.style.pointerEvents = 'auto';
+                gate.setAttribute('data-visible', 'true');
+            }
             var rl = document.getElementById('hlg-returning');
             if (rl) rl.remove();
             // Restore canonical single-screen state via gate's helper (handles
