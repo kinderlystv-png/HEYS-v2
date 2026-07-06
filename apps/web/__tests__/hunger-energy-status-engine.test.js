@@ -606,6 +606,29 @@ describe('HungerEnergyStatus pure engine', () => {
     expect(recentMealRisingHunger.riskBudget.driversUp).not.toContain('failed_delay_history');
   });
 
+  it('plans the next meal instead of recommending food now when low hunger follows a recent meal', () => {
+    const lowHungerAfterRecentMeal = HES.assessHungerEvent(
+      { hungerLevel: 1, hungerTrend: 'falling', safetyFlags: [] },
+      {
+        lastMealAt: '2026-07-06T17:45:00',
+        hoursSinceMeal: 0.63,
+        recentMeal: true,
+        todayMealCount: 2,
+        veryLowIntakeDay: true,
+        previousHungerLevel: 4,
+        minutesSinceLastHungerEvent: 43
+      }
+    );
+
+    expect(lowHungerAfterRecentMeal.invariantErrors).toEqual([]);
+    expect(lowHungerAfterRecentMeal.energyStatus.label).toBe('fed');
+    expect(lowHungerAfterRecentMeal.riskBudget.driversUp).toContain('nutrition_floor_risk');
+    expect(lowHungerAfterRecentMeal.suggestedAction).toBe('planNextMeal');
+    expect(lowHungerAfterRecentMeal.delayAllowed).toBe(true);
+    expect(lowHungerAfterRecentMeal.foodBandKcal).toBeUndefined();
+    expect(lowHungerAfterRecentMeal.recheckAfterMin).toBe(45);
+  });
+
   it('plans the next meal for low hunger after a very long gap without encoding zero food', () => {
     const lowHungerLongGap = HES.assessHungerEvent(
       { hungerLevel: 2, hungerTrend: 'unknown', safetyFlags: [] },

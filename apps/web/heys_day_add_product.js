@@ -473,7 +473,7 @@
     }, [products]);
 
     const getLatestDay = React.useCallback(() => {
-      return day || HEYS.Day?.getDay?.() || {};
+      return HEYS.Day?.getDay?.() || day || {};
     }, [day]);
 
     const handleOpenModal = React.useCallback(() => {

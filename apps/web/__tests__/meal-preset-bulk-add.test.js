@@ -324,7 +324,7 @@ describe('Meal preset bulk add', () => {
   it('keeps public addProductToMeal return value tied to the mutation result', () => {
     const source = readDayEffectsSource();
 
-    expect(source).toContain('const didAdd = await addProductToMeal(mi, productWithGrams);');
+    expect(source).toContain('const didAdd = await addProductToMeal(mi, productWithGrams, addOptions);');
     expect(source).toContain('return didAdd !== false;');
   });
 
@@ -335,7 +335,9 @@ describe('Meal preset bulk add', () => {
 
     expect(mealsSource).toContain('const addProductsToMeal = React.useCallback');
     expect(mealsSource).toContain('addProductsToMealRef.current = addProductsToMeal;');
-    expect(mealsSource).toContain('onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex');
+    expect(mealsSource).toContain('onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex, mealId: addMealId = targetMealId');
+    expect(mealsSource).toContain('const targetMealIndex = resolveMealIndex(baseDay, mi, targetMealId);');
+    expect(mealsSource).toContain('openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { mealId: newMealId');
     expect(mealsSource).toContain('ensureMealProductReady');
     expect(mealsSource).toContain("source: options?.source || 'day-add-products-to-meal'");
     expect(mealsSource).toContain("source: 'day-inline-add-product-single'");
@@ -351,6 +353,7 @@ describe('Meal preset bulk add', () => {
 
     expect(source).toContain('const showBulkMealPicker = (selectedProducts, onMealSelected) =>');
     expect(source).toContain('const success = await HEYS.Day.addProductsToMeal(mealIndex, entries, {');
+    expect(source).toContain('mealId,');
     expect(source).toContain("source: 'meal-rec-selected-products'");
     expect(source).not.toContain('selectedProducts.forEach((product, idx) =>');
     expect(source).not.toContain('}, idx * 100)');

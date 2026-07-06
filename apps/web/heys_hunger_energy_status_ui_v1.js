@@ -2753,13 +2753,6 @@
     return band[0] + '-' + band[1] + ' ккал';
   }
 
-  function formatMinuteWindow(windowMin) {
-    if (!Array.isArray(windowMin) || windowMin.length < 2) return null;
-    return windowMin[0] === windowMin[1]
-      ? windowMin[0] + ' мин'
-      : windowMin[0] + '-' + windowMin[1] + ' мин';
-  }
-
   function formatShortDuration(minutes) {
     const value = Number(minutes);
     if (!Number.isFinite(value) || value < 0) return null;
@@ -2812,7 +2805,7 @@
     if (decision.suggestedAction === 'hydratePause') return 'Вода или несладкий чай, затем перепроверить';
     if (decision.suggestedAction === 'coffeePause') return 'Кофе только если он привычный и низкорисковый';
     if (decision.suggestedAction === 'delayWithCheck' || decision.suggestedAction === 'observe') {
-      return decision.recheckAfterMin ? 'Вернуться к оценке через ' + decision.recheckAfterMin + ' мин' : 'Вернуться к оценке позже';
+      return 'Сейчас можно не есть; вернись к оценке, если состояние изменится';
     }
     if (decision.suggestedAction === 'eatMeal') return band ? 'Нормальный приём пищи, ' + band : 'Нормальный приём пищи';
     if (decision.suggestedAction === 'doNotDelay') return band ? 'Не откладывать, ' + band : 'Не откладывать';
@@ -2831,8 +2824,8 @@
     }
     if (decision.suggestedAction === 'hydratePause' || decision.suggestedAction === 'delayWithCheck' || decision.suggestedAction === 'observe') {
       return {
-        title: 'Поставить перепроверку',
-        detail: 'Вернуться к шкале через ' + (decision.recheckAfterMin || 45) + ' мин',
+        title: 'Оценить позже',
+        detail: 'Открой новую оценку, если голод или самочувствие изменятся',
         type: 'check'
       };
     }
@@ -2855,38 +2848,6 @@
       detail: band ? 'Белок + клетчатка, ' + band : 'Белок + клетчатка',
       type: 'food'
     };
-  }
-
-  function getOutcomeTitle(decision) {
-    if (decision?.suggestedAction === 'fastCarbSafety') return 'Через 15 мин';
-    if (decision?.recheckAfterMin) return 'Через ' + decision.recheckAfterMin + ' мин';
-    if (decision?.postFoodOutcomeAfterMin) return 'Через ' + formatMinuteWindow(decision.postFoodOutcomeAfterMin);
-    return 'После решения';
-  }
-
-  function getOutcomeOptions(decision) {
-    if (decision?.suggestedAction === 'fastCarbSafety') {
-      return [
-        ['symptoms_better', 'Стало лучше'],
-        ['checked_glucose', 'Проверил глюкозу'],
-        ['not_better', 'Не лучше'],
-        ['got_help', 'Обратился за помощью']
-      ];
-    }
-    if (decision?.delayAllowed) {
-      return [
-        ['hunger_grew', 'Голод вырос'],
-        ['hunger_passed', 'Прошёл'],
-        ['ate_calmly', 'Поел спокойно'],
-        ['lost_control', 'Потерял контроль']
-      ];
-    }
-    return [
-      ['hunger_lower', 'Голод снизился'],
-      ['ate_calmly', 'Поел спокойно'],
-      ['not_enough', 'Не помогло'],
-      ['lost_control', 'Потерял контроль']
-    ];
   }
 
   function getFollowUpQuestion(decision) {
@@ -3284,7 +3245,6 @@
     const [detailsOpen, setDetailsOpen] = React.useState(false);
     const [copyDone, setCopyDone] = React.useState(false);
     const [isDragging, setIsDragging] = React.useState(false);
-    const [outcomeSaved, setOutcomeSaved] = React.useState(null);
     const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(() => readAutoOpenEnabled());
     const [contextRefreshSeq, setContextRefreshSeq] = React.useState(0);
     const [editTarget, setEditTarget] = React.useState(null);
@@ -3304,7 +3264,6 @@
       setDetailsOpen(false);
       setCopyDone(false);
       setIsDragging(false);
-      setOutcomeSaved(null);
       setAutoOpenEnabledState(readAutoOpenEnabled());
       setContextRefreshSeq(0);
       setEditTarget(null);
@@ -3463,7 +3422,6 @@
       setResult(null);
       setDetailsOpen(false);
       setCopyDone(false);
-      setOutcomeSaved(null);
       setContextPatch({});
       setLowMealReasonResult(null);
       setEditTarget({
@@ -3525,7 +3483,6 @@
       setResult(null);
       setDetailsOpen(false);
       setCopyDone(false);
-      setOutcomeSaved(null);
       setContextPatch({});
       setLowMealReasonResult(null);
       setEditTarget(null);
@@ -3835,7 +3792,6 @@
       setResult({ input: finalInput, context, decision, drivers, log, eventId: eventRow.id });
       setDetailsOpen(false);
       setCopyDone(false);
-      setOutcomeSaved(null);
     }
 
     function resetInput() {
@@ -3844,48 +3800,9 @@
       setResult(null);
       setDetailsOpen(false);
       setCopyDone(false);
-      setOutcomeSaved(null);
       setEditTarget(null);
       setBackfillTarget(null);
       setLowMealReasonResult(null);
-    }
-
-    function recordOutcome(outcome) {
-      if (!result?.eventId) return;
-      const outcomeAt = nowIso();
-      const rows = readEvents();
-      const next = rows.map((row) => row.id === result.eventId ? {
-        ...row,
-        outcome,
-        outcomeAt,
-        updatedAt: outcomeAt,
-        syncStatus: 'queued',
-        outcomeEventId: (row.outcomeEventId || row.id) + ':' + outcomeAt,
-        outcomePlan: {
-          ...(row.outcomePlan || {}),
-          userReported: outcome,
-          userReportedAt: outcomeAt
-        }
-      } : row);
-      writeEvents(next);
-      setResult((prev) => prev ? {
-        ...prev,
-        log: {
-          ...(prev.log || {}),
-          outcome: {
-            ...(prev.log?.outcome || {}),
-            userReported: outcome,
-            userReportedAt: outcomeAt
-          },
-          eventMeta: {
-            ...(prev.log?.eventMeta || {}),
-            syncStatus: 'queued',
-            updatedAt: outcomeAt,
-            outcomeEventId: (prev.log?.eventMeta?.outcomeEventId || prev.eventId) + ':' + outcomeAt
-          }
-        }
-      } : prev);
-      setOutcomeSaved(outcome);
     }
 
     async function copyLog() {
@@ -3912,8 +3829,7 @@
       },
         h('header', { className: 'hes-head' },
           h('div', null,
-            h('div', { className: 'hes-kicker' }, 'Баланс энергообмена'),
-            result && h('h3', null, 'Рекомендация')
+            h('div', { className: 'hes-kicker' }, 'Баланс энергообмена')
           ),
           h('div', { className: 'hes-head__actions' },
             h('label', { className: 'hes-auto-toggle' },
@@ -4004,60 +3920,53 @@
           featureSettings.patternInsights && h(PatternInsightCard, { insight: patternInsight })
         ) : null,
         !settingsOpen && result ? h('div', { className: 'hes-result' },
-          (hungerChangeNote || lastMealHint) && h('div', { className: 'hes-context-summary' },
-            hungerChangeNote && h('span', null, hungerChangeNote),
-            lastMealHint && h('span', null, lastMealHint)
-          ),
+          h('h3', { className: 'hes-result-title' }, 'Рекомендация'),
           h('div', { className: 'hes-verdict' },
-            h('div', { className: 'hes-verdict__top' },
+            h('div', { className: 'hes-verdict__meta' },
+              (hungerChangeNote || lastMealHint) && h('div', { className: 'hes-verdict__context' },
+                hungerChangeNote && h('span', null, hungerChangeNote),
+                lastMealHint && h('span', null, lastMealHint)
+              ),
               h('span', { className: 'hes-confidence' }, result.decision.confidence === 'high' ? 'уверенно' : result.decision.confidence === 'medium' ? 'средняя уверенность' : 'нужно уточнить')
             ),
             h('strong', { className: 'hes-verdict__title' }, getRecommendationTitle(result.decision)),
             h('span', { className: 'hes-verdict__detail' }, getRecommendationDetail(result.decision))
           ),
-          result.log?.nextBestAction && h('div', { className: 'hes-next-action' },
+          result.log?.nextBestAction && !['food', 'plan'].includes(result.log.nextBestAction.type) && h('div', { className: 'hes-next-action' },
             h('span', null, 'Следующий шаг'),
             h('strong', null, result.log.nextBestAction.title),
             h('em', null, result.log.nextBestAction.detail)
           ),
-          h('div', { className: 'hes-reasons' },
-            h('div', { className: 'hes-reasons__title' }, 'Почему'),
-            getRecommendationReasons(result).map((reason) => h('span', { key: reason }, reason))
-          ),
-          safeArray(result.log?.patternCards).length > 0 && h('div', { className: 'hes-patterns' },
-            h('div', { className: 'hes-patterns__title' }, 'Паттерн'),
-            safeArray(result.log.patternCards).map((card) => h('div', { key: card.id, className: 'hes-pattern-card' },
-              h('strong', null, card.title),
-              h('span', null, card.detail)
-            ))
-          ),
-          h('div', { className: 'hes-context' },
-            h('div', { className: 'hes-context__title' }, 'Данные'),
-            getContextBadges(result).map((badge) => h('span', { key: badge }, badge))
-          ),
-          (result.decision.delayAllowed || result.decision.postFoodOutcomeAfterMin) && h('div', { className: 'hes-outcome' },
-            h('div', { className: 'hes-outcome__title' }, getOutcomeTitle(result.decision)),
-            h('div', { className: 'hes-outcome__chips' },
-              getOutcomeOptions(result.decision).map(([value, label]) => h('button', {
-                key: value,
-                type: 'button',
-                className: outcomeSaved === value ? 'is-active' : '',
-                onClick: () => recordOutcome(value)
-              }, label))
-            )
-          ),
           h('button', {
             type: 'button',
             className: 'hes-details-toggle',
-            onClick: () => setDetailsOpen((open) => !open)
+            onClick: () => setDetailsOpen((open) => !open),
+            'aria-expanded': detailsOpen
           }, detailsOpen ? 'Скрыть подробности' : 'Подробнее'),
-          detailsOpen && h('div', { className: 'hes-debug' },
-            h('div', { className: 'hes-debug__top' },
-              h('strong', null, 'Технический расчёт'),
-              h('button', { type: 'button', onClick: copyLog }, copyDone ? 'Скопировано' : 'Скопировать лог')
+          detailsOpen && h('div', { className: 'hes-details-panel' },
+            h('div', { className: 'hes-reasons' },
+              h('div', { className: 'hes-reasons__title' }, 'Почему'),
+              getRecommendationReasons(result).map((reason) => h('span', { key: reason }, reason))
             ),
-            h(DebugSummary, { result }),
-            h('pre', null, JSON.stringify(result.log, null, 2))
+            safeArray(result.log?.patternCards).length > 0 && h('div', { className: 'hes-patterns' },
+              h('div', { className: 'hes-patterns__title' }, 'Паттерн'),
+              safeArray(result.log.patternCards).map((card) => h('div', { key: card.id, className: 'hes-pattern-card' },
+                h('strong', null, card.title),
+                h('span', null, card.detail)
+              ))
+            ),
+            h('div', { className: 'hes-context' },
+              h('div', { className: 'hes-context__title' }, 'Данные'),
+              getContextBadges(result).map((badge) => h('span', { key: badge }, badge))
+            ),
+            h('div', { className: 'hes-debug' },
+              h('div', { className: 'hes-debug__top' },
+                h('strong', null, 'Технический расчёт'),
+                h('button', { type: 'button', onClick: copyLog }, copyDone ? 'Скопировано' : 'Скопировать лог')
+              ),
+              h(DebugSummary, { result }),
+              h('pre', null, JSON.stringify(result.log, null, 2))
+            )
           )
         ) : null,
         !settingsOpen && !isLowHungerClarification && h('footer', { className: 'hes-actions' },
@@ -4115,13 +4024,12 @@
 .hes-sheet{width:min(440px,calc(100vw - 24px));max-height:min(720px,calc(100dvh - 28px));overflow:auto;background:rgba(255,255,255,.98);color:#172033;border:1px solid rgba(67,69,135,.14);border-radius:18px;box-shadow:0 24px 64px rgba(15,23,42,.24);animation:hesIn .18s ease-out;overscroll-behavior:contain;touch-action:pan-y}
 .hes-sheet--clarification{max-height:none;overflow:visible}
 .hes-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 16px 8px 18px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px)}
-.hes-head>div:first-child{min-width:0;display:flex;align-items:center;min-height:44px}
+	.hes-head>div:first-child{min-width:0;flex:1 1 auto;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px}
 .hes-head__actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .hes-settings-btn{width:44px;height:44px;border:0;border-radius:14px;background:#f1f5f9;color:#434587;font-size:18px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .hes-settings-btn[aria-pressed="true"]{background:#434587;color:#fff;box-shadow:0 8px 18px rgba(67,69,135,.18)}
-.hes-kicker{font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1.15;text-transform:uppercase;color:#434587}
-.hes-head h3{margin:2px 0 0;font-size:20px;line-height:1.15;color:#172033}
-.hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#f1f5f9;color:#475569;font-size:20px;cursor:pointer}
+	.hes-kicker{max-width:100%;font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1.15;text-transform:uppercase;color:#434587}
+	.hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#f1f5f9;color:#475569;font-size:20px;cursor:pointer}
 .hes-auto-toggle{min-height:36px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#f8fbff;color:#475569;padding:0 8px;cursor:pointer;user-select:none}
 .hes-auto-toggle:focus-within{outline:2px solid rgba(67,69,135,.22);outline-offset:2px}
 .hes-auto-toggle__text{font-size:11px;font-weight:850;line-height:1;white-space:nowrap}
@@ -4154,7 +4062,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-sheet{background:#111827;color:#f8fafc;border-color:rgba(226,236,242,.16)}
 [data-theme="dark"] .hes-head{background:rgba(17,24,39,.98)}
 [data-theme="dark"] .hes-actions{background:rgba(17,24,39,.98)}
-[data-theme="dark"] .hes-head h3{color:#f8fafc}
+	[data-theme="dark"] .hes-result-title{color:#f8fafc}
 [data-theme="dark"] .hes-close,[data-theme="dark"] .hes-slider,[data-theme="dark"] .hes-chip{background:#1f2937;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-auto-toggle{background:#1f2937;color:#cbd5e1;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-auto-toggle__switch{background:#334155;box-shadow:inset 0 0 0 1px rgba(226,236,242,.12)}
@@ -4284,16 +4192,20 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-feature-row__copy em{font-style:normal;font-size:12px;line-height:1.25;color:#64748b;font-weight:750}
 .hes-feature-row__state{border-radius:999px;background:#f1f5f9;color:#64748b;font-size:10px;font-weight:900;padding:5px 7px;text-transform:uppercase}
 .hes-feature-row.is-on .hes-feature-row__state{background:#eef6ff;color:#434587}
-.hes-result{padding:10px 18px 132px;display:flex;flex-direction:column;gap:12px}
-.hes-context-summary{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;flex-direction:column;gap:4px;color:#475569;font-size:12px;font-weight:850;line-height:1.3}
-.hes-verdict{border-radius:16px;background:#eef6ff;border:1px solid rgba(29,112,183,.14);padding:14px;display:flex;flex-direction:column;gap:7px}
-.hes-verdict__top{display:flex;justify-content:flex-end;min-height:16px}
-.hes-verdict__title{font-size:22px;line-height:1.12;color:#172033}
-.hes-verdict__detail{font-size:15px;line-height:1.35;color:#475569;font-weight:750}
-.hes-next-action{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:12px 14px;display:grid;gap:4px}
-.hes-next-action span{font-size:12px;font-weight:850;color:#64748b}
-.hes-next-action strong{font-size:16px;line-height:1.2;color:#172033}
-.hes-next-action em{font-style:normal;font-size:13px;line-height:1.3;color:#475569;font-weight:750}
+	.hes-result{padding:10px 18px 132px;display:flex;flex-direction:column;gap:10px}
+	.hes-result-title{margin:1px 0 2px;font-size:17px;line-height:1.16;font-weight:750;color:#172033;letter-spacing:0}
+	.hes-verdict{border-radius:16px;background:#eef6ff;border:1px solid rgba(29,112,183,.14);padding:16px;display:flex;flex-direction:column;gap:9px}
+	.hes-verdict__meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:20px}
+	.hes-verdict__context{min-width:0;display:flex;flex-direction:column;gap:3px;color:#64748b;font-size:12px;font-weight:850;line-height:1.25}
+	.hes-verdict__context span{display:block}
+	.hes-verdict .hes-confidence{border:1px solid rgba(67,69,135,.12);border-radius:999px;background:rgba(255,255,255,.72);padding:4px 8px}
+	.hes-verdict__title{font-size:22px;line-height:1.12;color:#172033}
+	.hes-verdict__detail{font-size:15px;line-height:1.35;color:#475569;font-weight:750}
+	.hes-next-action{position:relative;border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:13px 14px 13px 17px;display:grid;gap:4px;overflow:hidden}
+	.hes-next-action::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:999px;background:#434587}
+	.hes-next-action span{font-size:12px;font-weight:850;color:#64748b}
+	.hes-next-action strong{font-size:16px;line-height:1.2;color:#172033}
+	.hes-next-action em{font-style:normal;font-size:13px;line-height:1.3;color:#475569;font-weight:750}
 .hes-reasons{border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#fff;padding:12px;display:flex;flex-wrap:wrap;gap:8px}
 .hes-reasons__title{width:100%;font-size:12px;font-weight:850;color:#64748b}
 .hes-reasons span{border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#f8fafc;color:#334155;font-size:12px;font-weight:800;padding:7px 10px}
@@ -4305,13 +4217,12 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-context{border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#fff;padding:10px 12px;display:flex;flex-wrap:wrap;gap:7px}
 .hes-context__title{width:100%;font-size:12px;font-weight:850;color:#64748b}
 .hes-context span{border-radius:999px;background:#eef6ff;color:#475569;font-size:11px;font-weight:800;padding:6px 9px}
-.hes-outcome{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fbfcff;padding:12px}
-.hes-outcome__title{font-size:12px;font-weight:850;color:#64748b;margin-bottom:8px}
-.hes-outcome__chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hes-outcome__chips button{min-height:38px;border:1px solid rgba(67,69,135,.14);border-radius:12px;background:#fff;color:#334155;font-size:12px;font-weight:850;cursor:pointer}
-.hes-outcome__chips button.is-active{background:#434587;color:#fff;border-color:#434587}
-.hes-details-toggle{min-height:42px;border:1px solid rgba(67,69,135,.18);border-radius:12px;background:#fff;color:#434587;font-weight:850;cursor:pointer}
-.hes-debug{border:1px solid rgba(15,23,42,.1);border-radius:14px;background:#f8fafc;overflow:hidden;margin-bottom:18px}
+	.hes-details-toggle{min-height:44px;border:1px solid rgba(67,69,135,.14);border-radius:12px;background:#fff;color:#434587;font-weight:850;cursor:pointer}
+	.hes-details-toggle[aria-expanded="true"]{background:#f8fbff;border-color:rgba(67,69,135,.2)}
+	.hes-details-panel{border:1px solid rgba(67,69,135,.1);border-radius:16px;background:#fbfcff;padding:10px;display:flex;flex-direction:column;gap:10px}
+	.hes-details-panel>.hes-reasons,.hes-details-panel>.hes-context,.hes-details-panel>.hes-patterns{border:0;background:transparent;border-radius:0;padding:2px;box-shadow:none}
+	.hes-details-panel>.hes-patterns{grid-template-columns:1fr}
+	.hes-debug{border:1px solid rgba(15,23,42,.1);border-radius:14px;background:#f8fafc;overflow:hidden;margin-bottom:18px}
 .hes-debug__top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(15,23,42,.08)}
 .hes-debug__top strong{font-size:13px;line-height:1.2}
 .hes-debug__top button{min-height:32px;border:0;border-radius:10px;background:#434587;color:#fff;font-weight:800;font-size:12px;padding:0 10px;white-space:nowrap}
@@ -4338,9 +4249,8 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-pattern-card{background:#111827;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-reasons{background:#1f2937;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-reasons span{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
-[data-theme="dark"] .hes-context,[data-theme="dark"] .hes-outcome{background:#1f2937;border-color:rgba(226,236,242,.14)}
-[data-theme="dark"] .hes-context span,[data-theme="dark"] .hes-outcome__chips button{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
-[data-theme="dark"] .hes-outcome__chips button.is-active{background:#434587;color:#fff;border-color:#434587}
+	[data-theme="dark"] .hes-context{background:#1f2937;border-color:rgba(226,236,242,.14)}
+	[data-theme="dark"] .hes-context span{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-spark{background:#172033;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-spark__axis{stroke:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-spark__night{fill:#020617;opacity:.26}

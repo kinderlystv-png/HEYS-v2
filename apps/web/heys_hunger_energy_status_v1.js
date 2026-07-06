@@ -628,6 +628,16 @@
     let delayAllowed = safety.delayAllowed;
     let recheckAfterMin;
 
+    const lowHungerAfterRecentMeal = state.hungerLevel <= 3 &&
+      energyStatus.label === 'fed' &&
+      ctx.veryLowIntakeDay &&
+      (state.hungerTrend === 'falling' || state.hungerTrend === 'stable') &&
+      !ctx.lowEnergyAvailabilityConcern &&
+      !ctx.failedDelayHistory &&
+      !ctx.allOrNothingThoughts &&
+      !ctx.hardTrainingRecovery &&
+      !ctx.proteinDebt;
+
     if (safety.hardOverride === SAFETY_OVERRIDES.fastCarbSafety) {
       suggestedAction = 'fastCarbSafety';
       delayAllowed = false;
@@ -643,6 +653,9 @@
     } else if (energyStatus.label === 'recoveryNeed') {
       suggestedAction = ctx.proteinDebt ? 'proteinFiberFirst' : 'eatMeal';
       delayAllowed = false;
+    } else if (lowHungerAfterRecentMeal) {
+      suggestedAction = 'planNextMeal';
+      recheckAfterMin = 45;
     } else if (riskBudget.level === 'high') {
       suggestedAction = (foodPriority.level === 'meal' || foodPriority.level === 'foodFirst') ? 'eatMeal' : 'riskBrakeMeal';
       delayAllowed = false;

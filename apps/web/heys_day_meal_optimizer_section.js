@@ -59,7 +59,7 @@
             const portion = MO.getSmartPortion(product);
             const productWithGrams = { ...product, grams: portion.grams };
 
-            const didAdd = await addProductToMeal(mealIndex, productWithGrams);
+            const didAdd = await addProductToMeal(mealIndex, productWithGrams, { mealId: meal?.id || null });
             if (didAdd === false) return;
 
             MO.trackUserAction({

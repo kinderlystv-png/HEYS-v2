@@ -1464,13 +1464,14 @@
                 // Открыть AddProductStep с предзаполненным поиском (Блокер 1 исправлен)
                 HEYS.AddProductStep.show({
                     mealIndex: selectedMealIndex,
+                    mealId: day?.meals?.[selectedMealIndex]?.id || null,
                     multiProductMode: false,
                     products: _products,
                     day: day,
                     dateKey: day?.date || new Date().toISOString().slice(0, 10),
                     initialSearch: searchQuery, // 🆕 Блокер 1: предзаполняем поиск
                     initialGrams: suggestion.grams || 100, // 🆕 v14: R6 (Sprint 1) — передаём рекомендованные ML граммы
-                    onAdd: async ({ product: addedProduct, grams, mealIndex }) => {
+                    onAdd: async ({ product: addedProduct, grams, mealIndex, mealId }) => {
                         _releaseProcessing();
                         console.info(`[MEAL] ✅ Product selected:`, addedProduct.name, `(${grams}г) to meal ${mealIndex}`);
 
@@ -1478,7 +1479,7 @@
                         // This is the SAME handler used by the regular diary flow.
                         // It handles: shared product cloning, harm normalization, setDay, animation, heysProductAdded event
                         if (HEYS?.Day?.addProductToMeal) {
-                            const success = await HEYS.Day.addProductToMeal(mealIndex, addedProduct, grams);
+                            const success = await HEYS.Day.addProductToMeal(mealIndex, addedProduct, grams, { mealId });
                             if (success) {
                                 console.info(`[MEAL] ✅ addProductToMeal succeeded for meal ${mealIndex}`);
                             } else {
@@ -1737,7 +1738,10 @@
                 return false;
             }
 
+            const latestDay = HEYS.Day?.getDay?.() || day || {};
+            const mealId = latestDay?.meals?.[mealIndex]?.id || day?.meals?.[mealIndex]?.id || null;
             const success = await HEYS.Day.addProductsToMeal(mealIndex, entries, {
+                mealId,
                 source: 'meal-rec-selected-products',
                 origin: 'meal-rec-bulk-selected'
             });
