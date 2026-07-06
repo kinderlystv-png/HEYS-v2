@@ -8,6 +8,7 @@ const { resolve } = require('node:path');
 const ROOT = resolve(__dirname, '..');
 const APP_LOCKBOX_ID = 'e6qrvefs3vn66jiamfk4';
 const COMMAND_TIMEOUT_MS = Number(process.env.HEYS_OPS_CHECK_TIMEOUT_MS || 12000);
+const TELEGRAM_TIMEOUT_MS = Number(process.env.HEYS_OPS_TELEGRAM_TIMEOUT_MS || 15000);
 
 const FUNCTIONS = [
   'heys-bot-client',
@@ -215,25 +216,30 @@ async function loadLockboxSecrets() {
 
 async function fetchWebhookInfo(label, token) {
   if (!token || String(token).startsWith('__IN_LOCKBOX__')) return { label, configured: false };
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, { signal: controller.signal });
-    const json = await res.json().catch(() => ({}));
-    const info = json.result || {};
-    return {
-      label,
-      configured: true,
-      ok: Boolean(json.ok),
-      webhookConfigured: Boolean(info.url),
-      pending_update_count: Number(info.pending_update_count || 0),
-      last_error_message: info.last_error_message || null,
-    };
-  } catch (e) {
-    return { label, configured: true, error: e.message };
-  } finally {
-    clearTimeout(timer);
+  let lastError = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, { signal: controller.signal });
+      const json = await res.json().catch(() => ({}));
+      const info = json.result || {};
+      return {
+        label,
+        configured: true,
+        ok: Boolean(json.ok),
+        webhookConfigured: Boolean(info.url),
+        pending_update_count: Number(info.pending_update_count || 0),
+        last_error_message: info.last_error_message || null,
+      };
+    } catch (e) {
+      lastError = e;
+      if (attempt < 2) await delay(750);
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return { label, configured: true, error: lastError?.message || 'telegram_check_failed' };
 }
 
 async function deleteWebhookSafe(label, token) {

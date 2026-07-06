@@ -235,7 +235,7 @@ apps/web/insights/pi_early_warning.js:803
 apps/web/insights/pi_early_warning.js:1306
 apps/web/insights/pi_ui_meal_rec_card.js:1103
 apps/web/insights/pi_ui_meal_rec_card.js:1364
-apps/web/insights/pi_ui_meal_rec_card.js:2327
+apps/web/insights/pi_ui_meal_rec_card.js:2331
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_app_shell_v1.js:176
 apps/web/heys_app_shell_v1.js:292

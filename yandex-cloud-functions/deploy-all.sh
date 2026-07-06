@@ -148,6 +148,22 @@ current_git_commit() {
     git -C "$SCRIPT_DIR" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown"
 }
 
+function_source_commit() {
+    local func_name="${1:-}"
+    local repo_root commit
+    if [ -n "$func_name" ]; then
+        repo_root="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+        commit="$(git -C "${repo_root:-$SCRIPT_DIR}" log --format=%h --max-count=1 -- "yandex-cloud-functions/$func_name" 2>/dev/null || true)"
+        if [ -n "$commit" ]; then
+            echo "$commit"
+        else
+            current_git_commit
+        fi
+        return
+    fi
+    current_git_commit
+}
+
 current_deployed_at() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
@@ -510,7 +526,7 @@ deploy_function() {
 
     # Build environment flags before touching per-function files so --dry-run is read-only.
     env_flags=$(build_env_flags "$func_name")
-    env_flags+=" --environment HEYS_DEPLOY_COMMIT=$(current_git_commit)"
+    env_flags+=" --environment HEYS_DEPLOY_COMMIT=$(function_source_commit "$func_name")"
     env_flags+=" --environment HEYS_DEPLOYED_AT=$(current_deployed_at)"
     env_flags+=" --environment HEYS_DEPLOY_GROUP=${TARGET_FUNC:-$DEPLOY_GROUP}"
     assert_env_flags_no_plaintext_secrets "$func_name" "$env_flags"

@@ -3305,18 +3305,38 @@ module.exports.handler = async function (event, context) {
 
       if (entryIds.length > 0) {
         let ackedUntil = null;
+        let matchedCount = 0;
+        let ackedCount = 0;
         await client.query('BEGIN');
         try {
           const targetRes = await client.query(
-            `SELECT MAX(created_at) AS max_created_at
+            `SELECT COUNT(*)::int AS matched_count, MAX(created_at) AS max_created_at
                FROM client_data_changelog
               WHERE client_id = $1::uuid
                 AND id = ANY($2::uuid[])`,
             [resolvedClientId, entryIds]
           );
+          matchedCount = Number(targetRes.rows?.[0]?.matched_count || 0);
           const maxCreatedAt = targetRes.rows?.[0]?.max_created_at || null;
 
-          await client.query(
+          if (matchedCount === 0) {
+            await client.query('COMMIT');
+            try { client.release(); } catch (_) { /* ignore */ }
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                ok: false,
+                error: 'entry_ids_not_found',
+                acked_until: null,
+                acked_ids: [],
+                matched_count: 0,
+                acked_count: 0,
+              })
+            };
+          }
+
+          const updateRes = await client.query(
             `UPDATE client_data_changelog
                 SET acked_at = NOW()
               WHERE client_id = $1::uuid
@@ -3324,6 +3344,7 @@ module.exports.handler = async function (event, context) {
                 AND acked_at IS NULL`,
             [resolvedClientId, entryIds]
           );
+          ackedCount = Number(updateRes.rowCount || 0);
 
           if (maxCreatedAt) {
             const remainingRes = await client.query(
@@ -3365,7 +3386,13 @@ module.exports.handler = async function (event, context) {
         return {
           statusCode: 200,
           headers: corsHeaders,
-          body: JSON.stringify({ ok: true, acked_until: ackedUntil, acked_ids: entryIds })
+          body: JSON.stringify({
+            ok: true,
+            acked_until: ackedUntil,
+            acked_ids: entryIds,
+            matched_count: matchedCount,
+            acked_count: ackedCount,
+          })
         };
       }
 
