@@ -4531,7 +4531,7 @@
         // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
         React.useEffect(() => {
             HEYS.Day = HEYS.Day || {};
-            HEYS.Day.addProductToMeal = async (mi, product, grams) => {
+            HEYS.Day.addProductToMeal = async (mi, product, grams, options) => {
                 // Валидация
                 if (typeof mi !== 'number' || mi < 0) {
                     console.warn('[HEYS.Day.addProductToMeal] Invalid meal index:', mi);
@@ -4542,8 +4542,14 @@
                     return false;
                 }
                 // Добавляем продукт
-                const productWithGrams = grams ? { ...product, grams } : product;
-                const didAdd = await addProductToMeal(mi, productWithGrams);
+                const addOptions = grams && typeof grams === 'object' && !Array.isArray(grams)
+                    ? grams
+                    : (options || {});
+                const productGrams = grams && typeof grams === 'object' && !Array.isArray(grams)
+                    ? grams.grams
+                    : grams;
+                const productWithGrams = productGrams ? { ...product, grams: productGrams } : product;
+                const didAdd = await addProductToMeal(mi, productWithGrams, addOptions);
                 return didAdd !== false;
             };
             return () => {

@@ -5836,7 +5836,7 @@
     }, [products]);
 
     const getLatestDay = React.useCallback(() => {
-      return day || HEYS.Day?.getDay?.() || {};
+      return HEYS.Day?.getDay?.() || day || {};
     }, [day]);
 
     const handleOpenModal = React.useCallback(() => {
@@ -6714,7 +6714,7 @@
             const portion = MO.getSmartPortion(product);
             const productWithGrams = { ...product, grams: portion.grams };
 
-            const didAdd = await addProductToMeal(mealIndex, productWithGrams);
+            const didAdd = await addProductToMeal(mealIndex, productWithGrams, { mealId: meal?.id || null });
             if (didAdd === false) return;
 
             MO.trackUserAction({
@@ -6881,6 +6881,15 @@
                 },
             }));
         } catch (_) { /* noop */ }
+    }
+
+    function resolveMealIndex(day, mealIndex, mealId) {
+        const mealsList = Array.isArray(day?.meals) ? day.meals : [];
+        if (mealId) {
+            const byId = mealsList.findIndex((m) => m && m.id === mealId);
+            if (byId >= 0) return byId;
+        }
+        return Number.isInteger(mealIndex) ? mealIndex : Number(mealIndex);
     }
 
     // =========================
@@ -11339,20 +11348,23 @@
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
                                 if (!window.HEYS?.AddProductStep?.show) return;
+                                const targetDay = dayOverride || HEYS.Day?.getDay?.() || day;
+                                const targetMealId = options.mealId || targetDay?.meals?.[targetMealIndex]?.id || null;
 
                                 window.HEYS.AddProductStep.show({
                                     mealIndex: targetMealIndex,
+                                    mealId: targetMealId,
                                     multiProductMode: multiProductMode,
                                     autoRepeatCount: autoRepeatCount || 0, // 🆕 «Подряд N продуктов»
                                     products: products,
-                                    day: dayOverride || HEYS.Day?.getDay?.() || day,
+                                    day: targetDay,
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
                                     barcodeCameraStart: options.barcodeCameraStart || null,
-	                                    onAdd: async ({ product, grams, mealIndex: addMealIndex, productCommitVerified }) => {
-	                                        let finalProduct = product;
-	                                        const ready = productCommitVerified === true
-	                                            ? { ok: true, product, reason: 'already_verified' }
+		                                    onAdd: async ({ product, grams, mealIndex: addMealIndex, mealId: addMealId = targetMealId, productCommitVerified }) => {
+		                                        let finalProduct = product;
+		                                        const ready = productCommitVerified === true
+		                                            ? { ok: true, product, reason: 'already_verified' }
 	                                            : await HEYS.products?.ensureMealProductReady?.(product, {
 	                                                source: 'day-inline-add-product',
 	                                                requireCommit: true
@@ -11406,37 +11418,58 @@
                                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
-                                        console.info('[HEYS.meal] ➕ Adding product to meal', {
-                                            product: finalProduct.name,
-                                            productId: String(productId),
-                                            grams,
-                                            mealIndex: addMealIndex,
-                                            dateKey: date,
-                                            updatedAt: newUpdatedAt,
-                                            blockUntilTs: newUpdatedAt + 3000,
-                                        });
+	                                        console.info('[HEYS.meal] ➕ Adding product to meal', {
+	                                            product: finalProduct.name,
+	                                            productId: String(productId),
+	                                            grams,
+	                                            mealIndex: addMealIndex,
+                                                mealId: addMealId,
+	                                            dateKey: date,
+	                                            updatedAt: newUpdatedAt,
+	                                            blockUntilTs: newUpdatedAt + 3000,
+	                                        });
 
                                         // 2026-05-29 anti-loop: pre-compute + persist outside setDay reducer,
                                         // см. fix(day) f23aa6a2 + commit для остальных reducer'ов в этом файле.
-                                        const baseDay = protectCheckinFields(dayRef.current || {});
-                                        const updatedMeals = (baseDay.meals || []).map((m, i) =>
-                                            i === addMealIndex
-                                                ? { ...m, items: [...(m.items || []), newItem] }
-                                                : m,
-                                        );
-                                        const newDayData = protectCheckinFields({ ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt });
+	                                        const key = _scopedDayKey(date);
+	                                        let baseDay = {};
+	                                        try {
+	                                            baseDay = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+	                                                ? (HEYS.utils.lsGet(key, {}) || {})
+	                                                : (dayRef.current || {});
+	                                        } catch (_) { baseDay = dayRef.current || {}; }
+	                                        baseDay = protectCheckinFields(baseDay);
+                                            const actualMealIndex = resolveMealIndex(baseDay, addMealIndex, addMealId);
+                                            if (!baseDay?.meals?.[actualMealIndex]) {
+                                                console.warn('[HEYS.day] ❌ Meal target not found for inline add — aborting', {
+                                                    mealIndex: addMealIndex,
+                                                    mealId: addMealId,
+                                                    resolvedMealIndex: actualMealIndex,
+                                                    productName: finalProduct?.name || null,
+                                                    mealsCount: Array.isArray(baseDay?.meals) ? baseDay.meals.length : 0,
+                                                });
+                                                if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
+                                                return false;
+                                            }
+	                                        const updatedMeals = (baseDay.meals || []).map((m, i) =>
+	                                            i === actualMealIndex
+	                                                ? { ...m, items: [...(m.items || []), newItem] }
+	                                                : m,
+	                                        );
+	                                        const newDayData = protectCheckinFields({ ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt });
 
-                                        const key = _scopedDayKey(date);
-                                        const prevMealItems = ((baseDay?.meals || [])[addMealIndex]?.items || []).length;
-                                        try {
-                                            lsSet(key, newDayData);
-                                            console.info('[HEYS.meal] ✅ Product saved to localStorage', {
-                                                product: finalProduct.name,
-                                                key,
-                                                mealIndex: addMealIndex,
-                                                itemsInMeal: prevMealItems + 1,
-                                                totalMeals: updatedMeals.length,
-                                                updatedAt: newUpdatedAt,
+	                                        const prevMealItems = ((baseDay?.meals || [])[actualMealIndex]?.items || []).length;
+	                                        try {
+	                                            lsSet(key, newDayData);
+	                                            console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+	                                                product: finalProduct.name,
+	                                                key,
+	                                                mealIndex: actualMealIndex,
+                                                    requestedMealIndex: addMealIndex,
+                                                    mealId: addMealId,
+	                                                itemsInMeal: prevMealItems + 1,
+	                                                totalMeals: updatedMeals.length,
+	                                                updatedAt: newUpdatedAt,
                                             });
                                         } catch (e) {
                                             console.error('[HEYS.meal] ❌ Product lsSet failed', {
@@ -11452,12 +11485,14 @@
                                         try { navigator.vibrate?.(10); } catch (e) { }
                                         window.dispatchEvent(new CustomEvent('heysProductAdded', {
                                             detail: {
-                                                product: finalProduct,
-                                                grams,
-                                                mealIndex: addMealIndex,
-                                                source: 'day-inline-add-product'
-                                            }
-                                        }));
+	                                                product: finalProduct,
+	                                                grams,
+	                                                mealIndex: actualMealIndex,
+                                                    requestedMealIndex: addMealIndex,
+                                                    mealId: addMealId,
+	                                                source: 'day-inline-add-product'
+	                                            }
+	                                        }));
                                         try {
                                             lsSet(`heys_last_grams_${productId}`, grams);
                                             const history = lsGet('heys_grams_history', {});
@@ -11474,31 +11509,32 @@
                                         if (!multiProductMode) {
                                             setTimeout(() => {
                                                 dispatchMealFlowFinished({
-                                                    source: 'day-inline-add-product-single',
-                                                    dateKey: newDayData?.date || date || null,
-                                                    mealIndex: addMealIndex,
-                                                    mealId: newDayData?.meals?.[addMealIndex]?.id || null,
-                                                });
-                                            }, 160);
-                                        }
+	                                                    source: 'day-inline-add-product-single',
+	                                                    dateKey: newDayData?.date || date || null,
+	                                                    mealIndex: actualMealIndex,
+	                                                    mealId: newDayData?.meals?.[actualMealIndex]?.id || addMealId || null,
+	                                                });
+	                                            }, 160);
+	                                        }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
                                             // Build updated day inline: setDay is async and
                                             // HEYS.Day.getDay() (dayRef.current) won't reflect
                                             // the new item yet at this point.
                                             const baseDayForSummary = protectCheckinFields(dayOverride || HEYS.Day?.getDay?.() || day || {});
                                             const srcMeals = baseDayForSummary.meals || [];
-                                            const mealsWithNewItem = srcMeals.map((m, i) =>
-                                                i === addMealIndex
-                                                    ? { ...m, items: [...(m.items || []), newItem] }
-                                                    : m
-                                            );
-                                            if (addMealIndex >= srcMeals.length) {
-                                                while (mealsWithNewItem.length < addMealIndex) {
-                                                    mealsWithNewItem.push({ items: [] });
-                                                }
-                                                mealsWithNewItem[addMealIndex] = { items: [newItem] };
-                                            }
-                                            const updatedDayForSummary = { ...baseDayForSummary, meals: mealsWithNewItem, updatedAt: newUpdatedAt };
+                                                const summaryMealIndex = resolveMealIndex(baseDayForSummary, actualMealIndex, addMealId);
+	                                            const mealsWithNewItem = srcMeals.map((m, i) =>
+	                                                i === summaryMealIndex
+	                                                    ? { ...m, items: [...(m.items || []), newItem] }
+	                                                    : m
+	                                            );
+	                                            if (summaryMealIndex >= srcMeals.length) {
+	                                                while (mealsWithNewItem.length < summaryMealIndex) {
+	                                                    mealsWithNewItem.push({ items: [] });
+	                                                }
+	                                                mealsWithNewItem[summaryMealIndex] = { id: addMealId || undefined, items: [newItem] };
+	                                            }
+	                                            const updatedDayForSummary = { ...baseDayForSummary, meals: mealsWithNewItem, updatedAt: newUpdatedAt };
 
                                             if (HEYS.StepModal?.hide) {
                                                 HEYS.StepModal.hide({ scrollToDiary: false });
@@ -11506,30 +11542,31 @@
 
                                             requestAnimationFrame(() => {
                                                 setTimeout(() => {
-                                                    HEYS.dayAddProductSummary.show({
-                                                        day: updatedDayForSummary,
-                                                        mealIndex: addMealIndex,
-                                                        pIndex,
-                                                        getProductFromItem,
-                                                        per100,
-                                                        scale,
-                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(addMealIndex, true, updatedDay, autoRepeatCount || 0),
-                                                        onAddLast: (updatedDay) => openAddProductModal(addMealIndex, false, updatedDay),
-                                                    });
-                                                }, 100);
-                                            });
-                                        }
-                                        if (scrollToDiaryHeading) scrollToDiaryHeading();
-                                    },
-	                                    onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex, _origin, _presetName } = {}) => {
-	                                        const addMany = addProductsToMealRef.current;
-	                                        if (typeof addMany !== 'function') {
-                                            console.warn('[HEYS.day] ⚠️ addProductsToMeal unavailable for inline preset bulk add', {
-                                                mealIndex: addMealIndex,
-                                                presetName: _presetName || null
-                                            });
-	                                            return false;
+	                                                    HEYS.dayAddProductSummary.show({
+	                                                        day: updatedDayForSummary,
+	                                                        mealIndex: summaryMealIndex,
+	                                                        pIndex,
+	                                                        getProductFromItem,
+	                                                        per100,
+	                                                        scale,
+	                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(summaryMealIndex, true, updatedDay, autoRepeatCount || 0, { mealId: addMealId }),
+	                                                        onAddLast: (updatedDay) => openAddProductModal(summaryMealIndex, false, updatedDay, undefined, { mealId: addMealId }),
+	                                                    });
+	                                                }, 100);
+	                                            });
 	                                        }
+	                                        if (scrollToDiaryHeading) scrollToDiaryHeading();
+	                                    },
+		                                    onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex, mealId: addMealId = targetMealId, _origin, _presetName } = {}) => {
+		                                        const addMany = addProductsToMealRef.current;
+		                                        if (typeof addMany !== 'function') {
+	                                            console.warn('[HEYS.day] ⚠️ addProductsToMeal unavailable for inline preset bulk add', {
+	                                                mealIndex: addMealIndex,
+                                                    mealId: addMealId,
+	                                                presetName: _presetName || null
+	                                            });
+		                                            return false;
+		                                        }
 	                                        const safeEntries = [];
 	                                        for (const entry of Array.isArray(entries) ? entries : []) {
 	                                            const product = entry?.product || entry;
@@ -11552,10 +11589,11 @@
 	                                                safeEntries.push(ready?.product || product);
 	                                            }
 	                                        }
-	                                        const didAdd = await addMany(addMealIndex, safeEntries, {
-	                                            source: 'day-inline-add-products-bulk',
-	                                            origin: _origin || 'preset-apply-bulk',
-	                                            presetName: _presetName || null,
+		                                        const didAdd = await addMany(addMealIndex, safeEntries, {
+                                                    mealId: addMealId,
+		                                            source: 'day-inline-add-products-bulk',
+		                                            origin: _origin || 'preset-apply-bulk',
+		                                            presetName: _presetName || null,
 	                                            productCommitVerified: true,
                                         });
                                         if (didAdd !== false && scrollToDiaryHeading) scrollToDiaryHeading();
@@ -11599,12 +11637,12 @@
                                 );
                             };
 
-                            // Показываем модалку выбора флоу
-                            if (!window.HEYS?.ConfirmModal?.show) {
-                                // Fallback: сразу открываем быстрый режим
-                                openAddProductModal(mealIndex, false);
-                                return;
-                            }
+	                            // Показываем модалку выбора флоу
+	                            if (!window.HEYS?.ConfirmModal?.show) {
+	                                // Fallback: сразу открываем быстрый режим
+	                                openAddProductModal(mealIndex, false, undefined, undefined, { mealId: newMealId });
+	                                return;
+	                            }
 
                             // Подгружаем недавние приёмы — для опциональной кнопки «Повторить из недавних».
                             // Только когда новый приём ещё пуст и у нас есть что предложить за последние 2 дня.
@@ -11646,13 +11684,13 @@
                                 }, 100);
                             };
 
-                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
-                                window.HEYS.ConfirmModal.hide();
-                                const actualIdx = findMealIndex();
-                                if (actualIdx >= 0) {
-                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { startWithBarcodeScanner, barcodeCameraStart }), 100);
-                                }
-                            };
+	                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
+	                                window.HEYS.ConfirmModal.hide();
+	                                const actualIdx = findMealIndex();
+	                                if (actualIdx >= 0) {
+	                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }), 100);
+	                                }
+	                            };
 
                             const renderFlowBarcodeButton = (multiProductMode, autoRepeatCount = 0, compact = false) => (
                                 React.createElement('button', {
@@ -12186,9 +12224,13 @@
             } catch (_) { baseDay = dayRef.current || {}; }
             baseDay = protectCheckinFields(baseDay);
             const mealsList = (baseDay && baseDay.meals) || [];
-            if (!mealsList[mi]) {
+            const targetMealId = options?.mealId || p?.mealId || p?._mealId || null;
+            const targetMealIndex = resolveMealIndex(baseDay, mi, targetMealId);
+            if (!mealsList[targetMealIndex]) {
                 console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductToMeal — aborting (state race?)', {
                     mealIndex: mi,
+                    mealId: targetMealId,
+                    resolvedMealIndex: targetMealIndex,
                     mealsCount: mealsList.length,
                     productName: finalProduct?.name || null,
                     baseDayUpdatedAt: baseDay?.updatedAt || null,
@@ -12196,16 +12238,18 @@
                 if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
                 return false;
             }
-            const before = (mealsList[mi]?.items || []).length;
-            const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
+            const before = (mealsList[targetMealIndex]?.items || []).length;
+            const meals = mealsList.map((m, i) => i === targetMealIndex ? { ...m, items: [...(m.items || []), item] } : m);
             const newDayData = protectCheckinFields({ ...baseDay, meals, updatedAt: newUpdatedAt });
             try {
                 logDayTrace('[HEYS.day-trace] 4/8 setDay applied', {
                     date: baseDay.date,
                     key,
-                    mealIndex: mi,
+                    mealIndex: targetMealIndex,
+                    requestedMealIndex: mi,
+                    mealId: targetMealId,
                     itemsBefore: before,
-                    itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                    itemsAfter: (newDayData.meals?.[targetMealIndex]?.items || []).length,
                     totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
                     updatedAt: newUpdatedAt,
                 });
@@ -12241,17 +12285,19 @@
                     product: finalProduct,
                     item,
                     grams: item.grams,
-                    mealIndex: mi,
+                    mealIndex: targetMealIndex,
+                    requestedMealIndex: mi,
+                    mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
                     source: 'day-add-product-to-meal'
                 }
             }));
             dispatchMealFlowFinished({
                 source: 'day-add-product-to-meal',
                 dateKey: newDayData?.date || date || null,
-                mealIndex: mi,
-                mealId: newDayData?.meals?.[mi]?.id || null,
+                mealIndex: targetMealIndex,
+                mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
             });
-            emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: mi, productId: item.product_id });
+            emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: targetMealIndex, mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null, productId: item.product_id });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
 
@@ -12319,9 +12365,13 @@
             } catch (_) { baseDay = dayRef.current || {}; }
             baseDay = protectCheckinFields(baseDay);
             const mealsList = (baseDay && baseDay.meals) || [];
-            if (!mealsList[mi]) {
+            const targetMealId = options?.mealId || null;
+            const targetMealIndex = resolveMealIndex(baseDay, mi, targetMealId);
+            if (!mealsList[targetMealIndex]) {
                 console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductsToMeal — aborting', {
                     mealIndex: mi,
+                    mealId: targetMealId,
+                    resolvedMealIndex: targetMealIndex,
                     mealsCount: mealsList.length,
                     productsCount: prepared.length,
                     baseDayUpdatedAt: baseDay?.updatedAt || null,
@@ -12332,8 +12382,8 @@
 
             const items = prepared.map((entry) => entry.item);
             const products = prepared.map((entry) => entry.finalProduct);
-            const before = (mealsList[mi]?.items || []).length;
-            const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), ...items] } : m);
+            const before = (mealsList[targetMealIndex]?.items || []).length;
+            const meals = mealsList.map((m, i) => i === targetMealIndex ? { ...m, items: [...(m.items || []), ...items] } : m);
             const newDayData = protectCheckinFields({ ...baseDay, meals, updatedAt: newUpdatedAt });
             try {
                 lsSet(key, newDayData);
@@ -12362,7 +12412,9 @@
                     items,
                     grams: items[0]?.grams,
                     count: items.length,
-                    mealIndex: mi,
+                    mealIndex: targetMealIndex,
+                    requestedMealIndex: mi,
+                    mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
                     source: options?.source || 'day-add-products-to-meal',
                     origin: options?.origin || 'batch',
                 }
@@ -12370,19 +12422,20 @@
             dispatchMealFlowFinished({
                 source: options?.source || 'day-add-products-to-meal',
                 dateKey: newDayData?.date || date || null,
-                mealIndex: mi,
-                mealId: newDayData?.meals?.[mi]?.id || null,
+                mealIndex: targetMealIndex,
+                mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
                 count: items.length,
                 origin: options?.origin || 'batch',
             });
             emitPlannerReplanRequest('PRODUCT_ADDED', {
-                mealIndex: mi,
+                mealIndex: targetMealIndex,
+                mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
                 productId: items[0]?.product_id,
                 productIds: items.map((item) => item.product_id),
                 count: items.length,
                 batch: true,
                 itemsBefore: before,
-                itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                itemsAfter: (newDayData.meals?.[targetMealIndex]?.items || []).length,
             });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
