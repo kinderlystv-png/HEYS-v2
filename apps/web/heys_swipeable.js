@@ -5,6 +5,13 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
+  function safeVibrate(pattern) {
+    if (!navigator.vibrate) return;
+    const activation = navigator.userActivation;
+    if (activation && !activation.isActive && !activation.hasBeenActive) return;
+    try { navigator.vibrate(pattern); } catch (_) { /* ignore haptic errors */ }
+  }
+
   function isInteractiveSwipeTarget(target) {
     const element = target && target.nodeType === 1
       ? target
@@ -120,7 +127,7 @@
         if (!hasActions && finalX < -DELETE_FULL_THRESHOLD) {
           setIsDeleting(true);
           setTranslateX(-window.innerWidth);
-          if (navigator.vibrate) navigator.vibrate(20);
+          safeVibrate(20);
           setTimeout(() => {
             onDeleteRef.current && onDeleteRef.current();
           }, 200);
@@ -145,14 +152,14 @@
     const handleDeleteClick = () => {
       setIsDeleting(true);
       setTranslateX(-window.innerWidth);
-      if (navigator.vibrate) navigator.vibrate(20);
+      safeVibrate(20);
       setTimeout(() => {
         onDeleteRef.current && onDeleteRef.current();
       }, 200);
     };
 
     const handleActionClick = (action) => {
-      if (navigator.vibrate) navigator.vibrate(10);
+      safeVibrate(10);
       setTranslateX(0);
       setTimeout(() => {
         try { action.onAction && action.onAction(); } catch (e) { /* swallow */ }

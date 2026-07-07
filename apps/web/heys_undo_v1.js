@@ -264,7 +264,7 @@
     try {
       handleAsyncCallback(entry.onUndo?.(entry.context, entry), {
         onSuccess: () => {
-          if (navigator.vibrate) navigator.vibrate(15);
+          safeVibrate(15);
           HEYS.Toast?.success('Действие отменено');
         },
         onError: (err) => {
@@ -280,6 +280,13 @@
     if (undoQueue.length) {
       setTimeout(scheduleNextUndo, CONFIG.animationMs + 24);
     }
+  }
+
+  function safeVibrate(pattern) {
+    if (!navigator.vibrate) return;
+    const activation = navigator.userActivation;
+    if (activation && !activation.isActive && !activation.hasBeenActive) return;
+    try { navigator.vibrate(pattern); } catch (_) { /* ignore haptic errors */ }
   }
 
   function onDismissClick(e) {

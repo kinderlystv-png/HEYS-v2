@@ -4,6 +4,13 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
+  function safeVibrate(pattern) {
+    if (!navigator.vibrate) return;
+    const activation = navigator.userActivation;
+    if (activation && !activation.isActive && !activation.hasBeenActive) return;
+    try { navigator.vibrate(pattern); } catch (_) { /* ignore haptic errors */ }
+  }
+
   // Параметры (увеличены пороги для меньшей чувствительности)
   const PULL_THRESHOLD = 100; // px для активации
   const MAX_PULL = 140; // максимальная высота
@@ -19,7 +26,7 @@
     
     // Haptic feedback
     const vibrate = useCallback((ms) => {
-      if (navigator.vibrate) navigator.vibrate(ms);
+      safeVibrate(ms);
     }, []);
     
     const handleTouchStart = useCallback((e) => {
