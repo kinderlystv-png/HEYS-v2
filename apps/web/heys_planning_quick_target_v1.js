@@ -89,8 +89,14 @@
         return indent + '↳ ' + safeTitle;
     }
 
+    function isQuickTargetTaskSelectable(task) {
+        return task?.status !== 'done' && task?.status !== 'cancelled';
+    }
+
     function appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, parentTaskId, depth) {
         const siblings = sortByOrder((tasks || []).filter((task) => (
+            isQuickTargetTaskSelectable(task)
+            &&
             (task.parentTaskId || '') === (parentTaskId || '')
             && (
                 parentTaskId
@@ -407,4 +413,3 @@
         PlanningQuickTargetField,
     };
 }());
-

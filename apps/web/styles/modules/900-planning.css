@@ -115,6 +115,21 @@
     opacity: 1;
 }
 
+.planning-subnav__item--action {
+    color: #434587;
+    border-color: rgba(67, 69, 135, 0.16);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.planning-subnav__item--action .planning-filter-toggle__icon {
+    width: 16px;
+    height: 16px;
+}
+
+.planning-subnav__item--action:active {
+    color: #37396f;
+}
+
 .planning-subnav__label {
     display: none;
 }
@@ -149,6 +164,12 @@
     box-shadow:
         0 10px 24px rgba(29, 78, 216, 0.38),
         0 0 0 3px rgba(15, 23, 42, 0.72);
+}
+
+[data-theme="dark"] .planning-subnav__item--action {
+    color: #c4b5fd;
+    border-color: rgba(196, 181, 253, 0.24);
+    background: rgba(30, 41, 59, 0.82);
 }
 
 /* --- Content area --- */
@@ -1043,7 +1064,7 @@
 
 .planning-checklists-screen__card::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
@@ -1946,11 +1967,13 @@
 .planning-tasks-toolbar {
     display: flex;
     justify-content: flex-end;
+    gap: 6px;
     margin-top: 0;
     flex-shrink: 0;
 }
 
-.planning-filter-toggle {
+.planning-filter-toggle,
+.planning-matrix-toggle {
     position: relative;
     width: 34px;
     height: 34px;
@@ -1969,7 +1992,8 @@
 }
 
 @media (hover: hover) {
-  .planning-filter-toggle:hover {
+  .planning-filter-toggle:hover,
+  .planning-matrix-toggle:hover {
     color: var(--planning-text);
     border-color: var(--planning-border-soft);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
@@ -1977,7 +2001,8 @@
 }
 
 .planning-filter-toggle.active,
-.planning-filter-toggle.has-active {
+.planning-filter-toggle.has-active,
+.planning-matrix-toggle:active {
     color: var(--planning-accent);
     background: var(--planning-accent-soft);
     border-color: rgba(37, 99, 235, 0.18);
@@ -2705,6 +2730,10 @@
     margin: 0;
 }
 
+.planning-task-group__header .planning-task-swipe.swipeable-container {
+    border-radius: 0;
+}
+
 .planning-task-group__header .planning-task-row {
     border-bottom: none;
     padding-bottom: 3px;
@@ -2859,6 +2888,50 @@
     background-color: rgba(255, 237, 213, 0.88);
     background-image: linear-gradient(180deg, rgba(249, 115, 22, 0.18) 0%, rgba(251, 146, 60, 0.12) 100%);
     border-radius: 7px;
+}
+
+.planning-task-node:has(.planning-task-row--priority-urgent)+.planning-task-node:has(.planning-task-row--priority-urgent) .planning-task-row--priority-urgent {
+    margin-top: -1px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow:
+        inset 1px 0 0 rgba(249, 115, 22, 0.16),
+        inset -1px 0 0 rgba(249, 115, 22, 0.16),
+        inset 0 -1px 0 rgba(249, 115, 22, 0.16);
+}
+
+.planning-task-node:has(+ .planning-task-node .planning-task-row--priority-urgent) .planning-task-row--priority-urgent {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+    box-shadow:
+        inset 1px 0 0 rgba(249, 115, 22, 0.16),
+        inset -1px 0 0 rgba(249, 115, 22, 0.16),
+        inset 0 1px 0 rgba(249, 115, 22, 0.16);
+}
+
+.planning-project-group--subgroup:has(.planning-task-group__header .planning-task-row--priority-urgent):has(.planning-task-group__tasks>.planning-task-node:first-child .planning-task-row--priority-urgent) .planning-task-group__tasks {
+    padding-top: 0;
+}
+
+.planning-project-group--subgroup:has(.planning-task-group__tasks>.planning-task-node:first-child .planning-task-row--priority-urgent) .planning-task-group__header .planning-task-row--priority-urgent {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+    box-shadow:
+        inset 1px 0 0 rgba(249, 115, 22, 0.16),
+        inset -1px 0 0 rgba(249, 115, 22, 0.16),
+        inset 0 1px 0 rgba(249, 115, 22, 0.16);
+}
+
+.planning-project-group--subgroup:has(.planning-task-group__header .planning-task-row--priority-urgent) .planning-task-group__tasks>.planning-task-node:first-child .planning-task-row--priority-urgent {
+    margin-top: -1px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow:
+        inset 1px 0 0 rgba(249, 115, 22, 0.16),
+        inset -1px 0 0 rgba(249, 115, 22, 0.16),
+        inset 0 -1px 0 rgba(249, 115, 22, 0.16);
 }
 
 .planning-task-row__indent {
@@ -3613,6 +3686,357 @@
     backdrop-filter: blur(8px);
 }
 
+.planning-task-matrix-overlay {
+    z-index: 10024;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    background: rgba(2, 6, 23, 0.66);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+.planning-modal--task-matrix {
+    position: relative;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.98);
+    background: #fff !important;
+    box-shadow:
+        0 18px 46px rgba(15, 23, 42, 0.16),
+        inset 0 1px 0 #fff;
+}
+
+.planning-modal--task-matrix::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #fff;
+}
+
+.planning-task-matrix__header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 38px;
+    padding: 5px 8px 5px 10px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+    background: #fff;
+}
+
+.planning-task-matrix__title-group {
+    min-width: 0;
+}
+
+.planning-task-matrix__eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: #434587;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.planning-task-matrix__title {
+    margin: 0;
+    color: var(--planning-text);
+    font-size: 15px;
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.planning-task-matrix__hint {
+    margin: 6px 0 0;
+    color: var(--planning-muted);
+    font-size: 12px;
+    line-height: 1.42;
+}
+
+.planning-task-matrix__close {
+    flex: 0 0 auto;
+}
+
+.planning-task-matrix__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 5px;
+    overflow: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    background: #fff;
+}
+
+.planning-task-matrix-quadrant {
+    --matrix-tone: #94a3b8;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--matrix-tone) 18%, rgba(226, 232, 240, 0.88));
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--matrix-tone) 8%, rgba(255, 255, 255, 0.96)) 0%,
+            rgba(255, 255, 255, 0.92) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s, background 0.16s;
+}
+
+.planning-task-matrix-quadrant--critical {
+    --matrix-tone: #f97316;
+}
+
+.planning-task-matrix-quadrant--growth {
+    --matrix-tone: #22c55e;
+}
+
+.planning-task-matrix-quadrant--warning {
+    --matrix-tone: #eab308;
+}
+
+.planning-task-matrix-quadrant--quiet {
+    --matrix-tone: #52a0d8;
+}
+
+.planning-task-matrix-quadrant.is-drop-target {
+    border-color: color-mix(in srgb, var(--matrix-tone) 42%, rgba(255, 255, 255, 0.4));
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--matrix-tone) 16%, rgba(255, 255, 255, 0.96)) 0%,
+            color-mix(in srgb, var(--matrix-tone) 7%, rgba(255, 255, 255, 0.94)) 100%);
+    box-shadow:
+        0 18px 34px color-mix(in srgb, var(--matrix-tone) 14%, rgba(15, 23, 42, 0.08)),
+        inset 0 0 0 1px color-mix(in srgb, var(--matrix-tone) 22%, transparent);
+    transform: translateY(-1px);
+}
+
+.planning-task-matrix-quadrant__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+}
+
+.planning-task-matrix-quadrant__title {
+    margin: 0;
+    color: var(--planning-text);
+    font-size: 11px;
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.planning-task-matrix-quadrant__action {
+    display: none;
+    margin-top: 0;
+    color: color-mix(in srgb, var(--matrix-tone) 60%, var(--planning-muted));
+    font-size: 10px;
+    line-height: 1.25;
+    font-weight: 700;
+}
+
+.planning-task-matrix-quadrant__count {
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in srgb, var(--matrix-tone) 72%, #334155);
+    background: color-mix(in srgb, var(--matrix-tone) 12%, rgba(255, 255, 255, 0.92));
+    border: 1px solid color-mix(in srgb, var(--matrix-tone) 18%, transparent);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.planning-task-matrix-quadrant__list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 1px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.planning-task-matrix-card,
+.planning-task-matrix-drag-preview {
+    border: 1px solid rgba(226, 232, 240, 0.86);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.045),
+        inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.planning-task-matrix-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1px;
+    min-height: 34px;
+    padding: 5px 7px;
+    color: inherit;
+    text-align: left;
+    cursor: grab;
+    touch-action: none;
+    transition: transform 0.16s, box-shadow 0.16s, opacity 0.16s, border-color 0.16s;
+}
+
+.planning-task-matrix-card:active {
+    cursor: grabbing;
+}
+
+@media (hover: hover) {
+    .planning-task-matrix-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(148, 163, 184, 0.44);
+        box-shadow:
+            0 14px 26px rgba(15, 23, 42, 0.09),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+}
+
+.planning-task-matrix-card.is-dragging {
+    opacity: 0.28;
+    transform: scale(0.98);
+}
+
+.planning-task-matrix-card__title {
+    display: block;
+    min-width: 0;
+    color: var(--planning-text);
+    font-size: 10.5px;
+    line-height: 1.12;
+    font-weight: 760;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.planning-task-matrix-card__meta {
+    display: block;
+    min-width: 0;
+    color: var(--planning-muted);
+    font-size: 9px;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.planning-task-matrix-quadrant__empty {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed color-mix(in srgb, var(--matrix-tone) 16%, rgba(148, 163, 184, 0.42));
+    border-radius: 8px;
+    color: var(--planning-muted);
+    background: rgba(255, 255, 255, 0.46);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.planning-task-matrix-drag-preview {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 10040;
+    pointer-events: none;
+    padding: 6px 8px;
+    opacity: 0.98;
+    box-shadow:
+        0 22px 44px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    will-change: transform;
+}
+
+@media (max-width: 640px) {
+    .planning-task-matrix-overlay {
+        align-items: center;
+        padding: 5px;
+    }
+
+    .planning-modal--task-matrix {
+        width: calc(100% - 10px);
+        height: calc(100% - 10px);
+        max-height: none;
+        border-radius: 12px;
+    }
+
+    .planning-task-matrix__header {
+        min-height: 34px;
+        padding: 4px 6px 4px 8px;
+    }
+
+    .planning-task-matrix__title {
+        font-size: 13px;
+    }
+
+    .planning-task-matrix__hint {
+        display: none;
+        max-width: 280px;
+        font-size: 11px;
+    }
+
+    .planning-task-matrix__grid {
+        gap: 4px;
+        padding: 4px;
+    }
+
+    .planning-task-matrix-quadrant {
+        min-height: 0;
+        padding: 5px;
+        border-radius: 9px;
+    }
+
+    .planning-task-matrix-quadrant__title {
+        font-size: 10px;
+    }
+
+    .planning-task-matrix-quadrant__action {
+        font-size: 10px;
+    }
+
+    .planning-task-matrix-card {
+        min-height: 31px;
+        padding: 4px 6px;
+        border-radius: 7px;
+    }
+
+    .planning-task-matrix-card__title {
+        font-size: 10px;
+    }
+
+    .planning-task-matrix-card__meta {
+        font-size: 8.5px;
+    }
+}
+
 /* Скрываем нижнее меню, CRS-линию и FAB-ы, пока открыт modal/sheet планировщика.
    На iOS fixed `.tabs` живёт отдельным compositor-слоем и иначе проступает поверх backdrop. */
 body.planning-quick-event-modal-open .fab-group,
@@ -3637,7 +4061,6 @@ body.planning-checklist-modal-open .crs-bar-container {
     pointer-events: none !important;
 }
 
-body:has(.macro-toast.visible) .planning-subnav,
 body:has(.macro-toast.visible) .planning-tasks-scale-fab,
 body:has(.macro-toast.visible) .planning-checklists-archive-badge {
     opacity: 0 !important;
@@ -8830,6 +9253,47 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 [data-theme="dark"] .planning-modal {
     background: var(--planning-surface);
+}
+
+[data-theme="dark"] .planning-modal--task-matrix {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.96) 100%);
+    box-shadow:
+        0 28px 72px rgba(0, 0, 0, 0.44),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .planning-task-matrix__header {
+    border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .planning-task-matrix-quadrant {
+    border-color: color-mix(in srgb, var(--matrix-tone) 20%, rgba(51, 65, 85, 0.72));
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--matrix-tone) 12%, rgba(15, 23, 42, 0.86)) 0%,
+            rgba(15, 23, 42, 0.72) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .planning-task-matrix-card,
+[data-theme="dark"] .planning-task-matrix-drag-preview {
+    border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(17, 24, 39, 0.9);
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .planning-task-matrix-quadrant__empty {
+    background: rgba(15, 23, 42, 0.48);
+    border-color: color-mix(in srgb, var(--matrix-tone) 18%, rgba(148, 163, 184, 0.22));
+}
+
+[data-theme="dark"] .planning-task-matrix-quadrant__more {
+    background: color-mix(in srgb, var(--matrix-tone) 12%, rgba(15, 23, 42, 0.82));
+    border-color: color-mix(in srgb, var(--matrix-tone) 22%, rgba(148, 163, 184, 0.18));
+    color: color-mix(in srgb, var(--matrix-tone) 62%, #cbd5e1);
 }
 
 [data-theme="dark"] .planning-add-btn {

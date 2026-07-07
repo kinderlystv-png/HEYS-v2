@@ -300,6 +300,7 @@
     }
 
     function getDueBucket(task, todayIso, slots) {
+        if (isTaskTerminal(task)) return 'all';
         if (!task?.dueDate) {
             const hasSlot = Array.isArray(slots) && slots.some((slot) => slot.taskId === task.id);
             return hasSlot ? 'scheduled' : 'unscheduled';

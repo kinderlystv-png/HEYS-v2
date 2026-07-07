@@ -587,6 +587,219 @@
             }));
     }
 
+    function MatrixIcon() {
+        return h('svg', {
+            className: 'planning-filter-toggle__icon',
+            viewBox: '0 0 20 20',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: '1.6',
+            'aria-hidden': 'true',
+        },
+            h('rect', { x: '3', y: '3', width: '5.5', height: '5.5', rx: '1.4' }),
+            h('rect', { x: '11.5', y: '3', width: '5.5', height: '5.5', rx: '1.4' }),
+            h('rect', { x: '3', y: '11.5', width: '5.5', height: '5.5', rx: '1.4' }),
+            h('rect', { x: '11.5', y: '11.5', width: '5.5', height: '5.5', rx: '1.4' }),
+        );
+    }
+
+    function TaskMatrixModal({ tasks, projects, taskLookup, resolvedTaskProjectIds, todayIso, onUpdateTask, onClose }) {
+        const [dragState, setDragState] = useState(null);
+        const [hoverQuadrantId, setHoverQuadrantId] = useState(null);
+        const dragStateRef = useRef(null);
+        const activeTasks = useMemo(() => (
+            (Array.isArray(tasks) ? tasks : []).filter(isTaskMatrixActive)
+        ), [tasks]);
+        const groups = useMemo(() => buildTaskMatrixGroups(activeTasks, todayIso), [activeTasks, todayIso]);
+        const projectNameById = useMemo(() => {
+            const map = new Map();
+            (Array.isArray(projects) ? projects : []).forEach((project) => {
+                if (project?.id) map.set(project.id, project.name || 'Проект');
+            });
+            return map;
+        }, [projects]);
+
+        React.useEffect(() => {
+            const handleKeyDown = (event) => {
+                if (event.key === 'Escape') onClose();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [onClose]);
+
+        const getDragPoint = (event) => {
+            const touch = event?.touches?.[0] || event?.changedTouches?.[0];
+            if (touch) return { x: touch.clientX, y: touch.clientY };
+            return { x: event?.clientX || 0, y: event?.clientY || 0 };
+        };
+
+        React.useEffect(() => {
+            if (!dragState) return undefined;
+
+            const handleDragMove = (event) => {
+                const current = dragStateRef.current;
+                if (!current) return;
+                event.preventDefault();
+                const point = getDragPoint(event);
+                const next = { ...current, x: point.x, y: point.y };
+                dragStateRef.current = next;
+                setDragState(next);
+
+                const element = document.elementFromPoint(point.x, point.y);
+                const dropZone = element && typeof element.closest === 'function'
+                    ? element.closest('[data-matrix-quadrant]')
+                    : null;
+                const nextQuadrantId = dropZone ? dropZone.getAttribute('data-matrix-quadrant') : null;
+                setHoverQuadrantId(TASK_MATRIX_QUADRANT_BY_ID.has(nextQuadrantId) ? nextQuadrantId : null);
+            };
+
+            const finishDrag = (event) => {
+                const current = dragStateRef.current;
+                if (!current) return;
+                event.preventDefault();
+                const point = getDragPoint(event);
+                const element = document.elementFromPoint(point.x, point.y);
+                const dropZone = element && typeof element.closest === 'function'
+                    ? element.closest('[data-matrix-quadrant]')
+                    : null;
+                const targetQuadrantId = dropZone ? dropZone.getAttribute('data-matrix-quadrant') : null;
+                if (TASK_MATRIX_QUADRANT_BY_ID.has(targetQuadrantId)) {
+                    onUpdateTask(current.taskId, getTaskMatrixPatchForQuadrant(targetQuadrantId));
+                }
+                dragStateRef.current = null;
+                setDragState(null);
+                setHoverQuadrantId(null);
+            };
+
+            window.addEventListener('mousemove', handleDragMove, { passive: false });
+            window.addEventListener('mouseup', finishDrag, { passive: false });
+            window.addEventListener('touchmove', handleDragMove, { passive: false });
+            window.addEventListener('touchend', finishDrag, { passive: false });
+            window.addEventListener('touchcancel', finishDrag, { passive: false });
+            return () => {
+                window.removeEventListener('mousemove', handleDragMove);
+                window.removeEventListener('mouseup', finishDrag);
+                window.removeEventListener('touchmove', handleDragMove);
+                window.removeEventListener('touchend', finishDrag);
+                window.removeEventListener('touchcancel', finishDrag);
+            };
+        }, [dragState, onUpdateTask]);
+
+        const describeTaskContext = (task) => {
+            const parts = [];
+            const resolvedProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || task.projectId;
+            const projectName = resolvedProjectId ? projectNameById.get(resolvedProjectId) : '';
+            const parentLabel = buildParentGroupLabel(task, taskLookup);
+            if (projectName) parts.push(projectName);
+            if (parentLabel) parts.push(parentLabel);
+            if (task.dueDate) parts.push('дедлайн ' + formatIsoDateShort(task.dueDate, todayIso, addDaysToIsoDate(todayIso, 1)));
+            return parts.join(' · ');
+        };
+
+        const startDrag = (event, task, quadrantId) => {
+            if (event.type === 'mousedown' && event.button !== 0) return;
+            const target = event.target;
+            if (target && target !== event.currentTarget && typeof target.closest === 'function') {
+                const blockedTarget = target.closest('button, input, select, textarea, a');
+                if (blockedTarget && blockedTarget !== event.currentTarget) return;
+            }
+            const rect = event.currentTarget.getBoundingClientRect();
+            const point = getDragPoint(event);
+            const next = {
+                taskId: task.id,
+                quadrantId,
+                title: String(task.title || '').trim() || 'Задача',
+                context: describeTaskContext(task),
+                width: rect.width,
+                offsetX: point.x - rect.left,
+                offsetY: point.y - rect.top,
+                x: point.x,
+                y: point.y,
+            };
+            event.preventDefault();
+            dragStateRef.current = next;
+            setDragState(next);
+            setHoverQuadrantId(quadrantId);
+        };
+
+        const renderTaskCard = (task, quadrantId) => {
+            const isDragging = dragState?.taskId === task.id;
+            const context = describeTaskContext(task);
+            const priorityLabel = PRIORITY_CONFIG[task.priority]?.label || task.priority || '';
+
+            return h('button', {
+                key: task.id,
+                type: 'button',
+                className: 'planning-task-matrix-card' + (isDragging ? ' is-dragging' : ''),
+                onMouseDown: (event) => startDrag(event, task, quadrantId),
+                onTouchStart: (event) => startDrag(event, task, quadrantId),
+                title: 'Перетащить задачу',
+            },
+                h('span', { className: 'planning-task-matrix-card__title' }, task.title || 'Задача'),
+                h('span', { className: 'planning-task-matrix-card__meta' },
+                    priorityLabel,
+                    context ? (' · ' + context) : '',
+                ),
+            );
+        };
+
+        const content = h('div', {
+            className: 'planning-modal-overlay planning-task-matrix-overlay',
+            onClick: onClose,
+        },
+            h('div', {
+                className: 'planning-modal planning-modal--task-matrix',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-task-matrix__header' },
+                    h('div', { className: 'planning-task-matrix__title-group' },
+                        h('h2', { className: 'planning-task-matrix__title' }, 'Матрица Эйзенхауэра'),
+                    ),
+                    h('button', { type: 'button', className: 'planning-modal__close planning-task-matrix__close', onClick: onClose }, '×'),
+                ),
+                h('div', { className: 'planning-task-matrix__grid' },
+                    TASK_MATRIX_QUADRANTS.map((quadrant) => {
+                        const bucket = groups[quadrant.id] || [];
+                        const isHot = hoverQuadrantId === quadrant.id;
+                        return h('section', {
+                            key: quadrant.id,
+                            className: 'planning-task-matrix-quadrant planning-task-matrix-quadrant--' + quadrant.tone
+                                + (isHot ? ' is-drop-target' : ''),
+                            'data-matrix-quadrant': quadrant.id,
+                        },
+                            h('div', { className: 'planning-task-matrix-quadrant__head' },
+                                h('div', null,
+                                    h('h3', { className: 'planning-task-matrix-quadrant__title' }, quadrant.title),
+                                    h('span', { className: 'planning-task-matrix-quadrant__action' }, quadrant.action),
+                                ),
+                                h('span', { className: 'planning-task-matrix-quadrant__count' }, String(bucket.length)),
+                            ),
+                            h('div', { className: 'planning-task-matrix-quadrant__list' },
+                                bucket.length > 0
+                                    ? bucket.map((task) => renderTaskCard(task, quadrant.id))
+                                    : h('div', { className: 'planning-task-matrix-quadrant__empty' }, 'Нет задач'),
+                            ),
+                        );
+                    }),
+                ),
+            ),
+            dragState && h('div', {
+                className: 'planning-task-matrix-drag-preview',
+                style: {
+                    width: dragState.width + 'px',
+                    transform: 'translate3d(' + (dragState.x - dragState.offsetX) + 'px, ' + (dragState.y - dragState.offsetY) + 'px, 0)',
+                },
+            },
+                h('span', { className: 'planning-task-matrix-card__title' }, dragState.title),
+                dragState.context && h('span', { className: 'planning-task-matrix-card__meta' }, dragState.context),
+            ),
+        );
+
+        return ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined' && document.body
+            ? ReactDOM.createPortal(content, document.body)
+            : content;
+    }
+
     function DurationFieldButton({ value, placeholder, kicker, compact, minimal, onClick }) {
         const formattedValue = formatDurationLabel(value);
         const compactValue = formatDurationCompactLabel(value);
@@ -787,6 +1000,90 @@
 
     function isTaskTerminal(task) {
         return task?.status === 'done' || task?.status === 'cancelled';
+    }
+
+    function isTaskMatrixActive(task) {
+        return !!(task && !isTaskTerminal(task) && !task.completedAt);
+    }
+
+    const TASK_MATRIX_QUADRANTS = [
+        {
+            id: 'urgent-important',
+            urgency: 'urgent',
+            importance: 'important',
+            title: 'Срочно и важно',
+            action: 'Сделать сейчас',
+            tone: 'critical',
+        },
+        {
+            id: 'later-important',
+            urgency: 'later',
+            importance: 'important',
+            title: 'Важно, не срочно',
+            action: 'Запланировать',
+            tone: 'growth',
+        },
+        {
+            id: 'urgent-optional',
+            urgency: 'urgent',
+            importance: 'optional',
+            title: 'Срочно, не важно',
+            action: 'Быстро решить',
+            tone: 'warning',
+        },
+        {
+            id: 'later-optional',
+            urgency: 'later',
+            importance: 'optional',
+            title: 'Не срочно и не важно',
+            action: 'Отложить или убрать',
+            tone: 'quiet',
+        },
+    ];
+    const TASK_MATRIX_QUADRANT_BY_ID = new Map(TASK_MATRIX_QUADRANTS.map((quadrant) => [quadrant.id, quadrant]));
+
+    function isValidTaskMatrixUrgency(value) {
+        return value === 'urgent' || value === 'later';
+    }
+
+    function isValidTaskMatrixImportance(value) {
+        return value === 'important' || value === 'optional';
+    }
+
+    function getTaskMatrixQuadrantId(urgency, importance) {
+        return (urgency === 'urgent' ? 'urgent' : 'later') + '-' + (importance === 'important' ? 'important' : 'optional');
+    }
+
+    function resolveTaskMatrixQuadrant(task, todayIso) {
+        const savedUrgency = isValidTaskMatrixUrgency(task?.matrixUrgency) ? task.matrixUrgency : null;
+        const savedImportance = isValidTaskMatrixImportance(task?.matrixImportance) ? task.matrixImportance : null;
+        const priority = String(task?.priority || '').toLowerCase();
+        const isDueNow = !!(task?.dueDate && String(task.dueDate).slice(0, 10) <= todayIso);
+        const urgency = savedUrgency || ((priority === 'p!' || isDueNow) ? 'urgent' : 'later');
+        const importance = savedImportance || ((priority === 'p!' || priority === 'p1') ? 'important' : 'optional');
+
+        return getTaskMatrixQuadrantId(urgency, importance);
+    }
+
+    function getTaskMatrixPatchForQuadrant(quadrantId) {
+        const quadrant = TASK_MATRIX_QUADRANT_BY_ID.get(quadrantId) || TASK_MATRIX_QUADRANT_BY_ID.get('later-optional');
+        return {
+            matrixUrgency: quadrant.urgency,
+            matrixImportance: quadrant.importance,
+        };
+    }
+
+    function buildTaskMatrixGroups(tasks, todayIso) {
+        const groups = {};
+        TASK_MATRIX_QUADRANTS.forEach((quadrant) => { groups[quadrant.id] = []; });
+
+        sortByOrder((Array.isArray(tasks) ? tasks : []).filter(isTaskMatrixActive)).forEach((task) => {
+            const quadrantId = resolveTaskMatrixQuadrant(task, todayIso);
+            const bucket = groups[quadrantId] || groups['later-optional'];
+            bucket.push(task);
+        });
+
+        return groups;
     }
 
     function buildTaskChildrenMap(tasks) {
@@ -2314,6 +2611,7 @@
         const [filterDueBucket, setFilterDueBucket] = useState('all');
         const [showQuickCalendar, setShowQuickCalendar] = useState(false);
         const [showQuickDurationPicker, setShowQuickDurationPicker] = useState(false);
+        const [showTaskMatrix, setShowTaskMatrix] = useState(false);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
         const [tasksUiScale, setTasksUiScale] = useState(readSavedTasksUiScale);
         const [clearActiveOpen, setClearActiveOpen] = useState(false);
@@ -2687,20 +2985,29 @@
                     h(TaskComposerCard, {
                         cardTitle: 'Новая задача',
                         cardHint: 'По умолчанию задача создаётся в работе. Можно сразу отправить её в готово или в драфт.',
-                        headerActions: h('button', {
-                            type: 'button',
-                            className: 'planning-filter-toggle' + (showFilters ? ' active' : '') + (activeFilterCount > 0 ? ' has-active' : ''),
-                            'aria-label': activeFilterCount > 0
-                                ? ('Фильтры, активно ' + activeFilterCount)
-                                : 'Фильтры',
-                            'aria-expanded': showFilters ? 'true' : 'false',
-                            title: activeFilterCount > 0
-                                ? ('Фильтры · активно ' + activeFilterCount)
-                                : 'Фильтры',
-                            onClick: () => setShowFilters((value) => !value),
-                        },
-                            h(FilterIcon),
-                            activeFilterCount > 0 && h('span', { className: 'planning-filter-toggle__badge' }, String(activeFilterCount)),
+                        headerActions: h(React.Fragment, null,
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-matrix-toggle',
+                                'aria-label': 'Открыть матрицу задач',
+                                title: 'Матрица задач',
+                                onClick: () => setShowTaskMatrix(true),
+                            }, h(MatrixIcon)),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-filter-toggle' + (showFilters ? ' active' : '') + (activeFilterCount > 0 ? ' has-active' : ''),
+                                'aria-label': activeFilterCount > 0
+                                    ? ('Фильтры, активно ' + activeFilterCount)
+                                    : 'Фильтры',
+                                'aria-expanded': showFilters ? 'true' : 'false',
+                                title: activeFilterCount > 0
+                                    ? ('Фильтры · активно ' + activeFilterCount)
+                                    : 'Фильтры',
+                                onClick: () => setShowFilters((value) => !value),
+                            },
+                                h(FilterIcon),
+                                activeFilterCount > 0 && h('span', { className: 'planning-filter-toggle__badge' }, String(activeFilterCount)),
+                            ),
                         ),
                         title: newTaskTitle,
                         onTitleChange: setNewTaskTitle,
@@ -2899,7 +3206,6 @@
                         'aria-label': 'Увеличить масштаб',
                     }, '+'),
                 );
-
                 return ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined' && document.body
                     ? ReactDOM.createPortal(scaleControl, document.body)
                     : scaleControl;
@@ -2933,13 +3239,28 @@
                 onConfirm: handleConfirmClearActiveTasks,
                 onClose: () => setClearActiveOpen(false),
             }),
+            showTaskMatrix && h(TaskMatrixModal, {
+                tasks: visibleTasks,
+                projects: activeProjects,
+                taskLookup,
+                resolvedTaskProjectIds,
+                todayIso,
+                onUpdateTask: state.updateTask,
+                onClose: () => setShowTaskMatrix(false),
+            }),
         );
     }
 
     HEYS.PlanningTasks = {
         DurationPresetModal,
+        MatrixIcon,
+        TaskMatrixModal,
         TaskDetailModal,
         TasksScreen,
+        TASK_MATRIX_QUADRANTS,
+        buildTaskMatrixGroups,
         buildResolvedTaskProjectMap,
+        getTaskMatrixPatchForQuadrant,
+        resolveTaskMatrixQuadrant,
     };
 })();

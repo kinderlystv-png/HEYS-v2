@@ -16,9 +16,13 @@
     const SUBNAV_ITEMS = [
         { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
         { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
-        { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
         { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
         { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
+    ];
+    const SUBNAV_RENDER_ITEMS = [
+        SUBNAV_ITEMS[0],
+        { id: 'matrix', label: 'Матрица Эйзенхауэра', shortLabel: 'Матрица', action: 'taskMatrix' },
+        ...SUBNAV_ITEMS.slice(1),
     ];
     const DEFAULT_HOME_SCREEN = 'calendar';
 
@@ -1565,6 +1569,9 @@
 
     function resolvePlanningRuntime() {
         const TasksScreen = HEYS.PlanningTasks && HEYS.PlanningTasks.TasksScreen;
+        const TaskMatrixModal = HEYS.PlanningTasks && HEYS.PlanningTasks.TaskMatrixModal;
+        const MatrixIcon = HEYS.PlanningTasks && HEYS.PlanningTasks.MatrixIcon;
+        const buildResolvedTaskProjectMap = HEYS.PlanningTasks && HEYS.PlanningTasks.buildResolvedTaskProjectMap;
         const CalendarScreen = HEYS.PlanningSchedule && HEYS.PlanningSchedule.CalendarScreen;
         const useGanttV2 = !!(HEYS.featureFlags && typeof HEYS.featureFlags.isEnabled === 'function'
             && HEYS.featureFlags.isEnabled('gantt_v2'));
@@ -1579,6 +1586,9 @@
             CalendarScreen,
             GanttScreen,
             ChronoScreen,
+            TaskMatrixModal,
+            MatrixIcon,
+            buildResolvedTaskProjectMap,
             usePlanningState,
             store: Planning.Store || {},
         };
@@ -1587,6 +1597,7 @@
     function PlanningTab(props = {}) {
         const requestedHomeScreen = getInitialPlanningHomeScreen(props.defaultHomeScreen);
         const [activeScreen, setActiveScreen] = useState(() => requestedHomeScreen);
+        const [showTaskMatrix, setShowTaskMatrix] = useState(false);
         const [layoutMetrics, setLayoutMetrics] = useState({ mainTabsHeight: 0, subnavHeight: 0 });
         const runtime = resolvePlanningRuntime();
         const planState = runtime.usePlanningState ? runtime.usePlanningState() : null;
@@ -1684,6 +1695,19 @@
             return runtime.TasksScreen;
         }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.TasksScreen]);
 
+        const activeProjects = useMemo(() => (
+            Array.isArray(planState?.projects)
+                ? planState.projects.filter((project) => project?.status !== 'archived')
+                : []
+        ), [planState?.projects]);
+        const taskLookup = useMemo(() => (
+            new Map((Array.isArray(planState?.tasks) ? planState.tasks : []).map((task) => [task.id, task]))
+        ), [planState?.tasks]);
+        const resolvedTaskProjectIds = useMemo(() => {
+            if (typeof runtime.buildResolvedTaskProjectMap !== 'function') return new Map();
+            return runtime.buildResolvedTaskProjectMap(Array.isArray(planState?.tasks) ? planState.tasks : [], activeProjects);
+        }, [activeProjects, planState?.tasks, runtime.buildResolvedTaskProjectMap]);
+
         if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen || !runtime.ChronoScreen) {
             console.warn('[HEYS.planning] Planning split modules are not ready yet');
             return h(PlanningFallback);
@@ -1691,25 +1715,34 @@
 
         const subnavNode = h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
             h('div', { className: 'planning-subnav__inner' },
-                SUBNAV_ITEMS.map((item) => h('button', {
+                SUBNAV_RENDER_ITEMS.map((item) => {
+                    const isAction = item.action === 'taskMatrix';
+                    return h('button', {
                     key: item.id,
                     type: 'button',
                     title: item.label,
                     'aria-label': item.label,
                     'data-screen': item.id,
-                    className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
+                    className: 'planning-subnav__item' + (activeScreen === item.id && !isAction ? ' active' : '') + (isAction ? ' planning-subnav__item--action planning-subnav__item--matrix' : ''),
                     onClick: () => {
+                        if (isAction) {
+                            setShowTaskMatrix(true);
+                            return;
+                        }
                         hasUserNavigatedRef.current = true;
                         setActiveScreen(item.id);
                     },
                 },
-                    h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
+                    h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' },
+                        isAction && runtime.MatrixIcon ? h(runtime.MatrixIcon) : item.icon,
+                    ),
                     h('span', {
                         className: 'planning-subnav__label',
                         'data-short-label': item.shortLabel || item.label,
                         'aria-hidden': 'true',
                     }, item.label),
-                )),
+                );
+                }),
             ),
         );
 
@@ -1725,6 +1758,17 @@
                 CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),
+            showTaskMatrix && runtime.TaskMatrixModal && h(runtime.TaskMatrixModal, {
+                tasks: Array.isArray(planState?.tasks) ? planState.tasks : [],
+                projects: activeProjects,
+                taskLookup,
+                resolvedTaskProjectIds,
+                todayIso: Planning.Utils && typeof Planning.Utils.dateStr === 'function'
+                    ? Planning.Utils.dateStr()
+                    : new Date().toISOString().slice(0, 10),
+                onUpdateTask: planState.updateTask,
+                onClose: () => setShowTaskMatrix(false),
+            }),
             ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined'
                 ? ReactDOM.createPortal(subnavNode, document.body)
                 : subnavNode,

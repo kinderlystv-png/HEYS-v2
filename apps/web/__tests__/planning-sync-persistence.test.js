@@ -187,6 +187,29 @@ describe('planning sync-aware persistence', () => {
         ]);
     });
 
+    it('does not classify terminal tasks as overdue due-filter items', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+        const { getDueBucket } = window.HEYS.Planning.Utils;
+
+        const done = Store.addTask('Done old task', {
+            status: 'done',
+            dueDate: '2026-06-01',
+        });
+        const cancelled = Store.addTask('Cancelled old task', {
+            status: 'cancelled',
+            dueDate: '2026-06-01',
+        });
+        const active = Store.addTask('Active old task', {
+            status: 'in_progress',
+            dueDate: '2026-06-01',
+        });
+
+        expect(getDueBucket(done, '2026-07-07', [])).toBe('all');
+        expect(getDueBucket(cancelled, '2026-07-07', [])).toBe('all');
+        expect(getDueBucket(active, '2026-07-07', [])).toBe('overdue');
+    });
+
     it('keeps the storage hot-sync merge rescue wired before idempotent return', () => {
         const rescueIdx = storageSource.indexOf('enqueuePlanningMergeRescue(baseKey, mergedArr');
         const idempotentIdx = storageSource.indexOf('if (currentRaw === reserialized) return false; // idempotent no-op; rescue above handles local-only parity');
