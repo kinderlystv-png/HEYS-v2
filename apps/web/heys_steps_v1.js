@@ -785,18 +785,6 @@
     };
   }
 
-  function buildPostStateEffect(dayData, postState) {
-    if (!postState) return null;
-    const baseMood = Number(dayData?.moodMorning);
-    const baseWellbeing = Number(dayData?.wellbeingMorning);
-    const baseStress = Number(dayData?.stressMorning);
-    const effect = {};
-    if (Number.isFinite(baseMood)) effect.moodDelta = postState.mood - baseMood;
-    if (Number.isFinite(baseWellbeing)) effect.wellbeingDelta = postState.wellbeing - baseWellbeing;
-    if (Number.isFinite(baseStress)) effect.stressDelta = postState.stress - baseStress;
-    return Object.keys(effect).length ? effect : null;
-  }
-
   function normalizeMorningActivationState(dateKey, dayDataInput = null) {
     const dayData = dayDataInput && typeof dayDataInput === 'object' ? dayDataInput : readDayData(dateKey, {});
     const stored = dayData?.morningActivation && typeof dayData.morningActivation === 'object'
@@ -853,7 +841,8 @@
       window.dispatchEvent(new CustomEvent('heys:morning-activation-followup-completed', {
         detail: {
           dateKey,
-          source: source || 'morning-activation-followup'
+          source: source || 'morning-activation-followup',
+          terminal: true
         }
       }));
     } catch (_) {
@@ -4112,28 +4101,10 @@
     const dateKey = context?.dateKey || getTodayKey();
     const dayData = readDayData(dateKey, {});
     const initialState = normalizeMorningActivationState(dateKey, dayData);
-    const [phase, setPhase] = useState('confirm');
-    const [selectedIntensity, setSelectedIntensity] = useState(initialState.intensity || null);
-    const [intensityRec, setIntensityRec] = useState(null);
-    const [postState, setPostState] = useState(() => {
-      const defaults = {
-        mood: clampMoodValue(dayData.moodMorning, 6),
-        wellbeing: clampMoodValue(dayData.wellbeingMorning, 6),
-        stress: clampMoodValue(dayData.stressMorning, 4)
-      };
-      return normalizePostState(initialState.postState, defaults) || defaults;
-    });
     const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
     const firstMealTimeLabel = firstMealTimeValue || '—';
     const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
     const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
-
-    const setPostField = (field, value) => {
-      setPostState((prev) => ({
-        ...prev,
-        [field]: clampMoodValue(value, prev[field] || 5)
-      }));
-    };
 
     const saveMissed = () => {
       const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
@@ -4166,7 +4137,6 @@
     };
 
     const saveDone = () => {
-      if (!selectedIntensity) return;
       try {
         if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
           HEYS.Day.requestFlush({ force: true });
@@ -4174,19 +4144,15 @@
       } catch (_) {
         // ignore
       }
-      const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
-      const normalizedPostState = normalizePostState(postState, {
-        mood: 6,
-        wellbeing: 6,
-        stress: 4
-      });
-      const postEffect = buildPostStateEffect(dayData, normalizedPostState);
+      const freshDayData = getFreshDayData(dateKey);
+      const nextState = normalizeMorningActivationState(dateKey, freshDayData);
+      const intensity = getMorningActivationIntensityRecommendation(freshDayData)?.intensity || initialState.intensity || 'medium';
       const preparedState = {
         ...nextState,
         status: 'done',
-        intensity: selectedIntensity,
-        postState: normalizedPostState,
-        postEffect,
+        intensity,
+        postState: null,
+        postEffect: null,
         firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null
@@ -4196,7 +4162,7 @@
       const _verify = readDayData(dateKey, {});
       console.warn('[MA.saveDone] SAVED', {
         dateKey,
-        intensity: selectedIntensity,
+        intensity,
         maStatus: _verify?.morningActivation?.status,
         trainingsCount: (_verify?.trainings || []).length,
         trainingSources: (_verify?.trainings || []).map(t => t?.source).filter(Boolean)
@@ -4254,212 +4220,44 @@
           layoutClass: 'ma-habit-cal--modal'
         })
         : null,
-      phase === 'confirm'
-        ? React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-        },
-          React.createElement('button', {
-            style: {
-              ...actionBtnStyle,
-              border: '1px solid rgba(16,185,129,0.35)',
-              background: 'rgba(16,185,129,0.12)',
-              color: '#047857'
-            },
-            onClick: () => {
-              const fresh = readDayData(dateKey, {});
-              setIntensityRec(getMorningActivationIntensityRecommendation(fresh));
-              setPhase('intensity');
-            }
-          }, 'Сделал зарядку'),
-          React.createElement('button', {
-            style: {
-              ...actionBtnStyle,
-              border: '1px solid rgba(29,112,183,0.35)',
-              background: 'rgba(29,112,183,0.10)',
-              color: '#1D70B7'
-            },
-            onClick: () => {
-              saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
-              context?.onNext?.();
-            }
-          }, 'Вместо зарядки: тренировка в первой половине дня'),
-          React.createElement('button', {
-            style: {
-              ...actionBtnStyle,
-              border: '1px solid rgba(244,63,94,0.35)',
-              background: 'rgba(244,63,94,0.10)',
-              color: '#be123c'
-            },
-            onClick: saveMissed
-          }, 'Не планирую сегодня'),
-          React.createElement('button', {
-            style: actionBtnStyle,
-            onClick: () => context?.onClose?.()
-          }, 'Сделаю позже')
-        )
-        : React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-        },
-          phase === 'intensity'
-            ? React.createElement(React.Fragment, null,
-              React.createElement('div', {
-                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
-              }, 'Выбери интенсивность (событие запишется как «Зарядка»):'),
-              intensityRec && React.createElement('div', {
-                style: {
-                  fontSize: '11px',
-                  color: '#334155',
-                  lineHeight: '1.45',
-                  marginBottom: '6px',
-                  padding: '8px 10px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(99,102,241,0.25)',
-                  background: 'rgba(99,102,241,0.06)'
-                }
-              }, `🧠 ${intensityRec.hint}`),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  border: selectedIntensity === 'super_light' ? '1px solid rgba(59,130,246,0.45)' : actionBtnStyle.border,
-                  background: selectedIntensity === 'super_light' ? 'rgba(59,130,246,0.08)' : actionBtnStyle.background,
-                  boxShadow: intensityRec?.intensity === 'super_light' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
-                },
-                onClick: () => {
-                  setSelectedIntensity('super_light');
-                  setPhase('post_state');
-                }
-              }, React.createElement(React.Fragment, null,
-                'Суперлегкая',
-                intensityRec?.intensity === 'super_light' && React.createElement('span', {
-                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
-                }, 'рекомендуем по утру')
-              )),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  border: selectedIntensity === 'medium' ? '1px solid rgba(245,158,11,0.45)' : actionBtnStyle.border,
-                  background: selectedIntensity === 'medium' ? 'rgba(245,158,11,0.08)' : actionBtnStyle.background,
-                  boxShadow: intensityRec?.intensity === 'medium' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
-                },
-                onClick: () => {
-                  setSelectedIntensity('medium');
-                  setPhase('post_state');
-                }
-              }, React.createElement(React.Fragment, null,
-                'Средне',
-                intensityRec?.intensity === 'medium' && React.createElement('span', {
-                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
-                }, 'рекомендуем по утру')
-              )),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  border: selectedIntensity === 'high' ? '1px solid rgba(244,63,94,0.45)' : actionBtnStyle.border,
-                  background: selectedIntensity === 'high' ? 'rgba(244,63,94,0.08)' : actionBtnStyle.background,
-                  boxShadow: intensityRec?.intensity === 'high' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
-                },
-                onClick: () => {
-                  setSelectedIntensity('high');
-                  setPhase('post_state');
-                }
-              }, React.createElement(React.Fragment, null,
-                'Высокоинтенсивная',
-                intensityRec?.intensity === 'high' && React.createElement('span', {
-                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
-                }, 'рекомендуем по утру')
-              )),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  background: '#f8fafc'
-                },
-                onClick: () => {
-                  setIntensityRec(null);
-                  setPhase('confirm');
-                }
-              }, 'Назад')
-            )
-            : React.createElement(React.Fragment, null,
-              React.createElement('div', {
-                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
-              }, 'Как изменилось состояние после зарядки?'),
-              React.createElement('div', {
-                style: {
-                  display: 'grid',
-                  gridTemplateColumns: '1fr',
-                  gap: '8px'
-                }
-              },
-                React.createElement('div', {
-                  style: {
-                    borderRadius: '10px',
-                    border: '1px solid rgba(148,163,184,0.25)',
-                    padding: '8px'
-                  }
-                },
-                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🙂 Настроение: ${postState.mood}/10`),
-                  React.createElement('input', Object.assign({
-                    type: 'range',
-                    min: 1,
-                    max: 10,
-                    value: postState.mood,
-                    className: 'mc-quality-slider',
-                    style: { touchAction: 'none' }
-                  }, getRangeGestureProps((nextValue) => setPostField('mood', nextValue))))
-                ),
-                React.createElement('div', {
-                  style: {
-                    borderRadius: '10px',
-                    border: '1px solid rgba(148,163,184,0.25)',
-                    padding: '8px'
-                  }
-                },
-                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `⚡ Бодрость: ${postState.wellbeing}/10`),
-                  React.createElement('input', Object.assign({
-                    type: 'range',
-                    min: 1,
-                    max: 10,
-                    value: postState.wellbeing,
-                    className: 'mc-quality-slider',
-                    style: { touchAction: 'none' }
-                  }, getRangeGestureProps((nextValue) => setPostField('wellbeing', nextValue))))
-                ),
-                React.createElement('div', {
-                  style: {
-                    borderRadius: '10px',
-                    border: '1px solid rgba(148,163,184,0.25)',
-                    padding: '8px'
-                  }
-                },
-                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🧠 Стресс: ${postState.stress}/10`),
-                  React.createElement('input', Object.assign({
-                    type: 'range',
-                    min: 1,
-                    max: 10,
-                    value: postState.stress,
-                    className: 'mc-quality-slider',
-                    style: { touchAction: 'none' }
-                  }, getRangeGestureProps((nextValue) => setPostField('stress', nextValue))))
-                )
-              ),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  border: '1px solid rgba(16,185,129,0.45)',
-                  background: 'rgba(16,185,129,0.12)',
-                  color: '#047857'
-                },
-                onClick: saveDone
-              }, 'Сохранить зарядку'),
-              React.createElement('button', {
-                style: {
-                  ...actionBtnStyle,
-                  background: '#f8fafc'
-                },
-                onClick: () => setPhase('intensity')
-              }, 'Назад к интенсивности')
-            )
-        )
+      React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+      },
+        React.createElement('button', {
+          style: {
+            ...actionBtnStyle,
+            border: '1px solid rgba(16,185,129,0.35)',
+            background: 'rgba(16,185,129,0.12)',
+            color: '#047857'
+          },
+          onClick: saveDone
+        }, 'Сделал зарядку'),
+        React.createElement('button', {
+          style: {
+            ...actionBtnStyle,
+            border: '1px solid rgba(29,112,183,0.35)',
+            background: 'rgba(29,112,183,0.10)',
+            color: '#1D70B7'
+          },
+          onClick: () => {
+            saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
+            context?.onNext?.();
+          }
+        }, 'Вместо зарядки: тренировка в первой половине дня'),
+        React.createElement('button', {
+          style: {
+            ...actionBtnStyle,
+            border: '1px solid rgba(244,63,94,0.35)',
+            background: 'rgba(244,63,94,0.10)',
+            color: '#be123c'
+          },
+          onClick: saveMissed
+        }, 'Не планирую сегодня'),
+        React.createElement('button', {
+          style: actionBtnStyle,
+          onClick: () => context?.onClose?.()
+        }, 'Сделаю позже')
+      )
     );
   }
 

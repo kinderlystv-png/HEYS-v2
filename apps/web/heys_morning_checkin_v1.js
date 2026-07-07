@@ -663,7 +663,7 @@
     if (!opened) followupOpening = false;
   }
 
-  function markMorningActivationFollowupCompleted(dateKey, source = 'morning-activation-followup-completed') {
+  function markMorningActivationFollowupCompleted(dateKey, source = 'morning-activation-followup-completed', eventDetail = {}) {
     const todayKey = getTodayKey();
     const effectiveDateKey = dateKey || todayKey;
     const currentClientId = getCurrentClientId();
@@ -672,7 +672,8 @@
     const hasTerminalState = ma.status === 'done' || ma.status === 'missed';
     const hasReplacement = ma.replacement === 'first_half_training'
       || (Array.isArray(dayData?.trainings) && dayData.trainings.some((t) => t?.source === 'morning_activation_replacement'));
-    if (!hasTerminalState && !hasReplacement) {
+    const hasTerminalEvent = eventDetail?.terminal === true;
+    if (!hasTerminalState && !hasReplacement && !hasTerminalEvent) {
       logMorningActivationTrace('[MA.followup] completion event ignored — no terminal state', {
         dateKey: effectiveDateKey,
         status: ma.status,
@@ -2067,7 +2068,7 @@
     const detail = event?.detail || {};
     const dateKey = detail.dateKey || getTodayKey();
     if (dateKey !== getTodayKey()) return;
-    setTimeout(() => markMorningActivationFollowupCompleted(dateKey, detail.source || 'event'), 0);
+    setTimeout(() => markMorningActivationFollowupCompleted(dateKey, detail.source || 'event', detail), 0);
   });
 
   // module-init trigger removed: at page-load localStorage may not yet contain today's day data

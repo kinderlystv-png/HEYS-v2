@@ -218,6 +218,56 @@ describe('morning activation followup decision', () => {
     );
   });
 
+  it('closes an already-open followup when the completion event is terminal before storage refreshes', () => {
+    vi.useFakeTimers();
+    const listeners = {};
+    const dayData = mealDay({
+      morningActivation: {
+        status: 'pending',
+        firstMealTime: '09:00',
+      },
+    });
+    const stepModalHide = vi.fn();
+
+    loadModule({
+      HEYS: {
+        currentClientId: 'client-1',
+        store: {
+          readSafe: vi.fn((key, fallback) => (
+            key === 'heys_client-1_dayv2_2026-06-09' ? dayData : fallback
+          )),
+          set: vi.fn(),
+        },
+        utils: {
+          getCurrentClientId: () => 'client-1',
+        },
+        StepModal: {
+          hide: stepModalHide,
+        },
+      },
+      addEventListener: vi.fn((type, handler) => {
+        listeners[type] = handler;
+      }),
+      document: {
+        addEventListener: vi.fn(),
+        getElementById: vi.fn((id) => (id === 'heys-step-modal-root' ? {} : null)),
+        dispatchEvent: vi.fn(),
+      },
+      sessionStorage: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+    });
+
+    listeners['heys:morning-activation-followup-completed']?.({
+      detail: { dateKey: '2026-06-09', source: 'test', terminal: true },
+    });
+    vi.advanceTimersByTime(0);
+
+    expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
+  });
+
   it('waits for meal-flow finish before stacking the followup over an active StepModal', () => {
     vi.useFakeTimers();
     const listeners = {};
@@ -361,6 +411,77 @@ describe('morning activation followup decision', () => {
       detail: expect.objectContaining({
         dateKey,
         source: 'morning-activation-replacement',
+      }),
+    }));
+  });
+
+  it('marks morning activation done from the first followup click', () => {
+    const dateKey = '2026-06-09';
+    const clientId = 'client-1';
+    const day = mealDay({
+      date: dateKey,
+      moodMorning: 6,
+      wellbeingMorning: 6,
+      stressMorning: 4,
+    });
+    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
+    localStorage.setItem(scopedKey, JSON.stringify(day));
+
+    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
+    global.window = domWindow;
+    global.document = domWindow.document;
+    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
+    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
+    global.React = React;
+    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
+    domWindow.React = React;
+    domWindow.ReactDOM = global.ReactDOM;
+    domWindow.HEYS = {
+      currentClientId: clientId,
+      utils: {
+        getCurrentClientId: () => clientId,
+      },
+      dayUtils: {
+        todayISO: () => dateKey,
+      },
+      game: {
+        recordMorningActivationDone: vi.fn(),
+      },
+    };
+    global.CustomEvent = class CustomEvent {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    };
+    global.HEYS = domWindow.HEYS;
+    domWindow.CustomEvent = global.CustomEvent;
+    const dispatchSpy = vi.fn();
+    domWindow.dispatchEvent = dispatchSpy;
+
+    // eslint-disable-next-line no-new-func
+    new Function(STEP_MODAL_SRC)();
+    // eslint-disable-next-line no-new-func
+    new Function(STEPS_SRC)();
+
+    const onNext = vi.fn();
+    const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
+    render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onNext } }));
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Сделал зарядку',
+    }));
+
+    const saved = JSON.parse(localStorage.getItem(scopedKey));
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(saved.morningActivation.status).toBe('done');
+    expect(saved.morningActivation.intensity).toBe('medium');
+    expect(screen.queryByText('Выбери интенсивность (событие запишется как «Зарядка»):')).toBeNull();
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:morning-activation-followup-completed',
+      detail: expect.objectContaining({
+        dateKey,
+        source: 'morning-activation-done',
       }),
     }));
   });
