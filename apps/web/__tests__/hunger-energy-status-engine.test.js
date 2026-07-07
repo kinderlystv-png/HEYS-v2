@@ -568,6 +568,57 @@ describe('HungerEnergyStatus pure engine', () => {
     expect(['meal', 'foodFirst']).toContain(moderateHungerHighRisk.foodPriority.level);
   });
 
+  it('treats recentFullMeal as the same protective context as recentBalancedMeal', () => {
+    const highHungerAfterFullMeal = HES.assessHungerEvent(
+      { hungerLevel: 8, controlLevel: 8, hungerTrend: 'rising', safetyFlags: [] },
+      {
+        recentMeal: true,
+        recentFullMeal: true,
+        lastMealQualityTone: 'good',
+        lastMealKcal: 850,
+        lastMealProtein: 45,
+        hoursSinceMeal: 0.4,
+        focus: 'stable'
+      }
+    );
+
+    expect(highHungerAfterFullMeal.energyStatus.label).toBe('fed');
+    expect(highHungerAfterFullMeal.foodPriority.level).toBe('checkpoint');
+    expect(highHungerAfterFullMeal.riskBudget.driversDown).toContain('recent_meal_or_satiety_lag');
+    expect(highHungerAfterFullMeal.foodPriority.driversDown).toContain('recent_balanced_meal');
+  });
+
+  it('uses clarification answers as algorithm inputs', () => {
+    const stressAnswer = HES.assessHungerEvent(
+      { hungerLevel: 6, controlLevel: 6, hungerTrend: 'stable', safetyFlags: [], hungerReasons: ['stress'] },
+      { lastMealAt: '2026-07-03T14:00:00+03:00' }
+    );
+    const mismatchAnswer = HES.assessHungerEvent(
+      { hungerLevel: 8, controlLevel: 8, hungerTrend: 'rising', safetyFlags: [], hungerReasons: ['meal_time_mismatch'] },
+      {
+        recentMeal: true,
+        recentFullMeal: true,
+        lastMealQualityTone: 'good',
+        lastMealKcal: 850,
+        lastMealProtein: 45,
+        hoursSinceMeal: 0.4,
+        focus: 'stable'
+      }
+    );
+
+    expect(stressAnswer.riskBudget.driversUp).toContain('reported_stress');
+    expect(stressAnswer.foodPriority.driversUp).toContain('reported_stress');
+    expect(mismatchAnswer.foodPriority.driversDown).toContain('meal_time_mismatch');
+    expect(mismatchAnswer.confidence).toBe('medium');
+
+    const stableRecentFood = HES.assessHungerEvent(
+      { hungerLevel: 1, hungerTrend: 'stable', safetyFlags: [], stableHungerReasons: ['recent_food'] },
+      { recentMeal: true, recentFullMeal: true, lastMealKcal: 800, lastMealProtein: 40, hoursSinceMeal: 1 }
+    );
+    expect(stableRecentFood.foodPriority.driversDown).toContain('stable_hunger_recent_food');
+    expect(stableRecentFood.explanation).toContain('stable_hunger_recent_food');
+  });
+
   it('keeps meal-level food support aligned with meal-level action and kcal band', () => {
     const repeatedRisingHungerAfterLongGap = HES.assessHungerEvent(
       { hungerLevel: 8, controlLevel: 8, hungerTrend: 'rising', safetyFlags: [] },

@@ -79,10 +79,27 @@
       hungerTrend: src.hungerTrend || ctx.hungerTrend || 'unknown',
       safetyFlags,
       safetyFlagsProvided,
+      hungerReasons: Array.isArray(src.hungerReasons) ? src.hungerReasons.slice() : [],
+      stableHungerReasons: Array.isArray(src.stableHungerReasons) ? src.stableHungerReasons.slice() : [],
       checkpointAttemptCount: clamp(src.checkpointAttemptCount || ctx.checkpointAttemptCount || 0, 0, 10),
       dataFreshness: src.dataFreshness || ctx.dataFreshness || 'fresh',
       ctx
     };
+  }
+
+  function hasReason(state, reason) {
+    return Array.isArray(state.hungerReasons) && state.hungerReasons.includes(reason);
+  }
+
+  function hasStableReason(state, reason) {
+    return Array.isArray(state.stableHungerReasons) && state.stableHungerReasons.includes(reason);
+  }
+
+  function hasRecentBalancedMealContext(ctx) {
+    return !!(ctx.recentBalancedMeal || ctx.recentFullMeal || ctx.justAte || ctx.satietyLagLikely ||
+      ctx.lastMealQualityTone === 'good' ||
+      (Number.isFinite(+ctx.hoursSinceMeal) && +ctx.hoursSinceMeal <= 3 &&
+        (Number(ctx.lastMealKcal) >= 600 || Number(ctx.lastMealProtein) >= 25)));
   }
 
   function collectMissingInputs(state) {
@@ -256,6 +273,9 @@
     if (ctx.stressLevel === 'high' || ctx.stressHigh || +ctx.stressLevel >= 7) {
       score += 10;
       driversUp.push('high_stress');
+    } else if (hasReason(state, 'stress')) {
+      score += 8;
+      driversUp.push('reported_stress');
     }
     if (ctx.mood === 'bad' || ctx.moodDropping || +ctx.moodLevel <= 3) {
       score += 8;
@@ -277,9 +297,13 @@
       score += 10;
       driversUp.push('no_intake_today');
     }
-    if (ctx.skippedMeal || ctx.skippedPlannedMeal) {
+    if (ctx.skippedMeal || ctx.skippedPlannedMeal || hasReason(state, 'missed_meal')) {
       score += 10;
       driversUp.push('skipped_meal');
+    }
+    if (hasReason(state, 'meal_time_mismatch')) {
+      confidence = minConfidence(confidence, 'medium');
+      driversDown.push('meal_time_mismatch');
     }
     if (ctx.knownReboundPattern || ctx.lateSweetReboundPattern || ctx.highRiskTimePattern) {
       score += 12;
@@ -310,7 +334,7 @@
       score -= 10;
       driversDown.push('good_control_stable_focus');
     }
-    if (ctx.recentBalancedMeal || ctx.justAte || ctx.satietyLagLikely) {
+    if (hasRecentBalancedMealContext(ctx)) {
       score -= 10;
       driversDown.push('recent_meal_or_satiety_lag');
     }
@@ -344,7 +368,7 @@
       score = Math.max(score, 26);
       driversUp.push('hunger_medium_floor');
     } else if (state.hungerLevel >= 8) {
-      const protectedByRecentCalmState = (ctx.recentBalancedMeal || ctx.justAte || ctx.satietyLagLikely) &&
+      const protectedByRecentCalmState = hasRecentBalancedMealContext(ctx) &&
         state.controlLevel != null && state.controlLevel >= 7;
       score = Math.max(score, protectedByRecentCalmState ? 26 : 56);
       driversUp.push(protectedByRecentCalmState ? 'high_hunger_recent_meal_floor' : 'hunger_high_floor');
@@ -393,7 +417,7 @@
       ctx.trainingRecovery === 'hard' || ctx.hardTrainingRecovery || ctx.proteinDebt) {
       label = 'recoveryNeed';
       drivers.push('recovery_or_protein_need');
-    } else if (ctx.justAte || ctx.satietyLagLikely || ctx.insulinWaveState === 'active' || ctx.recentMeal) {
+    } else if (ctx.justAte || ctx.satietyLagLikely || ctx.insulinWaveState === 'active' || ctx.recentMeal || ctx.recentFullMeal) {
       label = 'fed';
       drivers.push('recent_meal_processing');
     } else if (ctx.noIntakeToday || ctx.veryLowIntakeDay || ctx.threeDayDebtKcal < -1000 || ctx.longGap ||
@@ -516,6 +540,9 @@
     if (ctx.stressLevel === 'high' || +ctx.stressLevel >= 7 || ctx.moodDropping) {
       score += 8;
       driversUp.push('stress_or_mood_pressure');
+    } else if (hasReason(state, 'stress')) {
+      score += 6;
+      driversUp.push('reported_stress');
     }
     if (state.cravingLevel >= 7 || ctx.strongCraving) {
       score += 8;
@@ -525,9 +552,22 @@
       score += 6;
       driversUp.push('high_risk_time_pattern');
     }
-    if (ctx.recentBalancedMeal || ctx.satietyLagLikely || ctx.justAte) {
+    if (hasReason(state, 'missed_meal')) {
+      score += 10;
+      driversUp.push('reported_missed_meal');
+    }
+    if (hasRecentBalancedMealContext(ctx)) {
       score -= 15;
       driversDown.push('recent_balanced_meal');
+    }
+    if (hasReason(state, 'meal_time_mismatch') && hasRecentBalancedMealContext(ctx)) {
+      score -= 10;
+      confidence = minConfidence(confidence, 'medium');
+      driversDown.push('meal_time_mismatch');
+    }
+    if (hasStableReason(state, 'recent_food') && (hasRecentBalancedMealContext(ctx) || ctx.recentMeal)) {
+      score -= 6;
+      driversDown.push('stable_hunger_recent_food');
     }
     if (ctx.plannedMealMinutes != null && +ctx.plannedMealMinutes <= 60 && risk.level !== 'high') {
       score -= 8;
@@ -544,7 +584,7 @@
 
     score = clamp(Math.round(score), 0, 100);
 
-    if ((ctx.recentBalancedMeal || ctx.justAte || ctx.satietyLagLikely) &&
+    if (hasRecentBalancedMealContext(ctx) &&
       risk.level !== 'high' && risk.level !== 'stop') {
       score = Math.min(score, 45);
     }
@@ -718,10 +758,17 @@
     } else {
       bits.push('Decision uses hunger together with risk, recent food, recovery, and history.');
     }
-    const riskDriver = decision.riskBudget.driversUp[0];
-    const foodDriver = decision.foodPriority.driversUp[0] || decision.foodPriority.driversDown[0];
-    if (riskDriver) bits.push('Risk driver: ' + riskDriver + '.');
-    if (foodDriver) bits.push('Food support driver: ' + foodDriver + '.');
+    const riskDrivers = decision.riskBudget.driversUp.slice(0, 2);
+    const foodDrivers = [];
+    const foodSource = decision.foodPriority.driversUp.length
+      ? decision.foodPriority.driversUp
+      : decision.foodPriority.driversDown;
+    ['stable_hunger_recent_food', 'meal_time_mismatch'].forEach((driver) => {
+      if (foodSource.includes(driver)) pushUnique(foodDrivers, driver);
+    });
+    foodSource.forEach((driver) => pushUnique(foodDrivers, driver));
+    if (riskDrivers.length) bits.push('Risk drivers: ' + riskDrivers.join(', ') + '.');
+    if (foodDrivers.length) bits.push('Food support drivers: ' + foodDrivers.slice(0, 4).join(', ') + '.');
     return bits.join(' ');
   }
 

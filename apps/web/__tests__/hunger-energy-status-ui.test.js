@@ -268,6 +268,10 @@ describe('Hunger Energy Status UI adapter', () => {
       { hungerLevel: 7, now: '2026-07-04T12:00:00Z' },
       { previousHungerLevel: 4, minutesSinceLastHungerEvent: 120 }
     )).toBeNull();
+    expect(Adapter.buildStableHungerPrompt(
+      { hungerLevel: 5, now: '2026-07-04T12:00:00Z' },
+      { previousHungerLevel: 2, minutesSinceLastHungerEvent: 15 }
+    )).toBeNull();
     Storage.writeEvents([]);
     expect(Adapter.buildStableHungerPrompt(
       { hungerLevel: 5 },
@@ -275,7 +279,7 @@ describe('Hunger Energy Status UI adapter', () => {
     )).toBeNull();
   });
 
-  it('renders spark with only current hunger point and the latest meal marker', () => {
+  it('renders spark with current hunger point and all today meal markers', () => {
     vi.setSystemTime(new Date('2026-07-05T12:00:00Z'));
     Storage.writeEvents([
       {
@@ -322,8 +326,9 @@ describe('Hunger Energy Status UI adapter', () => {
       draft: { hungerLevel: 2 }
     });
 
-    expect(spark.meals).toHaveLength(1);
-    expect(spark.meals[0].label).toBe('еда 10:00');
+    expect(spark.meals).toHaveLength(2);
+    expect(spark.meals.map((meal) => meal.label)).toEqual(['еда 08:00', 'еда 10:00']);
+    expect(spark.meals.every((meal) => meal.quality)).toBe(true);
     expect(spark.hungerPoints).toHaveLength(3);
     expect(spark.hungerPoints.map((point) => point.level)).toEqual([4, 5, 2]);
     expect(spark.hungerPoints[2].type).toBe('preview');
@@ -332,6 +337,10 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(spark.lineStops[0].color).toBe(spark.hungerPoints[0].color);
     expect(spark.lineStops.at(-1).color).toBe(spark.hungerPoints.at(-1).color);
     expect(spark.lineStops.length).toBeGreaterThanOrEqual(spark.hungerPoints.length);
+    expect(uiSource).toContain('const SPARK_X_MIN = 8');
+    expect(uiSource).toContain('const SPARK_X_MAX = 312');
+    expect(uiSource).toContain("h('line', { className: 'hes-spark__axis', x1: SPARK_X_MIN, y1: 64, x2: SPARK_X_MAX, y2: 64 })");
+    expect(spark.hungerPoints.every((point) => point.x >= 8 && point.x <= 312)).toBe(true);
     expect(spark.path).toMatch(/^M/);
     expect(spark.ticks.length).toBeGreaterThan(0);
     expect(spark.nightBands).toEqual([]);
@@ -459,6 +468,41 @@ describe('Hunger Energy Status UI adapter', () => {
     });
   });
 
+  it('marks a recent full meal in hunger decision context', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([
+      {
+        id: 'hungry-before-full-meal',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 8
+      }
+    ]);
+
+    const context = Adapter.buildContextFromDay({
+      date: '2026-07-05',
+      day: {
+        date: '2026-07-05',
+        meals: [{
+          time: '12:30',
+          items: [
+            { name: 'Курица', grams: 140, kcal100: 165, protein100: 31, carbs100: 0, fat100: 4, harm: 1 },
+            { name: 'Гречка с овощами', grams: 180, kcal100: 110, protein100: 4, carbs100: 20, complex100: 18, simple100: 1, fat100: 1, fiber100: 4, harm: 1 }
+          ]
+        }]
+      }
+    });
+
+    expect(context.recentFullMeal).toBe(true);
+    expect(context.recentBalancedMeal).toBe(true);
+    expect(context.lastMealQualityTone).toBe('good');
+    expect(context.lastMealQuality).toMatchObject({ tone: 'good' });
+    expect(context.lastMealProtein).toBeGreaterThanOrEqual(25);
+    expect(context.mealQualitySnapshot).toHaveLength(1);
+    expect(context.mealQualitySnapshot[0].quality).toMatchObject({ tone: 'good' });
+  });
+
   it('asks for context when meaningful food appears after low hunger', () => {
     vi.setSystemTime(new Date('2026-07-05T13:20:00'));
     Storage.writeEvents([
@@ -483,6 +527,10 @@ describe('Hunger Energy Status UI adapter', () => {
       hungerLevel: 1,
       hungerEvent: { id: 'low-before-food' },
       mealAt: '2026-07-05T12:45:00',
+      mealQuality: {
+        tone: 'attention',
+        lowBefore: true
+      },
       analysis: {
         isMeaningful: true,
         category: 'caffeine_additions',
@@ -544,6 +592,30 @@ describe('Hunger Energy Status UI adapter', () => {
       stressCalorieLink: { choiceLabel: 'сладкое' }
     });
     expect(curatorCard.summary).toContain('Стресс/нервозность → сладкое');
+  });
+
+  it('tracks planned-ahead eating when future food access is limited', () => {
+    const review = {
+      mealAt: '2026-07-05T12:45:00',
+      hungerLevel: 1,
+      analysis: {
+        category: 'meal',
+        names: ['Боул заранее'],
+        kcal: 420
+      },
+      patternStats: { repeatCount: 1, isRepeated: false, needsPatternWork: false }
+    };
+
+    expect(Adapter.getLowHungerSavedSummary('future_food_access', review)).toContain('еда заранее');
+    expect(Adapter.getLowHungerNextStep('future_food_access', review).detail).toContain('позже не будет доступа к еде');
+    expect(Adapter.getLowHungerGentlePlan('future_food_access', review).replacement.detail).toContain('записать её как плановую');
+    expect(Adapter.getLowHungerContextOptions('future_food_access').map(([, label]) => label)).toContain('Не будет еды');
+    expect(Adapter.buildLowHungerCuratorCard('future_food_access', review)).toMatchObject({
+      reason: 'future_food_access',
+      mealIntent: 'planned_ahead'
+    });
+    expect(uiSource).toContain("future_food_access: 'еда заранее'");
+    expect(uiSource).toContain("['future_food_access', 'Заранее / не скоро еда']");
   });
 
   it('does not ask for low-hunger context for zero drinks', () => {
@@ -1383,9 +1455,37 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('Что могло усилить голод?');
     expect(uiSource).toContain("['Пропустил еду', { safetyFlags: [], hungerReasons: ['missed_meal'] }]");
     expect(uiSource).toContain("['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }]");
+    expect(uiSource).toContain("['Ошибка времени еды', { safetyFlags: [], hungerReasons: ['meal_time_mismatch'] }]");
+    expect(uiSource).toContain('isRecentFullMealContext(context)');
+    expect(uiSource).toContain('const recentFullMeal = minSinceMeal != null && minSinceMeal <= 180');
+    expect(uiSource).toContain('recentBalancedMeal: recentFullMeal');
+    expect(uiSource).toContain('lastMealQuality: buildMealQualityLog(lastMealQuality)');
+    expect(uiSource).toContain('mealQualitySnapshot: safeArray(context.mealQualitySnapshot)');
+    expect(uiSource).toContain('mealQuality: context.lowHungerMealReview.mealQuality || null');
+    expect(uiSource).toContain('input: cloneDecisionInput(finalInput)');
+    expect(uiSource).toContain('stableHungerPrompt: cloneStableHungerPrompt(finalInput.stableHungerPrompt)');
+    expect(uiSource).toContain('stableHungerReasons: copyArray(finalInput.stableHungerReasons)');
+    expect(uiSource).toContain("hasDriver('stable_hunger_recent_food')");
+    expect(uiSource).toContain("drivers.push('полноценная еда недавно')");
+    expect(uiSource).toContain("drivers.push('еда держит голод')");
+    expect(uiSource).toContain('return unique(drivers).slice(0, 6)');
+    expect(uiSource).toContain("className: 'hes-user-why'");
+    expect(uiSource).toContain("h('div', { className: 'hes-user-why__title' }, 'Почему так')");
+    expect(uiSource).toContain("className: 'hes-result-tools'");
+    expect(uiSource).toContain("className: 'hes-result' + ((detailsOpen || debugOpen) ? ' is-expanded' : '')");
+    expect(uiSource).toContain('.hes-result.is-expanded{padding-bottom:156px}');
+    expect(uiSource).toContain("debugOpen ? 'Скрыть лог' : 'Диагностика'");
+    expect(uiSource).toContain("detailsOpen ? 'Скрыть детали' : 'Пояснения'");
+    expect(uiSource).toContain("h('strong', null, 'Техническая диагностика')");
+    expect(uiSource).not.toContain("h('div', { className: 'hes-reasons__title' }, 'Ключевые причины')");
+    expect(uiSource).toContain('function formatTraceImpact(row)');
+    expect(uiSource).toContain("'снизило риск ' + Math.abs(risk)");
+    expect(uiSource).toContain("id: 'meal_time_mismatch'");
+    expect(uiSource).toContain("id: 'stable_recent_food'");
     expect(uiSource).not.toContain('Есть дрожь, слабость или головокружение?');
     expect(uiSource).toContain('stableHungerPrompt ? h(StableHungerReasonPrompt');
     expect(uiSource).toContain('}) : h(MissingPrompt');
+    expect(uiSource).toContain('context,');
     expect(uiSource).toContain('.hes-prompt.is-empty{opacity:0;background:transparent;border-color:transparent;pointer-events:none}');
     expect(uiSource).toContain('const liveHungerLevel = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerVisual ?? activeDraft.hungerLevel)');
     expect(uiSource).toContain('hungerLevel: liveHungerLevel');
@@ -1394,6 +1494,11 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).not.toContain("'stable:' + stableHungerPrompt.type + ':' + stableHungerPrompt.currentLevel");
     expect(uiSource).toContain('animation:hesPromptFade .24s ease both');
     expect(uiSource).toContain('.hes-slider__change{grid-column:1/-1;grid-row:3;justify-self:center;max-width:270px;min-height:38px');
+    expect(uiSource).toContain('.hes-slider__control{grid-column:2;grid-row:4;position:relative;width:68px;height:205px;justify-self:center;margin-top:18px;margin-bottom:18px}');
+    expect(uiSource).toContain('patchDraft({ stableHungerReasons: [reason] })');
+    expect(uiSource).toContain('.hes-chip.is-selected{background:#434587;color:#fff;border-color:#434587');
+    expect(uiSource).toContain('@media (max-width:520px){.hes-input{padding:8px 14px 8px;gap:10px}');
+    expect(uiSource).toContain('.hes-prompt{height:104px;min-height:104px;padding:10px}');
     expect(uiSource).toContain('MealEffectPrompt');
   });
 
