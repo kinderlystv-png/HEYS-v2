@@ -1124,6 +1124,7 @@
   }
 
   const MORNING_CORE_STEPS = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
+  const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);
   const MORNING_STEP_LABELS = {
     weight: 'вес',
     sleepTime: 'сон',
@@ -1305,6 +1306,10 @@
       || row?.completeByData === true;
   }
 
+  function isMorningFinalBlockingStep(stepId) {
+    return !MORNING_OPTIONAL_TAIL_STEPS.has(stepId);
+  }
+
   function getBlockingMorningSteps({ ledger, dateKey, clientId }) {
     const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds : [];
     if (!plannedStepIds.length) return [];
@@ -1318,14 +1323,14 @@
         status: row.status || (completeByData ? 'data_present' : 'missing'),
         completeByData
       };
-    }).filter((row) => !isMorningStatusTerminal(row));
+    }).filter((row) => isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row));
   }
 
   function summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone }) {
     const flowStatus = ledger?.steps?.__flow__?.status || null;
     const failed = steps.find((row) => row.status === 'failed_sync');
     const unresolved = steps.find((row) => isUnresolvedProgressStatus(row.status));
-    const blocking = steps.find((row) => !isMorningStatusTerminal(row));
+    const blocking = steps.find((row) => isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row));
     const allCorePresent = Object.values(corePresence || {}).every(Boolean);
     if (failed) return { state: 'failed', label: `ошибка: ${MORNING_STEP_LABELS[failed.id] || failed.id}` };
     if (unresolved) return { state: 'in_progress', label: `сохраняется: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };

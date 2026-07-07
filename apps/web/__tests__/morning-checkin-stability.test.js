@@ -34,6 +34,8 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('allowSwipe: false');
     expect(MORNING_SRC).toContain('allowProgressForwardNav: false');
     expect(MORNING_SRC).toContain("closeOnComplete: 'after'");
+    expect(STEP_MODAL_SRC).toContain('const touchStartActive = useRef(false);');
+    expect(STEP_MODAL_SRC).toContain('if (!touchStartActive.current) return;');
     expect(MORNING_SRC).toContain('mergeFreshStepsWithUnresolvedProgress');
     expect(MORNING_SRC).toContain("status === 'failed_sync'");
   });
@@ -73,7 +75,11 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('HEYS.caloricDebt?.needsRefeed === true');
     expect(MORNING_SRC).toContain("case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);");
     expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
+    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);");
+    expect(MORNING_SRC).toContain('isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row)');
     expect(MORNING_SRC).toContain('checkin_incomplete_steps');
+    expect(STEP_MODAL_SRC).toContain("raw.startsWith('checkin_incomplete_steps:')");
+    expect(STEP_MODAL_SRC).toContain('Вернитесь к незаполненным обязательным шагам.');
     expect(MORNING_SRC).toContain("case 'supplements': return Array.isArray(day?.supplementsPlanned);");
     expect(STEPS_SRC).toContain("reason: 'empty_measurements'");
     expect(STEPS_SRC).toContain("type: 'none'");
@@ -117,6 +123,13 @@ describe('morning check-in stability', () => {
     expect(PROFILE_SRC).toContain('writeDayDataScoped(todayKey');
     expect(PROFILE_SRC).toContain('HEYS.MorningCheckinUtils?.writeDayV2Scoped');
     expect(MORNING_SRC).toContain('HEYS.MorningCheckinUtils.writeDayV2Scoped = writeDayV2ScopedAndLegacy');
+  });
+
+  it('requires an explicit yesterdayVerify action before the morning flow can continue', () => {
+    expect(YESTERDAY_SRC).toContain('incompleteAction: null');
+    expect(YESTERDAY_SRC).toContain("if (unresolvedDates.length > 0 && !data.incompleteAction)");
+    expect(YESTERDAY_SRC).toContain('recommendedAction === act.id');
+    expect(YESTERDAY_SRC).not.toContain('incompleteAction: recommendedAction');
   });
 
   it('does not let step saves seed today from a richer live day with another date', () => {

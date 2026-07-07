@@ -1199,24 +1199,6 @@
       })()
       : null;
 
-    React.useEffect(() => {
-      if (!pendingInfo) return;
-      if (selectedAction || unresolvedDaysCount === 0 || !recommendedAction) return;
-      onChange({
-        ...data,
-        incompleteAction: recommendedAction,
-        pendingDateKeys: missingDays.map((day) => day.date) || []
-      });
-    }, [
-      pendingInfo,
-      selectedAction,
-      unresolvedDaysCount,
-      recommendedAction,
-      data,
-      onChange,
-      missingDays
-    ]);
-
     // Обработчик выбора действия для неполных данных
     const handleActionSelect = (actionId) => {
       onChange({

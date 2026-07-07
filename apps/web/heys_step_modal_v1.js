@@ -505,6 +505,7 @@
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
+    const touchStartActive = useRef(false);
     const savedStepSigsRef = useRef({});
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
@@ -609,6 +610,17 @@
         setValidationError(false);
         setValidationMessage(null);
       }, 2500);
+    }, []);
+
+    const getUserFacingCompletionError = useCallback((error) => {
+      const raw = String(error?.message || error || '');
+      if (raw.startsWith('checkin_incomplete_steps:')) {
+        return 'Не удалось завершить чек-ин. Вернитесь к незаполненным обязательным шагам.';
+      }
+      if (raw === 'checkin_sync_timeout') {
+        return 'Не удалось дождаться облака. Попробуйте ещё раз.';
+      }
+      return raw || 'Не удалось завершить чек-ин. Попробуйте ещё раз.';
     }, []);
 
     const normalizeValidationResult = useCallback((result) => {
@@ -763,7 +775,7 @@
               }
             } catch (e) {
               console.error('[StepModal] completion failed:', e);
-              showSaveError(requireStepAck ? (e?.message || 'Не удалось завершить чек-ин. Попробуйте ещё раз.') : 'Не удалось завершить. Попробуйте ещё раз.');
+              showSaveError(requireStepAck ? getUserFacingCompletionError(e) : 'Не удалось завершить. Попробуйте ещё раз.');
               return;
             }
           }
@@ -771,7 +783,7 @@
       } finally {
         setSavingStep(false);
       }
-    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
@@ -816,6 +828,7 @@
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
 
     const handleTouchStart = useCallback((e) => {
+      touchStartActive.current = false;
       if (!stepAllowSwipe) return;
 
       // Не перехватываем touch на интерактивных элементах — слайдеры, кнопки, инпуты.
@@ -825,6 +838,7 @@
 
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
+      touchStartActive.current = true;
     }, [stepAllowSwipe, currentConfig]);
 
     // Блокируем scroll на backdrop, разрешаем только внутри scrollable контейнеров
@@ -863,13 +877,21 @@
     }, []);
 
     const handleTouchEnd = useCallback((e) => {
-      if (!stepAllowSwipe) return;
+      if (!stepAllowSwipe) {
+        touchStartActive.current = false;
+        return;
+      }
 
       // Не перехватываем свайп на интерактивных элементах.
-      if (isInteractiveTouchTarget(e.target)) return;
+      if (isInteractiveTouchTarget(e.target)) {
+        touchStartActive.current = false;
+        return;
+      }
+      if (!touchStartActive.current) return;
 
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+      touchStartActive.current = false;
 
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         if (deltaX < 0 && currentStepIndex < totalSteps - 1) {
