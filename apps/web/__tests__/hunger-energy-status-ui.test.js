@@ -232,6 +232,49 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(history.personalHungerModel.goodFoodCount).toBe(1);
   });
 
+  it('prompts for context when hunger stays within one point for a long time', () => {
+    Storage.writeEvents([
+      {
+        id: 'stable-anchor',
+        source: 'day-fab',
+        createdAt: '2026-07-04T10:00:00Z',
+        recordedAt: '2026-07-04T10:00:00Z',
+        hungerLevel: 4
+      },
+      {
+        id: 'stable-recent',
+        source: 'day-fab',
+        createdAt: '2026-07-04T11:45:00Z',
+        recordedAt: '2026-07-04T11:45:00Z',
+        hungerLevel: 5
+      }
+    ]);
+    const prompt = Adapter.buildStableHungerPrompt(
+      { hungerLevel: 5, now: '2026-07-04T12:00:00Z' },
+      { previousHungerLevel: 5, minutesSinceLastHungerEvent: 15 }
+    );
+
+    expect(prompt).toMatchObject({
+      type: 'stable_hunger_long',
+      question: 'Почему голод не растёт?',
+      previousLevel: 4,
+      currentLevel: 5,
+      minutesSincePrevious: 120,
+      anchorEventId: 'stable-anchor'
+    });
+    expect(uiSource).toContain("label: 'На суете'");
+    expect(uiSource).toContain("label: 'Еда держит'");
+    expect(Adapter.buildStableHungerPrompt(
+      { hungerLevel: 7, now: '2026-07-04T12:00:00Z' },
+      { previousHungerLevel: 4, minutesSinceLastHungerEvent: 120 }
+    )).toBeNull();
+    Storage.writeEvents([]);
+    expect(Adapter.buildStableHungerPrompt(
+      { hungerLevel: 5 },
+      { previousHungerLevel: 4, minutesSinceLastHungerEvent: 40 }
+    )).toBeNull();
+  });
+
   it('renders spark with only current hunger point and the latest meal marker', () => {
     vi.setSystemTime(new Date('2026-07-05T12:00:00Z'));
     Storage.writeEvents([
@@ -1337,7 +1380,20 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain("addMeal({ time, dateKey, source: 'hunger-spark-long-press' })");
     expect(uiSource).toContain('pushEventsUndo');
     expect(uiSource).toContain('installMealEffectFollowUps');
-    expect(uiSource).toContain('HungerReasonPresets');
+    expect(uiSource).toContain('Что могло усилить голод?');
+    expect(uiSource).toContain("['Пропустил еду', { safetyFlags: [], hungerReasons: ['missed_meal'] }]");
+    expect(uiSource).toContain("['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }]");
+    expect(uiSource).not.toContain('Есть дрожь, слабость или головокружение?');
+    expect(uiSource).toContain('stableHungerPrompt ? h(StableHungerReasonPrompt');
+    expect(uiSource).toContain('}) : h(MissingPrompt');
+    expect(uiSource).toContain('.hes-prompt.is-empty{opacity:0;background:transparent;border-color:transparent;pointer-events:none}');
+    expect(uiSource).toContain('const liveHungerLevel = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerVisual ?? activeDraft.hungerLevel)');
+    expect(uiSource).toContain('hungerLevel: liveHungerLevel');
+    expect(uiSource).toContain('const requiredInputs = isPastDraft ? [] : getRequiredInputs(previewDecision, draftForDecision)');
+    expect(uiSource).toContain("'stable:' + stableHungerPrompt.type + ':' + (stableHungerPrompt.question || '')");
+    expect(uiSource).not.toContain("'stable:' + stableHungerPrompt.type + ':' + stableHungerPrompt.currentLevel");
+    expect(uiSource).toContain('animation:hesPromptFade .24s ease both');
+    expect(uiSource).toContain('.hes-slider__change{grid-column:1/-1;grid-row:3;justify-self:center;max-width:270px;min-height:38px');
     expect(uiSource).toContain('MealEffectPrompt');
   });
 

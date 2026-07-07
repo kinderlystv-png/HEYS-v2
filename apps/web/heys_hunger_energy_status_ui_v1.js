@@ -108,11 +108,11 @@
   const LOW_HUNGER_PASSIVE_MAX_KCAL = 35;
   const LOW_HUNGER_DAILY_PROMPT_LIMIT_OPTIONS = [0, 1, 2, 3, 5];
 
-  const HIGH_HUNGER_REASON_OPTIONS = [
-    { id: 'missed_meal', label: 'пропустил еду' },
-    { id: 'stress', label: 'стресс' },
-    { id: 'low_sleep', label: 'мало сна' },
-    { id: 'workout', label: 'тренировка' }
+  const STABLE_HUNGER_LONG_MIN = 90;
+  const STABLE_HUNGER_MAX_DELTA = 1;
+  const STABLE_HUNGER_REASON_OPTIONS = [
+    { id: 'busy_rush', label: 'На суете' },
+    { id: 'recent_food', label: 'Еда держит' }
   ];
 
   const MEAL_EFFECT_COPY = {
@@ -1995,6 +1995,46 @@
     return 'stable';
   }
 
+  function buildStableHungerPrompt(input, context) {
+    const previous = Number(context?.previousHungerLevel);
+    const current = Number(input?.hungerLevel);
+    const minutesSincePrevious = Number(context?.minutesSinceLastHungerEvent);
+    if (!Number.isFinite(current)) return null;
+    const nowTs = Date.parse(input?.now || context?.now || nowIso());
+    const stableAnchor = Number.isFinite(nowTs) ? readEvents()
+      .map((row) => ({
+        row,
+        t: Date.parse(row.recordedAt || row.createdAt || ''),
+        hungerLevel: Number(row.hungerLevel ?? row.input?.hungerLevel)
+      }))
+      .filter((entry) => (
+        !isQaEvent(entry.row) &&
+        Number.isFinite(entry.t) &&
+        entry.t <= nowTs &&
+        nowTs - entry.t <= TREND_WINDOW_MIN * 60000 &&
+        Number.isFinite(entry.hungerLevel) &&
+        Math.abs(current - entry.hungerLevel) <= STABLE_HUNGER_MAX_DELTA
+      ))
+      .sort((a, b) => a.t - b.t)[0] : null;
+    const anchorLevel = Number.isFinite(stableAnchor?.hungerLevel) ? stableAnchor.hungerLevel : previous;
+    const anchorMinutes = Number.isFinite(stableAnchor?.t)
+      ? Math.round((nowTs - stableAnchor.t) / 60000)
+      : minutesSincePrevious;
+    if (!Number.isFinite(anchorLevel) || !Number.isFinite(anchorMinutes)) return null;
+    if (anchorMinutes < STABLE_HUNGER_LONG_MIN || anchorMinutes > TREND_WINDOW_MIN) return null;
+    if (Math.abs(current - anchorLevel) > STABLE_HUNGER_MAX_DELTA) return null;
+    return {
+      type: 'stable_hunger_long',
+      question: 'Почему голод не растёт?',
+      previousLevel: anchorLevel,
+      currentLevel: current,
+      delta: current - anchorLevel,
+      minutesSincePrevious: Math.round(anchorMinutes),
+      anchorEventId: stableAnchor?.row?.id || null,
+      thresholdMin: STABLE_HUNGER_LONG_MIN
+    };
+  }
+
   function compactDecision(decision) {
     return {
       statusLabel: decision.statusLabel,
@@ -2149,10 +2189,10 @@
       title = '';
       options = [];
     } else if (missing.includes('safetyFlags')) {
-      title = 'Есть дрожь, слабость или головокружение?';
+      title = 'Что могло усилить голод?';
       options = [
-        ['Нет', { safetyFlags: [] }],
-        ['Есть', { safetyFlags: [HEYS.HungerEnergyStatus.SAFETY_FLAGS.shaky] }]
+        ['Пропустил еду', { safetyFlags: [], hungerReasons: ['missed_meal'] }],
+        ['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }]
       ];
     } else if (missing.includes('controlLevel')) {
       title = 'Могу выбрать еду спокойно?';
@@ -2946,15 +2986,16 @@
     );
   }
 
-  function HungerReasonPresets({ value, onToggle }) {
+  function StableHungerReasonPrompt({ prompt, value, onToggle }) {
+    if (!prompt) return null;
     const selected = new Set(safeArray(value));
-    return h('div', { className: 'hes-reason-presets' },
-      h('span', { className: 'hes-reason-presets__title' }, 'Что могло усилить?'),
-      h('div', { className: 'hes-reason-presets__chips' },
-        HIGH_HUNGER_REASON_OPTIONS.map((option) => h('button', {
+    return h('div', { className: 'hes-prompt is-visible' },
+      h('div', { className: 'hes-prompt__title' }, prompt.question || 'Почему голод не растёт?'),
+      h('div', { className: 'hes-prompt__chips' },
+        STABLE_HUNGER_REASON_OPTIONS.map((option) => h('button', {
           key: option.id,
           type: 'button',
-          className: 'hes-reason-chip' + (selected.has(option.id) ? ' is-selected' : ''),
+          className: 'hes-chip' + (selected.has(option.id) ? ' is-selected' : ''),
           onClick: () => onToggle?.(option.id),
           'aria-pressed': selected.has(option.id)
         }, option.label))
@@ -3698,12 +3739,14 @@
     );
     const selectedAssessmentAt = formatLocalDateTime(selectedAssessmentTime) || nowIso();
     const lowHungerMealReview = context.lowHungerMealReview || null;
+    const liveHungerLevel = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerVisual ?? activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+    const draftForDecision = { ...activeDraft, hungerLevel: liveHungerLevel };
     const input = {
       now: selectedAssessmentAt,
-      hungerLevel: activeDraft.hungerLevel,
+      hungerLevel: liveHungerLevel,
       controlLevel: activeDraft.controlLevel,
       cravingLevel: activeDraft.cravingLevel,
-      hungerTrend: resolveHungerTrend(activeDraft.hungerLevel, context),
+      hungerTrend: resolveHungerTrend(liveHungerLevel, context),
       safetyFlags: activeDraft.safetyFlags,
       hungerReasons: safeArray(activeDraft.hungerReasons),
       mealEffectAnswer: activeDraft.mealEffectAnswer || null
@@ -3716,8 +3759,12 @@
     const isLowHungerResolved = !!lowMealReasonResult && !result && !isPastDraft;
     const isLowHungerStep = isLowHungerClarification || isLowHungerResolved;
     const isStressCalorieFollowUp = !!state.stressCalorieFollowUp && !result && !isLowHungerStep;
-    const requiredInputs = isDragging || isPastDraft ? [] : getRequiredInputs(previewDecision, activeDraft);
+    const stableHungerPrompt = isPastDraft ? null : buildStableHungerPrompt(input, context);
+    const requiredInputs = isPastDraft ? [] : getRequiredInputs(previewDecision, draftForDecision);
     const hasRequiredInputs = requiredInputs.length > 0;
+    const promptKey = stableHungerPrompt
+      ? 'stable:' + stableHungerPrompt.type + ':' + (stableHungerPrompt.question || '')
+      : 'missing:' + requiredInputs.join('|');
     const activeDecision = result?.decision || previewDecision;
     const modalMode = (isLowHungerStep || isStressCalorieFollowUp) ? 'clarification' : result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
     const actionTone = getHungerTone(activeDraft.hungerVisual ?? activeDraft.hungerLevel);
@@ -3777,17 +3824,19 @@
         ...input,
         safetyFlags: Array.isArray(activeDraft.safetyFlags) ? activeDraft.safetyFlags : [],
         hungerReasons: safeArray(activeDraft.hungerReasons),
+        stableHungerReasons: stableHungerPrompt ? safeArray(activeDraft.stableHungerReasons) : [],
+        stableHungerPrompt,
         mealEffectAnswer: activeDraft.mealEffectAnswer || null
       };
     }
 
-    function toggleHungerReason(reason) {
+    function toggleStableHungerReason(reason) {
       if (!reason) return;
-      const current = safeArray(activeDraft.hungerReasons);
+      const current = safeArray(activeDraft.stableHungerReasons);
       const next = current.includes(reason)
         ? current.filter((item) => item !== reason)
         : current.concat(reason);
-      patchDraft({ hungerReasons: next });
+      patchDraft({ stableHungerReasons: next });
     }
 
     function startEditPoint(point) {
@@ -4154,6 +4203,8 @@
           previousHungerLevel: context.previousHungerLevel ?? null,
           previousHungerEventAt: context.previousHungerEventAt || null,
           minutesSinceLastHungerEvent: context.minutesSinceLastHungerEvent ?? null,
+          stableHungerPrompt: finalInput.stableHungerPrompt || null,
+          stableHungerReasons: safeArray(finalInput.stableHungerReasons),
           sleepQuality: context.sleepQuality || null,
           stressLevel: context.stressLevel || null,
           knownReboundPattern: !!context.knownReboundPattern,
@@ -4328,12 +4379,14 @@
             onDragStart: () => setIsDragging(true),
             onDragEnd: () => setIsDragging(false)
           }),
-          !isPastDraft && Math.round(Number(activeDraft.hungerLevel) || 0) >= 7 && h(HungerReasonPresets, {
-            value: activeDraft.hungerReasons,
-            onToggle: toggleHungerReason
-          }),
-          h(MissingPrompt, {
-            missingInputs: isDragging ? [] : requiredInputs,
+          stableHungerPrompt ? h(StableHungerReasonPrompt, {
+            key: promptKey,
+            prompt: stableHungerPrompt,
+            value: activeDraft.stableHungerReasons,
+            onToggle: toggleStableHungerReason
+          }) : h(MissingPrompt, {
+            key: promptKey,
+            missingInputs: requiredInputs,
             onPatch: patchDraft
           }),
           isPastDraft && h('div', { className: 'hes-edit-note' },
@@ -4517,18 +4570,19 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-input .hes-slider{min-height:0;border:0;background:transparent;padding:6px 2px 2px;display:grid;grid-template-columns:1fr 68px 1fr;grid-template-rows:auto auto auto auto;column-gap:0;row-gap:7px;align-items:center;justify-content:center}
 .hes-slider__value{grid-column:1/-1;grid-row:1;font-size:58px;font-weight:900;color:#434587;line-height:.92;text-align:center}
 .hes-slider__status{grid-column:1/-1;grid-row:2;text-align:center;font-size:15px;font-weight:850;line-height:1.2;color:#475569}
-.hes-slider__change{grid-column:1/-1;grid-row:3;justify-self:center;max-width:270px;border:1px solid rgba(67,69,135,.1);border-radius:999px;background:rgba(248,251,255,.82);color:#64748b;font-size:11px;font-weight:850;line-height:1.25;text-align:center;padding:5px 9px}
+.hes-slider__change{grid-column:1/-1;grid-row:3;justify-self:center;max-width:270px;min-height:38px;box-sizing:border-box;border:1px solid rgba(67,69,135,.1);border-radius:999px;background:rgba(248,251,255,.82);color:#64748b;font-size:11px;font-weight:850;line-height:1.25;text-align:center;padding:5px 9px;display:flex;align-items:center;justify-content:center}
 .hes-slider__control{grid-column:2;grid-row:4;position:relative;width:68px;height:205px;justify-self:center;margin-top:18px}
 .hes-slider__track{position:absolute;inset:0}
 .hes-slider__track::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;transform:translateX(-50%);border-radius:999px;background:rgba(67,69,135,.10)}
 .hes-slider__fill{position:absolute;left:0;bottom:0;width:100%;height:var(--hes-fill-px,102px);border-radius:999px;background:linear-gradient(180deg,var(--hes-fill-color-soft,#6b75a4) 0%,var(--hes-fill-color,#434587) 100%)}
 .hes-slider__thumb{position:absolute;left:50%;bottom:calc(var(--hes-fill-px,102px) - 23px);width:46px;height:46px;transform:translateX(-50%);border-radius:50%;background:linear-gradient(135deg,var(--hes-fill-color-soft,#6b75a4),var(--hes-fill-color,#434587));border:5px solid #fff;box-shadow:0 8px 22px var(--hes-fill-shadow,rgba(67,69,135,.28))}
 .hes-slider__range{position:absolute;left:50%;top:-23px;height:251px;width:68px;transform:translateX(-50%);writing-mode:vertical-lr;direction:rtl;opacity:0;cursor:pointer;touch-action:none}
-.hes-prompt{height:112px;min-height:112px;box-sizing:border-box;border-radius:16px;background:#fff7ed;border:1px solid rgba(234,88,12,.16);padding:11px;opacity:1;transition:opacity .22s ease,background-color .22s ease,border-color .22s ease}
+.hes-prompt{height:112px;min-height:112px;box-sizing:border-box;border-radius:16px;background:#fff7ed;border:1px solid rgba(234,88,12,.16);padding:11px;opacity:1;transition:opacity .22s ease,background-color .22s ease,border-color .22s ease;animation:hesPromptFade .24s ease both}
 .hes-prompt.is-empty{opacity:0;background:transparent;border-color:transparent;pointer-events:none}
 .hes-prompt.is-visible{opacity:1}
 .hes-prompt__title{font-size:14px;font-weight:850;line-height:1.25;color:#7c2d12;margin-bottom:8px}
 .hes-chip{min-height:52px;border-radius:14px;font-size:13px}
+@keyframes hesPromptFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .hes-low-meal{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:9px}
 .hes-low-meal__title{font-size:14px;font-weight:900;line-height:1.2;color:#434587}
 .hes-low-meal__text{font-size:12px;font-weight:750;line-height:1.35;color:#475569}
@@ -4612,6 +4666,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-edit-note span{text-align:right}
 .hes-reason-presets,.hes-meal-effect{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;flex-direction:column;gap:8px;color:#475569}
 .hes-reason-presets__title,.hes-meal-effect strong{font-size:12px;font-weight:900;color:#172033;line-height:1.2}
+.hes-reason-presets__note{font-size:11px;font-weight:800;line-height:1.25;color:#64748b}
 .hes-reason-presets__chips,.hes-meal-effect__choices{display:flex;flex-wrap:wrap;gap:6px}
 .hes-reason-chip,.hes-meal-effect__chip{min-height:30px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#fff;color:#64748b;padding:0 10px;font-size:11px;font-weight:850;cursor:pointer}
 .hes-reason-chip.is-selected,.hes-meal-effect__chip.is-selected{background:#434587;color:#fff;border-color:#434587;box-shadow:0 6px 14px rgba(67,69,135,.16)}
@@ -4743,6 +4798,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-edit-note strong{color:#c7d2fe}
 [data-theme="dark"] .hes-reason-presets,[data-theme="dark"] .hes-meal-effect{background:#172033;border-color:rgba(226,236,242,.12);color:#cbd5e1}
 [data-theme="dark"] .hes-reason-presets__title,[data-theme="dark"] .hes-meal-effect strong{color:#f8fafc}
+[data-theme="dark"] .hes-reason-presets__note{color:#94a3b8}
 [data-theme="dark"] .hes-reason-chip,[data-theme="dark"] .hes-meal-effect__chip{background:#111827;color:#cbd5e1;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-reason-chip.is-selected,[data-theme="dark"] .hes-meal-effect__chip.is-selected{background:#c7d2fe;color:#172033;border-color:#c7d2fe}
 [data-theme="dark"] .hes-pattern-insight,[data-theme="dark"] .hes-settings__top,[data-theme="dark"] .hes-feature-row,[data-theme="dark"] .hes-limit-row{background:#172033;border-color:rgba(226,236,242,.12);color:#cbd5e1}
@@ -4839,6 +4895,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     buildSparkTimeline,
     analyzeMealForLowHungerReview,
     buildMealMarkerQuality,
+    buildStableHungerPrompt,
     buildLowHungerMealReview,
     getLowHungerAnalyticsTags,
     getLowHungerSuggestionConfidence,
