@@ -325,6 +325,97 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(spark.lineStops[1].color).toBe(spark.hungerPoints[0].color);
   });
 
+  it('compacts nearby similar hunger points into small spark dots', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([
+      {
+        id: 'nearby-hunger-1',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 3
+      },
+      {
+        id: 'nearby-hunger-2',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:05:00',
+        recordedAt: '2026-07-05T12:05:00',
+        hungerLevel: 4
+      }
+    ]);
+
+    const spark = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: { date: '2026-07-05', meals: [] },
+      draft: { hungerLevel: 8 }
+    });
+
+    expect(spark.hungerPoints[0]).toMatchObject({ id: 'nearby-hunger-1', isCompactClusterPoint: true });
+    expect(spark.hungerPoints[1]).toMatchObject({ id: 'nearby-hunger-2', isCompactClusterPoint: true });
+    expect(spark.hungerPoints.at(-1).isCompactClusterPoint).toBeUndefined();
+  });
+
+  it('colors meal markers by hunger context and meal quality', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([
+      {
+        id: 'low-before-sweet',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 1
+      }
+    ]);
+
+    const lowStressSpark = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: {
+        date: '2026-07-05',
+        meals: [{
+          time: '12:30',
+          items: [{ name: 'Шоколадка после созвона', grams: 40, kcal100: 530, protein100: 6, carbs100: 58, simple100: 52, fat100: 31, fiber100: 2, harm: 7 }]
+        }]
+      },
+      draft: { hungerLevel: 1 }
+    });
+
+    expect(lowStressSpark.meals[0].quality).toMatchObject({
+      tone: 'attention',
+      lowBefore: true,
+      lowAfter: true
+    });
+
+    Storage.writeEvents([
+      {
+        id: 'high-before-meal',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 8
+      }
+    ]);
+
+    const goodMealSpark = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: {
+        date: '2026-07-05',
+        meals: [{
+          time: '12:30',
+          items: [
+            { name: 'Курица', grams: 140, kcal100: 165, protein100: 31, carbs100: 0, fat100: 4, harm: 1 },
+            { name: 'Гречка с овощами', grams: 180, kcal100: 110, protein100: 4, carbs100: 20, complex100: 18, simple100: 1, fat100: 1, fiber100: 4, harm: 1 }
+          ]
+        }]
+      },
+      draft: { hungerLevel: 4 }
+    });
+
+    expect(goodMealSpark.meals[0].quality).toMatchObject({
+      tone: 'good',
+      beforeLevel: 8
+    });
+  });
+
   it('asks for context when meaningful food appears after low hunger', () => {
     vi.setSystemTime(new Date('2026-07-05T13:20:00'));
     Storage.writeEvents([
@@ -363,6 +454,53 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(gentlePlan.replacement.detail).toContain('кофе без сиропа');
     expect(gentlePlan.experiment.detail).toContain('3 дня');
     expect(gentlePlan.quietCue).toBeNull();
+  });
+
+  it('tracks stress calorie cue as a separate low-hunger pattern', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([
+      {
+        id: 'low-before-sweet',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 1
+      }
+    ]);
+
+    const review = Adapter.buildLowHungerMealReview('2026-07-05', {
+      date: '2026-07-05',
+      meals: [{
+        time: '12:45',
+        items: [{ name: 'Конфета после созвона', grams: 30, kcal100: 450, carbs100: 70, fat100: 18, protein100: 4 }]
+      }]
+    });
+
+    expect(Adapter.getLowHungerSavedSummary('stress_calorie_cue', review)).toContain('стрессовый добор');
+    expect(Adapter.buildStressCalorieLink(review)).toMatchObject({
+      choiceType: 'sweet',
+      choiceLabel: 'сладкое',
+      hungerLevelBeforeMeal: 1
+    });
+    expect(Adapter.getLowHungerAnalyticsTags('stress_calorie_cue', review)).toContain('stress_calorie_cue');
+    expect(Adapter.getLowHungerNextStep('stress_calorie_cue', review).title).toContain('напряжение');
+    expect(Adapter.getLowHungerGentlePlan('stress_calorie_cue', review).experiment.detail).toContain('стресс');
+    expect(Adapter.buildLowHungerHabitPattern('stress_calorie_cue', review)).toMatchObject({
+      type: 'low_hunger_stress_calorie_cue',
+      reason: 'stress_calorie_cue',
+      mealIntent: 'stress_cue',
+      choiceType: 'sweet',
+      stressCalorieLink: { choiceType: 'sweet' }
+    });
+    const curatorCard = Adapter.buildLowHungerCuratorCard('stress_calorie_cue', review);
+    expect(curatorCard).toMatchObject({
+      title: 'Стрессовый добор при низком голоде',
+      reason: 'stress_calorie_cue',
+      mealIntent: 'stress_cue',
+      choiceType: 'sweet',
+      stressCalorieLink: { choiceLabel: 'сладкое' }
+    });
+    expect(curatorCard.summary).toContain('Стресс/нервозность → сладкое');
   });
 
   it('does not ask for low-hunger context for zero drinks', () => {

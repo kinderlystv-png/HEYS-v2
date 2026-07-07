@@ -18,6 +18,7 @@
   const HUNGER_TIMELINE_LONG_PRESS_MS = 520;
   const MEAL_EFFECT_FOLLOWUP_KEY = 'heys_hunger_meal_effect_followups_v1';
   const MEAL_EFFECT_DELAY_MIN = 60;
+  const STRESS_CALORIE_FOLLOWUP_DELAY_MIN = 60;
   const LOW_HUNGER_MEAL_MAX_LEVEL = 2;
   const LOW_HUNGER_MEAL_WINDOW_MIN = 240;
   const LOW_HUNGER_MEAL_MIN_KCAL = 15;
@@ -86,6 +87,7 @@
 
   const LOW_HUNGER_REASON_COPY = {
     habit_snack: 'Перекус или привычка',
+    stress_calorie_cue: 'Стресс или нервозность',
     caffeine_additions: 'Кофе или напиток с добавками',
     alcohol_context: 'Алкоголь или социальный контекст',
     cooking_taste: 'Пробовал еду при готовке',
@@ -94,6 +96,7 @@
 
   const LOW_HUNGER_REASON_SHORT_COPY = {
     habit_snack: 'перекус или привычка',
+    stress_calorie_cue: 'стресс или нервозность',
     caffeine_additions: 'кофе с добавками',
     alcohol_context: 'социальный контекст',
     cooking_taste: 'проба при готовке',
@@ -116,6 +119,12 @@
     lower: 'снизился',
     same: 'без изменений',
     higher: 'вырос'
+  };
+
+  const STRESS_CALORIE_OUTCOME_COPY = {
+    calmer: 'стало спокойнее',
+    wanted_more: 'потянуло ещё',
+    no_change: 'без изменений'
   };
 
   const FEATURE_SETTINGS_META = [
@@ -548,11 +557,19 @@
       return;
     }
     updateMealEffectFollowUp(due.id, { status: 'shown', shownAt: nowIso() });
-    show({
-      source: 'hunger-meal-effect-follow-up',
-      date: localDateKeyFromTs(due.mealAt || now),
-      mealEffectFollowUp: due
-    });
+    if (due.type === 'stress_calorie_cue') {
+      show({
+        source: 'hunger-stress-calorie-follow-up',
+        date: localDateKeyFromTs(due.mealAt || now),
+        stressCalorieFollowUp: due
+      });
+    } else {
+      show({
+        source: 'hunger-meal-effect-follow-up',
+        date: localDateKeyFromTs(due.mealAt || now),
+        mealEffectFollowUp: due
+      });
+    }
     planNextMealEffectTimer();
   }
 
@@ -573,6 +590,31 @@
       mealName: meal.name || null,
       mealAt,
       dueAt,
+      createdAt: nowIso()
+    };
+    writeMealEffectFollowUps(rows.concat(row));
+    planNextMealEffectTimer();
+    return row;
+  }
+
+  function scheduleStressCalorieFollowUp(eventRow, review) {
+    if (!eventRow?.id || !readHungerFeatureSettings().mealEffectReview) return null;
+    const mealTs = Date.parse(review?.mealAt || '');
+    const baseTs = Number.isFinite(mealTs) ? Math.max(Date.now(), mealTs) : Date.now();
+    const dueAt = formatLocalDateTime(baseTs + STRESS_CALORIE_FOLLOWUP_DELAY_MIN * 60000);
+    const id = 'stress-calorie:' + eventRow.id;
+    const stressCalorieLink = buildStressCalorieLink(review);
+    const rows = readMealEffectFollowUps().filter((row) => row?.id !== id).slice(-20);
+    const row = {
+      id,
+      type: 'stress_calorie_cue',
+      status: 'pending',
+      source: 'hunger-low-meal-review',
+      lowHungerEventId: eventRow.id,
+      hungerEventId: eventRow.hungerEventId || null,
+      mealAt: review?.mealAt || null,
+      dueAt,
+      stressCalorieLink,
       createdAt: nowIso()
     };
     writeMealEffectFollowUps(rows.concat(row));
@@ -831,6 +873,7 @@
           type: 'meal',
           t,
           at,
+          meal,
           label: 'еда ' + formatShortTime(t)
         });
       });
@@ -878,12 +921,25 @@
     const kcalDirect = Number(item?.kcal ?? item?.calories);
     const kcal100 = Number(product.kcal100 ?? product.kcal ?? product.calories100);
     const protein100 = Number(product.protein100 ?? product.prot100);
-    const carbs100 = Number(product.carbs100);
-    const fat100 = Number(product.fat100);
+    const simple100 = Number(product.simple100);
+    const complex100 = Number(product.complex100);
+    const carbs100 = Number(product.carbs100 ?? ((Number.isFinite(simple100) ? simple100 : 0) + (Number.isFinite(complex100) ? complex100 : 0)));
+    const bad100 = Number(product.badFat100 ?? product.badfat100);
+    const good100 = Number(product.goodFat100 ?? product.goodfat100);
+    const trans100 = Number(product.trans100);
+    const fat100 = Number(product.fat100 ?? ((Number.isFinite(bad100) ? bad100 : 0) + (Number.isFinite(good100) ? good100 : 0) + (Number.isFinite(trans100) ? trans100 : 0)));
+    const fiber100 = Number(product.fiber100);
+    const harm = HEYS.models?.normalizeHarm?.(product) ?? Number(product.harm ?? product.harmScore ?? product.harm100);
     const mult = grams > 0 ? grams / 100 : 0;
     const protein = Number.isFinite(protein100) ? protein100 * mult : 0;
     const carbs = Number.isFinite(carbs100) ? carbs100 * mult : 0;
     const fat = Number.isFinite(fat100) ? fat100 * mult : 0;
+    const simple = Number.isFinite(simple100) ? simple100 * mult : 0;
+    const complex = Number.isFinite(complex100) ? complex100 * mult : Math.max(0, carbs - simple);
+    const fiber = Number.isFinite(fiber100) ? fiber100 * mult : 0;
+    const bad = Number.isFinite(bad100) ? bad100 * mult : 0;
+    const good = Number.isFinite(good100) ? good100 * mult : 0;
+    const trans = Number.isFinite(trans100) ? trans100 * mult : 0;
     const macroKcal = protein * 3 + carbs * 4 + fat * 9;
     return {
       kcal: Number.isFinite(kcalDirect) && kcalDirect > 0
@@ -894,6 +950,13 @@
       protein,
       carbs,
       fat,
+      simple,
+      complex,
+      fiber,
+      bad,
+      good,
+      trans,
+      harm: Number.isFinite(Number(harm)) ? Number(harm) : null,
       grams
     };
   }
@@ -974,6 +1037,138 @@
       names: names.slice(0, 4),
       signature,
       patternKey: lowHungerPatternKey(category, signature, joined)
+    };
+  }
+
+  function mealNutrientTotals(meal) {
+    return safeArray(meal?.items).reduce((sum, item) => {
+      const next = mealItemNutrients(item);
+      sum.kcal += next.kcal || 0;
+      sum.protein += next.protein || 0;
+      sum.carbs += next.carbs || 0;
+      sum.fat += next.fat || 0;
+      sum.simple += next.simple || 0;
+      sum.complex += next.complex || 0;
+      sum.fiber += next.fiber || 0;
+      sum.bad += next.bad || 0;
+      sum.good += next.good || 0;
+      sum.trans += next.trans || 0;
+      sum.grams += next.grams || 0;
+      if (Number.isFinite(Number(next.harm)) && next.grams > 0) {
+        sum.harmWeighted += Number(next.harm) * next.grams;
+        sum.harmGrams += next.grams;
+      }
+      return sum;
+    }, {
+      kcal: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      simple: 0,
+      complex: 0,
+      fiber: 0,
+      bad: 0,
+      good: 0,
+      trans: 0,
+      grams: 0,
+      harmWeighted: 0,
+      harmGrams: 0
+    });
+  }
+
+  function findHungerAroundMeal(mealT, hungerPoints) {
+    const points = safeArray(hungerPoints)
+      .filter((point) => Number.isFinite(Number(point?.t)) && Number.isFinite(Number(point?.level)))
+      .sort((a, b) => a.t - b.t);
+    const before = points
+      .filter((point) => point.t <= mealT && mealT - point.t <= LOW_HUNGER_MEAL_WINDOW_MIN * 60 * 1000)
+      .sort((a, b) => b.t - a.t)[0] || null;
+    const after = points
+      .filter((point) => point.t > mealT && point.t - mealT <= LOW_HUNGER_MEAL_WINDOW_MIN * 60 * 1000)
+      .sort((a, b) => a.t - b.t)[0] || null;
+    return { before, after };
+  }
+
+  function findLowHungerMealReasonByMeal(mealAt, meal) {
+    const signature = mealSignature(meal);
+    return readEvents().slice().reverse().find((row) => (
+      row?.eventType === 'low_hunger_meal_reason' &&
+      row.mealAt === mealAt &&
+      (!signature || !row.mealSignature || row.mealSignature === signature)
+    )) || null;
+  }
+
+  function mealQualityToneFromScore(score) {
+    if (score >= 74) return 'good';
+    if (score >= 58) return 'moderate';
+    if (score >= 42) return 'mixed';
+    return 'attention';
+  }
+
+  function buildMealMarkerQuality(mealMarker, hungerPoints) {
+    const meal = mealMarker?.meal;
+    if (!meal) return { tone: 'mixed', score: 50, label: 'еда' };
+    const mealAt = mealMarker.at || formatLocalDateTime(mealMarker.t);
+    const totals = mealNutrientTotals(meal);
+    const analysis = analyzeMealForLowHungerReview(meal);
+    const around = findHungerAroundMeal(mealMarker.t, hungerPoints);
+    const beforeLevel = Number(around.before?.level);
+    const afterLevel = Number(around.after?.level);
+    const lowBefore = Number.isFinite(beforeLevel) && beforeLevel <= LOW_HUNGER_MEAL_MAX_LEVEL;
+    const lowAfter = Number.isFinite(afterLevel) && afterLevel <= LOW_HUNGER_MEAL_MAX_LEVEL;
+    const highBefore = Number.isFinite(beforeLevel) && beforeLevel >= 6;
+    const reasonRow = findLowHungerMealReasonByMeal(mealAt, meal);
+    const reason = reasonRow?.reason || null;
+    const stressOrHabitReason = ['stress_calorie_cue', 'habit_snack', 'caffeine_additions', 'alcohol_context'].includes(reason);
+    const impulsiveCategory = ['alcohol', 'caffeine_additions', 'near_zero_drink', 'snack'].includes(analysis.category);
+    const names = normalizeText(safeArray(analysis.names).join(' '));
+    const sweetCue = /(конфет|шокол|торт|пирож|печень|слад|candy|cake|sweet)/i.test(names);
+    const avgHarm = totals.harmGrams > 0 ? totals.harmWeighted / totals.harmGrams : 0;
+    const simpleRatio = totals.carbs > 0 ? totals.simple / totals.carbs : 0;
+    const goodFatRatio = totals.fat > 0 ? totals.good / totals.fat : 0;
+    let score = 55;
+    if (highBefore) score += 18;
+    else if (Number.isFinite(beforeLevel) && beforeLevel >= 4) score += 8;
+    else if (lowBefore) score -= 25;
+    if (Number.isFinite(afterLevel) && afterLevel >= 4) score += 4;
+    if (lowBefore && lowAfter) score -= 22;
+    if (stressOrHabitReason) score -= 26;
+    if (impulsiveCategory || sweetCue) score -= sweetCue || analysis.category === 'alcohol' ? 16 : 10;
+    if (totals.protein >= 20) score += 12;
+    else if (totals.protein >= 10) score += 6;
+    if (totals.fiber >= 5) score += 8;
+    else if (totals.fiber >= 2) score += 4;
+    if (simpleRatio > 0.55) score -= 12;
+    else if (simpleRatio > 0.35) score -= 6;
+    if (goodFatRatio >= 0.45 && totals.fat >= 5) score += 4;
+    if (avgHarm > 6) score -= 16;
+    else if (avgHarm > 4) score -= 8;
+    if (totals.kcal < LOW_HUNGER_MEAL_MIN_KCAL) score = Math.min(score, 45);
+    const finalScore = Math.max(0, Math.min(100, Math.round(score)));
+    const tone = stressOrHabitReason || (lowBefore && (lowAfter || impulsiveCategory || sweetCue))
+      ? 'attention'
+      : mealQualityToneFromScore(finalScore);
+    const label = tone === 'good'
+      ? 'хорошая еда'
+      : tone === 'moderate'
+        ? 'нормальная еда'
+        : tone === 'mixed'
+          ? 'средняя еда'
+          : 'еда для разбора';
+    return {
+      tone,
+      score: finalScore,
+      label,
+      beforeLevel: Number.isFinite(beforeLevel) ? beforeLevel : null,
+      afterLevel: Number.isFinite(afterLevel) ? afterLevel : null,
+      lowBefore,
+      lowAfter,
+      reason,
+      category: analysis.category,
+      kcal: Math.round(totals.kcal),
+      protein: Math.round(totals.protein),
+      fiber: Math.round(totals.fiber * 10) / 10,
+      avgHarm: Math.round(avgHarm * 10) / 10
     };
   }
 
@@ -1089,6 +1284,13 @@
 
   function getLowHungerRitualProfile(reason, review) {
     const category = review?.analysis?.category || '';
+    if (reason === 'stress_calorie_cue') {
+      return {
+        type: 'stress_cue',
+        label: 'стрессовый добор',
+        detail: 'Похоже, еда или напиток появились не из голода, а как реакция на напряжение.'
+      };
+    }
     if (reason === 'caffeine_additions' || category === 'near_zero_drink' || category === 'caffeine_additions') {
       return {
         type: 'ritual',
@@ -1129,9 +1331,40 @@
   function getLowHungerSavedSummary(reason, review) {
     if (reason === 'one_off') return 'Запомнили: разовый контекст при низком голоде.';
     if (reason === 'cooking_taste') return 'Запомнили: проба еды при готовке.';
+    if (reason === 'stress_calorie_cue') return 'Запомнили: стрессовый добор при низком голоде.';
     const profile = getLowHungerRitualProfile(reason, review);
     if (profile?.type === 'ritual') return 'Запомнили: ' + profile.label + ' при низком голоде.';
     return 'Запомнили: еда при низком голоде.';
+  }
+
+  function getStressCalorieChoice(review) {
+    const category = review?.analysis?.category || 'unknown';
+    const names = safeArray(review?.analysis?.names);
+    const joined = normalizeText(names.join(' '));
+    if (category === 'alcohol' || /(пиво|beer|вино|wine|сидр|cider|алког)/i.test(joined)) {
+      return { type: 'alcohol', label: 'алкоголь', names };
+    }
+    if (category === 'caffeine_additions' || category === 'near_zero_drink' || /(кофе|латте|капуч|раф|сироп|coffee)/i.test(joined)) {
+      return { type: 'caffeine_additions', label: 'кофе или напиток с добавками', names };
+    }
+    if (/(конфет|шокол|торт|пирож|печень|слад|candy|cake|sweet)/i.test(joined)) {
+      return { type: 'sweet', label: 'сладкое', names };
+    }
+    if (category === 'snack') return { type: 'snack', label: 'перекус', names };
+    return { type: category === 'food' ? 'food' : 'other_calorie', label: 'калорийный выбор', names };
+  }
+
+  function buildStressCalorieLink(review) {
+    const choice = getStressCalorieChoice(review);
+    return {
+      trigger: 'stress_or_nervousness',
+      choiceType: choice.type,
+      choiceLabel: choice.label,
+      mealNames: choice.names.slice(0, 3),
+      hungerLevelBeforeMeal: review?.hungerLevel ?? null,
+      mealAt: review?.mealAt || null,
+      timeBucket: timeBucketFromDateTime(review?.mealAt)
+    };
   }
 
   function buildLowHungerWeeklySummary(extraReview, extraReason, settings) {
@@ -1188,7 +1421,7 @@
     if (!weekly || weekly.total < 3) return null;
     const digestSuffix = weekly.digestLabel ? ' ' + weekly.digestLabel : '';
     return {
-      title: 'Фокус недели',
+      title: weekly.topReason === 'stress_calorie_cue' ? 'Стрессовый добор недели' : 'Фокус недели',
       summary: 'Чаще еда при низком голоде: ' + weekly.topReasonLabel + ', ' + weekly.topBucketLabel + '.' + digestSuffix,
       reason: weekly.topReason,
       timeBucket: weekly.topBucket,
@@ -1223,6 +1456,14 @@
       return {
         title: 'Перед похожим временем',
         detail: 'Если ' + when + ' снова появится перекус, начать с воды или короткой паузы.',
+        timeBucket: bucket,
+        mode: 'diary_inline'
+      };
+    }
+    if (reason === 'stress_calorie_cue') {
+      return {
+        title: 'Перед похожим напряжением',
+        detail: 'Если ' + when + ' снова тянет на сладкое, кофе с добавками или алкоголь без голода, сначала отметить напряжение и сделать короткую паузу.',
         timeBucket: bucket,
         mode: 'diary_inline'
       };
@@ -1442,6 +1683,18 @@
     return rows;
   }
 
+  function markCompactSparkPoints(points) {
+    const rows = safeArray(points);
+    return rows.map((point, index) => {
+      const hasNearbySimilar = rows.some((other, otherIndex) => (
+        otherIndex !== index &&
+        Math.abs(Number(other.x) - Number(point.x)) <= 20 &&
+        Math.abs(Number(other.level) - Number(point.level)) <= 1
+      ));
+      return hasNearbySimilar ? { ...point, isCompactClusterPoint: true } : point;
+    });
+  }
+
   function buildMicroForecastPoint(visibleHunger, preview, lastMeal, now) {
     if (!preview || !Number.isFinite(Number(preview.level))) return null;
     const actual = safeArray(visibleHunger)
@@ -1475,8 +1728,9 @@
     return Math.max(1, Math.min(10, n));
   }
 
-  function buildSparkTimeline({ date, day, draft, editTarget, backfillTarget, settings }) {
-    const now = Date.now();
+  function buildSparkTimeline({ date, day, draft, editTarget, backfillTarget, assessmentTime, settings }) {
+    const nowRaw = Number(assessmentTime);
+    const now = Number.isFinite(nowRaw) ? Math.min(nowRaw, Date.now()) : Date.now();
     const featureSettings = { ...DEFAULT_FEATURE_SETTINGS, ...((settings && typeof settings === 'object') ? settings : readHungerFeatureSettings()) };
     const timelineDate = date || todayKey();
     const meals = collectMealTimeline(date, day);
@@ -1491,7 +1745,7 @@
     const hungerStart = hungerTimelineStartTs(timelineDate);
     const visibleHunger = hunger.filter((item) => localDateKeyFromTs(item.t) === timelineDate && item.t >= hungerStart && item.t <= now);
     const previewLevel = clampHungerVisual(draft?.hungerVisual ?? draft?.hungerLevel, DEFAULT_DRAFT.hungerLevel);
-    const preview = { type: 'preview', t: now, level: previewLevel, label: 'сейчас ' + previewLevel + '/10' };
+    const preview = { type: 'preview', t: now, level: previewLevel, label: formatShortTime(now) + ' ' + previewLevel + '/10' };
     const backfillT = Number(backfillTarget?.t);
     const backfill = Number.isFinite(backfillT)
       ? {
@@ -1520,7 +1774,7 @@
     const xOf = (t) => 18 + ((t - scaleStart) / range) * 284;
     const yOf = (level) => 10 + ((10 - level) / 9) * 48;
     const sleepInterval = shouldShowSleepContext ? resolveSleepInterval(timelineDate, day) : null;
-    const coloredHungerPoints = hungerPoints.map((item) => {
+    const coloredHungerPoints = markCompactSparkPoints(hungerPoints.map((item) => {
       const isEditing = !!editTarget?.id && item.id === editTarget.id;
       const isBackfilling = item.type === 'backfill-preview';
       const level = isEditing
@@ -1537,8 +1791,12 @@
         y: yOf(level),
         color: getHungerTone(level).main
       };
-    });
-    const coloredMeals = visibleMeals.map((item) => ({ ...item, x: Math.max(18, Math.min(302, xOf(item.t))) }));
+    }));
+    const coloredMeals = visibleMeals.map((item) => ({
+      ...item,
+      x: Math.max(18, Math.min(302, xOf(item.t))),
+      quality: buildMealMarkerQuality(item, hungerPoints)
+    }));
     const cravingPoints = featureSettings.cravingGraph
       ? visibleHunger
         .filter((item) => Number.isFinite(Number(item.cravingLevel)))
@@ -1938,6 +2196,9 @@
     if (reason === 'habit_snack') {
       return 'В следующий раз сначала короткая пауза, вода или заранее выбранный спокойный перекус.';
     }
+    if (reason === 'stress_calorie_cue') {
+      return 'Отмечаем как связь напряжения с калорийной едой или напитком при низком голоде. Это отдельный паттерн, его увидит куратор.';
+    }
     if (reason === 'cooking_taste') {
       return 'Отмечаем как пробу при готовке: это не обычный приём пищи, но такие пробы лучше учитывать за неделю.';
     }
@@ -1979,6 +2240,14 @@
           : 'В похожий момент сначала вода или 10 минут паузы, потом спокойный выбор.'
       };
     }
+    if (reason === 'stress_calorie_cue') {
+      return {
+        title: repeated ? 'Разобрать стрессовый добор' : 'Отметить напряжение до еды',
+        detail: repeated
+          ? 'Если это повторится, куратору стоит смотреть не только еду, но и рабочий/ситуационный стресс перед ней.'
+          : 'В похожий момент сначала назвать стресс или нервозность, затем сделать короткую паузу перед калорийным выбором.'
+      };
+    }
     if (reason === 'cooking_taste') {
       return {
         title: repeated ? 'Отделить пробу от еды' : 'Учитывать пробу отдельно',
@@ -2008,32 +2277,40 @@
     const featureSettings = normalizeHungerFeatureSettings(settings || readHungerFeatureSettings());
     const experimentsEnabled = featureSettings.lowHungerExperiments !== false;
     const repeated = !!review?.patternStats?.isRepeated;
-    const replacement = reason === 'caffeine_additions'
-      ? {
+    let replacement;
+    if (reason === 'caffeine_additions') {
+      replacement = {
         title: 'План замены',
         detail: review?.analysis?.category === 'near_zero_drink'
           ? 'Оставить напиток почти нулевым: без молока, сиропа и сахара, если еды по плану нет.'
           : 'В похожий момент выбрать кофе без сиропа и сахара; молоко оставить только если это запланированный приём.'
-      }
-      : reason === 'alcohol_context'
-        ? {
-          title: 'План замены',
-          detail: 'Перед похожей ситуацией заранее выбрать одну спокойную порцию еды рядом с напитком.'
-        }
-        : reason === 'habit_snack'
-          ? {
-            title: 'План замены',
-            detail: 'Держать один заранее выбранный перекус или перенести еду в ближайший нормальный приём.'
-          }
-          : reason === 'cooking_taste'
-            ? {
-              title: 'План',
-              detail: 'Во время готовки оставить одну пробу вкуса и не доедать остатки автоматически.'
-            }
-          : {
-            title: 'План',
-            detail: 'Оставить как разовый контекст и не менять шкалу голода.'
-          };
+      };
+    } else if (reason === 'alcohol_context') {
+      replacement = {
+        title: 'План замены',
+        detail: 'Перед похожей ситуацией заранее выбрать одну спокойную порцию еды рядом с напитком.'
+      };
+    } else if (reason === 'habit_snack') {
+      replacement = {
+        title: 'План замены',
+        detail: 'Держать один заранее выбранный перекус или перенести еду в ближайший нормальный приём.'
+      };
+    } else if (reason === 'stress_calorie_cue') {
+      replacement = {
+        title: 'План замены',
+        detail: 'В похожий момент сначала назвать напряжение, сделать короткую паузу и выбрать заранее понятную альтернативу без импульсного добора.'
+      };
+    } else if (reason === 'cooking_taste') {
+      replacement = {
+        title: 'План',
+        detail: 'Во время готовки оставить одну пробу вкуса и не доедать остатки автоматически.'
+      };
+    } else {
+      replacement = {
+        title: 'План',
+        detail: 'Оставить как разовый контекст и не менять шкалу голода.'
+      };
+    }
     const experiment = reason === 'caffeine_additions'
       ? review?.analysis?.category === 'near_zero_drink'
         ? '3 дня отделять zero-напитки от кофе с добавками.'
@@ -2042,6 +2319,8 @@
         ? '3 дня заранее выбирать границу порции в похожих ситуациях.'
         : reason === 'habit_snack'
           ? '3 дня начинать с воды или 10 минут паузы перед таким перекусом.'
+          : reason === 'stress_calorie_cue'
+            ? '3 дня отмечать стресс или нервозность до сладкого, кофе с добавками или алкоголя при низком голоде.'
           : reason === 'cooking_taste'
             ? '3 дня отмечать пробы при готовке отдельно от обычной еды.'
             : '3 дня просто наблюдать, повторится ли похожий эпизод.';
@@ -2076,6 +2355,14 @@
       ['company', 'Компания'],
       ['automatic', 'Автоматически']
     ];
+    if (reason === 'stress_calorie_cue') return [
+      ['work_stress', 'Работа'],
+      ['nervousness', 'Нервозность'],
+      ['fatigue', 'Усталость'],
+      ['environment', 'Обстановка'],
+      ['anxiety', 'Тревога'],
+      ['automatic', 'Автоматически']
+    ];
     if (reason === 'cooking_taste') return [
       ['cooking', 'Готовка'],
       ['taste_check', 'Проверка вкуса'],
@@ -2092,12 +2379,15 @@
 
   function buildLowHungerHabitPattern(reason, review) {
     const ritualProfile = getLowHungerRitualProfile(reason, review);
+    const stressCalorieLink = reason === 'stress_calorie_cue' ? buildStressCalorieLink(review) : null;
     return {
-      type: 'low_hunger_food',
+      type: reason === 'stress_calorie_cue' ? 'low_hunger_stress_calorie_cue' : 'low_hunger_food',
       reason,
       category: review?.analysis?.category || null,
       mealIntent: ritualProfile?.type || 'unknown',
       ritualLabel: ritualProfile?.type === 'ritual' ? ritualProfile.label : null,
+      stressCalorieLink,
+      choiceType: stressCalorieLink?.choiceType || null,
       patternKey: review?.analysis?.patternKey || null,
       mealSignature: review?.mealSignature || null,
       timeBucket: timeBucketFromDateTime(review?.mealAt),
@@ -2112,13 +2402,19 @@
     const bucket = timeBucketFromDateTime(review?.mealAt);
     const ritualProfile = getLowHungerRitualProfile(reason, review);
     const curatorWeekFocus = buildLowHungerCuratorWeekFocus(review, reason, settings);
+    const stressCalorieLink = reason === 'stress_calorie_cue' ? buildStressCalorieLink(review) : null;
+    const summaryPrefix = stressCalorieLink
+      ? 'Стресс/нервозность → ' + stressCalorieLink.choiceLabel
+      : (LOW_HUNGER_REASON_COPY[reason] || 'Контекстная еда');
     return {
-      title: 'Еда при низком голоде',
-      summary: (LOW_HUNGER_REASON_COPY[reason] || 'Контекстная еда') + ', ' + count + ' раз(а) за период, чаще ' + lowHungerTimeBucketLabel(bucket),
+      title: reason === 'stress_calorie_cue' ? 'Стрессовый добор при низком голоде' : 'Еда при низком голоде',
+      summary: summaryPrefix + ', ' + count + ' раз(а) за период, чаще ' + lowHungerTimeBucketLabel(bucket),
       reason,
       category: review?.analysis?.category || null,
       mealIntent: ritualProfile?.type || 'unknown',
       ritualLabel: ritualProfile?.type === 'ritual' ? ritualProfile.label : null,
+      stressCalorieLink,
+      choiceType: stressCalorieLink?.choiceType || null,
       count,
       timeBucket: bucket,
       mealNames: safeArray(review?.analysis?.names).slice(0, 3),
@@ -2134,6 +2430,7 @@
     if (review?.patternStats?.isRepeated) tags.push('repeat_seen');
     if (review?.patternStats?.needsPatternWork) tags.push('pattern_work_needed');
     if (reason === review?.analysis?.suggestedReason) tags.push('auto_reason_confirmed');
+    if (reason === 'stress_calorie_cue') tags.push('stress_calorie_cue');
     return tags;
   }
 
@@ -2150,6 +2447,7 @@
     const useCompactConfirm = featureSettings.lowHungerCompactConfirm !== false && suggestionConfidence.level !== 'low' && !showAllReasons;
     const reasonOptions = [
       ['habit_snack', 'Перекус или привычка'],
+      ['stress_calorie_cue', 'Стресс / нервозность'],
       ['caffeine_additions', review.analysis?.category === 'caffeine_additions' ? 'Кофе с добавками' : 'Напиток с калориями'],
       ['alcohol_context', review.analysis?.category === 'alcohol' ? 'Алкоголь и контекст' : 'Социальный контекст'],
       ['cooking_taste', 'Пробовал при готовке'],
@@ -2226,6 +2524,10 @@
       h('div', { className: 'hes-low-meal__title' }, 'Контекст сохранён'),
       h('div', { className: 'hes-low-meal__text' }, result.advice),
       h('div', { className: 'hes-low-meal__saved' }, result.savedSummary || result.label),
+      result.stressCalorieLink && h('div', { className: 'hes-low-meal__soft' },
+        h('strong', null, 'Связка'),
+        h('span', null, 'Стресс/нервозность → ' + result.stressCalorieLink.choiceLabel)
+      ),
       result.nextStep && h('div', { className: 'hes-low-meal__next' },
         h('span', null, 'Следующий шаг'),
         h('strong', null, result.nextStep.title),
@@ -2384,18 +2686,21 @@
     );
   }
 
-  function TimelineSpark({ date, day, draft, hint, settings, editingEventId, backfillTarget, onEditPoint, onBackfillTime, onAddMealTime }) {
+  function TimelineSpark({ date, day, draft, hint, settings, editingEventId, backfillTarget, assessmentTime, onEditPoint, onBackfillTime, onAddMealTime }) {
     const data = buildSparkTimeline({
       date,
       day,
       draft,
       settings,
       editTarget: editingEventId ? { id: editingEventId, hungerLevel: draft?.hungerVisual ?? draft?.hungerLevel } : null,
-      backfillTarget
+      backfillTarget,
+      assessmentTime
     });
     const [actionMenu, setActionMenu] = React.useState(null);
     const pressRef = React.useRef(null);
     const gradientId = 'hes-hunger-spark-gradient';
+    const mealModerateGradientId = 'hes-meal-quality-moderate-gradient';
+    const mealMixedGradientId = 'hes-meal-quality-mixed-gradient';
     const canEditPoint = (point) => point?.id && point.type !== 'preview';
     const isPreviewPoint = (point) => point?.type === 'preview' || point?.type === 'backfill-preview';
     const resolvePressTarget = (event) => {
@@ -2465,13 +2770,21 @@
           height: 52,
           rx: 8
         }),
-        data.lineStops.length > 1 && h('defs', null,
-          h('linearGradient', { id: gradientId, x1: 18, y1: 0, x2: 302, y2: 0, gradientUnits: 'userSpaceOnUse' },
+        (data.lineStops.length > 1 || data.meals.some((meal) => meal.quality?.tone === 'moderate' || meal.quality?.tone === 'mixed')) && h('defs', null,
+          data.lineStops.length > 1 && h('linearGradient', { id: gradientId, x1: 18, y1: 0, x2: 302, y2: 0, gradientUnits: 'userSpaceOnUse' },
             data.lineStops.map((stop, index) => h('stop', {
               key: 'stop-' + index,
               offset: stop.offset.toFixed(1) + '%',
               stopColor: stop.color
             }))
+          ),
+          h('linearGradient', { id: mealModerateGradientId, x1: 0, y1: 20, x2: 0, y2: 66, gradientUnits: 'userSpaceOnUse' },
+            h('stop', { offset: '0%', stopColor: '#d9f99d' }),
+            h('stop', { offset: '100%', stopColor: '#86efac' })
+          ),
+          h('linearGradient', { id: mealMixedGradientId, x1: 0, y1: 20, x2: 0, y2: 66, gradientUnits: 'userSpaceOnUse' },
+            h('stop', { offset: '0%', stopColor: '#fef08a' }),
+            h('stop', { offset: '100%', stopColor: '#bef264' })
           )
         ),
         data.nightBands.map((band, index) => h('rect', {
@@ -2488,14 +2801,32 @@
           h('line', { x1: tick.x, y1: 62, x2: tick.x, y2: 67 }),
           h('text', { x: tick.x, y: 78, textAnchor: 'middle' }, tick.label)
         )),
-        data.meals.map((meal, index) => h('line', {
+        data.meals.map((meal, index) => h('g', {
           key: 'meal-' + index,
-          className: 'hes-spark__meal-line',
-          x1: meal.x,
-          y1: 22,
-          x2: meal.x,
-          y2: 64
-        })),
+          className: 'hes-spark__meal-marker hes-spark__meal-marker--' + (meal.quality?.tone || 'mixed')
+        },
+          h('rect', {
+            className: 'hes-spark__meal-pill',
+            x: meal.x - 5,
+            y: 20,
+            width: 10,
+            height: 46,
+            rx: 5,
+            style: meal.quality?.tone === 'moderate'
+              ? { fill: 'url(#' + mealModerateGradientId + ')' }
+              : meal.quality?.tone === 'mixed'
+                ? { fill: 'url(#' + mealMixedGradientId + ')' }
+                : undefined
+          }),
+          h('line', {
+            className: 'hes-spark__meal-line',
+            x1: meal.x,
+            y1: 22,
+            x2: meal.x,
+            y2: 64
+          }),
+          h('title', null, (meal.quality?.label || 'еда') + ' · ' + formatShortTime(meal.t))
+        )),
         data.backfillMarker && h('g', { className: 'hes-spark__backfill-marker' },
           h('line', {
             x1: data.backfillMarker.x,
@@ -2538,6 +2869,7 @@
           const className = [
             'hes-spark__point',
             isPreviewPoint(point) ? 'hes-spark__point--preview' : '',
+            point.isCompactClusterPoint ? 'hes-spark__point--compact' : '',
             editable ? 'is-editable' : '',
             point.isEditing ? 'is-editing' : ''
           ].filter(Boolean).join(' ');
@@ -2545,7 +2877,7 @@
             className,
             cx: point.x,
             cy: point.y,
-            r: isPreviewPoint(point) || point.isEditing ? 6 : 5,
+            r: point.isCompactClusterPoint ? 2.8 : isPreviewPoint(point) || point.isEditing ? 6 : 5,
             style: isPreviewPoint(point)
               ? { stroke: point.color }
               : { fill: point.color }
@@ -2646,6 +2978,28 @@
           onClick: () => onChange?.(key),
           'aria-pressed': value === key
         }, MEAL_EFFECT_COPY[key]))
+      )
+    );
+  }
+
+  function StressCalorieOutcomePrompt({ followUp, onOutcome }) {
+    if (!followUp) return null;
+    const link = followUp.stressCalorieLink || {};
+    return h('div', { className: 'hes-low-meal hes-low-meal--resolved' },
+      h('div', { className: 'hes-low-meal__title' }, 'Что стало после стрессового добора?'),
+      h('div', { className: 'hes-low-meal__text' },
+        'Ранее отметили: напряжение → ', link.choiceLabel || 'калорийный выбор',
+        followUp.mealAt ? ' в ' + formatShortTime(followUp.mealAt) : ''
+      ),
+      h('div', { className: 'hes-low-meal__context' },
+        h('span', null, 'Это помогло снять напряжение?'),
+        h('div', { className: 'hes-low-meal__context-chips' },
+          Object.keys(STRESS_CALORIE_OUTCOME_COPY).map((key) => h('button', {
+            key,
+            type: 'button',
+            onClick: () => onOutcome?.(key)
+          }, STRESS_CALORIE_OUTCOME_COPY[key]))
+        )
       )
     );
   }
@@ -3249,6 +3603,7 @@
     const [contextRefreshSeq, setContextRefreshSeq] = React.useState(0);
     const [editTarget, setEditTarget] = React.useState(null);
     const [backfillTarget, setBackfillTarget] = React.useState(null);
+    const [assessmentTime, setAssessmentTime] = React.useState(() => Date.now());
     const [lowMealReasonResult, setLowMealReasonResult] = React.useState(null);
     const [settingsOpen, setSettingsOpen] = React.useState(false);
     const [featureSettings, setFeatureSettings] = React.useState(() => readHungerFeatureSettings());
@@ -3268,6 +3623,7 @@
       setContextRefreshSeq(0);
       setEditTarget(null);
       setBackfillTarget(null);
+      setAssessmentTime(Date.now());
       setLowMealReasonResult(null);
       setSettingsOpen(false);
       setFeatureSettings(readHungerFeatureSettings());
@@ -3336,9 +3692,14 @@
     const timelineDate = state.date || timelineDay.date || todayKey();
     const baseContext = buildContextFromDay({ ...state, date: timelineDate, day: timelineDay });
     const context = { ...baseContext, ...contextPatch };
+    const selectedAssessmentTime = Math.min(
+      Number.isFinite(Number(assessmentTime)) ? Number(assessmentTime) : Date.now(),
+      Date.now()
+    );
+    const selectedAssessmentAt = formatLocalDateTime(selectedAssessmentTime) || nowIso();
     const lowHungerMealReview = context.lowHungerMealReview || null;
     const input = {
-      now: nowIso(),
+      now: selectedAssessmentAt,
       hungerLevel: activeDraft.hungerLevel,
       controlLevel: activeDraft.controlLevel,
       cravingLevel: activeDraft.cravingLevel,
@@ -3354,10 +3715,11 @@
     const isLowHungerClarification = !!lowHungerMealReview && !result && !isPastDraft && !lowMealReasonResult;
     const isLowHungerResolved = !!lowMealReasonResult && !result && !isPastDraft;
     const isLowHungerStep = isLowHungerClarification || isLowHungerResolved;
+    const isStressCalorieFollowUp = !!state.stressCalorieFollowUp && !result && !isLowHungerStep;
     const requiredInputs = isDragging || isPastDraft ? [] : getRequiredInputs(previewDecision, activeDraft);
     const hasRequiredInputs = requiredInputs.length > 0;
     const activeDecision = result?.decision || previewDecision;
-    const modalMode = isLowHungerStep ? 'clarification' : result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
+    const modalMode = (isLowHungerStep || isStressCalorieFollowUp) ? 'clarification' : result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
     const actionTone = getHungerTone(activeDraft.hungerVisual ?? activeDraft.hungerLevel);
     const hungerChangeNote = isEditingEvent
       ? 'Правка оценки ' + formatShortTime(editTarget.t)
@@ -3366,6 +3728,7 @@
       : getHungerChangeNote(activeDraft, context);
     const lastMealHint = getLastMealHint(context);
     const patternInsight = featureSettings.patternInsights ? buildPatternInsight(context) : null;
+    const canShiftAssessmentTime = !settingsOpen && !result && !isEditingEvent && !isBackfillingEvent && !isLowHungerStep && !isStressCalorieFollowUp;
 
     function patchDraft(patch) {
       setDraft((prev) => ({
@@ -3387,6 +3750,17 @@
     function toggleFeatureSetting(id, enabled) {
       const next = updateHungerFeatureSetting(id, enabled);
       setFeatureSettings(next);
+    }
+
+    function shiftAssessmentTimeBack() {
+      const lowerBound = dayStartTs(timelineDate);
+      setAssessmentTime((prev) => {
+        const base = Number.isFinite(Number(prev)) ? Math.min(Number(prev), Date.now()) : Date.now();
+        return Math.max(lowerBound, base - HUNGER_TIMELINE_SNAP_MS);
+      });
+      setResult(null);
+      setDetailsOpen(false);
+      setCopyDone(false);
     }
 
     function setLowHungerPromptLimit(limit) {
@@ -3546,6 +3920,11 @@
       const upcomingCue = getLowHungerUpcomingCue(reason, lowHungerMealReview);
       const weeklyDigest = featureSettings.lowHungerWeeklyDigest === false ? null : buildLowHungerWeeklySummary(lowHungerMealReview, reason, featureSettings);
       const curatorWeekFocus = buildLowHungerCuratorWeekFocus(lowHungerMealReview, reason, featureSettings);
+      const curatorTag = reason === 'stress_calorie_cue'
+        ? 'low_hunger_stress_calorie_cue'
+        : lowHungerMealReview.patternStats?.needsPatternWork
+          ? 'low_hunger_food_pattern'
+          : 'low_hunger_food_context';
       const eventRow = addEvent({
         eventType: 'low_hunger_meal_reason',
         recordedAt: reasonAt,
@@ -3579,11 +3958,23 @@
           patternKey: habitPattern.patternKey
         } : null,
         analyticsTags,
-        curatorTag: lowHungerMealReview.patternStats?.needsPatternWork ? 'low_hunger_food_pattern' : 'low_hunger_food_context',
+        curatorTag,
         requiresCuratorReview: !!lowHungerMealReview.patternStats?.needsPatternWork,
         cloudSyncKey: STORAGE_KEY,
         outcome: 'user_classified'
       });
+      const stressFollowUp = reason === 'stress_calorie_cue'
+        ? scheduleStressCalorieFollowUp(eventRow, lowHungerMealReview)
+        : null;
+      if (stressFollowUp?.id) {
+        updateEvent(eventRow.id, {
+          stressFollowUp: {
+            id: stressFollowUp.id,
+            dueAt: stressFollowUp.dueAt,
+            status: stressFollowUp.status
+          }
+        });
+      }
       setLowMealReasonResult({
         reason,
         label: LOW_HUNGER_REASON_COPY[reason] || 'Причина отмечена',
@@ -3599,10 +3990,38 @@
         weeklyDigest,
         curatorWeekFocus,
         contextOptions,
+        stressCalorieLink: habitPattern.stressCalorieLink || null,
+        stressFollowUp,
         eventId: eventRow.id,
         contextTag: null
       });
       setContextRefreshSeq((seq) => seq + 1);
+    }
+
+    function recordStressCalorieOutcome(outcome) {
+      const followUp = state.stressCalorieFollowUp;
+      if (!followUp?.id || !outcome) return;
+      const outcomeAt = nowIso();
+      const label = STRESS_CALORIE_OUTCOME_COPY[outcome] || outcome;
+      if (followUp.lowHungerEventId) {
+        updateEvent(followUp.lowHungerEventId, (row) => ({
+          stressOutcome: {
+            outcome,
+            label,
+            recordedAt: outcomeAt,
+            followUpId: followUp.id
+          },
+          analyticsTags: unique(safeArray(row.analyticsTags).concat('stress_outcome_' + outcome)),
+          updatedAt: outcomeAt
+        }));
+      }
+      updateMealEffectFollowUp(followUp.id, {
+        status: 'answered',
+        answeredAt: outcomeAt,
+        answer: outcome
+      });
+      planNextMealEffectTimer();
+      hide();
     }
 
     function recordLowHungerReviewClose(action, reviewArg) {
@@ -3722,7 +4141,7 @@
       const eventRow = addEvent({
         eventType: 'hunger_fixed',
         recordedAt: finalInput.now,
-        date: String(finalInput.now || nowIso()).slice(0, 10),
+        date: localDateKeyFromTs(selectedAssessmentTime) || String(finalInput.now || nowIso()).slice(0, 10),
         source: state.source || 'hunger-fab',
         hungerLevel: finalInput.hungerLevel,
         hungerStatus: HUNGER_STATUS_COPY[finalInput.hungerLevel] || null,
@@ -3802,6 +4221,7 @@
       setCopyDone(false);
       setEditTarget(null);
       setBackfillTarget(null);
+      setAssessmentTime(Date.now());
       setLowMealReasonResult(null);
     }
 
@@ -3829,7 +4249,17 @@
       },
         h('header', { className: 'hes-head' },
           h('div', null,
-            h('div', { className: 'hes-kicker' }, 'Баланс энергообмена')
+            h('div', { className: 'hes-kicker' }, 'Баланс энергообмена'),
+            canShiftAssessmentTime && h('div', { className: 'hes-time-stack' },
+              h('span', { className: 'hes-time-value' }, formatShortTime(selectedAssessmentTime)),
+              h('button', {
+                type: 'button',
+                className: 'hes-time-badge',
+                onClick: shiftAssessmentTimeBack,
+                title: 'Сдвинуть время оценки на 30 минут назад',
+                'aria-label': 'Время оценки ' + formatShortTime(selectedAssessmentTime) + '. Сдвинуть на 30 минут назад'
+              }, '-30 мин')
+            )
           ),
           h('div', { className: 'hes-head__actions' },
             h('label', { className: 'hes-auto-toggle' },
@@ -3872,6 +4302,11 @@
             onBackfill: backfillBeforeLowHungerMeal,
             onContextTag: recordLowHungerContextTag
           })
+        ) : isStressCalorieFollowUp ? h('div', { className: 'hes-input hes-input--clarify' },
+          h(StressCalorieOutcomePrompt, {
+            followUp: state.stressCalorieFollowUp,
+            onOutcome: recordStressCalorieOutcome
+          })
         ) : !result ? h('div', { className: 'hes-input' },
           state.mealEffectFollowUp && featureSettings.mealEffectReview && h(MealEffectPrompt, {
             followUp: state.mealEffectFollowUp,
@@ -3913,6 +4348,7 @@
             hint: lastMealHint,
             editingEventId: editTarget?.id,
             backfillTarget,
+            assessmentTime: isPastDraft ? null : selectedAssessmentTime,
             onEditPoint: startEditPoint,
             onBackfillTime: startBackfillAt,
             onAddMealTime: launchMealFlowAt
@@ -4021,15 +4457,19 @@
 .fab-group .hunger-energy-fab:hover{transform:scale(1.04)}
 .fab-group .hunger-energy-fab:active{transform:scale(.94)}
 .hes-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.26);display:flex;align-items:flex-end;justify-content:flex-end;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain;touch-action:none}
-.hes-sheet{width:min(440px,calc(100vw - 24px));max-height:min(720px,calc(100dvh - 28px));overflow:auto;background:rgba(255,255,255,.98);color:#172033;border:1px solid rgba(67,69,135,.14);border-radius:18px;box-shadow:0 24px 64px rgba(15,23,42,.24);animation:hesIn .18s ease-out;overscroll-behavior:contain;touch-action:pan-y}
-.hes-sheet--clarification{max-height:none;overflow:visible}
+.hes-sheet{width:min(440px,calc(100vw - 24px));max-height:min(720px,calc(100dvh - 28px));overflow:auto;background:rgba(255,255,255,.98);color:#172033;border:1px solid rgba(67,69,135,.14);border-radius:18px;box-shadow:0 24px 64px rgba(15,23,42,.24);animation:hesIn .18s ease-out;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.hes-sheet--clarification{overflow:auto}
 .hes-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 16px 8px 18px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px)}
-	.hes-head>div:first-child{min-width:0;flex:1 1 auto;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px}
+	.hes-head>div:first-child{position:relative;min-width:0;flex:1 1 auto;overflow:visible;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px}
 .hes-head__actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .hes-settings-btn{width:44px;height:44px;border:0;border-radius:14px;background:#f1f5f9;color:#434587;font-size:18px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .hes-settings-btn[aria-pressed="true"]{background:#434587;color:#fff;box-shadow:0 8px 18px rgba(67,69,135,.18)}
 	.hes-kicker{max-width:100%;font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1.15;text-transform:uppercase;color:#434587}
-	.hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#f1f5f9;color:#475569;font-size:20px;cursor:pointer}
+.hes-time-stack{position:absolute;left:0;top:65px;z-index:3;display:grid;gap:4px;justify-items:start;pointer-events:auto}
+.hes-time-value{font-size:14px;font-weight:900;line-height:1;color:#64748b}
+.hes-time-badge{min-height:20px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:rgba(248,251,255,.92);color:#7a86a1;box-shadow:0 8px 18px rgba(15,23,42,.08);backdrop-filter:blur(8px);display:inline-flex;align-items:center;padding:0 7px;font-size:10px;font-weight:850;line-height:1;cursor:pointer;white-space:nowrap}
+.hes-time-badge:focus-visible{outline:2px solid rgba(67,69,135,.24);outline-offset:2px}
+	.hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#fff1f4;color:#be5267;font-size:20px;cursor:pointer}
 .hes-auto-toggle{min-height:36px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#f8fbff;color:#475569;padding:0 8px;cursor:pointer;user-select:none}
 .hes-auto-toggle:focus-within{outline:2px solid rgba(67,69,135,.22);outline-offset:2px}
 .hes-auto-toggle__text{font-size:11px;font-weight:850;line-height:1;white-space:nowrap}
@@ -4063,12 +4503,15 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-head{background:rgba(17,24,39,.98)}
 [data-theme="dark"] .hes-actions{background:rgba(17,24,39,.98)}
 	[data-theme="dark"] .hes-result-title{color:#f8fafc}
-[data-theme="dark"] .hes-close,[data-theme="dark"] .hes-slider,[data-theme="dark"] .hes-chip{background:#1f2937;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-time-value{color:#cbd5e1}
+[data-theme="dark"] .hes-time-badge{background:rgba(23,32,51,.92);border-color:rgba(226,236,242,.14);color:#94a3b8}
+[data-theme="dark"] .hes-close{background:#3a1f2a;color:#f4a3b4}
+[data-theme="dark"] .hes-slider,[data-theme="dark"] .hes-chip{background:#1f2937;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-auto-toggle{background:#1f2937;color:#cbd5e1;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-auto-toggle__switch{background:#334155;box-shadow:inset 0 0 0 1px rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-auto-toggle input:checked+.hes-auto-toggle__switch{background:#6366f1}
 @keyframes hesIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-@media (max-width:520px){.hes-backdrop{padding:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}.hes-sheet{width:100%;max-height:calc(100dvh - 20px);border-radius:18px 18px 0 0}.hes-sheet--clarification{max-height:none}.hes-head{min-height:58px;padding:14px 12px 8px 14px}.hes-slider{grid-template-columns:42px 1fr;min-height:246px}.hes-slider__range{height:162px}.hes-actions{padding:0 12px 12px}.hes-primary,.hes-secondary{flex:1}}
+@media (max-width:520px){.hes-backdrop{padding:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}.hes-sheet{width:100%;max-height:calc(100dvh - 20px);border-radius:18px 18px 0 0}.hes-sheet--clarification{max-height:calc(100dvh - 20px);overflow:auto}.hes-head{min-height:58px;padding:14px 12px 8px 14px}.hes-slider{grid-template-columns:42px 1fr;min-height:246px}.hes-slider__range{height:162px}.hes-actions{padding:0 12px 12px}.hes-primary,.hes-secondary{flex:1}}
 .hes-input{padding:10px 18px 12px;display:flex;flex-direction:column;gap:12px;align-items:stretch}
 .hes-input--clarify{padding:10px 18px 18px}
 .hes-input .hes-slider{min-height:0;border:0;background:transparent;padding:6px 2px 2px;display:grid;grid-template-columns:1fr 68px 1fr;grid-template-rows:auto auto auto auto;column-gap:0;row-gap:7px;align-items:center;justify-content:center}
@@ -4135,11 +4578,21 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-spark__backfill-marker text{fill:#434587;font-size:8px;font-weight:900}
 .hes-spark__point{fill:#434587;stroke:#fff;stroke-width:2.4}
 .hes-spark__point--preview{fill:#ffffff;stroke:#434587;stroke-width:3}
+.hes-spark__point--compact{stroke-width:1.6}
+.hes-spark__point--preview.hes-spark__point--compact{stroke-width:1.8}
 .hes-spark__point-button{cursor:pointer;outline:none}
 .hes-spark__point-button:focus-visible .hes-spark__point{stroke:#172033;stroke-width:3.4}
 .hes-spark__point.is-editing{stroke:#434587;stroke-width:3.4}
 .hes-spark__point-hit{fill:transparent;stroke:transparent;pointer-events:all}
-.hes-spark__meal-line{stroke:#f08a74;stroke-width:2;stroke-linecap:round;stroke-dasharray:3 5;opacity:.58}
+.hes-spark__meal-marker{pointer-events:none}
+.hes-spark__meal-pill{fill:#fde68a;opacity:.7;filter:drop-shadow(0 3px 8px rgba(15,23,42,.08))}
+.hes-spark__meal-marker--good .hes-spark__meal-pill{fill:#bbf7d0}
+.hes-spark__meal-marker--attention .hes-spark__meal-pill{fill:#fed7aa}
+.hes-spark__meal-line{stroke:#f08a74;stroke-width:2;stroke-linecap:round;stroke-dasharray:3 5;opacity:.72}
+.hes-spark__meal-marker--good .hes-spark__meal-line{stroke:#38a169}
+.hes-spark__meal-marker--moderate .hes-spark__meal-line{stroke:#65a30d}
+.hes-spark__meal-marker--mixed .hes-spark__meal-line{stroke:#ca8a04}
+.hes-spark__meal-marker--attention .hes-spark__meal-line{stroke:#ea580c}
 .hes-spark__legend{position:absolute;left:10px;right:10px;top:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:16px;font-size:10px;font-weight:800;color:#64748b;pointer-events:none}
 .hes-spark__legend-items,.hes-spark__hint{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:rgba(248,251,255,.78);padding:2px 6px;backdrop-filter:blur(6px)}
 .hes-spark__legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -4165,7 +4618,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-meal-effect{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
 .hes-meal-effect>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hes-meal-effect span{font-size:11px;font-weight:800;color:#64748b;line-height:1.2}
-.hes-pattern-insight{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#fbfcff;padding:10px 12px;display:grid;gap:3px;color:#475569}
+.hes-pattern-insight{box-sizing:border-box;border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#fbfcff;padding:10px 12px 14px;display:grid;gap:3px;color:#475569;max-height:112px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .hes-pattern-insight span{font-size:11px;font-weight:900;color:#64748b}
 .hes-pattern-insight strong{font-size:13px;line-height:1.2;color:#172033}
 .hes-pattern-insight em{font-style:normal;font-size:12px;font-weight:750;line-height:1.3;color:#64748b}
@@ -4301,7 +4754,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-feature-row__state{background:#111827;color:#94a3b8}
 [data-theme="dark"] .hes-feature-row.is-on .hes-feature-row__state{background:#1f2937;color:#c7d2fe}
 @keyframes hesFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@media (max-width:520px){.hes-input{padding:8px 14px 8px}.hes-result{padding:8px 14px 132px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr}.hes-actions{padding:0 14px 14px}}
+@media (max-width:520px){.hes-input{padding:8px 14px 8px}.hes-result{padding:8px 14px 132px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr}.hes-pattern-insight{max-height:92px}.hes-actions{padding:0 14px 14px}}
 `;
     document.head.appendChild(style);
   }
@@ -4385,12 +4838,15 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     buildContextFromDay,
     buildSparkTimeline,
     analyzeMealForLowHungerReview,
+    buildMealMarkerQuality,
     buildLowHungerMealReview,
     getLowHungerAnalyticsTags,
     getLowHungerSuggestionConfidence,
     getLowHungerRitualProfile,
     getLowHungerSavedSummary,
     getLowHungerUpcomingCue,
+    getStressCalorieChoice,
+    buildStressCalorieLink,
     buildLowHungerCuratorCard,
     buildLowHungerCuratorWeekFocus,
     buildLowHungerExperimentFollowUp,
