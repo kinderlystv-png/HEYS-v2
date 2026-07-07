@@ -137,6 +137,11 @@ describe('HEYS.cloud write-context unavailable UX contract', () => {
     expect(storageSource).toContain("cloud.ensureWriteContextFresh(null, { reason: 'visibility-visible', retryPending: false })");
     expect(storageSource).toContain("cloud.ensureWriteContextFresh(null, { reason: 'window-focus', retryPending: false })");
     expect(storageSource).toContain("cloud.ensureWriteContextFresh(null, { reason: 'pageshow', retryPending: false })");
+    expect(storageSource).toContain('function recoverStalledClientUpload(reason, options = {})');
+    expect(storageSource).toContain("recoverStalledClientUpload('flush'");
+    expect(storageSource).toContain("recoverStalledClientUpload('online')");
+    expect(storageSource).toContain("recoverStalledClientUpload('window-focus')");
+    expect(storageSource).toContain('uploadRunId !== _clientUploadRunId');
 
     const branchStart = appHooksSource.indexOf('const isTransientWriteContext');
     const branchEnd = appHooksSource.indexOf('// 🔥 Если ошибка критическая', branchStart);

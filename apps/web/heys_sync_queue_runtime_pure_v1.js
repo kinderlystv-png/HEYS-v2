@@ -89,6 +89,77 @@
         return remote > local;
     }
 
+    function stripRootDayMergeMeta(day) {
+        if (!day || typeof day !== 'object') return day;
+        const {
+            updatedAt,
+            _sourceId,
+            _mergedAt,
+            _writerCid,
+            _h,
+            ...rest
+        } = day;
+        return rest;
+    }
+
+    function areDayv2MergeValuesEquivalent(localDay, remoteDay) {
+        if (!localDay || !remoteDay || typeof localDay !== 'object' || typeof remoteDay !== 'object') {
+            return false;
+        }
+        try {
+            const ch = global.HEYS && global.HEYS.contentHash;
+            if (ch && typeof ch.hashDay === 'function') {
+                return ch.hashDay(localDay) === ch.hashDay(remoteDay);
+            }
+        } catch (_) { /* fallback below */ }
+
+        try {
+            const dayUtils = global.HEYS && global.HEYS.dayUtils;
+            if (dayUtils && typeof dayUtils.isSameDayHydratedContent === 'function'
+                && dayUtils.isSameDayHydratedContent(localDay, remoteDay)) {
+                return true;
+            }
+        } catch (_) { /* fallback below */ }
+
+        try {
+            return JSON.stringify(stripRootDayMergeMeta(localDay)) === JSON.stringify(stripRootDayMergeMeta(remoteDay));
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function getStalledUploadRecoveryDecision(params) {
+        const now = Number(params?.now || Date.now());
+        const uploadStartedAt = Number(params?.uploadStartedAt || 0);
+        const minAgeMs = Math.max(1000, Number(params?.minAgeMs || 60000));
+        const inFlightCount = Number(params?.inFlightCount || 0);
+
+        if (!params?.uploadInProgress) {
+            return { recover: false, reason: 'not_uploading', ageMs: 0 };
+        }
+        if (!(inFlightCount > 0)) {
+            return { recover: false, reason: 'no_inflight', ageMs: 0 };
+        }
+        if (params?.online === false) {
+            return { recover: false, reason: 'offline', ageMs: 0 };
+        }
+        if (params?.switchInProgress) {
+            return { recover: false, reason: 'switch_in_progress', ageMs: 0 };
+        }
+        if (params?.logoutSuppressed) {
+            return { recover: false, reason: 'logout_suppressed', ageMs: 0 };
+        }
+        if (!(uploadStartedAt > 0)) {
+            return { recover: false, reason: 'missing_started_at', ageMs: 0 };
+        }
+
+        const ageMs = Math.max(0, now - uploadStartedAt);
+        if (ageMs < minAgeMs) {
+            return { recover: false, reason: 'too_young', ageMs, waitMs: minAgeMs - ageMs };
+        }
+        return { recover: true, reason: 'stalled_upload', ageMs, inFlightCount };
+    }
+
     function getSyncStatusForKey(params) {
         const key = String(params?.key || '');
         if (!key) return 'synced';
@@ -254,6 +325,8 @@
         requeueInFlightBatch,
         getSyncStatusForKey,
         shouldApplyByRevision,
+        areDayv2MergeValuesEquivalent,
+        getStalledUploadRecoveryDecision,
         enqueueClientSave,
         flushPendingQueueCore,
     };

@@ -153,6 +153,124 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
   });
 
+  it('treats dayv2 merge values with only root sync metadata differences as equivalent', () => {
+    global.HEYS = {
+      contentHash: {
+        hashDay(day) {
+          return JSON.stringify({
+            date: day.date,
+            meals: day.meals || [],
+            moodMorning: day.moodMorning,
+          });
+        },
+      },
+    };
+    loadModule();
+    const { areDayv2MergeValuesEquivalent } = global.HEYS.syncQueueRuntimePure;
+
+    const localDay = {
+      date: '2026-07-07',
+      updatedAt: 1000,
+      _sourceId: 'local',
+      meals: [],
+      moodMorning: 4,
+    };
+    const remoteAck = {
+      date: '2026-07-07',
+      updatedAt: 2000,
+      _sourceId: 'server',
+      _writerCid: 'client-1',
+      _mergedAt: 3000,
+      meals: [],
+      moodMorning: 4,
+    };
+
+    expect(areDayv2MergeValuesEquivalent(localDay, remoteAck)).toBe(true);
+  });
+
+  it('does not treat dayv2 merge values with user-visible differences as equivalent', () => {
+    global.HEYS = {
+      contentHash: {
+        hashDay(day) {
+          return JSON.stringify({
+            date: day.date,
+            meals: day.meals || [],
+            moodMorning: day.moodMorning,
+          });
+        },
+      },
+    };
+    loadModule();
+    const { areDayv2MergeValuesEquivalent } = global.HEYS.syncQueueRuntimePure;
+
+    expect(areDayv2MergeValuesEquivalent(
+      { date: '2026-07-07', updatedAt: 1000, meals: [], moodMorning: 4 },
+      { date: '2026-07-07', updatedAt: 2000, meals: [], moodMorning: 2 },
+    )).toBe(false);
+  });
+
+  it('recovers a stalled upload only after the configured age threshold', () => {
+    global.HEYS = {};
+    loadModule();
+    const { getStalledUploadRecoveryDecision } = global.HEYS.syncQueueRuntimePure;
+
+    expect(getStalledUploadRecoveryDecision({
+      uploadInProgress: true,
+      inFlightCount: 2,
+      uploadStartedAt: 1000,
+      now: 62000,
+      minAgeMs: 60000,
+      online: true,
+    })).toEqual(expect.objectContaining({
+      recover: true,
+      reason: 'stalled_upload',
+      ageMs: 61000,
+      inFlightCount: 2,
+    }));
+  });
+
+  it('does not recover an active upload before the stall threshold', () => {
+    global.HEYS = {};
+    loadModule();
+    const { getStalledUploadRecoveryDecision } = global.HEYS.syncQueueRuntimePure;
+
+    expect(getStalledUploadRecoveryDecision({
+      uploadInProgress: true,
+      inFlightCount: 1,
+      uploadStartedAt: 1000,
+      now: 12000,
+      minAgeMs: 15000,
+      online: true,
+    })).toEqual(expect.objectContaining({
+      recover: false,
+      reason: 'too_young',
+      ageMs: 11000,
+      waitMs: 4000,
+    }));
+  });
+
+  it('does not recover stalled uploads while offline or switching clients', () => {
+    global.HEYS = {};
+    loadModule();
+    const { getStalledUploadRecoveryDecision } = global.HEYS.syncQueueRuntimePure;
+    const base = {
+      uploadInProgress: true,
+      inFlightCount: 1,
+      uploadStartedAt: 1000,
+      now: 70000,
+      minAgeMs: 15000,
+    };
+
+    expect(getStalledUploadRecoveryDecision({ ...base, online: false })).toEqual(expect.objectContaining({
+      recover: false,
+      reason: 'offline',
+    }));
+    expect(getStalledUploadRecoveryDecision({ ...base, online: true, switchInProgress: true })).toEqual(expect.objectContaining({
+      recover: false,
+      reason: 'switch_in_progress',
+    }));
+  });
+
   it.each([
     'heys_planning_checklists_v1',
     'heys_planning_checklist_tombstones_v1',

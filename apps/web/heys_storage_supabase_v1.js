@@ -3451,6 +3451,9 @@
       uploadStartedAt: _uploadStartedAt,
       lastUploadOkAt: _lastUploadOkAt,
       lastUploadFailAt: _lastUploadFailAt,
+      clientUploadRunId: _clientUploadRunId,
+      clientUploadWatchdogSet: _clientUploadWatchdogTimer != null,
+      lastClientUploadRecoveryAt: _lastClientUploadRecoveryAt,
       clientUpsertTimerSet: clientUpsertTimer != null,
       clientUpsertTimerSetAt: _clientUpsertTimerSetAt,
       clientQueueLen: Array.isArray(clientUpsertQueue) ? clientUpsertQueue.length : 0
@@ -3510,6 +3513,9 @@
     const logFlushSummary = (label, afterCount) => {
       logCritical(`🧾 [FLUSH] ${label} before=${totalBefore} after=${afterCount} ms=${Date.now() - flushStartTs}`);
     };
+    recoverStalledClientUpload('flush', {
+      minAgeMs: CLIENT_UPLOAD_FLUSH_STALL_RECOVERY_MS,
+    });
 
     const result = await flushPendingQueueCore({
       timeoutMs,
@@ -6558,7 +6564,10 @@
             };
             let isNoOpMerge = false;
             try {
-              isNoOpMerge = JSON.stringify(stripUpdatedAt(it.v)) === JSON.stringify(stripUpdatedAt(result.v));
+              const runtimePure = global.HEYS?.syncQueueRuntimePure;
+              isNoOpMerge = typeof runtimePure?.areDayv2MergeValuesEquivalent === 'function'
+                ? runtimePure.areDayv2MergeValuesEquivalent(it.v, result.v)
+                : JSON.stringify(stripUpdatedAt(it.v)) === JSON.stringify(stripUpdatedAt(result.v));
             } catch (_) { /* noop — на ошибке сравнения ведём себя как раньше */ }
 
             if (!isNoOpMerge) {
@@ -10405,9 +10414,15 @@
   let _writeContextIssueTimeouts = 0;
   let _writeContextRetryTimer = null;
   let _clientUpsertTimerSetAt = 0; // Date.now() когда clientUpsertTimer был выставлен
+  let _clientUploadWatchdogTimer = null;
+  let _clientUploadRunId = 0;
+  let _lastClientUploadRecoveryAt = 0;
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
   let _uploadLogBufferedBatches = 0;
+  const CLIENT_UPLOAD_STALL_RECOVERY_MS = 60000;
+  const CLIENT_UPLOAD_FLUSH_STALL_RECOVERY_MS = 15000;
+  const CLIENT_UPLOAD_RECOVERY_COOLDOWN_MS = 10000;
   const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
   const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
   const UPLOAD_SUMMARY_BUFFER_MS = 2500;
@@ -10620,6 +10635,89 @@
     }
   }
 
+  function getClientUploadRecoveryDecision(reason, options = {}) {
+    const runtimePure = global.HEYS?.syncQueueRuntimePure;
+    if (!runtimePure || typeof runtimePure.getStalledUploadRecoveryDecision !== 'function') {
+      return { recover: false, reason: 'missing_runtime_helper', ageMs: 0 };
+    }
+    const persistedInFlight = Array.isArray(clientUpsertInFlightQueue) ? clientUpsertInFlightQueue.length : 0;
+    return runtimePure.getStalledUploadRecoveryDecision({
+      uploadInProgress: !!_uploadInProgress,
+      inFlightCount: Math.max(_uploadInFlightCount || 0, persistedInFlight),
+      uploadStartedAt: _uploadStartedAt,
+      now: Date.now(),
+      minAgeMs: options.minAgeMs || CLIENT_UPLOAD_STALL_RECOVERY_MS,
+      online: typeof navigator === 'undefined' ? true : navigator.onLine,
+      switchInProgress: !!cloud._switchClientInProgress,
+      logoutSuppressed: isLogoutSuppressionActive(),
+      reason,
+    });
+  }
+
+  function recoverStalledClientUpload(reason, options = {}) {
+    const decision = getClientUploadRecoveryDecision(reason, options);
+    if (!decision.recover) return false;
+    const now = Date.now();
+    if (now - _lastClientUploadRecoveryAt < CLIENT_UPLOAD_RECOVERY_COOLDOWN_MS) {
+      return false;
+    }
+    const batch = Array.isArray(clientUpsertInFlightQueue) ? clientUpsertInFlightQueue.slice() : [];
+    if (!batch.length) return false;
+
+    _lastClientUploadRecoveryAt = now;
+    _clientUploadRunId += 1;
+    _uploadInProgress = false;
+    _uploadInFlightCount = 0;
+    _uploadStartedAt = 0;
+    if (clientUpsertTimer) {
+      clearTimeout(clientUpsertTimer);
+      clientUpsertTimer = null;
+    }
+
+    requeueClientInFlightBatch(batch, `stalled-${reason || 'watchdog'}:${Math.round((decision.ageMs || 0) / 1000)}s`);
+    addSyncLogEntry('upload_recovered', {
+      reason: reason || 'watchdog',
+      ageMs: decision.ageMs || 0,
+      n: batch.length
+    });
+    recordUploadDiag({
+      kind: 'runtime-stall',
+      error: 'upload_stalled_recovered',
+      code: 'watchdog',
+      chunkBytes: 0,
+      chunkLen: batch.length,
+      items: batch.map((item) => item && item.k).filter(Boolean).slice(0, 10)
+    });
+    logCritical(`[SYNC] 🧯 Recovered stalled upload (${reason || 'watchdog'}): re-queued ${batch.length} item(s), age=${Math.round((decision.ageMs || 0) / 1000)}s`);
+
+    cloud.ensureWriteContextFresh(null, {
+      reason: `stalled-upload-recovery:${reason || 'watchdog'}`,
+      retryPending: false,
+    }).catch(() => null).finally(() => {
+      if (clientUpsertQueue.length > 0) scheduleClientPush();
+    });
+    notifySyncCompletedIfDrained();
+    return true;
+  }
+
+  function scheduleClientUploadWatchdog(reason) {
+    if (_clientUploadWatchdogTimer) {
+      clearTimeout(_clientUploadWatchdogTimer);
+      _clientUploadWatchdogTimer = null;
+    }
+    if (!_uploadInProgress || !(clientUpsertInFlightQueue && clientUpsertInFlightQueue.length > 0)) {
+      return;
+    }
+    const ageMs = _uploadStartedAt ? Math.max(0, Date.now() - _uploadStartedAt) : 0;
+    const delay = Math.max(1000, CLIENT_UPLOAD_STALL_RECOVERY_MS - ageMs);
+    _clientUploadWatchdogTimer = setTimeout(() => {
+      _clientUploadWatchdogTimer = null;
+      if (!recoverStalledClientUpload(reason || 'watchdog')) {
+        scheduleClientUploadWatchdog(reason || 'watchdog');
+      }
+    }, delay);
+  }
+
   /**
    * 🔄 v=34: Выделенная функция upload — используется как с debounce, так и immediately
    * @param {Array} batch - массив items для отправки
@@ -10710,6 +10808,8 @@
     _uploadInFlightCount = filteredBatch.length;
     _uploadStartedAt = Date.now();
     const _uploadStartTs = _uploadStartedAt;
+    const uploadRunId = ++_clientUploadRunId;
+    scheduleClientUploadWatchdog('upload-start');
     // One progress ceiling update per upload attempt (not on every pending-change).
     try {
       updateSyncProgressTotal();
@@ -10830,6 +10930,10 @@
         let isAuthError = false; // 🔧 v58 FIX: отслеживаем auth ошибки
         for (const [clientId, items] of Object.entries(byClientId)) {
           const result = await cloud.saveClientViaRPC(clientId, items);
+          if (uploadRunId !== _clientUploadRunId) {
+            logCritical(`[SYNC] 🧯 Ignored stale upload completion run=${uploadRunId} current=${_clientUploadRunId}`);
+            return;
+          }
           if (isLogoutSuppressionActive()) {
             clearClientInFlightBatch({ notify: false });
             _uploadInProgress = false;
@@ -10985,6 +11089,10 @@
       });
 
       const results = await Promise.all(promises);
+      if (uploadRunId !== _clientUploadRunId) {
+        logCritical(`[SYNC] 🧯 Ignored stale legacy upload completion run=${uploadRunId} current=${_clientUploadRunId}`);
+        return;
+      }
       const failedItems = results.filter(r => !r.success).map(r => r.item);
       const successItems = results.filter(r => r.success).map(r => r.item);
 
@@ -11042,6 +11150,10 @@
       persistClientQueueDurabilityState();
       notifyPendingChange();
     } catch (e) {
+      if (uploadRunId !== _clientUploadRunId) {
+        logCritical(`[SYNC] 🧯 Ignored stale upload error run=${uploadRunId} current=${_clientUploadRunId}`);
+        return;
+      }
       if (isLogoutSuppressionActive()) {
         clearClientInFlightBatch({ notify: false });
         _uploadInProgress = false;
@@ -12491,6 +12603,7 @@
     resetRetry(); // Сбрасываем exponential backoff
 
     const pendingBefore = cloud.getPendingCount();
+    recoverStalledClientUpload('online');
 
     if (clientUpsertQueue.length > 0) {
       cloud.ensureWriteContextFresh(null, { reason: 'online', retryPending: false })
@@ -13978,6 +14091,7 @@
       return;
     }
     startForegroundAutoSyncLoop();
+    recoverStalledClientUpload('visibility-visible');
     cloud.ensureWriteContextFresh(null, { reason: 'visibility-visible', retryPending: false }).catch(() => null);
     requestForegroundAutoSync('visibility-visible', { minGapMs: 5000 }).catch(() => { });
   }
@@ -13991,11 +14105,13 @@
 
   if (global.addEventListener) {
     global.addEventListener('focus', function () {
+      recoverStalledClientUpload('window-focus');
       cloud.ensureWriteContextFresh(null, { reason: 'window-focus', retryPending: false }).catch(() => null);
       requestForegroundAutoSync('window-focus', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
     });
     global.addEventListener('pageshow', function () {
+      recoverStalledClientUpload('pageshow');
       cloud.ensureWriteContextFresh(null, { reason: 'pageshow', retryPending: false }).catch(() => null);
       requestForegroundAutoSync('pageshow', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
