@@ -1774,7 +1774,7 @@
 	                        style="font-size:22px;font-weight:650;letter-spacing:0;color:#475569;font-family:system-ui,-apple-system,sans-serif">
 	                        Вход клиента</div>
 	                </div>
-                <form id="hlg-client-form" class="space-y-6" onsubmit="event.preventDefault(); hlgClientLogin();">
+	                <div id="hlg-client-form" class="space-y-6">
                     <!-- Телефон -->
                     <div class="space-y-3">
                         <div class="heys-auth-label"
@@ -1784,7 +1784,7 @@
                             style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
                             <span class="phone-prefix-large heys-auth-prefix"
                                 style="font-weight:700;color:#334155;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif;user-select:none">+7</span>
-                            <input id="hlg-phone" type="tel" inputmode="numeric" autocomplete="tel"
+	                            <input id="hlg-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel"
                                 placeholder="(999) 123-45-67" maxlength="15"
                                 class="phone-input-large heys-auth-phone-input"
                                 style="width:224px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
@@ -1797,28 +1797,28 @@
                             PIN-код</div>
                         <div class="heys-auth-pin-grid">
                             <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
-                                <input id="hlg-pin-0" class="heys-auth-pin-input" type="text" inputmode="numeric"
+	                                <input id="hlg-pin-0" name="pin-1" class="heys-auth-pin-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" maxlength="1" autocomplete="one-time-code"
                                     style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
                                 <span id="hlg-pin-ov-0" class="heys-auth-pin-overlay"
                                     style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
                             </div>
                             <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
-                                <input id="hlg-pin-1" class="heys-auth-pin-input" type="text" inputmode="numeric"
+	                                <input id="hlg-pin-1" name="pin-2" class="heys-auth-pin-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" maxlength="1" autocomplete="off"
                                     style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
                                 <span id="hlg-pin-ov-1" class="heys-auth-pin-overlay"
                                     style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
                             </div>
                             <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
-                                <input id="hlg-pin-2" class="heys-auth-pin-input" type="text" inputmode="numeric"
+	                                <input id="hlg-pin-2" name="pin-3" class="heys-auth-pin-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" maxlength="1" autocomplete="off"
                                     style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
                                 <span id="hlg-pin-ov-2" class="heys-auth-pin-overlay"
                                     style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
                             </div>
                             <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
-                                <input id="hlg-pin-3" class="heys-auth-pin-input" type="text" inputmode="numeric"
+	                                <input id="hlg-pin-3" name="pin-4" class="heys-auth-pin-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" maxlength="1" autocomplete="off"
                                     style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
                                 <span id="hlg-pin-ov-3" class="heys-auth-pin-overlay"
@@ -1844,8 +1844,8 @@
                     <div id="hlg-client-err" class="heys-auth-error"
                         style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
                     </div>
-                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="submit" disabled aria-label="Войти"></button>
-                </form>
+	                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="button" onclick="hlgClientLogin()" disabled aria-label="Войти"></button>
+                </div>
 		                <div class="heys-auth-footer-row">
 		                    <div class="heys-auth-support-line">Забыли PIN? <button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button">Обратитесь в поддержку.</button></div>
 		                </div>
@@ -1869,7 +1869,7 @@
                         style="margin-top:4px;font-size:14px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
                         Вход куратора</div>
                 </div>
-                <form id="hlg-curator-form" onsubmit="event.preventDefault(); hlgCuratorLogin();">
+	                <form id="hlg-curator-form" onsubmit="event.preventDefault(); hlgCuratorLogin();">
                     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
                         <input id="hlg-curator-email" class="heys-auth-input" name="email" type="email"
                             autocomplete="email" placeholder="Email"
@@ -1882,10 +1882,10 @@
                     <div id="hlg-curator-err" class="heys-auth-error"
                         style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:12px;font-family:system-ui,-apple-system,sans-serif">
                     </div>
-                    <button id="hlg-curator-submit" class="heys-auth-btn heys-auth-btn--primary" type="submit"
+	                    <button id="hlg-curator-submit" class="heys-auth-btn heys-auth-btn--primary" type="submit"
                         style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);font-family:system-ui,-apple-system,sans-serif">Войти
                         →</button>
-                </form>
+	                </form>
                 <div style="margin-top:20px;text-align:center">
                     <div id="hlg-greeting-curator" class="heys-auth-meta"
                         style="font-size:14px;color:#94a3b8;margin-bottom:8px;font-family:system-ui,-apple-system,sans-serif">
@@ -3833,15 +3833,20 @@
                     });
             };
 
-            // ─── Инициализация Enter для куратора ──────────────────────────
-            function initCuratorEnter() {
-                var passEl = document.getElementById('hlg-curator-pass');
-                if (passEl) {
-                    passEl.addEventListener('keydown', function (e) {
-                        if (e.key === 'Enter') window.hlgCuratorLogin();
-                    });
-                }
-            }
+	            // ─── Инициализация Enter для куратора ──────────────────────────
+	            function initCuratorEnter() {
+	                var emailEl = document.getElementById('hlg-curator-email');
+	                var passEl = document.getElementById('hlg-curator-pass');
+	                [emailEl, passEl].forEach(function (el) {
+	                    if (!el) return;
+	                    el.addEventListener('keydown', function (e) {
+	                        if (e.key === 'Enter') {
+	                            e.preventDefault();
+	                            window.hlgCuratorLogin();
+	                        }
+	                    });
+	                });
+	            }
 
             // ─── Watchdog совместимость ────────────────────────────────────
             // Если сработает recovery UI — скрываем логин-оверлей
