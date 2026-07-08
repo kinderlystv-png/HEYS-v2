@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.08.8e579928",
+      "buildHash": "8e579928",
+      "date": "2026-07-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Меню советов открывается надёжнее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Меню советов открывается надёжнее",
+          "description": "Кнопка советов в нижнем меню снова открывает список сразу, даже когда дневник параллельно обновляет данные. Это помогает не терять доступ к подсказкам после синхронизации дня."
+        }
+      ],
+      "coveredCommits": ["8e579928"]
+    },
+    {
       "version": "2026.07.08.5c70f19d",
       "buildHash": "5c70f19d",
       "date": "2026-07-08",
@@ -184,22 +200,6 @@
         }
       ],
       "coveredCommits": ["3c86a8a0", "2bbcd6e1"]
-    },
-    {
-      "version": "2026.07.05.4434fa1e",
-      "buildHash": "4434fa1e",
-      "date": "2026-07-05",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "stabilize check-ins and hunger prompts",
-      "items": [
-        {
-          "type": "fix",
-          "title": "stabilize check-ins and hunger prompts",
-          "description": "stabilize check-ins and hunger prompts"
-        }
-      ],
-      "coveredCommits": ["4434fa1e"]
     }
   ]
 }
