@@ -8,7 +8,7 @@
  * Trigger: Timer (every 5 minutes for trial queue, daily for cleanup)
  */
 
-const { getPool } = require('./shared/db-pool');
+const { acquireHealthyClient } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 
 // DB pool — shared canonical implementation (CA-cert verify-full SSL).
@@ -1461,8 +1461,7 @@ module.exports.handler = async (event, context) => {
 
   let client;
   try {
-    const pool = getPool();
-    client = await pool.connect();
+    client = await acquireHealthyClient();
     
     const results = {};
 
@@ -1723,8 +1722,8 @@ module.exports.handler = async (event, context) => {
     // is the casualty, sendTelegramNotification fails gracefully.
     await sendTelegramNotification(
       `🚨 *Maintenance handler FAILED*\n\n` +
-      `Task: ${triggerId}\n` +
-      `Error: ${error.message.slice(0, 300)}`
+      `Task: ${_mdEscape(triggerId)}\n` +
+      `Error: ${_mdEscape(error.message.slice(0, 300))}`
     );
     
     return {

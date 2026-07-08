@@ -25,6 +25,7 @@ const TRIGGERS = [
   { name: 'heys-start-bot-poll', cron: '0/1 * * * ? *', tag: '$latest', payloadIncludes: '"poll":"heys-start-bot"' },
   { name: 'heys-bot-client-keepwarm', cron: '0/1 * * * ? *', tag: '$latest', payloadIncludes: '"warmup":"heys-bot-client"' },
   { name: 'heys-maintenance-trial-queue', cron: '0/5 * * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"trial_queue"' },
+  { name: 'heys-maintenance-ops-canary', cron: '0 * * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"ops_canary"' },
   { name: 'heys-maintenance-daily', cron: '0 3 * * ? *', tag: '$latest' },
   { name: 'heys-maintenance-daily-report', cron: '0 4 * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"daily_report"' },
   { name: 'heys-maintenance-kv-cleanup-weekly', cron: '0 2 ? * SUN *', tag: '$latest', payloadIncludes: '"trigger_id":"kv_cleanup"' },
@@ -118,6 +119,10 @@ async function ycJson(args) {
 
 async function gitText(args) {
   return (await execFileText('git', args, { cwd: ROOT })).trim();
+}
+
+function parseGitStatusLines(output) {
+  return String(output || '').split(/\r?\n/).filter(Boolean);
 }
 
 function redact(value) {
@@ -287,7 +292,10 @@ async function collectStatus() {
       const versions = await ycJson(['serverless', 'function', 'version', 'list', '--function-name', name]);
       const latest = latestVersion(versions);
       const env = latest?.environment || {};
-      const sourceCommit = await gitText(['log', '--format=%h', '--max-count=1', '--', `yandex-cloud-functions/${name}`]).catch(() => '');
+      const sourcePath = `yandex-cloud-functions/${name}`;
+      const sourceCommitRaw = await gitText(['log', '--format=%h %cI', '--max-count=1', '--', sourcePath]).catch(() => '');
+      const [sourceCommit = '', sourceCommitDate = ''] = sourceCommitRaw.split(/\s+/, 2);
+      const dirtySource = parseGitStatusLines(await gitText(['status', '--porcelain', '--', sourcePath]).catch(() => ''));
       const deployedCommit = env.HEYS_DEPLOY_COMMIT || null;
       const plaintextSecrets = findPlaintextSecretEnv(env);
       const functionIssues = [];
@@ -297,6 +305,14 @@ async function collectStatus() {
       if (deployedCommit && sourceCommit && !sourceCommit.startsWith(String(deployedCommit).slice(0, sourceCommit.length))) {
         functionIssues.push(`drift=${deployedCommit}->${sourceCommit}`);
       }
+      if (dirtySource.length) {
+        functionIssues.push(`dirty_source=${dirtySource.length}`);
+        const latestCreatedAt = latest?.created_at ? Date.parse(latest.created_at) : 0;
+        const sourceCommittedAt = sourceCommitDate ? Date.parse(sourceCommitDate) : 0;
+        if (latestCreatedAt && sourceCommittedAt && latestCreatedAt > sourceCommittedAt + 60 * 1000) {
+          functionIssues.push(`hotpatch_newer_than_commit=${latest.created_at}`);
+        }
+      }
       if (functionIssues.length) issues.push(...functionIssues.map((p) => `${name}:${p}`));
       functions.push({
         name,
@@ -304,6 +320,8 @@ async function collectStatus() {
         created_at: latest?.created_at || null,
         deployed_commit: deployedCommit,
         source_commit: sourceCommit,
+        source_commit_date: sourceCommitDate || null,
+        dirty_source_files: dirtySource.length,
         plaintext_secret_keys: plaintextSecrets,
         issues: functionIssues,
       });

@@ -200,6 +200,41 @@ function getPool(functionName = null) {
   return pool;
 }
 
+function isTransientDbClientError(error) {
+  const message = String(error?.message || '');
+  return /Connection terminated unexpectedly|Connection ended unexpectedly|ECONNRESET|EPIPE|terminating connection/i.test(message)
+    || error?.code === 'ECONNRESET'
+    || error?.code === 'EPIPE';
+}
+
+async function acquireHealthyClient(options = {}) {
+  const {
+    functionName = null,
+    maxAttempts = 2,
+    validate = true,
+  } = options;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let client;
+    try {
+      client = await getPool(functionName).connect();
+      if (validate) await client.query('SELECT 1');
+      return client;
+    } catch (error) {
+      lastError = error;
+      if (client) client.release(true);
+      if (attempt + 1 < maxAttempts && isTransientDbClientError(error)) {
+        console.warn('[DB-Pool] retrying with fresh client:', error.message);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to acquire healthy DB client');
+}
+
 /**
  * Helper функция для автоматического управления клиентом
  * Получает клиент из pool, выполняет callback, и автоматически освобождает клиент
@@ -208,57 +243,14 @@ function getPool(functionName = null) {
  * @returns {Promise<any>} результат выполнения callback
  * @throws {Error} если произошла ошибка в callback
  */
-async function withClient(callback, maxRetries = 2) {
-  const pool = getPool();
-  let lastError = null;
+async function withClient(callback) {
+  const client = await acquireHealthyClient();
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    let client = null;
-
-    try {
-      client = await pool.connect();
-
-      // Проверяем живость соединения при повторной попытке
-      if (attempt > 0) {
-        try {
-          await client.query('SELECT 1');
-        } catch (pingErr) {
-          console.warn('[DB-Pool] Connection stale, releasing and retrying...');
-          client.release(true);
-          client = null;
-          continue;
-        }
-      }
-
-      return await callback(client);
-    } catch (err) {
-      lastError = err;
-
-      const isConnectionError =
-        err.message?.includes('Connection terminated') ||
-        err.message?.includes('connection') ||
-        err.code === 'ECONNRESET' ||
-        err.code === 'EPIPE';
-
-      if (isConnectionError && attempt < maxRetries) {
-        console.warn(`[DB-Pool] ⚠️ Connection error (attempt ${attempt + 1}/${maxRetries + 1}):`, err.message);
-        if (client) {
-          client.release(true);
-          client = null;
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-        continue;
-      }
-
-      throw err;
-    } finally {
-      if (client) {
-        client.release();
-      }
-    }
+  try {
+    return await callback(client);
+  } finally {
+    client.release();
   }
-
-  throw lastError || new Error('Unknown error in withClient');
 }
 
 /**
@@ -318,6 +310,7 @@ function getAllPools() {
 
 module.exports = {
   getPool,
+  acquireHealthyClient,
   withClient,
   closePool,
   getAllPools

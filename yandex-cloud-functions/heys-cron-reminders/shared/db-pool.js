@@ -182,6 +182,41 @@ function getPool(functionName = null) {
   return pool;
 }
 
+function isTransientDbClientError(error) {
+  const message = String(error?.message || '');
+  return /Connection terminated unexpectedly|Connection ended unexpectedly|ECONNRESET|EPIPE|terminating connection/i.test(message)
+    || error?.code === 'ECONNRESET'
+    || error?.code === 'EPIPE';
+}
+
+async function acquireHealthyClient(options = {}) {
+  const {
+    functionName = null,
+    maxAttempts = 2,
+    validate = true,
+  } = options;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let client;
+    try {
+      client = await getPool(functionName).connect();
+      if (validate) await client.query('SELECT 1');
+      return client;
+    } catch (error) {
+      lastError = error;
+      if (client) client.release(true);
+      if (attempt + 1 < maxAttempts && isTransientDbClientError(error)) {
+        console.warn('[DB-Pool] retrying with fresh client:', error.message);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to acquire healthy DB client');
+}
+
 /**
  * Helper функция для автоматического управления клиентом
  * Получает клиент из pool, выполняет callback, и автоматически освобождает клиент
@@ -191,8 +226,7 @@ function getPool(functionName = null) {
  * @throws {Error} если произошла ошибка в callback
  */
 async function withClient(callback) {
-  const pool = getPool();
-  const client = await pool.connect();
+  const client = await acquireHealthyClient();
   
   try {
     return await callback(client);
@@ -258,6 +292,7 @@ function getAllPools() {
 
 module.exports = {
   getPool,
+  acquireHealthyClient,
   withClient,
   closePool,
   getAllPools

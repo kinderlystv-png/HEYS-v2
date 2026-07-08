@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-07-08 — Создан триггер heys-maintenance-ops-canary
+
+**Проблема:** dead-man's switch бил тревогу `ops_canary молчит 43h`. Ручной
+`pnpm ops:heys:canary --strict` проходил успешно и обновлял heartbeat, но
+отдельного YC timer для `{"trigger_id":"ops_canary"}` не было.
+
+**Фикс:** создан YC trigger `heys-maintenance-ops-canary` (ID:
+`a1sutjl2sf3jp6lrq71j`):
+
+- cron: `0 * * * ? *` (ежечасно)
+- payload: `{"trigger_id":"ops_canary"}`
+- function: `d4e4q2l8p0jdui3703bv` (heys-maintenance, $latest)
+- service account: `aje85rjgpj4nk9m384ek`
+
+`check-heys-ops-status.cjs` теперь проверяет наличие этого trigger.
+
+Первый scheduled run подтвердил payload routing (`ops_canary`), но поймал stale
+PostgreSQL client из reused function container. Добавлен health-check + один
+retry с fresh client перед выполнением maintenance task. Emergency hotpatch
+задеплоен в версию `d4e0q40jugilksp0lbs5`; timer-form invoke после деплоя
+успешно обновил `ops_canary`.
+
+Follow-up: `ops:heys:status` теперь подсвечивает dirty source / hotpatch drift
+до commit, а `acquireHealthyClient()` вынесен в `db-pool.js` копии cloud
+functions, чтобы serverless stale connections ловились до бизнес-запросов.
+
+---
+
 ## 2026-06-15 — Создан триггер heys-maintenance-daily-cleanup
 
 **Проблема:** dead-man's switch бил тревогу `daily_cleanup молчит 277ч` — задача
