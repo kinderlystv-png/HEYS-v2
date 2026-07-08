@@ -39,13 +39,13 @@
     "console_calls_total": 1357
   },
   "p0d_post_optimization": {
-    "_captured": "2026-07-05 (baseline updated via --update-baseline)",
+    "_captured": "2026-07-08 (baseline updated via --update-baseline)",
     "boot_bundles_uncompressed": {
       "boot-init": 20390,
-      "boot-core": 1176123,
-      "boot-calc": 812638,
-      "boot-day": 860612,
-      "boot-app": 1116246
+      "boot-core": 1183876,
+      "boot-calc": 815417,
+      "boot-day": 911247,
+      "boot-app": 1122452
     },
     "boot_bundles_gzip": {
       "boot-init": 5949,
@@ -54,7 +54,7 @@
       "boot-day": 126212,
       "boot-app": 196668
     },
-    "boot_total_uncompressed": 3986009,
+    "boot_total_uncompressed": 4053382,
     "boot_total_gzip": 718200,
     "savings_vs_pre_percent": 48
   },
