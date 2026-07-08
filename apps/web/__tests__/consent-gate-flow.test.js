@@ -6,6 +6,43 @@ import { describe, expect, it } from 'vitest';
 const source = fs.readFileSync(path.resolve(__dirname, '../heys_app_gate_flow_v1.js'), 'utf8');
 
 describe('consent gate flow', () => {
+  it('keeps the app skeleton instead of rendering a separate gate while consent check is loading', () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+
+    window.HEYS = {
+      Consents: {
+        ConsentScreen: function ConsentScreen() {},
+        ConsentOutdatedBanner: function ConsentOutdatedBanner() {},
+      },
+    };
+    window.React = {
+      createElement: (type, props) => ({ type, props }),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const gate = window.HEYS.AppGateFlow.buildConsentGate({
+        gate: null,
+        desktopGate: null,
+        cloudUser: null,
+        clientId: 'client-1',
+        needsConsent: false,
+        checkingConsent: true,
+        setNeedsConsent: () => {},
+        setCheckingConsent: () => {},
+        setShowMorningCheckin: () => {},
+        setConsentCheckError: () => {},
+      });
+
+      expect(gate).toBeNull();
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
+  });
+
   it('blocks PIN clients when required consents are outdated', () => {
     const previousHEYS = window.HEYS;
     const previousReact = window.React;

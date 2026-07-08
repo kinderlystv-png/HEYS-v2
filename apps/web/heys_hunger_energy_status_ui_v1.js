@@ -293,8 +293,17 @@
     try { return new Date().toISOString(); } catch (_) { return String(Date.now()); }
   }
 
+  function formatDateKeyLocal(d) {
+    if (!d || !Number.isFinite(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   function todayKey() {
-    return nowIso().slice(0, 10);
+    const fromDayUtils = HEYS.dayUtils?.todayISO?.();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(fromDayUtils || ''))) return fromDayUtils;
+    const d = new Date();
+    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+    return formatDateKeyLocal(d) || nowIso().slice(0, 10);
   }
 
   function addDays(dateStr, days) {
@@ -1038,6 +1047,13 @@
     return meal.time || meal.timeStart || meal.startTime || meal.createdAt || meal.ts || meal.timestamp || '';
   }
 
+  function isNightMealTime(value) {
+    const match = /^(\d{1,2}):(\d{2})/.exec(String(value || ''));
+    if (!match) return false;
+    const rawHour = Number(match[1]);
+    return Number.isFinite(rawHour) && rawHour >= 0 && rawHour < 3;
+  }
+
   function mealTimeToDateTime(date, value) {
     if (!value) return null;
     const text = String(value);
@@ -1088,21 +1104,31 @@
   function getRecentDayCandidates(date, primaryDay) {
     const rows = [];
     const seen = new Set();
-    function push(dateKey, day) {
+    function push(dateKey, day, options = {}) {
       if (!dateKey || !day || typeof day !== 'object') return;
-      const key = dateKey + ':' + (day.updatedAt || day.date || rows.length);
+      const meals = options.onlyNight
+        ? safeArray(day.meals).filter((meal) => isNightMealTime(mealTimeValue(meal)))
+        : null;
+      if (options.onlyNight && meals.length === 0) return;
+      const normalizedDay = options.onlyNight ? { ...day, meals } : day;
+      const key = dateKey + ':' + (options.source || '') + ':' + (day.updatedAt || day.date || rows.length);
       if (seen.has(key)) return;
       seen.add(key);
-      rows.push({ date: dateKey, day });
+      rows.push({ date: dateKey, day: normalizedDay });
+    }
+    function pushHeysDay(dateKey, day, source) {
+      push(dateKey, day, { source });
+      const nextDate = addDays(dateKey, 1);
+      push(nextDate, getStoredDay(nextDate), { onlyNight: true, source: source + ':next-night' });
     }
 
     const today = date || primaryDay?.date || todayKey();
-    push(primaryDay?.date || today, primaryDay);
-    push(today, getRuntimeDay(today));
-    push(today, getStoredDay(today));
+    pushHeysDay(primaryDay?.date || today, primaryDay, 'primary');
+    pushHeysDay(today, getRuntimeDay(today), 'runtime');
+    pushHeysDay(today, getStoredDay(today), 'stored');
     for (let offset = 1; offset <= 3; offset += 1) {
       const prevDate = addDays(today, -offset);
-      push(prevDate, getStoredDay(prevDate));
+      pushHeysDay(prevDate, getStoredDay(prevDate), 'stored-' + offset);
     }
     return rows;
   }
@@ -1156,7 +1182,8 @@
   function localDateKeyFromTs(value) {
     const d = new Date(value);
     if (!Number.isFinite(d.getTime())) return '';
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+    return formatDateKeyLocal(d);
   }
 
   function dayStartTs(date) {

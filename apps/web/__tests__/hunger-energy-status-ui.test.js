@@ -1644,6 +1644,42 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(spark.path).toBe('');
   });
 
+  it('keeps the hunger graph on the previous HEYS day before 03:00', () => {
+    vi.setSystemTime(new Date(2026, 6, 8, 2, 30, 0));
+    global.HEYS.dayUtils = {
+      loadDay(date) {
+        if (date === '2026-07-07') {
+          return {
+            date,
+            meals: [
+              { time: '21:20', items: [{ name: 'dinner' }] }
+            ],
+            sleepStart: '23:30',
+            sleepEnd: '08:00'
+          };
+        }
+        if (date === '2026-07-08') {
+          return {
+            date,
+            meals: [
+              { time: '01:15', items: [{ name: 'night snack' }] },
+              { time: '10:00', items: [{ name: 'breakfast' }] }
+            ]
+          };
+        }
+        return null;
+      }
+    };
+
+    const spark = Adapter.buildSparkTimeline({
+      draft: { hungerLevel: 4 }
+    });
+
+    expect(spark.meals.map((meal) => meal.label)).toEqual(['еда 21:20', 'еда 01:15']);
+    expect(spark.meals.every((meal) => meal.t <= Date.now())).toBe(true);
+    expect(spark.meals[1].t).toBeGreaterThan(spark.meals[0].t);
+  });
+
   it('does not draw a fake night band when sleep time is missing', () => {
     vi.setSystemTime(new Date('2026-07-05T12:00:00Z'));
 

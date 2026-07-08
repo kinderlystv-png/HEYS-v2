@@ -850,6 +850,58 @@
     }
   }
 
+  function markMorningActivationSkipReasonAnswered(dateKey) {
+    const clientId = getCurrentClientId();
+    if (!clientId || !dateKey) return;
+    try {
+      sessionStorage.setItem(`heys_ma_skip_reason_answered_${clientId}_${dateKey}`, '1');
+    } catch (_) {
+      // sessionStorage can be unavailable in private mode
+    }
+  }
+
+  function traceMorningActivation(event, payload = {}, level = 'info') {
+    try {
+      const clientId = getCurrentClientId();
+      const body = {
+        event,
+        source: 'heys_steps_v1',
+        client: String(clientId || '').slice(0, 8) || null,
+        ...payload
+      };
+      if (!body.flowId && HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function') {
+        body.flowId = HEYS.LogTrace.makeFlowId('morning-activation');
+      }
+      if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
+        HEYS.LogTrace.trace(level, '[HEYS.ma.trace]', body);
+      } else {
+        (level === 'warn' ? console.warn : console.info)('[HEYS.ma.trace]', body);
+      }
+      return body.flowId || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function verifyMorningActivationSkipReasonWrite(dateKey, dayData, flowId) {
+    try {
+      if (!HEYS.LogTrace || typeof HEYS.LogTrace.verifyKvWrite !== 'function') return;
+      const key = `heys_dayv2_${dateKey}`;
+      const expectedSummary = typeof HEYS.LogTrace.summarizeValue === 'function'
+        ? HEYS.LogTrace.summarizeValue(dayData)
+        : null;
+      HEYS.LogTrace.verifyKvWrite({
+        prefix: '[HEYS.ma.trace]',
+        flowId,
+        key,
+        expectedSummary,
+        delayMs: 2500
+      });
+    } catch (_) {
+      // Readback diagnostics must never block the user flow.
+    }
+  }
+
   function removeMorningActivationArtifacts(dayData) {
     const maZoneSignatures = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
     const trainingZoneSignature = (training) => {
@@ -4498,6 +4550,7 @@
 
   function MorningActivationSkipReasonStepComponent({ context }) {
     const dateKey = context?.dateKey || getTodayKey();
+    const pickedRef = useRef(false);
     const btnBase = {
       width: '100%',
       textAlign: 'left',
@@ -4511,12 +4564,43 @@
       cursor: 'pointer'
     };
     const pick = (id) => {
-      persistMorningActivationState(dateKey, {
+      if (pickedRef.current) return;
+      pickedRef.current = true;
+      const savedDay = persistMorningActivationState(dateKey, {
         skipReasonId: id,
         skipReasonPending: false,
         skipReasonCapturedAt: Date.now()
       }, 'morning-activation-skip-reason');
-      context?.onNext?.();
+      markMorningActivationSkipReasonAnswered(dateKey);
+      const flowId = traceMorningActivation('skip_reason_picked', {
+        dateKey,
+        reasonId: id,
+        status: savedDay?.morningActivation?.status || null,
+        skipReasonPending: savedDay?.morningActivation?.skipReasonPending === true
+      });
+      verifyMorningActivationSkipReasonWrite(dateKey, savedDay, flowId);
+      try {
+        window.dispatchEvent(new CustomEvent('heys:morning-activation-skip-reason-picked', {
+          detail: { dateKey, reasonId: id, terminal: true }
+        }));
+      } catch (_) {
+        // ignore
+      }
+      const nextResult = context?.onNext?.();
+      if (nextResult && typeof nextResult.catch === 'function') {
+        nextResult.catch(() => {
+          pickedRef.current = false;
+        });
+      }
+      setTimeout(() => {
+        try {
+          const modalStillOpen = document.getElementById('heys-step-modal-root')
+            || document.getElementById('heys-morning-activation-modal-root');
+          if (modalStillOpen && typeof context?.onClose === 'function') context.onClose();
+        } catch (_) {
+          // ignore fallback close errors
+        }
+      }, 250);
     };
     return React.createElement('div', {
       className: 'ma-skip-reason-stack',

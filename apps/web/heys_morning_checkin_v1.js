@@ -24,6 +24,28 @@
     if (isMorningActivationDebugEnabled()) console.info(...args);
   }
 
+  function traceMorningActivationDecision(event, payload = {}, level = 'info') {
+    try {
+      const clientId = getCurrentClientId();
+      const body = {
+        event,
+        source: 'heys_morning_checkin_v1',
+        client: String(clientId || '').slice(0, 8) || null,
+        ...payload
+      };
+      if (!body.flowId && HEYS.LogTrace && typeof HEYS.LogTrace.makeFlowId === 'function') {
+        body.flowId = HEYS.LogTrace.makeFlowId('morning-activation');
+      }
+      if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
+        HEYS.LogTrace.trace(level, '[HEYS.ma.trace]', body);
+      } else if (isMorningActivationDebugEnabled()) {
+        (level === 'warn' ? console.warn : console.info)('[HEYS.ma.trace]', body);
+      }
+    } catch (_) {
+      // Trace must never affect morning activation.
+    }
+  }
+
   function getTodayKey() {
     // Используем «эффективную» дату: до 03:00 считаем, что день ещё предыдущий
     // Приоритет: dayUtils.todayISO (учитывает ночной порог) → models.todayISO → локальный fallback
@@ -475,30 +497,73 @@
 
   function maybeOpenMorningActivationSkipReason(trigger = 'unknown', dateKeyArg) {
     const _tag = '[MA.skipReason]';
-    if (skipReasonOpening) { logMorningActivationTrace(_tag, 'SKIP: already opening', { trigger }); return; }
-    if (!HEYS.StepModal?.show) { logMorningActivationTrace(_tag, 'SKIP: no StepModal', { trigger }); return; }
-    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { logMorningActivationTrace(_tag, 'SKIP: step not registered', { trigger }); return; }
+    if (skipReasonOpening) {
+      logMorningActivationTrace(_tag, 'SKIP: already opening', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, reason: 'already_opening' });
+      return;
+    }
+    if (!HEYS.StepModal?.show) {
+      logMorningActivationTrace(_tag, 'SKIP: no StepModal', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, reason: 'no_step_modal' }, 'warn');
+      return;
+    }
+    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) {
+      logMorningActivationTrace(_tag, 'SKIP: step not registered', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, reason: 'step_not_registered' }, 'warn');
+      return;
+    }
 
     const currentClientId = getCurrentClientId();
-    if (!currentClientId) { logMorningActivationTrace(_tag, 'SKIP: no clientId', { trigger }); return; }
+    if (!currentClientId) {
+      logMorningActivationTrace(_tag, 'SKIP: no clientId', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, reason: 'no_client' }, 'warn');
+      return;
+    }
 
     const dateKey = (typeof dateKeyArg === 'string' && dateKeyArg) ? dateKeyArg : getTodayKey();
     const dayData = readDayDataMergedForMaFollowup(dateKey);
     const ma = dayData?.morningActivation || {};
 
-    if (ma.status !== 'missed') { logMorningActivationTrace(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger }); return; }
-    if (!ma.skipReasonPending) { logMorningActivationTrace(_tag, 'SKIP: not pending reason', { trigger }); return; }
-    if (ma.skipReasonId) { logMorningActivationTrace(_tag, 'SKIP: reason already set', { trigger }); return; }
-    if (countMealsWithItems(dayData) < 1) { logMorningActivationTrace(_tag, 'SKIP: no meals with items yet', { trigger }); return; }
+    const mealCount = countMealsWithItems(dayData);
+    if (ma.status !== 'missed') {
+      logMorningActivationTrace(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'not_missed', status: ma.status || null, mealCount });
+      return;
+    }
+    if (!ma.skipReasonPending) {
+      logMorningActivationTrace(_tag, 'SKIP: not pending reason', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'not_pending', status: ma.status || null, reasonId: ma.skipReasonId || null, mealCount });
+      return;
+    }
+    if (ma.skipReasonId) {
+      logMorningActivationTrace(_tag, 'SKIP: reason already set', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'reason_already_set', status: ma.status || null, reasonId: ma.skipReasonId, mealCount });
+      return;
+    }
+    if (mealCount < 1) {
+      logMorningActivationTrace(_tag, 'SKIP: no meals with items yet', { trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'no_meals', status: ma.status || null, mealCount });
+      return;
+    }
 
     const answeredKey = `heys_ma_skip_reason_answered_${currentClientId}_${dateKey}`;
     try {
-      if (sessionStorage.getItem(answeredKey) === '1') { logMorningActivationTrace(_tag, 'SKIP: already answered session', { trigger }); return; }
+      if (sessionStorage.getItem(answeredKey) === '1') {
+        logMorningActivationTrace(_tag, 'SKIP: already answered session', { trigger });
+        traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'answered_session', status: ma.status || null, mealCount });
+        return;
+      }
     } catch (_) {
       // ignore
     }
 
     logMorningActivationTrace(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
+    traceMorningActivationDecision('skip_reason_modal_open', {
+      trigger,
+      dateKey,
+      status: ma.status || null,
+      mealCount
+    });
     skipReasonOpening = true;
     try {
       const opened = showMorningActivationModal({

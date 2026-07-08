@@ -44,6 +44,7 @@
         const timerRef = React.useRef(null);
         const prevStoredSnapRef = React.useRef(null);
         const prevDaySnapRef = React.useRef(null);
+        const pendingAnnouncedDaySnapRef = React.useRef(null);
         const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function') ? global.crypto.randomUUID() : String(Math.random()));
         const channelRef = React.useRef(null);
         const isUnmountedRef = React.useRef(false);
@@ -438,6 +439,9 @@
             // (сравнение без updatedAt через stripMeta) — skip, чтобы не создавать upload loop.
             // hot-sync может получить dayv2 из облака → setDay → autosave → upload → hot-sync → ...
             if (!force && freshestDaySnap && freshestDaySnap === daySnap) {
+                prevStoredSnapRef.current = freshestPersistedDay ? JSON.stringify(freshestPersistedDay) : null;
+                prevDaySnapRef.current = daySnap;
+                pendingAnnouncedDaySnapRef.current = null;
                 const t = Date.now();
                 const r = __heysDayv2FlushGuardLogState;
                 // Один лог на окно времени: updatedAt дёргается часто, несколько инстансов хука — иначе простыня HIT.
@@ -483,6 +487,7 @@
             saveToDate(_effDay.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
+            pendingAnnouncedDaySnapRef.current = null;
             // 🛡️ Pending mutation written through LS path → cleared so reconciler /
             // hot-sync / live-refresh могут снова свободно применять облако.
             // saveToDate сам имеет внутренние guards (updatedAt/sourceId order, payload.date
@@ -539,7 +544,8 @@
 
             // ☁️ Сразу показать что данные изменились (до debounce)
             // Это запустит анимацию синхронизации в облачном индикаторе
-            if (typeof global.dispatchEvent === 'function') {
+            if (pendingAnnouncedDaySnapRef.current !== daySnap && typeof global.dispatchEvent === 'function') {
+                pendingAnnouncedDaySnapRef.current = daySnap;
                 global.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: 'day', type: 'data' } }));
             }
 

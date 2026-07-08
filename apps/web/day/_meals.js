@@ -666,7 +666,7 @@
                     className: 'meal-header-badges-row',
                     style: {
                         display: 'flex',
-                        flexWrap: 'nowrap',
+                        flexWrap: 'wrap',
                         alignItems: 'center',
                         gap: '6px',
                         width: '100%',
@@ -687,7 +687,10 @@
                             color: activityContextTone.color,
                             border: '1px solid ' + activityContextTone.border,
                             fontWeight: '600',
-                            flexShrink: 0,
+                            flexShrink: 1,
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             lineHeight: 1,
                             marginBottom: 0,
                             whiteSpace: 'nowrap',
@@ -718,7 +721,10 @@
                                         ? '#475569'
                                         : '#1d4ed8',
                             fontWeight: '700',
-                            flexShrink: 0,
+                            flexShrink: 1,
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             minHeight: '28px',
                             lineHeight: 1,
                             whiteSpace: 'nowrap',
@@ -2705,15 +2711,18 @@
             mealNumber,
             mealTypeInfo,
             mealQuality,
+            pIndex,
             onExpand,
         } = params || {};
         const timeText = formatMealTime(meal?.time || '') || '—';
         const typeName = mealTypeInfo?.name || meal?.name || 'Приём';
         const typeClass = mealTypeInfo?.type ? ' meal-type-' + mealTypeInfo.type : '';
+        const mealKcal = Math.round((M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 }).kcal || 0);
         const productsCount = Array.isArray(meal?.items) ? meal.items.length : 0;
         const productsLabel = productsCount === 1
             ? '1 продукт'
             : (productsCount >= 2 && productsCount <= 4 ? productsCount + ' продукта' : productsCount + ' продуктов');
+        const summaryLabel = productsLabel + ' · ' + mealKcal + ' ккал';
         const qualityColor = mealQuality?.color || null;
         const qualityStyle = qualityColor
             ? {
@@ -2729,14 +2738,14 @@
             style: qualityStyle,
             onClick: onExpand,
             'aria-expanded': 'false',
-            'aria-label': `Раскрыть приём ${mealNumber}: ${timeText}, ${typeName}, ${productsLabel}`,
+            'aria-label': `Раскрыть приём ${mealNumber}: ${timeText}, ${typeName}, ${summaryLabel}`,
             'data-meal-index': mealIndex,
             'data-meal-time': meal?.time || '',
         },
             React.createElement('span', { className: 'meal-collapsed-plaque__number' }, mealNumber),
             React.createElement('span', { className: 'meal-collapsed-plaque__time' }, timeText),
             React.createElement('span', { className: 'meal-collapsed-plaque__type' }, typeName),
-            React.createElement('span', { className: 'meal-collapsed-plaque__count' }, productsLabel)
+            React.createElement('span', { className: 'meal-collapsed-plaque__count' }, summaryLabel)
         );
     }
 
@@ -2840,6 +2849,7 @@
                         mealNumber,
                         mealTypeInfo,
                         mealQuality: compactMealQuality,
+                        pIndex,
                         onExpand: () => toggleMealExpand(mi, sourceMeals),
                     })
                 );

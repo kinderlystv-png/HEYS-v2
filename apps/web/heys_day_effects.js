@@ -764,12 +764,37 @@
                                 migratedDay.meals = legacyMeals;
                             }
                         }
-                        // Сохраняем миграцию ТОЛЬКО если данные изменились
+                        const newDay = ensureDay(migratedDay, profNow);
+                        try {
+                            const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
+                            const ch = HEYS.contentHash;
+                            const sameContent = !!reactDay && (
+                                (ch && typeof ch.hashDay === 'function' && ch.hashDay(reactDay) === ch.hashDay(newDay)) ||
+                                (HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayStorageMergeContent === 'function' &&
+                                    HEYS.dayUtils.isSameDayStorageMergeContent(reactDay, newDay)) ||
+                                (HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function' &&
+                                    HEYS.dayUtils.isSameDayHydratedContent(reactDay, newDay))
+                            );
+                            if (sameContent) {
+                                recordDayDecision('SKIP_STORAGE_SAME_CONTENT_NEW_TS', source,
+                                    'content same, React updatedAt ' + (reactDay?.updatedAt || 0) + ' → storage ' + storageUpdatedAt);
+                                lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, storageUpdatedAt);
+                                if (storageUpdatedAt > ((reactDay && reactDay.updatedAt) || 0)) {
+                                    setDay(prevDay => (
+                                        prevDay && prevDay.date === newDay.date && ((prevDay.updatedAt || 0) < storageUpdatedAt)
+                                            ? { ...prevDay, updatedAt: storageUpdatedAt }
+                                            : prevDay
+                                    ));
+                                }
+                                return;
+                            }
+                        } catch (_) { /* equality guard is best-effort */ }
+                        // Сохраняем локальную миграцию только для локальных событий.
+                        // Внешний sync-снимок не должен сам порождать новую dayv2-запись.
                         const trainingsChanged = JSON.stringify(normalizedDay.trainings) !== JSON.stringify(cleanedTrainings);
-                        if (trainingsChanged) {
+                        if (trainingsChanged && !isExternalSource) {
                             lsSet(key, migratedDay);
                         }
-                        const newDay = ensureDay(migratedDay, profNow);
 
                         // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
                         setDay(prevDay => {

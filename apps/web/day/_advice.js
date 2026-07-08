@@ -2206,9 +2206,59 @@
         const toastAppearedAtRef = useRef(0);
         const [displayedAdvice, setDisplayedAdvice] = useState(null);
         const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
+        const getCurrentAdviceClientId = useCallback(() => {
+            try {
+                const fromRuntime = HEYSRef?.currentClientId || window.HEYS?.currentClientId;
+                if (fromRuntime && /^[0-9a-f-]{36}$/i.test(String(fromRuntime))) return String(fromRuntime);
+                const fromPin = localStorage.getItem('heys_pin_auth_client');
+                if (fromPin && /^[0-9a-f-]{36}$/i.test(String(fromPin))) return String(fromPin);
+                const fromLast = localStorage.getItem('heys_last_client_id');
+                if (fromLast && /^[0-9a-f-]{36}$/i.test(String(fromLast))) return String(fromLast);
+            } catch (_) { }
+            return '';
+        }, [HEYSRef]);
+        const parseAdviceSettingsRaw = useCallback((raw) => {
+            if (!raw) return null;
+            try {
+                if (typeof raw === 'string' && raw.startsWith('¤Z¤') && HEYSRef.store?.decompress) {
+                    return HEYSRef.store.decompress(raw);
+                }
+                return JSON.parse(raw);
+            } catch (_) {
+                return null;
+            }
+        }, [HEYSRef.store]);
+        const readRawAdviceSettings = useCallback((allowUnscoped = false) => {
+            try {
+                const clientId = getCurrentAdviceClientId();
+                if (clientId) {
+                    const scopedRaw = localStorage.getItem(`heys_${clientId}_advice_settings`);
+                    const scoped = parseAdviceSettingsRaw(scopedRaw);
+                    if (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) return scoped;
+                    if (!allowUnscoped) return null;
+                }
+                if (allowUnscoped) {
+                    const raw = localStorage.getItem('heys_advice_settings');
+                    const parsed = parseAdviceSettingsRaw(raw);
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+                }
+            } catch (_) { }
+            return null;
+        }, [getCurrentAdviceClientId, parseAdviceSettingsRaw]);
         const readAdviceSettings = useCallback(() => {
             try {
-                // 1. Try store (may return null if cloud sync not yet complete)
+                const fromScopedRaw = readRawAdviceSettings(false);
+                if (fromScopedRaw !== null) {
+                    console.info('[HEYS.advice] ✅ readAdviceSettings: source=scopedLocalStorage', fromScopedRaw);
+                    return fromScopedRaw;
+                }
+                const hasClientScope = !!getCurrentAdviceClientId();
+                if (hasClientScope) {
+                    console.info('[HEYS.advice] readAdviceSettings: scoped settings missing for current client, returning {}');
+                    return {};
+                }
+                // 1. Try store for global/no-client bootstrap only. With a current
+                // client, Store.get may migrate stale unscoped advice settings.
                 if (HEYSRef.store?.get) {
                     const fromStore = HEYSRef.store.get('heys_advice_settings', null);
                     if (fromStore !== null) {
@@ -2226,37 +2276,29 @@
                     }
                     console.info('[HEYS.advice] ⚠️ readAdviceSettings: lsGet returned null, trying raw localStorage');
                 }
-                // 3. Last resort: direct localStorage (for non-encrypted fallback)
-                try {
-                    const raw = localStorage.getItem('heys_advice_settings');
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        console.info('[HEYS.advice] ✅ readAdviceSettings: source=rawLocalStorage', parsed);
-                        return parsed;
-                    }
-                } catch (_) { }
+                // 3. Last resort: direct unscoped localStorage only before client scope exists.
+                const fromRaw = readRawAdviceSettings(true);
+                if (fromRaw !== null) {
+                    console.info('[HEYS.advice] ✅ readAdviceSettings: source=rawLocalStorage', fromRaw);
+                    return fromRaw;
+                }
             } catch (e) { }
             console.info('[HEYS.advice] readAdviceSettings: no settings found, returning {}');
             return {};
-        }, [HEYSRef.store, utils.lsGet]);
+        }, [HEYSRef.store, getCurrentAdviceClientId, readRawAdviceSettings, utils.lsGet]);
+        const getAdviceSoundEnabled = useCallback((settings) => {
+            if (Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) {
+                return settings.adviceSoundEnabled !== false;
+            }
+            if (Object.prototype.hasOwnProperty.call(settings, 'soundEnabled')) {
+                return settings.soundEnabled !== false;
+            }
+            return null;
+        }, []);
 
         const [toastsEnabled, setToastsEnabled] = useState(() => {
             try {
-                const settings = (() => {
-                    try {
-                        if (HEYSRef.store?.get) {
-                            const fromStore = HEYSRef.store.get('heys_advice_settings', null);
-                            if (fromStore !== null) return fromStore;
-                        }
-                        if (utils.lsGet) {
-                            const fromLs = utils.lsGet('heys_advice_settings', null);
-                            if (fromLs !== null) return fromLs;
-                        }
-                        const raw = localStorage.getItem('heys_advice_settings');
-                        if (raw) return JSON.parse(raw);
-                    } catch (_) { }
-                    return {};
-                })();
+                const settings = readAdviceSettings();
                 // Если в settings явно есть ключ — берём его значение.
                 if (Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')) {
                     return settings.toastsEnabled !== false;
@@ -2281,32 +2323,20 @@
         });
         const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
             try {
-                const settings = (() => {
-                    try {
-                        if (HEYSRef.store?.get) {
-                            const fromStore = HEYSRef.store.get('heys_advice_settings', null);
-                            if (fromStore !== null) return fromStore;
-                        }
-                        if (utils.lsGet) {
-                            const fromLs = utils.lsGet('heys_advice_settings', null);
-                            if (fromLs !== null) return fromLs;
-                        }
-                        const raw = localStorage.getItem('heys_advice_settings');
-                        if (raw) return JSON.parse(raw);
-                        // Аналогично toastsEnabled: returning user → false до прихода sync.
-                        let isReturning = false;
-                        try {
-                            isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
-                                          !!localStorage.getItem('heys_session_token') ||
-                                          !!localStorage.getItem('heys_last_client_id') ||
-                                          !!localStorage.getItem('heys_curator_session') ||
-                                          !!localStorage.getItem('heys_supabase_auth_token');
-                        } catch (_) { }
-                        if (isReturning) return { adviceSoundEnabled: false };
-                    } catch (_) { }
-                    return {};
-                })();
-                return settings.adviceSoundEnabled !== false;
+                const settings = readAdviceSettings();
+                const soundVal = getAdviceSoundEnabled(settings);
+                if (soundVal !== null) return soundVal;
+                // Аналогично toastsEnabled: returning user → false до прихода sync.
+                let isReturning = false;
+                try {
+                    isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
+                                  !!localStorage.getItem('heys_session_token') ||
+                                  !!localStorage.getItem('heys_last_client_id') ||
+                                  !!localStorage.getItem('heys_curator_session') ||
+                                  !!localStorage.getItem('heys_supabase_auth_token');
+                } catch (_) { }
+                if (isReturning) return false;
+                return true;
             } catch (e) {
                 return true;
             }
@@ -2325,9 +2355,7 @@
             const newToastsEnabled = Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')
                 ? settings.toastsEnabled !== false
                 : null;
-            const newSoundEnabled = Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')
-                ? settings.adviceSoundEnabled !== false
-                : null;
+            const newSoundEnabled = getAdviceSoundEnabled(settings);
             console.info('[HEYS.advice] 🔍 mount useEffect: settings read', {
                 settings,
                 newToastsEnabled,
@@ -2341,7 +2369,7 @@
         }, []);
 
         useEffect(() => {
-            const handleSyncCompleted = () => {
+            const applyAdviceSettingsState = () => {
                 try {
                     const settings = readAdviceSettings();
                     setToastsEnabled((prev) => {
@@ -2350,18 +2378,24 @@
                         return prev !== cloudVal ? cloudVal : prev;
                     });
                     setAdviceSoundEnabled((prev) => {
-                        if (!Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) return prev;
-                        const cloudVal = settings.adviceSoundEnabled !== false;
+                        const cloudVal = getAdviceSoundEnabled(settings);
+                        if (cloudVal === null) return prev;
                         return prev !== cloudVal ? cloudVal : prev;
                     });
                 } catch (e) {
                     HEYSRef.analytics?.trackError?.(e, { context: 'advice_settings_sync' });
                 }
             };
+            const handleSyncCompleted = () => applyAdviceSettingsState();
+            const handleAdviceSettingsChanged = () => applyAdviceSettingsState();
 
             window.addEventListener('heysSyncCompleted', handleSyncCompleted);
-            return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
-        }, [HEYSRef.analytics, readAdviceSettings]);
+            window.addEventListener('heysAdviceSettingsChanged', handleAdviceSettingsChanged);
+            return () => {
+                window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+                window.removeEventListener('heysAdviceSettingsChanged', handleAdviceSettingsChanged);
+            };
+        }, [HEYSRef.analytics, getAdviceSoundEnabled, readAdviceSettings]);
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
@@ -2531,10 +2565,9 @@
             setToastsEnabled(prev => {
                 const newVal = !prev;
                 try {
-                    const settings = HEYSRef.store?.get
-                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
-                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
+                    const settings = readAdviceSettings();
                     settings.toastsEnabled = newVal;
+                    settings.updatedAt = Date.now();
                     if (HEYSRef.store?.set) {
                         HEYSRef.store.set('heys_advice_settings', settings);
                     } else if (utils.lsSet) {
@@ -2545,16 +2578,16 @@
                 if (typeof haptic === 'function') haptic('light');
                 return newVal;
             });
-        }, [haptic, utils.lsGet, utils.lsSet]);
+        }, [HEYSRef.store, haptic, readAdviceSettings, utils.lsSet]);
 
         const toggleAdviceSoundEnabled = useCallback(() => {
             setAdviceSoundEnabled(prev => {
                 const newVal = !prev;
                 try {
-                    const settings = HEYSRef.store?.get
-                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
-                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
+                    const settings = readAdviceSettings();
                     settings.adviceSoundEnabled = newVal;
+                    settings.soundEnabled = newVal;
+                    settings.updatedAt = Date.now();
                     if (HEYSRef.store?.set) {
                         HEYSRef.store.set('heys_advice_settings', settings);
                     } else if (utils.lsSet) {
@@ -2565,7 +2598,7 @@
                 if (typeof haptic === 'function') haptic('light');
                 return newVal;
             });
-        }, [haptic, utils.lsGet, utils.lsSet]);
+        }, [HEYSRef.store, haptic, readAdviceSettings, utils.lsSet]);
 
         const [adviceModuleReady, setAdviceModuleReady] = useState(!!HEYSRef?.advice?.useAdviceEngine);
 
@@ -2914,12 +2947,8 @@
             // Fallback: 5s if sync never arrives (offline, error, new user with no cloud data).
             const isColdStart = (() => {
                 try {
-                    if (HEYSRef.store?.get) {
-                        const fromStore = HEYSRef.store.get('heys_advice_settings', null);
-                        if (fromStore !== null) return false;
-                    }
-                    const raw = localStorage.getItem('heys_advice_settings');
-                    return raw === null;
+                    const settings = readAdviceSettings();
+                    return settings == null || Object.keys(settings).length === 0;
                 } catch (_) {
                     return false;
                 }
@@ -2959,11 +2988,7 @@
             // settings absent — keep listening for the next event.
             const adviceSettingsLanded = () => {
                 try {
-                    if (HEYSRef.store?.get) {
-                        const fromStore = HEYSRef.store.get('heys_advice_settings', null);
-                        if (fromStore !== null) return true;
-                    }
-                    return localStorage.getItem('heys_advice_settings') !== null;
+                    return Object.keys(readAdviceSettings()).length > 0;
                 } catch (_) { return false; }
             };
 
@@ -3092,7 +3117,6 @@
                 setDisplayedAdvice(advicePrimary);
                 setDisplayedAdviceList(safeAdviceRelevant);
                 setToastVisible(false);
-                if (markShown) markShown(advicePrimary);
                 return;
             }
 

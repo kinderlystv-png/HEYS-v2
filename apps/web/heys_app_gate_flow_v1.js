@@ -2731,10 +2731,7 @@
         };
 
         if (consentEligible && checkingConsent) {
-            return renderGateMessage({
-                title: 'Загружаем данные',
-                text: 'Проверяем уже принятые согласия и подготавливаем приложение.',
-            });
+            return null;
         }
 
         if (baseEligible && consentCheckError) {

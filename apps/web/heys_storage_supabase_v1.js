@@ -3266,6 +3266,26 @@
     return written;
   }
 
+  function isSameFetchedDayContent(localDay, incomingDay) {
+    if (!localDay || !incomingDay || typeof localDay !== 'object' || typeof incomingDay !== 'object') return false;
+    try {
+      const localHydrated = ensureDayV2ComputedTotals(localDay);
+      const incomingHydrated = ensureDayV2ComputedTotals(incomingDay);
+      const ch = global.HEYS?.contentHash;
+      if (ch && typeof ch.hashDay === 'function') {
+        return ch.hashDay(localHydrated) === ch.hashDay(incomingHydrated);
+      }
+      const dayUtils = global.HEYS?.dayUtils;
+      if (dayUtils && typeof dayUtils.isSameDayStorageMergeContent === 'function') {
+        return dayUtils.isSameDayStorageMergeContent(localHydrated, incomingHydrated);
+      }
+      if (dayUtils && typeof dayUtils.isSameDayHydratedContent === 'function') {
+        return dayUtils.isSameDayHydratedContent(localHydrated, incomingHydrated);
+      }
+    } catch (_) { /* best-effort dedup */ }
+    return false;
+  }
+
   /** Debounced disk writes for hot pending queues (client + user) — reduces main-thread churn */
   const PENDING_SAVE_DEBOUNCE_MS = 120;
   const _pendingLsFlushTimers = Object.create(null);
@@ -10263,12 +10283,12 @@
           try {
             localVal = JSON.parse(ls.getItem(targetKey));
           } catch (e2) { }
+          let freshLocalVal = localVal;
 
           // Не затираем непустые дни пустыми ответами ИЛИ данными с меньшим количеством meals
           if (isDayKey) {
             // 🔍 DEBUG: Перечитываем localStorage СЕЙЧАС (не из кэша выше!)
             // Это критично для race condition — localVal мог устареть
-            let freshLocalVal = null;
             try {
               freshLocalVal = JSON.parse(ls.getItem(targetKey));
             } catch (e2) { }
@@ -10302,8 +10322,10 @@
             }
 
             // 🛡️ ЗАЩИТА 3: Если одинаковое количество meals — сравниваем по timestamp
-            const remoteUpdated = getDayPayloadUpdatedAt(row.v) || new Date(row.updated_at || 0).getTime();
             const localUpdated = getDayPayloadUpdatedAt(freshLocalVal);
+            const remotePayloadUpdated = getDayPayloadUpdatedAt(row.v);
+            const remoteRowUpdated = new Date(row.updated_at || 0).getTime();
+            const remoteUpdated = remotePayloadUpdated || (localUpdated > 0 ? 0 : remoteRowUpdated);
             if (localUpdated > remoteUpdated) {
               logCritical(`🛡️ [fetchDays] PROTECTED: Local is newer (${localUpdated} > ${remoteUpdated}), keeping local`);
               return;
@@ -10318,6 +10340,10 @@
               valueToStore = Store.decompress(row.v);
               log(`🔧 [fetchDays] Decompressed ${targetKey} from cloud`);
             }
+          }
+
+          if (isDayKey && freshLocalVal && isSameFetchedDayContent(freshLocalVal, valueToStore)) {
+            return;
           }
 
           // 🧷 Backup перед возможной перезаписью dayv2
@@ -12946,8 +12972,44 @@
     return changed;
   }
 
+  function isSameHotSyncValue(previousValue, nextValue) {
+    if (previousValue === nextValue) return true;
+    try {
+      return JSON.stringify(previousValue) === JSON.stringify(nextValue);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function shouldKeepLocalAdviceSettings(previousValue, nextValue) {
+    if (!previousValue || !nextValue
+        || typeof previousValue !== 'object'
+        || typeof nextValue !== 'object'
+        || Array.isArray(previousValue)
+        || Array.isArray(nextValue)) {
+      return false;
+    }
+
+    const localUpdatedAt = Number(previousValue.updatedAt || 0);
+    const remoteUpdatedAt = Number(nextValue.updatedAt || 0);
+    if (localUpdatedAt > 0 && remoteUpdatedAt > 0) return localUpdatedAt > remoteUpdatedAt;
+    if (localUpdatedAt > 0 && remoteUpdatedAt <= 0) return true;
+    return false;
+  }
+
   function dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, nextValue, source) {
     if (typeof window === 'undefined' || !window.dispatchEvent) return;
+
+    if (baseKey === 'heys_advice_settings') {
+      window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', {
+        detail: {
+          ...(nextValue && typeof nextValue === 'object' && !Array.isArray(nextValue) ? nextValue : {}),
+          clientId,
+          source: source || 'hot-sync',
+        }
+      }));
+      return;
+    }
 
     // heys_norms — fire heys:norms-updated so UserTab refreshes its React state
     // and its 300ms debounced auto-save doesn't clobber the freshly-synced cloud
@@ -13249,6 +13311,16 @@
       const currentRaw = global.localStorage.getItem(scopedKey);
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
+      if (currentRaw && isSameHotSyncValue(previousValue, value)) return false;
+
+      if (baseKey === 'heys_advice_settings' && shouldKeepLocalAdviceSettings(previousValue, value)) {
+        console.info('[HEYS.advice] hot-sync skipped stale advice settings', {
+          source,
+          localUpdatedAt: previousValue && previousValue.updatedAt,
+          remoteUpdatedAt: value && value.updatedAt,
+        });
+        return false;
+      }
 
       // 🔢 L3 revision gate (pull-side, additive). Skip applying a revision we have
       // already seen (remote <= local). When remoteRevision is absent/unknown (old DB

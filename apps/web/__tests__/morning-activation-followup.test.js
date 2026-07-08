@@ -483,6 +483,100 @@ describe('morning activation followup decision', () => {
         dateKey,
         source: 'morning-activation-done',
       }),
+      }));
+  });
+
+  it('persists skip reason and guards the modal from the first reason click', () => {
+    const dateKey = '2026-06-09';
+    const clientId = 'client-1';
+    const day = mealDay({
+      date: dateKey,
+      morningActivation: {
+        status: 'missed',
+        firstMealTime: '09:00',
+        skipReasonPending: true,
+        skipReasonId: null,
+      },
+    });
+    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
+    localStorage.setItem(scopedKey, JSON.stringify(day));
+
+    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
+    global.window = domWindow;
+    global.document = domWindow.document;
+    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
+    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
+    domWindow.sessionStorage.clear();
+    global.sessionStorage = domWindow.sessionStorage;
+    global.React = React;
+    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
+    domWindow.React = React;
+    domWindow.ReactDOM = global.ReactDOM;
+    const trace = vi.fn();
+    const verifyKvWrite = vi.fn();
+    domWindow.HEYS = {
+      currentClientId: clientId,
+      utils: {
+        getCurrentClientId: () => clientId,
+      },
+      dayUtils: {
+        todayISO: () => dateKey,
+      },
+      LogTrace: {
+        makeFlowId: vi.fn(() => 'ma-flow-1'),
+        trace,
+        verifyKvWrite,
+        summarizeValue: vi.fn(() => ({ kind: 'object', hash: 'day-hash' })),
+      },
+    };
+    global.CustomEvent = class CustomEvent {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    };
+    global.HEYS = domWindow.HEYS;
+    domWindow.CustomEvent = global.CustomEvent;
+    const dispatchSpy = vi.fn();
+    domWindow.dispatchEvent = dispatchSpy;
+
+    // eslint-disable-next-line no-new-func
+    new Function(STEP_MODAL_SRC)();
+    // eslint-disable-next-line no-new-func
+    new Function(STEPS_SRC)();
+
+    const onNext = vi.fn();
+    const Step = domWindow.HEYS.StepModal.registry.morning_activation_skip_reason.component;
+    render(React.createElement(Step, { context: { dateKey, onNext } }));
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Не было времени',
+    }));
+
+    const saved = JSON.parse(localStorage.getItem(scopedKey));
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(saved.morningActivation.skipReasonId).toBe('no_time');
+    expect(saved.morningActivation.skipReasonPending).toBe(false);
+    expect(domWindow.sessionStorage.getItem(`heys_ma_skip_reason_answered_${clientId}_${dateKey}`)).toBe('1');
+    expect(trace).toHaveBeenCalledWith('info', '[HEYS.ma.trace]', expect.objectContaining({
+      event: 'skip_reason_picked',
+      dateKey,
+      reasonId: 'no_time',
+      flowId: 'ma-flow-1',
+    }));
+    expect(verifyKvWrite).toHaveBeenCalledWith(expect.objectContaining({
+      prefix: '[HEYS.ma.trace]',
+      flowId: 'ma-flow-1',
+      key: `heys_dayv2_${dateKey}`,
+      expectedSummary: { kind: 'object', hash: 'day-hash' },
+    }));
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:morning-activation-skip-reason-picked',
+      detail: expect.objectContaining({
+        dateKey,
+        reasonId: 'no_time',
+        terminal: true,
+      }),
     }));
   });
 });
