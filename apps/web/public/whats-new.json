@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.08.058a09fe",
+      "buildHash": "058a09fe",
+      "date": "2026-07-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "вход и синхронизация стали надежнее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "вход и синхронизация стали надежнее",
+          "description": "вход и синхронизация стали надежнее"
+        }
+      ],
+      "coveredCommits": ["058a09fe", "78ab4cfe"]
+    },
+    {
       "version": "2026.07.07.0ccf9c7e",
       "buildHash": "0ccf9c7e",
       "date": "2026-07-07",
@@ -205,21 +221,6 @@
         }
       ],
       "coveredCommits": ["b5107c1e", "0cbc01a6", "875dafa1"]
-    },
-    {
-      "version": "2026.07.03.f048380c",
-      "buildHash": "f048380c",
-      "date": "2026-07-03",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Экспорт продуктов стал полнее",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Все продукты можно выгрузить одним файлом",
-          "description": "В инструментах куратора появился экспорт общей базы и личных баз клиентов в один файл. В нём видно, где найден каждый продукт, без данных о порциях."
-        }
-      ]
     }
   ]
 }
