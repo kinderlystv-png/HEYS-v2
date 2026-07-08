@@ -545,6 +545,7 @@
                 needsConsent,
                 checkingConsent,
                 setNeedsConsent,
+                setCheckingConsent,
                 setShowMorningCheckin,
                 isInitializing,
                 tab,
@@ -627,6 +628,7 @@
                 const fallbackHasOutdatedRequiredConsents = (fallbackComplianceState?.outdatedTypes || []).length > 0;
                 const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent
                     || fallbackComplianceState?.mustBlockReconsent
+                    || fallbackComplianceState?.consentCheckError
                     || fallbackHasOutdatedRequiredConsents;
 
                 return {

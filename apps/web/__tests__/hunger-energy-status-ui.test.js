@@ -102,6 +102,118 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(rows[0].updatedAt).toBe('2026-07-04T11:10:00Z');
   });
 
+  it('compacts low-hunger history rows before cloud sync storage', () => {
+    const heavyText = 'x'.repeat(12000);
+    Storage.addEvent({
+      id: 'heavy-low-hunger',
+      eventType: 'low_hunger_meal_reason',
+      recordedAt: '2026-07-04T11:00:00Z',
+      reason: 'habit_snack',
+      patternKey: 'snack:cookie',
+      mealSignature: 'cookie',
+      mealAnalysis: {
+        category: 'snack',
+        suggestedReason: 'habit_snack',
+        patternKey: 'snack:cookie',
+        signature: 'cookie',
+        kcal: 340,
+        macroGrams: 41.234,
+        names: ['Cookie', heavyText]
+      },
+      patternStats: {
+        windowDays: 30,
+        repeatCount: 4,
+        sameReason: 4,
+        samePattern: 3,
+        needsPatternWork: true,
+        isRepeated: true
+      },
+      curatorCard: {
+        title: 'Еда при низком голоде',
+        reason: 'habit_snack',
+        weeklyDigest: heavyText,
+        debugPayload: heavyText
+      },
+      gentlePlan: {
+        experiment: {
+          title: 'Мягкий эксперимент',
+          detail: heavyText
+        }
+      },
+      savedSummary: heavyText,
+      suggestionConfidence: { detail: heavyText }
+    });
+
+    const raw = memory.get('heys_hunger_energy_status_events_v1');
+    const rows = Storage.readEvents();
+    expect(raw.length).toBeLessThan(6000);
+    expect(rows[0]).toMatchObject({
+      eventType: 'low_hunger_meal_reason',
+      reason: 'habit_snack',
+      patternKey: 'snack:cookie',
+      mealSignature: 'cookie',
+      mealAnalysis: {
+        category: 'snack',
+        kcal: 340,
+        names: ['Cookie', 'x'.repeat(80)]
+      },
+      patternStats: {
+        repeatCount: 4,
+        needsPatternWork: true
+      }
+    });
+    expect(rows[0].curatorCard.debugPayload).toBeUndefined();
+    expect(rows[0].savedSummary).toBeUndefined();
+  });
+
+  it('migrates already bloated low-hunger rows on read', () => {
+    const heavyText = 'y'.repeat(14000);
+    memory.set('heys_hunger_energy_status_events_v1', JSON.stringify([
+      {
+        id: 'old-heavy-low-hunger',
+        eventType: 'low_hunger_meal_reason',
+        storageKey: 'heys_hunger_energy_status_events_v1',
+        cloudSyncKey: 'heys_hunger_energy_status_events_v1',
+        syncStatus: 'queued',
+        clientId: 'client-a',
+        createdAt: '2026-07-04T11:00:00Z',
+        recordedAt: '2026-07-04T11:00:00Z',
+        updatedAt: '2026-07-04T11:00:00Z',
+        reason: 'caffeine_additions',
+        patternKey: 'caffeine_additions:latte',
+        mealSignature: 'latte',
+        mealAnalysis: {
+          category: 'caffeine_additions',
+          suggestedReason: 'caffeine_additions',
+          patternKey: 'caffeine_additions:latte',
+          signature: 'latte',
+          kcal: 180,
+          names: ['Latte', heavyText]
+        },
+        curatorCard: { title: 'Еда при низком голоде', debugPayload: heavyText },
+        savedSummary: heavyText
+      }
+    ]));
+
+    const before = memory.get('heys_hunger_energy_status_events_v1');
+    const rows = Storage.readEvents();
+    const after = memory.get('heys_hunger_energy_status_events_v1');
+
+    expect(before.length).toBeGreaterThan(20000);
+    expect(after.length).toBeLessThan(6000);
+    expect(rows[0]).toMatchObject({
+      id: 'old-heavy-low-hunger',
+      reason: 'caffeine_additions',
+      patternKey: 'caffeine_additions:latte',
+      mealAnalysis: {
+        category: 'caffeine_additions',
+        kcal: 180,
+        names: ['Latte', 'y'.repeat(80)]
+      }
+    });
+    expect(rows[0].savedSummary).toBeUndefined();
+  });
+
   it('updates an existing hunger event without creating a new row', () => {
     Storage.addEvent({
       id: 'edit-me',

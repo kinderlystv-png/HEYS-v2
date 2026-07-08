@@ -719,10 +719,12 @@
                 className: 'phone-prefix-large heys-auth-prefix'
               }, '+7'),
               // Поле ввода — ширина по содержимому
-              React.createElement('input', {
-                ref: phoneInputRef,
-                type: 'tel',
-                inputMode: 'numeric',
+	              React.createElement('input', {
+	                ref: phoneInputRef,
+	                id: 'heys-client-phone',
+	                name: 'phone',
+	                type: 'tel',
+	                inputMode: 'numeric',
                 autoComplete: 'tel',
                 autoFocus: true,
                 readOnly: touchKeypad,
@@ -747,26 +749,31 @@
             React.createElement('div', {
               className: 'heys-auth-pin-grid'
             },
-              [0, 1, 2, 3].map((i) => {
-                const digit = (pinDigits && pinDigits[i]) || '';
-                const isFilled = Boolean(digit);
-                const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
-                return React.createElement('div', {
-                  key: 'pin_wrap_' + i,
-                  className: 'heys-auth-pin-box',
-                },
-                  React.createElement('input', {
-                    key: 'pin_' + i,
-                    ref: (el) => { pinRefs.current[i] = el; },
-                    type: 'password',
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
+	              [0, 1, 2, 3].map((i) => {
+	                const digit = (pinDigits && pinDigits[i]) || '';
+	                const isFilled = Boolean(digit);
+	                const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
+	                const pinInputStyle = overlay.d
+	                  ? { WebkitTextSecurity: 'none', color: 'transparent', caretColor: 'transparent' }
+	                  : { WebkitTextSecurity: 'disc' };
+	                return React.createElement('div', {
+	                  key: 'pin_wrap_' + i,
+	                  className: 'heys-auth-pin-box',
+	                },
+	                  React.createElement('input', {
+	                    key: 'pin_' + i,
+	                    ref: (el) => { pinRefs.current[i] = el; },
+	                    id: 'heys-client-pin-' + (i + 1),
+	                    name: 'pin-' + (i + 1),
+	                    type: 'text',
+	                    inputMode: 'numeric',
+	                    pattern: '[0-9]*',
                     autoComplete: i === 0 ? 'one-time-code' : 'off',
                     readOnly: touchKeypad,
-                    maxLength: 1,
-                    value: digit,
-                    // Скрываем текст input пока показывается overlay (иначе видна «маленькая цифра» браузера)
-                    style: overlay.d ? { color: 'transparent', caretColor: 'transparent' } : undefined,
+	                    maxLength: 1,
+	                    value: digit,
+	                    // Скрываем текст input пока показывается overlay (иначе видна «маленькая цифра» браузера)
+	                    style: pinInputStyle,
                     onChange: (e) => {
                       if (!clientPhoneValid || pinErrorActive) {
                         setActiveEntry('phone');
@@ -898,13 +905,14 @@
               '0',
             ),
             React.createElement(
-              'button',
-              {
-                key: 'pin_key_backspace',
-		                className: 'heys-auth-key heys-auth-key--muted',
-		                'aria-label': 'Удалить цифру PIN',
-		                onClick: handleKeypadBackspace,
-		              },
+	              'button',
+	              {
+	                key: 'pin_key_backspace',
+	                type: 'button',
+	                className: 'heys-auth-key heys-auth-key--muted',
+	                'aria-label': 'Удалить цифру PIN',
+	                onClick: handleKeypadBackspace,
+	              },
               '⌫',
             ),
           ),

@@ -84,6 +84,23 @@ describe('HEYS.cloud write-context session expiry', () => {
       error: expect.stringContaining('invalid_session'),
     }));
   });
+
+  it('exposes localStorage top keys and pending payload in quota diagnostics', () => {
+    localStorage.setItem('heys_big_diag_key', 'x'.repeat(4096));
+    localStorage.setItem('heys_pending_client_sync_queue', JSON.stringify([
+      { k: 'heys_hunger_energy_status_events_v1', v: { payload: 'y'.repeat(512) } },
+    ]));
+
+    const diag = window.HEYS.cloud.getStorageQuotaDiag({ topN: 3 });
+
+    expect(diag.totalSizeBytes).toBeGreaterThan(0);
+    expect(diag.topKeys).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'heys_big_diag_key', bytes: 8192 }),
+    ]));
+    expect(diag.pending.queue).toEqual(expect.arrayContaining([
+      expect.objectContaining({ k: 'heys_hunger_energy_status_events_v1', vKind: 'object' }),
+    ]));
+  });
 });
 
 describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
@@ -101,6 +118,21 @@ describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
     expect(storageSource).toContain('subscription_rejected: subscriptionRejectedKeys');
     expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(result.error))');
     expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(e.message))');
+  });
+});
+
+describe('HEYS.cloud 413 single-item fallback contract', () => {
+  it('does not store array-shaped KV values as compressed scalar strings', () => {
+    const storageSource = fs.readFileSync(
+      path.resolve(__dirname, '../heys_storage_supabase_v1.js'),
+      'utf8',
+    );
+
+    expect(storageSource).toContain('const canStoreCompressedScalar = !Array.isArray(it.v);');
+    expect(storageSource).toContain("if (Store && typeof it.v === 'object' && it.v !== null && canStoreCompressedScalar)");
+    expect(storageSource).toContain('const one = await YandexAPI.saveKV(clientId, it.k, value, it._ctx || null);');
+    expect(storageSource).toContain('const sk = await YandexAPI.saveKV(clientId, it.k, it.v, it._ctx || null);');
+    expect(storageSource).not.toContain('const canStoreCompressedScalar = !isProductsFamilyRpcKey(it.k) && !isOverlayFamilyRpcKey(it.k);');
   });
 });
 

@@ -2997,20 +2997,25 @@
     }
   }
 
-  function logLargestStorageKeys(limit = 8) {
+  function getLargestStorageKeys(limit = 8) {
+    const entries = [];
     try {
-      const entries = [];
       for (let i = 0; i < global.localStorage.length; i++) {
         const key = global.localStorage.key(i);
         if (!key) continue;
         const raw = global.localStorage.getItem(key) || '';
         const bytes = raw.length * 2;
-        entries.push({ key, bytes });
+        entries.push({ key, bytes, kb: Math.round((bytes / 1024) * 10) / 10 });
       }
+    } catch (e) { /* noop */ }
+    return entries
+      .sort((a, b) => b.bytes - a.bytes)
+      .slice(0, limit);
+  }
 
-      entries
-        .sort((a, b) => b.bytes - a.bytes)
-        .slice(0, limit)
+  function logLargestStorageKeys(limit = 8) {
+    try {
+      getLargestStorageKeys(limit)
         .forEach((entry, index) => {
           logCritical(`📦 [STORAGE TOP ${index + 1}] ${entry.key} = ${(entry.bytes / 1024).toFixed(1)} KB`);
         });
@@ -3673,6 +3678,52 @@
       _lastUploadDiag = { ts: Date.now(), ...info };
     } catch (_) { /* noop */ }
   }
+  function getUploadValueSummary(value) {
+    let bytes = 0;
+    let kind = 'unknown';
+    try {
+      if (typeof value === 'string') {
+        bytes = value.length;
+        kind = value.startsWith('¤Z¤') ? 'compressed-string' : 'string';
+      } else if (Array.isArray(value)) {
+        bytes = JSON.stringify(value).length;
+        kind = `array[${value.length}]`;
+      } else if (value && typeof value === 'object') {
+        bytes = JSON.stringify(value).length;
+        kind = 'object';
+      } else {
+        bytes = JSON.stringify(value ?? null).length;
+        kind = String(typeof value);
+      }
+    } catch (_) {
+      bytes = -1;
+      kind = 'serialize-fail';
+    }
+    return { bytes, kind, compressed: kind === 'compressed-string' };
+  }
+  function getUploadItemSummary(item) {
+    const summary = getUploadValueSummary(item && item.v);
+    return {
+      k: item && item.k,
+      bytes: summary.bytes,
+      kind: summary.kind,
+      compressed: summary.compressed,
+    };
+  }
+  function getUploadItemsDiag(items, limit) {
+    const safeItems = Array.isArray(items) ? items : [];
+    return safeItems
+      .map(getUploadItemSummary)
+      .sort((a, b) => (b.bytes || 0) - (a.bytes || 0))
+      .slice(0, limit || 10);
+  }
+  function getJsonSizeBytes(value) {
+    try {
+      return JSON.stringify(value).length;
+    } catch (_) {
+      return 0;
+    }
+  }
   // Классификация upload-ошибок (для diag badge-snapshot). Сетевые отказы
   // ("Failed to fetch" — типичный VPN-toggle симптом) до этого пропадали.
   function classifyUploadError(err) {
@@ -3707,31 +3758,29 @@
       for (let j = 0; j < arr.length; j++) {
         const it = arr[j];
         if (!it) continue;
-        const v = it.v;
-        let sizeBytes = 0;
-        let compressed = false;
-        let vKind = 'unknown';
-        try {
-          if (typeof v === 'string') {
-            sizeBytes = v.length;
-            compressed = v.startsWith('¤Z¤');
-            vKind = compressed ? 'compressed-string' : 'string';
-          } else if (Array.isArray(v)) {
-            sizeBytes = JSON.stringify(v).length;
-            vKind = `array[${v.length}]`;
-          } else if (v && typeof v === 'object') {
-            sizeBytes = JSON.stringify(v).length;
-            vKind = 'object';
-          } else {
-            sizeBytes = JSON.stringify(v ?? null).length;
-            vKind = String(typeof v);
-          }
-        } catch (_) { sizeBytes = -1; vKind = 'serialize-fail'; }
-        out[TARGETS[i]].push({ k: it.k, sizeBytes, compressed, vKind, updated_at: it.updated_at });
+        const hydrated = hydratePendingQueueItem(it);
+        const v = hydrated ? hydrated.v : it.v;
+        const valueSummary = getUploadValueSummary(v);
+        let vKind = valueSummary.kind;
+        if (it.__persistRef) vKind = hydrated ? `ref->${vKind}` : 'ref-missing';
+        const sizeBytes = valueSummary.bytes;
+        out[TARGETS[i]].push({ k: it.k, sizeBytes, compressed: valueSummary.compressed, vKind, updated_at: it.updated_at });
         if (sizeBytes > 0) out.totalSizeBytes += sizeBytes;
       }
     }
     return out;
+  };
+  cloud.getStorageQuotaDiag = function (options = {}) {
+    const topN = Math.max(1, Math.min(50, Math.round(Number(options.topN) || 10)));
+    const totalSizeBytes = Math.round(getStorageSize({ forceRecalc: true }) * 1024 * 1024);
+    const pending = cloud.getPendingItemsDetail ? cloud.getPendingItemsDetail() : { queue: [], inflight: [], totalSizeBytes: 0 };
+    return {
+      totalSizeBytes,
+      totalSizeMB: Math.round((totalSizeBytes / 1024 / 1024) * 100) / 100,
+      topKeys: getLargestStorageKeys(topN),
+      pending,
+      lastUploadDiag: _lastUploadDiag,
+    };
   };
 
   /** Событие для UI об изменении pending count */
@@ -6871,21 +6920,11 @@
         if (isPayloadTooLargeRpc(res.error)) {
           try {
             const chunkBytes = JSON.stringify(chunk).length;
-            const items = chunk.map(it => {
-              let bytes = 0; let kind = 'unknown';
-              try {
-                if (typeof it.v === 'string') { bytes = it.v.length; kind = it.v.startsWith('¤Z¤') ? 'compressed' : 'string'; }
-                else if (Array.isArray(it.v)) { bytes = JSON.stringify(it.v).length; kind = `array[${it.v.length}]`; }
-                else if (it.v && typeof it.v === 'object') { bytes = JSON.stringify(it.v).length; kind = 'object'; }
-                else { bytes = JSON.stringify(it.v ?? null).length; }
-              } catch (_) { /* noop */ }
-              return { k: it.k, bytes, kind };
-            });
             recordUploadDiag({
               kind: '413',
               chunkBytes,
               chunkLen: chunk.length,
-              items,
+              items: getUploadItemsDiag(chunk, 10),
               error: String(res?.error?.message || res?.error || ''),
               code: res?.error?.code || res?.error?.status,
             });
@@ -6913,7 +6952,8 @@
             return { ok: false, err: one.error || attempt.error };
           };
 
-          if (Store && typeof it.v === 'object' && it.v !== null && !Array.isArray(it.v)) {
+          const canStoreCompressedScalar = !Array.isArray(it.v);
+          if (Store && typeof it.v === 'object' && it.v !== null && canStoreCompressedScalar) {
             try {
               const c = Store.compress(it.v);
               if (typeof c === 'string' && c.startsWith('¤Z¤')) {
@@ -6974,11 +7014,11 @@
                 // 1. Tails first (reverse order — N..1)
                 for (let ti = tails.length - 1; ti >= 0; ti--) {
                   const tailKey = `${HEYS_PRODUCTS_RPC_TAIL_K}_${ti + 1}`;
-                  const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti]);
+                  const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti], it._ctx || null);
                   if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
                 }
                 // 2. Main last (commit marker)
-                const t2 = await YandexAPI.saveKV(clientId, it.k, mainShard);
+                const t2 = await YandexAPI.saveKV(clientId, it.k, mainShard, it._ctx || null);
                 if (!t2.success) return { success: false, saved: 0, error: t2.error || res.error };
 
                 // best-effort cleanup неиспользуемых старых tail-ключей
@@ -7031,11 +7071,11 @@
               // 1. Tails first (reverse order)
               for (let ti = tails.length - 1; ti >= 0; ti--) {
                 const tailKey = `${HEYS_OVERLAY_RPC_TAIL_K}_${ti + 1}`;
-                const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti]);
+                const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti], it._ctx || null);
                 if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
               }
               // 2. Main last (commit marker)
-              const tm = await YandexAPI.saveKV(clientId, it.k, mainShard);
+              const tm = await YandexAPI.saveKV(clientId, it.k, mainShard, it._ctx || null);
               if (!tm.success) return { success: false, saved: 0, error: tm.error || res.error };
 
               // best-effort cleanup unused tail keys
@@ -7075,7 +7115,7 @@
             }
           }
 
-          const sk = await YandexAPI.saveKV(clientId, it.k, it.v);
+          const sk = await YandexAPI.saveKV(clientId, it.k, it.v, it._ctx || null);
           if (sk.success) {
             if (isProductsBaseKey(it.k)) didSaveProductsMain = true;
             return { success: true, saved: 1 };
@@ -10969,14 +11009,25 @@
           }
           addSyncLogEntry(isWriteContextError ? 'upload_deferred' : 'upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           _lastUploadFailAt = Date.now();
-          recordUploadDiag({
-            kind: isWriteContextError ? 'write-context' : (isAuthError ? 'auth' : classifyUploadError(anyError)),
-            error: String(anyError?.message || anyError || '').slice(0, 240),
-            code: anyError?.code || anyError?.status,
-            chunkBytes: 0,
-            chunkLen: filteredBatch.length,
-            items: []
-          });
+          const uploadErrorKind = isWriteContextError ? 'write-context' : (isAuthError ? 'auth' : classifyUploadError(anyError));
+          const existingDiag = _lastUploadDiag;
+          const hasFreshDetailed413 = uploadErrorKind === '413'
+            && existingDiag
+            && existingDiag.kind === '413'
+            && Array.isArray(existingDiag.items)
+            && existingDiag.items.length > 0
+            && (Date.now() - existingDiag.ts) < 5000;
+          if (!hasFreshDetailed413) {
+            const diagItems = uploadErrorKind === '413' ? getUploadItemsDiag(hydratedBatch, 10) : [];
+            recordUploadDiag({
+              kind: uploadErrorKind,
+              error: String(anyError?.message || anyError || '').slice(0, 240),
+              code: anyError?.code || anyError?.status,
+              chunkBytes: uploadErrorKind === '413' ? getJsonSizeBytes(hydratedBatch) : 0,
+              chunkLen: hydratedBatch.length || filteredBatch.length,
+              items: diagItems
+            });
+          }
           if (/413|payload too large|request entity too large/i.test(String(anyError))) {
             _clientUpload413BackoffUntil = Date.now() + 45000;
             try {

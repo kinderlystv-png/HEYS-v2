@@ -11,6 +11,8 @@
   const AUTO_OPEN_PROFILE_FIELD = 'hungerEnergyStatusAutoOpen';
   const EVENT_SCHEMA_VERSION = 1;
   const MAX_EVENTS = 120;
+  const MAX_EVENT_STORAGE_BYTES = 38 * 1024;
+  const MAX_EVENT_ROW_BYTES = 5 * 1024;
   const TREND_WINDOW_MIN = 360;
   const HUNGER_TIMELINE_DAY_START_HOUR = 6;
   const HUNGER_TIMELINE_SNAP_MIN = 30;
@@ -45,6 +47,7 @@
   let mealEffectTimer = null;
   let pageScrollLock = null;
   let modalOpenSeq = 0;
+  let lastEventReadCompactionSig = '';
   const autoOpenShownClients = new Set();
 
   const STATUS_COPY = {
@@ -305,7 +308,7 @@
     const U = HEYS.utils || {};
     try {
       const rows = U.lsGet ? U.lsGet(STORAGE_KEY, []) : JSON.parse(global.localStorage.getItem(STORAGE_KEY) || '[]');
-      return Array.isArray(rows) ? rows : [];
+      return Array.isArray(rows) ? maybeCompactStoredEventsOnRead(rows) : [];
     } catch (_) {
       return [];
     }
@@ -329,6 +332,269 @@
       else global.localStorage?.setItem?.(key, JSON.stringify(next));
     } catch (_) {}
     return next;
+  }
+
+  function finiteNumberOrNull(value, digits) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    const factor = Math.pow(10, Number.isFinite(Number(digits)) ? Number(digits) : 0);
+    return Math.round(n * factor) / factor;
+  }
+
+  function compactText(value, maxLen) {
+    if (typeof value !== 'string') return value || null;
+    const limit = Number(maxLen) || 160;
+    return value.length > limit ? value.slice(0, limit) : value;
+  }
+
+  function compactTitleDetail(value) {
+    if (!value || typeof value !== 'object') return value || null;
+    return {
+      title: compactText(value.title, 120),
+      detail: compactText(value.detail, 260),
+      label: compactText(value.label, 120),
+      mode: compactText(value.mode, 80)
+    };
+  }
+
+  function compactMealAnalysisForStorage(analysis) {
+    if (!analysis || typeof analysis !== 'object') return null;
+    return {
+      category: analysis.category || null,
+      suggestedReason: analysis.suggestedReason || null,
+      patternKey: analysis.patternKey || null,
+      signature: analysis.signature || null,
+      kcal: finiteNumberOrNull(analysis.kcal, 0),
+      macroGrams: finiteNumberOrNull(analysis.macroGrams, 1),
+      names: safeArray(analysis.names).slice(0, 4).map((name) => compactText(name, 80)).filter(Boolean),
+      isMeaningful: !!analysis.isMeaningful
+    };
+  }
+
+  function compactMealQualityForStorage(quality) {
+    if (!quality || typeof quality !== 'object') return null;
+    return {
+      tone: quality.tone || null,
+      score: finiteNumberOrNull(quality.score, 0),
+      label: quality.label || null,
+      beforeLevel: finiteNumberOrNull(quality.beforeLevel, 0),
+      afterLevel: finiteNumberOrNull(quality.afterLevel, 0),
+      lowBefore: !!quality.lowBefore,
+      lowAfter: !!quality.lowAfter,
+      reason: quality.reason || null,
+      category: quality.category || null,
+      kcal: finiteNumberOrNull(quality.kcal, 0),
+      protein: finiteNumberOrNull(quality.protein, 0),
+      fiber: finiteNumberOrNull(quality.fiber, 1),
+      avgHarm: finiteNumberOrNull(quality.avgHarm, 1)
+    };
+  }
+
+  function compactPatternStatsForStorage(stats) {
+    if (!stats || typeof stats !== 'object') return null;
+    return {
+      windowDays: finiteNumberOrNull(stats.windowDays, 0),
+      repeatCount: finiteNumberOrNull(stats.repeatCount, 0),
+      sameReason: finiteNumberOrNull(stats.sameReason, 0),
+      samePattern: finiteNumberOrNull(stats.samePattern, 0),
+      oneOffSamePattern: finiteNumberOrNull(stats.oneOffSamePattern, 0),
+      frequentReason: stats.frequentReason || null,
+      isRepeated: !!stats.isRepeated,
+      needsPatternWork: !!stats.needsPatternWork,
+      suppressQuestion: !!stats.suppressQuestion,
+      suppressReason: stats.suppressReason || null
+    };
+  }
+
+  function compactGentlePlanForStorage(plan) {
+    if (!plan || typeof plan !== 'object') return null;
+    return {
+      title: compactText(plan.title, 120),
+      detail: compactText(plan.detail, 260),
+      quietCue: compactTitleDetail(plan.quietCue),
+      experiment: plan.experiment ? {
+        title: compactText(plan.experiment.title, 120),
+        detail: compactText(plan.experiment.detail, 260)
+      } : null
+    };
+  }
+
+  function compactHabitPatternForStorage(pattern) {
+    if (!pattern || typeof pattern !== 'object') return null;
+    return {
+      type: pattern.type || null,
+      reason: pattern.reason || null,
+      mealIntent: pattern.mealIntent || null,
+      timeBucket: pattern.timeBucket || null,
+      patternKey: pattern.patternKey || null,
+      stressCalorieLink: pattern.stressCalorieLink ? {
+        trigger: pattern.stressCalorieLink.trigger || null,
+        choiceType: pattern.stressCalorieLink.choiceType || null,
+        choiceLabel: pattern.stressCalorieLink.choiceLabel || null,
+        timeBucket: pattern.stressCalorieLink.timeBucket || null
+      } : null
+    };
+  }
+
+  function compactWeeklyFocusForStorage(value) {
+    if (!value || typeof value !== 'object') return null;
+    return {
+      title: compactText(value.title, 120),
+      summary: compactText(value.summary, 260),
+      reason: value.reason || value.topReason || null,
+      timeBucket: value.timeBucket || value.topBucket || null,
+      count: finiteNumberOrNull(value.count || value.total, 0),
+      extraKcal: value.extraKcal == null ? null : finiteNumberOrNull(value.extraKcal, 0),
+      equivalents: value.equivalents ? {
+        kcal: finiteNumberOrNull(value.equivalents.kcal, 0),
+        steps: finiteNumberOrNull(value.equivalents.steps, 0),
+        cardioMin: finiteNumberOrNull(value.equivalents.cardioMin, 0),
+        label: compactText(value.equivalents.label, 120)
+      } : null
+    };
+  }
+
+  function compactEventRowForStorage(row) {
+    if (!row || typeof row !== 'object') return null;
+    const next = { ...row };
+    const isLowHunger = LOW_HUNGER_RESOLVED_EVENT_TYPES.includes(next.eventType);
+    if (next.mealAnalysis) next.mealAnalysis = compactMealAnalysisForStorage(next.mealAnalysis);
+    if (next.mealQuality) next.mealQuality = compactMealQualityForStorage(next.mealQuality);
+    if (next.patternStats) next.patternStats = compactPatternStatsForStorage(next.patternStats);
+    if (next.habitPattern) next.habitPattern = compactHabitPatternForStorage(next.habitPattern);
+    if (next.gentlePlan) next.gentlePlan = compactGentlePlanForStorage(next.gentlePlan);
+    if (next.advice) next.advice = compactTitleDetail(next.advice);
+    if (next.nextStep) next.nextStep = compactTitleDetail(next.nextStep);
+    if (next.ritualProfile) next.ritualProfile = compactTitleDetail(next.ritualProfile);
+    if (next.upcomingCue) next.upcomingCue = compactTitleDetail(next.upcomingCue);
+    if (next.weeklyDigest) next.weeklyDigest = compactWeeklyFocusForStorage(next.weeklyDigest);
+    if (next.curatorWeekFocus) next.curatorWeekFocus = compactWeeklyFocusForStorage(next.curatorWeekFocus);
+    if (next.curatorCard && typeof next.curatorCard === 'object') {
+      next.curatorCard = {
+        title: compactText(next.curatorCard.title, 120),
+        reason: next.curatorCard.reason || null,
+        mealIntent: next.curatorCard.mealIntent || null,
+        count: finiteNumberOrNull(next.curatorCard.count, 0),
+        weeklyDigest: compactText(next.curatorCard.weeklyDigest, 220),
+        weekFocus: compactWeeklyFocusForStorage(next.curatorCard.weekFocus)
+      };
+    }
+    if (next.context?.lowHungerMealReview) {
+      next.context = {
+        ...next.context,
+        lowHungerMealReview: {
+          mealAt: next.context.lowHungerMealReview.mealAt || null,
+          hungerLevel: next.context.lowHungerMealReview.hungerLevel ?? null,
+          hungerAt: next.context.lowHungerMealReview.hungerAt || null,
+          mealAnalysis: compactMealAnalysisForStorage(next.context.lowHungerMealReview.mealAnalysis),
+          mealQuality: compactMealQualityForStorage(next.context.lowHungerMealReview.mealQuality)
+        }
+      };
+    }
+    if (Array.isArray(next.analyticsTags)) next.analyticsTags = unique(next.analyticsTags).slice(0, 12);
+    if (isLowHunger) {
+      delete next.savedSummary;
+      delete next.suggestionConfidence;
+    }
+
+    try {
+      if (JSON.stringify(next).length <= MAX_EVENT_ROW_BYTES) return next;
+    } catch (_) {
+      return next;
+    }
+
+    const compact = {
+      id: next.id,
+      schemaVersion: next.schemaVersion,
+      storageKey: next.storageKey,
+      cloudSyncKey: next.cloudSyncKey,
+      syncStatus: next.syncStatus,
+      clientId: next.clientId,
+      createdAt: next.createdAt,
+      recordedAt: next.recordedAt,
+      updatedAt: next.updatedAt,
+      eventType: next.eventType,
+      date: next.date,
+      source: next.source,
+      hungerLevel: next.hungerLevel,
+      hungerStatus: next.hungerStatus,
+      hungerEventId: next.hungerEventId,
+      hungerLevelBeforeMeal: next.hungerLevelBeforeMeal,
+      hungerAt: next.hungerAt,
+      mealAt: next.mealAt,
+      mealSignature: next.mealSignature,
+      mealAnalysis: next.mealAnalysis,
+      mealQuality: next.mealQuality,
+      patternKey: next.patternKey,
+      patternStats: next.patternStats,
+      reasonCategory: next.reasonCategory,
+      reason: next.reason,
+      suggestedReason: next.suggestedReason,
+      habitPattern: next.habitPattern,
+      gentlePlan: next.gentlePlan,
+      passiveContext: next.passiveContext,
+      stressFollowUp: next.stressFollowUp,
+      stressOutcome: next.stressOutcome,
+      analyticsTags: next.analyticsTags,
+      requiresCuratorReview: next.requiresCuratorReview,
+      outcome: next.outcome
+    };
+    if (next.decision || next.decisionSnapshot) {
+      compact.decisionSnapshot = compactDecision(next.decisionSnapshot || next.decision);
+    }
+    return compact;
+  }
+
+  function trimEventRowsForStorage(rows) {
+    const source = safeArray(rows).slice(-MAX_EVENTS);
+    const kept = [];
+    for (let i = source.length - 1; i >= 0; i -= 1) {
+      kept.unshift(source[i]);
+      try {
+        if (JSON.stringify(kept).length > MAX_EVENT_STORAGE_BYTES) kept.shift();
+      } catch (_) {
+        kept.shift();
+      }
+    }
+    return kept;
+  }
+
+  function jsonWireSize(value) {
+    try {
+      return JSON.stringify(value).length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function hasOversizedEventRow(rows) {
+    for (let i = 0; i < rows.length; i += 1) {
+      if (jsonWireSize(rows[i]) > MAX_EVENT_ROW_BYTES) return true;
+    }
+    return false;
+  }
+
+  function maybeCompactStoredEventsOnRead(rows) {
+    const safeRows = safeArray(rows);
+    const sourceBytes = jsonWireSize(safeRows);
+    const shouldCheck = safeRows.length > MAX_EVENTS ||
+      sourceBytes > MAX_EVENT_STORAGE_BYTES ||
+      hasOversizedEventRow(safeRows);
+    if (!shouldCheck) return safeRows;
+    const last = safeRows[safeRows.length - 1] || {};
+    const sig = [safeRows.length, sourceBytes, last.id || '', last.updatedAt || last.recordedAt || ''].join('|');
+    if (sig === lastEventReadCompactionSig) return safeRows;
+    lastEventReadCompactionSig = sig;
+    const compacted = normalizeEventRows(safeRows);
+    const compactBytes = jsonWireSize(compacted);
+    if (!compacted.length || compactBytes <= 0 || compactBytes >= sourceBytes) return safeRows;
+    try {
+      const U = HEYS.utils || {};
+      if (U.lsSet) U.lsSet(STORAGE_KEY, compacted);
+      else if (HEYS.store?.set) HEYS.store.set(STORAGE_KEY, compacted);
+      else global.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(compacted));
+    } catch (_) { /* best-effort migration */ }
+    return compacted;
   }
 
   function normalizeHungerFeatureSettings(settings) {
@@ -686,7 +952,7 @@
     const recordedAt = row.recordedAt || row.createdAt || nowIso();
     const createdAt = row.createdAt || recordedAt;
     const updatedAt = row.updatedAt || row.outcomeAt || createdAt;
-    return {
+    return compactEventRowForStorage({
       ...row,
       id: row.id || (HEYS.utils?.uuid?.() || ('hes_' + Date.now().toString(36))),
       schemaVersion: EVENT_SCHEMA_VERSION,
@@ -697,7 +963,7 @@
       createdAt,
       recordedAt,
       updatedAt
-    };
+    });
   }
 
   function normalizeEventRows(rows) {
@@ -708,7 +974,7 @@
       if (byId.has(normalized.id)) byId.delete(normalized.id);
       byId.set(normalized.id, normalized);
     });
-    return Array.from(byId.values()).slice(-MAX_EVENTS);
+    return trimEventRowsForStorage(Array.from(byId.values()));
   }
 
   function writeEvents(rows) {

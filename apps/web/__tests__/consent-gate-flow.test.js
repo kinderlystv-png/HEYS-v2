@@ -93,4 +93,45 @@ describe('consent gate flow', () => {
       window.React = previousReact;
     }
   });
+
+  it('shows a load error instead of the consent form when consent check fails', () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+
+    window.HEYS = {
+      Consents: {
+        ConsentScreen: function ConsentScreen() {},
+        ConsentOutdatedBanner: function ConsentOutdatedBanner() {},
+      },
+    };
+    window.React = {
+      createElement: (type, props, ...children) => ({ type, props: props || {}, children }),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const gate = window.HEYS.AppGateFlow.buildConsentGate({
+        gate: null,
+        desktopGate: null,
+        cloudUser: null,
+        clientId: 'client-1',
+        needsConsent: false,
+        checkingConsent: false,
+        setNeedsConsent: () => {},
+        setCheckingConsent: () => {},
+        setShowMorningCheckin: () => {},
+        consentCheckError: { message: 'API not ready' },
+        setConsentCheckError: () => {},
+      });
+
+      expect(gate).toBeTruthy();
+      expect(gate.type).toBe('div');
+      expect(gate.props.role).toBe('alert');
+      expect(gate.type).not.toBe(window.HEYS.Consents.ConsentScreen);
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
+  });
 });

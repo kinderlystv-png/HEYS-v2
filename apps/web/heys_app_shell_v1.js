@@ -1829,6 +1829,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         pendingDetailLines.push(`-- total in pending: ${fmtKB(det.totalSizeBytes)}`);
                     }
                 } catch (_) { /* noop */ }
+                let storageQuotaLines = [];
+                try {
+                    const quota = HEYS?.cloud?.getStorageQuotaDiag?.({ topN: 10 });
+                    if (quota) {
+                        storageQuotaLines.push(`total localStorage: ${quota.totalSizeMB} MB`);
+                        if (quota.pending?.totalSizeBytes) {
+                            storageQuotaLines.push(`pending payload: ${fmtKB(quota.pending.totalSizeBytes)}`);
+                        }
+                        if (Array.isArray(quota.topKeys) && quota.topKeys.length > 0) {
+                            quota.topKeys.forEach((r, idx) => {
+                                storageQuotaLines.push(`  #${idx + 1} ${r.key}: ${fmtKB(r.bytes)}`);
+                            });
+                        }
+                    }
+                } catch (_) { /* noop */ }
                 let lastErrLines = [];
                 try {
                     const diag = HEYS?.cloud?.getLastUploadDiag?.();
@@ -2570,6 +2585,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     '',
                     `=== Pending Queue Detail ===`,
                     ...(pendingDetailLines.length ? pendingDetailLines : ['(empty)']),
+                    '',
+                    `=== Storage Quota Detail ===`,
+                    ...(storageQuotaLines.length ? storageQuotaLines : ['(unavailable)']),
                     '',
                     `=== Last Upload Diag ===`,
                     ...lastErrLines,

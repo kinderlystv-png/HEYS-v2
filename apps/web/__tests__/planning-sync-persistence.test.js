@@ -124,6 +124,33 @@ describe('planning sync-aware persistence', () => {
         expect(JSON.parse(window.localStorage.getItem('heys_client-1_planning_chrono_entries'))).toEqual(cloudEntries);
     });
 
+    it('decompresses compressed planning cloud rows before refresh writes', async () => {
+        const { saveClientKey } = installHeys({ mirrorLsSet: true });
+        const Store = loadPlanningStore();
+        const cloudEntries = [{ id: 'cloud-compressed', activityId: 'a1', minutes: 15, date: '2026-07-02' }];
+        window.HEYS.store = {
+            decompress: vi.fn(() => cloudEntries),
+        };
+        window.HEYS.YandexAPI = {
+            getKVBatch: vi.fn().mockResolvedValue({
+                data: [
+                    {
+                        k: 'heys_planning_chrono_entries',
+                        v: '¤Z¤compressed-planning-entries',
+                        revision: 17,
+                    },
+                ],
+            }),
+        };
+
+        const result = await window.HEYS.Planning.refreshPlanningFromCloud();
+
+        expect(result).toMatchObject({ ok: true });
+        expect(window.HEYS.store.decompress).toHaveBeenCalledWith('¤Z¤compressed-planning-entries');
+        expect(JSON.parse(window.localStorage.getItem('heys_client-1_planning_chrono_entries'))).toEqual(cloudEntries);
+        expect(saveClientKey).not.toHaveBeenCalled();
+    });
+
     it('bulk-deletes tasks with slots, links, and dependency references', () => {
         installHeys();
         const Store = loadPlanningStore();

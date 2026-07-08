@@ -457,6 +457,17 @@
         };
     }
 
+    function decodePlanningCloudValue(value) {
+        if (typeof value !== 'string' || !value.startsWith('¤Z¤')) return value;
+        const Store = HEYS.store;
+        if (!Store || typeof Store.decompress !== 'function') return value;
+        try {
+            return Store.decompress(value);
+        } catch (_) {
+            return value;
+        }
+    }
+
     function pushPlanningPersistHistory(row) {
         try {
             _planningPersistHistory.push({
@@ -1900,7 +1911,11 @@
             if (res.error || !Array.isArray(res.data)) {
                 return { ok: false, reason: res.error || 'batch_failed' };
             }
-            res.data.forEach(function (item) {
+            const rows = res.data.map(function (item) {
+                if (!item || item.v == null) return item;
+                return { ...item, v: decodePlanningCloudValue(item.v) };
+            });
+            rows.forEach(function (item) {
                 if (item && item.k) {
                     notePlanningCloudValue(item.k, item.v, {
                         clientId,
@@ -1914,7 +1929,7 @@
                     saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 }
             });
-            res.data.forEach(function (item) {
+            rows.forEach(function (item) {
                 if (!item || item.k == null || item.v == null) return;
                 // 🛡️ L3d (2026-06-03): respect the same pending-write guard as
                 // applyForegroundHotSyncValue. This path used to call Store.save*

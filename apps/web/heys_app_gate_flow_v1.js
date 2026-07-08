@@ -2607,15 +2607,18 @@
             needsConsent,
             checkingConsent,
             setNeedsConsent,
+            setCheckingConsent,
             setShowMorningCheckin,
             // Compliance overhaul 2026-05-20
             outdatedTypes = [],
             graceExpiresAt = null,
             mustBlockReconsent = false,
             needsAgeGate = false,
+            consentCheckError = null,
             setOutdatedTypes,
             setMustBlockReconsent,
             setNeedsAgeGate,
+            setConsentCheckError,
         } = props;
 
         const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
@@ -2630,7 +2633,8 @@
                 return false;
             }
         })();
-        const baseEligible = !gate && !desktopGate && (!cloudUser || isPinSessionActive) && clientId && !checkingConsent;
+        const consentEligible = !gate && !desktopGate && (!cloudUser || isPinSessionActive) && clientId;
+        const baseEligible = consentEligible && !checkingConsent;
 
         // Diagnostic (debug-only, не засоряет prod console)
         if (needsConsent && !baseEligible) {
@@ -2642,6 +2646,115 @@
 
         if (baseEligible && shouldBlockForConsents && !HEYS.Consents?.ConsentScreen) {
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
+        }
+
+        const renderGateMessage = ({ title, text, tone = 'loading', actions = [] }) => {
+            const isError = tone === 'error';
+            return React.createElement('div', {
+                className: 'heys-consent-status-gate',
+                style: {
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '28px',
+                    background: '#f7f8f6',
+                    boxSizing: 'border-box',
+                },
+                role: isError ? 'alert' : 'status',
+                'aria-live': isError ? 'assertive' : 'polite',
+            }, React.createElement('div', {
+                className: 'heys-consent-status-panel',
+                style: {
+                    width: '100%',
+                    maxWidth: '420px',
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '18px',
+                    boxShadow: '0 18px 45px rgba(31, 41, 55, 0.08)',
+                    padding: '24px',
+                    boxSizing: 'border-box',
+                },
+            },
+                React.createElement('div', {
+                    style: {
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: isError ? '#fff4e5' : '#eef7f0',
+                        color: isError ? '#9a5b00' : '#256f3f',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '22px',
+                        marginBottom: '16px',
+                    },
+                }, isError ? '!' : '...'),
+                React.createElement('h1', {
+                    style: {
+                        margin: '0 0 10px',
+                        color: '#1f2937',
+                        fontSize: '24px',
+                        lineHeight: 1.22,
+                        fontWeight: 700,
+                    },
+                }, title),
+                React.createElement('p', {
+                    style: {
+                        margin: '0',
+                        color: '#4b5563',
+                        fontSize: '16px',
+                        lineHeight: 1.5,
+                    },
+                }, text),
+                actions.length ? React.createElement('div', {
+                    style: {
+                        display: 'grid',
+                        gap: '10px',
+                        marginTop: '22px',
+                    },
+                }, actions.map((action, idx) => React.createElement('button', {
+                    key: action.key || idx,
+                    type: 'button',
+                    onClick: action.onClick,
+                    style: {
+                        minHeight: '46px',
+                        borderRadius: '12px',
+                        border: idx === 0 ? '0' : '1px solid #d1d5db',
+                        background: idx === 0 ? '#256f3f' : '#ffffff',
+                        color: idx === 0 ? '#ffffff' : '#374151',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                    },
+                }, action.label))) : null
+            ));
+        };
+
+        if (consentEligible && checkingConsent) {
+            return renderGateMessage({
+                title: 'Загружаем данные',
+                text: 'Проверяем уже принятые согласия и подготавливаем приложение.',
+            });
+        }
+
+        if (baseEligible && consentCheckError) {
+            const retryConsentCheck = () => {
+                setConsentCheckError && setConsentCheckError(null);
+                setNeedsConsent(false);
+                setCheckingConsent && setCheckingConsent(true);
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:consents-ready'));
+                } catch (_) { /* noop */ }
+            };
+            return renderGateMessage({
+                title: 'Не удалось загрузить данные',
+                text: 'Мы не смогли проверить уже принятые согласия. Форма согласий не открыта, чтобы не просить подписывать документы заново.',
+                tone: 'error',
+                actions: [
+                    { key: 'retry', label: 'Повторить загрузку', onClick: retryConsentCheck },
+                    { key: 'reload', label: 'Обновить страницу', onClick: () => window.location.reload() },
+                ],
+            });
         }
 
         // ── Сценарий A: блокирующий ConsentScreen (отсутствуют согласия ИЛИ

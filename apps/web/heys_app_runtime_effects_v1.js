@@ -32,16 +32,20 @@
         setGraceExpiresAt,
         setMustBlockReconsent,
         setNeedsAgeGate,
+        setConsentCheckError,
     }) => {
         React.useEffect(() => {
             if (!clientId) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 setOutdatedTypes && setOutdatedTypes([]);
+                setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
+                setConsentCheckError && setConsentCheckError(null);
                 HEYS._consentsChecked = false;
                 HEYS._consentsValid = false;
+                HEYS._consentsCheckError = null;
                 return;
             }
             if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
@@ -53,8 +57,10 @@
                 setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
+                setConsentCheckError && setConsentCheckError(null);
                 HEYS._consentsChecked = true;
                 HEYS._consentsValid = true;
+                HEYS._consentsCheckError = null;
                 try {
                     window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
                         detail: { valid: true, needsConsent: false, source: 'demo-mode' }
@@ -77,18 +83,23 @@
             if (cloudUser && !isPinSessionActive()) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
+                setConsentCheckError && setConsentCheckError(null);
                 HEYS._consentsChecked = true;
                 HEYS._consentsValid = true;
+                HEYS._consentsCheckError = null;
                 return;
             }
 
             let cancelled = false;
             let retryTimer = null;
+            const CONSENT_CHECK_RETRY_MS = 8000;
 
             setCheckingConsent(true);
-            setNeedsConsent(true);
+            setNeedsConsent(false);
+            setConsentCheckError && setConsentCheckError(null);
             HEYS._consentsChecked = false;
             HEYS._consentsValid = false;
+            HEYS._consentsCheckError = null;
 
             // Утилита: нормализовать legacy-ответ в shape v2.
             const legacyAsV2 = (clientIdArg, legacyFn) => legacyFn(clientIdArg).then(r => ({
@@ -97,28 +108,71 @@
                 mustBlock: false, ageConfirmed: true,
             }));
 
+            const normalizeCheckError = (err, source) => {
+                const message = String(err?.message || err || 'Не удалось проверить согласия');
+                return {
+                    source,
+                    message,
+                    at: Date.now(),
+                    retryMs: CONSENT_CHECK_RETRY_MS,
+                };
+            };
+
+            const scheduleCheckRetry = () => {
+                if (retryTimer) clearTimeout(retryTimer);
+                retryTimer = setTimeout(() => {
+                    retryTimer = null;
+                    runCheck(0);
+                }, CONSENT_CHECK_RETRY_MS);
+            };
+
+            const failConsentCheck = (err, source) => {
+                if (cancelled) return;
+                const checkError = normalizeCheckError(err, source);
+                console.warn('[CONSENTS] Consent check failed — keeping consent form closed:', checkError.message);
+                setNeedsConsent(false);
+                setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes([]);
+                setGraceExpiresAt && setGraceExpiresAt(null);
+                setMustBlockReconsent && setMustBlockReconsent(false);
+                setNeedsAgeGate && setNeedsAgeGate(false);
+                setConsentCheckError && setConsentCheckError(checkError);
+                HEYS._consentsChecked = false;
+                HEYS._consentsValid = false;
+                HEYS._consentsCheckError = checkError;
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
+                        detail: {
+                            valid: false,
+                            needsConsent: false,
+                            checkError: true,
+                            source,
+                        }
+                    }));
+                } catch (_) { /* noop */ }
+                scheduleCheckRetry();
+            };
+
             const runCheck = (attempt = 0) => {
+                if (retryTimer) {
+                    clearTimeout(retryTimer);
+                    retryTimer = null;
+                }
+                setCheckingConsent(true);
+                setNeedsConsent(false);
+                setConsentCheckError && setConsentCheckError(null);
+                HEYS._consentsChecked = false;
+                HEYS._consentsValid = false;
+                HEYS._consentsCheckError = null;
+
                 const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
                 const legacy = HEYS.Consents?.api?.checkRequired;
 
                 if (!versioned && !legacy) {
-                    setNeedsConsent(true);
-                    setCheckingConsent(true);
-                    HEYS._consentsChecked = false;
-                    HEYS._consentsValid = false;
-
                     if (attempt < 40) {
                         retryTimer = setTimeout(() => runCheck(attempt + 1), 250);
                     } else {
-                        console.error('[CONSENTS] Consent API is not ready — blocking client flow');
-                        setCheckingConsent(false);
-                        setMustBlockReconsent && setMustBlockReconsent(true);
-                        HEYS._consentsChecked = true;
-                        try {
-                            window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
-                                detail: { valid: false, needsConsent: true, source: 'consent-api-timeout' }
-                            }));
-                        } catch (_) { /* noop */ }
+                        failConsentCheck('Consent API is not ready', 'consent-api-timeout');
                     }
                     return;
                 }
@@ -128,15 +182,15 @@
                     ? versioned().then(r => {
                         if (r?.error) {
                             if (pinSessionActive) {
-                                console.warn('[CONSENTS] versioned failed for PIN session — blocking client flow:', r.error);
                                 return {
                                     valid: false,
-                                    missing: r.missing || [],
+                                    missing: [],
                                     outdated: [],
                                     graceExpiresAt: null,
                                     graceStatus: 'none',
-                                    mustBlock: true,
+                                    mustBlock: false,
                                     ageConfirmed: true,
+                                    checkFailed: true,
                                     error: r.error,
                                 };
                             }
@@ -154,14 +208,19 @@
                             outdated: [],
                             graceExpiresAt: null,
                             graceStatus: 'none',
-                            mustBlock: true,
+                            mustBlock: false,
                             ageConfirmed: true,
+                            checkFailed: true,
                             error: 'versioned consent API not ready',
                         })
                         : legacyAsV2(clientId, legacy));
 
                 promise.then((r) => {
                     if (cancelled) return;
+                    if (r?.checkFailed) {
+                        failConsentCheck(r.error || 'Consent check failed', 'consent-check-error');
+                        return;
+                    }
                     const outdated = Array.isArray(r.outdated) ? r.outdated : [];
                     const effectiveConsentValid = !!r.valid && outdated.length === 0 && !r.mustBlock;
                     const needs = !effectiveConsentValid;
@@ -170,11 +229,13 @@
                     setOutdatedTypes && setOutdatedTypes(outdated);
                     setGraceExpiresAt && setGraceExpiresAt(r.graceExpiresAt || null);
                     setMustBlockReconsent && setMustBlockReconsent(!!r.mustBlock);
+                    setConsentCheckError && setConsentCheckError(null);
                     // Age-gate показываем только когда основные согласия в порядке —
                     // иначе сначала ConsentScreen, потом age.
                     setNeedsAgeGate && setNeedsAgeGate(!r.ageConfirmed && effectiveConsentValid);
                     HEYS._consentsChecked = true;
                     HEYS._consentsValid = effectiveConsentValid;
+                    HEYS._consentsCheckError = null;
                     try {
                         window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
                             detail: { valid: effectiveConsentValid, needsConsent: needs, source: 'consent-check' }
@@ -190,16 +251,7 @@
                 }).catch((err) => {
                     if (cancelled) return;
                     console.error('[CONSENTS] Error checking consents:', err);
-                    setNeedsConsent(true);
-                    setCheckingConsent(false);
-                    setMustBlockReconsent && setMustBlockReconsent(true);
-                    HEYS._consentsChecked = true;
-                    HEYS._consentsValid = false;
-                    try {
-                        window.dispatchEvent(new CustomEvent('heys:consents-state-changed', {
-                            detail: { valid: false, needsConsent: true, source: 'consent-check-error' }
-                        }));
-                    } catch (_) { /* noop */ }
+                    failConsentCheck(err, 'consent-check-error');
                 });
             };
 
@@ -213,7 +265,8 @@
                 window.removeEventListener('heys:consents-ready', handleConsentsReady);
             };
         }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent,
-            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate]);
+            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate,
+            setConsentCheckError]);
     };
 
     const useBadgeSync = ({ React }) => {

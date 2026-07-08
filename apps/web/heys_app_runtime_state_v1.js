@@ -30,12 +30,14 @@
         const [graceExpiresAt, setGraceExpiresAt] = React.useState(null);
         const [mustBlockReconsent, setMustBlockReconsent] = React.useState(false);
         const [needsAgeGate, setNeedsAgeGate] = React.useState(false);
+        const [consentCheckError, setConsentCheckError] = React.useState(null);
 
         const useConsentCheck = AppRuntimeEffects?.useConsentCheck
             || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
         useConsentCheck({
             React, clientId, cloudUser, setNeedsConsent, setCheckingConsent,
             setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate,
+            setConsentCheckError,
         });
 
         const swipeState = AppSwipeNav?.useSwipeNavigation
@@ -64,10 +66,12 @@
                 graceExpiresAt,
                 mustBlockReconsent,
                 needsAgeGate,
+                consentCheckError,
                 setOutdatedTypes,
                 setGraceExpiresAt,
                 setMustBlockReconsent,
                 setNeedsAgeGate,
+                setConsentCheckError,
             },
         };
     };

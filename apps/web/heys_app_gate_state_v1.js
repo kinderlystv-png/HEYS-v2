@@ -38,6 +38,7 @@
         needsConsent,
         checkingConsent,
         setNeedsConsent,
+        setCheckingConsent,
         setShowMorningCheckin,
         isInitializing,
         tab,
@@ -117,15 +118,18 @@
             needsConsent,
             checkingConsent,
             setNeedsConsent,
+            setCheckingConsent,
             setShowMorningCheckin,
             // Compliance overhaul 2026-05-20 — re-consent + age gate state
             outdatedTypes: complianceState?.outdatedTypes,
             graceExpiresAt: complianceState?.graceExpiresAt,
             mustBlockReconsent: complianceState?.mustBlockReconsent,
             needsAgeGate: complianceState?.needsAgeGate,
+            consentCheckError: complianceState?.consentCheckError,
             setOutdatedTypes: complianceState?.setOutdatedTypes,
             setMustBlockReconsent: complianceState?.setMustBlockReconsent,
             setNeedsAgeGate: complianceState?.setNeedsAgeGate,
+            setConsentCheckError: complianceState?.setConsentCheckError,
         }) : null;
 
         return {

@@ -81,6 +81,7 @@
         const hasOutdatedRequiredConsents = (complianceState?.outdatedTypes || []).length > 0;
         const isConsentBlocking = needsConsent || checkingConsent
             || complianceState?.mustBlockReconsent
+            || complianceState?.consentCheckError
             || hasOutdatedRequiredConsents;
 
         return {

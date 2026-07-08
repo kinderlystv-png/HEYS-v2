@@ -34,16 +34,105 @@ describe('first login onboarding guardrails', () => {
   });
 
   it('keeps registration blocked until required consents are valid', () => {
-    expect(runtimeEffectsSource).toContain('Consent API is not ready — blocking client flow');
-    expect(runtimeEffectsSource).toContain('setNeedsConsent(true)');
+    expect(runtimeEffectsSource).toContain('Consent check failed — keeping consent form closed');
+    expect(runtimeEffectsSource).toContain('setConsentCheckError && setConsentCheckError(checkError)');
+    expect(runtimeEffectsSource).toContain('needsConsent: false');
+    expect(runtimeEffectsSource).toContain('checkError: true');
     expect(runtimeEffectsSource).not.toContain('Promise.resolve({ valid: true, missing: [], outdated: [], mustBlock: false, ageConfirmed: true })');
-    expect(runtimeEffectsSource).toContain('versioned failed for PIN session — blocking client flow');
+    expect(runtimeEffectsSource).not.toContain('versioned failed for PIN session — blocking client flow');
     expect(runtimeEffectsSource).toContain('effectiveConsentValid');
     expect(runtimeEffectsSource).toContain('HEYS._consentsValid = effectiveConsentValid');
     expect(consentsSource).toContain('heys:consents-ready');
     expect(appMorningCheckinSource).toContain('heys:consents-state-changed');
     expect(morningCheckinSource).toContain('HEYS._consentsValid !== true');
     expect(morningCheckinSource).toContain('defer registration/check-in');
+  });
+
+  it('treats PIN consent API failures as load errors, not missing consents', async () => {
+    const previousHEYS = window.HEYS;
+    const previousLocalStorageGetItem = window.localStorage.getItem;
+    const previousAddEventListener = window.addEventListener;
+    const previousRemoveEventListener = window.removeEventListener;
+    const previousDispatchEvent = window.dispatchEvent;
+    const previousCustomEvent = window.CustomEvent;
+    const calls = [];
+    let cleanupEffect = null;
+    const state = {
+      needsConsent: null,
+      checkingConsent: null,
+      consentCheckError: null,
+      mustBlockReconsent: null,
+    };
+
+    window.CustomEvent = class CustomEvent {
+      constructor(type, init) {
+        this.type = type;
+        this.detail = init?.detail;
+      }
+    };
+    window.localStorage.getItem = (key) => (key === 'heys_pin_auth_client' ? 'client-1' : null);
+    window.addEventListener = () => {};
+    window.removeEventListener = () => {};
+    window.dispatchEvent = (event) => {
+      calls.push(event);
+      return true;
+    };
+    window.HEYS = {
+      cloud: { isPinAuthClient: () => true },
+      Consents: {
+        api: {
+          checkRequiredVersioned: async () => ({ error: 'API not ready' }),
+        },
+      },
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(runtimeEffectsSource);
+      window.HEYS.AppRuntimeEffects.useConsentCheck({
+        React: {
+          useEffect: (fn) => {
+            cleanupEffect = fn();
+          },
+        },
+        clientId: 'client-1',
+        cloudUser: null,
+        setNeedsConsent: (value) => { state.needsConsent = value; },
+        setCheckingConsent: (value) => { state.checkingConsent = value; },
+        setOutdatedTypes: () => {},
+        setGraceExpiresAt: () => {},
+        setMustBlockReconsent: (value) => { state.mustBlockReconsent = value; },
+        setNeedsAgeGate: () => {},
+        setConsentCheckError: (value) => { state.consentCheckError = value; },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(state.needsConsent).toBe(false);
+      expect(state.checkingConsent).toBe(false);
+      expect(state.mustBlockReconsent).toBe(false);
+      expect(state.consentCheckError).toEqual(expect.objectContaining({
+        source: 'consent-check-error',
+        message: 'API not ready',
+      }));
+      expect(calls).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          type: 'heys:consents-state-changed',
+          detail: expect.objectContaining({
+            needsConsent: false,
+            checkError: true,
+          }),
+        }),
+      ]));
+    } finally {
+      if (typeof cleanupEffect === 'function') cleanupEffect();
+      window.HEYS = previousHEYS;
+      window.localStorage.getItem = previousLocalStorageGetItem;
+      window.addEventListener = previousAddEventListener;
+      window.removeEventListener = previousRemoveEventListener;
+      window.dispatchEvent = previousDispatchEvent;
+      window.CustomEvent = previousCustomEvent;
+    }
   });
 
   it('does not show legal consent gates inside the public landing demo', () => {
