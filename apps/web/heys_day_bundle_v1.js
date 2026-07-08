@@ -2873,13 +2873,10 @@
                         }, 2000);
                     }
                 };
-                // Курaтор: sync update (без startTransition — тогда state updates точно
-                // не теряются). Обычные клиенты — продолжают через startTransition для perf.
-                if (_curator) {
-                    _runUpdate();
-                } else {
-                    React.startTransition(_runUpdate);
-                }
+                // Manual menu open must be synchronous for all sessions. Otherwise
+                // adviceTrigger/toastVisible can be deprioritized behind day sync
+                // updates and the 💡 drawer stays visually closed.
+                _runUpdate();
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
             // Expose globally чтобы shell IIFE listener мог вызвать напрямую
