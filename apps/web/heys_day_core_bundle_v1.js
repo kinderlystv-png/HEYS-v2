@@ -4127,6 +4127,31 @@
                             const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
                             const mealsDown = storageMealsCount < prevMealsCount;
                             const itemsDown = storageItemsCount < prevItemsCount;
+                            const guardApi = HEYS.dayMutationGuard;
+                            const activeMutationGuard = guardApi?.read?.((newDay && newDay.date) || updatedDate || date);
+                            if (
+                                isExternalSource &&
+                                activeMutationGuard &&
+                                guardApi?.breaksGuard?.(newDay, activeMutationGuard)
+                            ) {
+                                recordDayDecision(
+                                    'SKIP_PROTECTED_MUTATION_ROLLBACK',
+                                    source,
+                                    'guard ' + (activeMutationGuard.action || 'mutation') + ', expected meals/items '
+                                    + (activeMutationGuard.expectedMinMeals || 0) + '/' + (activeMutationGuard.expectedMinItems || 0)
+                                );
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (protected mutation rollback)', {
+                                    source,
+                                    updatedDate,
+                                    guard: activeMutationGuard,
+                                    storageMealsCount,
+                                    storageItemsCount,
+                                    storageUpdatedAt,
+                                    currentUpdatedAt,
+                                    forceReload
+                                });
+                                return prevDay;
+                            }
                             if (mealsDown || itemsDown) {
                                 console.warn('[HEYS.day] ⚠️ Potential overwrite (meals/items count down)', {
                                     source,

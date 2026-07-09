@@ -11098,7 +11098,7 @@
             .filter((it) => idsSet.has(it.id))
             .map((it) => {
                 const g = Object.prototype.hasOwnProperty.call(go, it.id) ? go[it.id] : it.grams;
-                return { ...it, id: uid('it_'), grams: g };
+                return { ...it, id: uid('it_'), grams: g, updatedAt: Date.now() };
             });
     }
 
@@ -11236,6 +11236,90 @@
                 trackError(e, { source: 'day/_meals.js', action });
             }
         }, [date, protectCheckinFields]);
+
+        const readScopedDayForDate = React.useCallback((targetDate) => {
+            const key = _scopedDayKey(targetDate);
+            try {
+                if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                    return HEYS.utils.lsGet(key, null);
+                }
+                return lsGet(key, null);
+            } catch (_) {
+                return null;
+            }
+        }, []);
+
+        const writeCrossDayWithGuard = React.useCallback((targetDate, action, buildNext, opts = {}) => {
+            const guardApi = HEYS.dayMutationGuard;
+            if (!guardApi) {
+                trackError(new Error('HEYS.dayMutationGuard missing'), { source: 'day/_meals.js', action });
+                return { ok: false, reason: 'guard_missing', day: null };
+            }
+            const key = _scopedDayKey(targetDate);
+            const before = readScopedDayForDate(targetDate) || { date: targetDate, meals: [] };
+            const beforeSummary = guardApi.summarize(before);
+            const built = typeof buildNext === 'function' ? buildNext(before) : null;
+            if (!built || !Array.isArray(built.meals)) {
+                guardApi.pushTrace('copyMutations', { action, targetDate, key, phase: 'build_failed', before: beforeSummary }, '[HEYS.day.copyTrace]');
+                return { ok: false, reason: 'build_failed', day: null };
+            }
+
+            const nextDay = protectCheckinFields({
+                ...before,
+                ...built,
+                date: targetDate,
+                updatedAt: built.updatedAt || Date.now(),
+            });
+            const nextSummary = guardApi.summarize(nextDay);
+            const expectedMealIds = Array.isArray(opts.expectedMealIds) ? opts.expectedMealIds.filter(Boolean) : [];
+            const expectedItemIds = Array.isArray(opts.expectedItemIds) ? opts.expectedItemIds.filter(Boolean) : [];
+            const expectedAbsentMealIds = Array.isArray(opts.expectedAbsentMealIds) ? opts.expectedAbsentMealIds.filter(Boolean) : [];
+            const expectedAbsentItemIds = Array.isArray(opts.expectedAbsentItemIds) ? opts.expectedAbsentItemIds.filter(Boolean) : [];
+            const guard = guardApi.write(targetDate, {
+                action,
+                source: opts.source || action,
+                expectedMealIds,
+                expectedItemIds,
+                expectedAbsentMealIds,
+                expectedAbsentItemIds,
+                expectedMinMeals: nextSummary.meals,
+                expectedMinItems: nextSummary.items,
+                before: beforeSummary,
+                after: nextSummary,
+            });
+
+            try {
+                lsSet(key, nextDay);
+            } catch (e) {
+                guardApi.pushTrace('copyMutations', { action, targetDate, key, phase: 'write_error', before: beforeSummary, after: nextSummary, message: e?.message || String(e) }, '[HEYS.day.copyTrace]');
+                trackError(e, { source: 'day/_meals.js', action });
+                return { ok: false, reason: 'write_error', day: null };
+            }
+
+            const readBack = readScopedDayForDate(targetDate);
+            const verification = guardApi.verify(readBack, guard);
+
+            guardApi.pushTrace('copyMutations', {
+                action,
+                targetDate,
+                key,
+                phase: verification.ok ? 'write_confirmed' : 'write_readback_mismatch',
+                guard,
+                before: beforeSummary,
+                intended: nextSummary,
+                readBack: verification.summary,
+                missingMeals: verification.missingMeals,
+                missingItems: verification.missingItems,
+                unexpectedMeals: verification.unexpectedMeals,
+                unexpectedItems: verification.unexpectedItems,
+            }, '[HEYS.day.copyTrace]');
+
+            if (!verification.ok) {
+                HEYS.Toast?.error?.('Не удалось надёжно сохранить копию. Попробуйте ещё раз.');
+                return { ok: false, reason: 'readback_mismatch', day: nextDay };
+            }
+            return { ok: true, day: readBack || nextDay, guard };
+        }, [protectCheckinFields, readScopedDayForDate]);
 
         const markUndoWindow = React.useCallback((durationMs = 5000) => {
             const updatedAt = Date.now();
@@ -12690,26 +12774,29 @@
                     dstMealId = updated.meals[dstMealIndex]?.id || null;
                 }
             } else {
-                // Cross-day copy — пишем в LS целевого дня; React state открытого дня НЕ трогаем
-                const tgtKey = _scopedDayKey(tgtDate);
-                const existing = lsGet(tgtKey, null) || { date: tgtDate, meals: [] };
-                const updated = writeIntoTarget(existing);
-                if (!updated) {
+                // Cross-day copy — atomic guarded LS write; React state of the open day is untouched.
+                const result = writeCrossDayWithGuard(
+                    tgtDate,
+                    'copy_items_cross_day',
+                    (existing) => writeIntoTarget(existing),
+                    {
+                        source: 'copy_meal',
+                        expectedMealIds: [((readScopedDayForDate(tgtDate)?.meals || [])[dstMealIndex]?.id)],
+                        expectedItemIds: cloned.map((item) => item.id).filter(Boolean),
+                    },
+                );
+                if (!result.ok) {
                     HEYS.Toast?.error?.('Целевой приём не найден');
                     return;
                 }
-                try {
-                    lsSet(tgtKey, updated);
-                } catch (e) {
-                    trackError(e, { source: 'day/_meals.js', action: 'copy_items_cross_day' });
-                }
-                dstMealId = updated.meals[dstMealIndex]?.id || null;
+                const updated = result.day;
+                dstMealId = updated?.meals?.[dstMealIndex]?.id || null;
                 window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: tgtDate, source: 'copy_meal' } }));
             }
 
             HEYS.Toast?.success?.(`Скопировано: ${itemIds.length}`);
             navigateAndScrollToMeal(tgtDate, dstMealId);
-        }, [setDay, markUndoWindow, persistDayData, date, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite]);
+        }, [setDay, markUndoWindow, persistDayData, date, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite, writeCrossDayWithGuard, readScopedDayForDate]);
 
         const openCopyMealModal = React.useCallback((srcMealIndex) => {
             const meal = dayRef.current?.meals?.[srcMealIndex];
@@ -12748,7 +12835,7 @@
                     if (!cloned || cloned.length === 0) return;
 
                     const completeWithItems = (newMealRaw) => {
-                        const newMeal = { ...newMealRaw, items: cloned };
+                        const newMeal = { ...newMealRaw, id: newMealRaw?.id || uid('m_'), items: cloned };
 
                         if (todayStr === date) {
                             // Today открыт: используем стандартный setDay
@@ -12759,17 +12846,24 @@
                             persistDayData(updated, 'copy_items_to_new_meal');
                             setDay(() => updated);
                         } else {
-                            // Today не открыт: пишем в LS today's dayv2 напрямую
-                            const tgtKey = _scopedDayKey(todayStr);
-                            const existing = lsGet(tgtKey, null) || { date: todayStr, meals: [] };
-                            const newMeals = sortMealsByTime([...(existing.meals || []), newMeal]);
-                            const updated = { ...existing, date: todayStr, meals: newMeals, updatedAt: Date.now() };
-                            try {
-                                lsSet(tgtKey, updated);
-                            } catch (e) {
-                                trackError(e, { source: 'day/_meals.js', action: 'copy_to_new_cross_day' });
-                            }
+                            // Today is not open: write fresh target LS with a guard against stale queue restore.
+                            const stampedMeal = { ...newMeal, updatedAt: newMeal.updatedAt || Date.now() };
+                            const result = writeCrossDayWithGuard(
+                                todayStr,
+                                'copy_to_new_cross_day',
+                                (existing) => {
+                                    const newMeals = sortMealsByTime([...(existing.meals || []), stampedMeal]);
+                                    return { ...existing, date: todayStr, meals: newMeals, updatedAt: Date.now() };
+                                },
+                                {
+                                    source: 'copy_meal_new',
+                                    expectedMealIds: [stampedMeal.id],
+                                    expectedItemIds: cloned.map((item) => item.id).filter(Boolean),
+                                },
+                            );
+                            if (!result.ok) return;
                             window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: todayStr, source: 'copy_meal_new' } }));
+                            newMeal.id = stampedMeal.id;
                         }
 
                         HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
@@ -12817,7 +12911,7 @@
                     }, 100);
                 },
             });
-        }, [date, pIndex, getProductFromItem, prof, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite]);
+        }, [date, pIndex, getProductFromItem, prof, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal, ensureDiaryItemsReadyForDayWrite, writeCrossDayWithGuard]);
 
         const buildDaysWithMeals = React.useCallback((opts) => {
             const includeEmpty = !!(opts && opts.includeEmpty);
@@ -12863,13 +12957,23 @@
             const existing = lsGet(key, null) || { date: dStr, meals: [] };
             const next = mutator(existing);
             if (!next) return false;
-            try { lsSet(key, next); } catch (e) {
-                trackError(e, { source: 'day/_meals.js', action: action || 'cross_day_write' });
-                return false;
-            }
+            const delta = HEYS.dayMutationGuard?.delta?.(existing, next) || {};
+            const result = writeCrossDayWithGuard(
+                dStr,
+                action || 'cross_day_write',
+                () => next,
+                {
+                    source: 'write_day_cross_day',
+                    expectedMealIds: delta.expectedMealIds || [],
+                    expectedItemIds: delta.expectedItemIds || [],
+                    expectedAbsentMealIds: delta.expectedAbsentMealIds || [],
+                    expectedAbsentItemIds: delta.expectedAbsentItemIds || [],
+                },
+            );
+            if (!result.ok) return false;
             window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dStr, source: action || 'move' } }));
             return true;
-        }, [date, setDay, markUndoWindow, persistDayData]);
+        }, [date, setDay, markUndoWindow, persistDayData, writeCrossDayWithGuard]);
 
         const createNewMealAndAddItem = React.useCallback(async (params) => {
             const { srcDate, srcMealId, srcItem, srcItemIndex, mode, todayStr } = params;
