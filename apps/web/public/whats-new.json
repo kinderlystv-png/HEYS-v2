@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.09.3c7bf67e",
+      "buildHash": "3c7bf67e",
+      "date": "2026-07-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "close charge followup on later",
+      "items": [
+        {
+          "type": "fix",
+          "title": "close charge followup on later",
+          "description": "close charge followup on later"
+        }
+      ],
+      "coveredCommits": ["3c7bf67e"]
+    },
+    {
       "version": "2026.07.09.4f6ff23f",
       "buildHash": "4f6ff23f",
       "date": "2026-07-09",
@@ -184,22 +200,6 @@
         }
       ],
       "coveredCommits": ["4c2764e6", "ab3e544a"]
-    },
-    {
-      "version": "2026.07.06.c3909434",
-      "buildHash": "c3909434",
-      "date": "2026-07-06",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Дневник лучше объясняет изменения",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Правки и голод стали понятнее",
-          "description": "Правки куратора теперь открываются отдельным обзором с переходом к нужному месту, а оценки голода аккуратнее уточняют еду при низком голоде. Это помогает быстрее понять, что изменилось в дневнике и почему приложение задаёт уточняющий вопрос."
-        }
-      ],
-      "coveredCommits": ["c3909434", "3c86a8a0", "2bbcd6e1"]
     }
   ]
 }
