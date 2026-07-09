@@ -184,13 +184,36 @@
   function writeDayV2ScopedAndLegacy(dateKey, dayData) {
     const safeDayData = normalizeDayForDate(dateKey, dayData, '[HEYS.morning] writeDayV2Scoped');
     if (!safeDayData) return false;
+    let valueToSave = safeDayData;
+    try {
+      if (HEYS.dayMutationGuard?.mergeProtectedFields) {
+        const structuralFields = new Set([
+          'date',
+          'meals',
+          'deletedMealIds',
+          'deletedItemIds',
+          'deletedMealItemIds',
+          'updatedAt',
+        ]);
+        const fields = Object.keys(safeDayData).filter((field) => !structuralFields.has(field));
+        if (fields.length) {
+          const current = readDayV2ScopedFirst(dateKey, null, { allowUnscopedFallback: false })
+            || readDayV2ScopedFirst(dateKey, null);
+          const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateKey, safeDayData, current, fields, {
+            action: 'morning-checkin-day-write',
+          });
+          if (protectedResult.blocked) return false;
+          valueToSave = protectedResult.day || safeDayData;
+        }
+      }
+    } catch (_) { /* guard diagnostics only */ }
     const cid = getCurrentClientId();
     if (cid) {
       const scopedKey = `heys_${cid}_dayv2_${dateKey}`;
       if (HEYS.store?.set) {
-        HEYS.store.set(scopedKey, safeDayData);
+        HEYS.store.set(scopedKey, valueToSave);
       } else if (HEYS.utils?.lsSet) {
-        HEYS.utils.lsSet(scopedKey, safeDayData);
+        HEYS.utils.lsSet(scopedKey, valueToSave);
       }
       try {
         if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
@@ -202,12 +225,12 @@
     // Fallback: нет clientId (редкий pre-auth case) — только тогда unscoped.
     const unscopedKey = `heys_dayv2_${dateKey}`;
     if (HEYS.store?.set) {
-      HEYS.store.set(unscopedKey, safeDayData);
+      HEYS.store.set(unscopedKey, valueToSave);
     } else if (HEYS.utils?.lsSet) {
-      HEYS.utils.lsSet(unscopedKey, safeDayData);
+      HEYS.utils.lsSet(unscopedKey, valueToSave);
     } else {
       try {
-        localStorage.setItem(unscopedKey, JSON.stringify(safeDayData));
+        localStorage.setItem(unscopedKey, JSON.stringify(valueToSave));
       } catch (_) {
         // Fallback storage is unavailable
       }
@@ -1296,6 +1319,16 @@
     return status === 'failed_sync' || status === 'saved_local' || status === 'editing';
   }
 
+  function markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, note = 'cloud_pending') {
+    return markMorningProgressStep(dateKey, stepId, {
+      status: 'saved_local',
+      cloudPending: true,
+      syncNote: note,
+      affectedKeys: affectedKeys || [],
+      error: null
+    }, clientId);
+  }
+
   function mergeFreshStepsWithUnresolvedProgress(freshSteps, existingLedger) {
     if (!existingLedger || !Array.isArray(existingLedger.plannedStepIds)) return freshSteps;
     const freshSet = new Set(freshSteps);
@@ -1428,6 +1461,8 @@
         savedAt: row.savedAt || null,
         syncedAt: row.syncedAt || null,
         error: row.error || null,
+        cloudPending: row.cloudPending === true,
+        syncNote: row.syncNote || null,
         completeByData: isMorningStepComplete(id, { dateKey, clientId, day, profile })
       };
     });
@@ -1529,6 +1564,8 @@
       status: 'saved_local',
       savedAt: Date.now(),
       affectedKeys: affectedKeys || [],
+      cloudPending: false,
+      syncNote: null,
       error: null
     }, clientId);
 
@@ -1553,17 +1590,15 @@
 
     const flushed = await HEYS.cloud.flushPendingQueue(timeoutMs || 10000);
     if (!flushed) {
-      const err = new Error('Не удалось дождаться облака. Попробуйте ещё раз.');
-      markMorningProgressStep(dateKey, stepId, {
-        status: 'failed_sync',
-        error: err.message
-      }, clientId);
-      throw err;
+      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_timeout');
+      return true;
     }
 
     markMorningProgressStep(dateKey, stepId, {
       status: 'synced',
       syncedAt: Date.now(),
+      cloudPending: false,
+      syncNote: null,
       error: null
     }, clientId);
     return true;
@@ -1642,7 +1677,8 @@
       flowId: plan?.flowId
     });
 
-    const finish = () => {
+    const finish = (opts = {}) => {
+      const cloudPending = opts.cloudPending === true;
       const ledger = readMorningProgress(todayKey, currentClientId);
       const blocking = getBlockingMorningSteps({ ledger, dateKey: todayKey, clientId: currentClientId });
       if (blocking.length) {
@@ -1666,14 +1702,18 @@
         sessionStorage.removeItem('heys_morning_supplements_advice_shown');
       } catch (e) { /* sessionStorage недоступен */ }
       markMorningProgressStep(todayKey, '__flow__', {
-        status: 'synced',
-        syncedAt: Date.now()
+        status: cloudPending ? 'saved_local' : 'synced',
+        savedAt: Date.now(),
+        syncedAt: cloudPending ? null : Date.now(),
+        cloudPending,
+        syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null,
+        error: null
       }, currentClientId);
       traceMorningCheckin('flow_complete', {
         dateKey: todayKey,
         clientId: currentClientId,
         flowId: plan?.flowId,
-        status: 'synced'
+        status: cloudPending ? 'saved_local' : 'synced'
       });
       if (onComplete) onComplete();
       return true;
@@ -1681,8 +1721,7 @@
 
     if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
       return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
-        if (!flushed) throw new Error('checkin_sync_timeout');
-        return finish();
+        return finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' });
       }).catch((err) => {
         markMorningProgressStep(todayKey, '__flow__', {
           status: 'failed_sync',

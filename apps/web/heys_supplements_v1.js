@@ -474,13 +474,29 @@
   function saveDaySafe(dateKey, dayData, options = {}) {
     const U = HEYS.utils || {};
     const key = `heys_dayv2_${dateKey}`;
+    let valueToSave = dayData;
+    try {
+      const field = options.field || null;
+      const extraFieldsByField = {
+        supplementsTaken: ['supplementsTakenAt'],
+      };
+      const fields = field ? [field].concat(extraFieldsByField[field] || []) : [];
+      if (fields.length && HEYS.dayMutationGuard?.mergeProtectedFields) {
+        const current = readStoredValue(key, null);
+        const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateKey, dayData, current, fields, {
+          action: options.source || 'supplements-day-save',
+        });
+        if (protectedResult.blocked) return false;
+        valueToSave = protectedResult.day || dayData;
+      }
+    } catch (_) { /* guard diagnostics only */ }
     if (HEYS.store && typeof HEYS.store.set === 'function') {
-      HEYS.store.set(key, dayData);
+      HEYS.store.set(key, valueToSave);
     } else if (U.lsSet) {
-      U.lsSet(key, dayData);
+      U.lsSet(key, valueToSave);
     }
 
-    queueSupplementsCloudSave(key, dayData);
+    queueSupplementsCloudSave(key, valueToSave);
 
     const clientId = getSupplementsCurrentClientId();
     const scopedKey = clientId ? `heys_${clientId}_dayv2_${dateKey}` : key;
@@ -492,6 +508,7 @@
       field: options.field || null,
       source: options.source || 'supplements-day-save'
     });
+    return true;
   }
 
   /**

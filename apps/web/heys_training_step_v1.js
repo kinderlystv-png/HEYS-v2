@@ -30,6 +30,23 @@
     } catch { }
   };
 
+  const saveDayFields = (dateKey, day, fields, action) => {
+    const key = `heys_dayv2_${dateKey}`;
+    let valueToSave = day;
+    try {
+      if (HEYS.dayMutationGuard?.mergeProtectedFields && Array.isArray(fields) && fields.length) {
+        const current = lsGet(key, null);
+        const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateKey, day, current, fields, {
+          action: action || 'training-step-day-save',
+        });
+        if (protectedResult.blocked) return false;
+        valueToSave = protectedResult.day || day;
+      }
+    } catch (_) { /* guard diagnostics only */ }
+    lsSet(key, valueToSave);
+    return true;
+  };
+
   const haptic = (style = 'light') => {
     try { navigator.vibrate?.(style === 'error' ? [50, 30, 50] : style === 'success' ? 20 : 10); } catch { }
   };
@@ -405,7 +422,7 @@
 
     day.trainings = trainings;
     day.updatedAt = Date.now();
-    lsSet(`heys_dayv2_${dateKey}`, day);
+    saveDayFields(dateKey, day, ['trainings'], 'training-step');
 
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
@@ -1131,7 +1148,7 @@
         lastIntensity: intensity,
         lastProgramId: fingersLog?.programId || null
       };
-      lsSet(`heys_dayv2_${dateKey}`, day);
+      saveDayFields(dateKey, day, ['fingers'], 'fingers-day-update');
     } catch (e) {
       console.warn('[saveFingers] day.fingers update failed:', e);
     }

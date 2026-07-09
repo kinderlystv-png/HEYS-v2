@@ -48,13 +48,13 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('data: { ...freshDay, date: dateKey }');
   });
 
-  it('keeps strict final completion single-step and waits for final cloud flush before completion events', () => {
+  it('keeps strict final completion single-step and marks cloud-pending local completion explicitly', () => {
     expect(STEP_MODAL_SRC).toContain('if (requireStepAck) {\n            if (!(await saveStepConfig(currentConfig, stepData))) return;');
-    const completeStart = MORNING_SRC.indexOf('function completeMorningCheckin');
-    const finishStart = MORNING_SRC.indexOf('const finish = () =>', completeStart);
-    const beforeFinish = MORNING_SRC.slice(completeStart, finishStart);
-    expect(beforeFinish).not.toContain('dispatchMorningCheckinDayRefresh');
-    expect(beforeFinish).not.toContain('heys:checkin-complete');
+    expect(MORNING_SRC).toContain('markMorningProgressCloudPending');
+    expect(MORNING_SRC).toContain("return finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' });");
+    expect(MORNING_SRC).toContain("status: cloudPending ? 'saved_local' : 'synced'");
+    expect(MORNING_SRC).toContain('cloudPending,');
+    expect(MORNING_SRC).toContain("syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null");
     expect(DAY_EFFECTS_SRC).toContain("'#sq' + (lsDay.sleepQuality || 0)");
     expect(DAY_EFFECTS_SRC).toContain("'#mm' + (lsDay.moodMorning || 0)");
     expect(DAY_EFFECTS_SRC).toContain("'#wm' + (lsDay.wellbeingMorning || 0)");

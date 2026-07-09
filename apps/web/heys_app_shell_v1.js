@@ -1748,9 +1748,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     lines.push(`  date: ${status.dateKey}  flowId: ${status.flowId || '—'}  flowStatus: ${status.flowStatus || '—'}  updated: ${age}`);
                     lines.push(`  sessionDone: ${!!status.sessionDone}  counts: ${JSON.stringify(status.counts || {})}`);
                     lines.push(`  corePresence: ${JSON.stringify(status.corePresence || {})}`);
-                    lines.push('  --- steps (id | status | data | error) ---');
+                    lines.push('  --- steps (id | status | data | cloud | error) ---');
                     (status.steps || []).forEach((step) => {
-                        lines.push(`  ${String(step.id).padEnd(18)} | ${String(step.status || '—').padEnd(12)} | data=${step.completeByData ? 'Y' : 'N'} | ${step.error || '—'}`);
+                        const cloud = step.cloudPending ? (step.syncNote || 'pending') : '—';
+                        lines.push(`  ${String(step.id).padEnd(18)} | ${String(step.status || '—').padEnd(12)} | data=${step.completeByData ? 'Y' : 'N'} | ${cloud} | ${step.error || '—'}`);
                     });
                     return lines;
                 };
@@ -1880,6 +1881,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     pushKV('_pinAuthClientId(isPinAuthClient)', typeof HEYS?.cloud?.isPinAuthClient === 'function'
                         ? HEYS.cloud.isPinAuthClient() : null);
                     pushKV('currentClientId', HEYS?.currentClientId);
+                    pushKV('writeContextDiag', typeof HEYS?.cloud?.getWriteContextDiag === 'function'
+                        ? HEYS.cloud.getWriteContextDiag() : null);
 
                     pushHeader('Document state');
                     pushKV('visibilityState', typeof document !== 'undefined' ? document.visibilityState : null);
@@ -1983,6 +1986,79 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         } catch (_) { /* noop */ }
                     } catch (e) {
                         extraLines.push('  (diagnostics error: ' + (e && e.message ? e.message : e) + ')');
+                    }
+
+                    pushHeader('Day copy/save forensic trace');
+                    try {
+                        const buffers = window.HEYS && window.HEYS._dayDiagBuffers ? window.HEYS._dayDiagBuffers : {};
+                        const guardApi = window.HEYS && window.HEYS.dayMutationGuard;
+                        const traceKeys = guardApi?.TRACE_KEYS || {};
+                        const guardPrefix = guardApi?.PREFIX || 'heys_day_mutation_guard_';
+                        const readStoredTrace = (key) => {
+                            try {
+                                const raw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(key) : null;
+                                const rows = raw ? JSON.parse(raw) : [];
+                                return Array.isArray(rows) ? rows : [];
+                            } catch (_) {
+                                return [];
+                            }
+                        };
+                        const copyMutationsMem = Array.isArray(buffers.copyMutations) ? buffers.copyMutations : [];
+                        const uploadRehydratesMem = Array.isArray(buffers.uploadRehydrates) ? buffers.uploadRehydrates : [];
+                        const copyMutations = copyMutationsMem.length ? copyMutationsMem : readStoredTrace(traceKeys.copyMutations || 'heys_day_diag_copy_mutations');
+                        const uploadRehydrates = uploadRehydratesMem.length ? uploadRehydratesMem : readStoredTrace(traceKeys.uploadRehydrates || 'heys_day_diag_upload_rehydrates');
+                        const guards = (() => {
+                            const out = [];
+                            const now = Date.now();
+                            try {
+                                const mem = window.HEYS?._dayMutationGuards || {};
+                                Object.keys(mem).forEach((dateKey) => {
+                                    const guard = mem[dateKey];
+                                    if (guard && Number(guard.expiresAt || 0) > now) out.push({ dateKey, ...guard });
+                                });
+                            } catch (_) { /* noop */ }
+                            try {
+                                if (typeof sessionStorage !== 'undefined') {
+                                    for (let i = 0; i < sessionStorage.length; i++) {
+                                        const key = sessionStorage.key(i);
+                                        if (!key || !key.startsWith(guardPrefix)) continue;
+                                        const raw = sessionStorage.getItem(key);
+                                        const guard = raw ? JSON.parse(raw) : null;
+                                        if (guard && Number(guard.expiresAt || 0) > now) out.push({ storageKey: key, ...guard });
+                                    }
+                                }
+                            } catch (_) { /* noop */ }
+                            return out.slice(-10);
+                        })();
+                        pushKV('activeMutationGuards', guards.length ? guards : '—');
+                        if (copyMutations.length) {
+                            extraLines.push('  --- recent copy mutations (last 20: ago_ms | phase | action | date | before -> readBack/intended) ---');
+                            copyMutations.slice(-20).reverse().forEach((row) => {
+                                const before = row.before ? `${row.before.meals}/${row.before.items}` : '—';
+                                const intended = row.intended ? `${row.intended.meals}/${row.intended.items}` : (row.after ? `${row.after.meals}/${row.after.items}` : '—');
+                                const readBack = row.readBack ? `${row.readBack.meals}/${row.readBack.items}` : '—';
+                                const missing = []
+                                    .concat((row.missingMeals || []).map((id) => 'meal:' + id))
+                                    .concat((row.missingItems || []).map((id) => 'item:' + id));
+                                const unexpected = []
+                                    .concat((row.unexpectedMeals || []).map((id) => 'meal:' + id))
+                                    .concat((row.unexpectedItems || []).map((id) => 'item:' + id));
+                                extraLines.push(`  ${Date.now() - row.ts}ms | ${row.phase || '—'} | ${row.action || '—'} | ${row.targetDate || '—'} | ${before} -> ${intended}/${readBack}${missing.length ? ' missing=' + missing.join(',') : ''}${unexpected.length ? ' unexpected=' + unexpected.join(',') : ''}`);
+                            });
+                        } else {
+                            extraLines.push('  (no copy mutation trace yet)');
+                        }
+                        if (uploadRehydrates.length) {
+                            extraLines.push('  --- recent dayv2 upload rehydrates (last 20: ago_ms | key | reason | queued -> local -> outgoing) ---');
+                            uploadRehydrates.slice(-20).reverse().forEach((row) => {
+                                const fmt = (s) => s ? `${s.meals}/${s.items}@${s.updatedAt || '—'}` : '—';
+                                extraLines.push(`  ${Date.now() - row.ts}ms | ${row.key || row.date || '—'} | ${row.reason || '—'} | ${fmt(row.queued)} -> ${fmt(row.local)} -> ${fmt(row.outgoing)}`);
+                            });
+                        } else {
+                            extraLines.push('  (no upload rehydrate trace yet)');
+                        }
+                    } catch (e) {
+                        extraLines.push('  (copy/save forensic trace error: ' + (e && e.message ? e.message : e) + ')');
                     }
 
                     // === Write history ===

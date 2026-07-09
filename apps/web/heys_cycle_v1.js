@@ -294,20 +294,31 @@
   function writeDayData(dateStr, value, lsSet) {
     const baseKey = 'heys_dayv2_' + dateStr;
     const scopedKey = getDayKey(dateStr);
+    let valueToSave = value;
+    try {
+      if (HEYS.dayMutationGuard?.mergeProtectedFields) {
+        const current = readDayData(dateStr, null);
+        const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateStr, value, current, ['cycleDay'], {
+          action: 'cycle-day-write',
+        });
+        if (protectedResult.blocked) return;
+        valueToSave = protectedResult.day || value;
+      }
+    } catch (_) { /* guard diagnostics only */ }
 
     if (HEYS.store?.set) {
-      writeStoredValue(scopedKey, value);
+      writeStoredValue(scopedKey, valueToSave);
       return;
     }
 
     if (lsSet) {
       try {
-        lsSet(baseKey, value);
+        lsSet(baseKey, valueToSave);
         return;
       } catch (e) { }
     }
 
-    writeStoredValue(scopedKey, value);
+    writeStoredValue(scopedKey, valueToSave);
   }
 
   /**

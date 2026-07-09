@@ -334,6 +334,11 @@
     return meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
   }
 
+  function countMealsWithItems(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    return meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0).length;
+  }
+
   function pickRicherDayData(a, b) {
     const left = a && typeof a === 'object' ? a : {};
     const right = b && typeof b === 'object' ? b : {};
@@ -4157,6 +4162,7 @@
     const firstMealTimeLabel = firstMealTimeValue || '—';
     const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
     const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
+    const laterClickedRef = useRef(false);
 
     const saveMissed = () => {
       const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
@@ -4228,6 +4234,23 @@
       }
       notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-done');
       context?.onNext?.();
+    };
+
+    const saveLater = () => {
+      if (laterClickedRef.current) return;
+      laterClickedRef.current = true;
+      const freshDayData = mergeDayMealsPreferLiveIfRicher(dateKey, getFreshDayData(dateKey));
+      const mealCount = Math.max(
+        countMealsWithItems(freshDayData),
+        countMealsWithItems(dayData),
+        1
+      );
+      persistMorningActivationState(dateKey, {
+        status: 'pending',
+        firstMealTime: initialState.firstMealTime || firstMealTimeValue || getFirstMealTimeFromDay(freshDayData) || null,
+        followupSnoozeUntilMealCount: mealCount
+      }, 'morning-activation-followup-dismiss');
+      context?.onClose?.();
     };
 
     const actionBtnStyle = {
@@ -4307,7 +4330,7 @@
         }, 'Не планирую сегодня'),
         React.createElement('button', {
           style: actionBtnStyle,
-          onClick: () => context?.onClose?.()
+          onClick: saveLater
         }, 'Сделаю позже')
       )
     );

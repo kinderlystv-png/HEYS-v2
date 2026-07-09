@@ -99,13 +99,26 @@
     return readStoredValue(key, fallback) || fallback;
   };
 
-  const writeDayValue = (dateKey, day) => {
-    writeStoredValue(getDayStorageKey(dateKey), day);
+  const writeDayValue = (dateKey, day, fields) => {
+    const key = getDayStorageKey(dateKey);
+    let valueToSave = day;
+    try {
+      if (Array.isArray(fields) && fields.length && HEYS.dayMutationGuard?.mergeProtectedFields) {
+        const current = readDayValue(dateKey, null);
+        const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateKey, day, current, fields, {
+          action: 'refeed-step',
+        });
+        if (protectedResult.blocked) return false;
+        valueToSave = protectedResult.day || day;
+      }
+    } catch (_) { /* guard diagnostics only */ }
+    writeStoredValue(key, valueToSave);
     try {
       if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
         HEYS.dayCache.notifyDateUpdated(dateKey);
       }
     } catch (_) { }
+    return true;
   };
 
   /**
@@ -717,7 +730,7 @@
         day.isRefeedDay = data.isRefeedDay;
         day.refeedReason = data.refeedReason || null;
         day.updatedAt = Date.now();
-        writeDayValue(dateKey, day);
+        writeDayValue(dateKey, day, ['isRefeedDay', 'refeedReason']);
 
         // Уведомляем о изменении
         window.dispatchEvent(new CustomEvent('heys:day-updated', {

@@ -4,10 +4,16 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const originalHEYS = window.HEYS;
+const originalWindow = global.window;
+const originalDocument = global.document;
 const originalDispatchEvent = window.dispatchEvent;
 const originalNavigatorOnlineDescriptor = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
 
 function loadStorageModule() {
+  if (typeof window.addEventListener !== 'function') window.addEventListener = vi.fn();
+  if (typeof window.removeEventListener !== 'function') window.removeEventListener = vi.fn();
+  if (typeof global.addEventListener !== 'function') global.addEventListener = window.addEventListener;
+  if (typeof global.removeEventListener !== 'function') global.removeEventListener = window.removeEventListener;
   for (const file of [
     '../heys_pending_queue_pure_v1.js',
     '../heys_sync_queue_runtime_pure_v1.js',
@@ -32,6 +38,8 @@ afterEach(() => {
 
 describe('HEYS.cloud write-context session expiry', () => {
   beforeEach(() => {
+    global.window = originalWindow;
+    global.document = originalWindow.document;
     restoreDispatchEventPatch();
     localStorage.clear();
     localStorage.setItem('heys_pin_auth_client', 'client-1');
@@ -174,6 +182,10 @@ describe('HEYS.cloud write-context unavailable UX contract', () => {
     expect(storageSource).toContain("recoverStalledClientUpload('online')");
     expect(storageSource).toContain("recoverStalledClientUpload('window-focus')");
     expect(storageSource).toContain('uploadRunId !== _clientUploadRunId');
+    expect(storageSource).toContain('const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 15000;');
+    expect(storageSource).toContain('cloud.getWriteContextDiag = function ()');
+    expect(storageSource).toContain("phase: 'timeout'");
+    expect(storageSource).toContain("phase: 'ready'");
 
     const branchStart = appHooksSource.indexOf('const isTransientWriteContext');
     const branchEnd = appHooksSource.indexOf('// 🔥 Если ошибка критическая', branchStart);
@@ -191,6 +203,8 @@ describe('HEYS.cloud write-context unavailable UX contract', () => {
 
 describe('HEYS.cloud write-context unavailable upload behavior', () => {
   beforeEach(() => {
+    global.window = originalWindow;
+    global.document = originalWindow.document;
     restoreDispatchEventPatch();
     vi.useFakeTimers();
     localStorage.clear();

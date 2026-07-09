@@ -92,7 +92,18 @@
     if (typeof writer === 'function') {
       return writer(dateKey, safeDayData);
     }
-    lsSet(`heys_dayv2_${dateKey}`, safeDayData);
+    let valueToSave = safeDayData;
+    try {
+      if (HEYS.dayMutationGuard?.mergeProtectedFields) {
+        const current = readDayDataScoped(dateKey, null);
+        const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(dateKey, safeDayData, current, ['weightMorning'], {
+          action: 'profile-step-day-write',
+        });
+        if (protectedResult.blocked) return false;
+        valueToSave = protectedResult.day || safeDayData;
+      }
+    } catch (_) { /* guard diagnostics only */ }
+    lsSet(`heys_dayv2_${dateKey}`, valueToSave);
     return true;
   }
 

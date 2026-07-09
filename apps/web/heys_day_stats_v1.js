@@ -357,7 +357,30 @@
     const persistDayChange = (nextDay, source, extraDetail = {}) => {
       if (!date) return;
       const statsDayKey = getStatsDayStorageKey();
-      const nextSnapshot = cloneDaySnapshot(nextDay);
+      let nextSnapshot = cloneDaySnapshot(nextDay);
+      try {
+        const isExplicitDestructive =
+          source === 'day-stats-clear-day-cta'
+          || source === 'day-stats-clear-day-undo'
+          || extraDetail.field === 'meals';
+        if (!isExplicitDestructive && HEYS.dayMutationGuard?.mergeProtectedFields) {
+          const structuralFields = new Set([
+            'date',
+            'meals',
+            'deletedMealIds',
+            'deletedItemIds',
+            'deletedMealItemIds',
+            'updatedAt',
+          ]);
+          const fields = Object.keys(nextSnapshot).filter((field) => !structuralFields.has(field));
+          const current = U?.lsGet?.(statsDayKey, null);
+          const protectedResult = HEYS.dayMutationGuard.mergeProtectedFields(date, nextSnapshot, current, fields, {
+            action: source || 'day-stats-write',
+          });
+          if (protectedResult.blocked) return;
+          nextSnapshot = protectedResult.day || nextSnapshot;
+        }
+      } catch (_) { /* guard diagnostics only */ }
 
       setDay(() => nextSnapshot);
 

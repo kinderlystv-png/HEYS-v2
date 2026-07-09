@@ -486,6 +486,74 @@ describe('morning activation followup decision', () => {
       }));
   });
 
+  it('snoozes and closes from the first Сделаю позже click', () => {
+    const dateKey = '2026-06-09';
+    const clientId = 'client-1';
+    const day = mealDay({
+      date: dateKey,
+      morningActivation: {
+        status: 'pending',
+        firstMealTime: '09:00',
+      },
+    });
+    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
+    localStorage.setItem(scopedKey, JSON.stringify(day));
+
+    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
+    global.window = domWindow;
+    global.document = domWindow.document;
+    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
+    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
+    global.React = React;
+    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
+    domWindow.React = React;
+    domWindow.ReactDOM = global.ReactDOM;
+    domWindow.HEYS = {
+      currentClientId: clientId,
+      utils: {
+        getCurrentClientId: () => clientId,
+      },
+      dayUtils: {
+        todayISO: () => dateKey,
+      },
+    };
+    global.CustomEvent = class CustomEvent {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    };
+    global.HEYS = domWindow.HEYS;
+    domWindow.CustomEvent = global.CustomEvent;
+    const dispatchSpy = vi.fn();
+    domWindow.dispatchEvent = dispatchSpy;
+
+    // eslint-disable-next-line no-new-func
+    new Function(STEP_MODAL_SRC)();
+    // eslint-disable-next-line no-new-func
+    new Function(STEPS_SRC)();
+
+    const onClose = vi.fn();
+    const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
+    render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onClose } }));
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Сделаю позже',
+    }));
+
+    const saved = JSON.parse(localStorage.getItem(scopedKey));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(saved.morningActivation.status).toBe('pending');
+    expect(saved.morningActivation.firstMealTime).toBe('09:00');
+    expect(saved.morningActivation.followupSnoozeUntilMealCount).toBe(1);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:day-updated',
+      detail: expect.objectContaining({
+        source: 'morning-activation-followup-dismiss',
+      }),
+    }));
+  });
+
   it('persists skip reason and guards the modal from the first reason click', () => {
     const dateKey = '2026-06-09';
     const clientId = 'client-1';

@@ -358,7 +358,7 @@
     ONLINE: 'online'
   };
 
-  const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 5000;
+  const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 15000;
   const WRITE_CONTEXT_UPLOAD_WAIT_MS = WRITE_CONTEXT_ISSUE_TIMEOUT_MS + 250;
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1673,6 +1673,75 @@
       if (Number.isFinite(parsed)) return parsed;
     }
     return 0;
+  }
+
+  function summarizeDayPayload(value) {
+    const meals = Array.isArray(value?.meals) ? value.meals : [];
+    const ids = HEYS.dayMutationGuard?.collectIds?.(value) || { mealIds: [], itemIds: [] };
+    return {
+      updatedAt: getDayPayloadUpdatedAt(value),
+      meals: meals.length,
+      items: meals.reduce((sum, meal) => sum + ((meal?.items || []).length), 0),
+      mealIds: ids.mealIds.map(String).filter(Boolean),
+      itemIds: ids.itemIds.map(String).filter(Boolean),
+    };
+  }
+
+  function readLocalDayPayloadForUpload(originalKey, normalizedKey, clientId) {
+    try {
+      const scopedKey = scopeKeyForClientStorage(originalKey || normalizedKey, clientId);
+      const raw = global.localStorage?.getItem?.(scopedKey);
+      if (!raw) return null;
+      if (typeof raw === 'string' && raw.startsWith('¤Z¤')) {
+        const decoded = decompressCloudRowValue(raw, scopedKey);
+        return decoded.ok ? decoded.value : null;
+      }
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function rehydrateDayv2UploadItemFromLocal(item, clientId) {
+    if (!item || !clientId || !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item.k || ''))) return item;
+    const dateMatch = String(item.k).match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
+    const dateStr = dateMatch && dateMatch[1];
+    const localDay = readLocalDayPayloadForUpload(item.originalKey, item.k, clientId);
+    if (!localDay || typeof localDay !== 'object') return item;
+
+    const queuedSummary = summarizeDayPayload(item.v);
+    const localSummary = summarizeDayPayload(localDay);
+    const guardApi = HEYS.dayMutationGuard;
+    const guard = guardApi?.read?.(dateStr);
+    const guardWouldBreak = guard && guardApi.breaksGuard(item.v, guard) && !guardApi.breaksGuard(localDay, guard);
+    const localIsClearlyAhead =
+      localSummary.updatedAt > queuedSummary.updatedAt &&
+      (localSummary.meals > queuedSummary.meals || localSummary.items > queuedSummary.items);
+
+    if (!guardWouldBreak && !localIsClearlyAhead) return item;
+
+    let nextValue = localDay;
+    try {
+      const merged = mergeDayData(localDay, item.v, { forceKeepAll: true });
+      if (merged && Array.isArray(merged.meals)) nextValue = merged;
+    } catch (_) { /* keep fresh local fallback */ }
+
+    const nextSummary = summarizeDayPayload(nextValue);
+    guardApi?.pushTrace?.('uploadRehydrates', {
+      key: item.k,
+      date: dateStr,
+      reason: guardWouldBreak ? 'active_mutation_guard' : 'fresh_local_ahead',
+      guardAction: guard?.action || null,
+      queued: queuedSummary,
+      local: localSummary,
+      outgoing: nextSummary,
+    }, '[HEYS.syncTrace] DAYV2_UPLOAD_REHYDRATED');
+
+    return {
+      ...item,
+      v: nextValue,
+      updated_at: new Date().toISOString(),
+    };
   }
 
   function isRemoteDayNewer(localValue, remoteValue) {
@@ -3253,6 +3322,36 @@
   function writeDayKeyWithQuotaGuard(key, valueToSave, options = {}) {
     if (shouldBlockDayV2DateMismatch(key, valueToSave, options.source || 'writeDayKeyWithQuotaGuard')) return false;
     const hydratedValue = ensureDayV2ComputedTotals(valueToSave);
+    try {
+      const dateMatch = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+      const dateStr = dateMatch && dateMatch[1];
+      const guardApi = HEYS.dayMutationGuard;
+      const guard = guardApi?.read?.(dateStr);
+      if (guard && guardApi?.breaksGuard?.(hydratedValue, guard)) {
+        guardApi.pushTrace('uploadRehydrates', {
+          key,
+          date: dateStr,
+          reason: 'blocked_dayv2_write_breaks_mutation_guard',
+          queued: summarizeDayPayload(hydratedValue),
+          guard: {
+            action: guard.action || null,
+            expectedMealIds: guard.expectedMealIds || [],
+            expectedItemIds: guard.expectedItemIds || [],
+            expectedAbsentMealIds: guard.expectedAbsentMealIds || [],
+            expectedAbsentItemIds: guard.expectedAbsentItemIds || [],
+            expectedMinMeals: guard.expectedMinMeals || 0,
+            expectedMinItems: guard.expectedMinItems || 0,
+          },
+        }, '[HEYS.syncTrace] DAYV2_UPLOAD_REHYDRATED');
+        window.console.warn('[HEYS.sinhron] 🛡️ SKIP_DAYV2_WRITE protected mutation guard', {
+          key,
+          date: dateStr,
+          source: options.source || 'writeDayKeyWithQuotaGuard',
+          action: guard.action,
+        });
+        return false;
+      }
+    } catch (_) { /* guard check must not break writes */ }
     const rawValue = JSON.stringify(hydratedValue);
     const written = safeSetItem(key, rawValue, {
       preserveRecentDuringHydration: !!options.preserveRecentDuringHydration,
@@ -3693,9 +3792,16 @@
   // Last upload diagnostic — held in memory only, exposed via cloud.getLastUploadDiag()
   // for badge-tap snapshot to surface real cause of upload failures (413 etc).
   let _lastUploadDiag = null;
+  let _lastWriteContextIssueDiag = null;
   function recordUploadDiag(info) {
     try {
       _lastUploadDiag = { ts: Date.now(), ...info };
+    } catch (_) { /* noop */ }
+  }
+  function recordWriteContextIssueDiag(info) {
+    try {
+      _lastWriteContextIssueDiag = { ts: Date.now(), ...info };
+      HEYS._lastWriteContextIssueDiag = _lastWriteContextIssueDiag;
     } catch (_) { /* noop */ }
   }
   function getUploadValueSummary(value) {
@@ -3758,6 +3864,21 @@
     return 'other';
   }
   cloud.getLastUploadDiag = function () { return _lastUploadDiag; };
+  cloud.getWriteContextDiag = function () {
+    const ctx = cloud._writeContext || null;
+    return {
+      current: ctx ? {
+        clientId: ctx.clientId ? String(ctx.clientId).slice(0, 8) : null,
+        hasContextId: !!ctx.contextId,
+        expiresAt: ctx.expiresAt || null,
+        issuedAt: ctx.issuedAt || null,
+      } : null,
+      readyPending: !!(cloud._writeContextReady && !cloud._writeContextReady._settled),
+      lastIssue: _lastWriteContextIssueDiag,
+      lastUnavailable: HEYS._lastWriteContextUnavailable || null,
+      issueTimeouts: _writeContextIssueTimeouts,
+    };
+  };
 
   // Tracks ms duration of last successful upload — used for adaptive slow-mode batching.
   let _lastSuccessfulUploadMs = 0;
@@ -6562,7 +6683,7 @@
         v: item.v,
         _ctx: item._ctx || liveCtx || null,
         updated_at: item.updated_at || new Date().toISOString()
-      }));
+      })).map(item => rehydrateDayv2UploadItemFromLocal(item, clientId));
 
       // 📊 L0 telemetry (server-revision rollout): count writes that go out WITHOUT a
       // write-context. This is the gate for the eventual HEYS_WRITE_CONTEXT_STRICT flip
@@ -11569,9 +11690,17 @@
       // _pinAuthClientId и нет curator-user (та же проверка, что session-ветка
       // ниже и syncClient используют). См. invariant #10.
       const isCurator = !cloud.isPinAuthClient?.();
+      let isSessionTokenMissing = () => false;
       let res;
       if (isCurator) {
         if (!targetClientId) return finish(null);
+        const issueStartedAt = Date.now();
+        recordWriteContextIssueDiag({
+          phase: 'start',
+          mode: 'curator',
+          client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+          timeoutMs: WRITE_CONTEXT_ISSUE_TIMEOUT_MS
+        });
         res = await raceWithTimeout(
           api.rpc('issue_write_context_by_curator', { p_client_id: targetClientId }),
           WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
@@ -11579,6 +11708,14 @@
           () => {
             _writeContextIssueTimeouts++;
             try { HEYS._writeContextIssueTimeouts = _writeContextIssueTimeouts; } catch (_) { }
+            recordWriteContextIssueDiag({
+              phase: 'timeout',
+              mode: 'curator',
+              client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+              timeoutMs: WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+              elapsedMs: Date.now() - issueStartedAt,
+              code: 'timeout'
+            });
             console.warn('[write-context] issue timeout:', targetClientId?.slice?.(0, 8) || targetClientId);
           }
         );
@@ -11586,17 +11723,36 @@
         const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
         const hasCookieSession = !!cloud.isPinAuthClient?.();
         if (!sessionToken && !hasCookieSession) return finish(null);
-        const issueBySession = (params) => raceWithTimeout(
-          api.rpc('issue_write_context_by_session', params),
-          WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
-          { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
-          () => {
-            _writeContextIssueTimeouts++;
-            try { HEYS._writeContextIssueTimeouts = _writeContextIssueTimeouts; } catch (_) { }
-            console.warn('[write-context] issue timeout: session');
-          }
-        );
-        const isSessionTokenMissing = (result) => {
+        const issueBySession = (params) => {
+          const issueStartedAt = Date.now();
+          recordWriteContextIssueDiag({
+            phase: 'start',
+            mode: 'session',
+            client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+            timeoutMs: WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+            hasBodyToken: !!(params && params.p_session_token)
+          });
+          return raceWithTimeout(
+            api.rpc('issue_write_context_by_session', params),
+            WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+            { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
+            () => {
+              _writeContextIssueTimeouts++;
+              try { HEYS._writeContextIssueTimeouts = _writeContextIssueTimeouts; } catch (_) { }
+              recordWriteContextIssueDiag({
+                phase: 'timeout',
+                mode: 'session',
+                client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+                timeoutMs: WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+                elapsedMs: Date.now() - issueStartedAt,
+                hasBodyToken: !!(params && params.p_session_token),
+                code: 'timeout'
+              });
+              console.warn('[write-context] issue timeout: session');
+            }
+          );
+        };
+        isSessionTokenMissing = (result) => {
           const raw = result?.error?.raw || result?.data || {};
           const reason = String(raw.reason || result?.error?.message || raw.error || '').toLowerCase();
           return reason.includes('missing_session_token') || reason.includes('invalid_session');
@@ -11616,6 +11772,13 @@
       }
       if (res?.error || res?.data?.error) {
         const issueError = res?.error || res?.data || {};
+        recordWriteContextIssueDiag({
+          phase: 'failed',
+          mode: isCurator ? 'curator' : 'session',
+          client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+          code: issueError.code || issueError.status || null,
+          message: issueError.message || issueError.error || String(issueError || '').slice(0, 120)
+        });
         console.warn('[write-context] issue failed:', issueError.message || issueError.code || issueError.error || issueError);
         if (isAuthFailure(issueError) || isSessionTokenMissing(res)) {
           dispatchSessionExpiredOnce('write_context_issue', issueError.message || issueError.error || issueError.code || issueError);
@@ -11623,7 +11786,14 @@
         return finish(null);
       }
       const data = res?.data || {};
-      if (!data.context_id) return finish(null);
+      if (!data.context_id) {
+        recordWriteContextIssueDiag({
+          phase: 'empty',
+          mode: isCurator ? 'curator' : 'session',
+          client: targetClientId ? String(targetClientId).slice(0, 8) : null
+        });
+        return finish(null);
+      }
       cloud._writeContext = {
         contextId: data.context_id,
         clientId: data.client_id || targetClientId,
@@ -11631,8 +11801,19 @@
         expiresAt: data.expires_at || null,
         issuedAt: Date.now(),
       };
+      recordWriteContextIssueDiag({
+        phase: 'ready',
+        mode: isCurator ? 'curator' : 'session',
+        client: cloud._writeContext.clientId ? String(cloud._writeContext.clientId).slice(0, 8) : null,
+        expiresAt: cloud._writeContext.expiresAt || null
+      });
       return finish(cloud._writeContext);
     } catch (e) {
+      recordWriteContextIssueDiag({
+        phase: 'exception',
+        client: targetClientId ? String(targetClientId).slice(0, 8) : null,
+        message: e?.message || String(e || '').slice(0, 120)
+      });
       console.warn('[write-context] issue exception:', e?.message || e);
       return finish(null);
     }

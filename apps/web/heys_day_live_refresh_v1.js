@@ -98,6 +98,16 @@
       const merged = sync.mergeDayData(local, cloudBlob);
       if (!merged) return; // identical content (mergeDayData returns null when same)
 
+      const guardApi = HEYS.dayMutationGuard;
+      const guard = guardApi?.read?.(date);
+      if (guard && guardApi?.breaksGuard?.(merged, guard)) {
+        console.warn('[HEYS.live] 🛡️ Skip live-refresh write: protected mutation rollback', {
+          date,
+          action: guard.action,
+        });
+        return;
+      }
+
       // Write merged back to LS via the standard helper. The interceptor will
       // not re-trigger upload because content hash equals cloud's.
       if (utils.lsSet) {
