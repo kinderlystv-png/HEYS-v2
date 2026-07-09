@@ -268,6 +268,62 @@ describe('morning activation followup decision', () => {
     expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
   });
 
+  it('closes an already-open followup when Сделаю позже dispatches dismissed event', () => {
+    const listeners = {};
+    const dayData = mealDay({
+      morningActivation: {
+        status: 'pending',
+        firstMealTime: '09:00',
+        followupSnoozeUntilMealCount: 1,
+      },
+    });
+    const storeSet = vi.fn();
+    const stepModalHide = vi.fn();
+    const sessionSet = vi.fn();
+
+    loadModule({
+      HEYS: {
+        currentClientId: 'client-1',
+        store: {
+          readSafe: vi.fn((key, fallback) => (
+            key === 'heys_client-1_dayv2_2026-06-09' ? dayData : fallback
+          )),
+          set: storeSet,
+        },
+        utils: {
+          getCurrentClientId: () => 'client-1',
+        },
+        StepModal: {
+          hide: stepModalHide,
+        },
+      },
+      addEventListener: vi.fn((type, handler) => {
+        listeners[type] = handler;
+      }),
+      document: {
+        addEventListener: vi.fn(),
+        getElementById: vi.fn((id) => (id === 'heys-step-modal-root' ? {} : null)),
+        dispatchEvent: vi.fn(),
+      },
+      sessionStorage: {
+        getItem: vi.fn(() => null),
+        setItem: sessionSet,
+        removeItem: vi.fn(),
+      },
+    });
+
+    listeners['heys:morning-activation-followup-dismissed']?.({
+      detail: { dateKey: '2026-06-09', mealCount: 1 },
+    });
+
+    expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
+    expect(storeSet).not.toHaveBeenCalled();
+    expect(sessionSet).toHaveBeenCalledWith(
+      'heys_morning_activation_followup_guard_client-1_2026-06-09',
+      '1'
+    );
+  });
+
   it('waits for meal-flow finish before stacking the followup over an active StepModal', () => {
     vi.useFakeTimers();
     const listeners = {};
@@ -550,6 +606,13 @@ describe('morning activation followup decision', () => {
       type: 'heys:day-updated',
       detail: expect.objectContaining({
         source: 'morning-activation-followup-dismiss',
+      }),
+    }));
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:morning-activation-followup-dismissed',
+      detail: expect.objectContaining({
+        dateKey,
+        mealCount: 1,
       }),
     }));
   });

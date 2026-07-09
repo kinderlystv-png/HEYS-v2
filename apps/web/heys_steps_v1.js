@@ -855,6 +855,20 @@
     }
   }
 
+  function notifyMorningActivationFollowupDismissed(dateKey, mealCount) {
+    try {
+      window.dispatchEvent(new CustomEvent('heys:morning-activation-followup-dismissed', {
+        detail: {
+          dateKey,
+          mealCount,
+          source: 'morning-activation-followup-dismiss'
+        }
+      }));
+    } catch (_) {
+      // ignore
+    }
+  }
+
   function markMorningActivationSkipReasonAnswered(dateKey) {
     const clientId = getCurrentClientId();
     if (!clientId || !dateKey) return;
@@ -4251,6 +4265,7 @@
         followupSnoozeUntilMealCount: mealCount
       }, 'morning-activation-followup-dismiss');
       context?.onClose?.();
+      notifyMorningActivationFollowupDismissed(dateKey, mealCount);
     };
 
     const actionBtnStyle = {

@@ -717,9 +717,12 @@
       onClose: () => {
         const fresh = readDayV2ScopedFirst(todayKey, {}) || {};
         const mc = Math.max(countMealsWithItems(fresh), mealCount || 0);
-        persistMorningActivationPatch(todayKey, {
-          followupSnoozeUntilMealCount: mc
-        }, 'morning-activation-followup-dismiss');
+        const existingSnoozeAt = Number(fresh?.morningActivation?.followupSnoozeUntilMealCount);
+        if (!(Number.isFinite(existingSnoozeAt) && existingSnoozeAt >= mc)) {
+          persistMorningActivationPatch(todayKey, {
+            followupSnoozeUntilMealCount: mc
+          }, 'morning-activation-followup-dismiss');
+        }
         logMorningActivationTrace('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
           mealCount: mc
         });
@@ -2178,6 +2181,39 @@
     const dateKey = detail.dateKey || getTodayKey();
     if (dateKey !== getTodayKey()) return;
     setTimeout(() => markMorningActivationFollowupCompleted(dateKey, detail.source || 'event', detail), 0);
+  });
+
+  window.addEventListener('heys:morning-activation-followup-dismissed', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail.dateKey || getTodayKey();
+    if (dateKey !== getTodayKey()) return;
+    const currentClientId = getCurrentClientId();
+    const dayData = readDayV2ScopedFirst(dateKey, {}) || {};
+    const mealCount = Math.max(
+      countMealsWithItems(dayData),
+      Number(detail.mealCount) || 0
+    );
+    const existingSnoozeAt = Number(dayData?.morningActivation?.followupSnoozeUntilMealCount);
+    if (!(Number.isFinite(existingSnoozeAt) && existingSnoozeAt >= mealCount)) {
+      persistMorningActivationPatch(dateKey, {
+        followupSnoozeUntilMealCount: mealCount
+      }, 'morning-activation-followup-dismiss');
+    }
+    closeMorningActivationOverlay();
+    try {
+      if (typeof HEYS.StepModal?.hide === 'function' && isMainStepModalOpen()) {
+        HEYS.StepModal.hide({ scrollToDiary: false });
+      }
+    } catch (_) {
+      // ignore close fallback errors
+    }
+    try {
+      const guardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${dateKey}`;
+      sessionStorage.setItem(guardKey, String(mealCount));
+    } catch (_) {
+      // sessionStorage may be unavailable
+    }
+    followupOpening = false;
   });
 
   // module-init trigger removed: at page-load localStorage may not yet contain today's day data
