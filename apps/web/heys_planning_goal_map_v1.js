@@ -383,25 +383,35 @@
             return project?.id;
         }, [goal, state]);
 
+        const selectDateTarget = useCallback((target) => {
+            if (!target || !['goal', 'task', 'milestone'].includes(target.kind)) {
+                announce('Срок можно добавить к цели, задаче или контрольной точке.');
+                return false;
+            }
+            setSelectedId(target.id);
+            const task = target.entityType === 'task' ? model.goalTasks.find((item) => item.id === target.entityId) : null;
+            setFormDraft({
+                nodeId: target.id,
+                title: target.title,
+                date: target.entityType === 'goal' ? goal?.dueDate || '' : task?.dueDate || '',
+                startTime: '09:00',
+                plannedMinutes: task?.plannedMinutes || 30,
+            });
+            setPanel('date');
+            return true;
+        }, [announce, goal?.dueDate, model.goalTasks]);
+
         const openCreate = useCallback((kind, position) => {
             if (readOnly) return;
             if (kind === 'date') {
                 const target = selectedNode && ['goal', 'task', 'milestone'].includes(selectedNode.kind)
                     ? selectedNode : model.nodes.find((node) => node.kind === 'goal');
-                setSelectedId(target?.id || null);
-                const task = target?.entityType === 'task' ? model.goalTasks.find((item) => item.id === target.entityId) : null;
-                setFormDraft({
-                    nodeId: target?.id,
-                    date: target?.entityType === 'goal' ? goal?.dueDate || '' : task?.dueDate || '',
-                    startTime: '09:00',
-                    plannedMinutes: task?.plannedMinutes || 30,
-                });
-                setPanel('date');
+                selectDateTarget(target);
                 return;
             }
             setQuickTitle('');
             setQuickCreate({ kind, position: position || screenToWorld((window.innerWidth || 390) / 2, (window.innerHeight || 844) / 2) });
-        }, [model.nodes, readOnly, screenToWorld, selectedNode]);
+        }, [model.nodes, readOnly, screenToWorld, selectDateTarget, selectedNode]);
 
         const submitCreate = useCallback(() => {
             const title = String(quickTitle || '').trim();
@@ -442,12 +452,15 @@
             const end = (upEvent) => {
                 window.removeEventListener('pointermove', move);
                 window.removeEventListener('pointerup', end);
-                if (moved) openCreate(kind, screenToWorld(upEvent.clientX, upEvent.clientY));
+                if (moved && kind === 'date') {
+                    const targetId = document.elementFromPoint(upEvent.clientX, upEvent.clientY)?.closest?.('[data-node-id]')?.dataset?.nodeId;
+                    selectDateTarget(model.nodes.find((node) => node.id === targetId));
+                } else if (moved) openCreate(kind, screenToWorld(upEvent.clientX, upEvent.clientY));
                 else openCreate(kind);
             };
             window.addEventListener('pointermove', move);
             window.addEventListener('pointerup', end, { once: true });
-        }, [openCreate, readOnly, screenToWorld]);
+        }, [model.nodes, openCreate, readOnly, screenToWorld, selectDateTarget]);
 
         const beginNodeDrag = useCallback((event, node) => {
             if (readOnly || event.button !== 0) return;
@@ -774,7 +787,7 @@
                     isOverdue && h('span', { className: 'goal-map-badge goal-map-badge--danger' }, 'Просрочено'),
                     node.blocked && h('span', { className: 'goal-map-badge goal-map-badge--warning' }, 'Заблокировано'),
                     isDone && h('span', { className: 'goal-map-badge goal-map-badge--done' }, 'Выполнено'),
-                    node.dueDate && h('span', { className: 'goal-map-badge' }, new Date(node.dueDate + 'T12:00:00').toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })),
+                    node.dueDate && h('span', { className: 'goal-map-badge' }, h(MapIcon, { kind: 'date' }), new Date(node.dueDate + 'T12:00:00').toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })),
                 ),
                 !readOnly && h('button', {
                     type: 'button', className: 'goal-map-node__connector',
@@ -830,7 +843,7 @@
                 h('label', null,
                     h('span', null, 'Название'),
                     h('textarea', {
-                        value: formDraft.nodeId === selectedNode.id ? formDraft.title : selectedNode.title,
+                        value: formDraft.nodeId === selectedNode.id ? (formDraft.title ?? selectedNode.title) : selectedNode.title,
                         readOnly,
                         onFocus: () => setFormDraft({ nodeId: selectedNode.id, title: selectedNode.title }),
                         onChange: (event) => setFormDraft((value) => ({ ...value, nodeId: selectedNode.id, title: event.target.value })),
@@ -869,6 +882,14 @@
                     h('option', { value: 'in_progress' }, 'В работе'),
                     h('option', { value: 'done' }, 'Выполнено'),
                     h('option', { value: 'cancelled' }, 'Отменено'),
+                )),
+                selectedNode.entityType === 'map' && h('label', null, h('span', null, 'Состояние'), h('select', {
+                    value: selectedNode.status || 'active',
+                    disabled: readOnly,
+                    onChange: (event) => updateSelectedNode({ status: event.target.value }),
+                },
+                    h('option', { value: 'active' }, 'Активно'),
+                    h('option', { value: 'done' }, 'Решено'),
                 )),
                 task && !readOnly && h('div', { className: 'goal-map-inspector__actions' },
                     h('button', { type: 'button', onClick: () => state?.updateGoal?.(goal.id, { nextTaskId: task.id }) }, 'Сделать фокусом'),

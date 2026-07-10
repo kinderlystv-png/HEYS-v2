@@ -517,6 +517,9 @@ body.planning-goal-map-open {
 }
 
 .goal-map-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 2px 6px;
     border: 1px solid var(--goal-map-border);
     border-radius: 999px;
@@ -525,6 +528,11 @@ body.planning-goal-map-open {
     font-size: 10px;
     font-weight: 650;
     line-height: 1.35;
+}
+
+.goal-map-badge svg {
+    width: 11px;
+    height: 11px;
 }
 
 .goal-map-badge--danger {
