@@ -2216,6 +2216,28 @@
     followupOpening = false;
   });
 
+  window.addEventListener('heys:morning-activation-skip-reason-picked', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail.dateKey || getTodayKey();
+    if (dateKey !== getTodayKey()) return;
+    closeMorningActivationOverlay();
+    try {
+      if (typeof HEYS.StepModal?.hide === 'function' && isMainStepModalOpen()) {
+        HEYS.StepModal.hide({ scrollToDiary: false });
+      }
+    } catch (_) {
+      // ignore close fallback errors
+    }
+    try {
+      const currentClientId = getCurrentClientId();
+      const answeredKey = `heys_ma_skip_reason_answered_${currentClientId || 'unknown'}_${dateKey}`;
+      sessionStorage.setItem(answeredKey, '1');
+    } catch (_) {
+      // sessionStorage may be unavailable
+    }
+    skipReasonOpening = false;
+  });
+
   // module-init trigger removed: at page-load localStorage may not yet contain today's day data
   // (HOT sync writes arrive later). The modal must only appear after explicit meal-flow finish.
 

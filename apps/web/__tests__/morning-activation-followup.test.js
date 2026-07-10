@@ -324,6 +324,61 @@ describe('morning activation followup decision', () => {
     );
   });
 
+  it('closes an already-open skip reason modal when a reason is picked', () => {
+    const listeners = {};
+    const dayData = mealDay({
+      morningActivation: {
+        status: 'missed',
+        firstMealTime: '09:00',
+        skipReasonPending: false,
+        skipReasonId: 'no_time',
+      },
+    });
+    const stepModalHide = vi.fn();
+    const sessionSet = vi.fn();
+
+    loadModule({
+      HEYS: {
+        currentClientId: 'client-1',
+        store: {
+          readSafe: vi.fn((key, fallback) => (
+            key === 'heys_client-1_dayv2_2026-06-09' ? dayData : fallback
+          )),
+          set: vi.fn(),
+        },
+        utils: {
+          getCurrentClientId: () => 'client-1',
+        },
+        StepModal: {
+          hide: stepModalHide,
+        },
+      },
+      addEventListener: vi.fn((type, handler) => {
+        listeners[type] = handler;
+      }),
+      document: {
+        addEventListener: vi.fn(),
+        getElementById: vi.fn((id) => (id === 'heys-step-modal-root' ? {} : null)),
+        dispatchEvent: vi.fn(),
+      },
+      sessionStorage: {
+        getItem: vi.fn(() => null),
+        setItem: sessionSet,
+        removeItem: vi.fn(),
+      },
+    });
+
+    listeners['heys:morning-activation-skip-reason-picked']?.({
+      detail: { dateKey: '2026-06-09', reasonId: 'no_time', terminal: true },
+    });
+
+    expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
+    expect(sessionSet).toHaveBeenCalledWith(
+      'heys_ma_skip_reason_answered_client-1_2026-06-09',
+      '1'
+    );
+  });
+
   it('waits for meal-flow finish before stacking the followup over an active StepModal', () => {
     vi.useFakeTimers();
     const listeners = {};

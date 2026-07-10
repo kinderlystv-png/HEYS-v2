@@ -678,6 +678,9 @@
       };
 
       const activePinIndex = activeEntry === 'pin' && !isPinComplete ? getNextPinIndex(pinDigits) : -1;
+      const canEraseKeypadDigit = !busy
+        && !pinErrorActive
+        && (phoneDigits.length > 0 || (pinDigits || []).some(Boolean));
 
       return React.createElement(
         React.Fragment,
@@ -909,7 +912,8 @@
 	              {
 	                key: 'pin_key_backspace',
 	                type: 'button',
-	                className: 'heys-auth-key heys-auth-key--muted',
+	                className: 'heys-auth-key heys-auth-key--muted heys-auth-key--delete' + (canEraseKeypadDigit ? ' is-available' : ''),
+	                disabled: !canEraseKeypadDigit,
 	                'aria-label': 'Удалить цифру PIN',
 	                onClick: handleKeypadBackspace,
 	              },

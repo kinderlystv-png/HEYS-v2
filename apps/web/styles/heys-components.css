@@ -13933,6 +13933,18 @@ body.tour-active .ios-pwa-banner {
   font-size: 21px;
 }
 
+html .heys-auth-key.heys-auth-key--delete.is-available {
+  border-color: #edcccc;
+  background: rgba(243, 215, 215, 0.42);
+  box-shadow: 0 8px 18px rgba(132, 71, 80, 0.07);
+  color: #9f5f68;
+}
+
+html .heys-auth-key.heys-auth-key--delete.is-available:active {
+  border-color: #e4b9bd;
+  background: rgba(243, 215, 215, 0.68);
+}
+
 @media (min-width: 768px) {
   .heys-auth-keypad {
     width: min(100%, 236px);
@@ -14489,6 +14501,17 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .heys-auth-key:active {
   border-color: rgba(147, 197, 253, 0.5);
   background: rgba(30, 64, 175, 0.38);
+}
+
+[data-theme="dark"] .heys-auth-key.heys-auth-key--delete.is-available {
+  border-color: rgba(243, 215, 215, 0.3);
+  background: rgba(159, 95, 104, 0.2);
+  color: #f0c9ce;
+}
+
+[data-theme="dark"] .heys-auth-key.heys-auth-key--delete.is-available:active {
+  border-color: rgba(243, 215, 215, 0.42);
+  background: rgba(159, 95, 104, 0.3);
 }
 
 [data-theme="dark"] .heys-auth-phone-input::placeholder,
