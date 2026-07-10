@@ -14,6 +14,16 @@ function installScheduleModule() {
 }
 
 describe('Planning calendar task picker helpers', () => {
+    it('routes calendar preference writes through the shared storage contract', () => {
+        expect(source).not.toContain('localStorage.setItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY');
+        expect(source).not.toContain('localStorage.setItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY');
+        expect(source).not.toContain('localStorage.setItem(CALENDAR_DAY_WINDOW_STORAGE_KEY');
+        expect(source).not.toContain("localStorage.setItem('heys_theme_pref'");
+        expect(source).toContain('U.lsSet(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY');
+        expect(source).toContain('U.lsSet(CALENDAR_STATE_VISIBILITY_STORAGE_KEY');
+        expect(source).toContain('U.lsSet(CALENDAR_DAY_WINDOW_STORAGE_KEY');
+    });
+
     beforeEach(() => {
         window.HEYS = {
             Planning: {

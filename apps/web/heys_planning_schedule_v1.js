@@ -5,6 +5,7 @@
     const Planning = HEYS.Planning || {};
     const PlanningTasks = HEYS.PlanningTasks || {};
     const PlanningQuickTarget = HEYS.PlanningQuickTarget;
+    const U = HEYS.utils || {};
     if (!React || !Planning.Constants || !Planning.Utils || !Planning.Hooks || !PlanningQuickTarget) return;
     const h = React.createElement;
     const { useState, useMemo, useRef, useEffect } = React;
@@ -101,7 +102,9 @@
 
     function readStoredCalendarDayWindow() {
         try {
-            const raw = localStorage.getItem(CALENDAR_DAY_WINDOW_STORAGE_KEY);
+            const raw = typeof U.lsGet === 'function'
+                ? U.lsGet(CALENDAR_DAY_WINDOW_STORAGE_KEY, null)
+                : localStorage.getItem(CALENDAR_DAY_WINDOW_STORAGE_KEY);
             const n = Number(raw);
             if (CALENDAR_DAY_WINDOW_OPTIONS.indexOf(n) !== -1) return n;
         } catch (error) {
@@ -112,7 +115,10 @@
 
     function readStoredCalendarContextVisibility() {
         try {
-            return localStorage.getItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY) !== '0';
+            const stored = typeof U.lsGet === 'function'
+                ? U.lsGet(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY, '1')
+                : localStorage.getItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY);
+            return stored !== '0';
         } catch (error) {
             return true;
         }
@@ -120,7 +126,9 @@
 
     function storeCalendarContextVisibility(isVisible) {
         try {
-            localStorage.setItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+            if (typeof U.lsSet === 'function') {
+                U.lsSet(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+            }
         } catch (error) {
             // ignore quota / private mode
         }
@@ -128,7 +136,10 @@
 
     function readStoredCalendarStateVisibility() {
         try {
-            return localStorage.getItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY) !== '0';
+            const stored = typeof U.lsGet === 'function'
+                ? U.lsGet(CALENDAR_STATE_VISIBILITY_STORAGE_KEY, '1')
+                : localStorage.getItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY);
+            return stored !== '0';
         } catch (error) {
             return true;
         }
@@ -136,7 +147,9 @@
 
     function storeCalendarStateVisibility(isVisible) {
         try {
-            localStorage.setItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+            if (typeof U.lsSet === 'function') {
+                U.lsSet(CALENDAR_STATE_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+            }
         } catch (error) {
             // ignore quota / private mode
         }
@@ -4117,7 +4130,9 @@
 
         useEffect(() => {
             try {
-                localStorage.setItem(CALENDAR_DAY_WINDOW_STORAGE_KEY, String(calendarDayWindow));
+                if (typeof U.lsSet === 'function') {
+                    U.lsSet(CALENDAR_DAY_WINDOW_STORAGE_KEY, String(calendarDayWindow));
+                }
             } catch (error) {
                 // ignore
             }
@@ -5281,15 +5296,12 @@
                         const current = html.getAttribute('data-theme') || 'light';
                         const next = current === 'dark' ? 'light' : 'dark';
                         html.setAttribute('data-theme', next);
-                        const U = root?.utils || {};
+                        const utils = root?.utils || {};
                         try {
-                            localStorage.setItem('heys_theme_pref', next);
-                            localStorage.setItem('heys_theme_explicit', '1');
-                            localStorage.setItem('heys_theme', next);
-                            if (U.lsSet) {
-                                U.lsSet('heys_theme_pref', next);
-                                U.lsSet('heys_theme_explicit', '1');
-                                U.lsSet('heys_theme', next);
+                            if (utils.lsSet) {
+                                utils.lsSet('heys_theme_pref', next);
+                                utils.lsSet('heys_theme_explicit', '1');
+                                utils.lsSet('heys_theme', next);
                             }
                         } catch (err) {
                             // ignore quota / private mode
