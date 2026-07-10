@@ -240,6 +240,35 @@ describe('Hunger Energy Status UI adapter', () => {
     });
   });
 
+  it('stops follow-up reminders after two snoozes', () => {
+    Storage.addEvent({
+      id: 'delay-snooze',
+      recordedAt: '2026-07-04T10:00:00Z',
+      outcomePlan: Storage.buildOutcomePlan({ suggestedAction: 'delayWithCheck' }, '2026-07-04T10:00:00Z')
+    });
+
+    Storage.snoozeOutcomeFollowUp('delay-snooze');
+    expect(Storage.readEvents()[0].outcomePlan).toMatchObject({ status: 'pending', snoozeCount: 1 });
+
+    Storage.snoozeOutcomeFollowUp('delay-snooze');
+    expect(Storage.readEvents()[0].outcomePlan).toMatchObject({
+      status: 'dismissed_after_snoozes',
+      dueAt: null,
+      snoozeCount: 2
+    });
+  });
+
+  it('keeps the saved hunger change and exposes the exact recheck time', () => {
+    expect(Adapter.getHungerChangeNote(
+      { hungerLevel: 2 },
+      { previousHungerLevel: 3, minutesSinceLastHungerEvent: 56 }
+    )).toBe('Было 3 → стало 2 за 56 мин');
+    expect(Adapter.getRecommendationDetail({ suggestedAction: 'hydratePause', recheckAfterMin: 20 }))
+      .toContain('через 20 мин');
+    expect(Adapter.getNextBestAction({ decision: { suggestedAction: 'hydratePause', recheckAfterMin: 20 } }))
+      .toMatchObject({ title: 'Повторить оценку через 20 мин', type: 'check' });
+  });
+
   it('compacts low-hunger history rows before cloud sync storage', () => {
     const heavyText = 'x'.repeat(12000);
     Storage.addEvent({

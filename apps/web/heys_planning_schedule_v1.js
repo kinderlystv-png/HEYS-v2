@@ -65,9 +65,8 @@
     const CALENDAR_TOUCH_DRAG_HOLD_MS = 180;
     const CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD = 12;
     const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
-    const CALENDAR_CELL_LONG_PRESS_MS = 280;
-    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 30;
-    const CALENDAR_TOUCH_TAP_SLOP_PX = 14;
+    const CALENDAR_CELL_LONG_PRESS_MS = 480;
+    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 12;
     const CALENDAR_DAY_WINDOW_OPTIONS = [3, 5, 8];
     const CALENDAR_DAY_WINDOW_STORAGE_KEY = 'heys_planning_calendar_day_window';
     const CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY = 'heys_planning_calendar_show_day_context';
@@ -183,6 +182,14 @@
         const hours = Math.floor(normalized / 60);
         const minutes = normalized % 60;
         return pad2(hours) + ':' + pad2(minutes);
+    }
+
+    function shouldCancelCalendarLongPress(startX, startY, currentX, currentY) {
+        const distance = Math.hypot(
+            (Number(currentX) || 0) - (Number(startX) || 0),
+            (Number(currentY) || 0) - (Number(startY) || 0),
+        );
+        return distance >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD;
     }
 
     function normalizeDurationMinutes(value) {
@@ -450,9 +457,22 @@
             startTime: source?.startTime || '09:00',
             endTime: source?.endTime || '10:00',
             quickCreate: !!source?.quickCreate,
+            quickCreateMode: source?.quickCreateMode || '',
             isBackground: Boolean(source?.isBackground),
             bgColor: source?.bgColor || BACKGROUND_SLOT_COLORS[0].value,
             recurrenceGroupId: source?.recurrenceGroupId ? String(source.recurrenceGroupId) : '',
+        };
+    }
+
+    function buildStandaloneQuickSlotOptions(source) {
+        return {
+            title: String(source?.title || '').trim() || 'Событие',
+            date: dateStr(source?.date),
+            startTime: source?.startTime || '09:00',
+            endTime: source?.endTime || '10:00',
+            source: 'user',
+            isBackground: Boolean(source?.isBackground),
+            bgColor: source?.isBackground ? source?.bgColor : undefined,
         };
     }
 
@@ -1380,8 +1400,80 @@
         );
     }
 
+    function QuickCreateFlowSheet({ draft, onSelect, onClose }) {
+        useEffect(() => {
+            document.body.classList.add('planning-quick-event-modal-open');
+            return () => document.body.classList.remove('planning-quick-event-modal-open');
+        }, []);
+
+        const dateValue = dateStr(draft?.date);
+        const dateLabel = dateValue
+            ? new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
+                .format(new Date(dateValue + 'T12:00:00'))
+            : '';
+        const timeLabel = [draft?.startTime, draft?.endTime].filter(Boolean).join('–');
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--quick-event planning-quick-flow-overlay',
+            onClick: onClose,
+        },
+            h('div', {
+                className: 'planning-quick-flow-sheet',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'planning-quick-flow-title',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-quick-flow-sheet__header' },
+                    h('div', null,
+                        h('div', { id: 'planning-quick-flow-title', className: 'planning-quick-flow-sheet__title' }, 'Что добавить?'),
+                        h('div', { className: 'planning-quick-flow-sheet__time' }, [dateLabel, timeLabel].filter(Boolean).join(' · ')),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-modal__close planning-modal__close--quick-event',
+                        onClick: onClose,
+                        'aria-label': 'Закрыть',
+                    }, '×'),
+                ),
+                h('div', { className: 'planning-quick-flow-sheet__actions' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-quick-flow-option planning-quick-flow-option--primary',
+                        onClick: () => onSelect('event'),
+                    },
+                        h('span', { className: 'planning-quick-flow-option__icon', 'aria-hidden': 'true' }, '○'),
+                        h('span', { className: 'planning-quick-flow-option__copy' },
+                            h('strong', null, 'Разовое событие'),
+                            h('span', null, 'Для дела, которое не нужно отслеживать'),
+                        ),
+                        h('span', { className: 'planning-quick-flow-option__arrow', 'aria-hidden': 'true' }, '›'),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-quick-flow-option',
+                        onClick: () => onSelect('task'),
+                    },
+                        h('span', { className: 'planning-quick-flow-option__icon', 'aria-hidden': 'true' }, '✓'),
+                        h('span', { className: 'planning-quick-flow-option__copy' },
+                            h('strong', null, 'Задача'),
+                            h('span', null, 'Можно менять статус и отмечать выполненной'),
+                        ),
+                        h('span', { className: 'planning-quick-flow-option__arrow', 'aria-hidden': 'true' }, '›'),
+                    ),
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-quick-flow-sheet__cancel',
+                    onClick: onClose,
+                }, 'Отмена'),
+            ),
+        );
+    }
+
     function QuickSlotModal({ draft, state, onClose }) {
         const { isDesktop } = usePlanningViewport();
+        const isStandaloneEvent = draft?.quickCreateMode === 'event';
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
         const projects = Array.isArray(state?.projects) ? state.projects : [];
         const activeProjectsQuick = useMemo(
@@ -1399,6 +1491,7 @@
             draft?.startTime,
             draft?.endTime,
             draft?.quickCreate,
+            draft?.quickCreateMode,
         ].join('|');
 
         const [title, setTitle] = useState(() => String(draft?.title || '').trim());
@@ -1484,7 +1577,21 @@
             const st = formatWallClockHm(sm);
             const et = formatWallClockHm(em);
             const durationMin = Math.max(30, em - sm);
-            const taskTitle = cleanTitle || 'Событие';
+            const taskTitle = cleanTitle || (isStandaloneEvent ? 'Событие' : 'Задача');
+
+            if (isStandaloneEvent) {
+                state.addSlot(buildStandaloneQuickSlotOptions({
+                    title: taskTitle,
+                    date,
+                    startTime: st,
+                    endTime: et,
+                    isBackground,
+                    bgColor,
+                }));
+                onClose();
+                return;
+            }
+
             const targetResolved = resolveQuickTargetPickerValue(quickTargetValue, tasks, resolvedTaskProjectIdsQuick);
             const nextParentTaskId = targetResolved.parentTaskId;
             const nextProjectId = targetResolved.projectId;
@@ -1587,7 +1694,9 @@
             },
                 h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
-                        h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, 'Новое событие'),
+                        h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' },
+                            isStandaloneEvent ? 'Разовое событие' : 'Новая задача',
+                        ),
                     ),
                     h('button', {
                         type: 'button',
@@ -1601,7 +1710,7 @@
                         h('input', {
                             id: 'planning-quick-event-title',
                             className: 'planning-quick-title-field__input',
-                            placeholder: 'Название события',
+                            placeholder: isStandaloneEvent ? 'Название события' : 'Название задачи',
                             value: title,
                             onChange: (event) => setTitle(event.target.value),
                             autoFocus: true,
@@ -1653,7 +1762,7 @@
                             }),
                         ),
                     ),
-                    h('div', { className: 'planning-quick-slot-target-wrap' },
+                    !isStandaloneEvent && h('div', { className: 'planning-quick-slot-target-wrap' },
                         h('div', { className: 'planning-quick-slot-target-wrap__label' }, 'Проект и подпроект'),
                         h(PlanningQuickTargetField, {
                             value: quickTargetValue,
@@ -1665,7 +1774,7 @@
                             modalMenuMode: true,
                         }),
                     ),
-                    h('div', { className: 'planning-add-project' },
+                    !isStandaloneEvent && h('div', { className: 'planning-add-project' },
                         h('input', {
                             className: 'planning-quick-input planning-quick-input--sm',
                             placeholder: 'Новый проект...',
@@ -1690,7 +1799,7 @@
                             },
                         }, '+ Проект'),
                     ),
-                    h('div', { className: 'planning-quick-repeat' },
+                    !isStandaloneEvent && h('div', { className: 'planning-quick-repeat' },
                         h('label', { className: 'planning-quick-repeat__toggle' },
                             h('input', {
                                 type: 'checkbox',
@@ -4720,7 +4829,12 @@
                 const distanceY = Math.abs(active.y1 - active.y0);
                 const distanceX = Math.abs(point.clientX - (active.x0 || 0));
 
-                if (!active.activated && (distanceY >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD || distanceX >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD)) {
+                if (!active.activated && shouldCancelCalendarLongPress(
+                    active.x0,
+                    active.y0,
+                    point.clientX,
+                    active.y1,
+                )) {
                     sendPlanningDebugLog({
                         runId: 'range-debug-1',
                         hypothesisId: 'H2-touch',
@@ -4813,15 +4927,6 @@
                     return;
                 }
 
-                const yEnd = typeof cleaned.y1 === 'number' ? cleaned.y1 : cleaned.y0;
-                const dy = Math.abs(yEnd - cleaned.y0);
-                if (!cleaned.moved && dy <= CALENDAR_TOUCH_TAP_SLOP_PX) {
-                    commitCalendarRangeDraft(cleaned, {
-                        location: 'heys_planning_schedule_v1.js:touchTap',
-                        message: 'quick slot draft from tap',
-                        hypothesisId: 'H7-touch-tap',
-                    });
-                }
             };
 
             session.handleTouchCancel = (touchCancelEvent) => {
@@ -4852,12 +4957,7 @@
                 });
                 // #endregion
 
-                if (!cleaned.activated) return;
-                commitCalendarRangeDraft(cleaned, {
-                    location: 'heys_planning_schedule_v1.js:touchCancel',
-                    message: 'range draft committed by touch cancel',
-                    hypothesisId: 'H7-touch',
-                });
+                // Browser/OS cancellation is never treated as an intentional create.
             };
 
             session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
@@ -4880,10 +4980,7 @@
 
             const pointerType = String(event.pointerType || '').toLowerCase();
             const isLikelyTouchDevice = !!usesTouchLikeInput;
-            const isTouchPointer = pointerType === 'touch'
-                || pointerType === 'pen'
-                || (!pointerType && isLikelyTouchDevice)
-                || (pointerType === 'mouse' && isLikelyTouchDevice);
+            const isTouchPointer = pointerType === 'touch';
             if (isTouchPointer) return;
 
             const col = typeof event.currentTarget.closest === 'function'
@@ -4897,10 +4994,12 @@
                 col,
                 targetNode: event.currentTarget || null,
                 pointerId: event.pointerId,
+                x0: event.clientX,
+                x1: event.clientX,
                 y0: y,
                 y1: y,
-                isTouchPointer,
-                activated: !isTouchPointer,
+                isTouchPointer: pointerType === 'pen',
+                activated: false,
                 moved: false,
                 longPressActivated: false,
                 holdTimer: 0,
@@ -4940,11 +5039,12 @@
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
                 const r = active.col.getBoundingClientRect();
+                active.x1 = ev.clientX;
                 active.y1 = ev.clientY - r.top;
 
-                const distance = Math.abs(active.y1 - active.y0);
+                const distance = Math.hypot(active.x1 - active.x0, active.y1 - active.y0);
                 if (!active.activated) {
-                    if (active.isTouchPointer && distance >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD) {
+                    if (shouldCancelCalendarLongPress(active.x0, active.y0, active.x1, active.y1)) {
                         // #region agent log
                         sendPlanningDebugLog({
                             runId: 'range-debug-1',
@@ -5008,14 +5108,14 @@
                 rangePointerSessionRef.current = null;
                 setRangeSelectPreview(null);
                 clearHoldTimer(active);
-                if (active.isTouchPointer && active.col) {
+                if (active.col) {
                     active.col.style.touchAction = active.prevTouchAction || '';
                 }
-                if (active.isTouchPointer && bodyScrollRef.current) {
+                if (bodyScrollRef.current) {
                     bodyScrollRef.current.style.overflow = active.prevBodyOverflow || '';
                     bodyScrollRef.current.style.touchAction = active.prevBodyTouchAction || '';
                 }
-                if (active.isTouchPointer && gridScrollRef.current) {
+                if (gridScrollRef.current) {
                     gridScrollRef.current.style.overflow = active.prevGridOverflow || '';
                     gridScrollRef.current.style.touchAction = active.prevGridTouchAction || '';
                 }
@@ -5088,38 +5188,24 @@
                 });
                 // #endregion
                 cleanupPointerSession();
-
-                if (!active.activated) return;
-
-                // #region agent log
-                sendPlanningDebugLog({
-                    runId: 'range-debug-1',
-                    hypothesisId: 'H5',
-                    location: 'heys_planning_schedule_v1.js:cancel',
-                    message: 'cancel promoted to finish',
-                    data: {
-                        pointerId: active.pointerId,
-                        moved: active.moved,
-                        y0: active.y0,
-                        y1: active.y1,
-                    },
-                });
-                // #endregion
-
-                commitCalendarRangeDraft(active, {
-                    location: 'heys_planning_schedule_v1.js:cancel',
-                    message: 'range draft committed by cancel',
-                    hypothesisId: 'H7',
-                });
             };
 
-            if (session.isTouchPointer) {
-                session.prevTouchAction = session.col?.style?.touchAction || '';
-                if (session.col) session.col.style.touchAction = 'none';
-                session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
-                session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
-                session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
-                session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+            session.prevTouchAction = session.col?.style?.touchAction || '';
+            session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
+            session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
+            session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
+            session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+            session.holdTimer = window.setTimeout(() => {
+                const active = rangePointerSessionRef.current;
+                if (!active || active !== session) return;
+                active.activated = true;
+                active.longPressActivated = true;
+                try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+                if (active.col) active.col.style.touchAction = 'none';
+                if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
+                if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
+                if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
+                if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
                 if (session.pointerId != null && session.targetNode && typeof session.targetNode.setPointerCapture === 'function') {
                     try {
                         session.targetNode.setPointerCapture(session.pointerId);
@@ -5127,40 +5213,28 @@
                         // ignore
                     }
                 }
-                if (event.cancelable) event.preventDefault();
-                session.holdTimer = window.setTimeout(() => {
-                    const active = rangePointerSessionRef.current;
-                    if (!active || active !== session) return;
-                    active.activated = true;
-                    active.longPressActivated = true;
-                    try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
-                    if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
-                    if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
-                    if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
-                    if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
-                    // #region agent log
-                    sendPlanningDebugLog({
-                        runId: 'range-debug-1',
-                        hypothesisId: 'H1',
-                        location: 'heys_planning_schedule_v1.js:holdTimer',
-                        message: 'long press activated',
-                        data: {
-                            pointerId: active.pointerId,
-                            y0: active.y0,
-                            bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
-                            gridOverflow: gridScrollRef.current?.style?.overflow || '',
-                            bodyTouchAction: bodyScrollRef.current?.style?.touchAction || '',
-                            gridTouchAction: gridScrollRef.current?.style?.touchAction || '',
-                        },
-                    });
-                    // #endregion
-                    setRangeSelectPreview({
-                        day: active.day,
-                        top: active.y0,
-                        height: CALENDAR_HOUR_HEIGHT,
-                    });
-                }, CALENDAR_CELL_LONG_PRESS_MS);
-            }
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H1',
+                    location: 'heys_planning_schedule_v1.js:holdTimer',
+                    message: 'long press activated',
+                    data: {
+                        pointerId: active.pointerId,
+                        y0: active.y0,
+                        bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
+                        gridOverflow: gridScrollRef.current?.style?.overflow || '',
+                        bodyTouchAction: bodyScrollRef.current?.style?.touchAction || '',
+                        gridTouchAction: gridScrollRef.current?.style?.touchAction || '',
+                    },
+                });
+                // #endregion
+                setRangeSelectPreview({
+                    day: active.day,
+                    top: active.y0,
+                    height: CALENDAR_HOUR_HEIGHT,
+                });
+            }, CALENDAR_CELL_LONG_PRESS_MS);
 
             window.addEventListener('pointermove', onMove, { passive: false });
             window.addEventListener('pointerup', finish);
@@ -5632,7 +5706,12 @@
                 onSlotOnly: () => removeCalendarSlotKeepTask(state, slotDeleteTarget.slot),
                 onSlotAndTask: () => removeCalendarSlotAndTask(slotDeleteTarget.slot),
             }),
-            slotDraft && slotDraft.quickCreate && h(QuickSlotModal, {
+            slotDraft && slotDraft.quickCreate && !slotDraft.quickCreateMode && h(QuickCreateFlowSheet, {
+                draft: slotDraft,
+                onSelect: (quickCreateMode) => setSlotDraft((current) => ({ ...current, quickCreateMode })),
+                onClose: () => setSlotDraft(null),
+            }),
+            slotDraft && slotDraft.quickCreate && slotDraft.quickCreateMode && h(QuickSlotModal, {
                 draft: slotDraft,
                 state,
                 onClose: () => setSlotDraft(null),
@@ -5994,8 +6073,10 @@
         buildCalendarSleepBlock,
         buildCalendarDayContextBlocks,
         buildCalendarStateMarkers,
+        shouldCancelCalendarLongPress,
         resolveCalendarDropConflict,
         resolveCalendarConflictChoiceTarget,
         buildCalendarSlotUndoEntry,
+        buildStandaloneQuickSlotOptions,
     };
 })();

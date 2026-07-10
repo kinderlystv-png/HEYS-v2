@@ -540,6 +540,11 @@
         };
     }
 
+    function buildUntrackedDraftKey(date, summary) {
+        if (!summary || !Number.isFinite(Number(summary.startMs))) return '';
+        return `${date || ''}:${summary.sinceKind || ''}:${Number(summary.startMs)}`;
+    }
+
     function buildPastUntrackedTailSummaries(entries, daysByDate, todayStr, options = {}) {
         const result = [];
         const lookbackDays = Math.max(1, Math.round(Number(options.lookbackDays) || 7));
@@ -5057,9 +5062,9 @@
                 endLabel: nextActiveDay && nextActiveDay.sleepStart ? String(nextActiveDay.sleepStart) : formatClockTime(sleepEndMs),
             });
         }, [activeDate, todayStr, entries, activeDay, nextActiveDay, timerNow, activeDayEndMs]);
-        const untrackedKey = untracked
-            ? `${untracked.sinceKind}:${untracked.sinceLabel}:${untracked.minutes}`
-            : '';
+        // Identity of the gap is its date and start, not its growing duration.
+        // Otherwise the minute ticker changes the key and clears an active draft.
+        const untrackedKey = buildUntrackedDraftKey(activeDate, untracked);
 
         const pastTailDaysByDate = useMemo(() => {
             const map = {};
@@ -5550,6 +5555,7 @@
         buildChronoReorderAssignments,
         buildLastAddedSummary,
         buildUntrackedChronoSummary,
+        buildUntrackedDraftKey,
         buildPastUntrackedTailSummaries,
         distributeUntrackedMinutes,
         buildUntrackedSteps,

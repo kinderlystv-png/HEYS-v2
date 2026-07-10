@@ -23,6 +23,7 @@
   const STRESS_CALORIE_FOLLOWUP_DELAY_MIN = 60;
   const OUTCOME_FOLLOWUP_AFTER_MEAL_MIN = 45;
   const OUTCOME_FOLLOWUP_SNOOZE_MIN = 15;
+  const OUTCOME_FOLLOWUP_MAX_SNOOZES = 2;
   const OUTCOME_FOLLOWUP_MEAL_LINK_HOURS = 6;
   const OUTCOME_FOLLOWUP_EXPIRE_HOURS = 12;
   const LOW_HUNGER_MEAL_MAX_LEVEL = 2;
@@ -561,7 +562,9 @@
         mealAt: next.outcomePlan.mealAt || null,
         userReported: next.outcomePlan.userReported || null,
         userReportedAt: next.outcomePlan.userReportedAt || null,
-        shownAt: next.outcomePlan.shownAt || null
+        shownAt: next.outcomePlan.shownAt || null,
+        snoozeCount: Math.max(0, Number(next.outcomePlan.snoozeCount) || 0),
+        dismissedAt: next.outcomePlan.dismissedAt || null
       } : null
     };
     if (next.decision || next.decisionSnapshot) {
@@ -1004,7 +1007,9 @@
         mealAt: null,
         userReported: null,
         userReportedAt: null,
-        shownAt: null
+        shownAt: null,
+        snoozeCount: 0,
+        dismissedAt: null
       };
     }
     return {
@@ -1017,7 +1022,9 @@
       mealAt: null,
       userReported: null,
       userReportedAt: null,
-      shownAt: null
+      shownAt: null,
+      snoozeCount: 0,
+      dismissedAt: null
     };
   }
 
@@ -1084,7 +1091,7 @@
     const now = Date.now();
     readEvents().forEach((row) => {
       const plan = row?.outcomePlan || {};
-      if (plan.userReported || ['answered', 'expired', 'not_requested', 'superseded'].includes(plan.status)) return;
+      if (plan.userReported || ['answered', 'expired', 'not_requested', 'superseded', 'dismissed_after_snoozes'].includes(plan.status)) return;
       const expiresAt = Date.parse(plan.expiresAt || '');
       if (Number.isFinite(expiresAt) && expiresAt < now) {
         updateEvent(row.id, { outcomePlan: { ...plan, status: 'expired' } });
@@ -1179,14 +1186,21 @@
 
   function snoozeOutcomeFollowUp(eventId) {
     if (!eventId) return null;
-    const updated = updateEvent(eventId, (row) => ({
-      outcomePlan: {
-        ...(row.outcomePlan || {}),
-        status: 'pending',
-        dueAt: toIso(Date.now() + OUTCOME_FOLLOWUP_SNOOZE_MIN * 60000),
-        shownAt: null
-      }
-    }));
+    const updated = updateEvent(eventId, (row) => {
+      const plan = row.outcomePlan || {};
+      const snoozeCount = Math.max(0, Number(plan.snoozeCount) || 0) + 1;
+      const dismissed = snoozeCount >= OUTCOME_FOLLOWUP_MAX_SNOOZES;
+      return {
+        outcomePlan: {
+          ...plan,
+          status: dismissed ? 'dismissed_after_snoozes' : 'pending',
+          dueAt: dismissed ? null : toIso(Date.now() + OUTCOME_FOLLOWUP_SNOOZE_MIN * 60000),
+          shownAt: null,
+          snoozeCount,
+          dismissedAt: dismissed ? nowIso() : null
+        }
+      };
+    });
     planNextOutcomeFollowUp();
     return updated;
   }
@@ -3867,7 +3881,7 @@
         type: 'button',
         className: 'hes-outcome-followup__later',
         onClick: () => onSnooze?.()
-      }, 'Напомнить через 15 минут')
+      }, Number(plan.snoozeCount) >= 1 ? 'Не напоминать до новой оценки' : 'Напомнить через 15 минут')
     );
   }
 
@@ -3897,32 +3911,32 @@
     if (!context) return null;
     if (context.lowHungerMealReview?.patternStats?.isRepeated) {
       return {
-        title: 'Повторяется еда при низком голоде',
-        detail: 'Похоже, это не голод, а контекст еды: кофе, привычка или социальная ситуация.'
+        title: 'Еда без голода повторяется',
+        detail: 'Чаще причина — кофе, привычка или компания.'
       };
     }
     if (context.personalHungerModel?.longGapDelayRiskHigh) {
       return {
-        title: 'Длинные паузы часто рискованны',
-        detail: 'Когда промежуток без еды большой, ожидание чаще ухудшало итог.'
+        title: 'Длинная пауза повышает риск',
+        detail: 'Раньше ожидание после долгой паузы чаще ухудшало результат.'
       };
     }
     if (context.repeatedHighHungerToday) {
       return {
-        title: 'Сегодня голод уже повторялся',
-        detail: 'Лучше смотреть не только на текущую точку, а на весь дневной ритм.'
+        title: 'Голод сегодня повторяется',
+        detail: 'Важен ритм всего дня, не только текущая оценка.'
       };
     }
     if (context.noIntakeToday) {
       return {
-        title: 'Еда сегодня не найдена',
-        detail: 'Оценка голода сейчас может быть и сигналом дефицита, и привычной задержкой.'
+        title: 'Сегодня нет записей о еде',
+        detail: 'Причиной может быть дефицит или задержка приёма пищи.'
       };
     }
     if (Number.isFinite(Number(context.hoursSinceMeal)) && Number(context.hoursSinceMeal) >= 5) {
       return {
-        title: 'Пауза без еды уже длинная',
-        detail: 'Если голод растёт, спокойный план еды обычно надёжнее терпеть до срыва.'
+        title: 'Пауза без еды затянулась',
+        detail: 'Если голод растёт, лучше заранее запланировать еду.'
       };
     }
     return null;
@@ -4043,12 +4057,19 @@
 
   function getRecommendationDetail(decision) {
     const band = formatFoodBand(decision.foodBandKcal);
+    const recheck = Number(decision.recheckAfterMin) > 0 ? formatShortDuration(decision.recheckAfterMin) : null;
     if (decision.suggestedAction === 'fastCarbSafety') return 'Если есть диабет или низкая глюкоза: быстрые углеводы и проверка через 15 мин';
     if (decision.suggestedAction === 'planNextMeal') return 'Можно не есть сейчас, но выбери ближайший спокойный приём';
-    if (decision.suggestedAction === 'hydratePause') return 'Вода или несладкий чай, затем перепроверить';
-    if (decision.suggestedAction === 'coffeePause') return 'Кофе только если он привычный и низкорисковый';
+    if (decision.suggestedAction === 'hydratePause') return recheck
+      ? 'Вода или несладкий чай, затем повторная оценка через ' + recheck
+      : 'Вода или несладкий чай, затем повторная оценка';
+    if (decision.suggestedAction === 'coffeePause') return recheck
+      ? 'Кофе только если он привычный, затем повторная оценка через ' + recheck
+      : 'Кофе только если он привычный, затем повторная оценка';
     if (decision.suggestedAction === 'delayWithCheck' || decision.suggestedAction === 'observe') {
-      return 'Сейчас можно не есть; вернись к оценке, если состояние изменится';
+      return recheck
+        ? 'Сейчас можно не есть; повторная оценка через ' + recheck
+        : 'Сейчас можно не есть; повтори оценку при изменении состояния';
     }
     if (decision.suggestedAction === 'eatMeal') return band ? 'Нормальный приём пищи, ' + band : 'Нормальный приём пищи';
     if (decision.suggestedAction === 'doNotDelay') return band ? 'Не откладывать, ' + band : 'Не откладывать';
@@ -4058,6 +4079,7 @@
   function getNextBestAction(result) {
     const decision = result?.decision || {};
     const band = formatFoodBand(decision.foodBandKcal);
+    const recheck = Number(decision.recheckAfterMin) > 0 ? formatShortDuration(decision.recheckAfterMin) : null;
     if (decision.suggestedAction === 'planNextMeal') {
       return {
         title: 'Выбрать ближайшую еду',
@@ -4067,15 +4089,15 @@
     }
     if (decision.suggestedAction === 'hydratePause' || decision.suggestedAction === 'delayWithCheck' || decision.suggestedAction === 'observe') {
       return {
-        title: 'Оценить позже',
-        detail: 'Открой новую оценку, если голод или самочувствие изменятся',
+        title: recheck ? 'Повторить оценку через ' + recheck : 'Оценить позже',
+        detail: 'Проверка запланирована; открой раньше, если голод или самочувствие изменятся',
         type: 'check'
       };
     }
     if (decision.suggestedAction === 'coffeePause') {
       return {
-        title: 'Короткая пауза',
-        detail: 'Кофе только если он привычный, затем повторная оценка',
+        title: recheck ? 'Повторить оценку через ' + recheck : 'Короткая пауза',
+        detail: 'Кофе только если он привычный; проверка уже запланирована',
         type: 'check'
       };
     }
@@ -4783,8 +4805,10 @@
       ? 'Правка оценки ' + formatShortTime(editTarget.t)
       : isBackfillingEvent
         ? 'Оценка за ' + formatShortTime(backfillTarget.t)
-      : getHungerChangeNote(activeDraft, context);
-    const lastMealHint = getLastMealHint(context);
+      : result
+        ? getHungerChangeNote(result.input, result.context)
+        : getHungerChangeNote(activeDraft, context);
+    const lastMealHint = getLastMealHint(result?.context || context);
     const energyBudgetSummary = result ? getEnergyBudgetSummary(result) : null;
     const patternInsight = featureSettings.patternInsights ? buildPatternInsight(context) : null;
     const canShiftAssessmentTime = !settingsOpen && !result && !isEditingEvent && !isBackfillingEvent && !isLowHungerStep && !isStressCalorieFollowUp && !isHungerOutcomeFollowUp;
@@ -5988,6 +6012,58 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-feature-row.is-on .hes-feature-row__state{background:#1f2937;color:#c7d2fe}
 @keyframes hesFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media (max-width:520px){.hes-input{padding:8px 14px 8px;gap:10px}.hes-result{padding:8px 14px 96px}.hes-result.is-expanded{padding-bottom:156px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr;row-gap:6px}.hes-slider__value{font-size:54px}.hes-slider__status{font-size:14px}.hes-slider__change{min-height:36px;max-width:260px}.hes-prompt{height:104px;min-height:104px;padding:10px}.hes-prompt__title{font-size:13px;margin-bottom:7px}.hes-chip{min-height:44px;border-radius:13px;font-size:12px;padding:6px 8px}.hes-spark{height:100px}.hes-pattern-insight{max-height:92px}.hes-actions{padding:0 14px 14px}.hes-actions .hes-primary,.hes-actions .hes-secondary{min-height:56px}}
+@media (max-height:900px){
+  .hes-head{min-height:54px;padding-top:10px;padding-bottom:5px}
+  .hes-time-stack{top:57px;gap:3px}
+  .hes-input{padding-top:5px;padding-bottom:6px;gap:7px}
+  .hes-input .hes-slider{row-gap:5px;padding-top:2px}
+  .hes-slider__value{font-size:48px}
+  .hes-slider__status{font-size:14px}
+  .hes-slider__change{min-height:32px}
+  .hes-slider__control{height:176px;margin-top:8px;margin-bottom:8px}
+  .hes-slider__range{height:222px}
+  .hes-prompt{height:92px;min-height:92px;padding:9px 10px}
+  .hes-prompt__title{font-size:13px;margin-bottom:6px}
+  .hes-chip{min-height:42px;font-size:12px}
+  .hes-spark{height:88px}
+  .hes-pattern-insight{max-height:none;padding:8px 10px;grid-template-columns:auto 1fr;column-gap:8px;row-gap:2px;align-items:center;overflow:visible}
+  .hes-pattern-insight span{grid-row:1/3;align-self:stretch;display:flex;align-items:center;border-right:1px solid rgba(67,69,135,.1);padding-right:9px}
+  .hes-pattern-insight strong,.hes-pattern-insight em{grid-column:2}
+  .hes-actions{padding-top:5px;padding-bottom:10px}
+  .hes-actions .hes-primary,.hes-actions .hes-secondary{min-height:48px}
+}
+@media (max-height:700px){
+  .hes-head{min-height:50px;padding-top:7px}
+  .hes-time-stack{top:52px}
+  .hes-input{gap:5px;padding-top:2px}
+  .hes-slider__value{font-size:42px}
+  .hes-slider__change{min-height:28px;padding-block:3px}
+  .hes-slider__control{height:142px;margin-top:4px;margin-bottom:4px}
+  .hes-slider__range{height:188px}
+  .hes-prompt{height:82px;min-height:82px;padding:7px 9px}
+  .hes-prompt__title{margin-bottom:4px}
+  .hes-chip{min-height:44px}
+  .hes-spark{height:72px;padding-block:4px}
+  .hes-pattern-insight{padding-block:6px}
+  .hes-pattern-insight em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hes-actions{padding-top:4px;padding-bottom:7px}
+  .hes-actions .hes-primary,.hes-actions .hes-secondary{min-height:44px}
+}
+@media (max-height:620px){
+  .hes-head{min-height:46px;padding-top:4px;padding-bottom:3px}
+  .hes-time-stack{top:48px}
+  .hes-input{gap:3px;padding-top:0;padding-bottom:3px}
+  .hes-input .hes-slider{row-gap:3px}
+  .hes-slider__value{font-size:38px}
+  .hes-slider__change{min-height:26px}
+  .hes-slider__control{height:118px;margin-block:2px}
+  .hes-slider__range{height:164px}
+  .hes-prompt{height:78px;min-height:78px;padding-block:5px}
+  .hes-spark{height:64px}
+  .hes-pattern-insight strong{font-size:12px}
+  .hes-pattern-insight em{font-size:11px}
+  .hes-actions{padding-top:2px;padding-bottom:5px}
+}
 `;
     document.head.appendChild(style);
   }
@@ -6101,7 +6177,10 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     writeHungerFeatureSettings,
     snapSparkTimestamp,
     sparkTimeFromX,
-    compactDecision
+    compactDecision,
+    getHungerChangeNote,
+    getRecommendationDetail,
+    getNextBestAction
   };
 
   HEYS.HungerEnergyStatusModal = {

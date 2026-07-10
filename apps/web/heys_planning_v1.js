@@ -2361,6 +2361,12 @@
             if (!isWizardOpen) return null;
             const goalType = getEffectiveGoalType(draft);
             const metric = getEffectiveMetricPreset(draft, goalType);
+            const metricUnit = String(metric?.unit || '');
+            const targetNumberProps = metricUnit === 'дн/нед' || metricUnit === 'раз/нед'
+                ? { min: 1, max: 7, step: 1 }
+                : metricUnit === 'мин'
+                    ? { min: 1, max: 10080, step: 5 }
+                    : { min: 0.1, max: 10000, step: 0.1 };
             const selectMetric = (metricId) => {
                 setDraft((current) => ({
                     ...current,
@@ -2415,6 +2421,7 @@
                                     h('input', {
                                         type: 'number',
                                         inputMode: 'decimal',
+                                        ...targetNumberProps,
                                         name: 'planning-goal-wizard-target',
                                         value: draft.targetValue,
                                         onChange: (event) => setDraft((current) => ({ ...current, targetValue: event.target.value })),

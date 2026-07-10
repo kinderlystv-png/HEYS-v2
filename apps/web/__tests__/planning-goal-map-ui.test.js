@@ -35,7 +35,7 @@ function createState() {
     return state;
 }
 
-function renderMap(state, goalPatch = {}) {
+function renderMap(state, goalPatch = {}, options = {}) {
     window.React = React;
     window.ReactDOM = {};
     window.HEYS = { cloud: { getSyncStatus: () => 'synced' } };
@@ -53,9 +53,12 @@ function renderMap(state, goalPatch = {}) {
         hasResultProgress: false,
         dueState: { isOverdue: false },
     };
-    return render(React.createElement(window.HEYS.PlanningGoalMap.GoalMapScreen, {
+    const map = React.createElement(window.HEYS.PlanningGoalMap.GoalMapScreen, {
         goal, state, readModel, onBack: vi.fn(), onStartFocus: vi.fn(),
-    }));
+    });
+    return render(options.onOuterTouchEnd
+        ? React.createElement('div', { onTouchEnd: options.onOuterTouchEnd }, map)
+        : map);
 }
 
 describe('goal map UI', () => {
@@ -111,6 +114,54 @@ describe('goal map UI', () => {
         renderMap(state, { status: 'done' });
         expect(screen.queryByRole('navigation', { name: 'Добавить элемент' })).toBeNull();
         expect(screen.getByRole('button', { name: 'Вернуть в активные' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Цель: Запустить продукт' })).toBeTruthy();
         expect(rerender).toBeTypeOf('function');
+    });
+
+    it('moves nodes with arrow keys in structure mode', () => {
+        const state = createState();
+        renderMap(state);
+        fireEvent.click(screen.getByRole('button', { name: 'Структура' }));
+        fireEvent.keyDown(screen.getByRole('button', { name: 'Задача: Первый шаг' }), { key: 'ArrowRight' });
+
+        expect(state.upsertGoalMapRecord).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'task:t1',
+            x: 376,
+        }));
+    });
+
+    it('keeps a task due date locally and persists it on change', () => {
+        const state = createState();
+        renderMap(state);
+        fireEvent.click(screen.getByRole('button', { name: 'Задача: Первый шаг' }));
+        const input = screen.getByLabelText('Срок');
+        fireEvent.input(input, { target: { value: '2026-07-20' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Структура' }));
+
+        expect(screen.getByLabelText('Срок').value).toBe('2026-07-20');
+        expect(state.updateTask).toHaveBeenCalledWith('t1', { dueDate: '2026-07-20' });
+    });
+
+    it('does not bubble map touch gestures to the app-wide swipe handler', () => {
+        const state = createState();
+        const onOuterTouchEnd = vi.fn();
+        const view = renderMap(state, {}, { onOuterTouchEnd });
+        const canvas = view.container.querySelector('.goal-map-canvas');
+
+        fireEvent.touchStart(canvas, { touches: [{ clientX: 330, clientY: 420 }] });
+        fireEvent.touchEnd(canvas, { changedTouches: [{ clientX: 80, clientY: 420 }] });
+
+        expect(onOuterTouchEnd).not.toHaveBeenCalled();
+        expect(view.container.querySelector('.goal-map-screen').classList.contains('no-swipe-zone')).toBe(true);
+    });
+
+    it('shows offline persistence status without closing the editor', () => {
+        const state = createState();
+        const view = renderMap(state);
+
+        fireEvent(window, new Event('offline'));
+
+        expect(screen.getAllByText('Без сети — изменения сохраняются на устройстве').length).toBeGreaterThan(0);
+        expect(view.container.querySelector('.goal-map-screen')).toBeTruthy();
     });
 });

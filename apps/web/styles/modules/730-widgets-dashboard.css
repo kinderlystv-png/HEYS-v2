@@ -8525,28 +8525,23 @@ body.reports-fullscreen-open {
 }
 
 @keyframes waveSway {
-
   0%,
   100% {
-    border-radius: 48% 52% 44% 56% / 52% 48% 56% 44%;
+    transform: translate3d(-2.5%, 0, 0) scaleX(1.03);
   }
 
-  33% {
-    border-radius: 44% 56% 52% 48% / 56% 44% 48% 52%;
-  }
-
-  66% {
-    border-radius: 56% 44% 48% 52% / 44% 56% 52% 48%;
+  50% {
+    transform: translate3d(2.5%, 4px, 0) scaleX(0.97);
   }
 }
 
 @keyframes waterShimmer {
   0% {
-    background-position: -200% center;
+    transform: translate3d(-12%, 0, 0);
   }
 
   100% {
-    background-position: 200% center;
+    transform: translate3d(12%, 0, 0);
   }
 }
 
@@ -8611,6 +8606,7 @@ body.reports-fullscreen-open {
   z-index: 99999;
   pointer-events: none;
   overflow: hidden;
+  contain: strict;
 }
 
 .water-screen-fill__body {
@@ -8626,6 +8622,8 @@ body.reports-fullscreen-open {
       rgba(5, 60, 180, 0.82) 100%);
   transform: translateY(100%);
   will-change: transform;
+  backface-visibility: hidden;
+  contain: paint;
 }
 
 .water-screen-fill__body.rising {
@@ -8645,19 +8643,23 @@ body.reports-fullscreen-open {
   height: 80px;
   animation: waveSway 2.8s ease-in-out infinite;
   background: rgba(100, 210, 255, 0.6);
+  border-radius: 48% 52% 44% 56% / 52% 48% 56% 44%;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* Shimmer полосы */
 .water-screen-fill__shimmer {
   position: absolute;
-  inset: 0;
+  inset: 0 -20%;
   background: repeating-linear-gradient(-45deg,
       transparent 0,
       rgba(255, 255, 255, 0.04) 2px,
       transparent 4px,
       transparent 18px);
-  background-size: 200% 100%;
   animation: waterShimmer 3s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .water-screen-fill__amount {

@@ -575,12 +575,14 @@
       }
       setStepData((prev) => {
         const next = { ...prev };
+        let changed = false;
         visibleStepConfigs.forEach((config) => {
           if (config.getInitialData && next[config.id] === undefined) {
             next[config.id] = config.getInitialData(context, next);
+            changed = true;
           }
         });
-        return next;
+        return changed ? next : prev;
       });
     }, [contextKey, visibleIdsSig, context, visibleStepConfigs]);
 
@@ -615,7 +617,10 @@
     const getUserFacingCompletionError = useCallback((error) => {
       const raw = String(error?.message || error || '');
       if (raw.startsWith('checkin_incomplete_steps:')) {
-        return 'Не удалось завершить чек-ин. Вернитесь к незаполненным обязательным шагам.';
+        const labels = raw.slice('checkin_incomplete_steps:'.length).trim();
+        return labels
+          ? `Осталось заполнить: ${labels}. Вернитесь к указанным шагам и сохраните данные.`
+          : 'Не удалось завершить чек-ин. Вернитесь к незаполненным обязательным шагам.';
       }
       if (raw === 'checkin_sync_timeout') {
         return 'Не удалось дождаться облака. Попробуйте ещё раз.';

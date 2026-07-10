@@ -41,6 +41,7 @@ body.planning-goal-map-open {
     min-width: 0;
     min-height: 100dvh;
     overflow: hidden;
+    overscroll-behavior: none;
     background: var(--goal-map-bg);
     color: var(--goal-map-text);
     color-scheme: light;
@@ -201,6 +202,8 @@ body.planning-goal-map-open {
     min-height: 56px;
     padding: 6px 16px;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
     border-bottom: 1px solid var(--goal-map-border);
     background: var(--goal-map-surface-muted);
     scrollbar-width: none;
@@ -214,7 +217,7 @@ body.planning-goal-map-open {
 .goal-map-segment button {
     flex: 0 0 auto;
     padding: 0 13px;
-    min-height: 42px;
+    min-height: 44px;
 }
 
 .goal-map-segment {
@@ -292,6 +295,7 @@ body.planning-goal-map-open {
     min-width: 0;
     min-height: 0;
     overflow: hidden;
+    overscroll-behavior: none;
     cursor: grab;
     touch-action: none;
     background-color: var(--goal-map-bg);
@@ -755,6 +759,8 @@ body.planning-goal-map-open {
     min-height: 0;
     padding: 24px clamp(16px, 5vw, 72px) 120px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     background: var(--goal-map-bg);
 }
 
@@ -956,6 +962,11 @@ body.planning-goal-map-open {
         bottom: calc(88px + env(safe-area-inset-bottom, 0px));
         max-width: none;
     }
+
+    .goal-map-inspector ~ .goal-map-toast {
+        top: calc(140px + env(safe-area-inset-top, 0px));
+        bottom: auto;
+    }
 }
 
 @media (max-height: 620px) and (orientation: landscape) {
@@ -967,6 +978,11 @@ body.planning-goal-map-open {
 
     .goal-map-toolbar {
         min-height: 48px;
+    }
+
+    .goal-map-toolbar > button,
+    .goal-map-segment button {
+        min-height: 44px;
     }
 
     .goal-map-palette {

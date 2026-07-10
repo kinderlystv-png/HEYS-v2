@@ -1683,6 +1683,33 @@ describe('chrono analytics helpers', () => {
         });
     });
 
+    it('keeps the untracked draft key stable while the same gap grows', () => {
+        const date = '2026-06-02';
+        const startMs = new Date('2026-06-02T09:30:00').getTime();
+        const first = Chrono.buildUntrackedDraftKey(date, {
+            startMs,
+            sinceKind: 'last-entry',
+            minutes: 30,
+        });
+        const afterMinuteTick = Chrono.buildUntrackedDraftKey(date, {
+            startMs,
+            sinceKind: 'last-entry',
+            minutes: 31,
+        });
+
+        expect(afterMinuteTick).toBe(first);
+        expect(Chrono.buildUntrackedDraftKey('2026-06-03', {
+            startMs,
+            sinceKind: 'last-entry',
+            minutes: 31,
+        })).not.toBe(first);
+        expect(Chrono.buildUntrackedDraftKey(date, {
+            startMs: startMs + 60000,
+            sinceKind: 'last-entry',
+            minutes: 30,
+        })).not.toBe(first);
+    });
+
     it('buildUntrackedChronoSummary uses edited duration as the last entry end', () => {
         const summary = Chrono.buildUntrackedChronoSummary(
             { sleepEnd: '07:00' },

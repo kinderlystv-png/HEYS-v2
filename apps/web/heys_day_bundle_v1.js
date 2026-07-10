@@ -2143,6 +2143,7 @@
         date,
         prof,
         pIndex,
+        prodSig,
         dayTot,
         normAbs,
         optimum,
@@ -2152,6 +2153,7 @@
         U,
         lsGet,
         currentStreak,
+        currentMinute,
         setShowConfetti,
         HEYS: heysGlobal,
     }) {
@@ -2208,6 +2210,7 @@
         const [adviceTrigger, setAdviceTrigger] = useState(null);
         const [adviceExpanded, setAdviceExpanded] = useState(false);
         const toastAppearedAtRef = useRef(0);
+        const lastToastPresentationKeyRef = useRef('');
         const [displayedAdvice, setDisplayedAdvice] = useState(null);
         const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
         const getCurrentAdviceClientId = useCallback(() => {
@@ -2625,7 +2628,7 @@
         const adviceEngine = adviceModuleReady ? HEYSRef.advice.useAdviceEngine : null;
 
         const hasClient = !!(HEYSRef?.currentClientId);
-        const emptyAdviceResult = {
+        const emptyAdviceResultRef = useRef({
             primary: null,
             relevant: [],
             adviceCount: 0,
@@ -2639,22 +2642,58 @@
             rateAdvice: null,
             scheduleAdvice: null,
             scheduledCount: 0
-        };
+        });
+        const emptyAdviceResult = emptyAdviceResultRef.current;
 
-        const adviceResult = (adviceEngine && hasClient) ? adviceEngine({
-            dayTot,
-            normAbs,
-            optimum,
-            displayOptimum: null,
-            caloricDebt: null,
-            day,
-            pIndex,
-            currentStreak,
-            trigger: adviceTrigger,
-            uiState,
-            prof,
-            waterGoal,
-        }) : emptyAdviceResult;
+        // Advice engine is a heavy pure calculation despite its historical
+        // `useAdviceEngine` name. Running it on every local UI state update
+        // returned fresh arrays/callbacks, which retriggered the toast effect
+        // and caused a self-sustaining DayTab render loop. Recompute only when
+        // an actual engine input changes. currentMinute keeps time-based rules
+        // fresh without tying them to unrelated renders.
+        const adviceInputKey = (() => {
+            try {
+                return JSON.stringify({
+                    day,
+                    date,
+                    dayTot,
+                    normAbs,
+                    optimum,
+                    waterGoal,
+                    currentStreak,
+                    adviceTrigger,
+                    uiState,
+                    prof,
+                    prodSig,
+                    currentMinute
+                });
+            } catch (_) {
+                return [date, day?.updatedAt, optimum, waterGoal, currentStreak, adviceTrigger, prodSig, currentMinute].join('|');
+            }
+        })();
+
+        const adviceResult = useMemo(() => {
+            if (!adviceEngine || !hasClient) return emptyAdviceResult;
+            return adviceEngine({
+                dayTot,
+                normAbs,
+                optimum,
+                displayOptimum: null,
+                caloricDebt: null,
+                day,
+                pIndex,
+                currentStreak,
+                trigger: adviceTrigger,
+                uiState,
+                prof,
+                waterGoal,
+            });
+        }, [
+            adviceEngine,
+            hasClient,
+            adviceInputKey,
+            emptyAdviceResult
+        ]);
 
         const safeAdviceResult = adviceResult || emptyAdviceResult;
         const {
@@ -3082,6 +3121,22 @@
             if (!advicePrimary) return;
 
             const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
+            // This effect presents advice and fires one-shot side effects (sound,
+            // haptic, markShown). Some callers pass unstable callback/array
+            // references, so React can legitimately re-run it without a semantic
+            // advice change. Guard the presentation itself to avoid a setter loop.
+            const toastPresentationKey = JSON.stringify({
+                date,
+                adviceId: advicePrimary.id || null,
+                trigger: adviceTrigger || null,
+                relevantIds: safeAdviceRelevant.map((item) => item?.id || null),
+                dismissed: dismissedAdvices.has(advicePrimary.id),
+                hidden: hiddenUntilTomorrow.has(advicePrimary.id),
+                toastsEnabled: !!toastsEnabled,
+                curator: isCuratorReadOnlyMode()
+            });
+            if (lastToastPresentationKeyRef.current === toastPresentationKey) return;
+            lastToastPresentationKeyRef.current = toastPresentationKey;
 
             // Курaтор НЕ видит auto-toast popup'ов. Manual клик по 💡 — открывает
             // history dropdown через renderManualAdviceList ниже.

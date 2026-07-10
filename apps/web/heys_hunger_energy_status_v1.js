@@ -888,7 +888,8 @@
       copyRisk: safety.copyRisk || 'normal',
       recheckAfterMin: action.delayAllowed ? action.recheckAfterMin : undefined,
       postFoodOutcomeAfterMin: action.postFoodOutcomeAfterMin,
-      stopDelaySignals: riskBudget.driversUp.slice(0, 3),
+      delayRiskSignals: riskBudget.driversUp.slice(0, 3),
+      stopDelaySignals: action.delayAllowed ? [] : riskBudget.driversUp.slice(0, 3),
       missingInputs,
       dataFreshness: state.dataFreshness,
       requiresCuratorReview: safety.hardOverride === SAFETY_OVERRIDES.medicalBoundary ||

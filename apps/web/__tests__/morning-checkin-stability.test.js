@@ -51,7 +51,10 @@ describe('morning check-in stability', () => {
   it('keeps strict final completion single-step and marks cloud-pending local completion explicitly', () => {
     expect(STEP_MODAL_SRC).toContain('if (requireStepAck) {\n            if (!(await saveStepConfig(currentConfig, stepData))) return;');
     expect(MORNING_SRC).toContain('markMorningProgressCloudPending');
-    expect(MORNING_SRC).toContain("return finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' });");
+    expect(MORNING_SRC).toContain("(flushed) => finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' })");
+    expect(MORNING_SRC).toContain("return finish({ cloudPending: true, syncNote: 'checkin_sync_failed' });");
+    expect(MORNING_SRC).toContain("return Promise.resolve(finish({ cloudPending: true, syncNote: 'checkin_sync_unavailable' }));");
+    expect(MORNING_SRC).toContain("markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_failed')");
     expect(MORNING_SRC).toContain("status: cloudPending ? 'saved_local' : 'synced'");
     expect(MORNING_SRC).toContain('cloudPending,');
     expect(MORNING_SRC).toContain("syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null");
@@ -76,10 +79,12 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);");
     expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
     expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);");
+    expect(MORNING_SRC).toContain("return status === 'synced'\n      || status === 'saved_local'");
     expect(MORNING_SRC).toContain('isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row)');
     expect(MORNING_SRC).toContain('checkin_incomplete_steps');
     expect(STEP_MODAL_SRC).toContain("raw.startsWith('checkin_incomplete_steps:')");
-    expect(STEP_MODAL_SRC).toContain('Вернитесь к незаполненным обязательным шагам.');
+    expect(STEP_MODAL_SRC).toContain("raw.slice('checkin_incomplete_steps:'.length).trim()");
+    expect(STEP_MODAL_SRC).toContain('Осталось заполнить: ${labels}. Вернитесь к указанным шагам и сохраните данные.');
     expect(MORNING_SRC).toContain("case 'supplements': return Array.isArray(day?.supplementsPlanned);");
     expect(STEPS_SRC).toContain("reason: 'empty_measurements'");
     expect(STEPS_SRC).toContain("type: 'none'");

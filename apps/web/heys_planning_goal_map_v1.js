@@ -55,6 +55,61 @@
         return { width: 194, height: 112 };
     }
 
+    function calculateFitViewport(nodes, width, height) {
+        const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+        const viewportWidth = Math.max(1, Number(width) || 1);
+        const viewportHeight = Math.max(1, Number(height) || 1);
+        if (!list.length) return { x: viewportWidth / 2, y: viewportHeight / 2, scale: 1 };
+        const bounds = list.map((node) => {
+            const size = getNodeSize(node.kind);
+            return {
+                left: (Number(node.x) || 0) - size.width / 2,
+                right: (Number(node.x) || 0) + size.width / 2,
+                top: (Number(node.y) || 0) - size.height / 2,
+                bottom: (Number(node.y) || 0) + size.height / 2,
+            };
+        });
+        const padding = 44;
+        const minX = Math.min(...bounds.map((item) => item.left)) - padding;
+        const maxX = Math.max(...bounds.map((item) => item.right)) + padding;
+        const minY = Math.min(...bounds.map((item) => item.top)) - padding;
+        const maxY = Math.max(...bounds.map((item) => item.bottom)) + padding;
+        const scale = clamp(Math.min(viewportWidth / Math.max(1, maxX - minX), viewportHeight / Math.max(1, maxY - minY)) * 0.94, MIN_SCALE, 1.2);
+        return {
+            x: viewportWidth / 2 - ((minX + maxX) / 2) * scale,
+            y: viewportHeight / 2 - ((minY + maxY) / 2) * scale,
+            scale,
+        };
+    }
+
+    function findAvailableNodePosition(preferred, nodes, kind) {
+        const origin = {
+            x: Number(preferred?.x) || 0,
+            y: Number(preferred?.y) || 0,
+        };
+        const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+        const candidateSize = getNodeSize(kind);
+        const isFree = (position) => list.every((node) => {
+            const size = getNodeSize(node.kind);
+            return Math.abs(position.x - (Number(node.x) || 0)) >= (candidateSize.width + size.width) / 2 + 24
+                || Math.abs(position.y - (Number(node.y) || 0)) >= (candidateSize.height + size.height) / 2 + 24;
+        });
+        if (isFree(origin)) return origin;
+        for (let ring = 1; ring <= 12; ring += 1) {
+            const radius = ring * 96;
+            const steps = Math.max(8, ring * 8);
+            for (let index = 0; index < steps; index += 1) {
+                const angle = -Math.PI / 2 + Math.PI * 2 * index / steps;
+                const candidate = {
+                    x: origin.x + Math.cos(angle) * radius,
+                    y: origin.y + Math.sin(angle) * radius,
+                };
+                if (isFree(candidate)) return candidate;
+            }
+        }
+        return { x: origin.x + 240, y: origin.y + list.length * 32 };
+    }
+
     function radialPositions(groupSizes) {
         const output = { goal: { x: 0, y: 0 }, results: [], tasks: [], obstacles: [], custom: [] };
         const resultCount = Math.max(0, Number(groupSizes?.results) || 0);
@@ -263,6 +318,9 @@
         const frameRef = useRef(0);
         const pointerRef = useRef(new Map());
         const undoRef = useRef([]);
+        const onBackRef = useRef(props.onBack);
+        const historyMarkerRef = useRef(null);
+        const initialFitRef = useRef(false);
         const [viewport, setViewport] = useState(() => {
             const height = window.innerHeight || 844;
             return {
@@ -292,7 +350,10 @@
         const records = useMemo(() => (Array.isArray(state?.goalMapRecords) ? state.goalMapRecords : [])
             .filter((record) => record?.goalId === goal?.id), [goal?.id, state?.goalMapRecords]);
         const model = useMemo(() => buildGoalMapModel({ goal, tasks: state?.tasks, records }), [goal, records, state?.tasks]);
+        onBackRef.current = props.onBack;
+
         const visibleNodes = useMemo(() => model.nodes.filter((node) => {
+            if (node.kind === 'goal') return true;
             if (!showCompleted && (node.status === 'done' || node.status === 'cancelled')) return false;
             return !search || String(node.title || '').toLowerCase().includes(search.toLowerCase());
         }).map((node) => dragPositions[node.id] ? { ...node, ...dragPositions[node.id] } : node), [model.nodes, showCompleted, search, dragPositions]);
@@ -346,15 +407,23 @@
             const nodes = visibleNodes.length ? visibleNodes : model.nodes;
             if (!nodes.length || !canvasRef.current) return;
             const rect = canvasRef.current.getBoundingClientRect();
-            const xs = nodes.map((node) => node.x);
-            const ys = nodes.map((node) => node.y);
-            const minX = Math.min(...xs) - 180;
-            const maxX = Math.max(...xs) + 180;
-            const minY = Math.min(...ys) - 150;
-            const maxY = Math.max(...ys) + 150;
-            const scale = clamp(Math.min(rect.width / Math.max(1, maxX - minX), rect.height / Math.max(1, maxY - minY)) * 0.9, MIN_SCALE, 1.2);
-            setViewport({ x: rect.width / 2 - ((minX + maxX) / 2) * scale, y: rect.height / 2 - ((minY + maxY) / 2) * scale, scale });
+            setViewport(calculateFitViewport(nodes, rect.width, rect.height));
         }, [model.nodes, visibleNodes]);
+
+        useEffect(() => {
+            if (mode !== 'map' || initialFitRef.current || !canvasRef.current) return undefined;
+            const frame = window.requestAnimationFrame(() => {
+                fitAll();
+                initialFitRef.current = true;
+            });
+            return () => window.cancelAnimationFrame(frame);
+        }, [fitAll, mode]);
+
+        useEffect(() => {
+            if (!selectedId || visibleNodeMap.has(selectedId)) return;
+            setSelectedId(null);
+            setPanel(null);
+        }, [selectedId, visibleNodeMap]);
 
         const autoArrange = useCallback(() => {
             if (readOnly) return;
@@ -373,8 +442,13 @@
             });
             state.saveGoalMapRecords?.(nextRecords, { reason: 'goal-map-auto-arrange' });
             announce('Карта упорядочена', () => before.forEach((entry) => persistNodePosition(entry.node, entry.position)));
-            window.requestAnimationFrame(fitAll);
-        }, [announce, fitAll, goal, model.goalTasks, model.nodes, persistNodePosition, readOnly, records, state]);
+            const arrangedNodes = model.nodes.map((node) => ({ ...node, ...(layout.get(node.id) || {}) }));
+            window.requestAnimationFrame(() => {
+                if (!canvasRef.current) return;
+                const rect = canvasRef.current.getBoundingClientRect();
+                setViewport(calculateFitViewport(arrangedNodes, rect.width, rect.height));
+            });
+        }, [announce, goal, model.goalTasks, model.nodes, persistNodePosition, readOnly, records, state]);
 
         const ensureProject = useCallback(() => {
             if (goal?.projectId) return goal.projectId;
@@ -416,7 +490,8 @@
         const submitCreate = useCallback(() => {
             const title = String(quickTitle || '').trim();
             if (!title || !quickCreate) return;
-            const { kind, position } = quickCreate;
+            const { kind, position: requestedPosition } = quickCreate;
+            const position = findAvailableNodePosition(requestedPosition, model.nodes, kind);
             if (kind === 'task' || kind === 'milestone') {
                 const task = state?.addTask?.(title, { projectId: ensureProject(), status: 'in_progress', priority: 'p2', isMilestone: kind === 'milestone' });
                 if (task?.id) {
@@ -439,7 +514,7 @@
             }
             setQuickCreate(null);
             setQuickTitle('');
-        }, [ensureProject, goal, persistNodePosition, quickCreate, quickTitle, state]);
+        }, [ensureProject, goal, model.nodes, persistNodePosition, quickCreate, quickTitle, state]);
 
         const beginPaletteDrag = useCallback((event, kind) => {
             if (readOnly) return;
@@ -699,14 +774,28 @@
 
         const closeMap = useCallback(() => {
             if (history.state?.heysGoalMap === goal?.id) history.back();
-            else props.onBack?.();
-        }, [goal?.id, props]);
+            else onBackRef.current?.();
+        }, [goal?.id]);
 
         useEffect(() => {
             document.body?.classList.add('planning-goal-map-open');
-            const marker = { ...(history.state || {}), heysGoalMap: goal?.id };
+            const baseState = { ...(history.state || {}) };
+            delete baseState.heysGoalMap;
+            history.replaceState(baseState, '');
+            const marker = { ...baseState, heysGoalMap: goal?.id };
             history.pushState(marker, '');
-            const onPop = () => props.onBack?.();
+            historyMarkerRef.current = goal?.id;
+            const onPop = () => {
+                if (history.state?.heysGoalMap === goal?.id) {
+                    try {
+                        const nextState = { ...(history.state || {}) };
+                        delete nextState.heysGoalMap;
+                        history.replaceState(nextState, '');
+                    } catch (_) { /* noop */ }
+                }
+                historyMarkerRef.current = null;
+                onBackRef.current?.();
+            };
             const onOnline = () => setOnline(true);
             const onOffline = () => setOnline(false);
             window.addEventListener('popstate', onPop);
@@ -717,8 +806,38 @@
                 window.removeEventListener('popstate', onPop);
                 window.removeEventListener('online', onOnline);
                 window.removeEventListener('offline', onOffline);
+                if (historyMarkerRef.current === goal?.id && history.state?.heysGoalMap === goal?.id) {
+                    try {
+                        const nextState = { ...(history.state || {}) };
+                        delete nextState.heysGoalMap;
+                        history.replaceState(nextState, '');
+                    } catch (_) { /* noop */ }
+                }
+                historyMarkerRef.current = null;
             };
-        }, [goal?.id, props.onBack]);
+        }, [goal?.id]);
+
+        useEffect(() => {
+            const mapElement = rootRef.current;
+            if (!mapElement || !document.body) return undefined;
+            const portalHost = Array.from(document.body.children).find((element) => element === mapElement || element.contains(mapElement));
+            const siblings = Array.from(document.body.children).filter((element) => element !== portalHost);
+            const previous = siblings.map((element) => ({
+                element,
+                ariaHidden: element.getAttribute('aria-hidden'),
+                inert: element.inert === true,
+            }));
+            previous.forEach(({ element }) => {
+                element.setAttribute('aria-hidden', 'true');
+                element.inert = true;
+            });
+            mapElement.querySelector('.goal-map-header__back')?.focus?.({ preventScroll: true });
+            return () => previous.forEach(({ element, ariaHidden, inert }) => {
+                if (ariaHidden === null) element.removeAttribute('aria-hidden');
+                else element.setAttribute('aria-hidden', ariaHidden);
+                element.inert = inert;
+            });
+        }, []);
 
         useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
 
@@ -728,7 +847,9 @@
             const movement = { ArrowLeft: [-delta, 0], ArrowRight: [delta, 0], ArrowUp: [0, -delta], ArrowDown: [0, delta] }[event.key];
             if (!movement) return;
             event.preventDefault();
-            persistNodePosition(node, { x: node.x + movement[0], y: node.y + movement[1] });
+            const position = { x: node.x + movement[0], y: node.y + movement[1] };
+            setDragPositions((current) => ({ ...current, [node.id]: position }));
+            persistNodePosition(node, position);
         };
 
         const renderEdge = (edge) => {
@@ -801,9 +922,9 @@
             if (!selectedNode && !selectedEdge && panel !== 'review') return null;
             if (panel === 'review') return h('aside', { className: 'goal-map-inspector', 'aria-label': 'Проверка результата' },
                 h('div', { className: 'goal-map-inspector__head' }, h('strong', null, formDraft.complete ? 'Завершить цель' : 'Проверить результат'), h('button', { type: 'button', onClick: () => setPanel(null), 'aria-label': 'Закрыть панель' }, '×')),
-                h('label', null, h('span', null, 'Текущий результат'), h('input', { value: formDraft.current || '', onChange: (event) => setFormDraft((value) => ({ ...value, current: event.target.value })) })),
-                h('label', null, h('span', null, 'Что изменилось'), h('textarea', { value: formDraft.change || '', onChange: (event) => setFormDraft((value) => ({ ...value, change: event.target.value })) })),
-                h('label', null, h('span', null, 'Следующий шаг'), h('input', { value: formDraft.nextStep || '', onChange: (event) => setFormDraft((value) => ({ ...value, nextStep: event.target.value })) })),
+                h('label', null, h('span', null, 'Текущий результат'), h('input', { name: 'goal-map-review-current', value: formDraft.current || '', onChange: (event) => setFormDraft((value) => ({ ...value, current: event.target.value })) })),
+                h('label', null, h('span', null, 'Что изменилось'), h('textarea', { name: 'goal-map-review-change', value: formDraft.change || '', onChange: (event) => setFormDraft((value) => ({ ...value, change: event.target.value })) })),
+                h('label', null, h('span', null, 'Следующий шаг'), h('input', { name: 'goal-map-review-next-step', value: formDraft.nextStep || '', onChange: (event) => setFormDraft((value) => ({ ...value, nextStep: event.target.value })) })),
                 h('button', { type: 'button', className: 'goal-map-button goal-map-button--primary', disabled: !String(formDraft.current || '').trim(), onClick: () => { props.onSaveReview?.(formDraft); setPanel(null); } }, formDraft.complete ? 'Завершить цель' : 'Сохранить проверку'),
             );
             if (selectedEdge) return h('aside', { className: 'goal-map-inspector', 'aria-label': 'Связь' },
@@ -812,11 +933,13 @@
                     ? h('p', null, RELATION_META[selectedEdge.relation] || 'связано')
                     : h(React.Fragment, null,
                         h('label', null, h('span', null, 'Тип связи'), h('select', {
+                            name: 'goal-map-edge-relation',
                             value: selectedEdge.relation || 'related',
                             disabled: readOnly,
                             onChange: (event) => state?.upsertGoalMapRecord?.({ ...selectedEdge, relation: event.target.value }),
                         }, Object.entries(RELATION_META).filter(([key]) => key !== 'hierarchy').map(([key, label]) => h('option', { key, value: key }, label)))),
                         h('label', null, h('span', null, selectedEdge.relation === 'option' ? 'Подпись ветки' : 'Подпись'), h('input', {
+                            name: 'goal-map-edge-label',
                             defaultValue: selectedEdge.label || '',
                             readOnly,
                             required: selectedEdge.relation === 'option',
@@ -835,6 +958,11 @@
             const meta = NODE_META[selectedNode.kind] || NODE_META.note;
             const task = selectedNode.entityType === 'task' ? model.goalTasks.find((item) => item.id === selectedNode.entityId) : null;
             const dateValue = selectedNode.entityType === 'goal' ? goal.dueDate : task?.dueDate;
+            const commitDueDate = (event) => {
+                const date = event.currentTarget.value;
+                setFormDraft((value) => ({ ...value, nodeId: selectedNode.id, date }));
+                updateSelectedNode({ dueDate: date || undefined });
+            };
             return h('aside', { className: 'goal-map-inspector', 'aria-label': `Параметры: ${selectedNode.title}` },
                 h('div', { className: 'goal-map-inspector__head' },
                     h('span', null, h(MapIcon, { kind: selectedNode.kind }), h('strong', null, meta.label)),
@@ -843,6 +971,7 @@
                 h('label', null,
                     h('span', null, 'Название'),
                     h('textarea', {
+                        name: 'goal-map-node-title',
                         value: formDraft.nodeId === selectedNode.id ? (formDraft.title ?? selectedNode.title) : selectedNode.title,
                         readOnly,
                         onFocus: () => setFormDraft({ nodeId: selectedNode.id, title: selectedNode.title }),
@@ -854,18 +983,19 @@
                     h('span', null, 'Срок'),
                     h('input', {
                         type: 'date',
-                        value: panel === 'date' && formDraft.nodeId === selectedNode.id ? formDraft.date || '' : dateValue || '',
+                        name: 'goal-map-node-due-date',
+                        value: formDraft.nodeId === selectedNode.id && Object.prototype.hasOwnProperty.call(formDraft, 'date')
+                            ? formDraft.date || ''
+                            : dateValue || '',
                         readOnly,
-                        onChange: (event) => {
-                            const date = event.target.value;
-                            setFormDraft((value) => ({ ...value, nodeId: selectedNode.id, date }));
-                            updateSelectedNode({ dueDate: date || undefined });
-                        },
+                        onInput: commitDueDate,
+                        onChange: commitDueDate,
+                        onBlur: commitDueDate,
                     }),
                 ),
                 task && panel === 'date' && h('div', { className: 'goal-map-inspector__schedule' },
-                    h('label', null, h('span', null, 'Время'), h('input', { type: 'time', value: formDraft.startTime || '09:00', onChange: (event) => setFormDraft((value) => ({ ...value, startTime: event.target.value })) })),
-                    h('label', null, h('span', null, 'Минут'), h('input', { type: 'number', min: 5, step: 5, value: formDraft.plannedMinutes || 30, onChange: (event) => setFormDraft((value) => ({ ...value, plannedMinutes: Number(event.target.value) || 30 })) })),
+                    h('label', null, h('span', null, 'Время'), h('input', { type: 'time', name: 'goal-map-schedule-start-time', value: formDraft.startTime || '09:00', onChange: (event) => setFormDraft((value) => ({ ...value, startTime: event.target.value })) })),
+                    h('label', null, h('span', null, 'Минут'), h('input', { type: 'number', name: 'goal-map-schedule-minutes', min: 5, step: 5, value: formDraft.plannedMinutes || 30, onChange: (event) => setFormDraft((value) => ({ ...value, plannedMinutes: Number(event.target.value) || 30 })) })),
                     h('button', {
                         type: 'button',
                         className: 'goal-map-button goal-map-button--primary',
@@ -874,16 +1004,17 @@
                     }, 'Поставить в календарь'),
                 ),
                 task && h('label', { className: 'goal-map-check' },
-                    h('input', { type: 'checkbox', checked: task.isMilestone === true, disabled: readOnly, onChange: (event) => updateSelectedNode({ isMilestone: event.target.checked }) }),
+                    h('input', { type: 'checkbox', name: 'goal-map-task-milestone', checked: task.isMilestone === true, disabled: readOnly, onChange: (event) => updateSelectedNode({ isMilestone: event.target.checked }) }),
                     h('span', null, 'Контрольная точка'),
                 ),
-                task && h('label', null, h('span', null, 'Состояние'), h('select', { value: task.status || 'in_progress', disabled: readOnly, onChange: (event) => updateSelectedNode({ status: event.target.value, progress: event.target.value === 'done' ? 100 : task.progress }) },
+                task && h('label', null, h('span', null, 'Состояние'), h('select', { name: 'goal-map-task-status', value: task.status || 'in_progress', disabled: readOnly, onChange: (event) => updateSelectedNode({ status: event.target.value, progress: event.target.value === 'done' ? 100 : task.progress }) },
                     h('option', { value: 'todo' }, 'Ожидает начала'),
                     h('option', { value: 'in_progress' }, 'В работе'),
                     h('option', { value: 'done' }, 'Выполнено'),
                     h('option', { value: 'cancelled' }, 'Отменено'),
                 )),
                 selectedNode.entityType === 'map' && h('label', null, h('span', null, 'Состояние'), h('select', {
+                    name: 'goal-map-node-status',
                     value: selectedNode.status || 'active',
                     disabled: readOnly,
                     onChange: (event) => updateSelectedNode({ status: event.target.value }),
@@ -905,7 +1036,7 @@
                 selectedNode.kind !== 'goal' && selectedNode.entityType !== 'task' && !readOnly && h('button', { type: 'button', className: 'goal-map-button is-danger', onClick: () => setConfirmDelete(selectedNode) }, 'Удалить элемент'),
                 !readOnly && selectedNode.kind !== 'goal' && h('label', null,
                     h('span', null, 'Связать с…'),
-                    h('select', { value: '', onChange: (event) => {
+                    h('select', { name: 'goal-map-link-target', value: '', onChange: (event) => {
                         const target = model.nodes.find((node) => node.id === event.target.value);
                         const validation = validateConnection(selectedNode, target, model.edges, model.goalTasks);
                         if (!validation.ok) { announce(validation.reason); return; }
@@ -934,7 +1065,19 @@
             return { label: 'Добавить задачу', action: () => openCreate('task') };
         })();
 
-        const mapContent = h('div', { className: 'goal-map-screen', ref: rootRef, 'data-testid': 'goal-map-screen' },
+        const stopAppSwipe = (event) => event.stopPropagation();
+        const mapContent = h('div', {
+            className: 'goal-map-screen no-swipe-zone',
+            ref: rootRef,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': `Карта цели: ${goal?.title || 'Цель'}`,
+            'data-no-app-swipe': 'true',
+            'data-testid': 'goal-map-screen',
+            onTouchStart: stopAppSwipe,
+            onTouchMove: stopAppSwipe,
+            onTouchEnd: stopAppSwipe,
+        },
             h('header', { className: 'goal-map-header' },
                 h('button', { type: 'button', className: 'goal-map-header__back', onClick: closeMap, 'aria-label': 'Назад к целям' }, h('span', { 'aria-hidden': 'true' }, '←'), h('span', null, 'Назад')),
                 h('div', { className: 'goal-map-header__summary' },
@@ -953,10 +1096,10 @@
                     h('button', { type: 'button', className: mode === 'map' ? 'is-active' : '', onClick: () => setMode('map'), 'aria-pressed': mode === 'map' }, 'Карта'),
                     h('button', { type: 'button', className: mode === 'structure' ? 'is-active' : '', onClick: () => setMode('structure'), 'aria-pressed': mode === 'structure' }, 'Структура'),
                 ),
-                h('label', { className: 'goal-map-search' }, h('span', { className: 'sr-only' }, 'Поиск по карте'), h('input', { type: 'search', value: search, placeholder: 'Поиск', onChange: (event) => setSearch(event.target.value) })),
+                h('label', { className: 'goal-map-search' }, h('span', { className: 'sr-only' }, 'Поиск по карте'), h('input', { type: 'search', name: 'goal-map-search', value: search, placeholder: 'Поиск', onChange: (event) => setSearch(event.target.value) })),
                 h('button', { type: 'button', onClick: fitAll }, 'Показать всё'),
                 h('button', { type: 'button', onClick: autoArrange, disabled: readOnly }, 'Упорядочить'),
-                h('label', { className: 'goal-map-check goal-map-check--toolbar' }, h('input', { type: 'checkbox', checked: showCompleted, onChange: (event) => setShowCompleted(event.target.checked) }), h('span', null, 'Выполненные')),
+                h('label', { className: 'goal-map-check goal-map-check--toolbar' }, h('input', { type: 'checkbox', name: 'goal-map-show-completed', checked: showCompleted, onChange: (event) => setShowCompleted(event.target.checked) }), h('span', null, 'Выполненные')),
                 h('span', { className: 'goal-map-toolbar__sync', role: 'status' }, syncStatus),
             ),
             mode === 'map' ? h('main', {
@@ -998,7 +1141,12 @@
                 h('h2', null, 'Структура цели'),
                 h('p', null, 'Все действия доступны с клавиатуры. Выберите элемент, чтобы изменить его или создать связь.'),
                 h('ul', null, visibleNodes.map((node) => h('li', { key: node.id },
-                    h('button', { type: 'button', 'aria-label': `${NODE_META[node.kind]?.label}: ${node.title}`, onClick: () => { setSelectedId(node.id); setSelectedEdgeId(null); } },
+                    h('button', {
+                        type: 'button',
+                        'aria-label': `${NODE_META[node.kind]?.label}: ${node.title}`,
+                        onKeyDown: (event) => onNodeKeyDown(event, node),
+                        onClick: () => { setSelectedId(node.id); setSelectedEdgeId(null); },
+                    },
                         h(MapIcon, { kind: node.kind }), h('span', null, h('strong', null, NODE_META[node.kind]?.label), ' — ', node.title),
                     ),
                 ))),
@@ -1020,7 +1168,7 @@
             quickCreate && h('div', { className: 'goal-map-dialog-backdrop', onClick: (event) => { if (event.target === event.currentTarget) setQuickCreate(null); } },
                 h('form', { className: 'goal-map-dialog', role: 'dialog', 'aria-modal': 'true', onSubmit: (event) => { event.preventDefault(); submitCreate(); } },
                     h('h2', null, `Новый элемент: ${NODE_META[quickCreate.kind]?.label}`),
-                    h('label', null, h('span', null, 'Название'), h('input', { autoFocus: true, value: quickTitle, onChange: (event) => setQuickTitle(event.target.value) })),
+                    h('label', null, h('span', null, 'Название'), h('input', { autoFocus: true, name: 'goal-map-new-node-title', value: quickTitle, onChange: (event) => setQuickTitle(event.target.value) })),
                     h('div', { className: 'goal-map-dialog__actions' },
                         h('button', { type: 'button', onClick: () => setQuickCreate(null) }, 'Отмена'),
                         h('button', { type: 'submit', className: 'goal-map-button--primary', disabled: !String(quickTitle || '').trim() }, 'Добавить'),
@@ -1031,10 +1179,10 @@
                 h('form', { className: 'goal-map-dialog', role: 'dialog', 'aria-modal': 'true', onSubmit: (event) => { event.preventDefault(); applyConnection(); } },
                     h('h2', null, 'Новая связь'),
                     h('p', null, `«${pendingConnection.fromNode.title}» → «${pendingConnection.toNode.title}»`),
-                    h('label', null, h('span', null, 'Тип связи'), h('select', { value: relationDraft, onChange: (event) => setRelationDraft(event.target.value) },
+                    h('label', null, h('span', null, 'Тип связи'), h('select', { name: 'goal-map-new-edge-relation', value: relationDraft, onChange: (event) => setRelationDraft(event.target.value) },
                         Object.entries(RELATION_META).filter(([key]) => key !== 'hierarchy').map(([key, label]) => h('option', { key, value: key }, label)),
                     )),
-                    (relationDraft === 'option' || relationLabel) && h('label', null, h('span', null, relationDraft === 'option' ? 'Подпись ветки' : 'Подпись'), h('input', { value: relationLabel, required: relationDraft === 'option', onChange: (event) => setRelationLabel(event.target.value) })),
+                    (relationDraft === 'option' || relationLabel) && h('label', null, h('span', null, relationDraft === 'option' ? 'Подпись ветки' : 'Подпись'), h('input', { name: 'goal-map-new-edge-label', value: relationLabel, required: relationDraft === 'option', onChange: (event) => setRelationLabel(event.target.value) })),
                     h('div', { className: 'goal-map-dialog__actions' },
                         h('button', { type: 'button', onClick: () => setPendingConnection(null) }, 'Отмена'),
                         h('button', { type: 'submit', className: 'goal-map-button--primary', disabled: relationDraft === 'option' && !String(relationLabel || '').trim() }, 'Создать связь'),
@@ -1065,6 +1213,8 @@
     GoalMap.RELATION_META = RELATION_META;
     GoalMap.nodeIdFor = nodeIdFor;
     GoalMap.getNodeSize = getNodeSize;
+    GoalMap.calculateFitViewport = calculateFitViewport;
+    GoalMap.findAvailableNodePosition = findAvailableNodePosition;
     GoalMap.radialPositions = radialPositions;
     GoalMap.deterministicRadialLayout = deterministicRadialLayout;
     GoalMap.buildGoalMapModel = buildGoalMapModel;

@@ -1402,6 +1402,7 @@
   function isMorningStatusTerminal(row) {
     const status = row?.status || 'missing';
     return status === 'synced'
+      || status === 'saved_local'
       || status === 'skipped'
       || status === 'data_present'
       || row?.completeByData === true;
@@ -1583,15 +1584,25 @@
     }
 
     if (!HEYS.cloud || typeof HEYS.cloud.flushPendingQueue !== 'function') {
-      const err = new Error('Синхронизация недоступна. Попробуйте ещё раз.');
-      markMorningProgressStep(dateKey, stepId, {
-        status: 'failed_sync',
-        error: err.message
-      }, clientId);
-      throw err;
+      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'sync_unavailable');
+      return true;
     }
 
-    const flushed = await HEYS.cloud.flushPendingQueue(timeoutMs || 10000);
+    let flushed = false;
+    try {
+      flushed = await HEYS.cloud.flushPendingQueue(timeoutMs || 10000);
+    } catch (err) {
+      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_failed');
+      traceMorningCheckin('step_sync_deferred', {
+        dateKey,
+        clientId,
+        stepId,
+        status: 'saved_local',
+        error: err?.message || String(err || 'flush_failed'),
+        affectedKeys
+      });
+      return true;
+    }
     if (!flushed) {
       markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_timeout');
       return true;
@@ -1723,36 +1734,35 @@
     };
 
     if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-      return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
-        return finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' });
-      }).catch((err) => {
-        markMorningProgressStep(todayKey, '__flow__', {
-          status: 'failed_sync',
-          error: err?.message || String(err || 'checkin_sync_failed')
-        }, currentClientId);
-        traceMorningCheckin('flow_failed', {
-          dateKey: todayKey,
-          clientId: currentClientId,
-          flowId: plan?.flowId,
-          status: 'failed_sync',
-          error: err?.message || String(err || 'checkin_sync_failed')
-        });
-        console.warn('[MorningCheckin] final flushPendingQueue failed:', err?.message || err);
-        throw err;
-      });
+      return HEYS.cloud.flushPendingQueue(10000).then(
+        (flushed) => finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' }),
+        (err) => {
+          markMorningProgressStep(todayKey, '__flow__', {
+            status: 'saved_local',
+            cloudPending: true,
+            syncNote: 'checkin_sync_failed',
+            error: null
+          }, currentClientId);
+          traceMorningCheckin('flow_sync_deferred', {
+            dateKey: todayKey,
+            clientId: currentClientId,
+            flowId: plan?.flowId,
+            status: 'saved_local',
+            error: err?.message || String(err || 'checkin_sync_failed')
+          });
+          console.warn('[MorningCheckin] final sync deferred:', err?.message || err);
+          return finish({ cloudPending: true, syncNote: 'checkin_sync_failed' });
+        }
+      );
     }
-    markMorningProgressStep(todayKey, '__flow__', {
-      status: 'failed_sync',
-      error: 'checkin_sync_unavailable'
-    }, currentClientId);
-    traceMorningCheckin('flow_failed', {
+    traceMorningCheckin('flow_sync_deferred', {
       dateKey: todayKey,
       clientId: currentClientId,
       flowId: plan?.flowId,
-      status: 'failed_sync',
+      status: 'saved_local',
       error: 'checkin_sync_unavailable'
     });
-    return Promise.reject(new Error('checkin_sync_unavailable'));
+    return Promise.resolve(finish({ cloudPending: true, syncNote: 'checkin_sync_unavailable' }));
   }
 
   /**

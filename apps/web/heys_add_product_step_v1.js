@@ -97,6 +97,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
   let globalProductsVersion = 0;
+  let lastPresetSuggestionRunAt = 0;
+  const PRESET_SUGGESTION_COOLDOWN_MS = 60 * 1000;
+
+  function runPresetSuggestions({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && now - lastPresetSuggestionRunAt < PRESET_SUGGESTION_COOLDOWN_MS) {
+      return HEYS.store?.getSuggestedPresets?.()?.length || 0;
+    }
+    const result = HEYS.store?.runPresetSuggestionEngine?.();
+    if (result != null) lastPresetSuggestionRunAt = now;
+    return result;
+  }
+
+  function getProductsWatchSignature(products) {
+    if (!Array.isArray(products)) return 'not-array';
+    return products.map((product) => {
+      const id = product?.id ?? product?.product_id ?? product?.name ?? '';
+      const updatedAt = product?.updatedAt ?? product?.updated_at ?? '';
+      const barcodes = getProductBarcodes(product).join(',');
+      return `${id}:${updatedAt}:${barcodes}`;
+    }).join('|');
+  }
 
   // Ждём загрузки StepModal
   if (!HEYS.StepModal) {
@@ -1114,6 +1136,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return rows.filter((r) => r && r._custom === true);
   };
 
+  let sharedBarcodeNameIndexSource = null;
+  let sharedBarcodeNameIndex = new Map();
+
+  const invalidateSharedBarcodeNameIndex = () => {
+    sharedBarcodeNameIndexSource = null;
+    sharedBarcodeNameIndex = new Map();
+  };
+
+  const getSharedBarcodeNameIndex = (cachedSharedProducts) => {
+    if (sharedBarcodeNameIndexSource === cachedSharedProducts) return sharedBarcodeNameIndex;
+
+    const nextIndex = new Map();
+    (cachedSharedProducts || []).forEach((shared) => {
+      const name = normalizeName(shared?.name);
+      if (!name) return;
+      const current = nextIndex.get(name);
+      if (current) {
+        current.count += 1;
+        current.match = null;
+      } else {
+        nextIndex.set(name, { count: 1, match: shared });
+      }
+    });
+
+    sharedBarcodeNameIndexSource = cachedSharedProducts;
+    sharedBarcodeNameIndex = nextIndex;
+    return sharedBarcodeNameIndex;
+  };
+
   const findSharedProductForBarcodeMerge = (product) => {
     if (!product) return null;
     const sharedId = resolveSharedProductId(product);
@@ -1127,16 +1178,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!Array.isArray(cached) || cached.length === 0) return null;
     const name = normalizeName(product.name);
     if (!name) return null;
-
-    let match = null;
-    let matches = 0;
-    cached.forEach((shared) => {
-      if (normalizeName(shared?.name) !== name) return;
-      matches += 1;
-      if (matches === 1) match = shared;
-    });
-
-    return matches === 1 && getProductBarcodes(match).length > 0 ? match : null;
+    const indexed = getSharedBarcodeNameIndex(cached).get(name);
+    const match = indexed?.count === 1 ? indexed.match : null;
+    return match && getProductBarcodes(match).length > 0 ? match : null;
   };
 
   const mergeSharedBarcodeIntoProductForAddStep = (product) => {
@@ -2162,14 +2206,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Формула: score = frequency * recencyWeight
     // recencyWeight = 1 / (1 + daysAgo * 0.15)
     //
-    // PERF (2026-05-27): мемоизация — Chrome Perf trace показал
-    // resolveUsageStats total 4,895ms (11.7%) на 100-сек session, главный JS hot path
-    // после normalize/resolveProduct fixes. Причина: для каждого product в sort
-    // вызывается getFreq → resolveUsageStats → usageStats.forEach (O(N) iteration
-    // через все usage entries). 300-500 products × 100+ entries × multiple sorts = много.
-    // Функция pure от (pid, name) пока usageStats не меняется (а она captured в closure
-    // и не меняется внутри одного render pass). Cache живёт в scope этой parent
-    // function — auto-cleaned когда closure released на следующем render.
+    // PERF: usage sync stores id, raw name and normalized name keys, so direct
+    // Map lookups cover canonical data. A previous substring fallback scanned the
+    // entire stats map for every product and dominated modal render time.
     const _resolveUsageStatsCache = new Map();
     const resolveUsageStats = (pid, name) => {
       const cacheKey = (pid == null ? '' : String(pid)) + '|' + String(name || '');
@@ -2187,16 +2226,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (normName && usageStats.has(normName)) candidates.push(usageStats.get(normName));
       if (searchNorm && usageStats.has(searchNorm)) candidates.push(usageStats.get(searchNorm));
       if (rawName && usageStats.has(rawName)) candidates.push(usageStats.get(rawName));
-
-      const target = searchNorm || normName || rawName;
-      if (target) {
-        usageStats.forEach((stats, key) => {
-          const k = String(key || '').trim();
-          if (!k || k.length < 3) return;
-          if (!target.includes(k) && !k.includes(target)) return;
-          candidates.push(stats);
-        });
-      }
 
       let result;
       if (!candidates.length) {
@@ -2377,7 +2406,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Запускаем анализ истории при открытии оверлея
     useEffect(() => {
-      const count = HEYS.store?.runPresetSuggestionEngine?.();
+      const count = runPresetSuggestions({ force: true });
       if (count != null) {
         setSuggestedPresets(HEYS.store?.getSuggestedPresets?.() || []);
         console.info('[HEYS.presets] ✅ Suggestion engine run, suggestions:', count);
@@ -3690,17 +3719,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
+    const productsWatchSignatureRef = useRef(null);
     const [isWaitingForProductsSettle, setIsWaitingForProductsSettle] = useState(
       () => initialProductsSyncState.syncInFlight && !initialProductsSyncState.syncSettled
     );
     const [showProductsSkeleton, setShowProductsSkeleton] = useState(false);
 
-    // Обновляем счётчик рекомендаций при изменении продуктов или mount
+    // Preset suggestions depend on meal history, not product catalog versions.
+    // Run once per modal mount; module-level cooldown covers repeat-add remounts.
     useEffect(() => {
-      // Запускаем движок рекомендаций в фоне (сразу при открытии шага добавления или прилетах синка)
       const timer = setTimeout(() => {
         try {
-          HEYS.store?.runPresetSuggestionEngine?.();
+          runPresetSuggestions();
           const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
           setSuggestedPresetsCount(count);
         } catch (e) {
@@ -3708,7 +3738,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }, 50);
       return () => clearTimeout(timer);
-    }, [productsVersion]);
+    }, []);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
     useEffect(() => {
@@ -3800,13 +3830,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const refreshUsageFromHistory = () => {
         try {
-          if (HEYS?.SmartSearchWithTypos?.syncUsageStatsFromDays) {
-            HEYS.SmartSearchWithTypos.syncUsageStatsFromDays({
+          if (HEYS?.SmartSearchWithTypos?.ensureUsageStatsFresh) {
+            const refreshed = HEYS.SmartSearchWithTypos.ensureUsageStatsFresh({
+              maxHours: 6,
               daysWindow: usageWindowDays,
               dateKey: dateKey || new Date().toISOString().slice(0, 10),
               lsGet: HEYS.store?.get
             });
-            setUsageStatsVersion(v => v + 1);
+            if (refreshed) setUsageStatsVersion(v => v + 1);
           }
         } catch (e) {
           // no-op
@@ -3848,6 +3879,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
 
       const handleSharedProductsUpdated = () => {
+        invalidateSharedBarcodeNameIndex();
         initialSyncDoneRef.current = true;
         setProductsVersion(v => v + 1);
         clearSearchCache();
@@ -3859,8 +3891,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Также подписываемся через HEYS.products.watch если доступен
       let unwatchProducts = () => { };
-      if (HEYS.products?.watch) {
-        unwatchProducts = HEYS.products.watch(() => {
+      // Overlay v2 is canonical; HEYS.products.watch observes the legacy
+      // heys_products mirror and can fire on mirror-only rewrites. Canonical
+      // overlay changes already arrive through products-version/shared events.
+      if (!isOverlayProductsEnabledForAddStep() && HEYS.products?.watch) {
+        unwatchProducts = HEYS.products.watch((nextProducts) => {
+          const nextSignature = getProductsWatchSignature(nextProducts);
+          if (productsWatchSignatureRef.current === nextSignature) return;
+          productsWatchSignatureRef.current = nextSignature;
           // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
           initialSyncDoneRef.current = true;
           setIsWaitingForProductsSettle(false);
@@ -3883,7 +3921,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const timer = setTimeout(() => {
         HEYS.cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })
           .then(() => {
-            if (!cancelled) setProductsVersion(v => v + 1);
+            if (!cancelled) {
+              invalidateSharedBarcodeNameIndex();
+              setProductsVersion(v => v + 1);
+            }
           })
           .catch((err) => {
             console.warn('[AddProductStep] shared products refresh failed', err);
@@ -3952,7 +3993,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // [verbose log removed — useMemo DONE drowns the trace channel]
       return filtered.map(mergeSharedBarcodeIntoProductForAddStep);
-    }, [context, pendingDeletedProductIds, productsVersion]);
+    }, [context?.products, pendingDeletedProductIds, productsVersion]);
 
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
@@ -3962,6 +4003,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => {
       const handleSharedUpdated = (event) => {
+        invalidateSharedBarcodeNameIndex();
         const detail = event?.detail || {};
         const updatedId = detail.productId ?? detail.product?.id;
         if (updatedId == null) return;
@@ -4054,16 +4096,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => {
       try {
-        if (HEYS?.SmartSearchWithTypos?.syncUsageStatsFromDays) {
-          HEYS.SmartSearchWithTypos.syncUsageStatsFromDays({
+        if (HEYS?.SmartSearchWithTypos?.ensureUsageStatsFresh) {
+          const refreshed = HEYS.SmartSearchWithTypos.ensureUsageStatsFresh({
+            maxHours: 6,
             daysWindow: usageWindowDays,
             dateKey: dateKey || new Date().toISOString().slice(0, 10),
             lsGet: HEYS.store?.get
           });
-          setUsageStatsVersion(v => v + 1);
+          if (refreshed) setUsageStatsVersion(v => v + 1);
         }
       } catch (e) {
-        console.error('[HEYS.search] syncUsageStatsFromDays error:', e);
+        console.error('[HEYS.search] ensureUsageStatsFresh error:', e);
       }
     }, [dateKey, usageWindowDays]);
 
@@ -4230,21 +4273,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const directCount = resolveCount(directStats);
 
-      // Fallback: мягкий поиск по ключам статистики (подстрока)
-      let best = directCount;
-      const target = nameSearchNorm || nameNorm || nameRaw;
-      if (!target || !effectiveUsageStats || effectiveUsageStats.size === 0) return 0;
-
-      effectiveUsageStats.forEach((stats, key) => {
-        if (best >= 9999) return;
-        const k = String(key || '').trim();
-        if (!k || k.length < 3) return;
-        if (!target.includes(k) && !k.includes(target)) return;
-        const c = resolveCount(stats);
-        if (c > best) best = c;
-      });
-
-      return best;
+      return directCount;
     }, [effectiveUsageStats, usageWindowDays]);
 
     const smartProducts = useMemo(() =>

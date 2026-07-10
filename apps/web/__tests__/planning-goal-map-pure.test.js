@@ -92,4 +92,38 @@ describe('goal map pure model', () => {
         expect(points.from.x).toBeGreaterThan(0);
         expect(points.to.x).toBeLessThan(400);
     });
+
+    it('fits every node inside a mobile viewport', () => {
+        const nodes = [
+            { id: 'goal:g1', kind: 'goal', x: 0, y: 0 },
+            { id: 'task:t1', kind: 'task', x: 480, y: 120 },
+            { id: 'map:o1', kind: 'obstacle', x: -420, y: -160 },
+        ];
+        const viewport = GoalMap.calculateFitViewport(nodes, 390, 711);
+
+        nodes.forEach((node) => {
+            const size = GoalMap.getNodeSize(node.kind);
+            const left = viewport.x + (node.x - size.width / 2) * viewport.scale;
+            const right = viewport.x + (node.x + size.width / 2) * viewport.scale;
+            const top = viewport.y + (node.y - size.height / 2) * viewport.scale;
+            const bottom = viewport.y + (node.y + size.height / 2) * viewport.scale;
+            expect(left).toBeGreaterThanOrEqual(0);
+            expect(right).toBeLessThanOrEqual(390);
+            expect(top).toBeGreaterThanOrEqual(0);
+            expect(bottom).toBeLessThanOrEqual(711);
+        });
+    });
+
+    it('places newly created nodes away from occupied geometry', () => {
+        const occupied = [{ id: 'goal:g1', kind: 'goal', x: 0, y: 0 }];
+        const position = GoalMap.findAvailableNodePosition({ x: 0, y: 0 }, occupied, 'task');
+        const goalSize = GoalMap.getNodeSize('goal');
+        const taskSize = GoalMap.getNodeSize('task');
+
+        expect(position).not.toEqual({ x: 0, y: 0 });
+        expect(
+            Math.abs(position.x) >= (goalSize.width + taskSize.width) / 2 + 24
+            || Math.abs(position.y) >= (goalSize.height + taskSize.height) / 2 + 24,
+        ).toBe(true);
+    });
 });

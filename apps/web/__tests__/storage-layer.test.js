@@ -379,6 +379,10 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(suggestions).toHaveLength(1);
     expect(suggestions[0].items.map((item) => item.name)).toEqual(['Кофе американо', 'Молоко 2,5']);
     expect(suggestions[0].items.some((item) => !item.name)).toBe(false);
+
+    mockStorage.setItem.mockClear();
+    expect(store.runPresetSuggestionEngine({ minFrequency: 2 })).toBe(1);
+    expect(mockStorage.setItem.mock.calls.some(([key]) => key.includes('suggested_presets_v1'))).toBe(false);
   });
 });
 

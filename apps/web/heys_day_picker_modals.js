@@ -89,11 +89,20 @@
             // Автоопределяем сколько тренировок показывать на основе данных
             return getVisibleTrainingsCount(day.trainings);
         });
+        const visibleTrainingsDataKey = (day.trainings || []).map((training) => {
+            if (!training) return '';
+            return JSON.stringify({
+                type: training.type || null,
+                z: Array.isArray(training.z) ? training.z : [],
+                strengthEntryMode: training.strengthEntryMode || null,
+                workoutLog: training.workoutLog || null
+            });
+        }).join('|');
 
         useEffect(() => {
             const nextVisibleTrainings = getVisibleTrainingsCount(day.trainings);
             setVisibleTrainings(prev => prev === nextVisibleTrainings ? prev : nextVisibleTrainings);
-        }, [day.trainings]);
+        }, [visibleTrainingsDataKey]);
 
         // === Период графиков (7, 14, 30 дней) ===
         const [chartPeriod, setChartPeriod] = useState(7);

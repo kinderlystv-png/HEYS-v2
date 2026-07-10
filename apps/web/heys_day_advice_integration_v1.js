@@ -33,6 +33,7 @@
             date: ctx.date,
             prof: ctx.prof,
             pIndex: ctx.pIndex,
+            prodSig: ctx.prodSig,
             dayTot: ctx.dayTot,
             normAbs: ctx.normAbs,
             optimum: ctx.optimum,
@@ -42,6 +43,7 @@
             U: ctx.U,
             lsGet: ctx.lsGet,
             currentStreak: ctx.currentStreak,
+            currentMinute: ctx.currentMinute,
             setShowConfetti: ctx.setShowConfetti,
             HEYS: heysRef
         }) || {};

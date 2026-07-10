@@ -96,4 +96,20 @@ describe('AddProductStep smart products', () => {
 
     expect(result.map((product) => product.id)).toEqual(['milk', 'bread-a']);
   });
+
+  it('uses indexed usage-stat lookups instead of scanning the full map per product', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, '../heys_add_product_step_v1.js'), 'utf8');
+    const smartProductsSource = source.slice(
+      source.indexOf('function computeSmartProducts'),
+      source.indexOf('// === Категории для фильтрации')
+    );
+
+    expect(smartProductsSource).not.toContain('usageStats.forEach');
+    expect(source).toContain('ensureUsageStatsFresh({');
+    expect(source).toContain('getSharedBarcodeNameIndex(cached).get(name)');
+    expect(source).toContain('[context?.products, pendingDeletedProductIds, productsVersion]');
+    expect(source).toContain('if (productsWatchSignatureRef.current === nextSignature) return;');
+    expect(source).toContain('if (!isOverlayProductsEnabledForAddStep() && HEYS.products?.watch)');
+    expect(source).toContain('invalidateSharedBarcodeNameIndex();');
+  });
 });

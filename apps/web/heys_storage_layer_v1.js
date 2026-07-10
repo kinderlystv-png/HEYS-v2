@@ -1199,14 +1199,17 @@
     var now = Date.now();
     var newSuggested = [];
 
-    // --- Лог всех частых комбо до фильтрации ---
-    console.groupCollapsed('[HEYS.storage] 📊 ML-presets: все частые комбо до фильтрации (' + frequentCombos.length + ')');
-    frequentCombos.forEach(function (combo, i) {
-      var names = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
-      var isConfirmed = confirmedSignatures.has(combo.signature);
-      console.info('[HEYS.storage] combo[' + (i + 1) + '] freq=' + combo.count + (isConfirmed ? ' ⛔ уже сохранён' : ' ✅ кандидат') + ' → ' + names);
-    });
-    console.groupEnd();
+    // Verbose candidate dumps are useful only during explicit diagnostics.
+    var debugPresetLogs = HEYS.DEBUG_MODE === true;
+    if (debugPresetLogs) {
+      console.groupCollapsed('[HEYS.storage] 📊 ML-presets: все частые комбо до фильтрации (' + frequentCombos.length + ')');
+      frequentCombos.forEach(function (combo, i) {
+        var names = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+        var isConfirmed = confirmedSignatures.has(combo.signature);
+        console.info('[HEYS.storage] combo[' + (i + 1) + '] freq=' + combo.count + (isConfirmed ? ' ⛔ уже сохранён' : ' ✅ кандидат') + ' → ' + names);
+      });
+      console.groupEnd();
+    }
 
     // --- Детекция и исключение подмножеств среди кандидатов ---
     var candidateCombos = frequentCombos.filter(function (c) { return !confirmedSignatures.has(c.signature); });
@@ -1227,7 +1230,7 @@
           var namesA = comboA.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
           var namesB = comboB.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
           var diffKeys = Array.from(keysB).filter(function (k) { return !keysA.has(k); });
-          console.info('[HEYS.storage] ⛔ SUBSET исключён: freq=' + comboA.count + ', лишние в большем: ' + diffKeys.join(', ') + '\n  исключаем: ' + namesA + '\n  оставляем: ' + namesB);
+          if (debugPresetLogs) console.info('[HEYS.storage] ⛔ SUBSET исключён: freq=' + comboA.count + ', лишние в большем: ' + diffKeys.join(', ') + '\n  исключаем: ' + namesA + '\n  оставляем: ' + namesB);
           subsetSignatures.add(comboA.signature);
         }
       });
@@ -1236,12 +1239,12 @@
     frequentCombos.forEach(function (combo) {
       if (confirmedSignatures.has(combo.signature)) {
         var skippedNames = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
-        console.info('[HEYS.storage] ⛔ ML-presets: пропущен (уже в пресетах): freq=' + combo.count + ' → ' + skippedNames);
+        if (debugPresetLogs) console.info('[HEYS.storage] ⛔ ML-presets: пропущен (уже в пресетах): freq=' + combo.count + ' → ' + skippedNames);
         return;
       }
       if (dismissedSignatures.has(combo.signature)) {
         var skippedNamesDisp = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
-        console.info('[HEYS.storage] ⛔ ML-presets: пропущен (был отменён): freq=' + combo.count + ' → ' + skippedNamesDisp);
+        if (debugPresetLogs) console.info('[HEYS.storage] ⛔ ML-presets: пропущен (был отменён): freq=' + combo.count + ' → ' + skippedNamesDisp);
         return;
       }
       if (subsetSignatures.has(combo.signature)) {
@@ -1277,19 +1280,23 @@
     // Сортируем по частоте (самые частые → первыми)
     newSuggested.sort(function (a, b) { return (b.frequency || 0) - (a.frequency || 0); });
 
-    Store.set(SUGGESTED_PRESETS_KEY, newSuggested);
+    var suggestionsChanged = JSON.stringify(existingSuggested) !== JSON.stringify(newSuggested);
+    if (suggestionsChanged) Store.set(SUGGESTED_PRESETS_KEY, newSuggested);
 
-    console.groupCollapsed('[HEYS.storage] 🔍 ML-presets: сгенерировано ' + newSuggested.length + ' наборов (развернуть)');
-    newSuggested.forEach(function (s, i) {
-      var itemNames = s.items.map(function (item) { return item.name || 'Без названия'; }).join(' + ');
-      console.info('[HEYS.storage] preset[' + (i + 1) + '] freq=' + s.frequency + ' → ' + itemNames);
-    });
-    console.groupEnd();
+    if (debugPresetLogs) {
+      console.groupCollapsed('[HEYS.storage] 🔍 ML-presets: сгенерировано ' + newSuggested.length + ' наборов (развернуть)');
+      newSuggested.forEach(function (s, i) {
+        var itemNames = s.items.map(function (item) { return item.name || 'Без названия'; }).join(' + ');
+        console.info('[HEYS.storage] preset[' + (i + 1) + '] freq=' + s.frequency + ' → ' + itemNames);
+      });
+      console.groupEnd();
+    }
 
     console.info('[HEYS.storage] ✅ runPresetSuggestionEngine завершён:', {
       days: allDays.length,
       frequentCombos: frequentCombos.length,
       suggestions: newSuggested.length,
+      changed: suggestionsChanged,
       minFrequency: MIN_FREQUENCY,
     });
     return newSuggested.length;

@@ -310,6 +310,41 @@ describe('Planning calendar task picker helpers', () => {
         });
     });
 
+    it('requires a stationary long press before calendar range creation', () => {
+        const Schedule = installScheduleModule();
+
+        expect(Schedule.shouldCancelCalendarLongPress(10, 10, 21, 10)).toBe(false);
+        expect(Schedule.shouldCancelCalendarLongPress(10, 10, 22, 10)).toBe(true);
+        expect(Schedule.shouldCancelCalendarLongPress(10, 10, 19, 19)).toBe(true);
+        expect(source).not.toContain('quick slot draft from tap');
+        expect(source).not.toContain('cancel promoted to finish');
+        expect(source).not.toContain('range draft committed by touch cancel');
+    });
+
+    it('keeps one-off calendar events separate from task lifecycle', () => {
+        const Schedule = installScheduleModule();
+        const slot = Schedule.buildStandaloneQuickSlotOptions({
+            title: 'Позвонить мастеру',
+            date: '2026-07-10',
+            startTime: '14:00',
+            endTime: '14:30',
+            isBackground: false,
+        });
+
+        expect(slot).toEqual({
+            title: 'Позвонить мастеру',
+            date: '2026-07-10',
+            startTime: '14:00',
+            endTime: '14:30',
+            source: 'user',
+            isBackground: false,
+            bgColor: undefined,
+        });
+        expect(slot).not.toHaveProperty('taskId');
+        expect(source).toContain("onSelect('event')");
+        expect(source).toContain("onSelect('task')");
+    });
+
     it('builds isolated undo actions for moved and created slots', () => {
         const Schedule = installScheduleModule();
         const calls = [];

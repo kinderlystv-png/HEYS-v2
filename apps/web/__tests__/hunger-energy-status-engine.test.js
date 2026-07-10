@@ -676,6 +676,8 @@ describe('HungerEnergyStatus pure engine', () => {
     expect(lowHungerAfterRecentMeal.riskBudget.driversUp).toContain('nutrition_floor_risk');
     expect(lowHungerAfterRecentMeal.suggestedAction).toBe('planNextMeal');
     expect(lowHungerAfterRecentMeal.delayAllowed).toBe(true);
+    expect(lowHungerAfterRecentMeal.stopDelaySignals).toEqual([]);
+    expect(lowHungerAfterRecentMeal.delayRiskSignals).toContain('nutrition_floor_risk');
     expect(lowHungerAfterRecentMeal.foodBandKcal).toBeUndefined();
     expect(lowHungerAfterRecentMeal.recheckAfterMin).toBe(45);
   });
