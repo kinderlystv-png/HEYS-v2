@@ -2343,15 +2343,17 @@
             setCreatedNotice(null);
             setMapGoalId(goal.id);
         };
+        const clearGoalMapHistoryMarker = () => {
+            try {
+                if (!history.state?.heysGoalMap) return;
+                const nextState = { ...(history.state || {}) };
+                delete nextState.heysGoalMap;
+                history.replaceState(nextState, '');
+            } catch (_) { /* noop */ }
+        };
         const openGoalSettingsFromMap = (goal) => {
             if (!goal?.id) return;
-            try {
-                if (history.state?.heysGoalMap) {
-                    const nextState = { ...(history.state || {}) };
-                    delete nextState.heysGoalMap;
-                    history.replaceState(nextState, '');
-                }
-            } catch (_) { /* noop */ }
+            clearGoalMapHistoryMarker();
             setMapGoalId(null);
             openGoalDetails(goal);
         };
@@ -2904,7 +2906,11 @@
                     readModel: mapReadModel,
                     onBack: () => setMapGoalId(null),
                     onOpenSettings: () => openGoalSettingsFromMap(selectedMapGoal),
-                    onStartFocus: () => startGoalFocus(selectedMapGoal, mapReadModel),
+                    onStartFocus: () => {
+                        clearGoalMapHistoryMarker();
+                        setMapGoalId(null);
+                        startGoalFocus(selectedMapGoal, mapReadModel);
+                    },
                     onScheduleFocus: (schedule) => scheduleGoalFocus(selectedMapGoal, mapReadModel.focusTask, schedule),
                     onSaveReview: (reviewDraft) => saveGoalReview(selectedMapGoal, mapReadModel.focusTask, reviewDraft),
                     onRestore: () => commitGoalPatch(selectedMapGoal, { status: 'active' }),
