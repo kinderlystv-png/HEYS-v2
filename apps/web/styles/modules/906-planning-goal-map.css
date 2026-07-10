@@ -697,6 +697,12 @@ body.planning-goal-map-open {
     font-weight: 650;
 }
 
+.goal-map-inspector label.goal-map-check {
+    align-items: center;
+    flex-direction: row;
+    gap: 9px;
+}
+
 .goal-map-inspector textarea {
     min-height: 76px;
     resize: vertical;
