@@ -5,7 +5,7 @@
     "sourceFingerprint": "f7ae4637de09",
     "fileCount": 41,
     "size": 1199795,
-    "builtAt": "2026-07-10T10:49:37.426Z"
+    "builtAt": "2026-07-10T10:55:55.282Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.f4b40029cb3f.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-07-10T10:49:52.630Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.b334ccfcd1b0.js",
-    "hash": "b334ccfcd1b0",
-    "sourceFingerprint": "90829b40a086",
+    "file": "postboot-3-ui-lazy.bundle.1359739108ae.js",
+    "hash": "1359739108ae",
+    "sourceFingerprint": "cc8a18c15061",
     "fileCount": 53,
-    "size": 2920000,
-    "builtAt": "2026-07-10T10:49:59.165Z"
+    "size": 2921542,
+    "builtAt": "2026-07-10T10:56:02.306Z"
   }
 }
