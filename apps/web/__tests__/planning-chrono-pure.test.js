@@ -194,6 +194,35 @@ describe('chrono.getProgress', () => {
     });
 });
 
+describe('chrono.getBubbleProgress', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    it('uses linked task plan when the activity has no scoped goal', () => {
+        expect(Chrono.getBubbleProgress({}, 45, 'day', { planned: 60 })).toMatchObject({
+            kind: 'plan', value: 0.75, raw: 0.75, minutes: 60, source: 'task',
+        });
+    });
+
+    it('keeps an explicit scoped target ahead of the linked task plan', () => {
+        expect(Chrono.getBubbleProgress(
+            { targetMinutesPerDay: 30 },
+            15,
+            'day',
+            { planned: 120 },
+        )).toMatchObject({ kind: 'target', value: 0.5, minutes: 30, source: 'activity' });
+    });
+
+    it('never hides an exceeded scoped budget behind the linked task plan', () => {
+        expect(Chrono.getBubbleProgress(
+            { budgetMinutesPerDay: 30 },
+            45,
+            'day',
+            { planned: 120 },
+        )).toMatchObject({ kind: 'budget', value: 1, raw: 1.5, over: true, minutes: 30 });
+    });
+});
+
 describe('chrono.ringColorForProgress', () => {
     let Chrono;
     beforeEach(() => { ({ Chrono } = loadModules()); });
@@ -204,6 +233,8 @@ describe('chrono.ringColorForProgress', () => {
 
     it('target — saturated hue', () => {
         expect(Chrono.ringColorForProgress({ kind: 'target', value: 0.5, raw: 0.5 }, 200))
+            .toBe('hsl(200, 50%, 50%)');
+        expect(Chrono.ringColorForProgress({ kind: 'plan', value: 0.5, raw: 0.5 }, 200))
             .toBe('hsl(200, 50%, 50%)');
     });
 
@@ -501,11 +532,11 @@ describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () =>
     const K_ENTRIES = 'heys_planning_chrono_entries';
     const K_CHECKLISTS = 'heys_planning_checklists_v1';
 
-    it('returns null for non-merge-safe keys (caller keeps wholesale replace)', () => {
-        expect(Store.mergeCloudPlanningArray('heys_planning_tasks', [], [])).toBeNull();
-        expect(Store.mergeCloudPlanningArray('heys_planning_projects', [], [])).toBeNull();
-        expect(Store.mergeCloudPlanningArray('heys_planning_slots', [], [])).toBeNull();
-        expect(Store.mergeCloudPlanningArray('heys_planning_links_v1', [], [])).toBeNull();
+    it('merges entity collections covered by tombstones and keeps snapshots replace-only', () => {
+        expect(Store.mergeCloudPlanningArray('heys_planning_tasks', [], [])).toEqual([]);
+        expect(Store.mergeCloudPlanningArray('heys_planning_projects', [], [])).toEqual([]);
+        expect(Store.mergeCloudPlanningArray('heys_planning_slots', [], [])).toEqual([]);
+        expect(Store.mergeCloudPlanningArray('heys_planning_links_v1', [], [])).toEqual([]);
         expect(Store.mergeCloudPlanningArray('heys_planning_chrono_snapshots', [], [])).toBeNull();
     });
 
@@ -1014,6 +1045,15 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
         expect(cur.category).toBe('growth');
     });
 
+    it('persists updated activity emoji', () => {
+        const a = Store.addChronoActivity({ name: 'Mood', emoji: '🙂' });
+
+        Store.updateChronoActivity(a.id, { emoji: '🎯' });
+        const cur = Store.getChronoActivities().find((x) => x.id === a.id);
+
+        expect(cur.emoji).toBe('🎯');
+    });
+
     it('mergeChronoActivities reassigns entries + sums snapshots', () => {
         const from = Store.addChronoActivity({ name: 'From' });
         const to = Store.addChronoActivity({ name: 'To' });
@@ -1094,6 +1134,41 @@ describe('chrono analytics helpers', () => {
         expect(facts).toEqual([
             expect.objectContaining({ activityId: 'a', planned: 120, actual: 90, delta: -30 }),
         ]);
+    });
+
+    it('buildChronoPlanFacts uses calendar duration only from the selected period', () => {
+        const facts = Chrono.buildChronoPlanFacts(
+            [{ id: 'a', name: 'Code', taskId: 't1' }],
+            [{ id: 't1', title: 'Feature', plannedMinutes: 240 }],
+            { a: 45 },
+            [
+                { taskId: 't1', date: '2026-06-02', startTime: '09:00', endTime: '10:30' },
+                { taskId: 't1', date: '2026-06-03', startTime: '12:00', endTime: '14:00' },
+            ],
+            ['2026-06-02'],
+        );
+
+        expect(facts[0]).toMatchObject({
+            activityId: 'a', planned: 90, actual: 45, delta: -45, planSource: 'calendar',
+        });
+    });
+
+    it('buildChronoPlanFacts marks tracked time as unplanned when calendar blocks are outside the period', () => {
+        const facts = Chrono.buildChronoPlanFacts(
+            [{ id: 'a', name: 'Code', taskId: 't1' }],
+            [{ id: 't1', title: 'Feature', plannedMinutes: 240 }],
+            { a: 30 },
+            [{ taskId: 't1', date: '2026-06-03', startTime: '09:00', endTime: '10:00' }],
+            ['2026-06-02'],
+        );
+
+        expect(facts[0]).toMatchObject({
+            activityId: 'a', planned: 0, actual: 30, ratio: null, planSource: 'calendar',
+        });
+    });
+
+    it('getChronoSlotDurationMinutes supports calendar blocks across midnight', () => {
+        expect(Chrono.getChronoSlotDurationMinutes({ startTime: '23:30', endTime: '01:00' })).toBe(90);
     });
 
     it('buildChronoWeekInsights reports top activity, budget overrun and target underrun', () => {

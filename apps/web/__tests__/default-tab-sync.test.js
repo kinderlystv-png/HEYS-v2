@@ -195,19 +195,19 @@ describe('HEYS default tab sync regression', () => {
     it('stores defaultTasksSubtab when tasks are chosen as home with a nested target', () => {
         let tabState = mountTabState(fakeReact);
 
-        tabState.setDefaultTab('tasks', { tasksSubtab: 'checklists' });
+        tabState.setDefaultTab('tasks', { tasksSubtab: 'goals' });
         tabState = renderTabState(fakeReact);
 
         expect(profileStore.utils.lsSet).toHaveBeenCalledWith('heys_profile', expect.objectContaining({
             defaultTab: 'tasks',
-            defaultTasksSubtab: 'checklists',
+            defaultTasksSubtab: 'goals',
         }));
         expect(window.HEYS._pendingProfileSyncFlags?.defaultTab).toEqual(expect.objectContaining({
             requestedTab: 'tasks',
-            requestedTasksSubtab: 'checklists',
+            requestedTasksSubtab: 'goals',
         }));
-        expect(tabState.defaultTasksSubtab).toBe('checklists');
-        expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('checklists');
+        expect(tabState.defaultTasksSubtab).toBe('goals');
+        expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('goals');
     });
 
     it('stores defaultTasksSubtab without forcing tasks as home tab', () => {

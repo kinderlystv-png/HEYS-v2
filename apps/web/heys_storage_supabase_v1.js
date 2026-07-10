@@ -292,6 +292,9 @@
     'heys_planning_chrono_untracked_tail_dismissed_v1',
     'heys_planning_checklists_v1',
     'heys_planning_checklist_tombstones_v1',
+    'heys_planning_goals_v1',
+    'heys_planning_entity_tombstones_v1',
+    'heys_planning_goal_map_records_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -6709,7 +6712,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -7779,7 +7782,10 @@
                 'heys_planning_chrono_tombstones_v1',
                 'heys_planning_chrono_untracked_tail_dismissed_v1',
                 'heys_planning_checklists_v1',
-                'heys_planning_checklist_tombstones_v1'
+                'heys_planning_checklist_tombstones_v1',
+                'heys_planning_goals_v1',
+                'heys_planning_entity_tombstones_v1',
+                'heys_planning_goal_map_records_v1'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
@@ -7789,8 +7795,12 @@
                 .eq('client_id', client_id)
                 .in('k', allCriticalKeys);
 
-              if (!phaseAError && phaseAData && phaseAData.length > 0) {
-                muteMirror = true;
+	              if (!phaseAError && phaseAData && phaseAData.length > 0) {
+	                phaseAData.sort((left, right) => {
+	                  const tombstoneKey = (row) => /planning_(?:chrono_|checklist_|entity_)?tombstones_v1$/.test(String(row?.k || '')) ? 0 : 1;
+	                  return tombstoneKey(left) - tombstoneKey(right);
+	                });
+	                muteMirror = true;
                 const lsPhaseA = global.localStorage;
                 // P0-D-stretch-2: pre-compile regex + cache decompressFn — раньше
                 // компилировалось на каждой row, теперь один раз. Также two-phase
@@ -7800,8 +7810,8 @@
                 const decompressFn = global.HEYS?.store?.decompress;
                 const writePairs = [];
                 for (let i = 0; i < phaseAData.length; i++) {
-                  const row = phaseAData[i];
-                  if (row.v == null) continue;
+	                  const row = phaseAData[i];
+	                  if (row.v == null) continue;
                   const pKey = scopeKeyForClientStorage(row.k, client_id);
                   const normalizedSyncKey = normalizeKeyForSupabase(row.k, client_id);
                   // 🛡️ v65 FIX: skip foreign-scoped keys in Phase A too
@@ -7843,18 +7853,19 @@
                   // даёт на UI 10-секундное «пилюли пропали → восстановились»
                   // (mount читает LS → пилюли видны; Phase A пишет [] → пропадают;
                   // позднее hot-sync через 12с привозит реальный массив → восстанавл.).
-                  const isPlanningChrono = row.k === 'heys_planning_chrono_activities'
+	                  const isPlanningChrono = row.k === 'heys_planning_chrono_activities'
                       || row.k === 'heys_planning_chrono_entries'
                       || row.k === 'heys_planning_chrono_snapshots';
                   const isPlanningChecklist = row.k === 'heys_planning_checklists_v1';
+                  const isPlanningGoals = row.k === 'heys_planning_goals_v1';
                   // Strict guard: считаем cloud валидным ТОЛЬКО если это
                   // непустой массив. Всё остальное (пустой [], объект {},
                   // строка "null", любой mock dev-API) — невалидно и не
                   // должно затирать местный массив. Mock dev API часто
                   // возвращает `{}`/null для отсутствующих rows, что после
                   // JSON.stringify уходило в LS как "null"/"{}" → coerce → [].
-                  if (isPlanningChrono || isPlanningChecklist) {
-                    const cloudInvalid = !Array.isArray(row.v) || row.v.length === 0;
+	                  if (isPlanningChrono || isPlanningChecklist || isPlanningGoals) {
+	                    const cloudInvalid = !Array.isArray(row.v) || row.v.length === 0;
                     if (cloudInvalid) {
                       try {
                         const existingRaw = lsPhaseA.getItem(pKey);
@@ -7868,8 +7879,34 @@
                       } catch (_) { /* fall through — пишем как есть */ }
                     }
                   }
-                  // Все гарды прошли — serializeem и queue write
-                  writePairs.push([pKey, JSON.stringify(row.v)]);
+	                  let phaseAValue = row.v;
+	                  const isPlanningMergeableArray = row.k === 'heys_planning_chrono_activities'
+	                    || row.k === 'heys_planning_chrono_entries'
+	                    || row.k === 'heys_planning_checklists_v1'
+	                    || row.k === 'heys_planning_goals_v1'
+	                    || row.k === 'heys_planning_projects'
+	                    || row.k === 'heys_planning_tasks'
+	                    || row.k === 'heys_planning_slots'
+	                    || row.k === 'heys_planning_links_v1'
+	                    || row.k === 'heys_planning_entity_tombstones_v1'
+	                    || row.k === 'heys_planning_goal_map_records_v1';
+	                  if (isPlanningMergeableArray && Array.isArray(row.v)) {
+	                    try {
+	                      const PStore = global.HEYS?.Planning?.Store;
+	                      const existingRaw = lsPhaseA.getItem(pKey);
+	                      let existing = [];
+	                      if (existingRaw) {
+	                        try { existing = JSON.parse(existingRaw); } catch (_) {
+	                          try { existing = decompressFn ? decompressFn(existingRaw) : []; } catch (_) { existing = []; }
+	                        }
+	                      }
+	                      if (PStore && typeof PStore.mergeCloudPlanningArray === 'function') {
+	                        phaseAValue = PStore.mergeCloudPlanningArray(row.k, Array.isArray(existing) ? existing : [], row.v) || row.v;
+	                      }
+	                    } catch (_) { /* keep cloud value */ }
+	                  }
+	                  // Все гарды прошли — serializeem и queue write
+	                  writePairs.push([pKey, JSON.stringify(phaseAValue)]);
                 }
                 // Tight write loop — только LS.setItem без сторонней работы
                 for (let i = 0; i < writePairs.length; i++) {
@@ -9738,7 +9775,14 @@
                 // a different client during a full-sync of another client_id.
                 if (row.k === 'heys_planning_chrono_activities'
                     || row.k === 'heys_planning_chrono_entries'
-                    || row.k === 'heys_planning_checklists_v1') {
+                    || row.k === 'heys_planning_checklists_v1'
+                    || row.k === 'heys_planning_goals_v1'
+                    || row.k === 'heys_planning_projects'
+                    || row.k === 'heys_planning_tasks'
+                    || row.k === 'heys_planning_slots'
+                    || row.k === 'heys_planning_links_v1'
+                    || row.k === 'heys_planning_entity_tombstones_v1'
+                    || row.k === 'heys_planning_goal_map_records_v1') {
                   try {
                     const PStore = global.HEYS?.Planning?.Store;
                     if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(valueToSave)) {
@@ -9801,6 +9845,7 @@
                       || row.k === 'heys_planning_chrono_entries'
                       || row.k === 'heys_planning_chrono_snapshots';
                   const isPlanningChecklistArrKey = row.k === 'heys_planning_checklists_v1';
+                  const isPlanningGoalsArrKey = row.k === 'heys_planning_goals_v1';
                   if (isPlanningChronoArrKey
                       && (!Array.isArray(valueToSave) || valueToSave.length === 0)) {
                     try {
@@ -9822,6 +9867,19 @@
                         const existing = JSON.parse(existingRaw);
                         if (Array.isArray(existing) && existing.length > 0) {
                           logCritical(`🛡️ [BOOTSTRAP] BLOCKED empty checklist wholesale ${row.k}; local has ${existing.length} items`);
+                          return;
+                        }
+                      }
+                    } catch (_) { /* fall through */ }
+                  }
+                  if (isPlanningGoalsArrKey
+                      && (!Array.isArray(valueToSave) || valueToSave.length === 0)) {
+                    try {
+                      const existingRaw = ls.getItem(key);
+                      if (existingRaw) {
+                        const existing = JSON.parse(existingRaw);
+                        if (Array.isArray(existing) && existing.length > 0) {
+                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED empty goals wholesale ${row.k}; local has ${existing.length} items`);
                           return;
                         }
                       }
@@ -13677,7 +13735,14 @@
         }
       } else if (baseKey === 'heys_planning_chrono_activities'
           || baseKey === 'heys_planning_chrono_entries'
-          || baseKey === 'heys_planning_checklists_v1') {
+          || baseKey === 'heys_planning_checklists_v1'
+          || baseKey === 'heys_planning_goals_v1'
+          || baseKey === 'heys_planning_projects'
+          || baseKey === 'heys_planning_tasks'
+          || baseKey === 'heys_planning_slots'
+          || baseKey === 'heys_planning_links_v1'
+          || baseKey === 'heys_planning_entity_tombstones_v1'
+          || baseKey === 'heys_planning_goal_map_records_v1') {
         // 🛡️ Planning merge-by-record (parallel-edit loss fix). Union local with cloud
         // instead of wholesale replace, so a stale cloud array can't drop local-only
         // adds or resurrect local deletes. Only keys with id + tombstone coverage

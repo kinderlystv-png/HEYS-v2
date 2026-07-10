@@ -32,7 +32,8 @@
 
     function migrateAndStamp(opts) {
         const respectFlag = !(opts && opts.force === true);
-        if (respectFlag && lsGet(SCHEMA_VERSION_KEY, null) === SCHEMA_VERSION) {
+        const currentSchemaVersion = lsGet(SCHEMA_VERSION_KEY, null);
+        if (respectFlag && currentSchemaVersion === SCHEMA_VERSION) {
             return { ok: true, alreadyDone: true };
         }
 
@@ -56,7 +57,9 @@
         });
 
         if (changed > 0) Store.saveTasks(migrated);
-        lsSet(SCHEMA_VERSION_KEY, SCHEMA_VERSION);
+        if (changed > 0 || currentSchemaVersion !== SCHEMA_VERSION) {
+            lsSet(SCHEMA_VERSION_KEY, SCHEMA_VERSION);
+        }
         return { ok: true, migrated: changed, total: tasks.length };
     }
 

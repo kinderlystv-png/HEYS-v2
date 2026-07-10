@@ -15,6 +15,7 @@
 
     const SUBNAV_ITEMS = [
         { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
+        { id: 'goals', label: 'Целеполагание', shortLabel: 'Цели', icon: '🎯' },
         { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
         { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
         { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
@@ -1567,6 +1568,1417 @@
         );
     }
 
+    function goalNumber(value) {
+        const text = String(value ?? '').trim();
+        if (!text) return null;
+        const n = Number(text.replace(',', '.'));
+        return Number.isFinite(n) ? n : null;
+    }
+
+    function getGoalProgress(goal) {
+        if (goal?.status === 'done') return 100;
+        const target = goalNumber(goal?.targetValue);
+        const current = goalNumber(goal?.currentValue);
+        const baseline = goalNumber(goal?.baselineValue);
+        if (target !== null && current !== null) {
+            if (current === target) return 100;
+            if (baseline !== null && baseline !== target) {
+                const ratio = (current - baseline) / (target - baseline);
+                return Math.max(0, Math.min(100, Math.round(ratio * 100)));
+            }
+            return 0;
+        }
+        const keyResults = Array.isArray(goal?.keyResults) ? goal.keyResults : [];
+        if (keyResults.length > 0) {
+            const done = keyResults.filter((item) => item?.done).length;
+            return Math.round((done / keyResults.length) * 100);
+        }
+        return 0;
+    }
+
+    function hasGoalProgressIndicator(goal) {
+        if (goal?.status === 'done') return true;
+        if (goalNumber(goal?.targetValue) !== null) return true;
+        if (Array.isArray(goal?.keyResults) && goal.keyResults.length > 0) return true;
+        return false;
+    }
+
+    function goalDateSerial(value) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').slice(0, 10));
+        if (!match) return null;
+        return Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000);
+    }
+
+    function getGoalDueState(goal, todayValue) {
+        if (!goal?.dueDate) return { isOverdue: false, label: '' };
+        if (goal?.status === 'done') return { isOverdue: false, label: 'до ' + formatGoalDate(goal.dueDate) };
+        const dueSerial = goalDateSerial(goal.dueDate);
+        const todaySerial = goalDateSerial(todayValue || new Date().toISOString().slice(0, 10));
+        if (dueSerial === null || todaySerial === null || dueSerial >= todaySerial) {
+            return { isOverdue: false, label: 'до ' + formatGoalDate(goal.dueDate) };
+        }
+        const days = todaySerial - dueSerial;
+        return {
+            isOverdue: true,
+            days,
+            label: 'Просрочена на ' + days + ' ' + (days === 1 ? 'день' : 'дн.'),
+        };
+    }
+
+    function isGoalTaskActive(task) {
+        return !!task && task.status !== 'done' && task.status !== 'cancelled';
+    }
+
+    function getGoalProjectTasks(goal, tasks) {
+        const allTasks = Array.isArray(tasks) ? tasks : [];
+        const projectId = String(goal?.projectId || '');
+        const result = projectId
+            ? allTasks.filter((task) => String(task?.projectId || '') === projectId)
+            : [];
+        const legacyFocus = goal?.nextTaskId
+            ? allTasks.find((task) => String(task?.id || '') === String(goal.nextTaskId))
+            : null;
+        if (legacyFocus && !result.some((task) => task.id === legacyFocus.id)) result.push(legacyFocus);
+        return result;
+    }
+
+    function getGoalTaskSlots(goalTasks, slots) {
+        const taskIds = new Set((goalTasks || []).map((task) => String(task.id || '')));
+        return (Array.isArray(slots) ? slots : []).filter((slot) => taskIds.has(String(slot?.taskId || '')));
+    }
+
+    function compareGoalTasks(left, right, slotByTaskId) {
+        const leftSlot = slotByTaskId.get(String(left?.id || ''));
+        const rightSlot = slotByTaskId.get(String(right?.id || ''));
+        if (!!leftSlot !== !!rightSlot) return leftSlot ? -1 : 1;
+        if (leftSlot && rightSlot) {
+            const slotDelta = String(leftSlot.date || '').localeCompare(String(rightSlot.date || ''))
+                || String(leftSlot.startTime || '').localeCompare(String(rightSlot.startTime || ''));
+            if (slotDelta) return slotDelta;
+        }
+        const dueDelta = String(left?.dueDate || '9999-12-31').localeCompare(String(right?.dueDate || '9999-12-31'));
+        if (dueDelta) return dueDelta;
+        return Number(left?.order || 0) - Number(right?.order || 0);
+    }
+
+    function getGoalFocusTask(goal, goalTasks, taskSlots, todayValue) {
+        const activeTasks = (goalTasks || []).filter(isGoalTaskActive);
+        const explicit = activeTasks.find((task) => String(task.id) === String(goal?.nextTaskId || ''));
+        if (explicit) return { task: explicit, suggested: false };
+        const today = String(todayValue || '').slice(0, 10);
+        const futureSlots = (taskSlots || [])
+            .filter((slot) => String(slot?.date || '') >= today)
+            .sort((left, right) => String(left.date || '').localeCompare(String(right.date || ''))
+                || String(left.startTime || '').localeCompare(String(right.startTime || '')));
+        const slotByTaskId = new Map();
+        futureSlots.forEach((slot) => {
+            const taskId = String(slot?.taskId || '');
+            if (taskId && !slotByTaskId.has(taskId)) slotByTaskId.set(taskId, slot);
+        });
+        const suggested = activeTasks.slice().sort((left, right) => compareGoalTasks(left, right, slotByTaskId))[0] || null;
+        return { task: suggested, suggested: !!suggested };
+    }
+
+    function getGoalNearestSlot(task, taskSlots, todayValue) {
+        if (!task) return null;
+        const today = String(todayValue || '').slice(0, 10);
+        return (taskSlots || [])
+            .filter((slot) => String(slot?.taskId || '') === String(task.id)
+                && String(slot?.date || '') >= today)
+            .sort((left, right) => String(left.date || '').localeCompare(String(right.date || ''))
+                || String(left.startTime || '').localeCompare(String(right.startTime || '')))[0] || null;
+    }
+
+    function getGoalActivityIds(goal, goalTasks, activities) {
+        const taskIds = new Set((goalTasks || []).map((task) => String(task.id || '')));
+        const projectId = String(goal?.projectId || '');
+        return new Set((Array.isArray(activities) ? activities : [])
+            .filter((activity) => !activity?.archived && (
+                taskIds.has(String(activity?.taskId || ''))
+                || projectId && String(activity?.projectId || '') === projectId
+            ))
+            .map((activity) => String(activity.id || '')));
+    }
+
+    function getGoalEffortMinutes(goal, goalTasks, state, todayValue) {
+        const activityIds = getGoalActivityIds(goal, goalTasks, state?.chronoActivities);
+        if (!activityIds.size) return { week: 0, total: 0 };
+        const todaySerial = goalDateSerial(todayValue);
+        const mondaySerial = todaySerial === null
+            ? null
+            : todaySerial - ((new Date(todaySerial * 86400000).getUTCDay() + 6) % 7);
+        let week = 0;
+        let total = 0;
+        const add = (item, minutesField) => {
+            if (!item || !activityIds.has(String(item.activityId || ''))) return;
+            const minutes = Math.max(0, Number(item[minutesField]) || 0);
+            total += minutes;
+            const serial = goalDateSerial(item.date);
+            if (serial !== null && mondaySerial !== null && serial >= mondaySerial && serial <= todaySerial) week += minutes;
+        };
+        (Array.isArray(state?.chronoEntries) ? state.chronoEntries : []).forEach((entry) => add(entry, 'minutes'));
+        (Array.isArray(state?.chronoSnapshots) ? state.chronoSnapshots : []).forEach((snapshot) => add(snapshot, 'totalMinutes'));
+        return { week: Math.round(week), total: Math.round(total) };
+    }
+
+    function getGoalBlockedState(task, tasks) {
+        const blockerIds = Array.isArray(task?.blockedByTaskIds) ? task.blockedByTaskIds : [];
+        if (!blockerIds.length) return null;
+        const taskById = new Map((tasks || []).map((entry) => [String(entry.id || ''), entry]));
+        return blockerIds.map((id) => taskById.get(String(id)))
+            .find((blocker) => blocker && blocker.status !== 'done' && blocker.status !== 'cancelled') || null;
+    }
+
+    function formatGoalMinutes(minutes) {
+        const value = Math.max(0, Math.round(Number(minutes) || 0));
+        if (value < 60) return value + ' мин';
+        const hours = Math.floor(value / 60);
+        const rest = value % 60;
+        return hours + ' ч' + (rest ? ' ' + rest + ' мин' : '');
+    }
+
+    function formatGoalSlot(slot, todayValue) {
+        if (!slot) return '';
+        const dateLabel = String(slot.date || '') === String(todayValue || '')
+            ? 'сегодня'
+            : formatGoalDate(slot.date);
+        return dateLabel + (slot.startTime ? ', ' + slot.startTime : '');
+    }
+
+    function getGoalSlotMinutes(slot) {
+        const parse = (value) => {
+            const match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
+            return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+        };
+        const start = parse(slot?.startTime);
+        const end = parse(slot?.endTime);
+        if (start === null || end === null) return 30;
+        return Math.max(5, end > start ? end - start : end + 1440 - start);
+    }
+
+    function getGoalReviewState(goal, todayValue) {
+        const reviewedSerial = goalDateSerial(String(goal?.reviewedAt || goal?.createdAt || '').slice(0, 10));
+        const todaySerial = goalDateSerial(todayValue);
+        if (reviewedSerial === null || todaySerial === null) return { stale: false, days: 0 };
+        const days = Math.max(0, todaySerial - reviewedSerial);
+        return { stale: days >= 7, days };
+    }
+
+    function buildGoalReadModel(goal, state, todayValue) {
+        const goalTasks = getGoalProjectTasks(goal, state?.tasks);
+        const taskSlots = getGoalTaskSlots(goalTasks, state?.slots);
+        const focus = getGoalFocusTask(goal, goalTasks, taskSlots, todayValue);
+        const focusSlot = getGoalNearestSlot(focus.task, taskSlots, todayValue);
+        const blocker = getGoalBlockedState(focus.task, state?.tasks);
+        const mapObstacle = (Array.isArray(state?.goalMapRecords) ? state.goalMapRecords : []).find((record) => (
+            record?.goalId === goal?.id
+            && record.recordType === 'node'
+            && record.nodeKind === 'obstacle'
+            && record.status !== 'done'
+            && record.status !== 'cancelled'
+        )) || null;
+        const dueState = getGoalDueState(goal, todayValue);
+        const reviewState = getGoalReviewState(goal, todayValue);
+        const effort = getGoalEffortMinutes(goal, goalTasks, state, todayValue);
+        const completedTasks = goalTasks.filter((task) => task?.status === 'done').length;
+        const resultProgress = getGoalProgress(goal);
+        const hasResultProgress = hasGoalProgressIndicator(goal);
+        let course = { kind: 'moving', label: 'Движение есть', reason: 'Следующее действие определено' };
+        if (goal?.status === 'done') {
+            course = { kind: 'done', label: 'Цель завершена', reason: 'Итоговый результат зафиксирован' };
+        } else if (!isUsefulGoalMetric(goal?.metricLabel) && !(goal?.keyResults || []).length) {
+            course = { kind: 'criterion', label: 'Нужен критерий результата', reason: 'Иначе прогресс нельзя проверить' };
+        } else if (dueState.isOverdue) {
+            course = { kind: 'review', label: 'Срок прошёл', reason: 'Нужно проверить результат' };
+        } else if (blocker || mapObstacle) {
+            course = { kind: 'blocked', label: 'Есть препятствие', reason: blocker?.title || mapObstacle?.title || 'Сначала нужно снять препятствие' };
+        } else if (!focus.task) {
+            course = { kind: 'action', label: 'Нет следующего действия', reason: 'Цель не двигается без конкретного шага' };
+        } else if (!focusSlot) {
+            course = { kind: 'schedule', label: 'Нужно запланировать', reason: 'Для текущего действия нет времени в календаре' };
+        } else if (reviewState.stale) {
+            course = { kind: 'review', label: 'Результат не проверен', reason: 'Последняя проверка была ' + reviewState.days + ' дн. назад' };
+        }
+        return {
+            goalTasks,
+            taskSlots,
+            focusTask: focus.task,
+            focusSuggested: focus.suggested,
+            focusSlot,
+            blocker,
+            mapObstacle,
+            dueState,
+            reviewState,
+            effort,
+            completedTasks,
+            resultProgress,
+            hasResultProgress,
+            course,
+        };
+    }
+
+    function formatGoalDate(value) {
+        if (!value) return '';
+        try {
+            return new Date(String(value).slice(0, 10) + 'T12:00:00').toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+            });
+        } catch (_) {
+            return String(value).slice(0, 10);
+        }
+    }
+
+    function formatGoalReviewDate(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return formatGoalDate(value);
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
+    const GOAL_TYPE_PRESETS = [
+        {
+            id: 'sleep',
+            label: 'Сон',
+            summaryHeading: 'Режим сна',
+            keywords: ['сон', 'спать', 'ложиться', 'просыпаться', 'отбой'],
+            metrics: [
+                { id: 'sleep-window', label: 'В нужном окне', metricLabel: 'отход ко сну и подъём в нужных рамках', summaryLabel: 'в нужном окне' },
+                { id: 'sleep-phone', label: 'Без телефона', metricLabel: 'вечера без телефона перед сном', summaryLabel: 'без телефона перед сном' },
+                { id: 'sleep-hours', label: '7+ часов', metricLabel: 'сон не меньше 7 часов', summaryLabel: '7+ часов сна' },
+            ],
+            steps: ['лечь без телефона', 'поставить вечерний будильник', 'подготовить комнату'],
+        },
+        {
+            id: 'nutrition',
+            label: 'Питание',
+            keywords: ['питание', 'еда', 'рацион', 'калории', 'белок', 'клетчатка', 'ужин'],
+            metrics: [
+                { id: 'nutrition-plan', label: 'По плану', metricLabel: 'дни в плане питания', summaryLabel: 'дни в плане питания', targetMode: 'number', targetLabel: 'Дней в неделю', unit: 'дн/нед' },
+                { id: 'nutrition-protein', label: 'Белок/клетчатка', metricLabel: 'белок и клетчатка в норме', summaryLabel: 'белок и клетчатка в норме' },
+                { id: 'nutrition-evening', label: 'Вечер спокойно', metricLabel: 'вечера без поздних перекусов', summaryLabel: 'вечера без поздних перекусов', targetMode: 'number', targetLabel: 'Дней в неделю', unit: 'дн/нед' },
+            ],
+            steps: ['запланировать ужины', 'добавить белок к завтраку', 'подготовить продукты'],
+        },
+        {
+            id: 'weight',
+            label: 'Вес',
+            keywords: ['вес', 'кг', 'похудеть', 'набрать', 'талия'],
+            metrics: [
+                { id: 'weight-kg', label: 'Вес', metricLabel: 'вес', summaryLabel: 'целевой вес', targetMode: 'number', targetLabel: 'Цель', unit: 'кг' },
+                { id: 'weight-waist', label: 'Талия', metricLabel: 'обхват талии', summaryLabel: 'обхват талии', targetMode: 'number', targetLabel: 'Цель', unit: 'см' },
+                { id: 'weight-trend', label: 'Тренд', metricLabel: 'стабильный недельный тренд', summaryLabel: 'стабильный недельный тренд' },
+            ],
+            steps: ['внести вес утром', 'проверить среднюю неделю', 'собрать план питания'],
+        },
+        {
+            id: 'training',
+            label: 'Тренировки',
+            keywords: ['трен', 'спорт', 'зал', 'бег', 'зарядка', 'актив'],
+            metrics: [
+                { id: 'training-count', label: 'Раз в неделю', metricLabel: 'тренировки в неделю', summaryLabel: 'тренировки в неделю', targetMode: 'number', targetLabel: 'Раз в неделю', unit: 'раз/нед' },
+                { id: 'training-minutes', label: 'Минуты', metricLabel: 'минуты активности в неделю', summaryLabel: 'минуты активности в неделю', targetMode: 'number', targetLabel: 'Минут в неделю', unit: 'мин' },
+                { id: 'training-regularity', label: 'Регулярность', metricLabel: 'регулярность тренировок без срывов', summaryLabel: 'регулярность без срывов' },
+            ],
+            steps: ['поставить тренировку в календарь', 'выбрать короткую тренировку', 'подготовить форму'],
+        },
+        {
+            id: 'habit',
+            label: 'Привычка',
+            keywords: ['привыч', 'каждый', 'регулярно', 'режим'],
+            metrics: [
+                { id: 'habit-days', label: 'Дней в неделю', metricLabel: 'дни выполнения в неделю', summaryLabel: 'дни выполнения', targetMode: 'number', targetLabel: 'Дней в неделю', unit: 'дн/нед' },
+                { id: 'habit-check', label: 'Выполняю', metricLabel: 'стабильное выполнение без паузы', summaryLabel: 'стабильное выполнение' },
+                { id: 'habit-quality', label: 'Качество', metricLabel: 'качество выполнения в нужных рамках', summaryLabel: 'качество в нужных рамках' },
+            ],
+            steps: ['поставить напоминание', 'сделать первый короткий подход', 'убрать главное препятствие'],
+        },
+    ];
+
+    function getGoalDateAfter(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        return [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0'),
+        ].join('-');
+    }
+
+    function createGoalDraft() {
+        return {
+            title: '',
+            metricKey: '',
+            targetValue: '',
+            dueDate: getGoalDateAfter(30),
+            nextTaskTitle: '',
+            slotDate: getGoalDateAfter(0),
+            slotStartTime: '09:00',
+            plannedMinutes: 30,
+        };
+    }
+
+    function addMinutesToGoalTime(value, minutes) {
+        const match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
+        if (!match) return '10:00';
+        const total = (Number(match[1]) * 60 + Number(match[2]) + Math.max(1, Number(minutes) || 30)) % 1440;
+        return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+    }
+
+    function getGoalTypePreset(typeId) {
+        return GOAL_TYPE_PRESETS.find((item) => item.id === typeId) || GOAL_TYPE_PRESETS[GOAL_TYPE_PRESETS.length - 1];
+    }
+
+    function inferGoalTypeId(title) {
+        const text = String(title || '').toLowerCase();
+        if (!text) return 'habit';
+        const match = GOAL_TYPE_PRESETS.find((preset) => (preset.keywords || []).some((keyword) => text.includes(keyword)));
+        return match ? match.id : 'habit';
+    }
+
+    function getEffectiveGoalType(draft) {
+        return getGoalTypePreset(inferGoalTypeId(draft?.title));
+    }
+
+    function getEffectiveMetricPreset(draft, typePreset) {
+        const options = Array.isArray(typePreset?.metrics) && typePreset.metrics.length > 0
+            ? typePreset.metrics
+            : getGoalTypePreset('habit').metrics;
+        return options.find((metric) => metric.id === draft?.metricKey) || options[0];
+    }
+
+    function getGoalDraftReadiness(draft) {
+        const type = getEffectiveGoalType(draft);
+        const metric = getEffectiveMetricPreset(draft, type);
+        const target = goalNumber(draft?.targetValue);
+        return {
+            title: String(draft?.title || '').trim().length > 0,
+            metric: metric?.targetMode !== 'number' || target !== null && target > 0,
+            dueDate: !!String(draft?.dueDate || '').trim(),
+            step: !!String(draft?.nextTaskTitle || '').trim(),
+            schedule: !!String(draft?.slotDate || '').trim() && !!String(draft?.slotStartTime || '').trim(),
+        };
+    }
+
+    function isUsefulGoalMetric(value) {
+        const text = String(value || '').trim();
+        return text.length > 0 && text !== '?';
+    }
+
+    function getGoalSummaryHeading(goal) {
+        const preset = getGoalTypePreset(goal?.goalType || inferGoalTypeId(goal?.title));
+        return preset.summaryHeading || preset.label;
+    }
+
+    function buildGoalMetricSummary(goal) {
+        const metricLabel = String(goal?.metricLabel || '').trim();
+        if (!isUsefulGoalMetric(metricLabel)) return '';
+        const summaryLabel = String(goal?.summaryLabel || '').trim() || metricLabel;
+        const unit = String(goal?.metricUnit || '').trim();
+        const hasTarget = goal?.targetValue !== undefined
+            && goal?.targetValue !== null
+            && String(goal.targetValue).trim() !== '';
+        const hasCurrent = goal?.currentValue !== undefined
+            && goal?.currentValue !== null
+            && String(goal.currentValue).trim() !== '';
+        if (hasTarget && hasCurrent) {
+            return summaryLabel + ': ' + String(goal.currentValue).trim() + ' / ' + String(goal.targetValue).trim() + (unit ? ' ' + unit : '');
+        }
+        if (hasTarget) {
+            return summaryLabel + ': цель ' + String(goal.targetValue).trim() + (unit ? ' ' + unit : '');
+        }
+        return summaryLabel;
+    }
+
+    function GoalSettingScreen({ state, onNavigate } = {}) {
+        const goals = Array.isArray(state?.goals) ? state.goals : [];
+        const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
+        const projects = Array.isArray(state?.projects) ? state.projects : [];
+        const activeGoals = goals.filter((goal) => goal?.status !== 'archived');
+        const archivedGoals = goals.filter((goal) => goal?.status === 'archived');
+        const [draft, setDraft] = useState(createGoalDraft);
+        const [isWizardOpen, setIsWizardOpen] = useState(false);
+        const [wizardStep, setWizardStep] = useState(0);
+        const [createdNotice, setCreatedNotice] = useState(null);
+        const [archivedNotice, setArchivedNotice] = useState(null);
+        const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+        const [keyResultDrafts, setKeyResultDrafts] = useState({});
+        const [nextTaskDrafts, setNextTaskDrafts] = useState({});
+        const [reviewDrafts, setReviewDrafts] = useState({});
+        const [reviewGoalIds, setReviewGoalIds] = useState({});
+        const [completionGoalIds, setCompletionGoalIds] = useState({});
+        const [reviewDetailsGoalIds, setReviewDetailsGoalIds] = useState({});
+        const [expandedGoalIds, setExpandedGoalIds] = useState({});
+        const [advancedGoalIds, setAdvancedGoalIds] = useState({});
+        const [scheduleGoalIds, setScheduleGoalIds] = useState({});
+        const [scheduleDrafts, setScheduleDrafts] = useState({});
+        const [mapGoalId, setMapGoalId] = useState(null);
+
+        const draftReadiness = getGoalDraftReadiness(draft);
+        const canAddGoal = draftReadiness.title && typeof state?.addGoal === 'function';
+        const canCompleteGoal = canAddGoal
+            && typeof state?.addProject === 'function'
+            && typeof state?.addTask === 'function'
+            && typeof state?.addSlot === 'function'
+            && Object.values(draftReadiness).every(Boolean);
+        const commitGoalPatch = (goal, patch) => {
+            if (!goal?.id || typeof state?.updateGoal !== 'function') return null;
+            return state.updateGoal(goal.id, patch);
+        };
+        const ensureGoalProject = (goal) => {
+            if (goal?.projectId) return projects.find((project) => project.id === goal.projectId) || { id: goal.projectId };
+            if (!goal?.id || typeof state?.addProject !== 'function') return null;
+            const project = state.addProject(goal.title || 'Цель');
+            if (project?.id) commitGoalPatch(goal, { projectId: project.id });
+            return project;
+        };
+        const commitGoalCurrent = (goal, value) => {
+            const currentValue = goalNumber(value);
+            const patch = { currentValue: currentValue === null ? undefined : currentValue };
+            if (currentValue !== null && goalNumber(goal?.baselineValue) === null) {
+                const previousValue = goalNumber(goal?.currentValue);
+                patch.baselineValue = previousValue === null ? currentValue : previousValue;
+            }
+            return commitGoalPatch(goal, patch);
+        };
+        const getGoalReviewDraft = (goal) => reviewDrafts[goal.id] || {
+            change: '',
+            current: '',
+            nextStep: '',
+        };
+        const updateGoalReviewDraft = (goal, patch) => {
+            if (!goal?.id) return;
+            setReviewDrafts((current) => ({
+                ...current,
+                [goal.id]: {
+                    ...getGoalReviewDraft(goal),
+                    ...(patch || {}),
+                },
+            }));
+        };
+        const resetWizard = (options) => {
+            setDraft(createGoalDraft());
+            setWizardStep(0);
+            setIsWizardOpen(false);
+            if (!options?.keepNotice) setCreatedNotice(null);
+        };
+        const handleAddGoal = () => {
+            if (!canCompleteGoal) return;
+            const goalType = getEffectiveGoalType(draft);
+            const metric = getEffectiveMetricPreset(draft, goalType);
+            const targetValue = metric.targetMode === 'number' && String(draft.targetValue || '').trim()
+                ? draft.targetValue
+                : undefined;
+            const project = state.addProject(String(draft.title || '').trim());
+            if (!project?.id) return;
+            const goal = state.addGoal({
+                title: draft.title,
+                outcome: draft.title,
+                projectId: project.id,
+                goalType: goalType.id,
+                metricKey: metric.id,
+                metricLabel: metric.metricLabel,
+                summaryLabel: metric.summaryLabel || metric.metricLabel,
+                metricUnit: metric.unit || '',
+                targetValue,
+                dueDate: draft.dueDate || undefined,
+            });
+            const nextTaskTitle = String(draft.nextTaskTitle || '').trim();
+            if (goal?.id && nextTaskTitle && typeof state?.addTask === 'function') {
+                const task = state.addTask(nextTaskTitle, {
+                    projectId: project.id,
+                    dueDate: draft.slotDate || goal.dueDate || undefined,
+                    plannedMinutes: draft.plannedMinutes,
+                    priority: 'p2',
+                    status: 'in_progress',
+                });
+                if (task?.id) {
+                    state.addSlot({
+                        taskId: task.id,
+                        title: task.title,
+                        date: draft.slotDate,
+                        startTime: draft.slotStartTime,
+                        endTime: addMinutesToGoalTime(draft.slotStartTime, draft.plannedMinutes),
+                        source: 'goal',
+                    });
+                    commitGoalPatch(goal, { nextTaskId: task.id });
+                }
+            }
+            if (goal?.id) {
+                setCreatedNotice({ id: goal.id, title: goal.title || draft.title });
+                setMapGoalId(goal.id);
+            }
+            resetWizard({ keepNotice: true });
+        };
+        const goToNextWizardStep = () => {
+            if (wizardStep >= 2) {
+                handleAddGoal();
+                return;
+            }
+            if (wizardStep === 0 && (!draftReadiness.title || !draftReadiness.dueDate)) return;
+            if (wizardStep === 1 && !draftReadiness.metric) return;
+            if (wizardStep === 1 && !draftReadiness.step) {
+                setDraft((current) => {
+                    const type = getEffectiveGoalType(current);
+                    return { ...current, nextTaskTitle: type.steps?.[0] || 'Сделать первый шаг' };
+                });
+            }
+            setWizardStep((current) => Math.min(2, current + 1));
+        };
+        const goToPreviousWizardStep = () => {
+            setWizardStep((current) => Math.max(0, current - 1));
+        };
+        const addKeyResult = (goal) => {
+            const text = String(keyResultDrafts[goal.id] || '').trim();
+            if (!text) return;
+            commitGoalPatch(goal, {
+                keyResults: (goal.keyResults || []).concat({ text }),
+            });
+            setKeyResultDrafts((current) => ({ ...current, [goal.id]: '' }));
+        };
+        const toggleKeyResult = (goal, item) => {
+            commitGoalPatch(goal, {
+                keyResults: (goal.keyResults || []).map((entry) => entry.id === item.id
+                    ? { ...entry, done: !entry.done }
+                    : entry),
+            });
+        };
+        const removeKeyResult = (goal, item) => {
+            commitGoalPatch(goal, {
+                keyResults: (goal.keyResults || []).filter((entry) => entry.id !== item.id),
+            });
+        };
+        const createNextTask = (goal) => {
+            const title = String(nextTaskDrafts[goal.id] || '').trim();
+            if (!title || typeof state?.addTask !== 'function') return;
+            const project = ensureGoalProject(goal);
+            if (!project?.id) return;
+            const task = state.addTask(title, {
+                projectId: project.id,
+                plannedMinutes: 30,
+                priority: 'p2',
+                status: 'in_progress',
+            });
+            if (task?.id) commitGoalPatch(goal, { nextTaskId: task.id });
+            setNextTaskDrafts((current) => ({ ...current, [goal.id]: '' }));
+        };
+        const getGoalScheduleDraft = (goal) => scheduleDrafts[goal.id] || {
+            date: getGoalDateAfter(0),
+            startTime: '09:00',
+            plannedMinutes: 30,
+        };
+        const updateGoalScheduleDraft = (goal, patch) => {
+            setScheduleDrafts((current) => ({
+                ...current,
+                [goal.id]: { ...getGoalScheduleDraft(goal), ...(patch || {}) },
+            }));
+        };
+        const toggleGoalSchedule = (goal) => {
+            if (!goal?.id) return;
+            setScheduleGoalIds((current) => ({ ...current, [goal.id]: current[goal.id] !== true }));
+        };
+        const scheduleGoalFocus = (goal, focusTask, overrideSchedule) => {
+            if (!focusTask?.id || typeof state?.addSlot !== 'function') return;
+            const schedule = overrideSchedule || getGoalScheduleDraft(goal);
+            if (!schedule.date || !schedule.startTime) return;
+            state.addSlot({
+                taskId: focusTask.id,
+                title: focusTask.title || goal.title,
+                date: schedule.date,
+                startTime: schedule.startTime,
+                endTime: addMinutesToGoalTime(schedule.startTime, schedule.plannedMinutes),
+                source: 'goal',
+            });
+            if (typeof state?.updateTask === 'function') {
+                state.updateTask(focusTask.id, {
+                    dueDate: schedule.date,
+                    plannedMinutes: schedule.plannedMinutes,
+                });
+            }
+            setScheduleGoalIds((current) => ({ ...current, [goal.id]: false }));
+        };
+        const selectGoalFocus = (goal, taskId) => {
+            if (!goal?.id) return;
+            commitGoalPatch(goal, { nextTaskId: taskId || undefined });
+        };
+        const completeGoalFocus = (goal, readModel) => {
+            const focusTask = readModel?.focusTask;
+            if (!focusTask?.id || typeof state?.updateTask !== 'function') return;
+            state.updateTask(focusTask.id, { status: 'done', progress: 100 });
+            const nextTask = (readModel.goalTasks || []).find((task) => task.id !== focusTask.id && isGoalTaskActive(task));
+            commitGoalPatch(goal, { nextTaskId: nextTask?.id });
+        };
+        const startGoalFocus = (goal, readModel) => {
+            const focusTask = readModel?.focusTask;
+            if (!focusTask?.id || typeof state?.startChronoTimer !== 'function') return;
+            let activity = (state.chronoActivities || []).find((item) => !item?.archived && item.taskId === focusTask.id);
+            if (!activity && typeof state?.addChronoActivity === 'function') {
+                const project = ensureGoalProject(goal);
+                activity = state.addChronoActivity({
+                    name: focusTask.title || goal.title,
+                    taskId: focusTask.id,
+                    projectId: project?.id,
+                    category: 'goal',
+                });
+            }
+            if (!activity?.id) return;
+            state.startChronoTimer({
+                activityId: activity.id,
+                plannedMinutes: focusTask.plannedMinutes || getGoalSlotMinutes(readModel.focusSlot) || 30,
+            });
+            if (typeof onNavigate === 'function') onNavigate('chrono');
+        };
+        const openGoalDetails = (goal) => {
+            if (!goal?.id) return;
+            setReviewGoalIds((current) => ({ ...current, [goal.id]: false }));
+            setExpandedGoalIds({ [goal.id]: true });
+        };
+        const closeGoalDetails = (goal) => {
+            if (!goal?.id) return;
+            setExpandedGoalIds((current) => ({ ...current, [goal.id]: false }));
+            setAdvancedGoalIds((current) => ({ ...current, [goal.id]: false }));
+        };
+        const toggleGoalReview = (goal, options) => {
+            if (!goal?.id) return;
+            setReviewDrafts((current) => current[goal.id] ? current : {
+                ...current,
+                [goal.id]: getGoalReviewDraft(goal),
+            });
+            if (!options?.keepDetails) {
+                setExpandedGoalIds((current) => ({ ...current, [goal.id]: false }));
+            }
+            setReviewGoalIds((current) => ({ ...current, [goal.id]: current[goal.id] !== true }));
+        };
+        const closeGoalReview = (goal) => {
+            if (!goal?.id) return;
+            setReviewGoalIds((current) => ({ ...current, [goal.id]: false }));
+            setCompletionGoalIds((current) => ({ ...current, [goal.id]: false }));
+            setReviewDetailsGoalIds((current) => ({ ...current, [goal.id]: false }));
+        };
+        const startGoalCompletion = (goal) => {
+            if (!goal?.id) return;
+            setCompletionGoalIds((current) => ({ ...current, [goal.id]: true }));
+            setReviewDrafts((current) => current[goal.id] ? current : {
+                ...current,
+                [goal.id]: getGoalReviewDraft(goal),
+            });
+            setReviewGoalIds((current) => ({ ...current, [goal.id]: true }));
+        };
+        const toggleGoalReviewDetails = (goal) => {
+            if (!goal?.id) return;
+            setReviewDetailsGoalIds((current) => ({ ...current, [goal.id]: current[goal.id] !== true }));
+        };
+        const toggleGoalAdvanced = (goal) => {
+            if (!goal?.id) return;
+            setAdvancedGoalIds((current) => ({ ...current, [goal.id]: current[goal.id] !== true }));
+        };
+        const saveGoalReview = (goal, nextTask, overrideDraft) => {
+            const reviewDraft = overrideDraft || getGoalReviewDraft(goal);
+            const isCompletion = overrideDraft?.complete === true || completionGoalIds[goal.id] === true;
+            const change = String(reviewDraft.change || '').trim();
+            const current = String(reviewDraft.current ?? '').trim();
+            const nextStep = String(reviewDraft.nextStep || '').trim();
+            if (!current) return;
+            const reviewedAt = new Date().toISOString();
+            const reviewHistory = Array.isArray(goal?.reviewHistory) ? goal.reviewHistory : [];
+            const patch = {
+                reviewChange: change,
+                reviewCurrent: current,
+                reviewNextStep: nextStep,
+                reviewNote: change,
+                reviewedAt,
+                reviewHistory: reviewHistory.concat({
+                    id: 'review-' + reviewedAt + '-' + Math.random().toString(36).slice(2, 7),
+                    at: reviewedAt,
+                    current,
+                    change,
+                    nextStep,
+                }),
+            };
+            if (isCompletion) patch.status = 'done';
+            const currentValue = goalNumber(current);
+            if (currentValue !== null && goalNumber(goal?.targetValue) !== null) {
+                patch.currentValue = currentValue;
+                if (goalNumber(goal?.baselineValue) === null) {
+                    const previousValue = goalNumber(goal?.currentValue);
+                    patch.baselineValue = previousValue === null ? currentValue : previousValue;
+                }
+            }
+            if (!isCompletion && nextStep && typeof state?.addTask === 'function' && (!nextTask || nextTask.status === 'done' || nextTask.status === 'cancelled')) {
+                const project = ensureGoalProject(goal);
+                const task = state.addTask(nextStep, {
+                    projectId: project?.id,
+                    dueDate: goal.dueDate || undefined,
+                    plannedMinutes: 30,
+                    priority: 'p2',
+                    status: 'in_progress',
+                });
+                if (task?.id) patch.nextTaskId = task.id;
+            }
+            commitGoalPatch(goal, patch);
+            setReviewDrafts((currentDrafts) => {
+                const nextDrafts = { ...currentDrafts };
+                delete nextDrafts[goal.id];
+                return nextDrafts;
+            });
+            closeGoalReview(goal);
+        };
+        const archiveGoalWithUndo = (goal) => {
+            if (!goal?.id || typeof state?.archiveGoal !== 'function') return;
+            const archived = state.archiveGoal(goal.id);
+            if (!archived) return;
+            setArchivedNotice({ id: goal.id, title: goal.title || 'Цель' });
+            setCreatedNotice(null);
+            setExpandedGoalIds((current) => ({ ...current, [goal.id]: false }));
+            setAdvancedGoalIds((current) => ({ ...current, [goal.id]: false }));
+        };
+        const restoreArchivedGoal = (goalId) => {
+            const id = goalId || archivedNotice?.id;
+            if (!id || typeof state?.updateGoal !== 'function') return;
+            const restored = state.updateGoal(id, { status: 'active' });
+            if (restored && archivedNotice?.id === id) setArchivedNotice(null);
+        };
+        const openGoalMap = (goal) => {
+            if (!goal?.id) return;
+            setCreatedNotice(null);
+            setMapGoalId(goal.id);
+        };
+        const openGoalSettingsFromMap = (goal) => {
+            if (!goal?.id) return;
+            try {
+                if (history.state?.heysGoalMap) {
+                    const nextState = { ...(history.state || {}) };
+                    delete nextState.heysGoalMap;
+                    history.replaceState(nextState, '');
+                }
+            } catch (_) { /* noop */ }
+            setMapGoalId(null);
+            openGoalDetails(goal);
+        };
+        const renderGoalWizard = () => {
+            if (!isWizardOpen) return null;
+            const goalType = getEffectiveGoalType(draft);
+            const metric = getEffectiveMetricPreset(draft, goalType);
+            const selectMetric = (metricId) => {
+                setDraft((current) => ({
+                    ...current,
+                    metricKey: metricId,
+                    targetValue: '',
+                }));
+            };
+            const steps = [
+                {
+                    label: 'Результат',
+                    title: 'Что должно стать иначе?',
+                    body: h('div', { className: 'planning-goals-wizard__stack' },
+                        h('input', {
+                            name: 'planning-goal-wizard-title',
+                            value: draft.title,
+                            onChange: (event) => setDraft((current) => ({ ...current, title: event.target.value })),
+                            onKeyDown: (event) => {
+                                if (event.key === 'Enter') goToNextWizardStep();
+                            },
+                            placeholder: 'Например: ложиться до полуночи',
+                            'aria-label': 'Название новой цели',
+                        }),
+                        h('input', {
+                            type: 'date',
+                            name: 'planning-goal-wizard-due-date',
+                            value: draft.dueDate,
+                            onChange: (event) => setDraft((current) => ({ ...current, dueDate: event.target.value })),
+                            'aria-label': 'Срок цели',
+                        }),
+                        h('div', { className: 'planning-goals-wizard__chips' },
+                            h('button', { type: 'button', onClick: () => setDraft((current) => ({ ...current, dueDate: getGoalDateAfter(7) })) }, 'Неделя'),
+                            h('button', { type: 'button', onClick: () => setDraft((current) => ({ ...current, dueDate: getGoalDateAfter(30) })) }, 'Месяц'),
+                        ),
+                    ),
+                },
+                {
+                    label: 'Метрика',
+                    title: 'Как поймём, что получилось?',
+                    body: h('div', { className: 'planning-goals-wizard__stack' },
+                        h('div', { className: 'planning-goals-wizard__choices', 'aria-label': 'Метрика цели' },
+                            (goalType.metrics || []).map((item) => h('button', {
+                                key: item.id,
+                                type: 'button',
+                                className: item.id === metric.id ? 'is-active' : '',
+                                onClick: () => selectMetric(item.id),
+                            }, item.label)),
+                        ),
+                        metric.targetMode === 'number'
+                            ? h('label', { className: 'planning-goals-wizard__number' },
+                                h('span', null, metric.targetLabel || 'Цель'),
+                                h('div', null,
+                                    h('input', {
+                                        type: 'number',
+                                        inputMode: 'decimal',
+                                        name: 'planning-goal-wizard-target',
+                                        value: draft.targetValue,
+                                        onChange: (event) => setDraft((current) => ({ ...current, targetValue: event.target.value })),
+                                        placeholder: metric.unit || 'значение',
+                                        'aria-label': 'Целевое значение',
+                                    }),
+                                    metric.unit && h('strong', null, metric.unit),
+                                ),
+                            )
+                            : h('p', { className: 'planning-goals-wizard__hint' }, metric.metricLabel),
+                    ),
+                },
+                {
+                    label: 'Действие',
+                    title: 'Что и когда сделать первым?',
+                    body: h('div', { className: 'planning-goals-wizard__stack' },
+                        h('input', {
+                            name: 'planning-goal-wizard-next-task',
+                            value: draft.nextTaskTitle,
+                            onChange: (event) => setDraft((current) => ({ ...current, nextTaskTitle: event.target.value })),
+                            onKeyDown: (event) => {
+                                if (event.key === 'Enter') handleAddGoal();
+                            },
+                            placeholder: goalType.steps?.[0] || 'Первое действие',
+                            'aria-label': 'Первый шаг по цели',
+                        }),
+                        h('div', { className: 'planning-goals-wizard__chips' },
+                            (goalType.steps || []).map((item) => h('button', {
+                                key: item,
+                                type: 'button',
+                                onClick: () => setDraft((current) => ({ ...current, nextTaskTitle: item })),
+                            }, item)),
+                        ),
+                        h('div', { className: 'planning-goals-wizard__schedule' },
+                            h('input', {
+                                type: 'date',
+                                value: draft.slotDate,
+                                onChange: (event) => setDraft((current) => ({ ...current, slotDate: event.target.value })),
+                                'aria-label': 'Дата первого действия',
+                            }),
+                            h('input', {
+                                type: 'time',
+                                value: draft.slotStartTime,
+                                onChange: (event) => setDraft((current) => ({ ...current, slotStartTime: event.target.value })),
+                                'aria-label': 'Время первого действия',
+                            }),
+                        ),
+                    ),
+                },
+            ];
+            const currentStep = steps[wizardStep] || steps[0];
+            const canContinue = [
+                draftReadiness.title && draftReadiness.dueDate,
+                draftReadiness.metric,
+                draftReadiness.step && draftReadiness.schedule,
+            ][wizardStep] === true;
+            return h('div', { className: 'planning-goals-wizard', 'aria-label': 'Мастер цели' },
+                h('div', { className: 'planning-goals-wizard__top' },
+                    h('span', null, (wizardStep + 1) + '/3'),
+                    h('strong', null, currentStep.label),
+                ),
+                h('h3', null, currentStep.title),
+                h('div', { className: 'planning-goals-wizard__body' }, currentStep.body),
+                h('div', { className: 'planning-goals-wizard__dots', 'aria-hidden': 'true' },
+                    steps.map((step, index) => h('span', {
+                        key: step.label,
+                        className: index === wizardStep ? 'is-active' : '',
+                    })),
+                ),
+                h('div', { className: 'planning-goals-wizard__actions' },
+                    h('button', { type: 'button', className: 'is-quiet', onClick: resetWizard }, 'Отмена'),
+                    wizardStep > 0 && h('button', { type: 'button', className: 'is-quiet', onClick: goToPreviousWizardStep }, 'Назад'),
+                    h('button', {
+                        type: 'button',
+                        className: 'is-primary',
+                        onClick: goToNextWizardStep,
+                        disabled: !canContinue,
+                    }, wizardStep >= 2 ? 'Создать и запланировать' : 'Далее'),
+                ),
+            );
+        };
+        const renderGoalCard = (goal, options) => {
+            const isSettingsView = options?.settingsView === true;
+            const keyResults = Array.isArray(goal.keyResults) ? goal.keyResults : [];
+            const keyResultsDone = keyResults.filter((item) => item?.done).length;
+            const reviewHistory = Array.isArray(goal.reviewHistory) ? goal.reviewHistory : [];
+            const isExpanded = isSettingsView || expandedGoalIds[goal.id] === true;
+            const isReviewOpen = reviewGoalIds[goal.id] === true;
+            const isCompletion = completionGoalIds[goal.id] === true;
+            const isReviewDetailsOpen = reviewDetailsGoalIds[goal.id] === true;
+            const isAdvancedOpen = advancedGoalIds[goal.id] === true;
+            const today = Planning.Utils?.dateStr ? Planning.Utils.dateStr() : new Date().toISOString().slice(0, 10);
+            const readModel = buildGoalReadModel(goal, state, today);
+            const project = projects.find((item) => item.id === goal.projectId) || null;
+            const nextTask = readModel.focusTask;
+            const progress = readModel.resultProgress;
+            const showProgress = readModel.hasResultProgress;
+            const dueState = readModel.dueState;
+            const isScheduleOpen = scheduleGoalIds[goal.id] === true;
+            const scheduleDraft = getGoalScheduleDraft(goal);
+            const outcome = String(goal.outcome || '').trim();
+            const metricSummary = buildGoalMetricSummary(goal);
+            const hasNumericMetric = goalNumber(goal?.currentValue) !== null
+                || goalNumber(goal?.targetValue) !== null
+                || !!String(goal?.metricUnit || '').trim();
+            const showMetricSummary = metricSummary && (!outcome || hasNumericMetric);
+            const reviewDraft = getGoalReviewDraft(goal);
+            const canSaveReview = String(reviewDraft.current ?? '').trim().length > 0;
+            const reviewPlaceholder = goalNumber(goal?.targetValue) !== null
+                ? 'Новое значение' + (goal.metricUnit ? ', ' + goal.metricUnit : '')
+                : 'Коротко: что получилось';
+            const finalResult = goal?.status === 'done'
+                ? String(goal.reviewCurrent || reviewHistory[reviewHistory.length - 1]?.current || '').trim()
+                : '';
+            return h('article', {
+                key: goal.id,
+                className: 'planning-goals-card' + (isSettingsView ? ' planning-goals-card--settings' : ''),
+            },
+                !isSettingsView && h('div', { className: 'planning-goals-card__top' },
+                    h('div', { className: 'planning-goals-card__title-wrap' },
+                        h('h3', { className: 'planning-goals-card__title' }, goal.title || 'Цель'),
+                        h('div', { className: 'planning-goals-card__meta' },
+                            h('span', {
+                                className: 'planning-goals-card__course planning-goals-card__course--' + readModel.course.kind,
+                            }, readModel.course.label),
+                            goal.dueDate && goal?.status !== 'done' && h('span', {
+                                className: dueState.isOverdue ? 'planning-goals-card__due--overdue' : '',
+                            }, dueState.label),
+                            goal?.status === 'done' && goal.completedAt
+                                ? h('span', null, 'завершена ', formatGoalDate(goal.completedAt))
+                                : goal.reviewedAt && h('span', null, 'обзор ', formatGoalDate(goal.reviewedAt)),
+                        ),
+                    ),
+                    h('div', { className: 'planning-goals-card__tools' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-goals-card__settings',
+                            onClick: () => openGoalDetails(goal),
+                            'aria-label': 'Параметры цели',
+                            title: 'Параметры цели',
+                        }, 'Параметры'),
+                    ),
+                ),
+                !isSettingsView && showProgress && h('div', { className: 'planning-goals-progress', 'aria-label': 'Прогресс цели ' + progress + '%' },
+                    h('div', { className: 'planning-goals-progress__bar', style: { width: progress + '%' } }),
+                    h('strong', null, progress + '%'),
+                ),
+                !isSettingsView && h('p', { className: 'planning-goals-card__reason' }, readModel.course.reason),
+                !isSettingsView && (outcome || showMetricSummary || finalResult || nextTask) && h('div', { className: 'planning-goals-card__summary' },
+                    outcome && h('div', null, h('strong', null, 'Результат'), h('span', null, outcome)),
+                    showMetricSummary && h('div', null, h('strong', null, getGoalSummaryHeading(goal)), h('span', null, metricSummary)),
+                    finalResult && h('div', null, h('strong', null, 'Итог'), h('span', null, finalResult)),
+                    nextTask && h('div', null, h('strong', null, 'Сейчас'), h('span', null, nextTask.title || 'Задача')),
+                    readModel.focusSlot && h('div', null, h('strong', null, 'Когда'), h('span', null, formatGoalSlot(readModel.focusSlot, today))),
+                ),
+                !isSettingsView && h('div', { className: 'planning-goals-card__signals' },
+                    h('span', null, h('strong', null, readModel.completedTasks + '/' + readModel.goalTasks.length), ' задач'),
+                    readModel.effort.week > 0 && h('span', null, h('strong', null, formatGoalMinutes(readModel.effort.week)), ' за неделю'),
+                    keyResults.length > 0 && h('span', null, h('strong', null, keyResultsDone + '/' + keyResults.length), ' результатов'),
+                ),
+                !isSettingsView && !isExpanded && !isReviewOpen && h('div', { className: 'planning-goals-card__actions' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-goals-card__progress-action',
+                        onClick: () => openGoalMap(goal),
+                    }, 'Открыть карту'),
+                ),
+                !isSettingsView && isScheduleOpen && h('div', { className: 'planning-goals-schedule-panel' },
+                    h('strong', null, nextTask?.title || 'Текущее действие'),
+                    h('div', { className: 'planning-goals-wizard__schedule' },
+                        h('input', {
+                            type: 'date',
+                            value: scheduleDraft.date,
+                            onChange: (event) => updateGoalScheduleDraft(goal, { date: event.target.value }),
+                            'aria-label': 'Дата действия',
+                        }),
+                        h('input', {
+                            type: 'time',
+                            value: scheduleDraft.startTime,
+                            onChange: (event) => updateGoalScheduleDraft(goal, { startTime: event.target.value }),
+                            'aria-label': 'Время действия',
+                        }),
+                    ),
+                    h('div', { className: 'planning-goals-review-panel__actions' },
+                        h('button', { type: 'button', onClick: () => toggleGoalSchedule(goal) }, 'Отмена'),
+                        h('button', { type: 'button', className: 'is-primary', onClick: () => scheduleGoalFocus(goal, nextTask) }, 'Поставить в календарь'),
+                    ),
+                ),
+                isReviewOpen && h('div', { className: 'planning-goals-review-panel' },
+                    h('label', null,
+                        h('span', null, isCompletion ? 'Итоговый результат' : 'Текущий результат'),
+                        h('input', {
+                            name: 'planning-goal-review-current',
+                            value: reviewDraft.current,
+                            onChange: (event) => updateGoalReviewDraft(goal, { current: event.target.value }),
+                            placeholder: reviewPlaceholder,
+                            autoFocus: true,
+                        }),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-goals-review-panel__more',
+                        onClick: () => toggleGoalReviewDetails(goal),
+                        'aria-expanded': isReviewDetailsOpen,
+                    }, isReviewDetailsOpen ? 'Скрыть детали' : 'Добавить детали'),
+                    isReviewDetailsOpen && h('div', { className: 'planning-goals-review-panel__details' },
+                        h('label', null,
+                            h('span', null, 'Что изменилось'),
+                            h('input', {
+                                name: 'planning-goal-review-change',
+                                value: reviewDraft.change,
+                                onChange: (event) => updateGoalReviewDraft(goal, { change: event.target.value }),
+                                placeholder: 'Короткий итог',
+                            }),
+                        ),
+                        !isCompletion && h('label', null,
+                            h('span', null, 'Следующий шаг'),
+                            h('input', {
+                                name: 'planning-goal-review-next-step',
+                                value: reviewDraft.nextStep,
+                                onChange: (event) => updateGoalReviewDraft(goal, { nextStep: event.target.value }),
+                                placeholder: 'Что сделать дальше',
+                            }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-goals-review-panel__actions' },
+                        h('button', { type: 'button', onClick: () => closeGoalReview(goal) }, 'Отмена'),
+                        h('button', {
+                            type: 'button',
+                            className: 'is-primary',
+                            onClick: () => saveGoalReview(goal, nextTask),
+                            disabled: !canSaveReview,
+                        }, isCompletion ? 'Завершить цель' : 'Сохранить'),
+                    ),
+                ),
+                isExpanded && h('div', { className: 'planning-goals-card__details' },
+                    isSettingsView && h('label', { className: 'planning-goals-settings__title' },
+                        h('span', null, 'Название'),
+                        h('input', {
+                            defaultValue: goal.title || '',
+                            name: 'planning-goal-title',
+                            onBlur: (event) => commitGoalPatch(goal, { title: event.target.value }),
+                            'aria-label': 'Название цели',
+                        }),
+                    ),
+                    isSettingsView && h('section', { className: 'planning-goals-workspace' },
+                        h('div', { className: 'planning-goals-workspace__course planning-goals-workspace__course--' + readModel.course.kind },
+                            h('strong', null, readModel.course.label),
+                            h('span', null, readModel.course.reason),
+                        ),
+                        h('div', { className: 'planning-goals-workspace__signals' },
+                            h('div', null,
+                                h('span', null, 'Результат'),
+                                h('strong', null, readModel.hasResultProgress ? readModel.resultProgress + '%' : 'не проверен'),
+                            ),
+                            h('div', null,
+                                h('span', null, 'План'),
+                                h('strong', null, readModel.completedTasks + '/' + readModel.goalTasks.length),
+                            ),
+                            h('div', null,
+                                h('span', null, 'Усилие'),
+                                h('strong', null, formatGoalMinutes(readModel.effort.week)),
+                            ),
+                        ),
+                        project && h('p', { className: 'planning-goals-workspace__project' }, 'Проект: ', h('strong', null, project.name || goal.title)),
+                        h('div', { className: 'planning-goals-workspace__focus' },
+                            h('span', null, 'Текущий фокус'),
+                            h('strong', null, nextTask?.title || 'Действие не выбрано'),
+                            readModel.blocker && h('small', { className: 'is-critical' }, 'Блокирует: ', readModel.blocker.title),
+                            readModel.focusSlot && h('small', null, 'В календаре: ', formatGoalSlot(readModel.focusSlot, today)),
+                        ),
+                        readModel.goalTasks.length > 0 && h('div', { className: 'planning-goals-workspace__section' },
+                            h('div', { className: 'planning-goals-block__head' }, 'Действия проекта'),
+                            h('div', { className: 'planning-goals-workspace__tasks' },
+                                readModel.goalTasks.map((task) => h('div', {
+                                    key: task.id,
+                                    className: 'planning-goals-workspace__task' + (task.id === nextTask?.id ? ' is-focus' : ''),
+                                },
+                                    h('input', {
+                                        type: 'checkbox',
+                                        checked: task.status === 'done',
+                                        onChange: () => state.updateTask?.(task.id, {
+                                            status: task.status === 'done' ? 'in_progress' : 'done',
+                                        }),
+                                        'aria-label': (task.status === 'done' ? 'Вернуть задачу: ' : 'Выполнить задачу: ') + task.title,
+                                    }),
+                                    h('button', { type: 'button', onClick: () => selectGoalFocus(goal, task.id) }, task.title || 'Задача'),
+                                    task.id === nextTask?.id && h('small', null, 'фокус'),
+                                )),
+                            ),
+                        ),
+                        readModel.taskSlots.length > 0 && h('div', { className: 'planning-goals-workspace__section' },
+                            h('div', { className: 'planning-goals-block__head' }, 'Календарный план'),
+                            h('div', { className: 'planning-goals-workspace__slots' },
+                                readModel.taskSlots.slice().sort((left, right) => String(left.date || '').localeCompare(String(right.date || ''))
+                                    || String(left.startTime || '').localeCompare(String(right.startTime || ''))).map((slot) => {
+                                    const task = readModel.goalTasks.find((item) => item.id === slot.taskId);
+                                    return h('div', { key: slot.id },
+                                        h('strong', null, formatGoalSlot(slot, today)),
+                                        h('span', null, task?.title || slot.title || 'Действие'),
+                                    );
+                                }),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-goals-grid' },
+                        h('label', null,
+                            h('span', null, 'Результат'),
+                            h('input', {
+                                name: 'planning-goal-outcome',
+                                defaultValue: goal.outcome || '',
+                                onBlur: (event) => commitGoalPatch(goal, { outcome: event.target.value }),
+                                placeholder: 'Что должно измениться',
+                            }),
+                        ),
+                        h('label', null,
+                            h('span', null, 'Метрика'),
+                            h('input', {
+                                name: 'planning-goal-metric',
+                                defaultValue: goal.metricLabel || '',
+                                onBlur: (event) => commitGoalPatch(goal, { metricLabel: event.target.value }),
+                                placeholder: 'Например: вес, тренировки, шаги',
+                            }),
+                        ),
+                        hasNumericMetric && h('label', null,
+                            h('span', null, 'Сейчас'),
+                            h('input', {
+                                type: 'number',
+                                inputMode: 'decimal',
+                                name: 'planning-goal-current-value',
+                                defaultValue: goal.currentValue ?? '',
+                                onBlur: (event) => commitGoalCurrent(goal, event.target.value),
+                            }),
+                        ),
+                        hasNumericMetric && h('label', null,
+                            h('span', null, 'Цель'),
+                            h('input', {
+                                type: 'number',
+                                inputMode: 'decimal',
+                                name: 'planning-goal-target-value',
+                                defaultValue: goal.targetValue ?? '',
+                                onBlur: (event) => commitGoalPatch(goal, { targetValue: event.target.value }),
+                            }),
+                        ),
+                        h('label', null,
+                            h('span', null, 'Срок'),
+                            h('input', {
+                                type: 'date',
+                                name: 'planning-goal-due-date',
+                                defaultValue: goal.dueDate || '',
+                                onChange: (event) => commitGoalPatch(goal, { dueDate: event.target.value || undefined }),
+                            }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-goals-block planning-goals-block--next' },
+                        h('div', { className: 'planning-goals-block__head' }, 'Добавить действие'),
+                        h('div', { className: 'planning-goals-inline-add' },
+                            h('input', {
+                                name: 'planning-goal-next-task-title',
+                                value: nextTaskDrafts[goal.id] || '',
+                                onChange: (event) => setNextTaskDrafts((current) => ({ ...current, [goal.id]: event.target.value })),
+                                onKeyDown: (event) => {
+                                    if (event.key === 'Enter') createNextTask(goal);
+                                },
+                                placeholder: 'Создать задачу',
+                            }),
+                            h('button', { type: 'button', onClick: () => createNextTask(goal) }, '+'),
+                        ),
+                        readModel.goalTasks.some(isGoalTaskActive) && h('select', {
+                            className: 'planning-goals-task-select',
+                            name: 'planning-goal-next-task-id',
+                            value: nextTask?.id || '',
+                            onChange: (event) => selectGoalFocus(goal, event.target.value),
+                            'aria-label': 'Выбрать текущий фокус',
+                        },
+                            h('option', { value: '' }, 'Выбрать текущий фокус'),
+                            readModel.goalTasks.filter(isGoalTaskActive).map((task) => h('option', { key: task.id, value: task.id }, task.title || 'Задача')),
+                        ),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-goals-advanced-toggle',
+                        onClick: () => toggleGoalAdvanced(goal),
+                        'aria-expanded': isAdvancedOpen,
+                    }, isAdvancedOpen ? 'Скрыть дополнительно' : 'Дополнительно'),
+                    isAdvancedOpen && h('div', { className: 'planning-goals-advanced' },
+                        reviewHistory.length > 0 && h('div', { className: 'planning-goals-block' },
+                            h('div', { className: 'planning-goals-block__head' }, 'История прогресса'),
+                            h('div', { className: 'planning-goals-history' },
+                                reviewHistory.slice().reverse().map((review) => h('div', {
+                                    key: review.id,
+                                    className: 'planning-goals-history__item',
+                                },
+                                    h('div', { className: 'planning-goals-history__top' },
+                                        h('strong', null, formatGoalReviewDate(review.at)),
+                                        h('span', null, review.current),
+                                    ),
+                                    review.change && h('p', null, review.change),
+                                    review.nextStep && h('small', null, 'Дальше: ', review.nextStep),
+                                )),
+                            ),
+                        ),
+                        h('div', { className: 'planning-goals-block' },
+                            h('div', { className: 'planning-goals-block__head' }, 'Ключевые результаты'),
+                            keyResults.length > 0 && h('div', { className: 'planning-goals-kr-list' },
+                                keyResults.map((item) => h('label', {
+                                    key: item.id,
+                                    className: 'planning-goals-kr' + (item.done ? ' is-done' : ''),
+                                },
+                                    h('input', {
+                                        type: 'checkbox',
+                                        checked: item.done === true,
+                                        onChange: () => toggleKeyResult(goal, item),
+                                    }),
+                                    h('span', null, item.text),
+                                    h('button', {
+                                        type: 'button',
+                                        onClick: (event) => {
+                                            event.preventDefault();
+                                            removeKeyResult(goal, item);
+                                        },
+                                        'aria-label': 'Удалить результат',
+                                    }, '×'),
+                                )),
+                            ),
+                            h('div', { className: 'planning-goals-inline-add' },
+                                h('input', {
+                                    name: 'planning-goal-key-result',
+                                    value: keyResultDrafts[goal.id] || '',
+                                    onChange: (event) => setKeyResultDrafts((current) => ({ ...current, [goal.id]: event.target.value })),
+                                    onKeyDown: (event) => {
+                                        if (event.key === 'Enter') addKeyResult(goal);
+                                    },
+                                    placeholder: 'Добавить измеримый результат',
+                                }),
+                                h('button', { type: 'button', onClick: () => addKeyResult(goal) }, '+'),
+                            ),
+                        ),
+                        h('div', { className: 'planning-goals-grid planning-goals-grid--wide' },
+                            h('label', null,
+                                h('span', null, 'Препятствие'),
+                                h('input', {
+                                    name: 'planning-goal-obstacle',
+                                    defaultValue: goal.obstacle || '',
+                                    onBlur: (event) => commitGoalPatch(goal, { obstacle: event.target.value }),
+                                    placeholder: 'Что обычно мешает',
+                                }),
+                            ),
+                            h('label', null,
+                                h('span', null, 'Если мешает'),
+                                h('input', {
+                                    name: 'planning-goal-if-then-plan',
+                                    defaultValue: goal.ifThenPlan || '',
+                                    onBlur: (event) => commitGoalPatch(goal, { ifThenPlan: event.target.value }),
+                                    placeholder: 'Что делаю вместо паузы',
+                                }),
+                            ),
+                        ),
+                    ),
+                    !isReviewOpen && h('div', { className: 'planning-goals-card__footer' },
+                        h('button', {
+                            type: 'button',
+                            className: goal?.status === 'done'
+                                ? 'planning-goals-card__restore-action'
+                                : 'planning-goals-card__done',
+                            onClick: () => goal?.status === 'done'
+                                ? commitGoalPatch(goal, { status: 'active' })
+                                : startGoalCompletion(goal),
+                        }, goal?.status === 'done' ? 'Вернуть в активные' : 'Завершить цель'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-goals-card__archive-action',
+                            onClick: () => archiveGoalWithUndo(goal),
+                        }, 'Перенести в архив'),
+                    ),
+                ),
+            );
+        };
+
+        const selectedMapGoal = goals.find((goal) => goal.id === mapGoalId);
+        if (selectedMapGoal) {
+            const GoalMapScreen = HEYS.PlanningGoalMap?.GoalMapScreen;
+            if (GoalMapScreen) {
+                const today = Planning.Utils?.dateStr ? Planning.Utils.dateStr() : new Date().toISOString().slice(0, 10);
+                const mapReadModel = buildGoalReadModel(selectedMapGoal, state, today);
+                return h(GoalMapScreen, {
+                    goal: selectedMapGoal,
+                    state,
+                    readModel: mapReadModel,
+                    onBack: () => setMapGoalId(null),
+                    onOpenSettings: () => openGoalSettingsFromMap(selectedMapGoal),
+                    onStartFocus: () => startGoalFocus(selectedMapGoal, mapReadModel),
+                    onScheduleFocus: (schedule) => scheduleGoalFocus(selectedMapGoal, mapReadModel.focusTask, schedule),
+                    onSaveReview: (reviewDraft) => saveGoalReview(selectedMapGoal, mapReadModel.focusTask, reviewDraft),
+                    onRestore: () => commitGoalPatch(selectedMapGoal, { status: 'active' }),
+                });
+            }
+        }
+
+        const selectedGoal = activeGoals.find((goal) => expandedGoalIds[goal.id] === true);
+        if (selectedGoal) {
+            return h('div', {
+                className: 'planning-goals-screen planning-goals-screen--settings',
+                'aria-label': 'Настройка цели',
+            },
+                h('div', { className: 'planning-goals-settings__header' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-goals-settings__back',
+                        onClick: () => closeGoalDetails(selectedGoal),
+                    }, '← Назад'),
+                    h('div', null,
+                        h('span', null, 'Цель'),
+                        h('h2', null, selectedGoal.title || 'Настройка'),
+                    ),
+                ),
+                renderGoalCard(selectedGoal, { settingsView: true }),
+            );
+        }
+
+        return h('div', { className: 'planning-goals-screen', 'aria-label': 'Целеполагание' },
+            h('div', { className: 'planning-goals-header' },
+                h('div', { className: 'planning-goals-header__row' },
+                    h('h2', null, 'Цели'),
+                    !isWizardOpen && h('button', {
+                        type: 'button',
+                        className: 'planning-goals-new-button',
+                        onClick: () => {
+                            setCreatedNotice(null);
+                            setArchivedNotice(null);
+                            setWizardStep(0);
+                            setIsWizardOpen(true);
+                        },
+                    }, '+ Цель'),
+                ),
+                renderGoalWizard(),
+                !isWizardOpen && createdNotice && h('div', { className: 'planning-goals-created' },
+                    h('strong', null, 'Цель создана'),
+                    h('span', null, createdNotice.title || 'Новая цель'),
+                ),
+                !isWizardOpen && archivedNotice && h('div', { className: 'planning-goals-archived-notice' },
+                    h('span', null, '«', archivedNotice.title, '» в архиве'),
+                    h('button', { type: 'button', onClick: () => restoreArchivedGoal() }, 'Вернуть'),
+                ),
+            ),
+            activeGoals.length === 0
+                ? h('div', { className: 'planning-empty planning-empty--inline' }, isWizardOpen ? 'После мастера цель появится здесь.' : 'Нажмите + Цель, чтобы создать первую.')
+                : h('div', { className: 'planning-goals-list' }, activeGoals.map(renderGoalCard)),
+            archivedGoals.length > 0 && h('div', { className: 'planning-goals-archive' },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-goals-archive__toggle',
+                    onClick: () => setIsArchiveOpen((current) => !current),
+                    'aria-expanded': isArchiveOpen,
+                }, isArchiveOpen ? 'Скрыть архив' : 'Архив (' + archivedGoals.length + ')'),
+                isArchiveOpen && h('div', { className: 'planning-goals-archive__list' },
+                    archivedGoals.map((goal) => h('div', { key: goal.id, className: 'planning-goals-archive__item' },
+                        h('span', null, goal.title || 'Цель'),
+                        h('button', { type: 'button', onClick: () => openGoalMap(goal) }, 'Открыть карту'),
+                        h('button', { type: 'button', onClick: () => restoreArchivedGoal(goal.id) }, 'Вернуть'),
+                    )),
+                ),
+            ),
+        );
+    }
+
     function resolvePlanningRuntime() {
         const TasksScreen = HEYS.PlanningTasks && HEYS.PlanningTasks.TasksScreen;
         const TaskMatrixModal = HEYS.PlanningTasks && HEYS.PlanningTasks.TaskMatrixModal;
@@ -1692,6 +3104,7 @@
             if (activeScreen === 'gantt') return runtime.GanttScreen;
             if (activeScreen === 'chrono') return runtime.ChronoScreen;
             if (activeScreen === 'checklists') return ChecklistsScreen;
+            if (activeScreen === 'goals') return GoalSettingScreen;
             return runtime.TasksScreen;
         }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.TasksScreen]);
 
@@ -1755,7 +3168,13 @@
                 className: 'planning-content'
                     + (activeScreen === 'calendar' ? ' planning-content--calendar-lock-scroll' : ''),
             },
-                CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
+                CurrentScreen ? h(CurrentScreen, {
+                    state: planState,
+                    onNavigate: (screen) => {
+                        hasUserNavigatedRef.current = true;
+                        setActiveScreen(screen);
+                    },
+                }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),
             showTaskMatrix && runtime.TaskMatrixModal && h(runtime.TaskMatrixModal, {

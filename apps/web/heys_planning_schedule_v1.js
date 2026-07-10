@@ -57,7 +57,7 @@
     ];
     const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const MINUTES_IN_DAY = 24 * 60;
-    const CALENDAR_LOOKBACK_DAYS = 1;
+    const CALENDAR_LOOKBACK_DAYS = 0;
     const CALENDAR_FORWARD_DAYS = 92;
     const CALENDAR_TOTAL_HEIGHT = HOURS.length * CALENDAR_HOUR_HEIGHT;
     const CALENDAR_DRAG_EDGE_THRESHOLD = 48;
@@ -69,6 +69,9 @@
     const CALENDAR_TOUCH_TAP_SLOP_PX = 14;
     const CALENDAR_DAY_WINDOW_OPTIONS = [3, 5, 8];
     const CALENDAR_DAY_WINDOW_STORAGE_KEY = 'heys_planning_calendar_day_window';
+    const CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY = 'heys_planning_calendar_show_day_context';
+    const CALENDAR_STATE_VISIBILITY_STORAGE_KEY = 'heys_planning_calendar_show_state_markers';
+    const CALENDAR_MEAL_DURATION_MINUTES = 30;
     const CALENDAR_MIN_DAY_COLUMN_WIDTH = 72;
     const CALENDAR_WINDOW_OVERSCAN_DAYS = 15;
     const CALENDAR_DRAG_ZOOM_VISIBLE_DAYS = 8;
@@ -105,6 +108,38 @@
             // ignore
         }
         return 3;
+    }
+
+    function readStoredCalendarContextVisibility() {
+        try {
+            return localStorage.getItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY) !== '0';
+        } catch (error) {
+            return true;
+        }
+    }
+
+    function storeCalendarContextVisibility(isVisible) {
+        try {
+            localStorage.setItem(CALENDAR_CONTEXT_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+        } catch (error) {
+            // ignore quota / private mode
+        }
+    }
+
+    function readStoredCalendarStateVisibility() {
+        try {
+            return localStorage.getItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY) !== '0';
+        } catch (error) {
+            return true;
+        }
+    }
+
+    function storeCalendarStateVisibility(isVisible) {
+        try {
+            localStorage.setItem(CALENDAR_STATE_VISIBILITY_STORAGE_KEY, isVisible ? '1' : '0');
+        } catch (error) {
+            // ignore quota / private mode
+        }
     }
 
     function getWeekdayLabel(isoDate) {
@@ -514,6 +549,300 @@
         };
     }
 
+    function parseCalendarClockMinutes(value) {
+        const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        if (!Number.isInteger(hours) || hours < 0 || hours > 23) return null;
+        if (!Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
+        return (hours * 60) + minutes;
+    }
+
+    function buildCalendarSleepBlock(day) {
+        const wakeTime = day?.sleepEnd || day?.wakeTime || day?.wokeAt;
+        const wakeClockMinutes = parseCalendarClockMinutes(wakeTime);
+        if (wakeClockMinutes == null) return null;
+
+        let durationMinutes = null;
+        const sleepClockMinutes = parseCalendarClockMinutes(day?.sleepStart);
+        if (sleepClockMinutes != null) {
+            durationMinutes = wakeClockMinutes - sleepClockMinutes;
+            if (durationMinutes <= 0) durationMinutes += MINUTES_IN_DAY;
+        } else {
+            const sleepHours = Number(day?.sleepHours);
+            if (Number.isFinite(sleepHours) && sleepHours > 0) {
+                durationMinutes = Math.round(sleepHours * 60);
+            }
+        }
+
+        if (!durationMinutes || durationMinutes > (16 * 60)) return null;
+
+        const calendarStartMinutes = CALENDAR_START_HOUR * 60;
+        const calendarEndMinutes = (CALENDAR_END_HOUR + 1) * 60;
+        const wakeDisplayMinutes = wakeClockMinutes < calendarStartMinutes
+            ? wakeClockMinutes + MINUTES_IN_DAY
+            : wakeClockMinutes;
+        const startDisplayMinutes = Math.max(calendarStartMinutes, wakeDisplayMinutes - durationMinutes);
+        const endDisplayMinutes = Math.min(calendarEndMinutes, wakeDisplayMinutes);
+        if (endDisplayMinutes <= startDisplayMinutes) return null;
+
+        return {
+            top: ((startDisplayMinutes - calendarStartMinutes) / 60) * CALENDAR_HOUR_HEIGHT,
+            height: ((endDisplayMinutes - startDisplayMinutes) / 60) * CALENDAR_HOUR_HEIGHT,
+            startTime: formatClockTime(startDisplayMinutes),
+            endTime: formatClockTime(endDisplayMinutes),
+        };
+    }
+
+    function buildCalendarDayContextBlocks(day) {
+        const calendarStartMinutes = CALENDAR_START_HOUR * 60;
+        const calendarEndMinutes = (CALENDAR_END_HOUR + 1) * 60;
+        const toBlock = ({ id, kind, title, startTime, durationMinutes }) => {
+            const clockMinutes = parseCalendarClockMinutes(startTime);
+            const safeDuration = Math.max(1, Math.round(Number(durationMinutes) || 0));
+            if (clockMinutes == null || !safeDuration) return null;
+
+            const displayStart = clockMinutes < calendarStartMinutes
+                ? clockMinutes + MINUTES_IN_DAY
+                : clockMinutes;
+            const clippedStart = Math.max(displayStart, calendarStartMinutes);
+            const clippedEnd = Math.min(displayStart + safeDuration, calendarEndMinutes);
+            if (clippedEnd <= clippedStart) return null;
+
+            return {
+                id,
+                kind,
+                title,
+                top: ((clippedStart - calendarStartMinutes) / 60) * CALENDAR_HOUR_HEIGHT,
+                height: ((clippedEnd - clippedStart) / 60) * CALENDAR_HOUR_HEIGHT,
+                startTime: formatClockTime(clippedStart),
+                endTime: formatClockTime(clippedEnd),
+            };
+        };
+
+        const mealBlocks = (Array.isArray(day?.meals) ? day.meals : [])
+            .map((meal, index) => {
+                if (!meal || !Array.isArray(meal.items) || meal.items.length === 0) return null;
+                return toBlock({
+                    id: 'meal-' + String(meal.id || index),
+                    kind: 'meal',
+                    title: 'Приём пищи',
+                    startTime: meal.time,
+                    durationMinutes: CALENDAR_MEAL_DURATION_MINUTES,
+                });
+            })
+            .filter(Boolean);
+
+        const trainingBlocks = (Array.isArray(day?.trainings) ? day.trainings : [])
+            .map((training, index) => {
+                const durationMinutes = (Array.isArray(training?.z) ? training.z : [])
+                    .reduce((sum, minutes) => sum + Math.max(0, Number(minutes) || 0), 0);
+                if (!durationMinutes) return null;
+                return toBlock({
+                    id: 'training-' + String(training?.id || index),
+                    kind: 'training',
+                    title: String(training?.activityLabel || '').trim() || 'Тренировка',
+                    startTime: training?.time,
+                    durationMinutes,
+                });
+            })
+            .filter(Boolean);
+
+        return mealBlocks.concat(trainingBlocks).sort((left, right) => left.top - right.top);
+    }
+
+    function readCalendarHungerEvents() {
+        try {
+            if (typeof HEYS.HungerEnergyStatusStorage?.readEvents === 'function') {
+                return HEYS.HungerEnergyStatusStorage.readEvents() || [];
+            }
+        } catch (_) { /* noop */ }
+        try {
+            if (typeof HEYS.utils?.lsGet === 'function') {
+                return HEYS.utils.lsGet('heys_hunger_energy_status_events_v1', []) || [];
+            }
+        } catch (_) { /* noop */ }
+        return [];
+    }
+
+    function buildCalendarStateMarkers(day, hungerEvents, displayDate) {
+        const calendarStartMinutes = CALENDAR_START_HOUR * 60;
+        const markerDate = dateStr(displayDate || day?.date);
+        if (!markerDate) return [];
+
+        const toMarker = ({ id, kind, value, time, label }) => {
+            const level = Math.round(Number(value));
+            const clockMinutes = parseCalendarClockMinutes(time);
+            if (!Number.isFinite(level) || level < 1 || level > 10 || clockMinutes == null) return null;
+            const displayMinutes = clockMinutes < calendarStartMinutes
+                ? clockMinutes + MINUTES_IN_DAY
+                : clockMinutes;
+            return {
+                id,
+                kind,
+                value: level,
+                label,
+                time: formatClockTime(displayMinutes),
+                top: ((displayMinutes - calendarStartMinutes) / 60) * CALENDAR_HOUR_HEIGHT,
+                tone: kind === 'hunger'
+                    ? (level >= 7 ? 'alert' : level >= 4 ? 'attention' : 'calm')
+                    : (level <= 3 ? 'alert' : level <= 6 ? 'attention' : 'calm'),
+            };
+        };
+
+        const hungerMarkers = (Array.isArray(hungerEvents) ? hungerEvents : [])
+            .map((row, index) => {
+                const recordedAt = row?.recordedAt || row?.createdAt;
+                const recordedDate = new Date(recordedAt);
+                if (!Number.isFinite(recordedDate.getTime())) return null;
+                const eventDate = dateStr(row?.date) || (() => {
+                    const localDate = pad2(recordedDate.getFullYear()) + '-'
+                        + pad2(recordedDate.getMonth() + 1) + '-'
+                        + pad2(recordedDate.getDate());
+                    return recordedDate.getHours() < CALENDAR_START_HOUR ? addDays(localDate, -1) : localDate;
+                })();
+                if (eventDate !== markerDate) return null;
+                return toMarker({
+                    id: 'hunger-' + String(row?.id || index),
+                    kind: 'hunger',
+                    value: row?.hungerLevel ?? row?.input?.hungerLevel,
+                    time: pad2(recordedDate.getHours()) + ':' + pad2(recordedDate.getMinutes()),
+                    label: 'Голод',
+                });
+            })
+            .filter(Boolean);
+
+        const wellbeingMarkers = [];
+        const addWellbeing = (id, value, time, label) => {
+            const marker = toMarker({ id, kind: 'wellbeing', value, time, label });
+            if (marker) wellbeingMarkers.push(marker);
+        };
+
+        addWellbeing('wellbeing-morning', day?.wellbeingMorning, day?.sleepEnd, 'Самочувствие после сна');
+        (Array.isArray(day?.meals) ? day.meals : []).forEach((meal, index) => {
+            if (!Array.isArray(meal?.items) || meal.items.length === 0) return;
+            addWellbeing(
+                'wellbeing-meal-' + String(meal?.id || index),
+                meal?.wellbeing,
+                meal?.time,
+                'Самочувствие после еды',
+            );
+        });
+        (Array.isArray(day?.trainings) ? day.trainings : []).forEach((training, index) => {
+            const duration = (Array.isArray(training?.z) ? training.z : [])
+                .reduce((sum, minutes) => sum + Math.max(0, Number(minutes) || 0), 0);
+            if (!duration) return;
+            addWellbeing(
+                'wellbeing-training-' + String(training?.id || index),
+                training?.wellbeing,
+                training?.time,
+                'Самочувствие после тренировки',
+            );
+        });
+
+        return hungerMarkers.concat(wellbeingMarkers).sort((left, right) => (
+            left.top - right.top || left.kind.localeCompare(right.kind)
+        ));
+    }
+
+    function resolveCalendarDropConflict(daySlots, candidateStartTime, durationMinutes, options = {}) {
+        const calendarStartMinutes = CALENDAR_START_HOUR * 60;
+        const calendarEndMinutes = (CALENDAR_END_HOUR + 1) * 60;
+        const candidateStart = getCalendarDisplayMinutes(candidateStartTime);
+        const safeDuration = Math.max(30, Math.round(Number(durationMinutes) || 0));
+        const candidateEnd = candidateStart + safeDuration;
+        const excludeSlotId = String(options.excludeSlotId || '');
+        const ranges = (Array.isArray(daySlots) ? daySlots : [])
+            .filter((slot) => !excludeSlotId || String(slot?.id || '') !== excludeSlotId)
+            .map((slot) => ({
+                start: getCalendarDisplayMinutes(slot?.startTime),
+                end: getCalendarDisplayEndMinutes(slot),
+            }))
+            .filter((range) => range.end > range.start);
+
+        const sleepBlock = options.sleepBlock;
+        if (sleepBlock?.startTime && sleepBlock?.endTime) {
+            const sleepStart = getCalendarDisplayMinutes(sleepBlock.startTime);
+            let sleepEnd = getCalendarDisplayMinutes(sleepBlock.endTime);
+            if (sleepEnd <= sleepStart) sleepEnd += MINUTES_IN_DAY;
+            if (sleepEnd > sleepStart) ranges.push({ start: sleepStart, end: sleepEnd });
+        }
+
+        (Array.isArray(options.contextBlocks) ? options.contextBlocks : []).forEach((block) => {
+            if (!block?.startTime || !block?.endTime) return;
+            const blockStart = getCalendarDisplayMinutes(block.startTime);
+            let blockEnd = getCalendarDisplayMinutes(block.endTime);
+            if (blockEnd <= blockStart) blockEnd += MINUTES_IN_DAY;
+            if (blockEnd > blockStart) ranges.push({ start: blockStart, end: blockEnd });
+        });
+
+        const overlaps = (start, end, range) => start < range.end && range.start < end;
+        const conflicts = ranges.filter((range) => overlaps(candidateStart, candidateEnd, range));
+        if (conflicts.length === 0) {
+            return { hasConflict: false, conflictCount: 0, suggestedStartTime: '', suggestedEndTime: '' };
+        }
+
+        const isRangeFree = (start) => {
+            const end = start + safeDuration;
+            if (start < calendarStartMinutes || end > calendarEndMinutes) return false;
+            return !ranges.some((range) => overlaps(start, end, range));
+        };
+
+        let suggestedStart = null;
+        for (let offset = CALENDAR_SNAP_MINUTES; offset <= (calendarEndMinutes - calendarStartMinutes); offset += CALENDAR_SNAP_MINUTES) {
+            const after = candidateStart + offset;
+            const before = candidateStart - offset;
+            if (isRangeFree(after)) {
+                suggestedStart = after;
+                break;
+            }
+            if (isRangeFree(before)) {
+                suggestedStart = before;
+                break;
+            }
+        }
+
+        return {
+            hasConflict: true,
+            conflictCount: conflicts.length,
+            suggestedStartTime: suggestedStart == null ? '' : formatClockTime(suggestedStart),
+            suggestedEndTime: suggestedStart == null ? '' : formatClockTime(suggestedStart + safeDuration),
+        };
+    }
+
+    function resolveCalendarConflictChoiceTarget(conflict, useSuggested) {
+        const targetTime = useSuggested ? conflict?.suggestedStartTime : conflict?.startTime;
+        const displayDay = String(conflict?.displayDay || '');
+        if (!targetTime || !displayDay) return null;
+
+        const targetMinutes = timeToMinutes(targetTime);
+        const displayHour = Math.floor(targetMinutes / 60)
+            + (targetMinutes < (CALENDAR_START_HOUR * 60) ? 24 : 0);
+        const subHourMinutes = targetMinutes % 60;
+        const target = resolveCalendarCellStart(displayDay, displayHour, subHourMinutes);
+        return {
+            date: target.date,
+            time: target.time,
+            displayHour,
+            subHourMinutes,
+        };
+    }
+
+    function readCalendarDayV2(dateKey) {
+        try {
+            if (HEYS.MorningCheckinUtils && typeof HEYS.MorningCheckinUtils.readDayV2ScopedFirst === 'function') {
+                return HEYS.MorningCheckinUtils.readDayV2ScopedFirst(dateKey, {}) || {};
+            }
+        } catch (_) { /* noop */ }
+        try {
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet('heys_dayv2_' + dateKey, {}) || {};
+            }
+        } catch (_) { /* noop */ }
+        return {};
+    }
+
     function resolveCalendarDisplayDateTime(displayDate, displayMinutes) {
         const normalizedMinutes = Math.max(CALENDAR_START_HOUR * 60, Math.round(Number(displayMinutes) || 0));
         const actualDate = normalizedMinutes >= MINUTES_IN_DAY ? addDays(displayDate, 1) : displayDate;
@@ -563,13 +892,6 @@
             className: ' planning-calendar-slot--attention',
             color: 'linear-gradient(180deg, rgba(239, 68, 68, 0.94) 0%, rgba(220, 38, 38, 0.88) 100%)',
         };
-    }
-
-    function getTaskCalendarAnchorDate(task, todayIso, rangeStartIso, rangeEndIso) {
-        const preferredDate = dateStr(task?.startDate || task?.dueDate || todayIso);
-        if (preferredDate < rangeStartIso) return rangeStartIso;
-        if (preferredDate > rangeEndIso) return rangeEndIso;
-        return preferredDate;
     }
 
     function buildParentTaskIdsWithChildren(tasks) {
@@ -669,30 +991,149 @@
         };
     }
 
-    function buildTaskHeaderDayPatch(task, targetDate, todayIso) {
-        const anchorDate = dateStr(task?.startDate || task?.dueDate || todayIso);
-        if (!targetDate || targetDate === anchorDate) return null;
+    function getCalendarTaskPickerPriorityRank(task) {
+        const priority = String(task?.priority || 'p2').toLowerCase();
+        if (priority === 'p!') return 0;
+        if (priority === 'p1') return 1;
+        if (priority === 'p2') return 2;
+        if (priority === 'p3') return 3;
+        return 9;
+    }
 
-        if (task?.startDate && task?.dueDate) {
-            const deltaDays = diffDays(anchorDate, targetDate);
-            return {
-                startDate: addDays(task.startDate, deltaDays),
-                dueDate: addDays(task.dueDate, deltaDays),
-            };
-        }
+    function getTaskCalendarSlotState(taskId, slots) {
+        const normalizedTaskId = String(taskId || '');
+        const recurrenceDatesByGroup = new Map();
+        let hasSlot = false;
 
-        if (task?.startDate) {
-            return { startDate: targetDate };
-        }
+        (Array.isArray(slots) ? slots : []).forEach((slot) => {
+            if (!normalizedTaskId || String(slot?.taskId || '') !== normalizedTaskId) return;
+            hasSlot = true;
+            const groupId = String(slot?.recurrenceGroupId || '');
+            if (!groupId) return;
+            if (!recurrenceDatesByGroup.has(groupId)) recurrenceDatesByGroup.set(groupId, new Set());
+            recurrenceDatesByGroup.get(groupId).add(dateStr(slot?.date));
+        });
 
-        return { dueDate: targetDate };
+        return {
+            hasSlot,
+            hasActiveRecurrence: Array.from(recurrenceDatesByGroup.values()).some((dates) => dates.size > 1),
+        };
+    }
+
+    function canTaskAddCalendarSlot(taskId, slots) {
+        const slotState = getTaskCalendarSlotState(taskId, slots);
+        return !slotState.hasSlot || slotState.hasActiveRecurrence;
+    }
+
+    function buildCalendarTaskPickerTasks(tasks, query, parentTaskIdsWithChildren, slots) {
+        const needle = String(query || '').trim().toLowerCase();
+        const parentIds = parentTaskIdsWithChildren && typeof parentTaskIdsWithChildren.has === 'function'
+            ? parentTaskIdsWithChildren
+            : new Set();
+
+        return (Array.isArray(tasks) ? tasks : [])
+            .filter((task) => {
+                if (!task || task.status === 'done' || task.status === 'cancelled') return false;
+                if (parentIds.has(task.id)) return false;
+                if (!canTaskAddCalendarSlot(task.id, slots)) return false;
+                const title = String(task.title || '').trim();
+                if (!title) return false;
+                return !needle || title.toLowerCase().includes(needle);
+            })
+            .slice()
+            .sort((left, right) => {
+                const priorityDelta = getCalendarTaskPickerPriorityRank(left) - getCalendarTaskPickerPriorityRank(right);
+                if (priorityDelta) return priorityDelta;
+                const orderDelta = (Number(left.order) || 0) - (Number(right.order) || 0);
+                if (orderDelta) return orderDelta;
+                return String(left.title || '').localeCompare(String(right.title || ''), 'ru');
+            });
+    }
+
+    function buildCalendarOverdueSlotItemsByDay(tasks, slots, todayIso, calendarDays, parentTaskIdsWithChildren) {
+        const map = {};
+        (Array.isArray(calendarDays) ? calendarDays : []).forEach((day) => { map[day] = []; });
+        if (!todayIso || !map[todayIso]) return map;
+
+        const parentIds = parentTaskIdsWithChildren && typeof parentTaskIdsWithChildren.has === 'function'
+            ? parentTaskIdsWithChildren
+            : new Set();
+        const taskById = new Map(
+            (Array.isArray(tasks) ? tasks : [])
+                .filter((task) => task?.id)
+                .map((task) => [String(task.id), task]),
+        );
+        const overdueSlotByTaskId = new Map();
+
+        (Array.isArray(slots) ? slots : []).forEach((slot) => {
+            const taskId = slot?.taskId ? String(slot.taskId) : '';
+            const displayDate = getCalendarDisplayDate(slot);
+            if (!taskId || !displayDate || displayDate >= todayIso) return;
+
+            const task = taskById.get(taskId);
+            if (!task || task.status === 'done' || task.status === 'cancelled') return;
+            if (parentIds.has(task.id)) return;
+
+            const existing = overdueSlotByTaskId.get(taskId);
+            const existingDate = existing ? getCalendarDisplayDate(existing) : '';
+            const isLater = !existing
+                || displayDate > existingDate
+                || (displayDate === existingDate
+                    && getCalendarDisplayMinutes(slot.startTime) > getCalendarDisplayMinutes(existing.startTime));
+            if (isLater) overdueSlotByTaskId.set(taskId, slot);
+        });
+
+        map[todayIso] = Array.from(overdueSlotByTaskId.entries())
+            .map(([taskId, slot]) => ({
+                task: taskById.get(taskId),
+                slot,
+                overdueDate: getCalendarDisplayDate(slot),
+            }))
+            .sort((left, right) => {
+                if (left.overdueDate !== right.overdueDate) return left.overdueDate.localeCompare(right.overdueDate);
+                const timeDelta = getCalendarDisplayMinutes(left.slot.startTime) - getCalendarDisplayMinutes(right.slot.startTime);
+                if (timeDelta) return timeDelta;
+                return getCalendarTaskPickerPriorityRank(left.task) - getCalendarTaskPickerPriorityRank(right.task)
+                    || ((Number(left.task.order) || 0) - (Number(right.task.order) || 0))
+                    || String(left.task.title || '').localeCompare(String(right.task.title || ''), 'ru');
+            });
+
+        return map;
     }
 
     function isPlanningCalendarDragPayload(payload) {
         return payload?.type === 'task' || payload?.type === 'slot';
     }
 
-    function SlotDeleteActionSheet({ slot, columnDay, hasLinkedTask, onClose, onSlotOnly, onSlotAndTask }) {
+    function removeCalendarSlotKeepTask(state, slot) {
+        if (!slot?.id || typeof state?.deleteSlot !== 'function') return;
+        state.deleteSlot(slot.id);
+    }
+
+    function buildCalendarSlotUndoEntry(state, action) {
+        const slotId = String(action?.slotId || '');
+        if (!slotId) return null;
+        if (action?.kind === 'move' && typeof state?.updateSlot === 'function') {
+            const original = action.original || {};
+            return {
+                label: 'Слот перенесён',
+                undo: () => state.updateSlot(slotId, {
+                    date: original.date,
+                    startTime: original.startTime,
+                    endTime: original.endTime,
+                }),
+            };
+        }
+        if (action?.kind === 'create' && typeof state?.deleteSlot === 'function') {
+            return {
+                label: 'Слот добавлен',
+                undo: () => state.deleteSlot(slotId),
+            };
+        }
+        return null;
+    }
+
+    function SlotDeleteActionSheet({ hasLinkedTask, onClose, onSlotOnly, onSlotAndTask }) {
         return h('div', {
             className: 'planning-slot-delete-overlay',
             onClick: onClose,
@@ -718,7 +1159,7 @@
                         onSlotOnly();
                         onClose();
                     },
-                }, 'Только слот — задача в шапке дня'),
+                }, 'Убрать только из календаря'),
                 hasLinkedTask && h('button', {
                     type: 'button',
                     className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--danger',
@@ -726,7 +1167,7 @@
                         onSlotAndTask();
                         onClose();
                     },
-                }, 'Слот и задачу'),
+                }, 'Удалить задачу целиком'),
                 !hasLinkedTask && h('button', {
                     type: 'button',
                     className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--danger',
@@ -740,6 +1181,101 @@
                     className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--ghost',
                     onClick: onClose,
                 }, 'Отмена'),
+            ),
+        );
+    }
+
+    function CalendarDropConflictSheet({ conflict, onClose, onUseSuggested, onKeepParallel }) {
+        const suggestedRange = conflict?.suggestedStartTime && conflict?.suggestedEndTime
+            ? conflict.suggestedStartTime + '–' + conflict.suggestedEndTime
+            : '';
+        return h('div', {
+            className: 'planning-slot-delete-overlay planning-calendar-conflict-overlay',
+            onClick: onClose,
+            role: 'presentation',
+        },
+            h('div', {
+                className: 'planning-slot-delete-sheet planning-calendar-conflict-sheet',
+                onClick: (event) => event.stopPropagation(),
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'planning-calendar-conflict-title',
+            },
+                h('div', {
+                    id: 'planning-calendar-conflict-title',
+                    className: 'planning-slot-delete-sheet__title',
+                }, 'Время уже занято'),
+                h('p', { className: 'planning-slot-delete-sheet__hint' },
+                    suggestedRange
+                        ? 'Ближайшее свободное окно: ' + suggestedRange + '.'
+                        : 'Свободного окна такой длительности в этом дне нет.',
+                ),
+                suggestedRange && h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-calendar-conflict-sheet__btn--primary',
+                    onClick: onUseSuggested,
+                }, 'Перенести на ' + suggestedRange),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-calendar-conflict-sheet__btn--parallel',
+                    onClick: onKeepParallel,
+                }, 'Оставить параллельно'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--ghost',
+                    onClick: onClose,
+                }, 'Отмена'),
+            ),
+        );
+    }
+
+    function CalendarDisplaySettingsSheet({
+        isContextVisible,
+        isStateVisible,
+        onToggleContext,
+        onToggleState,
+        onClose,
+    }) {
+        const renderSwitch = (label, checked, onToggle) => h('button', {
+            type: 'button',
+            className: 'planning-calendar-display-settings__row',
+            role: 'switch',
+            'aria-checked': checked ? 'true' : 'false',
+            onClick: onToggle,
+        },
+            h('span', { className: 'planning-calendar-display-settings__label' }, label),
+            h('span', {
+                className: 'planning-calendar-display-settings__switch' + (checked ? ' is-active' : ''),
+                'aria-hidden': 'true',
+            }, h('span', { className: 'planning-calendar-display-settings__thumb' })),
+        );
+
+        return h('div', {
+            className: 'planning-slot-delete-overlay planning-calendar-display-settings-overlay',
+            onClick: onClose,
+            role: 'presentation',
+        },
+            h('div', {
+                className: 'planning-slot-delete-sheet planning-calendar-display-settings-sheet',
+                onClick: (event) => event.stopPropagation(),
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'planning-calendar-display-settings-title',
+            },
+                h('div', { className: 'planning-calendar-display-settings__head' },
+                    h('div', {
+                        id: 'planning-calendar-display-settings-title',
+                        className: 'planning-slot-delete-sheet__title',
+                    }, 'Слои календаря'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-display-settings__close',
+                        onClick: onClose,
+                        'aria-label': 'Закрыть настройки календаря',
+                    }, '×'),
+                ),
+                renderSwitch('Еда и тренировки', isContextVisible, onToggleContext),
+                renderSwitch('Голод и самочувствие', isStateVisible, onToggleState),
             ),
         );
     }
@@ -2022,6 +2558,9 @@
             : (STATUS_CONFIG.todo?.icon || '○');
         const toggleLabel = taskStatusToggleDone ? 'Вернуть в работу' : 'Завершить задачу';
         const showCarryover = isPastDay && !taskStatusToggleDone && typeof onQuickReschedule === 'function';
+        const slotHeight = Number.parseFloat(String(style?.height || '')) || 0;
+        const isCompactSlot = slotHeight > 0 && slotHeight <= 36;
+        const isShortSlot = slotHeight > 0 && slotHeight <= 64;
         const showFooter = Boolean(
             showSubtitle
             || typeof onTaskStatusToggle === 'function'
@@ -2032,6 +2571,8 @@
         return h('div', {
             className: 'planning-calendar-slot'
                 + (className || '')
+                + (isCompactSlot ? ' planning-calendar-slot--compact' : '')
+                + (!isCompactSlot && isShortSlot ? ' planning-calendar-slot--short' : '')
                 + (isTouchDragSource ? ' planning-calendar-slot--touch-dragging' : ''),
             draggable: allowNativeDrag !== false,
             style: isTouchDragSource
@@ -2084,13 +2625,15 @@
                 if (typeof onDragStateChange === 'function') onDragStateChange(false);
             },
         },
-            parentGroupLabel && h('span', {
-                className: 'planning-calendar-slot__parent',
-                title: parentGroupLabel,
-            }, parentGroupLabel),
-            h('span', {
-                className: 'planning-calendar-slot__title' + (parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
-            }, title),
+            h('div', { className: 'planning-calendar-slot__text' },
+                parentGroupLabel && h('span', {
+                    className: 'planning-calendar-slot__parent',
+                    title: parentGroupLabel,
+                }, parentGroupLabel),
+                h('span', {
+                    className: 'planning-calendar-slot__title' + (parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
+                }, title),
+            ),
             showFooter && h('div', { className: 'planning-calendar-slot__footer' },
                 showSubtitle && h('span', { className: 'planning-calendar-slot__time' }, subtitle),
                 h('div', { className: 'planning-calendar-slot__actions' },
@@ -2181,6 +2724,8 @@
 
     function CalendarUnscheduledTaskPill({
         task,
+        slot,
+        overdueDate,
         projects,
         taskLookup,
         onOpen,
@@ -2193,16 +2738,26 @@
     }) {
         const parentGroupLabel = buildTaskParentGroupLabel(task, taskLookup);
         const projectColor = getTaskProjectColor(task, projects);
+        const dragPayload = slot?.id
+            ? { type: 'slot', slotId: slot.id }
+            : { type: 'task', taskId: task.id };
+        const dragSourceKey = slot?.id ? ('slot:' + slot.id) : ('task:' + task.id);
+        const overdueTimeLabel = slot?.startTime
+            ? [overdueDate, slot.startTime + (slot.endTime ? ('–' + slot.endTime) : '')].filter(Boolean).join(' · ')
+            : overdueDate;
+        const taskTitle = parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title;
 
         return h('div', {
             className: 'planning-calendar-unscheduled-pill'
+                + (slot?.id ? ' planning-calendar-unscheduled-pill--overdue' : '')
                 + (isTouchDragSource ? ' planning-calendar-unscheduled-pill--touch-dragging' : ''),
             draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
             style: {
                 '--planning-unscheduled-project-color': projectColor,
                 touchAction: 'none',
             },
-            title: parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title,
+            title: overdueTimeLabel ? (taskTitle + ' · ' + overdueTimeLabel) : taskTitle,
+            'aria-label': overdueTimeLabel ? ('Просрочено: ' + taskTitle + '. ' + overdueTimeLabel) : taskTitle,
             onPointerDown: (event) => {
                 const pointerType = String(event?.pointerType || '').toLowerCase();
                 if ((pointerType === 'touch' || pointerType === 'pen') && event?.cancelable) {
@@ -2212,8 +2767,8 @@
                 if (typeof onPointerDragStart === 'function') {
                     onPointerDragStart({
                         event,
-                        payload: { type: 'task', taskId: task.id },
-                        sourceKey: 'task:' + task.id,
+                        payload: dragPayload,
+                        sourceKey: dragSourceKey,
                         title: task.title,
                         badgeText: '',
                         parentGroupLabel,
@@ -2226,8 +2781,8 @@
                 if (typeof onTouchDragStart === 'function') {
                     onTouchDragStart({
                         event,
-                        payload: { type: 'task', taskId: task.id },
-                        sourceKey: 'task:' + task.id,
+                        payload: dragPayload,
+                        sourceKey: dragSourceKey,
                         title: task.title,
                         badgeText: '',
                         parentGroupLabel,
@@ -2236,8 +2791,11 @@
                 }
             },
             onDragStart: (event) => {
-                event.dataTransfer.effectAllowed = 'copyMove';
-                event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ type: 'task', taskId: task.id }));
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData(
+                    slot?.id ? 'text/heys-planning-slot' : 'text/heys-planning-task',
+                    JSON.stringify(dragPayload),
+                );
                 const emptyImg = new Image();
                 emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                 event.dataTransfer.setDragImage(emptyImg, 0, 0);
@@ -2260,17 +2818,216 @@
         );
     }
 
+    function CalendarTaskPickerModal({
+        tasks,
+        projects,
+        slots,
+        taskLookup,
+        parentTaskIdsWithChildren,
+        onClose,
+        onOpenTask,
+        onCompleteTask,
+        onDeleteTask,
+        onDragStateChange,
+        onTouchDragStart,
+        onPointerDragStart,
+        shouldSuppressClick,
+        allowNativeDrag,
+    }) {
+        const [query, setQuery] = useState('');
+        const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState('');
+        const visibleTasks = useMemo(
+            () => buildCalendarTaskPickerTasks(tasks, query, parentTaskIdsWithChildren, slots),
+            [tasks, query, parentTaskIdsWithChildren, slots],
+        );
+
+        useEffect(() => {
+            if (!confirmDeleteTaskId) return undefined;
+            const timer = window.setTimeout(() => setConfirmDeleteTaskId(''), 3000);
+            return () => window.clearTimeout(timer);
+        }, [confirmDeleteTaskId]);
+
+        const closeAfterDragActivation = () => {
+            if (typeof onClose === 'function') onClose();
+        };
+
+        const renderTask = (task) => {
+            const parentGroupLabel = buildTaskParentGroupLabel(task, taskLookup);
+            const projectColor = getTaskProjectColor(task, projects);
+            const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.p2 || {};
+            const hasActiveRecurrence = getTaskCalendarSlotState(task.id, slots).hasActiveRecurrence;
+            const isDeleteArmed = confirmDeleteTaskId === task.id;
+            const startDrag = (event, mode) => {
+                event.stopPropagation();
+                const starter = mode === 'touch' ? onTouchDragStart : onPointerDragStart;
+                if (typeof starter !== 'function') return;
+                starter({
+                    event,
+                    payload: { type: 'task', taskId: task.id },
+                    sourceKey: 'task:' + task.id,
+                    title: task.title,
+                    badgeText: '',
+                    parentGroupLabel,
+                    accentColor: projectColor,
+                    onDragStateChange,
+                    onDragActivated: closeAfterDragActivation,
+                });
+            };
+
+            const completeTask = (event) => {
+                event.stopPropagation();
+                setConfirmDeleteTaskId('');
+                if (typeof onCompleteTask === 'function') onCompleteTask(task.id);
+            };
+
+            const openTask = (event) => {
+                if (event) event.stopPropagation();
+                if (typeof shouldSuppressClick === 'function' && shouldSuppressClick()) return;
+                if (typeof onOpenTask !== 'function') return;
+                onClose();
+                onOpenTask(task.id);
+            };
+
+            const deleteTask = (event) => {
+                event.stopPropagation();
+                if (!isDeleteArmed) {
+                    setConfirmDeleteTaskId(task.id);
+                    return;
+                }
+                setConfirmDeleteTaskId('');
+                if (typeof onDeleteTask === 'function') onDeleteTask(task.id);
+            };
+
+            return h('div', {
+                key: task.id,
+                className: 'planning-calendar-task-picker__task',
+                style: { '--planning-task-picker-color': projectColor },
+                title: parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title,
+            },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-calendar-task-picker__task-main',
+                    draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
+                    onPointerDown: (event) => startDrag(event, 'pointer'),
+                    onTouchStart: (event) => {
+                        if (typeof window.PointerEvent === 'function') return;
+                        startDrag(event, 'touch');
+                    },
+                    onDragStart: (event) => {
+                        event.stopPropagation();
+                        event.dataTransfer.effectAllowed = 'copyMove';
+                        event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ type: 'task', taskId: task.id }));
+                        const emptyImg = new Image();
+                        emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                        event.dataTransfer.setDragImage(emptyImg, 0, 0);
+                        closeAfterDragActivation();
+                    },
+                    onClick: openTask,
+                },
+                    h('span', {
+                        className: 'planning-calendar-task-picker__priority',
+                        style: {
+                            color: priority.color || undefined,
+                            background: priority.bg || undefined,
+                            borderColor: priority.border || undefined,
+                        },
+                    }, priority.label || task.priority || 'P2'),
+                    h('span', { className: 'planning-calendar-task-picker__body' },
+                        parentGroupLabel && h('span', {
+                            className: 'planning-calendar-task-picker__parent',
+                        }, parentGroupLabel),
+                        h('span', { className: 'planning-calendar-task-picker__title' }, task.title),
+                    ),
+                    hasActiveRecurrence && h('span', {
+                        className: 'planning-calendar-task-picker__scheduled',
+                        'aria-label': 'Повторение включено',
+                        title: 'Повторение включено',
+                    }, '↻'),
+                ),
+                h('span', { className: 'planning-calendar-task-picker__actions' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-task-picker__action planning-calendar-task-picker__action--edit',
+                        'aria-label': 'Редактировать задачу',
+                        title: 'Редактировать задачу',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onClick: openTask,
+                    }, '✎'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-task-picker__action planning-calendar-task-picker__action--complete',
+                        'aria-label': 'Отметить выполненной',
+                        title: 'Отметить выполненной',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onClick: completeTask,
+                    }, '✓'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-task-picker__action planning-calendar-task-picker__action--delete'
+                            + (isDeleteArmed ? ' is-armed' : ''),
+                        'aria-label': isDeleteArmed ? 'Подтвердить удаление задачи' : 'Удалить задачу',
+                        title: isDeleteArmed ? 'Нажми ещё раз, чтобы удалить' : 'Удалить задачу',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onClick: deleteTask,
+                    }, isDeleteArmed ? 'Да' : '×'),
+                ),
+            );
+        };
+
+        return h('div', {
+            className: 'planning-calendar-task-picker-overlay',
+            onClick: onClose,
+            role: 'presentation',
+        },
+            h('div', {
+                className: 'planning-calendar-task-picker',
+                onClick: (event) => event.stopPropagation(),
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'planning-calendar-task-picker-title',
+            },
+                h('div', { className: 'planning-calendar-task-picker__head' },
+                    h('div', { id: 'planning-calendar-task-picker-title', className: 'planning-calendar-task-picker__title-main' }, 'Добавить задачу'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-task-picker__close',
+                        'aria-label': 'Закрыть',
+                        title: 'Закрыть',
+                        onClick: onClose,
+                    }, '×'),
+                ),
+                h('input', {
+                    className: 'planning-calendar-task-picker__search',
+                    type: 'search',
+                    value: query,
+                    placeholder: 'Поиск по названию',
+                    autoFocus: true,
+                    onChange: (event) => setQuery(event.target.value),
+                }),
+                h('div', { className: 'planning-calendar-task-picker__list' },
+                    visibleTasks.length
+                        ? visibleTasks.map(renderTask)
+                        : h('div', { className: 'planning-calendar-task-picker__empty' }, 'Задач не найдено'),
+                ),
+            ),
+        );
+    }
+
     function CalendarScreen({ state }) {
         const { isDesktop } = usePlanningViewport();
         const [slotDraft, setSlotDraft] = useState(null);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
         const [resizePreview, setResizePreview] = useState(null);
         const [calendarDayWindow, setCalendarDayWindow] = useState(readStoredCalendarDayWindow);
         const [calendarViewportWidth, setCalendarViewportWidth] = useState(0);
         const [calendarViewportHeight, setCalendarViewportHeight] = useState(0);
         const [nowLineTop, setNowLineTop] = useState(() => getCalendarNowTop());
         const [shouldCenterNow, setShouldCenterNow] = useState(true);
-        const [headerDropState, setHeaderDropState] = useState({ day: '', mode: '' });
+        const [isCalendarContextVisible, setIsCalendarContextVisible] = useState(readStoredCalendarContextVisibility);
+        const [isCalendarStateVisible, setIsCalendarStateVisible] = useState(readStoredCalendarStateVisibility);
+        const [calendarStateVersion, setCalendarStateVersion] = useState(0);
+        const [isDragCancelTargetActive, setIsDragCancelTargetActive] = useState(false);
         const [calendarCellDropPreview, setCalendarCellDropPreview] = useState(null);
         const [calendarDropCommitAccent, setCalendarDropCommitAccent] = useState(null);
         const headerFrame = { ready: true, top: 0, left: 0, width: 0, height: 0 };
@@ -2279,6 +3036,9 @@
         const [touchDragSourceKey, setTouchDragSourceKey] = useState('');
         const [rangeSelectPreview, setRangeSelectPreview] = useState(null);
         const [slotDeleteTarget, setSlotDeleteTarget] = useState(null);
+        const [calendarUndoEntry, setCalendarUndoEntry] = useState(null);
+        const [calendarDropConflictChoice, setCalendarDropConflictChoice] = useState(null);
+        const [isCalendarDisplaySettingsOpen, setIsCalendarDisplaySettingsOpen] = useState(false);
         const rangePointerSessionRef = useRef(null);
         const rangeTouchSessionRef = useRef(null);
         const resizeStateRef = useRef(null);
@@ -2292,8 +3052,9 @@
         const touchDragBodyRectRef = useRef(null);
         const touchDragGridRectRef = useRef(null);
         const touchDragLayoutGenRef = useRef(0);
-        const headerDropStateRef = useRef({ day: '', mode: '' });
+        const dragCancelRef = useRef(null);
         const dropCommitAccentTimerRef = useRef(0);
+        const calendarUndoTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
         const calendarBodyScrollRafRef = useRef(0);
@@ -2303,13 +3064,13 @@
         const isCalendarDragZoomActiveRef = useRef(false);
         const [, setCalendarThemeTick] = useState(0);
         const todayIso = getPlanningTodayIso();
+        const [todayDayData, setTodayDayData] = useState(() => readCalendarDayV2(todayIso));
         const yesterdayIso = useMemo(() => addDays(todayIso, -1), [todayIso]);
         const calendarStartIso = useMemo(() => addDays(todayIso, -CALENDAR_LOOKBACK_DAYS), [todayIso]);
         const calendarDays = useMemo(
             () => buildCalendarDays(calendarStartIso, CALENDAR_LOOKBACK_DAYS + CALENDAR_FORWARD_DAYS + 1),
             [calendarStartIso],
         );
-        const calendarEndIso = calendarDays[calendarDays.length - 1] || todayIso;
         const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? CALENDAR_DRAG_ZOOM_VISIBLE_DAYS : 0);
         const isCompactCalendarView = visibleDayCount >= CALENDAR_DRAG_ZOOM_VISIBLE_DAYS;
         const rawDayColumnWidth = Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / Math.max(visibleDayCount, 1));
@@ -2323,14 +3084,84 @@
         const taskMap = useMemo(() => new Map(state.tasks.map((task) => [task.id, task])), [state.tasks]);
         const resolvedTaskProjectIds = useMemo(() => buildResolvedTaskProjectMap(state.tasks, state.projects), [state.tasks, state.projects]);
         const parentTaskIdsWithChildren = useMemo(() => buildParentTaskIdsWithChildren(state.tasks), [state.tasks]);
+        const todaySleepBlock = useMemo(() => buildCalendarSleepBlock(todayDayData), [todayDayData]);
+        const todayContextBlocks = useMemo(
+            () => isCalendarContextVisible ? buildCalendarDayContextBlocks(todayDayData) : [],
+            [isCalendarContextVisible, todayDayData],
+        );
+        const todayStateMarkers = useMemo(
+            () => isCalendarStateVisible
+                ? buildCalendarStateMarkers(todayDayData, readCalendarHungerEvents(), todayIso)
+                : [],
+            [calendarStateVersion, isCalendarStateVisible, todayDayData, todayIso],
+        );
+
+        useEffect(() => {
+            const refreshCalendarDayData = () => {
+                setTodayDayData(readCalendarDayV2(todayIso));
+                setCalendarStateVersion((version) => version + 1);
+            };
+            const handleDayUpdated = (event) => {
+                const eventDate = event?.detail?.date || event?.detail?.dateKey || '';
+                if (!eventDate || eventDate === todayIso) refreshCalendarDayData();
+            };
+
+            refreshCalendarDayData();
+            window.addEventListener('heys:day-updated', handleDayUpdated);
+            window.addEventListener('heysMealAdded', refreshCalendarDayData);
+            window.addEventListener('heys:hunger-energy-status-updated', refreshCalendarDayData);
+            window.addEventListener('heysSyncCompleted', refreshCalendarDayData);
+            return () => {
+                window.removeEventListener('heys:day-updated', handleDayUpdated);
+                window.removeEventListener('heysMealAdded', refreshCalendarDayData);
+                window.removeEventListener('heys:hunger-energy-status-updated', refreshCalendarDayData);
+                window.removeEventListener('heysSyncCompleted', refreshCalendarDayData);
+            };
+        }, [todayIso]);
+
+        const toggleCalendarContextVisibility = () => {
+            setIsCalendarContextVisible((current) => {
+                const next = !current;
+                storeCalendarContextVisibility(next);
+                return next;
+            });
+        };
+
+        const toggleCalendarStateVisibility = () => {
+            setIsCalendarStateVisible((current) => {
+                const next = !current;
+                storeCalendarStateVisibility(next);
+                return next;
+            });
+        };
+
+        useEffect(() => () => {
+            if (calendarUndoTimerRef.current) window.clearTimeout(calendarUndoTimerRef.current);
+        }, []);
+
+        const offerCalendarUndo = (label, undo) => {
+            if (calendarUndoTimerRef.current) window.clearTimeout(calendarUndoTimerRef.current);
+            setCalendarUndoEntry({ label, undo });
+            calendarUndoTimerRef.current = window.setTimeout(() => {
+                calendarUndoTimerRef.current = 0;
+                setCalendarUndoEntry(null);
+            }, 5000);
+        };
+
+        const triggerCalendarUndo = () => {
+            if (calendarUndoEntry && typeof calendarUndoEntry.undo === 'function') {
+                calendarUndoEntry.undo();
+            }
+            if (calendarUndoTimerRef.current) {
+                window.clearTimeout(calendarUndoTimerRef.current);
+                calendarUndoTimerRef.current = 0;
+            }
+            setCalendarUndoEntry(null);
+        };
 
         const setCalendarDragZoom = (value) => {
             setIsCalendarDragZoomActive((current) => (current === value ? current : value));
         };
-
-        useEffect(() => {
-            headerDropStateRef.current = headerDropState;
-        }, [headerDropState]);
 
         const shouldSuppressCalendarClick = () => suppressCalendarClickUntilRef.current > Date.now();
 
@@ -2338,31 +3169,15 @@
             suppressCalendarClickUntilRef.current = Date.now() + 420;
         };
 
-        const resolveHeaderDropMode = (payload) => (payload?.type === 'slot' ? 'unschedule' : 'task');
-
-        const applyHeaderDropState = (day, payload) => {
-            const nextMode = resolveHeaderDropMode(payload);
-            const currentState = headerDropStateRef.current;
-            if (currentState.day === day && currentState.mode === nextMode) return;
-            setHeaderDropState((current) => {
-                if (current.day === day && current.mode === nextMode) return current;
-                return { day, mode: nextMode };
-            });
-        };
-
-        const clearHeaderDropState = () => {
-            const currentState = headerDropStateRef.current;
-            if (!currentState.day && !currentState.mode) return;
-            setHeaderDropState((current) => {
-                if (!current.day && !current.mode) return current;
-                return { day: '', mode: '' };
-            });
+        const clearDragCancelTarget = () => {
+            setIsDragCancelTargetActive((current) => (current ? false : current));
         };
 
         const buildCalendarCellDropPreview = (day, hour, payload, subHourMinutes) => {
             if (!day || hour == null || !isPlanningCalendarDragPayload(payload)) return null;
 
             const start = resolveCalendarCellStart(day, hour, subHourMinutes);
+            const daySlots = state.slots.filter((slot) => getCalendarDisplayDate(slot) === day);
 
             if (payload.type === 'slot' && payload.slotId) {
                 const slot = state.slots.find((entry) => entry.id === payload.slotId);
@@ -2376,6 +3191,11 @@
                     endTime,
                 });
                 const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects, null);
+                const conflict = resolveCalendarDropConflict(daySlots, start.time, durationMinutes, {
+                    excludeSlotId: slot.id,
+                    sleepBlock: day === todayIso ? todaySleepBlock : null,
+                    contextBlocks: day === todayIso ? todayContextBlocks : null,
+                });
 
                 return {
                     day,
@@ -2389,6 +3209,7 @@
                     timeLabel: start.time + '–' + endTime,
                     accentColor: getTaskProjectColor(linkedTask || {}, state.projects),
                     background: appearance.color,
+                    ...conflict,
                 };
             }
 
@@ -2401,6 +3222,10 @@
                 const metrics = buildSlotMetrics({
                     startTime: start.time,
                     endTime,
+                });
+                const conflict = resolveCalendarDropConflict(daySlots, start.time, durationMinutes, {
+                    sleepBlock: day === todayIso ? todaySleepBlock : null,
+                    contextBlocks: day === todayIso ? todayContextBlocks : null,
                 });
 
                 return {
@@ -2415,6 +3240,7 @@
                     timeLabel: start.time + '–' + endTime,
                     accentColor: getTaskProjectColor(task, state.projects),
                     background: '',
+                    ...conflict,
                 };
             }
 
@@ -2438,6 +3264,10 @@
                     && current.timeLabel === nextPreview.timeLabel
                     && current.accentColor === nextPreview.accentColor
                     && current.background === nextPreview.background
+                    && current.hasConflict === nextPreview.hasConflict
+                    && current.conflictCount === nextPreview.conflictCount
+                    && current.suggestedStartTime === nextPreview.suggestedStartTime
+                    && current.suggestedEndTime === nextPreview.suggestedEndTime
                 ) {
                     return current;
                 }
@@ -2493,20 +3323,20 @@
         const resolveCalendarDropTargetFromPoint = (clientX, clientY) => {
             const currentDayWidth = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
             const currentCalendarDays = calendarDaysRef.current || calendarDays;
-            const horizontalScrollLeft = gridScrollRef.current?.scrollLeft || 0;
+            const cancelNode = dragCancelRef.current;
+            if (cancelNode) {
+                const cancelRect = cancelNode.getBoundingClientRect();
+                const withinCancelX = clientX >= cancelRect.left && clientX <= cancelRect.right;
+                const withinCancelY = clientY >= cancelRect.top && clientY <= cancelRect.bottom;
+                if (withinCancelX && withinCancelY) return { type: 'cancel' };
+            }
 
             const headerNode = headerRef.current;
             if (headerNode) {
                 const headerRect = headerNode.getBoundingClientRect();
                 const withinHeaderX = clientX >= headerRect.left && clientX <= headerRect.right;
                 const withinHeaderY = clientY >= headerRect.top && clientY <= headerRect.bottom;
-
-                if (withinHeaderX && withinHeaderY) {
-                    const relativeX = clientX - headerRect.left + horizontalScrollLeft;
-                    const dayIndex = Math.floor(relativeX / currentDayWidth);
-                    const day = currentCalendarDays[dayIndex];
-                    if (day) return { type: 'header', day };
-                }
+                if (withinHeaderX && withinHeaderY) return null;
             }
 
             const bodyNode = bodyScrollRef.current;
@@ -2537,37 +3367,12 @@
             };
         };
 
-        const resolveHeaderDropContext = (payload) => {
-            if (payload?.type === 'task' && payload.taskId) {
-                const task = state.tasks.find((entry) => entry.id === payload.taskId);
-                return task ? { task, slot: null } : null;
-            }
-
-            if (payload?.type === 'slot' && payload.slotId) {
-                const slot = state.slots.find((entry) => entry.id === payload.slotId);
-                if (!slot?.taskId) return null;
-
-                const task = state.tasks.find((entry) => entry.id === slot.taskId);
-                return task ? { task, slot } : null;
-            }
-
-            return null;
-        };
-
-        const canApplyDragPayloadToHeaderDay = (payload) => (
-            (payload?.type === 'task' && !!payload.taskId)
-            || (payload?.type === 'slot' && !!payload.slotId)
-        );
-
         const syncTouchDragDropState = (active, clientX, clientY) => {
             const dropTarget = resolveCalendarDropTargetFromPoint(clientX, clientY);
-
-            if (canApplyDragPayloadToHeaderDay(active?.payload) && dropTarget?.type === 'header') {
-                applyHeaderDropState(dropTarget.day, active?.payload);
-                clearCalendarCellDropPreview();
-            } else {
-                clearHeaderDropState();
-            }
+            const nextCancelTargetActive = dropTarget?.type === 'cancel';
+            setIsDragCancelTargetActive((current) => (
+                current === nextCancelTargetActive ? current : nextCancelTargetActive
+            ));
 
             if (isPlanningCalendarDragPayload(active?.payload) && dropTarget?.type === 'cell') {
                 applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload, dropTarget.subHourMinutes);
@@ -2578,42 +3383,105 @@
             return dropTarget;
         };
 
-        const applyDragPayloadToHeaderDay = (day, payload) => {
-            const context = resolveHeaderDropContext(payload);
-            if (!context?.task) return;
-
-            const patch = buildTaskHeaderDayPatch(context.task, day, todayIso);
-            if (patch) state.updateTask(context.task.id, patch);
-            if (context.slot?.id) state.deleteSlot(context.slot.id);
-        };
-
-        const applyDragPayloadToCell = (date, hour, payload, subHourMinutes) => {
-            if (!payload) return;
-            const start = resolveCalendarCellStart(date, hour, subHourMinutes);
-            const startTime = start.time;
-
+        const commitDragPayloadToTime = (date, startTime, payload) => {
             if (payload.type === 'slot' && payload.slotId) {
                 const slot = state.slots.find((entry) => entry.id === payload.slotId);
-                if (!slot) return;
+                if (!slot) return false;
                 const duration = Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
+                const original = {
+                    date: slot.date,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                };
+                const nextEndTime = formatClockTime(timeToMinutes(startTime) + duration);
+                if (
+                    dateStr(slot.date) === date
+                    && slot.startTime === startTime
+                    && slot.endTime === nextEndTime
+                ) return false;
                 state.updateSlot(slot.id, {
-                    date: start.date,
+                    date,
                     startTime,
-                    endTime: formatClockTime(timeToMinutes(startTime) + duration),
+                    endTime: nextEndTime,
                 });
-                return;
+                const undoEntry = buildCalendarSlotUndoEntry(state, {
+                    kind: 'move',
+                    slotId: slot.id,
+                    original,
+                });
+                if (undoEntry) offerCalendarUndo(undoEntry.label, undoEntry.undo);
+                return true;
             }
 
             const task = state.tasks.find((entry) => entry.id === payload.taskId);
-            if (!task) return;
+            if (!task) return false;
+            if (!canTaskAddCalendarSlot(task.id, state.slots)) return false;
             const duration = getTaskDurationMinutes(task);
-            state.addSlot({
+            const createdSlot = state.addSlot({
                 taskId: task.id,
-                date: start.date,
+                date,
                 startTime,
                 endTime: formatClockTime(timeToMinutes(startTime) + duration),
                 title: '',
             });
+            if (createdSlot?.id) {
+                const undoEntry = buildCalendarSlotUndoEntry(state, {
+                    kind: 'create',
+                    slotId: createdSlot.id,
+                });
+                if (undoEntry) offerCalendarUndo(undoEntry.label, undoEntry.undo);
+            }
+            return !!createdSlot?.id;
+        };
+
+        const applyDragPayloadToCell = (date, hour, payload, subHourMinutes, options = {}) => {
+            if (!payload) return false;
+            const start = resolveCalendarCellStart(date, hour, subHourMinutes);
+            const sourceSlot = payload.type === 'slot' && payload.slotId
+                ? state.slots.find((entry) => entry.id === payload.slotId)
+                : null;
+            const sourceTask = payload.type === 'task' && payload.taskId
+                ? state.tasks.find((entry) => entry.id === payload.taskId)
+                : null;
+            if (payload.type === 'slot' && !sourceSlot) return false;
+            if (payload.type === 'task' && !sourceTask) return false;
+
+            const duration = sourceSlot
+                ? Math.max(30, getCalendarDisplayEndMinutes(sourceSlot) - getCalendarDisplayMinutes(sourceSlot.startTime))
+                : getTaskDurationMinutes(sourceTask);
+            const displayDay = getCalendarDisplayDate({ date: start.date, startTime: start.time });
+            const daySlots = state.slots.filter((slot) => getCalendarDisplayDate(slot) === displayDay);
+            const conflict = resolveCalendarDropConflict(daySlots, start.time, duration, {
+                excludeSlotId: sourceSlot?.id,
+                sleepBlock: displayDay === todayIso ? todaySleepBlock : null,
+                contextBlocks: displayDay === todayIso ? todayContextBlocks : null,
+            });
+
+            if (conflict.hasConflict && !options.keepParallel) {
+                setCalendarDropConflictChoice({
+                    ...conflict,
+                    displayDay,
+                    date: start.date,
+                    startTime: start.time,
+                    duration,
+                    payload,
+                });
+                return false;
+            }
+
+            return commitDragPayloadToTime(start.date, start.time, payload);
+        };
+
+        const commitCalendarConflictChoice = (useSuggested) => {
+            const choice = calendarDropConflictChoice;
+            if (!choice) return;
+            setCalendarDropConflictChoice(null);
+
+            const target = resolveCalendarConflictChoiceTarget(choice, useSuggested);
+            if (!target) return;
+            if (commitDragPayloadToTime(target.date, target.time, choice.payload)) {
+                flashCalendarDropCommitAccent(choice.displayDay, target.displayHour, target.subHourMinutes);
+            }
         };
 
         const maybeActivateCalendarDragZoomFromPoint = (clientX, payload) => {
@@ -2747,6 +3615,10 @@
             });
 
             syncTouchDragDropState(current, current.lastX, current.lastY);
+            if (!current.dragActivationNotified && typeof current.onDragActivated === 'function') {
+                current.dragActivationNotified = true;
+                current.onDragActivated(current);
+            }
             startCalendarTouchAutoScroll();
         };
 
@@ -2818,7 +3690,7 @@
             touchDragStateRef.current = null;
             setTouchDragPreview(null);
             setTouchDragSourceKey('');
-            clearHeaderDropState();
+            clearDragCancelTarget();
             clearCalendarCellDropPreview();
             setCalendarDragZoom(false);
 
@@ -2831,14 +3703,17 @@
             }
 
             if (!applyDrop || !active.activated || !dropTarget) return;
-            if (dropTarget.type === 'header') {
-                clearCalendarDropCommitAccent();
-                applyDragPayloadToHeaderDay(dropTarget.day, active.payload);
-                return;
-            }
+            if (dropTarget.type === 'cancel') return;
             if (dropTarget.type === 'cell') {
-                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload, dropTarget.subHourMinutes);
-                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour, dropTarget.subHourMinutes);
+                const committed = applyDragPayloadToCell(
+                    dropTarget.day,
+                    dropTarget.hour,
+                    active.payload,
+                    dropTarget.subHourMinutes,
+                );
+                if (committed) {
+                    flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour, dropTarget.subHourMinutes);
+                }
             }
         };
 
@@ -2852,6 +3727,7 @@
             accentColor,
             background,
             onDragStateChange,
+            onDragActivated,
         }) => {
             const touchPoint = event?.touches?.[0];
             if (!touchPoint || (event?.touches?.length || 0) !== 1) return;
@@ -2873,6 +3749,7 @@
                 accentColor,
                 background,
                 onDragStateChange,
+                onDragActivated,
                 touchId: touchPoint.identifier,
                 targetNode,
                 startX: clientX,
@@ -2890,6 +3767,7 @@
                 handlePointerMove: null,
                 handlePointerUp: null,
                 handlePointerCancel: null,
+                dragActivationNotified: false,
             };
 
             const activateTouchDrag = () => {
@@ -3015,6 +3893,7 @@
             accentColor,
             background,
             onDragStateChange,
+            onDragActivated,
         }) => {
             const pointerType = String(event?.pointerType || '').toLowerCase();
             if (event.button != null && event.button !== 0) return;
@@ -3036,6 +3915,7 @@
                 accentColor,
                 background,
                 onDragStateChange,
+                onDragActivated,
                 pointerId: event.pointerId,
                 targetNode,
                 startX: clientX,
@@ -3053,6 +3933,7 @@
                 handlePointerMove: null,
                 handlePointerUp: null,
                 handlePointerCancel: null,
+                dragActivationNotified: false,
             };
 
             const isTouchLike = pointerType === 'touch' || pointerType === 'pen';
@@ -3245,7 +4126,7 @@
         useEffect(() => {
             const deactivateDragZoom = () => {
                 setCalendarDragZoom(false);
-                clearHeaderDropState();
+                clearDragCancelTarget();
                 clearCalendarCellDropPreview();
             };
 
@@ -3383,16 +4264,6 @@
             setShouldCenterNow(true);
         };
 
-        const handleDropToHeaderDay = (day, event) => {
-            event.preventDefault();
-            setCalendarDragZoom(false);
-            clearHeaderDropState();
-            clearCalendarCellDropPreview();
-            clearCalendarDropCommitAccent();
-            const payload = parsePlanningDragPayload(event);
-            applyDragPayloadToHeaderDay(day, payload);
-        };
-
         useEffect(() => {
             const finishResizeInteraction = () => {
                 const active = resizeStateRef.current;
@@ -3491,39 +4362,16 @@
             return map;
         }, [calendarDays, state.slots]);
 
-        const unscheduledTasks = useMemo(() => state.tasks.filter((task) => {
-            if (task.status === 'done' || task.status === 'cancelled') return false;
-            if (parentTaskIdsWithChildren.has(task.id)) return false;
-            return !state.slots.some((slot) => slot.taskId === task.id);
-        }), [parentTaskIdsWithChildren, state.tasks, state.slots]);
-
-        const unscheduledTasksByDay = useMemo(() => {
-            const map = {};
-            calendarDays.forEach((day) => { map[day] = []; });
-            unscheduledTasks.forEach((task) => {
-                const day = getTaskCalendarAnchorDate(task, todayIso, calendarStartIso, calendarEndIso);
-                if (!map[day]) map[day] = [];
-                map[day].push(task);
-            });
-            return map;
-        }, [calendarDays, unscheduledTasks, todayIso, calendarStartIso, calendarEndIso]);
-
-        const moveYesterdayUnscheduledToToday = () => {
-            const tasks = unscheduledTasksByDay[yesterdayIso] || [];
-            if (!tasks.length) return;
-            let moved = 0;
-            tasks.forEach((task) => {
-                const patch = buildTaskHeaderDayPatch(task, todayIso, todayIso);
-                if (patch) {
-                    state.updateTask(task.id, patch);
-                    moved += 1;
-                }
-            });
-            suppressCalendarClick();
-            if (moved && typeof console !== 'undefined' && typeof console.info === 'function') {
-                console.info('[HEYS.planning.calendar] Moved ' + moved + ' unscheduled task(s) from yesterday to today');
-            }
-        };
+        const overdueSlotItemsByDay = useMemo(
+            () => buildCalendarOverdueSlotItemsByDay(
+                state.tasks,
+                state.slots,
+                todayIso,
+                calendarDays,
+                parentTaskIdsWithChildren,
+            ),
+            [calendarDays, parentTaskIdsWithChildren, state.tasks, state.slots, todayIso],
+        );
 
         const dayOccupancyByDay = useMemo(() => {
             const map = {};
@@ -4307,22 +5155,11 @@
         const handleDropToCell = (date, hour, event) => {
             event.preventDefault();
             setCalendarDragZoom(false);
-            clearHeaderDropState();
+            clearDragCancelTarget();
             clearCalendarCellDropPreview();
             const payload = parsePlanningDragPayload(event);
-            applyDragPayloadToCell(date, hour, payload);
-            flashCalendarDropCommitAccent(date, hour);
-        };
-
-        const removeCalendarSlotKeepTask = (slot, columnDay) => {
-            const taskId = slot?.taskId;
-            const remaining = state.slots.filter((s) => s.taskId === taskId && s.id !== slot.id);
-            state.deleteSlot(slot.id);
-            if (taskId && remaining.length === 0) {
-                state.updateTask(taskId, {
-                    startDate: columnDay,
-                    dueDate: columnDay,
-                });
+            if (applyDragPayloadToCell(date, hour, payload)) {
+                flashCalendarDropCommitAccent(date, hour);
             }
         };
 
@@ -4379,10 +5216,37 @@
                 + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : '')
                 + (touchDragPreview?.kind === 'task' ? ' planning-calendar-screen--task-dragging' : ''),
         },
+            touchDragPreview && h('div', {
+                ref: dragCancelRef,
+                className: 'planning-calendar-drag-cancel'
+                    + (isDragCancelTargetActive ? ' is-active' : ''),
+                role: 'status',
+                'aria-label': 'Отменить перенос',
+            },
+                h('span', { className: 'planning-calendar-drag-cancel__icon', 'aria-hidden': 'true' }, '×'),
+                h('span', { className: 'planning-calendar-drag-cancel__label' },
+                    isDragCancelTargetActive ? 'Отпустите — перенос отменится' : 'Отменить перенос',
+                ),
+            ),
+            calendarCellDropPreview?.hasConflict && h('div', {
+                className: 'planning-calendar-drag-conflict',
+                role: 'status',
+                'aria-live': 'polite',
+            },
+                h('strong', null, 'Пересечение'),
+                h('span', null, calendarCellDropPreview.suggestedStartTime
+                    ? ('Свободно ' + calendarCellDropPreview.suggestedStartTime + '–' + calendarCellDropPreview.suggestedEndTime)
+                    : 'Свободного окна в этом дне нет'),
+            ),
             h('div', { className: 'planning-calendar-nav' },
                 h('span', { className: 'planning-calendar-nav__density-label' }, 'Сколько дней в ряд'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-visibleDayCount) }, '‹'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: scrollCalendarToTodayWindow }, 'Сегодня'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-btn planning-btn--sm planning-calendar-nav__add-task-btn',
+                    onClick: () => setIsTaskPickerOpen(true),
+                }, '+ Задача'),
                 h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Плотность календаря: дней в окне' },
                     CALENDAR_DAY_WINDOW_OPTIONS.map((days) => h('button', {
                         key: 'days-window-' + days,
@@ -4394,6 +5258,13 @@
                     }, days + 'д')),
                 ),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(visibleDayCount) }, '›'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-btn planning-btn--sm planning-calendar-nav__settings-btn',
+                    'aria-label': 'Настроить слои календаря',
+                    title: 'Настроить слои календаря',
+                    onClick: () => setIsCalendarDisplaySettingsOpen(true),
+                }, h('span', { 'aria-hidden': 'true' }, '⚙')),
                 h('button', {
                     type: 'button',
                     className: 'hdr-theme-btn planning-calendar-nav__theme-btn',
@@ -4450,76 +5321,31 @@
                                 key: day,
                                 className: 'planning-calendar-day-header'
                                     + (day === todayIso ? ' planning-calendar-day-header--today' : '')
-                                    + (isWeekendDay(day) ? ' planning-calendar-day-header--weekend' : '')
-                                    + (headerDropState.day === day ? ' planning-calendar-day-header--drop-target' : '')
-                                    + (headerDropState.day === day && headerDropState.mode === 'unschedule'
-                                        ? ' planning-calendar-day-header--drop-unschedule'
-                                        : ''),
+                                    + (isWeekendDay(day) ? ' planning-calendar-day-header--weekend' : ''),
                                 title: dayOccupancyByDay[day]?.label || '',
-                                onDragOver: (event) => {
-                                    const payload = parsePlanningDragPayload(event);
-                                    if (!canApplyDragPayloadToHeaderDay(payload)) {
-                                        if (headerDropState.day === day) clearHeaderDropState();
-                                        return;
-                                    }
-
-                                    event.preventDefault();
-                                    maybeActivateCalendarDragZoom(event);
-                                    event.dataTransfer.dropEffect = 'move';
-                                    clearCalendarCellDropPreview();
-                                    applyHeaderDropState(day, payload);
-                                },
-                                onDragLeave: () => {
-                                    if (headerDropState.day === day) clearHeaderDropState();
-                                },
-                                onDrop: (event) => handleDropToHeaderDay(day, event),
                             },
-                                (day === yesterdayIso && (unscheduledTasksByDay[yesterdayIso] || []).length > 0)
-                                    ? h('div', {
-                                        className: 'planning-calendar-day-header__title planning-calendar-day-header__title--with-bulk',
-                                    },
-                                        h('div', { className: 'planning-calendar-day-header__title-row' },
-                                            h('div', { className: 'planning-calendar-day-header__title-dates' },
-                                                h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
-                                                h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
-                                            ),
-                                            h('button', {
-                                                type: 'button',
-                                                className: 'planning-btn planning-btn--sm planning-calendar-day-header__bulk-today-btn',
-                                                title: 'Перенести все задачи без времени на сегодня',
-                                                'aria-label': 'Перенести все задачи без времени на сегодня',
-                                                onClick: (event) => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    moveYesterdayUnscheduledToToday();
-                                                },
-                                            }, 'Сегодня'),
-                                        ),
-                                    )
-                                    : h('div', { className: 'planning-calendar-day-header__title' },
-                                        h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
-                                        h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
-                                    ),
+                                h('div', { className: 'planning-calendar-day-header__title' },
+                                    h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
+                                    h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
+                                ),
                                 dayOccupancyByDay[day]?.pressureTone && dayOccupancyByDay[day].pressureTone !== 'free' && h('span', {
                                     className: 'planning-calendar-day-pressure planning-calendar-day-pressure--' + dayOccupancyByDay[day].pressureTone,
                                     'aria-label': dayOccupancyByDay[day].label,
                                     title: dayOccupancyByDay[day].label,
                                 }, dayOccupancyByDay[day].pressureLabel),
-                                headerDropState.day === day && headerDropState.mode === 'unschedule' && h('span', {
-                                    className: 'planning-calendar-day-drop-hint',
-                                    'aria-hidden': 'true',
-                                }, '↺ без времени'),
-                                h('div', { className: 'planning-calendar-day-unscheduled' },
-                                    (unscheduledTasksByDay[day] || []).map((task) => h(CalendarUnscheduledTaskPill, {
-                                        key: task.id,
-                                        task,
+                                (overdueSlotItemsByDay[day] || []).length > 0 && h('div', { className: 'planning-calendar-day-unscheduled' },
+                                    (overdueSlotItemsByDay[day] || []).map((item) => h(CalendarUnscheduledTaskPill, {
+                                        key: item.slot.id,
+                                        task: item.task,
+                                        slot: item.slot,
+                                        overdueDate: item.overdueDate,
                                         projects: state.projects,
                                         taskLookup: taskMap,
                                         onDragStateChange: setCalendarDragZoom,
                                         onTouchDragStart: handleCalendarTouchStart,
                                         onPointerDragStart: handleCalendarPointerDragStart,
                                         shouldSuppressClick: shouldSuppressCalendarClick,
-                                        isTouchDragSource: touchDragSourceKey === ('task:' + task.id),
+                                        isTouchDragSource: touchDragSourceKey === ('slot:' + item.slot.id),
                                         allowNativeDrag: allowNativeCalendarDrag,
                                         onOpen: setSelectedTaskId,
                                     })),
@@ -4537,7 +5363,8 @@
                 },
                     h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
                     calendarCellDropPreview && h('div', {
-                        className: 'planning-calendar-time-drop-range',
+                        className: 'planning-calendar-time-drop-range'
+                            + (calendarCellDropPreview.hasConflict ? ' planning-calendar-time-drop-range--conflict' : ''),
                         style: {
                             top: calendarCellDropPreview.top + 'px',
                             height: calendarCellDropPreview.height + 'px',
@@ -4550,7 +5377,8 @@
                             + (calendarDropCommitAccent?.hour === hour ? ' planning-calendar-hour-label--drop-accent' : ''),
                     }, formatCalendarHourLabel(hour))),
                     calendarCellDropPreview && h('div', {
-                        className: 'planning-calendar-time-drop-preview',
+                        className: 'planning-calendar-time-drop-preview'
+                            + (calendarCellDropPreview.hasConflict ? ' planning-calendar-time-drop-preview--conflict' : ''),
                         style: { top: calendarCellDropPreview.top + 'px' },
                         'aria-hidden': 'true',
                     },
@@ -4591,11 +5419,56 @@
                                     event.preventDefault();
                                     maybeActivateCalendarDragZoom(event);
                                     event.dataTransfer.dropEffect = 'move';
-                                    clearHeaderDropState();
+                                    clearDragCancelTarget();
                                     applyCalendarCellDropPreview(day, hour, payload);
                                 },
                                 onDrop: (event) => handleDropToCell(day, hour, event),
                             })),
+                            day === todayIso && todaySleepBlock && h('div', {
+                                className: 'planning-calendar-sleep-block',
+                                style: {
+                                    top: todaySleepBlock.top + 'px',
+                                    height: todaySleepBlock.height + 'px',
+                                },
+                                title: 'Сон до ' + todaySleepBlock.endTime,
+                                'aria-label': 'Сон до ' + todaySleepBlock.endTime,
+                            },
+                                h('span', { className: 'planning-calendar-sleep-block__title' }, 'Сон'),
+                                h('span', { className: 'planning-calendar-sleep-block__time' },
+                                    todaySleepBlock.startTime + '–' + todaySleepBlock.endTime,
+                                ),
+                            ),
+                            day === todayIso && todayContextBlocks.map((block) => h('div', {
+                                key: block.id,
+                                className: 'planning-calendar-context-block planning-calendar-context-block--' + block.kind
+                                    + (block.height < 28 ? ' is-compact' : ''),
+                                style: {
+                                    top: block.top + 'px',
+                                    height: block.height + 'px',
+                                },
+                                title: block.title + ' · ' + block.startTime + '–' + block.endTime,
+                                'aria-label': block.title + ' с ' + block.startTime + ' до ' + block.endTime,
+                            },
+                                h('span', { className: 'planning-calendar-context-block__title' }, block.title),
+                                h('span', { className: 'planning-calendar-context-block__time' },
+                                    block.startTime + '–' + block.endTime,
+                                ),
+                            )),
+                            day === todayIso && todayStateMarkers.map((marker) => h('div', {
+                                key: marker.id,
+                                className: 'planning-calendar-state-marker planning-calendar-state-marker--' + marker.kind
+                                    + ' planning-calendar-state-marker--' + marker.tone,
+                                style: { top: marker.top + 'px' },
+                                role: 'img',
+                                title: marker.label + ' ' + marker.value + '/10 · ' + marker.time,
+                                'aria-label': marker.label + ' ' + marker.value + ' из 10 в ' + marker.time,
+                            },
+                                h('span', {
+                                    className: 'planning-calendar-state-marker__kind',
+                                    'aria-hidden': 'true',
+                                }, marker.kind === 'hunger' ? 'Г' : 'С'),
+                                h('strong', { className: 'planning-calendar-state-marker__value' }, marker.value),
+                            )),
                             rangeSelectPreview && rangeSelectPreview.day === day && h('div', {
                                 className: 'planning-calendar-range-selection',
                                 style: {
@@ -4608,7 +5481,8 @@
                                 className: 'planning-calendar-drop-preview'
                                     + (calendarCellDropPreview.kind === 'slot'
                                         ? ' planning-calendar-drop-preview--slot'
-                                        : ' planning-calendar-drop-preview--task'),
+                                        : ' planning-calendar-drop-preview--task')
+                                    + (calendarCellDropPreview.hasConflict ? ' planning-calendar-drop-preview--conflict' : ''),
                                 style: {
                                     top: calendarCellDropPreview.top + 'px',
                                     height: calendarCellDropPreview.height + 'px',
@@ -4693,6 +5567,31 @@
                     ),
                 ),
             ),
+            calendarUndoEntry && h('div', {
+                className: 'planning-calendar-undo-toast',
+                role: 'status',
+                'aria-live': 'polite',
+            },
+                h('span', { className: 'planning-calendar-undo-toast__label' }, calendarUndoEntry.label),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-calendar-undo-toast__btn',
+                    onClick: triggerCalendarUndo,
+                }, 'Отменить'),
+            ),
+            calendarDropConflictChoice && h(CalendarDropConflictSheet, {
+                conflict: calendarDropConflictChoice,
+                onClose: () => setCalendarDropConflictChoice(null),
+                onUseSuggested: () => commitCalendarConflictChoice(true),
+                onKeepParallel: () => commitCalendarConflictChoice(false),
+            }),
+            isCalendarDisplaySettingsOpen && h(CalendarDisplaySettingsSheet, {
+                isContextVisible: isCalendarContextVisible,
+                isStateVisible: isCalendarStateVisible,
+                onToggleContext: toggleCalendarContextVisibility,
+                onToggleState: toggleCalendarStateVisibility,
+                onClose: () => setIsCalendarDisplaySettingsOpen(false),
+            }),
             touchDragPreview && h('div', {
                 className: 'planning-calendar-drag-ghost'
                     + (touchDragPreview.kind === 'slot'
@@ -4716,11 +5615,9 @@
                 }, touchDragPreview.title),
             ),
             slotDeleteTarget && h(SlotDeleteActionSheet, {
-                slot: slotDeleteTarget.slot,
-                columnDay: slotDeleteTarget.day,
                 hasLinkedTask: !!slotDeleteTarget.slot.taskId,
                 onClose: () => setSlotDeleteTarget(null),
-                onSlotOnly: () => removeCalendarSlotKeepTask(slotDeleteTarget.slot, slotDeleteTarget.day),
+                onSlotOnly: () => removeCalendarSlotKeepTask(state, slotDeleteTarget.slot),
                 onSlotAndTask: () => removeCalendarSlotAndTask(slotDeleteTarget.slot),
             }),
             slotDraft && slotDraft.quickCreate && h(QuickSlotModal, {
@@ -4739,6 +5636,22 @@
                 state,
                 resolvedTaskProjectIds,
                 onClose: () => setSelectedTaskId(null),
+            }),
+            isTaskPickerOpen && h(CalendarTaskPickerModal, {
+                tasks: state.tasks,
+                projects: state.projects,
+                slots: state.slots,
+                taskLookup: taskMap,
+                parentTaskIdsWithChildren,
+                onClose: () => setIsTaskPickerOpen(false),
+                onOpenTask: setSelectedTaskId,
+                onCompleteTask: (taskId) => state.updateTask(taskId, { status: 'done' }),
+                onDeleteTask: (taskId) => state.deleteTask(taskId),
+                onDragStateChange: setCalendarDragZoom,
+                onTouchDragStart: handleCalendarTouchStart,
+                onPointerDragStart: handleCalendarPointerDragStart,
+                shouldSuppressClick: shouldSuppressCalendarClick,
+                allowNativeDrag: allowNativeCalendarDrag,
             }),
         );
     }
@@ -5062,5 +5975,15 @@
     HEYS.PlanningSchedule = {
         CalendarScreen,
         GanttScreen,
+        buildCalendarTaskPickerTasks,
+        canTaskAddCalendarSlot,
+        buildCalendarOverdueSlotItemsByDay,
+        removeCalendarSlotKeepTask,
+        buildCalendarSleepBlock,
+        buildCalendarDayContextBlocks,
+        buildCalendarStateMarkers,
+        resolveCalendarDropConflict,
+        resolveCalendarConflictChoiceTarget,
+        buildCalendarSlotUndoEntry,
     };
 })();

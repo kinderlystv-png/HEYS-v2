@@ -113,6 +113,32 @@
       .slice(0, 500);
   }
 
+  function mergePlanningRecords(incoming, current) {
+    const byId = new Map();
+    const recency = (item) => {
+      const raw = item && (item.updatedAt || item.deletedAt || item.createdAt || item.at);
+      if (raw == null) return 0;
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) return numeric;
+      const parsed = Date.parse(raw);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const absorb = (items, incomingWinsTie) => {
+      (Array.isArray(items) ? items : []).forEach((item) => {
+        if (!item || item.id == null) return;
+        const id = String(item.id);
+        const previous = byId.get(id);
+        if (!previous || recency(item) > recency(previous)
+            || (incomingWinsTie && recency(item) === recency(previous))) {
+          byId.set(id, item);
+        }
+      });
+    };
+    absorb(current, false);
+    absorb(incoming, true);
+    return Array.from(byId.values()).sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  }
+
   // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
   // Removes cached display nutrients when meals/items are empty (same invariant
   // as dayMealsIntegrity).
@@ -850,6 +876,7 @@
     mergeDayData,
     hasSubjectiveFieldDrop,
     mergeChronoTombstones,
+    mergePlanningRecords,
     mergeItemsById,
     mergeScalarKv,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,

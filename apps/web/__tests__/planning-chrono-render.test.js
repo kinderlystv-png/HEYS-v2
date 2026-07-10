@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -204,5 +204,88 @@ describe('chrono render stability', () => {
         }));
 
         expect(view.container.textContent).toContain('Focus');
+    });
+
+    it('ChronoCloud renders linked plan and fact inside one activity ring', () => {
+        const view = render(React.createElement(Chrono.ChronoCloud, {
+            activities: [{ id: 'a', name: 'Focus', emoji: 'F', hue: 210 }],
+            minutesByActivity: { a: 45 },
+            maxMin: 45,
+            scope: 'day',
+            planFacts: [{ activityId: 'a', planned: 60, actual: 45 }],
+            recentBadge: null,
+            onPick: () => { },
+            onLongPress: () => { },
+            hasInactive: false,
+            onDragDelete: () => { },
+        }));
+
+        const ring = view.container.querySelector('.chrono-bubble-wrap');
+        const button = view.getByRole('button', { name: 'Focus · факт 45м · план 1ч' });
+        expect(ring?.classList.contains('has-progress')).toBe(true);
+        expect(ring?.classList.contains('is-plan')).toBe(true);
+        expect(ring?.style.getPropertyValue('--progress-deg')).toBe('270deg');
+        expect(button.textContent).toContain('45м');
+        expect(button.textContent).toContain('план 1ч');
+        expect(view.container.querySelector('.chrono-planfact')).toBeNull();
+    });
+
+    it('ChronoCloud keeps an exceeded budget visible instead of task plan progress', () => {
+        const view = render(React.createElement(Chrono.ChronoCloud, {
+            activities: [{ id: 'a', name: 'Phone', hue: 0, budgetMinutesPerDay: 30 }],
+            minutesByActivity: { a: 45 },
+            maxMin: 45,
+            scope: 'day',
+            planFacts: [{ activityId: 'a', planned: 120, actual: 45 }],
+            recentBadge: null,
+            onPick: () => { },
+            onLongPress: () => { },
+            hasInactive: false,
+            onDragDelete: () => { },
+        }));
+
+        const ring = view.container.querySelector('.chrono-bubble-wrap');
+        expect(ring?.classList.contains('is-budget')).toBe(true);
+        expect(ring?.classList.contains('is-over')).toBe(true);
+        expect(view.getByRole('button', { name: 'Phone · факт 45м · лимит 30м' })).toBeTruthy();
+    });
+
+    it('ChronoWeeklyReport keeps details compact and opens a selected day', () => {
+        const onPickDay = vi.fn();
+        const report = {
+            score: 72,
+            headline: 'Неделя в балансе',
+            recommendation: 'Ритм держится.',
+            total: 480,
+            daysTracked: 4,
+            focusShare: 0.62,
+            drainShare: 0.08,
+            goalHitRate: 0.5,
+            hasGoals: true,
+            top: { activity: { name: 'Focus', emoji: 'F' }, minutes: 180 },
+            days: [
+                { date: '2026-06-01', minutes: 60 },
+                { date: '2026-06-02', minutes: 120 },
+                { date: '2026-06-03', minutes: 0 },
+                { date: '2026-06-04', minutes: 90 },
+                { date: '2026-06-05', minutes: 0 },
+                { date: '2026-06-06', minutes: 210 },
+                { date: '2026-06-07', minutes: 0 },
+            ],
+            trend: null,
+        };
+
+        const view = render(React.createElement(Chrono.ChronoWeeklyReport, { report, onPickDay }));
+        const score = view.getByRole('button', { name: /72/ });
+        expect(score.getAttribute('aria-expanded')).toBe('false');
+        expect(view.queryByText('4 из 7 дней')).toBeNull();
+
+        fireEvent.click(score);
+        expect(score.getAttribute('aria-expanded')).toBe('true');
+        expect(view.getByText('4 из 7 дней')).toBeTruthy();
+        expect(view.getByText('Фокус 62%')).toBeTruthy();
+
+        fireEvent.click(view.getByRole('button', { name: /02\.06/ }));
+        expect(onPickDay).toHaveBeenCalledWith('2026-06-02');
     });
 });

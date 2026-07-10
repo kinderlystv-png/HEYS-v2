@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const planningStoreSource = fs.readFileSync(path.resolve(__dirname, '../heys_planning_store_v1.js'), 'utf8');
 const storageSource = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
+const rpcSource = fs.readFileSync(path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'), 'utf8');
 
 const originalHEYS = window.HEYS;
 const originalReact = window.React;
@@ -109,6 +110,37 @@ describe('planning sync-aware persistence', () => {
         expect(saveClientKey).toHaveBeenCalledWith('heys_planning_chrono_entries', merged);
     });
 
+    it('enqueues calendar slots and exposes slot parity drift in debug snapshot', () => {
+        const { saveClientKey } = installHeys({ syncStatus: 'synced' });
+        const Store = loadPlanningStore();
+
+        Store.notePlanningCloudValue('heys_planning_slots', [], { source: 'test-cloud' });
+        const slot = Store.addSlot({
+            taskId: 'task-1',
+            date: '2026-07-09',
+            startTime: '13:15',
+            endTime: '14:15',
+        });
+
+        expect(saveClientKey).toHaveBeenCalledWith(
+            'heys_planning_slots',
+            expect.arrayContaining([expect.objectContaining({ id: slot.id, taskId: 'task-1' })]),
+        );
+
+        const parity = Store.getPlanningSyncParitySnapshot();
+        const slotsRow = parity.keys.find((row) => row.key === 'heys_planning_slots');
+        expect(slotsRow.class).toBe('criticalClientKey+mergeableArray');
+        expect(slotsRow.localOnlyIds).toContain(slot.id);
+        expect(slotsRow.confirmStatus).toBe('pending-readback');
+        expect(slotsRow.lastPersist).toEqual(expect.objectContaining({
+            key: 'heys_planning_slots',
+            reason: 'slots-save:add',
+            status: 'queued',
+            sync: true,
+            summary: expect.objectContaining({ length: 1 }),
+        }));
+    });
+
     it('does not mirror cloud-refresh planning writes back into upload queue', () => {
         const { saveClientKey, writeLocalKvWithoutMirror } = installHeys({ mirrorLsSet: true });
         const Store = loadPlanningStore();
@@ -122,6 +154,128 @@ describe('planning sync-aware persistence', () => {
         );
         expect(saveClientKey).not.toHaveBeenCalled();
         expect(JSON.parse(window.localStorage.getItem('heys_client-1_planning_chrono_entries'))).toEqual(cloudEntries);
+    });
+
+    it('stores goals as sync-backed mergeable planning records', () => {
+        const { saveClientKey } = installHeys();
+        const Store = loadPlanningStore();
+
+        const goal = Store.addGoal({
+            title: 'Стабильный режим',
+            metricLabel: 'тренировки',
+            targetValue: 12,
+            dueDate: '2026-08-01',
+        });
+
+        expect(goal).toMatchObject({
+            title: 'Стабильный режим',
+            metricLabel: 'тренировки',
+            targetValue: 12,
+            status: 'active',
+        });
+        expect(saveClientKey).toHaveBeenCalledWith(
+            'heys_planning_goals_v1',
+            expect.arrayContaining([expect.objectContaining({ id: goal.id })]),
+        );
+        expect(window.HEYS.Planning.Constants.STORAGE_CLASSES).toMatchObject({
+            criticalClientKeys: expect.arrayContaining(['heys_planning_goals_v1']),
+            mergeableArrayKeys: expect.arrayContaining(['heys_planning_goals_v1']),
+        });
+
+        saveClientKey.mockClear();
+        const updated = Store.updateGoal(goal.id, {
+            keyResults: [{ text: '3 тренировки в неделю', done: true }],
+            baselineValue: 2,
+            currentValue: 4,
+            reviewChange: 'стало проще держать режим',
+            reviewCurrent: '4',
+            reviewNextStep: 'поставить тренировку в календарь',
+            reviewHistory: [{
+                id: 'review-1',
+                at: '2026-07-09T12:00:00.000Z',
+                current: '4',
+                change: 'стало проще держать режим',
+                nextStep: 'поставить тренировку в календарь',
+            }],
+        });
+
+        expect(updated.keyResults).toEqual([
+            expect.objectContaining({ text: '3 тренировки в неделю', done: true }),
+        ]);
+        expect(updated).toMatchObject({
+            baselineValue: 2,
+            reviewChange: 'стало проще держать режим',
+            reviewCurrent: '4',
+            reviewNextStep: 'поставить тренировку в календарь',
+            reviewHistory: [expect.objectContaining({
+                id: 'review-1',
+                current: '4',
+            })],
+        });
+        expect(saveClientKey).toHaveBeenCalledWith(
+            'heys_planning_goals_v1',
+            expect.arrayContaining([expect.objectContaining({ id: goal.id, currentValue: 4 })]),
+        );
+
+        const mergeableRouteLine = storageSource.split('\n').find((line) => line.includes('const MERGEABLE_KEY_RE'));
+        const mergeKeyBlockStart = rpcSource.indexOf('const PLANNING_RECORD_MERGE_KEYS');
+        const mergeKeyBlock = rpcSource.slice(mergeKeyBlockStart, rpcSource.indexOf(']);', mergeKeyBlockStart));
+        expect(mergeableRouteLine).toContain('heys_planning_goals_v1');
+        expect(mergeKeyBlock).toContain("'heys_planning_goals_v1'");
+
+        const archived = Store.archiveGoal(goal.id);
+        expect(archived.status).toBe('archived');
+
+        const completed = Store.updateGoal(goal.id, { status: 'done' });
+        expect(completed).toMatchObject({ status: 'done' });
+        expect(completed.completedAt).toBeTruthy();
+    });
+
+    it('allows only one active goal per execution project', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+        const project = Store.addProject('Запуск');
+        const first = Store.addGoal({ title: 'Запустить HEYS', projectId: project.id, metricLabel: 'готовность' });
+
+        expect(first.projectId).toBe(project.id);
+        expect(Store.addGoal({ title: 'Другая цель', projectId: project.id })).toBeNull();
+
+        Store.archiveGoal(first.id);
+        expect(Store.addGoal({ title: 'Следующая цель', projectId: project.id })).toMatchObject({
+            projectId: project.id,
+            status: 'active',
+        });
+    });
+
+    it('infers the project for a legacy goal from its focused task', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+        const project = Store.addProject('Сон');
+        const task = Store.addTask('Поставить вечерний будильник', { projectId: project.id });
+        const goal = Store.addGoal({ title: 'Ложиться вовремя', nextTaskId: task.id, metricLabel: 'дни в режиме' });
+
+        expect(goal.projectId).toBeUndefined();
+        expect(Store.getGoals().find((item) => item.id === goal.id)).toMatchObject({ projectId: project.id });
+    });
+
+    it('merges goal arrays by id without dropping local-only goals', () => {
+        installHeys();
+        const Store = loadPlanningStore();
+
+        const merged = Store.mergeCloudPlanningArray('heys_planning_goals_v1', [
+            { id: 'shared', title: 'Local title', updatedAt: '2026-07-04T12:00:00Z', createdAt: '2026-07-04T10:00:00Z' },
+            { id: 'local-only', title: 'Local only', updatedAt: '2026-07-04T12:01:00Z' },
+        ], [
+            { id: 'shared', title: 'Remote old', updatedAt: '2026-07-04T11:00:00Z' },
+            { id: 'remote-only', title: 'Remote only', updatedAt: '2026-07-04T12:02:00Z' },
+        ]);
+
+        expect(merged).toEqual(expect.arrayContaining([
+            expect.objectContaining({ id: 'shared', title: 'Local title' }),
+            expect.objectContaining({ id: 'local-only', title: 'Local only' }),
+            expect.objectContaining({ id: 'remote-only', title: 'Remote only' }),
+        ]));
+        expect(merged).toHaveLength(3);
     });
 
     it('decompresses compressed planning cloud rows before refresh writes', async () => {

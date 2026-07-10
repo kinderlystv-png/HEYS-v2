@@ -8,8 +8,19 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
+
+const PLANNING_RECORD_MERGE_KEYS = new Set([
+  'heys_planning_checklist_tombstones_v1',
+  'heys_planning_goals_v1',
+  'heys_planning_entity_tombstones_v1',
+  'heys_planning_goal_map_records_v1',
+  'heys_planning_projects',
+  'heys_planning_tasks',
+  'heys_planning_slots',
+  'heys_planning_links_v1',
+]);
 
 function curatorActionDateFromKey(key) {
   const m = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})/);
@@ -2830,6 +2841,9 @@ module.exports.handler = async function (event, context) {
           } else if (k === 'heys_planning_chrono_tombstones_v1') {
             mergedValue = mergeChronoTombstones(incomingValue, currentValue);
             mergeOutcome = 'chrono_tombstones_merged';
+          } else if (PLANNING_RECORD_MERGE_KEYS.has(k)) {
+            mergedValue = mergePlanningRecords(incomingValue, currentValue);
+            mergeOutcome = 'planning_records_merged';
           } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.

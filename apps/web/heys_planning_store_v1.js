@@ -22,6 +22,9 @@
         CHRONO_TIMER: 'heys_planning_chrono_timer',
         CHECKLISTS: 'heys_planning_checklists_v1',
         CHECKLIST_TOMBSTONES: 'heys_planning_checklist_tombstones_v1',
+        GOALS: 'heys_planning_goals_v1',
+        ENTITY_TOMBSTONES: 'heys_planning_entity_tombstones_v1',
+        GOAL_MAP_RECORDS: 'heys_planning_goal_map_records_v1',
     };
 
     const CRITICAL_PLANNING_KEYS = new Set([
@@ -36,12 +39,22 @@
         'heys_planning_chrono_untracked_tail_dismissed_v1',
         KEYS.CHECKLISTS,
         KEYS.CHECKLIST_TOMBSTONES,
+        KEYS.GOALS,
+        KEYS.ENTITY_TOMBSTONES,
+        KEYS.GOAL_MAP_RECORDS,
     ]);
     const LOCAL_ONLY_PLANNING_KEYS = new Set([KEYS.CHRONO_TIMER]);
     const MERGEABLE_PLANNING_KEYS = new Set([
         KEYS.CHRONO_ACTIVITIES,
         KEYS.CHRONO_ENTRIES,
         KEYS.CHECKLISTS,
+        KEYS.GOALS,
+        KEYS.PROJECTS,
+        KEYS.TASKS,
+        KEYS.SLOTS,
+        KEYS.LINKS,
+        KEYS.GOAL_MAP_RECORDS,
+        KEYS.ENTITY_TOMBSTONES,
     ]);
     const _planningCloudMeta = new Map();
     const _planningPersistHistory = [];
@@ -378,11 +391,11 @@
         };
     }
 
-    function traceChrono(event, payload, level) {
+    function tracePlanning(prefix, event, payload, level) {
         try {
             const flowId = payload?.flowId
                 || (HEYS.LogTrace && typeof HEYS.LogTrace.lastFlowId === 'function'
-                    ? HEYS.LogTrace.lastFlowId('[HEYS.chrono.trace]', 5000)
+                    ? HEYS.LogTrace.lastFlowId(prefix, 5000)
                     : null);
             const body = {
                 event,
@@ -392,17 +405,45 @@
                 ...(payload || {}),
             };
             if (HEYS.LogTrace && typeof HEYS.LogTrace.trace === 'function') {
-                HEYS.LogTrace.trace(level || 'info', '[HEYS.chrono.trace]', body);
+                HEYS.LogTrace.trace(level || 'info', prefix, body);
                 return;
             }
             const fn = level === 'warn' ? console.warn : (level === 'error' ? console.error : console.info);
-            fn('[HEYS.chrono.trace]', body);
+            fn(prefix, body);
             setTimeout(() => {
                 try {
                     if (HEYS.LogTrace && typeof HEYS.LogTrace.flush === 'function') HEYS.LogTrace.flush();
                 } catch (_) { /* noop */ }
             }, 300);
         } catch (_) { /* trace must never break planning */ }
+    }
+
+    function traceChrono(event, payload, level) {
+        tracePlanning('[HEYS.chrono.trace]', event, payload, level);
+    }
+
+    function summarizeSlotForTrace(slot) {
+        if (!slot || typeof slot !== 'object') return null;
+        return {
+            id: slot.id ? String(slot.id) : null,
+            taskId: slot.taskId ? String(slot.taskId) : null,
+            date: slot.date ? String(slot.date) : null,
+            startTime: slot.startTime || null,
+            endTime: slot.endTime || null,
+            source: slot.source || null,
+        };
+    }
+
+    function summarizeSlotsForTrace(slots, slot) {
+        const arr = Array.isArray(slots) ? slots : [];
+        return {
+            slotsLen: arr.length,
+            slot: summarizeSlotForTrace(slot || (arr.length ? arr[arr.length - 1] : null)),
+        };
+    }
+
+    function tracePlanningSlot(event, payload, level) {
+        tracePlanning('[HEYS.planning.slot.trace]', event, payload, level);
     }
 
     function scopePlanningKey(key) {
@@ -477,6 +518,7 @@
                 sync: row.sync !== false,
                 status: row.status || null,
                 error: row.error || null,
+                summary: row.summary || null,
             });
             if (_planningPersistHistory.length > 80) _planningPersistHistory.shift();
         } catch (_) { /* noop */ }
@@ -513,17 +555,17 @@
         };
     }
 
-    function enqueuePlanningKeyForSync(key, value, reason) {
+    function enqueuePlanningKeyForSync(key, value, reason, meta) {
         if (!CRITICAL_PLANNING_KEYS.has(key)) return false;
         try {
             if (HEYS.cloud && typeof HEYS.cloud.saveClientKey === 'function') {
                 HEYS.cloud.saveClientKey(key, value);
-                pushPlanningPersistHistory({ key, reason, sync: true, status: 'queued' });
+                pushPlanningPersistHistory({ key, reason, sync: true, status: 'queued', summary: meta?.summary || valueSummary(value) });
                 return true;
             }
-            pushPlanningPersistHistory({ key, reason, sync: true, status: 'no-cloud' });
+            pushPlanningPersistHistory({ key, reason, sync: true, status: 'no-cloud', summary: meta?.summary || valueSummary(value) });
         } catch (error) {
-            pushPlanningPersistHistory({ key, reason, sync: true, status: 'error', error: error?.message || String(error) });
+            pushPlanningPersistHistory({ key, reason, sync: true, status: 'error', error: error?.message || String(error), summary: meta?.summary || valueSummary(value) });
             console.warn('[HEYS.planning] Failed to enqueue planning key:', key, error?.message || error);
         }
         return false;
@@ -560,11 +602,13 @@
         const localOnly = LOCAL_ONLY_PLANNING_KEYS.has(key);
         lsSet(key, value, { sync });
         if (localOnly) {
-            pushPlanningPersistHistory({ key, reason: options.reason || 'local-only', sync: false, status: 'local-only' });
+            pushPlanningPersistHistory({ key, reason: options.reason || 'local-only', sync: false, status: 'local-only', summary: valueSummary(value) });
             return value;
         }
         if (sync) {
-            const enqueued = enqueuePlanningKeyForSync(key, value, options.reason || 'planning-save');
+            const valueSum = valueSummary(value);
+            const enqueued = enqueuePlanningKeyForSync(key, value, options.reason || 'planning-save', { summary: valueSum });
+            const shouldVerifySlotWrite = key === KEYS.SLOTS && (options.reason || '').indexOf('slots-save') !== -1;
             if (key === KEYS.CHRONO_ENTRIES) {
                 let syncStatus = 'unknown';
                 try {
@@ -592,9 +636,36 @@
                     }
                 } catch (_) { /* readback trace must never break planning */ }
             }
+            if (shouldVerifySlotWrite) {
+                let syncStatus = 'unknown';
+                try {
+                    syncStatus = HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function'
+                        ? HEYS.cloud.getSyncStatus(key)
+                        : 'unknown';
+                } catch (_) { /* noop */ }
+                tracePlanningSlot('slots_persist_enqueued', {
+                    key,
+                    reason: options.reason || 'slots-save',
+                    status: enqueued ? 'queued' : 'not-queued',
+                    syncStatus,
+                    ...(summarizeSlotsForTrace(value, options.slot)),
+                    expectedSummary: valueSum,
+                }, enqueued ? 'info' : 'warn');
+                try {
+                    if (HEYS.LogTrace && typeof HEYS.LogTrace.verifyKvWrite === 'function') {
+                        HEYS.LogTrace.verifyKvWrite({
+                            prefix: '[HEYS.planning.slot.trace]',
+                            flowId: options.flowId || null,
+                            key,
+                            expectedSummary: valueSum,
+                            delayMs: 2500,
+                        });
+                    }
+                } catch (_) { /* readback trace must never break planning */ }
+            }
             verifyChronoEntriesQueued(key, value, options.reason || 'planning-save');
         } else {
-            pushPlanningPersistHistory({ key, reason: options.reason || 'cloud-apply', sync: false, status: 'local-write' });
+            pushPlanningPersistHistory({ key, reason: options.reason || 'cloud-apply', sync: false, status: 'local-write', summary: valueSummary(value) });
         }
         return value;
     }
@@ -757,7 +828,7 @@
     // bytes — callers compare against current LS and skip the write (no echo-upload loop,
     // see project_dayv2_echo_loop_fix history).
     function chronoRecencyMs(item) {
-        const t = item && (item.updatedAt || item.createdAt || item.at);
+        const t = item && (item.updatedAt || item.deletedAt || item.createdAt || item.at);
         if (t == null) return 0;
         const n = typeof t === 'number' ? t : Date.parse(t);
         return Number.isFinite(n) ? n : 0;
@@ -793,13 +864,8 @@
     // Does NOT write — callers (hot-sync interceptor, full-sync, refreshPlanningFromCloud)
     // decide how to store.
     //
-    // ⚠️ Only chrono ACTIVITIES and ENTRIES are merge-safe, because merge-by-union
-    // resurrects deletes unless a tombstone marks them. Those two have id + tombstone
-    // coverage (filterChrono* strips deleted ids here). The rest stay on replace:
-    //   • snapshots — no stable id (keyed by date+activityId, additive aggregate)
-    //   • projects/tasks/slots/links — no tombstone system yet, so union would
-    //     resurrect a delete done on another device. Adding per-record merge for
-    //     tasks/projects needs a tombstone layer first (separate change).
+    // Merge-by-id is enabled only for collections with explicit tombstone coverage.
+    // Snapshots remain replace-only because they have no stable record id.
     function mergeCloudPlanningArray(key, localArr, remoteArr) {
         if (key === KEYS.CHRONO_ACTIVITIES) {
             return sortByOrder(filterChronoActivities(mergeArrayById(localArr, remoteArr)));
@@ -810,11 +876,88 @@
         if (key === KEYS.CHECKLISTS) {
             return sortByOrder(filterChecklists(mergeArrayById(localArr, remoteArr)));
         }
+        if (key === KEYS.GOALS) {
+            return sortByOrder(normalizeGoals(mergeArrayById(localArr, remoteArr)));
+        }
+        if (key === KEYS.PROJECTS) {
+            return sortByOrder(mergeArrayById(localArr, remoteArr));
+        }
+        if (key === KEYS.TASKS) {
+            return sortByOrder(mergeArrayById(localArr, remoteArr));
+        }
+        if (key === KEYS.SLOTS) {
+            return sortByOrder(mergeArrayById(localArr, remoteArr));
+        }
+        if (key === KEYS.LINKS) {
+            return mergeArrayById(localArr, remoteArr);
+        }
+        if (key === KEYS.GOAL_MAP_RECORDS) {
+            return normalizeGoalMapRecords(mergeArrayById(localArr, remoteArr));
+        }
+        if (key === KEYS.ENTITY_TOMBSTONES) {
+            return normalizePlanningEntityTombstones(mergeArrayById(localArr, remoteArr));
+        }
         return null; // not merge-safe — caller keeps wholesale replace
     }
 
+    function normalizePlanningEntityTombstone(raw) {
+        const entityType = String(raw?.entityType || '').trim();
+        const entityId = String(raw?.entityId || '').trim();
+        if (!entityType || !entityId) return null;
+        const deletedAt = raw.deletedAt || raw.updatedAt || nowISO();
+        return {
+            id: `${entityType}:${entityId}`,
+            entityType,
+            entityId,
+            deletedAt,
+            updatedAt: raw.updatedAt || deletedAt,
+        };
+    }
+
+    function normalizePlanningEntityTombstones(items) {
+        return mergeArrayById([], (Array.isArray(items) ? items : [])
+            .map(normalizePlanningEntityTombstone)
+            .filter(Boolean));
+    }
+
+    function getPlanningEntityTombstones() {
+        return normalizePlanningEntityTombstones(lsGet(KEYS.ENTITY_TOMBSTONES, []));
+    }
+
+    function savePlanningEntityTombstones(items, opts) {
+        const incoming = normalizePlanningEntityTombstones(items);
+        const merged = normalizePlanningEntityTombstones(mergeArrayById(getPlanningEntityTombstones(), incoming));
+        persistPlanningKey(KEYS.ENTITY_TOMBSTONES, merged, {
+            reason: opts?.reason || 'entity-tombstones-save',
+            sync: opts?.sync,
+        });
+        return merged;
+    }
+
+    function addPlanningEntityTombstones(entityType, ids, opts) {
+        const at = nowISO();
+        const entries = (Array.isArray(ids) ? ids : [ids])
+            .map((id) => String(id || '').trim())
+            .filter(Boolean)
+            .map((entityId) => ({ entityType, entityId, deletedAt: at, updatedAt: at }));
+        if (!entries.length) return [];
+        savePlanningEntityTombstones(entries, opts);
+        return entries.map(normalizePlanningEntityTombstone);
+    }
+
+    function filterPlanningEntities(items, entityType) {
+        const tombstones = new Map(getPlanningEntityTombstones()
+            .filter((entry) => entry.entityType === entityType)
+            .map((entry) => [entry.entityId, chronoRecencyMs(entry)]));
+        return (Array.isArray(items) ? items : []).filter((item) => {
+            if (!item || item.id == null) return false;
+            const deletedAt = tombstones.get(String(item.id));
+            return deletedAt == null || chronoRecencyMs(item) > deletedAt;
+        });
+    }
+
     function getProjects() {
-        return sortByOrder(lsGet(KEYS.PROJECTS, []));
+        return sortByOrder(filterPlanningEntities(lsGet(KEYS.PROJECTS, []), 'project'));
     }
 
     function saveProjects(projects, opts) {
@@ -825,7 +968,7 @@
     }
 
     function getTasks() {
-        return sortByOrder(lsGet(KEYS.TASKS, []));
+        return sortByOrder(filterPlanningEntities(lsGet(KEYS.TASKS, []), 'task'));
     }
 
     function saveTasks(tasks, opts) {
@@ -836,13 +979,14 @@
     }
 
     function getSlots() {
-        return sortByOrder(lsGet(KEYS.SLOTS, []));
+        return sortByOrder(filterPlanningEntities(lsGet(KEYS.SLOTS, []), 'slot'));
     }
 
     function saveSlots(slots, opts) {
         persistPlanningKey(KEYS.SLOTS, sortByOrder(slots || []), {
             reason: opts?.reason || 'slots-save',
             sync: opts?.sync,
+            slot: opts?.slot,
         });
     }
 
@@ -876,6 +1020,7 @@
     }
 
     function deleteProject(id) {
+        addPlanningEntityTombstones('project', id, { reason: 'project-delete' });
         const projects = getProjects().filter((project) => project.id !== id);
         saveProjects(projects);
         const tasks = getTasks().map((task) => task.projectId === id
@@ -957,6 +1102,11 @@
     }
 
     function deleteTask(id) {
+        const deletedSlots = getSlots().filter((slot) => slot.taskId === id);
+        const deletedLinks = getLinks().filter((link) => link.fromId === id || link.toId === id);
+        addPlanningEntityTombstones('task', id, { reason: 'task-delete' });
+        addPlanningEntityTombstones('slot', deletedSlots.map((slot) => slot.id), { reason: 'task-delete-slots' });
+        addPlanningEntityTombstones('link', deletedLinks.map((link) => link.id), { reason: 'task-delete-links' });
         let tasks = getTasks().filter((task) => task.id !== id);
         tasks = tasks.map((task) => ({
             ...task,
@@ -968,13 +1118,20 @@
         }));
         saveTasks(tasks);
         const slots = getSlots().filter((slot) => slot.taskId !== id);
-        saveSlots(slots);
+        saveSlots(slots, { reason: 'slots-save:task-delete', slot: { id } });
+        saveLinks(getLinks().filter((link) => link.fromId !== id && link.toId !== id), { reason: 'links-save:task-delete' });
     }
 
     function deleteTasks(ids, opts) {
         const idSet = new Set((Array.isArray(ids) ? ids : []).filter(Boolean));
         const projectIdsToDelete = new Set((Array.isArray(opts?.deleteProjectIds) ? opts.deleteProjectIds : []).filter(Boolean));
         if (!idSet.size && !projectIdsToDelete.size) return 0;
+        const slotsToDelete = getSlots().filter((slot) => idSet.has(slot.taskId));
+        const linksToDelete = getLinks().filter((link) => idSet.has(link.fromId) || idSet.has(link.toId));
+        addPlanningEntityTombstones('task', Array.from(idSet), { reason: 'tasks-delete' });
+        addPlanningEntityTombstones('slot', slotsToDelete.map((slot) => slot.id), { reason: 'tasks-delete-slots' });
+        addPlanningEntityTombstones('link', linksToDelete.map((link) => link.id), { reason: 'tasks-delete-links' });
+        addPlanningEntityTombstones('project', Array.from(projectIdsToDelete), { reason: 'tasks-delete-projects' });
         const tasks = getTasks()
             .filter((task) => !idSet.has(task.id))
             .map((task) => ({
@@ -1041,7 +1198,7 @@
             createdAt: nowISO(),
             updatedAt: nowISO(),
         };
-        saveSlots(slots.concat(slot));
+        saveSlots(slots.concat(slot), { reason: 'slots-save:add', slot });
         return slot;
     }
 
@@ -1063,7 +1220,7 @@
             updatedAt: now,
         }));
         if (!created.length) return [];
-        saveSlots(slots.concat(created));
+        saveSlots(slots.concat(created), { reason: 'slots-save:add-batch', slot: created[created.length - 1] });
         return created;
     }
 
@@ -1078,27 +1235,29 @@
             updatedAt: nowISO(),
         };
         slots[index] = updated;
-        saveSlots(slots);
+        saveSlots(slots, { reason: 'slots-save:update', slot: updated });
         return updated;
     }
 
     function deleteSlot(id) {
+        addPlanningEntityTombstones('slot', id, { reason: 'slot-delete' });
         const slots = getSlots().filter((slot) => slot.id !== id);
-        saveSlots(slots);
+        saveSlots(slots, { reason: 'slots-save:delete', slot: { id } });
     }
 
     function deleteSlotBatch(ids) {
         const idSet = new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || '')).filter(Boolean));
         if (!idSet.size) return 0;
+        addPlanningEntityTombstones('slot', Array.from(idSet), { reason: 'slots-delete-batch' });
         const slots = getSlots().filter((slot) => !idSet.has(String(slot.id || '')));
-        saveSlots(slots);
+        saveSlots(slots, { reason: 'slots-save:delete-batch', slot: { id: Array.from(idSet).join(',') } });
         return idSet.size;
     }
 
     // ── Links (graph edges) ──────────────────────────────────────────
 
     function getLinks() {
-        return lsGet(KEYS.LINKS, []);
+        return filterPlanningEntities(lsGet(KEYS.LINKS, []), 'link');
     }
 
     function saveLinks(links, opts) {
@@ -1124,12 +1283,14 @@
             relation: opts?.relation || 'related',
             label: opts?.label || '',
             createdAt: nowISO(),
+            updatedAt: nowISO(),
         };
         saveLinks(links.concat(link));
         return link;
     }
 
     function deleteLink(id) {
+        addPlanningEntityTombstones('link', id, { reason: 'link-delete' });
         saveLinks(getLinks().filter(function (link) { return link.id !== id; }));
     }
 
@@ -1137,6 +1298,152 @@
         return getLinks().filter(function (link) {
             return link.fromId === entityId || link.toId === entityId;
         });
+    }
+
+    // ── Goal map records ─────────────────────────────────────────────
+
+    const GOAL_MAP_NODE_KINDS = new Set([
+        'goal', 'result', 'task', 'milestone', 'decision', 'obstacle', 'note',
+    ]);
+    const GOAL_MAP_RELATIONS = new Set([
+        'precedes', 'contributes', 'blocks', 'option', 'related',
+    ]);
+
+    function normalizeGoalMapRecord(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const id = String(raw.id || '').trim();
+        const goalId = String(raw.goalId || '').trim();
+        if (!id || !goalId) return null;
+        const updatedAt = raw.updatedAt || raw.deletedAt || raw.createdAt || nowISO();
+        if (raw.recordType === 'tombstone') {
+            return {
+                id,
+                schemaVersion: 1,
+                recordType: 'tombstone',
+                goalId,
+                deletedAt: raw.deletedAt || updatedAt,
+                updatedAt,
+            };
+        }
+        if (raw.recordType === 'edge') {
+            const fromNodeId = String(raw.fromNodeId || '').trim();
+            const toNodeId = String(raw.toNodeId || '').trim();
+            if (!fromNodeId || !toNodeId || fromNodeId === toNodeId) return null;
+            const relation = GOAL_MAP_RELATIONS.has(raw.relation) ? raw.relation : 'related';
+            return {
+                id,
+                schemaVersion: 1,
+                recordType: 'edge',
+                goalId,
+                fromNodeId,
+                toNodeId,
+                relation,
+                label: raw.label ? String(raw.label).trim() : undefined,
+                createdAt: raw.createdAt || updatedAt,
+                updatedAt,
+            };
+        }
+        if (raw.recordType !== 'node' || !GOAL_MAP_NODE_KINDS.has(raw.nodeKind)) return null;
+        const x = Number(raw.x);
+        const y = Number(raw.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        return {
+            id,
+            schemaVersion: 1,
+            recordType: 'node',
+            goalId,
+            nodeKind: raw.nodeKind,
+            entityType: String(raw.entityType || 'map').trim() || 'map',
+            entityId: raw.entityId ? String(raw.entityId) : undefined,
+            title: raw.title ? String(raw.title).trim() : undefined,
+            response: raw.response ? String(raw.response).trim() : undefined,
+            status: raw.status ? String(raw.status) : undefined,
+            x,
+            y,
+            createdAt: raw.createdAt || updatedAt,
+            updatedAt,
+        };
+    }
+
+    function normalizeGoalMapRecords(records) {
+        const normalized = (Array.isArray(records) ? records : [])
+            .map(normalizeGoalMapRecord)
+            .filter(Boolean);
+        return mergeArrayById([], normalized).sort((left, right) => String(left.id).localeCompare(String(right.id)));
+    }
+
+    function getAllGoalMapRecords(opts) {
+        const records = normalizeGoalMapRecords(lsGet(KEYS.GOAL_MAP_RECORDS, []));
+        return opts?.includeTombstones === false
+            ? records.filter((record) => record.recordType !== 'tombstone')
+            : records;
+    }
+
+    function getGoalMapRecords(goalId, opts) {
+        const id = String(goalId || '');
+        if (!id) return [];
+        const includeTombstones = opts?.includeTombstones === true;
+        return getAllGoalMapRecords({ includeTombstones: true })
+            .filter((record) => record.goalId === id && (includeTombstones || record.recordType !== 'tombstone'));
+    }
+
+    function saveGoalMapRecords(records, opts) {
+        const incoming = normalizeGoalMapRecords(records);
+        const next = opts?.replace === true
+            ? incoming
+            : normalizeGoalMapRecords(mergeArrayById(getAllGoalMapRecords({ includeTombstones: true }), incoming));
+        persistPlanningKey(KEYS.GOAL_MAP_RECORDS, next, {
+            reason: opts?.reason || 'goal-map-records-save',
+            sync: opts?.sync,
+        });
+        return next;
+    }
+
+    function nextRecordISO(previous) {
+        return new Date(Math.max(Date.now(), chronoRecencyMs(previous) + 1)).toISOString();
+    }
+
+    function upsertGoalMapRecord(record, opts) {
+        const previous = getAllGoalMapRecords({ includeTombstones: true }).find((entry) => entry.id === record?.id);
+        const now = nextRecordISO(previous);
+        const normalized = normalizeGoalMapRecord({
+            ...(record || {}),
+            createdAt: record?.createdAt || now,
+            updatedAt: now,
+        });
+        if (!normalized) return null;
+        saveGoalMapRecords([normalized], { ...opts, reason: opts?.reason || 'goal-map-record-upsert' });
+        return normalized;
+    }
+
+    function deleteGoalMapRecord(id, goalId, opts) {
+        const recordId = String(id || '').trim();
+        const ownerGoalId = String(goalId || '').trim();
+        if (!recordId || !ownerGoalId) return null;
+        const previous = getAllGoalMapRecords({ includeTombstones: true }).find((entry) => entry.id === recordId);
+        const at = nextRecordISO(previous);
+        const tombstone = normalizeGoalMapRecord({
+            id: recordId,
+            schemaVersion: 1,
+            recordType: 'tombstone',
+            goalId: ownerGoalId,
+            deletedAt: at,
+            updatedAt: at,
+        });
+        saveGoalMapRecords([tombstone], { ...opts, reason: opts?.reason || 'goal-map-record-delete' });
+        return tombstone;
+    }
+
+    function restorePlanningEntity(entityType, record) {
+        if (!record || !record.id) return null;
+        const tombstone = getPlanningEntityTombstones().find((entry) => entry.entityType === entityType && entry.entityId === String(record.id));
+        const restored = { ...record, updatedAt: nextRecordISO(tombstone) };
+        if (entityType === 'project') saveProjects(getProjects().concat(restored), { reason: 'project-restore' });
+        else if (entityType === 'task') saveTasks(getTasks().concat(restored), { reason: 'task-restore' });
+        else if (entityType === 'slot') saveSlots(getSlots().concat(restored), { reason: 'slot-restore', slot: restored });
+        else if (entityType === 'link') saveLinks(getLinks().concat(restored), { reason: 'link-restore' });
+        else return null;
+        return restored;
     }
 
     // ── Checklists ─────────────────────────────────────────────────
@@ -1310,6 +1617,204 @@
     function deleteChecklist(id) {
         addChecklistTombstone(id, 'delete-checklist');
         saveChecklists(getChecklists().filter((checklist) => checklist.id !== id));
+    }
+
+    function coerceGoalsArray(value) {
+        if (Array.isArray(value)) return value;
+        if (value && typeof value === 'object') {
+            if (Array.isArray(value.v)) return value.v;
+            if (value.id != null && value.title != null) return [value];
+            const vals = Object.values(value);
+            if (vals.length && vals.every((x) => x && typeof x === 'object')) return vals;
+        }
+        return [];
+    }
+
+    function normalizeOptionalNumber(value) {
+        if (value === undefined || value === null || String(value).trim() === '') return undefined;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : undefined;
+    }
+
+    function normalizeGoalKeyResult(raw, index) {
+        if (!raw || typeof raw !== 'object') return null;
+        const text = String(raw.text || '').trim();
+        if (!text) return null;
+        return {
+            id: raw.id ? String(raw.id) : uid(),
+            text,
+            done: raw.done === true,
+            currentValue: normalizeOptionalNumber(raw.currentValue),
+            targetValue: normalizeOptionalNumber(raw.targetValue),
+            order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : index,
+            createdAt: raw.createdAt || nowISO(),
+            updatedAt: raw.updatedAt || raw.createdAt || nowISO(),
+        };
+    }
+
+    function normalizeGoalKeyResults(items) {
+        return (Array.isArray(items) ? items : [])
+            .map((item, index) => normalizeGoalKeyResult(item, index))
+            .filter(Boolean)
+            .sort((left, right) => {
+                const orderDelta = Number(left.order || 0) - Number(right.order || 0);
+                if (orderDelta !== 0) return orderDelta;
+                return String(left.createdAt || '').localeCompare(String(right.createdAt || ''));
+            });
+    }
+
+    function normalizeGoalReview(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const current = String(raw.current ?? '').trim();
+        if (!current) return null;
+        return {
+            id: raw.id ? String(raw.id) : uid(),
+            at: raw.at || raw.createdAt || nowISO(),
+            current,
+            change: raw.change ? String(raw.change).trim() : '',
+            nextStep: raw.nextStep ? String(raw.nextStep).trim() : '',
+        };
+    }
+
+    function normalizeGoalReviewHistory(items) {
+        return (Array.isArray(items) ? items : [])
+            .map(normalizeGoalReview)
+            .filter(Boolean)
+            .sort((left, right) => String(left.at || '').localeCompare(String(right.at || '')));
+    }
+
+    function normalizeGoal(raw, index) {
+        if (!raw || typeof raw !== 'object') return null;
+        const title = String(raw.title || '').trim();
+        if (!title) return null;
+        const status = raw.status === 'archived' || raw.status === 'done'
+            ? raw.status
+            : 'active';
+        return {
+            ...raw,
+            id: raw.id ? String(raw.id) : uid(),
+            title,
+            projectId: raw.projectId ? String(raw.projectId) : undefined,
+            outcome: raw.outcome ? String(raw.outcome).trim() : '',
+            metricLabel: raw.metricLabel ? String(raw.metricLabel).trim() : '',
+            baselineValue: normalizeOptionalNumber(raw.baselineValue),
+            currentValue: normalizeOptionalNumber(raw.currentValue),
+            targetValue: normalizeOptionalNumber(raw.targetValue),
+            dueDate: raw.dueDate ? dateStr(raw.dueDate) : undefined,
+            obstacle: raw.obstacle ? String(raw.obstacle).trim() : '',
+            ifThenPlan: raw.ifThenPlan ? String(raw.ifThenPlan).trim() : '',
+            reviewNote: raw.reviewNote ? String(raw.reviewNote).trim() : '',
+            reviewChange: raw.reviewChange ? String(raw.reviewChange).trim() : '',
+            reviewCurrent: raw.reviewCurrent ? String(raw.reviewCurrent).trim() : '',
+            reviewNextStep: raw.reviewNextStep ? String(raw.reviewNextStep).trim() : '',
+            reviewHistory: normalizeGoalReviewHistory(raw.reviewHistory),
+            nextTaskId: raw.nextTaskId ? String(raw.nextTaskId) : undefined,
+            keyResults: normalizeGoalKeyResults(raw.keyResults),
+            status,
+            order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : index,
+            createdAt: raw.createdAt || nowISO(),
+            updatedAt: raw.updatedAt || raw.createdAt || nowISO(),
+            completedAt: status === 'done' ? (raw.completedAt || raw.updatedAt || nowISO()) : undefined,
+            reviewedAt: raw.reviewedAt || undefined,
+        };
+    }
+
+    function normalizeGoals(goals) {
+        return sortByOrder(coerceGoalsArray(goals)
+            .map((goal, index) => normalizeGoal(goal, index))
+            .filter(Boolean));
+    }
+
+    function inferLegacyGoalProjectIds(goals) {
+        const tasksById = new Map(getTasks().map((task) => [String(task.id || ''), task]));
+        const occupiedProjectIds = new Set((goals || [])
+            .filter((goal) => goal?.status === 'active' && goal.projectId)
+            .map((goal) => String(goal.projectId)));
+        return (goals || []).map((goal) => {
+            if (goal.projectId || goal.status !== 'active' || !goal.nextTaskId) return goal;
+            const projectId = tasksById.get(String(goal.nextTaskId))?.projectId;
+            if (!projectId || occupiedProjectIds.has(String(projectId))) return goal;
+            occupiedProjectIds.add(String(projectId));
+            return { ...goal, projectId: String(projectId) };
+        });
+    }
+
+    function hasActiveGoalForProject(goals, projectId, exceptGoalId) {
+        const pid = String(projectId || '');
+        if (!pid) return false;
+        return (goals || []).some((goal) => goal?.status === 'active'
+            && String(goal.projectId || '') === pid
+            && String(goal.id || '') !== String(exceptGoalId || ''));
+    }
+
+    function getGoals() {
+        return inferLegacyGoalProjectIds(normalizeGoals(lsGet(KEYS.GOALS, [])));
+    }
+
+    function saveGoals(goals, opts) {
+        persistPlanningKey(KEYS.GOALS, normalizeGoals(goals), {
+            reason: opts?.reason || 'goals-save',
+            sync: opts?.sync,
+        });
+    }
+
+    function addGoal(input) {
+        const goals = getGoals();
+        if (input?.projectId && hasActiveGoalForProject(goals, input.projectId)) return null;
+        const now = nowISO();
+        const goal = normalizeGoal({
+            ...(input && typeof input === 'object' ? input : {}),
+            id: uid(),
+            title: String(input?.title || '').trim() || 'Новая цель',
+            status: 'active',
+            order: goals.length,
+            createdAt: now,
+            updatedAt: now,
+        }, goals.length);
+        saveGoals(goals.concat(goal));
+        return goal;
+    }
+
+    function updateGoal(id, patch) {
+        const goals = getGoals();
+        const index = goals.findIndex((goal) => goal.id === id);
+        if (index === -1) return null;
+        const current = goals[index];
+        const nextPatch = patch || {};
+        const nextStatus = nextPatch.status === 'archived' || nextPatch.status === 'done' || nextPatch.status === 'active'
+            ? nextPatch.status
+            : current.status;
+        const nextProjectId = Object.prototype.hasOwnProperty.call(nextPatch, 'projectId')
+            ? nextPatch.projectId
+            : current.projectId;
+        if (nextStatus === 'active' && nextProjectId
+            && hasActiveGoalForProject(goals, nextProjectId, current.id)) return null;
+        const next = normalizeGoal({
+            ...current,
+            ...nextPatch,
+            title: Object.prototype.hasOwnProperty.call(nextPatch, 'title')
+                ? (String(nextPatch.title || '').trim() || current.title)
+                : current.title,
+            keyResults: Object.prototype.hasOwnProperty.call(nextPatch, 'keyResults')
+                ? normalizeGoalKeyResults(nextPatch.keyResults)
+                : current.keyResults,
+            status: nextStatus,
+            updatedAt: nowISO(),
+            completedAt: nextStatus === 'done'
+                ? (current.completedAt || nowISO())
+                : undefined,
+        }, index);
+        goals[index] = next;
+        saveGoals(goals);
+        return next;
+    }
+
+    function archiveGoal(id) {
+        return updateGoal(id, { status: 'archived' });
+    }
+
+    function deleteGoal(id) {
+        return archiveGoal(id);
     }
 
     // ── Chrono activities / entries / snapshots ─────────────────────
@@ -1904,6 +2409,9 @@
             'heys_planning_chrono_untracked_tail_dismissed_v1',
             'heys_planning_checklists_v1',
             'heys_planning_checklist_tombstones_v1',
+            'heys_planning_goals_v1',
+            'heys_planning_entity_tombstones_v1',
+            'heys_planning_goal_map_records_v1',
             // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
             // не синкается на push-стороне (см. CLIENT_SPECIFIC_KEYS в storage).
         ];
@@ -1927,6 +2435,8 @@
                     saveChronoTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item && item.k === 'heys_planning_checklist_tombstones_v1' && item.v != null) {
                     saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
+                } else if (item && item.k === 'heys_planning_entity_tombstones_v1' && item.v != null) {
+                    savePlanningEntityTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 }
             });
             rows.forEach(function (item) {
@@ -1942,17 +2452,14 @@
                         return; // local write pending — keep local authoritative
                     }
                 } catch (e) { /* noop */ }
-                // 🛡️ Chrono activities/entries: merge-by-record (union local+cloud) so a
-                // stale cloud array can't drop local-only adds or resurrect local deletes.
-                // Other keys: legacy replace (no tombstone layer → union would resurrect).
                 if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
-                    Store.saveProjects(item.v, { sync: false, reason: 'cloud-refresh' });
+                    Store.saveProjects(mergeCloudPlanningArray(item.k, lsGet(KEYS.PROJECTS, []), item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
-                    Store.saveTasks(item.v, { sync: false, reason: 'cloud-refresh' });
+                    Store.saveTasks(mergeCloudPlanningArray(item.k, lsGet(KEYS.TASKS, []), item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
-                    Store.saveSlots(item.v, { sync: false, reason: 'cloud-refresh' });
+                    Store.saveSlots(mergeCloudPlanningArray(item.k, lsGet(KEYS.SLOTS, []), item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
-                    Store.saveLinks(item.v, { sync: false, reason: 'cloud-refresh' });
+                    Store.saveLinks(mergeCloudPlanningArray(item.k, lsGet(KEYS.LINKS, []), item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_chrono_activities' && typeof Store.saveChronoActivities === 'function') {
                     const _localAct = getChronoActivities();
                     // 🛡️ Anti-wipe guard через tombstone-aware helper: пропускаем
@@ -1987,6 +2494,15 @@
                     }
                 } else if (item.k === 'heys_planning_checklist_tombstones_v1' && typeof Store.saveChecklistTombstones === 'function') {
                     Store.saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
+                } else if (item.k === 'heys_planning_goals_v1' && typeof Store.saveGoals === 'function') {
+                    const _localGoals = getGoals();
+                    Store.saveGoals(mergeCloudPlanningArray(item.k, _localGoals, item.v) || item.v, { sync: false, reason: 'cloud-refresh' });
+                } else if (item.k === 'heys_planning_goal_map_records_v1' && typeof Store.saveGoalMapRecords === 'function') {
+                    Store.saveGoalMapRecords(mergeCloudPlanningArray(item.k, getAllGoalMapRecords({ includeTombstones: true }), item.v) || item.v, {
+                        sync: false,
+                        reason: 'cloud-refresh',
+                        replace: true,
+                    });
                 }
             });
             _cloudPullDoneClientId = clientId || _cloudPullDoneClientId;
@@ -2011,6 +2527,8 @@
         const [chronoSnapshots, setChronoSnapshots] = useState(getChronoSnapshots);
         const [chronoTimer, setChronoTimer] = useState(getChronoTimer);
         const [checklists, setChecklists] = useState(getChecklists);
+        const [goals, setGoals] = useState(getGoals);
+        const [goalMapRecords, setGoalMapRecords] = useState(() => getAllGoalMapRecords({ includeTombstones: false }));
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
@@ -2022,6 +2540,8 @@
             setChronoSnapshots(getChronoSnapshots());
             setChronoTimer(getChronoTimer());
             setChecklists(getChecklists());
+            setGoals(getGoals());
+            setGoalMapRecords(getAllGoalMapRecords({ includeTombstones: false }));
         }, []);
 
         useEffect(() => {
@@ -2072,10 +2592,19 @@
             addChecklist: (input) => { const checklist = addChecklist(input); refresh(); return checklist; },
             updateChecklist: (id, patch) => { const checklist = updateChecklist(id, patch); refresh(); return checklist; },
             deleteChecklist: (id) => { deleteChecklist(id); refresh(); },
+            addGoal: (input) => { const goal = addGoal(input); refresh(); return goal; },
+            updateGoal: (id, patch) => { const goal = updateGoal(id, patch); refresh(); return goal; },
+            archiveGoal: (id) => { const goal = archiveGoal(id); refresh(); return goal; },
+            deleteGoal: (id) => { const goal = deleteGoal(id); refresh(); return goal; },
+            getGoalMapRecords,
+            saveGoalMapRecords: (records, opts) => { const next = saveGoalMapRecords(records, opts); refresh(); return next; },
+            upsertGoalMapRecord: (record, opts) => { const next = upsertGoalMapRecord(record, opts); refresh(); return next; },
+            deleteGoalMapRecord: (id, goalId, opts) => { const next = deleteGoalMapRecord(id, goalId, opts); refresh(); return next; },
+            restorePlanningEntity: (entityType, record) => { const next = restorePlanningEntity(entityType, record); refresh(); return next; },
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, links, chronoActivities, chronoEntries, chronoSnapshots, chronoTimer, checklists, ...api };
+        return { projects, tasks, slots, links, chronoActivities, chronoEntries, chronoSnapshots, chronoTimer, checklists, goals, goalMapRecords, ...api };
     }
 
     function usePlanningViewport() {
@@ -2144,6 +2673,9 @@
         if (key === KEYS.CHRONO_TOMBSTONES) return getChronoTombstones();
         if (key === KEYS.CHECKLISTS) return getChecklists();
         if (key === KEYS.CHECKLIST_TOMBSTONES) return getChecklistTombstones();
+        if (key === KEYS.GOALS) return getGoals();
+        if (key === KEYS.ENTITY_TOMBSTONES) return getPlanningEntityTombstones();
+        if (key === KEYS.GOAL_MAP_RECORDS) return getAllGoalMapRecords({ includeTombstones: true });
         return lsGet(key, []);
     }
 
@@ -2158,7 +2690,7 @@
                 const localValue = readPlanningValueForParity(key);
                 const local = valueSummary(localValue);
                 const cloud = _planningCloudMeta.get(key) || null;
-                const diff = cloud && Array.isArray(localValue) && MERGEABLE_PLANNING_KEYS.has(key)
+                const diff = cloud && Array.isArray(localValue) && Array.isArray(cloud.ids)
                     ? describePlanningArrayDiff(localValue, cloud.ids || [])
                     : { localOnlyIds: [], remoteOnlyIds: [] };
                 let status = 'unknown';
@@ -2179,7 +2711,7 @@
                     && lastPersist.sync
                     && lastPersistAgeMs != null
                     && lastPersistAgeMs <= PLANNING_READBACK_RECENT_WRITE_MS
-                    && (!cloud || !cloud.seenAt || cloud.seenAt < lastPersist.ts);
+                    && (!cloud || !cloud.seenAt || cloud.seenAt <= lastPersist.ts);
                 let confirmStatus = 'unknown';
                 if (LOCAL_ONLY_PLANNING_KEYS.has(key)) {
                     confirmStatus = 'local-only';
@@ -2194,7 +2726,9 @@
                     key,
                     class: LOCAL_ONLY_PLANNING_KEYS.has(key)
                         ? 'localOnly'
-                        : (MERGEABLE_PLANNING_KEYS.has(key) ? 'criticalClientKey+mergeableArray' : 'criticalClientKey'),
+                        : (MERGEABLE_PLANNING_KEYS.has(key)
+                            ? 'criticalClientKey+mergeableArray'
+                            : (Array.isArray(localValue) ? 'criticalClientKey+replaceArray' : 'criticalClientKey')),
                     status,
                     confirmStatus,
                     local,
@@ -2255,6 +2789,17 @@
         addLink,
         deleteLink,
         getLinksFor,
+        getPlanningEntityTombstones,
+        savePlanningEntityTombstones,
+        addPlanningEntityTombstones,
+        restorePlanningEntity,
+        normalizeGoalMapRecord,
+        normalizeGoalMapRecords,
+        getGoalMapRecords,
+        getAllGoalMapRecords,
+        saveGoalMapRecords,
+        upsertGoalMapRecord,
+        deleteGoalMapRecord,
         getChronoActivities,
         saveChronoActivities,
         addChronoActivity,
@@ -2293,6 +2838,12 @@
         getChecklistTombstones,
         saveChecklistTombstones,
         isCloudChecklistWipeSuspicious,
+        getGoals,
+        saveGoals,
+        addGoal,
+        updateGoal,
+        archiveGoal,
+        deleteGoal,
     };
 
     Planning.Hooks = {

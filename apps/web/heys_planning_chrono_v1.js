@@ -735,17 +735,17 @@
             .filter((item) => item.minutes > 0)
             .sort((a, b) => b.minutes - a.minutes);
         const breakdown = buildWeekBreakdown(entries, snapshots, weekDates);
-        let bestDay = null;
-        (Array.isArray(weekDates) ? weekDates : []).forEach((date) => {
-            const value = breakdown[date]?.__total || 0;
-            if (!bestDay || value > bestDay.minutes) bestDay = { date, minutes: value };
-        });
+        const days = (Array.isArray(weekDates) ? weekDates : []).map((date) => ({
+            date,
+            minutes: Math.round(Number(breakdown[date]?.__total) || 0),
+        }));
+        const bestDay = days.reduce((best, day) => (!best || day.minutes > best.minutes ? day : best), null);
         const focusMinutes = balance
             .filter((item) => item.id === 'focus' || item.id === 'growth' || item.id === 'health')
             .reduce((sum, item) => sum + item.minutes, 0);
         const drainMinutes = balance.find((item) => item.id === 'drain')?.minutes || 0;
-        // Объяснимый score: дни-с-записями из breakdown, доля целей из недельного
-        // hit-rate. Разбивка (scoreParts) уходит в UI — «из чего сложилось».
+        // Объяснимый score: UI показывает исходные доли и дни, а не
+        // внутренние баллы формулы.
         const daysTracked = (Array.isArray(weekDates) ? weekDates : [])
             .filter((date) => (breakdown[date]?.__total || 0) > 0).length;
         const goalHit = buildWeekGoalHitRate(activities, entries, snapshots, weekDates);
@@ -760,16 +760,22 @@
             ? 'Неделя собрана'
             : score >= 50
                 ? 'Неделя в балансе'
-                : 'Неделя требует чистки';
+                : 'Неделю стоит упростить';
         const recommendation = drainMinutes > focusMinutes * 0.35
-            ? 'Срежь потери на 30 минут и отдай их фокусу.'
+            ? 'Лучший следующий шаг: 30 минут из потерь перенести в фокус.'
             : focusMinutes < total * 0.4
-                ? 'Добавь один блок фокуса на 45 минут.'
-                : 'Сохраняй ритм: фокус уже держит структуру недели.';
+                ? 'Лучший следующий шаг: добавить один фокус-блок на 45 минут.'
+                : 'Ритм держится: фокус уже задаёт структуру недели.';
         return {
             total,
             score,
             scoreParts,
+            days,
+            daysTracked,
+            focusShare: total > 0 ? focusMinutes / total : 0,
+            drainShare: total > 0 ? drainMinutes / total : 0,
+            goalHitRate: goalHit.rate,
+            hasGoals: goalHit.hasGoals,
             headline,
             recommendation,
             trend: buildWeekTrend(activities, entries, snapshots, weekDates, minutesByActivity),
@@ -787,22 +793,53 @@
         return project ? `${project.name} · ${task.title}` : String(task.title || '');
     }
 
-    function buildChronoPlanFacts(activities, tasks, minutesByActivity) {
+    function getChronoSlotDurationMinutes(slot) {
+        if (!slot || !slot.startTime || !slot.endTime) return 0;
+        const parseTime = (value) => {
+            const parts = String(value || '').split(':').map(Number);
+            if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+            return (parts[0] * 60) + parts[1];
+        };
+        const start = parseTime(slot.startTime);
+        let end = parseTime(slot.endTime);
+        if (start === null || end === null) return 0;
+        if (end <= start) end += 24 * 60;
+        return Math.max(30, Math.min(24 * 60, Math.round(end - start)));
+    }
+
+    function buildChronoPlanFacts(activities, tasks, minutesByActivity, slots, dates) {
         const out = [];
-        const taskById = new Map((Array.isArray(tasks) ? tasks : []).map((task) => [task.id, task]));
+        const taskList = Array.isArray(tasks) ? tasks : [];
+        const taskById = new Map(taskList.map((task) => [task.id, task]));
+        const slotList = Array.isArray(slots) ? slots : [];
+        const dateSet = new Set((Array.isArray(dates) ? dates : []).filter(Boolean));
         (Array.isArray(activities) ? activities : []).forEach((activity) => {
             if (!activity || activity.archived) return;
             const actual = Math.round(Number(minutesByActivity && minutesByActivity[activity.id]) || 0);
             let planned = 0;
             let label = '';
+            let planSource = 'estimate';
+            let relatedTaskIds = [];
             if (activity.taskId && taskById.has(activity.taskId)) {
                 const task = taskById.get(activity.taskId);
+                relatedTaskIds = [task.id];
                 planned = Number(task.plannedMinutes) > 0 ? Math.round(Number(task.plannedMinutes)) : 0;
                 label = task.title || activity.name;
             } else if (activity.projectId) {
-                const projectTasks = (Array.isArray(tasks) ? tasks : []).filter((task) => task && task.projectId === activity.projectId);
+                const projectTasks = taskList.filter((task) => task && task.projectId === activity.projectId);
+                relatedTaskIds = projectTasks.map((task) => task.id);
                 planned = projectTasks.reduce((sum, task) => sum + (Number(task.plannedMinutes) || 0), 0);
                 label = activity.name;
+            }
+            if (relatedTaskIds.length > 0 && slotList.length > 0 && dateSet.size > 0) {
+                const relatedIdSet = new Set(relatedTaskIds);
+                const relatedSlots = slotList.filter((slot) => slot && relatedIdSet.has(slot.taskId));
+                if (relatedSlots.length > 0) {
+                    planned = relatedSlots
+                        .filter((slot) => dateSet.has(slot.date))
+                        .reduce((sum, slot) => sum + getChronoSlotDurationMinutes(slot), 0);
+                    planSource = 'calendar';
+                }
             }
             if (planned <= 0 && actual <= 0) return;
             if (!activity.taskId && !activity.projectId) return;
@@ -817,6 +854,7 @@
                 actual,
                 delta: actual - Math.round(planned),
                 ratio: planned > 0 ? actual / planned : null,
+                planSource,
             });
         });
         return out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -913,11 +951,34 @@
         };
     }
 
+    function getBubbleProgress(activity, minutes, scope, planFact) {
+        const scopedGoal = getActivityGoalForScope(activity, scope);
+        if (scopedGoal) {
+            return {
+                ...getProgress(activity, minutes, scope),
+                minutes: scopedGoal.minutes,
+                source: 'activity',
+            };
+        }
+        const planned = Math.round(Number(planFact && planFact.planned) || 0);
+        if (planned <= 0) return null;
+        const actual = Math.max(0, Number(minutes) || 0);
+        const raw = actual / planned;
+        return {
+            kind: 'plan',
+            value: Math.max(0, Math.min(1, raw)),
+            raw,
+            over: false,
+            minutes: planned,
+            source: 'task',
+        };
+    }
+
     // Цвет кольца на бабле, в зависимости от kind и прогресса.
     function ringColorForProgress(progress, activityHue) {
         if (!progress) return 'transparent';
         const safeHue = ((Number(activityHue) || 0) % 360 + 360) % 360;
-        if (progress.kind === 'target') {
+        if (progress.kind === 'target' || progress.kind === 'plan') {
             // Насыщенная версия hue активности.
             return `hsl(${Math.round(safeHue)}, 50%, 50%)`;
         }
@@ -1490,8 +1551,10 @@
             h('div', { className: 'chrono-picker__edit-line' },
                 h('button', {
                     type: 'button',
-                    className: 'chrono-picker__emoji chrono-picker__emoji--btn',
+                    className: 'chrono-picker__emoji chrono-picker__emoji--btn' + (emojiOpen ? ' active' : ''),
                     onClick: () => setEmojiOpen((open) => !open),
+                    title: 'Сменить смайл',
+                    'aria-expanded': emojiOpen,
                     'aria-label': 'Сменить эмодзи',
                 }, emoji || '·'),
                 h('input', {
@@ -1549,10 +1612,12 @@
                     },
                 }),
             ),
-            emojiOpen && h(EmojiPalette, {
+            emojiOpen && h('div', { className: 'chrono-picker__emoji-panel' },
+                h(EmojiPalette, {
                 selected: emoji,
                 onSelect: (next) => { setEmoji(next); setEmojiOpen(false); },
-            }),
+                }),
+            ),
         );
     }
 
@@ -2532,7 +2597,7 @@
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
         return h('div', { className: 'chrono-duration__link' },
-            h('div', { className: 'chrono-duration__link-title' }, 'План-факт'),
+            h('div', { className: 'chrono-duration__link-title' }, 'Связь с планом'),
             h('select', {
                 className: 'planning-modal__input chrono-duration__link-select',
                 value: activity.taskId || '',
@@ -2955,7 +3020,7 @@
 
     const DRAG_ACTIVATE_PX = 10;  // палец должен пройти ≥ этого расстояния прежде чем включится drag mode
 
-    function ChronoBubble({ activity, minutes, maxMin, sizeScale, scope, badge, onClick, onLongPress,
+    function ChronoBubble({ activity, minutes, maxMin, sizeScale, scope, planFact, badge, onClick, onLongPress,
                             baseX, baseY, bubbleRadius, onDragStart, onDragMove, onDragEnd }) {
         const diameter = Math.round(radiusForMinutes(minutes, maxMin, sizeScale) * 2);
         const bg = colorForActivity(activity.hue, minutes, maxMin);
@@ -2966,13 +3031,22 @@
         const dur = 12 + (seed % 6);
         const fx = 1 + (seed % 2) * 0.5;
         const fy = 1 + ((seed >> 3) % 2) * 0.5;
-        const progress = getProgress(activity, minutes, scope);
-        const hasGoal = progress !== null;
-        const progressDeg = hasGoal ? Math.round(progress.value * 360) : 0;
+        const progress = getBubbleProgress(activity, minutes, scope, planFact);
+        const hasProgress = progress !== null;
+        const missingLinkedPlan = !hasProgress && planFact && Number(planFact.planned) <= 0;
+        const progressDeg = hasProgress ? Math.round(progress.value * 360) : 0;
         const ringColor = ringColorForProgress(progress, activity.hue);
         const goalKind = progress ? progress.kind : null;
+        const compactPlan = hasProgress && diameter < 108;
         const nameFontSize = Math.max(9.2, Math.min(20, diameter * 0.118));
         const timeFontSize = Math.max(11, Math.min(23, diameter * 0.138));
+        const planFontSize = Math.max(8.5, Math.min(13, diameter * 0.09));
+        const progressLabel = goalKind === 'budget' ? 'лимит' : goalKind === 'target' ? 'цель' : 'план';
+        const title = hasProgress
+            ? `${activity.name} · факт ${formatMinutes(minutes)} · ${progressLabel} ${formatMinutes(progress.minutes)}`
+            : missingLinkedPlan
+                ? `${activity.name} · факт ${formatMinutes(minutes)} · план не задан`
+                : `${activity.name} · ${formatMinutes(minutes)}`;
 
         const pressTimer = useRef(null);
         const longFiredRef = useRef(false);
@@ -3070,9 +3144,10 @@
 
         return h('div', {
             className: 'chrono-bubble-wrap'
-                + (hasGoal ? ' has-target' : '')
+                + (hasProgress ? ' has-progress' : '')
+                + (goalKind === 'plan' ? ' is-plan' : '')
                 + (goalKind === 'budget' ? ' is-budget' : '')
-                + (progress && progress.kind === 'target' && progress.value >= 1 ? ' is-complete' : '')
+                + (progress && progress.kind !== 'budget' && progress.value >= 1 ? ' is-complete' : '')
                 + (progress && progress.over ? ' is-over' : ''),
             style: {
                 '--size': diameter + 'px',
@@ -3084,11 +3159,14 @@
                 '--float-y': fy + 'px',
                 '--bubble-name-font': nameFontSize.toFixed(1) + 'px',
                 '--bubble-time-font': timeFontSize.toFixed(1) + 'px',
+                '--bubble-plan-font': planFontSize.toFixed(1) + 'px',
             },
         },
             h('button', {
                 type: 'button',
-                className: 'chrono-bubble',
+                className: 'chrono-bubble'
+                    + (hasProgress || missingLinkedPlan ? ' chrono-bubble--with-plan' : '')
+                    + (compactPlan ? ' chrono-bubble--compact-plan' : ''),
                 style: { '--bg': bg },
                 onClick: handleClick,
                 onPointerDown: handlePointerDown,
@@ -3096,13 +3174,16 @@
                 onPointerUp: handlePointerEnd,
                 onPointerCancel: handlePointerEnd,
                 onPointerLeave: handlePointerEnd,
-                title: hasGoal
-                    ? `${activity.name} · ${formatMinutes(minutes)} / ${goalKind === 'budget' ? 'лимит' : 'цель'} ${formatMinutes((scope === 'week' ? (activity.targetMinutesPerWeek || activity.budgetMinutesPerWeek) : (activity.targetMinutesPerDay || activity.budgetMinutesPerDay)) || 0)}`
-                    : `${activity.name} · ${formatMinutes(minutes)}`,
+                title,
+                'aria-label': title,
             },
                 h('span', { className: 'chrono-bubble__emoji', 'aria-hidden': 'true' }, activity.emoji || '·'),
                 h('span', { className: 'chrono-bubble__name' }, activity.name),
                 h('span', { className: 'chrono-bubble__time' }, formatMinutes(minutes)),
+                hasProgress && h('span', { className: 'chrono-bubble__plan' },
+                    `${progressLabel} ${formatMinutes(progress.minutes)}`,
+                ),
+                missingLinkedPlan && h('span', { className: 'chrono-bubble__plan is-missing' }, 'без плана'),
             ),
             badge && h('span', {
                 key: badge.key,
@@ -3112,7 +3193,9 @@
         );
     }
 
-    function ChronoStrip({ activities, onPick, onAddNew }) {
+    function ChronoStrip({ activities, onPick, onAddNew, trashRef, trashState }) {
+        const trashDragging = !!(trashState && trashState.dragging);
+        const trashActive = !!(trashState && trashState.active);
         return h('div', { className: 'chrono-strip', role: 'list' },
             activities.map((a) => h('button', {
                 key: a.id,
@@ -3133,6 +3216,27 @@
                 title: 'Добавить новое занятие',
             },
                 h('span', { className: 'chrono-strip__name' }, '+ Новая'),
+            ),
+            trashRef && h('div', {
+                key: '__trash__',
+                ref: trashRef,
+                className: 'chrono-strip__trash'
+                    + (trashDragging ? ' is-dragging' : '')
+                    + (trashActive ? ' is-active' : ''),
+                title: 'Перетащите сюда круг, чтобы убрать из текущего периода',
+                'aria-hidden': 'true',
+            },
+                h('svg', {
+                    width: 20, height: 20, viewBox: '0 0 22 22', fill: 'none',
+                },
+                    h('path', {
+                        d: 'M4 6h14M9 6V4h4v2M9 10v6M13 10v6M5 6l1 12h10L17 6',
+                        stroke: 'currentColor',
+                        'stroke-width': '1.8',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round',
+                    }),
+                ),
             ),
         );
     }
@@ -3200,7 +3304,7 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, loggedRows, untracked, untrackedActive, variant, onUntrackedClick, onLoggedRowClick, onLoggedRowsReorder }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, loggedRows, totalMinutes, untracked, untrackedActive, variant, onUntrackedClick, onLoggedRowClick, onLoggedRowsReorder }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
@@ -3387,8 +3491,9 @@
 
         const visibleRows = draggingRowId && dragRows ? dragRows : rows;
         const showBody = isModal;
-        if (!isModal && rows.length === 0 && !lastAdded && !untracked) return null;
-        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked) return null;
+        const total = Math.max(0, Math.round(Number(totalMinutes) || 0));
+        if (!isModal && rows.length === 0 && !lastAdded && !untracked && total <= 0) return null;
+        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked && total <= 0) return null;
 
         return h('div', {
             className: 'chrono-overview'
@@ -3449,6 +3554,14 @@
                         ? `С последней записи в ${untracked.sinceLabel}`
                         : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
                 }, untrackedActive ? 'Выбирайте актив' : 'Записать'),
+            ),
+            total > 0 && h('div', {
+                className: 'chrono-overview__total',
+                title: `Суммарное время ${formatMinutes(total)}`,
+                'aria-label': `Всего хронометрировано: ${formatMinutes(total)}`,
+            },
+                h('span', { className: 'chrono-overview__total-label' }, 'Хронометрировано'),
+                h('strong', { className: 'chrono-overview__total-value' }, formatMinutes(total)),
             ),
             showBody && h('div', { id: isModal ? undefined : 'chrono-overview-body', className: 'chrono-overview__body' },
                 h('div', { className: 'chrono-overview__top' },
@@ -3538,33 +3651,6 @@
         );
     }
 
-    function ChronoPlanFactPanel({ facts, tasks, projects }) {
-        if (!Array.isArray(facts) || facts.length === 0) return null;
-        const taskById = new Map((Array.isArray(tasks) ? tasks : []).map((task) => [task.id, task]));
-        return h('div', { className: 'chrono-planfact', 'aria-label': 'План-факт по задачам' },
-            h('div', { className: 'chrono-planfact__title' }, 'План-факт'),
-            facts.slice(0, 4).map((fact) => {
-                const task = fact.taskId ? taskById.get(fact.taskId) : null;
-                const ratio = fact.planned > 0 ? Math.max(0, Math.min(1.5, fact.actual / fact.planned)) : 0;
-                return h('div', { key: fact.activityId, className: 'chrono-planfact__row' },
-                    h('div', { className: 'chrono-planfact__main' },
-                        h('span', { className: 'chrono-planfact__name' }, `${fact.emoji || ''} ${fact.name}`),
-                        h('span', { className: 'chrono-planfact__meta' }, task ? getTaskLabel(task, projects) : fact.label),
-                    ),
-                    h('div', { className: 'chrono-planfact__meter' },
-                        h('span', {
-                            className: 'chrono-planfact__fill' + (fact.delta > 0 ? ' is-over' : ''),
-                            style: { width: Math.round(Math.min(100, ratio * 100)) + '%' },
-                        }),
-                    ),
-                    h('div', { className: 'chrono-planfact__numbers' },
-                        `${formatMinutes(fact.actual)} / ${formatMinutes(fact.planned)}`,
-                    ),
-                );
-            }),
-        );
-    }
-
     function ChronoCategoryBalance({ balance }) {
         if (!Array.isArray(balance) || balance.length === 0) return null;
         return h('div', { className: 'chrono-category-balance', 'aria-label': 'Баланс категорий' },
@@ -3582,66 +3668,128 @@
         );
     }
 
-    // Подписанная дельта со стрелкой; goodWhenUp=false инвертирует тон (потери).
-    function renderTrendDelta(label, delta, opts) {
-        const o = opts || {};
+    function formatSignedMinutesDelta(delta) {
         const d = Number(delta) || 0;
-        const arrow = d > 0 ? '↑' : d < 0 ? '↓' : '·';
-        const goodWhenUp = o.goodWhenUp !== false;
-        const tone = d === 0 ? '' : ((d > 0) === goodWhenUp ? ' is-good' : ' is-bad');
-        const value = o.pct != null
-            ? `${d > 0 ? '+' : ''}${o.pct}%`
-            : `${d > 0 ? '+' : d < 0 ? '−' : ''}${formatMinutes(Math.abs(d))}`;
-        return h('span', { key: label, className: 'chrono-weekly-report__trend-item' + tone },
-            h('span', { className: 'chrono-weekly-report__trend-label' }, label),
-            h('span', { className: 'chrono-weekly-report__trend-arrow', 'aria-hidden': 'true' }, arrow),
-            h('strong', null, value),
-        );
+        return `${d > 0 ? '+' : d < 0 ? '−' : ''}${formatMinutes(Math.abs(Math.round(d)))}`;
     }
 
-    function ChronoWeeklyReport({ report }) {
+    function buildWeeklySignal(report) {
+        const trend = report && report.trend;
+        if (!trend) return null;
+        const candidates = [];
+        const focusDelta = Number(trend.focus && trend.focus.delta) || 0;
+        const drainDelta = Number(trend.drain && trend.drain.delta) || 0;
+        const totalDelta = Number(trend.totalDelta) || 0;
+        if (focusDelta !== 0) {
+            candidates.push({
+                id: 'focus',
+                weight: Math.abs(focusDelta) * 1.2,
+                tone: focusDelta > 0 ? 'good' : 'bad',
+                label: 'К прошлой неделе',
+                title: focusDelta > 0 ? 'Фокус вырос' : 'Фокус снизился',
+                value: formatSignedMinutesDelta(focusDelta),
+            });
+        }
+        if (drainDelta !== 0) {
+            candidates.push({
+                id: 'drain',
+                weight: Math.abs(drainDelta) * 1.1,
+                tone: drainDelta > 0 ? 'bad' : 'good',
+                label: 'К прошлой неделе',
+                title: drainDelta > 0 ? 'Потери выросли' : 'Потери снизились',
+                value: formatSignedMinutesDelta(drainDelta),
+            });
+        }
+        if (totalDelta !== 0) {
+            candidates.push({
+                id: 'total',
+                weight: Math.abs(totalDelta) * 0.65,
+                tone: 'neutral',
+                label: 'К прошлой неделе',
+                title: totalDelta > 0 ? 'Объём вырос' : 'Объём снизился',
+                value: formatSignedMinutesDelta(totalDelta),
+            });
+        }
+        return candidates.sort((a, b) => b.weight - a.weight)[0] || null;
+    }
+
+    function ChronoWeeklyReport({ report, onPickDay }) {
+        const [scoreOpen, setScoreOpen] = useState(false);
         if (!report) return null;
-        const parts = Array.isArray(report.scoreParts) ? report.scoreParts : [];
-        const trend = report.trend;
-        const hasTrend = trend && (trend.totalDelta !== 0 || trend.focus.delta !== 0 || trend.drain.delta !== 0);
+        const signal = buildWeeklySignal(report);
+        const days = Array.isArray(report.days) ? report.days : [];
+        const maxDayMinutes = days.reduce((max, day) => Math.max(max, Number(day.minutes) || 0), 0);
+        const scoreFacts = [
+            `${report.daysTracked || 0} из 7 дней`,
+            `Фокус ${Math.round((Number(report.focusShare) || 0) * 100)}%`,
+            `Потери ${Math.round((Number(report.drainShare) || 0) * 100)}%`,
+        ];
+        if (report.hasGoals) {
+            scoreFacts.push(`Цели ${Math.round((Number(report.goalHitRate) || 0) * 100)}%`);
+        }
         return h('div', { className: 'chrono-weekly-report', 'aria-label': 'Отчёт недели' },
             h('div', { className: 'chrono-weekly-report__head' },
                 h('div', null,
-                    h('div', { className: 'chrono-weekly-report__eyebrow' }, 'Отчёт недели'),
+                    h('div', { className: 'chrono-weekly-report__eyebrow' }, 'Неделя'),
                     h('div', { className: 'chrono-weekly-report__title' }, report.headline),
                 ),
-                h('div', { className: 'chrono-weekly-report__score' }, report.score),
-            ),
-            parts.length > 0 && h('div', { className: 'chrono-weekly-report__score-parts', 'aria-label': 'Из чего сложился счёт' },
-                parts.map((part) => h('span', {
-                    key: part.label,
-                    className: 'chrono-weekly-report__score-part' + (part.points < 0 ? ' is-negative' : ''),
+                h('button', {
+                    type: 'button',
+                    className: 'chrono-weekly-report__score',
+                    onClick: () => setScoreOpen((open) => !open),
+                    'aria-expanded': scoreOpen ? 'true' : 'false',
+                    'aria-controls': 'chrono-weekly-score-details',
+                    title: 'Из чего сложился ритм',
                 },
-                    h('span', { className: 'chrono-weekly-report__score-part-label' }, part.label),
-                    h('strong', null, `${part.points > 0 ? '+' : ''}${part.points}`),
-                )),
+                    h('span', null, 'Ритм'),
+                    h('strong', null, report.score),
+                ),
             ),
-            h('div', { className: 'chrono-weekly-report__grid' },
-                h('div', null,
+            scoreOpen && h('div', {
+                id: 'chrono-weekly-score-details',
+                className: 'chrono-weekly-report__score-details',
+            }, scoreFacts.map((fact) => h('span', { key: fact }, fact))),
+            h('div', { className: 'chrono-weekly-report__lead' }, report.recommendation),
+            days.length > 0 && h('div', { className: 'chrono-weekly-report__days' },
+                h('div', { className: 'chrono-weekly-report__label' }, 'По дням'),
+                h('div', { className: 'chrono-weekly-report__day-grid' },
+                    days.map((day, index) => {
+                        const minutes = Math.max(0, Number(day.minutes) || 0);
+                        const level = maxDayMinutes > 0 ? minutes / maxDayMinutes : 0;
+                        return h('button', {
+                            key: day.date,
+                            type: 'button',
+                            className: 'chrono-weekly-report__day' + (minutes <= 0 ? ' is-empty' : ''),
+                            style: { '--day-level': String(level) },
+                            onClick: () => onPickDay && onPickDay(day.date),
+                            'aria-label': `${formatDateLabel(day.date)} · ${formatMinutes(minutes)}. Открыть день`,
+                            title: `${formatDateLabel(day.date)} · ${formatMinutes(minutes)}`,
+                        },
+                            h('span', { className: 'chrono-weekly-report__day-bar', 'aria-hidden': 'true' },
+                                h('span', null),
+                            ),
+                            h('span', { className: 'chrono-weekly-report__day-label' },
+                                ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][index] || formatDateLabel(day.date),
+                            ),
+                        );
+                    }),
+                ),
+            ),
+            h('div', { className: 'chrono-weekly-report__metrics' },
+                h('div', { className: 'chrono-weekly-report__metric' },
                     h('span', { className: 'chrono-weekly-report__label' }, 'Всего'),
                     h('strong', null, formatMinutes(report.total)),
                 ),
-                report.top && h('div', null,
-                    h('span', { className: 'chrono-weekly-report__label' }, 'Главное'),
-                    h('strong', null, `${report.top.activity.emoji || ''} ${report.top.activity.name}`),
-                ),
-                report.bestDay && h('div', null,
-                    h('span', { className: 'chrono-weekly-report__label' }, 'Лучший день'),
-                    h('strong', null, `${formatDateLabel(report.bestDay.date)} · ${formatMinutes(report.bestDay.minutes)}`),
+                report.top && h('div', { className: 'chrono-weekly-report__metric' },
+                    h('span', { className: 'chrono-weekly-report__label' }, 'Главный фокус'),
+                    h('strong', null, `${report.top.activity.emoji || ''} ${report.top.activity.name} · ${formatMinutes(report.top.minutes)}`),
                 ),
             ),
-            hasTrend && h('div', { className: 'chrono-weekly-report__trend', 'aria-label': 'Тренд к прошлой неделе' },
-                h('span', { className: 'chrono-weekly-report__trend-caption' }, 'vs прошлая неделя'),
-                renderTrendDelta('Всего', trend.totalDelta, { pct: trend.totalPct }),
-                renderTrendDelta('Фокус', trend.focus.delta, {}),
-                renderTrendDelta('Потери', trend.drain.delta, { goodWhenUp: false }),
+            signal && h('div', { className: 'chrono-weekly-report__signal is-' + signal.tone, 'aria-label': 'Главное изменение к прошлой неделе' },
+                h('span', { className: 'chrono-weekly-report__signal-label' }, signal.label),
+                h('strong', null, signal.title),
+                h('span', { className: 'chrono-weekly-report__signal-value' }, signal.value),
             ),
-            h('div', { className: 'chrono-weekly-report__recommendation' }, report.recommendation),
         );
     }
 
@@ -3704,7 +3852,7 @@
     const BUBBLE_GAP = 10;          // compact visible air между bubble'ами
     const DRAG_BUBBLE_GAP = 22;     // extra air пока палец ведёт bubble
     const RELEASE_BUBBLE_GAP = 18;  // extra air на медленном возврате
-    const RING_PADDING = 8;         // .chrono-bubble-wrap.has-target + визуальный stroke/shadow
+    const RING_PADDING = 8;         // .chrono-bubble-wrap.has-progress + визуальный stroke/shadow
     const PHYLLOTAXIS_STEP = 4;     // шаг наружу при коллизии (px)
     const PHYLLOTAXIS_MAX_ATTEMPTS = 400;
 
@@ -3982,7 +4130,7 @@
 
     const DRAG_RELEASE_DURATION_MS = 3800;  // медленный liquid-return на новую орбиту
 
-    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, hasInactive, onDragDelete }) {
+    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, planFacts, recentBadge, onPick, onLongPress, hasInactive, onDragDelete, trashRef, onTrashStateChange }) {
         // Измерение доступной зоны для clamp'а и adaptive scale.
         const cloudRef = useRef(null);
         const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -4010,6 +4158,9 @@
 
         const [drag, setDrag] = useState(null);
         const [slotOverrides, setSlotOverrides] = useState({});
+        const planFactByActivityId = useMemo(() => new Map(
+            (Array.isArray(planFacts) ? planFacts : []).map((fact) => [fact.activityId, fact])
+        ), [planFacts]);
 
         const halfW = containerSize.width / 2;
         const baseSizeScale = sizeScaleForCount(activities.length, halfW, containerSize.height);
@@ -4062,13 +4213,18 @@
             [positioned, slotOverrides, halfW, halfH, drag]
         );
         const releaseRafRef = useRef(0);
-        const trashRef = useRef(null);
+        const internalTrashRef = useRef(null);
+        const dropTargetRef = trashRef || internalTrashRef;
+        const setTrashVisualState = useCallback((next) => {
+            if (typeof onTrashStateChange === 'function') onTrashStateChange(next);
+        }, [onTrashStateChange]);
 
         useEffect(() => () => {
             if (releaseRafRef.current) cancelAnimationFrame(releaseRafRef.current);
             // Safety: ушли с экрана посреди drag — не оставляем scroll-lock на <html>.
             try { document.documentElement.classList.remove('chrono-bubble-dragging'); } catch (_) { /* noop */ }
-        }, []);
+            setTrashVisualState({ dragging: false, active: false });
+        }, [setTrashVisualState]);
 
         // При изменении минут (например, после "+30м" — кружок вырос в радиусе)
         // или набора активностей — старые overrides становятся невалидными:
@@ -4094,28 +4250,31 @@
             // Глушим прокрутку/overscroll страницы на время drag — иначе жест к
             // нижнему краю (к корзине) перехватывается scroll'ом и drag срывается.
             try { document.documentElement.classList.add('chrono-bubble-dragging'); } catch (_) { /* noop */ }
+            setTrashVisualState({ dragging: true, active: false });
             setDrag({ id, baseX, baseY, dx: 0, dy: 0, radius, releasing: false });
-        }, []);
+        }, [setTrashVisualState]);
 
         const handleDragMove = useCallback((dx, dy, pointerX, pointerY) => {
+            let overTrash = false;
+            // Попадание считаем по позиции ПАЛЬЦА (pointerX/Y), а не по центру
+            // кружка: центр смещён от пальца на точку захвата (у большого кружка
+            // это ~радиус), из-за чего корзина срабатывала, когда палец выше неё.
+            if (dropTargetRef.current && Number.isFinite(pointerX) && Number.isFinite(pointerY)) {
+                const tRect = dropTargetRef.current.getBoundingClientRect();
+                overTrash = pointerX >= tRect.left && pointerX <= tRect.right
+                    && pointerY >= tRect.top && pointerY <= tRect.bottom;
+            }
+            setTrashVisualState({ dragging: true, active: overTrash });
             setDrag((prev) => {
                 if (!prev || prev.releasing) return prev;
-                let overTrash = false;
-                // Попадание считаем по позиции ПАЛЬЦА (pointerX/Y), а не по центру
-                // кружка: центр смещён от пальца на точку захвата (у большого кружка
-                // это ~радиус), из-за чего корзина срабатывала, когда палец выше неё.
-                if (trashRef.current && Number.isFinite(pointerX) && Number.isFinite(pointerY)) {
-                    const tRect = trashRef.current.getBoundingClientRect();
-                    overTrash = pointerX >= tRect.left && pointerX <= tRect.right
-                        && pointerY >= tRect.top && pointerY <= tRect.bottom;
-                }
                 return { ...prev, dx, dy, overTrash };
             });
-        }, []);
+        }, [dropTargetRef, setTrashVisualState]);
 
         const handleDragEnd = useCallback(() => {
             // Палец отпущен — снимаем scroll-lock сразу (release-анимация чисто визуальная).
             try { document.documentElement.classList.remove('chrono-bubble-dragging'); } catch (_) { /* noop */ }
+            setTrashVisualState({ dragging: false, active: false });
             setDrag((prev) => {
                 if (!prev) return prev;
                 if (prev.overTrash) {
@@ -4161,7 +4320,7 @@
                 releaseRafRef.current = requestAnimationFrame(step);
                 return { ...prev, releasing: true };
             });
-        }, [halfW, halfH, positioned, onDragDelete]);
+        }, [halfW, halfH, positioned, onDragDelete, setTrashVisualState]);
 
         const releasing = !!(drag && drag.releasing);
 
@@ -4177,7 +4336,10 @@
             return h('div', { className: 'chrono-empty' }, text);
         }
 
-        return h('div', { className: 'chrono-cloud', ref: cloudRef },
+        return h('div', {
+            className: 'chrono-cloud' + (scope === 'week' ? ' chrono-cloud--week' : ''),
+            ref: cloudRef,
+        },
             h('div', {
                 className: 'chrono-cloud__items chrono-cloud__items--radial' + (releasing ? ' is-releasing' : ''),
                 style: { '--cloud-height': displayCloudHeight + 'px' },
@@ -4200,6 +4362,7 @@
                             maxMin,
                             sizeScale,
                             scope,
+                            planFact: planFactByActivityId.get(activity.id) || null,
                             badge: recentBadge && recentBadge.activityId === activity.id ? recentBadge : null,
                             onClick: onPick,
                             onLongPress,
@@ -4212,8 +4375,8 @@
                         }),
                     );
                 }),
-                h('div', {
-                    ref: trashRef,
+                !trashRef && h('div', {
+                    ref: internalTrashRef,
                     className: 'chrono-cloud__trash'
                         + (drag && !drag.releasing ? ' is-dragging' : '')
                         + (drag && drag.overTrash ? ' is-active' : ''),
@@ -4255,6 +4418,8 @@
         const [timerNow, setTimerNow] = useState(() => Date.now());
         const [dismissedTailDates, setDismissedTailDates] = useState(() => readDismissedUntrackedTailDates());
         const [tailPromptClosed, setTailPromptClosed] = useState(false);
+        const chronoTrashRef = useRef(null);
+        const [chronoTrashState, setChronoTrashState] = useState({ dragging: false, active: false });
         const todayStr = Utils.chronoDateStr?.() || Utils.dateStr();
         const chronoClientId = getCurrentClientId() || 'global';
         const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
@@ -4295,6 +4460,7 @@
         const snapshots = state.chronoSnapshots || [];
         const tasks = state.tasks || [];
         const projects = state.projects || [];
+        const slots = state.slots || [];
         const timer = state.chronoTimer || null;
         const timerActivity = timer ? activities.find((a) => a.id === timer.activityId) : null;
         const timerPaused = !!(timer && timer.pausedAt);
@@ -4340,15 +4506,29 @@
         const displayActivities = useMemo(() => buildDisplayChronoActivities(visibleActivities, minutesByActivity),
             [visibleActivities, minutesByActivity]);
 
+        const planFacts = useMemo(() => buildChronoPlanFacts(
+            displayActivities,
+            tasks,
+            minutesByActivity,
+            slots,
+            dates,
+        ), [displayActivities, tasks, minutesByActivity, slots, dates]);
+
+        const plannedActivityIds = useMemo(() => new Set(
+            planFacts.filter((fact) => fact.planned > 0).map((fact) => fact.activityId)
+        ), [planFacts]);
+
         const partition = useMemo(() => {
             const active = [];
             const inactive = [];
             displayActivities.forEach((a) => {
-                if ((minutesByActivity[a.id] || 0) > 0) active.push(a);
+                if ((minutesByActivity[a.id] || 0) > 0
+                    || plannedActivityIds.has(a.id)
+                    || getActivityGoalForScope(a, scope)) active.push(a);
                 else inactive.push(a);
             });
             return { active, inactive };
-        }, [displayActivities, minutesByActivity]);
+        }, [displayActivities, minutesByActivity, plannedActivityIds, scope]);
 
         // Cold-load syncing placeholder.
         // На первом заходе в Задачи после reload `usePlanningState` читает LS
@@ -4817,9 +4997,6 @@
         const insights = useMemo(() => buildChronoWeekInsights(displayActivities, minutesByActivity, totalMinutes, scope),
             [displayActivities, minutesByActivity, totalMinutes, scope]);
 
-        const planFacts = useMemo(() => buildChronoPlanFacts(displayActivities, tasks, minutesByActivity),
-            [displayActivities, tasks, minutesByActivity]);
-
         const categoryBalance = useMemo(() => buildCategoryBalance(displayActivities, minutesByActivity),
             [displayActivities, minutesByActivity]);
 
@@ -4857,6 +5034,16 @@
             const assignments = buildChronoReorderAssignments(nextRows, activeDate, anchorMs);
             if (assignments.length > 0) state.reorderChronoRows(assignments);
         }, [state, loggedRows, activeDate]);
+
+        const handleChronoTrashStateChange = useCallback((next) => {
+            const dragging = !!(next && next.dragging);
+            const active = !!(next && next.active);
+            setChronoTrashState((prev) => (
+                prev.dragging === dragging && prev.active === active
+                    ? prev
+                    : { dragging, active }
+            ));
+        }, []);
 
         const untracked = useMemo(() => {
             if (activeDate === todayStr) {
@@ -5074,7 +5261,7 @@
             && untrackedDraft.selectedIds.length > 0);
 
         return h('div', {
-            className: 'chrono-screen',
+            className: 'chrono-screen' + (scope === 'week' ? ' chrono-screen--week' : ''),
             onPointerDown: handleScreenPointerDown,
             onPointerUp: handleScreenPointerUp,
             onPointerCancel: handleScreenPointerCancel,
@@ -5128,6 +5315,39 @@
                 onResume: handleTimerResume,
                 onStop: () => setTimerStopOpen(true),
             }),
+            chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
+            !chronoSyncing && h(ChronoCloud, {
+                activities: partition.active,
+                minutesByActivity,
+                maxMin,
+                scope,
+                planFacts,
+                recentBadge,
+                onPick: handleBubbleClick,
+                onLongPress: handleLongPress,
+                hasInactive: partition.inactive.length > 0,
+                trashRef: chronoTrashRef,
+                onTrashStateChange: handleChronoTrashStateChange,
+                onDragDelete: (id) => {
+                    const a = activities.find((x) => x.id === id);
+                    if (!a) return;
+                    // Корзина в облаке = убрать занятие из текущего дня/недели (вернуть в
+                    // полосу выбора), НЕ удалять его совсем. Полное удаление — только из
+                    // модалки «Занятия» (корзина у строки → DeleteActivityModal).
+                    const removed = state.clearChronoScope(id, dates);
+                    const entries = (removed && removed.entries) || [];
+                    const minutes = entries.reduce((sum, e) => sum + (Number(e.minutes) || 0), 0);
+                    setRecentBadge(null);
+                    setToast({ kind: 'cleared', removed: entries, minutes, scope });
+                },
+            }),
+            scope === 'week' && h(ChronoWeeklyReport, {
+                report: weeklyReport,
+                onPickDay: (date) => {
+                    setActiveDate(date);
+                    setScope('day');
+                },
+            }),
             h(ChronoOverviewPanel, {
                 insights,
                 balance: categoryBalance,
@@ -5135,6 +5355,7 @@
                 timeOfDay,
                 lastAdded,
                 loggedRows,
+                totalMinutes,
                 untracked: untrackedHasSelection ? null : untracked,
                 untrackedActive: !!untrackedDraft,
                 onUntrackedClick: handleUntrackedBadgeClick,
@@ -5151,43 +5372,12 @@
                 onConfirmNow: handleUntrackedApplyNow,
                 onCancel: handleUntrackedCancel,
             }),
-            h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
-            chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
             !chronoSyncing && h(ChronoStrip, {
                 activities: partition.inactive,
                 onPick: handleBubbleClick,
                 onAddNew: () => setPickerOpen(true),
-            }),
-            !chronoSyncing && h(ChronoCloud, {
-                activities: partition.active,
-                minutesByActivity,
-                maxMin,
-                scope,
-                recentBadge,
-                onPick: handleBubbleClick,
-                onLongPress: handleLongPress,
-                hasInactive: partition.inactive.length > 0,
-                onDragDelete: (id) => {
-                    const a = activities.find((x) => x.id === id);
-                    if (!a) return;
-                    // Корзина в облаке = убрать занятие из текущего дня/недели (вернуть в
-                    // полосу выбора), НЕ удалять его совсем. Полное удаление — только из
-                    // модалки «Занятия» (корзина у строки → DeleteActivityModal).
-                    const removed = state.clearChronoScope(id, dates);
-                    const entries = (removed && removed.entries) || [];
-                    const minutes = entries.reduce((sum, e) => sum + (Number(e.minutes) || 0), 0);
-                    setRecentBadge(null);
-                    setToast({ kind: 'cleared', removed: entries, minutes, scope });
-                },
-            }),
-            scope === 'week' && h(ChronoWeeklyReport, { report: weeklyReport }),
-            scope === 'week' && weekBreakdown && h(ChronoWeekBreakdown, {
-                dates,
-                breakdown: weekBreakdown,
-                activities,
-                todayStr,
-                activeDate,
-                onPickDate: (d) => { setScope('day'); setActiveDate(d); },
+                trashRef: chronoTrashRef,
+                trashState: chronoTrashState,
             }),
             durationTarget && h(ChronoDurationModal, {
                 activity: activities.find((a) => a.id === durationTarget.id) || durationTarget,
@@ -5299,6 +5489,7 @@
                     timeOfDay,
                     lastAdded,
                     loggedRows,
+                    totalMinutes,
                     untracked: untrackedHasSelection ? null : untracked,
                     untrackedActive: !!untrackedDraft,
                     onUntrackedClick: handleUntrackedBadgeClick,
@@ -5310,13 +5501,6 @@
                 },
                 onClose: () => setOverviewModalOpen(false),
             }),
-            totalMinutes > 0 && h('div', {
-                className: 'chrono-bottom-total',
-                title: `Суммарное время ${scope === 'week' ? 'за неделю' : 'за день'}`,
-                'aria-label': `Всего: ${formatMinutes(totalMinutes)}`,
-            },
-                h('span', { className: 'chrono-bottom-total__value' }, formatMinutes(totalMinutes)),
-            ),
         );
     }
 
@@ -5329,6 +5513,7 @@
         ChronoHistoryModal,
         ChronoHeatmap,
         ChronoWeekBreakdown,
+        ChronoWeeklyReport,
         ChronoOverviewPanel,
         ChronoCloud,
         ChronoTimerBanner,
@@ -5343,6 +5528,7 @@
         getTimerElapsedMs,
         getTimerRemainingMs,
         getProgress,
+        getBubbleProgress,
         getActivityTarget,
         getActivityGoalForScope,
         ringColorForProgress,
@@ -5354,6 +5540,7 @@
         buildWeekBreakdown,
         buildDisplayChronoActivities,
         buildChronoPlanFacts,
+        getChronoSlotDurationMinutes,
         buildChronoWeekInsights,
         buildCategoryBalance,
         buildDayTimeline,

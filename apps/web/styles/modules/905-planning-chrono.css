@@ -24,7 +24,7 @@
     flex: 1 1 0;
     height: 100%;
     min-height: 0;
-    padding: 18px 12px 16px;
+    padding: 18px 12px calc(88px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     gap: 12px;
     /* Скролл на самом экране, а не на cloud — иначе breakdown-бар в режиме
@@ -487,47 +487,6 @@ html.chrono-bubble-dragging .chrono-screen {
     white-space: nowrap;
 }
 
-/* Сумма за период — закреплена внизу справа, на одном уровне с FABs
-   подвкладок планнинга (.planning-subnav anchor = bottom-left, мы зеркалим
-   bottom-right). Использует те же переменные bottom-offset что и subnav,
-   чтобы при изменении высоты основных табов оба двигались синхронно. */
-.chrono-bottom-total {
-    position: fixed;
-    /* Компактно в коридоре между левыми FAB-ами и правой корзиной. */
-    right: calc(92px + env(safe-area-inset-right, 0px));
-    bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
-    white-space: nowrap;
-    z-index: 940;
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 10px;
-    min-width: 58px;
-    justify-content: center;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    color: var(--planning-text, #0f172a);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    pointer-events: none;
-    font-variant-numeric: tabular-nums;
-}
-
-.chrono-bottom-total__value {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--planning-accent, #2563eb);
-}
-
-.theme-dark .chrono-bottom-total,
-[data-theme="dark"] .chrono-bottom-total {
-    background: rgba(15, 23, 42, 0.85);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.92);
-}
-
 .chrono-scope-bar__today {
     margin-left: auto;
     padding: 4px 10px;
@@ -575,21 +534,24 @@ html.chrono-bubble-dragging .chrono-screen {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    padding: 4px 0;
+    margin-inline: -12px;
+    padding: 10px 12px 12px;
     align-items: center;
+    background: rgba(226, 236, 242, 0.72);
+    border-top: 1px solid rgba(82, 160, 216, 0.18);
 }
 
 .chrono-strip__item {
     --hue: 210deg;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 5px;
+    padding: 5px 10px;
     border-radius: 999px;
     background: var(--planning-surface-elevated, #f1f5f9);
     border: 1px solid hsl(var(--hue) 35% 78% / 0.6);
     color: var(--planning-text, #0f172a);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
@@ -609,7 +571,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-strip__emoji {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1;
 }
 
@@ -624,6 +586,34 @@ html.chrono-bubble-dragging .chrono-screen {
     font-weight: 600;
 }
 
+.chrono-strip__trash {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 34px;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(100, 116, 139, 0.7);
+    background: rgba(255, 255, 255, 0.88);
+    color: rgba(71, 85, 105, 0.9);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    pointer-events: none;
+    transition: transform 0.18s ease,
+                border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.chrono-strip__trash.is-dragging {
+    border-color: rgba(100, 116, 139, 0.9);
+    color: rgba(51, 65, 85, 1);
+}
+
+.chrono-strip__trash.is-active {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.14);
+    color: #dc2626;
+    transform: scale(1.08);
+}
+
 @media (hover: hover) {
   .chrono-strip__item--add:hover {
     background: var(--planning-accent, #2563eb);
@@ -633,10 +623,22 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 }
 
-/* --- Insights + plan/fact --- */
+.theme-dark .chrono-strip__trash,
+[data-theme="dark"] .chrono-strip__trash {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.theme-dark .chrono-strip,
+[data-theme="dark"] .chrono-strip {
+    background: rgba(82, 160, 216, 0.08);
+    border-top-color: rgba(82, 160, 216, 0.18);
+}
+
+/* --- Insights --- */
 .chrono-overview,
-.chrono-insights,
-.chrono-planfact {
+.chrono-insights {
     flex: 0 0 auto;
     border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.07));
     background: var(--planning-surface-elevated, #f8fafc);
@@ -912,6 +914,8 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-overview__untracked-text {
     flex: 0 1 auto;
     min-width: 0;
+    margin-left: auto;
+    text-align: right;
     color: #b91c1c;
     font-size: 11px;
     font-weight: 800;
@@ -925,34 +929,89 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-overview__untracked-action {
     flex: 0 0 auto;
     appearance: none;
-    padding: 5px 9px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-    border: 1px solid rgba(37, 99, 235, 0.2);
+    position: relative;
+    isolation: isolate;
+    min-width: 92px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    background: transparent;
     color: #ffffff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 800;
     line-height: 1.1;
     white-space: nowrap;
-    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
     cursor: pointer;
+}
+
+.chrono-overview__untracked-action::before {
+    content: '';
+    position: absolute;
+    inset: 5px 0;
+    z-index: -1;
+    border-radius: 10px;
+    background: var(--planning-accent, #2563eb);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.16);
     transition: box-shadow 0.16s ease, filter 0.16s ease, transform 0.16s ease;
 }
 
+.chrono-overview__untracked-action:focus-visible {
+    outline: 2px solid rgba(29, 112, 183, 0.72);
+    outline-offset: 2px;
+}
+
 .chrono-overview__untracked-action:hover {
-    filter: brightness(1.03);
-    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26);
+    filter: none;
+}
+
+.chrono-overview__untracked-action:hover::before {
+    filter: brightness(1.04);
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.2);
 }
 
 .chrono-overview__untracked-action.active {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+.chrono-overview__untracked-action.active::before {
     background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
     border-color: rgba(22, 163, 74, 0.28);
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14), 0 10px 22px rgba(15, 118, 110, 0.2);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12), 0 5px 12px rgba(15, 118, 110, 0.16);
     transform: translateY(-1px);
 }
 
 .chrono-overview__last--badge-only .chrono-overview__untracked-action {
     margin-left: auto;
+}
+
+.chrono-overview__total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 14px 10px;
+    border-top: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.06));
+    color: var(--planning-muted, #64748b);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__total-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-overview__total-value {
+    flex: 0 0 auto;
+    color: var(--planning-accent, #2563eb);
+    font-size: 14px;
+    line-height: 1;
 }
 
 .chrono-untracked-flow {
@@ -1501,14 +1560,12 @@ html.chrono-bubble-dragging .chrono-screen {
     background: var(--planning-surface, #fff);
 }
 
-.chrono-insights__title,
-.chrono-planfact__meta {
+.chrono-insights__title {
     font-size: 11px;
     color: var(--planning-muted, #64748b);
 }
 
-.chrono-insights__value,
-.chrono-planfact__name {
+.chrono-insights__value {
     font-size: 13px;
     font-weight: 700;
     color: var(--planning-text, #0f172a);
@@ -1517,55 +1574,10 @@ html.chrono-bubble-dragging .chrono-screen {
     white-space: nowrap;
 }
 
-.chrono-insights__detail,
-.chrono-planfact__numbers {
+.chrono-insights__detail {
     font-size: 12px;
     color: var(--planning-muted, #64748b);
     font-variant-numeric: tabular-nums;
-}
-
-.chrono-planfact {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 8px 10px;
-}
-
-.chrono-planfact__title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--planning-text, #0f172a);
-}
-
-.chrono-planfact__row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 96px auto;
-    gap: 8px;
-    align-items: center;
-}
-
-.chrono-planfact__main {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.chrono-planfact__meter {
-    height: 6px;
-    border-radius: 999px;
-    overflow: hidden;
-    background: rgba(15, 23, 42, 0.08);
-}
-
-.chrono-planfact__fill {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--planning-accent, #2563eb);
-}
-
-.chrono-planfact__fill.is-over {
-    background: hsl(28, 85%, 52%);
 }
 
 .chrono-category-balance {
@@ -1621,22 +1633,25 @@ html.chrono-bubble-dragging .chrono-screen {
 .tone-red { --chrono-category-color: #dc2626; }
 
 /* --- Cloud (bubbles) ---
-   Outer = flex-центрирование (горизонталь + вертикаль) внутри доступной высоты.
-   Inner (__items) = flex-wrap с gap, чтобы кружки оставались рядом друг с другом. */
+   Облако занимает верхнюю свободную область, а списки и чипы после него
+   собираются у нижнего края экрана. */
 .chrono-cloud {
-    /* Занимает ровно оставшуюся видимую высоту. Когда сводка/strip сверху
-       растут, cloud сжимается, а центр radial-layout остаётся в центре этой
-       оставшейся области, не уезжая вниз вместе со всей страницей. */
+    /* Занимает оставшуюся высоту между верхней навигацией и нижним стеком. */
     flex: 1 1 0;
     min-height: 0;
     box-sizing: border-box;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    /* Нижняя сейф-зона: облако flex-центрируется, но низ перекрыт фикс-FABʼами
-       (корзина/тотал/переключатель подвкладок). Резервируем место снизу, чтобы
-       кружки собирались по центру ВИДИМОЙ области, а не уезжали под кнопки. */
-    padding: 12px 4px 72px;
+    padding: 8px 4px 12px;
+}
+
+.chrono-cloud--week {
+    flex: 0 0 auto;
+    min-height: 380px;
+    min-height: clamp(360px, 52svh, 460px);
+    padding: 18px 4px 22px;
+    overflow: visible;
 }
 
 .chrono-cloud__items {
@@ -1700,8 +1715,7 @@ html.chrono-bubble-dragging .chrono-screen {
 /* Корзина — появляется при drag'е любого кружка, hit-detection через
    getBoundingClientRect (см. ChronoCloud handleDragMove). pointer-events:none,
    чтобы palец продолжал captured на bubble'е. */
-/* Привязка к viewport как у chrono-bottom-total — корзина оказывается
-   в нижней зоне между FAB-ами слева и блоком "всего" справа. */
+/* Fallback-корзина для изолированного ChronoCloud без внешней drop-зоны. */
 .chrono-cloud__trash {
     position: fixed;
     /* Корзина — в правом углу (стабильная цель для drag-to-trash). Тотал
@@ -1773,8 +1787,7 @@ html.chrono-bubble-dragging .chrono-screen {
     padding: 24px;
 }
 
-/* Wrapper — несёт размер, плавающую анимацию и (при наличии цели) кольцо
-   прогресса через conic-gradient. Внутри — сам кружок-button. */
+/* Wrapper несёт размер, плавающую анимацию и единое кольцо план-факта. */
 .chrono-bubble-wrap {
     --size: 56px;
     --ring-thickness: 4px;
@@ -1791,7 +1804,7 @@ html.chrono-bubble-dragging .chrono-screen {
     will-change: transform;
 }
 
-.chrono-bubble-wrap.has-target {
+.chrono-bubble-wrap.has-progress {
     width: calc(var(--size) + var(--ring-thickness) * 2);
     height: calc(var(--size) + var(--ring-thickness) * 2);
     padding: var(--ring-thickness);
@@ -1801,7 +1814,7 @@ html.chrono-bubble-dragging .chrono-screen {
     );
 }
 
-.chrono-bubble-wrap.has-target.is-complete {
+.chrono-bubble-wrap.has-progress.is-complete {
     box-shadow: 0 0 0 1px var(--ring-color, var(--planning-accent, #2563eb)),
                 0 4px 14px rgba(15, 23, 42, 0.18);
 }
@@ -1852,6 +1865,19 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-bubble:active {
     filter: brightness(0.94);
+}
+
+.chrono-bubble--with-plan {
+    gap: clamp(1px, calc(var(--size, 56px) * 0.025), 5px);
+    padding: 5px;
+}
+
+.chrono-bubble--with-plan .chrono-bubble__name {
+    -webkit-line-clamp: 2;
+}
+
+.chrono-bubble--compact-plan .chrono-bubble__emoji {
+    display: none;
 }
 
 @keyframes chrono-spawn {
@@ -1927,6 +1953,23 @@ html.chrono-bubble-dragging .chrono-screen {
     /* «1ч 30м» одной строкой — не переносим на 2 строки внутрь кружка. */
     white-space: nowrap;
     max-width: 96%;
+}
+
+.chrono-bubble__plan {
+    max-width: 96%;
+    overflow: hidden;
+    color: rgba(15, 23, 42, 0.68);
+    font-size: var(--bubble-plan-font, 10px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-bubble__plan.is-missing {
+    color: rgba(15, 23, 42, 0.56);
 }
 
 .chrono-history__tiny-btn {
@@ -2047,6 +2090,11 @@ html.chrono-bubble-dragging .chrono-screen {
     cursor: pointer;
     width: 36px;
     height: 36px;
+}
+
+.chrono-picker__emoji--btn.active {
+    background: rgba(67, 69, 135, 0.08);
+    border-color: var(--planning-accent, #434587);
 }
 
 .chrono-picker__name {
@@ -2185,6 +2233,19 @@ html.chrono-bubble-dragging .chrono-screen {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     gap: 4px;
+}
+
+.chrono-picker__emoji-panel {
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.08));
+    border-radius: 12px;
+    background: var(--planning-surface, #fff);
+    padding: 8px;
+    max-height: 96px;
+    overflow-y: auto;
+}
+
+.chrono-picker__emoji-panel .chrono-emoji-palette {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .chrono-emoji-palette__item {
@@ -3348,11 +3409,16 @@ html.chrono-bubble-dragging .chrono-screen {
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 12px;
-    background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(15, 23, 42, 0.02));
-    border: 1px solid rgba(37, 99, 235, 0.18);
+    gap: 12px;
+    padding: 15px;
+    border-radius: 14px;
+    background:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.98), rgba(226, 236, 242, 0.76)),
+        var(--planning-surface, #fff);
+    border: 1px solid rgba(67, 69, 135, 0.16);
+    box-shadow:
+        0 18px 40px -30px rgba(67, 69, 135, 0.58),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .chrono-weekly-report__head {
@@ -3366,7 +3432,8 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-weekly-report__label {
     font-size: 11px;
     color: var(--planning-muted, #64748b);
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0;
 }
 
 .chrono-weekly-report__title {
@@ -3376,113 +3443,185 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-weekly-report__score {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
+    appearance: none;
+    border: 0;
+    min-width: 58px;
+    min-height: 48px;
+    padding: 6px 10px;
+    border-radius: 14px;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--planning-accent, #2563eb);
+    background: linear-gradient(135deg, #434587, #1d70b7);
     color: #fff;
+    box-shadow: 0 10px 24px -16px rgba(67, 69, 135, 0.85);
+    cursor: pointer;
+    font: inherit;
+}
+
+.chrono-weekly-report__score:focus-visible,
+.chrono-weekly-report__day:focus-visible {
+    outline: 2px solid rgba(29, 112, 183, 0.72);
+    outline-offset: 2px;
+}
+
+.chrono-weekly-report__score span {
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.1;
+    opacity: 0.78;
+}
+
+.chrono-weekly-report__score strong {
     font-size: 18px;
+    font-weight: 900;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-weekly-report__score-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: -4px;
+}
+
+.chrono-weekly-report__score-details span {
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: rgba(67, 69, 135, 0.07);
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.chrono-weekly-report__lead {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(67, 69, 135, 0.06);
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.chrono-weekly-report__days {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chrono-weekly-report__day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.chrono-weekly-report__day {
+    appearance: none;
+    min-width: 0;
+    min-height: 54px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    display: grid;
+    grid-template-rows: 36px auto;
+    gap: 4px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.chrono-weekly-report__day-bar {
+    width: 100%;
+    height: 36px;
+    padding: 3px;
+    border-radius: 8px;
+    background: rgba(67, 69, 135, 0.06);
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.chrono-weekly-report__day-bar > span {
+    width: 100%;
+    height: max(4px, calc(var(--day-level) * 100%));
+    border-radius: 5px;
+    background: linear-gradient(180deg, #52a0d8, #434587);
+    transition: height 180ms ease;
+}
+
+.chrono-weekly-report__day.is-empty .chrono-weekly-report__day-bar > span {
+    background: rgba(100, 116, 139, 0.2);
+}
+
+.chrono-weekly-report__day-label {
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.chrono-weekly-report__metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.chrono-weekly-report__metric {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(67, 69, 135, 0.08);
+}
+
+.chrono-weekly-report__metric strong {
+    font-size: 13px;
+    line-height: 1.18;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-weekly-report__signal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3px 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.035);
+    border: 1px solid rgba(15, 23, 42, 0.055);
+}
+
+.chrono-weekly-report__signal-label {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-weekly-report__signal strong {
+    min-width: 0;
+    font-size: 13px;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-weekly-report__signal-value {
+    font-size: 13px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
 }
 
-.chrono-weekly-report__grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.chrono-weekly-report__grid > div {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.chrono-weekly-report__grid strong {
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.chrono-weekly-report__recommendation {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--planning-text, #0f172a);
-}
-
-/* --- Объяснимый score: разбивка «из чего сложилось» --- */
-.chrono-weekly-report__score-parts {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.chrono-weekly-report__score-part {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border-radius: 999px;
-    padding: 4px 8px;
-    background: rgba(15, 23, 42, 0.04);
-    font-size: 11px;
-    font-weight: 750;
-    line-height: 1;
-    color: var(--planning-text, #0f172a);
-}
-
-.chrono-weekly-report__score-part.is-negative {
-    background: rgba(220, 38, 38, 0.10);
-    color: #b91c1c;
-}
-
-.chrono-weekly-report__score-part-label {
-    color: var(--planning-muted, #64748b);
-}
-
-.chrono-weekly-report__score-part strong {
-    font-variant-numeric: tabular-nums;
-}
-
-/* --- Тренд неделя-к-неделе --- */
-.chrono-weekly-report__trend {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.chrono-weekly-report__trend-caption {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--planning-muted, #64748b);
-}
-
-.chrono-weekly-report__trend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 750;
-    color: var(--planning-muted, #64748b);
-}
-
-.chrono-weekly-report__trend-item.is-good { color: #16a34a; }
-.chrono-weekly-report__trend-item.is-bad { color: #dc2626; }
-
-.chrono-weekly-report__trend-label {
-    color: var(--planning-muted, #64748b);
-    font-weight: 700;
-}
-
-.chrono-weekly-report__trend-item strong {
-    font-variant-numeric: tabular-nums;
-}
+.chrono-weekly-report__signal.is-good .chrono-weekly-report__signal-value { color: #15803d; }
+.chrono-weekly-report__signal.is-bad .chrono-weekly-report__signal-value { color: #dc2626; }
+.chrono-weekly-report__signal.is-neutral .chrono-weekly-report__signal-value { color: var(--planning-accent, #2563eb); }
 
 @keyframes chrono-target-saved {
     0%   { opacity: 0; transform: translateY(-4px); }
@@ -3539,14 +3678,12 @@ html.chrono-bubble-dragging .chrono-screen {
     .chrono-cloud { gap: 12px; }
     .chrono-bubble { --size: 52px; }
     .chrono-emoji-palette { grid-template-columns: repeat(7, 1fr); }
+    .chrono-picker__emoji-panel .chrono-emoji-palette { grid-template-columns: repeat(7, minmax(0, 1fr)); }
     .chrono-duration__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .chrono-scope-bar { row-gap: 6px; }
     .chrono-overview { grid-template-columns: minmax(0, 1fr); }
     .chrono-overview__top { border-right: 0; border-bottom: 1px solid rgba(15, 23, 42, 0.06); }
     .chrono-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .chrono-planfact__row { grid-template-columns: minmax(0, 1fr); }
-    .chrono-planfact__meter { width: 100%; }
-    .chrono-weekly-report__grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* --- Dark theme --- */
@@ -3562,7 +3699,6 @@ html.chrono-bubble-dragging .chrono-screen {
 	.theme-dark .chrono-overview,
 	.theme-dark .chrono-insights,
 	.theme-dark .chrono-insights__item,
-	.theme-dark .chrono-planfact,
 .theme-dark .chrono-category-balance,
 .theme-dark .chrono-timeline__row,
 .theme-dark .chrono-weekly-report,
@@ -3574,7 +3710,6 @@ html.chrono-bubble-dragging .chrono-screen {
 	[data-theme="dark"] .chrono-overview,
 	[data-theme="dark"] .chrono-insights,
 	[data-theme="dark"] .chrono-insights__item,
-[data-theme="dark"] .chrono-planfact,
 [data-theme="dark"] .chrono-category-balance,
 [data-theme="dark"] .chrono-timeline__row,
 [data-theme="dark"] .chrono-weekly-report,
@@ -3608,20 +3743,26 @@ html.chrono-bubble-dragging .chrono-screen {
     color: #86efac;
 }
 
-.theme-dark .chrono-weekly-report__score-part,
-[data-theme="dark"] .chrono-weekly-report__score-part {
+.theme-dark .chrono-weekly-report__lead,
+.theme-dark .chrono-weekly-report__score-details span,
+.theme-dark .chrono-weekly-report__metric,
+.theme-dark .chrono-weekly-report__signal,
+[data-theme="dark"] .chrono-weekly-report__lead,
+[data-theme="dark"] .chrono-weekly-report__score-details span,
+[data-theme="dark"] .chrono-weekly-report__metric,
+[data-theme="dark"] .chrono-weekly-report__signal {
     background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.theme-dark .chrono-weekly-report__score-part.is-negative,
-[data-theme="dark"] .chrono-weekly-report__score-part.is-negative {
-    background: rgba(220, 38, 38, 0.22);
-    color: #fca5a5;
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .theme-dark .chrono-emoji-palette__item,
 [data-theme="dark"] .chrono-emoji-palette__item {
     background: rgba(255, 255, 255, 0.04);
     color: inherit;
+}
+
+.theme-dark .chrono-picker__emoji-panel,
+[data-theme="dark"] .chrono-picker__emoji-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
 }

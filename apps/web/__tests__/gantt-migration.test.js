@@ -14,17 +14,22 @@ const SRC = fs.readFileSync(
 
 let Migration;
 let lsStore;
+let lsSetCalls;
 let mockTasks;
 let savedTasks;
 
 function setup(initialTasks) {
     mockTasks = initialTasks.slice();
     savedTasks = null;
+    lsSetCalls = [];
     lsStore = {};
     window.HEYS = {
         utils: {
             lsGet: (k, fallback) => (k in lsStore ? lsStore[k] : fallback),
-            lsSet: (k, v) => { lsStore[k] = v; },
+            lsSet: (k, v) => {
+                lsSetCalls.push([k, v]);
+                lsStore[k] = v;
+            },
         },
         Planning: {
             Store: {
@@ -109,6 +114,18 @@ describe('PlanningGanttMigration.run', () => {
         expect(savedTasks).not.toBe(null);
         expect(savedTasks.find((t) => t.id === 'b').progress).toBe(100);
         expect(savedTasks.find((t) => t.id === 'a').progress).toBe(0);
+    });
+
+    it('force=true does not restamp schema when migrated tasks are already current', () => {
+        setup([{ id: 'a', status: 'in_progress' }]);
+        Migration.run();
+        savedTasks = null;
+        lsSetCalls = [];
+        const r = Migration.run({ force: true });
+        expect(r.ok).toBe(true);
+        expect(r.migrated).toBe(0);
+        expect(savedTasks).toBe(null);
+        expect(lsSetCalls).toEqual([]);
     });
 
     it('handles empty tasks array', () => {

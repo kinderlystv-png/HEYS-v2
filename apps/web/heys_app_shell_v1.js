@@ -2529,8 +2529,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 if ((row.localOnlyCount || 0) > 0 || (row.remoteOnlyCount || 0) > 0) {
                                     extraLines.push(`    diff localOnlyIds=${(row.localOnlyIds || []).join(',') || '—'} remoteOnlyIds=${(row.remoteOnlyIds || []).join(',') || '—'}`);
                                 }
-                                if (row.lastPersist && ((row.localOnlyCount || 0) > 0 || row.confirmStatus === 'pending-readback')) {
-                                    extraLines.push(`    lastPersist key=${row.lastPersist.key} status=${row.lastPersist.status || '—'} reason=${row.lastPersist.reason || '—'} sync=${row.lastPersist.sync ? 'Y' : 'N'}`);
+                                if (row.lastPersist && ((row.localOnlyCount || 0) > 0 || row.confirmStatus === 'pending-readback' || row.key === 'heys_planning_slots')) {
+                                    const summary = row.lastPersist.summary || {};
+                                    const summaryText = summary.hash
+                                        ? ` summary=${summary.length ?? summary.kind}:${summary.hash}`
+                                        : '';
+                                    extraLines.push(`    lastPersist key=${row.lastPersist.key} status=${row.lastPersist.status || '—'} reason=${row.lastPersist.reason || '—'} sync=${row.lastPersist.sync ? 'Y' : 'N'}${summaryText}`);
                                 }
                                 if (row.key === 'heys_planning_chrono_timer') {
                                     extraLines.push('    note: localOnly=true (active stopwatch is not uploaded by design)');
