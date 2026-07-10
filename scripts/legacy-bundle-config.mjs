@@ -113,6 +113,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_activity_card_v1.js',
         'heys_day_energy_context_v1.js',
         'heys_hunger_energy_status_v1.js',
+        'heys_hunger_energy_calibration_v1.js',
         'heys_hunger_energy_status_ui_v1.js',
         'heys_day_bottom_sheet_v1.js',
         'heys_day_hero_display_v1.js',
@@ -332,6 +333,7 @@ export const LEGACY_BUNDLES = {
         'heys_planning_gantt_v2.js',
         'heys_planning_chrono_v1.js',
         'heys_planning_checklists_v1.js',
+        'heys_planning_goal_map_v1.js',
         'heys_planning_v1.js',
     ],
 };
