@@ -32,6 +32,8 @@ Safety fast-carb events are excluded from normal calibration.
 - The reminders cron reads the cloud-synced event and sends Web Push to an
   existing subscription outside quiet hours. The push opens
   `?openHungerFollowUp=1`.
+- One recommendation can send at most one Web Push. The in-app question can be
+  postponed once; the second postponement dismisses it until a new assessment.
 - Answers are written to `outcomePlan.userReported`; unanswered follow-ups
   expire after 12 hours and never block a new assessment.
 

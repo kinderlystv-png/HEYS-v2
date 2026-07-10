@@ -488,8 +488,9 @@ type EnergyStatus = {
   copyRisk?: 'normal' | 'avoidRestrictionLanguage' | 'foodFirstOnly';
   foodBandKcal?: [number, number];
   explanation: string;
-  recheckAfterMin?: [number, number];
-  stopDelaySignals?: string[];
+  recheckAfterMin?: number;
+  delayRiskSignals?: string[];
+  stopDelaySignals?: string[]; // empty while delayAllowed=true
   missingInputs?: string[];
   safetyNote?: string;
 };

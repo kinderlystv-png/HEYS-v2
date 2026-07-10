@@ -35,6 +35,7 @@ const {
   HUNGER_EVENTS_KEY,
   findDueHungerFollowUps,
   buildHungerFollowUpPayload,
+  buildHungerFollowUpIdempotencyKey,
 } = require('./hunger-follow-up');
 
 // VAPID config: лениво, после initSecrets() — иначе на cold start читаем
@@ -1181,7 +1182,7 @@ async function jobHungerOutcomeFollowUps(client) {
     const followUp = findDueHungerFollowUps(row.v, now)[0];
     if (!followUp) continue;
     due += 1;
-    const key = `hunger_follow_up:${row.client_id}:${followUp.id}:${followUp.outcomePlan.dueAt}`;
+    const key = buildHungerFollowUpIdempotencyKey(row.client_id, followUp);
     if (!(await claimIdempotency(client, key))) continue;
     const result = await sendToClient(client, row.client_id, buildHungerFollowUpPayload(followUp));
     total += result.sent;

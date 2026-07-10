@@ -7,6 +7,7 @@ const {
   parseEventRows,
   findDueHungerFollowUps,
   buildHungerFollowUpPayload,
+  buildHungerFollowUpIdempotencyKey,
 } = require('../hunger-follow-up');
 
 const NOW = Date.parse('2026-07-10T12:00:00Z');
@@ -49,6 +50,10 @@ test('suppresses a follow-up that was just shown in the open app', () => {
   assert.deepEqual(findDueHungerFollowUps([recent, stale], NOW).map((row) => row.id), ['stale']);
 });
 
+test('suppresses a follow-up after two snoozes even if sync left it pending', () => {
+  assert.deepEqual(findDueHungerFollowUps([event({ snoozeCount: 2 })], NOW), []);
+});
+
 test('builds a push that opens the outcome question', () => {
   const payload = buildHungerFollowUpPayload(event({ family: 'food' }));
 
@@ -56,4 +61,12 @@ test('builds a push that opens the outcome question', () => {
   assert.match(payload.body, /сработала рекомендация/);
   assert.doesNotMatch(payload.body, /еда|голод/i);
   assert.equal(payload.renotify, false);
+});
+
+test('keeps one push idempotency key when a follow-up is snoozed', () => {
+  const first = event({ dueAt: '2026-07-10T11:30:00Z' });
+  const snoozed = event({ dueAt: '2026-07-10T11:45:00Z', snoozeCount: 1 });
+
+  assert.equal(buildHungerFollowUpIdempotencyKey('client-a', first), 'hunger_follow_up:client-a:event-1');
+  assert.equal(buildHungerFollowUpIdempotencyKey('client-a', snoozed), 'hunger_follow_up:client-a:event-1');
 });

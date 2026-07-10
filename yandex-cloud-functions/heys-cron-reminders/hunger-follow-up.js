@@ -16,6 +16,7 @@ function parseEventRows(value) {
 
 function isDuePlan(plan, nowMs) {
   if (!plan || plan.userReported || !['pending', 'shown'].includes(plan.status)) return false;
+  if (Number(plan.snoozeCount) >= 2) return false;
   const dueAt = Date.parse(plan.dueAt || '');
   const expiresAt = Date.parse(plan.expiresAt || '');
   if (!Number.isFinite(dueAt) || dueAt > nowMs) return false;
@@ -44,10 +45,15 @@ function buildHungerFollowUpPayload(row) {
   };
 }
 
+function buildHungerFollowUpIdempotencyKey(clientId, row) {
+  return `hunger_follow_up:${clientId}:${row?.id || 'unknown'}`;
+}
+
 module.exports = {
   HUNGER_EVENTS_KEY,
   parseEventRows,
   isDuePlan,
   findDueHungerFollowUps,
-  buildHungerFollowUpPayload
+  buildHungerFollowUpPayload,
+  buildHungerFollowUpIdempotencyKey
 };
