@@ -263,7 +263,14 @@
         const frameRef = useRef(0);
         const pointerRef = useRef(new Map());
         const undoRef = useRef([]);
-        const [viewport, setViewport] = useState({ x: Math.round((window.innerWidth || 390) / 2), y: Math.round((window.innerHeight || 844) / 2), scale: 0.78 });
+        const [viewport, setViewport] = useState(() => {
+            const height = window.innerHeight || 844;
+            return {
+                x: Math.round((window.innerWidth || 390) / 2),
+                y: Math.round(Math.max(120, (height - 128) / 2)),
+                scale: height < 600 ? 0.62 : 0.78,
+            };
+        });
         const [dragPositions, setDragPositions] = useState({});
         const [selectedId, setSelectedId] = useState(null);
         const [selectedEdgeId, setSelectedEdgeId] = useState(null);
@@ -929,6 +936,7 @@
                 h('button', { type: 'button', onClick: fitAll }, 'Показать всё'),
                 h('button', { type: 'button', onClick: autoArrange, disabled: readOnly }, 'Упорядочить'),
                 h('label', { className: 'goal-map-check goal-map-check--toolbar' }, h('input', { type: 'checkbox', checked: showCompleted, onChange: (event) => setShowCompleted(event.target.checked) }), h('span', null, 'Выполненные')),
+                h('span', { className: 'goal-map-toolbar__sync', role: 'status' }, syncStatus),
             ),
             mode === 'map' ? h('main', {
                 className: 'goal-map-canvas', ref: canvasRef,
