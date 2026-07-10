@@ -25,6 +25,7 @@
         "simulator": false
       },
       "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.heyslab.ru",
         "NODE_ENV": "production"
       }
     },
@@ -37,7 +38,16 @@
         "simulator": false
       },
       "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.heyslab.ru",
         "NODE_ENV": "production"
+      }
+    },
+    "rustore": {
+      "extends": "production",
+      "credentialsSource": "remote",
+      "distribution": "store",
+      "android": {
+        "buildType": "apk"
       }
     }
   },

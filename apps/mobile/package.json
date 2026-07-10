@@ -1,14 +1,16 @@
 {
   "name": "heys-mobile",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "main": "index.ts",
   "scripts": {
     "android": "expo run:android",
+    "build:rustore": "bash scripts/build-rustore.sh",
     "ios": "expo run:ios",
     "start": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start",
     "start:clear": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start -c",
     "type-check": "tsc --noEmit",
+    "verify:release-apk": "bash scripts/verify-release-apk.sh",
     "web": "expo start --web"
   },
   "dependencies": {

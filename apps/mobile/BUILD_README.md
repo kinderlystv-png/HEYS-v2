@@ -1,10 +1,11 @@
-ile через EAS Build
+# Mobile через EAS Build
 
 ## ✅ Конфигурация завершена
 
 Мобильное приложение настроено для изолированной сборки в монорепе:
 
-- ✅ `.easignore` - изоляция от корня монорепы
+- ✅ `scripts/build-rustore.sh` - чистая mobile-копия вне Git-корня
+- ✅ `.easignore` - дополнительная защита архива от локальных файлов
 - ✅ `package.json` - все зависимости явные (без `workspace:*`)
 - ✅ `eas.json` - профили для dev/preview/production
 - ✅ `app.json` - Android конфигурация с package ID
@@ -20,19 +21,21 @@ cd apps/mobile
 # Войти в Expo аккаунт
 eas login
 
-# Запустить сборку preview APK
-eas build --profile preview --platform android
+# Собрать подписанный APK для RuStore из изолированной mobile-копии
+npm run build:rustore
 
 # После сборки (10-15 минут):
 # - Получите ссылку на скачивание APK
-# - Установите на Android устройство
+# - Проверьте артефакт: npm run verify:release-apk -- /path/to/app.apk
+# - Установите этот же APK на Android-устройство и пройдите вход
 ```
 
 ### Вариант 2: Локальная сборка
 
 ```bash
 cd apps/mobile
-eas build --profile preview --platform android --local
+npm run build:rustore -- --local --output /tmp/HEYS-rustore.apk
+npm run verify:release-apk -- /tmp/HEYS-rustore.apk
 ```
 
 **Примечание:** Локальная сборка требует установленных Android SDK и Gradle.
@@ -42,6 +45,7 @@ eas build --profile preview --platform android --local
 ## 📋 Профили сборки
 
 ### `development`
+
 - Режим разработки с hot reload
 - Debug APK
 - `NODE_ENV=development`
@@ -51,6 +55,7 @@ eas build --profile development --platform android
 ```
 
 ### `preview` (рекомендуется для тестирования)
+
 - Release APK для внутреннего тестирования
 - Оптимизированная сборка
 - `NODE_ENV=production`
@@ -60,6 +65,7 @@ eas build --profile preview --platform android
 ```
 
 ### `production`
+
 - AAB (Android App Bundle) для Google Play
 - Автоинкремент версий
 - `NODE_ENV=production`
@@ -68,19 +74,35 @@ eas build --profile preview --platform android
 eas build --profile production --platform android
 ```
 
+### `rustore`
+
+- APK для публикации в RuStore
+- Production API, автоинкремент `versionCode`
+- Release-подпись из EAS credentials
+
+```bash
+npm run build:rustore
+npm run verify:release-apk -- /path/to/app.apk
+```
+
 ---
 
 ## 🔍 Что было настроено
 
-### 1. Изоляция от монорепы (`.easignore`)
+### 1. Изоляция от монорепы (`scripts/build-rustore.sh` + `.easignore`)
 
-Исключены из загрузки на EAS сервер:
-- `../../packages/*` - монорепа packages
-- `../../apps/web` - веб-приложение
-- `../../node_modules` - корневые node_modules
-- Конфиги, батники, документация
+EAS определяет Git-корень всей монорепы раньше вложенного `.easignore`, поэтому
+прямой запуск `eas build` из `apps/mobile` может упаковать весь репозиторий.
+Штатный wrapper сначала копирует только mobile-проект во временную директорию и
+запускает EAS там. Из архива исключены:
 
-**Зачем:** Уменьшает размер загружаемого архива, избегает конфликтов зависимостей.
+- `node_modules` - локальные зависимости
+- `.env*` - локальные адреса и настройки
+- `android`, `ios` - локальные prebuild-папки; EAS создаёт их из `app.json`
+- `release` - старые APK/AAB и материалы магазина
+
+**Зачем:** Уменьшает размер загружаемого архива, избегает конфликтов
+зависимостей.
 
 ### 2. Standalone конфигурация (`package.json`)
 
@@ -93,14 +115,12 @@ eas build --profile production --platform android
 ```json
 {
   "build": {
-    "preview": {
-      "distribution": "internal",
+    "rustore": {
+      "extends": "production",
+      "credentialsSource": "remote",
+      "distribution": "store",
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
-      },
-      "env": {
-        "NODE_ENV": "production"
+        "buildType": "apk"
       }
     }
   }
@@ -108,17 +128,18 @@ eas build --profile production --platform android
 ```
 
 **Ключевые параметры:**
-- `distribution: "internal"` - APK для внутреннего использования
+
+- `distribution: "store"` - APK для магазина
 - `buildType: "apk"` - создает APK (не AAB)
-- `gradleCommand` - явная команда сборки
+- `credentialsSource: "remote"` - EAS подставляет release-keystore
 
 ### 4. Android манифест (`app.json`)
 
 ```json
 {
   "android": {
-    "package": "com.heys.mobile.dev",
-    "versionCode": 1,
+    "package": "com.heys.mobile",
+    "versionCode": 3,
     "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
   }
 }
@@ -128,9 +149,10 @@ eas build --profile production --platform android
 
 ## 🐛 Troubleshooting
 
-### Ошибка: "workspace:* not found"
+### Ошибка: "workspace:\* not found"
 
-**Решение:** Убедитесь что в `package.json` нет ссылок на `workspace:*`. Все версии должны быть явными.
+**Решение:** Убедитесь что в `package.json` нет ссылок на `workspace:*`. Все
+версии должны быть явными.
 
 ### Ошибка: "Cannot resolve @heys/core"
 
@@ -138,24 +160,36 @@ eas build --profile production --platform android
 
 ### Сборка зависает
 
-**Решение:** 
+**Решение:**
+
 1. Попробуйте `--local` флаг для локальной сборки
 2. Проверьте статус EAS: https://status.expo.dev/
 
 ### Размер архива слишком большой
 
-**Решение:** `.easignore` уже исключает большинство файлов. Проверьте что не добавили большие файлы в `apps/mobile/`.
+**Решение:** запускайте `npm run build:rustore`, а не прямой `eas build` из
+монорепы. Wrapper сформирует отдельный чистый mobile-проект.
+
+### RuStore сообщает о несовпадении подписи
+
+Первые отклонённые APK `1.0.0` и `1.0.1` были подписаны Android Debug
+сертификатом. Не возвращайтесь к debug-подписи: для текущего release-keystore
+нужно запросить у поддержки RuStore деактивацию старого сертификата, после чего
+загрузить APK заново. Все следующие версии собирайте с тем же EAS
+release-keystore.
 
 ---
 
 ## 📱 Установка APK на устройство
 
 ### Через ссылку:
+
 1. EAS предоставит ссылку после сборки
 2. Откройте на Android устройстве
 3. Разрешите установку из неизвестных источников
 
 ### Через ADB:
+
 ```bash
 adb install path/to/app.apk
 ```
@@ -168,6 +202,8 @@ adb install path/to/app.apk
 - `eas.json` - профили сборки
 - `app.json` - конфигурация Expo/React Native
 - `package.json` - зависимости приложения
+- `scripts/build-rustore.sh` - изолированный запуск EAS из монорепы
+- `scripts/verify-release-apk.sh` - обязательная проверка APK перед загрузкой
 
 **НЕ удаляйте эти файлы** без понимания последствий для сборки.
 

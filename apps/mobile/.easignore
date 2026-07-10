@@ -39,3 +39,19 @@
 
 # Документация
 ../../*.md
+
+# Local-only inputs must never reach store builds. EAS should regenerate the
+# native projects from app.json instead of reusing ignored local prebuilds.
+.env*
+android
+ios
+node_modules
+.expo
+dist
+web-build
+release
+apps
+packages
+.DS_Store
+*.apk
+*.aab

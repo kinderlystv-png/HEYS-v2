@@ -8,6 +8,7 @@ type MobileExtra = {
   webUrl?: string;
 };
 
+const PRODUCTION_API_URL = 'https://api.heyslab.ru';
 const mobileExtra = (Constants.expoConfig?.extra?.mobile ?? {}) as MobileExtra;
 
 function normalizeBaseUrl(value: string): string {
@@ -19,7 +20,9 @@ function fromEnvOrExtra(envValue: string | undefined, extraValue: string | undef
 }
 
 export const API_URL = normalizeBaseUrl(
-  fromEnvOrExtra(process.env.EXPO_PUBLIC_API_URL, undefined, 'https://api.heyslab.ru')
+  __DEV__
+    ? fromEnvOrExtra(process.env.EXPO_PUBLIC_API_URL, undefined, PRODUCTION_API_URL)
+    : PRODUCTION_API_URL
 );
 
 export const HEYS_WEB_URL = normalizeBaseUrl(
@@ -62,7 +65,7 @@ export function getHostname(url: string): string | null {
 }
 
 export function getAllowedWebHosts(): Set<string> {
-  const hosts = [HEYS_WEB_URL, PRIVACY_URL, TERMS_URL, ACCOUNT_DELETION_URL]
+  const hosts = [API_URL, HEYS_WEB_URL, PRIVACY_URL, TERMS_URL, ACCOUNT_DELETION_URL]
     .map(getHostname)
     .filter((host): host is string => Boolean(host));
 
