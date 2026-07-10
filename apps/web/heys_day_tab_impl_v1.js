@@ -2375,6 +2375,7 @@
             eatenKcal,
             optimum,
             displayOptimum,
+            tdee,
             addMeal,
             addWater,
             adviceState,

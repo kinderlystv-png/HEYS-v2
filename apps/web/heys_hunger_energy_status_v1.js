@@ -9,6 +9,7 @@
   const FOOD_ACTIONS = ['riskBrakeMeal', 'eatSnack', 'eatMeal', 'proteinFiberFirst', 'doNotDelay', 'fastCarbSafety'];
 
   const SAFETY_FLAGS = Object.freeze({
+    bodySymptoms: 'bodySymptoms',
     dizzy: 'dizzy',
     shaky: 'shaky',
     faint: 'faint',
@@ -75,7 +76,7 @@
       now: src.now || ctx.now || new Date().toISOString(),
       hungerLevel: clamp(src.hungerLevel, 0, 10),
       controlLevel: src.controlLevel == null ? null : clamp(src.controlLevel, 0, 10),
-      cravingLevel: src.cravingLevel == null ? 0 : clamp(src.cravingLevel, 0, 10),
+      cravingLevel: src.cravingLevel == null ? null : clamp(src.cravingLevel, 0, 10),
       hungerTrend: src.hungerTrend || ctx.hungerTrend || 'unknown',
       safetyFlags,
       safetyFlagsProvided,
@@ -96,16 +97,53 @@
   }
 
   function hasRecentBalancedMealContext(ctx) {
-    return !!(ctx.recentBalancedMeal || ctx.recentFullMeal || ctx.justAte || ctx.satietyLagLikely ||
-      ctx.lastMealQualityTone === 'good' ||
-      (Number.isFinite(+ctx.hoursSinceMeal) && +ctx.hoursSinceMeal <= 3 &&
-        (Number(ctx.lastMealKcal) >= 600 || Number(ctx.lastMealProtein) >= 25)));
+    return mealRecencyProtection(ctx) >= 0.65;
+  }
+
+  function mealRecencyProtection(ctx) {
+    if (!ctx) return 0;
+    if (ctx.justAte || ctx.satietyLagLikely) return 1;
+    const hours = Number(ctx.hoursSinceMeal);
+    if (!Number.isFinite(hours)) {
+      if (ctx.recentBalancedMeal || ctx.recentFullMeal) return 1;
+      return ctx.recentMeal ? 0.6 : 0;
+    }
+    const kcal = Math.max(0, Number(ctx.lastMealKcal) || 0);
+    const protein = Math.max(0, Number(ctx.lastMealProtein) || 0);
+    const fiber = Math.max(0, Number(ctx.lastMealFiber) || 0);
+    let durationHours = 2.75 + Math.min(1.5, kcal / 400);
+    if (protein >= 25) durationHours += 0.75;
+    else if (protein >= 15) durationHours += 0.35;
+    if (fiber >= 4) durationHours += 0.5;
+    if (ctx.lastMealQualityTone === 'good') durationHours += 0.5;
+    else if (ctx.lastMealQualityTone === 'attention') durationHours -= 0.25;
+    return clamp((durationHours + 1 - hours) / 2, 0, 1);
+  }
+
+  function availableEnergyBudget(ctx) {
+    if (ctx?.dayEnergyBalanceKcal != null && Number.isFinite(Number(ctx.dayEnergyBalanceKcal))) {
+      return Number(ctx.dayEnergyBalanceKcal);
+    }
+    if (ctx?.remainingKcal != null && Number.isFinite(Number(ctx.remainingKcal))) return Number(ctx.remainingKcal);
+    return null;
+  }
+
+  function fitFoodBandToEnergyBudget(band, ctx) {
+    const budget = availableEnergyBudget(ctx);
+    if (!Array.isArray(band) || !Number.isFinite(budget) || budget >= band[1]) return band;
+    if (budget < 150) return [100, 200];
+    if (budget < 300) return [150, 300];
+    if (budget < 450) return [200, 400];
+    return [Math.min(band[0], 300), Math.max(400, Math.min(band[1], Math.round(budget / 50) * 50))];
   }
 
   function collectMissingInputs(state) {
     const missing = [];
     if (!state.safetyFlagsProvided) missing.push('safetyFlags');
     if (state.controlLevel == null && state.hungerLevel >= 6) missing.push('controlLevel');
+    if (state.hungerLevel >= 7 && state.hungerTrend === 'rising' && state.hungerReasons.length === 0) {
+      missing.push('hungerReason');
+    }
     if (!state.ctx.lastMealAt && !state.ctx.justAte) missing.push('lastMealAt');
     if (state.dataFreshness === 'stale') missing.push('freshContextData');
     return missing;
@@ -117,6 +155,7 @@
     const ctx = state.ctx;
     const drivers = [];
     const bodySignals = [
+      SAFETY_FLAGS.bodySymptoms,
       SAFETY_FLAGS.dizzy,
       SAFETY_FLAGS.shaky,
       SAFETY_FLAGS.faint,
@@ -243,7 +282,7 @@
     const missingInputs = collectMissingInputs(state);
     const driversUp = [];
     const driversDown = [];
-    let score = state.hungerLevel * 3;
+    let score = state.hungerLevel * 2;
     let confidence = state.safetyFlagsProvided ? 'high' : 'medium';
 
     if (state.controlLevel == null && state.hungerLevel >= 6) confidence = minConfidence(confidence, 'medium');
@@ -298,7 +337,7 @@
       driversUp.push('no_intake_today');
     }
     if (ctx.skippedMeal || ctx.skippedPlannedMeal || hasReason(state, 'missed_meal')) {
-      score += 10;
+      score += 4;
       driversUp.push('skipped_meal');
     }
     if (hasReason(state, 'meal_time_mismatch')) {
@@ -313,7 +352,7 @@
       score += 14;
       driversUp.push('failed_delay_history');
     } else if (state.checkpointAttemptCount >= 2) {
-      score += 14;
+      score += 10;
       driversUp.push('repeated_checkpoints');
     }
     if (ctx.allOrNothingThoughts) {
@@ -330,12 +369,17 @@
       confidence = minConfidence(confidence, 'medium');
     }
 
-    if (state.controlLevel != null && state.controlLevel >= 7 && (ctx.focus === 'stable' || ctx.goodFocus)) {
-      score -= 10;
-      driversDown.push('good_control_stable_focus');
+    if (state.controlLevel != null && state.controlLevel >= 7) {
+      score -= 8;
+      driversDown.push('good_control');
+      if (ctx.focus === 'stable' || ctx.goodFocus) {
+        score -= 4;
+        driversDown.push('stable_focus');
+      }
     }
-    if (hasRecentBalancedMealContext(ctx)) {
-      score -= 10;
+    const mealProtection = mealRecencyProtection(ctx);
+    if (mealProtection > 0) {
+      score -= Math.round(12 * mealProtection);
       driversDown.push('recent_meal_or_satiety_lag');
     }
     if (ctx.successfulWaitHistory) {
@@ -364,14 +408,14 @@
       driversUp.push('nutrition_floor_risk');
     }
 
-    if (state.hungerLevel >= 6 && state.hungerLevel <= 7) {
+    if (Number(ctx.recentFailedCheckpointCount) >= 2) {
+      score = Math.max(score, 56);
+      driversUp.push('repeated_failed_checkpoints');
+    } else if (state.checkpointAttemptCount >= 2) {
       score = Math.max(score, 26);
-      driversUp.push('hunger_medium_floor');
     } else if (state.hungerLevel >= 8) {
-      const protectedByRecentCalmState = hasRecentBalancedMealContext(ctx) &&
-        state.controlLevel != null && state.controlLevel >= 7;
-      score = Math.max(score, protectedByRecentCalmState ? 26 : 56);
-      driversUp.push(protectedByRecentCalmState ? 'high_hunger_recent_meal_floor' : 'hunger_high_floor');
+      score = Math.max(score, 26);
+      driversUp.push('high_hunger_checkpoint_floor');
     }
 
     score = clamp(Math.round(score), 0, 100);
@@ -402,6 +446,7 @@
     let label = 'stableBetweenMeals';
     const drivers = [];
     let confidence = state.safetyFlagsProvided ? 'high' : 'medium';
+    const mealProtection = mealRecencyProtection(ctx);
 
     if (safety.hardOverride === SAFETY_OVERRIDES.medicalBoundary ||
       safety.hardOverride === SAFETY_OVERRIDES.fastCarbSafety ||
@@ -417,7 +462,7 @@
       ctx.trainingRecovery === 'hard' || ctx.hardTrainingRecovery || ctx.proteinDebt) {
       label = 'recoveryNeed';
       drivers.push('recovery_or_protein_need');
-    } else if (ctx.justAte || ctx.satietyLagLikely || ctx.insulinWaveState === 'active' || ctx.recentMeal || ctx.recentFullMeal) {
+    } else if (ctx.insulinWaveState === 'active' || mealProtection >= 0.65) {
       label = 'fed';
       drivers.push('recent_meal_processing');
     } else if (ctx.noIntakeToday || ctx.veryLowIntakeDay || ctx.threeDayDebtKcal < -1000 || ctx.longGap ||
@@ -429,12 +474,13 @@
       ctx.premenstrualContext || ctx.nightWakeToEatPattern) {
       label = 'reboundRisk';
       drivers.push('rebound_context');
-    } else if (ctx.insulinWaveState === 'declining') {
+    } else if (ctx.insulinWaveState === 'declining' || mealProtection > 0) {
       label = 'postMealDecline';
       drivers.push('meal_energy_declining');
     }
 
     if (state.dataFreshness === 'stale') confidence = 'low';
+    else if (state.dataFreshness === 'partial' || hasReason(state, 'unclear')) confidence = minConfidence(confidence, 'medium');
     else if (!ctx.lastMealAt && !ctx.justAte && !ctx.recentMeal) confidence = minConfidence(confidence, 'medium');
 
     return {
@@ -456,6 +502,7 @@
     const driversDown = [];
     let score = state.hungerLevel * 4;
     let confidence = minConfidence(risk.confidence, energyStatus.confidence);
+    const mealProtection = mealRecencyProtection(ctx);
 
     if (safety.hardOverride) {
       return {
@@ -485,16 +532,6 @@
     } else if (state.controlLevel != null && state.controlLevel <= 6) {
       score += 8;
       driversUp.push('moderate_control');
-    }
-    if (risk.level === 'medium') {
-      score += 12;
-      driversUp.push('medium_risk_budget');
-    } else if (risk.level === 'high') {
-      score += 28;
-      driversUp.push('high_risk_budget');
-    } else if (risk.level === 'stop') {
-      score += 40;
-      driversUp.push('stop_risk_budget');
     }
     if (energyStatus.label === 'fed') {
       score -= 15;
@@ -552,12 +589,16 @@
       score += 6;
       driversUp.push('high_risk_time_pattern');
     }
+    if (ctx.knownReboundPattern) {
+      score += 4;
+      driversUp.push('known_rebound_pattern');
+    }
     if (hasReason(state, 'missed_meal')) {
       score += 10;
       driversUp.push('reported_missed_meal');
     }
-    if (hasRecentBalancedMealContext(ctx)) {
-      score -= 15;
+    if (mealProtection > 0) {
+      score -= Math.round(18 * mealProtection);
       driversDown.push('recent_balanced_meal');
     }
     if (hasReason(state, 'meal_time_mismatch') && hasRecentBalancedMealContext(ctx)) {
@@ -584,6 +625,16 @@
 
     score = clamp(Math.round(score), 0, 100);
 
+    const energyBudget = availableEnergyBudget(ctx);
+    const canUseEnergyBudgetCap = Number.isFinite(energyBudget) &&
+      energyStatus.label !== 'deficitPressure' &&
+      energyStatus.label !== 'recoveryNeed' &&
+      energyStatus.label !== 'nutritionFloorRisk';
+    if (canUseEnergyBudgetCap && energyBudget < 300) {
+      score = Math.min(score, 65);
+      driversDown.push('day_energy_target_near');
+    }
+
     if (hasRecentBalancedMealContext(ctx) &&
       risk.level !== 'high' && risk.level !== 'stop') {
       score = Math.min(score, 45);
@@ -601,6 +652,7 @@
     }
     if (energyStatus.label === 'nutritionFloorRisk') score = Math.max(score, 86);
     if (energyStatus.label === 'recoveryNeed' && ctx.proteinDebt) score = Math.max(score, 66);
+    if (energyStatus.label === 'deficitPressure' && state.hungerLevel >= 7) score = Math.max(score, 66);
     if (state.hungerLevel >= 4) score = Math.max(score, 21);
 
     const level = levelFromScore(score, [
@@ -612,6 +664,7 @@
     ]);
 
     if (state.dataFreshness === 'stale') confidence = minConfidence(confidence, 'low');
+    else if (state.dataFreshness === 'partial' || hasReason(state, 'unclear')) confidence = minConfidence(confidence, 'medium');
 
     return {
       score,
@@ -649,10 +702,12 @@
       if (ctx.plannedMealMinutes != null && +ctx.plannedMealMinutes <= 60) return [100, 200];
       return undefined;
     }
-    if (action === 'riskBrakeMeal') return risk.level === 'high' ? [150, 300] : [200, 400];
-    if (action === 'eatSnack') return [200, 400];
-    if (action === 'proteinFiberFirst') return energy.label === 'recoveryNeed' ? [400, 700] : [200, 400];
-    if (action === 'eatMeal') return fp.level === 'foodFirst' ? [400, 700] : [400, 700];
+    if (action === 'riskBrakeMeal') return fitFoodBandToEnergyBudget(risk.level === 'high' ? [150, 300] : [200, 400], ctx);
+    if (action === 'eatSnack') return fitFoodBandToEnergyBudget([200, 400], ctx);
+    if (action === 'proteinFiberFirst') {
+      return energy.label === 'recoveryNeed' ? [400, 700] : fitFoodBandToEnergyBudget([200, 400], ctx);
+    }
+    if (action === 'eatMeal') return fitFoodBandToEnergyBudget([400, 700], ctx);
     return undefined;
   }
 
@@ -813,6 +868,11 @@
     let confidence = minConfidence(riskBudget.confidence, foodPriority.confidence);
     confidence = minConfidence(confidence, energyStatus.confidence);
     if (missingInputs.length) confidence = minConfidence(confidence, missingInputs.includes('freshContextData') ? 'low' : 'medium');
+    const personalModel = state.ctx.personalHungerModel || state.ctx.personalModel;
+    if (!safety.hardOverride && personalModel && personalModel.learnedEnough === false &&
+      Number(personalModel.sampleSize) > 0) {
+      confidence = minConfidence(confidence, 'medium');
+    }
 
     const decision = {
       version: 'hunger-energy-status-v1',

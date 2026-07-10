@@ -31,6 +31,11 @@ const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
+const {
+  HUNGER_EVENTS_KEY,
+  findDueHungerFollowUps,
+  buildHungerFollowUpPayload,
+} = require('./hunger-follow-up');
 
 // VAPID config: лениво, после initSecrets() — иначе на cold start читаем
 // плейсхолдер `__IN_LOCKBOX__heys-app-secrets__` из env и setVapidDetails ломается.
@@ -170,6 +175,7 @@ const DEFAULT_CLIENT_PREFS = {
   evening_summary_time: '21:00',
   streak_celebration_enabled: true,
   curator_actions_enabled: true, // 📝 Privacy split: гейтит push о действиях куратора
+  hunger_follow_up_enabled: true,
 };
 
 const DEFAULT_CURATOR_PREFS = {
@@ -1150,6 +1156,40 @@ async function jobSubscriptionExpiry(client) {
   return { total };
 }
 
+// ─── Hunger outcome follow-up ────────────────────────────────────────
+
+async function jobHungerOutcomeFollowUps(client) {
+  const rows = await client.query(
+    `SELECT kv.client_id, kv.v
+       FROM client_kv_store kv
+      WHERE kv.k = $1
+        AND kv.updated_at >= NOW() - INTERVAL '2 days'
+        AND EXISTS (
+          SELECT 1 FROM push_subscriptions ps WHERE ps.client_id = kv.client_id
+        )`,
+    [HUNGER_EVENTS_KEY]
+  );
+  const now = Date.now();
+  const currentMinutes = minutesOfDay(nowInMsk());
+  let total = 0;
+  let due = 0;
+
+  for (const row of rows.rows) {
+    const prefs = await getClientPrefs(client, row.client_id);
+    if (!prefs.enabled || prefs.hunger_follow_up_enabled === false) continue;
+    if (isInQuietHours(currentMinutes, prefs.quiet_start, prefs.quiet_end)) continue;
+    const followUp = findDueHungerFollowUps(row.v, now)[0];
+    if (!followUp) continue;
+    due += 1;
+    const key = `hunger_follow_up:${row.client_id}:${followUp.id}:${followUp.outcomePlan.dueAt}`;
+    if (!(await claimIdempotency(client, key))) continue;
+    const result = await sendToClient(client, row.client_id, buildHungerFollowUpPayload(followUp));
+    total += result.sent;
+  }
+
+  return { scanned: rows.rows.length, due, total };
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event, context) {
@@ -1163,6 +1203,7 @@ module.exports.handler = async function (event, context) {
   let stats = {};
   try {
     stats.curatorBatching = await jobCuratorBatching(client);
+    stats.hungerOutcomeFollowUps = await jobHungerOutcomeFollowUps(client);
     stats.mealReminders = await jobMealReminders(client);
     stats.inactiveClients = await jobInactiveClients(client);
     stats.eveningSummary = await jobEveningSummary(client);

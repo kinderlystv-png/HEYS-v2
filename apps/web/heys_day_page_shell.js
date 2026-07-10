@@ -71,6 +71,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             caloricDebt,
             eatenKcal,
             optimum,
+            displayOptimum,
+            tdee,
             addMeal,
             addWater,
             diarySection,
@@ -428,7 +430,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 day,
                                 prof,
                                 eatenKcal,
-                                optimum,
+                                optimum: displayOptimum || optimum,
+                                tdee,
                                 caloricDebt
                             }
                         })
@@ -440,7 +443,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 day,
                                 prof,
                                 eatenKcal,
-                                optimum,
+                                optimum: displayOptimum || optimum,
+                                tdee,
                                 caloricDebt
                             }),
                             'aria-label': 'Открыть оценку голода'

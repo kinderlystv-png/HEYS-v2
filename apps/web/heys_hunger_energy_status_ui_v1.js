@@ -13,7 +13,7 @@
   const MAX_EVENTS = 120;
   const MAX_EVENT_STORAGE_BYTES = 38 * 1024;
   const MAX_EVENT_ROW_BYTES = 5 * 1024;
-  const TREND_WINDOW_MIN = 360;
+  const TREND_WINDOW_MIN = 180;
   const HUNGER_TIMELINE_DAY_START_HOUR = 6;
   const HUNGER_TIMELINE_SNAP_MIN = 30;
   const HUNGER_TIMELINE_SNAP_MS = HUNGER_TIMELINE_SNAP_MIN * 60 * 1000;
@@ -21,6 +21,10 @@
   const MEAL_EFFECT_FOLLOWUP_KEY = 'heys_hunger_meal_effect_followups_v1';
   const MEAL_EFFECT_DELAY_MIN = 60;
   const STRESS_CALORIE_FOLLOWUP_DELAY_MIN = 60;
+  const OUTCOME_FOLLOWUP_AFTER_MEAL_MIN = 45;
+  const OUTCOME_FOLLOWUP_SNOOZE_MIN = 15;
+  const OUTCOME_FOLLOWUP_MEAL_LINK_HOURS = 6;
+  const OUTCOME_FOLLOWUP_EXPIRE_HOURS = 12;
   const LOW_HUNGER_MEAL_MAX_LEVEL = 2;
   const LOW_HUNGER_MEAL_WINDOW_MIN = 240;
   const LOW_HUNGER_MEAL_MIN_KCAL = 15;
@@ -45,6 +49,7 @@
   let modalCleanup = null;
   let autoOpenTimer = null;
   let mealEffectTimer = null;
+  let outcomeFollowUpTimer = null;
   let pageScrollLock = null;
   let modalOpenSeq = 0;
   let lastEventReadCompactionSig = '';
@@ -58,7 +63,7 @@
     recoveryNeed: 'Восстановлению полезна еда',
     nutritionFloorRisk: 'Питания слишком мало для задержки',
     reboundRisk: 'Риск отката/срыва выше',
-    medicalCaution: 'Нужна осторожная food-first логика'
+    medicalCaution: 'Нужна особая осторожность'
   };
 
   const ACTION_COPY = {
@@ -67,7 +72,7 @@
     coffeePause: 'Кофе допустим как короткая пауза, если он привычный',
     delayWithCheck: 'Сделать короткую паузу с перепроверкой',
     planNextMeal: 'Запланировать ближайший спокойный приём пищи',
-    riskBrakeMeal: 'Съесть небольшой белково-клетчаточный якорь',
+    riskBrakeMeal: 'Съесть небольшой приём пищи с белком и клетчаткой',
     eatSnack: 'Съесть контролируемый перекус',
     eatMeal: 'Съесть нормальный приём пищи',
     proteinFiberFirst: 'Начать с белка и клетчатки',
@@ -189,7 +194,7 @@
   ];
 
   const DRIVER_COPY = {
-    safety_symptoms: 'телесные safety-сигналы',
+    safety_symptoms: 'слабость, дрожь или головокружение',
     glucose_context: 'глюкозный/медицинский контекст',
     medical_boundary: 'медицинская граница',
     loss_of_control_risk: 'риск потери контроля',
@@ -213,9 +218,11 @@
     known_rebound_pattern: 'похожий паттерн уже повторялся',
     failed_delay_history: 'паузы уже срывались',
     repeated_checkpoints: 'повторная перепроверка',
+    repeated_failed_checkpoints: 'две паузы подряд не помогли',
     recovery_or_protein_debt: 'восстановление или белок в долге',
     recent_meal_or_satiety_lag: 'еда была недавно',
-    good_control_stable_focus: 'контроль и фокус стабильны',
+    good_control: 'выбор еды остаётся спокойным',
+    stable_focus: 'внимание остаётся стабильным',
     recent_balanced_meal: 'сбалансированная еда была недавно',
     stable_hunger_recent_food: 'голод держится низким после еды',
     planned_meal_soon: 'приём пищи скоро',
@@ -223,15 +230,14 @@
     high_risk_budget: 'риск ожидания высокий',
     medium_risk_budget: 'риск ожидания средний',
     stop_risk_budget: 'риск требует остановки задержки',
-    hunger_medium_floor: 'голод заметный',
-    hunger_high_floor: 'голод высокий',
-    high_hunger_recent_meal_floor: 'голод высокий, но еда была недавно',
+    high_hunger_checkpoint_floor: 'при сильном голоде нужна перепроверка контекста',
     fed_or_recent_meal: 'еда ещё может давать насыщение',
     deficit_pressure: 'дефицит давит сильнее',
     protein_debt: 'белка может не хватать',
     very_low_intake_day: 'сегодня еды очень мало',
     stress_or_mood_pressure: 'стресс или настроение давят',
-    high_risk_time_pattern: 'это время часто рискованное'
+    high_risk_time_pattern: 'это время часто рискованное',
+    day_energy_target_near: 'дневная цель почти набрана'
   };
 
   const DEBUG_FACTOR_COPY = {
@@ -546,7 +552,17 @@
       stressOutcome: next.stressOutcome,
       analyticsTags: next.analyticsTags,
       requiresCuratorReview: next.requiresCuratorReview,
-      outcome: next.outcome
+      outcome: next.outcome,
+      outcomePlan: next.outcomePlan ? {
+        family: next.outcomePlan.family || null,
+        status: next.outcomePlan.status || null,
+        dueAt: next.outcomePlan.dueAt || null,
+        expiresAt: next.outcomePlan.expiresAt || null,
+        mealAt: next.outcomePlan.mealAt || null,
+        userReported: next.outcomePlan.userReported || null,
+        userReportedAt: next.outcomePlan.userReportedAt || null,
+        shownAt: next.outcomePlan.shownAt || null
+      } : null
     };
     if (next.decision || next.decisionSnapshot) {
       compact.decisionSnapshot = compactDecision(next.decisionSnapshot || next.decision);
@@ -808,6 +824,10 @@
         if (attempt < 24) scheduleAutoOpen(reason, attempt + 1);
         return;
       }
+      if (findDueOutcomeFollowUp()) {
+        runDueOutcomeFollowUp();
+        return;
+      }
       if (global.document?.body?.classList?.contains('hunger-energy-modal-open')) return;
       if (show({ source: 'entry-auto-open', date: todayKey(), autoOpened: true })) {
         autoOpenShownClients.add(clientId);
@@ -953,6 +973,254 @@
     const refresh = () => planNextMealEffectTimer();
     global.addEventListener?.('heysMealAdded', onMealAdded);
     global.addEventListener?.('heys:client-changed', refresh);
+    setTimeout(refresh, 0);
+  }
+
+  function toIso(value) {
+    const time = value instanceof Date
+      ? value.getTime()
+      : typeof value === 'number' && Number.isFinite(value)
+        ? value
+        : Date.parse(value || '');
+    return Number.isFinite(time) ? new Date(time).toISOString() : null;
+  }
+
+  function buildOutcomePlan(decision, recordedAt, basePlan = {}) {
+    const action = decision?.suggestedAction;
+    if (!action || action === 'fastCarbSafety') return { ...basePlan, status: 'not_requested' };
+    const family = DELAY_ACTIONS.includes(action) ? 'delay' : FOOD_ACTIONS.includes(action) ? 'food' : null;
+    if (!family) return { ...basePlan, status: 'not_requested' };
+    const recordedTs = Date.parse(recordedAt || '') || Date.now();
+    const expiresAt = toIso(recordedTs + OUTCOME_FOLLOWUP_EXPIRE_HOURS * 60 * 60000);
+    if (family === 'delay') {
+      const afterMin = Math.max(15, Number(decision?.recheckAfterMin) || 30);
+      return {
+        ...basePlan,
+        family,
+        status: 'pending',
+        requestedAfterMin: afterMin,
+        dueAt: toIso(recordedTs + afterMin * 60000),
+        expiresAt,
+        mealAt: null,
+        userReported: null,
+        userReportedAt: null,
+        shownAt: null
+      };
+    }
+    return {
+      ...basePlan,
+      family,
+      status: 'waiting_for_meal',
+      requestedAfterMin: OUTCOME_FOLLOWUP_AFTER_MEAL_MIN,
+      dueAt: null,
+      expiresAt,
+      mealAt: null,
+      userReported: null,
+      userReportedAt: null,
+      shownAt: null
+    };
+  }
+
+  function isMeaningfulMeal(meal) {
+    return !!meal && (safeArray(meal.items).length > 0 || Number(meal.kcal) > 0 || Number(meal.totalKcal) > 0);
+  }
+
+  function mealTimestamp(meal, dateKey) {
+    const dateTime = mealTimeToDateTime(dateKey || todayKey(), mealTimeValue(meal));
+    const time = Date.parse(dateTime || '');
+    return Number.isFinite(time) ? time : null;
+  }
+
+  function applyMealToOutcomeEvent(eventId, mealTs) {
+    if (!eventId || !Number.isFinite(mealTs)) return null;
+    const mealAt = toIso(mealTs);
+    return updateEvent(eventId, (row) => ({
+      outcomePlan: {
+        ...(row.outcomePlan || {}),
+        status: 'pending',
+        mealAt,
+        dueAt: toIso(mealTs + OUTCOME_FOLLOWUP_AFTER_MEAL_MIN * 60000),
+        expiresAt: toIso(mealTs + OUTCOME_FOLLOWUP_EXPIRE_HOURS * 60 * 60000),
+        shownAt: null
+      }
+    }));
+  }
+
+  function linkMealToWaitingOutcome(meal, dateKey) {
+    if (!isMeaningfulMeal(meal)) return null;
+    const mealTs = mealTimestamp(meal, dateKey);
+    if (!Number.isFinite(mealTs)) return null;
+    const maxGapMs = OUTCOME_FOLLOWUP_MEAL_LINK_HOURS * 60 * 60000;
+    const candidate = readEvents()
+      .filter((row) => {
+        const plan = row?.outcomePlan || {};
+        const recordedTs = Date.parse(row?.recordedAt || row?.createdAt || '');
+        return plan.family === 'food' && plan.status === 'waiting_for_meal' &&
+          !plan.userReported && Number.isFinite(recordedTs) && mealTs >= recordedTs && mealTs - recordedTs <= maxGapMs;
+      })
+      .sort((a, b) => Date.parse(b.recordedAt || b.createdAt || '') - Date.parse(a.recordedAt || a.createdAt || ''))[0];
+    if (!candidate) return null;
+    return applyMealToOutcomeEvent(candidate.id, mealTs);
+  }
+
+  function findFirstMealAfterEvent(row) {
+    const recordedTs = Date.parse(row?.recordedAt || row?.createdAt || '');
+    if (!Number.isFinite(recordedTs)) return null;
+    const maxTs = recordedTs + OUTCOME_FOLLOWUP_MEAL_LINK_HOURS * 60 * 60000;
+    const startDate = row.date || formatDateKeyLocal(new Date(recordedTs));
+    const candidates = [];
+    [startDate, addDays(startDate, 1)].forEach((dateKey) => {
+      const day = resolveDayData({ date: dateKey });
+      safeArray(day?.meals).forEach((meal) => {
+        if (!isMeaningfulMeal(meal)) return;
+        const time = mealTimestamp(meal, dateKey);
+        if (Number.isFinite(time) && time >= recordedTs && time <= maxTs) candidates.push({ meal, dateKey, time });
+      });
+    });
+    return candidates.sort((a, b) => a.time - b.time)[0] || null;
+  }
+
+  function reconcileOutcomeFollowUps() {
+    const now = Date.now();
+    readEvents().forEach((row) => {
+      const plan = row?.outcomePlan || {};
+      if (plan.userReported || ['answered', 'expired', 'not_requested', 'superseded'].includes(plan.status)) return;
+      const expiresAt = Date.parse(plan.expiresAt || '');
+      if (Number.isFinite(expiresAt) && expiresAt < now) {
+        updateEvent(row.id, { outcomePlan: { ...plan, status: 'expired' } });
+        return;
+      }
+      if (plan.family === 'food' && plan.status === 'waiting_for_meal') {
+        const match = findFirstMealAfterEvent(row);
+        if (match) applyMealToOutcomeEvent(row.id, match.time);
+        return;
+      }
+      const shownAt = Date.parse(plan.shownAt || '');
+      if (plan.status === 'shown' && Number.isFinite(shownAt) && now - shownAt >= 30 * 60000) {
+        updateEvent(row.id, { outcomePlan: { ...plan, status: 'pending', shownAt: null } });
+      }
+    });
+  }
+
+  function findDueOutcomeFollowUp() {
+    const now = Date.now();
+    return readEvents()
+      .filter((row) => {
+        const plan = row?.outcomePlan || {};
+        const dueAt = Date.parse(plan.dueAt || '');
+        const expiresAt = Date.parse(plan.expiresAt || '');
+        return plan.status === 'pending' && !plan.userReported && Number.isFinite(dueAt) && dueAt <= now &&
+          (!Number.isFinite(expiresAt) || expiresAt >= now);
+      })
+      .sort((a, b) => Date.parse(a.outcomePlan.dueAt) - Date.parse(b.outcomePlan.dueAt))[0] || null;
+  }
+
+  function planNextOutcomeFollowUp() {
+    if (outcomeFollowUpTimer) clearTimeout(outcomeFollowUpTimer);
+    reconcileOutcomeFollowUps();
+    const now = Date.now();
+    const next = readEvents()
+      .filter((row) => row?.outcomePlan?.status === 'pending' && !row.outcomePlan.userReported && Number.isFinite(Date.parse(row.outcomePlan.dueAt || '')))
+      .sort((a, b) => Date.parse(a.outcomePlan.dueAt) - Date.parse(b.outcomePlan.dueAt))[0];
+    if (!next) return;
+    const delay = Math.max(1000, Math.min(2147483647, Date.parse(next.outcomePlan.dueAt) - now));
+    outcomeFollowUpTimer = setTimeout(runDueOutcomeFollowUp, delay);
+  }
+
+  function runDueOutcomeFollowUp() {
+    if (global.document?.body?.classList?.contains('hunger-energy-modal-open')) {
+      outcomeFollowUpTimer = setTimeout(runDueOutcomeFollowUp, 30000);
+      return null;
+    }
+    const due = findDueOutcomeFollowUp();
+    if (!due) {
+      planNextOutcomeFollowUp();
+      return null;
+    }
+    const shownAt = nowIso();
+    const updated = updateEvent(due.id, (row) => ({
+      outcomePlan: { ...(row.outcomePlan || {}), status: 'shown', shownAt }
+    })) || due;
+    show({
+      source: 'hunger-outcome-follow-up',
+      date: updated.date || todayKey(),
+      hungerOutcomeFollowUp: updated
+    });
+    return updated;
+  }
+
+  function recordOutcomeFollowUp(eventId, outcome) {
+    if (!eventId || !outcome) return null;
+    const reportedAt = nowIso();
+    const updated = updateEvent(eventId, (row) => ({
+      outcome,
+      outcomeAt: reportedAt,
+      outcomePlan: {
+        ...(row.outcomePlan || {}),
+        status: 'answered',
+        userReported: outcome,
+        userReportedAt: reportedAt
+      }
+    }));
+    planNextOutcomeFollowUp();
+    return updated;
+  }
+
+  function supersedeOpenOutcomeFollowUps(nextRecordedAt) {
+    const nextAt = toIso(nextRecordedAt) || nowIso();
+    readEvents().forEach((row) => {
+      const plan = row?.outcomePlan || {};
+      if (!['pending', 'shown', 'waiting_for_meal'].includes(plan.status) || plan.userReported) return;
+      updateEvent(row.id, {
+        outcomePlan: { ...plan, status: 'superseded', supersededAt: nextAt }
+      });
+    });
+  }
+
+  function snoozeOutcomeFollowUp(eventId) {
+    if (!eventId) return null;
+    const updated = updateEvent(eventId, (row) => ({
+      outcomePlan: {
+        ...(row.outcomePlan || {}),
+        status: 'pending',
+        dueAt: toIso(Date.now() + OUTCOME_FOLLOWUP_SNOOZE_MIN * 60000),
+        shownAt: null
+      }
+    }));
+    planNextOutcomeFollowUp();
+    return updated;
+  }
+
+  function installOutcomeFollowUps() {
+    if (HEYS.__hungerOutcomeFollowUpsInstalled) return;
+    HEYS.__hungerOutcomeFollowUpsInstalled = true;
+    let refreshTimer = null;
+    const refresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(planNextOutcomeFollowUp, 250);
+    };
+    const onMealAdded = (event) => {
+      const detail = event?.detail || {};
+      linkMealToWaitingOutcome(detail.meal, detail.dateKey || detail.date || todayKey());
+      refresh();
+    };
+    const openFromPush = () => {
+      try {
+        const url = new URL(global.location.href);
+        if (url.searchParams.get('openHungerFollowUp') !== '1') return;
+        url.searchParams.delete('openHungerFollowUp');
+        global.history?.replaceState?.({}, '', url.pathname + url.search + url.hash);
+        setTimeout(runDueOutcomeFollowUp, 350);
+      } catch (_) {}
+    };
+    global.addEventListener?.('heysMealAdded', onMealAdded);
+    global.addEventListener?.('heys:day-updated', refresh);
+    global.addEventListener?.('heysSyncCompleted', refresh);
+    global.addEventListener?.('heys:client-changed', refresh);
+    global.document?.addEventListener?.('visibilitychange', () => {
+      if (global.document.visibilityState === 'visible') refresh();
+    });
+    openFromPush();
     setTimeout(refresh, 0);
   }
 
@@ -2128,14 +2396,22 @@
       }
       : null;
     const shouldShowCurrentPreview = !editTarget?.id && !backfill;
-    const hungerPoints = visibleHunger.concat(backfill ? [backfill] : shouldShowCurrentPreview ? [preview] : []).sort((a, b) => a.t - b.t);
+    const editT = Number(editTarget?.t);
+    const hungerPoints = visibleHunger.map((item) => (
+      editTarget?.id && item.id === editTarget.id && Number.isFinite(editT)
+        ? { ...item, t: Math.min(editT, now), label: formatShortTime(editT) + ' ' + previewLevel + '/10' }
+        : item
+    )).concat(backfill ? [backfill] : shouldShowCurrentPreview ? [preview] : []).sort((a, b) => a.t - b.t);
     const forecastSeed = featureSettings.microForecast && shouldShowCurrentPreview
       ? buildMicroForecastPoint(visibleHunger, preview, lastMeal, now)
       : null;
     const cravingSeed = featureSettings.cravingGraph && shouldShowCurrentPreview && Number.isFinite(Number(draft?.cravingLevel))
       ? { type: 'craving-preview', t: now, level: Math.max(1, Math.min(10, Math.round(Number(draft.cravingLevel)))) }
       : null;
-    const visibleItems = visibleMeals.concat(hungerPoints, forecastSeed ? [forecastSeed] : []);
+    const scaleAnchors = !shouldShowCurrentPreview && Number.isFinite(now)
+      ? [{ type: 'scale-anchor', t: featureSettings.microForecast ? now + 2 * 60 * 60 * 1000 : now }]
+      : [];
+    const visibleItems = visibleMeals.concat(hungerPoints, forecastSeed ? [forecastSeed] : [], scaleAnchors);
     const firstVisible = Math.min(...visibleItems.map((item) => item.t));
     const lastVisible = Math.max(...visibleItems.map((item) => item.t));
     const span = Math.max(1, lastVisible - firstVisible);
@@ -2250,7 +2526,7 @@
     return row?.source === 'qa' || row?.eventType === 'qa' || row?.qa === true;
   }
 
-  function buildHistorySignals() {
+  function buildHistorySignals(lastMealAt) {
     const rows = readEvents();
     const userRows = rows.filter((row) => !isQaEvent(row));
     const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
@@ -2276,6 +2552,14 @@
     const todayRows = hungerRows.filter((entry) => String(entry.row.recordedAt || entry.row.createdAt || '').slice(0, 10) === today);
     const recent6h = hungerRows.filter((entry) => now - entry.t <= 6 * 60 * 60 * 1000);
     const recent2h = hungerRows.filter((entry) => now - entry.t <= 2 * 60 * 60 * 1000);
+    const lastMealT = timestampOf(lastMealAt);
+    const recentCheckpointRows = recent2h.filter((entry) => (
+      (!Number.isFinite(lastMealT) || entry.t > lastMealT) &&
+      DELAY_ACTIONS.includes(getDecisionAction(entry.row))
+    ));
+    const recentFailedCheckpointCount = recentCheckpointRows.filter((entry) =>
+      BAD_OUTCOMES.includes(getOutcome(entry.row))
+    ).length;
     const highToday = todayRows.filter((entry) => entry.hungerLevel >= 7);
     const personalHungerModel = buildPersonalHungerModel(userRows);
     return {
@@ -2284,12 +2568,14 @@
       personalPatternDays: days.size,
       personalHungerModel,
       previousHungerLevel: Number.isFinite(latest?.hungerLevel) ? latest.hungerLevel : null,
+      previousHungerEventId: latest?.row?.id || null,
       previousHungerEventAt: latest?.row?.recordedAt || latest?.row?.createdAt || null,
       minutesSinceLastHungerEvent: latest ? Math.max(0, Math.round((now - latest.t) / 60000)) : null,
       recentHungerEventCount6h: recent6h.length,
       recentHighHungerCount6h: recent6h.filter((entry) => entry.hungerLevel >= 7).length,
       repeatedHighHungerToday: highToday.length >= 2,
-      checkpointAttemptCount: recent2h.length
+      checkpointAttemptCount: recentCheckpointRows.length,
+      recentFailedCheckpointCount
     };
   }
 
@@ -2312,11 +2598,38 @@
     const moodValue = numeric(day.moodAvg || day.moodMorning || day.mood);
     const trainings = safeArray(day.trainings);
     const trainingMinutes = trainings.reduce((sum, tr) => sum + safeArray(tr && tr.z).reduce((s, m) => s + numeric(m), 0), 0);
-    const eatenKcal = numeric(opts.eatenKcal || day.savedEatenKcal || day.kcal);
-    const optimum = numeric(opts.optimum);
-    const hour = new Date().getHours();
-    const history = buildHistorySignals();
     const todayMeals = safeArray(day.meals).filter((meal) => safeArray(meal && meal.items).length > 0);
+    const calculatedEatenKcal = todayMeals.reduce((sum, meal) => sum + numeric(mealNutrientTotals(meal)?.kcal), 0);
+    const explicitEatenKcal = Number(opts.eatenKcal);
+    const eatenKcal = Number.isFinite(explicitEatenKcal)
+      ? Math.max(0, explicitEatenKcal)
+      : calculatedEatenKcal > 0
+        ? calculatedEatenKcal
+        : todayMeals.length > 0
+          ? numeric(day.savedEatenKcal || day.kcal)
+          : 0;
+    const explicitOptimum = Number(opts.optimum);
+    const explicitTdee = Number(opts.tdee);
+    const savedOptimum = numeric(day.savedDisplayOptimum);
+    const needsEnergyFallback = (!(Number.isFinite(explicitOptimum) && explicitOptimum > 0) && savedOptimum <= 0) ||
+      !(Number.isFinite(explicitTdee) && explicitTdee > 0);
+    const profile = opts.prof || HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+    const fallbackEnergy = needsEnergyFallback
+      ? HEYS.TDEE?.calculate?.(day, profile, {
+        lsGet: HEYS.utils?.lsGet,
+        pIndex: opts.pIndex
+      }) || {}
+      : {};
+    const optimum = Number.isFinite(explicitOptimum) && explicitOptimum > 0
+      ? explicitOptimum
+      : savedOptimum || numeric(fallbackEnergy.optimum);
+    const dayTdeeKcal = Number.isFinite(explicitTdee) && explicitTdee > 0
+      ? explicitTdee
+      : numeric(fallbackEnergy.tdee);
+    const dayIntakeRatio = optimum > 0 ? eatenKcal / optimum : null;
+    const dayEnergyBalanceKcal = optimum > 0 ? optimum - eatenKcal : null;
+    const hour = new Date().getHours();
+    const history = buildHistorySignals(lastMealAt);
     const mealQualitySnapshot = collectMealTimeline(date, day)
       .filter((item) => localDateKeyFromTs(item.t) === date && item.t <= Date.now())
       .map((item) => ({
@@ -2360,8 +2673,15 @@
       hoursSinceMeal,
       todayMealCount: todayMeals.length,
       noIntakeToday,
+      dayEatenKcal: Math.round(eatenKcal),
+      dayTargetKcal: optimum ? Math.round(optimum) : null,
+      dayTdeeKcal: dayTdeeKcal ? Math.round(dayTdeeKcal) : null,
+      dayIntakeRatio,
+      dayEnergyBalanceKcal,
       remainingKcal: optimum ? Math.max(0, optimum - eatenKcal) : undefined,
-      veryLowIntakeDay: hour >= 17 && eatenKcal > 0 && eatenKcal < 900,
+      veryLowIntakeDay: hour >= 17 && eatenKcal > 0 && (
+        Number.isFinite(dayIntakeRatio) ? dayIntakeRatio < 0.45 : eatenKcal < 900
+      ),
       sleepHours: sleepHours || undefined,
       sleepQuality: sleepHours && sleepHours < 5 ? 'veryPoor' : sleepHours && sleepHours < 6 ? 'poor' : undefined,
       stressLevel: stressValue >= 7 ? 'high' : undefined,
@@ -2392,19 +2712,20 @@
     const minutesSincePrevious = Number(context?.minutesSinceLastHungerEvent);
     if (!Number.isFinite(previous) || !Number.isFinite(current)) return 'unknown';
     if (!Number.isFinite(minutesSincePrevious) || minutesSincePrevious > TREND_WINDOW_MIN) return 'unknown';
-    if (current > previous) return 'rising';
-    if (current < previous) return 'falling';
+    const delta = current - previous;
+    if (delta >= 2) return 'rising';
+    if (delta <= -2) return 'falling';
     return 'stable';
   }
 
   function buildStableHungerPrompt(input, context) {
-    const previous = Number(context?.previousHungerLevel);
     const current = Number(input?.hungerLevel);
-    const minutesSincePrevious = Number(context?.minutesSinceLastHungerEvent);
     if (!Number.isFinite(current)) return null;
-    if (Number.isFinite(previous) && Math.abs(current - previous) > STABLE_HUNGER_MAX_DELTA) return null;
     const nowTs = Date.parse(input?.now || context?.now || nowIso());
-    const stableAnchor = Number.isFinite(nowTs) ? readEvents()
+    const contextPreviousAt = Date.parse(context?.previousHungerEventAt || '');
+    const contextPreviousValid = Number.isFinite(Number(context?.previousHungerLevel)) &&
+      (!Number.isFinite(contextPreviousAt) || !Number.isFinite(nowTs) || contextPreviousAt <= nowTs);
+    const hungerEntries = Number.isFinite(nowTs) ? readEvents()
       .map((row) => ({
         row,
         t: Date.parse(row.recordedAt || row.createdAt || ''),
@@ -2414,28 +2735,65 @@
         !isQaEvent(entry.row) &&
         Number.isFinite(entry.t) &&
         entry.t <= nowTs &&
+        Number.isFinite(entry.hungerLevel)
+      )) : [];
+    const latestBefore = hungerEntries.slice().sort((a, b) => b.t - a.t)[0] || null;
+    const previous = contextPreviousValid
+      ? Number(context.previousHungerLevel)
+      : Number(latestBefore?.hungerLevel);
+    const minutesSincePrevious = contextPreviousValid
+      ? Number(context?.minutesSinceLastHungerEvent)
+      : Number.isFinite(latestBefore?.t) ? Math.max(0, Math.round((nowTs - latestBefore.t) / 60000)) : NaN;
+    const previousEventId = contextPreviousValid
+      ? context?.previousHungerEventId || null
+      : latestBefore?.row?.id || null;
+    if (Number.isFinite(previous) && Math.abs(current - previous) > STABLE_HUNGER_MAX_DELTA) return null;
+    const stableAnchor = hungerEntries
+      .filter((entry) => (
         nowTs - entry.t <= TREND_WINDOW_MIN * 60000 &&
-        Number.isFinite(entry.hungerLevel) &&
         Math.abs(current - entry.hungerLevel) <= STABLE_HUNGER_MAX_DELTA
       ))
-      .sort((a, b) => a.t - b.t)[0] : null;
+      .sort((a, b) => a.t - b.t)[0] || null;
     const anchorLevel = Number.isFinite(stableAnchor?.hungerLevel) ? stableAnchor.hungerLevel : previous;
     const anchorMinutes = Number.isFinite(stableAnchor?.t)
       ? Math.round((nowTs - stableAnchor.t) / 60000)
       : minutesSincePrevious;
-    if (!Number.isFinite(anchorLevel) || !Number.isFinite(anchorMinutes)) return null;
-    if (anchorMinutes < STABLE_HUNGER_LONG_MIN || anchorMinutes > TREND_WINDOW_MIN) return null;
-    if (Math.abs(current - anchorLevel) > STABLE_HUNGER_MAX_DELTA) return null;
-    return {
-      type: 'stable_hunger_long',
-      question: 'Почему голод не растёт?',
-      previousLevel: anchorLevel,
-      currentLevel: current,
-      delta: current - anchorLevel,
-      minutesSincePrevious: Math.round(anchorMinutes),
-      anchorEventId: stableAnchor?.row?.id || null,
-      thresholdMin: STABLE_HUNGER_LONG_MIN
-    };
+    if (
+      Number.isFinite(anchorLevel) &&
+      Number.isFinite(anchorMinutes) &&
+      anchorMinutes >= STABLE_HUNGER_LONG_MIN &&
+      anchorMinutes <= TREND_WINDOW_MIN &&
+      Math.abs(current - anchorLevel) <= STABLE_HUNGER_MAX_DELTA
+    ) {
+      return {
+        type: 'stable_hunger_long',
+        question: 'Почему голод не растёт?',
+        previousLevel: anchorLevel,
+        currentLevel: current,
+        delta: current - anchorLevel,
+        minutesSincePrevious: Math.round(anchorMinutes),
+        anchorEventId: stableAnchor?.row?.id || null,
+        thresholdMin: STABLE_HUNGER_LONG_MIN
+      };
+    }
+    if (
+      Number.isFinite(previous) &&
+      Number.isFinite(minutesSincePrevious) &&
+      minutesSincePrevious <= TREND_WINDOW_MIN &&
+      Math.round(current) === Math.round(previous)
+    ) {
+      return {
+        type: 'stable_hunger_repeat',
+        question: 'Почему оценка не меняется?',
+        previousLevel: previous,
+        currentLevel: current,
+        delta: current - previous,
+        minutesSincePrevious: Math.round(minutesSincePrevious),
+        anchorEventId: previousEventId,
+        thresholdMin: 0
+      };
+    }
+    return null;
   }
 
   function compactDecision(decision) {
@@ -2540,7 +2898,7 @@
   function getDisplayDrivers(decision, input, context) {
     const drivers = [];
     drivers.push('голод ' + input.hungerLevel + '/10');
-    if (decision.missingInputs.includes('safetyFlags')) drivers.push('safety не уточнён');
+    if (decision.missingInputs.includes('safetyFlags')) drivers.push('самочувствие не уточнено');
     if (input.controlLevel == null && input.hungerLevel >= 6) drivers.push('контроль не уточнён');
     else if (input.controlLevel != null && input.controlLevel <= 4) drivers.push('контроль низкий');
     else if (input.controlLevel != null && input.controlLevel <= 6) drivers.push('контроль средний');
@@ -2583,6 +2941,7 @@
     return safeArray(decision?.missingInputs).filter((key) => {
       if (key === 'safetyFlags') return hunger >= 6 && !Array.isArray(draft.safetyFlags);
       if (key === 'controlLevel') return hunger >= 6 && draft.controlLevel == null;
+      if (key === 'hungerReason') return hunger >= 7 && safeArray(draft.hungerReasons).length === 0;
       if (key === 'lastMealAt') return hunger >= 5;
       return key === 'freshContextData';
     });
@@ -2605,22 +2964,30 @@
       title = '';
       options = [];
     } else if (missing.includes('safetyFlags')) {
-      title = 'Что могло усилить голод?';
-      options = isRecentFullMealContext(context)
-        ? [
-          ['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }],
-          ['Ошибка времени еды', { safetyFlags: [], hungerReasons: ['meal_time_mismatch'] }]
-        ]
-        : [
-          ['Пропустил еду', { safetyFlags: [], hungerReasons: ['missed_meal'] }],
-          ['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }]
-        ];
+      title = 'Есть слабость, дрожь или головокружение?';
+      options = [
+        ['Нет таких симптомов', { safetyFlags: [] }],
+        ['Да, есть', { safetyFlags: [HEYS.HungerEnergyStatus?.SAFETY_FLAGS?.bodySymptoms || 'bodySymptoms'] }]
+      ];
     } else if (missing.includes('controlLevel')) {
       title = 'Могу выбрать еду спокойно?';
       options = [
         ['Да, спокойно', { controlLevel: 8 }],
         ['Тянет сорваться', { controlLevel: 3, cravingLevel: 8 }]
       ];
+    } else if (missing.includes('hungerReason')) {
+      title = 'Что больше похоже на причину?';
+      options = isRecentFullMealContext(context)
+        ? [
+          ['Стресс', { hungerReasons: ['stress'] }],
+          ['Время еды указано неверно', { hungerReasons: ['meal_time_mismatch'] }],
+          ['Не уверен', { hungerReasons: ['unclear'] }]
+        ]
+        : [
+          ['Пропущен приём пищи', { hungerReasons: ['missed_meal'] }],
+          ['Стресс', { hungerReasons: ['stress'] }],
+          ['Не уверен', { hungerReasons: ['unclear'] }]
+        ];
     } else if (missing.includes('lastMealAt')) {
       title = 'Ел недавно или давно?';
       options = [
@@ -3360,10 +3727,12 @@
             className,
             cx: point.x,
             cy: point.y,
-            r: point.isCompactClusterPoint ? 2.8 : isPreviewPoint(point) || point.isEditing ? 6 : 5,
+            r: point.isEditing ? 7 : point.isCompactClusterPoint ? 2.8 : isPreviewPoint(point) ? 6 : 5,
             style: isPreviewPoint(point)
               ? { stroke: point.color }
-              : { fill: point.color }
+              : point.isEditing
+                ? { fill: point.color, stroke: '#be5267' }
+                : { fill: point.color }
           });
           if (!editable) return React.cloneElement(visibleCircle, { key: point.type + '-' + index });
           return h('g', {
@@ -3463,6 +3832,42 @@
           'aria-pressed': value === key
         }, MEAL_EFFECT_COPY[key]))
       )
+    );
+  }
+
+  function HungerOutcomePrompt({ followUp, onOutcome, onSnooze }) {
+    const plan = followUp?.outcomePlan || {};
+    if (!followUp?.id || !plan.family) return null;
+    const isFood = plan.family === 'food';
+    const options = isFood
+      ? [
+          { id: 'hunger_lower', label: 'Голод снизился' },
+          { id: 'ate_calmly', label: 'Поел спокойно' },
+          { id: 'not_enough', label: 'Еды не хватило' },
+          { id: 'lost_control', label: 'Было сложно остановиться' }
+        ]
+      : [
+          { id: 'hunger_passed', label: 'Голод снизился' },
+          { id: 'hunger_grew', label: 'Голод усилился' },
+          { id: 'no_change', label: 'Не изменился' }
+        ];
+    return h('div', { className: 'hes-outcome-followup' },
+      h('div', { className: 'hes-outcome-followup__intro' },
+        h('strong', null, isFood ? 'Как изменилось состояние после еды?' : 'Что произошло после паузы?'),
+        h('span', null, 'Ответ поможет точнее подбирать следующие рекомендации.')
+      ),
+      h('div', { className: 'hes-outcome-followup__choices' },
+        options.map((option) => h('button', {
+          key: option.id,
+          type: 'button',
+          onClick: () => onOutcome?.(option.id)
+        }, option.label))
+      ),
+      h('button', {
+        type: 'button',
+        className: 'hes-outcome-followup__later',
+        onClick: () => onSnooze?.()
+      }, 'Напомнить через 15 минут')
     );
   }
 
@@ -3811,6 +4216,32 @@
     return unique(reasons).slice(0, 3);
   }
 
+  function formatKcalValue(value) {
+    const kcal = Number(value);
+    if (!Number.isFinite(kcal)) return null;
+    return Math.round(kcal) + ' ккал';
+  }
+
+  function getEnergyBudgetSummary(result) {
+    const context = result?.context || {};
+    const target = formatKcalValue(context.dayTargetKcal);
+    const eaten = formatKcalValue(context.dayEatenKcal);
+    const tdee = formatKcalValue(context.dayTdeeKcal);
+    const balanceValue = Number(context.dayEnergyBalanceKcal);
+    if (!target || !eaten) return null;
+    const balance = formatKcalValue(Math.abs(balanceValue));
+    const main = Number.isFinite(balanceValue) && balanceValue < 0
+      ? 'дневная цель превышена на ' + balance
+      : Number.isFinite(balanceValue)
+        ? 'до дневной цели ' + balance
+        : 'съедено ' + eaten + ' из цели';
+    const meta = [];
+    if (target) meta.push('цель ' + target);
+    if (eaten) meta.push('съедено ' + eaten);
+    if (tdee) meta.push('затраты ' + tdee);
+    return { main, meta: meta.join(' · ') };
+  }
+
   function getContextBadges(result) {
     const context = result?.context || {};
     const input = result?.input || {};
@@ -3887,19 +4318,25 @@
         { ...input, ...(patchInput || {}) },
         cloneContext(context, patchContext)
       );
-      const activeDriver = label === 'recentMeal'
+      const mappedDriverActive = label === 'recentMeal'
         ? hasDriver('recent_meal_or_satiety_lag', 'fed_or_recent_meal', 'recent_balanced_meal')
         : label === 'hungerReasons'
           ? hasDriver('reported_stress', 'reported_missed_meal', 'meal_time_mismatch')
           : label === 'stableHungerReasons'
             ? hasDriver('stable_hunger_recent_food')
-            : hasDriver(label);
+            : label === 'hungerRising'
+              ? hasDriver('hunger_rising')
+              : hasDriver(label);
+      const riskDelta = base.riskBudget.score - alt.riskBudget.score;
+      const foodDelta = base.foodPriority.score - alt.foodPriority.score;
+      const activeDriver = mappedDriverActive || riskDelta !== 0 || foodDelta !== 0 ||
+        alt.suggestedAction !== base.suggestedAction || alt.foodPriority.level !== base.foodPriority.level;
       rows.push({
         factor: label,
         label: DEBUG_FACTOR_COPY[label] || label,
         activeDriver,
-        riskDelta: base.riskBudget.score - alt.riskBudget.score,
-        foodDelta: base.foodPriority.score - alt.foodPriority.score,
+        riskDelta,
+        foodDelta,
         actionIfRemoved: alt.suggestedAction,
         foodSupportIfRemoved: alt.foodPriority.level
       });
@@ -3949,8 +4386,8 @@
     };
     const variants = [
       {
-        id: 'meal_today_exists',
-        label: 'если еда была 2ч назад',
+        id: 'meal_two_hours_ago',
+        label: 'если последняя еда была 2 ч назад',
         inputPatch: {},
         contextPatch: recentMealContext
       },
@@ -3961,10 +4398,10 @@
         contextPatch: {}
       },
       {
-        id: 'short_gap',
-        label: 'если промежуток короткий',
+        id: 'without_repeat',
+        label: 'если это первая проверка',
         inputPatch: {},
-        contextPatch: { ...recentMealContext, longGap: false }
+        contextPatch: { checkpointAttemptCount: 0, recentFailedCheckpointCount: 0 }
       }
     ];
     return variants.map((variant) => {
@@ -4005,6 +4442,7 @@
     const decisionTrace = buildDecisionTrace(input, context, decision);
     const counterfactuals = buildCounterfactuals(input, context);
     const outcomeLearning = buildOutcomeLearning(context);
+    const calibration = HEYS.HungerEnergyCalibration?.evaluate?.(readEvents()) || null;
     const nextBestAction = getNextBestAction({ input, context, decision });
     const logInput = cloneDecisionInput(input);
     const log = {
@@ -4035,6 +4473,11 @@
         })),
         justAte: !!context.justAte,
         satietyLagLikely: !!context.satietyLagLikely,
+        dayEatenKcal: context.dayEatenKcal ?? null,
+        dayTargetKcal: context.dayTargetKcal ?? null,
+        dayTdeeKcal: context.dayTdeeKcal ?? null,
+        dayIntakeRatio: Number.isFinite(Number(context.dayIntakeRatio)) ? Math.round(Number(context.dayIntakeRatio) * 100) / 100 : null,
+        dayEnergyBalanceKcal: Number.isFinite(Number(context.dayEnergyBalanceKcal)) ? Math.round(Number(context.dayEnergyBalanceKcal)) : null,
         remainingKcal: context.remainingKcal,
         veryLowIntakeDay: !!context.veryLowIntakeDay,
         sleepHours: context.sleepHours,
@@ -4060,6 +4503,7 @@
         recentHighHungerCount6h: context.recentHighHungerCount6h || 0,
         repeatedHighHungerToday: !!context.repeatedHighHungerToday,
         checkpointAttemptCount: context.checkpointAttemptCount || 0,
+        recentFailedCheckpointCount: context.recentFailedCheckpointCount || 0,
         lowHungerMealReview: context.lowHungerMealReview ? {
           mealAt: context.lowHungerMealReview.mealAt || null,
           hungerLevel: context.lowHungerMealReview.hungerLevel || null,
@@ -4089,6 +4533,7 @@
       decisionTrace,
       counterfactuals,
       outcomeLearning,
+      calibration,
       nextBestAction,
       outcome: {
         requestedAfterMin: decision.recheckAfterMin || null,
@@ -4120,15 +4565,23 @@
     return parts.length ? parts.join(' · ') : 'учтено без смены решения';
   }
 
+  function calibrationDirectionLabel(direction) {
+    if (direction === 'overweighted') return 'вес может быть завышен';
+    if (direction === 'underweighted') return 'вес может быть занижен';
+    return 'нужна проверка';
+  }
+
   function DebugSummary({ result }) {
     const log = result?.log || {};
     const velocity = log.hungerVelocity || {};
     const curve = log.mealGapRiskCurve || {};
     const learning = log.outcomeLearning || {};
+    const calibration = log.calibration || {};
     const audit = log.decisionAudit || {};
     const eventMeta = log.eventMeta || {};
     const trace = safeArray(log.decisionTrace).slice(0, 5);
     const counterfactuals = safeArray(log.counterfactuals).slice(0, 3);
+    const calibrationFlags = safeArray(calibration.flags).slice(0, 5);
     return h('div', { className: 'hes-debug-summary' },
       h('div', { className: 'hes-debug-grid' },
         h('div', null,
@@ -4152,6 +4605,12 @@
         h('div', null,
           h('span', null, 'Событие'),
           h('strong', null, eventMeta.id ? (eventMeta.syncStatus || 'queued') + ' / ' + eventMeta.id : 'ещё нет')
+        ),
+        h('div', null,
+          h('span', null, 'Калибровка'),
+          h('strong', null, calibration.status === 'ready'
+            ? Math.round((calibration.coverage || 0) * 100) + '% · ' + (calibration.ratedOutcomeCount || 0) + ' исходов'
+            : (calibration.ratedOutcomeCount || 0) + '/' + (calibration.minimums?.reportOutcomes || 12) + ' исходов')
         )
       ),
       trace.length > 0 && h('div', { className: 'hes-debug-list' },
@@ -4166,6 +4625,13 @@
         counterfactuals.map((row) => h('div', { key: row.id, className: 'hes-debug-row' },
           h('span', null, row.label),
           h('strong', null, row.suggestedAction + ' / ' + row.foodSupportLevel)
+        ))
+      ),
+      calibrationFlags.length > 0 && h('div', { className: 'hes-debug-list' },
+        h('span', { className: 'hes-debug-list__title' }, 'Кандидаты на пересмотр'),
+        calibrationFlags.map((flag) => h('div', { key: flag.id, className: 'hes-debug-row' },
+          h('span', null, flag.label || flag.factor || flag.scope),
+          h('strong', null, calibrationDirectionLabel(flag.direction) + ' · n=' + flag.sampleSize)
         ))
       )
     );
@@ -4300,14 +4766,18 @@
     const isLowHungerResolved = !!lowMealReasonResult && !result && !isPastDraft;
     const isLowHungerStep = isLowHungerClarification || isLowHungerResolved;
     const isStressCalorieFollowUp = !!state.stressCalorieFollowUp && !result && !isLowHungerStep;
-    const stableHungerPrompt = isPastDraft ? null : buildStableHungerPrompt(input, context);
+    const isHungerOutcomeFollowUp = !!state.hungerOutcomeFollowUp && !result && !isLowHungerStep && !isStressCalorieFollowUp;
+    const promptInput = isBackfillingEvent
+      ? { ...input, now: formatLocalDateTime(backfillTarget.t) || input.now }
+      : input;
+    const stableHungerPrompt = isEditingEvent ? null : buildStableHungerPrompt(promptInput, context);
     const requiredInputs = isPastDraft ? [] : getRequiredInputs(previewDecision, draftForDecision);
     const hasRequiredInputs = requiredInputs.length > 0;
     const promptKey = stableHungerPrompt
       ? 'stable:' + stableHungerPrompt.type + ':' + (stableHungerPrompt.question || '')
       : 'missing:' + requiredInputs.join('|');
     const activeDecision = result?.decision || previewDecision;
-    const modalMode = (isLowHungerStep || isStressCalorieFollowUp) ? 'clarification' : result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
+    const modalMode = (isLowHungerStep || isStressCalorieFollowUp || isHungerOutcomeFollowUp) ? 'clarification' : result ? (activeDecision.hardOverride ? 'safetyStop' : activeDecision.delayAllowed ? 'checkpoint' : 'foodRecommended') : 'input';
     const actionTone = getHungerTone(activeDraft.hungerVisual ?? activeDraft.hungerLevel);
     const hungerChangeNote = isEditingEvent
       ? 'Правка оценки ' + formatShortTime(editTarget.t)
@@ -4315,8 +4785,12 @@
         ? 'Оценка за ' + formatShortTime(backfillTarget.t)
       : getHungerChangeNote(activeDraft, context);
     const lastMealHint = getLastMealHint(context);
+    const energyBudgetSummary = result ? getEnergyBudgetSummary(result) : null;
     const patternInsight = featureSettings.patternInsights ? buildPatternInsight(context) : null;
-    const canShiftAssessmentTime = !settingsOpen && !result && !isEditingEvent && !isBackfillingEvent && !isLowHungerStep && !isStressCalorieFollowUp;
+    const canShiftAssessmentTime = !settingsOpen && !result && !isEditingEvent && !isBackfillingEvent && !isLowHungerStep && !isStressCalorieFollowUp && !isHungerOutcomeFollowUp;
+    const canShiftAssessmentForward = selectedAssessmentTime + HUNGER_TIMELINE_SNAP_MS <= Date.now();
+    const pastPointTime = isEditingEvent ? Number(editTarget.t) : isBackfillingEvent ? Number(backfillTarget.t) : NaN;
+    const canShiftPastPointForward = Number.isFinite(pastPointTime) && pastPointTime + HUNGER_TIMELINE_SNAP_MS <= Date.now();
 
     function patchDraft(patch) {
       setDraft((prev) => ({
@@ -4341,15 +4815,37 @@
     }
 
     function shiftAssessmentTimeBack() {
+      shiftAssessmentTimeBy(-HUNGER_TIMELINE_SNAP_MS);
+    }
+
+    function shiftAssessmentTimeForward() {
+      shiftAssessmentTimeBy(HUNGER_TIMELINE_SNAP_MS);
+    }
+
+    function shiftAssessmentTimeBy(deltaMs) {
       const lowerBound = dayStartTs(timelineDate);
       setAssessmentTime((prev) => {
         const base = Number.isFinite(Number(prev)) ? Math.min(Number(prev), Date.now()) : Date.now();
-        return Math.max(lowerBound, base - HUNGER_TIMELINE_SNAP_MS);
+        return Math.max(lowerBound, Math.min(Date.now(), base + deltaMs));
       });
       setResult(null);
       setDetailsOpen(false);
       setDebugOpen(false);
       setCopyDone(false);
+    }
+
+    function shiftPastPointTime(deltaMs) {
+      const lowerBound = dayStartTs(timelineDate);
+      const clampTime = (value) => Math.max(lowerBound, Math.min(Date.now(), Number(value) + deltaMs));
+      setResult(null);
+      setDetailsOpen(false);
+      setDebugOpen(false);
+      setCopyDone(false);
+      if (isEditingEvent) {
+        setEditTarget((prev) => prev?.id ? { ...prev, t: clampTime(prev.t) } : prev);
+      } else if (isBackfillingEvent) {
+        setBackfillTarget((prev) => Number.isFinite(Number(prev?.t)) ? { ...prev, t: clampTime(prev.t) } : prev);
+      }
     }
 
     function setLowHungerPromptLimit(limit) {
@@ -4412,22 +4908,35 @@
       if (!editTarget?.id) return;
       const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
       const editedAt = nowIso();
+      const nextT = Number(editTarget.t);
+      const nextRecordedAt = Number.isFinite(nextT) ? formatLocalDateTime(nextT) : null;
       const previousRows = readEvents();
       updateEvent(editTarget.id, (row) => {
         const previousLevel = Number(row.hungerLevel ?? row.input?.hungerLevel);
+        const previousRecordedAt = row.recordedAt || row.createdAt || null;
+        const history = safeArray(row.editHistory);
+        const nextHistory = history.concat({
+          at: editedAt,
+          field: 'hungerLevel',
+          from: Number.isFinite(previousLevel) ? Math.round(previousLevel) : null,
+          to: level
+        }, nextRecordedAt && nextRecordedAt !== previousRecordedAt ? {
+          at: editedAt,
+          field: 'recordedAt',
+          from: previousRecordedAt,
+          to: nextRecordedAt
+        } : []).slice(-8);
         return {
+          recordedAt: nextRecordedAt || row.recordedAt,
+          date: nextRecordedAt ? localDateKeyFromTs(nextT) : row.date,
           hungerLevel: level,
           hungerStatus: HUNGER_STATUS_COPY[level] || null,
           input: {
             ...(row.input || {}),
+            now: nextRecordedAt || row.input?.now,
             hungerLevel: level
           },
-          editHistory: safeArray(row.editHistory).concat({
-            at: editedAt,
-            field: 'hungerLevel',
-            from: Number.isFinite(previousLevel) ? Math.round(previousLevel) : null,
-            to: level
-          }).slice(-8),
+          editHistory: nextHistory,
           editedAt,
           updatedAt: editedAt
         };
@@ -4463,6 +4972,7 @@
       const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
       const recordedAt = formatLocalDateTime(backfillTarget.t);
       const savedAt = nowIso();
+      const stableReasons = stableHungerPrompt ? safeArray(activeDraft.stableHungerReasons) : [];
       const previousRows = readEvents();
       addEvent({
         eventType: 'hunger_backfill',
@@ -4476,12 +4986,16 @@
           hungerLevel: level,
           hungerTrend: 'unknown',
           safetyFlags: [],
-          hungerReasons: safeArray(activeDraft.hungerReasons)
+          hungerReasons: safeArray(activeDraft.hungerReasons),
+          stableHungerReasons: stableReasons,
+          stableHungerPrompt
         },
         context: {
           backfilled: true,
           backfilledAt: savedAt,
-          backfilledFrom: state.source || 'hunger-fab'
+          backfilledFrom: state.source || 'hunger-fab',
+          stableHungerPrompt: cloneStableHungerPrompt(stableHungerPrompt),
+          stableHungerReasons: copyArray(stableReasons)
         },
         backfilledAt: savedAt,
         cloudSyncKey: STORAGE_KEY,
@@ -4614,6 +5128,19 @@
       hide();
     }
 
+    function recordHungerOutcome(outcome) {
+      const followUp = state.hungerOutcomeFollowUp;
+      if (!followUp?.id || !outcome) return;
+      recordOutcomeFollowUp(followUp.id, outcome);
+      hide();
+    }
+
+    function postponeHungerOutcome() {
+      const followUp = state.hungerOutcomeFollowUp;
+      if (followUp?.id) snoozeOutcomeFollowUp(followUp.id);
+      hide();
+    }
+
     function recordLowHungerReviewClose(action, reviewArg) {
       const review = reviewArg || lowHungerMealReview;
       if (!review) return null;
@@ -4728,7 +5255,10 @@
         decision,
         drivers
       });
+      const outcomePlan = buildOutcomePlan(decision, finalInput.now, log.outcome);
+      log.outcome = outcomePlan;
       const previousRows = readEvents();
+      supersedeOpenOutcomeFollowUps(finalInput.now);
       const eventRow = addEvent({
         eventType: 'hunger_fixed',
         recordedAt: finalInput.now,
@@ -4759,6 +5289,8 @@
           previousHungerLevel: context.previousHungerLevel ?? null,
           previousHungerEventAt: context.previousHungerEventAt || null,
           minutesSinceLastHungerEvent: context.minutesSinceLastHungerEvent ?? null,
+          checkpointAttemptCount: context.checkpointAttemptCount || 0,
+          recentFailedCheckpointCount: context.recentFailedCheckpointCount || 0,
           stableHungerPrompt: cloneStableHungerPrompt(finalInput.stableHungerPrompt),
           stableHungerReasons: copyArray(finalInput.stableHungerReasons),
           sleepQuality: context.sleepQuality || null,
@@ -4790,7 +5322,7 @@
         outcomeLearning: log.outcomeLearning,
         nextBestAction: log.nextBestAction,
         patternCards: log.patternCards,
-        outcomePlan: log.outcome,
+        outcomePlan,
         followUpAfterMin: decision.recheckAfterMin || null,
         followUpQuestion: getFollowUpQuestion(decision),
         cloudSyncKey: STORAGE_KEY,
@@ -4820,6 +5352,7 @@
       setDetailsOpen(false);
       setDebugOpen(false);
       setCopyDone(false);
+      planNextOutcomeFollowUp();
     }
 
     function resetInput() {
@@ -4845,7 +5378,7 @@
       }
     }
 
-    return h('div', { className: 'hes-backdrop', onClick: () => hide() },
+    return h('div', { className: 'hes-backdrop', onClick: isHungerOutcomeFollowUp ? postponeHungerOutcome : () => hide() },
       h('section', {
         className: 'hes-sheet hes-sheet--' + modalMode,
         role: 'dialog',
@@ -4859,20 +5392,30 @@
       },
         h('header', { className: 'hes-head' },
           h('div', null,
-            h('div', { className: 'hes-kicker' }, 'Баланс энергообмена'),
+            h('div', { className: 'hes-kicker' }, isHungerOutcomeFollowUp ? 'Проверка результата' : 'Баланс энергообмена'),
             canShiftAssessmentTime && h('div', { className: 'hes-time-stack' },
               h('span', { className: 'hes-time-value' }, formatShortTime(selectedAssessmentTime)),
-              h('button', {
-                type: 'button',
-                className: 'hes-time-badge',
-                onClick: shiftAssessmentTimeBack,
-                title: 'Сдвинуть время оценки на 30 минут назад',
-                'aria-label': 'Время оценки ' + formatShortTime(selectedAssessmentTime) + '. Сдвинуть на 30 минут назад'
-              }, '-30 мин')
+              h('div', { className: 'hes-time-chips' },
+                h('button', {
+                  type: 'button',
+                  className: 'hes-time-badge',
+                  onClick: shiftAssessmentTimeBack,
+                  title: 'Сдвинуть время оценки на 30 минут назад',
+                  'aria-label': 'Время оценки ' + formatShortTime(selectedAssessmentTime) + '. Сдвинуть на 30 минут назад'
+                }, '-30 мин'),
+                h('button', {
+                  type: 'button',
+                  className: 'hes-time-badge',
+                  onClick: shiftAssessmentTimeForward,
+                  disabled: !canShiftAssessmentForward,
+                  title: 'Сдвинуть время оценки на 30 минут вперёд',
+                  'aria-label': 'Время оценки ' + formatShortTime(selectedAssessmentTime) + '. Сдвинуть на 30 минут вперёд'
+                }, '+30 мин')
+              )
             )
           ),
           h('div', { className: 'hes-head__actions' },
-            h('label', { className: 'hes-auto-toggle' },
+            !isHungerOutcomeFollowUp && h('label', { className: 'hes-auto-toggle' },
               h('span', { className: 'hes-auto-toggle__text' }, 'При входе'),
               h('input', {
                 type: 'checkbox',
@@ -4882,17 +5425,23 @@
               }),
               h('span', { className: 'hes-auto-toggle__switch', 'aria-hidden': 'true' })
             ),
-            h('button', {
+            !isHungerOutcomeFollowUp && h('button', {
               className: 'hes-settings-btn',
               type: 'button',
               onClick: () => setSettingsOpen((open) => !open),
               'aria-label': settingsOpen ? 'Закрыть настройки голода' : 'Открыть настройки голода',
               'aria-pressed': settingsOpen
             }, '⚙'),
-            h('button', { className: 'hes-close', type: 'button', onClick: () => hide(), 'aria-label': 'Закрыть' }, 'x')
+            h('button', { className: 'hes-close', type: 'button', onClick: isHungerOutcomeFollowUp ? postponeHungerOutcome : () => hide(), 'aria-label': 'Закрыть' }, 'x')
           )
         ),
-        settingsOpen ? h(HungerFeatureSettings, {
+        isHungerOutcomeFollowUp ? h('div', { className: 'hes-input hes-input--clarify' },
+          h(HungerOutcomePrompt, {
+            followUp: state.hungerOutcomeFollowUp,
+            onOutcome: recordHungerOutcome,
+            onSnooze: postponeHungerOutcome
+          })
+        ) : settingsOpen ? h(HungerFeatureSettings, {
           settings: featureSettings,
           onToggle: toggleFeatureSetting,
           onSetPromptLimit: setLowHungerPromptLimit,
@@ -4950,8 +5499,27 @@
             onPatch: patchDraft
           }),
           isPastDraft && h('div', { className: 'hes-edit-note' },
-            h('strong', null, isBackfillingEvent ? 'Оценка задним числом' : 'Редактируется прошлая точка'),
-            h('span', null, isBackfillingEvent ? 'Шаг времени 30 минут' : 'Время записи останется прежним')
+            h('div', null,
+              h('strong', null, isBackfillingEvent ? 'Оценка задним числом' : 'Редактируется прошлая точка'),
+              h('span', null, Number.isFinite(pastPointTime) ? formatShortTime(pastPointTime) : 'Шаг времени 30 минут')
+            ),
+            h('div', { className: 'hes-edit-time-chips' },
+              h('button', {
+                type: 'button',
+                className: 'hes-time-badge',
+                onClick: () => shiftPastPointTime(-HUNGER_TIMELINE_SNAP_MS),
+                title: 'Сдвинуть точку на 30 минут назад',
+                'aria-label': 'Сдвинуть редактируемую оценку на 30 минут назад'
+              }, '-30 мин'),
+              h('button', {
+                type: 'button',
+                className: 'hes-time-badge',
+                onClick: () => shiftPastPointTime(HUNGER_TIMELINE_SNAP_MS),
+                disabled: !canShiftPastPointForward,
+                title: 'Сдвинуть точку на 30 минут вперёд',
+                'aria-label': 'Сдвинуть редактируемую оценку на 30 минут вперёд'
+              }, '+30 мин')
+            )
           ),
           h(TimelineSpark, {
             date: timelineDate,
@@ -4961,7 +5529,7 @@
             hint: lastMealHint,
             editingEventId: editTarget?.id,
             backfillTarget,
-            assessmentTime: isPastDraft ? null : selectedAssessmentTime,
+            assessmentTime: selectedAssessmentTime,
             onEditPoint: startEditPoint,
             onBackfillTime: startBackfillAt,
             onAddMealTime: launchMealFlowAt
@@ -4985,6 +5553,10 @@
           ),
           h('div', { className: 'hes-user-why' },
             h('div', { className: 'hes-user-why__title' }, 'Почему так'),
+            energyBudgetSummary && h('div', { className: 'hes-energy-budget' },
+              h('strong', null, energyBudgetSummary.main),
+              energyBudgetSummary.meta && h('span', null, energyBudgetSummary.meta)
+            ),
             h('div', { className: 'hes-user-why__chips' },
               getRecommendationReasons(result).map((reason) => h('span', { key: reason }, reason))
             )
@@ -5030,7 +5602,7 @@
             h('pre', null, JSON.stringify(result.log, null, 2))
           )
         ) : null,
-        !settingsOpen && !isLowHungerClarification && h('footer', { className: 'hes-actions' },
+        !settingsOpen && !isLowHungerClarification && !isHungerOutcomeFollowUp && h('footer', { className: 'hes-actions' },
           isLowHungerResolved ? h('button', {
             type: 'button',
             className: 'hes-primary',
@@ -5092,7 +5664,9 @@
 	.hes-kicker{max-width:100%;font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1.15;text-transform:uppercase;color:#434587}
 .hes-time-stack{position:absolute;left:0;top:65px;z-index:3;display:grid;gap:4px;justify-items:start;pointer-events:auto}
 .hes-time-value{font-size:14px;font-weight:900;line-height:1;color:#64748b}
+.hes-time-chips,.hes-edit-time-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .hes-time-badge{min-height:20px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:rgba(248,251,255,.92);color:#7a86a1;box-shadow:0 8px 18px rgba(15,23,42,.08);backdrop-filter:blur(8px);display:inline-flex;align-items:center;padding:0 7px;font-size:10px;font-weight:850;line-height:1;cursor:pointer;white-space:nowrap}
+.hes-time-badge:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 .hes-time-badge:focus-visible{outline:2px solid rgba(67,69,135,.24);outline-offset:2px}
 	.hes-close{width:44px;height:44px;border:0;border-radius:12px;background:#fff1f4;color:#be5267;font-size:20px;cursor:pointer}
 .hes-auto-toggle{min-height:36px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(67,69,135,.12);border-radius:999px;background:#f8fbff;color:#475569;padding:0 8px;cursor:pointer;user-select:none}
@@ -5157,6 +5731,15 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-chip.is-selected{background:#434587;color:#fff;border-color:#434587;box-shadow:0 8px 18px rgba(67,69,135,.18)}
 @keyframes hesPromptFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .hes-low-meal{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:9px}
+.hes-outcome-followup{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:14px;display:grid;gap:12px}
+.hes-outcome-followup__intro{display:grid;gap:5px}
+.hes-outcome-followup__intro strong{font-size:18px;line-height:1.2;color:#172033}
+.hes-outcome-followup__intro span{font-size:12px;font-weight:750;line-height:1.35;color:#64748b}
+.hes-outcome-followup__choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hes-outcome-followup__choices button{min-height:52px;border:1px solid rgba(67,69,135,.14);border-radius:13px;background:#f8fbff;color:#334155;font-size:13px;font-weight:850;padding:8px;cursor:pointer}
+.hes-outcome-followup__choices button:last-child:nth-child(odd){grid-column:1/-1}
+.hes-outcome-followup__choices button:focus-visible{outline:2px solid rgba(67,69,135,.28);outline-offset:2px}
+.hes-outcome-followup__later{min-height:44px;border:0;background:transparent;color:#64748b;font-size:12px;font-weight:850;cursor:pointer}
 .hes-low-meal__title{font-size:14px;font-weight:900;line-height:1.2;color:#434587}
 .hes-low-meal__text{font-size:12px;font-weight:750;line-height:1.35;color:#475569}
 .hes-low-meal__why{border-radius:10px;background:#fbfcff;color:#64748b;font-size:11px;font-weight:800;line-height:1.25;padding:7px 9px}
@@ -5235,8 +5818,10 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-spark-menu__time{grid-column:1/-1;text-align:center;color:#64748b;font-size:10px;font-weight:850;line-height:1.1}
 .hes-spark-menu button{min-height:34px;border:1px solid rgba(67,69,135,.12);border-radius:10px;background:#f8fbff;color:#434587;font-size:11px;font-weight:850;cursor:pointer}
 .hes-edit-note{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#64748b;font-size:11px;font-weight:800;line-height:1.25}
+.hes-edit-note>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:0}
 .hes-edit-note strong{color:#434587;font-size:12px}
-.hes-edit-note span{text-align:right}
+.hes-edit-note span{text-align:left}
+.hes-edit-time-chips{justify-content:flex-end;flex-shrink:0}
 .hes-reason-presets,.hes-meal-effect{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#f8fbff;padding:9px 11px;display:flex;flex-direction:column;gap:8px;color:#475569}
 .hes-reason-presets__title,.hes-meal-effect strong{font-size:12px;font-weight:900;color:#172033;line-height:1.2}
 .hes-reason-presets__note{font-size:11px;font-weight:800;line-height:1.25;color:#64748b}
@@ -5285,6 +5870,9 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 	.hes-verdict__detail{font-size:15px;line-height:1.35;color:#475569;font-weight:750}
   .hes-user-why{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#fff;padding:11px 12px;display:grid;gap:8px}
   .hes-user-why__title{font-size:12px;font-weight:900;color:#64748b}
+  .hes-energy-budget{border:1px solid rgba(67,69,135,.1);border-radius:12px;background:#f8fbff;padding:9px 10px;display:grid;gap:3px}
+  .hes-energy-budget strong{font-size:13px;line-height:1.2;color:#172033}
+  .hes-energy-budget span{font-size:11px;line-height:1.25;color:#64748b;font-weight:800}
   .hes-user-why__chips{display:flex;flex-wrap:wrap;gap:7px}
   .hes-user-why__chips span{border-radius:999px;background:#eef6ff;color:#334155;font-size:12px;font-weight:850;line-height:1.2;padding:7px 9px}
 	.hes-next-action{position:relative;border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:13px 14px 13px 17px;display:grid;gap:4px;overflow:hidden}
@@ -5333,6 +5921,9 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-verdict{background:#172033;border-color:rgba(82,160,216,.2)}
 [data-theme="dark"] .hes-verdict__title{color:#f8fafc}
 [data-theme="dark"] .hes-user-why,[data-theme="dark"] .hes-next-action,[data-theme="dark"] .hes-patterns{background:#1f2937;border-color:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-energy-budget{background:#111827;border-color:rgba(226,236,242,.12)}
+[data-theme="dark"] .hes-energy-budget strong{color:#f8fafc}
+[data-theme="dark"] .hes-energy-budget span{color:#94a3b8}
 [data-theme="dark"] .hes-user-why__chips span{background:#111827;color:#e5e7eb}
 [data-theme="dark"] .hes-next-action strong,[data-theme="dark"] .hes-pattern-card strong{color:#f8fafc}
 [data-theme="dark"] .hes-pattern-card{background:#111827;border-color:rgba(226,236,242,.12)}
@@ -5352,6 +5943,10 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-slider__track::before{background:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-slider__change,[data-theme="dark"] .hes-context-summary{background:#172033;color:#cbd5e1;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-low-meal{background:#1f2937;border-color:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-outcome-followup{background:#1f2937;border-color:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-outcome-followup__intro strong{color:#f8fafc}
+[data-theme="dark"] .hes-outcome-followup__intro span,[data-theme="dark"] .hes-outcome-followup__later{color:#cbd5e1}
+[data-theme="dark"] .hes-outcome-followup__choices button{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-low-meal__title{color:#c7d2fe}
 [data-theme="dark"] .hes-low-meal__text{color:#cbd5e1}
 [data-theme="dark"] .hes-low-meal__why{background:#111827;color:#94a3b8}
@@ -5469,11 +6064,20 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     writeEvents,
     addEvent,
     updateEvent,
-    buildHistorySignals
+    buildHistorySignals,
+    buildOutcomePlan,
+    linkMealToWaitingOutcome,
+    findDueOutcomeFollowUp,
+    recordOutcomeFollowUp,
+    snoozeOutcomeFollowUp,
+    buildCalibrationReport: () => HEYS.HungerEnergyCalibration?.evaluate?.(readEvents()) || null
   };
 
   HEYS.HungerEnergyStatusAdapter = {
     buildContextFromDay,
+    resolveHungerTrend,
+    buildDecisionTrace,
+    buildCounterfactuals,
     buildSparkTimeline,
     analyzeMealForLowHungerReview,
     buildMealMarkerQuality,
@@ -5514,9 +6118,9 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { ensureRoot(); ensureStyles(); installAutoOpen(); installMealEffectFollowUps(); });
+      document.addEventListener('DOMContentLoaded', () => { ensureRoot(); ensureStyles(); installAutoOpen(); installMealEffectFollowUps(); installOutcomeFollowUps(); });
     } else {
-      setTimeout(() => { ensureRoot(); ensureStyles(); installAutoOpen(); installMealEffectFollowUps(); }, 0);
+      setTimeout(() => { ensureRoot(); ensureStyles(); installAutoOpen(); installMealEffectFollowUps(); installOutcomeFollowUps(); }, 0);
     }
   }
 })(typeof window !== 'undefined' ? window : globalThis);

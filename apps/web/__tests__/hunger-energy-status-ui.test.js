@@ -43,6 +43,9 @@ global.HEYS = {
 
 const uiPath = path.resolve(__dirname, '../heys_hunger_energy_status_ui_v1.js');
 const uiSource = fs.readFileSync(uiPath, 'utf8');
+const dayTabImplSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
+const dayTabRenderSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_render_v1.js'), 'utf8');
+const dayPageShellSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_page_shell.js'), 'utf8');
 eval(uiSource);
 
 const Storage = global.HEYS.HungerEnergyStatusStorage;
@@ -64,6 +67,90 @@ afterAll(() => {
 });
 
 describe('Hunger Energy Status UI adapter', () => {
+  it('passes expenditure and the effective day target into hunger context', () => {
+    expect(dayTabImplSource).toContain('displayOptimum,\n            tdee,');
+    expect(dayTabRenderSource).toContain('displayOptimum: ctx.displayOptimum');
+    expect(dayTabRenderSource).toContain('tdee: ctx.tdee');
+    expect(dayPageShellSource).toContain('optimum: displayOptimum || optimum');
+  });
+
+  it('builds a relative daily energy context and preserves an explicit zero intake', () => {
+    vi.setSystemTime(new Date('2026-07-04T18:00:00'));
+
+    const low = Adapter.buildContextFromDay({
+      date: '2026-07-04',
+      day: { date: '2026-07-04', meals: [], savedEatenKcal: 1600 },
+      eatenKcal: 800,
+      optimum: 2000,
+      tdee: 2300
+    });
+    const over = Adapter.buildContextFromDay({
+      date: '2026-07-04',
+      day: { date: '2026-07-04', meals: [] },
+      eatenKcal: 2150,
+      optimum: 2000,
+      tdee: 2300
+    });
+    const cleared = Adapter.buildContextFromDay({
+      date: '2026-07-04',
+      day: { date: '2026-07-04', meals: [], savedEatenKcal: 1600, savedDisplayOptimum: 2100 },
+      eatenKcal: 0
+    });
+
+    expect(low).toMatchObject({
+      dayEatenKcal: 800,
+      dayTargetKcal: 2000,
+      dayTdeeKcal: 2300,
+      dayIntakeRatio: 0.4,
+      dayEnergyBalanceKcal: 1200,
+      remainingKcal: 1200,
+      veryLowIntakeDay: true
+    });
+    expect(over).toMatchObject({
+      dayEnergyBalanceKcal: -150,
+      remainingKcal: 0,
+      veryLowIntakeDay: false
+    });
+    expect(cleared).toMatchObject({
+      dayEatenKcal: 0,
+      dayTargetKcal: 2100,
+      dayEnergyBalanceKcal: 2100,
+      remainingKcal: 2100,
+      veryLowIntakeDay: false
+    });
+  });
+
+  it('calculates energy context when hunger assessment opens outside the day tab', () => {
+    global.HEYS.TDEE = {
+      calculate(day, profile) {
+        expect(day.date).toBe('2026-07-04');
+        expect(profile.goal).toBe('maintain');
+        return { optimum: 2050, tdee: 2280 };
+      }
+    };
+    memory.set('heys_profile', JSON.stringify({ goal: 'maintain' }));
+
+    try {
+      const context = Adapter.buildContextFromDay({
+        date: '2026-07-04',
+        day: {
+          date: '2026-07-04',
+          meals: [{ time: '11:00', items: [{ name: 'Обед', grams: 100, kcal100: 700 }] }]
+        }
+      });
+
+      expect(context).toMatchObject({
+        dayEatenKcal: 700,
+        dayTargetKcal: 2050,
+        dayTdeeKcal: 2280,
+        dayEnergyBalanceKcal: 1350,
+        remainingKcal: 1350
+      });
+    } finally {
+      delete global.HEYS.TDEE;
+    }
+  });
+
   it('does not auto-open over an active morning check-in', () => {
     expect(uiSource).toContain('function hasActiveMorningCheckin()');
     expect(uiSource).toContain("['open', 'in_progress', 'failed'].includes(status.state)");
@@ -100,6 +187,57 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].hungerLevel).toBe(6);
     expect(rows[0].updatedAt).toBe('2026-07-04T11:10:00Z');
+  });
+
+  it('schedules delay follow-up by time but waits for a meal after food advice', () => {
+    const delay = Storage.buildOutcomePlan(
+      { suggestedAction: 'delayWithCheck', recheckAfterMin: 25 },
+      '2026-07-04T12:00:00Z'
+    );
+    const food = Storage.buildOutcomePlan(
+      { suggestedAction: 'riskBrakeMeal' },
+      '2026-07-04T12:00:00Z'
+    );
+
+    expect(delay).toMatchObject({ family: 'delay', status: 'pending', dueAt: '2026-07-04T12:25:00.000Z' });
+    expect(food).toMatchObject({ family: 'food', status: 'waiting_for_meal', dueAt: null });
+  });
+
+  it('starts a food follow-up only after a recorded meal', () => {
+    Storage.addEvent({
+      id: 'food-advice',
+      recordedAt: '2026-07-04T11:00:00Z',
+      date: '2026-07-04',
+      decisionSnapshot: { suggestedAction: 'riskBrakeMeal' },
+      outcomePlan: Storage.buildOutcomePlan({ suggestedAction: 'riskBrakeMeal' }, '2026-07-04T11:00:00Z'),
+      outcome: 'calculated'
+    });
+
+    expect(Storage.linkMealToWaitingOutcome({ time: '2026-07-04T12:00:00Z', items: [] }, '2026-07-04')).toBeNull();
+    Storage.linkMealToWaitingOutcome({ time: '2026-07-04T12:00:00Z', items: [{ name: 'Обед' }] }, '2026-07-04');
+
+    expect(Storage.readEvents()[0].outcomePlan).toMatchObject({
+      status: 'pending',
+      mealAt: '2026-07-04T12:00:00.000Z',
+      dueAt: '2026-07-04T12:45:00.000Z'
+    });
+  });
+
+  it('stores an explicit follow-up answer for calibration', () => {
+    Storage.addEvent({
+      id: 'delay-advice',
+      recordedAt: '2026-07-04T10:00:00Z',
+      decisionSnapshot: { suggestedAction: 'delayWithCheck' },
+      outcomePlan: Storage.buildOutcomePlan({ suggestedAction: 'delayWithCheck' }, '2026-07-04T10:00:00Z'),
+      outcome: 'calculated'
+    });
+
+    Storage.recordOutcomeFollowUp('delay-advice', 'hunger_passed');
+
+    expect(Storage.readEvents()[0]).toMatchObject({
+      outcome: 'hunger_passed',
+      outcomePlan: { status: 'answered', userReported: 'hunger_passed' }
+    });
   });
 
   it('compacts low-hunger history rows before cloud sync storage', () => {
@@ -267,6 +405,89 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(history.personalHungerModel.sampleSize).toBe(0);
   });
 
+  it('counts only real delay recommendations after the latest meal as checkpoints', () => {
+    Storage.writeEvents([
+      {
+        id: 'delay-before-meal',
+        source: 'day-fab',
+        createdAt: '2026-07-04T10:30:00Z',
+        recordedAt: '2026-07-04T10:30:00Z',
+        hungerLevel: 5,
+        outcome: 'hunger_grew',
+        decision: { suggestedAction: 'observe', riskLevel: 'medium' }
+      },
+      {
+        id: 'delay-after-meal',
+        source: 'day-fab',
+        createdAt: '2026-07-04T11:00:00Z',
+        recordedAt: '2026-07-04T11:00:00Z',
+        hungerLevel: 6,
+        outcome: 'hunger_grew',
+        decision: { suggestedAction: 'delayWithCheck', riskLevel: 'medium' }
+      },
+      {
+        id: 'food-assessment',
+        source: 'day-fab',
+        createdAt: '2026-07-04T11:30:00Z',
+        recordedAt: '2026-07-04T11:30:00Z',
+        hungerLevel: 7,
+        outcome: 'calculated',
+        decision: { suggestedAction: 'riskBrakeMeal', riskLevel: 'medium' }
+      }
+    ]);
+
+    const history = Storage.buildHistorySignals('2026-07-04T10:45:00Z');
+
+    expect(history.checkpointAttemptCount).toBe(1);
+    expect(history.recentFailedCheckpointCount).toBe(1);
+  });
+
+  it('treats one-point noise as stable and expires trend after three hours', () => {
+    expect(Adapter.resolveHungerTrend(6, {
+      previousHungerLevel: 5,
+      minutesSinceLastHungerEvent: 179
+    })).toBe('stable');
+    expect(Adapter.resolveHungerTrend(7, {
+      previousHungerLevel: 5,
+      minutesSinceLastHungerEvent: 179
+    })).toBe('rising');
+    expect(Adapter.resolveHungerTrend(7, {
+      previousHungerLevel: 5,
+      minutesSinceLastHungerEvent: 181
+    })).toBe('unknown');
+  });
+
+  it('marks score-changing factors as active and keeps counterfactuals distinct', () => {
+    const previousAssess = global.HEYS.HungerEnergyStatus.assessHungerEvent;
+    global.HEYS.HungerEnergyStatus.assessHungerEvent = (input, context) => {
+      const hunger = Number(input.hungerLevel) || 0;
+      const isRecent = Number(context.hoursSinceMeal) === 2;
+      const noTrend = input.hungerTrend === 'unknown';
+      const firstCheck = Number(context.checkpointAttemptCount) === 0;
+      const suggestedAction = isRecent ? 'eatSnack' : noTrend ? 'observe' : firstCheck ? 'hydratePause' : 'eatMeal';
+      return {
+        riskBudget: { score: hunger * 2 + (firstCheck ? 0 : 5), level: firstCheck ? 'low' : 'medium', driversUp: [], driversDown: [] },
+        foodPriority: { score: hunger * 3, level: isRecent ? 'snack' : 'meal', driversUp: [], driversDown: [] },
+        suggestedAction,
+        foodBandKcal: isRecent ? [200, 400] : [400, 700]
+      };
+    };
+
+    try {
+      const input = { now: '2026-07-04T12:00:00Z', hungerLevel: 8, hungerTrend: 'rising' };
+      const context = { hoursSinceMeal: 3.7, checkpointAttemptCount: 2 };
+      const base = global.HEYS.HungerEnergyStatus.assessHungerEvent(input, context);
+      const trace = Adapter.buildDecisionTrace(input, context, base);
+      const counterfactuals = Adapter.buildCounterfactuals(input, context);
+
+      expect(trace.find((row) => row.factor === 'hungerLevel')?.activeDriver).toBe(true);
+      expect(counterfactuals.map((row) => row.id)).toEqual(['meal_two_hours_ago', 'trend_not_rising', 'without_repeat']);
+      expect(new Set(counterfactuals.map((row) => row.suggestedAction)).size).toBe(3);
+    } finally {
+      global.HEYS.HungerEnergyStatus.assessHungerEvent = previousAssess;
+    }
+  });
+
   it('applies learned long-gap delay risk only when the current meal gap is long', () => {
     Storage.writeEvents([
       ...[1, 2, 3].map((n) => ({
@@ -345,6 +566,19 @@ describe('Hunger Energy Status UI adapter', () => {
   });
 
   it('prompts for context when hunger stays within one point for a long time', () => {
+    const repeatPrompt = Adapter.buildStableHungerPrompt(
+      { hungerLevel: 1, now: '2026-07-04T12:00:00Z' },
+      { previousHungerLevel: 1, previousHungerEventId: 'repeat-anchor', previousHungerEventAt: '2026-07-04T11:59:00Z', minutesSinceLastHungerEvent: 1 }
+    );
+    expect(repeatPrompt).toMatchObject({
+      type: 'stable_hunger_repeat',
+      question: 'Почему оценка не меняется?',
+      previousLevel: 1,
+      currentLevel: 1,
+      minutesSincePrevious: 1,
+      anchorEventId: 'repeat-anchor'
+    });
+
     Storage.writeEvents([
       {
         id: 'stable-anchor',
@@ -389,6 +623,41 @@ describe('Hunger Energy Status UI adapter', () => {
       { hungerLevel: 5 },
       { previousHungerLevel: 4, minutesSinceLastHungerEvent: 40 }
     )).toBeNull();
+  });
+
+  it('builds stable hunger prompt for backfilled time from events before that time', () => {
+    Storage.writeEvents([
+      {
+        id: 'before-backfill',
+        source: 'day-fab',
+        createdAt: '2026-07-04T18:00:00Z',
+        recordedAt: '2026-07-04T18:00:00Z',
+        hungerLevel: 1
+      },
+      {
+        id: 'after-backfill',
+        source: 'day-fab',
+        createdAt: '2026-07-04T20:00:00Z',
+        recordedAt: '2026-07-04T20:00:00Z',
+        hungerLevel: 7
+      }
+    ]);
+
+    const prompt = Adapter.buildStableHungerPrompt(
+      { hungerLevel: 1, now: '2026-07-04T19:00:00Z' },
+      { previousHungerLevel: 7, previousHungerEventId: 'after-backfill', previousHungerEventAt: '2026-07-04T20:00:00Z', minutesSinceLastHungerEvent: 0 }
+    );
+
+    expect(prompt).toMatchObject({
+      type: 'stable_hunger_repeat',
+      question: 'Почему оценка не меняется?',
+      previousLevel: 1,
+      currentLevel: 1,
+      minutesSincePrevious: 60,
+      anchorEventId: 'before-backfill'
+    });
+    expect(uiSource).toContain('const stableHungerPrompt = isEditingEvent ? null : buildStableHungerPrompt(promptInput, context)');
+    expect(uiSource).toContain('stableHungerPrompt: cloneStableHungerPrompt(stableHungerPrompt)');
   });
 
   it('renders spark with current hunger point and all today meal markers', () => {
@@ -1347,7 +1616,7 @@ describe('Hunger Energy Status UI adapter', () => {
 
   it('renders low-hunger meal clarification as a standalone step before hunger input', () => {
     expect(uiSource).toContain("isLowHungerStep ? h('div', { className: 'hes-input hes-input--clarify' }");
-    expect(uiSource).toContain("!isLowHungerClarification && h('footer'");
+    expect(uiSource).toContain("!isLowHungerClarification && !isHungerOutcomeFollowUp && h('footer'");
     expect(uiSource).toContain('isLowHungerClarification ? h(LowHungerMealPrompt');
     expect(uiSource).toContain('patternKey: lowHungerMealReview.analysis?.patternKey || null');
     expect(uiSource).toContain('analyticsTags');
@@ -1405,6 +1674,51 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(spark.hungerPoints.map((point) => point.type)).toEqual(['hunger', 'edit-preview']);
     expect(spark.hungerPoints[1]).toMatchObject({ id: 'hunger-edit', level: 8, isEditing: true });
     expect(spark.hungerPoints.some((point) => point.type === 'preview')).toBe(false);
+  });
+
+  it('keeps spark scale while moving an edited event timestamp', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([
+      {
+        id: 'hunger-before',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:00:00',
+        recordedAt: '2026-07-05T12:00:00',
+        hungerLevel: 4
+      },
+      {
+        id: 'hunger-edit-time',
+        source: 'day-fab',
+        createdAt: '2026-07-05T12:40:00',
+        recordedAt: '2026-07-05T12:40:00',
+        hungerLevel: 5
+      }
+    ]);
+    const assessmentTime = new Date('2026-07-05T13:20:00').getTime();
+    const shiftedTime = new Date('2026-07-05T13:10:00').getTime();
+
+    const base = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: { date: '2026-07-05', meals: [] },
+      draft: { hungerLevel: 8 },
+      assessmentTime
+    });
+    const editing = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: { date: '2026-07-05', meals: [] },
+      draft: { hungerLevel: 8 },
+      editTarget: { id: 'hunger-edit-time', hungerLevel: 8, t: shiftedTime },
+      assessmentTime
+    });
+
+    const editedPoint = editing.hungerPoints.find((point) => point.id === 'hunger-edit-time');
+    expect(editing.scaleStart).toBe(base.scaleStart);
+    expect(editing.scaleEnd).toBe(base.scaleEnd);
+    expect(editedPoint).toMatchObject({ type: 'edit-preview', level: 8, isEditing: true, t: shiftedTime });
+    expect(editedPoint.x).toBeGreaterThan(base.hungerPoints.find((point) => point.id === 'hunger-edit-time').x);
+    expect(uiSource).toContain('assessmentTime: selectedAssessmentTime');
+    expect(uiSource).toContain("field: 'recordedAt'");
+    expect(uiSource).toContain('+30 мин');
   });
 
   it('moves the current and edited spark point from the live slider visual value', () => {
@@ -1564,10 +1878,11 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain("addMeal({ time, dateKey, source: 'hunger-spark-long-press' })");
     expect(uiSource).toContain('pushEventsUndo');
     expect(uiSource).toContain('installMealEffectFollowUps');
-    expect(uiSource).toContain('Что могло усилить голод?');
-    expect(uiSource).toContain("['Пропустил еду', { safetyFlags: [], hungerReasons: ['missed_meal'] }]");
-    expect(uiSource).toContain("['Стресс', { safetyFlags: [], hungerReasons: ['stress'] }]");
-    expect(uiSource).toContain("['Ошибка времени еды', { safetyFlags: [], hungerReasons: ['meal_time_mismatch'] }]");
+    expect(uiSource).toContain('Есть слабость, дрожь или головокружение?');
+    expect(uiSource).toContain("['Нет таких симптомов', { safetyFlags: [] }]");
+    expect(uiSource).toContain("['Пропущен приём пищи', { hungerReasons: ['missed_meal'] }]");
+    expect(uiSource).toContain("['Стресс', { hungerReasons: ['stress'] }]");
+    expect(uiSource).toContain("['Время еды указано неверно', { hungerReasons: ['meal_time_mismatch'] }]");
     expect(uiSource).toContain('isRecentFullMealContext(context)');
     expect(uiSource).toContain('const recentFullMeal = minSinceMeal != null && minSinceMeal <= 180');
     expect(uiSource).toContain('recentBalancedMeal: recentFullMeal');
@@ -1583,6 +1898,10 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('return unique(drivers).slice(0, 6)');
     expect(uiSource).toContain("className: 'hes-user-why'");
     expect(uiSource).toContain("h('div', { className: 'hes-user-why__title' }, 'Почему так')");
+    expect(uiSource).toContain("className: 'hes-energy-budget'");
+    expect(uiSource).toContain('dayIntakeRatio < 0.45');
+    expect(uiSource).toContain('dayTdeeKcal: context.dayTdeeKcal ?? null');
+    expect(uiSource).toContain("meta.push('затраты ' + tdee)");
     expect(uiSource).toContain("className: 'hes-result-tools'");
     expect(uiSource).toContain("className: 'hes-result' + ((detailsOpen || debugOpen) ? ' is-expanded' : '')");
     expect(uiSource).toContain('.hes-result.is-expanded{padding-bottom:156px}');

@@ -71,7 +71,8 @@ Then adjust:
 
 - hunger rising: `+8`; falling/stable after pause: `-8`;
 - control 5-6: `+8`; control <=4: `+18`;
-- Risk Budget medium: `+12`; high: `+28`;
+- Risk Budget selects the safe action family, but its band is not added to the
+  score again; this avoids counting hunger, trend, and control twice;
 - `fed`: `-15`; `postMealDecline`: `+5`;
 - `deficitPressure`: `+12`; `reboundRisk`: `+14`;
 - `recoveryNeed`: `+22`; `nutritionFloorRisk`: `+35`;
@@ -79,12 +80,16 @@ Then adjust:
 - poor sleep: `+6`; very poor sleep: `+12`;
 - high stress/bad mood: `+8`; strong craving: `+8`;
 - high-risk time-of-day pattern: `+6`;
-- recent balanced meal: `-15`; satiety-lag likely: `-10`;
+- recent meal: gradual reduction up to `-18`, based on time and meal quality;
 - planned meal soon: `-8`, unless risk is high;
 - successful wait history in similar context: `-8`;
 - failed delay/uncontrolled history in similar context: `+12`.
 
 Clamp to `0-100`.
+
+When the daily energy target is already close, normal (non-safety, non-recovery)
+food support is capped at `snack`; the food band remains at least `100-200` kcal
+so the target never becomes a recommendation to ignore strong hunger.
 
 ## Food Band Matrix
 

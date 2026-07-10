@@ -191,7 +191,7 @@ const scenarios = [
     },
     expected: {
       status: ['stableBetweenMeals'],
-      risk: ['medium'],
+      risk: ['low', 'medium'],
       food: ['checkpoint', 'snack'],
       action: ['hydratePause', 'delayWithCheck', 'riskBrakeMeal']
     }
@@ -297,7 +297,7 @@ const scenarios = [
     },
     expected: {
       status: ['reboundRisk'],
-      risk: ['medium'],
+      risk: ['low', 'medium'],
       food: ['checkpoint', 'snack'],
       action: ['hydratePause', 'delayWithCheck', 'riskBrakeMeal']
     }
@@ -326,7 +326,7 @@ const scenarios = [
     context: {},
     expected: {
       status: ['stableBetweenMeals'],
-      risk: ['medium'],
+      risk: ['low', 'medium'],
       food: ['checkpoint'],
       action: ['delayWithCheck', 'hydratePause'],
       confidence: ['medium', 'low']
@@ -339,7 +339,7 @@ const scenarios = [
     context: { lastMealAt: '2026-07-03T09:00:00+03:00' },
     expected: {
       status: ['stableBetweenMeals'],
-      risk: ['medium'],
+      risk: ['low', 'medium'],
       food: ['checkpoint', 'snack'],
       action: ['hydratePause', 'delayWithCheck', 'riskBrakeMeal']
     }
@@ -405,7 +405,7 @@ const scenarios = [
     context: { dataFreshness: 'stale' },
     expected: {
       status: ['stableBetweenMeals'],
-      risk: ['medium'],
+      risk: ['low', 'medium'],
       food: ['checkpoint', 'snack'],
       action: ['hydratePause', 'delayWithCheck', 'riskBrakeMeal'],
       confidence: ['low']
@@ -710,5 +710,68 @@ describe('HungerEnergyStatus pure engine', () => {
 
     expect(stale.foodBandKcal).toBeUndefined();
     expect(missingMeal.foodBandKcal).toBeUndefined();
+  });
+
+  it('keeps the reported high-hunger case at a small food step instead of saturating both rails', () => {
+    const decision = HES.assessHungerEvent(
+      {
+        hungerLevel: 8,
+        controlLevel: 8,
+        cravingLevel: null,
+        hungerTrend: 'rising',
+        safetyFlags: [],
+        hungerReasons: ['missed_meal']
+      },
+      {
+        lastMealAt: '2026-07-09T19:30:00+03:00',
+        hoursSinceMeal: 3.7,
+        lastMealQualityTone: 'attention',
+        lastMealKcal: 430,
+        lastMealProtein: 13,
+        lastMealFiber: 1.4,
+        remainingKcal: 49,
+        checkpointAttemptCount: 0,
+        personalHungerModel: { sampleSize: 3, learnedEnough: false }
+      }
+    );
+
+    expect(decision.energyStatus.label).toBe('postMealDecline');
+    expect(decision.riskBudget.level).toBe('medium');
+    expect(decision.foodPriority.level).toBe('snack');
+    expect(decision.foodPriority.driversUp).not.toContain('high_risk_budget');
+    expect(decision.suggestedAction).toBe('riskBrakeMeal');
+    expect(decision.foodBandKcal).toEqual([100, 200]);
+    expect(decision.confidence).toBe('medium');
+  });
+
+  it('lets calm control lower risk while low control still triggers the high-risk floor', () => {
+    const input = { hungerLevel: 8, hungerTrend: 'rising', safetyFlags: [], hungerReasons: ['unclear'] };
+    const context = { lastMealAt: '2026-07-09T17:00:00+03:00', hoursSinceMeal: 6, remainingKcal: 500 };
+    const calm = HES.assessHungerEvent({ ...input, controlLevel: 8 }, context);
+    const strained = HES.assessHungerEvent({ ...input, controlLevel: 3, cravingLevel: 8 }, context);
+
+    expect(calm.riskBudget.level).toBe('medium');
+    expect(calm.riskBudget.driversDown).toContain('good_control');
+    expect(strained.riskBudget.level).toBe('high');
+    expect(strained.riskBudget.score).toBeGreaterThan(calm.riskBudget.score);
+  });
+
+  it('does not treat a hunger reason as a completed safety screen', () => {
+    const decision = HES.assessHungerEvent(
+      { hungerLevel: 8, controlLevel: 8, hungerTrend: 'rising', hungerReasons: ['missed_meal'] },
+      { lastMealAt: '2026-07-09T19:30:00+03:00', hoursSinceMeal: 3.7 }
+    );
+
+    expect(decision.missingInputs).toContain('safetyFlags');
+    expect(decision.confidence).toBe('medium');
+  });
+
+  it('uses a gradual meal-recency transition instead of a three-hour cliff', () => {
+    const input = { hungerLevel: 6, controlLevel: 8, hungerTrend: 'stable', safetyFlags: [] };
+    const meal = { lastMealAt: '2026-07-09T19:30:00+03:00', lastMealQualityTone: 'attention', lastMealKcal: 430, lastMealProtein: 13, lastMealFiber: 1.4 };
+
+    expect(HES.assessHungerEvent(input, { ...meal, hoursSinceMeal: 2 }).energyStatus.label).toBe('fed');
+    expect(HES.assessHungerEvent(input, { ...meal, hoursSinceMeal: 3.7 }).energyStatus.label).toBe('postMealDecline');
+    expect(HES.assessHungerEvent(input, { ...meal, hoursSinceMeal: 5 }).energyStatus.label).toBe('stableBetweenMeals');
   });
 });

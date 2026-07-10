@@ -103,7 +103,8 @@ Raise to `medium` if any apply:
 
 Raise to `high` if any apply:
 
-- hunger >=8;
+- hunger >=8 together with low control, failed checkpoints, or another strong
+  risk driver; hunger alone requires a checkpoint but is not `high` risk;
 - control <=4;
 - all-or-nothing thoughts;
 - safety-like body signals;
@@ -121,7 +122,8 @@ good focus, and successful personal history in similar contexts.
 Use the most explanatory label:
 
 - `fed`: recent meal or active wave, food still being processed;
-- `postMealDecline`: meal energy fading, normal transition hunger possible;
+- `postMealDecline`: meal protection is fading gradually, based on elapsed time
+  and the meal's kcal, protein, fiber, and quality;
 - `stableBetweenMeals`: normal gap, low risk, stable state;
 - `deficitPressure`: low intake, accumulated debt, or long gap raises food
   value;
@@ -145,11 +147,12 @@ Detailed v0 scoring lives in
 - `66-85` meal: normal meal fits current state.
 - `86-100` food-first: safety, recovery, low availability, or high risk.
 
-The score rises with hunger, rising trend, low control, high Risk Budget,
-`recoveryNeed`, `nutritionFloorRisk`, protein debt, very low intake, high-risk
-time-of-day pattern, long gap vs personal history, and failed delays. It falls
-with recent meal/satiety-lag, stable control, low risk, planned meal soon, and
-successful history in similar contexts. Safety flags jump to food-first
+The score rises with hunger, rising trend, low control, `recoveryNeed`,
+`nutritionFloorRisk`, protein debt, very low intake, high-risk time-of-day
+pattern, long gap vs personal history, and failed delays. It falls with recent
+meal/satiety-lag, stable control, low risk, planned meal soon, and successful
+history in similar contexts. Risk Budget controls whether waiting is allowed,
+but is not added to Food Priority again. Safety flags jump to food-first
 regardless of hunger score.
 
 ## Edge-Case Modifiers
@@ -216,3 +219,8 @@ Store:
 
 Only promote a pattern after the thresholds in the concept are met. Weak
 evidence stays "possible driver".
+
+Offline outcome calibration is defined in
+[HUNGER_ENERGY_STATUS_CALIBRATION.md](HUNGER_ENERGY_STATUS_CALIBRATION.md). It
+may flag action families or factors for review, but it never updates production
+weights automatically.

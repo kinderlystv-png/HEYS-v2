@@ -13,7 +13,7 @@ Risk Budget answers:
 
 Risk is not hunger intensity:
 
-- high hunger + calm control + recent meal can be medium risk;
+- high hunger + calm control can stay medium risk;
 - moderate hunger + low control + stress + failed delay history can be high
   risk;
 - safety-like symptoms make risk irrelevant because delay should stop.
@@ -43,7 +43,7 @@ type RiskBudget = {
 
 - dizziness, shaking, faintness, confusion, nausea -> `stop`;
 - control <=3 with hunger >=6 -> minimum `high`;
-- repeated failed checkpoints today -> minimum `high`;
+- two confirmed failed checkpoints today -> minimum `high`;
 - active/past ED or repeated loss-of-control pattern -> minimum `high`; no
   fasting-style delay suggestions;
 - diabetes/hypoglycemia risk/relevant medication -> `stop` or medical caution;
@@ -53,7 +53,7 @@ type RiskBudget = {
 ## Base Score Draft
 
 ```text
-base = hungerLevel * 3
+base = hungerLevel * 2
 ```
 
 Then adjust:
@@ -64,16 +64,21 @@ Then adjust:
 - stress high: `+10`; bad mood/irritability: `+8`;
 - poor sleep: `+8`; very poor sleep: `+14`;
 - long gap vs personal history: `+8`;
-- skipped planned meal: `+10`;
+- skipped planned meal: `+4`;
 - known rebound pattern: `+12`;
-- failed delay history in similar context: `+14`;
+- failed delay history in similar context: `+14`; two real recent checkpoints:
+  `+10` and minimum `medium`;
 - all-or-nothing thoughts: `+18`;
 - training recovery/protein debt: `+8`;
-- good control + stable focus: `-10`;
-- recent balanced meal + satiety-lag likely: `-10`;
+- good control: `-8`; stable focus adds `-4`;
+- recent meal: gradual protection up to `-12`, based on time, kcal, protein,
+  fiber, and meal quality;
 - successful wait history in similar context: `-8`.
 
 Clamp to `0-100`, then apply hard overrides.
+
+Hunger `8+` alone sets only a `medium` checkpoint floor. It does not create
+`high` risk without low control, failed delays, safety, or another risk driver.
 
 ## Confidence Gates
 

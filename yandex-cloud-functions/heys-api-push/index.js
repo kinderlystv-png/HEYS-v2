@@ -238,6 +238,7 @@ const DEFAULT_CLIENT_PREFS = {
   evening_summary_enabled: true,
   evening_summary_time: '21:00',
   streak_celebration_enabled: true,
+  hunger_follow_up_enabled: true,
 };
 
 const DEFAULT_CURATOR_PREFS = {

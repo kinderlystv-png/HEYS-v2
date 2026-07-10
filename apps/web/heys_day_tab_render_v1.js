@@ -128,6 +128,8 @@
             caloricDebt: ctx.caloricDebt,
             eatenKcal: ctx.eatenKcal,
             optimum: ctx.optimum,
+            displayOptimum: ctx.displayOptimum,
+            tdee: ctx.tdee,
             addMeal: ctx.addMeal,
             addWater: ctx.addWater,
             diarySection,
