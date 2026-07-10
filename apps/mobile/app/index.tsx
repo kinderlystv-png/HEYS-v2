@@ -20,7 +20,7 @@ export default function Index() {
         const session = await loadStoredSession();
         if (!session || isSessionExpired(session)) {
           if (session) await clearStoredSession();
-          if (!cancelled) router.replace('/auth/login');
+          if (!cancelled) router.replace('/web');
           return;
         }
 
@@ -40,11 +40,9 @@ export default function Index() {
 
         await verifySession(session);
         if (!cancelled) router.replace('/web');
-      } catch (err) {
+      } catch {
         await clearStoredSession();
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Не удалось восстановить сессию.');
-        }
+        if (!cancelled) router.replace('/web');
       }
     }
 
@@ -59,7 +57,7 @@ export default function Index() {
       <ScreenState
         actionLabel="Войти заново"
         body={error}
-        onAction={() => router.replace('/auth/login')}
+        onAction={() => router.replace('/web')}
         title="Нужен вход"
       />
     );

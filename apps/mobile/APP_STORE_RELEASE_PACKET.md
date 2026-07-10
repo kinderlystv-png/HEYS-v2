@@ -2,6 +2,9 @@
 
 Дата: 2026-07-02
 
+> Auth UI update (2026-07-11): отдельный React Native login удалён. Для review
+> используется фирменный синий HEYS-вход внутри controlled WebView.
+
 Документ нужен для заполнения App Store Connect перед iOS review и unlisted
 request. Финальные поля в App Store Connect должен проверить владелец аккаунта
 Apple Developer.
@@ -109,7 +112,7 @@ Prepare screenshots from a real iPhone or TestFlight build.
 
 | Slot | Screen                                                   |
 | ---- | -------------------------------------------------------- |
-| 1    | Native login screen                                      |
+| 1    | HEYS login screen inside the controlled WebView          |
 | 2    | HEYS diary or main web app screen after session exchange |
 | 3    | Settings with account, Face ID/Touch ID and legal links  |
 | 4    | Support/privacy/terms/account deletion entry points      |

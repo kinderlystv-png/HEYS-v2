@@ -1,7 +1,6 @@
 import * as Linking from 'expo-linking';
 
 export type DeepLinkTarget =
-  | { route: '/auth/login' }
   | { route: '/settings' }
   | { route: '/web'; webPath?: string };
 
@@ -11,7 +10,7 @@ export function parseDeepLink(url: string): DeepLinkTarget {
   const normalizedPath = path.replace(/^\/+/, '');
 
   if (!normalizedPath || normalizedPath === 'open') return { route: '/web' };
-  if (normalizedPath === 'login' || normalizedPath === 'auth/login') return { route: '/auth/login' };
+  if (normalizedPath === 'login' || normalizedPath === 'auth/login') return { route: '/web' };
   if (normalizedPath === 'settings' || normalizedPath === 'support') return { route: '/settings' };
 
   if (normalizedPath.startsWith('open/')) {

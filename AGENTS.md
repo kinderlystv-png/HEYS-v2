@@ -67,6 +67,34 @@ Tone, communication length, adjacent observations — см. user-level AGENTS.md
   найден конфликт, сначала синхронизируй общий safety-инвариант, а затем оставь
   явное agent-specific исключение.
 
+## RuStore mobile release — проверенный flow
+
+- Канонический успешный релиз: `apps/mobile` → HEYS `1.0.2(12)`. Версия
+  опубликована в RuStore 2026-07-10 18:55 на 100% аудитории и доступна по адресу
+  `https://rustore.ru/catalog/app/com.heys.mobile`.
+- Собирать только через изолированный wrapper:
+  `cd apps/mobile && npm run build:rustore -- --local --non-interactive --output /tmp/HEYS-rustore.apk`.
+  Не запускать прямой `eas build` из монорепы: он может отправить весь
+  Git-корень.
+- После сборки обязательно выполнить
+  `npm run verify:release-apk -- /tmp/HEYS-rustore.apk`. Gate проверяет package,
+  version, production API, `heys://`, release-подпись, отсутствие private URL и
+  `SYSTEM_ALERT_WINDOW`.
+- `SYSTEM_ALERT_WINDOW` HEYS не использует. Если RuStore просит его обоснование,
+  ничего не придумывать: добавить permission в `blockedPermissions`, пересобрать
+  APK и убедиться, что разрешение отсутствует в итоговом manifest.
+- Использовать EAS remote release-keystore и продолжать подписывать им все новые
+  версии. Старые отклонённые `1.0.0/1.0.1` были debug-signed, но первая
+  опубликованная release-версия `1.0.2(12)` принята с новым сертификатом.
+- Комментарий и тестовый доступ для модератора брать из
+  `apps/mobile/release/RUSTORE_REVIEW_NOTES.md`; загружать именно APK, прошедший
+  локальный artifact gate. Сборка не означает разрешение на загрузку/публикацию.
+- Mobile auth UI invariant: пользователь видит только фирменный синий HEYS-вход
+  внутри controlled WebView. Отдельный React Native login (`app/auth/login.tsx`)
+  удалён как дублирующий и не должен возвращаться. Guest, expired session,
+  logout и deep link `login` направляются в `/web`; сохранённая native session
+  по-прежнему может использовать безопасный session exchange.
+
 ## Полнота модулей: релиз без MVP
 
 - Продуктовые тренировочные модули (режим пальцев, режим растяжек/разминок и

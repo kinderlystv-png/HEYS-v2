@@ -1,5 +1,25 @@
 # Mobile через EAS Build
 
+## Проверенный релиз RuStore
+
+HEYS `1.0.2(12)` опубликован в RuStore 2026-07-10 18:55 на 100% аудитории:
+<https://rustore.ru/catalog/app/com.heys.mobile>. Рабочая последовательность:
+
+```bash
+cd apps/mobile
+npm run build:rustore -- --local --non-interactive --output /tmp/HEYS-rustore.apk
+npm run verify:release-apk -- /tmp/HEYS-rustore.apk
+```
+
+Загружать в RuStore можно только APK, для которого artifact gate завершился
+успешно. В проверенном APK используются production API и EAS release-keystore,
+есть `heys://`, отсутствуют private URL, debug-подпись и `SYSTEM_ALERT_WINDOW`.
+Комментарий и доступ для модератора — в `release/RUSTORE_REVIEW_NOTES.md`.
+
+Auth UI invariant: в приложении должен быть только синий HEYS-вход внутри
+controlled WebView. Отдельная зелёная React Native форма удалена; первый запуск,
+просроченная сессия, logout и login deep link должны открывать `/web`.
+
 ## ✅ Конфигурация завершена
 
 Мобильное приложение настроено для изолированной сборки в монорепе:
@@ -173,10 +193,10 @@ EAS определяет Git-корень всей монорепы раньше
 ### RuStore сообщает о несовпадении подписи
 
 Первые отклонённые APK `1.0.0` и `1.0.1` были подписаны Android Debug
-сертификатом. Не возвращайтесь к debug-подписи: для текущего release-keystore
-нужно запросить у поддержки RuStore деактивацию старого сертификата, после чего
-загрузить APK заново. Все следующие версии собирайте с тем же EAS
-release-keystore.
+сертификатом, но `1.0.2(12)` с EAS release-keystore успешно опубликован. Не
+возвращайтесь к debug-подписи: все следующие версии собирайте с тем же EAS
+release-keystore. В поддержку RuStore обращайтесь только если консоль явно
+сообщит о несовпадении сертификата.
 
 ---
 

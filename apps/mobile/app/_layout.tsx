@@ -36,7 +36,6 @@ export default function RootLayout() {
       <DeepLinkHandler />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ title: 'HEYS' }} />
-        <Stack.Screen name="auth/login" options={{ title: 'Вход' }} />
         <Stack.Screen name="auth/logout" options={{ title: 'Выход' }} />
         <Stack.Screen name="web/index" options={{ title: 'HEYS' }} />
         <Stack.Screen name="settings/index" options={{ title: 'Настройки' }} />

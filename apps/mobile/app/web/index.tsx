@@ -96,8 +96,8 @@ export default function WebScreen() {
       setError(null);
       const session = await loadStoredSession();
       if (!session || isSessionExpired(session)) {
-        await clearStoredSession();
-        router.replace('/auth/login');
+        if (session) await clearStoredSession();
+        setSourceUrl(getUnauthenticatedWebUrl());
         return;
       }
 

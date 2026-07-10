@@ -72,6 +72,11 @@ if ! LC_ALL=C grep -aFq "$production_api" "$bundle_tmp"; then
   exit 1
 fi
 
+if LC_ALL=C grep -aFq './auth/login.tsx' "$bundle_tmp"; then
+  echo 'Release APK still contains the removed native login route: ./auth/login.tsx' >&2
+  exit 1
+fi
+
 apksigner_cmd="$(command -v apksigner || true)"
 if [[ -z "$apksigner_cmd" ]]; then
   for sdk_root in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" /usr/local/share/android-commandlinetools; do

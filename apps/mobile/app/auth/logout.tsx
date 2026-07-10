@@ -28,7 +28,7 @@ export default function LogoutScreen() {
     }
 
     await clearStoredSession();
-    router.replace('/auth/login');
+    router.replace('/web');
   }, [router]);
 
   const markWebLogoutDone = useCallback((url: string) => {

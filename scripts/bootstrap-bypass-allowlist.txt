@@ -35,7 +35,7 @@ apps/web/advice/_other.js:350
 apps/web/advice/_other.js:973
 apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
-apps/web/heys_add_product_step_v1.js:158
+apps/web/heys_add_product_step_v1.js:180
 apps/web/heys_app_auth_init_v1.js:177
 apps/web/heys_app_auth_init_v1.js:90
 apps/web/heys_app_auth_init_v1.js:181
@@ -249,7 +249,7 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1618
+apps/web/heys_storage_layer_v1.js:1625
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
