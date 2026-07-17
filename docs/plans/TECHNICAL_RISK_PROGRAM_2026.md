@@ -271,3 +271,6 @@ Official runtime evidence:
 - `boot-core` gzip уменьшен на 1,526 байт; total initial gzip — до 906,255 байт.
 - Изолированный runtime smoke: contract v1, `HEYS.cloud` и lazy export helpers
   зарегистрированы, исключений исполнения нет.
+- Смежный security-аудит обнаружил credentials в отключённом static autologin;
+  значения удалены из публичного HTML, добавлен regression gate. Аккаунт требует
+  отдельной ротации, потому что прежнее значение уже присутствует в Git history.
