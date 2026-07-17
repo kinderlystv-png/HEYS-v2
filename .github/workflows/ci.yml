@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       legacy_bundles: ${{ steps.filter.outputs.legacy_bundles }}
+      mobile_critical: ${{ steps.filter.outputs.mobile_critical }}
       sync_critical: ${{ steps.filter.outputs.sync_critical }}
     steps:
       - name: Checkout
@@ -51,6 +52,9 @@ jobs:
               - 'apps/web/heys_storage_*.js'
               - 'apps/web/heys_auth_*.js'
               - 'apps/web/heys_yandex_api_*.js'
+              - 'apps/web/heys_morning_checkin_v1.js'
+              - 'apps/web/heys_step_modal_v1.js'
+              - 'apps/web/heys_sync_merge_v1.js'
               - 'apps/web/heys_pending_queue_pure_v1.js'
               - 'apps/web/heys_sync_queue_runtime_pure_v1.js'
               - 'apps/web/public/sw.js'
@@ -61,7 +65,18 @@ jobs:
               - 'apps/web/__tests__/sync-queue-runtime-pure.test.js'
               - 'apps/web/__tests__/pwa-update-logic.test.js'
               - 'apps/web/__tests__/heys-auth-*.test.js'
+              - 'apps/web/__tests__/morning-checkin-flow-resume.test.js'
+              - 'apps/web/__tests__/sync-merge-shared.test.js'
               - 'apps/web/__tests__/yandex-api-session-guards.test.js'
+              - 'yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs'
+              - 'yandex-cloud-functions/heys-api-rpc/index.js'
+              - 'yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            mobile_critical:
+              - 'apps/mobile/app/**/*.tsx'
+              - 'apps/mobile/src/**/*.ts'
+              - 'apps/mobile/package.json'
               - 'package.json'
               - 'pnpm-lock.yaml'
 
@@ -184,6 +199,35 @@ jobs:
       - name: Run sync-critical tests
         run: pnpm test:web:sync-critical
 
+  test-mobile-critical:
+    name: Test mobile critical
+    runs-on: ubuntu-latest
+    needs: [detect-legacy-bundle-changes]
+    if: needs.detect-legacy-bundle-changes.outputs.mobile_critical == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mobile critical tests
+        run: pnpm test:mobile:critical
+
+      - name: Type check mobile shell
+        run: pnpm --dir apps/mobile type-check
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -193,6 +237,7 @@ jobs:
         lint,
         type-check,
         test,
+        test-mobile-critical,
         verify-legacy-bundles,
         test-web-sync-critical,
       ]
@@ -202,6 +247,10 @@ jobs:
       needs.type-check.result == 'success' &&
       needs.test.result == 'success' &&
       needs.detect-legacy-bundle-changes.result == 'success' &&
+      (
+        needs.test-mobile-critical.result == 'success' ||
+        needs.test-mobile-critical.result == 'skipped'
+      ) &&
       (
         needs.test-web-sync-critical.result == 'success' ||
         needs.test-web-sync-critical.result == 'skipped'
