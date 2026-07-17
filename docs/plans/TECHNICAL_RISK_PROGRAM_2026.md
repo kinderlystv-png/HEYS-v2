@@ -1,6 +1,6 @@
 # HEYS Technical Risk Program 2026
 
-- Статус: **active, wave 4**
+- Статус: **completed**
 - Начато: **2026-07-17**
 - Ветка: **main** Цель: закрыть десять подтверждённых технических рисков
   четырьмя отдельными волнами без общего рефакторинга и без смешивания
@@ -36,10 +36,10 @@
 | R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | completed | Functions, CI и engines используют поддерживаемый совместимый runtime       |
 | R04 | SQL-миграции распределены без единого ledger             |     3 | completed | Один apply-flow, порядок и checksum воспроизводимы                          |
 | R05 | PWA/RuStore/mobile critical path не входит в CI          |     1 | completed | Check-in и mobile session/navigation contracts входят в короткий CI gate    |
-| R06 | Storage/sync остаётся большим глобальным модулем         |     4 | in review | Выделены проверенные контракты без смены legacy public API                  |
+| R06 | Storage/sync остаётся большим глобальным модулем         |     4 | completed | Выделены проверенные контракты без смены legacy public API                  |
 | R07 | Критические KV payload не валидируются по версии и форме |     3 | completed | Critical keys имеют versioned validation и совместимое чтение               |
 | R08 | Критические тесты зависят от текста source               |     1 | completed | Выбранные critical paths проверяют поведение исполняемого кода              |
-| R09 | На старте загружаются пять тяжёлых boot bundles          |     4 | in review | Есть baseline, budget и подтверждённое уменьшение initial gzip payload      |
+| R09 | На старте загружаются пять тяжёлых boot bundles          |     4 | completed | Есть baseline, budget и подтверждённое уменьшение initial gzip payload      |
 | R10 | Retention для audit-данных не полностью исполняется      |     3 | completed | Dry-run считает кандидатов; удаление остаётся выключенным до sign-off       |
 
 ## Последовательность волн
@@ -161,7 +161,9 @@ test → перенос только подтверждённых non-critical b
 - [x] Чистый local runtime smoke: новый boot hash исполнился, contract v1,
       `HEYS.cloud` и оба lazy export-helper доступны; page exceptions
       отсутствуют.
-- [ ] Source-only push и deployed-state verification.
+- [x] Source/release/test commits опубликованы до `4b495274`; web deploy
+      `29619170788` и RPC deploy `29619209559` прошли deployed-state/production
+      verification.
 
 Выходной gate: выделенные модули сохраняют legacy public API, initial gzip
 payload уменьшается относительно записанного baseline, runtime smoke зелёный.
@@ -182,6 +184,7 @@ payload уменьшается относительно записанного b
 | Retention delete-поведение расходилось с draft                  | docs/source/live report | `sed -n '1,34p' docs/legal/operator/heys-retention-policy-draft.md`; `sed -n '352,385p' yandex-cloud-functions/heys-maintenance/index.js`; `node scripts/db/retention-report.mjs`                                                                                                                                                                                         | ✅ До Wave 3 maintenance удалял security events через 30 дней и trace через 14 дней; production dry-run: 0 кандидатов по draft-окнам                           |
 | Storage key ownership вынесен в исполняемый контракт            | source/test/config      | `rg -n "storageKeyContract" apps/web/heys_storage_key_contract_v1.js apps/web/heys_storage_supabase_v1.js`; `pnpm vitest run tests/regressions/storage-key-contract.test.ts tests/regressions/7fb8be2f-anti-pollution-scoping.test.ts`                                                                                                                                    | ✅ Pure contract зарегистрирован до bridge; 6/6 поведенческих и anti-pollution tests прошли                                                                    |
 | Wave 4 уменьшает initial gzip без смены UI                      | generated measurement   | `git cat-file -s 7a015554:apps/web/public/boot-core.bundle.46e3e786e590.js.gz`; `stat -f '%z' apps/web/public/boot-core.bundle.3497ec9c0fba.js.gz`; остальные четыре boot bundles не менялись                                                                                                                                                                             | ✅ `boot-core`: 274,622 → 273,096; initial total: 907,781 → 906,255 байт (-1,526)                                                                              |
+| Wave 4 опубликована и проверена снаружи CI                      | GitHub/prod/canary      | `gh run view 29619170788`; `gh run view 29619209559`; `pnpm ops:heys:canary`; production `bundle-manifest.json` и HTML credential-field check                                                                                                                                                                                                                             | ✅ Web и 17 cloud functions развернуты; deployed state совпадает с HEAD; canary 4/4; static email/password fields отсутствуют                                  |
 
 Official runtime evidence:
 
@@ -274,3 +277,19 @@ Official runtime evidence:
 - Смежный security-аудит обнаружил credentials в отключённом static autologin;
   значения удалены из публичного HTML, добавлен regression gate. Аккаунт требует
   отдельной ротации, потому что прежнее значение уже присутствует в Git history.
+
+### 2026-07-18 — программа завершена
+
+- Wave 4 commits: `7121afee`, `8ce4e363`, `8c3fe967`, `8f39b7ab`, `364216e0`,
+  `4b495274`; `origin/main` опубликован до `4b495274`.
+- Pre-push suite: 205 test files passed, 2,806 tests passed, 33 skipped; storage
+  compatibility follow-up: 13/13.
+- GitHub Actions `29619170788`: build, unit gate, PWA/landing deploy, health
+  check и deployed-state verification прошли.
+- Ручной all-functions deploy `29619209559`: Node.js 22 predeploy tests,
+  обновление всех функций и API Gateway, retry-safe production verify прошли.
+- Независимый `pnpm ops:heys:canary` прошёл 4/4; production lazy hash
+  `d2746399f25b`, boot hash `720351221c6d` включает build-info текущего HEAD;
+  production HTML не содержит static email/password fields.
+- Все R01–R10 закрыты. Retention deletion не включался; единственное внешнее
+  действие после программы — ротация исторически засвеченного пароля аккаунта.
