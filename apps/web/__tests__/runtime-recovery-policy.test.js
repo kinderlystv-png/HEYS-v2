@@ -24,6 +24,7 @@ function setNavigator(value) {
 function loadStorageModule() {
   eval(fs.readFileSync(path.join(WEB_DIR, 'heys_pending_queue_pure_v1.js'), 'utf8'));
   eval(fs.readFileSync(path.join(WEB_DIR, 'heys_sync_queue_runtime_pure_v1.js'), 'utf8'));
+  eval(fs.readFileSync(path.join(WEB_DIR, 'heys_storage_key_contract_v1.js'), 'utf8'));
   eval(storageSrc);
 }
 

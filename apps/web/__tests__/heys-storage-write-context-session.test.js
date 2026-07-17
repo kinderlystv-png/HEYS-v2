@@ -18,6 +18,7 @@ function loadStorageModule() {
     '../heys_pending_queue_pure_v1.js',
     '../heys_sync_queue_runtime_pure_v1.js',
     '../heys_write_context_health_v1.js',
+    '../heys_storage_key_contract_v1.js',
   ]) {
     eval(fs.readFileSync(path.resolve(__dirname, file), 'utf8'));
   }
