@@ -2319,9 +2319,8 @@
                 try {
                     isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
                                   !!localStorage.getItem('heys_session_token') ||
-                                  !!localStorage.getItem('heys_last_client_id') ||
-                                  !!localStorage.getItem('heys_curator_session') ||
-                                  !!localStorage.getItem('heys_supabase_auth_token');
+	                                  !!localStorage.getItem('heys_last_client_id') ||
+	                                  !!localStorage.getItem('heys_curator_cookie_session_hint');
                 } catch (_) { }
                 return !isReturning;
             } catch (e) {
@@ -2338,9 +2337,8 @@
                 try {
                     isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
                                   !!localStorage.getItem('heys_session_token') ||
-                                  !!localStorage.getItem('heys_last_client_id') ||
-                                  !!localStorage.getItem('heys_curator_session') ||
-                                  !!localStorage.getItem('heys_supabase_auth_token');
+	                                  !!localStorage.getItem('heys_last_client_id') ||
+	                                  !!localStorage.getItem('heys_curator_cookie_session_hint');
                 } catch (_) { }
                 if (isReturning) return false;
                 return true;
