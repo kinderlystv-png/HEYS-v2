@@ -119,6 +119,10 @@ describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
     );
 
     expect(storageSource).toContain('const isDayv2MergeKey = (k) => /^heys_dayv2_\\d{4}-\\d{2}-\\d{2}$/.test(String(k || \'\'));');
+    expect(storageSource).toContain('const isMorningCheckinMergeKey = (k) => /^heys_morning_checkin_progress_v1_\\d{4}-\\d{2}-\\d{2}$/.test(String(k || \'\'));');
+    expect(storageSource).toContain('heys_morning_checkin_progress_v1_\\d{4}-\\d{2}-\\d{2}');
+    expect(storageSource).toContain('isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k)');
+    expect(storageSource).toContain('global.HEYS?.store?.invalidate?.(it.originalKey);');
     expect(storageSource).toContain('blockDayv2BatchFallback(it.k, result.error);');
     expect(storageSource).toContain('blockDayv2BatchFallback(it.k, e.message);');
     expect(storageSource).toContain('return { success: false, error: mergeAbortError, saved: mergeSavedCount };');

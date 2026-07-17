@@ -844,6 +844,7 @@
   // читает MorningCheckin при заморозке списка шагов. Сбрасывается в начале каждого
   // shouldShowMorningCheckin, чтобы не протекать в ручной showCheckin.morning().
   let _reopenRequiredOnly = false;
+  let _nextPlanYesterdayVerifyRequired = null;
 
   function hasCheckinValue(value) {
     return value !== undefined && value !== null && value !== '';
@@ -930,6 +931,7 @@
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
     _reopenRequiredOnly = false;
+    _nextPlanYesterdayVerifyRequired = null;
 
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = getCurrentClientId();
@@ -958,6 +960,15 @@
     const _calendarKey = new Date().toISOString().slice(0, 10);
     const _altDayData = _calendarKey !== todayKey ? (readDayV2ScopedFirst(_calendarKey, {}) || {}) : {};
     const mergedDay = { ..._altDayData, ..._dayData };
+    const profile = readProfileForceRawScoped(currentClientId) || readStoredValue('heys_profile', {}) || {};
+    const yesterdayVerifyRequired = shouldShowYesterdayVerifyRequired();
+    _nextPlanYesterdayVerifyRequired = yesterdayVerifyRequired;
+    const existingProgress = readMorningProgress(todayKey, currentClientId);
+    const remainingProgressSteps = getRemainingMorningSteps({
+      ledger: existingProgress,
+      dateKey: todayKey,
+      clientId: currentClientId
+    });
 
     // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
     // Переводим legacy-флаг в per-client/per-day ключ, чтобы не блокировать других клиентов
@@ -970,48 +981,42 @@
       // sessionStorage may be unavailable in private mode
     }
     if (sessionStorage.getItem(sessionKey) === 'true') {
-      // 🆕 TASK-003 follow-up: session-флаг подавляет повтор ТОЛЬКО когда данные
-      // чекина реально на месте. Если core-поля (сон/самочувствие/вес) пропали или
-      // не докачались из облака — переоткрываем чек-ин с недостающими шагами, а не
-      // прячем их за «уже проходили сегодня».
-      if (!coreCheckinDataMissing(mergedDay)) {
+      // Session-флаг — только подсказка. Он закрывает gate, когда основные данные
+      // на месте, в журнале нет незавершённых шагов и не появилась проверка прошлых дней.
+      if (!coreCheckinDataMissing(mergedDay)
+        && hasStepsGoal(profile)
+        && remainingProgressSteps.length === 0
+        && !yesterdayVerifyRequired) {
         console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен, данные чекина на месте:', sessionKey);
         return false;
       }
-      _reopenRequiredOnly = true;
-      console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но core-данные чекина отсутствуют — переоткрываем недостающие шаги', {
+      _reopenRequiredOnly = coreCheckinDataMissing(mergedDay) || !hasStepsGoal(profile);
+      console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но чек-ин требует продолжения', {
         sessionKey,
         hasWeight: hasCheckinWeight(mergedDay),
         hasSleep: hasSleepTime(mergedDay),
         hasSleepQuality: hasSleepQuality(mergedDay),
         hasMood: hasMorningMood(mergedDay),
+        hasStepsGoal: hasStepsGoal(profile),
+        remainingSteps: remainingProgressSteps.map((row) => row.id),
+        yesterdayVerifyRequired,
       });
       // fall through — ниже pending наберётся и вернём true
     }
 
-    const existingProgress = readMorningProgress(todayKey, currentClientId);
     const flowStatus = existingProgress?.steps?.__flow__?.status || null;
-    if (existingProgress && flowStatus !== 'closed' && flowStatus !== 'synced') {
-      const blockingSteps = getBlockingMorningSteps({
-        ledger: existingProgress,
-        dateKey: todayKey,
-        clientId: currentClientId
+    if (existingProgress && remainingProgressSteps.length > 0) {
+      console.warn('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
+        flowId: existingProgress.flowId,
+        remainingSteps: remainingProgressSteps.map((row) => row.id),
+        flowStatus
       });
-      if (blockingSteps.length > 0) {
-        console.warn('[MorningCheckin] ↩️ Resuming open flow with unfinished steps', {
-          flowId: existingProgress.flowId,
-          blockingSteps: blockingSteps.map((row) => row.id),
-          flowStatus
-        });
-        return true;
-      }
+      return true;
     }
 
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
     // Force-raw read минуя Store.get memory cache (закрывает race под VPN).
-    const profile = readProfileForceRawScoped(currentClientId) || readStoredValue('heys_profile', {}) || {};
-
     // 🛡️ Sync-in-progress guard для давних клиентов. На ранней стадии boot'а
     // scoped LS может содержать ТОЛЬКО subscription-поля (subscription_status,
     // trial_started_at, ...) ДО того, как полный профиль приземлится из cloud
@@ -1075,7 +1080,7 @@
     if (!hasMorningMood(mergedDay)) pending.push('morning_mood');
     if (!hasStepsGoal(profile)) pending.push('stepsGoal');
 
-    if (shouldShowYesterdayVerifyRequired()) {
+    if (yesterdayVerifyRequired) {
       pending.push('yesterdayVerify');
     }
 
@@ -1095,7 +1100,7 @@
    * Используется и в MorningCheckin, и в showCheckin.morning()
    */
   function getCheckinSteps(profile, opts) {
-    const { filterCompleted = false, requiredOnly = false } = opts || {};
+    const { filterCompleted = false, requiredOnly = false, yesterdayVerifyRequired = null } = opts || {};
     const steps = [];
     let hasProfileSteps = false;
 
@@ -1114,7 +1119,10 @@
     // Conditional push: если pending дней нет — не добавляем «пустой» слот в прогресс-бар.
     // Источник правды о наличии pending: HEYS.YesterdayVerify.shouldShow() →
     // getPendingPastDays().totalPendingDays > 0.
-    if (shouldShowYesterdayVerifyRequired()) {
+    const includeYesterdayVerify = typeof yesterdayVerifyRequired === 'boolean'
+      ? yesterdayVerifyRequired
+      : shouldShowYesterdayVerifyRequired();
+    if (includeYesterdayVerify) {
       steps.push('yesterdayVerify');
     }
 
@@ -1216,6 +1224,23 @@
 
   const MORNING_CORE_STEPS = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
   const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);
+  const MORNING_DATA_COMPLETABLE_STEPS = new Set([
+    ...MORNING_CORE_STEPS,
+    'refeedDay',
+    'cycle',
+    'measurements',
+    'cold_exposure',
+    'supplements',
+    'profile-metabolism'
+  ]);
+  const MORNING_REPLANNABLE_REQUIRED_STEPS = new Set([
+    ...MORNING_CORE_STEPS,
+    'yesterdayVerify',
+    'profile-personal',
+    'profile-body',
+    'profile-goals',
+    'profile-metabolism'
+  ]);
   const MORNING_STEP_LABELS = {
     weight: 'вес',
     sleepTime: 'сон',
@@ -1255,6 +1280,7 @@
         status: meta.status || null,
         error: meta.error || null,
         plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null,
+        remainingStepIds: Array.isArray(meta.remainingStepIds) ? meta.remainingStepIds : null,
         affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null
       };
       const isProblem = event === 'flow_failed'
@@ -1280,41 +1306,110 @@
     return readScopedClientValue(getMorningProgressKey(dateKey), null, clientId);
   }
 
-  function writeMorningProgress(ledger, clientId = getCurrentClientId()) {
-    if (!ledger || !ledger.dateKey) return ledger;
-    writeScopedClientValue(getMorningProgressKey(ledger.dateKey), ledger, clientId);
-    return ledger;
+  function readMorningProgressPersisted(dateKey, clientId = getCurrentClientId()) {
+    try {
+      const key = getScopedClientKey(getMorningProgressKey(dateKey), clientId);
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const decompress = HEYS.store?.decompress;
+      return decompress ? decompress(raw) : JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
   }
 
-  function ensureMorningProgress({ dateKey, clientId, flowId, plannedStepIds }) {
+  function writeMorningProgress(ledger, clientId = getCurrentClientId()) {
+    if (!ledger || !ledger.dateKey) return ledger;
+    const persisted = readMorningProgressPersisted(ledger.dateKey, clientId);
+    const mergeProgress = HEYS.sync?.mergeMorningCheckinProgress;
+    const merged = persisted && typeof mergeProgress === 'function'
+      ? mergeProgress(ledger, persisted)
+      : ledger;
+    writeScopedClientValue(getMorningProgressKey(ledger.dateKey), merged, clientId);
+    return merged;
+  }
+
+  function ensureMorningProgress({
+    dateKey,
+    clientId,
+    flowId,
+    plannedStepIds,
+    remainingStepIds = plannedStepIds,
+    replannedStepIds = []
+  }) {
     const existing = readMorningProgress(dateKey, clientId);
-    const samePlan = existing
-      && Array.isArray(existing.plannedStepIds)
-      && existing.plannedStepIds.join('|') === plannedStepIds.join('|');
-    const ledger = samePlan ? existing : {
+    const ledger = existing || {
       version: 1,
       clientId,
       dateKey,
       flowId: flowId || createMorningFlowId(dateKey),
-      plannedStepIds: plannedStepIds.slice(),
+      plannedStepIds: [],
       steps: {}
     };
-    let changed = !samePlan;
+    const mutationAt = Date.now();
+    let changed = !existing;
+    ledger.steps = ledger.steps || {};
+    ledger.plannedStepIds = Array.isArray(ledger.plannedStepIds) ? ledger.plannedStepIds : [];
+    if (!existing && !ledger.steps.__flow__) {
+      ledger.steps.__flow__ = { status: 'open', attempt: 1, updatedAt: mutationAt };
+    }
     plannedStepIds.forEach((id) => {
+      if (!ledger.plannedStepIds.includes(id)) {
+        ledger.plannedStepIds.push(id);
+        changed = true;
+      }
       if (!ledger.steps[id]) {
-        ledger.steps[id] = { status: 'planned' };
+        ledger.steps[id] = { status: 'planned', attempt: 1, updatedAt: mutationAt };
         changed = true;
       }
     });
-    if (changed) ledger.updatedAt = Date.now();
+    replannedStepIds.forEach((id) => {
+      const row = ledger.steps[id] || {};
+      if (row.status === 'saved_local' || row.status === 'skipped') return;
+      ledger.steps[id] = {
+        ...row,
+        previousStatus: row.status || null,
+        status: 'planned',
+        attempt: (Number(row.attempt) || 0) + 1,
+        replannedAt: mutationAt,
+        updatedAt: mutationAt,
+        savedAt: null,
+        syncedAt: null,
+        cloudPending: false,
+        syncNote: null,
+        error: null
+      };
+      changed = true;
+    });
+    const flowStatus = ledger.steps.__flow__?.status || null;
+    if (existing && remainingStepIds.length > 0
+      && (flowStatus === 'closed' || flowStatus === 'synced' || flowStatus === 'saved_local' || flowStatus === 'failed_sync')) {
+      ledger.steps.__flow__ = {
+        ...(ledger.steps.__flow__ || {}),
+        status: 'open',
+        attempt: (Number(ledger.steps.__flow__?.attempt) || 0) + 1,
+        reopenedAt: mutationAt,
+        updatedAt: mutationAt,
+        closedAt: null,
+        savedAt: null,
+        syncedAt: null,
+        cloudPending: false,
+        syncNote: null,
+        error: null
+      };
+      changed = true;
+    }
+    if (changed) ledger.updatedAt = Math.max(mutationAt, (Number(ledger.updatedAt) || 0) + 1);
     const written = changed ? writeMorningProgress(ledger, clientId) : ledger;
-    traceMorningCheckin(samePlan ? 'plan_reused' : 'plan_created', {
+    const traceEvent = existing ? 'plan_resumed' : 'plan_created';
+    traceMorningCheckin(traceEvent, {
       dateKey,
       clientId,
       flowId: written?.flowId,
-      plannedStepIds
+      plannedStepIds: written?.plannedStepIds || plannedStepIds,
+      remainingStepIds
     });
-    emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created', { ledger: written });
+    emitMorningCheckinStatus(dateKey, clientId, traceEvent, { ledger: written });
     return written;
   }
 
@@ -1332,39 +1427,78 @@
     }, clientId);
   }
 
-  function mergeFreshStepsWithUnresolvedProgress(freshSteps, existingLedger) {
-    if (!existingLedger || !Array.isArray(existingLedger.plannedStepIds)) return freshSteps;
-    const freshSet = new Set(freshSteps);
-    const stepsState = existingLedger.steps || {};
-    const merged = [];
-    existingLedger.plannedStepIds.forEach((id) => {
-      const status = stepsState[id]?.status;
-      if (freshSet.has(id) || isUnresolvedProgressStatus(status)) merged.push(id);
-    });
-    freshSteps.forEach((id) => {
+  function getRemainingMorningSteps({ ledger, dateKey, clientId }) {
+    const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds : [];
+    if (!plannedStepIds.length) return [];
+    const day = getFreshMorningDay(dateKey);
+    const profile = getFreshMorningProfile(clientId);
+    return plannedStepIds.map((id) => {
+      const row = ledger?.steps?.[id] || {};
+      const completeByData = id !== 'yesterdayVerify'
+        && MORNING_DATA_COMPLETABLE_STEPS.has(id)
+        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      return {
+        id,
+        status: row.status || (completeByData ? 'data_present' : 'missing'),
+        completeByData
+      };
+    }).filter((row) => !isMorningStatusTerminal(row));
+  }
+
+  function mergeFreshStepsWithProgress(freshSteps, existingLedger, state = {}) {
+    const dateKey = state.dateKey || getTodayKey();
+    const clientId = state.clientId || getCurrentClientId();
+    const day = getFreshMorningDay(dateKey);
+    const profile = getFreshMorningProfile(clientId);
+    const merged = existingLedger
+      ? getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id)
+      : [];
+    const alreadyPlanned = new Set(existingLedger?.plannedStepIds || []);
+    const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
+    replannedStepIds.forEach((id) => {
       if (!merged.includes(id)) merged.push(id);
     });
+
+    freshSteps.forEach((id) => {
+      if (merged.includes(id) || alreadyPlanned.has(id)) return;
+      const completeByData = id !== 'yesterdayVerify'
+        && MORNING_DATA_COMPLETABLE_STEPS.has(id)
+        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      if (!completeByData) merged.push(id);
+    });
     return merged;
+  }
+
+  function getReplannedMorningStepIds(freshSteps, existingLedger) {
+    if (!existingLedger) return [];
+    const planned = new Set(existingLedger.plannedStepIds || []);
+    return freshSteps.filter((id) => {
+      if (!planned.has(id) || !MORNING_REPLANNABLE_REQUIRED_STEPS.has(id)) return false;
+      const status = existingLedger.steps?.[id]?.status;
+      return status === 'synced' || status === 'data_present';
+    });
   }
 
   function markMorningProgressStep(dateKey, stepId, patch, clientId = getCurrentClientId()) {
     const ledger = readMorningProgress(dateKey, clientId);
     if (!ledger || !stepId) return null;
+    const mutationAt = Date.now();
     ledger.steps = ledger.steps || {};
     ledger.steps[stepId] = {
       ...(ledger.steps[stepId] || {}),
-      ...patch
+      ...patch,
+      updatedAt: mutationAt
     };
-    ledger.updatedAt = Date.now();
+    ledger.updatedAt = Math.max(mutationAt, (Number(ledger.updatedAt) || 0) + 1);
     const written = writeMorningProgress(ledger, clientId);
     traceMorningCheckin('step_status', {
       dateKey,
       clientId,
       flowId: written?.flowId,
       stepId,
-      status: ledger.steps[stepId]?.status,
-      error: ledger.steps[stepId]?.error || null,
-      affectedKeys: ledger.steps[stepId]?.affectedKeys || []
+      status: written?.steps?.[stepId]?.status,
+      error: written?.steps?.[stepId]?.error || null,
+      affectedKeys: written?.steps?.[stepId]?.affectedKeys || []
     });
     emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });
     return written;
@@ -1419,7 +1553,10 @@
     const profile = getFreshMorningProfile(clientId);
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
-      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      // Once yesterdayVerify entered the plan it must be acknowledged in the
+      // ledger. A later live shouldShow=false cannot silently satisfy it.
+      const completeByData = id !== 'yesterdayVerify'
+        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
       return {
         id,
         status: row.status || (completeByData ? 'data_present' : 'missing'),
@@ -1622,18 +1759,31 @@
     const dateKey = opts.dateKey || getTodayKey();
     const clientId = opts.clientId || getCurrentClientId();
     const profile = opts.profile || getFreshMorningProfile(clientId);
+    const cachedYesterdayVerifyRequired = opts.source === 'MorningCheckin'
+      && typeof _nextPlanYesterdayVerifyRequired === 'boolean'
+      ? _nextPlanYesterdayVerifyRequired
+      : null;
+    if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
     const freshSteps = getCheckinSteps(profile, {
       filterCompleted: opts.filterCompleted !== false,
-      requiredOnly: !!opts.requiredOnly
+      requiredOnly: !!opts.requiredOnly,
+      yesterdayVerifyRequired: cachedYesterdayVerifyRequired
     });
     const existingLedger = readMorningProgress(dateKey, clientId);
-    const steps = mergeFreshStepsWithUnresolvedProgress(freshSteps, existingLedger);
+    const steps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId });
+    const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
+    const fullPlannedStepIds = Array.from(new Set([
+      ...(existingLedger?.plannedStepIds || []),
+      ...freshSteps
+    ]));
     const flowId = createMorningFlowId(dateKey);
     const ledger = ensureMorningProgress({
       dateKey,
       clientId,
       flowId,
-      plannedStepIds: steps
+      plannedStepIds: fullPlannedStepIds,
+      remainingStepIds: steps,
+      replannedStepIds
     });
     return {
       dateKey,
@@ -1913,6 +2063,7 @@
         showTip: true,
         allowSwipe: false,
         freezeVisibleSteps: true,
+        forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
         requireStepAck: true,
         allowProgressForwardNav: false,
         onStepSaved: createMorningStepAck(plan)
@@ -1953,8 +2104,12 @@
   HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
   HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
+  HEYS.MorningCheckinUtils.mergeFreshStepsWithProgress = mergeFreshStepsWithProgress;
+  HEYS.MorningCheckinUtils.getRemainingMorningSteps = getRemainingMorningSteps;
+  HEYS.MorningCheckinUtils.getBlockingMorningSteps = getBlockingMorningSteps;
   HEYS.MorningCheckinUtils.flushAndMarkMorningStep = flushAndMarkMorningStep;
   HEYS.MorningCheckinUtils.readMorningProgress = readMorningProgress;
+  HEYS.MorningCheckinUtils.writeMorningProgress = writeMorningProgress;
   HEYS.MorningCheckinUtils.getMorningCheckinStatus = getMorningCheckinStatus;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
@@ -1997,6 +2152,7 @@
           closeOnComplete: 'after',
           allowSwipe: false,
           freezeVisibleSteps: true,
+          forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
           requireStepAck: true,
           allowProgressForwardNav: false,
           onStepSaved: createMorningStepAck(plan)

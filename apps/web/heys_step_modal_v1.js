@@ -490,6 +490,7 @@
     hidePrimaryOnFirst = false,
     finishLabel = 'Готово', // Текст кнопки на последнем шаге (по умолчанию "Готово")
     freezeVisibleSteps = false,
+    forceVisibleStepIds = [],
     requireStepAck = false,
     onStepSaved = null,
     allowProgressForwardNav = true
@@ -511,6 +512,13 @@
     const frozenContextKeyRef = useRef(null);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
+    const forceVisibleStepIdsKey = Array.isArray(forceVisibleStepIds)
+      ? forceVisibleStepIds.join('|')
+      : '';
+    const forcedVisibleStepIdSet = useMemo(
+      () => new Set(forceVisibleStepIdsKey ? forceVisibleStepIdsKey.split('|') : []),
+      [forceVisibleStepIdsKey]
+    );
 
     // Получаем конфигурации шагов
     const stepConfigs = useMemo(() => {
@@ -526,6 +534,7 @@
     const computedVisibleStepConfigs = useMemo(() => {
       return stepConfigs.filter(config => {
         if (!config) return false;
+        if (forcedVisibleStepIdSet.has(config.id)) return true;
         if (typeof config.shouldShow !== 'function') return true;
         try {
           return config.shouldShow(context, stepData);
@@ -534,7 +543,7 @@
           return true;
         }
       });
-    }, [stepConfigs, contextKey, stepData]);
+    }, [stepConfigs, contextKey, stepData, forcedVisibleStepIdSet]);
 
     if (freezeVisibleSteps && (frozenVisibleStepConfigsRef.current === null || frozenContextKeyRef.current !== contextKey)) {
       frozenContextKeyRef.current = contextKey;

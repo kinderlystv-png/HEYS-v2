@@ -26,6 +26,7 @@ const {
   mergeChronoTombstones,
   mergeItemsById,
   mergeScalarKv,
+  mergeMorningCheckinProgress,
   stampDayv2ChangedEntities,
   resolveDayMutationTs,
   ownerClientIdFromDayKey,
@@ -280,6 +281,19 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
       restSource.indexOf('SELECT safe_upsert_client_kv'),
     );
   });
+
+  test('RPC routes morning check-in progress through step-level merge before generic LWW', () => {
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)');
+    expect(rpcSource).toContain('mergeMorningCheckinProgress(incomingValue, currentValue)');
+    expect(rpcSource.indexOf('MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)')).toBeLessThan(
+      rpcSource.indexOf("} else if (noConflict) {"),
+    );
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -365,6 +379,87 @@ describe('mergeDayData — stale-remote does not drop freshly-added local item (
     const merged = mergeDayData(dayWithSyrup(), staleNoSyrup({ deletedItemIds: { syrup: 224000 } }));
     const snack = merged.meals.find((m) => m.id === 'snack');
     expect(snack.items.map((i) => i.id).sort()).toEqual(['coffee', 'milk']);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// mergeMorningCheckinProgress — cross-surface step-level merge
+// ───────────────────────────────────────────────────────────────────────────
+describe('mergeMorningCheckinProgress', () => {
+  test('preserves independent progress from two shells and keeps the cloud flowId', () => {
+    const current = {
+      version: 1,
+      clientId: 'client-1',
+      dateKey: '2026-07-17',
+      flowId: 'cloud-flow',
+      plannedStepIds: ['weight', 'sleepTime'],
+      steps: {
+        weight: { status: 'synced', updatedAt: 3000 },
+        sleepTime: { status: 'planned', updatedAt: 1000 },
+      },
+      updatedAt: 3000,
+    };
+    const incoming = {
+      version: 1,
+      clientId: 'client-1',
+      dateKey: '2026-07-17',
+      flowId: 'second-shell-flow',
+      plannedStepIds: ['weight', 'sleepTime', 'supplements'],
+      steps: {
+        weight: { status: 'planned', updatedAt: 1000 },
+        sleepTime: { status: 'saved_local', updatedAt: 4000 },
+        supplements: { status: 'skipped', updatedAt: 4100 },
+      },
+      updatedAt: 4100,
+    };
+
+    const merged = mergeMorningCheckinProgress(incoming, current, { now: 5000 });
+
+    expect(merged.flowId).toBe('cloud-flow');
+    expect(merged.plannedStepIds).toEqual(['weight', 'sleepTime', 'supplements']);
+    expect(merged.steps.weight.status).toBe('synced');
+    expect(merged.steps.sleepTime.status).toBe('saved_local');
+    expect(merged.steps.supplements.status).toBe('skipped');
+    expect(merged.updatedAt).toBe(5000);
+  });
+
+  test('allows an explicit newer replan to replace an older terminal row', () => {
+    const current = {
+      flowId: 'flow-1',
+      plannedStepIds: ['yesterdayVerify'],
+      steps: { yesterdayVerify: { status: 'synced', attempt: 1, syncedAt: 3000, updatedAt: 3000 } },
+      updatedAt: 3000,
+    };
+    const incoming = {
+      flowId: 'flow-2',
+      plannedStepIds: ['yesterdayVerify'],
+      steps: { yesterdayVerify: { status: 'planned', attempt: 2, replannedAt: 4000, updatedAt: 4000, savedAt: null, syncedAt: null } },
+      updatedAt: 4000,
+    };
+
+    const merged = mergeMorningCheckinProgress(incoming, current, { now: 5000 });
+    expect(merged.steps.yesterdayVerify.status).toBe('planned');
+    expect(merged.steps.yesterdayVerify.syncedAt).toBeNull();
+  });
+
+  test('does not let a future-skewed stale planned row downgrade a terminal status', () => {
+    const current = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight'],
+      steps: { weight: { status: 'synced', attempt: 1, syncedAt: 3000, updatedAt: 3000 } },
+      updatedAt: 3000,
+    };
+    const incoming = {
+      flowId: 'flow-2',
+      plannedStepIds: ['weight'],
+      steps: { weight: { status: 'planned', attempt: 1, updatedAt: 9999999999999 } },
+      updatedAt: 9999999999999,
+    };
+
+    const merged = mergeMorningCheckinProgress(incoming, current, { now: 5000 });
+
+    expect(merged.steps.weight.status).toBe('synced');
+    expect(merged.steps.weight.attempt).toBe(1);
   });
 });
 

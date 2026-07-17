@@ -6712,7 +6712,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -6728,6 +6728,7 @@
         return msg.includes('not allowed') || msg.includes('not implemented') || msg.includes('unknown function');
       };
       const isDayv2MergeKey = (k) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
+      const isMorningCheckinMergeKey = (k) => /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
       const isSubscriptionRequiredError = (err) => String(err || '').toLowerCase().includes('subscription_required');
       const subscriptionRejectedKeys = [];
       const blockDayv2BatchFallback = (k, err) => {
@@ -6768,6 +6769,7 @@
               if (lsSetRaw && it.originalKey) {
                 try {
                   lsSetRaw(it.originalKey, JSON.stringify(result.v));
+                  global.HEYS?.store?.invalidate?.(it.originalKey);
                 } catch (lsErr) {
                   console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
                 }
@@ -6806,7 +6808,7 @@
               console.warn('[merge-save] subscription_required for', it.k, '— dropping denied pending write');
               continue;
             }
-            if (isDayv2MergeKey(it.k)) {
+            if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k)) {
               blockDayv2BatchFallback(it.k, result.error);
               break;
             }
@@ -6829,7 +6831,7 @@
             console.warn('[merge-save] subscription_required exception for', it.k, '— dropping denied pending write');
             continue;
           }
-          if (isDayv2MergeKey(it.k)) {
+          if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k)) {
             blockDayv2BatchFallback(it.k, e.message);
             break;
           }

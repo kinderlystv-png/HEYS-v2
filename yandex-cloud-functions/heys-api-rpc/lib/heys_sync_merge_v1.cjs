@@ -574,6 +574,109 @@
     return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
   }
 
+  // ─── mergeMorningCheckinProgress ─────────────────────────────────────────
+  // A daily check-in is one logical flow shared by several shells. Generic
+  // whole-object LWW can lose a step saved by another shell, so merge rows
+  // independently and keep the first cloud flowId as the daily identity.
+  const MORNING_PROGRESS_STATUS_RANK = {
+    missing: 0,
+    planned: 1,
+    editing: 2,
+    failed_sync: 3,
+    open: 3,
+    closed: 4,
+    data_present: 5,
+    skipped: 5,
+    saved_local: 6,
+    synced: 7,
+  };
+  const MORNING_PROGRESS_TERMINAL_STATUSES = new Set([
+    'data_present',
+    'skipped',
+    'saved_local',
+    'synced',
+  ]);
+  const MORNING_PROGRESS_RESET_STATUSES = new Set([
+    'missing',
+    'planned',
+    'editing',
+    'open',
+    'closed',
+  ]);
+
+  function morningProgressRowTimestamp(row) {
+    if (!row || typeof row !== 'object') return 0;
+    return Math.max(
+      Number(row.updatedAt) || 0,
+      Number(row.replannedAt) || 0,
+      Number(row.reopenedAt) || 0,
+      Number(row.closedAt) || 0,
+      Number(row.savedAt) || 0,
+      Number(row.syncedAt) || 0
+    );
+  }
+
+  function mergeMorningProgressRow(incomingRow, currentRow) {
+    if (!incomingRow || typeof incomingRow !== 'object') return currentRow;
+    if (!currentRow || typeof currentRow !== 'object') return incomingRow;
+    const incomingAttempt = Number(incomingRow.attempt) || 0;
+    const currentAttempt = Number(currentRow.attempt) || 0;
+    const incomingTs = morningProgressRowTimestamp(incomingRow);
+    const currentTs = morningProgressRowTimestamp(currentRow);
+    const incomingRank = MORNING_PROGRESS_STATUS_RANK[incomingRow.status] || 0;
+    const currentRank = MORNING_PROGRESS_STATUS_RANK[currentRow.status] || 0;
+    let incomingWins;
+    if (incomingAttempt !== currentAttempt) {
+      incomingWins = incomingAttempt > currentAttempt;
+    } else if (MORNING_PROGRESS_TERMINAL_STATUSES.has(currentRow.status)
+      && MORNING_PROGRESS_RESET_STATUSES.has(incomingRow.status)) {
+      incomingWins = false;
+    } else if (MORNING_PROGRESS_TERMINAL_STATUSES.has(incomingRow.status)
+      && MORNING_PROGRESS_RESET_STATUSES.has(currentRow.status)) {
+      incomingWins = true;
+    } else {
+      incomingWins = incomingTs > currentTs
+        || (incomingTs === currentTs && incomingRank >= currentRank);
+    }
+    const older = incomingWins ? currentRow : incomingRow;
+    const newer = incomingWins ? incomingRow : currentRow;
+    return { ...older, ...newer };
+  }
+
+  function mergeMorningCheckinProgress(incoming, current, options = {}) {
+    if (incoming == null) return current;
+    if (current == null) return incoming;
+    if (typeof incoming !== 'object' || typeof current !== 'object'
+      || Array.isArray(incoming) || Array.isArray(current)) {
+      return incoming;
+    }
+
+    const incomingTs = Number(incoming.updatedAt) || 0;
+    const currentTs = Number(current.updatedAt) || 0;
+    const incomingIsNewer = incomingTs >= currentTs;
+    const base = incomingIsNewer ? current : incoming;
+    const overlay = incomingIsNewer ? incoming : current;
+    const merged = { ...base, ...overlay };
+    const currentPlan = Array.isArray(current.plannedStepIds) ? current.plannedStepIds : [];
+    const incomingPlan = Array.isArray(incoming.plannedStepIds) ? incoming.plannedStepIds : [];
+    merged.version = Math.max(Number(current.version) || 1, Number(incoming.version) || 1);
+    merged.clientId = current.clientId || incoming.clientId || null;
+    merged.dateKey = current.dateKey || incoming.dateKey || null;
+    merged.flowId = current.flowId || incoming.flowId || null;
+    merged.plannedStepIds = Array.from(new Set([...currentPlan, ...incomingPlan]));
+    merged.steps = {};
+    const stepIds = new Set([
+      ...Object.keys(current.steps || {}),
+      ...Object.keys(incoming.steps || {}),
+    ]);
+    stepIds.forEach((id) => {
+      merged.steps[id] = mergeMorningProgressRow(incoming.steps?.[id], current.steps?.[id]);
+    });
+    const now = Number(options.now) || Date.now();
+    merged.updatedAt = Math.max(incomingTs, currentTs, now);
+    return merged;
+  }
+
   // ─── mergeScalarKv ───────────────────────────────────────────────────────
   // Generic shallow merge for KV blobs like heys_norms, heys_profile.
   // Each top-level field's "winner" is decided by parent-level updatedAt:
@@ -879,6 +982,7 @@
     mergePlanningRecords,
     mergeItemsById,
     mergeScalarKv,
+    mergeMorningCheckinProgress,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,
     // Pure dayv2 stamping helpers (used by HEYS.storage interceptor + tests):
     stampDayv2ChangedEntities,

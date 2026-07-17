@@ -34,9 +34,10 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('allowSwipe: false');
     expect(MORNING_SRC).toContain('allowProgressForwardNav: false');
     expect(MORNING_SRC).toContain("closeOnComplete: 'after'");
+    expect(MORNING_SRC).toContain("forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : []");
     expect(STEP_MODAL_SRC).toContain('const touchStartActive = useRef(false);');
     expect(STEP_MODAL_SRC).toContain('if (!touchStartActive.current) return;');
-    expect(MORNING_SRC).toContain('mergeFreshStepsWithUnresolvedProgress');
+    expect(MORNING_SRC).toContain('mergeFreshStepsWithProgress');
     expect(MORNING_SRC).toContain("status === 'failed_sync'");
   });
 
@@ -95,9 +96,8 @@ describe('morning check-in stability', () => {
 
   it('reopens an interrupted morning flow when only optional tail steps remain', () => {
     expect(MORNING_SRC).toContain('const existingProgress = readMorningProgress(todayKey, currentClientId);');
-    expect(MORNING_SRC).toContain("flowStatus !== 'closed' && flowStatus !== 'synced'");
-    expect(MORNING_SRC).toContain('const blockingSteps = getBlockingMorningSteps({');
-    expect(MORNING_SRC).toContain('Resuming open flow with unfinished steps');
+    expect(MORNING_SRC).toContain('const remainingProgressSteps = getRemainingMorningSteps({');
+    expect(MORNING_SRC).toContain('Resuming flow with unfinished steps');
   });
 
   it('keeps the final morning routine step blocking until the user confirms it', () => {
@@ -109,6 +109,7 @@ describe('morning check-in stability', () => {
 
   it('keeps check-in trace useful without warning-only happy path noise', () => {
     expect(MORNING_SRC).toContain("plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null");
+    expect(MORNING_SRC).toContain("remainingStepIds: Array.isArray(meta.remainingStepIds) ? meta.remainingStepIds : null");
     expect(MORNING_SRC).toContain("affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null");
     expect(MORNING_SRC).toContain("HEYS.LogTrace.trace(level, '[CHECKIN.flow]', payload)");
     expect(MORNING_SRC).toContain("const level = isProblem ? 'warn' : 'info';");
@@ -116,9 +117,10 @@ describe('morning check-in stability', () => {
 
   it('emits morning status from the freshly written ledger and avoids no-op progress rewrites', () => {
     expect(MORNING_SRC).toContain('const status = getMorningCheckinStatus(dateKey, clientId, opts.ledger);');
-    expect(MORNING_SRC).toContain('let changed = !samePlan;');
+    expect(MORNING_SRC).toContain('let changed = !existing;');
     expect(MORNING_SRC).toContain('const written = changed ? writeMorningProgress(ledger, clientId) : ledger;');
-    expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, samePlan ? 'plan_reused' : 'plan_created', { ledger: written });");
+    expect(MORNING_SRC).toContain("const traceEvent = existing ? 'plan_resumed' : 'plan_created';");
+    expect(MORNING_SRC).toContain('emitMorningCheckinStatus(dateKey, clientId, traceEvent, { ledger: written });');
     expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });");
   });
 

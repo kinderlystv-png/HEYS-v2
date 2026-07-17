@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv, mergeMorningCheckinProgress } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 const PLANNING_RECORD_MERGE_KEYS = new Set([
@@ -21,6 +21,7 @@ const PLANNING_RECORD_MERGE_KEYS = new Set([
   'heys_planning_slots',
   'heys_planning_links_v1',
 ]);
+const MORNING_CHECKIN_PROGRESS_KEY_RE = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/i;
 
 function curatorActionDateFromKey(key) {
   const m = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})/);
@@ -2838,6 +2839,9 @@ module.exports.handler = async function (event, context) {
                 `_Curator state не очистился между switch'ами — meals идентичны другому клиенту того же curator._`
               );
             }
+          } else if (MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)) {
+            mergedValue = mergeMorningCheckinProgress(incomingValue, currentValue);
+            mergeOutcome = 'morning_checkin_progress_merged';
           } else if (k === 'heys_planning_chrono_tombstones_v1') {
             mergedValue = mergeChronoTombstones(incomingValue, currentValue);
             mergeOutcome = 'chrono_tombstones_merged';
@@ -3107,7 +3111,9 @@ module.exports.handler = async function (event, context) {
         }
 
         // Best-effort audit: only when actual merge happened (don't spam on every save).
-        if (mergeOutcome === 'day_merged' || mergeOutcome === 'scalar_merged') {
+        if (mergeOutcome === 'day_merged'
+          || mergeOutcome === 'scalar_merged'
+          || mergeOutcome === 'morning_checkin_progress_merged') {
           try {
             await client.query(
               `INSERT INTO data_loss_audit (client_id, key, action, existing_meals, new_meals, allowed, reason)
@@ -3117,7 +3123,9 @@ module.exports.handler = async function (event, context) {
                 k,
                 Array.isArray(cur.rows[0]?.v?.meals) ? cur.rows[0].v.meals.length : null,
                 Array.isArray(incomingValue.meals) ? incomingValue.meals.length : null,
-                mergeOutcome === 'day_merged' ? 'concurrent_edit_merged' : 'scalar_merged'
+                mergeOutcome === 'day_merged'
+                  ? 'concurrent_edit_merged'
+                  : mergeOutcome
               ]
             );
           } catch (auditErr) {
