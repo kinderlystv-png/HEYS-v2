@@ -5,6 +5,7 @@
 
 const { getPool } = require('./db-pool');
 const { initSecrets } = require('./secrets');
+const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
 const { mergeDayData } = require('./lib/heys_sync_merge_v1.cjs');
 const fs = require('fs');
 const path = require('path');
@@ -1045,6 +1046,7 @@ module.exports.handler = async function (event, context) {
           // REST POST полюция остаётся в LS даже после server reject (UI
           // показывает stale данные до hard-reload).
           const blockedItems = [];
+          const payloadBlockedItems = [];
 
           for (const row of rows) {
             if (!row.client_id || !row.k) {
@@ -1148,13 +1150,66 @@ module.exports.handler = async function (event, context) {
               continue;
             }
 
-            let dayv2RestTxStarted = false;
+            let protectedWriteTxStarted = false;
+            let contractCurrentValue = null;
+            const criticalContract = classifyCriticalKey(row.k);
+            if (criticalContract) {
+              try {
+                await client.query('BEGIN');
+                protectedWriteTxStarted = true;
+                const currentRes = await client.query(
+                  'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+                  [row.client_id, row.k]
+                );
+                contractCurrentValue = currentRes.rows?.[0]?.v || null;
+                const payloadResult = validateCriticalKvPayload(row.k, row.v, {
+                  mode: 'write',
+                  currentValue: contractCurrentValue,
+                });
+                if (!payloadResult.ok) {
+                  const firstError = payloadResult.errors?.[0];
+                  const reason = firstError ? `${firstError.code}:${firstError.path}` : 'invalid_payload';
+                  await client.query('ROLLBACK');
+                  protectedWriteTxStarted = false;
+                  try {
+                    await client.query(
+                      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                       VALUES ($1::uuid, $2::text, 'critical_payload_rejected', FALSE, $3)`,
+                      [row.client_id, row.k, `rest_post:${reason}`]
+                    );
+                  } catch (auditError) {
+                    console.warn('[REST POST] critical payload audit failed:', auditError.message);
+                  }
+                  blocked++;
+                  const blockedItem = { k: row.k, reason: 'critical_payload_rejected', detail: reason };
+                  blockedItems.push(blockedItem);
+                  payloadBlockedItems.push(blockedItem);
+                  continue;
+                }
+              } catch (error) {
+                if (protectedWriteTxStarted) {
+                  try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                  protectedWriteTxStarted = false;
+                }
+                console.warn('[REST POST] critical payload validation failed:', error.message);
+                blocked++;
+                const blockedItem = { k: row.k, reason: 'critical_payload_validation_failed' };
+                blockedItems.push(blockedItem);
+                payloadBlockedItems.push(blockedItem);
+                continue;
+              }
+            }
+
             // 🛡️ Content-fingerprint dup check для dayv2 — ловит partial pollution
             // где writer_cid правильный но meals идентичны другому клиенту того же
             // curator (incident #8).
             if (/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(row.k)) {
               const dup = await detectCrossClientDayv2ContentDup(client, row.client_id, row.k, row.v);
               if (dup) {
+                if (protectedWriteTxStarted) {
+                  try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                  protectedWriteTxStarted = false;
+                }
                 blocked++;
                 blockedItems.push({ k: row.k, reason: 'cross_client_dayv2_content_dup' });
                 const expected = String(row.client_id).slice(0, 8);
@@ -1182,13 +1237,16 @@ module.exports.handler = async function (event, context) {
               }
 
               try {
-                await client.query('BEGIN');
-                dayv2RestTxStarted = true;
-                const currentRes = await client.query(
-                  'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
-                  [row.client_id, row.k]
-                );
-                const currentValue = currentRes.rows?.[0]?.v || null;
+                if (!protectedWriteTxStarted) {
+                  await client.query('BEGIN');
+                  protectedWriteTxStarted = true;
+                  const currentRes = await client.query(
+                    'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+                    [row.client_id, row.k]
+                  );
+                  contractCurrentValue = currentRes.rows?.[0]?.v || null;
+                }
+                const currentValue = contractCurrentValue;
                 if (currentValue) {
                   const merged = mergeDayData(row.v, currentValue, { forceKeepAll: true });
                   if (merged) {
@@ -1197,9 +1255,9 @@ module.exports.handler = async function (event, context) {
                   }
                 }
               } catch (e) {
-                if (dayv2RestTxStarted) {
+                if (protectedWriteTxStarted) {
                   try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-                  dayv2RestTxStarted = false;
+                  protectedWriteTxStarted = false;
                 }
                 console.warn('[REST POST client_kv_store] dayv2 merge failed:', e.message);
                 blocked++;
@@ -1216,32 +1274,32 @@ module.exports.handler = async function (event, context) {
                 [row.client_id, row.k, JSON.stringify(row.v)]
               );
             } catch (writeErr) {
-              if (dayv2RestTxStarted) {
+              if (protectedWriteTxStarted) {
                 try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-                dayv2RestTxStarted = false;
+                protectedWriteTxStarted = false;
               }
               throw writeErr;
             }
 
             const res = writeResult.rows[0]?.result;
             if (res?.success) {
-              if (dayv2RestTxStarted) {
+              if (protectedWriteTxStarted) {
                 await client.query('COMMIT');
-                dayv2RestTxStarted = false;
+                protectedWriteTxStarted = false;
               }
               processed++;
             } else if (res?.error === 'data_loss_protection' || res?.error === 'non_client_data') {
-              if (dayv2RestTxStarted) {
+              if (protectedWriteTxStarted) {
                 try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-                dayv2RestTxStarted = false;
+                protectedWriteTxStarted = false;
               }
               blocked++;
               blockedItems.push({ k: row.k, reason: res.error });
               console.warn('[REST POST] 🛡️ Protected write blocked:', row.k, res.error);
             } else {
-              if (dayv2RestTxStarted) {
+              if (protectedWriteTxStarted) {
                 try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-                dayv2RestTxStarted = false;
+                protectedWriteTxStarted = false;
               }
               console.error('[REST POST] Write failed:', res);
             }
@@ -1261,6 +1319,7 @@ module.exports.handler = async function (event, context) {
               // _dropRejectedKey для каждого entry → удаляет stale LS +
               // ставит drop fence + триггерит reload. Без этого UI остаётся
               // загрязнённым stale данными даже после server reject.
+              payload_blocked: payloadBlockedItems.length > 0 ? payloadBlockedItems : undefined,
               identity_blocked: blockedItems.length > 0 ? blockedItems : undefined,
               message: blocked > 0 ? `${blocked} writes blocked by data loss protection` : undefined
             })

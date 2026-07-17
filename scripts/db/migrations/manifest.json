@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "ledgerTable": "public.heys_schema_migrations",
+  "legacyPathPrefixes": [
+    ".github/",
+    "database/",
+    "database_fixes/",
+    "docs/",
+    "migrations/",
+    "scripts/db/",
+    "supabase/",
+    "temp/",
+    "yandex-cloud-functions/migrations/"
+  ],
+  "legacyFiles": [
+    "database_clients_rls_policies.sql",
+    "database_schema_security_analytics.sql",
+    "scripts/security/audit-db.sql",
+    "scripts/temp_sync.sql",
+    "supabase_full_setup.sql",
+    "yandex-cloud-functions/database_leads_alter.sql"
+  ],
+  "migrations": [
+    {
+      "id": "2026-07-18_migration_ledger",
+      "order": 1,
+      "path": "scripts/db/migrations/2026-07-18_migration_ledger.sql",
+      "description": "Create the canonical schema migration ledger",
+      "destructive": false
+    }
+  ]
+}

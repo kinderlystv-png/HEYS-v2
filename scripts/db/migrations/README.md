@@ -1,5 +1,22 @@
 # DB migrations — rollback convention (2026-05-31)
 
+## Canonical runner (post-cutover)
+
+All new production schema changes must be added to `manifest.json` and applied
+through `node scripts/db/migrate.mjs`. Existing SQL files are an explicit legacy
+baseline: the runner inventories them but never replays them.
+
+```bash
+node scripts/db/migrate.mjs --check
+node scripts/db/migrate.mjs --status
+node scripts/db/migrate.mjs --apply --confirm-production
+```
+
+The runner rejects unknown SQL files, checksum drift, gaps in migration order,
+embedded transaction control and any migration not explicitly marked
+`"destructive": false`. Destructive data cleanup is intentionally outside this
+runner and requires a separately approved procedure.
+
 ## Rules для новых migrations
 
 1. **Каждая migration** должна включать одну из:

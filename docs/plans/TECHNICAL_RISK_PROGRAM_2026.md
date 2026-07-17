@@ -1,10 +1,10 @@
 # HEYS Technical Risk Program 2026
 
-- Статус: **active, wave 2**
+- Статус: **active, wave 3**
 - Начато: **2026-07-17**
-- Ветка: **main**
-Цель: закрыть десять подтверждённых технических рисков четырьмя отдельными
-волнами без общего рефакторинга и без смешивания несвязанных изменений.
+- Ветка: **main** Цель: закрыть десять подтверждённых технических рисков
+  четырьмя отдельными волнами без общего рефакторинга и без смешивания
+  несвязанных изменений.
 
 ## Правила программы
 
@@ -31,16 +31,16 @@
 
 | ID  | Риск                                                     | Волна | Статус    | Критерий закрытия                                                           |
 | --- | -------------------------------------------------------- | ----: | --------- | --------------------------------------------------------------------------- |
-| R01 | Curator JWT доступен через `localStorage`                |     2 | in review | Production использует HttpOnly cookie; JS storage и Bearer fallback удалены |
-| R02 | Cloud deploy не имеет pre-deploy test gate               |     2 | in review | Deploy job зависит от успешных тестов изменённой функции                    |
-| R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | in review | Functions, CI и engines используют поддерживаемый совместимый runtime       |
-| R04 | SQL-миграции распределены без единого ledger             |     3 | pending   | Один apply-flow, порядок и checksum воспроизводимы                          |
+| R01 | Curator JWT доступен через `localStorage`                |     2 | completed | Production использует HttpOnly cookie; JS storage и Bearer fallback удалены |
+| R02 | Cloud deploy не имеет pre-deploy test gate               |     2 | completed | Deploy job зависит от успешных тестов изменённой функции                    |
+| R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | completed | Functions, CI и engines используют поддерживаемый совместимый runtime       |
+| R04 | SQL-миграции распределены без единого ledger             |     3 | in review | Один apply-flow, порядок и checksum воспроизводимы                          |
 | R05 | PWA/RuStore/mobile critical path не входит в CI          |     1 | completed | Check-in и mobile session/navigation contracts входят в короткий CI gate    |
 | R06 | Storage/sync остаётся большим глобальным модулем         |     4 | pending   | Выделены проверенные контракты без смены legacy public API                  |
-| R07 | Критические KV payload не валидируются по версии и форме |     3 | pending   | Critical keys имеют versioned validation и совместимое чтение               |
+| R07 | Критические KV payload не валидируются по версии и форме |     3 | in review | Critical keys имеют versioned validation и совместимое чтение               |
 | R08 | Критические тесты зависят от текста source               |     1 | completed | Выбранные critical paths проверяют поведение исполняемого кода              |
 | R09 | На старте загружаются пять тяжёлых boot bundles          |     4 | pending   | Есть baseline, budget и подтверждённое уменьшение initial gzip payload      |
-| R10 | Retention для audit-данных не полностью исполняется      |     3 | pending   | Dry-run считает кандидатов; удаление остаётся выключенным до sign-off       |
+| R10 | Retention для audit-данных не полностью исполняется      |     3 | in review | Dry-run считает кандидатов; удаление остаётся выключенным до sign-off       |
 
 ## Последовательность волн
 
@@ -95,7 +95,7 @@ compatibility → selective deploy и health checks.
 - [x] Канонический runtime, `.nvmrc`, root engines и CI выровнены на Node.js 22.
 - [x] Все 19 описанных function packages установились, загрузились и прошли
       доступные unit/contract tests на Node.js `v22.23.1`.
-- [ ] Commit/push, фактический deploy 17 активных HEYS functions и production
+- [x] Commit/push, фактический deploy 17 активных HEYS functions и production
       runtime/smoke verification.
 
 Выходной gate: curator JWT отсутствует в JS storage, красные contract tests
@@ -108,6 +108,28 @@ Scope: R04, R07 и R10.
 Порядок: inventory SQL → canonical migration manifest/ledger без повторного
 применения history → versioned validators критических KV keys → retention
 report/dry-run. Реальное retention deletion не включается без legal sign-off.
+
+Проверено перед публикацией:
+
+- [x] 317 SQL-файлов проинвентаризированы: 316 legacy baseline и одна новая
+      managed migration; неизвестный SQL, checksum drift и разрыв порядка
+      блокируют runner.
+- [x] `--status` read-only показал отсутствующий ledger и одну pending
+      migration; apply откладывается до фиксации неизменяемого checksum в
+      commit.
+- [x] Profile, day, planning и morning check-in имеют versioned contracts;
+      production JSON-типы существующих profile/planning rows совместимы.
+- [x] Merge, single/batch RPC и REST write paths валидируют payload под row
+      lock; legacy без версии разрешён, неизвестная версия и destructive empty
+      write отклоняются.
+- [x] Retention report выполнен read-only: 0 кандидатов во всех четырёх policy
+      classes; агрегаты не содержат идентификаторов.
+- [x] Обнаруженные active deletes `security_events` (30 дней) и
+      `client_log_trace` (14 дней) заменены dry-run по draft-окнам 1 год/30
+      дней.
+- [x] 17 pure/ledger/retention contract tests и function gates RPC/REST/
+      maintenance прошли.
+- [ ] Commit/push, ledger apply, selective deploy и production verification.
 
 Выходной gate: migration state воспроизводим, несовместимые critical writes
 отклоняются, dry-run показывает объём и возраст retention candidates.
@@ -125,18 +147,18 @@ payload уменьшается относительно записанного b
 
 ## Facts Table
 
-| Claim                                                              | Source                 | Verify command                                                                                                                                                                                                                                                                                                                                                            | Result на 2026-07-17                                                                                                                                           |
-| ------------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Curator JWT читается из JS storage, а CSP допускает inline/eval    | source                 | `rg -n "heys_curator_session\|Authorization.*Bearer" apps/web/heys_yandex_api_v1.js`; `sed -n '16,24p' apps/web/index.html`                                                                                                                                                                                                                                               | ✅ Есть `localStorage` readers/Bearer headers; CSP содержит `unsafe-inline` и `unsafe-eval`                                                                    |
-| Auto-deploy выполняет deploy до test command                       | workflow               | `sed -n '145,205p' .github/workflows/cloud-functions-deploy.yml`; `rg -n "vitest\|node --test\|pnpm test\|npm test" .github/workflows/cloud-functions-deploy.yml`                                                                                                                                                                                                         | ✅ Deploy и post-deploy verify есть; pre-deploy test command отсутствует                                                                                       |
-| Deploy script задаёт Node.js 18 для всех описанных функций         | script + official docs | `rg -c 'echo "nodejs18' yandex-cloud-functions/deploy-all.sh`                                                                                                                                                                                                                                                                                                             | ✅ 19 записей; Yandex помечает `nodejs18` unsupported и `nodejs22` supported                                                                                   |
-| Migration SQL распределён, ledger не найден                        | filesystem/search      | `for d in database/migrations migrations scripts/db/migrations supabase/migrations yandex-cloud-functions/migrations database/yandex_migration; do find "$d" -maxdepth 1 -name '*.sql' \| wc -l; done`; `rg "schema_migrations\|migration_history\|applied_migrations" database migrations scripts/db supabase yandex-cloud-functions`                                    | ✅ 1+2+21+1+9+1 migration files и 199 root `database/*.sql`; ledger match отсутствует                                                                          |
-| До волны 1 mobile tests и Playwright CI job отсутствовали          | Git baseline           | `git ls-tree -r --name-only origin/main apps/mobile \| rg '\.(test\|spec)\.'`; `git grep -n -e playwright -e test:e2e origin/main -- .github/workflows`                                                                                                                                                                                                                   | ✅ Baseline match отсутствует; волна 1 добавила 3 test files и path-scoped CI job                                                                              |
-| Storage/RPC имеют крупный legacy scope                             | source count           | `wc -l apps/web/heys_storage_supabase_v1.js yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                                                                                                                 | ✅ 16,612 и 4,596 строк                                                                                                                                        |
-| KV table хранит произвольный JSONB, registry не проверяет shape    | schema/source          | `sed -n '60,74p' database/yandex_migration/001_schema.sql`; `sed -n '154,182p' apps/web/heys_storage_registry_v1.js`                                                                                                                                                                                                                                                      | ✅ `v JSONB`; `analyze()` проверяет policy/size, но не payload schema                                                                                          |
-| Большинство web test-файлов читают source                          | test search            | `find apps/web/__tests__ -maxdepth 1 -name '*.test.*'`; `rg -l readFileSync apps/web/__tests__ -g '*.test.*'`                                                                                                                                                                                                                                                             | ✅ 201 web test files, 168 содержат `readFileSync`; critical behavior coverage добавлено без роста source-reading count, mobile получил 3 отдельных test files |
-| Пять boot bundles грузятся при старте                              | manifest/assets/index  | `node -e "const fs=require('fs'),m=require('./apps/web/bundle-manifest.json'); let n=0,c=0; for(const [k,v] of Object.entries(m)){if(!/^boot-(core\|calc\|day\|app\|init)$/.test(k))continue; n+=fs.statSync('apps/web/public/'+v.file+'.gz').size;c+=v.fileCount} console.log(n,c)"`; `sed -n '946,965p' apps/web/index.html`; `sed -n '4118,4135p' apps/web/index.html` | ✅ 911,338 gzip bytes и 178 source files в текущем preview baseline                                                                                            |
-| Retention policy draft, delete job для `data_loss_audit` не найден | docs/search            | `sed -n '1,34p' docs/legal/operator/heys-retention-policy-draft.md`; `rg "DELETE FROM data_loss_audit" yandex-cloud-functions scripts database`                                                                                                                                                                                                                           | ✅ Требуется legal sign-off; maintenance только читает `data_loss_audit`                                                                                       |
+| Claim                                                           | Source                  | Verify command                                                                                                                                                                                                                                                                                                                                                            | Result на 2026-07-17                                                                                                                                           |
+| --------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Curator JWT читается из JS storage, а CSP допускает inline/eval | source                  | `rg -n "heys_curator_session\|Authorization.*Bearer" apps/web/heys_yandex_api_v1.js`; `sed -n '16,24p' apps/web/index.html`                                                                                                                                                                                                                                               | ✅ Есть `localStorage` readers/Bearer headers; CSP содержит `unsafe-inline` и `unsafe-eval`                                                                    |
+| Auto-deploy выполняет deploy до test command                    | workflow                | `sed -n '145,205p' .github/workflows/cloud-functions-deploy.yml`; `rg -n "vitest\|node --test\|pnpm test\|npm test" .github/workflows/cloud-functions-deploy.yml`                                                                                                                                                                                                         | ✅ Deploy и post-deploy verify есть; pre-deploy test command отсутствует                                                                                       |
+| Deploy script задаёт Node.js 18 для всех описанных функций      | script + official docs  | `rg -c 'echo "nodejs18' yandex-cloud-functions/deploy-all.sh`                                                                                                                                                                                                                                                                                                             | ✅ 19 записей; Yandex помечает `nodejs18` unsupported и `nodejs22` supported                                                                                   |
+| Migration SQL распределён, ledger не найден                     | filesystem/search       | `for d in database/migrations migrations scripts/db/migrations supabase/migrations yandex-cloud-functions/migrations database/yandex_migration; do find "$d" -maxdepth 1 -name '*.sql' \| wc -l; done`; `rg "schema_migrations\|migration_history\|applied_migrations" database migrations scripts/db supabase yandex-cloud-functions`                                    | ✅ 1+2+21+1+9+1 migration files и 199 root `database/*.sql`; ledger match отсутствует                                                                          |
+| До волны 1 mobile tests и Playwright CI job отсутствовали       | Git baseline            | `git ls-tree -r --name-only origin/main apps/mobile \| rg '\.(test\|spec)\.'`; `git grep -n -e playwright -e test:e2e origin/main -- .github/workflows`                                                                                                                                                                                                                   | ✅ Baseline match отсутствует; волна 1 добавила 3 test files и path-scoped CI job                                                                              |
+| Storage/RPC имеют крупный legacy scope                          | source count            | `wc -l apps/web/heys_storage_supabase_v1.js yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                                                                                                                 | ✅ 16,612 и 4,596 строк                                                                                                                                        |
+| KV table хранит произвольный JSONB, registry не проверяет shape | schema/source           | `sed -n '60,74p' database/yandex_migration/001_schema.sql`; `sed -n '154,182p' apps/web/heys_storage_registry_v1.js`                                                                                                                                                                                                                                                      | ✅ `v JSONB`; `analyze()` проверяет policy/size, но не payload schema                                                                                          |
+| Большинство web test-файлов читают source                       | test search             | `find apps/web/__tests__ -maxdepth 1 -name '*.test.*'`; `rg -l readFileSync apps/web/__tests__ -g '*.test.*'`                                                                                                                                                                                                                                                             | ✅ 201 web test files, 168 содержат `readFileSync`; critical behavior coverage добавлено без роста source-reading count, mobile получил 3 отдельных test files |
+| Пять boot bundles грузятся при старте                           | manifest/assets/index   | `node -e "const fs=require('fs'),m=require('./apps/web/bundle-manifest.json'); let n=0,c=0; for(const [k,v] of Object.entries(m)){if(!/^boot-(core\|calc\|day\|app\|init)$/.test(k))continue; n+=fs.statSync('apps/web/public/'+v.file+'.gz').size;c+=v.fileCount} console.log(n,c)"`; `sed -n '946,965p' apps/web/index.html`; `sed -n '4118,4135p' apps/web/index.html` | ✅ 911,338 gzip bytes и 178 source files в текущем preview baseline                                                                                            |
+| Retention delete-поведение расходилось с draft                  | docs/source/live report | `sed -n '1,34p' docs/legal/operator/heys-retention-policy-draft.md`; `sed -n '352,385p' yandex-cloud-functions/heys-maintenance/index.js`; `node scripts/db/retention-report.mjs`                                                                                                                                                                                         | ✅ До Wave 3 maintenance удалял security events через 30 дней и trace через 14 дней; production dry-run: 0 кандидатов по draft-окнам                           |
 
 Official runtime evidence:
 
@@ -178,3 +200,29 @@ Official runtime evidence:
   hashes и CSP без `unsafe-eval`.
 - До публикации production всё ещё содержит 17 HEYS functions на `nodejs18`;
   статус R01–R03 станет `completed` только после push/deploy/smoke.
+
+### 2026-07-17 — волна 2 завершена
+
+- Source/release commits: `239db724`, `f7673e48`, `06f83c4e`, `1f52ca7a`,
+  `f314ee0a`, `bd182d6c`, `1ff2de7d`, `44328d6e`.
+- Первый deploy выявил отсутствие VAPID public/subject в GitHub Secrets;
+  fallback безопасно восстанавливает только публичные значения из текущей
+  `$latest`, private key остаётся в Lockbox.
+- GitHub Actions `29615414530`: Node.js 22 pre-deploy gate, deploy и verify
+  зелёные.
+- Все 17 существующих HEYS functions имеют `$latest` runtime `nodejs22`, status
+  `ACTIVE`; payments target корректно пропущен, потому что функция/секреты не
+  настроены.
+- `pnpm ops:heys:canary`: bot warmup, два polling worker и maintenance DB canary
+  прошли. R01, R02 и R03 закрыты.
+
+### 2026-07-17 — волна 3 готова к фиксации
+
+- Canonical migration manifest учитывает 317 SQL-файлов и не переигрывает
+  историю; ledger migration остаётся pending до commit checksum.
+- Critical KV contract tests: 8/8; migration/retention tests: 9/9; RPC gate:
+  37/37 плюс load check, REST и maintenance load gates прошли.
+- Production type inventory: все найденные planning rows — JSON arrays, profile
+  rows — JSON objects; несовместимых типов в выбранном critical scope нет.
+- Read-only retention report: trace 71,005 rows / 49.3 MB, security 336,
+  data-loss audit 28,709, access audit 49,343, messages 90; policy candidates 0.

@@ -616,6 +616,18 @@ deploy_function() {
             echo -e "${RED}❌ ERROR: merge source not found at $SRC${NC}"
             exit 1
         fi
+
+        CONTRACT_SRC="$SCRIPT_DIR/shared/kv-payload-contracts.js"
+        CONTRACT_DST_DIR="$SCRIPT_DIR/$func_name/shared"
+        CONTRACT_DST="$CONTRACT_DST_DIR/kv-payload-contracts.js"
+        if [ -f "$CONTRACT_SRC" ]; then
+            mkdir -p "$CONTRACT_DST_DIR"
+            cp "$CONTRACT_SRC" "$CONTRACT_DST"
+            echo -e "${BLUE}ℹ️  Synced KV payload contracts: shared/kv-payload-contracts.js${NC}"
+        else
+            echo -e "${RED}❌ ERROR: KV payload contracts not found at $CONTRACT_SRC${NC}"
+            exit 1
+        fi
     fi
 
     # Pre-build zip with explicit exclusions.
