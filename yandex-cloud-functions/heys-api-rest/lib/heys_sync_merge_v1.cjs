@@ -616,9 +616,9 @@
     );
   }
 
-  function mergeMorningProgressRow(incomingRow, currentRow) {
-    if (!incomingRow || typeof incomingRow !== 'object') return currentRow;
-    if (!currentRow || typeof currentRow !== 'object') return incomingRow;
+  function chooseMorningProgressRowSource(incomingRow, currentRow) {
+    if (!incomingRow || typeof incomingRow !== 'object') return 'current';
+    if (!currentRow || typeof currentRow !== 'object') return 'incoming';
     const incomingAttempt = Number(incomingRow.attempt) || 0;
     const currentAttempt = Number(currentRow.attempt) || 0;
     const incomingTs = morningProgressRowTimestamp(incomingRow);
@@ -634,13 +634,49 @@
     } else if (MORNING_PROGRESS_TERMINAL_STATUSES.has(incomingRow.status)
       && MORNING_PROGRESS_RESET_STATUSES.has(currentRow.status)) {
       incomingWins = true;
+    } else if (MORNING_PROGRESS_TERMINAL_STATUSES.has(incomingRow.status)
+      && MORNING_PROGRESS_TERMINAL_STATUSES.has(currentRow.status)
+      && incomingRank !== currentRank) {
+      // Within one attempt terminal progress is monotonic. A device with a
+      // skewed clock must not turn cloud-confirmed `synced` back into
+      // `saved_local`; a higher attempt remains the explicit reopen mechanism.
+      incomingWins = incomingRank > currentRank;
     } else {
       incomingWins = incomingTs > currentTs
         || (incomingTs === currentTs && incomingRank >= currentRank);
     }
+    return incomingWins ? 'incoming' : 'current';
+  }
+
+  function mergeMorningProgressRow(incomingRow, currentRow) {
+    if (!incomingRow || typeof incomingRow !== 'object') return currentRow;
+    if (!currentRow || typeof currentRow !== 'object') return incomingRow;
+    const incomingWins = chooseMorningProgressRowSource(incomingRow, currentRow) === 'incoming';
     const older = incomingWins ? currentRow : incomingRow;
     const newer = incomingWins ? incomingRow : currentRow;
     return { ...older, ...newer };
+  }
+
+  function hasMorningCheckinProgressConflict(incoming, current) {
+    if (!incoming || !current || typeof incoming !== 'object' || typeof current !== 'object'
+      || Array.isArray(incoming) || Array.isArray(current)) {
+      return false;
+    }
+    if (incoming.flowId && current.flowId && incoming.flowId !== current.flowId) return true;
+
+    const incomingPlan = new Set(Array.isArray(incoming.plannedStepIds) ? incoming.plannedStepIds : []);
+    const currentPlan = Array.isArray(current.plannedStepIds) ? current.plannedStepIds : [];
+    if (currentPlan.some((id) => !incomingPlan.has(id))) return true;
+
+    return Object.entries(current.steps || {}).some(([id, currentRow]) => {
+      const incomingRow = incoming.steps?.[id];
+      if (!incomingRow || typeof incomingRow !== 'object') return true;
+      const sameLifecycle = incomingRow.status === currentRow?.status
+        && (Number(incomingRow.attempt) || 0) === (Number(currentRow?.attempt) || 0)
+        && morningProgressRowTimestamp(incomingRow) === morningProgressRowTimestamp(currentRow);
+      if (sameLifecycle) return false;
+      return chooseMorningProgressRowSource(incomingRow, currentRow) === 'current';
+    });
   }
 
   function mergeMorningCheckinProgress(incoming, current, options = {}) {
@@ -983,6 +1019,7 @@
     mergeItemsById,
     mergeScalarKv,
     mergeMorningCheckinProgress,
+    hasMorningCheckinProgressConflict,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,
     // Pure dayv2 stamping helpers (used by HEYS.storage interceptor + tests):
     stampDayv2ChangedEntities,

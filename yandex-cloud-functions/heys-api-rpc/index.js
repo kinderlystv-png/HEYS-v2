@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv, mergeMorningCheckinProgress } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 const PLANNING_RECORD_MERGE_KEYS = new Set([
@@ -2840,8 +2840,11 @@ module.exports.handler = async function (event, context) {
               );
             }
           } else if (MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)) {
+            const hasMorningConflict = hasMorningCheckinProgressConflict(incomingValue, currentValue);
             mergedValue = mergeMorningCheckinProgress(incomingValue, currentValue);
-            mergeOutcome = 'morning_checkin_progress_merged';
+            mergeOutcome = hasMorningConflict
+              ? 'morning_checkin_progress_conflict_merged'
+              : 'morning_checkin_progress_merged';
           } else if (k === 'heys_planning_chrono_tombstones_v1') {
             mergedValue = mergeChronoTombstones(incomingValue, currentValue);
             mergeOutcome = 'chrono_tombstones_merged';
@@ -3113,7 +3116,7 @@ module.exports.handler = async function (event, context) {
         // Best-effort audit: only when actual merge happened (don't spam on every save).
         if (mergeOutcome === 'day_merged'
           || mergeOutcome === 'scalar_merged'
-          || mergeOutcome === 'morning_checkin_progress_merged') {
+          || mergeOutcome === 'morning_checkin_progress_conflict_merged') {
           try {
             await client.query(
               `INSERT INTO data_loss_audit (client_id, key, action, existing_meals, new_meals, allowed, reason)

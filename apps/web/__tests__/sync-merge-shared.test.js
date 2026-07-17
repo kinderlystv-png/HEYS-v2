@@ -27,6 +27,7 @@ const {
   mergeItemsById,
   mergeScalarKv,
   mergeMorningCheckinProgress,
+  hasMorningCheckinProgressConflict,
   stampDayv2ChangedEntities,
   resolveDayMutationTs,
   ownerClientIdFromDayKey,
@@ -289,7 +290,10 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     );
 
     expect(rpcSource).toContain('MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)');
+    expect(rpcSource).toContain('hasMorningCheckinProgressConflict(incomingValue, currentValue)');
     expect(rpcSource).toContain('mergeMorningCheckinProgress(incomingValue, currentValue)');
+    expect(rpcSource).toContain("'morning_checkin_progress_conflict_merged'");
+    expect(rpcSource).not.toContain("|| mergeOutcome === 'morning_checkin_progress_merged'");
     expect(rpcSource.indexOf('MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)')).toBeLessThan(
       rpcSource.indexOf("} else if (noConflict) {"),
     );
@@ -460,6 +464,69 @@ describe('mergeMorningCheckinProgress', () => {
 
     expect(merged.steps.weight.status).toBe('synced');
     expect(merged.steps.weight.attempt).toBe(1);
+  });
+
+  test('does not let a future-skewed saved_local row downgrade synced in the same attempt', () => {
+    const current = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight'],
+      steps: { weight: { status: 'synced', attempt: 1, syncedAt: 3000, updatedAt: 3000 } },
+      updatedAt: 3000,
+    };
+    const incoming = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight'],
+      steps: { weight: { status: 'saved_local', attempt: 1, savedAt: 9999999999999, updatedAt: 9999999999999 } },
+      updatedAt: 9999999999999,
+    };
+
+    const merged = mergeMorningCheckinProgress(incoming, current, { now: 5000 });
+
+    expect(merged.steps.weight.status).toBe('synced');
+    expect(merged.steps.weight.syncedAt).toBe(3000);
+    expect(hasMorningCheckinProgressConflict(incoming, current)).toBe(true);
+  });
+
+  test('treats ordinary forward progress as non-conflicting for audit', () => {
+    const current = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight', 'sleepTime'],
+      steps: {
+        weight: { status: 'synced', attempt: 1, updatedAt: 3000 },
+        sleepTime: { status: 'planned', attempt: 1, updatedAt: 3000 },
+      },
+    };
+    const incoming = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight', 'sleepTime'],
+      steps: {
+        weight: { status: 'synced', attempt: 1, updatedAt: 3000 },
+        sleepTime: { status: 'saved_local', attempt: 1, savedAt: 4000, updatedAt: 4000 },
+      },
+    };
+
+    expect(hasMorningCheckinProgressConflict(incoming, current)).toBe(false);
+  });
+
+  test('detects a cloud-only completed step as a real cross-shell conflict', () => {
+    const current = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight', 'sleepTime'],
+      steps: {
+        weight: { status: 'synced', attempt: 1, updatedAt: 4000 },
+        sleepTime: { status: 'planned', attempt: 1, updatedAt: 1000 },
+      },
+    };
+    const incoming = {
+      flowId: 'flow-1',
+      plannedStepIds: ['weight', 'sleepTime'],
+      steps: {
+        weight: { status: 'planned', attempt: 1, updatedAt: 1000 },
+        sleepTime: { status: 'saved_local', attempt: 1, updatedAt: 5000 },
+      },
+    };
+
+    expect(hasMorningCheckinProgressConflict(incoming, current)).toBe(true);
   });
 });
 
