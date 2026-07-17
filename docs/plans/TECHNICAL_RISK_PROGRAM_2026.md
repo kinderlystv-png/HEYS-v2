@@ -158,8 +158,10 @@ test → перенос только подтверждённых non-critical b
       185/185.
 - [x] Minified `boot-core` gzip уменьшен с 274,622 до 273,096 байт; суммарный
       initial gzip пяти boot bundles — с 907,781 до 906,255 байт (-1,526).
-- [ ] Чистый local runtime smoke, source-only commit/push и deployed-state
-      verification.
+- [x] Чистый local runtime smoke: новый boot hash исполнился, contract v1,
+      `HEYS.cloud` и оба lazy export-helper доступны; page exceptions
+      отсутствуют.
+- [ ] Source-only push и deployed-state verification.
 
 Выходной gate: выделенные модули сохраняют legacy public API, initial gzip
 payload уменьшается относительно записанного baseline, runtime smoke зелёный.
@@ -255,13 +257,17 @@ Official runtime evidence:
 - Migration ledger применён в production: `1 applied / 0 pending`.
 - GitHub Actions `29617214105`: pre-deploy test, deploy всех функций, пять HTTP
   checks и runtime audit 17/17 прошли. Первый maintenance canary был transient;
-  непосредственный повтор `pnpm ops:heys:canary` прошёл 4/4, CI rerun запущен.
+  непосредственный повтор `pnpm ops:heys:canary` прошёл 4/4. Rerun обнаружил,
+  что `set -e` преждевременно завершал verify на первом curl timeout; retry loop
+  исправлен и ожидает публикации.
 - R04, R07 и R10 закрыты; destructive retention по-прежнему не включён.
 
-### 2026-07-18 — волна 4 готова к runtime smoke
+### 2026-07-18 — волна 4 готова к публикации
 
 - Выделен `HEYS.storageKeyContract` без изменения публичного `HEYS.cloud`.
 - Manual export helpers перенесены в существующий postboot lazy chunk с
   сохранением встроенных fallback paths.
 - Sync-critical: 185/185; contract/anti-pollution: 6/6.
 - `boot-core` gzip уменьшен на 1,526 байт; total initial gzip — до 906,255 байт.
+- Изолированный runtime smoke: contract v1, `HEYS.cloud` и lazy export helpers
+  зарегистрированы, исключений исполнения нет.
