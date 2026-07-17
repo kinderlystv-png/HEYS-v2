@@ -246,7 +246,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     expect(rpcSource).toContain('const merged = mergeDayData(it.v, currentValue, { forceKeepAll: true });');
     expect(rpcSource).not.toContain('if (!hasSubjectiveFieldDrop(it.v, currentValue)) continue;');
     expect(rpcSource).toContain("const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\\d{4}-\\d{2}-\\d{2}$/i.test(key));");
-    expect(rpcSource).toContain("'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (hasDayv2BatchKey ? ' FOR UPDATE' : '')");
+    expect(rpcSource).toContain("'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey) ? ' FOR UPDATE' : '')");
     expect(rpcSource).toMatch(/mergeBatchDayv2ExistingRows\([\s\S]*?\)\s*;\s+if \(dayv2Merged > 0\)[\s\S]*?SELECT \* FROM batch_upsert_client_kv_by_curator/);
   });
 
@@ -260,7 +260,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     expect(rpcSource).toContain('direct upsert_client_kv_by_session(dayv2) bypasses');
     expect(rpcSource).toContain('params.p_value = merged;');
     expect(rpcSource).toContain("console.warn('[upsert_client_kv_by_session] dayv2_guard_merged:', params.p_key);");
-    expect(rpcSource).toContain('const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items, hasDayv2BatchKey);');
+    expect(rpcSource).toMatch(/const prevMap = await prefetchGuardedCurrentValues\([\s\S]*?hasDayv2BatchKey \|\| hasCriticalBatchKey[\s\S]*?\);/);
     expect(rpcSource).toContain("await client.query('COMMIT');");
     expect(rpcSource.indexOf('direct upsert_client_kv_by_session(dayv2) bypasses')).toBeLessThan(
       rpcSource.indexOf('const TYPE_HINTS'),
