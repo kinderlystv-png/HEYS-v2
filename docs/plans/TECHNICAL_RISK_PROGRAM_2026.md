@@ -280,8 +280,9 @@ Official runtime evidence:
 
 ### 2026-07-18 — программа завершена
 
-- Wave 4 commits: `7121afee`, `8ce4e363`, `8c3fe967`, `8f39b7ab`, `364216e0`,
-  `4b495274`; `origin/main` опубликован до `4b495274`.
+- Wave 4 code commits: `7121afee`, `8ce4e363`, `8c3fe967`, `8f39b7ab`,
+  `364216e0`, `4b495274`; code history опубликована, completion roadmap следует
+  отдельным docs-only commit.
 - Pre-push suite: 205 test files passed, 2,806 tests passed, 33 skipped; storage
   compatibility follow-up: 13/13.
 - GitHub Actions `29619170788`: build, unit gate, PWA/landing deploy, health
@@ -289,7 +290,8 @@ Official runtime evidence:
 - Ручной all-functions deploy `29619209559`: Node.js 22 predeploy tests,
   обновление всех функций и API Gateway, retry-safe production verify прошли.
 - Независимый `pnpm ops:heys:canary` прошёл 4/4; production lazy hash
-  `d2746399f25b`, boot hash `720351221c6d` включает build-info текущего HEAD;
-  production HTML не содержит static email/password fields.
+  `d2746399f25b`, а динамический boot hash проверен deploy workflow на
+  соответствие своему HEAD; production HTML не содержит static email/password
+  fields.
 - Все R01–R10 закрыты. Retention deletion не включался; единственное внешнее
   действие после программы — ротация исторически засвеченного пароля аккаунта.
