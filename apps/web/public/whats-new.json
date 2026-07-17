@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.18.8f39b7ab",
+      "buildHash": "8f39b7ab",
+      "date": "2026-07-18",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Улучшения синхронизации и стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Улучшили обработку данных",
+          "description": "Доработали внутреннюю синхронизацию и загрузку приложения, чтобы данные между устройствами обрабатывались надёжнее."
+        }
+      ],
+      "coveredCommits": ["8c3fe967", "8ce4e363"]
+    },
+    {
       "version": "2026.07.18.ebc0e722",
       "buildHash": "ebc0e722",
       "date": "2026-07-18",
@@ -177,22 +193,6 @@
         }
       ],
       "coveredCommits": ["1af73856", "bf994068", "dc58c91e", "351d7118", "c58e172b", "e5507e4e"]
-    },
-    {
-      "version": "2026.07.09.3c7bf67e",
-      "buildHash": "3c7bf67e",
-      "date": "2026-07-09",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "close charge followup on later",
-      "items": [
-        {
-          "type": "fix",
-          "title": "close charge followup on later",
-          "description": "close charge followup on later"
-        }
-      ],
-      "coveredCommits": ["3c7bf67e"]
     }
   ]
 }
