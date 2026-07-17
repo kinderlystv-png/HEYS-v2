@@ -211,16 +211,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch {
       /* ignore */
     }
-    try {
-      if (localStorage.getItem('heys_curator_session')) return true;
-      const raw = localStorage.getItem('heys_supabase_auth_token');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return !!parsed?.access_token;
-      }
-    } catch {
-      /* ignore */
-    }
     return false;
   }
 

@@ -4,12 +4,11 @@
 //     Despite the filename, ALL cloud calls now route through HEYS.YandexAPI
 //     (Yandex Cloud Functions + API Gateway at https://api.heyslab.ru).
 //     The "supabase" suffix is kept for backwards compatibility with legacy
-//     boot order, bundle manifest hashes and localStorage keys
-//     (e.g. heys_supabase_auth_token — token name only, value is YC JWT).
+//     boot order and bundle manifest hashes.
 //     For new code: use HEYS.YandexAPI.rpc() / .rest() directly. Do NOT
 //     reintroduce a Supabase client here.
-//     Policy: keep localStorage key `heys_supabase_auth_token` until an explicit
-//     migration ships; renaming without migration would sign users out.
+//     Curator auth is cookie-only in production; legacy JS-readable tokens are
+//     purged during boot and must never be recreated.
 //
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
@@ -1087,16 +1086,14 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // 🔄 AUTO TOKEN REFRESH — автоматическое обновление истёкшего токена
+  // Curator cookie verification, deduplicated across concurrent sync calls.
   // ═══════════════════════════════════════════════════════════════════
   /**
-   * Проверяет токен и обновляет его если истёк.
-   * Вызывается перед sync операциями.
+   * Проверяет HttpOnly cookie (или localhost in-memory token) перед sync.
    * 
    * @returns {Promise<{valid: boolean, refreshed: boolean, error?: string}>}
    */
   let _refreshInProgress = null; // Deduplication
-  const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 минут до истечения — уже обновляем
 
   async function waitForSyncMethodReady(timeoutMs = 1500) {
     const hasSyncMethod = () => typeof cloud.bootstrapClientSync === 'function' || typeof cloud.syncClientViaRPC === 'function';
@@ -1111,170 +1108,51 @@
     return hasSyncMethod();
   }
 
-  function decodeCuratorJwtPayload(token) {
-    try {
-      const part = String(token || '').split('.')[1];
-      if (!part) return null;
-      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
-      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
-      if (typeof global.atob !== 'function') return null;
-      const raw = global.atob(padded);
-      try {
-        return JSON.parse(decodeURIComponent(Array.prototype.map.call(raw, ch => {
-          return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2);
-        }).join('')));
-      } catch (_) {
-        return JSON.parse(raw);
-      }
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function buildCuratorAuthFromJwt(token, fallbackUser) {
-    if (!token || token.length <= 10) return null;
-    const payload = decodeCuratorJwtPayload(token) || {};
-    const tokenUser = payload.sub ? {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role
-    } : null;
-    return {
-      access_token: token,
-      refresh_token: null,
-      expires_at: payload.exp || Math.floor(Date.now() / 1000) + 3600,
-      user: fallbackUser || tokenUser
-    };
-  }
-
   cloud.ensureValidToken = async function () {
-    // PIN auth не использует токены куратора
-    if (_rpcOnlyMode) {
+    if (_rpcOnlyMode && _pinAuthClientId) {
       return { valid: true, refreshed: false };
     }
 
-    // Deduplication: если проверка уже в процессе — ждём её
     if (_refreshInProgress) {
-      log('🔄 [TOKEN] Verification already in progress, waiting...');
       return _refreshInProgress;
     }
 
-    // Проверяем текущий токен
-    const AUTH_KEY = 'heys_supabase_auth_token';
-    let storedToken;
-    try {
-      const stored = global.localStorage?.getItem(AUTH_KEY);
-      storedToken = stored ? JSON.parse(stored) : null;
-    } catch (_) {
-      storedToken = null;
-    }
-
-    if (!storedToken || !storedToken.access_token) {
-      try {
-        const curatorSession = global.localStorage?.getItem('heys_curator_session');
-        const restoredFromJwt = buildCuratorAuthFromJwt(curatorSession, user);
-        if (restoredFromJwt?.access_token) {
-          storedToken = restoredFromJwt;
-          const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-          setFn(AUTH_KEY, JSON.stringify(restoredFromJwt));
-          logCritical('🔄 [TOKEN] Совместимый auth восстановлен из heys_curator_session');
-        }
-      } catch (_) { /* noop */ }
-    }
-
-    if (!storedToken || !storedToken.access_token) {
-      // Нет токена — нужен вход
-      // 🚨 КРИТИЧНО: Сбрасываем user чтобы UI мог отреагировать
+    const api = global.HEYS?.YandexAPI || global.YandexAPI;
+    const hasCuratorHint = (() => {
+      try { return !!global.localStorage?.getItem?.('heys_curator_cookie_session_hint'); } catch (_) { return false; }
+    })();
+    const devToken = api?.getCuratorToken?.() || null;
+    if (!user && !hasCuratorHint && !devToken) {
       user = null;
       status = CONNECTION_STATUS.OFFLINE;
-      logCritical('🔐 [TOKEN] Токен отсутствует — требуется вход');
-      return { valid: false, refreshed: false, error: 'no_token' };
+      return { valid: false, refreshed: false, error: 'no_curator_session' };
     }
 
-    // Проверяем expires_at
-    const now = Date.now();
-    const expiresAtMs = (storedToken.expires_at || 0) * 1000;
-    const timeUntilExpiry = expiresAtMs - now;
-
-    // ✅ FIX 2025-12-25: Если токен ещё свежий (>5 мин) — сразу возвращаем valid!
-    // Раньше здесь был баг: при client=null (Supabase SDK удалён) всегда возвращался error
-    if (timeUntilExpiry > TOKEN_REFRESH_BUFFER_MS) {
-      logCritical('✅ [TOKEN] Токен валиден, истекает через', Math.round(timeUntilExpiry / 60000), 'мин');
-      return { valid: true, refreshed: false };
-    }
-
-    // Токен истекает скоро или уже истёк — нужна проверка на сервере
-    const isExpired = timeUntilExpiry <= 0;
-    const minutesUntilExpiry = Math.round(timeUntilExpiry / 60000);
-    logCritical(`🔄 [TOKEN] ${isExpired ? 'Токен истёк' : `Токен истекает через ${minutesUntilExpiry} мин`}, проверяем на сервере...`);
-
-    // Запускаем проверку с deduplication
     _refreshInProgress = (async () => {
       try {
-        // ✅ FIX 2025-12-25: Используем Yandex API вместо Supabase SDK
-        // Supabase SDK был удалён, поэтому client = null всегда
-        // Проверяем токен через YandexAPI.verifyCuratorToken()
-
-        if (!global.YandexAPI || !global.YandexAPI.verifyCuratorToken) {
-          // YandexAPI ещё не загружен — доверяем локальному токену если он не сильно просрочен
-          if (timeUntilExpiry > -60 * 60 * 1000) { // Просрочен менее чем на час
-            logCritical('⚠️ [TOKEN] YandexAPI не загружен, доверяем локальному токену');
-            return { valid: true, refreshed: false };
-          }
-          logCritical('⚠️ [TOKEN] YandexAPI not loaded and token expired');
+        if (!api?.verifyCuratorToken) {
           return { valid: false, refreshed: false, error: 'api_not_loaded' };
         }
 
-        // Проверяем токен на сервере
-        const { data, error } = await global.YandexAPI.verifyCuratorToken(storedToken.access_token);
-
-        if (error || !data?.valid) {
-          logCritical('🔐 [TOKEN] Сервер отклонил токен:', error?.message || 'invalid');
-          // НЕ очищаем токен автоматически — пусть пользователь сам решит
-          // Это предотвращает случайный logout при временных проблемах с сетью
-          if (isExpired) {
-            // Только если токен реально истёк — требуем перелогин
-            user = null;
+        const { data, error } = await api.verifyCuratorToken(devToken || undefined);
+        if (!data?.valid || !data?.user) {
+          const message = error?.message || 'invalid_curator_session';
+          if (error && user) {
             status = CONNECTION_STATUS.OFFLINE;
-            return { valid: false, refreshed: false, error: 'token_expired', authRequired: true };
+            return { valid: true, refreshed: false, error: message, degraded: true };
           }
-          // Если не истёк — доверяем локально, возможно сеть глючит
-          logCritical('⚠️ [TOKEN] Сервер отклонил, но локально не истёк — доверяем локальному');
-          return { valid: true, refreshed: false };
+          user = null;
+          status = CONNECTION_STATUS.OFFLINE;
+          try { global.localStorage?.removeItem?.('heys_curator_cookie_session_hint'); } catch (_) { }
+          return { valid: false, refreshed: false, error: message, authRequired: true };
         }
 
-        // Сервер подтвердил токен — обновляем expires_at локально
-        // JWT токен на сервере живёт 24ч, так что продлеваем на 1ч локально
-        const freshExpiresAt = data.expires_at || Math.floor(Date.now() / 1000) + 3600;
-        const tokenData = {
-          ...storedToken,
-          expires_at: freshExpiresAt,
-          user: data.user || storedToken.user
-        };
-
-        try {
-          const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-          setFn(AUTH_KEY, JSON.stringify(tokenData));
-          setFn('heys_curator_session', storedToken.access_token);
-          logCritical('✅ [TOKEN] Токен подтверждён, продлили expires_at до', new Date(freshExpiresAt * 1000).toISOString());
-        } catch (e) {
-          logCritical('⚠️ [TOKEN] Ошибка сохранения:', e?.message);
-        }
-
-        if (data.user) {
-          user = data.user;
-        }
+        user = data.user;
         status = CONNECTION_STATUS.ONLINE;
-        return { valid: true, refreshed: true };
-
+        return { valid: true, refreshed: false };
       } catch (e) {
-        logCritical('⚠️ [TOKEN] Ошибка проверки:', e?.message);
-        // При ошибках сети — доверяем локальному токену если он не сильно просрочен
-        if (timeUntilExpiry > -60 * 60 * 1000) {
-          logCritical('⚠️ [TOKEN] Ошибка сети, доверяем локальному токену');
-          return { valid: true, refreshed: false };
-        }
-        return { valid: false, refreshed: false, error: e?.message };
+        status = CONNECTION_STATUS.OFFLINE;
+        return { valid: !!user, refreshed: false, error: e?.message, degraded: !!user };
       } finally {
         _refreshInProgress = null;
       }
@@ -1500,47 +1378,22 @@
     };
   };
 
-  // ═══════════════════════════════════════════════════════════════════
-  // �🔐 AUTH TOKEN SANITIZE (RTR-safe)
-  // ═══════════════════════════════════════════════════════════════════
-  // ВАЖНО: делаем это СРАЗУ при загрузке скрипта, до heys_app_v12.js.
-  // Иначе app может увидеть протухший токен и/или Supabase SDK может попытаться
-  // refresh'нуть одноразовый refresh_token (RTR) → 400 refresh_token_already_used.
+  // Purge legacy browser-readable curator credentials before app boot. The
+  // non-secret hint is kept only to trigger a server-side cookie probe.
   const OLD_AUTH_KEY__BOOT = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
   const NEW_AUTH_KEY__BOOT = 'heys_supabase_auth_token';
 
   function sanitizeStoredAuthToken__BOOT() {
     try {
-      const stored = global.localStorage && global.localStorage.getItem
-        ? global.localStorage.getItem(NEW_AUTH_KEY__BOOT)
-        : null;
-      if (!stored) return;
-
-      const parsed = JSON.parse(stored);
-      const accessToken = parsed?.access_token;
-      const storedUser = parsed?.user;
-
-      // Если токен битый/неполный — удаляем
-      // ⚠️ НЕ проверяем expires_at — в нашем Supabase проекте токены INFINITE (отключены)
-      // Supabase SDK всё равно возвращает expires_at = now + 1 hour по умолчанию,
-      // но это не означает что токен реально истечёт!
-      if (!accessToken || !storedUser) {
-        try {
-          global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
-          global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
-        } catch (_) { }
-        return;
-      }
-
-      // Токен выглядит валидным — оставляем
-      // (реальная проверка будет при первом запросе к Supabase)
-    } catch (e) {
-      // Не парсится → удаляем
-      try {
-        global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
-        global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
-      } catch (_) { }
-    }
+      if (!global.localStorage) return;
+      const hadLegacyMarker = !!global.localStorage.getItem(NEW_AUTH_KEY__BOOT)
+        || !!global.localStorage.getItem('heys_curator_session')
+        || !!global.localStorage.getItem(OLD_AUTH_KEY__BOOT);
+      global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
+      global.localStorage.removeItem('heys_curator_session');
+      global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
+      if (hadLegacyMarker) global.localStorage.setItem('heys_curator_cookie_session_hint', '1');
+    } catch (_) { }
   }
 
   // Запускаем раннюю санацию (sync)
@@ -5392,35 +5245,13 @@
     };
 
     try {
-      // ⚠️ RTR-safe: НЕ мигрируем сессии из старого sb-* ключа.
-      // При Refresh Token Rotation старые refresh_token могут быть уже использованы,
-      // и любая попытка их «восстановить» приводит к 400 refresh_token_already_used.
       const OLD_AUTH_KEY = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
       const NEW_AUTH_KEY = 'heys_supabase_auth_token';
 
-      // 🔄 RTR-safe v3: Очищаем ИСТЁКШИЕ токены ДО создания клиента
-      // Иначе SDK при инициализации попытается сделать refresh и получит 400
       try {
-        // Удаляем старый ключ (sb-*)
-        const hadOld = !!localStorage.getItem(OLD_AUTH_KEY);
-        if (hadOld) {
-          log('[AUTH] 🧹 Удаляем старый auth токен (sb-*)');
-          localStorage.removeItem(OLD_AUTH_KEY);
-        }
-
-        // ⚠️ Проверка expires_at ОТКЛЮЧЕНА — токены отключены в Supabase
-        // Раньше тут был код удаления истёкших токенов, но т.к. refresh tokens
-        // отключены в проекте, expires_at не обновляется и токен "истекает"
-        // хотя сессия на самом деле валидна. Просто проверяем что JSON валидный.
-        const stored = localStorage.getItem(NEW_AUTH_KEY);
-        if (stored) {
-          try {
-            JSON.parse(stored); // Проверка что JSON валидный
-          } catch (_) {
-            // Невалидный JSON — удаляем
-            localStorage.removeItem(NEW_AUTH_KEY);
-          }
-        }
+        localStorage.removeItem(OLD_AUTH_KEY);
+        localStorage.removeItem(NEW_AUTH_KEY);
+        localStorage.removeItem('heys_curator_session');
       } catch (_) { }
 
       // ✅ 2025-12-25: Supabase SDK УДАЛЁН — НЕ создаём клиент
@@ -5451,19 +5282,9 @@
       // Иначе при следующей загрузке куратор потеряет список клиентов.
       try {
         const pinAuthClient = global.localStorage.getItem('heys_pin_auth_client');
-        const curatorSession = global.localStorage.getItem('heys_curator_session');
-        const legacyCuratorSession = global.localStorage.getItem('heys_supabase_auth_token');
-
-        // Проверяем есть ли валидная сессия куратора
-        let hasCuratorSession = false;
-        if (curatorSession && curatorSession.length > 10) {
-          hasCuratorSession = true;
-        } else if (legacyCuratorSession) {
-          try {
-            const parsed = JSON.parse(legacyCuratorSession);
-            hasCuratorSession = !!(parsed?.user && parsed?.access_token);
-          } catch (_) { }
-        }
+        const hasCuratorSession = !!global.localStorage.getItem('heys_curator_cookie_session_hint')
+          || !!global.HEYS?.YandexAPI?.getCuratorToken?.()
+          || !!user;
 
         if (pinAuthClient && !hasCuratorSession) {
           // Нет сессии куратора — восстанавливаем PIN auth режим
@@ -5505,168 +5326,6 @@
       if (needsHealthCheck) {
         // Фоновая проверка — если direct недоступен, переключимся
         runHealthCheck().catch(() => { });
-      }
-
-      // 🔄 Автовосстановление сессии при старте (RTR-safe)
-      // 🔄 Восстановление сессии при старте
-      // Проверяем expires_at — если access_token истёк, refresh_token скорее всего тоже
-      // (RTR = Refresh Token Rotation, одноразовые токены)
-      const restoreSessionFromStorage = () => {
-        try {
-          const stored = localStorage.getItem('heys_supabase_auth_token');
-          if (!stored) return { user: null };
-          const parsed = JSON.parse(stored);
-          const accessToken = parsed?.access_token;
-          const refreshToken = parsed?.refresh_token;
-          const storedUser = parsed?.user;
-          const expiresAt = parsed?.expires_at;
-
-          // Мини-валидация
-          if (!accessToken || !storedUser) return { user: null };
-
-          // 🕐 Проверка expires_at: если access_token истёк более 1 часа назад,
-          // то refresh_token скорее всего уже "Already Used" (RTR)
-          // Supabase access_token по умолчанию живёт 1 час
-          const now = Math.floor(Date.now() / 1000);
-          const bufferSeconds = 60 * 60; // 1 час запас после expiry
-          const isExpired = expiresAt && (now > expiresAt + bufferSeconds);
-
-          if (isExpired) {
-            const hoursAgo = Math.round((now - expiresAt) / 3600);
-            logCritical(`⏰ Токен истёк ${hoursAgo}ч назад, требуется перелогин`);
-            // Удаляем только просроченный Supabase-токен.
-            // heys_pin_auth_client НЕ трогаем: если пользователь вошёл по PIN,
-            // его сессия независима от Supabase JWT. Auth init (heys_app_auth_init_v1.js)
-            // определит нужный путь (PIN vs curator) по наличию heys_pin_auth_client.
-            try {
-              localStorage.removeItem('heys_supabase_auth_token');
-            } catch (_) { }
-            return { user: null };
-          }
-
-          return { user: storedUser, accessToken, refreshToken, expiresAt };
-        } catch (_) {
-          return { user: null };
-        }
-      };
-
-      const persistCuratorSession = (token, data) => {
-        const restoredUser = data?.user;
-        if (!token || !restoredUser) return { user: null };
-        const tokenData = {
-          access_token: token,
-          refresh_token: null,
-          expires_at: data.expires_at || Math.floor(Date.now() / 1000) + 86400,
-          user: restoredUser
-        };
-        const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-        setFn('heys_supabase_auth_token', JSON.stringify(tokenData));
-        return {
-          user: restoredUser,
-          accessToken: token,
-          refreshToken: null,
-          expiresAt: tokenData.expires_at
-        };
-      };
-
-      const restoreCuratorJwtSessionFromStorage = async () => {
-        try {
-          const token = localStorage.getItem('heys_curator_session');
-          if (!token || token.length <= 10) return { user: null };
-          const api = global.HEYS?.YandexAPI || global.YandexAPI;
-          if (!api?.verifyCuratorToken) return { user: null, error: 'api_not_loaded' };
-
-          const { data, error } = await api.verifyCuratorToken(token);
-          if (error || !data?.valid || !data?.user) {
-            return { user: null, error: error?.message || 'invalid_curator_jwt' };
-          }
-          return persistCuratorSession(token, data);
-        } catch (e) {
-          return { user: null, error: e?.message || String(e) };
-        }
-      };
-
-      // ✅ FIX 2025-12-25: Supabase SDK УДАЛЁН — вся эта логика больше не работает.
-      // Авторизация теперь через YandexAPI (heys_yandex_api_v1.js).
-      // Оставляем только базовое восстановление user/status из localStorage.
-      if (!_signInInProgress) {
-        const restored = restoreSessionFromStorage();
-
-        if (restored.user) {
-          // Токен есть — устанавливаем user/status
-          user = restored.user;
-          status = CONNECTION_STATUS.SYNC;
-          logCritical('🔄 Сессия восстановлена:', user.email || user.id);
-          logCritical('[AUTH] ✅ user установлен из restore:', user?.email, '| user:', !!user);
-
-          // 🔐 v=35 FIX: После миграции на Yandex API — ВКЛЮЧАЕМ RPC режим!
-          // Supabase SDK удалён, все операции через REST API
-          // PIN auth client сбрасываем только _pinAuthClientId (это для клиента по PIN)
-          // но _rpcOnlyMode оставляем = true для куратора!
-          if (_pinAuthClientId) {
-            logCritical('🔐 Куратор восстановлен — сбрасываем PIN auth clientId, но RPC mode остаётся ON');
-            _pinAuthClientId = null;
-            try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
-          }
-          // 🔄 RPC режим ВКЛЮЧЁН для куратора (Yandex API)
-          _rpcOnlyMode = true;
-          // 🔇 v4.7.1: Лог отключён
-
-          // Устанавливаем status = ONLINE и делаем sync если есть clientId
-          // ⚠️ НЕ используем Supabase SDK (client.auth.setSession) — он удалён!
-          setTimeout(() => {
-            if (_signInInProgress) return;
-            status = CONNECTION_STATUS.ONLINE;
-
-            const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
-            logCritical('[restoreSession] setTimeout fired, clientId:', clientId ? clientId.slice(0, 8) + '...' : 'NULL');
-            if (clientId) {
-              logCritical('🔄 Запускаем bootstrap sync для клиента:', clientId.substring(0, 8) + '...');
-              cloud.syncClient(clientId).then(result => {
-                const errorText = result?.error || (result?.success === false ? 'unknown_error' : null);
-                if (errorText) {
-                  logCritical('⚠️ Bootstrap sync failed:', errorText);
-                } else {
-                  logCritical('✅ Bootstrap sync завершён');
-                }
-              }).catch(e => {
-                logCritical('⚠️ Bootstrap sync error:', e?.message || e);
-              });
-            }
-          }, 100);
-        } else {
-          const curatorSession = (() => {
-            try { return localStorage.getItem('heys_curator_session'); } catch (_) { return null; }
-          })();
-          const pinAuthClient = (() => {
-            try { return localStorage.getItem('heys_pin_auth_client'); } catch (_) { return null; }
-          })();
-
-          if (curatorSession && !pinAuthClient) {
-            restoreCuratorJwtSessionFromStorage().then(restoredJwt => {
-              if (_signInInProgress || !restoredJwt?.user) {
-                if (restoredJwt?.error && restoredJwt.error !== 'api_not_loaded') {
-                  logCritical('⚠️ Curator JWT restore failed:', restoredJwt.error);
-                }
-                return;
-              }
-
-              user = restoredJwt.user;
-              status = CONNECTION_STATUS.ONLINE;
-              _rpcOnlyMode = true;
-              _pinAuthClientId = null;
-              try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
-              logCritical('🔄 Curator JWT session restored:', user.email || user.id);
-
-              const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
-              if (clientId) {
-                cloud.syncClient(clientId).catch(e => {
-                  logCritical('⚠️ Bootstrap sync after curator JWT restore failed:', e?.message || e);
-                });
-              }
-            });
-          }
-        }
       }
 
       // ⚠️ Legacy Supabase onAuthStateChange — ПОЛНОСТЬЮ ОТКЛЮЧЁН
@@ -5717,10 +5376,8 @@
             var detail = e && e.detail || {};
             logCritical('[AUTH] 🔑 heys-auth-ready received:', detail.mode);
 
-            // Повторяем restoreSessionFromStorage чтобы подхватить новые данные
-            var restored = restoreSessionFromStorage();
-            if (restored.user) {
-              user = restored.user;
+            if (detail.mode === 'curator' && detail.user?.id) {
+              user = detail.user;
               status = CONNECTION_STATUS.ONLINE;
               _rpcOnlyMode = true;
               logCritical('[AUTH] ✅ Hot session restore:', user.email || user.id);
@@ -5731,14 +5388,9 @@
                   detail: { user: user, mode: detail.mode }
                 }));
               } catch (_) { }
-            } else {
-              // Данные не найдены — fallback reload
-              logCritical('[AUTH] ⚠️ No session data found after login, reloading');
-              window.location.reload();
             }
           } catch (err) {
             logCritical('[AUTH] ❌ heys-auth-ready handler error:', err);
-            window.location.reload();
           }
         }, { once: true });
       }
@@ -5780,6 +5432,7 @@
       // 🧹 Перед входом удаляем любые старые токены из storage.
       try {
         localStorage.removeItem('heys_supabase_auth_token');
+        localStorage.removeItem('heys_curator_session');
         localStorage.removeItem('sb-ukqolcziqcuplqfgrmsh-auth-token');
       } catch (_) { }
 
@@ -5813,33 +5466,11 @@
       // doUserUpload уйдёт в legacy upsert и получит 404.
       _rpcOnlyMode = true;
 
-      // 🔄 Сохраняем токен в localStorage (в формате совместимом со старым кодом)
       try {
-        const tokenData = {
-          access_token: data.access_token,
-          refresh_token: null, // Наш JWT не имеет refresh token
-          expires_at: data.expires_at,
-          user: data.user
-        };
-        const tokenJson = JSON.stringify(tokenData);
         const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-        setFn('heys_supabase_auth_token', tokenJson);
-        logCritical('[AUTH] ✅ Сессия сохранена (Yandex Auth), expires_at:', new Date(data.expires_at * 1000).toISOString());
-
-        // 🆕 v2.1: Сохраняем curator session для TrialQueue админки
-        // heys_trial_queue_v1.js проверяет этот ключ для admin API calls
-        setFn('heys_curator_session', data.access_token);
-        logCritical('[AUTH] ✅ Curator session сохранена для adminAPI');
-
-        // Верификация
-        const check = global.localStorage.getItem('heys_supabase_auth_token');
-        if (!check) {
-          logCritical('[AUTH] ❌ ВЕРИФИКАЦИЯ ПРОВАЛЕНА: токен не читается обратно!');
-        } else {
-          logCritical('[AUTH] ✅ Верификация OK, токен сохранён');
-        }
+        setFn('heys_curator_cookie_session_hint', '1');
       } catch (saveErr) {
-        logCritical('[AUTH] ❌ Ошибка сохранения сессии:', saveErr?.message || saveErr);
+        logCritical('[AUTH] ⚠️ Cookie session hint was not persisted:', saveErr?.message || saveErr);
       }
 
       status = 'sync';
@@ -10605,12 +10236,9 @@
 
   function hasCuratorJwtAuth() {
     try {
-      const curatorSession = global.localStorage?.getItem?.('heys_curator_session');
-      if (curatorSession && curatorSession.length > 10) return true;
-      const storedToken = global.localStorage?.getItem?.('heys_supabase_auth_token');
-      if (!storedToken) return false;
-      const parsed = JSON.parse(storedToken);
-      return !!(parsed && parsed.user && parsed.access_token);
+      return !!user
+        || !!global.HEYS?.YandexAPI?.getCuratorToken?.()
+        || !!global.localStorage?.getItem?.('heys_curator_cookie_session_hint');
     } catch (_) {
       return false;
     }
@@ -13138,13 +12766,7 @@
 
   function hasCuratorHotSyncAuth() {
     try {
-      if (user) return true;
-      const curatorSession = global.localStorage.getItem('heys_curator_session');
-      if (curatorSession && curatorSession.length > 10) return true;
-      const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
-      if (!storedToken) return false;
-      const parsed = JSON.parse(storedToken);
-      return !!(parsed && parsed.user && parsed.access_token);
+      return hasCuratorJwtAuth();
     } catch (_) {
       return false;
     }
@@ -13337,12 +12959,7 @@
     if (!navigator.onLine) return false;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
-    let hasCuratorTok = false;
-    try {
-      const cs = global.localStorage.getItem('heys_curator_session');
-      if (cs && cs.length > 10) hasCuratorTok = true;
-    } catch (_) { /* noop */ }
-    return Boolean(isPinAuth || user || hasCuratorTok);
+    return Boolean(isPinAuth || hasCuratorHotSyncAuth());
   }
 
   // Both bootstrapClientSync (full-sync row processing) и applyForegroundHotSyncValue
@@ -13962,12 +13579,7 @@
     );
     const hasCuratorSession = (() => {
       try {
-        const curatorSession = global.localStorage.getItem('heys_curator_session');
-        if (curatorSession && curatorSession.length > 10) return true;
-        const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
-        if (!storedToken) return false;
-        const parsed = JSON.parse(storedToken);
-        return !!(parsed && parsed.user && parsed.access_token);
+        return hasCuratorJwtAuth();
       } catch (_) {
         return false;
       }
@@ -14792,9 +14404,7 @@
     // защиты уже отсекут stale session token от прошлой PIN-сессии).
     let _isCuratorSwitch = false;
     try {
-      const hasCuratorJwt = !!localStorage.getItem('heys_curator_session');
-      const hasSupabaseAuth = !!localStorage.getItem('heys_supabase_auth_token');
-      _isCuratorSwitch = (hasCuratorJwt || hasSupabaseAuth) && !!oldClientId;
+      _isCuratorSwitch = hasCuratorJwtAuth() && !!oldClientId;
     } catch (_) {}
 
     if (_isCuratorSwitch) {
@@ -14974,24 +14584,17 @@
     log('📥 Загружаем данные нового клиента...');
     let _switchUsedCuratorPath = false;
     try {
-      // Проверяем есть ли сессия куратора (токен в localStorage)
-      // ⚠️ Не полагаемся на переменную `user` — она может быть не синхронизирована!
-      let hasCuratorSession = false;
-      try {
-        const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
-        if (storedToken) {
-          try {
-            const parsed = JSON.parse(storedToken);
-            hasCuratorSession = !!(parsed?.user && parsed?.access_token);
-          } catch (_) {
-            hasCuratorSession = false;
-          }
+      let hasCuratorSession = hasCuratorJwtAuth();
+      if (!user && hasCuratorSession && YandexAPI?.verifyCuratorToken) {
+        const devToken = YandexAPI.getCuratorToken?.() || undefined;
+        const verifyResult = await YandexAPI.verifyCuratorToken(devToken);
+        if (verifyResult?.data?.valid && verifyResult.data.user) {
+          user = verifyResult.data.user;
+          status = CONNECTION_STATUS.ONLINE;
+        } else {
+          hasCuratorSession = false;
         }
-        if (!hasCuratorSession) {
-          const curatorSession = global.localStorage.getItem('heys_curator_session');
-          hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
-        }
-      } catch (_) { }
+      }
 
       // 🔍 DEBUG: Логируем какой путь выбран
       log(`🔍 [switchClient] user=${!!user}, hasCuratorSession=${hasCuratorSession}, → ${(user || hasCuratorSession) ? 'CURATOR path' : 'PIN path'}`);
@@ -15006,29 +14609,6 @@
       // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
       // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА используем RPC режим!
       if (user || hasCuratorSession) {
-        // Куратор — если user ещё не установлен, восстанавливаем из токена
-        if (!user && hasCuratorSession) {
-          try {
-            const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
-            let parsed = null;
-            if (storedToken) {
-              try { parsed = JSON.parse(storedToken); } catch (_) { parsed = null; }
-            }
-            if (!parsed?.user) {
-              const curatorSession = global.localStorage.getItem('heys_curator_session');
-              parsed = buildCuratorAuthFromJwt(curatorSession, null);
-              if (parsed?.access_token) {
-                const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-                setFn('heys_supabase_auth_token', JSON.stringify(parsed));
-              }
-            }
-            if (parsed?.user) {
-              user = parsed.user;
-              status = CONNECTION_STATUS.ONLINE;
-              logCritical('🔄 [SWITCH] Восстановлен user из токена:', user.email || user.id);
-            }
-          } catch (_) { }
-        }
         // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА RPC режим!
         _rpcOnlyMode = true;
         // Debug: console.log('🔐 [SWITCH] RPC mode ENABLED for curator (Yandex API)');
@@ -15909,8 +15489,8 @@
   cloud.publishToShared = async function (product) {
     if (!user) {
       try {
-        const token = localStorage.getItem('heys_curator_session');
-        if (token && HEYS?.YandexAPI?.verifyCuratorToken) {
+        if (hasCuratorJwtAuth() && HEYS?.YandexAPI?.verifyCuratorToken) {
+          const token = HEYS.YandexAPI.getCuratorToken?.() || undefined;
           const verifyResult = await HEYS.YandexAPI.verifyCuratorToken(token);
           if (verifyResult?.data?.valid && verifyResult.data.user) {
             user = verifyResult.data.user;

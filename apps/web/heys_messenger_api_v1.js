@@ -24,27 +24,20 @@
       /* ignore */
     }
 
-    // Curator tabs may still contain a stale PIN heys_session_token from a previous
-    // client login. Prefer curator JWTs unless this is an explicit PIN session.
+    // Localhost may expose an in-memory dev token. Production curator requests
+    // carry only the HttpOnly cookie via credentials:'include'.
     if (!hasPinAuthClient) {
       try {
-        const curatorSession = localStorage.getItem('heys_curator_session');
-        if (curatorSession) {
-          try {
-            return JSON.parse(curatorSession);
-          } catch {
-            return curatorSession;
-          }
-        }
+        const devToken = HEYS.YandexAPI?.getCuratorToken?.();
+        if (devToken) return devToken;
       } catch {
         /* ignore */
       }
       try {
-        const raw = localStorage.getItem('heys_supabase_auth_token');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.access_token) return parsed.access_token;
-        }
+        const hasCuratorSession = HEYS.auth?.isCuratorSession?.() === true
+          || !!HEYS.cloud?.getUser?.()
+          || !!localStorage.getItem('heys_curator_cookie_session_hint');
+        if (hasCuratorSession) return null;
       } catch {
         /* ignore */
       }
@@ -273,6 +266,11 @@
     } catch {
       /* ignore */
     }
+    try {
+      if (localStorage.getItem('heys_curator_cookie_session_hint')) return true;
+    } catch {
+      /* ignore */
+    }
     const token = getBearerToken();
     if (!token) return false;
     // JWT имеет 3 точки + длиннее обычного session token
@@ -371,7 +369,14 @@
   function startFabUnreadPolling() {
     if (_fabPolling) return;
     if (disableLocalFabUnreadPolling()) return;
-    if (!getBearerToken()) return;
+    const hasCookieSession = (() => {
+      try {
+        return HEYS.auth?.isCuratorSession?.() === true
+          || !!localStorage.getItem('heys_pin_cookie_session_hint')
+          || !!localStorage.getItem('heys_curator_cookie_session_hint');
+      } catch { return false; }
+    })();
+    if (!getBearerToken() && !hasCookieSession) return;
     _fabPolling = true;
     void refreshFabUnread();
     _fabPollTimer = setInterval(refreshFabUnread, 60000);

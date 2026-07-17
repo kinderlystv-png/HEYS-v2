@@ -65,7 +65,7 @@ fi
 
 yc serverless function version create \
   --function-name heys-api-rpc \
-  --runtime nodejs18 \
+  --runtime nodejs22 \
   --entrypoint index.handler \
   --memory 512m \
   --execution-timeout 30s \

@@ -346,6 +346,10 @@ describe('SecurityMiddleware', () => {
     it('basicSecurity должен работать корректно', () => {
       basicSecurity(mockReq, mockRes, mockNext);
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
+      const cspCall = mockRes.setHeader.mock.calls.find(
+        ([name]: [string]) => name === 'Content-Security-Policy',
+      );
+      expect(cspCall?.[1]).not.toContain("'unsafe-eval'");
       expect(mockNext).toHaveBeenCalled();
     });
 

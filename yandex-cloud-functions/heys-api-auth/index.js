@@ -448,6 +448,42 @@ function getCuratorTokenFromRequest(event) {
   return getCookieValue(event.headers?.cookie || event.headers?.Cookie || '', 'heys_curator_jwt');
 }
 
+function buildCuratorLoginBody(accessToken, curator, cookieOnly = false) {
+  const body = {
+    expires_in: JWT_EXPIRES_IN,
+    expires_at: Math.floor(Date.now() / 1000) + JWT_EXPIRES_IN,
+    user: {
+      id: curator.id,
+      email: curator.email,
+      role: 'curator',
+      user_metadata: {
+        name: curator.name
+      }
+    }
+  };
+
+  if (!cookieOnly) {
+    body.access_token = accessToken;
+    body.token_type = 'bearer';
+  }
+
+  return body;
+}
+
+function shouldUseCookieOnlyCuratorResponse(origin, requestedCookieOnly = false) {
+  if (requestedCookieOnly === true) return true;
+  if (!origin) return false;
+
+  try {
+    const hostname = new URL(origin).hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return false;
+  } catch (_) {
+    // A malformed browser Origin must fail closed and never receive a JWT body.
+  }
+
+  return true;
+}
+
 const CLEAR_CLIENT_SESSION_COOKIES = [
   'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
   'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
@@ -484,7 +520,7 @@ function withClearCookies(result, cookies) {
 // Handlers
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function handleLogin(body, jwtSecret, ip) {
+async function handleLogin(body, jwtSecret, ip, cookieOnly = false) {
   // 🛡️ Rate limit check (DB-level, multi-instance safe)
   const rl = await checkLoginRateLimit(ip);
   if (!rl.allowed) {
@@ -588,14 +624,9 @@ async function handleLogin(body, jwtSecret, ip) {
       role: 'curator'
     }, jwtSecret);
 
-    // Формируем ответ в формате совместимом с Supabase.
-    //
-    // PR-B (2026-05-20): дополнительно выставляем JWT в HttpOnly cookie
-    // `heys_curator_jwt`. Это defense-in-depth: пока legacy-код всё ещё
-    // читает access_token из тела и сохраняет в localStorage, server-side
-    // путь уже умеет принимать тот же токен из cookie через handler
-    // heys-api-rpc. После того как все legacy-callers переведут на
-    // cookie-only, JWT из тела ответа можно будет убрать (Phase 2).
+    // Non-local browser origins are forced to cookie-only by the handler. Native
+    // mobile requests have no browser Origin and keep the explicit token response
+    // for SecureStore + one-time WebView session exchange.
     //
     // Domain=.heyslab.ru — frontend на app.heyslab.ru, API на api.heyslab.ru
     // (разные поддомены одного зарегистрированного домена).
@@ -605,20 +636,7 @@ async function handleLogin(body, jwtSecret, ip) {
       headers: {
         'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`
       },
-      body: JSON.stringify({
-        access_token: accessToken,
-        token_type: 'bearer',
-        expires_in: JWT_EXPIRES_IN,
-        expires_at: Math.floor(Date.now() / 1000) + JWT_EXPIRES_IN,
-        user: {
-          id: curator.id,
-          email: curator.email,
-          role: 'curator',
-          user_metadata: {
-            name: curator.name
-          }
-        }
-      })
+      body: JSON.stringify(buildCuratorLoginBody(accessToken, curator, cookieOnly))
     };
 
   } catch (e) {
@@ -1848,7 +1866,7 @@ async function handleExportProducts(curatorId) {
   }
 }
 
-async function handleRegister(body, jwtSecret) {
+async function handleRegister(body, jwtSecret, cookieOnly = false) {
   const { email, password, name } = body;
 
   if (!email || !password) {
@@ -1904,16 +1922,10 @@ async function handleRegister(body, jwtSecret) {
 
     return {
       statusCode: 201,
-      body: JSON.stringify({
-        access_token: accessToken,
-        token_type: 'bearer',
-        expires_in: JWT_EXPIRES_IN,
-        user: {
-          id: curator.id,
-          email: curator.email,
-          role: 'curator'
-        }
-      })
+      headers: {
+        'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`
+      },
+      body: JSON.stringify(buildCuratorLoginBody(accessToken, curator, cookieOnly))
     };
 
   } catch (e) {
@@ -2015,18 +2027,22 @@ module.exports.handler = async function (event, context) {
     event.requestContext?.identity?.sourceIp ??
     'unknown'
   );
+  const cookieOnlyCuratorResponse = shouldUseCookieOnlyCuratorResponse(
+    origin,
+    body?.cookie_only === true
+  );
 
   let result;
 
   switch (action) {
     case 'login':
-      result = await handleLogin(body, JWT_SECRET, clientIp);
+      result = await handleLogin(body, JWT_SECRET, clientIp, cookieOnlyCuratorResponse);
       break;
     case 'verify':
       result = await handleVerify(body, curatorAuthHeader, JWT_SECRET);
       break;
     case 'register':
-      result = await handleRegister(body, JWT_SECRET);
+      result = await handleRegister(body, JWT_SECRET, cookieOnlyCuratorResponse);
       break;
     case 'mfa':
       result = await handleMfa(mfaAction, body, curatorAuthHeader, JWT_SECRET);
@@ -2160,5 +2176,7 @@ module.exports._test = {
   deriveProductIdentityKeys,
   isProductKvExportKey,
   mergeOverlayProductForExport,
-  makeProductsExportBuilder
+  makeProductsExportBuilder,
+  buildCuratorLoginBody,
+  shouldUseCookieOnlyCuratorResponse
 };

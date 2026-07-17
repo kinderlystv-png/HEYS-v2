@@ -213,11 +213,9 @@
    */
   function isCuratorSession() {
     if (HEYS.auth?.isCuratorSession) return HEYS.auth.isCuratorSession();
-    const curatorSession = readGlobalValue('heys_curator_session', null);
-    if (curatorSession && curatorSession.length > 10) return true;
-    const legacy = readGlobalValue('heys_supabase_auth_token', null);
-    if (legacy?.access_token) return true;
-    return !!HEYS.cloud?.getUser?.();
+    return !!(HEYS.cloud?.getUser?.()
+      || HEYS.YandexAPI?.getCuratorToken?.()
+      || readGlobalValue('heys_curator_cookie_session_hint', null));
   }
 
   /**

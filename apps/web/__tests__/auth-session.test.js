@@ -265,35 +265,20 @@ describe('Token Storage', () => {
   
   describe('Token persistence', () => {
     
-    test('expired token should be removed on init', () => {
-      // Записываем истёкший токен
-      const expiredToken = {
-        access_token: 'old-token',
-        expires_at: Date.now() / 1000 - 3600 // Час назад
-      };
-      mockStorage.setItem(AUTH_KEY, JSON.stringify(expiredToken));
-      
-      // Симуляция init logic
-      const stored = JSON.parse(mockStorage.getItem(AUTH_KEY) || 'null');
-      if (stored?.expires_at && stored.expires_at * 1000 < Date.now()) {
-        mockStorage.removeItem(AUTH_KEY);
-      }
-      
+    test.each([
+      ['expired', Date.now() / 1000 - 3600],
+      ['valid', Date.now() / 1000 + 3600],
+    ])('%s browser-readable curator token is removed on init', (_label, expiresAt) => {
+      mockStorage.setItem(AUTH_KEY, JSON.stringify({
+        access_token: 'legacy-token',
+        expires_at: expiresAt,
+      }));
+
+      // Cookie-only browser auth never trusts token lifetime in localStorage.
+      mockStorage.removeItem(AUTH_KEY);
+
+      expect(mockStorage.getItem(AUTH_KEY)).toBeNull();
       expect(mockStorage.removeItem).toHaveBeenCalledWith(AUTH_KEY);
-    });
-    
-    test('valid token should remain on init', () => {
-      const validToken = {
-        access_token: 'valid-token',
-        expires_at: Date.now() / 1000 + 3600 // Через час
-      };
-      mockStorage.setItem(AUTH_KEY, JSON.stringify(validToken));
-      
-      // Симуляция init logic
-      const stored = JSON.parse(mockStorage.getItem(AUTH_KEY) || 'null');
-      const shouldRemove = stored?.expires_at && stored.expires_at * 1000 < Date.now();
-      
-      expect(shouldRemove).toBe(false);
     });
   });
   

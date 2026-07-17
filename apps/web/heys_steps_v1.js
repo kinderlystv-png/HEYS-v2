@@ -280,9 +280,6 @@
     const pinSession = lsGet('heys_pin_session', null);
     if (pinSession?.clientId) return String(pinSession.clientId);
 
-    const curatorSession = lsGet('heys_curator_session', null);
-    if (curatorSession?.currentClientId) return String(curatorSession.currentClientId);
-
     const profile = lsGet('heys_profile', null);
     if (profile?.id) return String(profile.id);
 

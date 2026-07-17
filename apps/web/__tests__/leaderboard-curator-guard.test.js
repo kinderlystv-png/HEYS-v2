@@ -27,7 +27,7 @@ describe('HEYS.leaderboard curator guard', () => {
   });
 
   it('does not publish session snapshots for curator sessions', () => {
-    localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
     localStorage.setItem('heys_leaderboard_sharing', 'true');
 
     const rpc = vi.fn().mockResolvedValue({ data: {} });
@@ -51,7 +51,7 @@ describe('HEYS.leaderboard curator guard', () => {
   });
 
   it('keeps sharing toggle local for curator sessions', async () => {
-    localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
 
     const rpc = vi.fn().mockResolvedValue({ data: {} });
     window.HEYS = { YandexAPI: { rpc } };

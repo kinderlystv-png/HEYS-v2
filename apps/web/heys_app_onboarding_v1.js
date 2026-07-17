@@ -101,9 +101,9 @@
     const isCuratorSession = () => {
         const isCuratorSessionFn = HEYS.auth?.isCuratorSession;
         if (typeof isCuratorSessionFn === 'function') return isCuratorSessionFn();
-        const curatorSession = readStoredValue('heys_curator_session', null);
-        const supabaseToken = readStoredValue('heys_supabase_auth_token', null);
-        return !!(curatorSession || supabaseToken || HEYS.cloud?.getUser?.());
+        return !!(HEYS.cloud?.getUser?.()
+            || HEYS.YandexAPI?.getCuratorToken?.()
+            || readStoredValue('heys_curator_cookie_session_hint', null));
     };
 
     // 🆕 v1.7: Проверка что пользователь авторизован как КЛИЕНТ (не куратор, не гость)

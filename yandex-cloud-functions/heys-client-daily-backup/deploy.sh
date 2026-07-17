@@ -44,7 +44,7 @@ fi
 cp "$SCRIPT_DIR/../.ycignore" "$SCRIPT_DIR/.ycignore" 2>/dev/null || true
 
 echo -e "${YELLOW}🚀 Deploying heys-client-daily-backup...${NC}"
-echo -e "${BLUE}   Runtime: nodejs18 | Memory: 256m | Timeout: 300s${NC}"
+echo -e "${BLUE}   Runtime: nodejs22 | Memory: 256m | Timeout: 300s${NC}"
 
 # Build env flags
 ENV_FLAGS=""
@@ -67,7 +67,7 @@ fi
 cd "$SCRIPT_DIR"
 eval yc serverless function version create \
     --function-name heys-client-daily-backup \
-    --runtime nodejs18 \
+    --runtime nodejs22 \
     --entrypoint index.handler \
     --memory 256m \
     --execution-timeout 300s \

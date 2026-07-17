@@ -1106,7 +1106,6 @@
                 try {
                     if (HEYS.auth?.getSessionToken?.()) return true;
                     if (localStorage.getItem('heys_session_token')) return true;
-                    if (localStorage.getItem('heys_curator_session')) return true;
                     if (hasWeeklyCookieSessionCarrier()) return true;
                 } catch (_) { /* noop */ }
                 return false;
@@ -1176,15 +1175,6 @@
                         }
                     } else {
                         console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
-                    }
-                }
-
-                // Attempt 5: Curator session (for curator access)
-                if (!sessionToken) {
-                    const curatorToken = localStorage.getItem('heys_curator_session');
-                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
-                    if (isValidToken(curatorToken)) {
-                        sessionToken = curatorToken;
                     }
                 }
 
@@ -1374,15 +1364,6 @@
                         }
                     } else {
                         console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
-                    }
-                }
-
-                // Attempt 5: Curator session (alternative auth mechanism)
-                if (!sessionToken) {
-                    const curatorToken = localStorage.getItem('heys_curator_session');
-                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
-                    if (isValidToken(curatorToken)) {
-                        sessionToken = curatorToken;
                     }
                 }
 
@@ -1716,15 +1697,6 @@
                                 }
                             } else {
                                 console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
-                            }
-                        }
-
-                        // Attempt 5: Curator session (alternative auth mechanism)
-                        if (!sessionToken) {
-                            const curatorToken = localStorage.getItem('heys_curator_session');
-                            console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? 'found' : 'NOT FOUND');
-                            if (isValidToken(curatorToken)) {
-                                sessionToken = curatorToken;
                             }
                         }
 

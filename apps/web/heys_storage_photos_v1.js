@@ -74,14 +74,7 @@
 
     function getCuratorToken() {
         try {
-            const curatorSession = global.localStorage.getItem('heys_curator_session');
-            if (curatorSession) return curatorSession;
-            const supabaseAuth = global.localStorage.getItem('heys_supabase_auth_token');
-            if (supabaseAuth) {
-                const parsed = JSON.parse(supabaseAuth);
-                return parsed?.access_token || null;
-            }
-            return null;
+            return HEYS?.YandexAPI?.getCuratorToken?.() || null;
         } catch (_) {
             return null;
         }

@@ -118,11 +118,10 @@
       if (_readGlobalValue('heys_pin_auth_client') || _readGlobalValue('heys_pin_cookie_session_hint')) {
         return false;
       }
-      if (_readGlobalValue('heys_curator_session') || _readGlobalValue('heys_curator_cookie_session_hint')) {
-        return true;
-      }
-      const authToken = _readGlobalValue('heys_supabase_auth_token');
-      return !!(authToken && authToken.user);
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+      return !!(HEYS.cloud?.getUser?.()
+        || HEYS.YandexAPI?.getCuratorToken?.()
+        || _readGlobalValue('heys_curator_cookie_session_hint'));
     } catch (_) {
       return false;
     }

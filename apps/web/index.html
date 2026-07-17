@@ -12,13 +12,14 @@
     <!-- 🛡️ SEC-005 (2026-06-08): Content-Security-Policy через meta http-equiv.
          Object Storage не пропускает кастомные HTTP-заголовки, поэтому используем meta.
          Ограничения meta: НЕ работают frame-ancestors, report-to/uri, sandbox.
-         'unsafe-inline'/'unsafe-eval' в script-src — компромисс: ~28 inline-скриптов
-         в index.html (boot, PWA install, debug snapshot). Дальнейшее усиление —
+         'unsafe-inline' в script-src — временный компромисс: ~28 inline-скриптов
+         в index.html (boot, PWA install, debug snapshot). `unsafe-eval` удалён:
+         production runtime не использует eval/new Function. Дальнейшее усиление —
          через nonce/hash после рефактора inline-кода в external. Allowlist внешних
          доменов основан на аудите apps/web/heys_*.js (jsdelivr/twemoji, qrserver,
          storage.yandexcloud.net, api.heyslab.ru). -->
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.jsdelivr.net https://api.qrserver.com https://storage.yandexcloud.net https://*.storage.yandexcloud.net; connect-src 'self' https://api.heyslab.ru https://storage.yandexcloud.net https://*.storage.yandexcloud.net http://localhost:4001 ws://localhost:* http://localhost:*; font-src 'self' data:; media-src 'self' blob: https://storage.yandexcloud.net https://*.storage.yandexcloud.net; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.heyslab.ru; upgrade-insecure-requests" />
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.jsdelivr.net https://api.qrserver.com https://storage.yandexcloud.net https://*.storage.yandexcloud.net; connect-src 'self' https://api.heyslab.ru https://storage.yandexcloud.net https://*.storage.yandexcloud.net http://localhost:4001 ws://localhost:* http://localhost:*; font-src 'self' data:; media-src 'self' blob: https://storage.yandexcloud.net https://*.storage.yandexcloud.net; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.heyslab.ru; upgrade-insecure-requests" />
     <!-- 🛡️ Preconnect: DNS+TCP+TLS ahead of time -->
     <link rel="preconnect" href="https://api.heyslab.ru" crossorigin />
     <!-- 🟦 Telegram in-app browser detection: показывает баннер с инструкцией
@@ -1748,7 +1749,7 @@
                         return typeof lastId === 'string' && lastId.length >= 8;
                     } catch (_) { return false; }
                 })();
-		                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || restoredCuratorCompat || hasRecoverablePin || hasPinCookieHint || hasCuratorCookieHint;
+		                window.__heysHasSession = hasPinAuth || hasRecoverablePin || hasPinCookieHint || hasCuratorCookieHint;
                 window.__heysHasRecoverablePin = hasRecoverablePin;
             } catch (_) {
                 window.__heysHasSession = false;
@@ -3751,7 +3752,11 @@
                 fetch(API + '/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, password: password }),
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        cookie_only: location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'
+                    }),
                     mode: 'cors',
                     cache: 'no-store',
                     credentials: 'include'
@@ -3767,7 +3772,8 @@
                         }
 
                         var d = res.data;
-                        if (!d || !d.access_token || !d.user) {
+                        var isLocalCuratorDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+                        if (!d || !d.user || (isLocalCuratorDev && !d.access_token)) {
                             if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
                             hlgSetCuratorErr('Неверный email или пароль');
                             hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
@@ -3775,18 +3781,10 @@
                         }
 
                         var finishCuratorLogin = function () {
-	                            // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
 	                            lsDel('heys_pin_auth_client');
 	                            lsDel('heys_session_token');
                                 hlgSetCookieSessionHint('pin', false);
-	                            var tokenData = {
-                                access_token: d.access_token,
-                                expires_in: d.expires_in || 86400,
-                                expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 86400),
-                                user: d.user
-                            };
-	                            lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
-	                            lsRaw('heys_curator_session', d.access_token);
+                                if (isLocalCuratorDev) window.__heysDevCuratorToken = d.access_token;
                                 hlgSetCookieSessionHint('curator', true);
 
                             // Передаём данные в React

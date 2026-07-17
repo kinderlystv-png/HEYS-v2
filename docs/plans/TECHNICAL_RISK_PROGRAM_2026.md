@@ -1,8 +1,8 @@
 # HEYS Technical Risk Program 2026
 
-Статус: **active**  
-Начато: **2026-07-17**  
-Ветка: **main**  
+- Статус: **active, wave 2**
+- Начато: **2026-07-17**
+- Ветка: **main**
 Цель: закрыть десять подтверждённых технических рисков четырьмя отдельными
 волнами без общего рефакторинга и без смешивания несвязанных изменений.
 
@@ -31,9 +31,9 @@
 
 | ID  | Риск                                                     | Волна | Статус    | Критерий закрытия                                                           |
 | --- | -------------------------------------------------------- | ----: | --------- | --------------------------------------------------------------------------- |
-| R01 | Curator JWT доступен через `localStorage`                |     2 | pending   | Production использует HttpOnly cookie; JS storage и Bearer fallback удалены |
-| R02 | Cloud deploy не имеет pre-deploy test gate               |     2 | pending   | Deploy job зависит от успешных тестов изменённой функции                    |
-| R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | pending   | Functions, CI и engines используют поддерживаемый совместимый runtime       |
+| R01 | Curator JWT доступен через `localStorage`                |     2 | in review | Production использует HttpOnly cookie; JS storage и Bearer fallback удалены |
+| R02 | Cloud deploy не имеет pre-deploy test gate               |     2 | in review | Deploy job зависит от успешных тестов изменённой функции                    |
+| R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | in review | Functions, CI и engines используют поддерживаемый совместимый runtime       |
 | R04 | SQL-миграции распределены без единого ledger             |     3 | pending   | Один apply-flow, порядок и checksum воспроизводимы                          |
 | R05 | PWA/RuStore/mobile critical path не входит в CI          |     1 | completed | Check-in и mobile session/navigation contracts входят в короткий CI gate    |
 | R06 | Storage/sync остаётся большим глобальным модулем         |     4 | pending   | Выделены проверенные контракты без смены legacy public API                  |
@@ -78,6 +78,25 @@ Scope: R01, R02 и R03.
 Порядок: inventory всех curator-token readers → cookie-only transport →
 совместимое CSP tightening → function-specific pre-deploy tests → Node.js 22
 compatibility → selective deploy и health checks.
+
+Проверено перед публикацией:
+
+- [x] Production browser origin принудительно получает cookie-only
+      login/register response; клиентский флаг не может запросить JWT обратно.
+- [x] Native запрос без browser Origin сохраняет token-response для SecureStore
+      и one-time WebView exchange; localhost держит dev token только в памяти
+      вкладки.
+- [x] Старые `heys_curator_session` / `heys_supabase_auth_token` удаляются при
+      boot, новые записи в JS storage отсутствуют.
+- [x] `unsafe-eval` удалён из production CSP; `unsafe-inline` остаётся до
+      отдельного выноса inline boot-кода.
+- [x] Cloud deploy имеет отдельный prerequisite job и повторный локальный gate;
+      post-deploy HTTP checks, runtime audit и automation canaries сохранены.
+- [x] Канонический runtime, `.nvmrc`, root engines и CI выровнены на Node.js 22.
+- [x] Все 19 описанных function packages установились, загрузились и прошли
+      доступные unit/contract tests на Node.js `v22.23.1`.
+- [ ] Commit/push, фактический deploy 17 активных HEYS functions и production
+      runtime/smoke verification.
 
 Выходной gate: curator JWT отсутствует в JS storage, красные contract tests
 останавливают deploy, все функции проходят smoke на поддерживаемом runtime.
@@ -135,3 +154,27 @@ Official runtime evidence:
 - Волна 1: mobile critical 10/10, web sync-critical 183/183, mobile type-check и
   CI YAML validation прошли.
 - Публикация и deploy ещё не выполнялись.
+
+### 2026-07-17 — волна 1 завершена
+
+- Source/CI commit:
+  `f4916ae9 test(ci): gate check-in and mobile critical paths`.
+- Release commits: `d6aa614d`, `d2af97a1`.
+- `main` опубликован до `d2af97a1`.
+- Pre-push gate: 206 test files passed, 2,804 tests passed, 33 skipped.
+- GitHub Actions run `29610231173`: build, unit gate, PWA/landing deploy и
+  deployed-state verification прошли.
+- R05 и R08 закрыты; начат inventory cookie-only auth для волны 2.
+
+### 2026-07-17 — волна 2 готова к публикации
+
+- Cookie-only web auth проверен 227 web tests и 10 auth function contract tests.
+- Полный function gate: 19/19 packages passed на Node.js `v22.23.1`.
+- Deploy dry-run для `heys-api-auth` показал `runtime=nodejs22` и обязательный
+  pre-deploy gate до создания версии.
+- Production CSP больше не содержит `unsafe-eval`; runtime source не содержит
+  `eval()` / `new Function()`.
+- Scoped legacy QA собрал 7 затронутых bundles; `localhost:3001` отдаёт новые
+  hashes и CSP без `unsafe-eval`.
+- До публикации production всё ещё содержит 17 HEYS functions на `nodejs18`;
+  статус R01–R03 станет `completed` только после push/deploy/smoke.

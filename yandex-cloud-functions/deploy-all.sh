@@ -17,6 +17,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ENV_FILE="$SCRIPT_DIR/.env"
 VALIDATE_SCRIPT="$SCRIPT_DIR/validate-env.sh"
 HEALTH_SCRIPT="$SCRIPT_DIR/health-check.sh"
+TEST_SCRIPT="$SCRIPT_DIR/test-functions.sh"
 CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
 
 # Parse flags
@@ -122,7 +123,7 @@ API_FUNCTIONS=(
 AUTOMATION_FUNCTIONS=(
     heys-bot-client heys-maintenance heys-client-daily-backup
     heys-cron-security-alerts heys-cron-reminders heys-cron-trial-drip
-    heys-cron-photo-cleanup
+    heys-cron-photo-cleanup heys-snapshot-demo
 )
 
 selected_functions() {
@@ -268,43 +269,43 @@ get_function_config() {
     local func_name=$1
     case "$func_name" in
         "heys-api-rpc")
-            echo "nodejs18 index.handler 512m 30s" ;;
+            echo "nodejs22 index.handler 512m 30s" ;;
         "heys-api-rest")
-            echo "nodejs18 index.handler 512m 30s" ;;
+            echo "nodejs22 index.handler 512m 30s" ;;
         "heys-api-auth")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-leads")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-sms")
-            echo "nodejs18 index.handler 128m 10s" ;;
+            echo "nodejs22 index.handler 128m 10s" ;;
         "heys-api-health")
-            echo "nodejs18 index.handler 128m 5s" ;;
+            echo "nodejs22 index.handler 128m 5s" ;;
         "heys-api-payments")
-            echo "nodejs18 index.handler 256m 15s" ;;
+            echo "nodejs22 index.handler 256m 15s" ;;
         "heys-bot-client")
-            echo "nodejs18 index.handler 256m 60s" ;;
+            echo "nodejs22 index.handler 256m 60s" ;;
         "heys-cron-trial-drip")
-            echo "nodejs18 index.handler 256m 60s" ;;
+            echo "nodejs22 index.handler 256m 60s" ;;
         "heys-cron-security-alerts")
-            echo "nodejs18 index.handler 256m 60s" ;;
+            echo "nodejs22 index.handler 256m 60s" ;;
         "heys-cron-speechkit-transcribe")
-            echo "nodejs18 index.handler 256m 120s" ;;
+            echo "nodejs22 index.handler 256m 120s" ;;
         "heys-api-push")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-messages")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-photos")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         "heys-cron-reminders")
-            echo "nodejs18 index.handler 512m 120s" ;;
+            echo "nodejs22 index.handler 512m 120s" ;;
         "heys-cron-photo-cleanup")
-            echo "nodejs18 index.handler 256m 600s" ;;
+            echo "nodejs22 index.handler 256m 600s" ;;
         "heys-client-daily-backup")
-            echo "nodejs18 index.handler 256m 300s" ;;
+            echo "nodejs22 index.handler 256m 300s" ;;
         "heys-snapshot-demo")
-            echo "nodejs18 index.handler 512m 300s" ;;
+            echo "nodejs22 index.handler 512m 300s" ;;
         "heys-maintenance")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 30s" ;;
         *)
             echo "" ;;
     esac
@@ -700,6 +701,22 @@ ensure_speechkit_trigger() {
         echo -e "${GREEN}✅ SpeechKit timer created: $trigger_name ($cron_expr)${NC}"
     fi
 }
+
+# Every deploy path, including manual runs, is guarded by the same Node runtime
+# compatibility and function contract tests. CI also runs this as a separate job
+# so the deploy job itself never starts after a red gate.
+if [ ! -x "$TEST_SCRIPT" ]; then
+    echo -e "${RED}❌ Pre-deploy test gate is missing or not executable: $TEST_SCRIPT${NC}"
+    exit 1
+fi
+
+PREDEPLOY_TARGETS=()
+while IFS= read -r func_name; do
+    [ -n "$func_name" ] && PREDEPLOY_TARGETS+=("$func_name")
+done < <(selected_functions)
+
+echo -e "${BLUE}🧪 Running mandatory pre-deploy function gate...${NC}"
+"$TEST_SCRIPT" "${PREDEPLOY_TARGETS[@]}"
 
 # Main execution
 SHOULD_UPDATE_GATEWAY=false

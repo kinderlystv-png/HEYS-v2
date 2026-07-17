@@ -494,7 +494,7 @@ describe('eventLog: failure recovery (real module)', () => {
     const { heysCtx, rpcMock, runFlush } = createIsolatedModule({
       rpcResult: { data: null, error: { message: 'invalid_session' } },
     });
-    heysCtx.localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    heysCtx.localStorage.setItem('heys_curator_cookie_session_hint', '1');
     heysCtx.localStorage.setItem(PENDING_KEY, JSON.stringify([
       { kind: 'meal-add', summary: 'old pending', payload: { dateKey: '2026-05-24' } },
     ]));

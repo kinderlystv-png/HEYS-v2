@@ -2237,10 +2237,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try {
                 if (HEYS.cloud?.getUser?.()) return true;
             } catch { /* noop */ }
-            try {
-                return !!localStorage.getItem('heys_curator_session') ||
-                    !!localStorage.getItem('heys_supabase_auth_token');
-            } catch { return false; }
+            try { return !!localStorage.getItem('heys_curator_cookie_session_hint'); } catch { return false; }
         })();
 
         const defaults = isCurator

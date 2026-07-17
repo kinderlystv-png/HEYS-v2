@@ -17,10 +17,11 @@
         const bootLog = (msg) => window.__heysLog && window.__heysLog('[APP] ' + msg);
         bootLog('heys_app_entry_v1.js started');
 
-        // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
+        // 🔍 EARLY DEBUG: only non-secret session signals are observable.
         try {
-            const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
-            bootLog('auth token: ' + (_earlyToken ? 'YES' : 'NO'));
+            const _earlySessionHint = localStorage.getItem('heys_curator_cookie_session_hint')
+                || localStorage.getItem('heys_pin_cookie_session_hint');
+            bootLog('session hint: ' + (_earlySessionHint ? 'YES' : 'NO'));
         } catch (e) {
             bootLog('auth check error: ' + e.message);
         }

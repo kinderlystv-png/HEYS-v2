@@ -466,26 +466,14 @@
     return { ok: true };
   }
 
-  /**
-   * Проверить, является ли сессия кураторской
-   * Источник правды: heys_curator_session (JWT), fallback: legacy supabase token,
-   * дополнительный fallback: HEYS.cloud.getUser()
-   */
+  /** Проверить кураторский runtime без чтения секретов из JS storage. */
   function isCuratorSession() {
     try {
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (curatorSession && curatorSession.length > 10) return true;
-      const legacy = localStorage.getItem('heys_supabase_auth_token');
-      if (legacy) {
-        const parsed = JSON.parse(legacy);
-        if (parsed?.access_token) return true;
-      }
+      if (HEYS.cloud?.getUser?.()) return true;
+      if (HEYS.YandexAPI?.getCuratorToken?.()) return true;
+      return localStorage.getItem(CURATOR_COOKIE_SESSION_HINT_KEY) === '1';
     } catch (_) { }
-    try {
-      return !!HEYS.cloud?.getUser?.();
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 
   // === Session Token Management ===

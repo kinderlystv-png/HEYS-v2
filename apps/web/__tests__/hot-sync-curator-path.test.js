@@ -20,8 +20,9 @@ function getRunForegroundHotKeySyncSource() {
 describe('foreground hot-sync curator auth path', () => {
   const hotSyncSource = getRunForegroundHotKeySyncSource();
 
-  it('treats heys_curator_session as explicit curator auth', () => {
-    expect(hotSyncSource).toContain("global.localStorage.getItem('heys_curator_session')");
+  it('uses the cookie-safe curator auth context instead of JS-readable JWT', () => {
+    expect(hotSyncSource).toContain('return hasCuratorJwtAuth();');
+    expect(hotSyncSource).not.toContain("global.localStorage.getItem('heys_curator_session')");
     expect(hotSyncSource).toContain('const isCuratorMode = hasCuratorSession || (!hasSessionToken && isCuratorLike);');
   });
 

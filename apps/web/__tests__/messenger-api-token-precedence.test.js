@@ -24,27 +24,28 @@ describe('HEYS.MessengerAPI token precedence', () => {
     window.HEYS = originalHEYS;
   });
 
-  it('prefers curator JWT over stale PIN session token outside PIN auth', () => {
-    localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+  it('does not reuse a stale PIN bearer during cookie-only curator auth', () => {
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
     localStorage.setItem('heys_session_token', JSON.stringify('stale-pin-token'));
 
     const api = loadMessengerAPI();
 
-    expect(api._getBearerToken()).toBe('curator.jwt.token');
+    expect(api._getBearerToken()).toBeNull();
   });
 
-  it('unwraps JSON-serialized curator JWT before sending Authorization', () => {
-    localStorage.setItem('heys_curator_session', JSON.stringify('curator.jwt.token'));
+  it('ignores legacy curator JWT storage during production requests', () => {
+    localStorage.setItem('heys_curator_session', JSON.stringify('legacy.curator.jwt'));
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
     localStorage.setItem('heys_session_token', JSON.stringify('stale-pin-token'));
 
     const api = loadMessengerAPI();
 
-    expect(api._getBearerToken()).toBe('curator.jwt.token');
+    expect(api._getBearerToken()).toBeNull();
   });
 
   it('keeps PIN session token precedence for explicit PIN auth clients', () => {
     localStorage.setItem('heys_pin_auth_client', 'test-pin-client-id');
-    localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
     localStorage.setItem('heys_session_token', JSON.stringify('pin-session-token'));
 
     const api = loadMessengerAPI();
@@ -68,7 +69,7 @@ describe('HEYS.MessengerAPI token precedence', () => {
   });
 
   it('backs off inbox polling after server errors', async () => {
-    localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    localStorage.setItem('heys_curator_cookie_session_hint', '1');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
       status: 500,

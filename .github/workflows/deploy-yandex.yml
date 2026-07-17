@@ -24,7 +24,7 @@ permissions:
   actions: read
 
 env:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   PNPM_VERSION: "8"
   # Opt the remaining Node20-runtime actions (setup-node@v4, cache@v3,
   # pnpm/action-setup@v2) onto Node 24 — the official migration path GitHub forces on
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
 
       - id: classify
         name: Classify push (S3-aware, release-only vs code-bearing)

@@ -777,7 +777,7 @@
 
   function getAuditContext() {
     const sessionToken = HEYS.cloud?.getSessionToken?.() || localStorage.getItem('heys_session_token');
-    const curatorToken = localStorage.getItem('heys_curator_session');
+    const curatorToken = HEYS.YandexAPI?.getCuratorToken?.() || null;
     const clientIdRaw = HEYS.utils?.getCurrentClientId?.() ||
       localStorage.getItem('heys_client_current') ||
       localStorage.getItem('heys_pin_auth_client');
@@ -794,7 +794,9 @@
     try {
       if (HEYS.cloud?.isPinAuthClient?.()) return true;
       if (HEYS.YandexAPI?.hasCookieSessionHint?.('pin')) return true;
-      return !!localStorage.getItem('heys_pin_cookie_session_hint');
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+      return !!localStorage.getItem('heys_pin_cookie_session_hint')
+        || !!localStorage.getItem('heys_curator_cookie_session_hint');
     } catch (_) {
       return false;
     }
@@ -2083,7 +2085,7 @@
       const hasSession = Boolean(
         HEYS.auth?.getSessionToken?.() ||
         localStorage.getItem('heys_session_token') ||
-        localStorage.getItem('heys_curator_session')
+        hasCookieSessionCarrier()
       );
 
       if (!HEYS.YandexAPI?.rpc || !hasSession || isAuditRpcBlocked()) {
@@ -4601,8 +4603,7 @@
      * Для кураторов нет PIN session — cloud sync делается через storage sync layer
      */
     _isCuratorMode() {
-      return HEYS.auth?.isCuratorSession?.() === true ||
-        !!localStorage.getItem('heys_curator_session');
+      return HEYS.auth?.isCuratorSession?.() === true;
     },
 
     /**
@@ -5420,11 +5421,7 @@
      */
     _getCuratorId() {
       try {
-        const tokenJson = localStorage.getItem('heys_supabase_auth_token');
-        if (!tokenJson) return null;
-
-        const tokenData = JSON.parse(tokenJson);
-        return tokenData?.user?.id || null;
+        return HEYS.cloud?.getUser?.()?.id || null;
       } catch (e) {
         console.error('[HEYS.game] Failed to parse curator session:', e);
         return null;
@@ -5484,8 +5481,8 @@
         const { curatorToken } = getAuditContext();
         const curatorId = this._getCuratorId();
 
-        if (!curatorToken || !curatorId) {
-          console.error('❌ Curator auth required (JWT token + curatorId)');
+        if ((!curatorToken && HEYS.auth?.isCuratorSession?.() !== true) || !curatorId) {
+          console.error('❌ Curator auth required');
           return { error: 'curator_auth_required' };
         }
 
@@ -6004,8 +6001,7 @@
           localStorage.getItem('heys_session_token') ||
           HEYS.cloud?.isPinAuthClient?.() ||
           localStorage.getItem('heys_pin_cookie_session_hint') ||
-          HEYS.auth?.isCuratorSession?.() === true ||
-          localStorage.getItem('heys_curator_session');
+          HEYS.auth?.isCuratorSession?.() === true;
         if (!hasSession) {
           return;
         }

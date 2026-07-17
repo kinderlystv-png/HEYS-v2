@@ -2106,12 +2106,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         extraLines.push('  (empty)');
                     }
 
-                    // === Auth tokens ===
-                    pushHeader('Auth tokens (LS presence)');
-                    pushKV('heys_curator_session', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_session')));
+                    // === Auth session signals ===
+                    pushHeader('Auth session signals (no secrets)');
+                    pushKV('heys_curator_cookie_session_hint', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_cookie_session_hint')));
                     pushKV('heys_session_token', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_session_token')));
                     pushKV('heys_pin_auth_client', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_pin_auth_client')));
-                    pushKV('heys_supabase_auth_token', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')));
 
                     // === Sync config + retry ===
                     // NOTE (2026-06-03): значения ниже — СТАТИЧЕСКОЕ зеркало литералов из
@@ -2799,12 +2798,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 } else {
                     console.log('(event history empty)');
                 }
-                console.log('=== Auth tokens ===');
+                console.log('=== Auth session signals (no secrets) ===');
                 console.log({
-                    heys_curator_session: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_session')),
+                    heys_curator_cookie_session_hint: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_cookie_session_hint')),
                     heys_session_token: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_session_token')),
                     heys_pin_auth_client: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_pin_auth_client')),
-                    heys_supabase_auth_token: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')),
                 });
 
                 // === Sync pipeline configuration & retry policy ===

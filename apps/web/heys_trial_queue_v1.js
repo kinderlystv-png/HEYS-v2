@@ -1088,11 +1088,7 @@
     try {
       if (HEYS.cloud?.getUser?.()) return true;
     } catch (_) { /* noop */ }
-    try {
-      return !!localStorage.getItem('heys_curator_session');
-    } catch (_) {
-      return false;
-    }
+    try { return !!localStorage.getItem('heys_curator_cookie_session_hint'); } catch (_) { return false; }
   };
 
   const adminAPI = {

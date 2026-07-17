@@ -691,21 +691,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 	    };
 	  };
 
-  const hasCuratorJwt = () => {
-    try {
-      return !!readGlobalValue('heys_curator_session', null);
-    } catch (_) {
-      return false;
-    }
-  };
-
   const isCuratorUser = () => {
-    // PIN-куратора у нас нет — только JWT-куратор и PIN-клиенты.
-    // hasCuratorJwt() убран как fallback потому что давал false-positive
-    // PIN-клиентам со стейл `heys_curator_session` от прошлой сессии.
     const isCuratorSession = HEYS.auth?.isCuratorSession;
     if (typeof isCuratorSession === 'function') return !!isCuratorSession();
-    return !!HEYS.cloud?.getUser?.();
+    return !!(HEYS.cloud?.getUser?.()
+      || HEYS.YandexAPI?.getCuratorToken?.()
+      || readGlobalValue('heys_curator_cookie_session_hint', null));
   };
 
   const isSharedProduct = (product) => {

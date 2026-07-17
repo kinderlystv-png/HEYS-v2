@@ -159,11 +159,10 @@
       const hasPinAuth = !!readGlobalValue('heys_pin_auth_client', null)
         || !!readGlobalValue('heys_pin_cookie_session_hint', null);
       if (hasPinAuth) return false;
-      const hasCuratorJwt = !!readGlobalValue('heys_curator_session', null)
-        || !!readGlobalValue('heys_curator_cookie_session_hint', null);
-      if (hasCuratorJwt) return true;
-      const authToken = readGlobalValue('heys_supabase_auth_token', null);
-      return !!(authToken && authToken.user);
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+      return !!(HEYS.cloud?.getUser?.()
+        || HEYS.YandexAPI?.getCuratorToken?.()
+        || readGlobalValue('heys_curator_cookie_session_hint', null));
     } catch (_) {
       return false;
     }

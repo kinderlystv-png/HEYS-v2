@@ -266,10 +266,11 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(moduleSource).toMatch(/if \(items\.some\(\(item\) => \/\^heys_dayv2_\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(String\(item\?\.k \|\| ''\)\)\)\) \{\s+return \{ success: false, saved: 0, error: 'merge_save_required_for_dayv2' \};\s+\}/);
   });
 
-  it('getAllKV falls back to curator JWT path when no session token exists', async () => {
+  it('getAllKV uses curator HttpOnly cookie when no session token exists', async () => {
     const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
       storageSeed: {
-        heys_curator_session: 'curator-jwt-1',
+        heys_curator_cookie_session_hint: '1',
       },
     });
     global.fetch.mockResolvedValue(
@@ -288,9 +289,9 @@ describe('HEYS.YandexAPI session-safe access', () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe('https://api.heyslab.ru/auth/clients/client-42/kv');
-    expect(options.headers).toMatchObject({
+    expect(options.credentials).toBe('include');
+    expect(options.headers).toEqual({
       'Content-Type': 'application/json',
-      Authorization: 'Bearer curator-jwt-1',
     });
   });
 
@@ -611,7 +612,6 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
     global.fetch
       .mockResolvedValueOnce(createJsonResponse({
-        access_token: 'curator-jwt-new',
         expires_in: 86400,
         user: { id: 'curator-1', email: 'curator@example.test', role: 'curator' },
       }))
@@ -623,12 +623,50 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch.mock.calls[0][0]).toBe('https://api.heyslab.ru/auth/login');
     expect(global.fetch.mock.calls[0][1].credentials).toBe('include');
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
+      email: 'curator@example.test',
+      password: 'secret',
+      cookie_only: true,
+    });
+    expect(result.data.access_token).toBeUndefined();
+    expect(api.getCuratorToken()).toBeNull();
     expect(global.fetch.mock.calls[1][0]).toBe('https://api.heyslab.ru/auth/client-logout');
     expect(global.fetch.mock.calls[1][1]).toMatchObject({
       method: 'POST',
       credentials: 'include',
       body: '{}',
     });
+  });
+
+  it('ignores legacy curator tokens from localStorage in production', () => {
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: {
+        heys_curator_session: 'legacy.curator.jwt',
+        heys_supabase_auth_token: JSON.stringify({ access_token: 'legacy.supabase.jwt' }),
+      },
+    });
+
+    expect(api.getCuratorToken()).toBeNull();
+  });
+
+  it('keeps localhost curator token in memory without writing browser storage', async () => {
+    const api = loadYandexAPI({ hostname: 'localhost' });
+    global.fetch
+      .mockResolvedValueOnce(createJsonResponse({
+        access_token: 'local.curator.jwt',
+        expires_in: 86400,
+        user: { id: 'curator-1', email: 'curator@example.test', role: 'curator' },
+      }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: true, revoked: false }));
+
+    const result = await api.curatorLogin('curator@example.test', 'secret');
+
+    expect(result.data.access_token).toBe('local.curator.jwt');
+    expect(api.getCuratorToken()).toBe('local.curator.jwt');
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body).cookie_only).toBe(false);
+    expect(global.localStorage.setItem).not.toHaveBeenCalledWith('heys_curator_session', expect.anything());
+    expect(global.localStorage.setItem).not.toHaveBeenCalledWith('heys_supabase_auth_token', expect.anything());
   });
 
   it('curatorLogin fails closed and rolls back curator cookie when stale client cookie cleanup fails', async () => {
@@ -638,7 +676,6 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
     global.fetch
       .mockResolvedValueOnce(createJsonResponse({
-        access_token: 'curator-jwt-new',
         expires_in: 86400,
         user: { id: 'curator-1', email: 'curator@example.test', role: 'curator' },
       }))
@@ -679,10 +716,11 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
   });
 
-  it('REST reads include curator JWT when curator session exists', async () => {
+  it('REST reads use cookie credentials without Authorization in production', async () => {
     const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
       storageSeed: {
-        heys_curator_session: 'curator-jwt-1',
+        heys_curator_cookie_session_hint: '1',
       },
     });
     global.fetch.mockResolvedValue(
@@ -695,16 +733,16 @@ describe('HEYS.YandexAPI session-safe access', () => {
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toContain('/rest/client_kv_store?');
     expect(options.credentials).toBe('include');
-    expect(options.headers).toMatchObject({
+    expect(options.headers).toEqual({
       'Content-Type': 'application/json',
-      Authorization: 'Bearer curator-jwt-1',
     });
   });
 
   it('preserves auth error from curator fallback instead of masking it as network error', async () => {
     const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
       storageSeed: {
-        heys_curator_session: 'curator-jwt-1',
+        heys_curator_cookie_session_hint: '1',
       },
     });
     global.fetch.mockResolvedValue(

@@ -56,15 +56,11 @@ describe('HEYS.Subscription curator guard', () => {
   it('does not call session subscription RPC for curator sessions', async () => {
     const clientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
     const storage = createMockStorage({
-      heys_curator_session: 'curator.jwt.token',
+      heys_curator_cookie_session_hint: '1',
       heys_client_current: JSON.stringify(clientId),
       heys_clients: JSON.stringify([
         { id: clientId, name: 'Client A', subscription_status: 'active' },
       ]),
-      heys_supabase_auth_token: JSON.stringify({
-        access_token: 'curator.jwt.token',
-        user: { id: 'curator-1', email: 'curator@example.test' },
-      }),
     });
 
     Object.defineProperty(window, 'localStorage', {
@@ -89,15 +85,11 @@ describe('HEYS.Subscription curator guard', () => {
   it('keeps the legacy Subscriptions module local for curator sessions', async () => {
     const clientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
     const storage = createMockStorage({
-      heys_curator_session: 'curator.jwt.token',
+      heys_curator_cookie_session_hint: '1',
       heys_client_current: JSON.stringify(clientId),
       heys_clients: JSON.stringify([
         { id: clientId, name: 'Client A', subscription_status: 'active' },
       ]),
-      heys_supabase_auth_token: JSON.stringify({
-        access_token: 'curator.jwt.token',
-        user: { id: 'curator-1', email: 'curator@example.test' },
-      }),
     });
 
     Object.defineProperty(window, 'localStorage', {

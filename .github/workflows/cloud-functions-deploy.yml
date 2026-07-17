@@ -10,6 +10,7 @@ on:
       - "yandex-cloud-functions/heys-api-*/**"
       - "yandex-cloud-functions/shared/**"
       - "yandex-cloud-functions/deploy-all.sh"
+      - "yandex-cloud-functions/test-functions.sh"
       - "yandex-cloud-functions/api-gateway-spec.yaml"
   workflow_dispatch:
     inputs:
@@ -30,16 +31,80 @@ on:
           - "heys-api-photos"
 
 jobs:
-  deploy:
-    name: Deploy Cloud Functions
+  predeploy-tests:
+    name: Pre-deploy function tests (Node.js 22)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: yandex-cloud-functions/**/package-lock.json
+
+      - name: Resolve and test deployment targets
+        shell: bash
+        run: |
+          chmod +x yandex-cloud-functions/test-functions.sh
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MANUAL_FUNCTION="${{ inputs.function_name }}"
+            if [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
+              yandex-cloud-functions/test-functions.sh "$MANUAL_FUNCTION"
+            else
+              yandex-cloud-functions/test-functions.sh --all
+            fi
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE=$(git rev-parse HEAD^ 2>/dev/null || true)
+          fi
+
+          if [ -z "$BEFORE" ]; then
+            yandex-cloud-functions/test-functions.sh --all
+            exit 0
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
+          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$|test-functions\.sh$)'; then
+            yandex-cloud-functions/test-functions.sh --all
+            exit 0
+          fi
+
+          mapfile -t FUNCTIONS < <(echo "$CHANGED_FILES" | sed -n 's#^yandex-cloud-functions/\(heys-api-[^/]*\)/.*#\1#p' | sort -u)
+          if [ "${#FUNCTIONS[@]}" -eq 0 ]; then
+            echo "Gateway-only change: no function runtime target"
+            bash -n yandex-cloud-functions/deploy-all.sh yandex-cloud-functions/test-functions.sh
+          else
+            yandex-cloud-functions/test-functions.sh "${FUNCTIONS[@]}"
+          fi
+
+  deploy:
+    name: Deploy Cloud Functions
+    needs: predeploy-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Setup Yandex Cloud CLI
         run: |
@@ -138,7 +203,7 @@ jobs:
             echo "gateway_spec_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$)'; then
+          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$|test-functions\.sh$)'; then
             echo "mode=all" >> "$GITHUB_OUTPUT"
             echo "reason=shared-or-deploy-script-changed" >> "$GITHUB_OUTPUT"
             exit 0
@@ -259,6 +324,24 @@ jobs:
           retry_http_check "REST endpoint" "200" check_rest
           retry_http_check "Client logout preflight" "204" check_client_logout_preflight
           retry_http_check "Curator logout preflight" "204" check_curator_logout_preflight
+
+          echo "🧭 Verifying every deployed HEYS function runtime..."
+          while IFS= read -r function_name; do
+            runtime=$(yc serverless function version list \
+              --function-name "$function_name" --limit 1 --format json \
+              | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const v=JSON.parse(s)[0]||{};process.stdout.write(v.runtime||"")})')
+            if [ "$runtime" != "nodejs22" ]; then
+              echo "::error::$function_name runs $runtime, expected nodejs22"
+              exit 1
+            fi
+            echo "✅ $function_name: $runtime"
+          done < <(yc serverless function list --format json \
+            | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>JSON.parse(s).filter(x=>x.name.startsWith("heys-")).sort((a,b)=>a.name.localeCompare(b.name)).forEach(x=>console.log(x.name)))')
+
+          if [ "${{ steps.deployment-target.outputs.mode }}" = "all" ]; then
+            echo "🧪 Running automation canaries after the runtime migration..."
+            node yandex-cloud-functions/check-heys-ops-status.cjs --canary --strict
+          fi
 
           echo "✅ Deployment verified successfully"
 

@@ -17,7 +17,7 @@ print(f"Password chars: {[ord(c) for c in password]}")
 cmd = [
     'yc', 'serverless', 'function', 'version', 'create',
     '--function-name', 'heys-api-rpc',
-    '--runtime', 'nodejs18',
+    '--runtime', 'nodejs22',
     '--entrypoint', 'index.handler',
     '--memory', '256m',
     '--execution-timeout', '30s',

@@ -105,6 +105,37 @@ describe('HEYS.AppAuthInit session restore', () => {
     expect(setIsInitializing).toHaveBeenCalledWith(false);
   });
 
+  it('purges legacy curator secrets and migrates only a cookie probe hint', async () => {
+    storage._store.heys_curator_session = 'legacy.curator.jwt';
+    storage._store.heys_supabase_auth_token = JSON.stringify({
+      access_token: 'legacy.supabase.jwt',
+      user: { id: 'curator-legacy' },
+    });
+    const setAuthUser = vi.fn();
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud: { setAuthUser },
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId: vi.fn(),
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus: vi.fn(),
+      setIsInitializing: vi.fn(),
+    });
+
+    await flushPromises();
+
+    expect(storage._store.heys_curator_session).toBeUndefined();
+    expect(storage._store.heys_supabase_auth_token).toBeUndefined();
+    expect(storage._store.heys_curator_cookie_session_hint).toBe('1');
+    expect(window.HEYS.YandexAPI.verifyCuratorToken).toHaveBeenCalledWith();
+  });
+
   it('clears invalid cookie-only PIN sessions before falling back to login', async () => {
     storage._store.heys_pin_cookie_session_hint = '1';
     window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn().mockResolvedValue({

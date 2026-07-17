@@ -86,9 +86,15 @@
             try { localStorage.removeItem(key); } catch (_) { }
         };
 
-        const writeRawLocalStorage = (key, value) => {
-            try { localStorage.setItem(key, value); } catch (_) { }
-        };
+        // Migrate only the non-secret session hint, then purge legacy curator
+        // credentials before any online/offline branch can read them.
+        const hadLegacyCuratorMarker = !!readGlobalValue('heys_curator_session', null)
+            || !!readGlobalValue('heys_supabase_auth_token', null);
+        removeGlobalValue('heys_curator_session');
+        removeGlobalValue('heys_supabase_auth_token');
+        if (hadLegacyCuratorMarker) {
+            try { localStorage.setItem('heys_curator_cookie_session_hint', '1'); } catch (_) { }
+        }
 
         const isPinRestoreAuthError = (error) => {
             const code = String(error?.code || error?.status || error?.statusCode || '').toLowerCase();
@@ -221,65 +227,6 @@
             return undefined;
         }
 
-        // 🔐 Проверяем expires_at — если токен РЕАЛЬНО истёк, не восстанавливаем сессию
-        // ✅ FIX 2025-12-25: НЕ удаляем токен если он ещё не истёк!
-        // ensureValidToken() может продлить его через серверную проверку
-        const readStoredAuthUser = () => {
-            try {
-                const stored = readGlobalValue('heys_supabase_auth_token', null);
-                if (!stored) return null;
-                const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
-
-                // 🚨 Проверяем expires_at — но НЕ удаляем токен преждевременно!
-                const expiresAt = parsed?.expires_at;
-                if (expiresAt) {
-                    const now = Date.now();
-                    const expiresAtMs = expiresAt * 1000;
-                    // ✅ FIX: Только если токен РЕАЛЬНО истёк (не "скоро истечёт")
-                    // Раньше здесь был буфер 5 минут который вызывал ложные логауты
-                    if (expiresAtMs < now) {
-                        devLog('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
-                        // Очищаем только РЕАЛЬНО истёкший Supabase токен
-                        removeGlobalValue('heys_supabase_auth_token');
-                        // 🔧 v58 FIX: НЕ удаляем session_token если есть PIN auth сессия!
-                        // session_token нужен для PIN auth клиентов (не используют Supabase)
-                        // Удалять только если НЕТ PIN-сессии (куратор)
-                        const hasPinAuth = readGlobalValue('heys_pin_auth_client', null);
-                        if (!hasPinAuth) {
-                            devLog('[AUTH] No PIN auth, clearing session_token');
-                            removeGlobalValue('heys_session_token');
-                        } else {
-                            devLog('[AUTH] PIN auth present, keeping session_token');
-                        }
-                        return null;
-                    }
-                    // Если токен скоро истекает — это ОК, ensureValidToken() обновит его
-                    const minutesLeft = Math.round((expiresAtMs - now) / 60000);
-                    devLog('[AUTH] Token valid, expires in', minutesLeft, 'min');
-                }
-
-                return parsed?.user || null;
-            } catch (e) {
-                return null;
-            }
-        };
-
-        const storedUser = readStoredAuthUser();
-        const savedEmail = storedUser?.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null);
-
-        const persistCuratorJwtAuth = (token, data) => {
-            const restoredUser = data?.user;
-            if (!token || !restoredUser) return null;
-            const tokenData = {
-                access_token: token,
-                refresh_token: null,
-                expires_at: data.expires_at || Math.floor(Date.now() / 1000) + 86400,
-                user: restoredUser,
-            };
-            writeRawLocalStorage('heys_supabase_auth_token', JSON.stringify(tokenData));
-            return restoredUser;
-        };
-
         const setRestoredCuratorUser = (restoredUser) => {
             setCloudUser(restoredUser);
             try { cloudRef?.setAuthUser?.(restoredUser); } catch (_) { }
@@ -337,26 +284,15 @@
             window.__heysReturningUser = false;
         }
 
-        const curatorJwtRaw = readGlobalValue('heys_curator_session', null);
-        const curatorJwt = typeof curatorJwtRaw === 'string' ? curatorJwtRaw.trim() : '';
-        const hasCuratorJwtSession = !!curatorJwt && curatorJwt.length > 10;
-
-        // 🔐 Auth priority:
-        // - explicit curator JWT wins over stale PIN markers;
-        // - otherwise PIN auth keeps priority over legacy compatible curator auth.
         let pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
         let pinRecoveredFromSession = false;
-        if (pinAuthClient && hasCuratorJwtSession) {
-            removeGlobalValue('heys_pin_auth_client');
-            pinAuthClient = null;
-        }
 
         // 🔄 Stage 1: recover PIN session from session_token + last_client_id
         // Если pin_auth_client потёрт но session_token жив — восстанавливаем clientId
         // из last_client_id (пишется при успешном логине). Это закрывает race
         // когда state-drift (logout/expiry/cleanup) убрал маркер pin_auth_client,
         // но активная сессия на сервере ещё валидна.
-        if (!pinAuthClient && !storedUser && !hasCuratorJwtSession) {
+        if (!pinAuthClient) {
             const sessionTokenRaw = readGlobalValue('heys_session_token', null);
             const lastClientIdRaw = readGlobalValue('heys_last_client_id', null);
             const sessionTokenOk = sessionTokenRaw && (typeof sessionTokenRaw === 'string' ? sessionTokenRaw.trim().length > 0 : true);
@@ -416,105 +352,16 @@
             setStatus('offline');
             setIsInitializing(false);
         };
-        const shouldProbeCookiePinSession = !storedUser
-            && !hasCuratorJwtSession
-            && !hasPinSession
+        const shouldProbeCookiePinSession = !hasPinSession
             && hasPinCookieSessionHint
             && !!cloudRef
             && typeof HEYS.YandexAPI?.getCurrentClientBySession === 'function';
-        const shouldProbeCookieCuratorSession = !storedUser
-            && !hasCuratorJwtSession
-            && !hasPinSession
+        const shouldProbeCookieCuratorSession = !hasPinSession
             && hasCookieSessionHint('curator')
             && !!cloudRef
             && typeof HEYS.YandexAPI?.verifyCuratorToken === 'function';
 
-        if (storedUser && cloudRef && !hasPinSession) {
-            // Есть сохранённая сессия куратора (и нет PIN-сессии) — восстанавливаем.
-            // Важно: ставим cloudUser ДО любых восстановлений clientId, чтобы не запускался consent-flow как для клиента.
-            if (savedEmail) setEmail(savedEmail);
-            setRestoredCuratorUser(storedUser);
-            setStatus('online');
-
-            // ✅ FIX 2025-12-25: Восстанавливаем выбранного клиента из localStorage!
-            // Ранее skipClientRestore: true мешало куратору видеть данные после рефреша
-            // Теперь восстанавливаем clientId, но не PIN auth (куратор не использует PIN)
-            initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
-
-            // 🔄 Тестируем доступ через YandexAPI вместо Supabase
-            HEYS.YandexAPI.getClients(storedUser.id)
-                .then((clients) => {
-                    if (!clients || clients.error) {
-                        // Сессия невалидна — показываем форму логина
-                        __heysShowGateLogin();
-                    } else {
-                        // v12: Сессия валидна — убираем гейт
-                        __heysDismissGate();
-                    }
-                })
-                .catch(() => {
-                    // Сессия невалидна — показываем форму логина
-                    __heysShowGateLogin();
-                })
-                .finally(() => {
-                    setIsInitializing(false);
-                });
-        } else if (hasCuratorJwtSession && cloudRef && !hasPinSession) {
-            const api = HEYS.YandexAPI || window.YandexAPI;
-            if (!api?.verifyCuratorToken) {
-                devWarn('[App] Curator JWT restore skipped: YandexAPI.verifyCuratorToken unavailable');
-                initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
-                setStatus('offline');
-                __heysDismissGate();
-                setIsInitializing(false);
-            } else {
-                api.verifyCuratorToken(curatorJwt)
-                    .then(({ data, error }) => {
-                        if (data?.valid && data?.user) {
-                            const restoredUser = persistCuratorJwtAuth(curatorJwt, data);
-                            if (!restoredUser) throw new Error('invalid_curator_jwt_payload');
-                            const email = restoredUser.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null) || '';
-                            if (email) setEmail(email);
-                            setRestoredCuratorUser(restoredUser);
-                            setStatus('online');
-                            initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
-                            __heysDismissGate();
-                            return;
-                        }
-
-                        const message = error?.message || 'invalid_curator_jwt';
-                        const authRejected = isPinRestoreAuthError({ message }) || (!data?.valid && !error);
-                        if (authRejected) {
-                            removeGlobalValue('heys_curator_session');
-                            removeGlobalValue('heys_supabase_auth_token');
-                            setStatus('offline');
-                            __heysShowGateLogin();
-                            return;
-                        }
-
-                        initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
-                        setStatus('offline');
-                        __heysDismissGate();
-                    })
-                    .catch((err) => {
-                        devWarn('[App] Curator JWT restore failed:', err);
-                        const message = err?.message || String(err || '');
-                        if (isPinRestoreAuthError({ message })) {
-                            removeGlobalValue('heys_curator_session');
-                            removeGlobalValue('heys_supabase_auth_token');
-                            setStatus('offline');
-                            __heysShowGateLogin();
-                        } else {
-                            initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
-                            setStatus('offline');
-                            __heysDismissGate();
-                        }
-                    })
-                    .finally(() => {
-                        setIsInitializing(false);
-                    });
-            }
-        } else if (hasPinSession && cloudRef) {
+        if (hasPinSession && cloudRef) {
             // 🔐 PIN auth — приоритет над куратором (клиент вошёл по телефону+PIN)
             devLog('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...', pinRecoveredFromSession ? '(recovered from session_token)' : '');
 
@@ -802,7 +649,7 @@
 
             } else if (mode === 'curator') {
                 // Curator auth: same logic as storedUser branch (lines 232-256)
-                var user = detail.user || readStoredAuthUser();
+                var user = detail.user;
                 if (!user || !cloudRef) return;
                 var email = user.email || readGlobalValue('heys_remember_email', null) || '';
                 setCookieSessionHint('curator', true);

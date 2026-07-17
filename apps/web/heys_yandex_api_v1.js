@@ -84,6 +84,9 @@
   let _lastError = null;
   let _lastErrorAt = 0;
   let _curatorTokenLogged = false;
+  let _devCuratorToken = isLocalBrowserDev && typeof global.__heysDevCuratorToken === 'string'
+    ? global.__heysDevCuratorToken
+    : null;
   const PIN_COOKIE_SESSION_HINT_KEY = 'heys_pin_cookie_session_hint';
   const CURATOR_COOKIE_SESSION_HINT_KEY = 'heys_curator_cookie_session_hint';
 
@@ -214,43 +217,23 @@
     throw lastError;
   }
 
-  /**
-   * Получить JWT токен куратора из localStorage
-   * 🔧 v57 FIX: Читаем heys_curator_session (куратор JWT), а НЕ heys_supabase_auth_token (Supabase auth)
-   * @returns {string|null}
-   */
+  /** Production curator auth is cookie-only. Localhost may keep a token in
+   * memory because the production Domain=.heyslab.ru cookie cannot be set. */
   function getCuratorToken() {
-    try {
-      // 1. Сначала проверяем curator JWT (правильный ключ)
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (curatorSession) {
-        log('getCuratorToken: using heys_curator_session');
-        if (!_curatorTokenLogged) {
-          logInfo('🔐 [HEYS.auth] Токен куратора найден (heys_curator_session)');
-          _curatorTokenLogged = true;
-        }
-        return curatorSession;
-      }
-
-      // 2. Fallback: legacy supabase auth (для обратной совместимости)
-      const supabaseAuth = localStorage.getItem('heys_supabase_auth_token');
-      if (supabaseAuth) {
-        const parsed = JSON.parse(supabaseAuth);
-        if (parsed?.access_token) {
-          log('getCuratorToken: fallback to heys_supabase_auth_token');
-          if (!_curatorTokenLogged) {
-            logInfo('🔐 [HEYS.auth] Токен куратора найден (legacy heys_supabase_auth_token)');
-            _curatorTokenLogged = true;
-          }
-          return parsed.access_token;
-        }
-      }
-
-      return null;
-    } catch (e) {
-      err('getCuratorToken failed:', e.message);
-      return null;
+    if (!isLocalBrowserDev || !_devCuratorToken) return null;
+    if (!_curatorTokenLogged) {
+      logInfo('🔐 [HEYS.auth] Local dev curator token is kept in memory only');
+      _curatorTokenLogged = true;
     }
+    return _devCuratorToken;
+  }
+
+  function setDevCuratorToken(token) {
+    _devCuratorToken = isLocalBrowserDev && typeof token === 'string' && token.trim()
+      ? token.trim()
+      : null;
+    global.__heysDevCuratorToken = _devCuratorToken;
+    _curatorTokenLogged = false;
   }
 
   function shouldTryCookieCuratorRequest() {
@@ -275,6 +258,7 @@
 
   function hasCuratorRuntimeContext() {
     if (getCuratorToken()) return true;
+    if (hasCookieSessionHint('curator')) return true;
     try {
       if (global.HEYS?.auth?.isCuratorSession?.() === true) return true;
     } catch (_) { /* noop */ }
@@ -316,18 +300,9 @@
    */
   function getCuratorUserId() {
     try {
-      const stored = localStorage.getItem('heys_supabase_auth_token');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed?.user?.id) return parsed.user.id;
-        } catch (_) {
-          // Malformed legacy-compatible token must not block bare JWT fallback.
-        }
-      }
-
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      const payload = decodeJwtPayload(curatorSession);
+      const runtimeUser = global.HEYS?.cloud?.getUser?.();
+      if (runtimeUser?.id) return runtimeUser.id;
+      const payload = decodeJwtPayload(getCuratorToken());
       return payload?.sub || payload?.user_id || null;
     } catch (e) {
       err('getCuratorUserId failed:', e.message);
@@ -655,7 +630,12 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password, mfa_code: mfaCode || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          mfa_code: mfaCode || undefined,
+          cookie_only: !isLocalBrowserDev,
+        }),
         // PR-B (2026-05-20): принимаем Set-Cookie от heys-api-auth
         // (heys_curator_jwt, HttpOnly, Domain=.heyslab.ru). credentials:'include'
         // обязателен для cross-subdomain cookie carriage.
@@ -675,7 +655,8 @@
         };
       }
 
-      // Успешный ответ: { access_token, token_type, expires_in, user }
+      if (isLocalBrowserDev) setDevCuratorToken(data.access_token);
+
       if (data?.user?.id) {
         logInfo('🔐 [HEYS.auth] Вход куратора OK:', `${data.user.id.slice(0, 8)}...`);
       } else {
@@ -701,7 +682,7 @@
 
       return {
         data: {
-          access_token: data.access_token,
+          access_token: isLocalBrowserDev ? data.access_token : undefined,
           user: data.user,
           expires_in: data.expires_in,
           expires_at: Math.floor(Date.now() / 1000) + (data.expires_in || 86400)
@@ -2817,6 +2798,7 @@
 
   async function curatorLogout() {
     const clearLocalCuratorAuth = () => {
+      setDevCuratorToken(null);
       try { localStorage.removeItem('heys_curator_session'); } catch {}
       try { localStorage.removeItem('heys_supabase_auth_token'); } catch {}
       setCookieSessionHint('curator', false);
@@ -2952,7 +2934,8 @@
     verifyClientPin,
     curatorLogin,
     verifyCuratorToken,
-    getCuratorToken,  // exposed для гейта в curator-only фичах (см. heys_curator_actions_banner_v1.js)
+    getCuratorToken,
+    setDevCuratorToken,
     setCookieSessionHint,
     hasCookieSessionHint,
 

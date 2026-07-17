@@ -31,17 +31,10 @@
       if (raw) { try { return JSON.parse(raw); } catch { return raw; } }
     } catch (e) { /* ignore */ }
 
-    // 2) JWT куратора
+    // 2) Localhost-only curator token. Production uses HttpOnly cookie.
     try {
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (curatorSession) return curatorSession;
-    } catch (e) { /* ignore */ }
-    try {
-      const raw = localStorage.getItem('heys_supabase_auth_token');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.access_token) return parsed.access_token;
-      }
+      const devToken = HEYS.YandexAPI?.getCuratorToken?.();
+      if (devToken) return devToken;
     } catch (e) { /* ignore */ }
 
     return null;
