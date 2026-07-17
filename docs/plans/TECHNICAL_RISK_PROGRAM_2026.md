@@ -1,6 +1,6 @@
 # HEYS Technical Risk Program 2026
 
-- Статус: **active, wave 3**
+- Статус: **active, wave 4**
 - Начато: **2026-07-17**
 - Ветка: **main** Цель: закрыть десять подтверждённых технических рисков
   четырьмя отдельными волнами без общего рефакторинга и без смешивания
@@ -34,13 +34,13 @@
 | R01 | Curator JWT доступен через `localStorage`                |     2 | completed | Production использует HttpOnly cookie; JS storage и Bearer fallback удалены |
 | R02 | Cloud deploy не имеет pre-deploy test gate               |     2 | completed | Deploy job зависит от успешных тестов изменённой функции                    |
 | R03 | Cloud Functions работают на неподдерживаемом Node.js 18  |     2 | completed | Functions, CI и engines используют поддерживаемый совместимый runtime       |
-| R04 | SQL-миграции распределены без единого ledger             |     3 | in review | Один apply-flow, порядок и checksum воспроизводимы                          |
+| R04 | SQL-миграции распределены без единого ledger             |     3 | completed | Один apply-flow, порядок и checksum воспроизводимы                          |
 | R05 | PWA/RuStore/mobile critical path не входит в CI          |     1 | completed | Check-in и mobile session/navigation contracts входят в короткий CI gate    |
-| R06 | Storage/sync остаётся большим глобальным модулем         |     4 | pending   | Выделены проверенные контракты без смены legacy public API                  |
-| R07 | Критические KV payload не валидируются по версии и форме |     3 | in review | Critical keys имеют versioned validation и совместимое чтение               |
+| R06 | Storage/sync остаётся большим глобальным модулем         |     4 | in review | Выделены проверенные контракты без смены legacy public API                  |
+| R07 | Критические KV payload не валидируются по версии и форме |     3 | completed | Critical keys имеют versioned validation и совместимое чтение               |
 | R08 | Критические тесты зависят от текста source               |     1 | completed | Выбранные critical paths проверяют поведение исполняемого кода              |
-| R09 | На старте загружаются пять тяжёлых boot bundles          |     4 | pending   | Есть baseline, budget и подтверждённое уменьшение initial gzip payload      |
-| R10 | Retention для audit-данных не полностью исполняется      |     3 | in review | Dry-run считает кандидатов; удаление остаётся выключенным до sign-off       |
+| R09 | На старте загружаются пять тяжёлых boot bundles          |     4 | in review | Есть baseline, budget и подтверждённое уменьшение initial gzip payload      |
+| R10 | Retention для audit-данных не полностью исполняется      |     3 | completed | Dry-run считает кандидатов; удаление остаётся выключенным до sign-off       |
 
 ## Последовательность волн
 
@@ -129,7 +129,11 @@ report/dry-run. Реальное retention deletion не включается б
       дней.
 - [x] 17 pure/ledger/retention contract tests и function gates RPC/REST/
       maintenance прошли.
-- [ ] Commit/push, ledger apply, selective deploy и production verification.
+- [x] Source/release commits `ebc0e722`, `c0d60e5b`, `7a015554` опубликованы;
+      ledger применён (`1 applied / 0 pending`).
+- [x] Cloud deploy обновил все 17 функций; HTTP checks и runtime audit прошли.
+      Первый strict canary попал в кратковременную недоступность maintenance,
+      повторный production canary прошёл полностью; CI rerun запущен.
 
 Выходной gate: migration state воспроизводим, несовместимые critical writes
 отклоняются, dry-run показывает объём и возраст retention candidates.
@@ -141,6 +145,21 @@ Scope: R06 и R09.
 Порядок: dependency/bundle baseline → один контракт за проход → поведенческий
 test → перенос только подтверждённых non-critical boot readers → повторное
 измерение cold/reload/offline/SW paths.
+
+Проверено перед публикацией:
+
+- [x] Из `heys_storage_supabase_v1.js` выделен чистый versioned contract
+      владения client-scoped/session ключами; legacy `HEYS.cloud` API не
+      менялся.
+- [x] Контракт загружается перед storage bridge и fail-closed проверяет порядок.
+- [x] Два manual export-helper перенесены из `boot-core` в существующий lazy UI
+      chunk; их consumers уже имели полные inline fallback paths.
+- [x] Поведенческие contract/anti-pollution tests: 6/6; web sync-critical:
+      185/185.
+- [x] Minified `boot-core` gzip уменьшен с 274,622 до 273,096 байт; суммарный
+      initial gzip пяти boot bundles — с 907,781 до 906,255 байт (-1,526).
+- [ ] Чистый local runtime smoke, source-only commit/push и deployed-state
+      verification.
 
 Выходной gate: выделенные модули сохраняют legacy public API, initial gzip
 payload уменьшается относительно записанного baseline, runtime smoke зелёный.
@@ -157,8 +176,10 @@ payload уменьшается относительно записанного b
 | Storage/RPC имеют крупный legacy scope                          | source count            | `wc -l apps/web/heys_storage_supabase_v1.js yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                                                                                                                 | ✅ 16,612 и 4,596 строк                                                                                                                                        |
 | KV table хранит произвольный JSONB, registry не проверяет shape | schema/source           | `sed -n '60,74p' database/yandex_migration/001_schema.sql`; `sed -n '154,182p' apps/web/heys_storage_registry_v1.js`                                                                                                                                                                                                                                                      | ✅ `v JSONB`; `analyze()` проверяет policy/size, но не payload schema                                                                                          |
 | Большинство web test-файлов читают source                       | test search             | `find apps/web/__tests__ -maxdepth 1 -name '*.test.*'`; `rg -l readFileSync apps/web/__tests__ -g '*.test.*'`                                                                                                                                                                                                                                                             | ✅ 201 web test files, 168 содержат `readFileSync`; critical behavior coverage добавлено без роста source-reading count, mobile получил 3 отдельных test files |
-| Пять boot bundles грузятся при старте                           | manifest/assets/index   | `node -e "const fs=require('fs'),m=require('./apps/web/bundle-manifest.json'); let n=0,c=0; for(const [k,v] of Object.entries(m)){if(!/^boot-(core\|calc\|day\|app\|init)$/.test(k))continue; n+=fs.statSync('apps/web/public/'+v.file+'.gz').size;c+=v.fileCount} console.log(n,c)"`; `sed -n '946,965p' apps/web/index.html`; `sed -n '4118,4135p' apps/web/index.html` | ✅ 911,338 gzip bytes и 178 source files в текущем preview baseline                                                                                            |
+| Пять boot bundles грузятся при старте                           | manifest/assets/index   | `node -e "const fs=require('fs'),m=require('./apps/web/bundle-manifest.json'); let n=0,c=0; for(const [k,v] of Object.entries(m)){if(!/^boot-(core\|calc\|day\|app\|init)$/.test(k))continue; n+=fs.statSync('apps/web/public/'+v.file+'.gz').size;c+=v.fileCount} console.log(n,c)"`; `sed -n '946,965p' apps/web/index.html`; `sed -n '4118,4135p' apps/web/index.html` | ✅ До Wave 4: 907,781 gzip bytes и 178 source files                                                                                                            |
 | Retention delete-поведение расходилось с draft                  | docs/source/live report | `sed -n '1,34p' docs/legal/operator/heys-retention-policy-draft.md`; `sed -n '352,385p' yandex-cloud-functions/heys-maintenance/index.js`; `node scripts/db/retention-report.mjs`                                                                                                                                                                                         | ✅ До Wave 3 maintenance удалял security events через 30 дней и trace через 14 дней; production dry-run: 0 кандидатов по draft-окнам                           |
+| Storage key ownership вынесен в исполняемый контракт            | source/test/config      | `rg -n "storageKeyContract" apps/web/heys_storage_key_contract_v1.js apps/web/heys_storage_supabase_v1.js`; `pnpm vitest run tests/regressions/storage-key-contract.test.ts tests/regressions/7fb8be2f-anti-pollution-scoping.test.ts`                                                                                                                                    | ✅ Pure contract зарегистрирован до bridge; 6/6 поведенческих и anti-pollution tests прошли                                                                    |
+| Wave 4 уменьшает initial gzip без смены UI                      | generated measurement   | `git cat-file -s 7a015554:apps/web/public/boot-core.bundle.46e3e786e590.js.gz`; `stat -f '%z' apps/web/public/boot-core.bundle.3497ec9c0fba.js.gz`; остальные четыре boot bundles не менялись                                                                                                                                                                             | ✅ `boot-core`: 274,622 → 273,096; initial total: 907,781 → 906,255 байт (-1,526)                                                                              |
 
 Official runtime evidence:
 
@@ -226,3 +247,21 @@ Official runtime evidence:
   rows — JSON objects; несовместимых типов в выбранном critical scope нет.
 - Read-only retention report: trace 71,005 rows / 49.3 MB, security 336,
   data-loss audit 28,709, access audit 49,343, messages 90; policy candidates 0.
+
+### 2026-07-18 — волна 3 развернута
+
+- Source/release commits: `ebc0e722`, `c0d60e5b`, `7a015554`; `origin/main`
+  опубликован до `7a015554`.
+- Migration ledger применён в production: `1 applied / 0 pending`.
+- GitHub Actions `29617214105`: pre-deploy test, deploy всех функций, пять HTTP
+  checks и runtime audit 17/17 прошли. Первый maintenance canary был transient;
+  непосредственный повтор `pnpm ops:heys:canary` прошёл 4/4, CI rerun запущен.
+- R04, R07 и R10 закрыты; destructive retention по-прежнему не включён.
+
+### 2026-07-18 — волна 4 готова к runtime smoke
+
+- Выделен `HEYS.storageKeyContract` без изменения публичного `HEYS.cloud`.
+- Manual export helpers перенесены в существующий postboot lazy chunk с
+  сохранением встроенных fallback paths.
+- Sync-critical: 185/185; contract/anti-pollution: 6/6.
+- `boot-core` gzip уменьшен на 1,526 байт; total initial gzip — до 906,255 байт.
