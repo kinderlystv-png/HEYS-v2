@@ -927,6 +927,12 @@
             HEYS: app
         }) || null;
 
+        // Mobile stats/activity only need the compact insulin indicator. Return
+        // before building the hidden diary panels: DayTab intentionally flips
+        // heavyUiReady after first paint, and doing the diary work here caused
+        // a second long commit even though the diary tab was not visible.
+        if (!showDiary) return insulinIndicator;
+
         const refeedCard = app.Refeed?.renderRefeedCard?.({
             isRefeedDay: day?.isRefeedDay,
             refeedReason: day?.refeedReason,
@@ -1060,8 +1066,6 @@
                 className: ('deferred-card-slot deferred-card-slot--loaded ' + animClass + ' ' + slotTypeClass).trim()
             }, content);
         };
-
-        if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
             React.createElement(DiaryCompactSummary, {
