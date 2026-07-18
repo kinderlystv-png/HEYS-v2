@@ -671,7 +671,7 @@
           try {
             __pt('STORE_SET_FENCED', { sk: sk.slice(0, 80), ageMs });
           } catch (_) { /* noop */ }
-          return;
+          return false;
         }
         // Expired — clean up sentinel.
         try { global.sessionStorage.removeItem(fenceKey); } catch (_) { /* noop */ }
@@ -742,16 +742,23 @@
             console.debug('[Store.set] 🛡️ DEFERRED during switchClient:', k);
           }
         } catch (_) { }
-        return;
+        return false;
       }
     }
+    const hadPreviousMemory = memory.has(sk);
+    const previousMemory = memory.get(sk);
     memory.set(sk, v);
-    rawSet(sk, v);
+    const persistedLocally = rawSet(sk, v);
+    if (!persistedLocally) {
+      if (hadPreviousMemory) memory.set(sk, previousMemory);
+      else memory.delete(sk);
+      return false;
+    }
     maybeReportQuota();
     if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
     try {
       if (global.HEYS && global.HEYS._suppressStoreCloudSync === true) {
-        return;
+        return true;
       }
       if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
         const cid = ns();
@@ -764,14 +771,14 @@
           // defence-in-depth, но больше не кричит на каждый global key.
           if (global.HEYS.cloud && typeof global.HEYS.cloud.isNonClientDataKey === 'function'
               && global.HEYS.cloud.isNonClientDataKey(sk)) {
-            return;
+            return true;
           }
           // Передаём scoped key в облако (с clientId), чтобы ключ совпадал при загрузке
           // sk уже содержит heys_<clientId>_<key>
           // Сохраняем любые значения: объекты, массивы, boolean, числа, строки
           // (не сохраняем только undefined и функции)
           if (v === undefined || typeof v === 'function') {
-            return;
+            return true;
           }
           global.HEYS.saveClientKey(cid, sk, v);
         }
@@ -788,6 +795,7 @@
         }));
       }
     }
+    return true;
   };
 
   Store.watch = function (k, fn) { const sk = scoped(k); if (!watchers.has(sk)) watchers.set(sk, new Set()); watchers.get(sk).add(fn); return () => { const set = watchers.get(sk); if (set) { set.delete(fn); if (!set.size) watchers.delete(sk); } }; };

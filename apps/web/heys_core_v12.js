@@ -216,20 +216,21 @@
       // Store.set's scoped() is idempotent: keys already containing the cid are returned unchanged,
       // so nsKey-scoped keys (from the client-scoped IIFE below) are never double-prefixed.
       if (window.HEYS?.store?.set) {
-        window.HEYS.store.set(key, val);
+        const stored = window.HEYS.store.set(key, val);
+        if (stored === false) return false;
         const type = key.includes('dayv2') ? 'meal'
           : key.includes('product') ? 'product'
             : key.includes('profile') ? 'profile'
               : 'data';
         window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
-        return;
+        return true;
       }
       // Store not yet ready (early boot) — write uncompressed.
       // Skip if identical to avoid spurious events.
       const serialized = JSON.stringify(val);
       try {
         const existing = localStorage.getItem(key);
-        if (existing === serialized) return;
+        if (existing === serialized) return true;
       } catch (_) { /* proceed to write */ }
       localStorage.setItem(key, serialized);
       const type = key.includes('dayv2') ? 'meal'
@@ -237,8 +238,10 @@
           : key.includes('profile') ? 'profile'
             : 'data';
       window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
+      return true;
     } catch (e) {
       console.error('[lsSet] Error saving:', key, e);
+      return false;
     }
   }
 

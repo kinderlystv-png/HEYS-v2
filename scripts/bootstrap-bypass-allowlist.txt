@@ -82,12 +82,12 @@ apps/web/heys_demo_mode_v1.js:144
 apps/web/heys_demo_mode_v1.js:160
 apps/web/heys_demo_mode_v1.js:201
 apps/web/heys_demo_mode_v1.js:202
-apps/web/heys_core_v12.js:234
-apps/web/heys_core_v12.js:850
-apps/web/heys_core_v12.js:1945
-apps/web/heys_core_v12.js:4379
-apps/web/heys_core_v12.js:5599
-apps/web/heys_core_v12.js:5710
+apps/web/heys_core_v12.js:235
+apps/web/heys_core_v12.js:853
+apps/web/heys_core_v12.js:1948
+apps/web/heys_core_v12.js:4382
+apps/web/heys_core_v12.js:5602
+apps/web/heys_core_v12.js:5713
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_core_bundle_v1.js:2197
 apps/web/heys_day_core_bundle_v1.js:3938
@@ -239,7 +239,7 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1625
+apps/web/heys_storage_layer_v1.js:1633
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
