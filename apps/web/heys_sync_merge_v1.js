@@ -781,6 +781,15 @@
     return merged;
   }
 
+  function mergeScalarKvWithOutcome(key, incoming, current) {
+    const incomingTs = Number(incoming && incoming.updatedAt) || 0;
+    const currentTs = Number(current && current.updatedAt) || 0;
+    if (key === 'heys_game' && incomingTs > 0 && currentTs > incomingTs) {
+      return { value: current, outcome: 'stale_write_blocked' };
+    }
+    return { value: mergeScalarKv(incoming, current), outcome: 'scalar_merged' };
+  }
+
   // ─── Pure dayv2 stamping helpers ─────────────────────────────────────────
   // Используются HEYS.storage interceptor'ом для централизованного штампа
   // изменённых meals/items/trainings. deletedItemIds tombstones НЕ выводятся из
@@ -1018,6 +1027,7 @@
     mergePlanningRecords,
     mergeItemsById,
     mergeScalarKv,
+    mergeScalarKvWithOutcome,
     mergeMorningCheckinProgress,
     hasMorningCheckinProgressConflict,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,
