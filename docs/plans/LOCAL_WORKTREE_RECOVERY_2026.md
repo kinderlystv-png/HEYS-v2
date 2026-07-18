@@ -45,12 +45,12 @@
 
 | ID  | Группа                             | Предварительный scope                                                  | Статус          | Выходной gate                                       |
 | --- | ---------------------------------- | ---------------------------------------------------------------------- | --------------- | --------------------------------------------------- |
-| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | inventory       | navigation/session tests                            |
+| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | committed       | navigation/session tests                            |
 | G02 | Nutrition / day / insulin wave     | `apps/web/day/**`, day bundles, IW, products, status, advice           | inventory       | точечные расчётные и UI-contract tests              |
 | G03 | Mobility                           | `apps/web/mobility/**`, mobility bundle/tests/styles                   | inventory       | mobility suite + scoped UI bundle                   |
-| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | inventory       | sync-critical contracts                             |
-| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | inventory       | отдельные regression tests по дефектам              |
-| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | inventory       | package gates + load checks + canary после deploy   |
+| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | partial         | sync-critical contracts                             |
+| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | partial         | отдельные regression tests по дефектам              |
+| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | partial         | package gates + load checks + canary после deploy   |
 | G07 | DB migration                       | `database/2026-07-18_push_idempotency_delivery_state.sql`              | inventory       | checksum, idempotency tests, managed apply          |
 | G08 | Documentation                      | root/docs/reference/infra/function docs                                | inventory       | ссылки и утверждения сверены с опубликованным кодом |
 | G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only | release build from integrated source                |
@@ -82,6 +82,10 @@
 | Локальные и remote-изменения пересекаются в source у storage, RPC и deploy | Git intersection | `comm -12 <(git diff --name-only HEAD \| sort) <(git diff --name-only HEAD..origin/main \| sort)`                                         | ✅ пересечения включают `heys_storage_supabase_v1.js`, `heys-api-rpc/index.js`, `deploy-all.sh`; остальные пересечения — web generated/hash files |
 | Контрольный worktree создан чистым от текущего `origin/main`               | worktree status  | `git -C /private/tmp/heys-recovery-20260718 status --short --branch`                                                                      | ✅ ветка `codex/local-recovery-20260718`, dirty paths отсутствуют                                                                                 |
 | Production web отвечает, а HEYS automation canary проходит                 | live checks      | HTTP check `https://app.heyslab.ru/`; `pnpm ops:heys:canary`                                                                              | ✅ HTTP 200; canary 4/4 на старте recovery                                                                                                        |
+| Mobile safe-area patch совместим с navigation/session contracts            | tests            | `pnpm test:mobile:critical`; `pnpm --dir apps/mobile type-check`                                                                          | ✅ 10/10 tests; TypeScript без ошибок                                                                                                             |
+| Game stale-write guard одинаков в browser, RPC и REST                      | source mirror    | `cmp -s apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs`; аналогично REST                   | ✅ обе serverless-копии byte-identical источнику                                                                                                  |
+| Новый merge outcome сохраняет существующие sync-контракты                  | tests            | `pnpm vitest run apps/web/__tests__/merge-scalar-kv-meta.test.js apps/web/__tests__/sync-merge-shared.test.js`                            | ✅ 109/109 tests                                                                                                                                  |
+| RPC и REST с новым merge-контрактом загружаются как cloud functions        | function gate    | `yandex-cloud-functions/test-functions.sh heys-api-rpc heys-api-rest`                                                                     | ✅ 2/2 target gates                                                                                                                               |
 
 ## Журнал выполнения
 
@@ -95,16 +99,29 @@
 - Создан чистый контрольный worktree от `origin/main`; исходный checkout не
   изменялся.
 
+### 2026-07-18 — первые независимые группы
+
+- G01: Android WebView получил нижний safe area без изменения iOS; mobile
+  critical 10/10 и type-check прошли; commit `6f86312f`.
+- G05: score history приведён к шкале 0–100 (`68d573d5`), status использует
+  фактически позднейшее валидное время приёма пищи (`99bac7d8`), gamification
+  fail-closed блокирует запись при неуспешном cloud precheck (`cd8d913e`).
+  Regression tests: 4/4 и 4/4; hook обновил только line-drift allowlist.
+- G04/G06: `heys_game` stale write теперь возвращает явный
+  `stale_write_blocked`. Pre-commit gate обнаружил отсутствующий browser/REST
+  mirror; контракт исправлен во всех трёх runtime-копиях. Merge tests 109/109,
+  RPC+REST function gates 2/2; commit `37a6dbf8`.
+
 ## Durable handoff
 
 ### Current state
 
-- Recovery roadmap создана в контрольной ветке, но ещё не закоммичена.
-- Ни одна пользовательская группа пока не переносилась и не публиковалась.
+- Recovery roadmap и первые независимые изменения закоммичены локально.
+- Ни одна группа пока не опубликована и не развернута из recovery-ветки.
 - Исходный checkout остаётся неизменным dirty-источником.
 
 ### Next action
 
-Построить подробный inventory G01–G09: для каждого файла отделить локальный
-patch от уже опубликованных remote-изменений, после чего начать с самой
-маленькой независимой группы, не имеющей конфликтов с `origin/main`.
+Собрать scoped legacy preview для четырёх изменённых web-source файлов,
+проверить локальный runtime, затем опубликовать зелёные commit'ы и развернуть
+RPC. После production verification продолжить inventory оставшихся G02–G09.
