@@ -110,11 +110,12 @@ describe('training step drums tab', () => {
       ok: true,
     };
 
-    trainingStep.saveMobility({ dateKey: '2026-06-13', trainingIndex: 1 }, log, {
+    const saved = trainingStep.saveMobility({ dateKey: '2026-06-13', trainingIndex: 1 }, log, {
       time: '20:30',
       comment: 'after desk work',
     });
 
+    expect(saved).toBe(true);
     const day = JSON.parse(storage.get('heys_dayv2_2026-06-13'));
     expect(day.trainings[1]).toMatchObject({
       type: 'mobility',
@@ -123,6 +124,20 @@ describe('training step drums tab', () => {
       comment: 'after desk work',
       mobilityLog: log,
     });
+  });
+
+  it('returns false when mobilityLog cannot be written', () => {
+    const { trainingStep } = setupTrainingStep();
+    globalThis.HEYS.utils = {
+      lsGet: (_key, fallback) => fallback,
+      lsSet: () => false
+    };
+
+    expect(trainingStep.saveMobility(
+      { dateKey: '2026-06-13', trainingIndex: 1 },
+      { version: 1, mode: 'evening_relax', ok: true },
+      {}
+    )).toBe(false);
   });
 
   it('opens Mobility fullscreen from the type tab when the module is loaded', () => {
