@@ -7746,8 +7746,8 @@
         }, []);
 
         const addMeal = React.useCallback(async () => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление приёма пищи недоступно');
                 return;
             }
 
@@ -8535,7 +8535,7 @@
                     id: item.product_id || undefined,
                     product_id: item.product_id || undefined,
                     name: item.name,
-                    grams: item.grams || 100,
+                    grams: HEYS.models.normalizeItemGrams(item.grams, 100),
                     kcal100: item.kcal100,
                     protein100: item.protein100,
                     carbs100: item.carbs100,
@@ -8623,8 +8623,8 @@
         }, []);
 
         const addProductToMeal = React.useCallback(async (mi, p, options = {}) => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление продуктов недоступно');
                 return false;
             }
 
@@ -8777,8 +8777,8 @@
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
 
         const addProductsToMeal = React.useCallback(async (mi, entries, options = {}) => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление продуктов недоступно');
                 return false;
             }
 
@@ -9042,8 +9042,8 @@
 
         const repeatYesterdayMeal = React.useCallback(async (mealIndex, yMeal) => {
             if (!yMeal || !(yMeal.items || []).length) return;
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast?.('Копирование продуктов недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Копирование продуктов недоступно');
                 return;
             }
             const cloned = await ensureDiaryItemsReadyForDayWrite(
@@ -9098,8 +9098,8 @@
         }, [date]);
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Копирование продуктов недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Копирование продуктов недоступно');
                 return;
             }
             const tgtDate = targetDate || date;
@@ -9475,8 +9475,8 @@
                 pIndex,
                 getProductFromItem,
                 onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
-                    if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                        HEYS.Paywall.showBlockedToast?.('Перенос недоступен');
+                    if (!HEYS.Paywall?.canWriteSync?.()) {
+                        HEYS.Paywall?.showBlockedToast?.('Перенос недоступен');
                         return;
                     }
                     if (createNewMeal) {
@@ -9584,8 +9584,8 @@
                 pIndex,
                 getProductFromItem,
                 onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
-                    if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                        HEYS.Paywall.showBlockedToast?.('Копирование недоступно');
+                    if (!HEYS.Paywall?.canWriteSync?.()) {
+                        HEYS.Paywall?.showBlockedToast?.('Копирование недоступно');
                         return;
                     }
                     if (createNewMeal) {
@@ -9641,8 +9641,8 @@
         }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal, prepareCopiedDiaryItem]);
 
         const moveMealToDate = React.useCallback(async (srcMealIndex, dstDate) => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast?.('Перенос приёма недоступен');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Перенос приёма недоступен');
                 return;
             }
             const srcMeal = dayRef.current?.meals?.[srcMealIndex];

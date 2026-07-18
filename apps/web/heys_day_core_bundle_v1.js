@@ -5333,8 +5333,8 @@
             const options = normalizeAddWaterOptions(optionsOrSkipScroll);
 
             // 🔒 Read-only gating
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Добавление воды недоступно');
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление воды недоступно');
                 return;
             }
 

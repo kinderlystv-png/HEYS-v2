@@ -1,35 +1,35 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.05c32c6388fb.js",
-    "hash": "05c32c6388fb",
-    "sourceFingerprint": "fd710689f31a",
+    "file": "boot-core.bundle.8934bf20e8d6.js",
+    "hash": "8934bf20e8d6",
+    "sourceFingerprint": "225609fa306f",
     "fileCount": 40,
-    "size": 1181821,
-    "builtAt": "2026-07-18T01:00:32.257Z"
+    "size": 1183979,
+    "builtAt": "2026-07-18T02:43:12.998Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.c03b6c21b0ad.js",
-    "hash": "c03b6c21b0ad",
-    "sourceFingerprint": "9f602e9af7d3",
+    "file": "boot-calc.bundle.479d9d1aa373.js",
+    "hash": "479d9d1aa373",
+    "sourceFingerprint": "781a1aa004ba",
     "fileCount": 19,
-    "size": 823339,
-    "builtAt": "2026-07-18T01:00:39.250Z"
+    "size": 823289,
+    "builtAt": "2026-07-18T02:43:17.629Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.65e8a4444e11.js",
-    "hash": "65e8a4444e11",
-    "sourceFingerprint": "2d1485f39351",
+    "file": "boot-day.bundle.9a56507cff47.js",
+    "hash": "9a56507cff47",
+    "sourceFingerprint": "f18e18a3e96d",
     "fileCount": 61,
-    "size": 952941,
-    "builtAt": "2026-07-18T01:00:47.380Z"
+    "size": 953013,
+    "builtAt": "2026-07-18T02:43:21.538Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.232f093b62a4.js",
-    "hash": "232f093b62a4",
-    "sourceFingerprint": "07aa35c8b697",
+    "file": "boot-app.bundle.8eeee81bb22b.js",
+    "hash": "8eeee81bb22b",
+    "sourceFingerprint": "aee7de6211e1",
     "fileCount": 51,
-    "size": 1121674,
-    "builtAt": "2026-07-18T01:00:58.083Z"
+    "size": 1121689,
+    "builtAt": "2026-07-18T02:43:26.967Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.90dd9af836f5.js",
@@ -37,7 +37,7 @@
     "sourceFingerprint": "fd6fc3f25a77",
     "fileCount": 6,
     "size": 20460,
-    "builtAt": "2026-07-18T01:00:58.526Z"
+    "builtAt": "2026-07-18T02:43:27.283Z"
   },
   "postboot-1-game-eager": {
     "file": "postboot-1-game-eager.bundle.bb651c659737.js",
@@ -45,15 +45,15 @@
     "sourceFingerprint": "ad9c4d96cef4",
     "fileCount": 1,
     "size": 1369,
-    "builtAt": "2026-07-18T01:00:58.782Z"
+    "builtAt": "2026-07-18T02:43:27.423Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.c2af13ba1c06.js",
-    "hash": "c2af13ba1c06",
-    "sourceFingerprint": "96e99a807ca3",
+    "file": "postboot-1-game-lazy.bundle.5506de14c233.js",
+    "hash": "5506de14c233",
+    "sourceFingerprint": "a3f8b2e821a5",
     "fileCount": 32,
-    "size": 1502442,
-    "builtAt": "2026-07-18T01:01:11.008Z"
+    "size": 1502973,
+    "builtAt": "2026-07-18T02:43:33.370Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.807cb783ab2f.js",
@@ -61,15 +61,15 @@
     "sourceFingerprint": "f6b773bd8a27",
     "fileCount": 1,
     "size": 1524,
-    "builtAt": "2026-07-18T01:01:11.495Z"
+    "builtAt": "2026-07-18T02:43:33.520Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.899d40ccf625.js",
-    "hash": "899d40ccf625",
-    "sourceFingerprint": "5f7c1860fc39",
+    "file": "postboot-2-insights-lazy.bundle.96e22cf1a664.js",
+    "hash": "96e22cf1a664",
+    "sourceFingerprint": "d00c9409cf53",
     "fileCount": 39,
-    "size": 1655757,
-    "builtAt": "2026-07-18T01:01:21.817Z"
+    "size": 1655826,
+    "builtAt": "2026-07-18T02:43:38.738Z"
   },
   "postboot-3-ui-eager": {
     "file": "postboot-3-ui-eager.bundle.2da300f79259.js",
@@ -77,14 +77,14 @@
     "sourceFingerprint": "f5714d40010c",
     "fileCount": 2,
     "size": 3881,
-    "builtAt": "2026-07-18T01:01:22.349Z"
+    "builtAt": "2026-07-18T02:43:38.940Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.b8408bb211f1.js",
-    "hash": "b8408bb211f1",
-    "sourceFingerprint": "1d817c497964",
+    "file": "postboot-3-ui-lazy.bundle.62d4d6c9944e.js",
+    "hash": "62d4d6c9944e",
+    "sourceFingerprint": "5c302d855ce5",
     "fileCount": 55,
-    "size": 2948612,
-    "builtAt": "2026-07-18T01:01:45.884Z"
+    "size": 2949639,
+    "builtAt": "2026-07-18T02:43:50.967Z"
   }
 }

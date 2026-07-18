@@ -5673,9 +5673,10 @@
     return input.filter(function (x, idx) { return allowed.indexOf(x) >= 0 && input.indexOf(x) === idx; });
   }
   function normalizeProfile(input) {
+    const src = input || {};
     const ko = onboardingKernel();
     if (ko && ko.normalizeProfile) {
-      return ko.normalizeProfile(input || {}, {
+      const normalized = ko.normalizeProfile(src, {
         fields: {
           age: { type: 'number', default: null },
           level: { type: 'enum', allowed: LEVELS, default: 'beginner' },
@@ -5686,12 +5687,14 @@
           acceptedDisclaimer: { type: 'boolean', default: false }
         }
       });
+      // Number(null) === 0, поэтому сохраняем отсутствие возраста явно.
+      if (src.age === null || src.age === undefined || src.age === '') normalized.age = null;
+      return normalized;
     }
-    const src = input || {};
-    const age = Number(src.age);
+    const age = src.age === null || src.age === undefined || src.age === '' ? null : Number(src.age);
     const level = LEVELS.indexOf(src.level) >= 0 ? src.level : 'beginner';
     return {
-      age: Number.isFinite(age) ? age : null,
+      age: age !== null && Number.isFinite(age) ? age : null,
       level: level,
       populations: pickKnown(src.populations, POPULATIONS),
       equipment: pickKnown(src.equipment, EQUIPMENT),
@@ -5704,7 +5707,7 @@
     const p = normalizeProfile(profile);
     const issues = [];
     if (p.age === null) issues.push({ level: 'error', code: 'onboarding.age_missing', msg: 'возраст нужен для fail-closed safety' });
-    if (p.acceptedDisclaimer !== true) issues.push({ level: 'warn', code: 'onboarding.disclaimer', msg: 'режим не является медицинской рекомендацией' });
+    if (p.acceptedDisclaimer !== true) issues.push({ level: 'error', code: 'onboarding.disclaimer', msg: 'подтвердите, что режим не заменяет медицинскую рекомендацию' });
     if (p.populations.indexOf('pregnancy') >= 0) issues.push({ level: 'warn', code: 'onboarding.pregnancy_medical', msg: 'беременность: медицинский контекст вне алгоритма' });
     if (p.populations.indexOf('hypermobile') >= 0) issues.push({ level: 'warn', code: 'onboarding.hypermobile_stability', msg: 'гипермобильность: приоритет укреплению и стабильности' });
     return { profile: p, issues: issues, ok: !issues.some(function (i) { return i.level === 'error'; }) };
@@ -5877,10 +5880,22 @@
     if (kr && kr.makeId) return kr.makeId(parts);
     return parts.join('_');
   }
-  function addSession(clientId, sessionResult, storage) {
+  function addSession(clientId, sessionResult, storage, options) {
     const data = load(clientId, storage);
+    const opts = options && typeof options === 'object' ? options : {};
+    const idempotencyKey = opts.idempotencyKey ? String(opts.idempotencyKey) : null;
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    if (idempotencyKey) {
+      const existing = sessions.find(function (session) {
+        return session && session.idempotencyKey === idempotencyKey;
+      });
+      if (existing) return existing;
+    }
     const item = {
-      id: recordId(['mob_sess', Date.now(), data.sessions.length]),
+      id: idempotencyKey
+        ? recordId(['mob_sess', idempotencyKey])
+        : recordId(['mob_sess', Date.now(), sessions.length]),
+      idempotencyKey: idempotencyKey,
       savedAt: new Date().toISOString(),
       mode: sessionResult && sessionResult.session && sessionResult.session.mode,
       ok: !!(sessionResult && sessionResult.ok),
@@ -5888,9 +5903,11 @@
       session: (sessionResult && sessionResult.session) || sessionResult || null
     };
     const a = adapter(storage);
-    if (a) a.append(clientId, 'sessions', item, { cap: 500 }, storageOf(storage));
-    else save(clientId, Object.assign(data, { sessions: data.sessions.concat([item]) }), storage);
-    return item;
+    const next = Object.assign({}, data, { sessions: sessions.concat([item]).slice(-500) });
+    const saved = a
+      ? a.save(clientId, next, storageOf(storage))
+      : save(clientId, next, storage);
+    return saved ? item : null;
   }
   function addAssessment(clientId, audit, storage) {
     const data = load(clientId, storage);
@@ -8142,13 +8159,13 @@
   const MOBILITY_TIMER_LOCK_HEARTBEAT_MS = 2000;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
     loadLevel: 3,
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const LEVEL_LABEL = {
@@ -8997,6 +9014,52 @@
       validators: Mobility.validators
     };
   }
+  function mobilitySessionIdempotencyKey(ctx, target, flags) {
+    if (!ctx || !ctx.dateKey) return null;
+    const session = target && target.session || {};
+    const partial = !!(flags && flags.partial || target && target.partial || session.partial);
+    const progress = target && target.partialProgress || session.partialProgress || {};
+    const completed = partial ? Number(progress.completedSteps) || 0 : 0;
+    return [
+      'mobility',
+      String(ctx.dateKey),
+      String(ctx.trainingIndex == null ? 0 : ctx.trainingIndex),
+      String(session.mode || 'unknown'),
+      partial ? 'partial-' + completed : 'complete'
+    ].join(':');
+  }
+  function persistMobilitySessionPair(options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    if (!opts.recordsStore || typeof opts.recordsStore.addSession !== 'function' || !opts.target) {
+      return { status: 'failed', reason: 'records_unavailable', record: null, diarySaved: false };
+    }
+    let record = null;
+    try {
+      record = opts.recordsStore.addSession(opts.clientId, opts.target, opts.storage, {
+        idempotencyKey: opts.idempotencyKey || null
+      });
+    } catch (_) {
+      record = null;
+    }
+    if (!record) {
+      return { status: 'failed', reason: 'records_write_failed', record: null, diarySaved: false };
+    }
+    if (!opts.diaryRequired) {
+      return { status: 'saved_both', reason: 'diary_not_required', record: record, diarySaved: null };
+    }
+    if (!opts.trainingStep || typeof opts.trainingStep.saveMobility !== 'function') {
+      return { status: 'diary_pending', reason: 'diary_unavailable', record: record, diarySaved: false };
+    }
+    try {
+      const diaryResult = opts.trainingStep.saveMobility(opts.context, opts.mobilityLog, opts.meta);
+      if (diaryResult === false || diaryResult && diaryResult.ok === false) {
+        return { status: 'diary_pending', reason: 'diary_write_failed', record: record, diarySaved: false };
+      }
+    } catch (_) {
+      return { status: 'diary_pending', reason: 'diary_write_failed', record: record, diarySaved: false };
+    }
+    return { status: 'saved_both', reason: 'saved', record: record, diarySaved: true };
+  }
   function normalizeProfile(profile) {
     return Mobility.onboarding
       ? Mobility.onboarding.normalizeProfile(Object.assign({}, DEFAULT_PROFILE, profile || {}))
@@ -9392,6 +9455,49 @@
       result.issues.length
         ? h('ul', { className: 'mobility-issues' }, result.issues.map(function (i) {
             return h('li', { key: i.code, 'data-level': i.level }, humanizeVisibleText(i.msg || i.code));
+          }))
+        : null
+    );
+  }
+
+  function SafetyOnboardingGate(props) {
+    const profile = normalizeProfile(props.profile);
+    const issues = props.validation && Array.isArray(props.validation.issues)
+      ? props.validation.issues.filter(function (issue) { return issue.level === 'error'; })
+      : [];
+    return h('section', {
+      className: 'mobility-panel mobility-safety-onboarding',
+      'aria-label': 'Обязательные данные перед тренировкой'
+    },
+      h('h3', null, 'Перед первой тренировкой'),
+      h('p', null, 'Укажите возраст и подтвердите предупреждение. Без этих данных тренировка не запускается.'),
+      h('label', null,
+        h('span', null, 'Возраст'),
+        h('input', {
+          'aria-label': 'Возраст перед тренировкой',
+          type: 'number',
+          min: 1,
+          value: profile.age == null ? '' : profile.age,
+          onChange: function (e) {
+            const age = e.target.value === '' ? null : Number(e.target.value);
+            props.onChange && props.onChange(Object.assign({}, profile, { age: Number.isFinite(age) ? age : null }));
+          }
+        })
+      ),
+      h('label', { className: 'mobility-disclaimer' },
+        h('input', {
+          'aria-label': 'Подтвердить предупреждение перед тренировкой',
+          type: 'checkbox',
+          checked: profile.acceptedDisclaimer === true,
+          onChange: function (e) {
+            props.onChange && props.onChange(Object.assign({}, profile, { acceptedDisclaimer: e.target.checked }));
+          }
+        }),
+        h('span', null, 'Понимаю: режим не заменяет медицинскую рекомендацию')
+      ),
+      issues.length
+        ? h('ul', { className: 'mobility-issues', role: 'alert' }, issues.map(function (issue) {
+            return h('li', { key: issue.code, 'data-level': issue.level }, humanizeVisibleText(issue.msg || issue.code));
           }))
         : null
     );
@@ -10896,7 +11002,14 @@
     const [protocolId, setProtocolId] = useState(initialProtocol && initialProtocol.id || null);
     const [modeId, setModeId] = useState(props.modeId || (initialProtocol && initialProtocol.modeId) || (d.onboarding && d.onboarding.recommendMode(initialProfile, { timeOfDay: props.timeOfDay })) || 'morning_tonify');
     const [readinessInput, setReadinessInput] = useState(props.readiness || {});
+    const [recordsView, setRecordsView] = useState(function () {
+      if (props.records) return props.records;
+      return d.recordsStore && typeof d.recordsStore.load === 'function'
+        ? d.recordsStore.load(props.clientId, props.storage)
+        : {};
+    });
     const [saveStatus, setSaveStatus] = useState(null);
+    const [pendingSessionSave, setPendingSessionSave] = useState(null);
     const [activeTab, setActiveTab] = useState('today');
     const [flowMode, setFlowMode] = useState('choose');
     const [runnerStarted, setRunnerStarted] = useState(false);
@@ -10910,6 +11023,13 @@
         ? d.recordsStore.latestCourse(props.clientId, props.storage)
         : null;
     });
+    function refreshRecordsView() {
+      const next = d.recordsStore && typeof d.recordsStore.load === 'function'
+        ? d.recordsStore.load(props.clientId, props.storage)
+        : props.records;
+      if (next) setRecordsView(next);
+      return next || null;
+    }
     // Адаптивный масштаб под ширину контейнера: меряем при маунте и на resize,
     // прокидываем --mob-w (px) в CSS, который масштабирует заголовок/иконки/отступы
     // через clamp(). Так нет горизонтального скролла и заголовок ужимается на узких.
@@ -10971,6 +11091,11 @@
           populations: Array.from(new Set((profile.populations || []).concat(selectedProtocol.profilePatch.populations)))
         })
       : profile;
+    const profileValidation = useMemo(function () {
+      return d.onboarding && typeof d.onboarding.validateProfile === 'function'
+        ? d.onboarding.validateProfile(profileForBuild)
+        : { ok: false, profile: profileForBuild, issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }] };
+    }, [d.onboarding, profileForBuild]);
 
     function applyMode(nextModeId) {
       setModeId(nextModeId);
@@ -10991,6 +11116,7 @@
     }
     function handleProfileChange(nextProfile) {
       setProfile(nextProfile);
+      if (typeof props.onProfileChange === 'function') props.onProfileChange(nextProfile);
       if (d.onboarding && nextProfile && nextProfile.goal !== profile.goal) {
         if (d.protocolCatalog && typeof d.protocolCatalog.recommend === 'function') {
           const p = d.protocolCatalog.recommend(nextProfile, props);
@@ -11010,6 +11136,7 @@
 
     const built = useMemo(function () {
       if (!d.routineBuilder) return null;
+      if (!profileValidation.ok) return { ok: false, errors: profileValidation.issues, issues: profileValidation.issues, session: null };
       const protocolOptions = d.protocolCatalog && selectedProtocol
         ? d.protocolCatalog.buildOptions(selectedProtocol)
         : {};
@@ -11025,7 +11152,7 @@
         randomSeed: mixSeed || null,
         painFlags: props.painFlags || [],
         contraindications: props.contraindications || [],
-        records: d.recordsStore && d.recordsStore.load ? d.recordsStore.load(props.clientId, props.storage) : props.records
+        records: recordsView
       });
       if (activeCourse && profileForBuild.goal === 'posture' && flowMode !== 'protocol' && d.coursePlanner && d.coursePlanner.buildDailySession) {
         return d.coursePlanner.buildDailySession(activeCourse, profileForBuild, Object.assign({}, options, {
@@ -11051,13 +11178,15 @@
       mixSeed,
       props.painFlags,
       props.contraindications,
-      props.records,
+      recordsView,
       props.clientId,
-      props.storage
+      props.storage,
+      profileValidation
     ]);
 
     const customSourceAtomIds = customRunAtomIds.length ? customRunAtomIds : customAtomIds;
     const customBuilt = useMemo(function () {
+      if (!profileValidation.ok) return { ok: false, errors: profileValidation.issues, issues: profileValidation.issues, session: null };
       return buildCustomBuilt(customSourceAtomIds, modeId, profileForBuild, {
         timeOfDay: props.timeOfDay,
         readinessInput: readinessInput,
@@ -11081,7 +11210,8 @@
       props.phase,
       props.keyLoadWithinHours,
       props.painFlags,
-      props.contraindications
+      props.contraindications,
+      profileValidation
     ]);
 
     const activeBuilt = flowMode === 'custom' ? customBuilt : built;
@@ -11116,35 +11246,50 @@
     function persistMobilitySession(result, planOverride, flags) {
       const target = result || activeBuilt;
       const p = planOverride || plan;
-      if (!d.recordsStore || !target) return null;
-      const record = d.recordsStore.addSession(props.clientId, target, props.storage);
-      if (props.dateKey && global.HEYS && global.HEYS.TrainingStep && typeof global.HEYS.TrainingStep.saveMobility === 'function') {
-        const mobilityLog = {
-          version: 1,
-          mode: target.session && target.session.mode,
-          purpose: target.session && target.session.purpose,
-          autonomic: target.session && target.session.autonomic,
-          ok: target.ok !== false,
-          partial: !!(flags && flags.partial || target.partial),
-          partialProgress: target.partialProgress || target.session && target.session.partialProgress || null,
-          totalDurationMinutes: p && p.estimatedDurationSec ? Math.round(p.estimatedDurationSec / 60) : null,
-          plan: p,
-          issues: target.issues || [],
-          savedAt: new Date().toISOString()
-        };
-        global.HEYS.TrainingStep.saveMobility({
-          dateKey: props.dateKey,
-          trainingIndex: props.trainingIndex
-        }, mobilityLog, {
+      if (!d.recordsStore || !target) return { status: 'failed', reason: 'records_unavailable' };
+      const context = props.dateKey ? {
+        dateKey: props.dateKey,
+        trainingIndex: props.trainingIndex
+      } : null;
+      const mobilityLog = {
+        version: 1,
+        mode: target.session && target.session.mode,
+        purpose: target.session && target.session.purpose,
+        autonomic: target.session && target.session.autonomic,
+        ok: target.ok !== false,
+        partial: !!(flags && flags.partial || target.partial),
+        partialProgress: target.partialProgress || target.session && target.session.partialProgress || null,
+        totalDurationMinutes: p && p.estimatedDurationSec ? Math.round(p.estimatedDurationSec / 60) : null,
+        plan: p,
+        issues: target.issues || [],
+        savedAt: new Date().toISOString()
+      };
+      return persistMobilitySessionPair({
+        recordsStore: d.recordsStore,
+        clientId: props.clientId,
+        target: target,
+        storage: props.storage,
+        idempotencyKey: mobilitySessionIdempotencyKey(context, target, flags),
+        diaryRequired: !!context,
+        trainingStep: global.HEYS && global.HEYS.TrainingStep,
+        context: context,
+        mobilityLog: mobilityLog,
+        meta: {
           activityLabel: 'Мобильность' + (mobilityLog.partial ? ' (частично)' : '')
-        });
-      }
-      return record;
+        }
+      });
+    }
+    function applySessionSaveResult(result, target, targetPlan, flags) {
+      const status = result && result.status || 'failed';
+      setSaveStatus(status);
+      if (result && result.record) refreshRecordsView();
+      if (status === 'saved_both') setPendingSessionSave(null);
+      else setPendingSessionSave({ target: target, plan: targetPlan, flags: flags || {} });
+      return result;
     }
     function saveSession() {
-      const record = persistMobilitySession(executionBuilt, executionPlan, {});
-      if (!record) return;
-      setSaveStatus('session');
+      const result = persistMobilitySession(executionBuilt, executionPlan, {});
+      return applySessionSaveResult(result, executionBuilt, executionPlan, {});
     }
     function savePartialSession(progress, resultOverride, planOverride) {
       const targetBuilt = resultOverride || activeBuilt;
@@ -11153,12 +11298,28 @@
       const partial = partialMobilityResult(targetBuilt, targetPlan, progress);
       if (!partial) return;
       const partialPlan = d.routineRunner && partial.session ? d.routineRunner.buildRunPlan(partial.session) : targetPlan;
-      persistMobilitySession(partial, partialPlan, { partial: true });
-      setSaveStatus('session');
+      const flags = { partial: true };
+      const result = persistMobilitySession(partial, partialPlan, flags);
+      return applySessionSaveResult(result, partial, partialPlan, flags);
+    }
+    function retryPendingSessionSave() {
+      if (!pendingSessionSave) return null;
+      const result = persistMobilitySession(
+        pendingSessionSave.target,
+        pendingSessionSave.plan,
+        pendingSessionSave.flags
+      );
+      return applySessionSaveResult(
+        result,
+        pendingSessionSave.target,
+        pendingSessionSave.plan,
+        pendingSessionSave.flags
+      );
     }
     function saveAssessment(audit) {
       if (!d.recordsStore || !audit) return;
       d.recordsStore.addAssessment(props.clientId, audit, props.storage);
+      refreshRecordsView();
       setSaveStatus('assessment');
     }
     function savePainFlag(step) {
@@ -11168,6 +11329,7 @@
         atomId: step && step.atomId,
         zone: step && step.jointRegion || null
       }, props.storage);
+      refreshRecordsView();
       setSaveStatus('pain');
     }
     function saveStepFeedback(step, feedback) {
@@ -11180,6 +11342,7 @@
         slotId: step.slotId || step.blockId || null,
         atomId: step.atomId || null
       }, feedback || {}), props.storage);
+      refreshRecordsView();
       setSaveStatus('feedback');
     }
     function startPostureCourse() {
@@ -11263,6 +11426,7 @@
     ];
 
     function startGuidedSession() {
+      if (!profileValidation.ok) return;
       if (!activeBuilt || !activeBuilt.session || !plan) return;
       showMobilityPreflight({
         modeId: modeId,
@@ -11399,6 +11563,15 @@
     }
 
     function renderToday() {
+      if (!profileValidation.ok) {
+        return h('div', { className: 'mobility-fs-today' },
+          h(SafetyOnboardingGate, {
+            profile: profile,
+            validation: profileValidation,
+            onChange: handleProfileChange
+          })
+        );
+      }
       const title = flowMode === 'custom'
         ? 'Свой план'
         : flowMode === 'resume'
@@ -11566,7 +11739,7 @@
       if (activeTab === 'progress') {
         return h('div', null,
           h(ProgressPanel, {
-            records: props.records,
+            records: recordsView,
             nowDate: props.nowDate,
             built: activeBuilt,
             readinessInput: readinessInput,
@@ -11583,7 +11756,7 @@
       if (activeTab === 'calendar') {
         return h(CalendarPanel, {
           profile: profile,
-          records: props.records,
+          records: recordsView,
           course: activeCourseView,
           onStartCourse: startPostureCourse,
           phase: props.phase,
@@ -11596,14 +11769,22 @@
       return renderToday();
     }
 
-    const showTrainingContext = activeTab === 'today' && flowMode === 'choose';
+    const showTrainingContext = activeTab === 'today' && flowMode === 'choose' && profileValidation.ok;
 
     return h('main', { className: 'mobility-app mobility-fs-session', 'data-mode': modeId, ref: rootRef },
       renderTrainingHeader(),
       renderTabs(),
       showTrainingContext ? renderTrainingContext() : null,
       saveStatus ? h('div', { className: 'mobility-save-status', 'data-status': saveStatus },
-        saveStatus === 'session' ? 'Тренировка сохранена'
+        saveStatus === 'saved_both' ? 'Тренировка сохранена'
+          : saveStatus === 'diary_pending' ? h(React.Fragment, null,
+            h('span', null, 'Не удалось сохранить тренировку в дневник.'),
+            h('button', { type: 'button', onClick: retryPendingSessionSave }, 'Повторить сохранение')
+          )
+          : saveStatus === 'failed' ? h(React.Fragment, null,
+            h('span', null, 'Не удалось сохранить тренировку.'),
+            h('button', { type: 'button', onClick: retryPendingSessionSave }, 'Повторить сохранение')
+          )
           : saveStatus === 'assessment' ? 'Замеры сохранены'
           : saveStatus === 'course' ? 'Курс обновлён'
           : saveStatus === 'feedback' ? 'Ощущения сохранены'
@@ -11627,6 +11808,7 @@
     MobilityApp: MobilityApp,
     ModePicker: ModePicker,
     ProfilePanel: ProfilePanel,
+    SafetyOnboardingGate: SafetyOnboardingGate,
     ReadinessPanel: ReadinessPanel,
     AssessmentPanel: AssessmentPanel,
     ProgressPanel: ProgressPanel,
@@ -11638,6 +11820,8 @@
     ConstructorPanel: ConstructorPanel,
     AtomVisual: AtomVisual,
     ExecutionPanel: ExecutionPanel,
+    mobilitySessionIdempotencyKey: mobilitySessionIdempotencyKey,
+    persistMobilitySessionPair: persistMobilitySessionPair,
     RunnerPlanPanel: RunnerPlanPanel,
     EffectMapPanel: EffectMapPanel,
     SourceBadge: SourceBadge,
@@ -11671,12 +11855,12 @@
   let bodyScrollLocked = false;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const MODE_LABEL = {
@@ -11708,19 +11892,66 @@
       : raw;
   }
 
-  function readStoredProfile() {
+  function readProfileRoot() {
     try {
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+        const stored = HEYS.utils.lsGet('heys_profile', {});
+        return stored && typeof stored === 'object' ? stored : {};
+      }
       const ls = global.localStorage;
       if (!ls || typeof ls.getItem !== 'function') return {};
       const raw = JSON.parse(ls.getItem('heys_profile') || '{}');
-      return raw.mobilityProfile || raw.mobility || {};
+      return raw && typeof raw === 'object' ? raw : {};
     } catch (_) {
       return {};
     }
   }
 
+  function readStoredProfile() {
+    const raw = readProfileRoot();
+    return raw.mobilityProfile || raw.mobility || {};
+  }
+
+  function saveProfile(profile) {
+    const nextProfile = normalizeProfile(profile);
+    const root = readProfileRoot();
+    const next = Object.assign({}, root, { mobilityProfile: nextProfile });
+    try {
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+        return HEYS.utils.lsSet('heys_profile', next) !== false;
+      }
+      const ls = global.localStorage;
+      if (!ls || typeof ls.setItem !== 'function') return false;
+      ls.setItem('heys_profile', JSON.stringify(next));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function getProfile(overrides) {
     return normalizeProfile(Object.assign({}, readStoredProfile(), overrides || {}));
+  }
+
+  function validateBuildProfile(profile) {
+    if (!Mobility.onboarding || typeof Mobility.onboarding.validateProfile !== 'function') {
+      return {
+        ok: false,
+        profile: profile,
+        issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }]
+      };
+    }
+    return Mobility.onboarding.validateProfile(profile);
+  }
+
+  function blockedBuild(validation) {
+    const issues = validation && Array.isArray(validation.issues) ? validation.issues : [];
+    return {
+      ok: false,
+      errors: issues.filter(function (issue) { return issue.level === 'error'; }),
+      issues: issues,
+      session: null
+    };
   }
 
   function protocolFromOptions(opts) {
@@ -11747,6 +11978,8 @@
       return { ok: false, errors: [{ level: 'error', code: 'mobility.not_loaded', msg: 'модуль мобильности не загружен' }], session: null };
     }
     const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
     const protocol = protocolFromOptions(opts);
     const protocolOptions = protocol && Mobility.protocolCatalog && typeof Mobility.protocolCatalog.buildOptions === 'function'
       ? Mobility.protocolCatalog.buildOptions(protocol)
@@ -11768,7 +12001,10 @@
     if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildDailySession !== 'function') {
       return { ok: false, errors: [{ level: 'error', code: 'mobility.course_not_loaded', msg: 'планер курса не загружен' }], session: null };
     }
-    return Mobility.coursePlanner.buildDailySession(course, getProfile(profile), opts || {});
+    const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
+    return Mobility.coursePlanner.buildDailySession(course, p, opts || {});
   }
 
   function modeLabel(modeId) {
@@ -11902,6 +12138,7 @@
     },
       h(Mobility.UI.MobilityApp, {
         profile: profile,
+        onProfileChange: saveProfile,
         onClose: close,
         dateKey: o.dateKey,
         trainingIndex: o.trainingIndex,
@@ -11932,6 +12169,7 @@
   }
 
   Mobility.getProfile = getProfile;
+  Mobility.saveProfile = saveProfile;
   Mobility.buildSession = buildSession;
   Mobility.buildCourse = buildCourse;
   Mobility.buildCourseSession = buildCourseSession;
