@@ -11,6 +11,9 @@
  * привязан SA с lockbox.payloadViewer), с fallback на env-переменные:
  *   TELEGRAM_CLIENT_BOT_TOKEN — токен бота (отдельный от куратор-канала!)
  *   HEYS_START_BOT_TOKEN      — токен бота HEYS Старт (@heys_start_bot)
+ *   TELEGRAM_BOT_TOKEN         — curator/support bot для lead callbacks
+ *   TELEGRAM_CHAT_ID           — разрешённый curator chat
+ *   TELEGRAM_CURATOR_USER_IDS  — optional allowlist Telegram user id для group chat
  *   APP_URL                   — куда вести клиента (default: https://app.heyslab.ru)
  *   INTERNAL_CRON_TOKEN       — общий с heys-api-payments, для /bot/send
  *   PG_*                      — БД (пока только env, не в Lockbox)
@@ -25,10 +28,12 @@ const crypto = require('crypto');
 // (если задан LOCKBOX_APP_SECRET_ID), остальные используют кеш модуля.
 let TELEGRAM_BOT_TOKEN = null;
 let HEYS_START_BOT_TOKEN = null;
+let CURATOR_BOT_TOKEN = null;
 let APP_URL = null;
 let INTERNAL_CRON_TOKEN = null;
 let TELEGRAM_API = null;
 let HEYS_START_API = null;
+let CURATOR_API = null;
 let configLoaded = false;
 let configPromise = null;
 
@@ -63,6 +68,7 @@ async function ensureConfig() {
       // куратор-бот (TELEGRAM_BOT_TOKEN) сюда не подставлять: уйдёт в чужой чат.
       TELEGRAM_BOT_TOKEN = pick('TELEGRAM_CLIENT_BOT_TOKEN');
       HEYS_START_BOT_TOKEN = pick('HEYS_START_BOT_TOKEN');
+      CURATOR_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
       APP_URL = pick('APP_URL') || 'https://app.heyslab.ru';
       INTERNAL_CRON_TOKEN = pick('INTERNAL_CRON_TOKEN');
 
@@ -71,6 +77,9 @@ async function ensureConfig() {
         : null;
       HEYS_START_API = HEYS_START_BOT_TOKEN
         ? `https://api.telegram.org/bot${HEYS_START_BOT_TOKEN}`
+        : null;
+      CURATOR_API = CURATOR_BOT_TOKEN
+        ? `https://api.telegram.org/bot${CURATOR_BOT_TOKEN}`
         : null;
 
       configLoaded = true;
@@ -85,6 +94,7 @@ async function ensureConfig() {
           from: secrets ? 'lockbox' : 'env',
           hasClientToken: !!TELEGRAM_BOT_TOKEN,
           hasStartToken: !!HEYS_START_BOT_TOKEN,
+          hasCuratorToken: !!CURATOR_BOT_TOKEN,
         });
     })();
   }
@@ -122,6 +132,12 @@ function getTelegramApi(bot = 'client') {
     return {
       api: HEYS_START_API,
       tokenName: 'HEYS_START_BOT_TOKEN',
+    };
+  }
+  if (bot === 'curator') {
+    return {
+      api: CURATOR_API,
+      tokenName: 'TELEGRAM_BOT_TOKEN',
     };
   }
   return {
@@ -279,21 +295,18 @@ async function sendMessage(chatId, text, opts = {}, bot = 'client') {
   }, bot);
 }
 
-async function answerCallbackQueryFast(queryId, bot = 'start') {
+async function answerCallbackQueryFast(queryId, bot = 'start', options = {}) {
   if (!queryId) return;
-  const token =
-    bot === 'start'
-      ? HEYS_START_BOT_TOKEN
-      : TELEGRAM_BOT_TOKEN;
-  if (!token || isLockboxPlaceholder(token)) return;
+  const { api } = getTelegramApi(bot);
+  if (!api) return;
 
   try {
     const response = await fetchWithTimeout(
-      `https://api.telegram.org/bot${token}/answerCallbackQuery`,
+      `${api}/answerCallbackQuery`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callback_query_id: queryId }),
+        body: JSON.stringify({ callback_query_id: queryId, ...options }),
       },
       getCallbackAckTimeoutMs(),
     );
@@ -394,7 +407,9 @@ async function releasePollLease(lockName, owner) {
 async function recordPollHeartbeat(lockName, summary = {}) {
   const task = lockName === 'heys-start-bot'
     ? 'telegram_start_poll'
-    : 'telegram_client_poll';
+    : lockName === 'heys-curator-bot'
+      ? 'telegram_curator_poll'
+      : 'telegram_client_poll';
   try {
     await queryWithFreshClient(
       `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
@@ -830,6 +845,145 @@ async function sendStartLeadHandoff(lead) {
   }
 }
 
+const LEAD_TAKEN_CALLBACK_RE = /^lead_taken_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+function getCuratorUserAllowlist() {
+  return new Set(
+    String(process.env.TELEGRAM_CURATOR_USER_IDS || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => /^-?\d+$/.test(value)),
+  );
+}
+
+function isAuthorizedCuratorCallback(query) {
+  const configuredChatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  const chatId = String(query?.message?.chat?.id || '').trim();
+  const actorId = String(query?.from?.id || '').trim();
+  if (!configuredChatId || !chatId || !actorId || chatId !== configuredChatId) return false;
+
+  const allowlist = getCuratorUserAllowlist();
+  if (allowlist.size > 0) return allowlist.has(actorId);
+
+  return query?.message?.chat?.type === 'private' && actorId === chatId;
+}
+
+function getCuratorActorLabel(from) {
+  const username = String(from?.username || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 32);
+  if (username) return `@${username}`;
+  const firstName = String(from?.first_name || '').trim().slice(0, 64);
+  return firstName ? escapeHtml(firstName) : 'куратор';
+}
+
+async function claimLeadForCurator(leadId) {
+  const client = await getPool().connect();
+  try {
+    const updated = await client.query(
+      `UPDATE public.leads
+          SET status = 'contacted',
+              contacted_at = COALESCE(contacted_at, NOW()),
+              updated_at = NOW()
+        WHERE id = $1::uuid
+          AND status = 'new'
+      RETURNING id, status, contacted_at`,
+      [leadId],
+    );
+    if (updated.rows?.[0]) {
+      return { outcome: 'claimed', ...updated.rows[0] };
+    }
+
+    const existing = await client.query(
+      `SELECT id, status, contacted_at
+         FROM public.leads
+        WHERE id = $1::uuid`,
+      [leadId],
+    );
+    const lead = existing.rows?.[0];
+    if (!lead) return { outcome: 'not_found' };
+    if (lead.status === 'contacted') return { outcome: 'already_claimed', ...lead };
+    return { outcome: 'status_conflict', ...lead };
+  } finally {
+    client.release();
+  }
+}
+
+async function editClaimedLeadMessage(query, claim) {
+  const originalText = String(query?.message?.text || '').trim().slice(0, 3500);
+  const actor = getCuratorActorLabel(query?.from);
+  const contactedAt = new Date(claim?.contacted_at || Date.now()).toISOString();
+  const text = `${escapeHtml(originalText)}\n\n✅ <b>В работе</b>\nКуратор: ${actor}\nВремя: ${contactedAt}`;
+  await tgRequest('editMessageText', {
+    chat_id: query.message.chat.id,
+    message_id: query.message.message_id,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: { inline_keyboard: [] },
+  }, 'curator');
+}
+
+async function handleCuratorLeadCallback(query) {
+  await ensureRuntimeConfig();
+  const acknowledge = (text, showAlert = false) => answerCallbackQueryFast(
+    query?.id,
+    'curator',
+    { text: String(text).slice(0, 180), show_alert: showAlert },
+  );
+
+  if (!query?.id) return { outcome: 'missing_callback_id' };
+  if (!isAuthorizedCuratorCallback(query)) {
+    await acknowledge('Действие доступно только авторизованному куратору.', true);
+    return { outcome: 'forbidden' };
+  }
+
+  const match = LEAD_TAKEN_CALLBACK_RE.exec(String(query?.data || ''));
+  if (!match || !query?.message?.message_id) {
+    await acknowledge('Кнопка некорректна или устарела.', true);
+    return { outcome: 'malformed' };
+  }
+
+  try {
+    const claim = await claimLeadForCurator(match[1]);
+    if (claim.outcome === 'claimed') {
+      await acknowledge('Лид взят в работу.');
+      try {
+        await editClaimedLeadMessage(query, claim);
+      } catch (error) {
+        console.warn('[Curator Bot] lead message edit failed:', error.message);
+      }
+      return claim;
+    }
+    if (claim.outcome === 'already_claimed') {
+      await acknowledge('Лид уже взят в работу.');
+      return claim;
+    }
+    if (claim.outcome === 'not_found') {
+      await acknowledge('Лид не найден.', true);
+      return claim;
+    }
+
+    await acknowledge('Статус лида уже изменён. Обновите очередь.', true);
+    return claim;
+  } catch (error) {
+    console.warn('[Curator Bot] lead claim failed:', error.message);
+    await acknowledge('Не удалось обновить лид. Попробуйте ещё раз.', true);
+    return { outcome: 'error' };
+  }
+}
+
+async function handleCuratorBotUpdate(update) {
+  if (!update?.callback_query) return { outcome: 'ignored' };
+  if (!String(update.callback_query.data || '').startsWith('lead_taken_')) {
+    await ensureRuntimeConfig();
+    await answerCallbackQueryFast(update.callback_query.id, 'curator', {
+      text: 'Кнопка не поддерживается.',
+      show_alert: true,
+    });
+    return { outcome: 'unsupported' };
+  }
+  return handleCuratorLeadCallback(update.callback_query);
+}
+
 function queueStartLeadHandoff(lead) {
   setTimeout(() => {
     sendStartLeadHandoff(lead).catch((e) => {
@@ -1241,7 +1395,34 @@ function getTelegramPollWindowMs(payload = {}, envKey = 'HEYS_START_POLL_WINDOW_
 async function handleStartBotPoll(payload = {}) {
   await ensureRuntimeConfig();
   const leaseMs = getTelegramPollWindowMs(payload, 'HEYS_START_POLL_WINDOW_MS') + POLL_LEASE_SAFETY_MS;
-  return withPollLease('heys-start-bot', leaseMs, () => runStartBotPoll(payload));
+  return withPollLease('heys-start-bot', leaseMs, async () => {
+    const curatorTask = CURATOR_API
+      ? runCuratorBotPoll(payload)
+      : Promise.resolve(jsonResponse(200, {
+        ok: false,
+        poll: 'heys-curator-bot',
+        skipped: 'token_not_configured',
+        processed: 0,
+        delivered: 0,
+        telegram_ok: false,
+      }));
+    const [startResponse, curatorResponse] = await Promise.all([
+      runStartBotPoll(payload),
+      curatorTask,
+    ]);
+    const startBody = parseMaybeJson(startResponse?.body) || {};
+    const curatorBody = parseMaybeJson(curatorResponse?.body) || {};
+    if (startBody.telegram_ok) {
+      await recordPollHeartbeat('heys-start-bot', startBody);
+    }
+    if (curatorBody.telegram_ok) {
+      await recordPollHeartbeat('heys-curator-bot', curatorBody);
+    }
+    return jsonResponse(startResponse?.statusCode || 200, {
+      ...startBody,
+      curator: curatorBody,
+    });
+  });
 }
 
 async function runStartBotPoll(payload = {}) {
@@ -1300,16 +1481,78 @@ async function runStartBotPoll(payload = {}) {
   }
 
   const durationMs = Date.now() - startedAt;
-  if (getUpdatesOk) {
-    await recordPollHeartbeat('heys-start-bot', { processed, delivered, duration_ms: durationMs });
-  }
-
   return jsonResponse(200, {
     ok: true,
     poll: 'heys-start-bot',
     processed,
     delivered,
     duration_ms: durationMs,
+    telegram_ok: getUpdatesOk,
+  });
+}
+
+async function runCuratorBotPoll(payload = {}) {
+  const startedAt = Date.now();
+  const deadline = startedAt + getTelegramPollWindowMs(payload, 'TELEGRAM_CURATOR_POLL_WINDOW_MS');
+  let processed = 0;
+  let delivered = 0;
+  let lastUpdateId = null;
+  let getUpdatesOk = false;
+
+  while (Date.now() + 1500 < deadline) {
+    const remainingMs = deadline - Date.now();
+    const timeoutSec = Math.max(
+      1,
+      Math.min(BOT_GET_UPDATES_MAX_TIMEOUT_SEC, Math.floor((remainingMs - 1000) / 1000)),
+    );
+    let updates = [];
+    try {
+      updates = await tgRequest('getUpdates', {
+        timeout: timeoutSec,
+        limit: 20,
+        allowed_updates: ['callback_query'],
+      }, 'curator', (timeoutSec + 3) * 1000);
+      getUpdatesOk = true;
+    } catch (e) {
+      console.warn('[Curator Bot] poll getUpdates failed:', e.message);
+      if (Date.now() + 1500 >= deadline) break;
+      await sleep(750);
+      continue;
+    }
+
+    if (!Array.isArray(updates) || updates.length === 0) continue;
+
+    for (const update of updates) {
+      if (Number.isFinite(update?.update_id)) {
+        lastUpdateId = Math.max(lastUpdateId ?? update.update_id, update.update_id);
+      }
+      const outcome = await handleCuratorBotUpdate(update);
+      processed += 1;
+      if (outcome?.outcome !== 'ignored') delivered += 1;
+    }
+
+    if (lastUpdateId !== null) {
+      try {
+        await tgRequest('getUpdates', {
+          offset: lastUpdateId + 1,
+          timeout: 0,
+          limit: 1,
+          allowed_updates: ['callback_query'],
+        }, 'curator');
+      } catch (e) {
+        console.warn('[Curator Bot] poll offset commit failed:', e.message);
+      }
+    }
+  }
+
+  const durationMs = Date.now() - startedAt;
+  return jsonResponse(200, {
+    ok: true,
+    poll: 'heys-curator-bot',
+    processed,
+    delivered,
+    duration_ms: durationMs,
+    telegram_ok: getUpdatesOk,
   });
 }
 
@@ -1497,6 +1740,7 @@ module.exports.handler = async function (event) {
       service: 'heys-start-bot',
       ok: true,
       hasToken: !!HEYS_START_BOT_TOKEN,
+      hasCuratorToken: !!CURATOR_BOT_TOKEN,
       configSource: process.env.LOCKBOX_APP_SECRET_ID ? 'lockbox' : 'env',
     });
   }
@@ -1508,6 +1752,7 @@ module.exports.handler = async function (event) {
       ok: true,
       hasToken: !!TELEGRAM_BOT_TOKEN,
       hasStartToken: !!HEYS_START_BOT_TOKEN,
+      hasCuratorToken: !!CURATOR_BOT_TOKEN,
       configSource: process.env.LOCKBOX_APP_SECRET_ID ? 'lockbox' : 'env',
     });
   }
@@ -1550,4 +1795,11 @@ module.exports.handler = async function (event) {
   }
 
   return jsonResponse(404, { error: 'not-found', path });
+};
+
+module.exports.__test = {
+  claimLeadForCurator,
+  handleCuratorLeadCallback,
+  handleCuratorBotUpdate,
+  isAuthorizedCuratorCallback,
 };
