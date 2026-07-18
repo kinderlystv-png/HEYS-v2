@@ -1,5 +1,10 @@
 # 📊 HEYS Scoring Reference
 
+> [!WARNING] Раздел Status Score частично устарел: current source использует
+> другой набор факторов, веса и API namespace. Актуальный паспорт и
+> подтверждённые различия:
+> [`reference/systems/ANALYTICS_AND_SCORING.md`](reference/systems/ANALYTICS_AND_SCORING.md).
+
 > **Справочник скоринговых систем HEYS** Версия: 1.1.0 | Обновлено: 2026-03-20
 
 **📌 Основной справочник данных**:

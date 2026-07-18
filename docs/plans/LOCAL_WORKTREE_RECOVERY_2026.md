@@ -43,17 +43,17 @@
 
 ## Карта групп
 
-| ID  | Группа                             | Предварительный scope                                                  | Статус                       | Выходной gate                                       |
-| --- | ---------------------------------- | ---------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------- |
-| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | source published             | navigation/session tests                            |
-| G02 | Nutrition / day / insulin wave     | `apps/web/day/**`, day bundles, IW, products, status, advice           | inventory                    | точечные расчётные и UI-contract tests              |
-| G03 | Mobility                           | `apps/web/mobility/**`, mobility bundle/tests/styles                   | inventory                    | mobility suite + scoped UI bundle                   |
-| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | partial: game guard deployed | sync-critical contracts                             |
-| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | partial: 3 fixes deployed    | отдельные regression tests по дефектам              |
-| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | wave 2 tested                | package gates + load checks + canary после deploy   |
-| G07 | DB migration                       | `scripts/db/migrations/2026-07-18_push_idempotency_delivery_state.sql` | wave 2 tested                | checksum, idempotency tests, managed apply          |
-| G08 | Documentation                      | root/docs/reference/infra/function docs                                | inventory                    | ссылки и утверждения сверены с опубликованным кодом |
-| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only              | release build from integrated source                |
+| ID  | Группа                             | Предварительный scope                                                  | Статус                    | Выходной gate                                       |
+| --- | ---------------------------------- | ---------------------------------------------------------------------- | ------------------------- | --------------------------------------------------- |
+| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | source published          | navigation/session tests                            |
+| G02 | Nutrition / day / insulin wave     | `apps/web/day/**`, day bundles, IW, products, status, advice           | wave 3 committed + tested | точечные расчётные и UI-contract tests              |
+| G03 | Mobility                           | `apps/web/mobility/**`, mobility bundle/tests/styles                   | wave 3 committed + tested | mobility suite + scoped UI bundle                   |
+| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | wave 3 committed + tested | sync-critical contracts                             |
+| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | wave 3 committed + tested | отдельные regression tests по дефектам              |
+| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | published + deployed      | package gates + load checks + canary после deploy   |
+| G07 | DB migration                       | `scripts/db/migrations/2026-07-18_push_idempotency_delivery_state.sql` | applied + verified        | checksum, idempotency tests, managed apply          |
+| G08 | Documentation                      | root/docs/reference/infra/function docs                                | transferred + audited     | ссылки и утверждения сверены с опубликованным кодом |
+| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only           | release build from integrated source                |
 
 Статусы групп будут обновляться значениями `inventory`, `transferred`, `tested`,
 `committed`, `published`, `deployed`, `blocked` или `superseded`.
@@ -94,6 +94,12 @@
 | Telegram lead claim авторизован и идемпотентен                             | function tests   | `node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs` | ✅ 23/23 tests; function pre-deploy gate passed                                                                                                   |
 | Push delivery state совместим с production-схемой                          | DB dry-run       | managed migration в `BEGIN`/`ROLLBACK`, затем повторная проверка колонок и test key                                                                                  | ✅ схема применена и проверена; после rollback осталось 2 исходные колонки и 0 test rows                                                          |
 | Reminder retry contract проходит package gate                              | function tests   | `yandex-cloud-functions/test-functions.sh heys-cron-reminders`                                                                                                       | ✅ 33/33 function tests; pre-deploy gate passed                                                                                                   |
+| Recovery wave 2 опубликована и развернута                                  | Git/YC/DB        | `git rev-parse origin/main`; managed migration history; function metadata и canary                                                                                   | ✅ `origin/main` @ `4fce1cbf`; migration применена; leads, bot и reminders deployed; canary 4/4                                                   |
+| Storage write failures не маскируются успешным локальным save              | tests            | `pnpm vitest run apps/web/__tests__/storage-layer.test.js`                                                                                                           | ✅ contract усилен в `dd849853`                                                                                                                   |
+| Product placeholder, subscription gate и training save fail closed         | tests            | targeted product/subscription/training suites                                                                                                                        | ✅ commits `b9695eaa`, `c2699583`, `8559f107`; 47/47 targeted tests                                                                               |
+| Явные `grams: 0` сохраняются во всех подтверждённых nutrition readers      | tests            | `pnpm vitest run apps/web/__tests__/item-grams-zero-contract.test.js`                                                                                                | ✅ 6/6 contract; commit `67fc869f`                                                                                                                |
+| Mobility safety и pair-save recovery покрыты всем domain suite             | tests            | `pnpm vitest run apps/web/__tests__/mobility-*.test.js`                                                                                                              | ✅ 13 files, 173 tests; commit `a5c01506`                                                                                                         |
+| Новый живой справочник имеет воспроизводимые Facts Table и целые ссылки    | docs audit       | read-only execution встроенных команд + relative-link scan                                                                                                           | ✅ 181 быстрых проверки: 181/181 после исправления синтаксиса; 12 test-команд подтверждены профильными прогонами; новых broken links нет          |
 
 ## Журнал выполнения
 
@@ -146,17 +152,42 @@
 - Конфликтующий local diff `deploy-all.sh` не перенесён: он возвращал секреты из
   Lockbox в environment variables и ослаблял опубликованный security contract.
 
+### 2026-07-18 — wave 2 опубликована и развернута
+
+- Source, migration metadata, release notes и SAST-fix опубликованы до
+  `origin/main` @ `4fce1cbf`.
+- Managed migration применена до функции reminders; leads, bot и reminders
+  развернуты selective deploy и прошли function gates/health.
+- Общий automation canary прошёл 4/4. Cloud heartbeat bot polling был
+  актуальным; локальная прямая Telegram-проверка была ограничена сетью, поэтому
+  реальное callback-нажатие не заявляется как проверенное.
+
+### 2026-07-18 — wave 3 source и документация
+
+- G04: storage API возвращает результат local write и не скрывает сбой; commit
+  `dd849853`.
+- G02/G05: unresolved shared nutrients блокируют выбор, subscription access
+  fail-closed, training save подтверждается readback, явные `grams: 0`
+  сохраняются; commits `b9695eaa`, `c2699583`, `8559f107`, `67fc869f`.
+- G03: mobility onboarding fail-closed, профиль сохраняется, pair-save имеет
+  idempotent recovery и мгновенное обновление records; commit `a5c01506`; полный
+  mobility suite — 173/173.
+- G08: перенесён живой справочник и маркировки старых документов. Проверены
+  relative links и 181 быстрая команда Facts Table; исправлены невыполнимые
+  примеры и устаревшие фразы о deployment wave 2.
+
 ## Durable handoff
 
 ### Current state
 
-- Wave 1 опубликована и проверена в production; G01 source опубликован без
-  отдельного RuStore release. Wave 2 закоммичена и готова к integration/deploy.
-- G02, G03, оставшаяся часть G04, G05, G08–G09 ещё не интегрированы.
+- Wave 1 и wave 2 опубликованы и проверены в production; G01 source опубликован
+  без отдельного RuStore release.
+- G02–G05 source закоммичены и протестированы в wave 3. G08 перенесена и
+  проверена; G09 требует единой integration/release сборки.
 - Исходный checkout остаётся неизменным dirty-источником.
 
 ### Next action
 
-Опубликовать wave 2, применить managed DB migration до функции reminders,
-selective-deploy трёх функций и проверить Telegram queues/canary. Затем перейти
-к оставшимся storage/sync, nutrition и mobility scopes.
+Зафиксировать G08, интегрировать wave 3 в чистом worktree от текущего
+`origin/main`, пересобрать release artifacts один раз, пройти pre-push gates,
+опубликовать и подтвердить GitHub deploy, production health и runtime markers.

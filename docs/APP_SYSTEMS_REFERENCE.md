@@ -3,6 +3,13 @@
 > **Справочник инфраструктурных модулей приложения** Версия: 1.0.0 | Обновлено:
 > 2026-02-26
 
+> **Статус 2026-07-17:** документ сохранён как обзор нескольких подсистем, но
+> его точные структуры, размеры, списки миграций и раздел Product Search не
+> считаются текущими контрактами без проверки source. Актуальная граница
+> продуктов/overlay/поиска описана в
+> [`reference/systems/PRODUCTS_AND_SEARCH.md`](reference/systems/PRODUCTS_AND_SEARCH.md),
+> storage/sync — в [`SYNC_REFERENCE.md`](SYNC_REFERENCE.md).
+
 **📌 Основной справочник данных**:
 [DATA_MODEL_REFERENCE.md](./DATA_MODEL_REFERENCE.md) — структуры данных, ключи,
 базовые расчёты
@@ -103,7 +110,10 @@ cascadeBatchProductUpdates(productId, newProductData);
 
 ## 🔍 Product Search (SmartSearch)
 
-**Файл**: `heys_add_product_step_v1.js`, `heys_core_v12.js`
+> Этот раздел описывает раннюю упрощённую модель. Текущий web-runtime —
+> `heys_smart_search_v2.js`, вызываемый из `heys_add_product_step_v1.js` и
+> `heys_core_v12.js`; workspace-пакет `@heys/search` не является фактическим
+> движком основного legacy web flow.
 
 ### Алгоритм поиска
 

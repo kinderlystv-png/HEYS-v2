@@ -1,15 +1,52 @@
 # 📊 HEYS Data Model Reference
 
-> **Справочник всех аналитических параметров HEYS** Версия: 5.6.0 | Обновлено:
-> 2026-02-26 | **~170 умных советов** | **37 факторов инсулиновой волны** | **🧠
-> Insulin Wave v4.1.0** | **🔬 PMID Science Links** | **🏋️ Training Context** |
-> **💰 Caloric Debt** | **🔄 Refeed Day** | **📊 Status Score** | **🎮
-> Gamification (36 достижений, 8 категорий)** | **🏭 NOVA Classification** |
-> **🧬 Extended Nutrients** | **🔮 Predictive Insights v6.3.0: 41 паттерн (100%
-> научное покрытие + ⚡ мемоизация)** | **🛡️ Store API v4.8.8 (React State Sync
-> Fix)** | **🚨 EWS v4.2 (Phenotype-Aware, Global Score, Causal Chains, Weekly
-> Progress)** | **🎯 Dynamic Priority Badge v4.3.0 (Acuteness Decay, Section
-> Rules, Pattern Degradation)**
+> **Статус:** частично проверено 2026-07-17.<br> **Проверенный охват:**
+> инициализация и сохранение `DayRecord`, поля Day Score, client scope основных
+> данных, durable pending-очередь, основной контракт Meal/MealItem, канонический
+> reader Product, базовые Profile/Norms и расчёт `normAbs`.<br> **Пока не
+> перепроверено полностью:** measurements, training, cycle, advice, metabolism,
+> расширенная nutrition и analytics-разделы.<br> **Ключевые источники
+> проверки:** `heys_day_init_v1.js`, `heys_day_hooks.js`,
+> `heys_day_calculations.js`, `heys_cloud_merge_v1.js`,
+> `heys_storage_layer_v1.js`, `heys_pending_queue_pure_v1.js`,
+> `heys_models_v1.js`, `heys_core_v12.js`, `heys_products_overlay_v1.js`,
+> `heys_user_tab_impl_v1.js`, `heys_profile_step_v1.js`.
+
+Этот документ сохраняет накопленное описание модели данных. До завершения
+поэтапной ревизии непроверенные разделы используются как навигация и должны
+подтверждаться текущим кодом перед изменением контракта.
+
+## Facts Table текущей ревизии
+
+| Утверждение                                                                              | Проверка                                                                                                                                                                                                                                         | Результат                                                                          |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| День читается из client-scoped `dayv2` с legacy fallback                                 | `rg -n -e "scopedKey" -e "unscopedKey" apps/web/heys_day_init_v1.js`                                                                                                                                                                             | подтверждено                                                                       |
+| Autosave сохраняет schema version 3, timestamp и writer source ID                        | `rg -n -e "schemaVersion" -e "updatedAt" -e "_sourceId" apps/web/heys_day_hooks.js`                                                                                                                                                              | подтверждено; старое значение версии исправлено ниже                               |
+| Автоматический `dayScore` целый, а `dayScoreRaw` хранит значение с точностью 0.1         | `sed -n '190,207p' apps/web/heys_day_calculations.js`                                                                                                                                                                                            | подтверждено; дублирующие строки модели объединены                                 |
+| Ручной Day Score имеет приоритет при merge                                               | `sed -n '108,119p' apps/web/heys_cloud_merge_v1.js`                                                                                                                                                                                              | подтверждено                                                                       |
+| `_syncCompletedAt` принадлежит runtime `HEYS.cloud`, а не `DayRecord`                    | `rg -n --glob '!apps/web/public/**' "cloud\._syncCompletedAt" apps/web`                                                                                                                                                                          | подтверждено; поле удалено из таблицы дня                                          |
+| Durable client queue хранится под `heys_pending_client_sync_queue`                       | `rg -n "PENDING_CLIENT_QUEUE_KEY" apps/web/heys_pending_queue_pure_v1.js`                                                                                                                                                                        | подтверждено; старое имя исправлено ниже                                           |
+| `ensureDay()` не переносит `dayScoreRaw` и `dayScoreManual`                              | `node -e "global.window=global;global.addEventListener=()=>{};global.removeEventListener=()=>{};require('./apps/web/heys_models_v1.js');console.log(HEYS.models.ensureDay({date:'2026-07-17',dayScore:8,dayScoreRaw:7.6,dayScoreManual:true}))"` | подтверждено: результат содержит только `dayScore`; зафиксировано как слабое место |
+| Канонический список продуктов читается через overlay-aware `HEYS.products.getAll()`      | `rg -n -e "overlay_products_v2" -e "HEYS.products.getAll = function" apps/web/heys_feature_flags_v1.js apps/web/heys_core_v12.js`                                                                                                                | подтверждено; описание `heys_products` как полной базы исправлено                  |
+| MealItem содержит nutrient snapshot, а resolver умеет совмещать его с индексом продуктов | `rg -n -e "hasMacroSnapshot" -e "applyItemFallback" apps/web/heys_models_v1.js`                                                                                                                                                                  | подтверждено; snapshot-поля добавлены в модель ниже                                |
+| Расширенные product aliases включают `omega3_100 → omega3` и `vitamin_b12 → vitaminB12`  | `sed -n '1735,1770p' apps/web/heys_models_v1.js`                                                                                                                                                                                                 | подтверждено; старый alias `omega3Per100` исправлен                                |
+| Profile UI использует два значения пола и хранит desktop gate в `desktopAllowed`         | `rg -n -e "value: 'Мужской'" -e "value: 'Женский'" -e "desktopAllowed" apps/web/heys_user_tab_impl_v1.js`                                                                                                                                        | подтверждено; таблица профиля исправлена                                           |
+| Начальные нормы БЖУ рассчитываются по цели, полу и возрасту                              | `sed -n '192,258p' apps/web/heys_profile_step_v1.js`                                                                                                                                                                                             | подтверждено; фиксированные 50/25 обозначены только примером                       |
+| `normAbs.prot` использует NET Atwater 3 ккал/г                                           | `sed -n '68,82p' apps/web/heys_day_calculations.js`                                                                                                                                                                                              | подтверждено; формула `/4` исправлена на `/3`                                      |
+
+## Подтверждённые слабые места
+
+### Нормализация теряет метаданные Day Score
+
+`HEYS.models.ensureDay()` формирует новый объект по allowlist и переносит
+`dayScore`, но не переносит `dayScoreRaw` и `dayScoreManual`. При этом
+`heys_cloud_merge_v1.js` использует ручной флаг для приоритета merge, а
+`heys_relapse_risk_v1.js` предпочитает raw-значение. Воспроизводимая проверка
+нормализатора возвращает `{"dayScore":8}` для входа, содержащего все три поля.
+
+Это подтверждённая отсутствующая гарантия сохранения метаданных при hydration.
+Исправление продуктового кода и отдельный regression-тест находятся за пределами
+текущей документационной задачи.
 
 📚 **[SCIENTIFIC_REFERENCES.md](./SCIENTIFIC_REFERENCES.md)** — полный список
 научных источников с PMID ссылками
@@ -155,6 +192,7 @@ PostgreSQL (harm)
 | `date`                 | string              | Дата в формате YYYY-MM-DD                                                          | `"2025-11-29"`                      |
 | `sleepStart`           | string              | Время начала сна (HH:MM)                                                           | `"23:30"`                           |
 | `sleepEnd`             | string              | Время окончания сна (HH:MM)                                                        | `"07:00"`                           |
+| `daySleepMinutes`      | number              | Дневной сон в минутах                                                              | `30`                                |
 | `sleepNote`            | string              | Заметка о сне                                                                      | `"Хорошо выспался"`                 |
 | `sleepQuality`         | number              | Качество сна (1-10)                                                                | `7`                                 |
 | `weightMorning`        | number              | Утренний вес (кг)                                                                  | `75.5`                              |
@@ -163,7 +201,8 @@ PostgreSQL (harm)
 | `householdActivities`  | HouseholdActivity[] | Массив бытовых активностей                                                         | `[{minutes: 30, time: "14:00"}]`    |
 | `householdMin`         | number              | ⚠️ Legacy: сумма минут всех активностей                                            | `30`                                |
 | `householdTime`        | string              | ⚠️ Legacy: время первой активности                                                 | `"14:00"`                           |
-| `dayScore`             | number              | Оценка дня (1-10)                                                                  | `8`                                 |
+| `dayScore`             | number / `''`       | Итоговая целая оценка 0-10; может быть рассчитана автоматически или задана вручную | `8`                                 |
+| `dayScoreRaw`          | number / `''`       | Автоматическая оценка с точностью 0.1 для аналитики                                | `7.3`                               |
 | `moodAvg`              | number              | Среднее настроение за день (1-10)                                                  | `7.5`                               |
 | `wellbeingAvg`         | number              | Среднее самочувствие за день (1-10)                                                | `7.2`                               |
 | `stressAvg`            | number              | Средний стресс за день (1-10)                                                      | `3.0`                               |
@@ -176,6 +215,7 @@ PostgreSQL (harm)
 | `sleepHours`           | number              | Вычисляемое: часы сна                                                              | `7.5`                               |
 | `updatedAt`            | number              | Timestamp последнего обновления                                                    | `1732886400000`                     |
 | `meals`                | Meal[]              | Массив приёмов пищи                                                                | `[...]`                             |
+| `deletedMealIds`       | object              | Tombstones удалённых приёмов пищи для merge                                        | `{}`                                |
 | `trainings`            | Training[]          | Массив тренировок (до 3)                                                           | `[...]`                             |
 | `measurements`         | Measurements        | Замеры тела (опционально)                                                          | `{...}`                             |
 | `cycleDay`             | number/null         | День менструального цикла (1-7, null=не отслеживается)                             | `3`                                 |
@@ -186,11 +226,14 @@ PostgreSQL (harm)
 | `supplementsTakenAt`   | string              | Время приёма добавок (ISO)                                                         | `"2025-11-29T08:00:00"`             |
 | `supplementsTakenMeta` | object              | Метаданные приёма (форма, доза, тайминг по ID)                                     | `{vit_d: {dose: 2000, form: "D3"}}` |
 | `coldExposure`         | object/null         | Данные холодовой экспозиции (из чек-ина)                                           | `{minutes: 3, type: "shower"}`      |
-| `schemaVersion`        | number              | Версия схемы данных (для миграций синхронизации)                                   | `2`                                 |
-| `_sourceId`            | string              | Source ID для синхронизации (UUID устройства)                                      | `"abc-123-def"`                     |
-| `dayScore`             | number              | Оценка дня 0-10 (авто или ручная), см. [SCORING_REFERENCE](./SCORING_REFERENCE.md) | `7.5`                               |
+| `isFastingDay`         | boolean             | Низкокалорийный день подтверждён как осознанный                                    | `false`                             |
+| `isIncomplete`         | boolean             | День помечен как неполный для аналитических фильтров                               | `false`                             |
+| `savedEatenKcal`       | number              | Сохранённое витринное значение съеденных калорий                                   | `1850`                              |
+| `savedDisplayOptimum`  | number              | Сохранённая отображаемая цель для стабильного reload                               | `2100`                              |
+| `morningActivation`    | object              | Состояние утренней активации и follow-up                                           | `{...}`                             |
+| `schemaVersion`        | number              | Версия схемы данных (autosave по умолчанию пишет 3)                                | `3`                                 |
+| `_sourceId`            | string              | ID экземпляра writer для разрешения равных timestamps                              | `"abc-123-def"`                     |
 | `dayScoreManual`       | boolean             | Ручная оценка (выигрывает при cloud merge)                                         | `true`                              |
-| `_syncCompletedAt`     | number              | Timestamp завершения синхронизации                                                 | `1732886400000`                     |
 
 ---
 
@@ -307,12 +350,15 @@ PostgreSQL (harm)
 
 ## Продукт в приёме (MealItem)
 
-| Параметр     | Тип           | Описание               | Пример                 |
-| ------------ | ------------- | ---------------------- | ---------------------- |
-| `id`         | string        | Уникальный ID записи   | `"item_1732886400001"` |
-| `product_id` | string/number | ID продукта из базы    | `"prod_123"`           |
-| `name`       | string        | Название (опционально) | `"Овсянка"`            |
-| `grams`      | number        | Граммы                 | `150`                  |
+| Параметр                                                    | Тип                | Описание                                            | Пример                 |
+| ----------------------------------------------------------- | ------------------ | --------------------------------------------------- | ---------------------- |
+| `id`                                                        | string             | Уникальный ID записи                                | `"item_1732886400001"` |
+| `product_id`                                                | string/number      | ID продукта из базы                                 | `"prod_123"`           |
+| `name`                                                      | string             | Название (опционально)                              | `"Овсянка"`            |
+| `grams`                                                     | number             | Граммы                                              | `150`                  |
+| `brand` / `brand_fingerprint`                               | string/null        | Snapshot бренда для устойчивого разрешения продукта | `"Бренд"`              |
+| `kcal100`, `protein100`, `carbs100`, `fat100` и детализация | number / undefined | Snapshot нутриентов на момент добавления            | `367`                  |
+| `gi`, `harm`                                                | number / undefined | Snapshot ГИ и канонического harm                    | `55`                   |
 
 ⚠️ **Важно**: `MealItem` НЕ имеет поля `category`! Для получения категории
 используй `getProductFromItem(item, pIndex)`.
@@ -321,7 +367,11 @@ PostgreSQL (harm)
 
 ## Продукт (Product)
 
-**localStorage ключ**: `heys_products` (массив всех продуктов)
+**Канонический reader**: `HEYS.products.getAll()`. При включённом по умолчанию
+`overlay_products_v2` он возвращает merged view из cloud-каталога
+`shared_products` и client-scoped `heys_products_overlay_v2`. Ключ
+`heys_products` сохраняется как legacy-совместимый snapshot и fallback, но не
+является единственным источником полного списка.
 
 ### Базовые поля (на 100г)
 
@@ -422,7 +472,7 @@ YandexAPI. Используются модулями Harm Score, Predictive Insi
 ```
 snake_case (PostgreSQL)  →  camelCase (JavaScript)
 vitamin_b12              →  vitaminB12
-omega3_100               →  omega3Per100
+omega3_100               →  omega3
 nova_group               →  novaGroup
 ```
 
@@ -438,7 +488,7 @@ EXTENDED_NUTRIENT_KEYS маппинг определён в `heys_models_v1.js`.
 | ---------------------- | -------- | --------------------------------------------------- | ---------------------------------------- |
 | `firstName`            | string   | Имя                                                 | `"Антон"`                                |
 | `lastName`             | string   | Фамилия                                             | `"Поплавский"`                           |
-| `gender`               | string   | Пол                                                 | `"Мужской"` / `"Женской"` / `"Другое"`   |
+| `gender`               | string   | Пол в текущем Profile UI                            | `"Мужской"` / `"Женский"`                |
 | `weight`               | number   | Текущий вес (кг)                                    | `75`                                     |
 | `height`               | number   | Рост (см)                                           | `180`                                    |
 | `age`                  | number   | Возраст (лет)                                       | `30`                                     |
@@ -451,6 +501,7 @@ EXTENDED_NUTRIENT_KEYS маппинг определён в `heys_models_v1.js`.
 | `activityLevel`        | string   | Уровень активности (для TDEE)                       | `"moderate"`                             |
 | `cycleTrackingEnabled` | boolean  | Включён ли трекинг менструального цикла             | `false`                                  |
 | `profileCompleted`     | boolean  | Флаг завершения мастера профиля                     | `true`                                   |
+| `desktopAllowed`       | boolean  | Разрешён ли клиенту вход с desktop                  | `false`                                  |
 | `plannedSupplements`   | string[] | IDs запланированных добавок                         | `["vit_d", "omega3", "magnesium"]`       |
 | `supplementSettings`   | object   | Настройки добавок (тайминг, форма, доза по ID)      | `{vit_d: {time: "morning", dose: 2000}}` |
 | `supplementHistory`    | object   | Лёгкая история для предупреждений/лимитов           | `{vit_d: {streak: 7, lastTaken: "..."}}` |
@@ -552,16 +603,21 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay); // {daysUntilNormal, messag
 
 **localStorage ключ**: `heys_norms`
 
-| Параметр         | Тип    | Описание                 | По умолчанию |
-| ---------------- | ------ | ------------------------ | ------------ |
-| `carbsPct`       | number | % углеводов от калоража  | `50`         |
-| `proteinPct`     | number | % белка от калоража      | `25`         |
-| `simpleCarbPct`  | number | % простых от углеводов   | `30`         |
-| `badFatPct`      | number | % вредных жиров от жиров | `30`         |
-| `superbadFatPct` | number | % транс-жиров от жиров   | `5`          |
-| `fiberPct`       | number | г клетчатки на 1000 ккал | `14`         |
-| `giPct`          | number | Целевой средний ГИ       | `55`         |
-| `harmPct`        | number | Допустимый % вреда       | `10`         |
+`carbsPct` и `proteinPct` не имеют одного универсального default: мастер профиля
+рассчитывает их через `calcNormsFromGoal()` по цели, полу и возрасту. Числа ниже
+для БЖУ — пример режима поддержки для мужчины младше 40 лет; остальные
+ограничения возвращаются мастером одинаковыми.
+
+| Параметр         | Тип    | Описание                 | Пример мастера |
+| ---------------- | ------ | ------------------------ | -------------- |
+| `carbsPct`       | number | % углеводов от калоража  | `50`           |
+| `proteinPct`     | number | % белка от калоража      | `25`           |
+| `simpleCarbPct`  | number | % простых от углеводов   | `30`           |
+| `badFatPct`      | number | % вредных жиров от жиров | `30`           |
+| `superbadFatPct` | number | % транс-жиров от жиров   | `5`            |
+| `fiberPct`       | number | г клетчатки на 1000 ккал | `14`           |
+| `giPct`          | number | Целевой средний ГИ       | `55`           |
+| `harmPct`        | number | Допустимый % вреда       | `10`           |
 
 ---
 
@@ -594,7 +650,7 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay); // {daysUntilNormal, messag
 | --------- | --------------------------------------------------- |
 | `kcal`    | `optimum`                                           |
 | `carbs`   | `optimum * carbsPct / 100 / 4`                      |
-| `prot`    | `optimum * proteinPct / 100 / 4` ⚠️                 |
+| `prot`    | `optimum * proteinPct / 100 / 3` (NET Atwater)      |
 | `fat`     | `optimum * (100 - carbsPct - proteinPct) / 100 / 9` |
 | `simple`  | `carbs * simpleCarbPct / 100`                       |
 | `complex` | `carbs - simple`                                    |
@@ -949,28 +1005,29 @@ TEF = prot_g × 0 + carbs_g × 4 × 0.075 + fat_g × 9 × 0.015
 
 ### Основные ключи данных
 
-| Ключ                  | Описание             | Namespace     | Файл               |
-| --------------------- | -------------------- | ------------- | ------------------ |
-| `heys_dayv2_{date}`   | Данные дня           | ✅ clientId   | `heys_day_v12.js`  |
-| `heys_products`       | База продуктов       | ✅ clientId   | `heys_core_v12.js` |
-| `heys_profile`        | Профиль пользователя | ✅ clientId   | `heys_user_v12.js` |
-| `heys_norms`          | Нормы питания        | ✅ clientId   | `heys_user_v12.js` |
-| `heys_hr_zones`       | Пульсовые зоны       | ✅ clientId   | `heys_user_v12.js` |
-| `heys_client_current` | Текущий клиент       | ❌ глобальный | `heys_app_v12.js`  |
+| Ключ                       | Описание                                                       | Namespace     | Файл                          |
+| -------------------------- | -------------------------------------------------------------- | ------------- | ----------------------------- |
+| `heys_dayv2_{date}`        | Данные дня                                                     | ✅ clientId   | `heys_day_v12.js`             |
+| `heys_products_overlay_v2` | Клиентские ссылки, overrides и custom-продукты для merged view | ✅ clientId   | `heys_products_overlay_v1.js` |
+| `heys_products`            | Legacy snapshot и fallback продуктов                           | ✅ clientId   | `heys_core_v12.js`            |
+| `heys_profile`             | Профиль пользователя                                           | ✅ clientId   | `heys_user_v12.js`            |
+| `heys_norms`               | Нормы питания                                                  | ✅ clientId   | `heys_user_v12.js`            |
+| `heys_hr_zones`            | Пульсовые зоны                                                 | ✅ clientId   | `heys_user_v12.js`            |
+| `heys_client_current`      | Текущий клиент                                                 | ❌ глобальный | `heys_app_v12.js`             |
 
 ### Insights системы
 
-| Ключ                         | Описание                                                                  | Namespace   | Файл                          |
-| ---------------------------- | ------------------------------------------------------------------------- | ----------- | ----------------------------- |
-| `heys_ews_weekly_v1`         | EWS Weekly Progress (4 недели снапшотов)                                  | ✅ clientId | `pi_early_warning.js`         |
-| `heys_game`                  | Состояние геймификации (XP, уровень, достижения)                          | ✅ clientId | `heys_gamification_v1.js`     |
-| `heys_portion_history`       | История выбора порций (для автоподстановки)                               | ✅ clientId | `heys_core_v12.js`            |
-| `heys_pending_client_queue`  | Очередь неуспешных синков (retry при восстановлении связи)                | ✅ clientId | `heys_app_sync_effects_v1.js` |
-| `heys_widget_layout_v1`      | Layout виджетов Dashboard ([см. APP_SYSTEMS](./APP_SYSTEMS_REFERENCE.md)) | ✅ clientId | `heys_widgets_core_v1.js`     |
-| `heys_widget_layout_meta_v1` | Метаданные grid (версия, дата)                                            | ✅ clientId | `heys_widgets_core_v1.js`     |
-| `heys_water_history`         | История воды (compressed)                                                 | ✅ clientId | `heys_day_hooks.js`           |
-| `heys_grams_history`         | История порций в граммах (автоподстановка)                                | ✅ clientId | `heys_core_v12.js`            |
-| `heys_scheduled_advices`     | Запланированные советы/напоминания                                        | ✅ clientId | `heys_advice_bundle_v1.js`    |
+| Ключ                             | Описание                                                                  | Namespace     | Файл                            |
+| -------------------------------- | ------------------------------------------------------------------------- | ------------- | ------------------------------- |
+| `heys_ews_weekly_v1`             | EWS Weekly Progress (4 недели снапшотов)                                  | ✅ clientId   | `pi_early_warning.js`           |
+| `heys_game`                      | Состояние геймификации (XP, уровень, достижения)                          | ✅ clientId   | `heys_gamification_v1.js`       |
+| `heys_portion_history`           | История выбора порций (для автоподстановки)                               | ✅ clientId   | `heys_core_v12.js`              |
+| `heys_pending_client_sync_queue` | Общая durable-очередь; каждая запись содержит свой `client_id`            | ❌ глобальный | `heys_pending_queue_pure_v1.js` |
+| `heys_widget_layout_v1`          | Layout виджетов Dashboard ([см. APP_SYSTEMS](./APP_SYSTEMS_REFERENCE.md)) | ✅ clientId   | `heys_widgets_core_v1.js`       |
+| `heys_widget_layout_meta_v1`     | Метаданные grid (версия, дата)                                            | ✅ clientId   | `heys_widgets_core_v1.js`       |
+| `heys_water_history`             | История воды (compressed)                                                 | ✅ clientId   | `heys_day_hooks.js`             |
+| `heys_grams_history`             | История порций в граммах (автоподстановка)                                | ✅ clientId   | `heys_core_v12.js`              |
+| `heys_scheduled_advices`         | Запланированные советы/напоминания                                        | ✅ clientId   | `heys_advice_bundle_v1.js`      |
 
 ### Авторизация и сессия
 

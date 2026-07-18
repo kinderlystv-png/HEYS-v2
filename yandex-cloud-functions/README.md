@@ -3,6 +3,12 @@
 > Production backend для HEYS v2 на базе Yandex Cloud Functions Все 7 функций
 > работают на `api.heyslab.ru`
 
+> **Статус 2026-07-17:** список из семи функций и раздел про постоянный
+> 15-минутный GitHub monitor устарели. Канонический deploy inventory находится в
+> `deploy-all.sh`, gateway routes — в `api-gateway-spec.yaml`, operational
+> expectations — в `check-heys-ops-status.cjs`. Этот файл используется как
+> исторический runbook, а не как полный каталог production backend.
+
 ---
 
 ## 📦 Архитектура

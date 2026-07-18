@@ -1,29 +1,39 @@
 # HEYS Curator vs Client (PIN) — Sync & Functional Differences
 
-> **Version:** v2.1.0 | **Updated:** 27.02.2026
+> **Статус:** частично перепроверено 2026-07-17<br> **Проверенный охват:**
+> credentials, основной sync routing и Phase A/B<br> **Остальные UI/gamification
+> детали:** исторический источник до отдельной проверки
 >
 > Единый справочник различий между режимами **Curator** и **Client (PIN auth)**.
+
+### Facts Table — проверенный routing
+
+| ID  | Утверждение                                                | Проверка                                                    | Статус               |
+| --- | ---------------------------------------------------------- | ----------------------------------------------------------- | -------------------- |
+| C1  | Оба режима в основном пути вызывают `bootstrapClientSync`  | `sed -n '1303,1390p' apps/web/heys_storage_supabase_v1.js`  | проверено 2026-07-17 |
+| C2  | `syncClientViaRPC` — PIN fallback при отсутствии bootstrap | `sed -n '1365,1392p' apps/web/heys_storage_supabase_v1.js`  | проверено 2026-07-17 |
+| C3  | Phase A dispatch содержит `phaseA: true`                   | `rg -n 'phaseA: true' apps/web/heys_storage_supabase_v1.js` | проверено 2026-07-17 |
 
 ---
 
 ## 1. Быстрый summary
 
-| Aspect                      | Curator                                           | Client (PIN auth)                                         |
-| --------------------------- | ------------------------------------------------- | --------------------------------------------------------- |
-| Auth credential             | JWT (`heys_supabase_auth_token`)                  | `session_token` (`heys_session_token`)                    |
-| HTML gate форма             | Email + Password (`hlg-screen-curator`)           | Phone + 4-digit PIN (`hlg-screen-client`)                 |
-| Primary sync path           | `bootstrapClientSync`                             | `syncClientViaRPC`                                        |
-| Phase A/B                   | ✅ Есть (2 фазы)                                  | ❌ Нет (single full sync)                                 |
-| `heysSyncCompleted` payload | `phaseA: true` + `phase: 'full', viaYandex: true` | `phase: 'full'`                                           |
-| `switchClient`              | ✅ Да (multi-client)                              | ⚠️ Логика ограничена own profile                          |
-| Gamification cloud sync     | Через storage sync layer                          | Прямые `*_by_session` RPC                                 |
-| Client management RPC       | ✅ `*_by_session` curator endpoints               | ❌ Недоступно                                             |
-| Token refresh               | `YandexAPI.verifyCuratorToken()`                  | Пропускается (`_rpcOnlyMode` → valid)                     |
-| Anti-timing delay           | ❌ Нет                                            | ✅ 350-600ms random delay при login                       |
-| Consent gate                | ❌ Не показывается                                | ✅ Показывается (`needsConsent`)                          |
-| Desktop gate                | ❌ Не показывается                                | ✅ Показывается (`!desktopAllowed`)                       |
-| `_authSyncPending` guard    | ❌ Не устанавливается                             | ✅ v62: блокирует SW reload во время sync (15s polling)   |
-| `_auditDowngradedXP`        | ❌ Нет                                            | ✅ v62: force-reconcile XP после обнаруженного даунгрейда |
+| Aspect                      | Curator                                 | Client (PIN auth)                                         |
+| --------------------------- | --------------------------------------- | --------------------------------------------------------- |
+| Auth credential             | JWT (`heys_supabase_auth_token`)        | `session_token` (`heys_session_token`)                    |
+| HTML gate форма             | Email + Password (`hlg-screen-curator`) | Phone + 4-digit PIN (`hlg-screen-client`)                 |
+| Primary sync path           | `syncClient` → `bootstrapClientSync`    | `syncClient` → `bootstrapClientSync`                      |
+| Phase A/B                   | ✅ Есть                                 | ✅ Есть                                                   |
+| `heysSyncCompleted` payload | `phaseA: true`, затем `phase: 'full'`   | `phaseA: true`, затем `phase: 'full'`                     |
+| `switchClient`              | ✅ Да (multi-client)                    | ⚠️ Логика ограничена own profile                          |
+| Gamification cloud sync     | Через storage sync layer                | Прямые `*_by_session` RPC                                 |
+| Client management RPC       | ✅ `*_by_session` curator endpoints     | ❌ Недоступно                                             |
+| Token refresh               | `YandexAPI.verifyCuratorToken()`        | Пропускается (`_rpcOnlyMode` → valid)                     |
+| Anti-timing delay           | ❌ Нет                                  | ✅ 350-600ms random delay при login                       |
+| Consent gate                | ❌ Не показывается                      | ✅ Показывается (`needsConsent`)                          |
+| Desktop gate                | ❌ Не показывается                      | ✅ Показывается (`!desktopAllowed`)                       |
+| `_authSyncPending` guard    | ❌ Не устанавливается                   | ✅ v62: блокирует SW reload во время sync (15s polling)   |
+| `_auditDowngradedXP`        | ❌ Нет                                  | ✅ v62: force-reconcile XP после обнаруженного даунгрейда |
 
 ---
 
@@ -38,14 +48,12 @@
 
 ```javascript
 const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
-if (isPinAuth) {
-  return syncClientViaRPC(clientId);
-}
 return bootstrapClientSync(clientId, options);
 ```
 
-**Итог:** различие потоков определяется не самим `_rpcOnlyMode`, а наличием
-`_pinAuthClientId` + типом сессии.
+`syncClientViaRPC` остаётся legacy fallback только для PIN-потока, если
+`bootstrapClientSync` ещё недоступен. **Итог:** основной download-механизм
+общий, а различия задают credential, ownership и доступные операции.
 
 ---
 
