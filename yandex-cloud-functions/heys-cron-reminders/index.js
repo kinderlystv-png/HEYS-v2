@@ -31,6 +31,7 @@ const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
+const { deliverIdempotently, isInReminderDeliveryWindow } = require('./push-idempotency');
 const {
   HUNGER_EVENTS_KEY,
   findDueHungerFollowUps,
@@ -103,18 +104,6 @@ function isoDateNDaysAgoMsk(n) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
-// ─── Idempotency ──────────────────────────────────────────────────────
-
-async function claimIdempotency(client, key) {
-  const r = await client.query(
-    `INSERT INTO push_idempotency (key) VALUES ($1)
-     ON CONFLICT (key) DO NOTHING
-     RETURNING key`,
-    [key]
-  );
-  return r.rowCount > 0;
-}
-
 // ─── Push sending ──────────────────────────────────────────────────────
 
 async function sendToSubscriptions(client, table, idCol, ownerId, payload) {
@@ -146,10 +135,20 @@ async function sendToSubscriptions(client, table, idCol, ownerId, payload) {
     .filter(Boolean);
 
   if (deadIds.length) {
-    await client.query(
-      `DELETE FROM ${table} WHERE id = ANY($1::uuid[])`,
-      [deadIds]
-    );
+    try {
+      await client.query(
+        `DELETE FROM ${table} WHERE id = ANY($1::uuid[])`,
+        [deadIds]
+      );
+    } catch (error) {
+      // Доставка уже завершилась: ошибка housekeeping не должна превращать
+      // успешный push в retry и создавать дубль на живом endpoint.
+      console.error('[cron-reminders] failed to clean dead push subscriptions', {
+        table,
+        count: deadIds.length,
+        error: error.message,
+      });
+    }
   }
 
   const sent = results.filter((r) => r.status === 'fulfilled').length;
@@ -546,7 +545,6 @@ async function jobMealReminders(client) {
     // Hour-bucket для идемпотентности: один пуш на каждый "час разрыва".
     const hourBucket = Math.floor(gapMin / 60);
     const key = `meal_reminder:${today}:${hourBucket}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     const payload = {
       title: 'HEYS — не забудь записать еду',
@@ -554,7 +552,7 @@ async function jobMealReminders(client) {
       tag: 'meal-reminder',
       url: '/',
     };
-    const res = await sendToClient(client, clientId, payload);
+    const res = await deliverIdempotently(client, key, () => sendToClient(client, clientId, payload));
     total += res.sent;
   }
   return { total };
@@ -586,7 +584,6 @@ async function jobInactiveClients(client) {
     if (isInQuietHours(minutesOfDay(now), prefs.quiet_start, prefs.quiet_end)) continue;
 
     const key = `inactive_client:${today}:${row.curator_id}:${row.client_id}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     const payload = {
       title: 'HEYS — клиент пропал',
@@ -594,7 +591,7 @@ async function jobInactiveClients(client) {
       tag: `inactive-${row.client_id}`,
       url: `/curator?client=${row.client_id}`,
     };
-    const res = await sendToCurator(client, row.curator_id, payload);
+    const res = await deliverIdempotently(client, key, () => sendToCurator(client, row.curator_id, payload));
     total += res.sent;
   }
   return { total };
@@ -636,29 +633,28 @@ async function jobEveningSummary(client) {
     const targetMin = parseHHMM(prefs.evening_summary_time);
     if (targetMin === null) continue;
     // Окно ±7 минут от заданного времени (так как cron каждые 15 мин).
-    const diff = currentMinutes - targetMin;
-    if (diff < -7 || diff > 7) continue;
+    if (!isInReminderDeliveryWindow(currentMinutes, targetMin)) continue;
 
     if (isInQuietHours(currentMinutes, prefs.quiet_start, prefs.quiet_end)) continue;
 
     const key = `evening_summary:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const dayRes = await client.query(
-      `SELECT v FROM client_kv_store WHERE client_id = $1 AND k = $2 LIMIT 1`,
-      [clientId, `heys_dayv2_${today}`]
-    );
-    const { kcal, protein } = sumDayKcalProtein(dayRes.rows[0]?.v || null);
-
-    const payload = {
-      title: 'HEYS — итог дня',
-      body: kcal > 0
-        ? `Сегодня: ${kcal} ккал, белок ${protein} г. Загляни, чтобы добрать норму.`
-        : 'Ты сегодня ничего не записал. Самое время заглянуть в приложение.',
-      tag: 'evening-summary',
-      url: '/',
-    };
-    const res = await sendToClient(client, clientId, payload);
+    const res = await deliverIdempotently(client, key, async () => {
+      const dayRes = await client.query(
+        `SELECT v FROM client_kv_store WHERE client_id = $1 AND k = $2 LIMIT 1`,
+        [clientId, `heys_dayv2_${today}`]
+      );
+      const { kcal, protein } = sumDayKcalProtein(dayRes.rows[0]?.v || null);
+      const payload = {
+        title: 'HEYS — итог дня',
+        body: kcal > 0
+          ? `Сегодня: ${kcal} ккал, белок ${protein} г. Загляни, чтобы добрать норму.`
+          : 'Ты сегодня ничего не записал. Самое время заглянуть в приложение.',
+        tag: 'evening-summary',
+        url: '/',
+      };
+      return sendToClient(client, clientId, payload);
+    });
     total += res.sent;
   }
   return { total };
@@ -704,7 +700,6 @@ async function jobStreakCelebration(client) {
     if (!allHaveMeals) continue;
 
     const key = `streak_7d:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     const payload = {
       title: 'HEYS — 7 дней подряд!',
@@ -712,7 +707,7 @@ async function jobStreakCelebration(client) {
       tag: 'streak-7d',
       url: '/',
     };
-    const res = await sendToClient(client, clientId, payload);
+    const res = await deliverIdempotently(client, key, () => sendToClient(client, clientId, payload));
     total += res.sent;
   }
   return { total };
@@ -725,7 +720,7 @@ async function jobMorningBreakfast(client) {
   const now = nowInMsk();
   const cur = minutesOfDay(now);
   const target = 12 * 60; // 12:00
-  if (Math.abs(cur - target) > 7) return { total: 0, skipped: 'window' };
+  if (!isInReminderDeliveryWindow(cur, target)) return { total: 0, skipped: 'window' };
 
   const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
   let total = 0;
@@ -740,9 +735,10 @@ async function jobMorningBreakfast(client) {
     if (lastMeal !== null) continue; // уже есть приём пищи
 
     const key = `morning_breakfast:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const res = await sendToClient(client, clientId, { ...T.morningBreakfast(), tag: 'morning-breakfast', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.morningBreakfast(), tag: 'morning-breakfast', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -765,16 +761,17 @@ async function jobMorningCheckin(client) {
 
     const wakeAvg = await getWakeAvgMinutes(client, clientId);
     const target = (wakeAvg !== null ? wakeAvg : 8 * 60) + 60; // wake + 1 час
-    if (Math.abs(cur - target) > 7) continue;
+    if (!isInReminderDeliveryWindow(cur, target)) continue;
 
     // Если weightMorning уже заполнен — не шлём.
     const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
     if (day?.weightMorning && Number(day.weightMorning) > 0) continue;
 
     const key = `morning_checkin:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const res = await sendToClient(client, clientId, { ...T.morningCheckin(), tag: 'morning-checkin', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.morningCheckin(), tag: 'morning-checkin', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -797,7 +794,7 @@ async function jobMorningVitamins(client) {
 
     const wakeAvg = await getWakeAvgMinutes(client, clientId);
     const target = (wakeAvg !== null ? wakeAvg : 8 * 60) + 60 + 10; // wake + 1ч + 10мин
-    if (Math.abs(cur - target) > 7) continue;
+    if (!isInReminderDeliveryWindow(cur, target)) continue;
 
     // Витамины — только если есть plannedSupplements
     const profile = await loadKv(client, clientId, 'heys_profile');
@@ -809,7 +806,6 @@ async function jobMorningVitamins(client) {
     if (!day?.weightMorning) continue;
 
     const key = `morning_vitamins:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     // Соберём список названий
     const names = supplements
@@ -817,7 +813,9 @@ async function jobMorningVitamins(client) {
       .filter(Boolean)
       .slice(0, 3); // не более 3 в тексте
 
-    const res = await sendToClient(client, clientId, { ...T.morningVitamins(names), tag: 'morning-vitamins', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.morningVitamins(names), tag: 'morning-vitamins', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -853,9 +851,10 @@ async function jobWaterHint(client) {
 
     const bucket = waterHourBucket(cur);
     const key = `water_hint:${today}:${bucket}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const res = await sendToClient(client, clientId, { ...T.waterHint(Math.round(deficit)), tag: 'water-hint', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.waterHint(Math.round(deficit)), tag: 'water-hint', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -885,10 +884,11 @@ async function jobCal90(client) {
     if (pct < 0.9 || pct >= 1.0) continue; // 90–100%
 
     const key = `cal_90:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     const left = Math.max(0, norms.kcal - macros.kcal);
-    const res = await sendToClient(client, clientId, { ...T.cal90(left), tag: 'cal-90', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.cal90(left), tag: 'cal-90', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -923,8 +923,9 @@ async function jobMacroOver(client) {
     for (const c of checks) {
       if (!c.norm || c.val < c.norm) continue;
       const key = `macro_over_${c.code}:${today}:${clientId}`;
-      if (!(await claimIdempotency(client, key))) continue;
-      const res = await sendToClient(client, clientId, { ...c.tpl(), tag: `macro-over-${c.code}`, url: '/' });
+      const res = await deliverIdempotently(client, key, () => (
+        sendToClient(client, clientId, { ...c.tpl(), tag: `macro-over-${c.code}`, url: '/' })
+      ));
       total += res.sent;
     }
   }
@@ -937,7 +938,7 @@ async function jobOvereat3d(client) {
   const today = todayDateMsk();
   const now = nowInMsk();
   const cur = minutesOfDay(now);
-  if (Math.abs(cur - 9 * 60) > 7) return { total: 0, skipped: 'window' };
+  if (!isInReminderDeliveryWindow(cur, 9 * 60)) return { total: 0, skipped: 'window' };
 
   const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
   let total = 0;
@@ -962,9 +963,10 @@ async function jobOvereat3d(client) {
     if (!allOver) continue;
 
     const key = `overeat_3d:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const res = await sendToClient(client, clientId, { ...T.overeat3d(), tag: 'overeat-3d', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.overeat3d(), tag: 'overeat-3d', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -995,9 +997,10 @@ async function jobLateMeal(client) {
     if (lastToday < median + 30) continue;
 
     const key = `late_meal:${today}:${clientId}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
-    const res = await sendToClient(client, clientId, { ...T.lateMeal(), tag: 'late-meal', url: '/' });
+    const res = await deliverIdempotently(client, key, () => (
+      sendToClient(client, clientId, { ...T.lateMeal(), tag: 'late-meal', url: '/' })
+    ));
     total += res.sent;
   }
   return { total };
@@ -1025,15 +1028,14 @@ async function jobCalStreak(client) {
     // sentinel один → один push. Серия порвалась и началась новая → новая
     // startDate → новый sentinel → новый push.
     const key = `cal_streak:${clientId}:${startDate}`;
-    if (!(await claimIdempotency(client, key))) continue;
-
-    const prefs = await getCuratorPrefs(client, r.curator_id);
-    if (!prefs.enabled) continue;
-
-    const res = await sendToCurator(client, r.curator_id, {
-      ...T.calStreakCurator(r.name, streak),
-      tag: `cal-streak-${clientId}`,
-      url: `/curator?client=${clientId}`,
+    const res = await deliverIdempotently(client, key, async () => {
+      const prefs = await getCuratorPrefs(client, r.curator_id);
+      if (!prefs.enabled) return { sent: 0, total: 0, cleaned: 0 };
+      return sendToCurator(client, r.curator_id, {
+        ...T.calStreakCurator(r.name, streak),
+        tag: `cal-streak-${clientId}`,
+        url: `/curator?client=${clientId}`,
+      });
     });
     total += res.sent;
   }
@@ -1047,7 +1049,7 @@ async function jobEwsAlerts(client) {
   const now = nowInMsk();
   const cur = minutesOfDay(now);
   // Проверяем раз в день в 10:00 ±7 мин (sentinel + раз в 3 дня)
-  if (Math.abs(cur - 10 * 60) > 7) return { total: 0, skipped: 'window' };
+  if (!isInReminderDeliveryWindow(cur, 10 * 60)) return { total: 0, skipped: 'window' };
 
   const rows = await client.query(
     `SELECT c.id AS client_id, c.name, c.curator_id
@@ -1077,30 +1079,46 @@ async function jobEwsAlerts(client) {
       // sentinel раз в 3 дня
       const day3 = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 3));
       const key = `ews:${p.pattern_id || p.id}:${clientId}:${day3}`;
-      if (!(await claimIdempotency(client, key))) continue;
-
-      // Куратору — полный текст
-      const curatorPrefs = await getCuratorPrefs(client, r.curator_id);
-      if (curatorPrefs.enabled) {
-        const res = await sendToCurator(client, r.curator_id, {
-          ...T.ewsCurator(r.name, p.name || p.pattern_id || 'паттерн'),
-          tag: `ews-${p.pattern_id}-${clientId}`,
-          url: `/curator?client=${clientId}`,
-        });
-        total += res.sent;
-      }
-      // Клиенту — мягкий намёк
-      const prefs = await getClientPrefs(client, clientId);
-      if (prefs.enabled && prefs.ews_client_hint_enabled !== false) {
-        if (!isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) {
-          const res = await sendToClient(client, clientId, {
-            ...T.ewsClient(p.name || p.pattern_id || 'паттерн'),
-            tag: `ews-client-${p.pattern_id}`,
-            url: '/',
+      const res = await deliverIdempotently(client, key, async () => {
+        const result = { sent: 0, total: 0, cleaned: 0 };
+        try {
+          // Куратору — полный текст
+          const curatorPrefs = await getCuratorPrefs(client, r.curator_id);
+          if (curatorPrefs.enabled) {
+            const curatorResult = await sendToCurator(client, r.curator_id, {
+              ...T.ewsCurator(r.name, p.name || p.pattern_id || 'паттерн'),
+              tag: `ews-${p.pattern_id}-${clientId}`,
+              url: `/curator?client=${clientId}`,
+            });
+            result.sent += curatorResult.sent;
+            result.total += curatorResult.total;
+            result.cleaned += curatorResult.cleaned;
+          }
+          // Клиенту — мягкий намёк
+          const prefs = await getClientPrefs(client, clientId);
+          if (prefs.enabled && prefs.ews_client_hint_enabled !== false) {
+            if (!isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) {
+              const clientResult = await sendToClient(client, clientId, {
+                ...T.ewsClient(p.name || p.pattern_id || 'паттерн'),
+                tag: `ews-client-${p.pattern_id}`,
+                url: '/',
+              });
+              result.sent += clientResult.sent;
+              result.total += clientResult.total;
+              result.cleaned += clientResult.cleaned;
+            }
+          }
+        } catch (error) {
+          if (result.sent < 1) throw error;
+          console.error('[cron-reminders] EWS channel failed after partial delivery', {
+            key,
+            sent: result.sent,
+            error: error.message,
           });
-          total += res.sent;
         }
-      }
+        return result;
+      });
+      total += res.sent;
     }
     void today; // eslint-disable-line no-unused-expressions
   }
@@ -1113,7 +1131,7 @@ async function jobSubscriptionExpiry(client) {
   const today = todayDateMsk();
   const now = nowInMsk();
   const cur = minutesOfDay(now);
-  if (Math.abs(cur - 10 * 60) > 7) return { total: 0, skipped: 'window' };
+  if (!isInReminderDeliveryWindow(cur, 10 * 60)) return { total: 0, skipped: 'window' };
 
   // Берём всех клиентов с куратором и активной/триал-подпиской
   const rows = await client.query(
@@ -1145,13 +1163,12 @@ async function jobSubscriptionExpiry(client) {
     if (!kind || !tpl) continue;
 
     const key = `subscription_${kind}:${today}:${r.client_id}`;
-    if (!(await claimIdempotency(client, key))) continue;
 
     const payload = kind === 'expired'
       ? { ...tpl(r.name), tag: `subscription-${kind}-${r.client_id}`, url: `/curator?client=${r.client_id}` }
       : { ...tpl(r.name, daysLeft), tag: `subscription-${kind}-${r.client_id}`, url: `/curator?client=${r.client_id}` };
 
-    const res = await sendToCurator(client, r.curator_id, payload);
+    const res = await deliverIdempotently(client, key, () => sendToCurator(client, r.curator_id, payload));
     total += res.sent;
   }
   return { total };
@@ -1183,8 +1200,9 @@ async function jobHungerOutcomeFollowUps(client) {
     if (!followUp) continue;
     due += 1;
     const key = buildHungerFollowUpIdempotencyKey(row.client_id, followUp);
-    if (!(await claimIdempotency(client, key))) continue;
-    const result = await sendToClient(client, row.client_id, buildHungerFollowUpPayload(followUp));
+    const result = await deliverIdempotently(client, key, () => (
+      sendToClient(client, row.client_id, buildHungerFollowUpPayload(followUp))
+    ));
     total += result.sent;
   }
 

@@ -18,11 +18,14 @@ test('all repository SQL files are managed or explicitly legacy', () => {
 });
 
 test('managed migrations are ordered, checksummed and non-destructive', () => {
-  const prepared = prepareMigrations(loadManifest());
-  assert.equal(prepared.length, 1);
-  assert.equal(prepared[0].order, 1);
-  assert.match(prepared[0].checksum, /^[0-9a-f]{64}$/);
-  assert.equal(prepared[0].destructive, false);
+  const manifest = loadManifest();
+  const prepared = prepareMigrations(manifest);
+  assert.equal(prepared.length, manifest.migrations.length);
+  prepared.forEach((migration, index) => {
+    assert.equal(migration.order, index + 1);
+    assert.match(migration.checksum, /^[0-9a-f]{64}$/);
+    assert.equal(migration.destructive, false);
+  });
 });
 
 test('embedded transaction control is rejected but comments are ignored', () => {
@@ -32,7 +35,10 @@ test('embedded transaction control is rejected but comments are ignored', () => 
 
 test('ledger comparison blocks checksum and unknown-history drift', () => {
   const prepared = prepareMigrations(loadManifest());
-  assert.deepEqual(compareLedger(prepared, []).pending.map((item) => item.id), [prepared[0].id]);
+  assert.deepEqual(
+    compareLedger(prepared, []).pending.map((item) => item.id),
+    prepared.map((item) => item.id)
+  );
   assert.match(compareLedger(prepared, [{
     id: prepared[0].id,
     order: 1,

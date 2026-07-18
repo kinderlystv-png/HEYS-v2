@@ -27,6 +27,13 @@
       "path": "scripts/db/migrations/2026-07-18_migration_ledger.sql",
       "description": "Create the canonical schema migration ledger",
       "destructive": false
+    },
+    {
+      "id": "2026-07-18_push_idempotency_delivery_state",
+      "order": 2,
+      "path": "scripts/db/migrations/2026-07-18_push_idempotency_delivery_state.sql",
+      "description": "Add retry-safe claimed and delivered states for reminder pushes",
+      "destructive": false
     }
   ]
 }
