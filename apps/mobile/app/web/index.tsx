@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
@@ -156,7 +156,7 @@ export default function WebScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <SafeAreaView edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['top']} style={styles.container}>
       {error ? (
         <View style={styles.warning}>
           <Text style={styles.warningText}>{error}</Text>
