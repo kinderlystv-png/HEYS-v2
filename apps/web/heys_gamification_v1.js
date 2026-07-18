@@ -4689,7 +4689,9 @@
             return false;
           }
 
-          // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
+          // 🛡️ Fail-closed precheck + server-side merge: при недоступном чтении
+          // запись запрещена, а гонку между чтением и записью закрывает merge-save.
+          let lastSeenCloudUpdatedAt = 0;
           try {
             // 🔧 FIX v2.5: p_ prefixed params + proper response unwrap
             const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', withOptionalSessionToken({
@@ -4698,13 +4700,23 @@
 
             if (cloudResult?.error) {
               console.warn('[🎮 Gamification] Cloud check RPC error:', cloudResult.error?.message || cloudResult.error);
-              // Продолжаем синхронизацию — лучше записать чем ничего
+              gameSyncTraceStep(syncTrace, 'cloud_precheck:failed_blocked', { message: cloudResult.error?.message || String(cloudResult.error) });
+              endGameSyncTrace(syncTrace, 'error', { reason: 'cloud_precheck_failed' });
+              return false;
             }
 
             const kvData = this._unwrapKvResult(cloudResult);
+            if (!kvData || kvData.success === false || kvData.error) {
+              const message = kvData?.error || 'invalid_cloud_precheck_response';
+              console.warn('[🎮 Gamification] Cloud check invalid response:', message);
+              gameSyncTraceStep(syncTrace, 'cloud_precheck:failed_blocked', { message: String(message) });
+              endGameSyncTrace(syncTrace, 'error', { reason: 'cloud_precheck_invalid' });
+              return false;
+            }
             const cloudData_ = kvData?.value || {};
             const cloudXP = cloudData_.totalXP || 0;
             const cloudUpdatedAt = cloudData_.updatedAt || 0;
+            lastSeenCloudUpdatedAt = Number(cloudUpdatedAt) || 0;
 
             // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными.
             // dailyXP: cloud считаем только по записям ≤30 дней, как validateAndMigrate чистит
@@ -4761,9 +4773,10 @@
               return false;
             }
           } catch (checkErr) {
-            // Если не удалось проверить — продолжаем синхронизацию (лучше чем ничего)
-            console.warn('[🎮 Gamification] Cloud check failed, proceeding:', checkErr.message);
-            gameSyncTraceStep(syncTrace, 'cloud_precheck:failed_proceed', { message: checkErr.message });
+            console.warn('[🎮 Gamification] Cloud check failed, write blocked:', checkErr.message);
+            gameSyncTraceStep(syncTrace, 'cloud_precheck:failed_blocked', { message: checkErr.message });
+            endGameSyncTrace(syncTrace, 'error', { reason: 'cloud_precheck_exception', message: checkErr.message });
+            return false;
           }
 
           const cloudData = {
@@ -4786,20 +4799,39 @@
             lastUpdated: new Date().toISOString()
           };
 
-          // 🔧 FIX v2.5: p_ prefixed params + error checking
-          const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', withOptionalSessionToken({
-            p_key: STORAGE_KEY,   // 'heys_game'
-            p_value: cloudData    // Отправляем объект, не JSON.stringify
-          }, sessionToken));
+          if (typeof HEYS.YandexAPI.mergeSaveKV !== 'function') {
+            console.error('[🎮 Gamification] Cloud merge-save is unavailable');
+            endGameSyncTrace(syncTrace, 'error', { reason: 'merge_save_unavailable' });
+            return false;
+          }
 
-          if (upsertResult?.error) {
-            console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
-            endGameSyncTrace(syncTrace, 'error', { reason: 'upsert_failed', message: upsertResult.error?.message || upsertResult.error });
+          const auditContext = getAuditContext();
+          const mergeResult = await HEYS.YandexAPI.mergeSaveKV(
+            auditContext.clientId,
+            STORAGE_KEY,
+            cloudData,
+            lastSeenCloudUpdatedAt
+          );
+
+          if (!mergeResult?.success) {
+            console.error('[🎮 Gamification] Cloud merge-save FAILED:', mergeResult?.error || 'unknown_error');
+            endGameSyncTrace(syncTrace, 'error', { reason: 'merge_save_failed', message: mergeResult?.error || 'unknown_error' });
+            return false;
+          }
+
+          if (mergeResult.v && typeof mergeResult.v === 'object') {
+            _data = mergeGameData(data, mergeResult.v);
+            setStoredValue(STORAGE_KEY, _data);
+          }
+
+          if (mergeResult.outcome === 'stale_write_blocked') {
+            console.warn('[🎮 Gamification] Cloud changed during sync; stale write was blocked');
+            endGameSyncTrace(syncTrace, 'ok', { reason: 'stale_write_blocked' });
             return false;
           }
 
           console.info('[🎮 Gamification] ✅ Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
-          endGameSyncTrace(syncTrace, 'ok', { reason: 'upsert_success', xp: data.totalXP, level: data.level });
+          endGameSyncTrace(syncTrace, 'ok', { reason: 'merge_save_success', outcome: mergeResult.outcome || null, xp: data.totalXP, level: data.level });
           return true;
         } finally {
           _syncInProgress = false;

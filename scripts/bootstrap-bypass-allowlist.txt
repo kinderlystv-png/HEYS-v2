@@ -135,7 +135,7 @@ apps/web/heys_gamification_bar_v1.js:1425
 apps/web/heys_gamification_v1.js:1590
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
-apps/web/heys_gamification_v1.js:6027
+apps/web/heys_gamification_v1.js:6059
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
