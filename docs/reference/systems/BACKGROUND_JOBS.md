@@ -1,10 +1,10 @@
 # Фоновые задачи и обслуживание
 
-> **Статус:** source-контракты проверены 2026-07-18<br> **Охват:** timer
-> routing, maintenance, reminders, trial drip, security alerts, backup, photo
-> cleanup, SpeechKit worker и operational checker<br> **Не подтверждено:**
-> фактическое состояние YC triggers/functions, последние heartbeat и доставка
-> внешних уведомлений
+> **Статус:** source-контракты и production topology проверены 2026-07-18<br>
+> **Охват:** timer routing, maintenance, reminders, trial drip, security alerts,
+> backup, photo cleanup, SpeechKit worker, snapshot demo и operational
+> checker<br> **Не подтверждено:** фактическая доставка внешних уведомлений
+> конечным получателям
 
 ## Роль системы
 
@@ -21,10 +21,11 @@ YC timer triggers
   ├─ heys-client-daily-backup → PostgreSQL snapshots → Object Storage
   ├─ heys-cron-photo-cleanup → orphan S3 prefixes
   ├─ heys-cron-speechkit-transcribe → queued/processing jobs
+  ├─ heys-snapshot-demo → публичный demo snapshot
   └─ heys-bot-client → two long-poll workers (см. TELEGRAM.md)
 
 check-heys-ops-status.cjs
-  → проверяет ожидаемые functions/triggers/secrets и делает canary invokes
+  → 9 automation functions, 17 HEYS triggers, 16 heartbeat tasks + backup
 ```
 
 ## Основные владельцы
@@ -113,11 +114,16 @@ Photo cleanup сравнивает UUID prefixes bucket с таблицей `cli
 
 ## Наблюдаемость
 
-`check-heys-ops-status.cjs` хранит ожидаемый список критичных functions,
-расписаний, payload markers и Lockbox keys. В strict/automation mode он может
-сопоставить текущий YC state и сделать короткие canary invocations. Это более
-сильное доказательство deployment wiring, чем README, но в этом проходе checker
-не запускался: документ подтверждает source expectation, не live state.
+`check-heys-ops-status.cjs` получает automation functions из общего inventory и
+хранит ожидания для 17 HEYS triggers, 16 heartbeat-задач и backup. `--dead-man`
+не вызывает worker: он читает только runtime markers из БД и fail-closed
+реагирует на missing/stale rows. GitHub запускает эту проверку каждые 15 минут.
+
+Production snapshot после rollout `e10811ba`: все 17 HEYS triggers ACTIVE и их
+canonical hash не изменился; шесть самостоятельных workers опубликованы на
+Node.js 22. Последний strict dead-man вернул `ok: true`: reminders/security
+heartbeats были 3 минуты, SpeechKit 0 минут, snapshot 3 минуты; backup был `ok`,
+9 часов, `5` success и `0` errors. GitHub run `29640220848` зелёный.
 
 Security alerts раз в 15 минут выполняют независимые правила. Ошибка одного
 правила становится `query_error`, не прерывая остальные; Telegram имеет
@@ -154,32 +160,30 @@ cooldown, а результат попытки фиксируется в БД. H
   idempotency невозможно.
 - Reminders и trial drip возвращают 200 при внутренних ошибках. Trigger health,
   основанный только на HTTP status, даёт false green.
-- Dead-man watcher живёт внутри `heys-maintenance`; полное отсутствие всех её
-  запусков обнаруживается только внешним ops-check/отдельным alert контуром.
+- Внутренний watcher остаётся частью maintenance, но полное отсутствие её
+  запусков теперь независимо обнаруживает scheduled GitHub dead-man.
 - Backup KV и account snapshots делаются в разных транзакциях и могут отражать
   немного разные состояния клиента.
 - Photo cleanup safety зависит от production `DRY_RUN` и истории
   `photo_cleanup_log`; source не доказывает, включено ли реальное удаление.
-- Ops checker перечисляет не все известные workers: SpeechKit trigger создаётся
-  deployment script, но отсутствует в его `FUNCTIONS/TRIGGERS` ожиданиях. Значит
-  общий strict status не доказывает его живость.
-- Для reminders и bot polling recovery wave 2 проверил post-deploy health,
-  актуальный heartbeat и общий canary. Остальные расписания и worker heartbeat
-  этим проходом повторно не проверялись.
+- Доставка Telegram/Web Push конечному получателю не доказывается heartbeat:
+  marker подтверждает завершение worker, а structured results всё ещё нужно
+  читать при `query_error`/`logged_only`.
 
 ## Facts Table
 
-| ID  | Утверждение                                                                            | Проверка                                                                                                                                                                                                             | Статус                                    |
-| --- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| B1  | Ops checker задаёт critical functions и timer expectations                             | `sed -n '10,70p' yandex-cloud-functions/check-heys-ops-status.cjs`                                                                                                                                                   | проверено 2026-07-17                      |
-| B2  | Maintenance безопасно разрешает trigger id и отделяет destructive cleanup              | `sed -n '1410,1515p' yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                                               | проверено 2026-07-17                      |
-| B3  | Maintenance пишет heartbeat и возвращает 500 при handler failure                       | `rg -n -e 'recordHeartbeat' -e 'statusCode: 500' yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                   | проверено 2026-07-17                      |
-| B4  | Reminder delivery использует claimed lease, delivered commit и retry failed/zero-send  | `sed -n '1,120p' yandex-cloud-functions/heys-cron-reminders/push-idempotency.js && node --test yandex-cloud-functions/heys-cron-reminders/__tests__/push-idempotency.test.js`                                        | исправлено; 11 тестов пройдено 2026-07-18 |
-| B5  | Reminder handler ловит общую ошибку и возвращает 200 со stats                          | `sed -n '1190,1245p' yandex-cloud-functions/heys-cron-reminders/index.js`                                                                                                                                            | проверено 2026-07-17                      |
-| B6  | Trial drip отмечает stage только после успешного send и продолжает batch               | `sed -n '100,185p' yandex-cloud-functions/heys-cron-trial-drip/index.js`                                                                                                                                             | проверено 2026-07-17                      |
-| B7  | Transcription polling использует row lease и stale recovery                            | `sed -n '275,345p' yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js`                                                                                                                                   | проверено 2026-07-17                      |
-| B8  | Backup использует два отдельных repeatable-read snapshots                              | `rg -n -e 'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ' -e 'snapshotClientAccount' yandex-cloud-functions/heys-client-daily-backup/index.js`                                                                   | проверено 2026-07-17                      |
-| B9  | Photo cleanup default dry-run, soft-grace и hard cap                                   | `sed -n '1,55p' yandex-cloud-functions/heys-cron-photo-cleanup/index.js`                                                                                                                                             | проверено 2026-07-17                      |
-| B10 | Security rules изолируют query failures и возвращают structured results                | `sed -n '389,470p' yandex-cloud-functions/heys-cron-security-alerts/index.js`                                                                                                                                        | проверено 2026-07-17                      |
-| B11 | Reminder delivery state имеет отдельные contract tests; прочие workers покрыты точечно | `find yandex-cloud-functions -path '*/__tests__/*' -type f \( -path '*maintenance*' -o -path '*reminder*' -o -path '*drip*' -o -path '*cleanup*' -o -path '*speech*' -o -path '*backup*' -o -path '*ops*' \) -print` | проверено 2026-07-18                      |
-| B12 | SpeechKit trigger создаётся deploy script, но не включён в ops checker list            | `rg -n 'speechkit' yandex-cloud-functions/deploy-all.sh; test -z "$(rg 'speechkit' yandex-cloud-functions/check-heys-ops-status.cjs)"`                                                                               | проверено 2026-07-17: второй поиск пуст   |
+| ID  | Утверждение                                                                            | Проверка                                                                                                                                                                                                             | Статус                                           |
+| --- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| B1  | Ops checker покрывает общий automation inventory, 17 triggers и 16 heartbeat tasks     | `node --test yandex-cloud-functions/__tests__/check-heys-ops-status.test.cjs yandex-cloud-functions/__tests__/function-inventory.test.cjs`                                                                           | 22/22 теста пройдено 2026-07-18                  |
+| B2  | Maintenance безопасно разрешает trigger id и отделяет destructive cleanup              | `sed -n '1410,1515p' yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                                               | проверено 2026-07-17                             |
+| B3  | Maintenance пишет heartbeat и возвращает 500 при handler failure                       | `rg -n -e 'recordHeartbeat' -e 'statusCode: 500' yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                   | проверено 2026-07-17                             |
+| B4  | Reminder delivery использует claimed lease, delivered commit и retry failed/zero-send  | `sed -n '1,120p' yandex-cloud-functions/heys-cron-reminders/push-idempotency.js && node --test yandex-cloud-functions/heys-cron-reminders/__tests__/push-idempotency.test.js`                                        | исправлено; 11 тестов пройдено 2026-07-18        |
+| B5  | Reminder handler ловит общую ошибку и возвращает 200 со stats                          | `sed -n '1190,1245p' yandex-cloud-functions/heys-cron-reminders/index.js`                                                                                                                                            | проверено 2026-07-17                             |
+| B6  | Trial drip отмечает stage только после успешного send и продолжает batch               | `sed -n '100,185p' yandex-cloud-functions/heys-cron-trial-drip/index.js`                                                                                                                                             | проверено 2026-07-17                             |
+| B7  | Transcription polling использует row lease и stale recovery                            | `sed -n '275,345p' yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js`                                                                                                                                   | проверено 2026-07-17                             |
+| B8  | Backup использует два отдельных repeatable-read snapshots                              | `rg -n -e 'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ' -e 'snapshotClientAccount' yandex-cloud-functions/heys-client-daily-backup/index.js`                                                                   | проверено 2026-07-17                             |
+| B9  | Photo cleanup default dry-run, soft-grace и hard cap                                   | `sed -n '1,55p' yandex-cloud-functions/heys-cron-photo-cleanup/index.js`                                                                                                                                             | проверено 2026-07-17                             |
+| B10 | Security rules изолируют query failures и возвращают structured results                | `sed -n '389,470p' yandex-cloud-functions/heys-cron-security-alerts/index.js`                                                                                                                                        | проверено 2026-07-17                             |
+| B11 | Reminder delivery state имеет отдельные contract tests; прочие workers покрыты точечно | `find yandex-cloud-functions -path '*/__tests__/*' -type f \( -path '*maintenance*' -o -path '*reminder*' -o -path '*drip*' -o -path '*cleanup*' -o -path '*speech*' -o -path '*backup*' -o -path '*ops*' \) -print` | проверено 2026-07-18                             |
+| B12 | SpeechKit и пять других standalone workers ставят heartbeat                            | `rg -n 'recordHeartbeat' yandex-cloud-functions/heys-cron-{speechkit-transcribe,reminders,security-alerts,trial-drip,photo-cleanup}/index.js yandex-cloud-functions/heys-snapshot-demo/index.js`                     | production strict dead-man `ok: true` 2026-07-18 |
+| B13 | HEYS trigger topology не изменилась при rollout                                        | `yc serverless trigger list --format json` + canonical hash по `heys-*`                                                                                                                                              | 17/17 ACTIVE; hash `7dae879a…c731c`              |

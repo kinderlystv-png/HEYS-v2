@@ -35,21 +35,6 @@
 
 ## P2
 
-### P2-02 — Automation functions выпадают из auto-deploy, регулярный health monitor выключен
-
-- **Тип / система / вероятность:** эксплуатационный пробел; infra & background;
-  высокая для изменения `heys-cron-*`, `heys-maintenance` или backup worker.
-- **Последствие:** merge в `main` может не обновить worker, а production outage
-  останется незамеченным до ручной проверки или следующего косвенного сигнала.
-- **Доказательство:** workflow auto-deploy следит только за
-  `yandex-cloud-functions/heys-api-*/**`; schedule health monitor
-  закомментирован.
-- **Минимальное исправление:** расширить classifier/deploy inventory на
-  automation group и включить дешёвый внешний scheduled heartbeat/dead-man
-  check.
-- **Проверка:** workflow contract test на changed paths и controlled dry-run;
-  искусственно stale heartbeat создаёт alert независимо от maintenance worker.
-
 ### P2-06 — Product overlay достиг whole-array KV ceiling
 
 - **Тип / система / вероятность:** подтверждённый архитектурный риск; products &
@@ -123,6 +108,28 @@
 2. Backup/restore не имеет fault-injection regression между KV и account phases.
 
 ## Закрыто
+
+### 2026-07-18 — P2-02 Automation deployment и внешний dead-man
+
+Единый declarative inventory теперь описывает 19 исходных функций: 18 разрешены
+для auto-deploy, SMS явно выключен. Push classifier охватывает API, cron,
+maintenance, polling и backup source; shared runtime/deploy tooling выбирает все
+18 целей, а неизвестный каталог блокирует deploy. `deploy-all.sh`, тестовый
+runner и GitHub workflow используют один список.
+
+Шесть самостоятельных workers записывают heartbeat, а migration
+`2026-07-18_automation_worker_heartbeats.sql` добавила их thresholds в
+production. Strict dead-man проверяет 16 heartbeat-задач и свежий backup.
+`api-health-monitor.yml` запускается каждые 15 минут, использует repository CA
+для `verify-full` PostgreSQL и не вызывает worker ради проверки живости.
+
+Rollout: source commit `e10811ba`, monitor CA fix `8ff40e5c`, workflow
+`29639893647` успешно проверил и опубликовал inventory; payments пропущен из-за
+отсутствующих YooKassa secrets, SMS не входил в targets. После deploy 17
+HEYS-триггеров остались ACTIVE с тем же hash
+`7dae879aff09f4a848c064026521503d97cd71077bdbb8bdb04035d2471c731c`. Финальный
+dead-man вернул `ok: true`, а GitHub monitor `29640220848` завершился успешно.
+Контракт фиксируют 22 Node-теста inventory/ops checker.
 
 ### 2026-07-18 — P2-01 Reminder delivery idempotency
 
@@ -250,7 +257,7 @@ records — `mobility-records-progression.test.js`, результат diary wri
 
 ## Рекомендуемый порядок исправлений
 
-1. P2-02 и P2-08 — закрыть operational blind spot и целостность recovery.
+1. P2-08 — закрыть целостность recovery.
 2. P2-06/P2-07 — только после этого планировать более крупные изменения
    хранения.
 3. P3-01 — маркировать старые документы параллельно затронутым исправлениям, без
@@ -269,8 +276,8 @@ records — `mobility-records-progression.test.js`, результат diary wri
 | F07 | Missing shared base даёт disabled placeholder и meal-gate block                                        | `rg -n -e 'shared_nutrients_pending' -e 'resolveMealProduct' -e '_nutrientsPending' apps/web/heys_products_overlay_v1.js apps/web/heys_core_v12.js apps/web/heys_add_product_step_v1.js && pnpm vitest run apps/web/__tests__/overlay-cloud-snapshot-suppress.test.js apps/web/__tests__/product-commit-gate-contract.test.js`                                                                                                              | исправлено и покрыто 2026-07-18                                      |
 | F08 | Mobility возвращает явный pair-result и повторяет partial save без дубля                               | `rg -n -e 'persistMobilitySessionPair' -e 'saved_both' -e 'diary_pending' -e 'idempotencyKey' apps/web/mobility/heys_mobility_ui_v1.js apps/web/mobility/heys_mobility_records_store_v1.js apps/web/heys_training_step_v1.js && pnpm vitest run apps/web/__tests__/mobility-ui.test.js apps/web/__tests__/mobility-records-progression.test.js apps/web/__tests__/training-step-drums-tab.test.js apps/web/__tests__/storage-layer.test.js` | исправлено и покрыто 2026-07-18                                      |
 | F09 | Keyed reminders используют lease и фиксируют только успешную доставку                                  | `rg -n -e 'deliverIdempotently' -e 'isInReminderDeliveryWindow' yandex-cloud-functions/heys-cron-reminders/index.js yandex-cloud-functions/heys-cron-reminders/push-idempotency.js && node --test yandex-cloud-functions/heys-cron-reminders/__tests__/push-idempotency.test.js`                                                                                                                                                            | исправлено во всех 16 keyed scenarios; 11 тестов пройдено 2026-07-18 |
-| F10 | Auto-deploy path не включает automation functions                                                      | `sed -n '1,35p' .github/workflows/cloud-functions-deploy.yml`                                                                                                                                                                                                                                                                                                                                                                               | подтверждено                                                         |
-| F11 | Scheduled health monitor выключен                                                                      | `sed -n '1,25p' .github/workflows/api-health-monitor.yml`                                                                                                                                                                                                                                                                                                                                                                                   | подтверждено                                                         |
+| F10 | Auto-deploy classifier охватывает automation functions                                                 | `sed -n '1,90p' .github/workflows/cloud-functions-deploy.yml && node --test yandex-cloud-functions/__tests__/function-inventory.test.cjs`                                                                                                                                                                                                                                                                                                   | исправлено; 18 auto-deploy целей, SMS disabled 2026-07-18            |
+| F11 | Scheduled health monitor выполняет внешний strict dead-man                                             | `sed -n '1,180p' .github/workflows/api-health-monitor.yml && node --test yandex-cloud-functions/__tests__/check-heys-ops-status.test.cjs`                                                                                                                                                                                                                                                                                                   | исправлено; run `29640220848` зелёный 2026-07-18                     |
 | F12 | Subscription/Paywall, legacy Subscriptions и diary consumers используют один fail-closed access helper | `rg -n -e 'canWriteStatus' -e 'useState\(false\)' -e 'Paywall\?\.canWriteSync' apps/web/heys_subscription_v1.js apps/web/heys_subscriptions_v1.js apps/web/heys_paywall_v1.js apps/web/heys_day_day_handlers.js apps/web/day/_meals.js apps/web/heys_day_tab_render_v1.js && pnpm vitest run apps/web/__tests__/subscription-curator-guard.test.js --no-coverage && sed -n '105,150p' yandex-cloud-functions/heys-api-rpc/index.js`         | исправлено; client 24/24, server gate остаётся строгим 2026-07-18    |
 | F13 | `lead_taken_*` обрабатывается авторизованно и идемпотентно через существующий Start poll               | `rg -n -e 'lead_taken_' -e 'claimLeadForCurator' -e 'runCuratorBotPoll' yandex-cloud-functions/heys-api-leads/index.js yandex-cloud-functions/heys-bot-client/index.js && node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                                                                        | исправлено; 9/9 тестов пройдено 2026-07-18                           |
 | F14 | Leads API строго нормализует и валидирует телефон до DB, сохраняя canonical dedup key                  | `sed -n '30,48p;325,355p;468,525p' yandex-cloud-functions/heys-api-leads/index.js && node --test yandex-cloud-functions/heys-api-leads/__tests__/phone-validation.test.cjs`                                                                                                                                                                                                                                                                 | исправлено; 6/6 тестов пройдено 2026-07-18                           |
