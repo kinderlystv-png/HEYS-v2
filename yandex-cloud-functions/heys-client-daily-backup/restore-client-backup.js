@@ -306,47 +306,55 @@ async function computeDiff(pool, clientId, kvSnapshot, filterKeys) {
 // Execute restore (transactional upsert)
 // ═══════════════════════════════════════════════════════════════════
 
-async function executeRestore(pool, clientId, kvSnapshot, keysToRestore) {
+async function withTransaction(pool, work) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-
-        let restored = 0;
-        for (const key of keysToRestore) {
-            const entry = kvSnapshot[key];
-            const encryptedBuffer = entry?.v_encrypted_b64
-                ? Buffer.from(entry.v_encrypted_b64, 'base64')
-                : null;
-            const restoredAt = normalizeTimestamp(entry?.updated_at) || new Date().toISOString();
-
-            await client.query(
-                `INSERT INTO client_kv_store (client_id, k, v, v_encrypted, key_version, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6)
-                 ON CONFLICT (client_id, k) DO UPDATE SET
-                   v = EXCLUDED.v,
-                   v_encrypted = EXCLUDED.v_encrypted,
-                   key_version = EXCLUDED.key_version,
-                   updated_at = EXCLUDED.updated_at`,
-                [
-                    clientId,
-                    key,
-                    JSON.stringify(entry.v),
-                    encryptedBuffer,
-                    entry?.key_version ?? null,
-                    restoredAt,
-                ],
-            );
-            restored++;
-        }
-
+        const result = await work(client);
         await client.query('COMMIT');
-        return restored;
+        return result;
     } catch (err) {
         await client.query('ROLLBACK');
         throw err;
     } finally {
         client.release();
     }
+}
+
+async function restoreKvRows(client, clientId, kvSnapshot, keysToRestore) {
+    let restored = 0;
+    for (const key of keysToRestore) {
+        const entry = kvSnapshot[key];
+        const encryptedBuffer = entry?.v_encrypted_b64
+            ? Buffer.from(entry.v_encrypted_b64, 'base64')
+            : null;
+        const restoredAt = normalizeTimestamp(entry?.updated_at) || new Date().toISOString();
+
+        await client.query(
+            `INSERT INTO client_kv_store (client_id, k, v, v_encrypted, key_version, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (client_id, k) DO UPDATE SET
+               v = EXCLUDED.v,
+               v_encrypted = EXCLUDED.v_encrypted,
+               key_version = EXCLUDED.key_version,
+               updated_at = EXCLUDED.updated_at`,
+            [
+                clientId,
+                key,
+                JSON.stringify(entry.v),
+                encryptedBuffer,
+                entry?.key_version ?? null,
+                restoredAt,
+            ],
+        );
+        restored++;
+    }
+    return restored;
+}
+
+async function executeRestore(pool, clientId, kvSnapshot, keysToRestore) {
+    return withTransaction(pool, (client) =>
+        restoreKvRows(client, clientId, kvSnapshot, keysToRestore));
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -491,90 +499,92 @@ function buildUpsert(table, columns, pkField = 'id') {
             ON CONFLICT (${pkField}) DO UPDATE SET ${setClauses}`;
 }
 
-async function executeAccountRestore(pool, accountData, tableDiffs) {
+async function restoreAccountRows(client, tableDiffs) {
     if (!tableDiffs || Object.keys(tableDiffs).length === 0) return 0;
 
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        let restored = 0;
+    let restored = 0;
 
-        const tableConfigs = {
-            clients: {
-                columns: [
-                    'id', 'curator_id', 'name', 'phone', 'phone_normalized',
-                    'pin_updated_at', 'pin_failed_attempts', 'pin_locked_until',
-                    'subscription_status', 'subscription_plan',
-                    'subscription_started_at', 'subscription_expires_at',
-                    'trial_started_at', 'trial_ends_at', 'updated_at',
-                ],
-                pk: 'id',
-            },
-            consents: {
-                columns: [
-                    'id', 'client_id', 'consent_type', 'document_version',
-                    'granted', 'signature_method', 'ip_address', 'user_agent',
-                    'created_at', 'revoked_at',
-                ],
-                pk: 'id',
-            },
-            subscriptions: {
-                columns: [
-                    'id', 'client_id', 'trial_started_at', 'trial_ends_at',
-                    'active_until', 'canceled_at', 'created_at', 'updated_at',
-                ],
-                pk: 'id',
-            },
-            trial_queue: {
-                columns: [
-                    'id', 'client_id', 'curator_id', 'status',
-                    'queued_at', 'offer_sent_at', 'offer_expires_at',
-                    'assigned_at', 'canceled_at', 'source', 'priority',
-                    'notification_channel', 'created_at', 'updated_at',
-                ],
-                pk: 'id',
-            },
-            payments: {
-                columns: [
-                    'id', 'client_id', 'external_payment_id', 'external_status',
-                    'payment_provider', 'amount', 'currency', 'plan',
-                    'period_start', 'period_end', 'status',
-                    'created_at', 'updated_at', 'metadata',
-                ],
-                pk: 'id',
-            },
-        };
+    const tableConfigs = {
+        clients: {
+            columns: [
+                'id', 'curator_id', 'name', 'phone', 'phone_normalized',
+                'pin_updated_at', 'pin_failed_attempts', 'pin_locked_until',
+                'subscription_status', 'subscription_plan',
+                'subscription_started_at', 'subscription_expires_at',
+                'trial_started_at', 'trial_ends_at', 'updated_at',
+            ],
+            pk: 'id',
+        },
+        consents: {
+            columns: [
+                'id', 'client_id', 'consent_type', 'document_version',
+                'granted', 'signature_method', 'ip_address', 'user_agent',
+                'created_at', 'revoked_at',
+            ],
+            pk: 'id',
+        },
+        subscriptions: {
+            columns: [
+                'id', 'client_id', 'trial_started_at', 'trial_ends_at',
+                'active_until', 'canceled_at', 'created_at', 'updated_at',
+            ],
+            pk: 'id',
+        },
+        trial_queue: {
+            columns: [
+                'id', 'client_id', 'curator_id', 'status',
+                'queued_at', 'offer_sent_at', 'offer_expires_at',
+                'assigned_at', 'canceled_at', 'source', 'priority',
+                'notification_channel', 'created_at', 'updated_at',
+            ],
+            pk: 'id',
+        },
+        payments: {
+            columns: [
+                'id', 'client_id', 'external_payment_id', 'external_status',
+                'payment_provider', 'amount', 'currency', 'plan',
+                'period_start', 'period_end', 'status',
+                'created_at', 'updated_at', 'metadata',
+            ],
+            pk: 'id',
+        },
+    };
 
-        for (const [table, diff] of Object.entries(tableDiffs)) {
-            const cfg = tableConfigs[table];
-            if (!cfg) continue;
+    for (const [table, diff] of Object.entries(tableDiffs)) {
+        const cfg = tableConfigs[table];
+        if (!cfg) continue;
 
-            const rows = [...diff.toInsert, ...diff.toUpdate];
-            if (rows.length === 0) continue;
+        const rows = [...diff.toInsert, ...diff.toUpdate];
+        if (rows.length === 0) continue;
 
-            const sql = buildUpsert(table, cfg.columns, cfg.pk);
-            for (const row of rows) {
-                const values = cfg.columns.map((col) => {
-                    const val = row[col];
-                    // Convert metadata JSONB to string if needed
-                    if (col === 'metadata' && val && typeof val === 'object') {
-                        return JSON.stringify(val);
-                    }
-                    return val ?? null;
-                });
-                await client.query(sql, values);
-                restored++;
-            }
+        const sql = buildUpsert(table, cfg.columns, cfg.pk);
+        for (const row of rows) {
+            const values = cfg.columns.map((col) => {
+                const val = row[col];
+                // Convert metadata JSONB to string if needed
+                if (col === 'metadata' && val && typeof val === 'object') {
+                    return JSON.stringify(val);
+                }
+                return val ?? null;
+            });
+            await client.query(sql, values);
+            restored++;
         }
-
-        await client.query('COMMIT');
-        return restored;
-    } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-    } finally {
-        client.release();
     }
+
+    return restored;
+}
+
+async function executeAccountRestore(pool, tableDiffs) {
+    return withTransaction(pool, (client) => restoreAccountRows(client, tableDiffs));
+}
+
+async function executeFullRestore(pool, clientId, kvSnapshot, keysToRestore, tableDiffs) {
+    return withTransaction(pool, async (client) => {
+        const kvRestored = await restoreKvRows(client, clientId, kvSnapshot, keysToRestore);
+        const accountRestored = await restoreAccountRows(client, tableDiffs);
+        return { kvRestored, accountRestored };
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -695,24 +705,42 @@ async function main() {
         let kvRestored = 0;
         let accountRestored = 0;
 
-        // Restore KV
-        if (restoreKv && kvActionCount > 0) {
-            const actionKeys = [...diff.toInsert, ...diff.toUpdate];
+        const actionKeys = restoreKv ? [...diff.toInsert, ...diff.toUpdate] : [];
+
+        // A full restore is one PostgreSQL transaction across KV and account rows.
+        if (restoreKv && restoreAccount) {
+            console.log(`\n⚡ Restoring ${totalActions} KV/account action(s) atomically...`);
+            try {
+                ({ kvRestored, accountRestored } = await executeFullRestore(
+                    dbPool,
+                    args.clientId,
+                    snapshot.kvSnapshot,
+                    actionKeys,
+                    tableDiffs,
+                ));
+            } catch (err) {
+                console.error(`\n❌ Full restore FAILED (transaction rolled back): ${err.message}`);
+                await dbPool.end();
+                process.exit(1);
+            }
+        } else if (restoreKv && kvActionCount > 0) {
             console.log(`\n⚡ Restoring ${actionKeys.length} KV key(s)...`);
             try {
-                kvRestored = await executeRestore(dbPool, args.clientId, snapshot.kvSnapshot, actionKeys);
+                kvRestored = await executeRestore(
+                    dbPool,
+                    args.clientId,
+                    snapshot.kvSnapshot,
+                    actionKeys,
+                );
             } catch (err) {
                 console.error(`\n❌ KV restore FAILED (transaction rolled back): ${err.message}`);
                 await dbPool.end();
                 process.exit(1);
             }
-        }
-
-        // Restore account tables
-        if (restoreAccount && accountActionCount > 0) {
+        } else if (restoreAccount && accountActionCount > 0) {
             console.log(`\n⚡ Restoring ${accountActionCount} account row(s)...`);
             try {
-                accountRestored = await executeAccountRestore(dbPool, snapshot.accountData, tableDiffs);
+                accountRestored = await executeAccountRestore(dbPool, tableDiffs);
             } catch (err) {
                 console.error(`\n❌ Account restore FAILED (transaction rolled back): ${err.message}`);
                 await dbPool.end();
@@ -726,7 +754,18 @@ async function main() {
     await dbPool.end();
 }
 
-main().catch((err) => {
-    console.error('Fatal error:', err);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch((err) => {
+        console.error('Fatal error:', err);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    withTransaction,
+    restoreKvRows,
+    restoreAccountRows,
+    executeRestore,
+    executeAccountRestore,
+    executeFullRestore,
+};

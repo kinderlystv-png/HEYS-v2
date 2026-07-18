@@ -1,14 +1,15 @@
 # heys-client-daily-backup
 
-Ежедневный per-client snapshot бэкап `client_kv_store` → Yandex Object Storage.
+Ежедневный per-client snapshot бэкап KV и account tables → Yandex Object
+Storage.
 
 ## Что делает
 
 1. Читает список клиентов из таблицы `clients`.
-2. Для каждого клиента снимает **полный KV-snapshot** (`client_kv_store`) в
-   `REPEATABLE READ` транзакции.
-3. Включает в snapshot: `v` (JSONB), `v_encrypted` (base64), `key_version`,
-   `updated_at`.
+2. Для каждого клиента в одной `REPEATABLE READ` транзакции снимает
+   `client_kv_store` и account tables без PIN/session hashes.
+3. Включает KV `v` (JSONB), `v_encrypted` (base64), `key_version`, `updated_at`
+   и `accountData`.
 4. Сериализует → SHA-256 checksum → gzip (level 9) → загружает в S3.
 5. Ротация: удаляет объекты старше 365 дней.
 6. Telegram-алерт при ошибках (без ПДн), еженедельный success-отчёт по
@@ -31,7 +32,7 @@ s3://heys-backups/client-daily/2026-03-29/4545ee50-4f5f-4fc0-b862-7ca45fa1bafc.j
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": "server-daily-backup",
   "exportedAt": "2026-03-30T01:00:12.345Z",
   "businessDate": "2026-03-29",
@@ -50,6 +51,13 @@ s3://heys-backups/client-daily/2026-03-29/4545ee50-4f5f-4fc0-b862-7ca45fa1bafc.j
       "key_version": 1,
       "updated_at": "2026-03-29T20:30:00.000Z"
     }
+  },
+  "accountData": {
+    "client": { "id": "ccfe6ea3-...", "name": "..." },
+    "consents": [],
+    "subscriptions": [],
+    "trial_queue": [],
+    "payments": []
   },
   "checksum": "sha256hex..."
 }
@@ -164,8 +172,12 @@ echo "Computed: $COMPUTED"
 2. Показывает dry-run diff (ключи, которые будут перезаписаны).
 3. Выполняет transactional upsert в `client_kv_store`.
 
-> **Пока restore автоматизирован не полностью.** Скрипт будет добавлен в
-> следующем этапе.
+Restore-скрипт реализован в `restore-client-backup.js`: сначала запускайте его с
+`--dry-run`, затем без флага для live restore. Поддерживаются `--keys`,
+`--account-only` и `--kv-only`. Полный KV + account restore выполняется одной
+транзакцией; ошибка любого account write откатывает KV writes. Явные
+single-scope режимы используют отдельную транзакцию только для выбранной
+области.
 
 ## Monitoring
 
@@ -178,7 +190,7 @@ echo "Computed: $COMPUTED"
 
 |             | YC Managed PG (built-in)  | heys-client-daily-backup        |
 | ----------- | ------------------------- | ------------------------------- |
-| Scope       | Вся БД                    | Per-client KV                   |
+| Scope       | Вся БД                    | Per-client KV + account tables  |
 | Format      | Внутренний YC формат      | JSON.gz                         |
 | Restore     | yc cluster restore (PITR) | Upsert KV конкретного клиента   |
 | Retention   | 14 дней                   | 365 дней                        |

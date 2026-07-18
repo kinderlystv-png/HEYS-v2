@@ -179,106 +179,107 @@ function getBusinessDate() {
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Read all KV entries for a single client inside a REPEATABLE READ txn.
+ * Read all KV entries for a single client. The caller owns the transaction.
  * Returns { keyCount, kvSnapshot: { key: { v, v_encrypted, key_version, updated_at } } }
  */
-async function snapshotClient(dbClient, clientId) {
-    await dbClient.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ');
-    try {
-        const { rows } = await dbClient.query(
-            `SELECT k, v, v_encrypted, key_version, updated_at
+async function readClientKvSnapshot(dbClient, clientId) {
+    const { rows } = await dbClient.query(
+        `SELECT k, v, v_encrypted, key_version, updated_at
          FROM client_kv_store
         WHERE client_id = $1
         ORDER BY k`,
-            [clientId],
-        );
-        await dbClient.query('COMMIT');
+        [clientId],
+    );
 
-        const kvSnapshot = {};
-        for (const row of rows) {
-            kvSnapshot[row.k] = {
-                v: row.v,
-                updated_at: row.updated_at,
-            };
-            // Preserve encrypted payload if present (binary → base64 for JSON)
-            if (row.v_encrypted != null) {
-                kvSnapshot[row.k].v_encrypted_b64 = row.v_encrypted.toString('base64');
-                kvSnapshot[row.k].key_version = row.key_version;
-            }
+    const kvSnapshot = {};
+    for (const row of rows) {
+        kvSnapshot[row.k] = {
+            v: row.v,
+            updated_at: row.updated_at,
+        };
+        // Preserve encrypted payload if present (binary → base64 for JSON)
+        if (row.v_encrypted != null) {
+            kvSnapshot[row.k].v_encrypted_b64 = row.v_encrypted.toString('base64');
+            kvSnapshot[row.k].key_version = row.key_version;
         }
-
-        return { keyCount: rows.length, kvSnapshot };
-    } catch (err) {
-        await dbClient.query('ROLLBACK');
-        throw err;
     }
+
+    return { keyCount: rows.length, kvSnapshot };
 }
 
 /**
  * Read non-KV account tables for a single client.
  * Excludes security-sensitive fields (pin_hash, pin_salt, token_hash).
- * Runs inside a REPEATABLE READ txn for consistency.
+ * The caller owns the transaction.
  */
-async function snapshotClientAccount(dbClient, clientId) {
+async function readClientAccountSnapshot(dbClient, clientId) {
+    // clients — exclude pin_hash, pin_salt (auth secrets)
+    const { rows: clientRows } = await dbClient.query(
+        `SELECT id, curator_id, name, phone, phone_normalized,
+                pin_updated_at, pin_failed_attempts, pin_locked_until,
+                subscription_status, subscription_plan,
+                subscription_started_at, subscription_expires_at,
+                trial_started_at, trial_ends_at, updated_at
+           FROM clients WHERE id = $1`,
+        [clientId],
+    );
+
+    // consents
+    const { rows: consentRows } = await dbClient.query(
+        `SELECT id, client_id, consent_type, document_version,
+                granted, signature_method, ip_address, user_agent,
+                created_at, revoked_at
+           FROM consents WHERE client_id = $1 ORDER BY created_at`,
+        [clientId],
+    );
+
+    // subscriptions
+    const { rows: subRows } = await dbClient.query(
+        `SELECT id, client_id, trial_started_at, trial_ends_at,
+                active_until, canceled_at, created_at, updated_at
+           FROM subscriptions WHERE client_id = $1`,
+        [clientId],
+    );
+
+    // trial_queue
+    const { rows: trialRows } = await dbClient.query(
+        `SELECT id, client_id, curator_id, status,
+                queued_at, offer_sent_at, offer_expires_at,
+                assigned_at, canceled_at, source, priority,
+                notification_channel, created_at, updated_at
+           FROM trial_queue WHERE client_id = $1`,
+        [clientId],
+    );
+
+    // payments
+    const { rows: paymentRows } = await dbClient.query(
+        `SELECT id, client_id, external_payment_id, external_status,
+                payment_provider, amount, currency, plan,
+                period_start, period_end, status,
+                created_at, updated_at, metadata
+           FROM payments WHERE client_id = $1 ORDER BY created_at`,
+        [clientId],
+    );
+
+    return {
+        client: clientRows[0] || null,
+        consents: consentRows,
+        subscriptions: subRows,
+        trial_queue: trialRows,
+        payments: paymentRows,
+    };
+}
+
+/**
+ * Capture KV and account tables from one PostgreSQL snapshot boundary.
+ */
+async function snapshotClientBundle(dbClient, clientId) {
     await dbClient.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     try {
-        // clients — exclude pin_hash, pin_salt (auth secrets)
-        const { rows: clientRows } = await dbClient.query(
-            `SELECT id, curator_id, name, phone, phone_normalized,
-                    pin_updated_at, pin_failed_attempts, pin_locked_until,
-                    subscription_status, subscription_plan,
-                    subscription_started_at, subscription_expires_at,
-                    trial_started_at, trial_ends_at, updated_at
-               FROM clients WHERE id = $1`,
-            [clientId],
-        );
-
-        // consents
-        const { rows: consentRows } = await dbClient.query(
-            `SELECT id, client_id, consent_type, document_version,
-                    granted, signature_method, ip_address, user_agent,
-                    created_at, revoked_at
-               FROM consents WHERE client_id = $1 ORDER BY created_at`,
-            [clientId],
-        );
-
-        // subscriptions
-        const { rows: subRows } = await dbClient.query(
-            `SELECT id, client_id, trial_started_at, trial_ends_at,
-                    active_until, canceled_at, created_at, updated_at
-               FROM subscriptions WHERE client_id = $1`,
-            [clientId],
-        );
-
-        // trial_queue
-        const { rows: trialRows } = await dbClient.query(
-            `SELECT id, client_id, curator_id, status,
-                    queued_at, offer_sent_at, offer_expires_at,
-                    assigned_at, canceled_at, source, priority,
-                    notification_channel, created_at, updated_at
-               FROM trial_queue WHERE client_id = $1`,
-            [clientId],
-        );
-
-        // payments
-        const { rows: paymentRows } = await dbClient.query(
-            `SELECT id, client_id, external_payment_id, external_status,
-                    payment_provider, amount, currency, plan,
-                    period_start, period_end, status,
-                    created_at, updated_at, metadata
-               FROM payments WHERE client_id = $1 ORDER BY created_at`,
-            [clientId],
-        );
-
+        const kv = await readClientKvSnapshot(dbClient, clientId);
+        const accountData = await readClientAccountSnapshot(dbClient, clientId);
         await dbClient.query('COMMIT');
-
-        return {
-            client: clientRows[0] || null,
-            consents: consentRows,
-            subscriptions: subRows,
-            trial_queue: trialRows,
-            payments: paymentRows,
-        };
+        return { ...kv, accountData };
     } catch (err) {
         await dbClient.query('ROLLBACK');
         throw err;
@@ -412,10 +413,10 @@ module.exports.handler = async function handler(_event, _context) {
     for (const clientId of clients) {
         try {
             dbClient = await dbPool.connect();
-            const { keyCount, kvSnapshot } = await snapshotClient(dbClient, clientId);
-
-            // Snapshot non-KV account tables in a separate txn
-            const accountData = await snapshotClientAccount(dbClient, clientId);
+            const { keyCount, kvSnapshot, accountData } = await snapshotClientBundle(
+                dbClient,
+                clientId,
+            );
             dbClient.release();
             dbClient = null;
 
@@ -543,4 +544,10 @@ module.exports.handler = async function handler(_event, _context) {
     }
 
     return { statusCode: 200, body: JSON.stringify(summary) };
+};
+
+module.exports.__test = {
+    readClientKvSnapshot,
+    readClientAccountSnapshot,
+    snapshotClientBundle,
 };

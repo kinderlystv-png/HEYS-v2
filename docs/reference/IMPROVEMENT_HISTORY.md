@@ -15,6 +15,7 @@
 | 2026-07-18 | P2-03       | Client write-access решения сведены к fail-closed `canWriteStatus`                                          | `subscription-curator-guard.test.js`; server KV gate остаётся независимым                                                                   |
 | 2026-07-18 | P2-04       | Curator lead callback стал авторизованным и идемпотентным в общем polling worker                            | `lead-taken-callback.test.cjs`                                                                                                              |
 | 2026-07-18 | P2-05       | Leads API нормализует и валидирует российский телефон до DB и side effects                                  | `phone-validation.test.cjs`                                                                                                                 |
+| 2026-07-18 | P2-08       | Snapshot читает KV/account в одной repeatable-read boundary; полный restore атомарен между scopes           | `heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                            |
 
 ## Правило ведения
 

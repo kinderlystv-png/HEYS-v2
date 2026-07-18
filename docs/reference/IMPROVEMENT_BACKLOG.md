@@ -64,24 +64,6 @@
 - **Проверка:** fault-injection после каждого шага выбранной операции, повтор
   команды и merge с другого устройства сохраняют целостный invariant.
 
-### P2-08 — Backup и restore не дают единой точки согласованности
-
-- **Тип / система / вероятность:** архитектурный риск восстановления данных;
-  backup & reports; низкая в обычный день, высокая по последствиям во время
-  изменения account/subscription state или сбоя restore.
-- **Последствие:** snapshot может соединить KV из одного DB snapshot и account
-  tables из более позднего; при restore успешный KV transaction может остаться
-  применённым, если следующий account transaction упадёт.
-- **Доказательство:** KV и account snapshot выполняются двумя отдельными
-  `REPEATABLE READ` transactions; restore сначала завершает `executeRestore`,
-  затем отдельно запускает `executeAccountRestore`.
-- **Минимальное исправление:** для полного snapshot использовать одну connection
-  и одну read transaction; полный restore выполнять одной transaction либо явно
-  поддерживать resumable manifest со статусом каждого scope.
-- **Проверка:** concurrent mutation test подтверждает одну snapshot boundary;
-  fault-injection между KV/account phases не оставляет неотмеченный partial
-  restore, dry-run остаётся без mutation.
-
 ## P3
 
 ### P3-01 — Старые подробные справочники выглядят актуальнее, чем являются
@@ -105,7 +87,6 @@
 
 1. `product-commit-gate-contract.test.js` проверяет строки source; он не
    исполняет production 413 branch и не доказывает multi-device recovery.
-2. Backup/restore не имеет fault-injection regression между KV и account phases.
 
 ## Закрытые проблемы
 
@@ -126,16 +107,15 @@
 
 ## Рекомендуемый порядок исправлений
 
-1. P2-08 — закрыть целостность backup/restore recovery.
-2. P2-06/P2-07 — после этого планировать более крупные изменения хранения.
+1. P2-06 — закрыть whole-array ceiling product overlay.
+2. P2-07 — затем дать атомарность критичным planning-операциям.
 3. P3-01 — маркировать старые документы параллельно затронутым исправлениям, без
    массового переписывания.
 
 ## Facts Table
 
-| ID    | Проверенный факт                                                    | Как перепроверить                   | Результат на 2026-07-18                                              |
-| ----- | ------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| P2-06 | Overlay whole-array write имеет отдельную queued ветку после 413    | `rg -n 'cloud_save_queued_after_413 | 413' apps/web/heys_core_v12.js apps/web/heys_products_overlay_v1.js` | подтверждено                                                                                                                                              |
-| P2-07 | Planning хранит связанные коллекции разными KV keys                 | `rg -n 'PLANNING_KEYS               | mergeable                                                            | replace_only' apps/web/heys_planning_store_v1.js`                                                                                                         | подтверждено |
-| P2-08 | Backup и restore разделяют KV и account transactions                | `rg -n 'REPEATABLE READ             | executeRestore                                                       | executeAccountRestore' yandex-cloud-functions/heys-client-daily-backup/index.js yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js` | подтверждено |
-| P3-01 | Старый scoring reference содержит legacy namespace и число факторов | `rg -n 'HEYS.StatusScore            | 9 факторов' docs/SCORING_REFERENCE.md`                               | подтверждено                                                                                                                                              |
+| ID    | Проверенный факт                                                    | Как перепроверить                                                                                         | Результат на 2026-07-18 |
+| ----- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------- |
+| P2-06 | Overlay whole-array write имеет отдельную queued ветку после 413    | `rg -n 'cloud_save_queued_after_413\|413' apps/web/heys_core_v12.js apps/web/heys_products_overlay_v1.js` | подтверждено            |
+| P2-07 | Planning хранит связанные коллекции разными KV keys                 | `rg -n 'PLANNING_KEYS\|mergeable\|replace_only' apps/web/heys_planning_store_v1.js`                       | подтверждено            |
+| P3-01 | Старый scoring reference содержит legacy namespace и число факторов | `rg -n 'HEYS.StatusScore\|9 факторов' docs/SCORING_REFERENCE.md`                                          | подтверждено            |
