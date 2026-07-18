@@ -93,6 +93,22 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     try { globalThis.window.localStorage.clear(); } catch (_) { /* noop */ }
   });
 
+  it('не показывает запуск до возраста и принятого предупреждения', async () => {
+    const onProfileChange = vi.fn();
+    render(React.createElement(UI().MobilityApp, { modeId: 'morning_tonify', onProfileChange }));
+
+    expect(screen.getByRole('heading', { name: 'Перед первой тренировкой' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Начать тренировку' })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Возраст перед тренировкой'), { target: { value: '30' } });
+    fireEvent.click(screen.getByLabelText('Подтвердить предупреждение перед тренировкой'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeTruthy();
+    });
+    expect(onProfileChange).toHaveBeenCalled();
+  });
+
   it('рендерит focus-mode как у пальцев и открывает runner только после запуска тренировки', { timeout: 60000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     expect(screen.getByText('Мобильность')).toBeTruthy();
@@ -519,7 +535,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
       modeId: 'morning_tonify'
     }));
     openTestsProfile();
-    expect(container.textContent).toContain('режим не является медицинской рекомендацией');
+    expect(container.textContent).toContain('подтвердите, что режим не заменяет медицинскую рекомендацию');
     expect(container.textContent).toContain('Гипермобильность');
     expect(container.textContent).toContain('Ролл');
     expect(container.textContent).not.toContain('hypermobile');
@@ -681,8 +697,121 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     expect(records.painFlags[0].level).toBe('pain');
     expect(records.painFlags[0].atomId).toBeTruthy();
     expect(globalThis.HEYS.Mobility.recordsStore.load('client-b', storage).sessions).toHaveLength(0);
+    fireEvent.click(screen.getByRole('tab', { name: /Прогресс/ }));
+    expect(container.textContent).not.toContain('нет истории');
     delete globalThis.HEYS.TrainingStep;
   }, 15000);
+
+  it('возвращает failed и не пишет diary, если records write упал', () => {
+    const saveMobility = vi.fn(() => true);
+    const result = UI().persistMobilitySessionPair({
+      recordsStore: { addSession: () => { throw new Error('records write failed'); } },
+      clientId: 'client-a',
+      target: { ok: true, session: { mode: 'evening_relax' } },
+      idempotencyKey: 'mobility:2026-06-13:2:complete',
+      diaryRequired: true,
+      trainingStep: { saveMobility },
+      context: { dateKey: '2026-06-13', trainingIndex: 2 },
+      mobilityLog: { version: 1, mode: 'evening_relax', ok: true }
+    });
+
+    expect(result).toMatchObject({ status: 'failed', reason: 'records_write_failed' });
+    expect(saveMobility).not.toHaveBeenCalled();
+  });
+
+  it('повторяет partial diary write без дубля records и достигает saved_both', () => {
+    const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
+    const target = {
+      ok: true,
+      partial: true,
+      partialProgress: { completedSteps: 3 },
+      session: { mode: 'morning_tonify', partial: true, partialProgress: { completedSteps: 3 } }
+    };
+    const context = { dateKey: '2026-06-13', trainingIndex: 2 };
+    const idempotencyKey = UI().mobilitySessionIdempotencyKey(context, target, { partial: true });
+    const common = {
+      recordsStore: globalThis.HEYS.Mobility.recordsStore,
+      clientId: 'client-a',
+      target,
+      storage,
+      idempotencyKey,
+      diaryRequired: true,
+      context,
+      mobilityLog: { version: 1, mode: 'morning_tonify', partial: true, partialProgress: { completedSteps: 3 } }
+    };
+
+    const pending = UI().persistMobilitySessionPair({
+      ...common,
+      trainingStep: { saveMobility: () => false }
+    });
+    expect(pending).toMatchObject({ status: 'diary_pending', reason: 'diary_write_failed' });
+    expect(globalThis.HEYS.Mobility.recordsStore.listSessions('client-a', storage)).toHaveLength(1);
+
+    const saved = UI().persistMobilitySessionPair({
+      ...common,
+      trainingStep: { saveMobility: () => true }
+    });
+    expect(saved).toMatchObject({ status: 'saved_both', diarySaved: true });
+    expect(globalThis.HEYS.Mobility.recordsStore.listSessions('client-a', storage)).toHaveLength(1);
+  });
+
+  it('показывает diary_pending и повторяет точную попытку из UI', () => {
+    const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
+    const saveMobility = vi.fn().mockReturnValueOnce(false).mockReturnValue(true);
+    globalThis.HEYS.TrainingStep = { saveMobility };
+    const { container } = render(React.createElement(UI().MobilityApp, {
+      profile,
+      modeId: 'evening_relax',
+      clientId: 'client-a',
+      storage,
+      dateKey: '2026-06-13',
+      trainingIndex: 2
+    }));
+
+    startTodayTraining();
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить в тренировку' }));
+    expect(container.textContent).toContain('Не удалось сохранить тренировку в дневник.');
+    expect(globalThis.HEYS.Mobility.recordsStore.listSessions('client-a', storage)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить сохранение' }));
+    expect(container.textContent).toContain('Тренировка сохранена');
+    expect(container.textContent).not.toContain('Не удалось сохранить тренировку в дневник.');
+    expect(saveMobility).toHaveBeenCalledTimes(2);
+    expect(globalThis.HEYS.Mobility.recordsStore.listSessions('client-a', storage)).toHaveLength(1);
+  });
+
+  it('показывает failed при ошибке records и восстанавливается повтором', () => {
+    const data = {};
+    let failRecordsWrite = true;
+    const storage = {
+      getItem: (key) => Object.prototype.hasOwnProperty.call(data, key) ? data[key] : null,
+      setItem: (key, value) => {
+        if (failRecordsWrite) throw new Error('records write failed');
+        data[key] = String(value);
+      }
+    };
+    const saveMobility = vi.fn(() => true);
+    globalThis.HEYS.TrainingStep = { saveMobility };
+    const { container } = render(React.createElement(UI().MobilityApp, {
+      profile,
+      modeId: 'evening_relax',
+      clientId: 'client-a',
+      storage,
+      dateKey: '2026-06-13',
+      trainingIndex: 2
+    }));
+
+    startTodayTraining();
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить в тренировку' }));
+    expect(container.textContent).toContain('Не удалось сохранить тренировку.');
+    expect(saveMobility).not.toHaveBeenCalled();
+
+    failRecordsWrite = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить сохранение' }));
+    expect(container.textContent).toContain('Тренировка сохранена');
+    expect(saveMobility).toHaveBeenCalledTimes(1);
+    expect(globalThis.HEYS.Mobility.recordsStore.listSessions('client-a', storage)).toHaveLength(1);
+  });
 
   it('не пишет mobilityLog в дневник без явного контекста тренировки', { timeout: 60000 }, () => {
     const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
