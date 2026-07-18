@@ -58,6 +58,15 @@ function ensureVapid() {
 // Все юзеры считаются в MSK (UTC+3). User prefs хранят HH:MM в MSK.
 const MSK_OFFSET_HOURS = 3;
 
+async function recordWorkerHeartbeat(client) {
+  await client.query(
+    `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+     VALUES ('cron_reminders', now(), NULL, interval '45 minutes')
+     ON CONFLICT (task) DO UPDATE
+       SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+  );
+}
+
 // ─── Time helpers ──────────────────────────────────────────────────────
 
 function nowInMsk() {
@@ -1239,6 +1248,7 @@ module.exports.handler = async function (event, context) {
     stats.calStreak = await jobCalStreak(client);
     stats.ewsAlerts = await jobEwsAlerts(client);
     stats.subscriptionExpiry = await jobSubscriptionExpiry(client);
+    await recordWorkerHeartbeat(client);
   } catch (err) {
     console.error('[cron-reminders] error:', err.message, err.stack);
     stats.error = err.message;

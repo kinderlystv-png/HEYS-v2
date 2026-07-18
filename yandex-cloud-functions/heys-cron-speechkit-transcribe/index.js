@@ -67,6 +67,15 @@ function getPool() {
   return pool;
 }
 
+async function recordWorkerHeartbeat() {
+  await getPool().query(
+    `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+     VALUES ('cron_speechkit_transcribe', now(), NULL, interval '5 minutes')
+     ON CONFLICT (task) DO UPDATE
+       SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+  );
+}
+
 class SpeechkitHttpError extends Error {
   constructor(message, status) {
     super(message);
@@ -516,6 +525,7 @@ module.exports.handler = async function () {
   });
   const polled = [];
   for (const job of processing) polled.push(await processPoll(job));
+  await recordWorkerHeartbeat();
 
   return {
     statusCode: 200,

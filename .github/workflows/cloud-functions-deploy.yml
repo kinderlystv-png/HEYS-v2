@@ -7,28 +7,19 @@ on:
   push:
     branches: [main]
     paths:
-      - "yandex-cloud-functions/heys-api-*/**"
+      - "yandex-cloud-functions/heys-*/**"
       - "yandex-cloud-functions/shared/**"
       - "yandex-cloud-functions/deploy-all.sh"
       - "yandex-cloud-functions/test-functions.sh"
+      - "yandex-cloud-functions/function-inventory.cjs"
       - "yandex-cloud-functions/api-gateway-spec.yaml"
   workflow_dispatch:
     inputs:
       function_name:
         description: "Function to deploy (leave empty for all)"
         required: false
-        type: choice
-        options:
-          - "all"
-          - "heys-api-rpc"
-          - "heys-api-rest"
-          - "heys-api-auth"
-          - "heys-api-leads"
-          - "heys-api-health"
-          - "heys-api-payments"
-          - "heys-api-push"
-          - "heys-api-messages"
-          - "heys-api-photos"
+        type: string
+        default: "all"
 
 jobs:
   predeploy-tests:
@@ -57,6 +48,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MANUAL_FUNCTION="${{ inputs.function_name }}"
             if [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
+              node yandex-cloud-functions/function-inventory.cjs --assert-deployable "$MANUAL_FUNCTION"
               yandex-cloud-functions/test-functions.sh "$MANUAL_FUNCTION"
             else
               yandex-cloud-functions/test-functions.sh --all
@@ -76,17 +68,19 @@ jobs:
           fi
 
           CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
-          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$|test-functions\.sh$)'; then
-            yandex-cloud-functions/test-functions.sh --all
-            exit 0
-          fi
+          RESOLUTION=$(printf '%s\n' "$CHANGED_FILES" | node yandex-cloud-functions/function-inventory.cjs --resolve)
+          MODE=$(node -e 'const r=JSON.parse(process.argv[1]); process.stdout.write(r.mode)' "$RESOLUTION")
+          FUNCTIONS_CSV=$(node -e 'const r=JSON.parse(process.argv[1]); process.stdout.write(r.functions.join(","))' "$RESOLUTION")
 
-          mapfile -t FUNCTIONS < <(echo "$CHANGED_FILES" | sed -n 's#^yandex-cloud-functions/\(heys-api-[^/]*\)/.*#\1#p' | sort -u)
-          if [ "${#FUNCTIONS[@]}" -eq 0 ]; then
-            echo "Gateway-only change: no function runtime target"
-            bash -n yandex-cloud-functions/deploy-all.sh yandex-cloud-functions/test-functions.sh
-          else
+          if [ "$MODE" = "all" ]; then
+            yandex-cloud-functions/test-functions.sh --all
+          elif [ "$MODE" = "selective" ]; then
+            IFS=',' read -r -a FUNCTIONS <<< "$FUNCTIONS_CSV"
             yandex-cloud-functions/test-functions.sh "${FUNCTIONS[@]}"
+          else
+            echo "No function runtime target: $MODE"
+            node yandex-cloud-functions/function-inventory.cjs --verify
+            bash -n yandex-cloud-functions/deploy-all.sh yandex-cloud-functions/test-functions.sh
           fi
 
   deploy:
@@ -190,36 +184,9 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
           echo "Changed files:"
           echo "$CHANGED_FILES"
-
-          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/api-gateway-spec\.yaml$'; then
-            echo "gateway_spec_changed=true" >> "$GITHUB_OUTPUT"
-            NON_GATEWAY_CHANGED=$(echo "$CHANGED_FILES" | grep -Ev '^yandex-cloud-functions/api-gateway-spec\.yaml$' || true)
-            if [ -z "$NON_GATEWAY_CHANGED" ]; then
-              echo "mode=gateway-only" >> "$GITHUB_OUTPUT"
-              echo "reason=gateway-spec-only" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          else
-            echo "gateway_spec_changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$|test-functions\.sh$)'; then
-            echo "mode=all" >> "$GITHUB_OUTPUT"
-            echo "reason=shared-or-deploy-script-changed" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          mapfile -t FUNCTIONS < <(echo "$CHANGED_FILES" | sed -n 's#^yandex-cloud-functions/\(heys-api-[^/]*\)/.*#\1#p' | sort -u)
-
-          if [ "${#FUNCTIONS[@]}" -eq 0 ]; then
-            echo "mode=all" >> "$GITHUB_OUTPUT"
-            echo "reason=no-specific-function-detected" >> "$GITHUB_OUTPUT"
-          else
-            SELECTED_FUNCTIONS=$(IFS=,; echo "${FUNCTIONS[*]}")
-            echo "mode=selective" >> "$GITHUB_OUTPUT"
-            echo "functions=$SELECTED_FUNCTIONS" >> "$GITHUB_OUTPUT"
-            echo "reason=changed-function-directories" >> "$GITHUB_OUTPUT"
-          fi
+          printf '%s\n' "$CHANGED_FILES" \
+            | node yandex-cloud-functions/function-inventory.cjs --resolve --github-output \
+            >> "$GITHUB_OUTPUT"
 
       - name: Deploy functions
         shell: bash
@@ -239,9 +206,14 @@ jobs:
             for func_name in "${FUNCTIONS[@]}"; do
               ./deploy-all.sh "$func_name" --ci --skip-health
             done
-          else
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🚀 Deploying all functions (manual all)"
+            ./deploy-all.sh --ci --skip-health
+          elif [ "${{ steps.deployment-target.outputs.mode }}" = "all" ]; then
             echo "🚀 Deploying all functions (${{ steps.deployment-target.outputs.reason }})"
             ./deploy-all.sh --ci --skip-health
+          else
+            echo "ℹ️ No function deployment targets"
           fi
 
       - name: Update API Gateway

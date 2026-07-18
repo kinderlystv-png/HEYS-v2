@@ -251,6 +251,14 @@ async function recordRun(pool, runData) {
         }),
       ],
     );
+    if (runData.status === 'ok') {
+      await client.query(
+        `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+         VALUES ('cron_photo_cleanup', now(), NULL, interval '8 days')
+         ON CONFLICT (task) DO UPDATE
+           SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+      );
+    }
   } finally {
     client.release();
   }

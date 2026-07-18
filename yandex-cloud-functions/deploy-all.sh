@@ -114,17 +114,21 @@ payments_env_ready() {
         [ -n "$YUKASSA_WEBHOOK_SECRET" ]
 }
 
-API_FUNCTIONS=(
-    heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health
-    heys-api-payments heys-api-push heys-api-messages heys-api-photos
-    heys-cron-speechkit-transcribe
-)
+INVENTORY_SCRIPT="$SCRIPT_DIR/function-inventory.cjs"
+if [ ! -f "$INVENTORY_SCRIPT" ]; then
+    echo -e "${RED}❌ Function inventory not found: $INVENTORY_SCRIPT${NC}"
+    exit 1
+fi
 
-AUTOMATION_FUNCTIONS=(
-    heys-bot-client heys-maintenance heys-client-daily-backup
-    heys-cron-security-alerts heys-cron-reminders heys-cron-trial-drip
-    heys-cron-photo-cleanup heys-snapshot-demo
-)
+API_FUNCTIONS=()
+while IFS= read -r func_name; do
+    API_FUNCTIONS+=("$func_name")
+done < <(node "$INVENTORY_SCRIPT" --list --group api --auto-only)
+
+AUTOMATION_FUNCTIONS=()
+while IFS= read -r func_name; do
+    AUTOMATION_FUNCTIONS+=("$func_name")
+done < <(node "$INVENTORY_SCRIPT" --list --group automations --auto-only)
 
 selected_functions() {
     if [ -n "$TARGET_FUNC" ]; then
@@ -753,7 +757,7 @@ if [ -n "$TARGET_FUNC" ]; then
     if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
         SHOULD_UPDATE_GATEWAY=true
     fi
-    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ]; then
+    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
         ensure_speechkit_trigger
     fi
 else
@@ -762,7 +766,7 @@ else
         [ -z "$func_name" ] && continue
         deploy_function "$func_name"
     done < <(selected_functions)
-    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
+    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
         ensure_speechkit_trigger
     fi
     
