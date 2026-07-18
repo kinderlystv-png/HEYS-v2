@@ -77,6 +77,7 @@ collectMarkdownFiles(REFERENCE_DIR);
 const brokenLinks = [];
 const structureErrors = [];
 const duplicateIdErrors = [];
+const tableErrors = [];
 const fixedLineWarnings = [];
 let checkedLinks = 0;
 const markdownCache = new Map();
@@ -117,6 +118,21 @@ for (const file of markdownFiles) {
     if (seenIds.has(id)) duplicateIdErrors.push(`${relative(ROOT, file)} -> ${id}`);
     seenIds.add(id);
   }
+
+  let expectedTablePipes = null;
+  for (const [index, line] of markdown.split('\n').entries()) {
+    if (/^\|.*\|\s*$/.test(line)) {
+      const pipeCount = [...line.matchAll(/(?<!\\)\|/g)].length;
+      if (expectedTablePipes === null) expectedTablePipes = pipeCount;
+      else if (pipeCount !== expectedTablePipes) {
+        tableErrors.push(
+          `${relative(ROOT, file)}:${index + 1} -> ${pipeCount - 1} columns, expected ${expectedTablePipes - 1}`,
+        );
+      }
+    } else {
+      expectedTablePipes = null;
+    }
+  }
 }
 
 const dossierFiles = markdownFiles.filter(
@@ -128,11 +144,12 @@ for (const file of dossierFiles) {
   const firstSectionEnd = markdown.indexOf('\n## ');
   const passport = firstSectionEnd === -1 ? markdown : markdown.slice(0, firstSectionEnd);
   const normalizedPassport = passport.replace(/<br>\s*/gi, '\n> ').replace(/^>\s*>\s*/gm, '> ');
+  const passportText = normalizedPassport.replace(/\n>\s*/g, ' ');
   const missing = [];
 
-  if (!/^>\s*(?:\*\*)?Статус(?:\*\*)?:/m.test(normalizedPassport)) missing.push('Статус');
-  if (!/^>\s*(?:\*\*)?Охват(?:\*\*)?:/m.test(normalizedPassport)) missing.push('Охват');
-  if (!/^>\s*(?:\*\*)?Не (?:подтверждено|охвачено)(?:\*\*)?:/m.test(normalizedPassport)) {
+  if (!/(?:\*\*)?Статус(?:\*\*)?:/.test(passportText)) missing.push('Статус');
+  if (!/(?:\*\*)?Охват(?:\*\*)?:/.test(passportText)) missing.push('Охват');
+  if (!/(?:\*\*)?Не (?:подтверждено|охвачено)(?:\*\*)?:/.test(passportText)) {
     missing.push('Не подтверждено/Не охвачено');
   }
   if (!/^## Facts Table(?:\s|$)/m.test(markdown)) missing.push('Facts Table');
@@ -142,13 +159,15 @@ for (const file of dossierFiles) {
   }
 }
 
-const errorCount = brokenLinks.length + structureErrors.length + duplicateIdErrors.length;
+const errorCount =
+  brokenLinks.length + structureErrors.length + duplicateIdErrors.length + tableErrors.length;
 
 if (errorCount > 0) {
   console.error(`Reference check failed (${errorCount} errors):`);
   for (const link of brokenLinks) console.error(`- ${link}`);
   for (const error of structureErrors) console.error(`- ${error}`);
   for (const error of duplicateIdErrors) console.error(`- duplicate Facts Table ID: ${error}`);
+  for (const error of tableErrors) console.error(`- malformed Markdown table: ${error}`);
   process.exitCode = 1;
 } else {
   console.log(
