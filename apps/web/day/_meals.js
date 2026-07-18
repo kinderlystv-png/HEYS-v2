@@ -5323,7 +5323,7 @@
                     id: item.product_id || undefined,
                     product_id: item.product_id || undefined,
                     name: item.name,
-                    grams: item.grams || 100,
+                    grams: HEYS.models.normalizeItemGrams(item.grams, 100),
                     kcal100: item.kcal100,
                     protein100: item.protein100,
                     carbs100: item.carbs100,

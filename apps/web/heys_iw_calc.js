@@ -82,7 +82,7 @@
     const items = meal?.items || [];
 
     for (const item of items) {
-      const grams = item.grams || 100;
+      const grams = HEYS.models.normalizeItemGrams(item.grams, 100);
       const prod = getProductFromItem(item, pIndex);
 
       // 🔧 FIX v3.8.2: Тройной fallback для ВСЕХ полей — prod → item snapshot → default

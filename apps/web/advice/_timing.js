@@ -284,7 +284,7 @@
                     let lateMealKcal = 0;
                     for (const item of (lastMealByTime.items || [])) {
                         const product = helpers.getProductForItem(item, ctx.pIndex);
-                        if (product) lateMealKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
+                        if (product) lateMealKcal += (product.kcal100 || 0) * window.HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
                     }
 
                     if (lateMealKcal > 500) {

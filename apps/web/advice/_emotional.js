@@ -332,7 +332,7 @@
                 let prevSimple = 0;
                 for (const item of prevMeal.items || []) {
                     const product = getProductForItem(item, ctx.pIndex);
-                    if (product) prevSimple += (product.simple100 || 0) * (item.grams || 100) / 100;
+                    if (product) prevSimple += (product.simple100 || 0) * window.HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
                 }
 
                 if (prevSimple > 30) {

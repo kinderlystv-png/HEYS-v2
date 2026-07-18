@@ -127,6 +127,17 @@
     };
   }
 
+  /**
+   * Normalize a meal-item amount without treating an explicit zero as missing.
+   * Missing values retain the legacy default; valid numeric strings and numbers
+   * share the same non-negative contract.
+   */
+  function normalizeItemGrams(value, fallback = 100) {
+    if (value == null || (typeof value === 'string' && value.trim() === '')) return fallback;
+    const grams = Number(value);
+    return Number.isFinite(grams) && grams >= 0 ? grams : fallback;
+  }
+
   // ====================================================================
   // 🔄 PRODUCT PRIORITY BY ORIGIN (Variant C+)
   // ====================================================================
@@ -1159,6 +1170,7 @@
   // Harm field normalization (v4.3.0)
   M.normalizeHarm = normalizeHarm;
   M.normalizeHarmFields = normalizeHarmFields;
+  M.normalizeItemGrams = normalizeItemGrams;
 
   // 🆕 Product Priority by Origin (v4.5.0)
   M.getProductPrioritySource = getProductPrioritySource;

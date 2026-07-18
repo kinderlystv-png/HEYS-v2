@@ -2378,7 +2378,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
-        grams: item.grams || 100,
+        grams: HEYS.models.normalizeItemGrams(item.grams, 100),
         kcal100: item.kcal100,
         protein100: item.protein100,
         fat100: item.fat100,
@@ -2437,7 +2437,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
-        grams: item.grams || 100,
+        grams: HEYS.models.normalizeItemGrams(item.grams, 100),
         kcal100: item.kcal100,
         protein100: item.protein100,
         fat100: item.fat100,
@@ -2732,7 +2732,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const calcKcal = (item) =>
-      item.kcal100 ? Math.round((item.kcal100 * (item.grams || 100)) / 100) : 0;
+      item.kcal100 ? Math.round((item.kcal100 * HEYS.models.normalizeItemGrams(item.grams, 100)) / 100) : 0;
 
     const pluralProduct = (n) =>
       n === 1 ? 'продукт' : n <= 4 ? 'продукта' : 'продуктов';
@@ -2989,7 +2989,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
                 React.createElement('div', { className: 'mpr-create-item-bottom' },
                   React.createElement('div', { className: 'mpr-create-item-kcal' },
-                    `${Math.round(((item.kcal100 || 0) * (item.grams || 100)) / 100)} ккал`
+                    `${Math.round(((item.kcal100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100)) / 100)} ккал`
                   ),
                   React.createElement('div', { className: 'mpr-preview-item-grams' },
                     React.createElement('button', {
@@ -8685,7 +8685,7 @@ NOVA: 1
       (dayData.meals || []).forEach(m => {
         const items = Array.isArray(m?.items) ? m.items : [];
         items.forEach(it => {
-          const g = it.grams || 100;
+          const g = HEYS.models.normalizeItemGrams(it.grams, 100);
           const pid = it.product_id || it.name;
           const prod = (context?.products || []).find(p => (p.id || p.name) === pid);
           if (prod) total += (prod.kcal100 || 0) * g / 100;

@@ -243,7 +243,7 @@
                     for (const meal of dayMeals) {
                         for (const item of (meal.items || [])) {
                             const product = helpers.getProductForItem(item, pIndex);
-                            if (product) dayKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
+                            if (product) dayKcal += (product.kcal100 || 0) * window.HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
                         }
                     }
 
@@ -1032,7 +1032,7 @@
                         for (const item of meal.items || []) {
                             const product = helpers.getProductForItem(item, pIndex);
                             if (product) {
-                                const grams = item.grams || 100;
+                                const grams = window.HEYS.models.normalizeItemGrams(item.grams, 100);
                                 dayKcal += (product.kcal100 || 0) * grams / 100;
                             }
                         }
@@ -1579,7 +1579,7 @@
                 let mealFat = 0;
                 for (const item of lastMeal.items) {
                     const p = helpers.getProductForItem(item, pIndex);
-                    if (p) mealFat += (p.fat100 || 0) * (item.grams || 100) / 100;
+                    if (p) mealFat += (p.fat100 || 0) * window.HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
                 }
 
                 if (mealFat >= 10) {

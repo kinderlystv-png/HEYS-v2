@@ -2574,7 +2574,7 @@
     let totalGrams = 0, weightedGI = 0, totalProtein = 0, totalFat = 0;
     for (const item of (meal.items || [])) {
       const prod = getProductFromItem(item, pIndex);
-      const g = item.grams || 100;
+      const g = HEYS.models.normalizeItemGrams(item.grams, 100);
       totalGrams += g;
       weightedGI += (prod?.gi || 50) * g;
       totalProtein += (prod?.protein100 || 0) * g / 100;
@@ -2952,7 +2952,7 @@
     for (const item of items) {
       const prod = getProductFromItem ? getProductFromItem(item) : item;
       const name = prod?.name || item?.name || '';
-      const grams = item.grams || 100;
+      const grams = HEYS.models.normalizeItemGrams(item.grams, 100);
       totalGrams += grams;
 
       if (I.isLiquidFood(name)) {

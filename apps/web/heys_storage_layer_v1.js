@@ -964,7 +964,7 @@
     // Сохраняем как обычный набор
     const savedId = Store.saveMealPreset({
       name: preset.name,
-      items: (preset.items || []).map((item) => ({ ...item, grams: item.grams || 100 })),
+      items: (preset.items || []).map((item) => ({ ...item, grams: HEYS.models.normalizeItemGrams(item.grams, 100) })),
     });
     console.info('[HEYS.storage] ✅ Suggested preset confirmed:', { id, name: preset.name });
     return savedId;
