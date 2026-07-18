@@ -161,6 +161,10 @@ test → перенос только подтверждённых non-critical b
 - [x] Чистый local runtime smoke: новый boot hash исполнился, contract v1,
       `HEYS.cloud` и оба lazy export-helper доступны; page exceptions
       отсутствуют.
+- [x] Production PWA smoke: cold start и reload сохранили mounted root и
+      activated SW; при `context.setOffline(true)` offline reload прошёл,
+      `navigator.onLine=false`, root и 5/5 проверенных boot bundles доступны из
+      CacheStorage, page errors отсутствуют.
 - [x] Source/release/test commits опубликованы до `4b495274`; web deploy
       `29619170788` и RPC deploy `29619209559` прошли deployed-state/production
       verification.
@@ -185,6 +189,7 @@ payload уменьшается относительно записанного b
 | Storage key ownership вынесен в исполняемый контракт            | source/test/config      | `rg -n "storageKeyContract" apps/web/heys_storage_key_contract_v1.js apps/web/heys_storage_supabase_v1.js`; `pnpm vitest run tests/regressions/storage-key-contract.test.ts tests/regressions/7fb8be2f-anti-pollution-scoping.test.ts`                                                                                                                                    | ✅ Pure contract зарегистрирован до bridge; 6/6 поведенческих и anti-pollution tests прошли                                                                    |
 | Wave 4 уменьшает initial gzip без смены UI                      | generated measurement   | `git cat-file -s 7a015554:apps/web/public/boot-core.bundle.46e3e786e590.js.gz`; `stat -f '%z' apps/web/public/boot-core.bundle.3497ec9c0fba.js.gz`; остальные четыре boot bundles не менялись                                                                                                                                                                             | ✅ `boot-core`: 274,622 → 273,096; initial total: 907,781 → 906,255 байт (-1,526)                                                                              |
 | Wave 4 опубликована и проверена снаружи CI                      | GitHub/prod/canary      | `gh run view 29619170788`; `gh run view 29619209559`; `pnpm ops:heys:canary`; production `bundle-manifest.json` и HTML credential-field check                                                                                                                                                                                                                             | ✅ Web и 17 cloud functions развернуты; deployed state совпадает с HEAD; canary 4/4; static email/password fields отсутствуют                                  |
+| Production PWA сохраняет первый экран offline                   | isolated browser smoke  | Fresh Playwright context: cold load → reload → `context.setOffline(true)` → reload; SW/CacheStorage/runtime state                                                                                                                                                                                                                                                         | ✅ SW activated/controller; offline `navigator.onLine=false`; root mounted; root и 5/5 boot bundles cached; 0 page errors                                      |
 
 Official runtime evidence:
 
@@ -293,5 +298,8 @@ Official runtime evidence:
   `d2746399f25b`, а динамический boot hash проверен deploy workflow на
   соответствие своему HEAD; production HTML не содержит static email/password
   fields.
+- Изолированный production PWA smoke подтвердил cold start, reload, service
+  worker update path и offline reload; единственный console error — ожидаемый
+  API `Failed to fetch` при отключённой сети, необработанных page errors нет.
 - Все R01–R10 закрыты. Retention deletion не включался; единственное внешнее
   действие после программы — ротация исторически засвеченного пароля аккаунта.
