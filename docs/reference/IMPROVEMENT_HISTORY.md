@@ -18,6 +18,7 @@
 | 2026-07-18 | P2-06       | Большой product overlay публикуется plain-array shards с versioned manifest; неполное поколение не применяется | `overlay-shard-codec.test.js`, product commit и hot-sync contract tests                                                                     |
 | 2026-07-18 | P2-07       | Каскадное удаление task/project сначала сохраняет durable command и идемпотентно завершается после сбоя        | `planning-atomic-commands.test.js`                                                                                                          |
 | 2026-07-18 | P2-08       | Snapshot читает KV/account в одной repeatable-read boundary; полный restore атомарен между scopes              | `heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                            |
+| 2026-07-18 | P2-09       | Mobile stats/activity прекращают сборку скрытых diary-панелей сразу после нужного insulin-индикатора           | `day-diary-section-mobile-fast-path.test.js`; runtime 390×844, 6× CPU: hidden commit 38.1→0.5 ms                                            |
 | 2026-07-18 | P3-01       | Старые analytics/insulin/curator/infra guides получили historical/source marker и current dossier gate         | `pnpm docs:reference:check`                                                                                                                 |
 
 ## Правило ведения
