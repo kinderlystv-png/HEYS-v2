@@ -25,6 +25,7 @@
         GOALS: 'heys_planning_goals_v1',
         ENTITY_TOMBSTONES: 'heys_planning_entity_tombstones_v1',
         GOAL_MAP_RECORDS: 'heys_planning_goal_map_records_v1',
+        COMMANDS: 'heys_planning_commands_v1',
     };
 
     const CRITICAL_PLANNING_KEYS = new Set([
@@ -42,6 +43,7 @@
         KEYS.GOALS,
         KEYS.ENTITY_TOMBSTONES,
         KEYS.GOAL_MAP_RECORDS,
+        KEYS.COMMANDS,
     ]);
     const LOCAL_ONLY_PLANNING_KEYS = new Set([KEYS.CHRONO_TIMER]);
     const MERGEABLE_PLANNING_KEYS = new Set([
@@ -55,8 +57,10 @@
         KEYS.LINKS,
         KEYS.GOAL_MAP_RECORDS,
         KEYS.ENTITY_TOMBSTONES,
+        KEYS.COMMANDS,
     ]);
     const _planningCloudMeta = new Map();
+    const _planningQueuedHashes = new Map();
     const _planningPersistHistory = [];
     const PLANNING_READBACK_RECENT_WRITE_MS = 15000;
     const PLANNING_READBACK_DEBOUNCE_MS = 750;
@@ -560,11 +564,13 @@
         try {
             if (HEYS.cloud && typeof HEYS.cloud.saveClientKey === 'function') {
                 HEYS.cloud.saveClientKey(key, value);
+                _planningQueuedHashes.set(key, stableHash(value));
                 pushPlanningPersistHistory({ key, reason, sync: true, status: 'queued', summary: meta?.summary || valueSummary(value) });
                 return true;
             }
             pushPlanningPersistHistory({ key, reason, sync: true, status: 'no-cloud', summary: meta?.summary || valueSummary(value) });
         } catch (error) {
+            _planningQueuedHashes.delete(key);
             pushPlanningPersistHistory({ key, reason, sync: true, status: 'error', error: error?.message || String(error), summary: meta?.summary || valueSummary(value) });
             console.warn('[HEYS.planning] Failed to enqueue planning key:', key, error?.message || error);
         }
@@ -897,6 +903,9 @@
         if (key === KEYS.ENTITY_TOMBSTONES) {
             return normalizePlanningEntityTombstones(mergeArrayById(localArr, remoteArr));
         }
+        if (key === KEYS.COMMANDS) {
+            return normalizePlanningCommands(mergeArrayById(localArr, remoteArr));
+        }
         return null; // not merge-safe — caller keeps wholesale replace
     }
 
@@ -943,6 +952,166 @@
         if (!entries.length) return [];
         savePlanningEntityTombstones(entries, opts);
         return entries.map(normalizePlanningEntityTombstone);
+    }
+
+    const PLANNING_COMMAND_SCHEMA_VERSION = 1;
+    const PLANNING_COMMAND_DELETE_TASKS = 'delete_tasks_cascade';
+
+    function normalizePlanningCommand(raw) {
+        if (!raw || raw.type !== PLANNING_COMMAND_DELETE_TASKS) return null;
+        const taskIds = Array.from(new Set((Array.isArray(raw.payload?.taskIds) ? raw.payload.taskIds : [])
+            .map((id) => String(id || '').trim()).filter(Boolean))).sort();
+        const projectIds = Array.from(new Set((Array.isArray(raw.payload?.projectIds) ? raw.payload.projectIds : [])
+            .map((id) => String(id || '').trim()).filter(Boolean))).sort();
+        if (!taskIds.length && !projectIds.length) return null;
+        const createdAt = raw.createdAt || raw.updatedAt || nowISO();
+        return {
+            id: String(raw.id || `delete:${stableHash([taskIds, projectIds, createdAt])}`),
+            schemaVersion: PLANNING_COMMAND_SCHEMA_VERSION,
+            type: PLANNING_COMMAND_DELETE_TASKS,
+            state: 'committed',
+            payload: { taskIds, projectIds },
+            createdAt,
+            updatedAt: raw.updatedAt || createdAt,
+        };
+    }
+
+    function normalizePlanningCommands(items) {
+        return mergeArrayById([], (Array.isArray(items) ? items : [])
+            .map(normalizePlanningCommand)
+            .filter(Boolean))
+            .sort((a, b) => chronoRecencyMs(a) - chronoRecencyMs(b) || String(a.id).localeCompare(String(b.id)));
+    }
+
+    function getPlanningCommands() {
+        return normalizePlanningCommands(lsGet(KEYS.COMMANDS, []));
+    }
+
+    function savePlanningCommands(items, opts) {
+        const current = getPlanningCommands();
+        const merged = normalizePlanningCommands(mergeArrayById(current, items));
+        if (stableHash(current) === stableHash(merged)) {
+            if (opts?.sync !== false) ensurePlanningCommandsQueued(current, opts?.reason);
+            return current;
+        }
+        persistPlanningKey(KEYS.COMMANDS, merged, {
+            reason: opts?.reason || 'planning-commands-save',
+            sync: opts?.sync,
+        });
+        return merged;
+    }
+
+    function ensurePlanningCommandsQueued(commands, reason) {
+        const normalized = normalizePlanningCommands(commands);
+        if (!normalized.length) return true;
+        const hash = stableHash(normalized);
+        if (_planningQueuedHashes.get(KEYS.COMMANDS) === hash) return true;
+        return enqueuePlanningKeyForSync(
+            KEYS.COMMANDS,
+            normalized,
+            reason || 'planning-command-queue-guard',
+            { summary: valueSummary(normalized) },
+        );
+    }
+
+    function createDeleteTasksCommand(taskIds, projectIds) {
+        const createdAt = nowISO();
+        return normalizePlanningCommand({
+            id: `delete:${uid()}`,
+            type: PLANNING_COMMAND_DELETE_TASKS,
+            payload: { taskIds, projectIds },
+            createdAt,
+            updatedAt: createdAt,
+        });
+    }
+
+    function savePlanningCollectionIfChanged(current, next, save, opts) {
+        if (stableHash(current) === stableHash(next)) return false;
+        save(next, opts);
+        return true;
+    }
+
+    function applyDeleteTasksCommand(command, opts) {
+        const normalized = normalizePlanningCommand(command);
+        if (!normalized) return { ok: false, changedKeys: [] };
+        const idSet = new Set(normalized.payload.taskIds);
+        const projectIds = new Set(normalized.payload.projectIds);
+        const tasksBefore = getTasks();
+        const slotsBefore = getSlots();
+        const linksBefore = getLinks();
+        const projectsBefore = getProjects();
+        const deletedAt = normalized.createdAt;
+        const tombstoneInputs = [
+            ...Array.from(idSet).map((entityId) => ({ entityType: 'task', entityId, deletedAt, updatedAt: deletedAt })),
+            ...slotsBefore.filter((slot) => idSet.has(String(slot.taskId || '')))
+                .map((slot) => ({ entityType: 'slot', entityId: slot.id, deletedAt, updatedAt: deletedAt })),
+            ...linksBefore.filter((link) => idSet.has(String(link.fromId || '')) || idSet.has(String(link.toId || '')))
+                .map((link) => ({ entityType: 'link', entityId: link.id, deletedAt, updatedAt: deletedAt })),
+            ...Array.from(projectIds).map((entityId) => ({ entityType: 'project', entityId, deletedAt, updatedAt: deletedAt })),
+        ];
+        const changedKeys = [];
+        const currentTombstones = getPlanningEntityTombstones();
+        const nextTombstones = normalizePlanningEntityTombstones([...currentTombstones, ...tombstoneInputs]);
+        if (savePlanningCollectionIfChanged(currentTombstones, nextTombstones, savePlanningEntityTombstones, {
+            reason: opts?.reason || 'planning-command:delete-tombstones',
+            sync: opts?.sync,
+        })) changedKeys.push(KEYS.ENTITY_TOMBSTONES);
+
+        const nextProjects = projectsBefore.filter((project) => !projectIds.has(String(project.id || '')));
+        if (savePlanningCollectionIfChanged(projectsBefore, nextProjects, saveProjects, {
+            reason: opts?.reason || 'planning-command:delete-projects',
+            sync: opts?.sync,
+        })) changedKeys.push(KEYS.PROJECTS);
+
+        const nextTasks = tasksBefore
+            .filter((task) => !idSet.has(String(task.id || '')))
+            .map((task) => {
+                const blockedByTaskIds = Array.isArray(task.blockedByTaskIds)
+                    ? task.blockedByTaskIds.filter((entry) => !idSet.has(String(entry)))
+                    : [];
+                const projectId = projectIds.has(String(task.projectId || '')) ? undefined : task.projectId;
+                const parentTaskId = idSet.has(String(task.parentTaskId || '')) ? undefined : task.parentTaskId;
+                const changed = stableHash(blockedByTaskIds) !== stableHash(task.blockedByTaskIds || [])
+                    || projectId !== task.projectId
+                    || parentTaskId !== task.parentTaskId;
+                return changed
+                    ? { ...task, blockedByTaskIds, projectId, parentTaskId, updatedAt: deletedAt }
+                    : task;
+            });
+        if (savePlanningCollectionIfChanged(tasksBefore, nextTasks, saveTasks, {
+            reason: opts?.reason || 'planning-command:delete-tasks',
+            sync: opts?.sync,
+        })) changedKeys.push(KEYS.TASKS);
+
+        const nextSlots = slotsBefore.filter((slot) => !idSet.has(String(slot.taskId || '')));
+        if (savePlanningCollectionIfChanged(slotsBefore, nextSlots, saveSlots, {
+            reason: opts?.reason || 'planning-command:delete-slots',
+            sync: opts?.sync,
+        })) changedKeys.push(KEYS.SLOTS);
+
+        const nextLinks = linksBefore.filter((link) => (
+            !idSet.has(String(link.fromId || '')) && !idSet.has(String(link.toId || ''))
+        ));
+        if (savePlanningCollectionIfChanged(linksBefore, nextLinks, saveLinks, {
+            reason: opts?.reason || 'planning-command:delete-links',
+            sync: opts?.sync,
+        })) changedKeys.push(KEYS.LINKS);
+
+        return { ok: true, changedKeys, command: normalized };
+    }
+
+    function replayPlanningCommands(opts) {
+        const commands = getPlanningCommands();
+        if (opts?.sync !== false) ensurePlanningCommandsQueued(commands, opts?.reason);
+        const results = commands.map((command) => applyDeleteTasksCommand(command, {
+            reason: opts?.reason || 'planning-command-replay',
+            sync: opts?.sync,
+        }));
+        return {
+            ok: results.every((result) => result.ok),
+            replayed: results.length,
+            changedKeys: Array.from(new Set(results.flatMap((result) => result.changedKeys || []))),
+        };
     }
 
     function filterPlanningEntities(items, entityType) {
@@ -1020,13 +1189,7 @@
     }
 
     function deleteProject(id) {
-        addPlanningEntityTombstones('project', id, { reason: 'project-delete' });
-        const projects = getProjects().filter((project) => project.id !== id);
-        saveProjects(projects);
-        const tasks = getTasks().map((task) => task.projectId === id
-            ? { ...task, projectId: undefined, updatedAt: nowISO() }
-            : task);
-        saveTasks(tasks);
+        return deleteTasks([], { deleteProjectIds: [id] });
     }
 
     function addTask(title, opts) {
@@ -1102,53 +1265,18 @@
     }
 
     function deleteTask(id) {
-        const deletedSlots = getSlots().filter((slot) => slot.taskId === id);
-        const deletedLinks = getLinks().filter((link) => link.fromId === id || link.toId === id);
-        addPlanningEntityTombstones('task', id, { reason: 'task-delete' });
-        addPlanningEntityTombstones('slot', deletedSlots.map((slot) => slot.id), { reason: 'task-delete-slots' });
-        addPlanningEntityTombstones('link', deletedLinks.map((link) => link.id), { reason: 'task-delete-links' });
-        let tasks = getTasks().filter((task) => task.id !== id);
-        tasks = tasks.map((task) => ({
-            ...task,
-            blockedByTaskIds: Array.isArray(task.blockedByTaskIds)
-                ? task.blockedByTaskIds.filter((entry) => entry !== id)
-                : [],
-            parentTaskId: task.parentTaskId === id ? undefined : task.parentTaskId,
-            updatedAt: nowISO(),
-        }));
-        saveTasks(tasks);
-        const slots = getSlots().filter((slot) => slot.taskId !== id);
-        saveSlots(slots, { reason: 'slots-save:task-delete', slot: { id } });
-        saveLinks(getLinks().filter((link) => link.fromId !== id && link.toId !== id), { reason: 'links-save:task-delete' });
+        return deleteTasks([id]);
     }
 
     function deleteTasks(ids, opts) {
         const idSet = new Set((Array.isArray(ids) ? ids : []).filter(Boolean));
         const projectIdsToDelete = new Set((Array.isArray(opts?.deleteProjectIds) ? opts.deleteProjectIds : []).filter(Boolean));
         if (!idSet.size && !projectIdsToDelete.size) return 0;
-        const slotsToDelete = getSlots().filter((slot) => idSet.has(slot.taskId));
-        const linksToDelete = getLinks().filter((link) => idSet.has(link.fromId) || idSet.has(link.toId));
-        addPlanningEntityTombstones('task', Array.from(idSet), { reason: 'tasks-delete' });
-        addPlanningEntityTombstones('slot', slotsToDelete.map((slot) => slot.id), { reason: 'tasks-delete-slots' });
-        addPlanningEntityTombstones('link', linksToDelete.map((link) => link.id), { reason: 'tasks-delete-links' });
-        addPlanningEntityTombstones('project', Array.from(projectIdsToDelete), { reason: 'tasks-delete-projects' });
-        const tasks = getTasks()
-            .filter((task) => !idSet.has(task.id))
-            .map((task) => ({
-                ...task,
-                projectId: projectIdsToDelete.has(task.projectId) ? undefined : task.projectId,
-                blockedByTaskIds: Array.isArray(task.blockedByTaskIds)
-                    ? task.blockedByTaskIds.filter((entry) => !idSet.has(entry))
-                    : [],
-                parentTaskId: idSet.has(task.parentTaskId) ? undefined : task.parentTaskId,
-                updatedAt: nowISO(),
-            }));
-        if (projectIdsToDelete.size) {
-            saveProjects(getProjects().filter((project) => !projectIdsToDelete.has(project.id)));
-        }
-        saveTasks(tasks);
-        saveSlots(getSlots().filter((slot) => !idSet.has(slot.taskId)));
-        saveLinks(getLinks().filter((link) => !idSet.has(link.fromId) && !idSet.has(link.toId)));
+        const command = createDeleteTasksCommand(Array.from(idSet), Array.from(projectIdsToDelete));
+        // Durable intent is persisted before the first affected collection. If any
+        // later write fails, startup/cloud replay finishes the same idempotent command.
+        savePlanningCommands([command], { reason: 'planning-command:create-delete' });
+        applyDeleteTasksCommand(command, { reason: 'planning-command:apply-delete' });
         return idSet.size || projectIdsToDelete.size;
     }
 
@@ -2412,6 +2540,7 @@
             'heys_planning_goals_v1',
             'heys_planning_entity_tombstones_v1',
             'heys_planning_goal_map_records_v1',
+            'heys_planning_commands_v1',
             // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
             // не синкается на push-стороне (см. CLIENT_SPECIFIC_KEYS в storage).
         ];
@@ -2437,6 +2566,8 @@
                     saveChecklistTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item && item.k === 'heys_planning_entity_tombstones_v1' && item.v != null) {
                     savePlanningEntityTombstones(item.v, { sync: false, reason: 'cloud-refresh' });
+                } else if (item && item.k === 'heys_planning_commands_v1' && item.v != null) {
+                    savePlanningCommands(item.v, { sync: false, reason: 'cloud-refresh' });
                 }
             });
             rows.forEach(function (item) {
@@ -2505,6 +2636,7 @@
                     });
                 }
             });
+            replayPlanningCommands({ reason: 'cloud-refresh-command-replay' });
             _cloudPullDoneClientId = clientId || _cloudPullDoneClientId;
             try {
                 if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -2792,6 +2924,10 @@
         getPlanningEntityTombstones,
         savePlanningEntityTombstones,
         addPlanningEntityTombstones,
+        getPlanningCommands,
+        savePlanningCommands,
+        applyDeleteTasksCommand,
+        replayPlanningCommands,
         restorePlanningEntity,
         normalizeGoalMapRecord,
         normalizeGoalMapRecords,
@@ -2893,6 +3029,12 @@
     Planning.isCloudChronoWipeSuspicious = isCloudChronoWipeSuspicious;
     Planning.isCloudChecklistWipeSuspicious = isCloudChecklistWipeSuspicious;
 
+    try {
+        replayPlanningCommands({ reason: 'planning-command-startup-replay' });
+    } catch (error) {
+        console.warn('[HEYS.planning] Command replay deferred:', error?.message || error);
+    }
+
     // bootstrapClientSync Phase A пишет planning ключи прямым ls.setItem минуя
     // interceptor (см. heys_storage_supabase_v1.js:7283-7288) — usePlanningState
     // не узнаёт об апдейте, и ChronoScreen остаётся в `chronoSyncing=true`.
@@ -2903,6 +3045,13 @@
         window.addEventListener('heysSyncCompleted', function (ev) {
             const cid = ev && ev.detail && ev.detail.clientId;
             if (cid) _cloudPullDoneClientId = cid;
+            if (!cid || cid === getPlanningClientId()) {
+                try {
+                    replayPlanningCommands({ reason: 'planning-command-sync-replay' });
+                } catch (error) {
+                    console.warn('[HEYS.planning] Command replay after sync deferred:', error?.message || error);
+                }
+            }
             try {
                 window.dispatchEvent(new CustomEvent('heys:planning-updated', {
                     detail: { source: 'phase-a', initial: true, clientId: cid },

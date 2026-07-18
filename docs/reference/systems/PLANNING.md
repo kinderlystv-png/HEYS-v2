@@ -1,6 +1,6 @@
 # Планировщик: задачи, календарь, chrono, чек-листы и цели
 
-> **Статус:** core-контракты проверены 2026-07-17<br> **Охват:** web store,
+> **Статус:** core-контракты проверены 2026-07-18<br> **Охват:** web store,
 > локальное/облачное хранение, merge/delete, cloud pull, основные UI-границы и
 > тесты<br> **Не охвачено:** детальная UX-логика каждого экрана, все поля каждой
 > сущности, визуальный Gantt layout и planning-agent OpenAPI<br>
@@ -45,7 +45,7 @@ Phase A / refreshPlanningFromCloud → merge + tombstones + anti-wipe guards
 
 Канонические логические ключи объявлены в `Planning.Constants.KEYS`. Основные
 группы: projects, tasks, slots, links, chrono activities/entries/snapshots,
-checklists, goals, goal-map records и tombstones.
+checklists, goals, goal-map records, tombstones и durable delete commands.
 
 Store делит ключи по поведению:
 
@@ -89,6 +89,12 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 остаются replace-only, потому что Store не считает их безопасными для merge по
 стабильному record id.
 
+Каскадное удаление task/project сначала сохраняет `heys_planning_commands_v1`, а
+затем меняет tombstones, projects, tasks, slots и links. Команда mergeable и
+идемпотентно повторяется после startup, Phase A и собственного cloud pull.
+Поэтому сбой между отдельными KV writes оставляет durable intent, по которому
+каскад завершается на этом или другом устройстве.
+
 ## Инварианты
 
 1. Активный chrono timer остаётся local-only; готовая запись времени — cloud
@@ -103,6 +109,8 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 7. `cloudPullDone` привязан к client id; состояние одного клиента нельзя
    использовать для empty/loading state другого.
 8. UI-модули не должны обходить `Planning.Store` прямой записью контейнеров.
+9. Delete command записывается до первой затронутой коллекции; повтор команды не
+   меняет уже согласованное состояние.
 
 ## Ошибки и защитные механизмы
 
@@ -117,8 +125,9 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 
 ## Подтверждённые риски и границы гарантий
 
-- Система хранит несколько связанных сущностей отдельными KV-массивами, поэтому
-  нет общей транзакции между task/slot/link/goal изменениями.
+- Система хранит несколько связанных сущностей отдельными KV-массивами. Durable
+  command закрывает каскадное удаление task/project, но не является общей
+  транзакцией для прочих task/slot/link/goal изменений.
 - Snapshots не имеют merge-by-id гарантии и заменяются целиком.
 - Client store и UI остаются крупными vanilla-JS модулями; изменение формы
   сущности требует проверить normalizer, tombstone, merge, persistence и UI.
@@ -136,19 +145,22 @@ pending local mutation, tombstones и anti-wipe проверки могут со
   идемпотентность и chrono helpers.
 - `apps/web/__tests__/planning-goal-map-store.test.js` — goal-map
   persistence/merge.
+- `apps/web/__tests__/planning-atomic-commands.test.js` — порядок durable
+  intent, fault-injection между writes, повтор и replay на другом устройстве.
 - `apps/web/__tests__/planning-home-subtab.test.js` — навигационный контракт.
 - `apps/web/__tests__/planning-*-ui.test.js` и render tests — ключевые
   UI-сценарии.
 
 ## Facts Table
 
-| ID  | Утверждение                                                            | Проверка                                                                                                                 | Статус               |
-| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| P1  | Ключи и storage classes объявлены в planning store                     | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                      | проверено 2026-07-17 |
-| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`       | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                   | проверено 2026-07-17 |
-| P3  | Cloud refresh получает batch и применяет tombstones до основных данных | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                 | проверено 2026-07-17 |
-| P4  | Pending local mutation блокирует cloud overwrite                       | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                         | проверено 2026-07-17 |
-| P5  | Active chrono timer local-only, completed entry cloud-synced           | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                  | проверено 2026-07-17 |
-| P6  | Planning keys включены в Phase A                                       | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                    | проверено 2026-07-17 |
-| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                      | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                    | проверено 2026-07-17 |
-| P8  | Application и agent ingest входят в RPC handler                        | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js` | проверено 2026-07-17 |
+| ID  | Утверждение                                                                     | Проверка                                                                                                                 | Статус               |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| P1  | Ключи и storage classes объявлены в planning store                              | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                      | проверено 2026-07-17 |
+| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`                | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                   | проверено 2026-07-17 |
+| P3  | Cloud refresh получает batch и применяет tombstones до основных данных          | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                 | проверено 2026-07-17 |
+| P4  | Pending local mutation блокирует cloud overwrite                                | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                         | проверено 2026-07-17 |
+| P5  | Active chrono timer local-only, completed entry cloud-synced                    | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                  | проверено 2026-07-17 |
+| P6  | Planning keys включены в Phase A                                                | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                    | проверено 2026-07-17 |
+| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                               | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                    | проверено 2026-07-17 |
+| P8  | Application и agent ingest входят в RPC handler                                 | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js` | проверено 2026-07-17 |
+| P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                 | проверено 2026-07-18 |

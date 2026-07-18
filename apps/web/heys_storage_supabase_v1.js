@@ -303,6 +303,7 @@
     'heys_planning_goals_v1',
     'heys_planning_entity_tombstones_v1',
     'heys_planning_goal_map_records_v1',
+    'heys_planning_commands_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -6423,7 +6424,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_commands_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -7513,7 +7514,8 @@
                 'heys_planning_checklist_tombstones_v1',
                 'heys_planning_goals_v1',
                 'heys_planning_entity_tombstones_v1',
-                'heys_planning_goal_map_records_v1'
+                'heys_planning_goal_map_records_v1',
+                'heys_planning_commands_v1'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
@@ -7617,7 +7619,8 @@
 	                    || row.k === 'heys_planning_slots'
 	                    || row.k === 'heys_planning_links_v1'
 	                    || row.k === 'heys_planning_entity_tombstones_v1'
-	                    || row.k === 'heys_planning_goal_map_records_v1';
+	                    || row.k === 'heys_planning_goal_map_records_v1'
+	                    || row.k === 'heys_planning_commands_v1';
 	                  if (isPlanningMergeableArray && Array.isArray(row.v)) {
 	                    try {
 	                      const PStore = global.HEYS?.Planning?.Store;
@@ -9510,7 +9513,8 @@
                     || row.k === 'heys_planning_slots'
                     || row.k === 'heys_planning_links_v1'
                     || row.k === 'heys_planning_entity_tombstones_v1'
-                    || row.k === 'heys_planning_goal_map_records_v1') {
+                    || row.k === 'heys_planning_goal_map_records_v1'
+                    || row.k === 'heys_planning_commands_v1') {
                   try {
                     const PStore = global.HEYS?.Planning?.Store;
                     if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(valueToSave)) {
@@ -13456,7 +13460,8 @@
           || baseKey === 'heys_planning_slots'
           || baseKey === 'heys_planning_links_v1'
           || baseKey === 'heys_planning_entity_tombstones_v1'
-          || baseKey === 'heys_planning_goal_map_records_v1') {
+          || baseKey === 'heys_planning_goal_map_records_v1'
+          || baseKey === 'heys_planning_commands_v1') {
         // 🛡️ Planning merge-by-record (parallel-edit loss fix). Union local with cloud
         // instead of wholesale replace, so a stale cloud array can't drop local-only
         // adds or resurrect local deletes. Only keys with id + tombstone coverage

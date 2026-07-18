@@ -16,6 +16,7 @@ const PLANNING_RECORD_MERGE_KEYS = new Set([
   'heys_planning_goals_v1',
   'heys_planning_entity_tombstones_v1',
   'heys_planning_goal_map_records_v1',
+  'heys_planning_commands_v1',
   'heys_planning_projects',
   'heys_planning_tasks',
   'heys_planning_slots',
