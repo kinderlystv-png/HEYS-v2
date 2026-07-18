@@ -6,6 +6,13 @@ Compact agent reference. Detailed architecture in
 [apps/web/BUGS_HISTORY.md](apps/web/BUGS_HISTORY.md). Project status / TODO in
 [todo.md](todo.md).
 
+Для входа в незнакомую область сначала используй
+[живой справочник](docs/reference/README.md): найди системное досье, затем перед
+правкой перепроверь затронутый контракт по указанным исходникам и тестам.
+Обновляй досье только при смене поведения, владельца данных, контракта,
+инварианта или подтверждённого риска; после правки запускай
+`pnpm docs:reference:check`.
+
 Tone, communication length, adjacent observations — см. user-level AGENTS.md.
 
 ---

@@ -1,20 +1,35 @@
-# � HEYS API Documentation
+# HEYS API Documentation
 
-> **Version:** 15.1.0  
-> **Last Updated:** February 12, 2026  
-> **Status:** Production Ready (v4.8.8 — React State Sync Fix)  
-> **Maintainer:** @development-team
+> **Статус:** частично проверено по коду 2026-07-17<br> **Проверенный охват:**
+> browser API adapter, auth endpoints, RPC allowlist, sync entrypoint и gateway
+> routes<br> **Не перепроверено:** все продуктовые RPC-контракты, внешние
+> интеграции и production-конфигурация<br> **Источники истины:**
+> `apps/web/heys_yandex_api_v1.js`,
+> `yandex-cloud-functions/api-gateway-spec.yaml`,
+> `yandex-cloud-functions/heys-api-rpc/index.js`
+
+## Facts Table — проверенный API core
+
+| ID  | Утверждение                                                                                | Проверка                                                                                                      | Статус               |
+| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | -------------------- |
+| A1  | Web adapter использует `/rpc`, `/rest`, `/auth/login`, `/auth/verify`                      | `rg -n -e "RPC: '/rpc'" -e "AUTH_LOGIN: '/auth/login'" apps/web/heys_yandex_api_v1.js`                        | проверено 2026-07-17 |
+| A2  | Gateway содержит auth, bot, push, messages и media маршруты сверх первоначального API core | `rg -n '^  /' yandex-cloud-functions/api-gateway-spec.yaml`                                                   | проверено 2026-07-17 |
+| A3  | Публичные RPC определяются серверным `ALLOWED_FUNCTIONS`                                   | `rg -n -e 'const ALLOWED_FUNCTIONS' -e 'CURATOR_ONLY_FUNCTIONS' yandex-cloud-functions/heys-api-rpc/index.js` | проверено 2026-07-17 |
+| A4  | Основной client download запускается через `cloud.syncClient` и `bootstrapClientSync`      | `rg -n -e 'cloud.syncClient =' -e 'cloud.bootstrapClientSync =' apps/web/heys_storage_supabase_v1.js`         | проверено 2026-07-17 |
 
 ## 📋 Overview
 
 HEYS Platform предоставляет API для ведения дневника питания,
-нутрициологического анализа и управления клиентами. API реализован через **7
-Yandex Cloud Functions** (serverless, nodejs18).
+нутрициологического анализа и управления клиентами. API Gateway маршрутизирует
+запросы в специализированные Yandex Cloud Functions. Историческое ядро из семи
+API-функций расширено auth, push, messages, media, bot и другими маршрутами;
+фиксированный счётчик функций не является контрактом.
 
 **Base URL:** `https://api.heyslab.ru`  
 **Authentication:** Клиенты: PIN → `session_token` | Кураторы: JWT (Bearer)  
 **Content-Type:** `application/json`  
-**CORS:** только `app.heyslab.ru`, `heyslab.ru`
+**CORS:** allowlist задаётся обработчиком каждого API; для RPC источник истины —
+`ALLOWED_ORIGINS` в `heys-api-rpc/index.js`.
 
 ## 🏗️ Architecture
 
@@ -22,7 +37,8 @@ Yandex Cloud Functions** (serverless, nodejs18).
 
 - **Legacy Core** - LocalStorage-based data management (`heys_*.js` vanilla JS)
 - **Modern Layer** - TypeScript/React (`packages/`, `apps/web/src/`)
-- **API Layer** - 7 Yandex Cloud Functions at `api.heyslab.ru`
+- **API Layer** - API Gateway + специализированные Yandex Cloud Functions at
+  `api.heyslab.ru`
 - **Security Layer** - Input validation, XSS protection, session-based IDOR
   protection
 
@@ -45,13 +61,13 @@ await HEYS.YandexAPI.rpc('client_pin_auth', {
 ### Кураторы (email + password → JWT)
 
 ```javascript
-// POST https://api.heyslab.ru/auth/curator
-fetch('https://api.heyslab.ru/auth/curator', {
+// POST https://api.heyslab.ru/auth/login
+fetch('https://api.heyslab.ru/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'curator@example.com', password: '...' }),
 });
-// Returns: { token: 'JWT...', curator_id, name }
+// Точный response contract задаёт heys-api-auth; web adapter сохраняет access token.
 
 // Дальнейшие API запросы: Authorization: Bearer <JWT>
 ```
@@ -114,27 +130,21 @@ await HEYS.YandexAPI.rpc('delete_client_by_session', {
 // Bootstrap Sync (загрузить все данные клиента)
 await HEYS.cloud.syncClient(clientId); // автовыбор стратегии (curator / PIN)
 
-// KV операции (глобальные ключи)
-await HEYS.YandexAPI.rpc('kv_set', {
-  p_key: 'settings',
-  p_value: JSON.stringify(data),
-});
-await HEYS.YandexAPI.rpc('kv_get', { p_key: 'settings' });
-await HEYS.YandexAPI.rpc('kv_delete', { p_key: 'settings' });
-
-// KV операции (ключи клиента)
-await HEYS.YandexAPI.rpc('client_kv_set_by_session', {
+// Client KV: authority определяется сервером из session/context.
+await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
   p_session_token: token,
-  p_client_id: clientId,
   p_key: 'heys_products',
-  p_value: JSON.stringify(products),
+  p_value: products,
 });
-await HEYS.YandexAPI.rpc('client_kv_get_by_session', {
+await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
   p_session_token: token,
-  p_client_id: clientId,
   p_key: 'heys_products',
 });
 ```
+
+Полный allowlist не дублируется здесь: актуальные функции и специальные
+auth-гейты находятся в `ALLOWED_FUNCTIONS`/`CURATOR_ONLY_FUNCTIONS` серверного
+обработчика.
 
 ### 4. Planning context ingest (приложение + агент)
 
@@ -573,22 +583,18 @@ const warnings = HEYS.insights.getEarlyWarnings(historyData);
 
 ## 📚 Additional Resources
 
-- [**Architecture Guide**](./guides/ARCHITECTURE.md) - System architecture
-  overview
-- [**Security Guide**](./guides/SECURITY.md) - Security implementation details
-- [**Integration Guide**](./guides/INTEGRATION.md) - External service
-  integration
-- [**Testing Guide**](./guides/TESTING.md) - API testing strategies
+- [**Architecture Guide**](ARCHITECTURE.md) — общая архитектура.
+- [**Security Review**](SECURITY_REVIEW.md) — канонический статус рисков.
+- [**Security Runbook**](SECURITY_RUNBOOK.md) — операционные проверки.
+- [**Sync Reference**](SYNC_REFERENCE.md) — хранение и синхронизация.
+- [**Cloud Functions README**](../yandex-cloud-functions/README.md) — backend
+  entrypoints.
 
 ## 🔄 Versioning
 
-API follows semantic versioning (MAJOR.MINOR.PATCH):
-
-- **MAJOR** - Breaking changes
-- **MINOR** - New features (backward compatible)
-- **PATCH** - Bug fixes (backward compatible)
-
-Current version: **14.0.0**
+У API нет подтверждённой единой semantic-version линии для всех Cloud Functions.
+Совместимость определяется конкретным gateway route, RPC contract и миграцией;
+не используйте номер этого Markdown-файла как версию backend.
 
 ## 📞 Support
 

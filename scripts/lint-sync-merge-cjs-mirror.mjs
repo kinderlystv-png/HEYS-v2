@@ -11,8 +11,9 @@
 //
 // Hook: pre-commit. При расхождении exit 1 + инструкция как поправить.
 
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -22,14 +23,33 @@ const CJS_PATHS = [
   resolve(repoRoot, 'yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs'),
   resolve(repoRoot, 'yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs'),
 ];
+const CHECK_STAGED = process.argv.includes('--staged');
+
+function repoRelative(filePath) {
+  return filePath.replace(repoRoot + '/', '');
+}
+
+function readCommittedCandidate(filePath) {
+  const relativePath = repoRelative(filePath);
+  const isStaged = execFileSync('git', ['diff', '--cached', '--name-only', '--', relativePath], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  }).trim();
+  const source = isStaged ? `:${relativePath}` : `HEAD:${relativePath}`;
+  return execFileSync('git', ['show', source], { cwd: repoRoot, encoding: 'utf8' });
+}
+
+function readCandidate(filePath) {
+  return CHECK_STAGED ? readCommittedCandidate(filePath) : readFileSync(filePath, 'utf8');
+}
 
 if (!existsSync(ESM_PATH) || CJS_PATHS.some((p) => !existsSync(p))) {
   // Не падаем если файлы отсутствуют (например, на check-out где их вынесли).
   process.exit(0);
 }
 
-const esm = readFileSync(ESM_PATH, 'utf8');
-const stale = CJS_PATHS.filter((p) => readFileSync(p, 'utf8') !== esm);
+const esm = readCandidate(ESM_PATH);
+const stale = CJS_PATHS.filter((p) => readCandidate(p) !== esm);
 
 if (stale.length === 0) {
   process.exit(0);
@@ -43,8 +63,12 @@ for (const cjsPath of stale) {
 }
 console.error('');
 console.error('Fix:');
-console.error('  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
-console.error('  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs');
+console.error(
+  '  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs',
+);
+console.error(
+  '  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs',
+);
 console.error('  git add yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs \\');
 console.error('          yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs');
 console.error('');

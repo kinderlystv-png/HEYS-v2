@@ -49,6 +49,7 @@
     "docker:compose:up": "docker-compose up",
     "docker:run": "docker run -p 3001:3001 heys:latest",
     "docker:run:dev": "docker run -p 3001:3001 -v $(pwd):/app heys:dev",
+    "docs:reference:check": "node scripts/check-reference-links.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "healthcheck": "node scripts/healthcheck.js",
