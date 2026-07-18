@@ -148,6 +148,7 @@ jobs:
         if: always()
         env:
           PGPASSWORD: ${{ secrets.PG_PASSWORD }}
+          PGSSLROOTCERT: ${{ github.workspace }}/yandex-cloud-functions/certs/root.crt
         run: |
           if [ -z "$PGPASSWORD" ]; then
             echo "::error::PG_PASSWORD is not configured for the dead-man check"

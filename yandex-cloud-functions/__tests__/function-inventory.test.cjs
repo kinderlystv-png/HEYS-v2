@@ -100,5 +100,6 @@ test('health workflow schedules an independent strict dead-man check', () => {
   assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
   assert.match(workflow, /if: always\(\)[\s\S]*--dead-man --strict --json/);
   assert.match(workflow, /PGPASSWORD: \$\{\{ secrets\.PG_PASSWORD \}\}/);
+  assert.match(workflow, /PGSSLROOTCERT: \$\{\{ github\.workspace \}\}\/yandex-cloud-functions\/certs\/root\.crt/);
   assert.doesNotMatch(workflow, /serverless function invoke heys-maintenance/);
 });
