@@ -67,14 +67,27 @@ jobs:
         id: rpc
         run: |
           echo "🔌 Testing RPC endpoint (get_shared_products)..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 \
-            -X POST "${{ env.API_BASE_URL }}/rpc?fn=get_shared_products" \
-            -H "Content-Type: application/json" \
-            -H "Origin: https://app.heyslab.ru" \
-            -d '{"p_limit": 1}')
+          for attempt in 1 2 3; do
+            RESPONSE=$(curl -sS -w "\n%{http_code}" --max-time 10 \
+              -X POST "${{ env.API_BASE_URL }}/rpc?fn=get_shared_products" \
+              -H "Content-Type: application/json" \
+              -H "Origin: https://app.heyslab.ru" \
+              -d '{"p_limit": 1}' || true)
 
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n-1)
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            HTTP_CODE="${HTTP_CODE:-000}"
+            BODY=$(echo "$RESPONSE" | head -n-1)
+            ITEM_COUNT=$(echo "$BODY" | jq 'if type == "array" then length else 0 end' 2>/dev/null || echo 0)
+
+            if [ "$HTTP_CODE" = "200" ] && [ "$ITEM_COUNT" -ge 1 ]; then
+              break
+            fi
+
+            echo "::warning::RPC attempt $attempt/3 failed (HTTP $HTTP_CODE, items $ITEM_COUNT)"
+            if [ "$attempt" -lt 3 ]; then
+              sleep 5
+            fi
+          done
 
           echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
 
@@ -84,8 +97,6 @@ jobs:
             exit 1
           fi
 
-          # Проверка структуры ответа
-          ITEM_COUNT=$(echo "$BODY" | jq 'length // 0')
           if [ "$ITEM_COUNT" -lt 1 ]; then
             echo "::error::RPC returned empty array"
             exit 1
@@ -97,12 +108,24 @@ jobs:
         id: rest
         run: |
           echo "📊 Testing REST endpoint (shared_products)..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 \
-            "${{ env.API_BASE_URL }}/rest/shared_products?limit=1" \
-            -H "Origin: https://app.heyslab.ru")
+          for attempt in 1 2 3; do
+            RESPONSE=$(curl -sS -w "\n%{http_code}" --max-time 10 \
+              "${{ env.API_BASE_URL }}/rest/shared_products?limit=1" \
+              -H "Origin: https://app.heyslab.ru" || true)
 
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n-1)
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            HTTP_CODE="${HTTP_CODE:-000}"
+            BODY=$(echo "$RESPONSE" | head -n-1)
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              break
+            fi
+
+            echo "::warning::REST attempt $attempt/3 failed with HTTP $HTTP_CODE"
+            if [ "$attempt" -lt 3 ]; then
+              sleep 5
+            fi
+          done
 
           echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
 
@@ -163,7 +186,7 @@ jobs:
       # Auto-redeploy при обнаружении проблем
       - name: Auto-redeploy on API failure
         id: redeploy
-        if: failure() && (steps.rest.outcome == 'failure' || steps.rpc.outcome == 'failure')
+        if: github.event_name == 'schedule' && failure() && (steps.rest.outcome == 'failure' || steps.rpc.outcome == 'failure')
         continue-on-error: true # Не падать, если триггер не сработал
         uses: actions/github-script@v7
         with:

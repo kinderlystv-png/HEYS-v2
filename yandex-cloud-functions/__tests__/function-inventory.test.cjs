@@ -103,3 +103,17 @@ test('health workflow schedules an independent strict dead-man check', () => {
   assert.match(workflow, /PGSSLROOTCERT: \$\{\{ github\.workspace \}\}\/yandex-cloud-functions\/certs\/root\.crt/);
   assert.doesNotMatch(workflow, /serverless function invoke heys-maintenance/);
 });
+
+test('health workflow debounces API recovery and never redeploys from push or manual runs', () => {
+  const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'), 'utf8');
+  assert.equal((workflow.match(/for attempt in 1 2 3; do/g) || []).length, 2);
+  assert.equal((workflow.match(/sleep 5/g) || []).length, 2);
+  assert.match(
+    workflow,
+    /if: github\.event_name == 'schedule' && failure\(\) && \(steps\.rest\.outcome == 'failure' \|\| steps\.rpc\.outcome == 'failure'\)/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /if: failure\(\) && \(steps\.rest\.outcome == 'failure' \|\| steps\.rpc\.outcome == 'failure'\)/,
+  );
+});
