@@ -110,6 +110,21 @@ describe('planning sync-aware persistence', () => {
         expect(saveClientKey).toHaveBeenCalledWith('heys_planning_chrono_entries', merged);
     });
 
+    it('persists dismissed chrono tail dates through the canonical sync-backed store', () => {
+        const { saveClientKey } = installHeys();
+        const Store = loadPlanningStore();
+
+        Store.saveChronoUntrackedTailDismissedDates(['2026-07-15', '2026-07-16']);
+        const next = Store.saveChronoUntrackedTailDismissedDates(['2026-07-16', '2026-07-14']);
+
+        expect(next).toEqual(['2026-07-14', '2026-07-15', '2026-07-16']);
+        expect(Store.getChronoUntrackedTailDismissedDates()).toEqual(next);
+        expect(saveClientKey).toHaveBeenLastCalledWith(
+            'heys_planning_chrono_untracked_tail_dismissed_v1',
+            next,
+        );
+    });
+
     it('enqueues calendar slots and exposes slot parity drift in debug snapshot', () => {
         const { saveClientKey } = installHeys({ syncStatus: 'synced' });
         const Store = loadPlanningStore();

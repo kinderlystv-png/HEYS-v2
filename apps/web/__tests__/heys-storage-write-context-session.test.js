@@ -109,6 +109,62 @@ describe('HEYS.cloud write-context session expiry', () => {
       expect.objectContaining({ k: 'heys_hunger_energy_status_events_v1', vKind: 'object' }),
     ]));
   });
+
+  it('rebinds a persisted queue item from a stale context to the live context', async () => {
+    window.HEYS.YandexAPI.rpc.mockResolvedValue({
+      data: {
+        context_id: 'ctx-live',
+        client_id: 'client-1',
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+      error: null,
+    });
+    window.HEYS.YandexAPI.mergeSaveKV = vi.fn().mockResolvedValue({
+      success: true,
+      v: { date: '2026-06-15', updatedAt: Date.now() },
+      outcome: 'merged',
+    });
+    window.HEYS.cloud.setPinAuthClient('client-1');
+
+    const result = await window.HEYS.cloud.saveClientViaRPC('client-1', [{
+      k: 'heys_dayv2_2026-06-15',
+      v: { date: '2026-06-15', updatedAt: Date.now() },
+      _ctx: 'ctx-stale',
+    }]);
+
+    expect(result).toEqual(expect.objectContaining({ success: true, saved: 1 }));
+    expect(window.HEYS.YandexAPI.mergeSaveKV).toHaveBeenCalledWith(
+      'client-1',
+      'heys_dayv2_2026-06-15',
+      expect.objectContaining({ date: '2026-06-15' }),
+      expect.any(Number),
+      'ctx-live',
+    );
+  });
+
+  it('treats a terminal fresh-row server rejection as handled instead of requeueing it', async () => {
+    window.HEYS.YandexAPI.rpc.mockResolvedValue({
+      data: {
+        context_id: 'ctx-live',
+        client_id: 'client-1',
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+      error: null,
+    });
+    window.HEYS.YandexAPI.mergeSaveKV = vi.fn().mockResolvedValue({
+      success: true,
+      v: null,
+      outcome: 'cross_client_blob_blocked',
+    });
+    window.HEYS.cloud.setPinAuthClient('client-1');
+
+    const result = await window.HEYS.cloud.saveClientViaRPC('client-1', [{
+      k: 'heys_dayv2_2026-07-18',
+      v: { date: '2026-07-18', updatedAt: Date.now() },
+    }]);
+
+    expect(result).toEqual(expect.objectContaining({ success: true, saved: 1 }));
+  });
 });
 
 describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
@@ -127,6 +183,10 @@ describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
     expect(storageSource).toContain('blockDayv2BatchFallback(it.k, e.message);');
     expect(storageSource).toContain('return { success: false, error: mergeAbortError, saved: mergeSavedCount };');
     expect(storageSource).toContain("console.warn('[merge-save] subscription_required for', it.k, '— dropping denied pending write');");
+    expect(storageSource).toContain("console.warn('[merge-save] dayv2 merge failed for', k, '→', reason, '— keeping pending instead of unsafe batch fallback');");
+    expect(storageSource).toContain('if (retryAttempt >= MAX_RETRY_ATTEMPTS) return;');
+    expect(storageSource).toContain('isOnline: navigator.onLine && retryAttempt < MAX_RETRY_ATTEMPTS');
+    expect(storageSource).toContain('retryAttempt > 0 ? getRetryDelay()');
     expect(storageSource).toContain('subscription_rejected: subscriptionRejectedKeys');
     expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(result.error))');
     expect(storageSource).toContain('if (isDayv2MergeKey(it.k) && isSubscriptionRequiredError(e.message))');

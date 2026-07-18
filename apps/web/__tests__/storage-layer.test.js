@@ -334,6 +334,13 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(mockStorage._store[`heys_${CLIENT_ID}_heys_pin_cookie_session_hint`]).toBeUndefined();
   });
 
+  test('Store.set reports a failed local write', () => {
+    const store = loadStorageLayer();
+    mockStorage.setItem = () => { throw new Error('quota'); };
+
+    expect(store.set('heys_dayv2_2026-06-13', { date: '2026-06-13', trainings: [] })).toBe(false);
+  });
+
   test('cleanup v2 removes old scoped auth/session copies', () => {
     const scopedPinKey = `heys_${CLIENT_ID}_heys_pin_auth_client`;
     const scopedSessionKey = `heys_${CLIENT_ID}_heys_session_token`;

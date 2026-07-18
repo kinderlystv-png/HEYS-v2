@@ -31,6 +31,7 @@
   const LOW_HUNGER_MEAL_MIN_KCAL = 15;
   const DEFAULT_DRAFT = { hungerLevel: 5, hungerVisual: 5, hungerTrend: 'unknown' };
   const DEFAULT_FEATURE_SETTINGS = {
+    showDiaryCard: true,
     microForecast: true,
     cravingGraph: true,
     mealEffectReview: true,
@@ -142,6 +143,11 @@
   };
 
   const FEATURE_SETTINGS_META = [
+    {
+      id: 'showDiaryCard',
+      title: 'График в дневнике',
+      detail: 'Показывает динамику голода после карточки клетчатки.'
+    },
     {
       id: 'microForecast',
       title: 'Прогноз на 1–2 часа',
@@ -626,12 +632,18 @@
   }
 
   function normalizeHungerFeatureSettings(settings) {
-    const raw = { ...DEFAULT_FEATURE_SETTINGS, ...((settings && typeof settings === 'object') ? settings : {}) };
+    const source = (settings && typeof settings === 'object') ? settings : {};
+    const raw = { ...DEFAULT_FEATURE_SETTINGS, ...source };
+    if (!Object.prototype.hasOwnProperty.call(source, 'showDiaryCard') && Object.prototype.hasOwnProperty.call(source, 'showReportsCard')) {
+      raw.showDiaryCard = source.showReportsCard !== false;
+    }
     const limit = Math.max(0, Math.min(5, Math.round(Number(raw.lowHungerDailyPromptLimit))));
-    return {
+    const normalized = {
       ...raw,
       lowHungerDailyPromptLimit: Number.isFinite(limit) ? limit : DEFAULT_FEATURE_SETTINGS.lowHungerDailyPromptLimit
     };
+    delete normalized.showReportsCard;
+    return normalized;
   }
 
   function readHungerFeatureSettings() {
@@ -2246,9 +2258,10 @@
     });
   }
 
-  function buildTimelineTicks(scaleStart, scaleEnd, xOf) {
+  function buildTimelineTicks(scaleStart, scaleEnd, xOf, options) {
+    const compact = options?.compact === true;
     const spanHours = Math.max(1, (scaleEnd - scaleStart) / (60 * 60 * 1000));
-    const intervalHours = spanHours > 12 ? 3 : 2;
+    const intervalHours = compact ? 6 : spanHours > 12 ? 3 : 2;
     const tick = new Date(scaleStart);
     if (!Number.isFinite(tick.getTime())) return [];
     tick.setMinutes(0, 0, 0);
@@ -2259,7 +2272,11 @@
     const rows = [];
     while (tick.getTime() <= scaleEnd) {
       const t = tick.getTime();
-      if (t >= scaleStart) rows.push({ t, x: Math.max(SPARK_X_MIN, Math.min(SPARK_X_MAX, xOf(t))), label: formatShortTime(t) });
+      if (t >= scaleStart) rows.push({
+        t,
+        x: Math.max(SPARK_X_MIN, Math.min(SPARK_X_MAX, xOf(t))),
+        label: compact ? String(tick.getHours()).padStart(2, '0') : formatShortTime(t)
+      });
       tick.setHours(tick.getHours() + intervalHours);
       if (rows.length > 12) break;
     }
@@ -2380,7 +2397,7 @@
     return Math.max(1, Math.min(10, n));
   }
 
-  function buildSparkTimeline({ date, day, draft, editTarget, backfillTarget, assessmentTime, settings }) {
+  function buildSparkTimeline({ date, day, draft, editTarget, backfillTarget, assessmentTime, settings, includeCurrentPreview = true, compactTimeAxis = false }) {
     const nowRaw = Number(assessmentTime);
     const now = Number.isFinite(nowRaw) ? Math.min(nowRaw, Date.now()) : Date.now();
     const featureSettings = { ...DEFAULT_FEATURE_SETTINGS, ...((settings && typeof settings === 'object') ? settings : readHungerFeatureSettings()) };
@@ -2409,7 +2426,7 @@
         label: 'за ' + formatShortTime(backfillT) + ' ' + previewLevel + '/10'
       }
       : null;
-    const shouldShowCurrentPreview = !editTarget?.id && !backfill;
+    const shouldShowCurrentPreview = includeCurrentPreview !== false && !editTarget?.id && !backfill;
     const editT = Number(editTarget?.t);
     const hungerPoints = visibleHunger.map((item) => (
       editTarget?.id && item.id === editTarget.id && Number.isFinite(editT)
@@ -2505,7 +2522,7 @@
         offset: Math.max(0, Math.min(100, ((item.x - SPARK_X_MIN) / SPARK_X_RANGE) * 100)),
         color: item.color
       })),
-      ticks: buildTimelineTicks(scaleStart, scaleEnd, xOf),
+      ticks: buildTimelineTicks(scaleStart, scaleEnd, xOf, { compact: compactTimeAxis }),
       nightBands: buildNightBands(sleepInterval, scaleStart, scaleEnd, xOf),
       sleepInterval,
       scaleStart,
@@ -3550,7 +3567,7 @@
     );
   }
 
-  function TimelineSpark({ date, day, draft, hint, settings, editingEventId, backfillTarget, assessmentTime, onEditPoint, onBackfillTime, onAddMealTime }) {
+  function TimelineSpark({ date, day, draft, hint, settings, editingEventId, backfillTarget, assessmentTime, includeCurrentPreview = true, compactTimeAxis = false, onEditPoint, onBackfillTime, onAddMealTime }) {
     const data = buildSparkTimeline({
       date,
       day,
@@ -3558,7 +3575,9 @@
       settings,
       editTarget: editingEventId ? { id: editingEventId, hungerLevel: draft?.hungerVisual ?? draft?.hungerLevel } : null,
       backfillTarget,
-      assessmentTime
+      assessmentTime,
+      includeCurrentPreview,
+      compactTimeAxis
     });
     const [actionMenu, setActionMenu] = React.useState(null);
     const pressRef = React.useRef(null);
@@ -3808,7 +3827,63 @@
         hint && h('span', { className: 'hes-spark__hint' }, hint),
         !data.hasHistory && h('span', { className: 'hes-spark__muted' }, 'история появится после записей')
       ),
-      h('div', { className: 'hes-spark__gesture-hint' }, 'тап — оценка · удержание — еда')
+      (onBackfillTime || onAddMealTime) && h('div', { className: 'hes-spark__gesture-hint' }, 'тап — оценка · удержание — еда')
+    );
+  }
+
+  function DiaryHungerCard({ date, day }) {
+    const [viewState, setViewState] = React.useState(() => ({
+      settings: readHungerFeatureSettings(),
+      revision: 0
+    }));
+
+    React.useEffect(() => {
+      const refresh = () => setViewState((current) => ({
+        settings: readHungerFeatureSettings(),
+        revision: current.revision + 1
+      }));
+      const handleStorage = (event) => {
+        if (event?.key === FEATURE_SETTINGS_KEY || event?.key === STORAGE_KEY) refresh();
+      };
+      global.addEventListener?.('heys:hunger-feature-settings-updated', refresh);
+      global.addEventListener?.('heys:hunger-energy-status-updated', refresh);
+      global.addEventListener?.('storage', handleStorage);
+      return () => {
+        global.removeEventListener?.('heys:hunger-feature-settings-updated', refresh);
+        global.removeEventListener?.('heys:hunger-energy-status-updated', refresh);
+        global.removeEventListener?.('storage', handleStorage);
+      };
+    }, []);
+
+    if (viewState.settings.showDiaryCard === false) return null;
+
+    const timelineDate = date || day?.date || todayKey();
+    const latestPoint = collectHungerTimeline()
+      .filter((point) => localDateKeyFromTs(point.t) === timelineDate)
+      .at(-1);
+    const statusText = latestPoint
+      ? latestPoint.level + '/10 · ' + formatShortTime(latestPoint.t)
+      : 'пока без оценок';
+
+    return h('section', {
+      className: 'hes-diary-hunger-card',
+      'aria-label': 'График голода за день',
+      'data-hunger-revision': viewState.revision
+    },
+      h('div', { className: 'hes-diary-hunger-card__header' },
+        h('div', { className: 'hes-diary-hunger-card__title' },
+          h('span', { 'aria-hidden': 'true' }, '◉'),
+          h('strong', null, 'Голод')
+        ),
+        h('span', { className: 'hes-diary-hunger-card__status' }, statusText)
+      ),
+      h(TimelineSpark, {
+        date: timelineDate,
+        day,
+        settings: viewState.settings,
+        includeCurrentPreview: false,
+        compactTimeAxis: true
+      })
     );
   }
 
@@ -5701,6 +5776,12 @@
 .hes-auto-toggle__switch::before{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.18);transition:transform .18s ease}
 .hes-auto-toggle input:checked+.hes-auto-toggle__switch{background:#434587}
 .hes-auto-toggle input:checked+.hes-auto-toggle__switch::before{transform:translateX(14px)}
+.hes-diary-hunger-card{box-sizing:border-box;margin:0 0 12px;padding:12px;border:1px solid rgba(67,69,135,.13);border-radius:18px;background:linear-gradient(145deg,rgba(248,251,255,.98),rgba(238,246,255,.88));box-shadow:0 8px 22px rgba(30,64,175,.07)}
+.hes-diary-hunger-card__header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 9px}
+.hes-diary-hunger-card__title{display:flex;align-items:center;gap:7px;color:#172033;font-size:14px;line-height:1.2}
+.hes-diary-hunger-card__title>span{color:#434587;font-size:12px}
+.hes-diary-hunger-card__status{border-radius:999px;background:rgba(255,255,255,.82);color:#64748b;padding:5px 8px;font-size:10px;font-weight:850;line-height:1;white-space:nowrap}
+.hes-diary-hunger-card .hes-spark{height:112px;background:rgba(255,255,255,.72)}
 .hes-slider{min-height:260px;border-radius:14px;background:#f8fbff;border:1px solid rgba(29,112,183,.12);padding:10px;display:grid;grid-template-columns:48px 1fr;grid-template-rows:auto 1fr;gap:8px;align-items:center}
 .hes-slider__value{grid-column:1/-1;text-align:center;font-size:32px;font-weight:900;color:#434587;line-height:1}
 .hes-slider__range{height:176px;width:44px;writing-mode:vertical-lr;direction:rtl;accent-color:#434587;justify-self:center}
@@ -5942,6 +6023,10 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-details-toggle,[data-theme="dark"] .hes-debug-toggle{background:#1f2937;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-settings-btn{background:#172033;color:#c7d2fe}
 [data-theme="dark"] .hes-settings-btn[aria-pressed="true"]{background:#c7d2fe;color:#172033}
+[data-theme="dark"] .hes-diary-hunger-card{background:linear-gradient(145deg,#172033,#111827);border-color:rgba(226,236,242,.13);box-shadow:none}
+[data-theme="dark"] .hes-diary-hunger-card__title{color:#f8fafc}
+[data-theme="dark"] .hes-diary-hunger-card__status{background:#1f2937;color:#cbd5e1}
+[data-theme="dark"] .hes-diary-hunger-card .hes-spark{background:#172033}
 [data-theme="dark"] .hes-verdict{background:#172033;border-color:rgba(82,160,216,.2)}
 [data-theme="dark"] .hes-verdict__title{color:#f8fafc}
 [data-theme="dark"] .hes-user-why,[data-theme="dark"] .hes-next-action,[data-theme="dark"] .hes-patterns{background:#1f2937;border-color:rgba(226,236,242,.14)}
@@ -6192,6 +6277,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     setAutoOpenEnabled: writeAutoOpenEnabled,
     getFeatureSettings: readHungerFeatureSettings,
     setFeatureSettings: writeHungerFeatureSettings,
+    DiaryCard: DiaryHungerCard,
     scheduleAutoOpen
   };
 

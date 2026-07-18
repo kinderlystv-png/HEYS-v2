@@ -46,6 +46,7 @@ const uiSource = fs.readFileSync(uiPath, 'utf8');
 const dayTabImplSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
 const dayTabRenderSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_render_v1.js'), 'utf8');
 const dayPageShellSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_page_shell.js'), 'utf8');
+const dayDiarySectionSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_diary_section.js'), 'utf8');
 eval(uiSource);
 
 const Storage = global.HEYS.HungerEnergyStatusStorage;
@@ -1837,6 +1838,7 @@ describe('Hunger Energy Status UI adapter', () => {
     ]);
 
     expect(Adapter.readHungerFeatureSettings()).toMatchObject({
+      showDiaryCard: true,
       microForecast: true,
       cravingGraph: true,
       mealEffectReview: true,
@@ -1852,6 +1854,7 @@ describe('Hunger Energy Status UI adapter', () => {
 
     Adapter.writeHungerFeatureSettings({ microForecast: false, cravingGraph: false, lowHungerDailyPromptLimit: 3 });
     expect(Adapter.readHungerFeatureSettings()).toMatchObject({
+      showDiaryCard: true,
       microForecast: false,
       cravingGraph: false,
       mealEffectReview: true,
@@ -1876,6 +1879,10 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(enabled.forecast).toMatchObject({ type: 'forecast' });
     expect(enabled.cravingPoints.map((point) => point.level)).toEqual([7, 8]);
     expect(enabled.cravingPath).toMatch(/^M/);
+
+    const migrated = Adapter.writeHungerFeatureSettings({ showReportsCard: false });
+    expect(migrated.showDiaryCard).toBe(false);
+    expect(migrated).not.toHaveProperty('showReportsCard');
   });
 
   it('renders a separate settings button and feature rails in the hunger modal', () => {
@@ -1886,6 +1893,7 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('Лимит уточнений за день');
     expect(uiSource).toContain("className: 'hes-limit-row'");
     expect(uiSource).toContain("id: 'microForecast'");
+    expect(uiSource).toContain("id: 'showDiaryCard'");
     expect(uiSource).toContain("id: 'cravingGraph'");
     expect(uiSource).toContain("id: 'mealEffectReview'");
     expect(uiSource).toContain("id: 'smartReminders'");
@@ -1898,6 +1906,37 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('lowHungerCompactConfirm !== false');
     expect(uiSource).toContain("className: 'hes-feature-row'");
     expect(uiSource).toContain('shouldShowSmartReminder');
+  });
+
+  it('reuses the hunger timeline after fiber as an optional diary card with a compact time axis', () => {
+    vi.setSystemTime(new Date('2026-07-05T13:20:00'));
+    Storage.writeEvents([{
+      id: 'report-point',
+      source: 'day-fab',
+      recordedAt: '2026-07-05T12:00:00',
+      hungerLevel: 4
+    }]);
+
+    const spark = Adapter.buildSparkTimeline({
+      date: '2026-07-05',
+      day: { date: '2026-07-05', meals: [{ time: '00:30', items: [{ name: 'late meal' }] }] },
+      draft: { hungerLevel: 9 },
+      includeCurrentPreview: false,
+      compactTimeAxis: true
+    });
+
+    expect(spark.hungerPoints).toHaveLength(1);
+    expect(spark.hungerPoints[0]).toMatchObject({ id: 'report-point', level: 4 });
+    expect(spark.forecast).toBeNull();
+    expect(spark.ticks.length).toBeGreaterThan(0);
+    expect(spark.ticks.every((tick) => /^\d{2}$/.test(tick.label))).toBe(true);
+    expect(spark.ticks.length).toBeLessThanOrEqual(5);
+    expect(uiSource).toContain('DiaryCard: DiaryHungerCard');
+    const fiberCardIndex = dayDiarySectionSource.lastIndexOf('React.createElement(DiaryFiberPanel');
+    const hungerCardIndex = dayDiarySectionSource.indexOf('React.createElement(DiaryHungerCard', fiberCardIndex);
+    const nextDiarySlotIndex = dayDiarySectionSource.indexOf('goalProgressBar,', hungerCardIndex);
+    expect(hungerCardIndex).toBeGreaterThan(fiberCardIndex);
+    expect(hungerCardIndex).toBeLessThan(nextDiarySlotIndex);
   });
 
   it('wires graph gestures to creation, long-press meal flow, undo, and follow-up context', () => {

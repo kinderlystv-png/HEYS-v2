@@ -4,21 +4,14 @@
 const { execFile } = require('node:child_process');
 const { readFileSync, existsSync } = require('node:fs');
 const { resolve } = require('node:path');
+const { listFunctions } = require('./function-inventory.cjs');
 
 const ROOT = resolve(__dirname, '..');
 const APP_LOCKBOX_ID = 'e6qrvefs3vn66jiamfk4';
 const COMMAND_TIMEOUT_MS = Number(process.env.HEYS_OPS_CHECK_TIMEOUT_MS || 12000);
 const TELEGRAM_TIMEOUT_MS = Number(process.env.HEYS_OPS_TELEGRAM_TIMEOUT_MS || 15000);
 
-const FUNCTIONS = [
-  'heys-bot-client',
-  'heys-maintenance',
-  'heys-client-daily-backup',
-  'heys-cron-security-alerts',
-  'heys-cron-reminders',
-  'heys-cron-trial-drip',
-  'heys-cron-photo-cleanup',
-];
+const FUNCTIONS = listFunctions({ group: 'automations', autoOnly: true });
 
 const TRIGGERS = [
   { name: 'heys-client-bot-poll', cron: '0/1 * * * ? *', tag: '$latest', payloadIncludes: '"poll":"heys-client-bot"' },
@@ -27,6 +20,7 @@ const TRIGGERS = [
   { name: 'heys-maintenance-trial-queue', cron: '0/5 * * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"trial_queue"' },
   { name: 'heys-maintenance-ops-canary', cron: '0 * * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"ops_canary"' },
   { name: 'heys-maintenance-daily', cron: '0 3 * * ? *', tag: '$latest' },
+  { name: 'heys-maintenance-daily-cleanup', cron: '30 3 * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"daily_cleanup"' },
   { name: 'heys-maintenance-daily-report', cron: '0 4 * * ? *', tag: '$latest', payloadIncludes: '"trigger_id":"daily_report"' },
   { name: 'heys-maintenance-kv-cleanup-weekly', cron: '0 2 ? * SUN *', tag: '$latest', payloadIncludes: '"trigger_id":"kv_cleanup"' },
   { name: 'heys-maintenance-weekly-report', cron: '0 16 ? * SUN *', tag: '$latest', payloadIncludes: '"trigger_id":"weekly_report"' },
@@ -35,6 +29,8 @@ const TRIGGERS = [
   { name: 'heys-cron-reminders-timer', cron: '*/15 * * * ? *', tag: '$latest' },
   { name: 'heys-cron-trial-drip-timer', cron: '0 7 * * ? *', tag: '$latest' },
   { name: 'heys-cron-photo-cleanup-timer', cron: '0 6 ? * MON *', tag: '$latest' },
+  { name: 'heys-cron-speechkit-transcribe-timer', cron: '0/1 * * * ? *', tag: '$latest' },
+  { name: 'heys-snapshot-demo-hourly', cron: '0 * ? * * *', tag: '$latest' },
 ];
 
 const TELEGRAM_BOTS = [
@@ -42,6 +38,25 @@ const TELEGRAM_BOTS = [
   { label: 'client', key: 'TELEGRAM_CLIENT_BOT_TOKEN' },
   { label: 'start', key: 'HEYS_START_BOT_TOKEN' },
 ];
+
+const EXPECTED_HEARTBEAT_TASKS = Object.freeze([
+  'backup_chain',
+  'cron_photo_cleanup',
+  'cron_reminders',
+  'cron_security_alerts',
+  'cron_speechkit_transcribe',
+  'cron_trial_drip',
+  'daily_cleanup',
+  'daily_report',
+  'kv_health',
+  'ops_canary',
+  'telegram_client_poll',
+  'telegram_curator_poll',
+  'telegram_start_poll',
+  'trial_queue',
+  'weekly_report',
+  'snapshot_demo',
+]);
 
 const EXPECTED_APP_LOCKBOX_KEYS = [
   'TELEGRAM_BOT_TOKEN',
@@ -180,10 +195,15 @@ function evaluateWebhookInfo(bot) {
   return problems;
 }
 
-function evaluateHeartbeatRows(rows = []) {
-  return rows
+function evaluateHeartbeatRows(rows = [], expectedTasks = []) {
+  const stale = rows
     .filter((row) => row.stale === true || row.stale === 't')
     .map((row) => `${row.task}:${row.minutes_ago || row.hours_ago || '?'}m`);
+  const present = new Set(rows.map((row) => row.task));
+  const missing = expectedTasks
+    .filter((task) => !present.has(task))
+    .map((task) => `${task}:missing`);
+  return [...stale, ...missing];
 }
 
 function evaluateBackupRow(row) {
@@ -282,6 +302,39 @@ async function queryDbJson(sql) {
       return [key, raw];
     }));
   });
+}
+
+async function collectDeadManStatus(query = queryDbJson) {
+  const [heartbeatRows, backupRows] = await Promise.all([
+    query(`
+      SELECT task,
+             round(extract(epoch FROM now() - last_ok_at) / 60)::int AS minutes_ago,
+             (last_ok_at < now() - max_silence) AS stale
+        FROM maintenance_heartbeat
+       ORDER BY task
+    `),
+    query(`
+      SELECT status,
+             round(extract(epoch FROM now() - run_at) / 3600)::int AS hours_ago,
+             success_count::int,
+             error_count::int
+        FROM backup_run_log
+       ORDER BY run_at DESC
+       LIMIT 1
+    `),
+  ]);
+  const issues = [];
+  const heartbeatIssues = evaluateHeartbeatRows(heartbeatRows, EXPECTED_HEARTBEAT_TASKS);
+  issues.push(...heartbeatIssues.map((issue) => `heartbeat:${issue}`));
+  const backup = backupRows[0] || null;
+  const backupIssues = evaluateBackupRow(backup);
+  issues.push(...backupIssues.map((issue) => `backup:${issue}`));
+  return {
+    ok: issues.length === 0,
+    issues,
+    heartbeats: heartbeatRows,
+    backup,
+  };
 }
 
 async function collectStatus() {
@@ -384,7 +437,7 @@ async function collectStatus() {
   const backup = backupRows[0] || null;
   const backupIssues = evaluateBackupRow(backup);
   if (backupIssues.length) issues.push(...backupIssues.map((p) => `backup:${p}`));
-  const staleHeartbeats = evaluateHeartbeatRows(heartbeatRows);
+  const staleHeartbeats = evaluateHeartbeatRows(heartbeatRows, EXPECTED_HEARTBEAT_TASKS);
   if (staleHeartbeats.length) issues.push(...staleHeartbeats.map((p) => `heartbeat:${p}`));
 
   return { ok: issues.length === 0, issues, functions, triggers, telegram, backup, heartbeats: heartbeatRows };
@@ -519,6 +572,17 @@ function printHuman(status) {
 
 async function main() {
   const args = new Set(process.argv.slice(2));
+  if (args.has('--dead-man')) {
+    const status = await collectDeadManStatus();
+    if (args.has('--json')) {
+      console.log(JSON.stringify(status, null, 2));
+    } else {
+      console.log(status.ok ? '✅ Automation dead-man: OK' : '🚨 Automation dead-man: CHECK REQUIRED');
+      for (const issue of status.issues) console.log(`- ${issue}`);
+    }
+    if (args.has('--strict') && !status.ok) process.exitCode = 1;
+    return;
+  }
   if (args.has('--secrets')) {
     const inventory = await collectSecretInventory();
     console.log(JSON.stringify(inventory, null, 2));
@@ -557,6 +621,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  FUNCTIONS,
+  TRIGGERS,
   redact,
   findPlaintextSecretEnv,
   evaluateTrigger,
@@ -564,6 +630,8 @@ module.exports = {
   evaluateHeartbeatRows,
   evaluateBackupRow,
   latestVersion,
+  EXPECTED_HEARTBEAT_TASKS,
+  collectDeadManStatus,
   collectSecretInventory,
   remediateSafeTelegramWebhooks,
   runCanaries,

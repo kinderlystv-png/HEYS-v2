@@ -1362,6 +1362,9 @@
 
     function readDismissedUntrackedTailDates() {
         try {
+            if (Store && typeof Store.getChronoUntrackedTailDismissedDates === 'function') {
+                return Store.getChronoUntrackedTailDismissedDates();
+            }
             const parsed = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
                 ? HEYS.utils.lsGet(UNTRACKED_TAIL_DISMISS_KEY, [])
                 : [];
@@ -1372,6 +1375,11 @@
     }
 
     function saveDismissedUntrackedTailDates(dates) {
+        if (Store && typeof Store.saveChronoUntrackedTailDismissedDates === 'function') {
+            return Store.saveChronoUntrackedTailDismissedDates(dates, {
+                reason: 'chrono-untracked-tail-dismiss',
+            });
+        }
         const normalized = Array.from(new Set((Array.isArray(dates) ? dates : [])
             .map((date) => String(date || '').slice(0, 10))
             .filter(Boolean)))

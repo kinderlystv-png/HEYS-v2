@@ -25,7 +25,7 @@ function loadStepModal() {
   return window.HEYS.StepModal;
 }
 
-function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired = false } = {}) {
+function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired = false, yesterdayReady = true } = {}) {
   const values = new Map([[DAY_KEY, { date: DATE_KEY, ...day }]]);
   if (ledger) values.set(PROGRESS_KEY, structuredClone(ledger));
   localStorage.setItem(`heys_${CLIENT_ID}_profile`, JSON.stringify({
@@ -50,9 +50,9 @@ function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired 
       shouldShowMeasurements: () => false,
     },
     Refeed: { shouldShowRefeedStep: () => false },
-    YesterdayVerifyReady: true,
+    YesterdayVerifyReady: yesterdayReady,
     YesterdayVerify: {
-      stepRegistered: true,
+      stepRegistered: yesterdayReady,
       shouldShow: vi.fn(() => yesterdayRequired),
     },
   };
@@ -116,6 +116,25 @@ afterEach(() => {
 });
 
 describe('StepModal forced visibility', () => {
+  it('renders a frozen planned step when its config registers after mount', () => {
+    const modal = loadStepModal();
+    const view = render(React.createElement(modal.Component, {
+      steps: ['sleepTime'],
+      freezeVisibleSteps: true,
+      showTip: false,
+    }));
+
+    expect(view.container.textContent).toBe('');
+    act(() => {
+      modal.registerStep('sleepTime', {
+        title: 'Сон',
+        component: () => React.createElement('div', null, 'sleep-time-ready'),
+      });
+    });
+
+    expect(screen.getByText('sleep-time-ready')).toBeTruthy();
+  });
+
   it('keeps a planned step visible without changing ordinary shouldShow filtering', () => {
     const modal = loadStepModal();
     const component = (label) => () => React.createElement('div', null, label);
@@ -188,7 +207,7 @@ describe('StepModal forced visibility', () => {
 });
 
 describe('morning check-in journal resume', () => {
-  it('reproduces the cross-surface incident and resumes only yesterdayVerify with the same flow', () => {
+  it('reconciles an obsolete planned yesterdayVerify after the current-day decision is already stored', () => {
     const { utils, values } = loadMorning({
       day: completedDay(),
       profile: { stepsGoal: 9000 },
@@ -199,16 +218,28 @@ describe('morning check-in journal resume', () => {
     const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
     const written = values.get(PROGRESS_KEY);
 
-    expect(plan.steps).toEqual(['yesterdayVerify']);
+    expect(plan.steps).toEqual([]);
     expect(plan.flowId).toBe('flow-original');
     expect(written.plannedStepIds).toHaveLength(9);
     expect(written.steps.measurements.status).toBe('skipped');
     expect(written.steps.cold_exposure.status).toBe('saved_local');
-    expect(written.steps.__flow__.status).toBe('open');
-    expect(utils.getBlockingMorningSteps({ ledger: written, dateKey: DATE_KEY, clientId: CLIENT_ID }))
-      .toEqual([{ id: 'yesterdayVerify', status: 'planned', completeByData: false }]);
-    written.steps.yesterdayVerify.status = 'synced';
+    expect(written.steps.__flow__.status).toBe('saved_local');
     expect(utils.getBlockingMorningSteps({ ledger: written, dateKey: DATE_KEY, clientId: CLIENT_ID })).toEqual([]);
+  });
+
+  it('keeps a planned yesterdayVerify blocking while its decision module is not ready', () => {
+    const { utils } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger: fullIncidentLedger(),
+      yesterdayReady: false,
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+
+    expect(plan.steps).toEqual(['yesterdayVerify']);
+    expect(utils.getBlockingMorningSteps({ ledger: fullIncidentLedger(), dateKey: DATE_KEY, clientId: CLIENT_ID }))
+      .toEqual([{ id: 'yesterdayVerify', status: 'planned', completeByData: false }]);
   });
 
   it('does not repeat explicit empty answers, skipped measurements, or a completed final step', () => {
@@ -292,10 +323,12 @@ describe('morning check-in journal resume', () => {
 
   it('does not let a session flag hide an unfinished journal or a current yesterday check', () => {
     sessionStorage.setItem(`heys_morning_checkin_done_${CLIENT_ID}_${DATE_KEY}`, 'true');
+    const unfinishedLedger = fullIncidentLedger();
+    unfinishedLedger.steps.morningRoutine = { status: 'planned' };
     const withLedger = loadMorning({
       day: completedDay(),
       profile: { stepsGoal: 9000 },
-      ledger: fullIncidentLedger(),
+      ledger: unfinishedLedger,
     });
     expect(withLedger.HEYS.shouldShowMorningCheckin()).toBe(true);
 

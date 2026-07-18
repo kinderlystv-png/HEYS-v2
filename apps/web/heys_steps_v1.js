@@ -1279,7 +1279,10 @@
       dayData.date = dateKey;
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
-      saveDayData(dateKey, dayData);
+      const saved = saveDayData(dateKey, dayData);
+      if (!saved) {
+        throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');
+      }
 
       // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
       const profile = lsGet('heys_profile', {});
@@ -1303,6 +1306,10 @@
           detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true }
         }));
       }
+      return {
+        affectedKeys: [`heys_dayv2_${dateKey}`],
+        completed: true
+      };
     },
     xpAction: 'weight_logged'
   });

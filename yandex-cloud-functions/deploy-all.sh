@@ -114,17 +114,21 @@ payments_env_ready() {
         [ -n "$YUKASSA_WEBHOOK_SECRET" ]
 }
 
-API_FUNCTIONS=(
-    heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health
-    heys-api-payments heys-api-push heys-api-messages heys-api-photos
-    heys-cron-speechkit-transcribe
-)
+INVENTORY_SCRIPT="$SCRIPT_DIR/function-inventory.cjs"
+if [ ! -f "$INVENTORY_SCRIPT" ]; then
+    echo -e "${RED}❌ Function inventory not found: $INVENTORY_SCRIPT${NC}"
+    exit 1
+fi
 
-AUTOMATION_FUNCTIONS=(
-    heys-bot-client heys-maintenance heys-client-daily-backup
-    heys-cron-security-alerts heys-cron-reminders heys-cron-trial-drip
-    heys-cron-photo-cleanup heys-snapshot-demo
-)
+API_FUNCTIONS=()
+while IFS= read -r func_name; do
+    API_FUNCTIONS+=("$func_name")
+done < <(node "$INVENTORY_SCRIPT" --list --group api --auto-only)
+
+AUTOMATION_FUNCTIONS=()
+while IFS= read -r func_name; do
+    AUTOMATION_FUNCTIONS+=("$func_name")
+done < <(node "$INVENTORY_SCRIPT" --list --group automations --auto-only)
 
 selected_functions() {
     if [ -n "$TARGET_FUNC" ]; then
@@ -327,17 +331,6 @@ build_env_flags() {
         local k=$1
         env_flags+=" --environment $k=${!k}"
     }
-    # Secret values are loaded by shared/secrets.js from Lockbox at cold start.
-    # The placeholder keeps startup guards/module initialization compatible
-    # without copying the actual secret into Cloud Functions environment vars.
-    _add_lockbox_secret() {
-        local k=$1
-        env_flags+=" --environment $k=__IN_LOCKBOX__${k}__"
-    }
-    _add_optional_lockbox_secret() {
-        local k=$1
-        if [ -n "${!k}" ]; then _add_lockbox_secret "$k"; fi
-    }
 
     # Lockbox secret IDs (constants).
     # heys-app-secrets: TELEGRAM_*, INTERNAL_CRON_TOKEN, APP_URL, JWT_SECRET,
@@ -352,10 +345,9 @@ build_env_flags() {
     # PG + LOCKBOX_DB_SECRET_ID — для всех функций с БД (кроме health/sms)
     if [[ ! "$func_name" =~ (health|sms) ]]; then
         local k
-        for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_SSL; do
+        for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD PG_SSL; do
             _add_required "$k"
         done
-        _add_lockbox_secret PG_PASSWORD
         env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$LOCKBOX_DB_ID"
     fi
 
@@ -366,13 +358,13 @@ build_env_flags() {
     fi
 
     # Backup-функции (heys-client-daily-backup, heys-snapshot-demo) + photo-cleanup:
-    # S3 + TG приходят из Lockbox; env содержит только безопасные placeholders/config.
+    # S3 + TG (env fallback пока .env активен — initSecrets overlay'ит Lockbox значениями)
     if [[ "$func_name" =~ (backup|snapshot-demo|photo-cleanup) ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
-        _add_optional_lockbox_secret TELEGRAM_BOT_TOKEN
-        _add TELEGRAM_CHAT_ID
-        _add_optional_lockbox_secret S3_ACCESS_KEY_ID
-        _add_optional_lockbox_secret S3_SECRET_ACCESS_KEY
+        local k
+        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            _add "$k"
+        done
     fi
 
     # SpeechKit transcription worker: DB + App Lockbox, optional SpeechKit env
@@ -391,17 +383,22 @@ build_env_flags() {
     fi
 
     # heys-api-rpc: TG для real-time profile pollution alerts (2026-06-01 wave 2).
-    # initSecrets через shared/secrets.js читает TELEGRAM_* из Lockbox.
+    # initSecrets через shared/secrets.js уже читает TELEGRAM_* из Lockbox; здесь
+    # явный env-fallback на случай если Lockbox lag-нет на cold start.
     if [[ "$func_name" == "heys-api-rpc" ]]; then
-        _add_optional_lockbox_secret TELEGRAM_BOT_TOKEN
-        _add TELEGRAM_CHAT_ID
+        local k
+        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+            _add "$k"
+        done
     fi
 
     # Photos функция: S3 credentials для signed URL генерации
     if [[ "$func_name" == "heys-api-photos" ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
-        _add_optional_lockbox_secret S3_ACCESS_KEY_ID
-        _add_optional_lockbox_secret S3_SECRET_ACCESS_KEY
+        local k
+        for k in S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            _add "$k"
+        done
     fi
 
     # heys-snapshot-demo: override S3_BUCKET (default bucket "heys-backups"
@@ -419,12 +416,12 @@ build_env_flags() {
     # SEC-024 v2 (2026-06-14): добавлен heys-api-rest для curator-JWT verify в
     # enforceClientKvAuthForGet middleware (cross-client read detection для кураторов).
     if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]] || [[ "$func_name" == "heys-api-photos" ]] || [[ "$func_name" == "heys-api-rest" ]]; then
-        _add_lockbox_secret JWT_SECRET
+        _add_required JWT_SECRET
     fi
 
     # SESSION_SECRET — только auth
     if [[ "$func_name" == "heys-api-auth" ]]; then
-        _add_lockbox_secret SESSION_SECRET
+        _add_required SESSION_SECRET
     fi
 
     # Payments: YUKASSA_* + INTERNAL_CRON_TOKEN (poll-фолбэк P0.4)
@@ -437,8 +434,10 @@ build_env_flags() {
 
     # Cron drip-уведомлений (Phase 1, P0.7)
     if [[ "$func_name" == "heys-cron-trial-drip" ]]; then
-        _add_optional_lockbox_secret INTERNAL_CRON_TOKEN
-        _add APP_URL
+        local k
+        for k in INTERNAL_CRON_TOKEN APP_URL; do
+            _add "$k"
+        done
     fi
 
     # Telegram bots: existing client PIN/notification bot + HEYS Start quiz bot.
@@ -459,9 +458,10 @@ build_env_flags() {
     # push notifications перестают доставляться (FATAL: VAPID keys not configured).
     # validate_function_env выше гарантирует что переменные не пусты.
     if [[ "$func_name" =~ (push|reminders|messages) ]]; then
-        _add_required VAPID_PUBLIC_KEY
-        _add_lockbox_secret VAPID_PRIVATE_KEY
-        _add_required VAPID_SUBJECT
+        local k
+        for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+            _add_required "$k"
+        done
     fi
 
     # SEC-023 hot-fix 2026-06-14: heys-api-rest в STRICT-mode для write-context.
@@ -730,7 +730,7 @@ if [ -n "$TARGET_FUNC" ]; then
     if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
         SHOULD_UPDATE_GATEWAY=true
     fi
-    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ]; then
+    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
         ensure_speechkit_trigger
     fi
 else
@@ -739,7 +739,7 @@ else
         [ -z "$func_name" ] && continue
         deploy_function "$func_name"
     done < <(selected_functions)
-    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
+    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
         ensure_speechkit_trigger
     fi
     

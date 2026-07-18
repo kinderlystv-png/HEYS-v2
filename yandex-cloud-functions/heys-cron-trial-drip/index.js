@@ -32,6 +32,15 @@ function getAppUrl() {
   return process.env.APP_URL || 'https://app.heyslab.ru';
 }
 
+async function recordWorkerHeartbeat(client) {
+  await client.query(
+    `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+     VALUES ('cron_trial_drip', now(), NULL, interval '30 hours')
+     ON CONFLICT (task) DO UPDATE
+       SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+  );
+}
+
 // ⚠️ 152-ФЗ: имя клиента (ПДн) НЕ передаём через Telegram API
 // (серверы api.telegram.org за пределами РФ). Текст обезличен, поэтому
 // исходящий трафик в Telegram содержит только статус подписки и chat_id —
@@ -148,6 +157,7 @@ module.exports.handler = async function (event, context) {
         console.error(`[CRON-DRIP] error stage=${stage} client=${row.client_id}:`, e.message);
       }
     }
+    await recordWorkerHeartbeat(client);
   } finally {
     client.release();
   }

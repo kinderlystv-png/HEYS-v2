@@ -49,6 +49,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
+    function QuickActionsFabGroup({ id, onAddWater, onAddMeal, hungerContext = {} }) {
+        const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
+        const MessageFabButton = HEYS.Messenger?.FabButton;
+
+        return React.createElement('div', {
+            className: 'fab-group',
+            ...(id ? { id } : {})
+        },
+            React.createElement('button', {
+                className: 'water-fab',
+                onClick: onAddWater,
+                'aria-label': 'Добавить стакан воды'
+            }, '🥛'),
+            React.createElement('button', {
+                className: 'meal-fab',
+                onClick: onAddMeal,
+                'aria-label': 'Добавить приём пищи'
+            }, '🍽️'),
+            HungerFabButton
+                ? React.createElement(HungerFabButton, {
+                    key: 'hunger-fab',
+                    context: hungerContext
+                })
+                : React.createElement('button', {
+                    className: 'hunger-energy-fab',
+                    onClick: () => HEYS.HungerEnergyStatusModal?.show?.(hungerContext),
+                    'aria-label': 'Открыть оценку голода'
+                }, React.createElement('svg', {
+                    className: 'hes-fab-icon',
+                    viewBox: '0 0 24 24',
+                    focusable: 'false',
+                    'aria-hidden': 'true'
+                },
+                    React.createElement('circle', { cx: 12, cy: 12, r: 8.2 }),
+                    React.createElement('path', { d: 'M8.4 12h7.2' })
+                )),
+            MessageFabButton
+                ? React.createElement(MessageFabButton, { key: 'msg-fab' })
+                : React.createElement('button', {
+                    className: 'message-fab',
+                    onClick: () => HEYS.Messenger?.openModal?.(),
+                    'aria-label': 'Написать куратору'
+                }, '💬')
+        );
+    }
+
     function renderDayPage(params) {
         const {
             isReadOnly,
@@ -387,84 +433,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 reportsFullscreenModal,
 
-                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement('div', {
-                    className: 'fab-group',
-                    id: 'tour-fab-buttons'
-                },
-                    React.createElement('button', {
-                        className: 'water-fab',
-                        onClick: (e) => addWater(200, {
-                            source: 'day-fab',
-                            sourceEl: e.currentTarget
-                        }),
-                        'aria-label': 'Добавить стакан воды'
-                    }, '🥛'),
-                    React.createElement('button', {
-                        className: 'meal-fab',
-                        onClick: () => {
-                            if (mobileSubTab !== 'diary' && window.HEYS?.App?.setTab) {
-                                window.HEYS.App.setTab('diary');
-                                setTimeout(() => {
-                                    const heading = document.getElementById('diary-heading');
-                                    if (heading) {
-                                        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }
-                                    setTimeout(() => addMeal(), 800);
-                                }, 200);
-                            } else {
+                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
+                    id: 'tour-fab-buttons',
+                    onAddWater: (e) => addWater(200, {
+                        source: 'day-fab',
+                        sourceEl: e.currentTarget
+                    }),
+                    onAddMeal: () => {
+                        if (mobileSubTab !== 'diary' && window.HEYS?.App?.setTab) {
+                            window.HEYS.App.setTab('diary');
+                            setTimeout(() => {
                                 const heading = document.getElementById('diary-heading');
                                 if (heading) {
                                     heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 }
                                 setTimeout(() => addMeal(), 800);
+                            }, 200);
+                        } else {
+                            const heading = document.getElementById('diary-heading');
+                            if (heading) {
+                                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
-                        },
-                        'aria-label': 'Добавить приём пищи'
-                    }, '🍽️'),
-                    window.HEYS?.HungerEnergyStatusModal?.FabButton
-                        ? React.createElement(window.HEYS.HungerEnergyStatusModal.FabButton, {
-                            key: 'hunger-fab',
-                            context: {
-                                source: 'day-fab',
-                                date,
-                                day,
-                                prof,
-                                eatenKcal,
-                                optimum: displayOptimum || optimum,
-                                tdee,
-                                caloricDebt
-                            }
-                        })
-                        : React.createElement('button', {
-                            className: 'hunger-energy-fab',
-                            onClick: () => window.HEYS?.HungerEnergyStatusModal?.show?.({
-                                source: 'day-fab',
-                                date,
-                                day,
-                                prof,
-                                eatenKcal,
-                                optimum: displayOptimum || optimum,
-                                tdee,
-                                caloricDebt
-                            }),
-                            'aria-label': 'Открыть оценку голода'
-                        }, React.createElement('svg', {
-                            className: 'hes-fab-icon',
-                            viewBox: '0 0 24 24',
-                            focusable: 'false',
-                            'aria-hidden': 'true'
-                        },
-                            React.createElement('circle', { cx: 12, cy: 12, r: 8.2 }),
-                            React.createElement('path', { d: 'M8.4 12h7.2' })
-                        )),
-                    window.HEYS?.Messenger?.FabButton
-                        ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
-                        : React.createElement('button', {
-                            className: 'message-fab',
-                            onClick: () => window.HEYS?.Messenger?.openModal?.(),
-                            'aria-label': 'Написать куратору'
-                        }, '💬')
-                ),
+                            setTimeout(() => addMeal(), 800);
+                        }
+                    },
+                    hungerContext: {
+                        source: 'day-fab',
+                        date,
+                        day,
+                        prof,
+                        eatenKcal,
+                        optimum: displayOptimum || optimum,
+                        tdee,
+                        caloricDebt
+                    }
+                }),
 
                 diarySection,
 
@@ -703,6 +706,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     HEYS.dayPageShell = {
-        renderDayPage
+        renderDayPage,
+        QuickActionsFabGroup
     };
 })(window);

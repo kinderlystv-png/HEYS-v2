@@ -867,7 +867,7 @@
           if (name.includes(source.toLowerCase())) {
             found[nutrient].sources.push(source);
             // Грубая оценка (можно улучшить с реальными данными)
-            found[nutrient].amount += (item.grams || 100) * 0.01;
+            found[nutrient].amount += HEYS.models.normalizeItemGrams(item.grams, 100) * 0.01;
           }
         }
       }
@@ -1027,7 +1027,7 @@
         // Проверяем жирность для жирорастворимых
         let mealFat = 0;
         for (const item of lastMeal.items) {
-          mealFat += (item.fat100 || 0) * (item.grams || 100) / 100;
+          mealFat += (item.fat100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
         }
 
         if (mealFat >= 10) {

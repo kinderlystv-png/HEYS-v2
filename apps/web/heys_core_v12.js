@@ -216,20 +216,21 @@
       // Store.set's scoped() is idempotent: keys already containing the cid are returned unchanged,
       // so nsKey-scoped keys (from the client-scoped IIFE below) are never double-prefixed.
       if (window.HEYS?.store?.set) {
-        window.HEYS.store.set(key, val);
+        const stored = window.HEYS.store.set(key, val);
+        if (stored === false) return false;
         const type = key.includes('dayv2') ? 'meal'
           : key.includes('product') ? 'product'
             : key.includes('profile') ? 'profile'
               : 'data';
         window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
-        return;
+        return true;
       }
       // Store not yet ready (early boot) — write uncompressed.
       // Skip if identical to avoid spurious events.
       const serialized = JSON.stringify(val);
       try {
         const existing = localStorage.getItem(key);
-        if (existing === serialized) return;
+        if (existing === serialized) return true;
       } catch (_) { /* proceed to write */ }
       localStorage.setItem(key, serialized);
       const type = key.includes('dayv2') ? 'meal'
@@ -237,8 +238,10 @@
           : key.includes('profile') ? 'profile'
             : 'data';
       window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
+      return true;
     } catch (e) {
       console.error('[lsSet] Error saving:', key, e);
+      return false;
     }
   }
 
@@ -4883,13 +4886,19 @@
 	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
 	      let finalProduct = product;
 	      let forceCloudAck = !!opts.forceCloudAck;
+	      const Overlay = HEYS.OverlayStore;
 	      if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
 	        const cloned = HEYS.products.addFromShared?.(product);
 	        if (cloned) {
 	          finalProduct = cloned;
 	        }
 	      }
-	      const Overlay = HEYS.OverlayStore;
+	      const overlayOn = !!(HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2'));
+	      if (overlayOn && typeof Overlay?.resolveMealProduct === 'function') {
+	        const nutrientReady = Overlay.resolveMealProduct(finalProduct);
+	        if (!nutrientReady.ok) return nutrientReady;
+	        finalProduct = nutrientReady.product;
+	      }
 	      const rows = Overlay?.readRaw?.() || [];
 	      const pid = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
 	      const sharedId = finalProduct.shared_origin_id || finalProduct.sharedOriginId || null;

@@ -132,6 +132,60 @@ describe('OverlayStore cloud snapshot sync suppression', () => {
     ]);
   });
 
+  it('keeps a missing Type A base visible but blocks meal use until nutrients resolve', () => {
+    const { context } = createOverlayHarness();
+    const partialShared = new Map([
+      ['shared-ready', {
+        id: 'shared-ready',
+        name: 'Готовый продукт',
+        kcal100: 120,
+        protein100: 10,
+      }],
+    ]);
+    context.HEYS.OverlayStore.writeRaw([
+      { id: 'local-ready', shared_origin_id: 'shared-ready', in_my_list: true },
+      {
+        id: 'local-pending',
+        shared_origin_id: 'shared-pending',
+        overrides: { name: 'Ожидающий продукт' },
+        in_my_list: true,
+      },
+    ]);
+
+    const partialView = context.HEYS.OverlayStore.toMergedView(partialShared);
+    const pending = partialView.find((product) => product.id === 'local-pending');
+    expect(partialView).toHaveLength(2);
+    expect(pending).toMatchObject({
+      name: 'Ожидающий продукт',
+      _nutrientsPending: true,
+      _selectionDisabled: true,
+    });
+    expect(context.HEYS.OverlayStore.resolveMealProduct(pending, partialShared)).toMatchObject({
+      ok: false,
+      reason: 'shared_nutrients_pending',
+    });
+
+    const refreshedShared = new Map(partialShared);
+    refreshedShared.set('shared-pending', {
+      id: 'shared-pending',
+      name: 'Ожидающий продукт',
+      kcal100: 80,
+      protein100: 4,
+    });
+    const refreshedView = context.HEYS.OverlayStore.toMergedView(refreshedShared);
+    const resolved = refreshedView.filter((product) => product.id === 'local-pending');
+
+    expect(refreshedView).toHaveLength(2);
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0]).toMatchObject({ kcal100: 80, protein100: 4 });
+    expect(resolved[0]._nutrientsPending).toBeUndefined();
+    expect(context.HEYS.OverlayStore.resolveMealProduct(resolved[0], refreshedShared)).toMatchObject({
+      ok: true,
+      reason: 'shared_nutrients_ready',
+      product: expect.objectContaining({ id: 'local-pending', kcal100: 80 }),
+    });
+  });
+
   it('links legacy products to shared rows by any shared barcode alias', () => {
     const { context } = createOverlayHarness();
     const sharedById = new Map([

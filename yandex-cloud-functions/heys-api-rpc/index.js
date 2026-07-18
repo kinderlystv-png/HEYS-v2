@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKv, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 const PLANNING_RECORD_MERGE_KEYS = new Set([
@@ -2995,8 +2995,9 @@ module.exports.handler = async function (event, context) {
                   }
                 }
 
-                mergedValue = mergeScalarKv(incomingValue, currentValue);
-                mergeOutcome = 'scalar_merged';
+                const scalarMerge = mergeScalarKvWithOutcome(k, incomingValue, currentValue);
+                mergedValue = scalarMerge.value;
+                mergeOutcome = scalarMerge.outcome;
 
                 // 📊 Anomaly detection: wholesale identity change на немолодой row.
                 if (k === 'heys_profile') {

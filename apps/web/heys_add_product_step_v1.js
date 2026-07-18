@@ -2378,7 +2378,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
-        grams: item.grams || 100,
+        grams: HEYS.models.normalizeItemGrams(item.grams, 100),
         kcal100: item.kcal100,
         protein100: item.protein100,
         fat100: item.fat100,
@@ -2437,7 +2437,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const items = mealItems.map(item => ({
         product_id: item.product_id,
         name: item.name,
-        grams: item.grams || 100,
+        grams: HEYS.models.normalizeItemGrams(item.grams, 100),
         kcal100: item.kcal100,
         protein100: item.protein100,
         fat100: item.fat100,
@@ -2732,7 +2732,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const calcKcal = (item) =>
-      item.kcal100 ? Math.round((item.kcal100 * (item.grams || 100)) / 100) : 0;
+      item.kcal100 ? Math.round((item.kcal100 * HEYS.models.normalizeItemGrams(item.grams, 100)) / 100) : 0;
 
     const pluralProduct = (n) =>
       n === 1 ? 'продукт' : n <= 4 ? 'продукта' : 'продуктов';
@@ -2989,7 +2989,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
                 React.createElement('div', { className: 'mpr-create-item-bottom' },
                   React.createElement('div', { className: 'mpr-create-item-kcal' },
-                    `${Math.round(((item.kcal100 || 0) * (item.grams || 100)) / 100)} ккал`
+                    `${Math.round(((item.kcal100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100)) / 100)} ккал`
                   ),
                   React.createElement('div', { className: 'mpr-preview-item-grams' },
                     React.createElement('button', {
@@ -5188,6 +5188,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false, showEditAction = false) => {
       product = mergeSharedBarcodeIntoProductForAddStep(product);
       const pid = String(product.id ?? product.product_id ?? product.name);
+      const isNutrientsPending = product._nutrientsPending === true || product._selectionDisabled === true;
       const isFav = favorites.has(pid);
       const isHidden = hiddenProducts.has(pid);
       const usageCount = showUsageCount ? getUsageCount(pid, product.name) : 0;
@@ -5215,9 +5216,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return React.createElement('div', {
         key: pid,
-        className: 'aps-product-card',
+        className: 'aps-product-card' + (isNutrientsPending ? ' aps-product-card--disabled' : ''),
         style: harmToneStyle || undefined,
-        onClick: () => selectProduct(product)
+        onClick: isNutrientsPending ? undefined : () => selectProduct(product),
+        'aria-disabled': isNutrientsPending ? 'true' : undefined
       },
         // Иконка категории
         product.category && React.createElement('span', {
@@ -5235,22 +5237,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ),
           showProductBrand && React.createElement('div', { className: 'aps-product-brand' }, highlightedBrand),
           React.createElement('div', { className: 'aps-product-meta' },
-            React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
-            React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-            React.createElement('span', { className: 'aps-meta-macros' },
-              'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
-            ),
-            showUsageCount && React.createElement(React.Fragment, null,
-              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-              React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
-            ),
-            barcode && React.createElement(React.Fragment, null,
-              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-              React.createElement('span', { className: 'aps-product-barcode' },
-                barcode,
-                barcodeCount > 1 ? ` +${barcodeCount - 1}` : ''
+            isNutrientsPending
+              ? React.createElement('span', { className: 'aps-meta-pending' }, 'Состав загружается')
+              : React.createElement(React.Fragment, null,
+                React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
+                React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                React.createElement('span', { className: 'aps-meta-macros' },
+                  'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
+                ),
+                showUsageCount && React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                  React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
+                ),
+                barcode && React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                  React.createElement('span', { className: 'aps-product-barcode' },
+                    barcode,
+                    barcodeCount > 1 ? ` +${barcodeCount - 1}` : ''
+                  )
+                )
               )
-            )
           )
         ),
 
@@ -8679,7 +8685,7 @@ NOVA: 1
       (dayData.meals || []).forEach(m => {
         const items = Array.isArray(m?.items) ? m.items : [];
         items.forEach(it => {
-          const g = it.grams || 100;
+          const g = HEYS.models.normalizeItemGrams(it.grams, 100);
           const pid = it.product_id || it.name;
           const prod = (context?.products || []).find(p => (p.id || p.name) === pid);
           if (prod) total += (prod.kcal100 || 0) * g / 100;

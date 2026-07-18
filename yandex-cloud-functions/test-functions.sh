@@ -5,15 +5,17 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INVENTORY_SCRIPT="$SCRIPT_DIR/function-inventory.cjs"
 
-ALL_FUNCTIONS=(
-  heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-sms
-  heys-api-health heys-api-payments heys-api-push heys-api-messages
-  heys-api-photos heys-bot-client heys-cron-trial-drip
-  heys-cron-security-alerts heys-cron-speechkit-transcribe
-  heys-cron-reminders heys-cron-photo-cleanup heys-client-daily-backup
-  heys-snapshot-demo heys-maintenance
-)
+if [ ! -f "$INVENTORY_SCRIPT" ]; then
+  echo "Function inventory not found: $INVENTORY_SCRIPT" >&2
+  exit 1
+fi
+
+ALL_FUNCTIONS=()
+while IFS= read -r function_name; do
+  ALL_FUNCTIONS+=("$function_name")
+done < <(node "$INVENTORY_SCRIPT" --list)
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 <function> [<function> ...] | --all" >&2

@@ -24,6 +24,15 @@ const { initSecrets } = require('./shared/secrets');
 const COOLDOWN_MINUTES = 30;
 const WINDOW_MINUTES = 60;
 
+async function recordWorkerHeartbeat(client) {
+  await client.query(
+    `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+     VALUES ('cron_security_alerts', now(), NULL, interval '45 minutes')
+     ON CONFLICT (task) DO UPDATE
+       SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+  );
+}
+
 // Telegram-токены подтягиваются initSecrets() из Lockbox в process.env —
 // читаем напрямую в sendAlert ниже.
 
@@ -463,6 +472,9 @@ module.exports.handler = async function () {
       console.error('[security-alerts] concurrency_watch error:', err.message);
       results.push({ rule: 'concurrency_watch', status: 'check_error', error: err.message });
     }
+
+    const hasCheckErrors = results.some((result) => result.status === 'query_error' || result.status === 'check_error');
+    if (!hasCheckErrors) await recordWorkerHeartbeat(client);
 
     return {
       statusCode: 200,

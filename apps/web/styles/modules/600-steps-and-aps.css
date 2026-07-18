@@ -2476,10 +2476,25 @@
   background: var(--color-slate-100);
 }
 
+.aps-product-card--disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.aps-product-card--disabled:active {
+  transform: none;
+}
+
 @media (hover: hover) {
   [data-theme='dark'] .aps-product-card:hover {
   background: #1e293b;
 }
+
+  .aps-product-card--disabled:hover,
+  [data-theme='dark'] .aps-product-card--disabled:hover {
+    background: var(--card);
+    border-color: var(--border);
+  }
 }
 
 [data-theme='dark'] .aps-product-card:active {
@@ -2595,6 +2610,10 @@
 .aps-meta-macros {
   color: #9ca3af;
   font-size: inherit;
+}
+
+.aps-meta-pending {
+  color: var(--muted);
 }
 
 .aps-product-usage {

@@ -35,9 +35,10 @@
     return input.filter(function (x, idx) { return allowed.indexOf(x) >= 0 && input.indexOf(x) === idx; });
   }
   function normalizeProfile(input) {
+    const src = input || {};
     const ko = onboardingKernel();
     if (ko && ko.normalizeProfile) {
-      return ko.normalizeProfile(input || {}, {
+      const normalized = ko.normalizeProfile(src, {
         fields: {
           age: { type: 'number', default: null },
           level: { type: 'enum', allowed: LEVELS, default: 'beginner' },
@@ -48,12 +49,14 @@
           acceptedDisclaimer: { type: 'boolean', default: false }
         }
       });
+      // Number(null) === 0, поэтому сохраняем отсутствие возраста явно.
+      if (src.age === null || src.age === undefined || src.age === '') normalized.age = null;
+      return normalized;
     }
-    const src = input || {};
-    const age = Number(src.age);
+    const age = src.age === null || src.age === undefined || src.age === '' ? null : Number(src.age);
     const level = LEVELS.indexOf(src.level) >= 0 ? src.level : 'beginner';
     return {
-      age: Number.isFinite(age) ? age : null,
+      age: age !== null && Number.isFinite(age) ? age : null,
       level: level,
       populations: pickKnown(src.populations, POPULATIONS),
       equipment: pickKnown(src.equipment, EQUIPMENT),
@@ -66,7 +69,7 @@
     const p = normalizeProfile(profile);
     const issues = [];
     if (p.age === null) issues.push({ level: 'error', code: 'onboarding.age_missing', msg: 'возраст нужен для fail-closed safety' });
-    if (p.acceptedDisclaimer !== true) issues.push({ level: 'warn', code: 'onboarding.disclaimer', msg: 'режим не является медицинской рекомендацией' });
+    if (p.acceptedDisclaimer !== true) issues.push({ level: 'error', code: 'onboarding.disclaimer', msg: 'подтвердите, что режим не заменяет медицинскую рекомендацию' });
     if (p.populations.indexOf('pregnancy') >= 0) issues.push({ level: 'warn', code: 'onboarding.pregnancy_medical', msg: 'беременность: медицинский контекст вне алгоритма' });
     if (p.populations.indexOf('hypermobile') >= 0) issues.push({ level: 'warn', code: 'onboarding.hypermobile_stability', msg: 'гипермобильность: приоритет укреплению и стабильности' });
     return { profile: p, issues: issues, ok: !issues.some(function (i) { return i.level === 'error'; }) };

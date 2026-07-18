@@ -22,12 +22,12 @@
   let bodyScrollLocked = false;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const MODE_LABEL = {
@@ -74,6 +74,27 @@
     return normalizeProfile(Object.assign({}, readStoredProfile(), overrides || {}));
   }
 
+  function validateBuildProfile(profile) {
+    if (!Mobility.onboarding || typeof Mobility.onboarding.validateProfile !== 'function') {
+      return {
+        ok: false,
+        profile: profile,
+        issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }]
+      };
+    }
+    return Mobility.onboarding.validateProfile(profile);
+  }
+
+  function blockedBuild(validation) {
+    const issues = validation && Array.isArray(validation.issues) ? validation.issues : [];
+    return {
+      ok: false,
+      errors: issues.filter(function (issue) { return issue.level === 'error'; }),
+      issues: issues,
+      session: null
+    };
+  }
+
   function protocolFromOptions(opts) {
     const o = opts || {};
     if (!Mobility.protocolCatalog) return null;
@@ -98,6 +119,8 @@
       return { ok: false, errors: [{ level: 'error', code: 'mobility.not_loaded', msg: 'модуль мобильности не загружен' }], session: null };
     }
     const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
     const protocol = protocolFromOptions(opts);
     const protocolOptions = protocol && Mobility.protocolCatalog && typeof Mobility.protocolCatalog.buildOptions === 'function'
       ? Mobility.protocolCatalog.buildOptions(protocol)
@@ -119,7 +142,10 @@
     if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildDailySession !== 'function') {
       return { ok: false, errors: [{ level: 'error', code: 'mobility.course_not_loaded', msg: 'планер курса не загружен' }], session: null };
     }
-    return Mobility.coursePlanner.buildDailySession(course, getProfile(profile), opts || {});
+    const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
+    return Mobility.coursePlanner.buildDailySession(course, p, opts || {});
   }
 
   function modeLabel(modeId) {

@@ -6066,6 +6066,8 @@
     HEYS.PlanningSchedule = {
         CalendarScreen,
         GanttScreen,
+        RepeatDateCalendar,
+        BACKGROUND_SLOT_COLORS,
         buildCalendarTaskPickerTasks,
         canTaskAddCalendarSlot,
         buildCalendarOverdueSlotItemsByDay,

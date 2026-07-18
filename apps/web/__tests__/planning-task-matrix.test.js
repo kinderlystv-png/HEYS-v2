@@ -35,9 +35,16 @@ describe('Planning task matrix helpers', () => {
                     dateStr: () => '2026-07-07',
                     getDueBucket: () => 'all',
                     getTaskDurationMinutes: () => 0,
-                    minutesToTime: () => '00:00',
+                    minutesToTime: (minutes) => {
+                        const safe = Math.max(0, Math.round(Number(minutes) || 0));
+                        return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0');
+                    },
                     sortByOrder: (items) => items.slice().sort((left, right) => (left.order || 0) - (right.order || 0)),
-                    timeToMinutes: () => 0,
+                    timeToMinutes: (value) => {
+                        const [hours, minutes] = String(value || '00:00').split(':').map(Number);
+                        return ((hours || 0) * 60) + (minutes || 0);
+                    },
+                    uid: () => 'repeat-group',
                 },
             },
             PlanningQuickTarget: {
@@ -92,5 +99,32 @@ describe('Planning task matrix helpers', () => {
             matrixUrgency: 'urgent',
             matrixImportance: 'optional',
         });
+    });
+
+    it('builds one linked calendar slot per selected repeat date', () => {
+        const Tasks = installTasksModule();
+
+        expect(Tasks.buildRepeatedTaskSlotOptions(new Set([
+            '2026-08-15',
+            '2026-07-21',
+            '2026-08-15',
+        ]), {
+            taskId: 'task-1',
+            startTime: '11:30',
+            endTime: '12:45',
+            isBackground: true,
+            bgColor: '#3b82f6',
+        })).toEqual([
+            {
+                taskId: 'task-1', title: '', date: '2026-07-21',
+                startTime: '11:30', endTime: '12:45', source: 'user',
+                recurrenceGroupId: 'repeat-group', isBackground: true, bgColor: '#3b82f6',
+            },
+            {
+                taskId: 'task-1', title: '', date: '2026-08-15',
+                startTime: '11:30', endTime: '12:45', source: 'user',
+                recurrenceGroupId: 'repeat-group', isBackground: true, bgColor: '#3b82f6',
+            },
+        ]);
     });
 });

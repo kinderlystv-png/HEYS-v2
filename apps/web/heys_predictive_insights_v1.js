@@ -629,6 +629,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param {number} options.optimum - целевой калораж
    * @returns {Object} результат анализа
    */
+  function getStoredScore100(day) {
+    if (!day || typeof day !== 'object') return null;
+
+    // Both persisted fields have an explicit 1-10 contract. Prefer the
+    // decimal analytics value, then fall back to the integer UI value.
+    for (const field of ['dayScoreRaw', 'dayScore']) {
+      const value = Number(day[field]);
+      if (Number.isFinite(value) && value >= 1 && value <= 10) {
+        return Math.round(value * 10);
+      }
+    }
+    return null;
+  }
+
+  function buildScoreHistory(days) {
+    return (Array.isArray(days) ? days : [])
+      .slice(-14)
+      .filter(d => d && d.date)
+      .map(d => {
+        const storedScore = getStoredScore100(d);
+        if (storedScore !== null) return { date: d.date, score: storedScore };
+
+        // Fallback is already expressed on the same 0-100 output scale.
+        let proxy = 50;
+        if (Array.isArray(d.meals) && d.meals.length >= 3) proxy += 15;
+        if (Number(d.sleepHours) >= 7) proxy += 15;
+        if (Number(d.stressAvg) > 0 && Number(d.stressAvg) <= 5) proxy += 10;
+        if (Number(d.weight) > 0) proxy += 10;
+        return { date: d.date, score: Math.min(100, proxy) };
+      });
+  }
+
   function analyze(options = {}) {
     const {
       daysBack = CONFIG.DEFAULT_DAYS,
@@ -958,25 +990,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       result.scoreDelta = { change: 0, significant: false, hasData: false };
     }
 
-    // R-INS-LEVEL-UP-3: Score history для sparkline (последние 14 дней)
-    // Извлекаем daily scores из days — если есть `dayScore` или вычисляем proxy.
+    // R-INS-LEVEL-UP-3: Score history для sparkline (последние 14 дней), 0-100.
     try {
-      const scoreHistory = days
-        .slice(-14)
-        .filter(d => d && d.date)
-        .map(d => {
-          // Если есть сохранённый dayScore — используем. Иначе fallback к kcal ratio как proxy.
-          const score = Number(d.dayScore);
-          if (Number.isFinite(score) && score > 0) return { date: d.date, score };
-          // Fallback: грубая оценка из meal completeness + sleep + stress
-          let proxy = 50;
-          if (Array.isArray(d.meals) && d.meals.length >= 3) proxy += 15;
-          if (Number(d.sleepHours) >= 7) proxy += 15;
-          if (Number(d.stressAvg) > 0 && Number(d.stressAvg) <= 5) proxy += 10;
-          if (Number(d.weight) > 0) proxy += 10;
-          return { date: d.date, score: Math.min(100, proxy) };
-        });
-      result.scoreHistory = scoreHistory;
+      result.scoreHistory = buildScoreHistory(days);
     } catch (e) {
       result.scoreHistory = [];
     }
@@ -1609,6 +1625,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // getDaysData() — получение данных дней
   HEYS.PredictiveInsights.getDaysData = getDaysData;
+  HEYS.PredictiveInsights.buildScoreHistory = buildScoreHistory;
 
   // Паттерн-анализаторы (делегируем в HEYS.InsightsPI.patterns если есть)
   HEYS.PredictiveInsights.analyzeMealTiming = analyzeMealTiming;

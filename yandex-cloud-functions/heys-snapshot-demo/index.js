@@ -135,6 +135,15 @@ function getPool() {
   return pool;
 }
 
+async function recordWorkerHeartbeat() {
+  await getPool().query(
+    `INSERT INTO public.maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+     VALUES ('snapshot_demo', now(), NULL, interval '3 hours')
+     ON CONFLICT (task) DO UPDATE
+       SET last_ok_at = now(), stale_alerted_at = NULL, max_silence = EXCLUDED.max_silence`,
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // S3 client (singleton)
 // ═══════════════════════════════════════════════════════════════════
@@ -342,6 +351,8 @@ exports.handler = async () => {
   };
 
   console.log('[SnapshotDemo] Done:', JSON.stringify(summary));
+
+  if (results.failed.length === 0) await recordWorkerHeartbeat();
 
   if (results.failed.length > 0) {
     await sendAlert(

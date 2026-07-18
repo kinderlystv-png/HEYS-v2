@@ -5673,9 +5673,10 @@
     return input.filter(function (x, idx) { return allowed.indexOf(x) >= 0 && input.indexOf(x) === idx; });
   }
   function normalizeProfile(input) {
+    const src = input || {};
     const ko = onboardingKernel();
     if (ko && ko.normalizeProfile) {
-      return ko.normalizeProfile(input || {}, {
+      const normalized = ko.normalizeProfile(src, {
         fields: {
           age: { type: 'number', default: null },
           level: { type: 'enum', allowed: LEVELS, default: 'beginner' },
@@ -5686,12 +5687,14 @@
           acceptedDisclaimer: { type: 'boolean', default: false }
         }
       });
+      // Number(null) === 0, поэтому сохраняем отсутствие возраста явно.
+      if (src.age === null || src.age === undefined || src.age === '') normalized.age = null;
+      return normalized;
     }
-    const src = input || {};
-    const age = Number(src.age);
+    const age = src.age === null || src.age === undefined || src.age === '' ? null : Number(src.age);
     const level = LEVELS.indexOf(src.level) >= 0 ? src.level : 'beginner';
     return {
-      age: Number.isFinite(age) ? age : null,
+      age: age !== null && Number.isFinite(age) ? age : null,
       level: level,
       populations: pickKnown(src.populations, POPULATIONS),
       equipment: pickKnown(src.equipment, EQUIPMENT),
@@ -5704,7 +5707,7 @@
     const p = normalizeProfile(profile);
     const issues = [];
     if (p.age === null) issues.push({ level: 'error', code: 'onboarding.age_missing', msg: 'возраст нужен для fail-closed safety' });
-    if (p.acceptedDisclaimer !== true) issues.push({ level: 'warn', code: 'onboarding.disclaimer', msg: 'режим не является медицинской рекомендацией' });
+    if (p.acceptedDisclaimer !== true) issues.push({ level: 'error', code: 'onboarding.disclaimer', msg: 'подтвердите, что режим не заменяет медицинскую рекомендацию' });
     if (p.populations.indexOf('pregnancy') >= 0) issues.push({ level: 'warn', code: 'onboarding.pregnancy_medical', msg: 'беременность: медицинский контекст вне алгоритма' });
     if (p.populations.indexOf('hypermobile') >= 0) issues.push({ level: 'warn', code: 'onboarding.hypermobile_stability', msg: 'гипермобильность: приоритет укреплению и стабильности' });
     return { profile: p, issues: issues, ok: !issues.some(function (i) { return i.level === 'error'; }) };
@@ -8142,13 +8145,13 @@
   const MOBILITY_TIMER_LOCK_HEARTBEAT_MS = 2000;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
     loadLevel: 3,
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const LEVEL_LABEL = {
@@ -9392,6 +9395,49 @@
       result.issues.length
         ? h('ul', { className: 'mobility-issues' }, result.issues.map(function (i) {
             return h('li', { key: i.code, 'data-level': i.level }, humanizeVisibleText(i.msg || i.code));
+          }))
+        : null
+    );
+  }
+
+  function SafetyOnboardingGate(props) {
+    const profile = normalizeProfile(props.profile);
+    const issues = props.validation && Array.isArray(props.validation.issues)
+      ? props.validation.issues.filter(function (issue) { return issue.level === 'error'; })
+      : [];
+    return h('section', {
+      className: 'mobility-panel mobility-safety-onboarding',
+      'aria-label': 'Обязательные данные перед тренировкой'
+    },
+      h('h3', null, 'Перед первой тренировкой'),
+      h('p', null, 'Укажите возраст и подтвердите предупреждение. Без этих данных тренировка не запускается.'),
+      h('label', null,
+        h('span', null, 'Возраст'),
+        h('input', {
+          'aria-label': 'Возраст перед тренировкой',
+          type: 'number',
+          min: 1,
+          value: profile.age == null ? '' : profile.age,
+          onChange: function (e) {
+            const age = e.target.value === '' ? null : Number(e.target.value);
+            props.onChange && props.onChange(Object.assign({}, profile, { age: Number.isFinite(age) ? age : null }));
+          }
+        })
+      ),
+      h('label', { className: 'mobility-disclaimer' },
+        h('input', {
+          'aria-label': 'Подтвердить предупреждение перед тренировкой',
+          type: 'checkbox',
+          checked: profile.acceptedDisclaimer === true,
+          onChange: function (e) {
+            props.onChange && props.onChange(Object.assign({}, profile, { acceptedDisclaimer: e.target.checked }));
+          }
+        }),
+        h('span', null, 'Понимаю: режим не заменяет медицинскую рекомендацию')
+      ),
+      issues.length
+        ? h('ul', { className: 'mobility-issues', role: 'alert' }, issues.map(function (issue) {
+            return h('li', { key: issue.code, 'data-level': issue.level }, humanizeVisibleText(issue.msg || issue.code));
           }))
         : null
     );
@@ -10971,6 +11017,11 @@
           populations: Array.from(new Set((profile.populations || []).concat(selectedProtocol.profilePatch.populations)))
         })
       : profile;
+    const profileValidation = useMemo(function () {
+      return d.onboarding && typeof d.onboarding.validateProfile === 'function'
+        ? d.onboarding.validateProfile(profileForBuild)
+        : { ok: false, profile: profileForBuild, issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }] };
+    }, [d.onboarding, profileForBuild]);
 
     function applyMode(nextModeId) {
       setModeId(nextModeId);
@@ -11010,6 +11061,7 @@
 
     const built = useMemo(function () {
       if (!d.routineBuilder) return null;
+      if (!profileValidation.ok) return { ok: false, errors: profileValidation.issues, issues: profileValidation.issues, session: null };
       const protocolOptions = d.protocolCatalog && selectedProtocol
         ? d.protocolCatalog.buildOptions(selectedProtocol)
         : {};
@@ -11053,11 +11105,13 @@
       props.contraindications,
       props.records,
       props.clientId,
-      props.storage
+      props.storage,
+      profileValidation
     ]);
 
     const customSourceAtomIds = customRunAtomIds.length ? customRunAtomIds : customAtomIds;
     const customBuilt = useMemo(function () {
+      if (!profileValidation.ok) return { ok: false, errors: profileValidation.issues, issues: profileValidation.issues, session: null };
       return buildCustomBuilt(customSourceAtomIds, modeId, profileForBuild, {
         timeOfDay: props.timeOfDay,
         readinessInput: readinessInput,
@@ -11081,7 +11135,8 @@
       props.phase,
       props.keyLoadWithinHours,
       props.painFlags,
-      props.contraindications
+      props.contraindications,
+      profileValidation
     ]);
 
     const activeBuilt = flowMode === 'custom' ? customBuilt : built;
@@ -11263,6 +11318,7 @@
     ];
 
     function startGuidedSession() {
+      if (!profileValidation.ok) return;
       if (!activeBuilt || !activeBuilt.session || !plan) return;
       showMobilityPreflight({
         modeId: modeId,
@@ -11399,6 +11455,15 @@
     }
 
     function renderToday() {
+      if (!profileValidation.ok) {
+        return h('div', { className: 'mobility-fs-today' },
+          h(SafetyOnboardingGate, {
+            profile: profile,
+            validation: profileValidation,
+            onChange: handleProfileChange
+          })
+        );
+      }
       const title = flowMode === 'custom'
         ? 'Свой план'
         : flowMode === 'resume'
@@ -11596,7 +11661,7 @@
       return renderToday();
     }
 
-    const showTrainingContext = activeTab === 'today' && flowMode === 'choose';
+    const showTrainingContext = activeTab === 'today' && flowMode === 'choose' && profileValidation.ok;
 
     return h('main', { className: 'mobility-app mobility-fs-session', 'data-mode': modeId, ref: rootRef },
       renderTrainingHeader(),
@@ -11627,6 +11692,7 @@
     MobilityApp: MobilityApp,
     ModePicker: ModePicker,
     ProfilePanel: ProfilePanel,
+    SafetyOnboardingGate: SafetyOnboardingGate,
     ReadinessPanel: ReadinessPanel,
     AssessmentPanel: AssessmentPanel,
     ProgressPanel: ProgressPanel,
@@ -11671,12 +11737,12 @@
   let bodyScrollLocked = false;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const MODE_LABEL = {
@@ -11723,6 +11789,27 @@
     return normalizeProfile(Object.assign({}, readStoredProfile(), overrides || {}));
   }
 
+  function validateBuildProfile(profile) {
+    if (!Mobility.onboarding || typeof Mobility.onboarding.validateProfile !== 'function') {
+      return {
+        ok: false,
+        profile: profile,
+        issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }]
+      };
+    }
+    return Mobility.onboarding.validateProfile(profile);
+  }
+
+  function blockedBuild(validation) {
+    const issues = validation && Array.isArray(validation.issues) ? validation.issues : [];
+    return {
+      ok: false,
+      errors: issues.filter(function (issue) { return issue.level === 'error'; }),
+      issues: issues,
+      session: null
+    };
+  }
+
   function protocolFromOptions(opts) {
     const o = opts || {};
     if (!Mobility.protocolCatalog) return null;
@@ -11747,6 +11834,8 @@
       return { ok: false, errors: [{ level: 'error', code: 'mobility.not_loaded', msg: 'модуль мобильности не загружен' }], session: null };
     }
     const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
     const protocol = protocolFromOptions(opts);
     const protocolOptions = protocol && Mobility.protocolCatalog && typeof Mobility.protocolCatalog.buildOptions === 'function'
       ? Mobility.protocolCatalog.buildOptions(protocol)
@@ -11768,7 +11857,10 @@
     if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildDailySession !== 'function') {
       return { ok: false, errors: [{ level: 'error', code: 'mobility.course_not_loaded', msg: 'планер курса не загружен' }], session: null };
     }
-    return Mobility.coursePlanner.buildDailySession(course, getProfile(profile), opts || {});
+    const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
+    return Mobility.coursePlanner.buildDailySession(course, p, opts || {});
   }
 
   function modeLabel(modeId) {

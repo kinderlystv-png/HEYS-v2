@@ -540,6 +540,17 @@ describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () =>
         expect(Store.mergeCloudPlanningArray('heys_planning_chrono_snapshots', [], [])).toBeNull();
     });
 
+    it('unions dismissed chrono tail dates so stale cloud state cannot reopen the prompt', () => {
+        const key = 'heys_planning_chrono_untracked_tail_dismissed_v1';
+        const local = ['2026-07-15', '2026-07-16'];
+        const remote = ['2026-07-04', '2026-07-15'];
+
+        const merged = Store.mergeCloudPlanningArray(key, local, remote);
+
+        expect(merged).toEqual(['2026-07-04', '2026-07-15', '2026-07-16']);
+        expect(Store.mergeCloudPlanningArray(key, merged, remote)).toEqual(merged);
+    });
+
     it('unions local-only and remote-only records — neither side is lost', () => {
         const local = [{ id: 'L', activityId: 'a', date: '2026-06-04', minutes: 30, createdAt: '2026-06-04T10:00:00Z' }];
         const remote = [{ id: 'R', activityId: 'a', date: '2026-06-04', minutes: 45, createdAt: '2026-06-04T11:00:00Z' }];

@@ -18,6 +18,7 @@
       HEYS.analytics.trackError(err, context);
     } catch (_) { }
   };
+  const canWriteStatus = (value) => HEYS.Subscription?.canWriteStatus?.(value) === true;
 
   // =====================================================
   // КОНФИГУРАЦИЯ
@@ -77,10 +78,10 @@
     },
 
     STATUSES: {
-      trial: { id: 'trial', name: 'Триал', color: '#3b82f6', canEdit: true },
-      active: { id: 'active', name: 'Активна', color: '#22c55e', canEdit: true },
-      read_only: { id: 'read_only', name: 'Только просмотр', color: '#f59e0b', canEdit: false },
-      canceled: { id: 'canceled', name: 'Отменена', color: '#6b7280', canEdit: false }
+      trial: { id: 'trial', name: 'Триал', color: '#3b82f6', get canEdit() { return canWriteStatus('trial'); } },
+      active: { id: 'active', name: 'Активна', color: '#22c55e', get canEdit() { return canWriteStatus('active'); } },
+      read_only: { id: 'read_only', name: 'Только просмотр', color: '#f59e0b', get canEdit() { return canWriteStatus('read_only'); } },
+      canceled: { id: 'canceled', name: 'Отменена', color: '#6b7280', get canEdit() { return canWriteStatus('canceled'); } }
     }
   };
 
@@ -196,7 +197,7 @@
       plan,
       is_trial: status === 'trial',
       days_left: daysUntil(profile.trial_ends_at),
-      can_edit: status !== 'read_only',
+      can_edit: canWriteStatus(status),
       trial_started_at: profile.trial_started_at,
       trial_ends_at: profile.trial_ends_at,
       subscription_ends_at: profile.subscription_ends_at,
@@ -468,7 +469,7 @@
    */
   async function canEdit(clientId) {
     const status = await getStatus(clientId);
-    return status.can_edit === true;
+    return canWriteStatus(status);
   }
 
   /**

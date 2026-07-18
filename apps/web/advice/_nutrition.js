@@ -902,7 +902,7 @@
             for (const item of lastMeal.items) {
                 const product = getProductForItem(item, pIndex);
                 if (!product) continue;
-                const grams = item.grams || 100;
+                const grams = window.HEYS.models.normalizeItemGrams(item.grams, 100);
                 lastMealSimple += (product.simple100 || 0) * grams / 100;
                 lastMealCarbs += ((product.simple100 || 0) + (product.complex100 || 0)) * grams / 100;
                 lastMealKcal += (product.kcal100 || 0) * grams / 100;

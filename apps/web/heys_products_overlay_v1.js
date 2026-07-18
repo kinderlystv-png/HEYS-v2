@@ -466,10 +466,13 @@
         continue;
       }
       const base = sharedById && sharedById.get(String(r.shared_origin_id));
-      if (!base) {
-        // Shared row missing for a Type A overlay — keep overlay as-is so the row
-        // does not vanish from UI. Future shared refresh re-merges.
-        out.push(_withNormalizedBarcodes(r));
+      if (!hasMealNutrientSource(base)) {
+        // Keep a visible placeholder, but never present a raw Type A link as a
+        // selectable nutrient source. A later shared refresh rebuilds this row.
+        out.push(Object.assign({}, buildTypeAProduct(r, base), {
+          _nutrientsPending: true,
+          _selectionDisabled: true,
+        }));
         continue;
       }
       // Type A row — merge with shared base. Skip if shared base name is tombstoned
@@ -478,13 +481,7 @@
         const _bnrm = String(base.name).trim().toLowerCase();
         if (_tombNames.has(_bnrm)) continue;
       }
-      const merged = Object.assign({}, base, r.overrides || {}, {
-        id: r.id,
-        shared_origin_id: r.shared_origin_id,
-        fingerprint: r.fingerprint || base.fingerprint,
-        user_modified: !!r.user_modified,
-      });
-      out.push(_withNormalizedBarcodes(merged));
+      out.push(buildTypeAProduct(r, base));
     }
 
     // Dev-mode: freeze to fail fast on accidental mutation.
@@ -669,6 +666,46 @@
       barcode: barcodes[0],
       barcodes,
     });
+  }
+
+  function hasMealNutrientSource(product) {
+    if (!product || product.kcal100 == null || product.kcal100 === '') return false;
+    return Number.isFinite(Number(product.kcal100));
+  }
+
+  function buildTypeAProduct(row, base) {
+    const source = base && typeof base === 'object' ? base : {};
+    return _withNormalizedBarcodes(Object.assign({}, source, row.overrides || {}, {
+      id: row.id,
+      shared_origin_id: row.shared_origin_id,
+      fingerprint: row.fingerprint || source.fingerprint,
+      user_modified: !!row.user_modified,
+    }));
+  }
+
+  function resolveMealProduct(product, sharedById) {
+    if (!product) return { ok: false, product: null, reason: 'missing_product' };
+    const sharedId = product.shared_origin_id || product.sharedOriginId || null;
+    if (!sharedId) return { ok: true, product, reason: 'not_linked' };
+
+    const index = sharedById || HEYS.cloud?.getSharedIndex?.() || null;
+    const base = index && index.get(String(sharedId));
+    if (!hasMealNutrientSource(base)) {
+      return { ok: false, product, reason: 'shared_nutrients_pending' };
+    }
+
+    const row = readRaw().find((candidate) => candidate
+      && !candidate._custom
+      && candidate.shared_origin_id != null
+      && String(candidate.shared_origin_id) === String(sharedId));
+    return {
+      ok: true,
+      product: row ? buildTypeAProduct(row, base) : Object.assign({}, product, base, {
+        _nutrientsPending: false,
+        _selectionDisabled: false,
+      }),
+      reason: 'shared_nutrients_ready',
+    };
   }
   function _getSharedAuxIndexes(sharedById) {
     if (_sharedByFingerprintRef !== sharedById) {
@@ -1126,6 +1163,8 @@
     clear,
     migrate,
     verifyMigration,
+    hasMealNutrientSource,
+    resolveMealProduct,
     NUTRIENT_FIELDS,
   };
 

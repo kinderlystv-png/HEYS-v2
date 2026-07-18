@@ -199,11 +199,30 @@
     const action = dayData.yesterdayVerifyAction;
     if (action === 'confirm_real_data' || action === 'clear_day' || action === 'estimated_fill') return true;
     if (dayData.estimatedDayFill?.source === 'morning-checkin') return true;
-    // Soft markers — 'fill_later' и одиночный isIncomplete=true.
-    // Они НЕ блокируют повторный вопрос: на следующее утро день
-    // пере-оценивается по содержимому в isPendingPastDay(). Если ratio<0.5 —
-    // чекин снова спросит «дозаполни / голодание / очистить».
+    // Soft marker 'fill_later' закрывает текущий чек-ин, но не скрывает день
+    // навсегда: на следующее утро дата решения станет прошлой и день снова
+    // будет оценён по фактическому содержимому.
+    if (action === 'fill_later' && isVerifyDecisionFromCurrentCheckin(dayData.yesterdayVerifyAt)) return true;
     return false;
+  }
+
+  function getLogicalCheckinDateKey(timestamp) {
+    const date = new Date(Number(timestamp));
+    if (Number.isNaN(date.getTime())) return '';
+    if (date.getHours() < 3) date.setDate(date.getDate() - 1);
+    return formatDateKey(date);
+  }
+
+  function getCurrentCheckinDateKey() {
+    try {
+      const current = HEYS.dayUtils?.todayISO?.();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(current || ''))) return String(current);
+    } catch (_) { }
+    return getLogicalCheckinDateKey(Date.now());
+  }
+
+  function isVerifyDecisionFromCurrentCheckin(timestamp) {
+    return getLogicalCheckinDateKey(timestamp) === getCurrentCheckinDateKey();
   }
 
   function markYesterdayVerified(dayData, action, nowTs) {
@@ -1661,6 +1680,7 @@
     getDayReviewInfo,
     getPendingPastDays,
     shouldShow: shouldShowYesterdayVerify,
+    isExplicitlyVerified,
     isReady: _stepRegistered,
     stepRegistered: _stepRegistered,
     INCOMPLETE_ACTIONS,

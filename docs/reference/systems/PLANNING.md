@@ -51,6 +51,9 @@ Store делит ключи по поведению:
 
 - **critical client keys** — должны попадать в cloud sync и parity diagnostics;
 - **mergeable arrays** — объединяются по `id`, а не заменяются целиком;
+- **append-only date sets** — отклонённые пользователем незаполненные хвосты
+  хронометража объединяются по дате, чтобы stale cloud pull не открыл модалку
+  повторно;
 - **local only** — активный `heys_planning_chrono_timer`, который не переносится
   между устройствами; завершённые chrono entries синхронизируются.
 
@@ -68,6 +71,14 @@ pending local mutation, tombstones и anti-wipe проверки могут со
    local-only, ставит его в общую sync queue.
 3. Store обновляет planning state/event consumers.
 4. После успешного upload может планироваться readback для проверки parity.
+
+### Задача на выбранные даты
+
+Форма новой задачи в списке может создать одну задачу и несколько связанных
+календарных слотов на конкретные даты, в том числе в разных месяцах. Слоты
+объединяются `recurrenceGroupId`, используют одинаковое время и могут быть
+обычными или фоновыми; диапазон задачи идёт от первой до последней выбранной
+даты.
 
 ### Облачная загрузка
 
@@ -111,6 +122,9 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 8. UI-модули не должны обходить `Planning.Store` прямой записью контейнеров.
 9. Delete command записывается до первой затронутой коллекции; повтор команды не
    меняет уже согласованное состояние.
+10. Даты, отмеченные как «Не актуально» в хронометраже, объединяются через set
+    union во всех cloud-pull путях и не могут быть удалены старым
+    remote-массивом.
 
 ## Ошибки и защитные механизмы
 
@@ -148,6 +162,8 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 - `apps/web/__tests__/planning-atomic-commands.test.js` — порядок durable
   intent, fault-injection между writes, повтор и replay на другом устройстве.
 - `apps/web/__tests__/planning-home-subtab.test.js` — навигационный контракт.
+- `apps/web/__tests__/planning-task-matrix.test.js` — группировка матрицы и
+  контракт календарных слотов задачи на выбранные даты.
 - `apps/web/__tests__/planning-*-ui.test.js` и render tests — ключевые
   UI-сценарии.
 

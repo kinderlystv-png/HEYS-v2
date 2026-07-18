@@ -86,6 +86,15 @@ describe('mobility onboarding', () => {
     expect(r.issues.some((i) => i.code === 'onboarding.hypermobile_stability')).toBe(true);
   });
 
+  it('validateProfile блокирует запуск без принятого предупреждения', () => {
+    const r = M().onboarding.validateProfile({ age: 30, acceptedDisclaimer: false });
+    expect(r.ok).toBe(false);
+    expect(r.issues).toContainEqual(expect.objectContaining({
+      level: 'error',
+      code: 'onboarding.disclaimer'
+    }));
+  });
+
   it('recommendMode мапит цель на режим', () => {
     expect(M().onboarding.recommendMode({ goal: 'relax' }, {})).toBe('evening_relax');
     expect(M().onboarding.recommendMode({}, { timeOfDay: 'morning' })).toBe('morning_tonify');

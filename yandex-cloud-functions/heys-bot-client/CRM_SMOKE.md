@@ -10,15 +10,13 @@ process.
 ## Preconditions
 
 - `heys-bot-client` has been deployed from the current source.
-- `@heys_start_bot` webhook points to:
-
-```text
-https://api.heyslab.ru/start-bot/webhook
-```
-
-- Telegram webhook `secret_token` matches `HEYS_START_WEBHOOK_SECRET`.
+- `heys-start-bot-poll` ACTIVE, cron `0/1 * * * ? *`, payload
+  `{"poll":"heys-start-bot","window_ms":55000}` and tag `$latest`.
+- `getWebhookInfo` for Start and curator/support tokens returns empty `url`;
+  polling and webhook must not compete for either token.
 - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are configured for curator
-  handoff.
+  handoff; private chat uses matching actor/chat id. A group chat additionally
+  requires `TELEGRAM_CURATOR_USER_IDS`.
 - `HEYS_START_BOT_TOKEN`, `INTERNAL_CRON_TOKEN`, `PG_*` and app Lockbox access
   are configured.
 
@@ -27,13 +25,22 @@ https://api.heyslab.ru/start-bot/webhook
 ```bash
 cd /Users/poplavskijanton/HEYS-v2
 node --check yandex-cloud-functions/heys-bot-client/index.js
+node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs \
+  yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs
 curl -sS https://api.heyslab.ru/start-bot/health
 curl -sS -i -X POST https://api.heyslab.ru/start-bot/webhook \
   -H 'Content-Type: application/json' \
   -d '{"update_id":1}'
+yc serverless trigger get heys-start-bot-poll
+yc serverless function invoke heys-bot-client \
+  --data '{"poll":"heys-start-bot","window_ms":1000}'
+pnpm ops:heys:status --strict
 ```
 
-Expected spoof result without Telegram secret header: HTTP 403.
+Expected: 23 tests pass; health reports Start and curator tokens; spoof webhook
+without Telegram secret returns HTTP 403; manual invoke contains both
+`heys-start-bot` and `heys-curator-bot`; trigger is ACTIVE; Telegram pending
+queues are zero and webhooks are off.
 
 ## Manual Telegram flow
 
@@ -64,6 +71,15 @@ readiness: <this_week|next_week>
 The curator message must not contain phone, name, raw Telegram `chat_id`, IP or
 user-agent.
 
+Press `✅ Взял в работу` from the authorized curator account.
+
+Expected callback result:
+
+- Telegram closes the callback spinner and confirms the claim;
+- the source message loses its button and gains `В работе`, curator actor and
+  timestamp;
+- no lead contact data is added to the Telegram message.
+
 ## DB verification
 
 Use `scripts/db/psql.sh` and substitute the `lead_id` from the curator handoff.
@@ -71,7 +87,7 @@ Use `scripts/db/psql.sh` and substitute the `lead_id` from the curator handoff.
 ```sql
 SELECT id, phone IS NOT NULL AS has_phone, messenger, utm_source,
        utm_medium, utm_campaign, quiz_segment, readiness, how_heard,
-       consent_method, consent_privacy_version
+       consent_method, consent_privacy_version, status, contacted_at
   FROM public.leads
  WHERE id = '<lead_id>';
 ```
@@ -87,7 +103,8 @@ Expected:
 - `quiz_segment` is not null;
 - `readiness` is `this_week` or `next_week`;
 - `how_heard = telegram_bot`;
-- `consent_method = telegram_contact`.
+- `consent_method = telegram_contact`;
+- after the curator click, `status = contacted` and `contacted_at IS NOT NULL`.
 
 ```sql
 SELECT event_type, lead_id, source, campaign, segment,
@@ -121,7 +138,7 @@ Expected:
 
 - no second active lead for the same normalized phone;
 - existing `week_request` gets the same `lead_id`;
-- `record_funnel_event(... dedupe_key='lead:start:<lead_id>')` stays idempotent.
+- `record_funnel_event(... dedupe_key='lead:start:<lead_id>')` stays idempotent;
 - curator Telegram chat does not receive a second handoff for the same linked
   `week_request`.
 
@@ -145,4 +162,7 @@ Expected `count = 1`.
 - curator handoff contains no phone/name/raw chat id;
 - DB row in `public.leads` has contact data and qualification fields;
 - `funnel_events` has `lead` event without PII metadata;
-- replay does not create a duplicate active lead or duplicate curator handoff.
+- replay does not create a duplicate active lead or duplicate curator handoff;
+- authorized `Взял в работу` gives one `new → contacted` transition, direct
+  callback acknowledgement and one message edit;
+- profile tests prove repeat/parallel callbacks do not create a second mutation.

@@ -19,7 +19,7 @@ const mergeModule = require(
   path.resolve(__dirname, '..', '..', '..', 'yandex-cloud-functions', 'heys-api-rpc', 'lib', 'heys_sync_merge_v1.cjs')
 );
 
-const { mergeScalarKv } = mergeModule;
+const { mergeScalarKv, mergeScalarKvWithOutcome } = mergeModule;
 
 describe('mergeScalarKv — _meta protection contract', () => {
   it('skips root-level _meta from overlay (pre-existing behavior)', () => {
@@ -92,6 +92,27 @@ describe('mergeScalarKv — _meta protection contract', () => {
     const merged = mergeScalarKv(overlay, base);
     expect(merged.game.totalXP).toBe(200);
     expect(merged.game._meta).toBeUndefined();
+  });
+});
+
+describe('mergeScalarKvWithOutcome — heys_game stale-write guard', () => {
+  it('keeps newer cloud game data and reports the blocked write', () => {
+    const current = { totalXP: 500, updatedAt: 200 };
+    const incoming = { totalXP: 100, updatedAt: 100 };
+
+    expect(mergeScalarKvWithOutcome('heys_game', incoming, current)).toEqual({
+      value: current,
+      outcome: 'stale_write_blocked'
+    });
+  });
+
+  it('keeps scalar merge behavior for a newer game write', () => {
+    const current = { totalXP: 100, updatedAt: 100 };
+    const incoming = { totalXP: 500, updatedAt: 200 };
+    const result = mergeScalarKvWithOutcome('heys_game', incoming, current);
+
+    expect(result.outcome).toBe('scalar_merged');
+    expect(result.value.totalXP).toBe(500);
   });
 });
 

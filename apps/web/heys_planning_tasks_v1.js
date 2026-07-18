@@ -19,7 +19,7 @@
         PlanningQuickTargetField,
     } = PlanningQuickTarget;
     const { PRIORITY_CONFIG, STATUS_CONFIG, DUE_BUCKETS, PROJECT_COLORS } = Planning.Constants;
-    const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes } = Planning.Utils;
+    const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes, uid } = Planning.Utils;
 
     const TASKS_UI_SCALE_STORAGE_KEY = 'heys_planning_tasks_ui_scale_v1';
     const TASKS_UI_SCALE_MIN = 0.6;
@@ -158,6 +158,39 @@
             startTime: minutesToTime(startMinutes),
             endTime: minutesToTime(safeEndMinutes),
         };
+    }
+
+    function buildRepeatedTaskSlotOptions(selectedDates, options) {
+        const opts = options || {};
+        const dates = Array.from(new Set(Array.from(selectedDates || [])
+            .map((value) => String(value || '').slice(0, 10))
+            .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))))
+            .sort();
+        if (dates.length === 0) return [];
+
+        let startMinutes = timeToMinutes(opts.startTime || '09:00');
+        let endMinutes = timeToMinutes(opts.endTime || '10:00');
+        if (!Number.isFinite(startMinutes) || startMinutes < 0) startMinutes = 9 * 60;
+        if (!Number.isFinite(endMinutes) || endMinutes <= startMinutes) {
+            endMinutes = Math.min(startMinutes + 60, (24 * 60) - 1);
+        }
+        if (endMinutes <= startMinutes) {
+            startMinutes = 23 * 60;
+            endMinutes = (24 * 60) - 1;
+        }
+
+        const recurrenceGroupId = opts.recurrenceGroupId || uid();
+        return dates.map((date) => ({
+            taskId: opts.taskId || undefined,
+            title: '',
+            date,
+            startTime: minutesToTime(startMinutes),
+            endTime: minutesToTime(endMinutes),
+            source: 'user',
+            recurrenceGroupId,
+            isBackground: opts.isBackground === true,
+            bgColor: opts.isBackground === true ? opts.bgColor : undefined,
+        }));
     }
 
     function pluralizeTasks(count) {
@@ -1561,6 +1594,7 @@
         onDurationClick,
         durationPlaceholder,
         durationMinimal,
+        extraContent,
     }) {
         return h('div', { className: 'planning-quick-add' },
             h('div', { className: 'planning-quick-add__title-row' },
@@ -1600,6 +1634,7 @@
                     onClick: onDurationClick,
                 }),
             ),
+            extraContent || null,
         );
     }
 
@@ -2604,6 +2639,14 @@
         const [selectedPriority, setSelectedPriority] = useState('p2');
         const [quickDueDate, setQuickDueDate] = useState('');
         const [quickMinutes, setQuickMinutes] = useState('');
+        const [repeatOnDates, setRepeatOnDates] = useState(false);
+        const [repeatDates, setRepeatDates] = useState(() => new Set());
+        const [showRepeatCalendar, setShowRepeatCalendar] = useState(false);
+        const [repeatStartTime, setRepeatStartTime] = useState('09:00');
+        const [repeatEndTime, setRepeatEndTime] = useState('10:00');
+        const [repeatIsBackground, setRepeatIsBackground] = useState(false);
+        const [repeatBgColor, setRepeatBgColor] = useState('#3b82f6');
+        const [repeatValidationVisible, setRepeatValidationVisible] = useState(false);
         const [showFilters, setShowFilters] = useState(false);
         const [filterStatus, setFilterStatus] = useState('all');
         const [filterPriority, setFilterPriority] = useState('all');
@@ -2911,22 +2954,51 @@
             setQuickMinutes('');
             setShowQuickCalendar(false);
             setShowQuickDurationPicker(false);
+            setRepeatOnDates(false);
+            setRepeatDates(new Set());
+            setShowRepeatCalendar(false);
+            setRepeatStartTime('09:00');
+            setRepeatEndTime('10:00');
+            setRepeatIsBackground(false);
+            setRepeatBgColor('#3b82f6');
+            setRepeatValidationVisible(false);
         };
 
         const handleQuickCreateTask = (mode) => {
             const title = String(newTaskTitle || '').trim();
             if (!title) return;
+            if (repeatOnDates && mode !== 'done' && repeatDates.size === 0) {
+                setRepeatValidationVisible(true);
+                setShowRepeatCalendar(true);
+                return;
+            }
             const status = mode === 'done'
                 ? 'done'
                 : (mode === 'draft' ? 'todo' : 'in_progress');
+            const sortedRepeatDates = repeatOnDates && mode !== 'done'
+                ? Array.from(repeatDates).sort()
+                : [];
+            const rawRepeatDuration = timeToMinutes(repeatEndTime) - timeToMinutes(repeatStartTime);
+            const repeatedDuration = rawRepeatDuration > 0 ? rawRepeatDuration : 60;
             const task = state.addTask(title, {
                 projectId: resolvedQuickTarget.projectId,
                 parentTaskId: resolvedQuickTarget.parentTaskId,
                 priority: selectedPriority,
                 status,
-                dueDate: quickDueDate || undefined,
-                plannedMinutes: quickMinutes ? Number(quickMinutes) : undefined,
+                startDate: sortedRepeatDates[0] || undefined,
+                dueDate: sortedRepeatDates[sortedRepeatDates.length - 1] || quickDueDate || undefined,
+                plannedMinutes: quickMinutes ? Number(quickMinutes) : (sortedRepeatDates.length ? repeatedDuration : undefined),
             });
+
+            if (task?.id && sortedRepeatDates.length > 0) {
+                state.addSlotBatch(buildRepeatedTaskSlotOptions(sortedRepeatDates, {
+                    taskId: task.id,
+                    startTime: repeatStartTime,
+                    endTime: repeatEndTime,
+                    isBackground: repeatIsBackground,
+                    bgColor: repeatBgColor,
+                }));
+            }
 
             if (mode === 'done' && task?.id) {
                 const completionSlot = buildCompletionSlotFromNow(task.plannedMinutes);
@@ -3030,6 +3102,7 @@
                                 className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--done-task',
                                 title: 'Добавить уже завершённую задачу и поставить её в календарь текущим временем',
                                 'aria-label': 'Добавить уже завершённую задачу',
+                                disabled: repeatOnDates,
                                 onClick: handleAddCompletedTask,
                             },
                                 h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⚡'),
@@ -3039,6 +3112,7 @@
                                 className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--draft-task',
                                 title: 'Добавить задачу как драфт — в статусе «Ожидает начала»',
                                 'aria-label': 'Добавить задачу как драфт',
+                                disabled: repeatOnDates,
                                 onClick: handleAddDraftTask,
                             },
                                 h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⏸'),
@@ -3067,6 +3141,108 @@
                         onDurationClick: () => setShowQuickDurationPicker(true),
                         durationPlaceholder: 'мин/дн',
                         durationMinimal: true,
+                        extraContent: h('div', { className: 'planning-task-repeat' },
+                            h('label', { className: 'planning-task-repeat__toggle' },
+                                h('input', {
+                                    type: 'checkbox',
+                                    checked: repeatOnDates,
+                                    onChange: (event) => {
+                                        const enabled = event.target.checked;
+                                        setRepeatOnDates(enabled);
+                                        setRepeatValidationVisible(false);
+                                        if (enabled) {
+                                            setRepeatDates((current) => current.size > 0
+                                                ? current
+                                                : new Set([quickDueDate || todayIso]));
+                                            setShowRepeatCalendar(true);
+                                        } else {
+                                            setShowRepeatCalendar(false);
+                                        }
+                                    },
+                                }),
+                                h('span', null, 'Повторять в выбранные даты'),
+                            ),
+                            repeatOnDates && h('div', { className: 'planning-task-repeat__details' },
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-task-repeat__dates',
+                                    onClick: () => setShowRepeatCalendar(true),
+                                }, '📅 Выбрано дат: ' + repeatDates.size),
+                                h('div', { className: 'planning-task-repeat__time' },
+                                    h('label', null, 'С', h('input', {
+                                        type: 'time',
+                                        value: repeatStartTime,
+                                        onChange: (event) => setRepeatStartTime(event.target.value || '09:00'),
+                                    })),
+                                    h('label', null, 'До', h('input', {
+                                        type: 'time',
+                                        value: repeatEndTime,
+                                        onChange: (event) => setRepeatEndTime(event.target.value || '10:00'),
+                                    })),
+                                ),
+                                h('div', { className: 'planning-task-repeat__kind', role: 'group', 'aria-label': 'Вид задачи в календаре' },
+                                    h('button', {
+                                        type: 'button',
+                                        className: !repeatIsBackground ? 'active' : '',
+                                        'aria-pressed': !repeatIsBackground,
+                                        onClick: () => setRepeatIsBackground(false),
+                                    }, 'Обычная'),
+                                    h('button', {
+                                        type: 'button',
+                                        className: repeatIsBackground ? 'active' : '',
+                                        'aria-pressed': repeatIsBackground,
+                                        onClick: () => setRepeatIsBackground(true),
+                                    }, 'Фоновая'),
+                                ),
+                                repeatIsBackground && h('div', { className: 'planning-bg-palette', 'aria-label': 'Цвет фоновой задачи' },
+                                    ((HEYS.PlanningSchedule && HEYS.PlanningSchedule.BACKGROUND_SLOT_COLORS) || []).map((color) => h('button', {
+                                        key: color.value,
+                                        type: 'button',
+                                        className: 'planning-bg-swatch' + (repeatBgColor === color.value ? ' planning-bg-swatch--active' : ''),
+                                        style: { background: color.value },
+                                        title: color.label,
+                                        'aria-label': color.label,
+                                        onClick: () => setRepeatBgColor(color.value),
+                                    })),
+                                ),
+                                repeatValidationVisible && repeatDates.size === 0 && h('p', {
+                                    className: 'planning-task-repeat__error',
+                                    role: 'alert',
+                                }, 'Выбери хотя бы одну дату.'),
+                            ),
+                            repeatOnDates && showRepeatCalendar && HEYS.PlanningSchedule?.RepeatDateCalendar && h(React.Fragment, null,
+                                h('div', {
+                                    className: 'planning-repeat-calendar__backdrop',
+                                    onClick: () => setShowRepeatCalendar(false),
+                                }),
+                                h('div', { className: 'planning-repeat-calendar__overlay' },
+                                    h('div', { className: 'planning-repeat-calendar__overlay-header' },
+                                        h('span', { className: 'planning-repeat-calendar__overlay-title' }, 'Даты задачи'),
+                                        h('button', {
+                                            type: 'button',
+                                            className: 'planning-modal__close planning-modal__close--quick-event',
+                                            onClick: () => setShowRepeatCalendar(false),
+                                            'aria-label': 'Закрыть календарь',
+                                        }, '×'),
+                                    ),
+                                    h(HEYS.PlanningSchedule.RepeatDateCalendar, {
+                                        selectedDates: repeatDates,
+                                        onToggleDate: (isoDate) => {
+                                            setRepeatDates((current) => {
+                                                const next = new Set(current);
+                                                if (next.has(isoDate)) next.delete(isoDate);
+                                                else next.add(isoDate);
+                                                return next;
+                                            });
+                                            setRepeatValidationVisible(false);
+                                        },
+                                        onClear: () => setRepeatDates(new Set()),
+                                        anchorDate: quickDueDate || todayIso,
+                                        onClose: () => setShowRepeatCalendar(false),
+                                    }),
+                                ),
+                            ),
+                        ),
                     }),
                     showFilters && h('div', { className: 'planning-filters-panel' },
                         h('div', { className: 'planning-filters-panel__header' },
@@ -3262,5 +3438,6 @@
         buildResolvedTaskProjectMap,
         getTaskMatrixPatchForQuadrant,
         resolveTaskMatrixQuadrant,
+        buildRepeatedTaskSlotOptions,
     };
 })();

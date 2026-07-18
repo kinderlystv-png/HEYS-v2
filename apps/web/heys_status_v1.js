@@ -164,6 +164,31 @@
     }
   }
 
+  function parseMealTimeMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = time.trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getLatestValidMeal(meals) {
+    if (!Array.isArray(meals)) return null;
+    let latest = null;
+    for (const meal of meals) {
+      const minutes = parseMealTimeMinutes(meal?.time);
+      if (minutes === null || (latest && minutes <= latest.minutes)) continue;
+      latest = {
+        meal,
+        minutes,
+        time: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+      };
+    }
+    return latest;
+  }
+
   /**
    * Вычислить оценку фактора (0-100)
    */
@@ -190,14 +215,10 @@
       }
 
       case 'timing': {
-        // Проверяем последний приём пищи
-        const meals = dayData?.meals || [];
-        if (meals.length === 0) return 50; // Нет данных — нейтрально
+        const latestMeal = getLatestValidMeal(dayData?.meals);
+        if (!latestMeal) return 50; // Нет валидного времени — нейтрально
 
-        const lastMeal = meals[meals.length - 1];
-        if (!lastMeal?.time) return 50;
-
-        const [h] = lastMeal.time.split(':').map(Number);
+        const h = Math.floor(latestMeal.minutes / 60);
         if (h <= 20) return 100; // До 20:00 — отлично
         if (h <= 21) return 80;  // До 21:00 — хорошо
         if (h <= 22) return 50;  // До 22:00 — нормально
@@ -311,10 +332,9 @@
         return { value, target, unit: 'г', percent: Math.round((value / target) * 100) };
       }
       case 'timing': {
-        const meals = dayData?.meals || [];
-        if (meals.length === 0) return { value: null, target: null, unit: null, label: 'нет данных' };
-        const lastMeal = meals[meals.length - 1];
-        return { value: lastMeal?.time || null, target: '20:00', unit: null, label: `последний приём ${lastMeal?.time || '—'}` };
+        const latestMeal = getLatestValidMeal(dayData?.meals);
+        if (!latestMeal) return { value: null, target: null, unit: null, label: 'нет данных' };
+        return { value: latestMeal.time, target: '20:00', unit: null, label: `последний приём ${latestMeal.time}` };
       }
       case 'steps': {
         const goal = profile?.stepsGoal || 10000;
@@ -700,6 +720,7 @@
     // Функции
     calculateStatus,
     scoreFactor,
+    getLatestValidMeal,
     detectIssue,
 
     // Компоненты

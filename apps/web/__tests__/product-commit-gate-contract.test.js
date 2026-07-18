@@ -24,6 +24,8 @@ describe('personal product commit gate contract', () => {
     expect(core).toContain('cloud_save_queued_after_413');
     expect(core).toContain('visible_product_present');
     expect(core).toContain('ensureMealProductReady');
+    expect(core).toContain('Overlay.resolveMealProduct(finalProduct)');
+    expect(core).toContain('if (!nutrientReady.ok) return nutrientReady;');
   });
 
   it('blocks AddProductStep completion until the product is committed', () => {
@@ -37,6 +39,8 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('throw new Error(\'product_commit_failed\')');
     expect(addProduct).toContain('throw error;');
     expect(addProduct).not.toContain('штрихкод сохранён локально, но облачная синхронизация сейчас недоступна');
+    expect(addProduct).toContain("'aria-disabled': isNutrientsPending ? 'true' : undefined");
+    expect(addProduct).toContain("'Состав загружается'");
   });
 
   it('keeps new-product barcode capture on the create step', () => {

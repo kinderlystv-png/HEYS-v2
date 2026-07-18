@@ -27,29 +27,20 @@ const ALLOWED_ORIGINS = [
 ];
 
 /**
- * Нормализует телефон к формату +7XXXXXXXXXX
+ * Нормализует поддержанный российский телефон к формату +7XXXXXXXXXX.
  * @param {string} phone - сырой телефон (может быть с пробелами, дефисами, скобками)
- * @returns {string} - нормализованный телефон +7XXXXXXXXXX
+ * @returns {string|null} - нормализованный телефон или null для invalid input
  */
 function normalizePhone(phone) {
-  // Убираем всё кроме цифр и +
-  let digits = phone.replace(/[^\d+]/g, '');
+  const raw = String(phone ?? '').trim();
+  if (!raw || !/^\+?[\d\s()-]+$/.test(raw)) return null;
 
-  // Убираем + в начале если есть
-  digits = digits.replace(/^\+/, '');
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) digits = `7${digits}`;
+  if (digits.length === 11 && digits.startsWith('8')) digits = `7${digits.slice(1)}`;
+  if (!/^7\d{10}$/.test(digits)) return null;
 
-  // Если начинается с 8 — заменяем на 7
-  if (digits.startsWith('8')) {
-    digits = '7' + digits.slice(1);
-  }
-
-  // Если не начинается с 7 — добавляем 7 в начало (для РФ)
-  if (!digits.startsWith('7')) {
-    digits = '7' + digits;
-  }
-
-  // Возвращаем в формате +7XXXXXXXXXX
-  return '+' + digits;
+  return `+${digits}`;
 }
 
 function getCorsHeaders(origin) {
@@ -332,13 +323,26 @@ module.exports.handler = async function (event, context) {
     }
 
     // Валидация
-    if (!name || !phone || !messenger) {
+    if (!name || !messenger) {
       return {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Missing required fields: name, phone, messenger',
+          error: 'Missing required fields: name, messenger',
+        }),
+      };
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Invalid phone format',
+          message: 'Введите корректный номер телефона',
         }),
       };
     }
@@ -422,9 +426,6 @@ module.exports.handler = async function (event, context) {
       event.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ||
       event.requestContext?.identity?.sourceIp ||
       'unknown';
-
-    // Нормализуем телефон к формату +7XXXXXXXXXX
-    const normalizedPhone = normalizePhone(phone);
 
     // Сохраняем в PostgreSQL через connection pool
     const pool = getPool();
@@ -628,3 +629,5 @@ module.exports.handler = async function (event, context) {
     };
   }
 };
+
+module.exports.__test = { normalizePhone };

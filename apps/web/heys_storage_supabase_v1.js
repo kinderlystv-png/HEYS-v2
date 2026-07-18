@@ -6375,16 +6375,11 @@
 
     try {
       // Преобразуем items в формат для YandexAPI.
-      // 🛡️ Phase B2 — preserve _ctx из queue item; для items без _ctx (например
-      // direct push'ы из interceptSetItem) fallback на live cloud._writeContext
-      // если он для того же clientId. Без этого fallback'a saves через
-      // interceptSetItem не получали бы context (большинство писей идёт через
-      // этот путь, не через saveClientKey).
       // 2026-06-11 / TASK-005: для non-PIN write-context обязателен. Если он не
       // выпустился, не отправляем null-ctx batch как будто всё хорошо: оставляем
       // pending + показываем sync-error.
       const contextState = await ensureWriteContextForUpload(clientId, items);
-      if (contextState.required && !contextState.contextId && !contextState.itemsHaveContext) {
+      if (contextState.required && !contextState.contextId) {
         const keys = items.map(item => item?.k).filter(Boolean).join(', ').slice(0, 160);
         recordWriteContextUnavailable('upload_blocked_no_context', { clientId, keys });
         return { success: false, error: 'write_context_unavailable' };
@@ -6396,7 +6391,9 @@
         originalKey: item.k, // preserve scoped key for LS write-back
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
-        _ctx: item._ctx || liveCtx || null,
+        // Queue items survive browser sessions, so their persisted context may
+        // already be expired. A freshly validated live context always wins.
+        _ctx: liveCtx || item._ctx || null,
         updated_at: item.updated_at || new Date().toISOString()
       })).map(item => rehydrateDayv2UploadItemFromLocal(item, clientId));
 
@@ -6444,8 +6441,9 @@
       const isSubscriptionRequiredError = (err) => String(err || '').toLowerCase().includes('subscription_required');
       const subscriptionRejectedKeys = [];
       const blockDayv2BatchFallback = (k, err) => {
-        mergeAbortError = `merge_save_required_for_dayv2:${String(err || 'unknown').slice(0, 120)}`;
-        console.warn('[merge-save] dayv2 merge failed for', k, '— keeping pending instead of unsafe batch fallback');
+        const reason = String(err || 'unknown').slice(0, 120);
+        mergeAbortError = `merge_save_required_for_dayv2:${reason}`;
+        console.warn('[merge-save] dayv2 merge failed for', k, '→', reason, '— keeping pending instead of unsafe batch fallback');
       };
 
       for (const it of mergeableItems) {
@@ -6453,6 +6451,17 @@
           const lastSeen = Number((it.v && it.v.updatedAt) || 0);
           // 🛡️ Phase B2: pass per-item contextId (captured at save-time).
           const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen, it._ctx || null);
+          const isTerminalMergeRejection = result.success
+            && /^(cross_client_|invalid_profile_field)/i.test(String(result.outcome || ''));
+          if (isTerminalMergeRejection && !result.v) {
+            // mergeSaveKV already applied the server rejection policy via
+            // _dropRejectedKey. A fresh-row rejection intentionally has no
+            // cloud value; treating that as an RPC failure would requeue the
+            // rejected payload forever.
+            console.warn('[merge-save] terminal server rejection for', it.k, '→', result.outcome, '— pending item dropped');
+            mergeSavedCount++;
+            continue;
+          }
           if (result.success && result.v) {
             // 🛡️ Idempotency check — обрывает curator-side merge/autosave loop.
             // Сценарий: merge_save_client_kv_by_curator возвращает merged_v с DB.updated_at,
@@ -7481,9 +7490,8 @@
                 // Stage 4 (2026-05-23): subscription status cache (~250-300 байт).
                 // canWriteSync() в paywall_v1 читает HEYS.Subscription.getCachedStatus()
                 // синхронно при каждом write attempt. На cold-start без cache он
-                // возвращает true (fail-open) — пользователь с истёкшим триалом мог
-                // успеть сделать write до приземления реального статуса. С этим
-                // ключом в Phase A canWriteSync видит реальный status сразу.
+                // блокирует запись и запускает background refresh; ключ в Phase A
+                // сокращает это закрытое loading-окно.
                 'heys_subscription_status',
                 // Stage 5 (2026-05-23): widget layout (~2-3 KB). Читается синхронно
                 // при первом рендере dashboard — без него виджеты раскладываются по
@@ -7620,6 +7628,7 @@
 	                    || row.k === 'heys_planning_links_v1'
 	                    || row.k === 'heys_planning_entity_tombstones_v1'
 	                    || row.k === 'heys_planning_goal_map_records_v1'
+	                    || row.k === 'heys_planning_chrono_untracked_tail_dismissed_v1'
 	                    || row.k === 'heys_planning_commands_v1';
 	                  if (isPlanningMergeableArray && Array.isArray(row.v)) {
 	                    try {
@@ -9514,6 +9523,7 @@
                     || row.k === 'heys_planning_links_v1'
                     || row.k === 'heys_planning_entity_tombstones_v1'
                     || row.k === 'heys_planning_goal_map_records_v1'
+                    || row.k === 'heys_planning_chrono_untracked_tail_dismissed_v1'
                     || row.k === 'heys_planning_commands_v1') {
                   try {
                     const PStore = global.HEYS?.Planning?.Store;
@@ -10517,11 +10527,9 @@
       return { required: false, contextId: null };
     }
 
-    const allItemsHaveContext = Array.isArray(items) && items.length > 0 && items.every(item => item && item._ctx);
-    if (allItemsHaveContext) {
-      return { required: true, contextId: null, itemsHaveContext: true };
-    }
-
+    // Persisted queue items may carry a context from an earlier browser session.
+    // Never treat the mere presence of `_ctx` as proof that it is still valid:
+    // under strict validation an expired context poisons every retry forever.
     if (isUsableWriteContextForClient(clientId)) {
       return { required: true, contextId: cloud._writeContext.contextId };
     }
@@ -11238,6 +11246,10 @@
    */
   function scheduleClientPush(opts) {
     if (isLogoutSuppressionActive()) return;
+    // Circuit breaker: after the retry budget is exhausted, keep durable
+    // pending data without scheduling another 500ms loop. Auth/network restore
+    // paths reset retryAttempt and resume the queue explicitly.
+    if (retryAttempt >= MAX_RETRY_ATTEMPTS) return;
     // 🛡️ Switch-race guard (2026-05-30 audit): scheduleClientPush мог
     // setTimeout'ить flush С 500ms debounce. Если в этой window'е стартует
     // curator switch — после cleanup, но до reload — таймер мог сработать
@@ -11257,7 +11269,7 @@
       notifyPendingChange();
     }
 
-    let delay = navigator.onLine ? 500 : getRetryDelay();
+    let delay = retryAttempt > 0 ? getRetryDelay() : (navigator.onLine ? 500 : getRetryDelay());
     if (_clientUpload413BackoffUntil > Date.now()) {
       delay = Math.max(delay, Math.min(120000, _clientUpload413BackoffUntil - Date.now()));
     }
@@ -11392,7 +11404,9 @@
       item: upsertObj,
       normalizedKey,
       waitingForSync,
-      isOnline: navigator.onLine,
+      // Critical keys normally upload immediately, but must respect the same
+      // circuit breaker as the debounced path after repeated RPC failures.
+      isOnline: navigator.onLine && retryAttempt < MAX_RETRY_ATTEMPTS,
       uploadInProgress: !!_uploadInProgress,
       pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
       persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
@@ -13461,6 +13475,7 @@
           || baseKey === 'heys_planning_links_v1'
           || baseKey === 'heys_planning_entity_tombstones_v1'
           || baseKey === 'heys_planning_goal_map_records_v1'
+          || baseKey === 'heys_planning_chrono_untracked_tail_dismissed_v1'
           || baseKey === 'heys_planning_commands_v1') {
         // 🛡️ Planning merge-by-record (parallel-edit loss fix). Union local with cloud
         // instead of wholesale replace, so a stale cloud array can't drop local-only

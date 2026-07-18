@@ -37,6 +37,31 @@ describe('mobility records store', () => {
     expect(M().recordsStore.listSessions('c2', storage).length).toBe(0);
   });
 
+  it('повторяет session write по idempotency key без дубля', () => {
+    const storage = M().recordsStore.createMemoryStorage();
+    const target = { ok: true, session: { mode: 'evening_relax', blocks: [] } };
+    const first = M().recordsStore.addSession('c1', target, storage, { idempotencyKey: 'mobility:2026-06-13:2:partial-3' });
+    const repeated = M().recordsStore.addSession('c1', target, storage, { idempotencyKey: 'mobility:2026-06-13:2:partial-3' });
+
+    expect(repeated.id).toBe(first.id);
+    expect(M().recordsStore.listSessions('c1', storage)).toHaveLength(1);
+  });
+
+  it('возвращает null при ошибке записи session', () => {
+    const storage = {
+      getItem: () => null,
+      setItem: () => { throw new Error('records write failed'); }
+    };
+    const saved = M().recordsStore.addSession(
+      'c1',
+      { ok: true, session: { mode: 'evening_relax', blocks: [] } },
+      storage,
+      { idempotencyKey: 'failed-write' }
+    );
+
+    expect(saved).toBeNull();
+  });
+
   it('latestAssessment возвращает последний аудит', () => {
     const storage = M().recordsStore.createMemoryStorage();
     M().recordsStore.addAssessment('c1', { leadingLimiter: { jointRegion: 'ankle' } }, storage);

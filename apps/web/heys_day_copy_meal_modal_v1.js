@@ -218,7 +218,7 @@
         const [dstMealIndex, setDstMealIndex] = React.useState(candidateMeals.length > 0 ? candidateMeals[0].index : null);
         const [itemGrams, setItemGrams] = React.useState(() => {
             const m = {};
-            allItems.forEach(it => { m[it.id] = Number(it.grams) || 100; });
+            allItems.forEach(it => { m[it.id] = HEYS.models.normalizeItemGrams(it.grams, 100); });
             return m;
         });
 

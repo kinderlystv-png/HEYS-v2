@@ -52,16 +52,23 @@ describe('morning check-in stability', () => {
   it('keeps strict final completion single-step and marks cloud-pending local completion explicitly', () => {
     expect(STEP_MODAL_SRC).toContain('if (requireStepAck) {\n            if (!(await saveStepConfig(currentConfig, stepData))) return;');
     expect(MORNING_SRC).toContain('markMorningProgressCloudPending');
-    expect(MORNING_SRC).toContain("(flushed) => finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' })");
-    expect(MORNING_SRC).toContain("return finish({ cloudPending: true, syncNote: 'checkin_sync_failed' });");
-    expect(MORNING_SRC).toContain("return Promise.resolve(finish({ cloudPending: true, syncNote: 'checkin_sync_unavailable' }));");
-    expect(MORNING_SRC).toContain("markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_failed')");
+    expect(MORNING_SRC).toContain("? 'background_sync'");
+    expect(MORNING_SRC).toContain("traceMorningCheckin('step_sync_background'");
+    expect(MORNING_SRC).toContain("traceMorningCheckin('flow_sync_background'");
+    expect(MORNING_SRC).not.toContain('flushed = await HEYS.cloud.flushPendingQueue');
+    expect(MORNING_SRC).not.toContain('return HEYS.cloud.flushPendingQueue(10000).then');
     expect(MORNING_SRC).toContain("status: cloudPending ? 'saved_local' : 'synced'");
     expect(MORNING_SRC).toContain('cloudPending,');
     expect(MORNING_SRC).toContain("syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null");
     expect(DAY_EFFECTS_SRC).toContain("'#sq' + (lsDay.sleepQuality || 0)");
     expect(DAY_EFFECTS_SRC).toContain("'#mm' + (lsDay.moodMorning || 0)");
     expect(DAY_EFFECTS_SRC).toContain("'#wm' + (lsDay.wellbeingMorning || 0)");
+  });
+
+  it('acknowledges a successfully persisted weight without waiting for a read-back render', () => {
+    expect(STEPS_SRC).toContain('const saved = saveDayData(dateKey, dayData);');
+    expect(STEPS_SRC).toContain("throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');");
+    expect(STEPS_SRC).toContain('affectedKeys: [`heys_dayv2_${dateKey}`],\n        completed: true');
   });
 
   it('treats explicit no-period cycle answer as completed for today', () => {

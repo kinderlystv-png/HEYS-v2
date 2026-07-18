@@ -1141,7 +1141,7 @@
     let mealFat = 0;
     for (const item of lastMeal.items) {
       const p = getProduct(item);
-      if (p) mealFat += (p.fat100 || 0) * (item.grams || 100) / 100;
+      if (p) mealFat += (p.fat100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
     }
 
     // Жирная еда → жирорастворимые витамины
@@ -1219,7 +1219,7 @@
     let mealProtein = 0;
     for (const item of lastMeal.items) {
       const p = getProduct(item);
-      if (p) mealProtein += (p.protein100 || 0) * (item.grams || 100) / 100;
+      if (p) mealProtein += (p.protein100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
     }
     if (mealProtein >= 25) {
       const sportSupps = notTaken.filter(id =>

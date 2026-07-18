@@ -19,6 +19,7 @@
         CHRONO_ENTRIES: 'heys_planning_chrono_entries',
         CHRONO_SNAPSHOTS: 'heys_planning_chrono_snapshots',
         CHRONO_TOMBSTONES: 'heys_planning_chrono_tombstones_v1',
+        CHRONO_UNTRACKED_TAIL_DISMISSED: 'heys_planning_chrono_untracked_tail_dismissed_v1',
         CHRONO_TIMER: 'heys_planning_chrono_timer',
         CHECKLISTS: 'heys_planning_checklists_v1',
         CHECKLIST_TOMBSTONES: 'heys_planning_checklist_tombstones_v1',
@@ -37,7 +38,7 @@
         KEYS.CHRONO_ENTRIES,
         KEYS.CHRONO_SNAPSHOTS,
         KEYS.CHRONO_TOMBSTONES,
-        'heys_planning_chrono_untracked_tail_dismissed_v1',
+        KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED,
         KEYS.CHECKLISTS,
         KEYS.CHECKLIST_TOMBSTONES,
         KEYS.GOALS,
@@ -58,6 +59,7 @@
         KEYS.GOAL_MAP_RECORDS,
         KEYS.ENTITY_TOMBSTONES,
         KEYS.COMMANDS,
+        KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED,
     ]);
     const _planningCloudMeta = new Map();
     const _planningQueuedHashes = new Map();
@@ -707,6 +709,29 @@
         return pruneChronoTombstones(lsGet(KEYS.CHRONO_TOMBSTONES, []));
     }
 
+    function normalizeChronoUntrackedTailDismissedDates(dates) {
+        return Array.from(new Set((Array.isArray(dates) ? dates : [])
+            .map((date) => String(date || '').slice(0, 10))
+            .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))))
+            .sort();
+    }
+
+    function getChronoUntrackedTailDismissedDates() {
+        return normalizeChronoUntrackedTailDismissedDates(
+            lsGet(KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED, []),
+        );
+    }
+
+    function saveChronoUntrackedTailDismissedDates(dates, opts) {
+        const current = opts?.replace === true ? [] : getChronoUntrackedTailDismissedDates();
+        const next = normalizeChronoUntrackedTailDismissedDates(current.concat(dates || []));
+        persistPlanningKey(KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED, next, {
+            reason: opts?.reason || 'chrono-untracked-tail-dismiss',
+            sync: opts?.sync,
+        });
+        return next;
+    }
+
     function saveChronoTombstones(tombstones, opts) {
         const current = lsGet(KEYS.CHRONO_TOMBSTONES, []);
         const incoming = Array.isArray(tombstones) ? tombstones : [];
@@ -873,6 +898,11 @@
     // Merge-by-id is enabled only for collections with explicit tombstone coverage.
     // Snapshots remain replace-only because they have no stable record id.
     function mergeCloudPlanningArray(key, localArr, remoteArr) {
+        if (key === KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED) {
+            return normalizeChronoUntrackedTailDismissedDates(
+                (Array.isArray(remoteArr) ? remoteArr : []).concat(Array.isArray(localArr) ? localArr : []),
+            );
+        }
         if (key === KEYS.CHRONO_ACTIVITIES) {
             return sortByOrder(filterChronoActivities(mergeArrayById(localArr, remoteArr)));
         }
@@ -2614,8 +2644,18 @@
                     Store.saveChronoSnapshots(item.v, { sync: false, reason: 'cloud-refresh' });
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
                     Store.saveChronoTombstones(item.v, { sync: false, reason: 'cloud-refresh' }); // tombstones already union-merge in saveChronoTombstones
-                } else if (item.k === 'heys_planning_chrono_untracked_tail_dismissed_v1' && HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-                    persistPlanningKey('heys_planning_chrono_untracked_tail_dismissed_v1', item.v, { sync: false, reason: 'cloud-refresh' });
+                } else if (item.k === KEYS.CHRONO_UNTRACKED_TAIL_DISMISSED) {
+                    const localDates = getChronoUntrackedTailDismissedDates();
+                    const mergedDates = mergeCloudPlanningArray(item.k, localDates, item.v) || localDates;
+                    saveChronoUntrackedTailDismissedDates(mergedDates, {
+                        replace: true,
+                        sync: false,
+                        reason: 'cloud-refresh',
+                    });
+                    const diff = describePlanningArrayDiff(localDates, item.v);
+                    if (diff.localOnlyIds.length > 0) {
+                        enqueuePlanningMergeRescue(item.k, mergedDates, { reason: 'chrono-tail-dismiss-merge-rescue' });
+                    }
                 } else if (item.k === 'heys_planning_checklists_v1' && typeof Store.saveChecklists === 'function') {
                     const _localChecklists = getChecklists();
                     if (isCloudChecklistWipeSuspicious(item.k, _localChecklists, item.v)) {
@@ -2946,6 +2986,8 @@
         mergeChronoActivities,
         getChronoTombstones,
         saveChronoTombstones,
+        getChronoUntrackedTailDismissedDates,
+        saveChronoUntrackedTailDismissedDates,
         mergeArrayById,
         mergeCloudPlanningArray,
         isCloudChronoWipeSuspicious,

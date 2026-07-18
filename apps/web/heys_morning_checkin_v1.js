@@ -1434,8 +1434,7 @@
     const profile = getFreshMorningProfile(clientId);
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
-      const completeByData = id !== 'yesterdayVerify'
-        && MORNING_DATA_COMPLETABLE_STEPS.has(id)
+      const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
         && isMorningStepComplete(id, { dateKey, clientId, day, profile });
       return {
         id,
@@ -1461,8 +1460,7 @@
 
     freshSteps.forEach((id) => {
       if (merged.includes(id) || alreadyPlanned.has(id)) return;
-      const completeByData = id !== 'yesterdayVerify'
-        && MORNING_DATA_COMPLETABLE_STEPS.has(id)
+      const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
         && isMorningStepComplete(id, { dateKey, clientId, day, profile });
       if (!completeByData) merged.push(id);
     });
@@ -1553,10 +1551,7 @@
     const profile = getFreshMorningProfile(clientId);
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
-      // Once yesterdayVerify entered the plan it must be acknowledged in the
-      // ledger. A later live shouldShow=false cannot silently satisfy it.
-      const completeByData = id !== 'yesterdayVerify'
-        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
       return {
         id,
         status: row.status || (completeByData ? 'data_present' : 'missing'),
@@ -1644,7 +1639,8 @@
       case 'sleepQuality': return hasSleepQuality(day);
       case 'morning_mood': return hasMorningMood(day);
       case 'stepsGoal': return hasStepsGoal(profile);
-      case 'yesterdayVerify': return !shouldShowYesterdayVerifyRequired();
+      case 'yesterdayVerify':
+        return isYesterdayVerifyDecisionReady() && !shouldShowYesterdayVerifyRequired();
       case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);
       case 'cycle': return hasCycleDecision(day, profile);
       case 'measurements': {
@@ -1720,38 +1716,20 @@
       throw err;
     }
 
-    if (!HEYS.cloud || typeof HEYS.cloud.flushPendingQueue !== 'function') {
-      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'sync_unavailable');
-      return true;
-    }
-
-    let flushed = false;
-    try {
-      flushed = await HEYS.cloud.flushPendingQueue(timeoutMs || 10000);
-    } catch (err) {
-      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_failed');
-      traceMorningCheckin('step_sync_deferred', {
-        dateKey,
-        clientId,
-        stepId,
-        status: 'saved_local',
-        error: err?.message || String(err || 'flush_failed'),
-        affectedKeys
-      });
-      return true;
-    }
-    if (!flushed) {
-      markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, 'flush_timeout');
-      return true;
-    }
-
-    markMorningProgressStep(dateKey, stepId, {
-      status: 'synced',
-      syncedAt: Date.now(),
-      cloudPending: false,
-      syncNote: null,
-      error: null
-    }, clientId);
+    // Local-first: Store.set already enqueues the affected values and starts the
+    // normal uploader. Waiting for the entire queue here made every "Next" tap
+    // depend on unrelated network/retry state for up to 10 seconds.
+    const syncNote = HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function'
+      ? 'background_sync'
+      : 'sync_unavailable';
+    markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, syncNote);
+    traceMorningCheckin('step_sync_background', {
+      dateKey,
+      clientId,
+      stepId,
+      status: 'saved_local',
+      affectedKeys
+    });
     return true;
   }
 
@@ -1883,36 +1861,18 @@
       return true;
     };
 
-    if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-      return HEYS.cloud.flushPendingQueue(10000).then(
-        (flushed) => finish(flushed ? {} : { cloudPending: true, syncNote: 'checkin_sync_timeout' }),
-        (err) => {
-          markMorningProgressStep(todayKey, '__flow__', {
-            status: 'saved_local',
-            cloudPending: true,
-            syncNote: 'checkin_sync_failed',
-            error: null
-          }, currentClientId);
-          traceMorningCheckin('flow_sync_deferred', {
-            dateKey: todayKey,
-            clientId: currentClientId,
-            flowId: plan?.flowId,
-            status: 'saved_local',
-            error: err?.message || String(err || 'checkin_sync_failed')
-          });
-          console.warn('[MorningCheckin] final sync deferred:', err?.message || err);
-          return finish({ cloudPending: true, syncNote: 'checkin_sync_failed' });
-        }
-      );
-    }
-    traceMorningCheckin('flow_sync_deferred', {
+    const syncAvailable = !!(HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function');
+    traceMorningCheckin('flow_sync_background', {
       dateKey: todayKey,
       clientId: currentClientId,
       flowId: plan?.flowId,
       status: 'saved_local',
-      error: 'checkin_sync_unavailable'
+      error: syncAvailable ? null : 'checkin_sync_unavailable'
     });
-    return Promise.resolve(finish({ cloudPending: true, syncNote: 'checkin_sync_unavailable' }));
+    return finish({
+      cloudPending: true,
+      syncNote: syncAvailable ? 'background_sync' : 'checkin_sync_unavailable'
+    });
   }
 
   /**

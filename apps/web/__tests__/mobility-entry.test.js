@@ -86,6 +86,25 @@ describe('Mobility public entry', () => {
     expect(plan.totalSteps).toBeGreaterThan(0);
   });
 
+  it('defaults and public builders fail closed until required profile data is provided', () => {
+    const M = setupFull();
+    const defaultProfile = M.getProfile({});
+    const built = M.buildSession('morning_tonify', {}, {});
+    const course = M.buildCourse({ goal: 'posture', startedAt: '2026-06-01', weeks: 4 });
+    const courseBuilt = M.buildCourseSession(course, {}, { todayKey: '2026-06-08' });
+
+    expect(defaultProfile.age).toBeNull();
+    expect(defaultProfile.acceptedDisclaimer).toBe(false);
+    expect(built.ok).toBe(false);
+    expect(built.session).toBeNull();
+    expect(built.errors.map((issue) => issue.code)).toEqual(expect.arrayContaining([
+      'onboarding.age_missing',
+      'onboarding.disclaimer'
+    ]));
+    expect(courseBuilt.ok).toBe(false);
+    expect(courseBuilt.session).toBeNull();
+  });
+
   it('buildCourseSession delegates to slot-based course planner', () => {
     const M = setupFull();
     const course = M.buildCourse({ goal: 'posture', startedAt: '2026-06-01', weeks: 4 });

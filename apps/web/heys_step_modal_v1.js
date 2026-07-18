@@ -471,6 +471,9 @@
       nextLabel: config.nextLabel || null,  // Кастомный текст кнопки "Далее"/"Готово"
       hideHeaderNext: config.hideHeaderNext || false,  // Скрыть кнопку в хедере
     };
+    try {
+      document.dispatchEvent(new CustomEvent('heys-step-registered', { detail: { id } }));
+    } catch (_) { }
   }
 
   // === StepModal — главный контейнер ===
@@ -510,6 +513,15 @@
     const savedStepSigsRef = useRef({});
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
+    const [registryVersion, setRegistryVersion] = useState(0);
+
+    useEffect(() => {
+      const handleStepRegistered = () => setRegistryVersion((version) => version + 1);
+      document.addEventListener('heys-step-registered', handleStepRegistered);
+      // Закрывает race, если регистрация случилась между первым render и effect.
+      handleStepRegistered();
+      return () => document.removeEventListener('heys-step-registered', handleStepRegistered);
+    }, []);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
     const forceVisibleStepIdsKey = Array.isArray(forceVisibleStepIds)
@@ -529,7 +541,7 @@
         // Inline step config
         return stepId;
       }).filter(Boolean);
-    }, [steps]);
+    }, [steps, registryVersion]);
 
     const computedVisibleStepConfigs = useMemo(() => {
       return stepConfigs.filter(config => {
@@ -545,13 +557,15 @@
       });
     }, [stepConfigs, contextKey, stepData, forcedVisibleStepIdSet]);
 
-    if (freezeVisibleSteps && (frozenVisibleStepConfigsRef.current === null || frozenContextKeyRef.current !== contextKey)) {
+    const allStepConfigsReady = stepConfigs.length === steps.length;
+    if (freezeVisibleSteps && allStepConfigsReady
+      && (frozenVisibleStepConfigsRef.current === null || frozenContextKeyRef.current !== contextKey)) {
       frozenContextKeyRef.current = contextKey;
       frozenVisibleStepConfigsRef.current = computedVisibleStepConfigs;
     }
 
     const visibleStepConfigs = freezeVisibleSteps
-      ? (frozenVisibleStepConfigsRef.current || computedVisibleStepConfigs)
+      ? (frozenVisibleStepConfigsRef.current || (allStepConfigsReady ? computedVisibleStepConfigs : []))
       : computedVisibleStepConfigs;
 
     const totalSteps = visibleStepConfigs.length;

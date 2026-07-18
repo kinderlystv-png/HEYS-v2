@@ -4,9 +4,8 @@ name: API Health Monitor
 # При падении критических endpoints отправляет алерт в Telegram
 
 on:
-  # schedule отключён — экономия токенов Copilot
-  # schedule:
-  #   - cron: "*/15 * * * *"
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch: # Ручной запуск для тестирования
   push:
     branches: [main]
@@ -30,6 +29,14 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Test Health Endpoint
         id: health
         run: |
@@ -136,8 +143,25 @@ jobs:
 
           echo "✅ Auth endpoint passed"
 
+      - name: Check Automation Dead-Man
+        id: deadman
+        if: always()
+        env:
+          PGPASSWORD: ${{ secrets.PG_PASSWORD }}
+        run: |
+          if [ -z "$PGPASSWORD" ]; then
+            echo "::error::PG_PASSWORD is not configured for the dead-man check"
+            exit 1
+          fi
+          if ! command -v psql >/dev/null 2>&1; then
+            echo "::error::psql is unavailable on the runner"
+            exit 1
+          fi
+          node yandex-cloud-functions/check-heys-ops-status.cjs --dead-man --strict --json
+
       # Auto-redeploy при обнаружении проблем
       - name: Auto-redeploy on API failure
+        id: redeploy
         if: failure() && (steps.rest.outcome == 'failure' || steps.rpc.outcome == 'failure')
         continue-on-error: true # Не падать, если триггер не сработал
         uses: actions/github-script@v7
@@ -166,15 +190,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          MESSAGE="🚨 *HEYS API Health Check Failed*%0A%0A"
-          MESSAGE="${MESSAGE}❌ One or more endpoints down%0A"
+          MESSAGE="🚨 *HEYS Health / Dead-Man Check Failed*%0A%0A"
+          MESSAGE="${MESSAGE}❌ One or more health checks failed%0A"
           MESSAGE="${MESSAGE}🕐 Time: $(date -u +'%Y-%m-%d %H:%M:%S UTC')%0A"
           MESSAGE="${MESSAGE}🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})%0A%0A"
           MESSAGE="${MESSAGE}*Health*: ${{ steps.health.outputs.http_code || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*RPC*: ${{ steps.rpc.outputs.http_code || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*REST*: ${{ steps.rest.outputs.http_code || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*Auth*: ${{ steps.auth.outputs.http_code || 'N/A' }}%0A%0A"
-          MESSAGE="${MESSAGE}🔄 Auto-redeploy: TRIGGERED%0A"
+          MESSAGE="${MESSAGE}*Dead-man*: ${{ steps.deadman.outcome || 'N/A' }}%0A%0A"
+          MESSAGE="${MESSAGE}🔄 Auto-redeploy: ${{ steps.redeploy.outcome || 'not-triggered' }}%0A"
           MESSAGE="${MESSAGE}📝 Action: Monitor workflow or run \`./deploy-all.sh\` manually if redeploy fails"
 
           # Проверка, что токены настроены
@@ -198,3 +223,4 @@ jobs:
           echo "  - RPC: ${{ steps.rpc.outputs.http_code }}"
           echo "  - REST: ${{ steps.rest.outputs.http_code }}"
           echo "  - Auth: ${{ steps.auth.outputs.http_code }}"
+          echo "  - Dead-man: ${{ steps.deadman.outcome }}"

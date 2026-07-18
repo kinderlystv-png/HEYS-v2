@@ -951,6 +951,7 @@
         const LazyMount = getLazyMount(React);
         const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
         const DiaryFiberPanel = getDiaryFiberPanelComponent(React);
+        const DiaryHungerCard = app.HungerEnergyStatusModal?.DiaryCard || null;
         const DiaryOptionalPanels = getDiaryOptionalPanelsComponent(React);
         const DiaryPanelGate = getDiaryPanelGateComponent(React);
 
@@ -1086,6 +1087,9 @@
                 pIndex,
                 profile: prof
             }),
+            DiaryHungerCard
+                ? React.createElement(DiaryHungerCard, { date: dateKey, day })
+                : null,
             goalProgressBar,
             React.createElement(DiaryPanelGate, {
                 profile: prof,

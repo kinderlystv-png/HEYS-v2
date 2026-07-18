@@ -7323,51 +7323,16 @@
           }, isEditMode ? '✓' : '✏️')
         ),
 
-        // Meal/Water/Message FAB group — как на остальных вкладках (справа).
+        // Общий Water/Meal/Hunger/Message FAB group — тот же компонент, что в Day.
         // В edit-mode прячем, чтобы не мешали перетаскиванию.
-        !isEditMode && React.createElement('div', { className: 'fab-group' },
-          React.createElement('button', {
-            className: 'meal-fab',
-            onClick: () => goToDayAndRun('diary', 'addMeal', []),
-            'aria-label': 'Добавить приём пищи'
-          }, '🍽️'),
-          React.createElement('button', {
-            className: 'water-fab',
-            onClick: (e) => handleAddWater(200, e.currentTarget),
-            'aria-label': 'Добавить стакан воды'
-          }, '🥛'),
-          window.HEYS?.HungerEnergyStatusModal?.FabButton
-            ? React.createElement(window.HEYS.HungerEnergyStatusModal.FabButton, {
-                key: 'hunger-fab',
-                context: {
-                  source: 'widgets-fab',
-                  date: selectedDate || new Date().toISOString().slice(0, 10)
-                }
-              })
-            : React.createElement('button', {
-                className: 'hunger-energy-fab',
-                onClick: () => window.HEYS?.HungerEnergyStatusModal?.show?.({
-                  source: 'widgets-fab',
-                  date: selectedDate || new Date().toISOString().slice(0, 10)
-                }),
-                'aria-label': 'Открыть оценку голода'
-              }, React.createElement('svg', {
-                className: 'hes-fab-icon',
-                viewBox: '0 0 24 24',
-                focusable: 'false',
-                'aria-hidden': 'true'
-              },
-                React.createElement('circle', { cx: 12, cy: 12, r: 8.2 }),
-                React.createElement('path', { d: 'M8.4 12h7.2' })
-              )),
-          window.HEYS?.Messenger?.FabButton
-            ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
-            : React.createElement('button', {
-                className: 'message-fab',
-                onClick: () => window.HEYS?.Messenger?.openModal?.(),
-                'aria-label': 'Написать куратору'
-              }, '💬')
-        )
+        !isEditMode && React.createElement(HEYS.dayPageShell.QuickActionsFabGroup, {
+          onAddWater: (e) => handleAddWater(200, e.currentTarget),
+          onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
+          hungerContext: {
+            source: 'widgets-fab',
+            date: selectedDate || new Date().toISOString().slice(0, 10)
+          }
+        })
       )
     );
   }
