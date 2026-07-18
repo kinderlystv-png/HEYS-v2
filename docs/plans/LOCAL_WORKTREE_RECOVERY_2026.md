@@ -53,7 +53,7 @@
 | G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | published + deployed      | package gates + load checks + canary после deploy   |
 | G07 | DB migration                       | `scripts/db/migrations/2026-07-18_push_idempotency_delivery_state.sql` | applied + verified        | checksum, idempotency tests, managed apply          |
 | G08 | Documentation                      | root/docs/reference/infra/function docs                                | transferred + audited     | ссылки и утверждения сверены с опубликованным кодом |
-| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only           | release build from integrated source                |
+| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | built + verified          | release build from integrated source                |
 
 Статусы групп будут обновляться значениями `inventory`, `transferred`, `tested`,
 `committed`, `published`, `deployed`, `blocked` или `superseded`.
@@ -74,12 +74,12 @@
 
 | Claim                                                                      | Source           | Verify command                                                                                                                                                       | Result на 2026-07-18                                                                                                                              |
 | -------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Предыдущая программа R01–R10 завершена                                     | remote roadmap   | `git show origin/main:docs/plans/TECHNICAL_RISK_PROGRAM_2026.md \| sed -n '1,35p'`                                                                                   | ✅ roadmap имеет статус `completed`, все R01–R10 отмечены `completed`                                                                             |
+| Предыдущая программа R01–R10 завершена                                     | remote roadmap   | `git grep -n 'Статус.*completed' origin/main -- docs/plans/TECHNICAL_RISK_PROGRAM_2026.md`                                                                           | ✅ roadmap имеет статус `completed`, все R01–R10 отмечены `completed`                                                                             |
 | Актуальная remote-база — `1f77cce5`                                        | Git ref          | `git rev-parse origin/main`                                                                                                                                          | ✅ `1f77cce5d5fbde96f43aaf6173046123f07d25ae`                                                                                                     |
 | Исходный local `main` отстаёт на 14 commit'ов                              | Git history      | `git rev-list --count HEAD..origin/main`                                                                                                                             | ✅ `14`                                                                                                                                           |
-| Исходный checkout содержит 93 tracked и 41 untracked path                  | Git status       | `git diff --name-only \| wc -l`; `git ls-files --others --exclude-standard \| wc -l`                                                                                 | ✅ `93` и `41`                                                                                                                                    |
+| Исходный checkout содержит 93 tracked и 41 untracked path                  | Git status       | `git diff --name-only`; `git ls-files --others --exclude-standard`                                                                                                   | ✅ `93` и `41`                                                                                                                                    |
 | Tracked dirty scope без generated web/hash файлов — 78 файлов              | Git diff         | `git diff --shortstat HEAD -- . ':(exclude)apps/web/public/**' ':(exclude)apps/web/bundle-manifest.json' ':(exclude)apps/web/index.html'`                            | ✅ `78 files changed`                                                                                                                             |
-| Локальные и remote-изменения пересекаются в source у storage, RPC и deploy | Git intersection | `comm -12 <(git diff --name-only HEAD \| sort) <(git diff --name-only HEAD..origin/main \| sort)`                                                                    | ✅ пересечения включают `heys_storage_supabase_v1.js`, `heys-api-rpc/index.js`, `deploy-all.sh`; остальные пересечения — web generated/hash files |
+| Локальные и remote-изменения пересекаются в source у storage, RPC и deploy | Git intersection | `git diff --name-only HEAD`; `git diff --name-only HEAD..origin/main`                                                                                                | ✅ пересечения включают `heys_storage_supabase_v1.js`, `heys-api-rpc/index.js`, `deploy-all.sh`; остальные пересечения — web generated/hash files |
 | Контрольный worktree создан чистым от текущего `origin/main`               | worktree status  | `git -C /private/tmp/heys-recovery-20260718 status --short --branch`                                                                                                 | ✅ ветка `codex/local-recovery-20260718`, dirty paths отсутствуют                                                                                 |
 | Production web отвечает, а HEYS automation canary проходит                 | live checks      | HTTP check `https://app.heyslab.ru/`; `pnpm ops:heys:canary`                                                                                                         | ✅ HTTP 200; canary 4/4 на старте recovery                                                                                                        |
 | Mobile safe-area patch совместим с navigation/session contracts            | tests            | `pnpm test:mobile:critical`; `pnpm --dir apps/mobile type-check`                                                                                                     | ✅ 10/10 tests; TypeScript без ошибок                                                                                                             |
@@ -100,6 +100,7 @@
 | Явные `grams: 0` сохраняются во всех подтверждённых nutrition readers      | tests            | `pnpm vitest run apps/web/__tests__/item-grams-zero-contract.test.js`                                                                                                | ✅ 6/6 contract; commit `67fc869f`                                                                                                                |
 | Mobility safety и pair-save recovery покрыты всем domain suite             | tests            | `pnpm vitest run apps/web/__tests__/mobility-*.test.js`                                                                                                              | ✅ 13 files, 173 tests; commit `a5c01506`                                                                                                         |
 | Новый живой справочник имеет воспроизводимые Facts Table и целые ссылки    | docs audit       | read-only execution встроенных команд + relative-link scan                                                                                                           | ✅ 181 быстрых проверки: 181/181 после исправления синтаксиса; 12 test-команд подтверждены профильными прогонами; новых broken links нет          |
+| Mobility bundle участвует в общем generated/release contract               | build registry   | import `LEGACY_GENERATORS.mobility`; проверить 41 source, output classification и `GENERATED_ADD_PATHS`; `pnpm verify:legacy-bundles`                                | ✅ missing registry исправлен в `a7a7aa02`; bundle содержит pair-save/profile markers; manifests/index согласованы                                |
 
 ## Журнал выполнения
 
@@ -176,6 +177,17 @@
   relative links и 181 быстрая команда Facts Table; исправлены невыполнимые
   примеры и устаревшие фразы о deployment wave 2.
 
+### 2026-07-18 — wave 3 интегрирована локально
+
+- Семь source/docs commit'ов объединены с текущим `origin/main` в clean
+  integration worktree; merge commit `d0e575c5`.
+- Integration gate обнаружил, что mobility bundle собирался `predev`, но не был
+  зарегистрирован как generated output. В реестр добавлены все 41 source и
+  output; build/release commit `a7a7aa02` содержит актуальный mobility bundle и
+  согласованные hashed bundles/manifests/index.
+- `pnpm verify:legacy-bundles` прошёл; What's New подготовлен в `17318e9f`.
+  Remote push, CI и production evidence ещё не выполнены.
+
 ## Durable handoff
 
 ### Current state
@@ -183,11 +195,10 @@
 - Wave 1 и wave 2 опубликованы и проверены в production; G01 source опубликован
   без отдельного RuStore release.
 - G02–G05 source закоммичены и протестированы в wave 3. G08 перенесена и
-  проверена; G09 требует единой integration/release сборки.
+  проверена; G09 пересобрана и прошла bundle consistency gate.
 - Исходный checkout остаётся неизменным dirty-источником.
 
 ### Next action
 
-Зафиксировать G08, интегрировать wave 3 в чистом worktree от текущего
-`origin/main`, пересобрать release artifacts один раз, пройти pre-push gates,
-опубликовать и подтвердить GitHub deploy, production health и runtime markers.
+Пройти pre-push gates, опубликовать integration HEAD в `main` и подтвердить
+GitHub deploy, production health, runtime markers и итоговый dirty-scope audit.
