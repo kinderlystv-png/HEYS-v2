@@ -16,7 +16,8 @@ describe('personal product commit gate contract', () => {
     const core = read('apps/web/heys_core_v12.js');
 
     expect(core).toContain('ensurePersonalProductCommitted');
-    expect(core).toContain("YandexAPI.saveKV(clientId, 'heys_products_overlay_v2'");
+    expect(core).toContain("YandexAPI.saveKV(clientId, 'heys_products_overlay_v2', nextRows");
+    expect(core).toContain("'heys_products_overlay_v2_rpc_manifest'");
     expect(core).toContain("YandexAPI.getKV(clientId, 'heys_products_overlay_v2')");
     expect(core).toContain("Overlay.writeRaw(cloudRows, { skipCloudSync: true");
     expect(core).toContain('cloud_save_ack_pending_readback');

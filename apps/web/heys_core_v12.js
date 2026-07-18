@@ -4694,6 +4694,7 @@
 	      const sharedIdOf = (p) => p?.shared_origin_id || p?.sharedOriginId || (p?._fromShared && p?.id) || (p?.is_shared && p?.id) || null;
 	      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 	      const isPayloadTooLargeError = (err) => /413|payload too large|request entity too large/i.test(String(err || ''));
+	      const OverlayShardCodec = HEYS.OverlayShardCodec;
 	      const hasRowForProduct = (rows, p) => {
 	        const pid = productIdOf(p);
 	        const sharedId = sharedIdOf(p);
@@ -4810,22 +4811,40 @@
 	        return sharedId && row.shared_origin_id && String(row.shared_origin_id) === String(sharedId);
 	      });
 	      const nextRows = upsertRowInto(localRows, buildOverlayRow(committedProduct, existingRow));
+	      const commitLocallyQueued = (source, reason) => {
+	        const wroteLocalQueued = Overlay.writeRaw(nextRows, { source });
+	        if (!wroteLocalQueued) return { ok: false, product: committedProduct, reason: 'local_overlay_apply_failed' };
+	        HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
+	        try {
+	          window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+	            detail: { productId: productIdOf(committedProduct), product: committedProduct }
+	          }));
+	        } catch (_) { /* noop */ }
+	        return { ok: true, product: committedProduct, reason };
+	      };
 	      const contextId = opts.contextId || HEYS.cloud?.snapshotWriteContext?.()?.contextId || null;
+	      const publication = OverlayShardCodec?.createSingle?.(nextRows) || null;
+	      if (OverlayShardCodec && !publication?.ok) {
+	        return { ok: false, product: committedProduct, reason: publication?.reason || 'overlay_manifest_unavailable' };
+	      }
 	      const saveResult = await YandexAPI.saveKV(clientId, 'heys_products_overlay_v2', nextRows, contextId);
 	      if (!saveResult || saveResult.success === false || saveResult.error) {
 	        const reason = saveResult?.error || 'cloud_save_failed';
 	        if (isPayloadTooLargeError(reason)) {
-	          const wroteLocalQueued = Overlay.writeRaw(nextRows, { source: 'personal-product-commit-413-queued' });
-	          if (!wroteLocalQueued) return { ok: false, product: committedProduct, reason: 'local_overlay_apply_failed' };
-	          HEYS.products.setAll?.(nextProducts, { source: opts.source || 'personal-product-commit' });
-	          try {
-	            window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
-	              detail: { productId: productIdOf(committedProduct), product: committedProduct }
-	            }));
-	          } catch (_) { /* noop */ }
-	          return { ok: true, product: committedProduct, reason: 'cloud_save_queued_after_413' };
+	          return commitLocallyQueued('personal-product-commit-413-queued', 'cloud_save_queued_after_413');
 	        }
 	        return { ok: false, product: committedProduct, reason };
+	      }
+	      if (publication?.manifest) {
+	        const manifestResult = await YandexAPI.saveKV(
+	          clientId,
+	          'heys_products_overlay_v2_rpc_manifest',
+	          publication.manifest,
+	          contextId,
+	        );
+	        if (!manifestResult || manifestResult.success === false || manifestResult.error) {
+	          return commitLocallyQueued('personal-product-commit-manifest-queued', 'cloud_manifest_queued');
+	        }
 	      }
 
 	      let readback = await YandexAPI.getKV(clientId, 'heys_products_overlay_v2');

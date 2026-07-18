@@ -228,10 +228,19 @@
   function logProductsCloudWrite(_path, _key, _value) { /* no-op stub kept for callsite compat */ }
 
   /** Ключи, требующие client-specific storage */
+  const HEYS_OVERLAY_RPC_TAIL_K = 'heys_products_overlay_v2_rpc_tail';
+  const HEYS_OVERLAY_RPC_MANIFEST_K = 'heys_products_overlay_v2_rpc_manifest';
+  const MAX_TAIL_SHARDS = 16;
+  const OVERLAY_RPC_SYNC_KEYS = [
+    HEYS_OVERLAY_RPC_MANIFEST_K,
+    HEYS_OVERLAY_RPC_TAIL_K,
+    ...Array.from({ length: MAX_TAIL_SHARDS }, (_, index) => `${HEYS_OVERLAY_RPC_TAIL_K}_${index + 1}`),
+  ];
   const CLIENT_SPECIFIC_KEYS = [
     // Основные данные клиента
     'heys_products',
     'heys_products_overlay_v2',  // Overlay (TypeA + TypeB) — нужен для real-time sync удалений между устройствами
+    ...OVERLAY_RPC_SYNC_KEYS,
     'heys_profile',
     'heys_hr_zones',
     'heys_norms',
@@ -790,11 +799,10 @@
     || String(k || '').startsWith(`${HEYS_PRODUCTS_RPC_TAIL_K}_`);
 
   /** Шард overlay v2 при 413 на RPC — мержится с heys_products_overlay_v2 при download. */
-  const HEYS_OVERLAY_RPC_TAIL_K = 'heys_products_overlay_v2_rpc_tail';
   const isOverlayBaseKey = (k) => String(k || '') === 'heys_products_overlay_v2';
+  const isOverlayManifestRpcKey = (k) => String(k || '') === HEYS_OVERLAY_RPC_MANIFEST_K;
   const isOverlayTailRpcKey = (k) => String(k || '') === HEYS_OVERLAY_RPC_TAIL_K
     || String(k || '').startsWith(`${HEYS_OVERLAY_RPC_TAIL_K}_`);
-  const MAX_TAIL_SHARDS = 16;
 
   // Numeric sort by trailing _N — fixes localeCompare bug where _tail_10 < _tail_2.
   const tailIndexFromKey = (k) => {
@@ -880,11 +888,83 @@
   }
 
   function mergeOverlayRpcTailRawClientRows(rows, clientId) {
-    return mergeRpcTailRawClientRows(rows, clientId, isOverlayTailRpcKey, 'heys_products_overlay_v2');
+    if (!Array.isArray(rows) || rows.length === 0 || !clientId) return rows;
+    const codec = global.HEYS?.OverlayShardCodec;
+    if (!codec || typeof codec.assemble !== 'function') {
+      return mergeRpcTailRawClientRows(rows, clientId, isOverlayTailRpcKey, 'heys_products_overlay_v2');
+    }
+    const family = [];
+    let mainRow = null;
+    let manifestRow = null;
+    for (let i = 0; i < rows.length; i += 1) {
+      const normalized = normalizeKeyForSupabase(rows[i]?.k, clientId);
+      if (normalized === 'heys_products_overlay_v2') {
+        mainRow = rows[i];
+        family.push(rows[i]);
+      } else if (isOverlayManifestRpcKey(normalized)) {
+        manifestRow = rows[i];
+        family.push(rows[i]);
+      } else if (isOverlayTailRpcKey(normalized)) {
+        family.push(rows[i]);
+      }
+    }
+    if (family.length === 0) return rows;
+    const tailRows = family
+      .filter((row) => isOverlayTailRpcKey(normalizeKeyForSupabase(row?.k, clientId)))
+      .sort((a, b) => sortByTailIndex(a, b, (row) => row?.k));
+    const assemblyTailRows = codec.isManifest?.(manifestRow?.v)
+      ? tailRows.filter((row) => normalizeKeyForSupabase(row?.k, clientId) !== HEYS_OVERLAY_RPC_TAIL_K)
+      : tailRows;
+    const assembled = codec.assemble(mainRow?.v, assemblyTailRows.map((row) => row?.v), manifestRow?.v);
+    const familySet = new Set(family);
+    const out = rows.filter((row) => !familySet.has(row));
+    if (!assembled.ok) return out;
+    const template = mainRow || tailRows[0];
+    out.push({ ...template, k: 'heys_products_overlay_v2', v: assembled.rows });
+    return out;
   }
 
   function mergeOverlayRpcTailDeduped(deduped, client_id) {
-    return mergeRpcTailDeduped(deduped, client_id, isOverlayTailRpcKey, 'heys_products_overlay_v2');
+    if (!Array.isArray(deduped) || !client_id) return deduped;
+    const codec = global.HEYS?.OverlayShardCodec;
+    if (!codec || typeof codec.assemble !== 'function') {
+      return mergeRpcTailDeduped(deduped, client_id, isOverlayTailRpcKey, 'heys_products_overlay_v2');
+    }
+    const family = [];
+    let mainEntry = null;
+    let manifestEntry = null;
+    for (let i = 0; i < deduped.length; i += 1) {
+      const normalized = normalizeKeyForSupabase(deduped[i]?.row?.k || deduped[i]?.scopedKey, client_id);
+      if (normalized === 'heys_products_overlay_v2') {
+        mainEntry = deduped[i];
+        family.push(deduped[i]);
+      } else if (isOverlayManifestRpcKey(normalized)) {
+        manifestEntry = deduped[i];
+        family.push(deduped[i]);
+      } else if (isOverlayTailRpcKey(normalized)) {
+        family.push(deduped[i]);
+      }
+    }
+    if (family.length === 0) return deduped;
+    const tailEntries = family
+      .filter((entry) => isOverlayTailRpcKey(normalizeKeyForSupabase(entry?.row?.k || entry?.scopedKey, client_id)))
+      .sort((a, b) => sortByTailIndex(a, b, (entry) => entry?.row?.k || entry?.scopedKey));
+    const assemblyTailEntries = codec.isManifest?.(manifestEntry?.row?.v)
+      ? tailEntries.filter((entry) => (
+        normalizeKeyForSupabase(entry?.row?.k || entry?.scopedKey, client_id) !== HEYS_OVERLAY_RPC_TAIL_K
+      ))
+      : tailEntries;
+    const assembled = codec.assemble(mainEntry?.row?.v, assemblyTailEntries.map((entry) => entry?.row?.v), manifestEntry?.row?.v);
+    const familySet = new Set(family);
+    const out = deduped.filter((entry) => !familySet.has(entry));
+    if (!assembled.ok) return out;
+    const template = mainEntry || tailEntries[0];
+    out.push({
+      ...template,
+      scopedKey: scopeKeyForClientStorage('heys_products_overlay_v2', client_id),
+      row: { ...(template?.row || {}), k: 'heys_products_overlay_v2', v: assembled.rows },
+    });
+    return out;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -6491,6 +6571,7 @@
       }
 
       const Store = global.HEYS?.store;
+      const OverlayShardCodec = global.HEYS?.OverlayShardCodec;
       const isProductsBaseKey = (k) => {
         const s = String(k || '');
         return s === 'heys_products' || /(^|_)heys_products$/.test(s);
@@ -6501,7 +6582,7 @@
       };
       const isOverlayFamilyRpcKey = (k) => {
         const s = String(k || '');
-        return isOverlayBaseKey(s) || isOverlayTailRpcKey(s);
+        return isOverlayBaseKey(s) || isOverlayManifestRpcKey(s) || isOverlayTailRpcKey(s);
       };
       const isIsolatedRpcKey = (k) => isProductsFamilyRpcKey(k) || isOverlayFamilyRpcKey(k);
 
@@ -6690,7 +6771,22 @@
           for (let ui = 0; ui < chunk.length; ui++) {
             const k = chunk[ui]?.k;
             if (isProductsBaseKey(k)) didSaveProductsMain = true;
-            if (isOverlayBaseKey(k)) didSaveOverlayMain = true;
+            if (isOverlayBaseKey(k)) {
+              const publication = OverlayShardCodec?.createSingle?.(chunk[ui]?.v);
+              if (!publication?.ok) {
+                return { success: false, saved: 0, error: publication?.reason || 'overlay_manifest_unavailable' };
+              }
+              const manifestResult = await YandexAPI.saveKV(
+                clientId,
+                HEYS_OVERLAY_RPC_MANIFEST_K,
+                publication.manifest,
+                chunk[ui]?._ctx || null,
+              );
+              if (!manifestResult.success) {
+                return { success: false, saved: 0, error: manifestResult.error || 'overlay_manifest_save_failed' };
+              }
+              didSaveOverlayMain = true;
+            }
           }
           return { success: true, saved: res.saved || chunk.length };
         }
@@ -6812,38 +6908,27 @@
             }
           }
 
-          // Overlay v2 shard fallback (parity with products family).
+          // Overlay v2 versioned shard fallback (parity with products family).
           // Overlay rows have rich nutrient data per item (~1.5KB raw / ~0.5KB compressed)
           // — slim is unsafe (would lose user nutrients) so we shard the array as-is.
-          // Atomic order: tails first (reverse), main last as commit-marker.
-          if (isOverlayBaseKey(it.k) && Store) {
+          // Readers accept a generation only when every expected shard matches.
+          // Tails and main stay plain arrays for old-client compatibility;
+          // the versioned manifest is the commit marker written last.
+          if (isOverlayBaseKey(it.k) && OverlayShardCodec) {
             const arr = productsArrayFromClientKvValue(it.v);
             if (Array.isArray(arr) && arr.length >= 2) {
               const shardTargetBytes = 42 * 1024;
-              const shards = [];
-              let cur = [];
-              let curBytes = 0;
-              for (let si = 0; si < arr.length; si++) {
-                const one = arr[si];
-                const oneBytes = Math.max(1, JSON.stringify(one).length + 1);
-                if (cur.length > 0 && curBytes + oneBytes > shardTargetBytes) {
-                  shards.push(cur);
-                  cur = [];
-                  curBytes = 0;
-                }
-                cur.push(one);
-                curBytes += oneBytes;
+              const split = OverlayShardCodec.splitRows(arr, {
+                targetBytes: shardTargetBytes,
+                maxShards: MAX_TAIL_SHARDS + 1,
+              });
+              if (!split.ok) {
+                logCritical(`⚠️ [YANDEX SAVE] Overlay v2 split failed: ${split.reason}`);
+                return { success: false, saved: 0, error: split.reason || res.error };
               }
-              if (cur.length > 0) shards.push(cur);
-              if (shards.length === 0) shards.push([]);
-
+              const shards = split.shards;
               const mainShard = shards[0];
               const tails = shards.slice(1);
-
-              if (tails.length > MAX_TAIL_SHARDS) {
-                logCritical(`⚠️ [YANDEX SAVE] Overlay v2 has ${tails.length + 1} shards, exceeds MAX_TAIL_SHARDS (${MAX_TAIL_SHARDS}). Aborting split.`);
-                return { success: false, saved: 0, error: res.error };
-              }
 
               // 1. Tails first (reverse order)
               for (let ti = tails.length - 1; ti >= 0; ti--) {
@@ -6851,9 +6936,19 @@
                 const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti], it._ctx || null);
                 if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
               }
-              // 2. Main last (commit marker)
+              // 2. Main remains a plain array for rollback/old-client compatibility.
               const tm = await YandexAPI.saveKV(clientId, it.k, mainShard, it._ctx || null);
               if (!tm.success) return { success: false, saved: 0, error: tm.error || res.error };
+              // 3. Manifest last: only now may new clients accept the generation.
+              const manifestResult = await YandexAPI.saveKV(
+                clientId,
+                HEYS_OVERLAY_RPC_MANIFEST_K,
+                split.manifest,
+                it._ctx || null,
+              );
+              if (!manifestResult.success) {
+                return { success: false, saved: 0, error: manifestResult.error || 'overlay_manifest_save_failed' };
+              }
 
               // best-effort cleanup unused tail keys
               if (typeof YandexAPI.deleteKV === 'function') {
@@ -6863,7 +6958,7 @@
               }
               didSaveOverlayMain = true;
               didSplitOverlayUpload = tails.length > 0;
-              logCritical(`📑 [YANDEX SAVE] Split heys_products_overlay_v2 RPC: ${shards.length} shard(s), total=${arr.length} rows (413 fallback)`);
+              logCritical(`📑 [YANDEX SAVE] Split heys_products_overlay_v2 RPC: ${shards.length} manifest-verified shard(s), total=${arr.length} rows (413 fallback)`);
               return { success: true, saved: 1 };
             }
           }
@@ -13075,7 +13170,7 @@
     // applyCloudSnapshot's pendingLocalTypeA preserves local TypeA when
     // a partial main shard arrives, so HOT-sync stays consistent without
     // tail handling. Full reassembly happens on next bootstrap/full sync.
-    if (isOverlayTailRpcKey(baseKey)) {
+    if (isOverlayManifestRpcKey(baseKey) || isOverlayTailRpcKey(baseKey)) {
       return true; // mark handled — don't write to LS as garbage key
     }
 
@@ -13517,7 +13612,11 @@
       // Map key → scope and check if that scope changed
       if (key.includes('widget_layout') && changedScopes.includes('widgets')) {
         needed.push(key);
-      } else if (key === 'heys_products' && changedScopes.includes('products')) {
+      } else if ((key === 'heys_products'
+          || key === 'heys_products_overlay_v2'
+          || isOverlayManifestRpcKey(key)
+          || isOverlayTailRpcKey(key))
+        && changedScopes.includes('products')) {
         needed.push(key);
       } else if (key.startsWith('heys_planning_') && changedScopes.includes('planning')) {
         needed.push(key);
@@ -13751,7 +13850,9 @@
     const _overlayHotBuf = [];
     const _isOverlayFamilyKey = (k) => {
       const nk = normalizeKeyForSupabase(k, clientId);
-      return nk === 'heys_products_overlay_v2' || isOverlayTailRpcKey(nk);
+      return nk === 'heys_products_overlay_v2'
+        || isOverlayManifestRpcKey(nk)
+        || isOverlayTailRpcKey(nk);
     };
     const flushOverlayHotBuf = () => {
       if (_overlayHotBuf.length === 0) return 0;
