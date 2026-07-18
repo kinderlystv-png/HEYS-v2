@@ -108,6 +108,8 @@ test('health workflow debounces API recovery and never redeploys from push or ma
   const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'), 'utf8');
   assert.equal((workflow.match(/for attempt in 1 2 3; do/g) || []).length, 2);
   assert.equal((workflow.match(/sleep 5/g) || []).length, 2);
+  assert.match(workflow, /ITEM_COUNT=\$\(echo "\$BODY" \| jq 'length \/\/ 0'/);
+  assert.doesNotMatch(workflow, /type == "array"/);
   assert.match(
     workflow,
     /if: github\.event_name == 'schedule' && failure\(\) && \(steps\.rest\.outcome == 'failure' \|\| steps\.rpc\.outcome == 'failure'\)/,
