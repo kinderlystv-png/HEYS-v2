@@ -40,6 +40,8 @@ export VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY:-contract-test-public-key}"
 export VAPID_PRIVATE_KEY="${VAPID_PRIVATE_KEY:-contract-test-private-key}"
 export VAPID_SUBJECT="${VAPID_SUBJECT:-mailto:contract-test@heyslab.ru}"
 
+node --test "$SCRIPT_DIR/shared/__tests__/kv-payload-contracts.test.cjs"
+
 for function_name in "${TARGETS[@]}"; do
   function_dir="$SCRIPT_DIR/$function_name"
   package_file="$function_dir/package.json"
@@ -47,6 +49,13 @@ for function_name in "${TARGETS[@]}"; do
   if [ ! -f "$package_file" ]; then
     echo "Unknown cloud function or missing package.json: $function_name" >&2
     exit 1
+  fi
+
+  if [[ "$function_name" == "heys-api-rpc" || "$function_name" == "heys-api-rest" ]]; then
+    if ! cmp -s "$SCRIPT_DIR/shared/kv-payload-contracts.js" "$function_dir/shared/kv-payload-contracts.js"; then
+      echo "KV payload contract mirror is stale for $function_name" >&2
+      exit 1
+    fi
   fi
 
   echo "==> Testing $function_name on Node $(node --version)"

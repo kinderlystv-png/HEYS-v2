@@ -329,12 +329,7 @@ async function collectDeadManStatus(query = queryDbJson) {
   const backup = backupRows[0] || null;
   const backupIssues = evaluateBackupRow(backup);
   issues.push(...backupIssues.map((issue) => `backup:${issue}`));
-  return {
-    ok: issues.length === 0,
-    issues,
-    heartbeats: heartbeatRows,
-    backup,
-  };
+  return { ok: issues.length === 0, issues, heartbeats: heartbeatRows, backup };
 }
 
 async function collectStatus() {

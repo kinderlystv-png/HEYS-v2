@@ -14,8 +14,6 @@ export const LEGACY_BUNDLES = {
         'heys_pwa_module_v1.js',
         'heys_simple_analytics.js',
         'heys_smart_search_v2.js',
-        'heys_shared_products_export_fields_v1.js',
-        'heys_export_utils_v1.js',
         'heys_core_v12.js',
         'heys_yandex_api_v1.js',
         'heys_cloud_merge_v1.js',
@@ -24,6 +22,7 @@ export const LEGACY_BUNDLES = {
         'heys_storage_photos_v1.js',
         'heys_pending_queue_pure_v1.js',
         'heys_sync_queue_runtime_pure_v1.js',
+        'heys_storage_key_contract_v1.js',
         'heys_write_context_health_v1.js',
         'heys_perf_main_thread_v1.js',
         'heys_sync_merge_v1.js',
@@ -277,6 +276,10 @@ export const LEGACY_BUNDLES = {
         'heys_postboot3_facade_v1.js',
     ],
     'postboot-3-ui-lazy': [
+        // Manual product-export helpers. heys_core_v12 has complete inline
+        // fallbacks until this lazy chunk registers the shared helpers.
+        'heys_shared_products_export_fields_v1.js',
+        'heys_export_utils_v1.js',
         // P0-D-stretch-2 (2026-05-22): backup UI вынесен из boot-app сюда.
         // Все consumers через getModule('AppBackup')/getStableHook fallback
         // pattern (heys_app_root_impl_v1.js:10-71) — undefined deps возвращают
@@ -449,9 +452,58 @@ export const LEGACY_GENERATORS = {
         ],
         dependsOn: [],
     },
+    mobility: {
+        // Kernel modules load before the domain catalog/engine; public entry is last.
+        script: 'apps/web/scripts/bundle-mobility.cjs',
+        output: 'apps/web/heys_mobility_bundle_v1.js',
+        sources: [
+            'apps/web/_kernel/heys_training_focus_ui_v1.js',
+            'apps/web/_kernel/heys_kernel_bibliography_v1.js',
+            'apps/web/_kernel/heys_kernel_bibliography_ui_v1.js',
+            'apps/web/_kernel/heys_kernel_stats_v1.js',
+            'apps/web/_kernel/heys_kernel_dates_v1.js',
+            'apps/web/_kernel/heys_kernel_calendar_v1.js',
+            'apps/web/_kernel/heys_kernel_periodization_v1.js',
+            'apps/web/_kernel/heys_kernel_progression_v1.js',
+            'apps/web/_kernel/heys_kernel_session_v1.js',
+            'apps/web/_kernel/heys_kernel_runner_v1.js',
+            'apps/web/_kernel/heys_kernel_timer_v1.js',
+            'apps/web/_kernel/heys_kernel_active_session_v1.js',
+            'apps/web/_kernel/heys_kernel_router_v1.js',
+            'apps/web/_kernel/heys_kernel_catalog_v1.js',
+            'apps/web/_kernel/heys_kernel_assess_v1.js',
+            'apps/web/_kernel/heys_kernel_gate_v1.js',
+            'apps/web/_kernel/heys_kernel_records_v1.js',
+            'apps/web/_kernel/heys_kernel_onboarding_v1.js',
+            'apps/web/_kernel/heys_kernel_sports_v1.js',
+            'apps/web/mobility/heys_mobility_axis_catalog_v1.js',
+            'apps/web/mobility/heys_mobility_sport_config_v1.js',
+            'apps/web/mobility/heys_mobility_load_v1.js',
+            'apps/web/mobility/heys_mobility_bibliography_v1.js',
+            'apps/web/mobility/heys_mobility_atom_catalog_v1.js',
+            'apps/web/mobility/heys_mobility_validators_v1.js',
+            'apps/web/mobility/heys_mobility_assessment_v1.js',
+            'apps/web/mobility/heys_mobility_onboarding_v1.js',
+            'apps/web/mobility/heys_mobility_readiness_v1.js',
+            'apps/web/mobility/heys_mobility_records_store_v1.js',
+            'apps/web/mobility/heys_mobility_progression_v1.js',
+            'apps/web/mobility/heys_mobility_mode_engine_v1.js',
+            'apps/web/mobility/heys_mobility_protocols_catalog_v1.js',
+            'apps/web/mobility/heys_mobility_calendar_v1.js',
+            'apps/web/mobility/heys_mobility_course_planner_v1.js',
+            'apps/web/mobility/heys_mobility_routine_builder_v1.js',
+            'apps/web/mobility/heys_mobility_breath_runner_v1.js',
+            'apps/web/mobility/heys_mobility_routine_runner_v1.js',
+            'apps/web/mobility/heys_mobility_voice_v1.js',
+            'apps/web/mobility/heys_mobility_session_persistence_v1.js',
+            'apps/web/mobility/heys_mobility_ui_v1.js',
+            'apps/web/mobility/heys_mobility_entry_v1.js',
+        ],
+        dependsOn: [],
+    },
 };
 
-export const LEGACY_GENERATOR_ORDER = ['day-core', 'advice', 'meals', 'day', 'fingers'];
+export const LEGACY_GENERATOR_ORDER = ['day-core', 'advice', 'meals', 'day', 'fingers', 'mobility'];
 
 export const LEGACY_FULL_REBUILD_TRIGGERS = new Set([
     'scripts/bundle-legacy.mjs',

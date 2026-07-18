@@ -954,7 +954,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.ee38d35a515c.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.61c3de0997e0.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.cf43dba3cc2c.js" as="script" />
     <link rel="preload" href="boot-day.bundle.d21f4f3aca3e.js" as="script" />
     <link rel="preload" href="boot-app.bundle.8eeee81bb22b.js" as="script" />
@@ -1668,14 +1668,69 @@
 	    <script>
 	        (function () {
 	            try {
-	                var hadLegacyCuratorMarker = !!localStorage.getItem('heys_curator_session')
-	                    || !!localStorage.getItem('heys_supabase_auth_token');
-	                localStorage.removeItem('heys_curator_session');
-	                localStorage.removeItem('heys_supabase_auth_token');
-	                if (hadLegacyCuratorMarker) localStorage.setItem('heys_curator_cookie_session_hint', '1');
-		                var hasPinAuth = !!localStorage.getItem('heys_pin_auth_client');
-                        var hasPinCookieHint = !!localStorage.getItem('heys_pin_cookie_session_hint');
+	                function decodeCuratorJwtPayload(token) {
+	                    try {
+	                        var part = String(token || '').split('.')[1];
+	                        if (!part || typeof atob !== 'function') return null;
+	                        var normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+	                        var padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+	                        var raw = atob(padded);
+	                        try {
+	                            return JSON.parse(decodeURIComponent(Array.prototype.map.call(raw, function (ch) {
+	                                return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2);
+	                            }).join('')));
+	                        } catch (_) {
+	                            return JSON.parse(raw);
+	                        }
+	                    } catch (_) { return null; }
+	                }
+	                function restoreCompatCuratorAuth(token) {
+	                    try {
+	                        if (!token || token.length <= 10) return false;
+	                        var payload = decodeCuratorJwtPayload(token) || {};
+	                        var nowSec = Math.floor(Date.now() / 1000);
+	                        if (payload.exp && payload.exp < nowSec) {
+	                            localStorage.removeItem('heys_curator_session');
+	                            localStorage.removeItem('heys_supabase_auth_token');
+	                            return false;
+	                        }
+	                        var userId = payload.sub || payload.user_id;
+	                        var user = userId ? {
+	                            id: userId,
+	                            email: payload.email,
+	                            role: payload.role
+	                        } : null;
+	                        var tokenData = {
+	                            access_token: token,
+	                            refresh_token: null,
+	                            expires_at: payload.exp || nowSec + 3600,
+	                            user: user
+	                        };
+	                        localStorage.setItem('heys_supabase_auth_token', JSON.stringify(tokenData));
+	                        localStorage.removeItem('heys_pin_auth_client');
+	                        localStorage.removeItem('heys_session_token');
+	                        return !!(user && user.id);
+	                    } catch (_) { return false; }
+	                }
+	                var curatorSession = localStorage.getItem('heys_curator_session');
+		                var hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
+		                var restoredCuratorCompat = hasCuratorSession ? restoreCompatCuratorAuth(curatorSession) : false;
+		                hasCuratorSession = !!localStorage.getItem('heys_curator_session');
+		                var hasPinAuth = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_auth_client');
+                        var hasPinCookieHint = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_cookie_session_hint');
                         var hasCuratorCookieHint = !!localStorage.getItem('heys_curator_cookie_session_hint');
+		                var hasSupabaseToken = (function () {
+	                    try {
+	                        var raw = localStorage.getItem('heys_supabase_auth_token');
+                        if (!raw) return false;
+                        var parsed = JSON.parse(raw);
+	                        if (!parsed) return false;
+	                        // Проверяем expires_at — если истёк, считаем нет сессии
+	                        var expiresAt = parsed.expires_at;
+	                        if (expiresAt && expiresAt * 1000 < Date.now()) return false;
+	                        return !!(parsed.user && parsed.user.id);
+	                    } catch (_) { return false; }
+	                })();
                 // 🔐 Stage 1: session_token + last_client_id = recoverable PIN session.
                 // Если pin_auth_client потёрт (logout/expiry/race), но session_token жив
                 // и есть запомненный последний клиент — это всё равно returning user,
@@ -2776,12 +2831,11 @@
                 ? 'http://localhost:4001'
                 : 'https://api.heyslab.ru';
             var AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
-            // Временный curator autologin — отключается одним флагом без раскопок.
+            // Legacy curator autologin switch. Credentials must never be embedded
+            // in this public HTML; the disabled flow remains only for compatibility.
             var TEMP_CURATOR_AUTOLOGIN_ENABLED = false;
             var TEMP_CURATOR_AUTOLOGIN = {
                 enabled: TEMP_CURATOR_AUTOLOGIN_ENABLED,
-                email: 'poplanton@mail.ru',
-                password: 'apn232388',
                 onceKey: 'heys_temp_curator_autologin_v1'
             };
             // ─── Утилиты localStorage ───────────────────────────────────────
@@ -4066,7 +4120,7 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.ee38d35a515c.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.61c3de0997e0.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.cf43dba3cc2c.js"></script>
     <script defer src="boot-day.bundle.d21f4f3aca3e.js"></script>
     <script defer src="boot-app.bundle.8eeee81bb22b.js"></script>
@@ -4130,11 +4184,11 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.61ea8bc1f55d.js',
+                'postboot-1-game-lazy.bundle.7a41cc71b195.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-2-insights-lazy.bundle.899d40ccf625.js',
+                'postboot-2-insights-lazy.bundle.96e22cf1a664.js',
                 'postboot-3-ui-eager.bundle.2da300f79259.js',
-                'postboot-3-ui-lazy.bundle.3a70c3964b65.js'
+                'postboot-3-ui-lazy.bundle.f2386736c2b4.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

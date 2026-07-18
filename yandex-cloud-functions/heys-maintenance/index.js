@@ -2,7 +2,7 @@
  * heys-maintenance — Scheduled maintenance tasks
  * 
  * Functions:
- * - cleanup_security_logs: Remove old auth attempt logs (30 days)
+ * - retention_dry_run: Report old security/debug rows without deleting them
  * - process_trial_queue: Assign trial offers to queued users
  * 
  * Trigger: Timer (every 5 minutes for trial queue, daily for cleanup)
@@ -351,33 +351,31 @@ async function processTrialQueue(client) {
 /**
  * Cleanup old security logs
  */
-async function cleanupSecurityLogs(client) {
+async function reportSecurityLogRetention(client) {
   const result = await client.query(
-    'SELECT public.cleanup_security_logs($1) as deleted_count',
-    [30] // Keep 30 days
+    `SELECT count(*)::int AS candidate_rows
+       FROM public.security_events
+      WHERE created_at < now() - interval '1 year'`
   );
-  return result.rows[0]?.deleted_count || 0;
+  return { dry_run: true, candidate_rows: result.rows[0]?.candidate_rows || 0 };
 }
 
 /**
- * Cleanup client_log_trace — клиентский console buffer (2026-06-01).
- * Удерживаем 14 дней (диагностика recent инцидентов). Источник: миграция
- * 2026-06-01_create_client_log_trace.sql.
+ * Read-only retention report for client_log_trace. Deletion is intentionally
+ * disabled until legal/owner sign-off; the current draft window is 30 days.
  */
-async function cleanupClientLogTrace(client) {
+async function reportClientLogTraceRetention(client) {
   try {
     const res = await client.query(
-      `WITH del AS (
-         DELETE FROM public.client_log_trace
-         WHERE captured_at < (NOW() - INTERVAL '14 days')
-         RETURNING length(message) + length(coalesce(args::text, '')) AS sz
-       )
-       SELECT count(*)::int AS rows, coalesce(sum(sz), 0)::bigint AS bytes FROM del`
+      `SELECT count(*)::int AS candidate_rows,
+              coalesce(sum(pg_column_size(t)), 0)::bigint AS candidate_bytes
+         FROM public.client_log_trace AS t
+        WHERE captured_at < (NOW() - INTERVAL '30 days')`
     );
-    return res.rows[0] || { rows: 0, bytes: 0 };
+    return { dry_run: true, ...(res.rows[0] || { candidate_rows: 0, candidate_bytes: 0 }) };
   } catch (e) {
     // Table может не существовать на стейдже — fail-safe
-    return { rows: 0, bytes: 0, error: e.message };
+    return { dry_run: true, candidate_rows: 0, candidate_bytes: 0, error: e.message };
   }
 }
 
@@ -1508,16 +1506,13 @@ module.exports.handler = async (event, context) => {
       await recordHeartbeat(client, 'trial_queue');
     }
 
-    // Cleanup security logs
+    // Retention stays read-only until legal/owner sign-off.
     if (runCleanup) {
-      results.cleanup = {
-        deleted_count: await cleanupSecurityLogs(client)
-      };
-      console.log(`[Maintenance] Cleanup: deleted ${results.cleanup.deleted_count} old entries`);
+      results.security_retention = await reportSecurityLogRetention(client);
+      console.log(`[Maintenance] Security retention dry-run: ${results.security_retention.candidate_rows} candidates`);
 
-      // client_log_trace TTL — каждый день в той же daily-фазе
-      results.log_trace_cleanup = await cleanupClientLogTrace(client);
-      console.log(`[Maintenance] LogTrace TTL: deleted ${results.log_trace_cleanup.rows} rows (${(Number(results.log_trace_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
+      results.log_trace_retention = await reportClientLogTraceRetention(client);
+      console.log(`[Maintenance] LogTrace retention dry-run: ${results.log_trace_retention.candidate_rows} candidates (${(Number(results.log_trace_retention.candidate_bytes || 0) / 1024).toFixed(1)} KB)`);
 
       // profile_snapshots TTL (30 дней)
       results.profile_snapshots_cleanup = await cleanupProfileSnapshots(client);

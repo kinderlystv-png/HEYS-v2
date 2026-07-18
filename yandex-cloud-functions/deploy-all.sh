@@ -250,19 +250,30 @@ validate_function_env() {
         fi
     fi
 
-    # VAPID — для push/reminders/messages. yc CLI заменяет ВЕСЬ env на каждый
-    # deploy (не merge), поэтому пустой VAPID_* молча wipes ключи из cloud
-    # function и push notifications перестают доставляться. Fail fast, не дать
-    # задеплоить функцию без обязательных push-ключей.
+    # VAPID — для push/reminders/messages. Public key и subject не являются
+    # секретами, но старый CI мог не иметь их в GitHub Secrets. В таком случае
+    # безопасно подхватываем только эти два значения из текущей $latest-версии.
+    # Private key всегда приходит из Lockbox и в env не копируется.
     if [[ "$func_name" =~ (push|reminders|messages) ]]; then
         local v missing=()
-        for v in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+        for v in VAPID_PUBLIC_KEY VAPID_SUBJECT; do
+            if [ -z "${!v}" ] && command -v yc >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+                local existing_value
+                existing_value="$(yc serverless function version list \
+                    --function-name "$func_name" --format json 2>/dev/null \
+                    | jq -r --arg key "$v" '.[0].environment[$key] // empty')"
+                if [ -n "$existing_value" ]; then
+                    printf -v "$v" '%s' "$existing_value"
+                    export "$v"
+                    echo -e "${BLUE}ℹ️  Restored $v from current $func_name configuration${NC}"
+                fi
+            fi
             if [ -z "${!v}" ]; then missing+=("$v"); fi
         done
         if [ ${#missing[@]} -gt 0 ]; then
             echo -e "${RED}❌ ERROR: VAPID env-vars missing for $func_name: ${missing[*]}${NC}"
-            echo -e "${YELLOW}   yc CLI replaces full env on each deploy. Empty VAPID would wipe push keys.${NC}"
-            echo -e "${YELLOW}   Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT to $ENV_FILE${NC}"
+            echo -e "${YELLOW}   yc CLI replaces full env on each deploy. Empty VAPID config would break push delivery.${NC}"
+            echo -e "${YELLOW}   Add VAPID_PUBLIC_KEY and VAPID_SUBJECT to $ENV_FILE or deploy once from an existing configured function.${NC}"
             exit 1
         fi
     fi
@@ -603,6 +614,18 @@ deploy_function() {
             echo -e "${BLUE}ℹ️  Synced merge module: lib/heys_sync_merge_v1.cjs${NC}"
         else
             echo -e "${RED}❌ ERROR: merge source not found at $SRC${NC}"
+            exit 1
+        fi
+
+        CONTRACT_SRC="$SCRIPT_DIR/shared/kv-payload-contracts.js"
+        CONTRACT_DST_DIR="$SCRIPT_DIR/$func_name/shared"
+        CONTRACT_DST="$CONTRACT_DST_DIR/kv-payload-contracts.js"
+        if [ -f "$CONTRACT_SRC" ]; then
+            mkdir -p "$CONTRACT_DST_DIR"
+            cp "$CONTRACT_SRC" "$CONTRACT_DST"
+            echo -e "${BLUE}ℹ️  Synced KV payload contracts: shared/kv-payload-contracts.js${NC}"
+        else
+            echo -e "${RED}❌ ERROR: KV payload contracts not found at $CONTRACT_SRC${NC}"
             exit 1
         fi
     fi

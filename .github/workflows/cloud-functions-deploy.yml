@@ -236,7 +236,10 @@ jobs:
             local status=""
 
             for attempt in $(seq 1 "$attempts"); do
-              status="$($check_fn)"
+              # curl timeout/non-zero must become a retryable HTTP 000 instead
+              # of terminating this set -e step before the retry loop runs.
+              status="$($check_fn || true)"
+              status="${status:-000}"
 
               if [ "$status" = "$expected" ]; then
                 echo "✅ $name: OK (HTTP $status, attempt $attempt/$attempts)"

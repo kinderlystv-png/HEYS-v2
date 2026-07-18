@@ -111,9 +111,7 @@ function resolveChangedFiles(files = []) {
     const match = /^yandex-cloud-functions\/(heys-[^/]+)\//.exec(file);
     if (!match) continue;
     const item = FUNCTION_BY_NAME.get(match[1]);
-    if (!item) {
-      throw new Error(`Unknown cloud function directory: ${match[1]}`);
-    }
+    if (!item) throw new Error(`Unknown cloud function directory: ${match[1]}`);
     if (!item.autoDeploy) {
       throw new Error(`Auto-deploy disabled for ${item.name}: ${item.reason}`);
     }
@@ -201,10 +199,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = {
-  FUNCTIONS,
-  assertDeployable,
-  listFunctions,
-  resolveChangedFiles,
-  verifyInventory,
-};
+module.exports = { FUNCTIONS, assertDeployable, listFunctions, resolveChangedFiles, verifyInventory };

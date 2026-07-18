@@ -94,7 +94,8 @@ describe('Mobility UI', { timeout: 60000 }, () => {
   });
 
   it('не показывает запуск до возраста и принятого предупреждения', async () => {
-    render(React.createElement(UI().MobilityApp, { modeId: 'morning_tonify' }));
+    const onProfileChange = vi.fn();
+    render(React.createElement(UI().MobilityApp, { modeId: 'morning_tonify', onProfileChange }));
 
     expect(screen.getByRole('heading', { name: 'Перед первой тренировкой' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Начать тренировку' })).toBeNull();
@@ -105,6 +106,7 @@ describe('Mobility UI', { timeout: 60000 }, () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeTruthy();
     });
+    expect(onProfileChange).toHaveBeenCalled();
   });
 
   it('рендерит focus-mode как у пальцев и открывает runner только после запуска тренировки', { timeout: 60000 }, () => {

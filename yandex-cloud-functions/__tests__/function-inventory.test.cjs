@@ -3,12 +3,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
 
-const {
-  FUNCTIONS,
-  listFunctions,
-  resolveChangedFiles,
-  verifyInventory,
-} = require('../function-inventory.cjs');
+const { FUNCTIONS, listFunctions, resolveChangedFiles, verifyInventory } = require('../function-inventory.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -26,15 +21,12 @@ test('inventory exactly covers every cloud function source directory', () => {
 });
 
 test('API source change selects its exact deployment target', () => {
-  assert.deepEqual(
-    resolveChangedFiles(['yandex-cloud-functions/heys-api-leads/index.js']),
-    {
-      mode: 'selective',
-      functions: ['heys-api-leads'],
-      gatewaySpecChanged: false,
-      reason: 'changed-function-directories',
-    },
-  );
+  assert.deepEqual(resolveChangedFiles(['yandex-cloud-functions/heys-api-leads/index.js']), {
+    mode: 'selective',
+    functions: ['heys-api-leads'],
+    gatewaySpecChanged: false,
+    reason: 'changed-function-directories',
+  });
 });
 
 test('cron, maintenance, backup and polling changes select automation targets', () => {
@@ -61,15 +53,12 @@ test('shared runtime change selects every auto-deploy function', () => {
 });
 
 test('gateway-only change does not invent a runtime target', () => {
-  assert.deepEqual(
-    resolveChangedFiles(['yandex-cloud-functions/api-gateway-spec.yaml']),
-    {
-      mode: 'gateway-only',
-      functions: [],
-      gatewaySpecChanged: true,
-      reason: 'gateway-spec-only',
-    },
-  );
+  assert.deepEqual(resolveChangedFiles(['yandex-cloud-functions/api-gateway-spec.yaml']), {
+    mode: 'gateway-only',
+    functions: [],
+    gatewaySpecChanged: true,
+    reason: 'gateway-spec-only',
+  });
 });
 
 test('unknown function directory fails closed', () => {
@@ -99,10 +88,7 @@ test('deploy and test scripts consume the shared inventory instead of local list
 });
 
 test('deploy workflow routes API and automation changes through the shared classifier', () => {
-  const workflow = readFileSync(
-    path.resolve(ROOT, '../.github/workflows/cloud-functions-deploy.yml'),
-    'utf8',
-  );
+  const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/cloud-functions-deploy.yml'), 'utf8');
   assert.match(workflow, /yandex-cloud-functions\/heys-\*\/\*\*/);
   assert.equal((workflow.match(/function-inventory\.cjs --resolve/g) || []).length, 2);
   assert.doesNotMatch(workflow, /sed -n .*heys-api-/);
@@ -110,12 +96,26 @@ test('deploy workflow routes API and automation changes through the shared class
 });
 
 test('health workflow schedules an independent strict dead-man check', () => {
-  const workflow = readFileSync(
-    path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'),
-    'utf8',
-  );
+  const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'), 'utf8');
   assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
   assert.match(workflow, /if: always\(\)[\s\S]*--dead-man --strict --json/);
   assert.match(workflow, /PGPASSWORD: \$\{\{ secrets\.PG_PASSWORD \}\}/);
+  assert.match(workflow, /PGSSLROOTCERT: \$\{\{ github\.workspace \}\}\/yandex-cloud-functions\/certs\/root\.crt/);
   assert.doesNotMatch(workflow, /serverless function invoke heys-maintenance/);
+});
+
+test('health workflow debounces API recovery and never redeploys from push or manual runs', () => {
+  const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'), 'utf8');
+  assert.equal((workflow.match(/for attempt in 1 2 3; do/g) || []).length, 2);
+  assert.equal((workflow.match(/sleep 5/g) || []).length, 2);
+  assert.match(workflow, /ITEM_COUNT=\$\(echo "\$BODY" \| jq 'length \/\/ 0'/);
+  assert.doesNotMatch(workflow, /type == "array"/);
+  assert.match(
+    workflow,
+    /if: github\.event_name == 'schedule' && failure\(\) && \(steps\.rest\.outcome == 'failure' \|\| steps\.rpc\.outcome == 'failure'\)/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /if: failure\(\) && \(steps\.rest\.outcome == 'failure' \|\| steps\.rpc\.outcome == 'failure'\)/,
+  );
 });

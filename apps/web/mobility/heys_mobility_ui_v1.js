@@ -2986,6 +2986,7 @@
     }
     function handleProfileChange(nextProfile) {
       setProfile(nextProfile);
+      if (typeof props.onProfileChange === 'function') props.onProfileChange(nextProfile);
       if (d.onboarding && nextProfile && nextProfile.goal !== profile.goal) {
         if (d.protocolCatalog && typeof d.protocolCatalog.recommend === 'function') {
           const p = d.protocolCatalog.recommend(nextProfile, props);

@@ -214,7 +214,16 @@ test('all keyed reminder sends use the delivery state wrapper', () => {
 
 test('migration defines the claimed and delivered database states', () => {
   const migration = fs.readFileSync(
-    path.join(__dirname, '..', '..', '..', 'database', '2026-07-18_push_idempotency_delivery_state.sql'),
+    path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'scripts',
+      'db',
+      'migrations',
+      '2026-07-18_push_idempotency_delivery_state.sql'
+    ),
     'utf8'
   );
   assert.match(migration, /status = 'delivered'/);

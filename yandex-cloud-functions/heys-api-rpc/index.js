@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
+const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
@@ -384,6 +385,28 @@ function isIdentityGuardKey(k) {
 }
 const PROFILE_IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
 
+function criticalPayloadReason(result) {
+  const first = result?.errors?.[0];
+  return first ? `${first.code}:${first.path}` : 'invalid_payload';
+}
+
+async function validateCriticalWriteForItem(_client, clientId, key, value, currentValue, source) {
+  const result = validateCriticalKvPayload(key, value, { mode: 'write', currentValue });
+  if (result.ok) return result;
+
+  const reason = criticalPayloadReason(result);
+  try {
+    await getPool('heys-api-rpc').query(
+      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+       VALUES ($1::uuid, $2::text, 'critical_payload_rejected', FALSE, $3)`,
+      [clientId, String(key || '').slice(0, 200), `${source}:${reason}`]
+    );
+  } catch (error) {
+    console.warn(`[${source}] critical payload audit failed:`, error.message);
+  }
+  return result;
+}
+
 /**
  * runIdentityGuardsForItem — per-item проверки перед UPSERT в client_kv_store.
  * Возвращает { allow, finalValue, snapshotId, blockedReason }.
@@ -640,25 +663,21 @@ async function detectCrossClientDayv2ContentDup(client, curatorId, clientId, k, 
 async function prefetchGuardedCurrentValues(client, clientId, items, lockRows = false) {
   const guardedKeys = [];
   for (const it of items) {
-    if (it && typeof it.k === 'string' && isIdentityGuardKey(it.k)) {
+    if (it && typeof it.k === 'string' && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k))) {
       guardedKeys.push(it.k);
     }
   }
   const map = new Map();
   if (guardedKeys.length === 0) return map;
-  try {
-    const r = await client.query(
-      'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (lockRows ? ' FOR UPDATE' : ''),
-      [clientId, guardedKeys]
-    );
-    for (const row of r.rows) {
-      const tsMs = (row.updated_at instanceof Date)
-        ? row.updated_at.getTime()
-        : Date.parse(row.updated_at || '');
-      map.set(row.k, { v: row.v, updated_at_ms: tsMs || 0 });
-    }
-  } catch (e) {
-    console.warn('[identity-guard] prefetch failed:', e.message);
+  const r = await client.query(
+    'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (lockRows ? ' FOR UPDATE' : ''),
+    [clientId, guardedKeys]
+  );
+  for (const row of r.rows) {
+    const tsMs = (row.updated_at instanceof Date)
+      ? row.updated_at.getTime()
+      : Date.parse(row.updated_at || '');
+    map.set(row.k, { v: row.v, updated_at_ms: tsMs || 0 });
   }
   return map;
 }
@@ -2670,6 +2689,33 @@ module.exports.handler = async function (event, context) {
           [resolvedClientId, k]
         );
 
+        const currentValueForContract = cur.rows.length > 0 ? cur.rows[0].v : null;
+        const payloadContract = await validateCriticalWriteForItem(
+          client,
+          resolvedClientId,
+          k,
+          incomingValue,
+          currentValueForContract,
+          isCurator ? 'merge_save_by_curator' : 'merge_save_by_session'
+        );
+        if (!payloadContract.ok) {
+          await client.query('ROLLBACK');
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              ok: false,
+              success: false,
+              error: 'critical_payload_rejected',
+              reason: criticalPayloadReason(payloadContract),
+              key: k,
+              contract: payloadContract.contract,
+              contract_version: payloadContract.version,
+            })
+          };
+        }
+
         if (cur.rows.length === 0) {
           // 🛡️ Fresh-row guard (incident 2026-06-02 #9): даже когда cloud row
           // ещё не существует — проверяем что incoming._writerCid соответствует
@@ -3560,17 +3606,19 @@ module.exports.handler = async function (event, context) {
       // 1) Pre-SELECT OLD values одним запросом для diff'a + updated_at для identity-guard.
       const keysList = items.map(it => it && it.k).filter(k => typeof k === 'string');
       const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(key));
+      const hasCriticalBatchKey = keysList.some((key) => !!classifyCriticalKey(key));
       let dayv2BatchTxStarted = false;
       let oldByKey = new Map();
       let oldUpdatedAtByKey = new Map();
+      let oldSelectOk = true;
       if (keysList.length > 0) {
         try {
-          if (hasDayv2BatchKey) {
+          if (hasDayv2BatchKey || hasCriticalBatchKey) {
             await client.query('BEGIN');
             dayv2BatchTxStarted = true;
           }
           const oldRows = await client.query(
-            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (hasDayv2BatchKey ? ' FOR UPDATE' : ''),
+            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey) ? ' FOR UPDATE' : ''),
             [targetClientId, keysList]
           );
           for (const row of oldRows.rows) {
@@ -3586,9 +3634,41 @@ module.exports.handler = async function (event, context) {
             try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
             dayv2BatchTxStarted = false;
           }
+          oldSelectOk = false;
           console.warn('[batch_upsert] OLD select failed:', selErr.message);
         }
       }
+
+      // 1.25) Versioned payload contracts for critical state. Legacy payloads
+      // remain readable/writable, but incompatible shapes, unknown versions and
+      // destructive empty replacements are rejected before any UPSERT.
+      const payloadBlockedKeys = [];
+      const payloadKeptItems = [];
+      for (const it of items) {
+        if (!it || typeof it.k !== 'string' || !classifyCriticalKey(it.k)) {
+          payloadKeptItems.push(it);
+          continue;
+        }
+        if (!oldSelectOk) {
+          payloadBlockedKeys.push({ k: it.k, reason: 'current_value_unavailable' });
+          continue;
+        }
+        const payloadResult = await validateCriticalWriteForItem(
+          client,
+          targetClientId,
+          it.k,
+          it.v,
+          oldByKey.has(it.k) ? oldByKey.get(it.k) : null,
+          'batch_upsert_by_curator'
+        );
+        if (!payloadResult.ok) {
+          payloadBlockedKeys.push({ k: it.k, reason: criticalPayloadReason(payloadResult) });
+          continue;
+        }
+        payloadKeptItems.push(it);
+      }
+      items.length = 0;
+      items.push(...payloadKeptItems);
 
       // 1.5) 🛡️ Identity-pollution guards (added 2026-06-01 incident 2).
       // До этого date только merge_save_* path защищал identity-keys; curator
@@ -3659,6 +3739,10 @@ module.exports.handler = async function (event, context) {
         console.warn('[batch_upsert_client_kv_by_curator] dayv2_guard_merged:', dayv2Merged);
       }
       if (items.length === 0) {
+        if (dayv2BatchTxStarted) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          dayv2BatchTxStarted = false;
+        }
         try { client.release(); } catch (_) { /* ignore */ }
         return {
           statusCode: 200,
@@ -3667,8 +3751,11 @@ module.exports.handler = async function (event, context) {
             success: true,
             saved: 0,
             rejected: rejectedKeys.length,
+            payload_blocked: payloadBlockedKeys,
             identity_blocked: guardBlockedKeys,
-            error: guardBlockedKeys.length ? 'identity_guard_blocked' : (rejectedKeys.length ? 'not_client_data' : undefined),
+            error: payloadBlockedKeys.length
+              ? 'critical_payload_rejected'
+              : (guardBlockedKeys.length ? 'identity_guard_blocked' : (rejectedKeys.length ? 'not_client_data' : undefined)),
           })
         };
       }
@@ -3771,9 +3858,11 @@ module.exports.handler = async function (event, context) {
 
       // Include identity_blocked в response чтобы caller знал что часть items
       // отвергнута guard'ом (даже при success=true остальных).
-      const responseBody = (guardBlockedKeys.length > 0 && upsertResult && typeof upsertResult === 'object')
-        ? { ...upsertResult, identity_blocked: guardBlockedKeys }
-        : upsertResult;
+      let responseBody = upsertResult;
+      if (upsertResult && typeof upsertResult === 'object') {
+        if (payloadBlockedKeys.length > 0) responseBody = { ...responseBody, payload_blocked: payloadBlockedKeys };
+        if (guardBlockedKeys.length > 0) responseBody = { ...responseBody, identity_blocked: guardBlockedKeys };
+      }
       return {
         statusCode: 200,
         headers: corsHeaders,
@@ -3895,9 +3984,9 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    // 🛡️ Identity-guard для session single-write path (added 2026-06-01 incident 2).
+    // 🛡️ Payload contract + identity guard for session single-write path.
     if (fnName === 'upsert_client_kv_by_session' &&
-        typeof params.p_key === 'string' && isIdentityGuardKey(params.p_key) &&
+        typeof params.p_key === 'string' && (isIdentityGuardKey(params.p_key) || classifyCriticalKey(params.p_key)) &&
         params.p_value && typeof params.p_value === 'object' && params.p_session_token) {
       // Resolve session → client_id.
       let resolvedSessionClientId = null;
@@ -3914,7 +4003,7 @@ module.exports.handler = async function (event, context) {
         console.warn('[upsert_client_kv_by_session] session resolve failed:', e.message);
       }
       if (resolvedSessionClientId) {
-        let prevV = null, prevTsMs = 0;
+        let prevV = null, prevTsMs = 0, prevFetchOk = true;
         try {
           const cr = await client.query(
             'SELECT v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text',
@@ -3927,19 +4016,120 @@ module.exports.handler = async function (event, context) {
               : (Date.parse(cr.rows[0].updated_at || '') || 0);
           }
         } catch (e) {
+          prevFetchOk = false;
           console.warn('[upsert_client_kv_by_session] prev fetch failed:', e.message);
         }
-        const gr = await runIdentityGuardsForItem(
-          client, resolvedSessionClientId, params.p_key, params.p_value, prevV, prevTsMs, 'upsert_by_session'
-        );
-        if (!gr.allow) {
+        if (classifyCriticalKey(params.p_key) && !prevFetchOk) {
           try { client.release(); } catch (_) { /* ignore */ }
           return {
             statusCode: 200,
             headers: corsHeaders,
-            body: JSON.stringify({ success: false, ok: false, error: 'identity_guard_blocked', reason: gr.blockedReason, key: params.p_key })
+            body: JSON.stringify({ success: false, ok: false, error: 'critical_payload_rejected', reason: 'current_value_unavailable', key: params.p_key })
           };
         }
+        const payloadResult = await validateCriticalWriteForItem(
+          client,
+          resolvedSessionClientId,
+          params.p_key,
+          params.p_value,
+          prevV,
+          'upsert_by_session'
+        );
+        if (!payloadResult.ok) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: false,
+              ok: false,
+              error: 'critical_payload_rejected',
+              reason: criticalPayloadReason(payloadResult),
+              key: params.p_key,
+              contract: payloadResult.contract,
+              contract_version: payloadResult.version,
+            })
+          };
+        }
+        if (isIdentityGuardKey(params.p_key)) {
+          const gr = await runIdentityGuardsForItem(
+            client, resolvedSessionClientId, params.p_key, params.p_value, prevV, prevTsMs, 'upsert_by_session'
+          );
+          if (!gr.allow) {
+            try { client.release(); } catch (_) { /* ignore */ }
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({ success: false, ok: false, error: 'identity_guard_blocked', reason: gr.blockedReason, key: params.p_key })
+            };
+          }
+        }
+      }
+    }
+
+    // Serialize direct critical writes with the same row lock used by merge_save.
+    // The earlier guard provides friendly errors; this second validation closes
+    // the race between reading the current value and calling the SQL upsert.
+    if (fnName === 'upsert_client_kv_by_session'
+        && typeof params.p_key === 'string'
+        && classifyCriticalKey(params.p_key)
+        && params.p_value && typeof params.p_value === 'object'
+        && params.p_session_token) {
+      try {
+        const sessionResult = await client.query(
+          `SELECT client_id FROM client_sessions
+           WHERE token_hash = digest($1, 'sha256')
+             AND expires_at > now()
+             AND revoked_at IS NULL`,
+          [params.p_session_token]
+        );
+        const sessionClientId = sessionResult.rows?.[0]?.client_id || null;
+        if (sessionClientId) {
+          await client.query('BEGIN');
+          params.__protectedWriteTxStarted = true;
+          const currentResult = await client.query(
+            'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+            [sessionClientId, params.p_key]
+          );
+          const payloadResult = await validateCriticalWriteForItem(
+            client,
+            sessionClientId,
+            params.p_key,
+            params.p_value,
+            currentResult.rows?.[0]?.v || null,
+            'upsert_by_session_locked'
+          );
+          if (!payloadResult.ok) {
+            await client.query('ROLLBACK');
+            delete params.__protectedWriteTxStarted;
+            try { client.release(); } catch (_) { /* ignore */ }
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                success: false,
+                ok: false,
+                error: 'critical_payload_rejected',
+                reason: criticalPayloadReason(payloadResult),
+                key: params.p_key,
+                contract: payloadResult.contract,
+                contract_version: payloadResult.version,
+              })
+            };
+          }
+        }
+      } catch (error) {
+        if (params.__protectedWriteTxStarted) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          delete params.__protectedWriteTxStarted;
+        }
+        console.warn('[upsert_client_kv_by_session] locked contract validation failed:', error.message);
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ success: false, ok: false, error: 'critical_payload_validation_failed', key: params.p_key })
+        };
       }
     }
 
@@ -4009,9 +4199,10 @@ module.exports.handler = async function (event, context) {
         }
       }
 
-      // 🛡️ Identity-guard для session batch path.
+      // 🛡️ Payload contracts + identity guard for session batch path.
       // Skip resolution entirely если нет guarded keys (избегаем лишнего DB roundtrip).
-      const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string' && isIdentityGuardKey(it.k));
+      const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string'
+        && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k)));
       if (hasGuardedKey && params.p_session_token) {
         let resolvedSessionClientId = null;
         try {
@@ -4030,19 +4221,44 @@ module.exports.handler = async function (event, context) {
           const hasDayv2BatchKey = params.p_items.some((it) =>
             it && typeof it.k === 'string' && /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(it.k)
           );
-          if (hasDayv2BatchKey) {
+          const hasCriticalBatchKey = params.p_items.some((it) =>
+            it && typeof it.k === 'string' && !!classifyCriticalKey(it.k)
+          );
+          if (hasDayv2BatchKey || hasCriticalBatchKey) {
             await client.query('BEGIN');
-            params.__dayv2BatchTxStarted = true;
+            params.__protectedWriteTxStarted = true;
           }
-          const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items, hasDayv2BatchKey);
+          const prevMap = await prefetchGuardedCurrentValues(
+            client,
+            resolvedSessionClientId,
+            params.p_items,
+            hasDayv2BatchKey || hasCriticalBatchKey
+          );
+          const payloadBlockedSessionKeys = [];
           const blockedSessionKeys = [];
           const kept = [];
           for (const it of params.p_items) {
-            if (!it || typeof it.k !== 'string' || !isIdentityGuardKey(it.k)) {
+            if (!it || typeof it.k !== 'string') {
               kept.push(it);
               continue;
             }
             const prev = prevMap.get(it.k) || { v: null, updated_at_ms: 0 };
+            const payloadResult = await validateCriticalWriteForItem(
+              client,
+              resolvedSessionClientId,
+              it.k,
+              it.v,
+              prev.v,
+              'batch_upsert_by_session'
+            );
+            if (!payloadResult.ok) {
+              payloadBlockedSessionKeys.push({ k: it.k, reason: criticalPayloadReason(payloadResult) });
+              continue;
+            }
+            if (!isIdentityGuardKey(it.k)) {
+              kept.push(it);
+              continue;
+            }
             const gr = await runIdentityGuardsForItem(
               client, resolvedSessionClientId, it.k, it.v, prev.v, prev.updated_at_ms, 'batch_upsert_by_session'
             );
@@ -4058,18 +4274,25 @@ module.exports.handler = async function (event, context) {
             console.warn('[batch_upsert_client_kv_by_session] dayv2_guard_merged:', dayv2Merged);
           }
           if (params.p_items.length === 0) {
-            if (params.__dayv2BatchTxStarted) {
+            if (params.__protectedWriteTxStarted) {
               try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-              delete params.__dayv2BatchTxStarted;
+              delete params.__protectedWriteTxStarted;
             }
             try { client.release(); } catch (_) { /* ignore */ }
             return {
               statusCode: 200,
               headers: corsHeaders,
-              body: JSON.stringify({ success: true, saved: 0, identity_blocked: blockedSessionKeys, error: 'identity_guard_blocked' })
+              body: JSON.stringify({
+                success: true,
+                saved: 0,
+                payload_blocked: payloadBlockedSessionKeys,
+                identity_blocked: blockedSessionKeys,
+                error: payloadBlockedSessionKeys.length ? 'critical_payload_rejected' : 'identity_guard_blocked',
+              })
             };
           }
           // Store for response augmentation in dispatch path (see below).
+          params.__payloadBlocked = payloadBlockedSessionKeys;
           params.__identityBlocked = blockedSessionKeys;
         }
       }
@@ -4465,9 +4688,9 @@ module.exports.handler = async function (event, context) {
       infoLog('[RPC] get_curator_clients success', { rows: result.rows?.length || 0 });
     }
 
-    if (params && params.__dayv2BatchTxStarted) {
+    if (params && params.__protectedWriteTxStarted) {
       await client.query('COMMIT');
-      delete params.__dayv2BatchTxStarted;
+      delete params.__protectedWriteTxStarted;
     }
 
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
@@ -4495,6 +4718,10 @@ module.exports.handler = async function (event, context) {
     // until we drop localStorage on the client; both paths interoperate.
     // `revoke_session` success clears the same cookie with Max-Age=0.
     let responseBody = result.rows.length === 1 ? result.rows[0] : result.rows;
+    if (params && Array.isArray(params.__payloadBlocked) && params.__payloadBlocked.length > 0
+        && responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)) {
+      responseBody = { ...responseBody, payload_blocked: params.__payloadBlocked };
+    }
     // 🛡️ Surface identity_blocked если guard отверг часть items в session batch path.
     if (params && Array.isArray(params.__identityBlocked) && params.__identityBlocked.length > 0
         && responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)) {
@@ -4533,9 +4760,9 @@ module.exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    if (params && params.__dayv2BatchTxStarted) {
+    if (params && params.__protectedWriteTxStarted) {
       try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
-      delete params.__dayv2BatchTxStarted;
+      delete params.__protectedWriteTxStarted;
     }
     // Детальное логирование для admin функций и критичных функций.
     // log_* — debug/audit функции, которые сами логируют события клиента.

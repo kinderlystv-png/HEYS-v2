@@ -33,7 +33,7 @@ Retention job нужен до paid-scale/R2 для таблиц и объект�
 -- client/browser debug trace: 30 days
 SELECT count(*) AS client_log_trace_candidates
 FROM client_log_trace
-WHERE created_at < now() - interval '30 days';
+WHERE captured_at < now() - interval '30 days';
 
 -- security events: 1 year
 SELECT count(*) AS security_events_candidates
@@ -48,7 +48,7 @@ WHERE created_at < now() - interval '1 year';
 -- data-access audit: 3 years
 SELECT count(*) AS data_access_audit_candidates
 FROM data_access_audit_log
-WHERE accessed_at < now() - interval '3 years';
+WHERE created_at < now() - interval '3 years';
 
 -- photo cleanup evidence
 SELECT run_at, status, orphan_candidates_count, deleted_count, dry_run
@@ -74,8 +74,8 @@ BEGIN;
 WITH doomed AS (
   SELECT id
   FROM client_log_trace
-  WHERE created_at < now() - interval '30 days'
-  ORDER BY created_at
+  WHERE captured_at < now() - interval '30 days'
+  ORDER BY captured_at
   LIMIT 500
 )
 DELETE FROM client_log_trace

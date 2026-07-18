@@ -64,6 +64,7 @@ describe('Mobility public entry', () => {
   beforeEach(() => {
     document.head.innerHTML = '';
     document.body.innerHTML = '';
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -103,6 +104,22 @@ describe('Mobility public entry', () => {
     ]));
     expect(courseBuilt.ok).toBe(false);
     expect(courseBuilt.session).toBeNull();
+  });
+
+  it('persists the accepted mobility profile without replacing other profile fields', () => {
+    const M = setupFull();
+    localStorage.setItem('heys_profile', JSON.stringify({ name: 'Антон', weight: 80 }));
+
+    expect(M.saveProfile({ age: 30, acceptedDisclaimer: true, equipment: ['band'] })).toBe(true);
+    const stored = JSON.parse(localStorage.getItem('heys_profile'));
+
+    expect(stored).toMatchObject({ name: 'Антон', weight: 80 });
+    expect(stored.mobilityProfile).toMatchObject({
+      age: 30,
+      acceptedDisclaimer: true,
+      equipment: ['band']
+    });
+    expect(M.getProfile({})).toMatchObject({ age: 30, acceptedDisclaimer: true });
   });
 
   it('buildCourseSession delegates to slot-based course planner', () => {

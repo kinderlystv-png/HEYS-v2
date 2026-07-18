@@ -302,7 +302,7 @@ async function answerCallbackQueryFast(queryId, bot = 'start', options = {}) {
 
   try {
     const response = await fetchWithTimeout(
-      `${api}/answerCallbackQuery`,
+      api + '/answerCallbackQuery',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

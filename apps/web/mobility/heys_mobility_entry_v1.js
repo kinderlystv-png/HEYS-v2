@@ -59,14 +59,40 @@
       : raw;
   }
 
-  function readStoredProfile() {
+  function readProfileRoot() {
     try {
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+        const stored = HEYS.utils.lsGet('heys_profile', {});
+        return stored && typeof stored === 'object' ? stored : {};
+      }
       const ls = global.localStorage;
       if (!ls || typeof ls.getItem !== 'function') return {};
       const raw = JSON.parse(ls.getItem('heys_profile') || '{}');
-      return raw.mobilityProfile || raw.mobility || {};
+      return raw && typeof raw === 'object' ? raw : {};
     } catch (_) {
       return {};
+    }
+  }
+
+  function readStoredProfile() {
+    const raw = readProfileRoot();
+    return raw.mobilityProfile || raw.mobility || {};
+  }
+
+  function saveProfile(profile) {
+    const nextProfile = normalizeProfile(profile);
+    const root = readProfileRoot();
+    const next = Object.assign({}, root, { mobilityProfile: nextProfile });
+    try {
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+        return HEYS.utils.lsSet('heys_profile', next) !== false;
+      }
+      const ls = global.localStorage;
+      if (!ls || typeof ls.setItem !== 'function') return false;
+      ls.setItem('heys_profile', JSON.stringify(next));
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -279,6 +305,7 @@
     },
       h(Mobility.UI.MobilityApp, {
         profile: profile,
+        onProfileChange: saveProfile,
         onClose: close,
         dateKey: o.dateKey,
         trainingIndex: o.trainingIndex,
@@ -309,6 +336,7 @@
   }
 
   Mobility.getProfile = getProfile;
+  Mobility.saveProfile = saveProfile;
   Mobility.buildSession = buildSession;
   Mobility.buildCourse = buildCourse;
   Mobility.buildCourseSession = buildCourseSession;

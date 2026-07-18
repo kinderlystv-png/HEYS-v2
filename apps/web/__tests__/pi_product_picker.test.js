@@ -40,6 +40,10 @@ describe('Smart Product Picker v2.5', () => {
             }
         };
 
+        // Production loads the shared domain models before insights modules.
+        const modelsPath = path.join(__dirname, '../heys_models_v1.js');
+        loadScriptAsModule(modelsPath);
+
         // Mock localStorage getter with sample data
         mockDayData = {
             meals: [

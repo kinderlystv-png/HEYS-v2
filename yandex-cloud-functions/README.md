@@ -11,6 +11,12 @@
 > expectations — в `check-heys-ops-status.cjs`. Этот файл используется как
 > исторический runbook, а не как полный каталог production backend.
 
+> **Статус 2026-07-17:** список из семи функций и раздел про постоянный
+> 15-минутный GitHub monitor устарели. Канонический deploy inventory находится в
+> `deploy-all.sh`, gateway routes — в `api-gateway-spec.yaml`, operational
+> expectations — в `check-heys-ops-status.cjs`. Этот файл используется как
+> исторический runbook, а не как полный каталог production backend.
+
 ---
 
 ## 📦 Архитектура
@@ -56,9 +62,9 @@ sleep 10                # Ждём warmup
 ## 🛡️ Историческая схема защиты (v5.0.1)
 
 Перечень старых обещаний про количество функций, постоянный GitHub monitor и
-автоматический redeploy удалён: он не подтверждает состояние production.
-Текущий статус проверяется через `check-heys-ops-status.cjs`, а deploy wiring —
-через `.github/workflows/cloud-functions-deploy.yml`.
+автоматический redeploy удалён: он не подтверждает состояние production. Текущий
+статус проверяется через `check-heys-ops-status.cjs`, а deploy wiring — через
+`.github/workflows/cloud-functions-deploy.yml`.
 
 ### Диагностика
 

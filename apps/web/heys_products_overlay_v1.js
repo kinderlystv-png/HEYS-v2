@@ -698,14 +698,15 @@
       && !candidate._custom
       && candidate.shared_origin_id != null
       && String(candidate.shared_origin_id) === String(sharedId));
-    return {
-      ok: true,
-      product: row ? buildTypeAProduct(row, base) : Object.assign({}, product, base, {
-        _nutrientsPending: false,
-        _selectionDisabled: false,
-      }),
-      reason: 'shared_nutrients_ready',
-    };
+    const resolved = row
+      ? buildTypeAProduct(row, base)
+      : _withNormalizedBarcodes(Object.assign({}, base, product, {
+        id: product.id ?? product.product_id ?? base.id,
+        shared_origin_id: sharedId,
+      }));
+    delete resolved._nutrientsPending;
+    delete resolved._selectionDisabled;
+    return { ok: true, product: resolved, reason: 'shared_nutrients_ready' };
   }
   function _getSharedAuxIndexes(sharedById) {
     if (_sharedByFingerprintRef !== sharedById) {
