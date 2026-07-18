@@ -53,9 +53,9 @@
         //   return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
         // }
 
-        // === READ-ONLY BANNER: показываем если триал истёк ===
+        // === READ-ONLY BANNER: показываем пока запись не подтверждена ===
         const subscriptionStatus = heysRef.Subscription?.getCachedStatus?.() || ctx.prof?.subscription_status || 'none';
-        const isReadOnly = subscriptionStatus === 'read_only';
+        const isReadOnly = heysRef.Subscription?.canWriteStatus?.(subscriptionStatus) !== true;
 
         // === Diary Section (extracted) ===
         // Phase split: render lightweight placeholder first, heavy diary mounts after first paint.

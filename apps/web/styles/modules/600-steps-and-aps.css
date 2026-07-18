@@ -2486,6 +2486,18 @@
   background: #0f172a;
 }
 
+.aps-product-card--disabled,
+.aps-product-card--disabled:hover,
+.aps-product-card--disabled:active,
+[data-theme='dark'] .aps-product-card--disabled:hover,
+[data-theme='dark'] .aps-product-card--disabled:active {
+  cursor: progress;
+  opacity: 0.72;
+  transform: none;
+  background: var(--card);
+  border-color: var(--border);
+}
+
 .aps-product-icon {
   font-size: 16px;
   min-width: 22px;
@@ -2595,6 +2607,11 @@
 .aps-meta-macros {
   color: #9ca3af;
   font-size: inherit;
+}
+
+.aps-meta-pending {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .aps-product-usage {

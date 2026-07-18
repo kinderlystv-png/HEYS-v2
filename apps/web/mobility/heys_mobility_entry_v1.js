@@ -22,12 +22,12 @@
   let bodyScrollLocked = false;
 
   const DEFAULT_PROFILE = {
-    age: 30,
+    age: null,
     level: 'beginner',
     populations: [],
     equipment: ['band', 'strap'],
     goal: 'morning',
-    acceptedDisclaimer: true
+    acceptedDisclaimer: false
   };
 
   const MODE_LABEL = {
@@ -59,19 +59,66 @@
       : raw;
   }
 
-  function readStoredProfile() {
+  function readProfileRoot() {
     try {
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+        const stored = HEYS.utils.lsGet('heys_profile', {});
+        return stored && typeof stored === 'object' ? stored : {};
+      }
       const ls = global.localStorage;
       if (!ls || typeof ls.getItem !== 'function') return {};
       const raw = JSON.parse(ls.getItem('heys_profile') || '{}');
-      return raw.mobilityProfile || raw.mobility || {};
+      return raw && typeof raw === 'object' ? raw : {};
     } catch (_) {
       return {};
     }
   }
 
+  function readStoredProfile() {
+    const raw = readProfileRoot();
+    return raw.mobilityProfile || raw.mobility || {};
+  }
+
+  function saveProfile(profile) {
+    const nextProfile = normalizeProfile(profile);
+    const root = readProfileRoot();
+    const next = Object.assign({}, root, { mobilityProfile: nextProfile });
+    try {
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+        return HEYS.utils.lsSet('heys_profile', next) !== false;
+      }
+      const ls = global.localStorage;
+      if (!ls || typeof ls.setItem !== 'function') return false;
+      ls.setItem('heys_profile', JSON.stringify(next));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function getProfile(overrides) {
     return normalizeProfile(Object.assign({}, readStoredProfile(), overrides || {}));
+  }
+
+  function validateBuildProfile(profile) {
+    if (!Mobility.onboarding || typeof Mobility.onboarding.validateProfile !== 'function') {
+      return {
+        ok: false,
+        profile: profile,
+        issues: [{ level: 'error', code: 'mobility.onboarding_not_loaded', msg: 'проверка обязательных данных не загружена' }]
+      };
+    }
+    return Mobility.onboarding.validateProfile(profile);
+  }
+
+  function blockedBuild(validation) {
+    const issues = validation && Array.isArray(validation.issues) ? validation.issues : [];
+    return {
+      ok: false,
+      errors: issues.filter(function (issue) { return issue.level === 'error'; }),
+      issues: issues,
+      session: null
+    };
   }
 
   function protocolFromOptions(opts) {
@@ -98,6 +145,8 @@
       return { ok: false, errors: [{ level: 'error', code: 'mobility.not_loaded', msg: 'модуль мобильности не загружен' }], session: null };
     }
     const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
     const protocol = protocolFromOptions(opts);
     const protocolOptions = protocol && Mobility.protocolCatalog && typeof Mobility.protocolCatalog.buildOptions === 'function'
       ? Mobility.protocolCatalog.buildOptions(protocol)
@@ -119,7 +168,10 @@
     if (!Mobility.coursePlanner || typeof Mobility.coursePlanner.buildDailySession !== 'function') {
       return { ok: false, errors: [{ level: 'error', code: 'mobility.course_not_loaded', msg: 'планер курса не загружен' }], session: null };
     }
-    return Mobility.coursePlanner.buildDailySession(course, getProfile(profile), opts || {});
+    const p = getProfile(profile);
+    const validation = validateBuildProfile(p);
+    if (!validation.ok) return blockedBuild(validation);
+    return Mobility.coursePlanner.buildDailySession(course, p, opts || {});
   }
 
   function modeLabel(modeId) {
@@ -253,6 +305,7 @@
     },
       h(Mobility.UI.MobilityApp, {
         profile: profile,
+        onProfileChange: saveProfile,
         onClose: close,
         dateKey: o.dateKey,
         trainingIndex: o.trainingIndex,
@@ -283,6 +336,7 @@
   }
 
   Mobility.getProfile = getProfile;
+  Mobility.saveProfile = saveProfile;
   Mobility.buildSession = buildSession;
   Mobility.buildCourse = buildCourse;
   Mobility.buildCourseSession = buildCourseSession;

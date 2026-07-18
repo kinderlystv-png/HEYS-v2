@@ -3,6 +3,13 @@
 > **Источники правды для CDN/Storage/VM конфигурации**  
 > Обновлено: 2026-02-25
 
+> **Статус 2026-07-17:** документ сохранён как подробный инфраструктурный
+> runbook, но перечисленные IP, resource IDs, firewall rules, версии ПО и срок
+> SSL являются runtime-фактами на дату последней проверки, а не вечными
+> контрактами. Перед операцией сверяйте их с Yandex Cloud/DNS/VM. Общая
+> актуальная граница и источники проверки описаны в
+> [`docs/reference/systems/INFRA_OPERATIONS.md`](../docs/reference/systems/INFRA_OPERATIONS.md).
+
 ---
 
 ## 🌐 PWA `app.heyslab.ru` — Nginx Reverse Proxy
@@ -42,7 +49,8 @@ ssh -i ~/.ssh/yc_key -o IdentitiesOnly=yes yc-user@158.160.53.194
 > добавить SSH ключ после создания VM — через `bootcmd` в user-data (выполняется
 > при каждом старте):  
 > `yc compute instance add-metadata --name app-heyslab-proxy --metadata-from-file "user-data=bootcmd.yaml"`
-> + stop/start.
+>
+> - stop/start.
 
 ### Почему Nginx вместо CDN?
 
@@ -115,8 +123,9 @@ curl -sI https://app.heyslab.ru/boot-core.bundle.e0cfd58e1796.js | grep -iE "cac
 curl -sI "https://app.heyslab.ru/assets/index-*.js" | grep -iE "cache-control"
 ```
 
-> ✅ Fix 2026-02-25: добавлено правило `location ~ \.(bundle|chunk)\.[a-f0-9]+\.(js|css)$`
-> в nginx конфиг → хешированные бандлы получили `immutable` вместо `no-cache`.  
+> ✅ Fix 2026-02-25: добавлено правило
+> `location ~ \.(bundle|chunk)\.[a-f0-9]+\.(js|css)$` в nginx конфиг →
+> хешированные бандлы получили `immutable` вместо `no-cache`.  
 > **Результат:** скорость загрузки при повторном визите: `~30s → мгновенно`.
 
 ### Landing (CDN)

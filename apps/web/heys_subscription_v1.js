@@ -17,6 +17,24 @@
   const CACHE_KEY = 'heys_subscription_status';
   const CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
 
+  function normalizeStatus(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value !== 'object') return '';
+    if (typeof value.status === 'string') return value.status;
+    if (typeof value.subscription_status === 'string') return value.subscription_status;
+    if (value.data) return normalizeStatus(value.data);
+    if (value.get_subscription_status_by_session) {
+      return normalizeStatus(value.get_subscription_status_by_session);
+    }
+    return '';
+  }
+
+  function canWriteStatus(value) {
+    const status = normalizeStatus(value);
+    return status === STATUS.TRIAL || status === STATUS.ACTIVE;
+  }
+
   // === Утилиты ===
   const U = HEYS.utils || {};
 
@@ -184,14 +202,7 @@
   let _inflightPromise = null;
 
   function unwrapStatusPayload(payload) {
-    if (!payload) return STATUS.NONE;
-    if (typeof payload === 'string') return payload;
-    if (typeof payload.status === 'string') return payload.status;
-    if (payload.data) return unwrapStatusPayload(payload.data);
-    if (payload.get_subscription_status_by_session) {
-      return unwrapStatusPayload(payload.get_subscription_status_by_session);
-    }
-    return STATUS.NONE;
+    return normalizeStatus(payload) || STATUS.NONE;
   }
 
   // === API вызовы ===
@@ -349,7 +360,7 @@
    * trial_pending ещё не открывает дневник: куратор одобрил, но доступ стартует позже.
    */
   function canWrite(status) {
-    return status === STATUS.TRIAL || status === STATUS.ACTIVE;
+    return canWriteStatus(status);
   }
 
   /**
@@ -363,21 +374,23 @@
    * Активен ли триал или подписка?
    */
   function isActive(status) {
-    return status === STATUS.TRIAL || status === STATUS.ACTIVE;
+    return canWriteStatus(status);
   }
 
   /**
    * Получить UI-метаданные для статуса
    */
   function getStatusMeta(status) {
-    switch (status) {
+    const normalized = normalizeStatus(status) || STATUS.NONE;
+    const accessAllowed = canWriteStatus(normalized);
+    switch (normalized) {
       case STATUS.TRIAL_PENDING:
         return {
           label: 'Триал одобрен',
           shortLabel: 'Одобрен',
           color: '#3b82f6', // blue
           emoji: '✅',
-          canWrite: true,
+          canWrite: accessAllowed,
         };
       case STATUS.TRIAL:
         return {
@@ -385,7 +398,7 @@
           shortLabel: 'Триал',
           color: '#f59e0b', // amber
           emoji: '⏳',
-          canWrite: true,
+          canWrite: accessAllowed,
         };
       case STATUS.ACTIVE:
         return {
@@ -393,7 +406,7 @@
           shortLabel: 'Pro',
           color: '#22c55e', // green
           emoji: '✨',
-          canWrite: true,
+          canWrite: accessAllowed,
         };
       case STATUS.READ_ONLY:
         return {
@@ -401,7 +414,7 @@
           shortLabel: 'Истекла',
           color: '#ef4444', // red
           emoji: '🔒',
-          canWrite: false,
+          canWrite: accessAllowed,
         };
       case STATUS.NONE:
       default:
@@ -410,7 +423,7 @@
           shortLabel: 'Нет',
           color: '#6b7280', // gray
           emoji: '📋',
-          canWrite: false,
+          canWrite: accessAllowed,
         };
     }
   }
@@ -498,6 +511,8 @@
     getLocalStatus: getLocalSubscriptionStatus,
 
     // Helpers
+    normalizeStatus,
+    canWriteStatus,
     canWrite,
     shouldShowPaywall,
     isActive,

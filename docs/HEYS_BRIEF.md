@@ -9,10 +9,13 @@
 
 ## Как пользоваться этим документом
 
-- Это **единственный источник истины** для документации проекта.
+- Это основной сводный продуктовый и операционный обзор проекта.
 - Содержит все слои: Layer 0 (операционка), Layer 1 (продукт), Layer 2
   (техника).
 - Для AI-агентов: размер документа (~1800 строк) не проблема.
+- Текущие технические факты и карта исходников находятся в
+  [живом справочнике](reference/README.md); при расхождении приоритет у кода,
+  конфигурации и тестов.
 
 ---
 
@@ -1519,13 +1522,13 @@ SSL: verify-full
 | **Models**             | `heys_models_v1.js`                                                |
 | **Storage**            | `heys_storage_layer_v1.js`                                         |
 | **UI**                 | `heys_user_v12.js`, `heys_reports_v12.js`                          |
-| **Cloud Functions** 🆕 | `yandex-cloud-functions/heys-api-*` (7 функций)                    |
+| **Cloud Functions** 🆕 | `yandex-cloud-functions/` (API, bots, cron и maintenance)          |
 | **Infrastructure** 🆕  | `infra/README.md` (VM, CDN, S3, DNS)                               |
 
 **Документация:**
 
 - [DATA_MODEL_REFERENCE.md](./DATA_MODEL_REFERENCE.md) — модель данных
-- [YANDEX_API.md](./YANDEX_API.md) — API интеграция с Yandex Cloud
+- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) — API интеграция с Yandex Cloud
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — архитектура
 - [infra/README.md](../infra/README.md) — инфраструктура (VM, CDN, S3)
 - [docs/legal/](./legal/) — юридические документы

@@ -1,15 +1,15 @@
 # HEYS Documentation Summary
 
-> Last updated: 2026-04-17 | Navigation for active HEYS documentation
+> Last updated: 2026-07-17 | Navigation for active HEYS documentation
 
 ## 🚀 Core Documentation
 
 ### Essential Files
 
 - [Project Overview](README.md)
+- [Living Application Reference](reference/README.md) ⭐
 - [HEYS Brief (Product v1)](HEYS_BRIEF.md) ⭐
 - [Quick Start Checklist](Quick%20Start%20Checklist.md)
-- [Project Context](HEYS_Project_Context.md)
 - [Development Methodology](HEYS_Development_Methodology.md)
 
 ## 📋 Active Plans & Roadmaps
@@ -53,6 +53,7 @@
 ## 🗃️ Archive
 
 - [Current Archive](archive/README.md)
+- [Historical Project Context](HEYS_Project_Context.md) - August 2025 snapshot
 - [Legacy Documents](archive/legacy/) - Historical/superseded documentation
 
 ## Document Categories

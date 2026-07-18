@@ -375,7 +375,7 @@
 
                     const stats = productMap.get(productName);
                     stats.frequency += 1;
-                    stats.totalGrams += item.grams || 100;
+                    stats.totalGrams += global.HEYS.models.normalizeItemGrams(item.grams, 100);
                     stats.timesOfDay.push(meal.time || '12:00');
 
                     // Update macros (weighted average)

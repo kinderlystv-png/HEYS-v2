@@ -7336,9 +7336,8 @@
                 // Stage 4 (2026-05-23): subscription status cache (~250-300 байт).
                 // canWriteSync() в paywall_v1 читает HEYS.Subscription.getCachedStatus()
                 // синхронно при каждом write attempt. На cold-start без cache он
-                // возвращает true (fail-open) — пользователь с истёкшим триалом мог
-                // успеть сделать write до приземления реального статуса. С этим
-                // ключом в Phase A canWriteSync видит реальный status сразу.
+                // блокирует запись и запускает background refresh; ключ в Phase A
+                // сокращает это закрытое loading-окно.
                 'heys_subscription_status',
                 // Stage 5 (2026-05-23): widget layout (~2-3 KB). Читается синхронно
                 // при первом рендере dashboard — без него виджеты раскладываются по

@@ -78,10 +78,22 @@
     if (kr && kr.makeId) return kr.makeId(parts);
     return parts.join('_');
   }
-  function addSession(clientId, sessionResult, storage) {
+  function addSession(clientId, sessionResult, storage, options) {
     const data = load(clientId, storage);
+    const opts = options && typeof options === 'object' ? options : {};
+    const idempotencyKey = opts.idempotencyKey ? String(opts.idempotencyKey) : null;
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    if (idempotencyKey) {
+      const existing = sessions.find(function (session) {
+        return session && session.idempotencyKey === idempotencyKey;
+      });
+      if (existing) return existing;
+    }
     const item = {
-      id: recordId(['mob_sess', Date.now(), data.sessions.length]),
+      id: idempotencyKey
+        ? recordId(['mob_sess', idempotencyKey])
+        : recordId(['mob_sess', Date.now(), sessions.length]),
+      idempotencyKey: idempotencyKey,
       savedAt: new Date().toISOString(),
       mode: sessionResult && sessionResult.session && sessionResult.session.mode,
       ok: !!(sessionResult && sessionResult.ok),
@@ -89,9 +101,11 @@
       session: (sessionResult && sessionResult.session) || sessionResult || null
     };
     const a = adapter(storage);
-    if (a) a.append(clientId, 'sessions', item, { cap: 500 }, storageOf(storage));
-    else save(clientId, Object.assign(data, { sessions: data.sessions.concat([item]) }), storage);
-    return item;
+    const next = Object.assign({}, data, { sessions: sessions.concat([item]).slice(-500) });
+    const saved = a
+      ? a.save(clientId, next, storageOf(storage))
+      : save(clientId, next, storage);
+    return saved ? item : null;
   }
   function addAssessment(clientId, audit, storage) {
     const data = load(clientId, storage);

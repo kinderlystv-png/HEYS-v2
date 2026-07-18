@@ -1,9 +1,24 @@
-# 🔐 HEYS Security Reference
+# HEYS Security Runbook
 
-> **v2.0** | 2025-01-04 | Compact edition
+> **Статус:** частично перепроверено по репозиторию 2026-07-17<br> **Охват:**
+> RPC allowlist, server-side encryption sources и smoke entrypoint<br>
+> **Production grants/env/состояние строк:** требуют runtime-проверки; наличие
+> миграции в git не доказывает её применение
 
-Краткий справочник безопасности. Для smoke tests:
+Краткая операционная памятка. Живой статус рисков ведётся в
+[SECURITY_REVIEW.md](SECURITY_REVIEW.md). Для smoke tests:
 `./scripts/security-smoke-test.sh`
+
+## Facts Table — проверенная граница
+
+| ID  | Утверждение                                                                        | Проверка                                                                                                         | Статус               |
+| --- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------- |
+| R1  | RPC origin allowlist и localhost env-gate определены в handler                     | `rg -n -e 'ALLOW_LOCALHOST_ORIGINS' -e 'ALLOWED_ORIGINS' yandex-cloud-functions/heys-api-rpc/index.js`           | проверено 2026-07-17 |
+| R2  | Session-safe KV и write-context функции входят в публичный allowlist               | `sed -n '790,850p' yandex-cloud-functions/heys-api-rpc/index.js`                                                 | проверено 2026-07-17 |
+| R3  | SQL health encryption использует `is_health_key`, `v_encrypted`, `key_version`     | `rg -n -e 'is_health_key' -e 'v_encrypted' database/2026-06-16_harden_write_client_kv_value_non_client_keys.sql` | проверено 2026-07-17 |
+| R4  | Browser storage layer делает JSON/pattern compression, не cryptographic encryption | `sed -n '59,175p' apps/web/heys_storage_layer_v1.js`                                                             | проверено 2026-07-17 |
+
+Production-состояние схемы, grants и env этой таблицей не подтверждается.
 
 ---
 
@@ -124,13 +139,17 @@ cd yandex-cloud-functions
 
 ### Что шифруется
 
-| Паттерн ключа   | Описание                  | Шифрование   |
-| --------------- | ------------------------- | ------------ |
-| `heys_profile`  | ПДн + health              | ✅ AES-256   |
-| `heys_dayv2_*`  | Дневник питания, сон, вес | ✅ AES-256   |
-| `heys_hr_zones` | Пульсовые зоны            | ✅ AES-256   |
-| `heys_products` | База продуктов            | ❌ Plaintext |
-| `heys_norms`    | Нормы питания             | ❌ Plaintext |
+| Паттерн ключа   | Описание                  | Шифрование                     |
+| --------------- | ------------------------- | ------------------------------ |
+| `heys_profile`  | ПДн + health              | предназначено для AES-256 в БД |
+| `heys_dayv2_*`  | Дневник питания, сон, вес | предназначено для AES-256 в БД |
+| `heys_hr_zones` | Пульсовые зоны            | предназначено для AES-256 в БД |
+| `heys_products` | База продуктов            | ❌ Plaintext                   |
+| `heys_norms`    | Нормы питания             | ❌ Plaintext                   |
+
+Таблица описывает SQL-контракт. Фактическое состояние production подтверждает
+только диагностический запрос ниже; browser localStorage этим механизмом не
+шифруется.
 
 ### Архитектура
 

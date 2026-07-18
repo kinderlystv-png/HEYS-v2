@@ -82,12 +82,12 @@ apps/web/heys_demo_mode_v1.js:144
 apps/web/heys_demo_mode_v1.js:160
 apps/web/heys_demo_mode_v1.js:201
 apps/web/heys_demo_mode_v1.js:202
-apps/web/heys_core_v12.js:234
-apps/web/heys_core_v12.js:850
-apps/web/heys_core_v12.js:1945
-apps/web/heys_core_v12.js:4379
-apps/web/heys_core_v12.js:5599
-apps/web/heys_core_v12.js:5710
+apps/web/heys_core_v12.js:235
+apps/web/heys_core_v12.js:853
+apps/web/heys_core_v12.js:1948
+apps/web/heys_core_v12.js:4382
+apps/web/heys_core_v12.js:5608
+apps/web/heys_core_v12.js:5719
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_core_bundle_v1.js:2197
 apps/web/heys_day_core_bundle_v1.js:3938
@@ -150,7 +150,7 @@ apps/web/heys_metabolic_intelligence_v1.js:2012
 apps/web/heys_metabolic_intelligence_v1.js:2191
 apps/web/heys_metabolic_intelligence_v1.js:2333
 apps/web/heys_metabolic_intelligence_v1.js:2417
-apps/web/heys_models_v1.js:404
+apps/web/heys_models_v1.js:415
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
 apps/web/fingers/heys_fingers_entry_v1.js:166
@@ -165,11 +165,11 @@ apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:205
 apps/web/heys_platform_apis_v1.js:609
 apps/web/heys_predictive_insights_v1.js:48
-apps/web/heys_products_overlay_v1.js:555
-apps/web/heys_products_overlay_v1.js:1032
-apps/web/heys_products_overlay_v1.js:1033
-apps/web/heys_products_overlay_v1.js:1034
-apps/web/heys_products_overlay_v1.js:1093
+apps/web/heys_products_overlay_v1.js:552
+apps/web/heys_products_overlay_v1.js:1070
+apps/web/heys_products_overlay_v1.js:1071
+apps/web/heys_products_overlay_v1.js:1072
+apps/web/heys_products_overlay_v1.js:1131
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1191
@@ -191,9 +191,9 @@ apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
 apps/web/heys_storage_photos_v1.js:435
 apps/web/heys_storage_photos_v1.js:575
-apps/web/heys_subscription_v1.js:62
-apps/web/heys_subscriptions_v1.js:697
-apps/web/heys_subscriptions_v1.js:1434
+apps/web/heys_subscription_v1.js:80
+apps/web/heys_subscriptions_v1.js:698
+apps/web/heys_subscriptions_v1.js:1435
 apps/web/heys_training_step_v1.js:29
 apps/web/heys_trial_queue_v1.js:57
 apps/web/heys_ui_onboarding_v1.js:1133
@@ -239,7 +239,7 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1625
+apps/web/heys_storage_layer_v1.js:1633
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не

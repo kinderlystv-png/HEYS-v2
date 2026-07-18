@@ -880,14 +880,12 @@
   async function canWrite() {
     if (!HEYS.Subscription) {
       devWarn('[Paywall] Subscription module not loaded');
-      return true; // Fallback: разрешаем если модуль не загружен
+      return false;
     }
 
     try {
-      const status = normalizeSubscriptionStatus(await HEYS.Subscription.getStatus());
-      if (!status) return true; // До выбора клиента статус может быть ещё неизвестен.
-      return status === HEYS.Subscription.STATUS.TRIAL ||
-        status === HEYS.Subscription.STATUS.ACTIVE;
+      const status = await HEYS.Subscription.getStatus();
+      return HEYS.Subscription.canWriteStatus?.(status) === true;
     } catch (err) {
       devWarn('[Paywall] Error checking status:', err);
       trackError(err, { scope: 'Paywall', action: 'checkStatus' });
@@ -895,33 +893,22 @@
     }
   }
 
-  function normalizeSubscriptionStatus(value) {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-      if (typeof value.status === 'string') return value.status;
-      if (typeof value.subscription_status === 'string') return value.subscription_status;
-      if (value.data) return normalizeSubscriptionStatus(value.data);
-    }
-    return '';
-  }
-
   /**
    * Синхронная версия canWrite (использует кэш)
    * @returns {boolean}
    */
   function canWriteSync() {
-    if (!HEYS.Subscription) return true;
+    if (!HEYS.Subscription) return false;
 
-    const cached = normalizeSubscriptionStatus(HEYS.Subscription.getCachedStatus?.())
-      || normalizeSubscriptionStatus(HEYS.Subscription.getLocalStatus?.());
+    const normalizeStatus = HEYS.Subscription.normalizeStatus;
+    const cached = normalizeStatus?.(HEYS.Subscription.getCachedStatus?.())
+      || normalizeStatus?.(HEYS.Subscription.getLocalStatus?.());
     if (!cached) {
       requestStatusRefresh('empty-cache');
       return false;
     }
 
-    const allowed = cached === HEYS.Subscription.STATUS.TRIAL ||
-      cached === HEYS.Subscription.STATUS.ACTIVE;
+    const allowed = HEYS.Subscription.canWriteStatus?.(cached) === true;
     if (!allowed) requestStatusRefresh(cached);
     return allowed;
   }
@@ -961,7 +948,7 @@
    * @returns {{ canWrite: boolean, isLoading: boolean, showPaywall: Function }}
    */
   function useWriteAccess() {
-    const [canWriteState, setCanWrite] = React.useState(true);
+    const [canWriteState, setCanWrite] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {

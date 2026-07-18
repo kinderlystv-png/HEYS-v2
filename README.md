@@ -12,7 +12,7 @@ tracking, training management, and productivity enhancement.
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
 [![Tests](https://img.shields.io/badge/tests-✓_passing-brightgreen.svg)](#)
 [![Quality](https://img.shields.io/badge/code_quality-A+-brightgreen.svg)](#)
-[![Security](https://img.shields.io/badge/security-✓_hardened-brightgreen.svg)](./docs/SECURITY.md)
+[![Security](https://img.shields.io/badge/security-✓_hardened-brightgreen.svg)](./docs/SECURITY_DOCUMENTATION.md)
 [![API](https://img.shields.io/badge/API-documented-blue.svg)](./docs/API_DOCUMENTATION.md)
 [![Architecture](https://img.shields.io/badge/architecture-documented-blue.svg)](./docs/ARCHITECTURE.md)
 [![Contributors](https://img.shields.io/badge/contributors-welcome-orange.svg)](./CONTRIBUTING.md)

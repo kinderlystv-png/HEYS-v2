@@ -312,7 +312,7 @@
       // Простой расчёт без модуля
       let avgGI = 50, totalGrams = 0, weightedGI = 0;
       for (const item of (lastMeal.items || [])) {
-        const grams = item.grams || 100;
+        const grams = HEYSRef.models.normalizeItemGrams(item.grams, 100);
         const prod = getProductFromItem ? getProductFromItem(item, pIndex) : null;
         const gi = prod?.gi || prod?.gi100 || 50;
         weightedGI += gi * grams;

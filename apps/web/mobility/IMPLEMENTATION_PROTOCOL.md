@@ -349,6 +349,8 @@ runtime-артефакт.
   повторяет поведение пальцев: `Прервать тренировку?` → при прогрессе
   `Записать прогресс?` → частичная сессия пишется в `recordsStore` и
   `TrainingStep.saveMobility` с `partial=true`, затем live runner закрывается.
+  Pair-save возвращает `saved_both / diary_pending / failed`; при ошибке UI не
+  показывает успех и повторяет тот же partial payload по idempotency key.
 - Тесты: добавлен regression на partial abort save; targeted UI прогон
   `mobility-ui + fingers-exercise-runner + confirm-modal-layering` = 77/77.
   Browser QA на 390×844 подтвердил две ConfirmModal, `partialProgress` в

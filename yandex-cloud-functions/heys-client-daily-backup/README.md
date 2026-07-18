@@ -164,8 +164,10 @@ echo "Computed: $COMPUTED"
 2. Показывает dry-run diff (ключи, которые будут перезаписаны).
 3. Выполняет transactional upsert в `client_kv_store`.
 
-> **Пока restore автоматизирован не полностью.** Скрипт будет добавлен в
-> следующем этапе.
+Restore-скрипт реализован в `restore-client-backup.js`: сначала запускайте его с
+`--dry-run`, затем без флага для live restore. Поддерживаются `--keys`,
+`--account-only` и `--kv-only`. KV и account scopes восстанавливаются отдельными
+транзакциями, поэтому проверяйте итог обоих этапов.
 
 ## Monitoring
 

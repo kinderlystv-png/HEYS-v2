@@ -25,9 +25,10 @@
   const lsSet = (key, val) => {
     try {
       const utils = HEYS.utils;
-      if (utils?.lsSet) return utils.lsSet(key, val);
+      if (utils?.lsSet) return utils.lsSet(key, val) !== false;
       localStorage.setItem(key, JSON.stringify(val));
-    } catch { }
+      return true;
+    } catch { return false; }
   };
 
   const saveDayFields = (dateKey, day, fields, action) => {
@@ -43,8 +44,16 @@
         valueToSave = protectedResult.day || day;
       }
     } catch (_) { /* guard diagnostics only */ }
-    lsSet(key, valueToSave);
-    return true;
+    if (!lsSet(key, valueToSave)) return false;
+    const persisted = lsGet(key, null);
+    if (!persisted || typeof persisted !== 'object') return false;
+    return (Array.isArray(fields) ? fields : []).every((field) => {
+      try {
+        return JSON.stringify(persisted[field]) === JSON.stringify(valueToSave[field]);
+      } catch (_) {
+        return false;
+      }
+    });
   };
 
   const haptic = (style = 'light') => {
@@ -422,7 +431,8 @@
 
     day.trainings = trainings;
     day.updatedAt = Date.now();
-    saveDayFields(dateKey, day, ['trainings'], 'training-step');
+    const saved = saveDayFields(dateKey, day, ['trainings'], 'training-step');
+    if (!saved) return false;
 
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
@@ -434,6 +444,7 @@
         detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
       }));
     }
+    return true;
   }
 
   function readTrainingFormData(ctx) {
@@ -1156,7 +1167,7 @@
 
   function saveMobility(ctx, mobilityLog, meta) {
     const baseMeta = meta && typeof meta === 'object' ? meta : {};
-    persistMergedTraining(ctx, {}, {
+    return persistMergedTraining(ctx, {}, {
       type: 'mobility',
       activityLabel: baseMeta.activityLabel || 'Мобильность',
       time: baseMeta.time || getRoundedCurrentTime(),

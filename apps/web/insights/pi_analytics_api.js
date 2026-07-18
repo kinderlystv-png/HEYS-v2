@@ -53,7 +53,7 @@
     // Fallback
     const prod = pIndex?.byId?.get?.(item.product_id);
     if (!prod) return 0;
-    const grams = item.grams || 100;
+    const grams = HEYS.models.normalizeItemGrams(item.grams, 100);
     return ((prod.kcal100 || 0) * grams) / 100;
   }
 

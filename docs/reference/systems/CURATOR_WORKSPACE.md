@@ -1,0 +1,151 @@
+# Рабочее пространство куратора
+
+> **Статус:** core source-пути проверены 2026-07-17<br> **Охват:** вход
+> куратора, список и выбор клиента, переключение client context, редактирование
+> клиента, очередь trial, moderation и связанные data boundaries<br> **Не
+> подтверждено:** production permissions/ownership, browser UX всех вкладок и
+> live API state
+
+## Какой Curator Panel является реальным
+
+В repository существуют две реализации с похожим названием:
+
+- активный legacy web flow в `heys_app_gate_flow_v1.js`, `heys_app_hooks_v1.js`
+  и `heys_app_shell_v1.js`;
+- TypeScript `src/components/CuratorPanel`, который использует mock API,
+  placeholder tabs и skipped tests.
+
+Для текущего приложения каноничен первый. README TypeScript-компонента —
+описание прототипа/рефакторинга, не runtime-спецификация продукта.
+
+## Основной поток
+
+```text
+curator login / cookie session
+        ↓
+YandexAPI.getClients → cloud list или cached heys_clients
+        ↓
+gate: clients | trial queue | product moderation
+        ↓ select client
+HEYS.cloud.switchClient(target, previous)
+        ↓ только после загрузки нового scope
+heys_client_current + HEYS.currentClientId + heys:client-changed
+        ↓
+обычный app shell в curator context: diary, reports, messenger, sync
+```
+
+Выбор клиента — смена security/data context, а не только UI selection. Gate
+сначала ставит switching state и вызывает cloud switch; глобальный current id
+обновляется после завершения загрузки. Это защищает от чтения/записи ключей под
+новым id до фактической смены namespace.
+
+## Владельцы ответственности
+
+| Область                                          | Точка                                              |
+| ------------------------------------------------ | -------------------------------------------------- |
+| HTML login gate и восстановление curator session | `index.html`, `heys_auth_v1.js`                    |
+| React state клиентов и CRUD                      | `heys_app_hooks_v1.js` → `useCloudClients`         |
+| Экран выбора, queue, moderation                  | `heys_app_gate_flow_v1.js`                         |
+| App header/dropdown после выбора                 | `heys_app_shell_v1.js`                             |
+| Переключение storage namespace                   | `heys_storage_supabase_v1.js` → cloud switch flow  |
+| Curator/session RPC facade                       | `heys_yandex_api_v1.js`                            |
+| Server authorization и allowlists                | `yandex-cloud-functions/heys-api-rpc/index.js`     |
+| Trial queue                                      | `heys_trial_queue_v1.js`                           |
+| Product moderation                               | `heys_product_moderation_v1.js`                    |
+| Messenger                                        | `heys_messenger_api_v1.js`, `heys_messenger_v1.js` |
+| Prototype, не active owner                       | `src/components/CuratorPanel/*`                    |
+
+## Список и CRUD клиентов
+
+`useCloudClients` получает список через YandexAPI и защищается от параллельной
+загрузки. При ошибке используется cached `heys_clients`; UI хранит источник
+`cloud/local/error`, поэтому offline список не должен восприниматься как свежий.
+Событие `heys:clients-updated` повторно загружает список после
+queue/subscription операций.
+
+Создание с phone+PIN предпочитает curator auth RPC. Есть fallback create path, а
+при отсутствии cloud user код способен создать local-only client. Rename, phone
+и PIN используют разные API paths; PIN reset не является частью обычного profile
+update.
+
+Удаление сначала оптимистично меняет local list, затем вызывает server delete.
+При ошибке local snapshot восстанавливается. Если удаляется выбранный клиент,
+current/last ids очищаются; undo поддерживается только при наличии общего Undo
+API и выбранной опции.
+
+## Queue, moderation и работа внутри клиента
+
+До выбора клиента куратор видит список, trial queue и product moderation. Queue
+и subscription actions отправляют `heys:clients-updated`, чтобы список и статусы
+обновлялись без reload. Product moderation использует curator-only publish
+contracts, отделённые от client pending requests.
+
+После выбора куратора переводят в общий app shell. Дневник и остальные client
+данные используют тот же client-scoped storage слой, но server должен проверять
+ownership куратора. Для записи storage способен запросить write-context
+capability через `issue_write_context_by_curator`.
+
+Messenger также различает роль: curator передаёт explicit client id, client —
+нет. Shell лишь отображает inbox cache; polling/backoff принадлежат
+MessengerAPI.
+
+## Инварианты
+
+1. До выбора реального клиента нельзя читать/мигрировать client product/data.
+2. `heys_client_current` меняется только вместе с полноценной сменой namespace.
+3. Client switch сначала загружает target scope, затем публикует новый current
+   id.
+4. Cached clients list явно маркируется как cache/local, а не cloud truth.
+5. Curator RPC проверяет session и ownership target client на server side.
+6. PIN никогда не хранится/передаётся как обычное поле profile update.
+7. Удаление выбранного клиента очищает current/last client ids.
+8. Событие `heys:client-changed` отправляется после фиксации глобального
+   context.
+9. TypeScript prototype не используется как источник runtime-контрактов.
+
+## Подтверждённые слабые места и пробелы
+
+- Старый `CuratorPanel/README.md` уверенно описывает production architecture, но
+  хук работает на mock data, три вкладки — placeholders, весь test suite помечен
+  `describe.skip`.
+- По active imports TypeScript CuratorPanel вне своей demo/директории не найден;
+  изменения в нём могут никак не повлиять на пользовательский интерфейс.
+- Реальный curator UI распределён по очень крупным legacy-файлам gate/hooks/
+  shell, поэтому ownership и границы трудно увидеть без этого досье.
+- При ошибке загрузки cached clients могут быть устаревшими; последующая
+  destructive операция всё равно должна подтверждаться server ownership/state.
+- Есть local-only fallback создания клиента без cloud user. Это полезно для
+  offline/dev, но такой объект не равен зарегистрированному server client.
+- Client switch содержит retry, но после второго failure отправляет sync-error и
+  продолжение flow зависит от окружающего UI; atomic runtime поведение не
+  проверялось браузером.
+- `get_curator_clients` и write-context есть в curator allowlist, однако live
+  grants/function bodies production в этой ревизии не проверены.
+- Значительная часть curator поведения покрыта узкими guard tests, но active
+  full-panel component/E2E test отсутствует; существующий TS test skipped.
+
+## Facts Table
+
+| ID  | Утверждение                                                           | Проверка                                                                                                                                                        | Статус               |
+| --- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| C1  | TypeScript CuratorPanel использует mock API и placeholder tabs        | `sed -n '1,90p' apps/web/src/components/CuratorPanel/CuratorPanelContainer.tsx && sed -n '1,230p' apps/web/src/components/CuratorPanel/hooks/useCuratorData.ts` | проверено 2026-07-17 |
+| C2  | Его component tests целиком skipped                                   | `sed -n '65,85p' apps/web/src/components/CuratorPanel/__tests__/CuratorPanel.test.tsx`                                                                          | проверено 2026-07-17 |
+| C3  | Active state/CRUD принадлежат `useCloudClients` в legacy hooks        | `sed -n '1995,2415p' apps/web/heys_app_hooks_v1.js`                                                                                                             | проверено 2026-07-17 |
+| C4  | List fetch имеет in-flight guard и local cache fallback               | `sed -n '2055,2195p' apps/web/heys_app_hooks_v1.js`                                                                                                             | проверено 2026-07-17 |
+| C5  | Gate содержит clients, queue и moderation tabs                        | `sed -n '2080,2210p' apps/web/heys_app_gate_flow_v1.js`                                                                                                         | проверено 2026-07-17 |
+| C6  | Gate switch обновляет current id после `cloud.switchClient`           | `sed -n '2325,2385p' apps/web/heys_app_gate_flow_v1.js`                                                                                                         | проверено 2026-07-17 |
+| C7  | Client CRUD разделяет profile update и PIN reset                      | `sed -n '2195,2335p' apps/web/heys_app_hooks_v1.js`                                                                                                             | проверено 2026-07-17 |
+| C8  | Curator RPC allowlist содержит clients/create/write-context contracts | `sed -n '930,1008p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                               | проверено 2026-07-17 |
+| C9  | Storage запрашивает curator write-context capability                  | `sed -n '11740,11785p' apps/web/heys_storage_supabase_v1.js`                                                                                                    | проверено 2026-07-17 |
+| C10 | Prototype не импортируется вне своей директории/demo в `apps/web/src` | `rg -n 'CuratorPanel' apps/web/src --glob '*.{ts,tsx}'`                                                                                                         | проверено 2026-07-17 |
+| C11 | Есть guard tests для login/switch/access, но prototype test skipped   | `find apps/web/__tests__ -maxdepth 1 -type f \( -name '*curator*' -o -name '*client-switch*' -o -name '*client-access*' \) -print`                              | проверено 2026-07-17 |
+
+## Связанные источники
+
+- [`CURATOR_VS_CLIENT.md`](../../CURATOR_VS_CLIENT.md) — role/data boundaries.
+- [`SYNC_REFERENCE.md`](../../SYNC_REFERENCE.md) — client-scoped persistence.
+- [`SECURITY_DOCUMENTATION.md`](../../SECURITY_DOCUMENTATION.md) —
+  auth/ownership.
+- [`PRODUCTS_AND_SEARCH.md`](PRODUCTS_AND_SEARCH.md) — moderation contracts.
+- [`SUBSCRIPTION_AND_PAYMENTS.md`](SUBSCRIPTION_AND_PAYMENTS.md) —
+  trial/subscription.

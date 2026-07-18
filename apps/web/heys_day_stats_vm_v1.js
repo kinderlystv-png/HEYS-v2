@@ -1465,7 +1465,7 @@
           const prod = (nameKey && pIndex?.byName?.get(nameKey)) ||
             (item.product_id != null ? pIndex?.byId?.get(String(item.product_id).toLowerCase()) : null);
           const src = prod || item;
-          const g = item.grams || 100;
+          const g = HEYS.models.normalizeItemGrams(item.grams, 100);
           if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
           else if (macroKey === 'fat') macroSum += ((+src.badFat100 || 0) + (+src.goodFat100 || 0) + (+src.trans100 || 0)) * g / 100;
           else macroSum += ((+src.simple100 || 0) + (+src.complex100 || 0)) * g / 100;
