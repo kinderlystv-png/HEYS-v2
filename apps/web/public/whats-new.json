@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.18.ab732323",
+      "buildHash": "ab732323",
+      "date": "2026-07-18",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Обновление планирования, чекина и надёжности HEYS",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Обновление планирования и чекина",
+          "description": "Добавлены задачи по выбранным датам, стабильное локальное сохранение утреннего чекина и исправлены повторные служебные модалки."
+        }
+      ],
+      "coveredCommits": ["a3468caa", "76a2edf6", "7f578a4d", "6583cb0f", "0c5ea2d6", "c64850d3"]
+    },
+    {
       "version": "2026.07.18.728f0c93",
       "buildHash": "728f0c93",
       "date": "2026-07-18",
@@ -193,22 +209,6 @@
         }
       ],
       "coveredCommits": ["ebc0e722"]
-    },
-    {
-      "version": "2026.07.18.1ff2de7d",
-      "buildHash": "1ff2de7d",
-      "date": "2026-07-18",
-      "kind": "technical",
-      "profile": "technical-backend-api",
-      "title": "Надёжнее обновления серверной части",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Безопасное обновление уведомлений",
-          "description": "Обновили серверные функции без риска потерять настройки push-уведомлений."
-        }
-      ],
-      "coveredCommits": ["1ff2de7d"]
     }
   ]
 }
