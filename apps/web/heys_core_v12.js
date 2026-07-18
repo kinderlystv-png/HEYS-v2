@@ -4867,13 +4867,19 @@
 	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
 	      let finalProduct = product;
 	      let forceCloudAck = !!opts.forceCloudAck;
+	      const Overlay = HEYS.OverlayStore;
 	      if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
 	        const cloned = HEYS.products.addFromShared?.(product);
 	        if (cloned) {
 	          finalProduct = cloned;
 	        }
 	      }
-	      const Overlay = HEYS.OverlayStore;
+	      const overlayOn = !!(HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2'));
+	      if (overlayOn && typeof Overlay?.resolveMealProduct === 'function') {
+	        const nutrientReady = Overlay.resolveMealProduct(finalProduct);
+	        if (!nutrientReady.ok) return nutrientReady;
+	        finalProduct = nutrientReady.product;
+	      }
 	      const rows = Overlay?.readRaw?.() || [];
 	      const pid = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
 	      const sharedId = finalProduct.shared_origin_id || finalProduct.sharedOriginId || null;

@@ -5188,6 +5188,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false, showEditAction = false) => {
       product = mergeSharedBarcodeIntoProductForAddStep(product);
       const pid = String(product.id ?? product.product_id ?? product.name);
+      const isNutrientsPending = product._nutrientsPending === true || product._selectionDisabled === true;
       const isFav = favorites.has(pid);
       const isHidden = hiddenProducts.has(pid);
       const usageCount = showUsageCount ? getUsageCount(pid, product.name) : 0;
@@ -5215,9 +5216,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return React.createElement('div', {
         key: pid,
-        className: 'aps-product-card',
+        className: 'aps-product-card' + (isNutrientsPending ? ' aps-product-card--disabled' : ''),
         style: harmToneStyle || undefined,
-        onClick: () => selectProduct(product)
+        onClick: isNutrientsPending ? undefined : () => selectProduct(product),
+        'aria-disabled': isNutrientsPending ? 'true' : undefined
       },
         // Иконка категории
         product.category && React.createElement('span', {
@@ -5235,22 +5237,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ),
           showProductBrand && React.createElement('div', { className: 'aps-product-brand' }, highlightedBrand),
           React.createElement('div', { className: 'aps-product-meta' },
-            React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
-            React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-            React.createElement('span', { className: 'aps-meta-macros' },
-              'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
-            ),
-            showUsageCount && React.createElement(React.Fragment, null,
-              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-              React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
-            ),
-            barcode && React.createElement(React.Fragment, null,
-              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-              React.createElement('span', { className: 'aps-product-barcode' },
-                barcode,
-                barcodeCount > 1 ? ` +${barcodeCount - 1}` : ''
+            isNutrientsPending
+              ? React.createElement('span', { className: 'aps-meta-pending' }, 'Состав загружается')
+              : React.createElement(React.Fragment, null,
+                React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
+                React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                React.createElement('span', { className: 'aps-meta-macros' },
+                  'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
+                ),
+                showUsageCount && React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                  React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
+                ),
+                barcode && React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+                  React.createElement('span', { className: 'aps-product-barcode' },
+                    barcode,
+                    barcodeCount > 1 ? ` +${barcodeCount - 1}` : ''
+                  )
+                )
               )
-            )
           )
         ),
 
