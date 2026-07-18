@@ -43,17 +43,17 @@
 
 ## Карта групп
 
-| ID  | Группа                             | Предварительный scope                                                  | Статус          | Выходной gate                                       |
-| --- | ---------------------------------- | ---------------------------------------------------------------------- | --------------- | --------------------------------------------------- |
-| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | committed       | navigation/session tests                            |
-| G02 | Nutrition / day / insulin wave     | `apps/web/day/**`, day bundles, IW, products, status, advice           | inventory       | точечные расчётные и UI-contract tests              |
-| G03 | Mobility                           | `apps/web/mobility/**`, mobility bundle/tests/styles                   | inventory       | mobility suite + scoped UI bundle                   |
-| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | partial         | sync-critical contracts                             |
-| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | partial         | отдельные regression tests по дефектам              |
-| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | partial         | package gates + load checks + canary после deploy   |
-| G07 | DB migration                       | `database/2026-07-18_push_idempotency_delivery_state.sql`              | inventory       | checksum, idempotency tests, managed apply          |
-| G08 | Documentation                      | root/docs/reference/infra/function docs                                | inventory       | ссылки и утверждения сверены с опубликованным кодом |
-| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only | release build from integrated source                |
+| ID  | Группа                             | Предварительный scope                                                  | Статус                       | Выходной gate                                       |
+| --- | ---------------------------------- | ---------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------- |
+| G01 | Mobile / WebView                   | `apps/mobile/app/web/index.tsx`                                        | source published             | navigation/session tests                            |
+| G02 | Nutrition / day / insulin wave     | `apps/web/day/**`, day bundles, IW, products, status, advice           | inventory                    | точечные расчётные и UI-contract tests              |
+| G03 | Mobility                           | `apps/web/mobility/**`, mobility bundle/tests/styles                   | inventory                    | mobility suite + scoped UI bundle                   |
+| G04 | Storage / sync                     | storage layer/supabase, merge/snapshot tests                           | partial: game guard deployed | sync-critical contracts                             |
+| G05 | Product contracts                  | gamification, predictive, subscriptions/paywall, supplements, training | partial: 3 fixes deployed    | отдельные regression tests по дефектам              |
+| G06 | RPC / Telegram / reminders / leads | cloud functions, deploy script, новые function tests                   | partial: RPC guard deployed  | package gates + load checks + canary после deploy   |
+| G07 | DB migration                       | `database/2026-07-18_push_idempotency_delivery_state.sql`              | inventory                    | checksum, idempotency tests, managed apply          |
+| G08 | Documentation                      | root/docs/reference/infra/function docs                                | inventory                    | ссылки и утверждения сверены с опубликованным кодом |
+| G09 | Generated web artifacts            | bundles, manifests, `sw.js`, `whats-new.json`, hash sync               | regenerate only              | release build from integrated source                |
 
 Статусы групп будут обновляться значениями `inventory`, `transferred`, `tested`,
 `committed`, `published`, `deployed`, `blocked` или `superseded`.
@@ -86,6 +86,10 @@
 | Game stale-write guard одинаков в browser, RPC и REST                      | source mirror    | `cmp -s apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs`; аналогично REST                   | ✅ обе serverless-копии byte-identical источнику                                                                                                  |
 | Новый merge outcome сохраняет существующие sync-контракты                  | tests            | `pnpm vitest run apps/web/__tests__/merge-scalar-kv-meta.test.js apps/web/__tests__/sync-merge-shared.test.js`                            | ✅ 109/109 tests                                                                                                                                  |
 | RPC и REST с новым merge-контрактом загружаются как cloud functions        | function gate    | `yandex-cloud-functions/test-functions.sh heys-api-rpc heys-api-rest`                                                                     | ✅ 2/2 target gates                                                                                                                               |
+| Recovery wave 1 опубликована в `main`                                      | Git remote       | `git fetch origin`; `git rev-parse origin/main`                                                                                           | ✅ `ae5e97316a8e4b1e774c50310899b26d369c6bf8`                                                                                                     |
+| Web release wave 1 развернут и совпадает с HEAD                            | GitHub Actions   | `gh run view 29624626130`                                                                                                                 | ✅ build, 2,816-test gate, deploy, health и deployed-state verify прошли                                                                          |
+| RPC game guard работает из Node.js 22 production version                   | cloud metadata   | `yc serverless function version list --function-id d4e9e90es31bgjp87j8i --limit 1 --format json`                                          | ✅ ACTIVE; `HEYS_DEPLOY_COMMIT=37a6dbf8`; post-deploy health и canary 4/4                                                                         |
+| Production bundles содержат runtime-код wave 1                             | live assets      | `curl --compressed` production hashes и `rg` по новым identifiers                                                                         | ✅ найдены `mergeScalarKvWithOutcome`, `cloud_precheck:failed_blocked`, `getLatestValidMeal`, `buildScoreHistory`                                 |
 
 ## Журнал выполнения
 
@@ -112,16 +116,30 @@
   mirror; контракт исправлен во всех трёх runtime-копиях. Merge tests 109/109,
   RPC+REST function gates 2/2; commit `37a6dbf8`.
 
+### 2026-07-18 — wave 1 опубликована и развернута
+
+- Integration commits: merge `6bbe6916`, generated release `c66f5794`, What's
+  New `ae5e9731`; `origin/main` опубликован до `ae5e9731`.
+- Pre-push: 208 test files, 2,816 passed, 33 skipped; bundle/source и size gates
+  прошли.
+- GitHub web deploy `29624626130` и cloud auto-deploy `29624626142` завершились
+  success; production deployed-state совпал с HEAD.
+- `heys-api-rpc` дополнительно развернут selective deploy: latest ACTIVE,
+  Node.js 22, `HEYS_DEPLOY_COMMIT=37a6dbf8`; HTTP/DB health и canary 4/4.
+- Production assets содержат все четыре новых runtime-маркера. Mobile source
+  опубликован, но новый RuStore APK в этой wave не собирался и не загружался.
+
 ## Durable handoff
 
 ### Current state
 
-- Recovery roadmap и первые независимые изменения закоммичены локально.
-- Ни одна группа пока не опубликована и не развернута из recovery-ветки.
+- Wave 1 опубликована и проверена в production; G01 source опубликован без
+  отдельного RuStore release.
+- G02, G03, оставшаяся часть G04–G09 ещё не интегрированы.
 - Исходный checkout остаётся неизменным dirty-источником.
 
 ### Next action
 
-Собрать scoped legacy preview для четырёх изменённых web-source файлов,
-проверить локальный runtime, затем опубликовать зелёные commit'ы и развернуть
-RPC. После production verification продолжить inventory оставшихся G02–G09.
+Продолжить G06/G07: отдельно проверить leads phone validation, Telegram
+lead-taken callback и push-idempotency migration/reminder contract. Затем
+перейти к оставшимся storage/sync, nutrition и mobility scopes.
