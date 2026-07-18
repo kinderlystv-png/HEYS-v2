@@ -82,6 +82,19 @@ const fixedLineWarnings = [];
 let checkedLinks = 0;
 const markdownCache = new Map();
 
+const historicalSourceContracts = [
+  ['docs/SCORING_REFERENCE.md', 'reference/systems/ANALYTICS_AND_SCORING.md'],
+  ['docs/DATA_MODEL_ANALYTICS.md', 'reference/systems/ANALYTICS_AND_SCORING.md'],
+  ['docs/INSULIN_WAVE_DOCUMENTATION.md', 'reference/systems/NUTRITION_AND_INSULIN.md'],
+  [
+    'apps/web/src/components/CuratorPanel/README.md',
+    '../../../../../docs/reference/systems/CURATOR_WORKSPACE.md',
+  ],
+  ['infra/README.md', '../docs/reference/systems/INFRA_OPERATIONS.md'],
+  ['yandex-cloud-functions/README.md', '../docs/reference/systems/INFRA_OPERATIONS.md'],
+  ['docs/Quick Start Checklist.md', 'reference/systems/INFRA_OPERATIONS.md'],
+];
+
 for (const file of markdownFiles) {
   const markdown = readFileSync(file, 'utf8');
   markdownCache.set(file, markdown);
@@ -156,6 +169,25 @@ for (const file of dossierFiles) {
 
   if (missing.length > 0) {
     structureErrors.push(`${relative(ROOT, file)} -> missing ${missing.join(', ')}`);
+  }
+}
+
+for (const [sourcePath, currentDossier] of historicalSourceContracts) {
+  const file = resolve(ROOT, sourcePath);
+  if (!existsSync(file)) {
+    structureErrors.push(`${sourcePath} -> missing historical source`);
+    continue;
+  }
+
+  const passport = readFileSync(file, 'utf8').split('\n').slice(0, 16).join('\n');
+  if (!/\*\*Статус: historical\/source\.\*\*/.test(passport)) {
+    structureErrors.push(`${sourcePath} -> missing historical/source marker in header`);
+  }
+  if (!passport.includes(currentDossier)) {
+    structureErrors.push(`${sourcePath} -> missing current dossier link ${currentDossier}`);
+  }
+  if (!existsSync(resolve(dirname(file), currentDossier))) {
+    structureErrors.push(`${sourcePath} -> current dossier target missing ${currentDossier}`);
   }
 }
 

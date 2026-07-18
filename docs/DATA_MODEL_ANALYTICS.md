@@ -1,6 +1,6 @@
 # 📊 HEYS Analytics & Scoring Reference
 
-> [!WARNING] Это подробный исторический справочник, а не автоматически
+> **Статус: historical/source.** Это подробный исторический справочник, а не автоматически
 > актуальный контракт. Проверенная карта namespaces, шкал, потоков и
 > расхождений:
 > [`reference/systems/ANALYTICS_AND_SCORING.md`](reference/systems/ANALYTICS_AND_SCORING.md).

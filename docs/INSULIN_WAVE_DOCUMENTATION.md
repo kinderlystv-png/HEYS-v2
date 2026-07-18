@@ -1,6 +1,6 @@
 # Инсулиновая волна (Insulin Wave) — Полная документация
 
-> [!WARNING] Это глубокая карта алгоритма, но она не является медицинской
+> **Статус: historical/source.** Это глубокая карта алгоритма, но она не является медицинской
 > спецификацией и уже содержит отдельные расхождения с runtime source после
 > правок v4.3. Проверенный паспорт системы и список drift:
 > [`reference/systems/NUTRITION_AND_INSULIN.md`](reference/systems/NUTRITION_AND_INSULIN.md).

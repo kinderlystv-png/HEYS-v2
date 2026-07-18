@@ -1,6 +1,6 @@
 # CuratorPanel - Панель куратора
 
-> [!WARNING] Этот каталог — незавершённый TypeScript-прототип: данные mock,
+> **Статус: historical/source.** Этот каталог — незавершённый TypeScript-прототип: данные mock,
 > часть вкладок placeholder, tests skipped. Активный production flow находится в
 > legacy web runtime. Проверенная карта:
 > [`docs/reference/systems/CURATOR_WORKSPACE.md`](../../../../../docs/reference/systems/CURATOR_WORKSPACE.md).

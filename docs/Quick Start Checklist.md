@@ -1,5 +1,10 @@
 # Quick Start Checklist - Обновлено 26.08.2025
 
+> **Статус: historical/source.** Это snapshot инструментов 2025 года, не
+> актуальный quick start или production runbook. Текущая карта проекта и
+> operational flow: [`reference/README.md`](reference/README.md) и
+> [`reference/systems/INFRA_OPERATIONS.md`](reference/systems/INFRA_OPERATIONS.md).
+
 ## 🆕 НОВЕЙШИЕ СИСТЕМЫ (АВГУСТ 2025):
 
 ### ⚓ Универсальная система автоматических якорей

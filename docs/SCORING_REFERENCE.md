@@ -1,6 +1,6 @@
 # 📊 HEYS Scoring Reference
 
-> [!WARNING] Раздел Status Score частично устарел: current source использует
+> **Статус: historical/source.** Раздел Status Score частично устарел: current source использует
 > другой набор факторов, веса и API namespace. Актуальный паспорт и
 > подтверждённые различия:
 > [`reference/systems/ANALYTICS_AND_SCORING.md`](reference/systems/ANALYTICS_AND_SCORING.md).

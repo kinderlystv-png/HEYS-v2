@@ -1,5 +1,9 @@
 # HEYS Infrastructure — Yandex Cloud
 
+> **Статус: historical/source.** Это подробный runbook и snapshot, а не источник
+> текущего состояния ресурсов. Актуальные проверки и границы операций:
+> [`docs/reference/systems/INFRA_OPERATIONS.md`](../docs/reference/systems/INFRA_OPERATIONS.md).
+
 > **Источники правды для CDN/Storage/VM конфигурации**  
 > Обновлено: 2026-02-25
 

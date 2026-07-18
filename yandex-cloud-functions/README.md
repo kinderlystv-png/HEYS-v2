@@ -1,7 +1,9 @@
 # 🚀 HEYS Serverless API — Yandex Cloud Functions
 
-> Production backend для HEYS v2 на базе Yandex Cloud Functions Все 7 функций
-> работают на `api.heyslab.ru`
+> **Статус: historical/source.** Это snapshot раннего serverless-контура, а не
+> актуальный inventory или инструкция для production. Текущая карта deploy,
+> monitoring и recovery:
+> [`docs/reference/systems/INFRA_OPERATIONS.md`](../docs/reference/systems/INFRA_OPERATIONS.md).
 
 > **Статус 2026-07-17:** список из семи функций и раздел про постоянный
 > 15-минутный GitHub monitor устарели. Канонический deploy inventory находится в
@@ -33,7 +35,7 @@
 
 ```bash
 cd yandex-cloud-functions
-./deploy-all.sh  # Деплоит все 7 функций (~4 минуты)
+./deploy-all.sh  # Состав текущего inventory определяет сам скрипт
 ```
 
 ### 2. Деплой одной функции
@@ -51,23 +53,18 @@ sleep 10                # Ждём warmup
 
 ---
 
-## 🛡️ Система защиты от падений (v5.0.1)
+## 🛡️ Историческая схема защиты (v5.0.1)
 
-### ✅ Автоматическая защита
+Перечень старых обещаний про количество функций, постоянный GitHub monitor и
+автоматический redeploy удалён: он не подтверждает состояние production.
+Текущий статус проверяется через `check-heys-ops-status.cjs`, а deploy wiring —
+через `.github/workflows/cloud-functions-deploy.yml`.
 
-1. **24/7 мониторинг** — GitHub Actions проверяет API каждые 15 минут
-2. **Auto-healing** — автоматический re-deploy при обнаружении 502
-3. **Telegram алерты** — мгновенное оповещение о проблемах
-4. **CI/CD validation** — проверка Health + RPC + REST после каждого push
-
-### 📊 Мониторинг в реальном времени
+### Диагностика
 
 ```bash
 # Локальная проверка
 ./health-check.sh
-
-# Continuous monitoring (30s интервал)
-./health-check.sh --watch
 
 # Проверка секретов перед деплоем
 ./validate-env.sh
@@ -75,14 +72,9 @@ sleep 10                # Ждём warmup
 
 ### 🚨 Если API падает
 
-```bash
-cd yandex-cloud-functions
-./deploy-all.sh              # Re-deploy всех функций
-sleep 10                     # Warmup
-./health-check.sh            # Проверка
-```
-
-⏱️ **MTTR** (Mean Time To Recovery): **~2 минуты**
+Не делайте массовый redeploy по этой старой инструкции. Сначала определите
+конкретную функцию и состояние canary/dead-man по актуальному operational
+контуру из досье выше; deployment остаётся отдельным разрешённым действием.
 
 ---
 
