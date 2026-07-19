@@ -308,7 +308,8 @@
 
   /** Префиксы ключей, требующих client-specific storage */
   const CLIENT_SPECIFIC_PREFIXES = [
-    'heys_milestone_'         // Достигнутые вехи (heys_milestone_7_days, etc.)
+    'heys_milestone_',        // Достигнутые вехи (heys_milestone_7_days, etc.)
+    'heys_morning_checkin_progress_v1_' // Resumable/exact-once morning flow ledger
   ];
 
   /**
@@ -1105,9 +1106,16 @@
 
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
+  let criticalSyncReadyClientId = null;
+  let criticalSyncInFlight = null;
   let failsafeTimerId = null;
   let _syncEverStarted = false; // 🔄 v5: true после первого вызова bootstrapClientSync
   cloud.isInitialSyncCompleted = function () { return initialSyncCompleted; };
+  cloud.isCriticalSyncReady = function (clientId) {
+    if (!clientId) return false;
+    return criticalSyncReadyClientId === clientId
+      || (initialSyncCompleted && cloud._lastClientSync?.clientId === clientId);
+  };
 
   // 🔧 Debug getters (для консоли) — только если ещё не определены
   if (!Object.getOwnPropertyDescriptor(cloud, '_rpcOnlyMode')) {
@@ -1630,6 +1638,23 @@
       v: nextValue,
       updated_at: new Date().toISOString(),
     };
+  }
+
+  function mergeMorningCheckinInboundValue(storageKey, incomingValue) {
+    if (!/_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(String(storageKey || ''))) {
+      return incomingValue;
+    }
+
+    try {
+      const mergeProgress = global.HEYS?.sync?.mergeMorningCheckinProgress;
+      const rawLocal = global.localStorage?.getItem?.(storageKey);
+      if (!rawLocal || typeof mergeProgress !== 'function') return incomingValue;
+      const localValue = tryParse(rawLocal);
+      if (!localValue || typeof localValue !== 'object') return incomingValue;
+      return mergeProgress(localValue, incomingValue);
+    } catch (_) {
+      return incomingValue;
+    }
   }
 
   function isRemoteDayNewer(localValue, remoteValue) {
@@ -5573,6 +5598,8 @@
     } catch (e) { }
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
+    criticalSyncReadyClientId = null;
+    criticalSyncInFlight = null;
     startFailsafeTimer(); // Перезапустить failsafe для нового входа
     // 🔄 Сброс сохранённого режима — при следующем входе определится заново
     try {
@@ -6339,7 +6366,9 @@
         || ((cloud._writeContext && cloud._writeContext.clientId === clientId)
           ? cloud._writeContext.contextId : null);
       const yandexItems = items.map(item => ({
-        originalKey: item.k, // preserve scoped key for LS write-back
+        // Queue items carry the normalized cloud key. Rebuild the canonical
+        // client-scoped key before a merge response is written back locally.
+        originalKey: scopeKeyForClientStorage(item.k, clientId),
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
         // Queue items survive browser sessions, so their persisted context may
@@ -6437,10 +6466,24 @@
             } catch (_) { /* noop — на ошибке сравнения ведём себя как раньше */ }
 
             if (!isNoOpMerge) {
+              let localWriteValue = result.v;
+              if (isMorningCheckinMergeKey(it.k) && it.originalKey) {
+                try {
+                  const currentLocalProgress = global.HEYS?.store?.readSafe?.(it.originalKey, null);
+                  const mergeMorningProgress = global.HEYS?.sync?.mergeMorningCheckinProgress;
+                  if (currentLocalProgress && typeof mergeMorningProgress === 'function') {
+                    // The RPC may finish after the user has already saved the
+                    // next step. Preserve the newer local row during write-back.
+                    localWriteValue = mergeMorningProgress(currentLocalProgress, result.v);
+                  }
+                } catch (_) {
+                  localWriteValue = result.v;
+                }
+              }
               // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
               if (lsSetRaw && it.originalKey) {
                 try {
-                  lsSetRaw(it.originalKey, JSON.stringify(result.v));
+                  lsSetRaw(it.originalKey, JSON.stringify(localWriteValue));
                   global.HEYS?.store?.invalidate?.(it.originalKey);
                 } catch (lsErr) {
                   console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
@@ -7307,6 +7350,18 @@
         const skipHeavyPreWork = isDeltaFastPath || isForceDelta;
         const now = Date.now(); // needed for _lastClientSync and cloud cleanup
 
+        // A persisted delta cursor only says that this client synced sometime before.
+        // On a fresh page load, hydrate the first-frame keys in one batch before the
+        // delta tail starts, otherwise React can render stale cache and visibly reshape.
+        if (skipHeavyPreWork
+          && !cloud.isCriticalSyncReady(client_id)
+          && typeof cloud.ensureCriticalSyncReady === 'function') {
+          const criticalResult = await cloud.ensureCriticalSyncReady(client_id);
+          if (!criticalResult?.criticalReady && !cloud.isCriticalSyncReady(client_id)) {
+            console.warn('[HEYS.sync] Critical first-frame batch unavailable; keeping startup barrier until fallback');
+          }
+        }
+
         if (isDeltaFastPath) {
           logCritical(`[DELTA FAST-PATH] Direct fetch, skipping all pre-work, since ${lastSyncTs}`);
         }
@@ -7422,37 +7477,28 @@
           // Выполняется только при первой синхронизации (initialSyncCompleted === false)
           if (!initialSyncCompleted) {
             try {
-              const today = new Date().toISOString().slice(0, 10);
-              const criticalBaseKeys = [
-                'heys_profile', 'heys_norms', 'heys_products',
-                'heys_hr_zones', `heys_dayv2_${today}`,
+              const criticalBaseKeys = getCriticalFirstFrameKeys();
+              /* Critical list rationale:
                 // Stage 2 expansion: настройки UI которые нужны до первого рендера —
                 // toggle советов / звука / прочитанные подсказки. Один RPC, тот же
                 // round-trip, не добавляет latency. Закрывает race когда тосты вылезали
                 // с дефолтным toastsEnabled=true до прихода реального флага из cloud.
-                'heys_advice_settings', 'heys_advice_read_today',
                 // Stage 3 (2026-05-23): gamification core. Без этого ключа
                 // gamification-bar при cold-start показывала default totalXP=0 /
                 // event-based partial fallback (~25) — пользователь видел "сброс"
                 // прогресса до тех пор пока full sync не приземлит heys_game (порой
                 // 5-20 сек на cellular). Размер ~18-20KB на клиента — приемлемо
                 // для Phase A.
-                'heys_game',
                 // Stage 4 (2026-05-23): subscription status cache (~250-300 байт).
                 // canWriteSync() в paywall_v1 читает HEYS.Subscription.getCachedStatus()
                 // синхронно при каждом write attempt. На cold-start без cache он
                 // блокирует запись и запускает background refresh; ключ в Phase A
                 // сокращает это закрытое loading-окно.
-                'heys_subscription_status',
                 // Stage 5 (2026-05-23): widget layout (~2-3 KB). Читается синхронно
                 // при первом рендере dashboard — без него виджеты раскладываются по
                 // дефолту и перестраиваются когда полный sync приземлит layout.
-                'heys_widget_layout_v1', 'heys_widget_layout_meta_v1',
                 // Meal presets: нужны в add-product flow сразу после входа/переключения клиента,
                 // иначе пользователь видит пустой список готовых наборов до следующего HOT-sync.
-                'heys_meal_presets_v1',
-                'heys_suggested_presets_v1',
-                'heys_suggested_presets_dismissed_v1',
                 // Stage 6 (2026-06-14): planning (projects/tasks/slots/links + chrono).
                 // До этого planning ключи попадали только в Phase B paginated fetch —
                 // вкладка Задачи показывала пустоту/placeholder-круги до прихода
@@ -7460,22 +7506,7 @@
                 // (мелкие массивы id+title+ts) — приемлемо для Phase A round-trip.
                 // chrono_entries / snapshots могут быть крупнее у активных юзеров,
                 // но всё равно намного меньше heys_game/products в той же фазе.
-                'heys_planning_projects',
-                'heys_planning_tasks',
-                'heys_planning_slots',
-                'heys_planning_links_v1',
-                'heys_planning_chrono_activities',
-                'heys_planning_chrono_entries',
-                'heys_planning_chrono_snapshots',
-                'heys_planning_chrono_tombstones_v1',
-                'heys_planning_chrono_untracked_tail_dismissed_v1',
-                'heys_planning_checklists_v1',
-                'heys_planning_checklist_tombstones_v1',
-                'heys_planning_goals_v1',
-                'heys_planning_entity_tombstones_v1',
-                'heys_planning_goal_map_records_v1',
-                'heys_planning_commands_v1'
-              ];
+              */
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
 
@@ -7568,7 +7599,7 @@
                       } catch (_) { /* fall through — пишем как есть */ }
                     }
                   }
-	                  let phaseAValue = row.v;
+	                  let phaseAValue = mergeMorningCheckinInboundValue(pKey, row.v);
 	                  const isPlanningMergeableArray = row.k === 'heys_planning_chrono_activities'
 	                    || row.k === 'heys_planning_chrono_entries'
 	                    || row.k === 'heys_planning_checklists_v1'
@@ -7607,6 +7638,7 @@
 
                 // 🔓 Разблокируем UI — критичные данные готовы
                 initialSyncCompleted = true;
+                criticalSyncReadyClientId = client_id;
                 cloud._syncCompletedAt = Date.now(); // ⏱️ Grace period: не пере-загружаем products
                 cloud._productsFingerprint = null; // 🔄 Delta-sync: сбрасываем чтобы первый реальный изменение прошло
                 cancelFailsafeTimer();
@@ -7918,7 +7950,7 @@
               if (!__decompDelta.ok) {
                 return; // skip this row — would write garbage to localStorage
               }
-              let valueToStore = __decompDelta.value;
+              let valueToStore = mergeMorningCheckinInboundValue(key, __decompDelta.value);
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
               if (key.includes('dayv2_') && shouldBlockDayV2DateMismatch(key, valueToStore, 'delta-light')) return;
@@ -9279,7 +9311,7 @@
               // Для products используем отфильтрованные данные (уже обработаны выше)
               // Если дошли сюда — значит merge не произошёл (local пуст)
               // Используем remoteProducts которые уже отфильтрованы
-              let valueToSave = row.v;
+              let valueToSave = mergeMorningCheckinInboundValue(key, row.v);
 
               // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
               // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
@@ -12066,8 +12098,9 @@
     // и dedup check в interceptSetItem. persistDayData вызывается только из
     // пользовательских действий, а не из React re-render после cloud sync.
     const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
+    const _isMorningCheckinProgress = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(String(normalizedKey || ''));
     const _isProducts = normalizedKey === 'heys_products' || k === 'heys_products' || (k && k.includes('products'));
-    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isDefaultTabSync) {
+    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isMorningCheckinProgress && !_isDefaultTabSync) {
       // FUNDAMENTAL FIX: для products — не теряем write молча, ставим retry после grace period
       if (_isProducts) {
         scheduleProductsPostWindowRetry(client_id);
@@ -12084,6 +12117,9 @@
     }
     if (_inGracePeriod && _isDayV2Data) {
       pushSyncTrace('GRACE_PERIOD_BYPASS_dayv2', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
+    }
+    if (_inGracePeriod && _isMorningCheckinProgress) {
+      pushSyncTrace('GRACE_PERIOD_BYPASS_morning_checkin', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
     }
 
     // Диагностика: логируем добавление dayv2 в upload queue с caller
@@ -12543,7 +12579,9 @@
 
     // 🛡️ GRACE PERIOD v3: Skip re-upload of data just downloaded from cloud
     const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
-    if (_skGrace < 10000) return;
+    const _skBaseKey = stripClientScopePrefixes(String(k || '')).key;
+    const _isMorningCheckinLedger = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(_skBaseKey);
+    if (_skGrace < 10000 && !_isMorningCheckinLedger) return;
 
     // Получаем client_id для client-level данных (products, days)
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
@@ -12616,6 +12654,13 @@
     recoverStalledClientUpload('online');
 
     if (clientUpsertQueue.length > 0) {
+      // Offline retry may still be parked on a long exponential-backoff timer.
+      // Once the browser reports a real network restore, replace that stale
+      // delay with the normal online debounce so durable writes resume promptly.
+      if (clientUpsertTimer) {
+        clearTimeout(clientUpsertTimer);
+        clientUpsertTimer = null;
+      }
       cloud.ensureWriteContextFresh(null, { reason: 'online', retryPending: false })
         .catch(() => null)
         .finally(() => {
@@ -12623,6 +12668,10 @@
         });
     }
     if (upsertQueue.length > 0) {
+      if (upsertTimer) {
+        clearTimeout(upsertTimer);
+        upsertTimer = null;
+      }
       schedulePush();
     }
     notifyPendingChange();
@@ -13042,6 +13091,36 @@
     } catch (_) { /* noop */ }
   }
 
+  function getCriticalFirstFrameKeys() {
+    const today = new Date().toISOString().slice(0, 10);
+    return [
+      'heys_profile', 'heys_norms', 'heys_products',
+      'heys_hr_zones', `heys_dayv2_${today}`,
+      'heys_advice_settings', 'heys_advice_read_today',
+      'heys_game',
+      'heys_subscription_status',
+      'heys_widget_layout_v1', 'heys_widget_layout_meta_v1',
+      'heys_meal_presets_v1',
+      'heys_suggested_presets_v1',
+      'heys_suggested_presets_dismissed_v1',
+      'heys_planning_projects',
+      'heys_planning_tasks',
+      'heys_planning_slots',
+      'heys_planning_links_v1',
+      'heys_planning_chrono_activities',
+      'heys_planning_chrono_entries',
+      'heys_planning_chrono_snapshots',
+      'heys_planning_chrono_tombstones_v1',
+      'heys_planning_chrono_untracked_tail_dismissed_v1',
+      'heys_planning_checklists_v1',
+      'heys_planning_checklist_tombstones_v1',
+      'heys_planning_goals_v1',
+      'heys_planning_entity_tombstones_v1',
+      'heys_planning_goal_map_records_v1',
+      'heys_planning_commands_v1',
+    ];
+  }
+
   function getForegroundHotSyncKeys(reason) {
     const today = new Date().toISOString().slice(0, 10);
     const allClientKeys = Array.isArray(CLIENT_SPECIFIC_KEYS) ? CLIENT_SPECIFIC_KEYS.slice() : [];
@@ -13209,6 +13288,11 @@
       return false; // skip — better than corrupting localStorage with the compressed string
     }
 	    value = __decompHot.value;
+	    // Foreground hot-sync may finish a few milliseconds after the current
+	    // step was saved locally. Merge the journal by step before serializing,
+	    // otherwise the older cloud snapshot can turn `saved_local` back into
+	    // `planned` while the UI has already advanced.
+	    value = mergeMorningCheckinInboundValue(scopedKey, value);
 
 	    try {
 	      const PStore = global.HEYS?.Planning?.Store;
@@ -13631,15 +13715,21 @@
     return needed;
   }
 
-  async function runForegroundHotKeySync(clientId, reason) {
+  async function runForegroundHotKeySync(clientId, reason, options = {}) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI) {
       return { success: false, updated: 0, failed: 0, reason: 'no_api', mode: 'no-api', fetchedKeys: [], fetchedKeyCount: 0, markerScopes: [] };
     }
 
     foregroundAutoSyncTick += 1;
-    const allKeys = getForegroundHotSyncKeys(reason);
-    const markerAwareKeys = Array.from(new Set([...allKeys, ...getForegroundHotSyncKeys('marker-scope')]));
+    const requestedKeys = Array.isArray(options.keys) && options.keys.length > 0
+      ? options.keys
+      : null;
+    const allKeys = requestedKeys || getForegroundHotSyncKeys(reason);
+    const applySource = options.source || 'foreground-hot-sync';
+    const markerAwareKeys = options.skipMarkers
+      ? allKeys
+      : Array.from(new Set([...allKeys, ...getForegroundHotSyncKeys('marker-scope')]));
     let markerScopes = [];
 
     // Detect auth mode: session_token (PIN client) vs curator JWT
@@ -13660,7 +13750,7 @@
     // Phase 1b: check change markers before pulling data
     // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
     let keysToFetch = allKeys;
-    if (!isMarkersDisabled()) {
+    if (!options.skipMarkers && !isMarkersDisabled()) {
       try {
         let markerResult = null;
 
@@ -13736,7 +13826,7 @@
           // product synced without name — meal item fell back to nameless snapshot).
           const hotRows = mergeOverlayRpcTailRawClientRows(batchResult.data, clientId);
           for (const item of hotRows) {
-            if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v, 'foreground-hot-sync', item.revision)) {
+            if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v, applySource, item.revision)) {
               updated += 1;
             }
           }
@@ -13794,6 +13884,61 @@
     }
     return _runForegroundHotKeySyncLegacy(clientId, keysToFetch, reason, markerScopes);
   }
+
+  cloud.ensureCriticalSyncReady = async function (clientId) {
+    if (cloud.isCriticalSyncReady(clientId)) {
+      return { success: true, cached: true, mode: 'critical-ready' };
+    }
+    if (criticalSyncInFlight?.clientId === clientId) {
+      return criticalSyncInFlight.promise;
+    }
+
+    const promise = (async () => {
+      const result = await runForegroundHotKeySync(clientId, 'critical-first-frame', {
+        keys: getCriticalFirstFrameKeys(),
+        skipMarkers: true,
+        source: 'critical-first-frame',
+      });
+      const batchComplete = result?.success
+        && (result.mode === 'session-batch' || result.mode === 'curator-batch');
+      if (!batchComplete) return result;
+
+      // The request can finish after logout/client switch. Never publish readiness
+      // for a client that no longer owns the visible app.
+      const activeClientId = global.HEYS?.currentClientId || cloud.getCurrentClientId?.();
+      if (activeClientId !== clientId) {
+        return { ...result, criticalReady: false, staleClient: true };
+      }
+
+      initialSyncCompleted = true;
+      criticalSyncReadyClientId = clientId;
+      cloud._syncCompletedAt = Date.now();
+      cloud._productsFingerprint = null;
+      cancelFailsafeTimer();
+      if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        const dispatchCriticalReady = () => {
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+            detail: { clientId, phaseA: true, source: 'critical-first-frame' },
+          }));
+        };
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(dispatchCriticalReady);
+        } else {
+          setTimeout(dispatchCriticalReady, 0);
+        }
+      }
+      return { ...result, criticalReady: true };
+    })();
+
+    criticalSyncInFlight = { clientId, promise };
+    try {
+      return await promise;
+    } finally {
+      if (criticalSyncInFlight?.promise === promise) criticalSyncInFlight = null;
+    }
+  };
 
   async function _runForegroundHotKeySyncLegacy(clientId, keys, reason, markerScopes = []) {
     const YandexAPI = global.HEYS?.YandexAPI;

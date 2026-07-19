@@ -176,10 +176,9 @@
                 } catch (_) { /* best-effort */ }
                 const root = ReactDOM.createRoot(rootElement);
                 // 🛡️ Layer 1 (incident 2026-06-02 fix): RootWithKey подписан на
-                // event 'heys:client-changed' и применяет key={clientId} на AppComponent.
-                // При смене clientId React unmount'ит ВСЁ поддерево и mount'ит fresh —
-                // все useState/useRef/useReducer обнуляются. Fallback на случай если
-                // location.reload() отключён через `heys_disable_switch_reload='1'`.
+                // event 'heys:client-changed'. Реальная смена client↔client remount'ит
+                // всё поддерево; первая anonymous→client активация остаётся in-place,
+                // потому что данных другого клиента в памяти ещё нет.
                 function readInitialClientIdForKey() {
                     try {
                         if (window.HEYS && window.HEYS.currentClientId) {
@@ -199,20 +198,27 @@
                 }
 
                 function RootWithKey() {
-                    const [clientId, setClientId] = React.useState(readInitialClientIdForKey);
+                    const initialClientId = readInitialClientIdForKey();
+                    const activeClientRef = React.useRef(initialClientId);
+                    const [reactKey, setReactKey] = React.useState(initialClientId || '__no_client__');
                     React.useEffect(() => {
                         const handler = (e) => {
                             const next = (e && e.detail && e.detail.clientId)
                                 || (window.HEYS && window.HEYS.currentClientId)
                                 || null;
-                            setClientId(next);
+                            const previous = activeClientRef.current;
+                            activeClientRef.current = next;
+                            if (previous === next) return;
+                            // Anonymous/login → first client already transitions in-place via
+                            // App's own setClientId after Phase A. Remounting here immediately
+                            // repeated AuthInit and produced several visible flashes.
+                            if (!previous && next) return;
+                            // Real client↔client switch and logout still get a clean tree.
+                            setReactKey(next || '__no_client__');
                         };
                         window.addEventListener('heys:client-changed', handler);
                         return () => window.removeEventListener('heys:client-changed', handler);
                     }, []);
-                    // Sentinel key '__no_client__' для до-логина (Gate/Login flow рендерится через App).
-                    // При переходе на UUID после login → remount произойдёт автоматически (правильное поведение).
-                    const reactKey = clientId || '__no_client__';
                     return React.createElement(AppComponent, { key: reactKey });
                 }
                 root.render(React.createElement(ErrorBoundary, null, React.createElement(RootWithKey)));

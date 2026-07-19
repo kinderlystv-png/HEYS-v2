@@ -1931,12 +1931,14 @@
                                         const targetClientId = res.clientId;
                                         const phoneNorm = (HEYS.auth?.normalizePhone?.(phone) || phone);
 
-                                        // 🚀 Stage 2: вместо `await switchClient` (5–10с под VPN) — резолвим
-                                        // setClientId по эвенту heysSyncCompleted{phaseA:true} (~300-800мс).
-                                        // Полный sync продолжается в фоне. Caller получает res сразу
-                                        // после loginClient и закрывает форму, AppShell монтируется
-                                        // как только Phase A отгрузит 5 критичных ключей.
+                                        // Держим LoginScreen в едином состоянии «Проверяем PIN» до Phase A.
+                                        // Полный sync продолжится в фоне, но промежуточный idle-кадр формы
+                                        // и полусобранный AppShell пользователь больше не увидит.
                                         let resolved = false;
+                                        let resolveCriticalReady;
+                                        const criticalReadyPromise = new Promise((resolve) => {
+                                            resolveCriticalReady = resolve;
+                                        });
                                         const finalize = () => {
                                             if (resolved) return;
                                             resolved = true;
@@ -1950,6 +1952,7 @@
                                                 window.HEYS.currentClientId = targetClientId;
                                             } catch (_) { }
                                             setClientId(targetClientId);
+                                            resolveCriticalReady();
                                         };
                                         const phaseAHandler = (e) => {
                                             if (resolved) return;
@@ -1975,6 +1978,7 @@
                                             window.removeEventListener('heysSyncCompleted', phaseAHandler);
                                             finalize();
                                         }
+                                        await criticalReadyPromise;
                                     }
                                     return res;
                                 },

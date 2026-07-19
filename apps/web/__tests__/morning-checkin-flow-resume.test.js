@@ -10,7 +10,8 @@ const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_che
 const SYNC_MERGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_sync_merge_v1.js'), 'utf8');
 const DATE_KEY = '2026-07-17';
 const CLIENT_ID = 'client-1';
-const PROGRESS_KEY = `heys_${CLIENT_ID}_heys_morning_checkin_progress_v1_${DATE_KEY}`;
+const PROGRESS_KEY = `heys_${CLIENT_ID}_morning_checkin_progress_v1_${DATE_KEY}`;
+const LEGACY_PROGRESS_KEY = `heys_${CLIENT_ID}_heys_morning_checkin_progress_v1_${DATE_KEY}`;
 const DAY_KEY = `heys_${CLIENT_ID}_dayv2_${DATE_KEY}`;
 
 function loadStepModal() {
@@ -197,16 +198,86 @@ describe('StepModal forced visibility', () => {
       expect(view.container.querySelector('.mc-step-content')?.textContent).toContain(ids[index]);
       fireEvent.click(screen.getByRole('button', { name: index === ids.length - 1 ? 'Готово' : 'Далее' }));
       await act(async () => {
-        await Promise.resolve();
-        vi.advanceTimersByTime(250);
+        await vi.advanceTimersByTimeAsync(250);
       });
     }
     expect(onComplete).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
+
+  it('accepts only one synchronous completion tap while the final save is pending', async () => {
+    let releaseSave;
+    const savePending = new Promise((resolve) => { releaseSave = resolve; });
+    const modal = loadStepModal();
+    const save = vi.fn(() => savePending.then(() => ({ completed: true })));
+    modal.registerStep('weight', {
+      component: () => React.createElement('div', null, 'weight'),
+      save,
+    });
+    const onComplete = vi.fn();
+    render(React.createElement(modal.Component, {
+      steps: ['weight'],
+      requireStepAck: true,
+      onComplete,
+      showTip: false,
+    }));
+
+    const finish = screen.getByRole('button', { name: 'Готово' });
+    act(() => {
+      finish.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      finish.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      releaseSave();
+      await savePending;
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('morning progress key migration', () => {
+  it('reads the previous double-heys local key without continuing to write it', () => {
+    const { utils, values } = loadMorning();
+    values.set(LEGACY_PROGRESS_KEY, fullIncidentLedger());
+
+    expect(utils.readMorningProgress(DATE_KEY, CLIENT_ID)?.flowId).toBe('flow-original');
+    utils.writeMorningProgress(fullIncidentLedger(), CLIENT_ID);
+    expect(values.get(PROGRESS_KEY)?.flowId).toBe('flow-original');
+  });
 });
 
 describe('morning check-in journal resume', () => {
+  it('repairs a partial persisted journal before resuming the flow', () => {
+    const partialLedger = {
+      plannedStepIds: ['weight'],
+      steps: { weight: { status: 'planned', attempt: 1, updatedAt: 1000 } },
+      updatedAt: 1000,
+    };
+    const { utils, values } = loadMorning({
+      day: {},
+      profile: {},
+      ledger: partialLedger,
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+    const written = values.get(PROGRESS_KEY);
+
+    expect(plan.flowId).toBeTruthy();
+    expect(written).toMatchObject({
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: plan.flowId,
+    });
+    expect(written.steps.__flow__).toMatchObject({ status: 'open', attempt: 1 });
+    expect(written.steps.weight.status).toBe('planned');
+  });
+
   it('reconciles an obsolete planned yesterdayVerify after the current-day decision is already stored', () => {
     const { utils, values } = loadMorning({
       day: completedDay(),
@@ -361,5 +432,110 @@ describe('morning check-in journal resume', () => {
     expect(written.steps.weight.status).toBe('synced');
     expect(written.steps.sleepTime.status).toBe('synced');
     expect(values.get(PROGRESS_KEY).flowId).toBe('flow-original');
+  });
+
+  it('rechecks yesterday at finalization and reopens instead of publishing a false completion', () => {
+    const ledger = fullIncidentLedger('open');
+    ledger.plannedStepIds = ledger.plannedStepIds.filter((id) => id !== 'yesterdayVerify');
+    delete ledger.steps.yesterdayVerify;
+    const { HEYS, utils, values } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+      yesterdayRequired: false,
+    });
+    HEYS.YesterdayVerify.shouldShow.mockReturnValue(true);
+
+    const written = utils.ensureFinalMorningRequirements({
+      dateKey: DATE_KEY,
+      clientId: CLIENT_ID,
+      flowId: 'flow-original',
+    });
+
+    expect(written.plannedStepIds).toContain('yesterdayVerify');
+    expect(written.steps.yesterdayVerify.status).toBe('planned');
+    expect(written.steps.__flow__.status).toBe('open');
+    expect(utils.getBlockingMorningSteps({ ledger: written, dateKey: DATE_KEY, clientId: CLIENT_ID }))
+      .toContainEqual({ id: 'yesterdayVerify', status: 'planned', completeByData: false });
+    expect(values.get(PROGRESS_KEY).steps.__flow__.status).toBe('open');
+  });
+
+  it('turns local check-in rows into an explicit cloud acknowledgement after queue drain', () => {
+    const ledger = fullIncidentLedger('saved_local');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.weight = { status: 'saved_local', cloudPending: true, updatedAt: 1000 };
+    ledger.steps.__flow__ = { status: 'saved_local', cloudPending: true, updatedAt: 2000 };
+    const { utils, values } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+
+    const written = utils.markMorningProgressCloudSynced(DATE_KEY, CLIENT_ID);
+
+    expect(written.steps.weight.status).toBe('synced');
+    expect(written.steps.weight.cloudPending).toBe(false);
+    expect(written.steps.__flow__.status).toBe('synced');
+    expect(values.get(PROGRESS_KEY).steps.__flow__.status).toBe('synced');
+  });
+
+  it('reports the newest locally saved step instead of staying on weight', () => {
+    const ledger = fullIncidentLedger('open');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.weight = { status: 'saved_local', cloudPending: true, updatedAt: 1000 };
+    ledger.steps.sleepTime = { status: 'saved_local', cloudPending: true, updatedAt: 3000 };
+    const { utils } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+
+    expect(utils.getMorningCheckinStatus(DATE_KEY, CLIENT_ID).label).toBe('сохранено локально: сон');
+  });
+
+  it('publishes one local status transition for one successfully saved step', async () => {
+    const ledger = fullIncidentLedger('open');
+    ledger.steps.weight = { status: 'planned' };
+    const { HEYS, utils } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+    HEYS.cloud = { flushPendingQueue: vi.fn() };
+    const events = [];
+    const listener = (event) => events.push(event.detail);
+    window.addEventListener('heys:morning-checkin-status', listener);
+
+    await utils.flushAndMarkMorningStep('weight', [`heys_dayv2_${DATE_KEY}`], 10000, {
+      dateKey: DATE_KEY,
+      clientId: CLIENT_ID,
+      saveResult: { completed: true },
+    });
+    window.removeEventListener('heys:morning-checkin-status', listener);
+
+    expect(events.filter((event) => event.reason === 'step_status')).toHaveLength(1);
+  });
+
+  it('continues offline and keeps an explicit pending cloud status', async () => {
+    const ledger = fullIncidentLedger('open');
+    ledger.steps.weight = { status: 'planned' };
+    const { HEYS, utils, values } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+    delete HEYS.cloud;
+
+    await expect(utils.flushAndMarkMorningStep('weight', [`heys_dayv2_${DATE_KEY}`], 10000, {
+      dateKey: DATE_KEY,
+      clientId: CLIENT_ID,
+      saveResult: { completed: true },
+    })).resolves.toBe(true);
+
+    expect(values.get(PROGRESS_KEY).steps.weight).toMatchObject({
+      status: 'saved_local',
+      cloudPending: true,
+      syncNote: 'sync_unavailable',
+    });
   });
 });

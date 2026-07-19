@@ -41,6 +41,15 @@
         if (typeof HEYS.shouldShowMorningCheckin !== 'function') missing.push('morning-checkin');
         if (!isYesterdayVerifyReady()) missing.push('yesterday-verify');
         if (missing.length > 0) {
+            // A required check-in is no longer an idle-only feature: on a busy
+            // device requestIdleCallback may not run before the shell is hidden.
+            // Force the exact chunks whose readiness events we await below.
+            if (missing.includes('morning-checkin')) {
+                Promise.resolve(HEYS.__loadPostboot3Ui?.()).catch(() => null);
+            }
+            if (missing.includes('yesterday-verify')) {
+                Promise.resolve(HEYS.__loadPostboot1Game?.()).catch(() => null);
+            }
             console.info('[MorningCheckin] ℹ️ required modules deferred — ожидаем загрузку', {
                 missing,
                 source: meta?.source || 'unknown',
@@ -56,6 +65,15 @@
                 window.addEventListener('heys-yesterday-verify-ready', retry, { once: true });
             }
             return false;
+        }
+
+        if (meta?.resumeExistingOnly) {
+            const localStatus = HEYS.MorningCheckinUtils?.getMorningCheckinStatus?.(undefined, meta.clientId);
+            const resumableStates = ['open', 'in_progress', 'failed', 'closed'];
+            if (!localStatus?.flowId || !resumableStates.includes(localStatus.state)) {
+                console.info('[MorningCheckin] ℹ️ offline resume skipped — no unfinished local flow');
+                return false;
+            }
         }
 
         const shouldShow = HEYS.shouldShowMorningCheckin();
@@ -79,7 +97,17 @@
 
         // Ref для актуального clientId (избегаем проблемы closure)
         const clientIdRef = React.useRef(clientId);
-        React.useEffect(() => { clientIdRef.current = clientId; }, [clientId]);
+        // Consent state может стать valid уже на Phase A. Исторические дни в этот
+        // момент ещё не загружены, поэтому YesterdayVerify даст ложное `false` и
+        // обязательный шаг появится только после преждевременного flow_complete.
+        // Запоминаем именно полный download активного клиента.
+        const fullSyncReadyClientRef = React.useRef(null);
+        React.useEffect(() => {
+            clientIdRef.current = clientId;
+            if (fullSyncReadyClientRef.current && fullSyncReadyClientRef.current !== clientId) {
+                fullSyncReadyClientRef.current = null;
+            }
+        }, [clientId]);
 
         // Проверяем ТОЛЬКО после события heysSyncCompleted (когда данные точно загружены)
         React.useEffect(() => {
@@ -103,6 +131,7 @@
                     console.info('[MorningCheckin] ℹ️ Phase A sync — ждём полного sync для чек-ина');
                     return;
                 }
+                fullSyncReadyClientRef.current = eventClientId;
 
                 // Задержка чтобы React state (setClientId) успел обновиться
                 // и localStorage точно содержал данные нового клиента
@@ -182,15 +211,36 @@
         }, [isInitializing]); // clientId убран из зависимостей — используем ref
 
         React.useEffect(() => {
-            const handleConsentsStateChanged = () => {
+            const handleConsentsStateChanged = (event) => {
                 if (HEYS._consentsValid !== true) {
-                    setShowMorningCheckin(false);
+                    // Consent gate owns legal blocking. A background re-check
+                    // may temporarily unset this flag; closing an already open
+                    // flow here leaves both shell and overlay hidden.
+                    console.info('[MorningCheckin] ℹ️ consents re-check in progress — preserve current check-in state');
+                    return;
+                }
+                const activeClientId = clientIdRef.current || clientId || HEYS.utils?.getCurrentClientId?.() || '';
+                if (event?.detail?.source === 'offline-consent-cache' && activeClientId) {
+                    setTimeout(() => {
+                        evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
+                            source: 'offline-consent-cache',
+                            clientId: activeClientId,
+                            isInitializing,
+                            resumeExistingOnly: true,
+                        });
+                    }, 0);
+                    return;
+                }
+                if (!activeClientId || fullSyncReadyClientRef.current !== activeClientId) {
+                    console.info('[MorningCheckin] ℹ️ consents готовы — ждём полный sync перед планом', {
+                        clientId: activeClientId ? String(activeClientId).slice(0, 8) : null,
+                    });
                     return;
                 }
                 setTimeout(() => {
                     evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
                         source: 'consents-state-changed',
-                        clientId: clientIdRef.current || clientId,
+                        clientId: activeClientId,
                         isInitializing,
                     });
                 }, 0);

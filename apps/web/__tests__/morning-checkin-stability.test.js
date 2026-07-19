@@ -14,6 +14,7 @@ const PROFILE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_profile_ste
 const DAY_HANDLERS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_day_handlers.js'), 'utf8');
 const DAY_EFFECTS_SRC_DIRECT = fs.readFileSync(path.resolve(__dirname, '../heys_day_effects.js'), 'utf8');
 const STORAGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
+const LOG_TRACE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_client_log_trace_v1.js'), 'utf8');
 
 describe('morning check-in stability', () => {
   it('freezes visible step configs before save-driven shouldShow changes can shift indexes', () => {
@@ -37,8 +38,14 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : []");
     expect(STEP_MODAL_SRC).toContain('const touchStartActive = useRef(false);');
     expect(STEP_MODAL_SRC).toContain('if (!touchStartActive.current) return;');
+    expect(STEP_MODAL_SRC).toContain('const transitionInFlightRef = useRef(false);');
+    expect(STEP_MODAL_SRC).toContain('actionInFlightRef.current || transitionInFlightRef.current');
+    expect(STEP_MODAL_SRC).toContain('await waitForSavingPaint();');
     expect(MORNING_SRC).toContain('mergeFreshStepsWithProgress');
     expect(MORNING_SRC).toContain("status === 'failed_sync'");
+    expect(STEP_MODAL_SRC).toContain("'data-heys-step-modal': 'true'");
+    expect(STEP_MODAL_SRC).toContain("'data-heys-step-id': currentConfig.id");
+    expect(STEP_MODAL_SRC).toContain("'data-heys-saving': savingStep ? 'true' : 'false'");
   });
 
   it('prevents progress dots from advancing strict morning flow and refreshes final day data with payload', () => {
@@ -59,6 +66,9 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).not.toContain('return HEYS.cloud.flushPendingQueue(10000).then');
     expect(MORNING_SRC).toContain("status: cloudPending ? 'saved_local' : 'synced'");
     expect(MORNING_SRC).toContain('cloudPending,');
+    expect(MORNING_SRC).toContain('ensureFinalMorningRequirements(plan)');
+    expect(MORNING_SRC).toContain("window.addEventListener('heys:queue-drained'");
+    expect(MORNING_SRC).toContain("traceMorningCheckin('flow_cloud_synced'");
     expect(MORNING_SRC).toContain("syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null");
     expect(DAY_EFFECTS_SRC).toContain("'#sq' + (lsDay.sleepQuality || 0)");
     expect(DAY_EFFECTS_SRC).toContain("'#mm' + (lsDay.moodMorning || 0)");
@@ -69,6 +79,11 @@ describe('morning check-in stability', () => {
     expect(STEPS_SRC).toContain('const saved = saveDayData(dateKey, dayData);');
     expect(STEPS_SRC).toContain("throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');");
     expect(STEPS_SRC).toContain('affectedKeys: [`heys_dayv2_${dateKey}`],\n        completed: true');
+  });
+
+  it('does not call preventDefault from a passive touch slider event', () => {
+    expect(STEPS_SRC).toContain("event.type?.indexOf('touch') !== 0");
+    expect(STEPS_SRC).toContain("touchAction: 'none'");
   });
 
   it('treats explicit no-period cycle answer as completed for today', () => {
@@ -117,9 +132,12 @@ describe('morning check-in stability', () => {
   it('keeps check-in trace useful without warning-only happy path noise', () => {
     expect(MORNING_SRC).toContain("plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null");
     expect(MORNING_SRC).toContain("remainingStepIds: Array.isArray(meta.remainingStepIds) ? meta.remainingStepIds : null");
+    expect(MORNING_SRC).toContain("syncedStepIds: Array.isArray(meta.syncedStepIds) ? meta.syncedStepIds : null");
     expect(MORNING_SRC).toContain("affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null");
     expect(MORNING_SRC).toContain("HEYS.LogTrace.trace(level, '[CHECKIN.flow]', payload)");
     expect(MORNING_SRC).toContain("const level = isProblem ? 'warn' : 'info';");
+    expect(LOG_TRACE_SRC).toContain("console.info('[CHECKIN.trace] status_event'");
+    expect(LOG_TRACE_SRC).not.toContain("console.warn('[CHECKIN.trace] status_event'");
   });
 
   it('emits morning status from the freshly written ledger and avoids no-op progress rewrites', () => {
@@ -129,6 +147,10 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("const traceEvent = existing ? 'plan_resumed' : 'plan_created';");
     expect(MORNING_SRC).toContain('emitMorningCheckinStatus(dateKey, clientId, traceEvent, { ledger: written });');
     expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });");
+    expect(STORAGE_SRC).toContain("'heys_morning_checkin_progress_v1_' // Resumable/exact-once morning flow ledger");
+    expect(STORAGE_SRC).toContain('if (_skGrace < 10000 && !_isMorningCheckinLedger) return;');
+    expect(STORAGE_SRC).toContain('!_isMorningCheckinProgress && !_isDefaultTabSync');
+    expect(STORAGE_SRC).toContain("GRACE_PERIOD_BYPASS_morning_checkin");
   });
 
   it('routes yesterdayVerify and registration day writes through scoped helpers', () => {

@@ -555,6 +555,17 @@
             const { gate, desktopGate, consentGate } = gateState;
             const hasBlockingGate = Boolean(gate || desktopGate || consentGate);
 
+            // The boot loader must leave only after React committed a real screen.
+            // `root.render()` itself is asynchronous and can otherwise expose a white
+            // frame while auth state/client shell is still settling.
+            React.useEffect(() => {
+                if (isInitializing || (!clientId && !gate) || window.__heysContentReady) return;
+                window.__heysContentReady = true;
+                window.dispatchEvent(new CustomEvent('heys:app-content-ready', {
+                    detail: { clientId: clientId || null, screen: clientId ? 'app' : 'gate' },
+                }));
+            }, [isInitializing, clientId, gate]);
+
             const fallbackUseClientInitState = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
             const useClientInitState = getStableHook(AppClientInit.useClientInitState, fallbackUseClientInitState);
             useClientInitState({
@@ -626,7 +637,8 @@
 
                 const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
                 const fallbackHasOutdatedRequiredConsents = (fallbackComplianceState?.outdatedTypes || []).length > 0;
-                const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent
+                const isConsentRevalidationBlocking = fallbackCheckingConsent && HEYS._consentsValid !== true;
+                const isConsentBlocking = fallbackNeedsConsent || isConsentRevalidationBlocking
                     || fallbackComplianceState?.mustBlockReconsent
                     || fallbackComplianceState?.consentCheckError
                     || fallbackHasOutdatedRequiredConsents;

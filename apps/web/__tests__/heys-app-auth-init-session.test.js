@@ -10,6 +10,12 @@ const originalLocalStorage = window.localStorage;
 const modulePath = path.resolve(__dirname, '../heys_app_auth_init_v1.js');
 const moduleSource = fs.readFileSync(modulePath, 'utf8');
 
+it('keeps successful session restoration out of the warning channel', () => {
+  expect(moduleSource).toContain("console.info('[AuthInit] restored PIN currentClientId'");
+  expect(moduleSource).toContain("console.info('[AuthInit] registrationInProgress cleared");
+  expect(moduleSource).not.toContain("console.warn('[AuthInit] restored PIN currentClientId'");
+});
+
 function createMockStorage(seed = {}) {
   const store = { ...seed };
   return {
@@ -62,6 +68,7 @@ describe('HEYS.AppAuthInit session restore', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     Object.defineProperty(window, 'localStorage', {
       value: originalLocalStorage,
@@ -250,5 +257,75 @@ describe('HEYS.AppAuthInit session restore', () => {
     expect(setClientId).not.toHaveBeenCalledWith('client-stale-1');
     expect(setStatus).toHaveBeenCalledWith('offline');
     expect(setIsInitializing).toHaveBeenCalledWith(false);
+  });
+
+  it('reuses client-scoped critical readiness after the app tree remounts', async () => {
+    const clientId = 'client-ready-1';
+    storage._store.heys_pin_auth_client = clientId;
+    storage._store.heys_session_token = 'session-token';
+    const setIsInitializing = vi.fn();
+    const cloud = {
+      setPinAuthClient: vi.fn(),
+      isCriticalSyncReady: vi.fn(() => true),
+      syncClient: vi.fn().mockResolvedValue({ success: true }),
+    };
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud,
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId: vi.fn(),
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus: vi.fn(),
+      setIsInitializing,
+    });
+
+    expect(cloud.isCriticalSyncReady).toHaveBeenCalledWith(clientId);
+    expect(setIsInitializing).toHaveBeenCalledWith(false);
+    await flushPromises();
+  });
+
+  it('does not expose a stale cached screen at the old 2.5s boundary', async () => {
+    vi.useFakeTimers();
+    const clientId = 'client-stale-cache-1';
+    storage._store.heys_pin_auth_client = clientId;
+    storage._store.heys_session_token = 'session-token';
+    storage._store[`heys_${clientId}_last_sync_ts`] = '2026-07-18T20:00:00.000Z';
+    let resolveSync;
+    const syncPromise = new Promise((resolve) => { resolveSync = resolve; });
+    const setIsInitializing = vi.fn();
+    const cloud = {
+      setPinAuthClient: vi.fn(),
+      isCriticalSyncReady: vi.fn(() => false),
+      syncClient: vi.fn(() => syncPromise),
+    };
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud,
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId: vi.fn(),
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus: vi.fn(),
+      setIsInitializing,
+    });
+
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(setIsInitializing).not.toHaveBeenCalledWith(false);
+    await vi.advanceTimersByTimeAsync(5500);
+    expect(setIsInitializing).toHaveBeenCalledWith(false);
+
+    resolveSync({ success: true });
+    await flushPromises();
   });
 });

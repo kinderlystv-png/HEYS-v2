@@ -652,7 +652,7 @@
       global.addEventListener('heys:morning-checkin-status', function (ev) {
         try {
           var status = ev && ev.detail && ev.detail.status;
-          console.warn('[CHECKIN.trace] status_event', {
+          console.info('[CHECKIN.trace] status_event', {
             reason: ev && ev.detail && ev.detail.reason,
             state: status && status.state,
             label: status && status.label,

@@ -121,7 +121,12 @@
 
     const applyClientX = (clientX, event) => {
       stopRangeGesture(event);
-      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      // `touch-action: none` below already owns the slider gesture. Calling
+      // preventDefault from React's passive touch listener creates a browser
+      // warning and adds work to every drag frame.
+      if (event && event.type?.indexOf('touch') !== 0 && event.cancelable && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
       const nextValue = valueFromClientX(clientX);
       if (nextValue !== numericValue) onValue(nextValue, event);
     };

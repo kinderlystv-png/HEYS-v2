@@ -79,7 +79,8 @@
 
         // Проверка согласий блокирует всё (показывается ДО morning checkin)
         const hasOutdatedRequiredConsents = (complianceState?.outdatedTypes || []).length > 0;
-        const isConsentBlocking = needsConsent || checkingConsent
+        const isConsentRevalidationBlocking = checkingConsent && HEYS._consentsValid !== true;
+        const isConsentBlocking = needsConsent || isConsentRevalidationBlocking
             || complianceState?.mustBlockReconsent
             || complianceState?.consentCheckError
             || hasOutdatedRequiredConsents;

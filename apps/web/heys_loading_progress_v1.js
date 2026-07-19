@@ -14,8 +14,8 @@
  *   - online/offline     (navigator)
  *
  * UI: 3px gradient bar сверху viewport + pill chip снизу с текстом и dot
- * статуса сети. Скрывается на ready или __heysAppReady=true. Suppressed
- * в DEMO mode.
+ * статуса сети. Скрывается после commit реального React-экрана
+ * (`heys:app-content-ready`). Suppressed в DEMO mode.
  */
 (function (global) {
     'use strict';
@@ -317,11 +317,18 @@
         const d = (ev && ev.detail) || {};
         const next = {};
         if (typeof d.phase === 'string') next.phase = d.phase;
-        if (typeof d.percent === 'number') next.percent = d.percent;
+        if (typeof d.percent === 'number') {
+            // `root.render()` is scheduled, not committed. Reserve 100% for the
+            // content-ready event so the loader cannot reveal a white frame.
+            next.percent = d.phase === 'ready' ? Math.min(99, d.percent) : d.percent;
+        }
         if (typeof d.message === 'string') next.message = d.message;
         if (typeof d.detail === 'string') next.detail = d.detail;
         updateProgress(next);
-        if (d.phase === 'ready') scheduleHide();
+    }
+
+    function onAppContentReady() {
+        updateProgress({ phase: 'ready', percent: 100, message: 'Готово' });
     }
 
     function onNetworkChange() {
@@ -331,7 +338,7 @@
     function watchAppReady() {
         if (state.destroyed) return;
         if (global.__heysAppReady === true) {
-            updateProgress({ phase: 'ready', percent: 100, message: 'Готово' });
+            updateProgress({ phase: 'react-mount', percent: 99, message: 'Готовим интерфейс...' });
         } else {
             setTimeout(watchAppReady, 350);
         }
@@ -383,12 +390,16 @@
         global.addEventListener('heysSyncStarting', onSyncStarting);
         global.addEventListener('heysSyncCompleted', onSyncCompleted);
         global.addEventListener('heys:progress', onCustomProgress);
+        global.addEventListener('heys:app-content-ready', onAppContentReady, { once: true });
         global.addEventListener('online', onNetworkChange);
         global.addEventListener('offline', onNetworkChange);
 
         // Already-fired check (e.g. CSS preload finished before this loaded)
         if (global.__heysMainCSSLoaded === true && state.percent < 35) {
             onCssLoaded();
+        }
+        if (global.__heysContentReady === true) {
+            onAppContentReady();
         }
 
         // Force-logout aborts progress

@@ -510,6 +510,8 @@
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
     const touchStartActive = useRef(false);
+    const actionInFlightRef = useRef(false);
+    const transitionInFlightRef = useRef(false);
     const savedStepSigsRef = useRef({});
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
@@ -645,6 +647,9 @@
           ? `Осталось заполнить: ${labels}. Вернитесь к указанным шагам и сохраните данные.`
           : 'Не удалось завершить чек-ин. Вернитесь к незаполненным обязательным шагам.';
       }
+      if (raw.startsWith('checkin_decision_pending:')) {
+        return 'Проверка прошлых дней ещё загружается. Подождите немного и нажмите «Готово» ещё раз.';
+      }
       if (raw === 'checkin_sync_timeout') {
         return 'Не удалось дождаться облака. Попробуйте ещё раз.';
       }
@@ -661,6 +666,11 @@
       }
       return { valid: !!result, message: null };
     }, []);
+
+    const waitForSavingPaint = useCallback(() => new Promise((resolve) => {
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
+      else setTimeout(resolve, 0);
+    }), []);
 
     const saveStepConfig = useCallback(async (config, allStepData) => {
       if (!config || typeof config.save !== 'function') return true;
@@ -711,8 +721,9 @@
 
     // Навигация
     const goToStep = useCallback((newIndex, direction) => {
-      if (animating || newIndex < 0 || newIndex >= totalSteps) return;
+      if (transitionInFlightRef.current || animating || newIndex < 0 || newIndex >= totalSteps) return;
 
+      transitionInFlightRef.current = true;
       setSlideDirection(direction);
       setAnimating(true);
 
@@ -722,6 +733,7 @@
         // Запускаем slide-in анимацию для нового шага
         setSlideInDirection(direction === 'left' ? 'from-right' : 'from-left');
         setAnimating(false);
+        transitionInFlightRef.current = false;
         // Сбрасываем slide-in после анимации
         setTimeout(() => setSlideInDirection(null), 250);
       }, 200);
@@ -729,7 +741,7 @@
 
     // 🚀 PERF R30: defer step transition/save — validation stays sync for immediate UX feedback
     const handleNext = useCallback(async () => {
-      if (savingStep || animating) return;
+      if (actionInFlightRef.current || transitionInFlightRef.current || savingStep || animating) return;
 
       // Валидация текущего шага
       const validation = currentConfig.validate
@@ -759,8 +771,12 @@
       // нажимаешь — а ничего не происходит, нажимаешь снова". Validate тут
       // синхронный, goToStep уже сам управляет анимацией через свой
       // setTimeout(200), второй внешний wrapper избыточен.
+      actionInFlightRef.current = true;
       setSavingStep(true);
       try {
+        // Let the explicit "Сохраняю..." state reach one frame even
+        // when local persistence resolves synchronously.
+        await waitForSavingPaint();
         if (currentStepIndex < totalSteps - 1) {
           if (!(await saveStepConfig(currentConfig, stepData))) return;
           goToStep(currentStepIndex + 1, 'left');
@@ -809,9 +825,10 @@
           }
         }
       } finally {
+        actionInFlightRef.current = false;
         setSavingStep(false);
       }
-    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError, waitForSavingPaint]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
@@ -825,10 +842,12 @@
     }, [currentStepIndex, goToStep, visibleStepConfigs]);
 
     const handleSkip = useCallback(async () => {
-      if (savingStep || animating || currentStepIndex >= totalSteps - 1) return;
+      if (actionInFlightRef.current || transitionInFlightRef.current || savingStep || animating || currentStepIndex >= totalSteps - 1) return;
       if (requireStepAck && typeof onStepSaved === 'function' && currentConfig) {
+        actionInFlightRef.current = true;
         setSavingStep(true);
         try {
+          await waitForSavingPaint();
           const ackResult = onStepSaved({
             stepId: currentConfig.id,
             config: currentConfig,
@@ -846,11 +865,12 @@
           showSaveError(e?.message || 'Не удалось сохранить пропуск шага. Попробуйте ещё раз.');
           return;
         } finally {
+          actionInFlightRef.current = false;
           setSavingStep(false);
         }
       }
       goToStep(currentStepIndex + 1, 'left');
-    }, [savingStep, animating, currentStepIndex, totalSteps, requireStepAck, onStepSaved, currentConfig, stepData, context, goToStep, showSaveError]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, requireStepAck, onStepSaved, currentConfig, stepData, context, goToStep, showSaveError, waitForSavingPaint]);
 
     // Swipe handlers — учитываем allowSwipe из конфига шага
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
@@ -981,7 +1001,12 @@
         onTouchStart: handleTouchStart,
         onTouchEnd: handleTouchEnd
       },
-        React.createElement('div', { className: 'mc-modal' },
+        React.createElement('div', {
+          className: 'mc-modal',
+          'data-heys-step-modal': 'true',
+          'data-heys-step-id': currentConfig.id,
+          'data-heys-saving': savingStep ? 'true' : 'false'
+        },
           // Header — iOS-style с кнопками слева/справа
           React.createElement('div', { className: 'mc-header mc-header--nav' },
             // Левая часть: Назад или Закрыть
@@ -1058,7 +1083,8 @@
 
           // Step content
           React.createElement('div', {
-            className: `mc-step-content ${slideClass}${validationError ? ' mc-validation-error' : ''}`
+            className: `mc-step-content ${slideClass}${validationError ? ' mc-validation-error' : ''}`,
+            'data-heys-step-id': currentConfig.id
           },
             StepComponent && React.createElement(StepComponent, {
               data: stepData[currentConfig.id] || {},

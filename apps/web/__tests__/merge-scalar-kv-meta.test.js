@@ -140,17 +140,16 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     'heys_suggested_presets_dismissed_v1',
   ];
 
-  // Локализуем блок `const criticalBaseKeys = [...]` динамически — line-numbers
-  // меняются при правках в файле, hardcoded range быстро дрейфует. Ищем по
-  // маркеру `criticalBaseKeys = [` и берём ~50 строк после (где сам массив).
-  const criticalKeysStart = source.indexOf('const criticalBaseKeys = [');
+  // Локализуем единый источник ключей Phase A динамически — line-numbers
+  // меняются при правках в файле, hardcoded range быстро дрейфует.
+  const criticalKeysStart = source.indexOf('function getCriticalFirstFrameKeys()');
   if (criticalKeysStart < 0) {
-    throw new Error('Test setup: `const criticalBaseKeys = [` not found in heys_storage_supabase_v1.js');
+    throw new Error('Test setup: `getCriticalFirstFrameKeys()` not found in heys_storage_supabase_v1.js');
   }
   const phaseAArea = source.slice(criticalKeysStart, criticalKeysStart + 4000);
 
   expectedKeys.forEach((key) => {
-    it(`criticalBaseKeys contains '${key}'`, () => {
+    it(`critical first-frame keys contain '${key}'`, () => {
       expect(phaseAArea).toContain(`'${key}'`);
     });
   });

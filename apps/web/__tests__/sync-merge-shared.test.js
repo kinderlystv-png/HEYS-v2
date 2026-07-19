@@ -298,6 +298,21 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
       rpcSource.indexOf("} else if (noConflict) {"),
     );
   });
+
+  test('foreground hot-sync merges morning progress before serializing its cloud value', () => {
+    const storageSource = fs.readFileSync(
+      path.resolve(__dirname, '../heys_storage_supabase_v1.js'),
+      'utf8',
+    );
+    const functionStart = storageSource.indexOf('function applyForegroundHotSyncValue');
+    const functionEnd = storageSource.indexOf('// Phase 1b: change markers state', functionStart);
+    const hotSyncSource = storageSource.slice(functionStart, functionEnd);
+
+    expect(hotSyncSource).toContain('value = mergeMorningCheckinInboundValue(scopedKey, value);');
+    expect(hotSyncSource.indexOf('value = mergeMorningCheckinInboundValue(scopedKey, value);')).toBeLessThan(
+      hotSyncSource.indexOf('serialized = JSON.stringify(value);'),
+    );
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────

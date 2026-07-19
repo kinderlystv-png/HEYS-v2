@@ -88,7 +88,7 @@ function loadDerivedStateModule() {
     eval(source);
 }
 
-function renderDerivedState(fakeReact, profileStore) {
+function renderDerivedState(fakeReact, profileStore, overrides = {}) {
     fakeReact.beginRender();
     return window.HEYS.AppDerivedState.useAppDerivedState({
         React: fakeReact,
@@ -101,6 +101,7 @@ function renderDerivedState(fakeReact, profileStore) {
         showMorningCheckin: false,
         U: profileStore.utils,
         cloud: { isPinAuthClient: () => true },
+        ...overrides,
     });
 }
 
@@ -134,5 +135,26 @@ describe('HEYS app derived state profile name sync', () => {
 
         derived = renderDerivedState(fakeReact, profileStore);
         expect(derived.currentClientName).toBe('Пупсик тестовый');
+    });
+
+    it('does not hide an authenticated screen during background consent revalidation', () => {
+        window.HEYS._consentsValid = true;
+
+        const derived = renderDerivedState(fakeReact, profileStore, {
+            checkingConsent: true,
+            showMorningCheckin: true,
+        });
+
+        expect(derived.isConsentBlocking).toBe(false);
+    });
+
+    it('keeps consent checking blocking until a valid proof exists', () => {
+        window.HEYS._consentsValid = false;
+
+        const derived = renderDerivedState(fakeReact, profileStore, {
+            checkingConsent: true,
+        });
+
+        expect(derived.isConsentBlocking).toBe(true);
     });
 });

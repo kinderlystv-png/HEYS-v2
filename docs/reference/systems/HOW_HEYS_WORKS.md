@@ -132,6 +132,29 @@ flowchart TD
 пресеты еды и критические planning-данные. Поэтому корректный контракт Phase A —
 «критический набор первого отображения», а не фиксированное число пять.
 
+Первый стабильный кадр PIN-клиента открывается только после свежей Phase A или
+после подтверждённой runtime-готовности этого же клиента. Persisted
+`last_sync_ts` сам по себе больше не снимает loader: он доказывает лишь прошлую
+синхронизацию и не гарантирует, что локальный вопрос, шапка или сегодняшний день
+совпадают с облаком. При намеренном remount по `heys:client-changed` readiness
+сохраняется в sync-runtime по `clientId`, поэтому второй loader не ждёт уже
+полученное событие повторно.
+
+Boot-прогресс доходит до 100% и скрывается только после
+`heys:app-content-ready`: это событие отправляется эффектом уже после commit
+рабочего React-экрана или gate. Сам `root.render()` готовностью не считается,
+потому что между его вызовом и первым содержательным кадром возможна пауза.
+
+После успешного PIN форма остаётся в состоянии «Проверяем PIN» до Phase A.
+Первая активация `anonymous → client` меняет состояние приложения in-place и не
+запускает повторный `AppAuthInit`; защитный remount сохраняется для logout и
+реального переключения `client → client`, где требуется очистка дерева.
+
+Версионированное подтверждение обязательных согласий остаётся действующим во
+время фоновой серверной перепроверки: такой revalidation не скрывает уже готовый
+экран или открытый чек-ин. Явный ответ о недействительных/устаревших согласиях
+по-прежнему немедленно возвращает блокирующий legal gate.
+
 Если сеть недоступна, bootstrap помечает sync как завершённый для локального
 режима и не блокирует работу. Если перед download уже есть несохранённые
 изменения текущего клиента, sync сначала пытается сбросить pending-очередь,
@@ -243,7 +266,16 @@ context-запись остаётся локально, а не уходит с 
 Пошаговые действия утреннего чек-ина подтверждаются после успешной локальной
 записи и не ждут очистки всей облачной очереди. Обычный uploader продолжает
 синхронизацию в фоне; недоступность сети не блокирует переход между шагами или
-завершение уже сохранённого чек-ина.
+завершение уже сохранённого чек-ина. Один пользовательский переход создаёт одну
+терминальную запись шага в журнале; повторное нажатие во время сохранения не
+запускает второй save или повторное завершение flow.
+
+Автоматический план чек-ина строится только после полного initial download
+активного клиента: готовность согласий и быстрая Phase A сами по себе его не
+открывают, потому что проверка прошлых дней зависит от исторических `dayv2`.
+Перед финальным session-флагом решение `YesterdayVerify` сверяется повторно;
+новая обязательная проверка возвращает журнал в `open`, а опустошение общей
+pending-очереди переводит локально сохранённые строки журнала в `synced`.
 
 Журнал утреннего чек-ина сверяет старый `planned` для `yesterdayVerify` с
 актуальным решением готового модуля проверки: уже закрытое решение не становится
@@ -252,9 +284,11 @@ fail-closed.
 
 Download использует полную или delta-загрузку. Полученные ключи проходят
 проверки client ownership, pending-local guard и специальные anti-wipe правила.
-После записи в localStorage слой sync очищает соответствующий memory cache и
-отправляет предметные события: например, `heys:day-updated` для дней и
-`heys:products-updated` для каталога.
+Progress ledger утреннего чек-ина во всех входящих путях, включая foreground
+hot-sync, объединяется по строкам шагов: старый cloud snapshot не может вернуть
+локальный `saved_local`/`synced` в `planned`. После записи в localStorage слой
+sync очищает соответствующий memory cache и отправляет предметные события:
+например, `heys:day-updated` для дней и `heys:products-updated` для каталога.
 
 Важно различать два события:
 
@@ -333,5 +367,7 @@ Advice engine работает как детерминированный pipelin
 | `Store.set` пишет local state и передаёт клиентские ключи в `saveClientKey` | `sed -n '654,782p' apps/web/heys_storage_layer_v1.js`                                                                             | Подтверждены scoping, local write, watchers и cloud handoff                            |
 | Upload использует pending-очередь и Yandex RPC                              | `rg -n "enqueueClientSave\|scheduleClientPush\|saveClientViaRPC" apps/web/heys_storage_supabase_v1.js`                            | Подтверждены enqueue, batch scheduler и отправка                                       |
 | Download и upload имеют разные события                                      | `rg -n "heysSyncCompleted\|heys:data-uploaded" apps/web/heys_storage_supabase_v1.js`                                              | Подтверждено                                                                           |
+| Background consent revalidation не скрывает валидный экран                  | `rg -n "isConsentRevalidationBlocking\|_consentsValid" apps/web/heys_app_derived_state_v1.js apps/web/heys_app_root_impl_v1.js`   | Подтверждён version-bound non-blocking revalidation                                    |
+| Foreground hot-sync монотонно объединяет progress ledger                    | `rg -n "mergeMorningCheckinInboundValue\|applyForegroundHotSyncValue" apps/web/heys_storage_supabase_v1.js`                       | Подтверждён step-level merge до записи в localStorage                                  |
 | Day передаёт totals/norms/profile в advice engine                           | `sed -n '1700,1765p' apps/web/heys_day_tab_impl_v1.js`                                                                            | Подтверждена интеграция                                                                |
 | Advice pipeline генерирует, фильтрует, приоритизирует и возвращает trace    | `sed -n '8199,8735p' apps/web/heys_advice_bundle_v1.js`                                                                           | Подтверждены context, candidate sources, filters, cooldown, outputs и trace            |

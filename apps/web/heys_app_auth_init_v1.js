@@ -176,7 +176,7 @@
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = currentClient;
                 if (_shouldLogRestore('curator', currentClient)) {
-                    console.warn('[AuthInit] restored curator currentClientId', currentClient?.slice(0, 8));
+                    console.info('[AuthInit] restored curator currentClientId', currentClient?.slice(0, 8));
                 }
             } else if (!skipPinAuthRestore && pinAuthClient) {
                 // 🔐 PIN auth: клиент вошёл по телефону+PIN — устанавливаем его clientId
@@ -186,7 +186,7 @@
                 // Sync heys_client_current so nsKey resolves correctly on next reload
                 try { localStorage.setItem('heys_client_current', JSON.stringify(pinAuthClient)); } catch (_) { }
                 if (_shouldLogRestore('pin', pinAuthClient)) {
-                    console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
+                    console.info('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
                 }
 
                 // Если у текущего PIN-клиента уже есть свой scoped профиль —
@@ -203,7 +203,7 @@
                         const prof = tryParseStoredValue(rawProfile, null);
                         if (prof?.profileCompleted || prof?.firstName || prof?.birthDate) {
                             localStorage.removeItem('heys_registration_in_progress');
-                            console.warn('[AuthInit] registrationInProgress cleared (scoped profile present)');
+                            console.info('[AuthInit] registrationInProgress cleared (scoped profile present)');
                         }
                     }
                 } catch (_) { }
@@ -399,39 +399,34 @@
             };
             window.addEventListener('heysSyncCompleted', phaseAHandler);
 
-            // 🚀 OPTIMISTIC MOUNT (2026-05-27 VPN UX fix):
-            // Если для этого clientId уже был успешный sync (есть last_sync_ts) — у нас
-            // ВСЁ есть локально (initLocalData() выше уже подняло данные из LS в React state).
-            // Снимаем gate СРАЗУ, не ждём network roundtrip. syncClient продолжит работать в
-            // фоне и обновит данные через heysSyncCompleted listeners (React tabs ре-рендерятся).
-            // Под VPN с медленным/нестабильным каналом это убивает 60-сек белый экран.
-            const hasPriorSync = (() => {
-                try {
-                    return !!localStorage.getItem('heys_' + pinAuthClient + '_last_sync_ts');
-                } catch (_) { return false; }
-            })();
-            if (hasPriorSync) {
-                devLog('[App] ⚡ Optimistic mount (has prior sync, last_sync_ts present)');
+            // RootWithKey intentionally remounts the app after client activation.
+            // Phase A can already be applied before the new tree subscribes to its event,
+            // so read the client-scoped runtime readiness marker synchronously. A persisted
+            // last_sync_ts is not sufficient: it only proves an older sync happened and
+            // would expose stale questions/header state before the fresh critical pull.
+            const hasRuntimeCriticalData = !!cloudRef.isCriticalSyncReady?.(pinAuthClient);
+            if (hasRuntimeCriticalData) {
+                devLog('[App] ⚡ Stable mount (critical data already ready for client)');
                 gateDismissed = true;
                 initFinalized = true;
                 __heysDismissGate();
                 setIsInitializing(false);
             }
 
-            // 🛡️ SOFT TIMEOUT backstop (2.5s):
-            // Покрывает edge case когда optimistic mount не сработал (first PIN visit на этом
-            // device / cache cleared) И syncClient висит на VPN. После 2.5с форсим render —
-            // sync продолжается в фоне (либо приземлится через event, либо timeout'нет).
+            // 🛡️ SOFT TIMEOUT backstop (8s):
+            // Phase A normally arrives in under a second. Give the critical pull enough time
+            // to produce one stable first frame; only then fall back to the local cache for a
+            // degraded network instead of exposing stale data after 2.5s.
             const softTimeoutHandle = setTimeout(() => {
                 if (initFinalized) return;
                 initFinalized = true;
-                devWarn('[App] ⏰ Soft timeout (2.5s) — forcing render, sync continues in background');
+                devWarn('[App] ⏰ Critical sync timeout (8s) — using local cache, sync continues in background');
                 if (!gateDismissed) {
                     gateDismissed = true;
                     __heysDismissGate();
                 }
                 setIsInitializing(false);
-            }, 2500);
+            }, 8000);
 
             // Синхронизируем с сервером
             // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных

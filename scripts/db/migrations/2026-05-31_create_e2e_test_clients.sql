@@ -40,6 +40,18 @@ FROM curator, (VALUES
 ) AS test(uuid, name, phone, pin)
 ON CONFLICT (id) DO NOTHING;
 
+-- Runtime write gates use subscriptions, not the legacy status columns on
+-- clients. Keep the dedicated fixtures writable so offline/cloud E2E checks
+-- exercise synchronization instead of the read-only paywall branch.
+INSERT INTO public.subscriptions (client_id, active_until)
+VALUES
+  ('11111111-1111-1111-1111-111111111111'::uuid, NOW() + INTERVAL '10 years'),
+  ('22222222-2222-2222-2222-222222222222'::uuid, NOW() + INTERVAL '10 years')
+ON CONFLICT (client_id) DO UPDATE
+SET active_until = GREATEST(public.subscriptions.active_until, EXCLUDED.active_until),
+    canceled_at = NULL,
+    updated_at = NOW();
+
 -- Pre-populate minimal heys_profile для каждого test client.
 -- Без этого app показывает registration form при PIN login,
 -- и тесты падают на ожидании dashboard кнопки "Добавить приём пищи".
@@ -92,5 +104,30 @@ VALUES
     NOW()
   )
 ON CONFLICT (client_id, k) DO NOTHING;
+
+-- Dedicated E2E clients must enter product flows directly. These rows are
+-- permanent test-fixture consent records (never copied from a real profile).
+INSERT INTO public.consents (
+  client_id, consent_type, document_version, granted,
+  consent_method, signature_method, is_active
+)
+SELECT client_id, consent_type, document_version, true, 'checkbox', 'checkbox', true
+FROM (VALUES
+  ('11111111-1111-1111-1111-111111111111'::uuid, 'user_agreement', '1.6'),
+  ('11111111-1111-1111-1111-111111111111'::uuid, 'personal_data', '1.5'),
+  ('11111111-1111-1111-1111-111111111111'::uuid, 'health_data', '1.3'),
+  ('22222222-2222-2222-2222-222222222222'::uuid, 'user_agreement', '1.6'),
+  ('22222222-2222-2222-2222-222222222222'::uuid, 'personal_data', '1.5'),
+  ('22222222-2222-2222-2222-222222222222'::uuid, 'health_data', '1.3')
+) AS fixture(client_id, consent_type, document_version)
+ON CONFLICT (client_id, consent_type, document_version) WHERE granted = true DO NOTHING;
+
+UPDATE public.clients
+SET birth_year = COALESCE(birth_year, 1995),
+    age_confirmed_at = COALESCE(age_confirmed_at, NOW())
+WHERE id IN (
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '22222222-2222-2222-2222-222222222222'::uuid
+);
 
 COMMIT;

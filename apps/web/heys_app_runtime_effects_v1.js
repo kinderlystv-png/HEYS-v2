@@ -1,6 +1,51 @@
 // heys_app_runtime_effects_v1.js — runtime UI effects
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const CONSENT_VALIDATION_CACHE_VERSION = 1;
+
+    const getRequiredConsentVersions = () => {
+        const versions = HEYS.LegalVersions || {};
+        const required = Array.isArray(versions.required)
+            ? versions.required
+            : ['user_agreement', 'personal_data', 'health_data'];
+        return required.reduce((result, type) => {
+            result[type] = String(versions[type] || '');
+            return result;
+        }, {});
+    };
+
+    const getConsentValidationCacheKey = (clientId) => `heys_${clientId}_consent_validation_v1`;
+
+    const writeConsentValidationCache = (clientId) => {
+        if (!clientId) return;
+        try {
+            localStorage.setItem(getConsentValidationCacheKey(clientId), JSON.stringify({
+                version: CONSENT_VALIDATION_CACHE_VERSION,
+                clientId,
+                requiredVersions: getRequiredConsentVersions(),
+                validatedAt: Date.now(),
+            }));
+        } catch (_) { /* localStorage may be unavailable */ }
+    };
+
+    const clearConsentValidationCache = (clientId) => {
+        if (!clientId) return;
+        try { localStorage.removeItem(getConsentValidationCacheKey(clientId)); } catch (_) { /* noop */ }
+    };
+
+    const hasCurrentConsentValidationCache = (clientId) => {
+        if (!clientId) return false;
+        try {
+            const raw = localStorage.getItem(getConsentValidationCacheKey(clientId));
+            if (!raw) return false;
+            const cached = JSON.parse(raw);
+            return cached?.version === CONSENT_VALIDATION_CACHE_VERSION
+                && cached?.clientId === clientId
+                && JSON.stringify(cached?.requiredVersions || {}) === JSON.stringify(getRequiredConsentVersions());
+        } catch (_) {
+            return false;
+        }
+    };
 
     const useWidgetsEditMode = ({ React }) => {
         const [widgetsEditMode, setWidgetsEditMode] = React.useState(false);
@@ -92,14 +137,8 @@
 
             let cancelled = false;
             let retryTimer = null;
+            let onlineRecheckBound = false;
             const CONSENT_CHECK_RETRY_MS = 8000;
-
-            setCheckingConsent(true);
-            setNeedsConsent(false);
-            setConsentCheckError && setConsentCheckError(null);
-            HEYS._consentsChecked = false;
-            HEYS._consentsValid = false;
-            HEYS._consentsCheckError = null;
 
             // Утилита: нормализовать legacy-ответ в shape v2.
             const legacyAsV2 = (clientIdArg, legacyFn) => legacyFn(clientIdArg).then(r => ({
@@ -126,8 +165,34 @@
                 }, CONSENT_CHECK_RETRY_MS);
             };
 
+            const dispatchConsentState = (detail) => {
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:consents-state-changed', { detail }));
+                } catch (_) { /* noop */ }
+            };
+
+            const applyCachedConsent = (source) => {
+                setNeedsConsent(false);
+                setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes([]);
+                setGraceExpiresAt && setGraceExpiresAt(null);
+                setMustBlockReconsent && setMustBlockReconsent(false);
+                setNeedsAgeGate && setNeedsAgeGate(false);
+                setConsentCheckError && setConsentCheckError(null);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = true;
+                HEYS._consentsCheckError = null;
+                dispatchConsentState({ valid: true, needsConsent: false, source });
+            };
+
             const failConsentCheck = (err, source) => {
                 if (cancelled) return;
+                if (hasCurrentConsentValidationCache(clientId)) {
+                    console.warn('[CONSENTS] Consent re-check failed — using current version-matched proof');
+                    applyCachedConsent('consent-cache-fallback');
+                    scheduleCheckRetry();
+                    return;
+                }
                 const checkError = normalizeCheckError(err, source);
                 console.warn('[CONSENTS] Consent check failed — keeping consent form closed:', checkError.message);
                 setNeedsConsent(false);
@@ -158,12 +223,29 @@
                     clearTimeout(retryTimer);
                     retryTimer = null;
                 }
-                setCheckingConsent(true);
-                setNeedsConsent(false);
-                setConsentCheckError && setConsentCheckError(null);
-                HEYS._consentsChecked = false;
-                HEYS._consentsValid = false;
-                HEYS._consentsCheckError = null;
+                const hasCachedValidation = hasCurrentConsentValidationCache(clientId);
+                if (navigator.onLine === false && hasCachedValidation) {
+                    applyCachedConsent('offline-consent-cache');
+                    if (!onlineRecheckBound) {
+                        onlineRecheckBound = true;
+                        window.addEventListener('online', handleOnlineRecheck, { once: true });
+                    }
+                    return;
+                }
+                if (hasCachedValidation) {
+                    // A successful version-bound proof is enough to keep the
+                    // authenticated UI stable while the server revalidates it.
+                    // An explicit invalid/outdated server response below still
+                    // clears the proof and opens the legal gate immediately.
+                    applyCachedConsent('consent-cache-revalidate');
+                } else {
+                    setCheckingConsent(true);
+                    setNeedsConsent(false);
+                    setConsentCheckError && setConsentCheckError(null);
+                    HEYS._consentsChecked = false;
+                    HEYS._consentsValid = false;
+                    HEYS._consentsCheckError = null;
+                }
 
                 const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
                 const legacy = HEYS.Consents?.api?.checkRequired;
@@ -224,6 +306,8 @@
                     const outdated = Array.isArray(r.outdated) ? r.outdated : [];
                     const effectiveConsentValid = !!r.valid && outdated.length === 0 && !r.mustBlock;
                     const needs = !effectiveConsentValid;
+                    if (effectiveConsentValid) writeConsentValidationCache(clientId);
+                    else clearConsentValidationCache(clientId);
                     setNeedsConsent(needs);
                     setCheckingConsent(false);
                     setOutdatedTypes && setOutdatedTypes(outdated);
@@ -255,6 +339,11 @@
                 });
             };
 
+            const handleOnlineRecheck = () => {
+                onlineRecheckBound = false;
+                if (!cancelled) runCheck(0);
+            };
+
             const handleConsentsReady = () => runCheck(0);
             window.addEventListener('heys:consents-ready', handleConsentsReady);
             runCheck(0);
@@ -262,6 +351,7 @@
             return () => {
                 cancelled = true;
                 if (retryTimer) clearTimeout(retryTimer);
+                if (onlineRecheckBound) window.removeEventListener('online', handleOnlineRecheck);
                 window.removeEventListener('heys:consents-ready', handleConsentsReady);
             };
         }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent,

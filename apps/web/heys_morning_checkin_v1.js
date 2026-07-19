@@ -1202,11 +1202,22 @@
   }
 
   function getScopedClientKey(logicalKey, clientId = getCurrentClientId()) {
+    if (!clientId) return logicalKey;
+    const suffix = String(logicalKey || '').startsWith('heys_')
+      ? String(logicalKey).slice('heys_'.length)
+      : String(logicalKey || '');
+    return `heys_${clientId}_${suffix}`;
+  }
+
+  function getLegacyScopedClientKey(logicalKey, clientId = getCurrentClientId()) {
     return clientId ? `heys_${clientId}_${logicalKey}` : logicalKey;
   }
 
   function readScopedClientValue(logicalKey, fallback = null, clientId = getCurrentClientId()) {
-    return readStoredValue(getScopedClientKey(logicalKey, clientId), fallback);
+    const missing = {};
+    const canonical = readStoredValue(getScopedClientKey(logicalKey, clientId), missing);
+    if (canonical !== missing) return canonical;
+    return readStoredValue(getLegacyScopedClientKey(logicalKey, clientId), fallback);
   }
 
   function writeScopedClientValue(logicalKey, value, clientId = getCurrentClientId()) {
@@ -1281,6 +1292,7 @@
         error: meta.error || null,
         plannedStepIds: Array.isArray(meta.plannedStepIds) ? meta.plannedStepIds : null,
         remainingStepIds: Array.isArray(meta.remainingStepIds) ? meta.remainingStepIds : null,
+        syncedStepIds: Array.isArray(meta.syncedStepIds) ? meta.syncedStepIds : null,
         affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null
       };
       const isProblem = event === 'flow_failed'
@@ -1309,7 +1321,8 @@
   function readMorningProgressPersisted(dateKey, clientId = getCurrentClientId()) {
     try {
       const key = getScopedClientKey(getMorningProgressKey(dateKey), clientId);
-      const raw = localStorage.getItem(key);
+      const legacyKey = getLegacyScopedClientKey(getMorningProgressKey(dateKey), clientId);
+      const raw = localStorage.getItem(key) || localStorage.getItem(legacyKey);
       if (!raw) return null;
       const decompress = HEYS.store?.decompress;
       return decompress ? decompress(raw) : JSON.parse(raw);
@@ -1337,7 +1350,12 @@
     remainingStepIds = plannedStepIds,
     replannedStepIds = []
   }) {
-    const existing = readMorningProgress(dateKey, clientId);
+    const persistedProgress = readMorningProgress(dateKey, clientId);
+    const existing = persistedProgress
+      && (!persistedProgress.clientId || persistedProgress.clientId === clientId)
+      && (!persistedProgress.dateKey || persistedProgress.dateKey === dateKey)
+      ? persistedProgress
+      : null;
     const ledger = existing || {
       version: 1,
       clientId,
@@ -1348,10 +1366,27 @@
     };
     const mutationAt = Date.now();
     let changed = !existing;
+    if (!ledger.version) {
+      ledger.version = 1;
+      changed = true;
+    }
+    if (!ledger.clientId) {
+      ledger.clientId = clientId;
+      changed = true;
+    }
+    if (!ledger.dateKey) {
+      ledger.dateKey = dateKey;
+      changed = true;
+    }
+    if (!ledger.flowId) {
+      ledger.flowId = flowId || createMorningFlowId(dateKey);
+      changed = true;
+    }
     ledger.steps = ledger.steps || {};
     ledger.plannedStepIds = Array.isArray(ledger.plannedStepIds) ? ledger.plannedStepIds : [];
-    if (!existing && !ledger.steps.__flow__) {
+    if (!ledger.steps.__flow__) {
       ledger.steps.__flow__ = { status: 'open', attempt: 1, updatedAt: mutationAt };
+      changed = true;
     }
     plannedStepIds.forEach((id) => {
       if (!ledger.plannedStepIds.includes(id)) {
@@ -1420,6 +1455,7 @@
   function markMorningProgressCloudPending(dateKey, stepId, affectedKeys, clientId, note = 'cloud_pending') {
     return markMorningProgressStep(dateKey, stepId, {
       status: 'saved_local',
+      savedAt: Date.now(),
       cloudPending: true,
       syncNote: note,
       affectedKeys: affectedKeys || [],
@@ -1563,11 +1599,14 @@
   function summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone }) {
     const flowStatus = ledger?.steps?.__flow__?.status || null;
     const failed = steps.find((row) => row.status === 'failed_sync');
-    const unresolved = steps.find((row) => isUnresolvedProgressStatus(row.status));
+    const unresolved = steps
+      .filter((row) => isUnresolvedProgressStatus(row.status))
+      .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0))[0];
     const blocking = steps.find((row) => isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row));
     const allCorePresent = Object.values(corePresence || {}).every(Boolean);
     if (failed) return { state: 'failed', label: `ошибка: ${MORNING_STEP_LABELS[failed.id] || failed.id}` };
-    if (unresolved) return { state: 'in_progress', label: `сохраняется: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };
+    if (flowStatus === 'saved_local') return { state: 'in_progress', label: 'чек-ин сохранён локально' };
+    if (unresolved) return { state: 'in_progress', label: `сохранено локально: ${MORNING_STEP_LABELS[unresolved.id] || unresolved.id}` };
     if (flowStatus === 'synced' && blocking) return { state: 'open', label: `не завершён: ${MORNING_STEP_LABELS[blocking.id] || blocking.id}` };
     if (flowStatus === 'synced') return { state: 'complete', label: 'чек-ин завершён' };
     if (flowStatus === 'failed_sync') return { state: 'failed', label: 'ошибка финальной синхронизации' };
@@ -1596,6 +1635,7 @@
         status: row.status || (isMorningStepComplete(id, { dateKey, clientId, day, profile }) ? 'data_present' : 'missing'),
         savedAt: row.savedAt || null,
         syncedAt: row.syncedAt || null,
+        updatedAt: row.updatedAt || null,
         error: row.error || null,
         cloudPending: row.cloudPending === true,
         syncNote: row.syncNote || null,
@@ -1697,15 +1737,6 @@
       return true;
     }
 
-    markMorningProgressStep(dateKey, stepId, {
-      status: 'saved_local',
-      savedAt: Date.now(),
-      affectedKeys: affectedKeys || [],
-      cloudPending: false,
-      syncNote: null,
-      error: null
-    }, clientId);
-
     const complete = isMorningStepComplete(stepId, { dateKey, clientId, saveResult: opts.saveResult });
     if (!complete) {
       const err = new Error('Шаг сохранён не полностью. Проверьте данные и попробуйте ещё раз.');
@@ -1805,9 +1836,80 @@
     }));
   }
 
+  function ensureFinalMorningRequirements(plan) {
+    const dateKey = plan?.dateKey || getTodayKey();
+    const clientId = plan?.clientId || getCurrentClientId();
+    if (!isYesterdayVerifyDecisionReady()) {
+      throw new Error('checkin_decision_pending:проверка прошлых дней');
+    }
+
+    let ledger = readMorningProgress(dateKey, clientId);
+    if (!shouldShowYesterdayVerifyRequired()) return ledger;
+
+    const plannedStepIds = Array.from(new Set([
+      ...(ledger?.plannedStepIds || []),
+      'yesterdayVerify'
+    ]));
+    const yesterdayRow = ledger?.steps?.yesterdayVerify || null;
+    const replannedStepIds = yesterdayRow && isMorningStatusTerminal(yesterdayRow)
+      ? ['yesterdayVerify']
+      : [];
+    ledger = ensureMorningProgress({
+      dateKey,
+      clientId,
+      flowId: ledger?.flowId || plan?.flowId,
+      plannedStepIds,
+      remainingStepIds: ['yesterdayVerify'],
+      replannedStepIds
+    });
+    return ledger;
+  }
+
+  function markMorningProgressCloudSynced(dateKey = getTodayKey(), clientId = getCurrentClientId()) {
+    const ledger = readMorningProgress(dateKey, clientId);
+    if (!ledger?.steps) return null;
+    const syncedAt = Date.now();
+    const syncedStepIds = [];
+    Object.entries(ledger.steps).forEach(([stepId, row]) => {
+      if (!row || row.status !== 'saved_local' || row.cloudPending !== true) return;
+      ledger.steps[stepId] = {
+        ...row,
+        status: 'synced',
+        cloudPending: false,
+        syncNote: null,
+        syncedAt,
+        updatedAt: syncedAt,
+        error: null
+      };
+      syncedStepIds.push(stepId);
+    });
+    if (!syncedStepIds.length) return ledger;
+    ledger.updatedAt = Math.max(syncedAt, (Number(ledger.updatedAt) || 0) + 1);
+    const written = writeMorningProgress(ledger, clientId);
+    traceMorningCheckin('flow_cloud_synced', {
+      dateKey,
+      clientId,
+      flowId: written?.flowId,
+      status: written?.steps?.__flow__?.status || null,
+      syncedStepIds
+    });
+    emitMorningCheckinStatus(dateKey, clientId, 'cloud_synced', { ledger: written });
+    return written;
+  }
+
   function completeMorningCheckin(plan, onComplete) {
     const todayKey = plan?.dateKey || getTodayKey();
     const currentClientId = plan?.clientId || getCurrentClientId();
+    const finalLedger = ensureFinalMorningRequirements(plan);
+    const finalBlocking = getBlockingMorningSteps({
+      ledger: finalLedger,
+      dateKey: todayKey,
+      clientId: currentClientId
+    });
+    if (finalBlocking.length) {
+      const labels = finalBlocking.map((row) => MORNING_STEP_LABELS[row.id] || row.id).join(', ');
+      throw new Error(`checkin_incomplete_steps:${labels}`);
+    }
     markMorningProgressStep(todayKey, '__flow__', {
       status: 'saved_local',
       savedAt: Date.now(),
@@ -2071,6 +2173,8 @@
   HEYS.MorningCheckinUtils.readMorningProgress = readMorningProgress;
   HEYS.MorningCheckinUtils.writeMorningProgress = writeMorningProgress;
   HEYS.MorningCheckinUtils.getMorningCheckinStatus = getMorningCheckinStatus;
+  HEYS.MorningCheckinUtils.ensureFinalMorningRequirements = ensureFinalMorningRequirements;
+  HEYS.MorningCheckinUtils.markMorningProgressCloudSynced = markMorningProgressCloudSynced;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
   HEYS.MorningCheckinDebug = HEYS.MorningCheckinDebug || {};
@@ -2084,6 +2188,15 @@
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));
+
+  window.addEventListener('heys:queue-drained', () => {
+    try {
+      if (HEYS.cloud?.getPendingCount?.() !== 0) return;
+      markMorningProgressCloudSynced();
+    } catch (_) {
+      // Cloud acknowledgement must never break the product flow.
+    }
+  });
 
   /**
    * Быстрый API для показа конкретных шагов
