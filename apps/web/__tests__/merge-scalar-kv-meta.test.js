@@ -204,7 +204,8 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     if (applyStart < 0) {
       throw new Error('Test setup: `function applyForegroundHotSyncValue` not found');
     }
-    const applyArea = source.slice(applyStart, applyStart + 10000);
+    const applyEnd = source.indexOf('\n  // Phase 1b:', applyStart);
+    const applyArea = source.slice(applyStart, applyEnd > applyStart ? applyEnd : undefined);
     expect(applyArea).toContain("baseKey.startsWith('heys_planning_')");
     expect(applyArea).toContain("cloud.getSyncStatus(baseKey) === 'pending'");
     expect(applyArea).toContain('local-pending-write');
