@@ -41,6 +41,8 @@ apps/web/heys_app_hooks_v1.js:202
 apps/web/heys_app_hooks_v1.js:203
 apps/web/heys_app_hooks_v1.js:204
 apps/web/heys_app_hooks_v1.js:552
+# [local-only] Version-bound consent proof must survive reload/offline without entering the cloud sync queue.
+apps/web/heys_app_runtime_effects_v1.js:22
 apps/web/heys_app_shell_v1.js:145
 apps/web/heys_app_shell_v1.js:261
 apps/web/heys_app_tabs_v1.js:53
