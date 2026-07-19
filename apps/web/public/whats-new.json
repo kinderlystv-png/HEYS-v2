@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.19.9ffd1ca3",
+      "buildHash": "9ffd1ca3",
+      "date": "2026-07-19",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Стабильный утренний чек-ин",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Стабильный утренний чек-ин",
+          "description": "Чек-ин надёжно сохраняет шаги, корректно продолжается после перезагрузки и открывается без промежуточных состояний."
+        }
+      ],
+      "coveredCommits": ["ae22f239"]
+    },
+    {
       "version": "2026.07.18.e40349e9",
       "buildHash": "e40349e9",
       "date": "2026-07-18",
@@ -193,22 +209,6 @@
         }
       ],
       "coveredCommits": ["37a6dbf8", "cd8d913e", "99bac7d8", "68d573d5", "6f86312f"]
-    },
-    {
-      "version": "2026.07.18.8f39b7ab",
-      "buildHash": "8f39b7ab",
-      "date": "2026-07-18",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Улучшения синхронизации и стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Улучшили обработку данных",
-          "description": "Доработали внутреннюю синхронизацию и загрузку приложения, чтобы данные между устройствами обрабатывались надёжнее."
-        }
-      ],
-      "coveredCommits": ["8c3fe967", "8ce4e363"]
     }
   ]
 }
