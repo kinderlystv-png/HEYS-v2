@@ -9,6 +9,10 @@ const CHRONO_SRC = fs.readFileSync(
     path.resolve(__dirname, '../heys_planning_chrono_v1.js'),
     'utf8'
 );
+const CHRONO_CSS = fs.readFileSync(
+    path.resolve(__dirname, '../styles/modules/905-planning-chrono.css'),
+    'utf8'
+);
 
 function loadChrono() {
     window.React = React;
@@ -204,6 +208,42 @@ describe('chrono render stability', () => {
         }));
 
         expect(view.container.textContent).toContain('Focus');
+    });
+
+    it('snaps a minutes-driven layout update without changing drag transitions', () => {
+        const activities = [
+            { id: 'a', name: 'Focus', emoji: 'F', hue: 210 },
+            { id: 'b', name: 'Rest', emoji: 'R', hue: 120 },
+        ];
+        const props = {
+            activities,
+            minutesByActivity: { a: 60, b: 30 },
+            maxMin: 60,
+            scope: 'day',
+            recentBadge: null,
+            onPick: () => { },
+            onLongPress: () => { },
+            hasInactive: false,
+            onDragDelete: () => { },
+        };
+        const view = render(React.createElement(Chrono.ChronoCloud, props));
+
+        view.rerender(React.createElement(Chrono.ChronoCloud, {
+            ...props,
+            minutesByActivity: { a: 60, b: 90 },
+            maxMin: 90,
+        }));
+        const cloud = view.container.querySelector('.chrono-cloud__items--radial');
+        expect(cloud?.classList.contains('is-layout-snap')).toBe(true);
+        expect(CHRONO_CSS).toMatch(
+            /\.chrono-cloud__items--radial\.is-layout-snap \.chrono-cloud__slot\s*{[^}]*transition:\s*none;/s
+        );
+        expect(CHRONO_CSS).toMatch(
+            /\.chrono-cloud__slot\s*{[^}]*transition:\s*transform 1\.25s[^;]*;/s
+        );
+        expect(CHRONO_CSS).toMatch(
+            /\.chrono-cloud__items--radial\.is-releasing \.chrono-cloud__slot\s*{[^}]*transition:\s*transform 3\.2s[^;]*;/s
+        );
     });
 
     it('ChronoCloud renders linked plan and fact inside one activity ring', () => {

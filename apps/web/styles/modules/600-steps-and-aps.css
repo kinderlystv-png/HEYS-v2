@@ -918,6 +918,12 @@
   flex-direction: column;
 }
 
+/* Не перекрываем toast-уведомлением кнопки в верхней части продуктового flow. */
+body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
+  top: auto !important;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
 .mc-modal:has(.aps-search-step) .mc-step-content,
 .mc-modal:has(.aps-grams-step) .mc-step-content {
   padding: 0 12px 12px;

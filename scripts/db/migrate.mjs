@@ -38,8 +38,29 @@ function stripSqlComments(sql) {
     .replace(/--[^\n]*/g, '');
 }
 
+function stripDollarQuotedBodies(sql) {
+  let output = '';
+  let cursor = 0;
+  while (cursor < sql.length) {
+    const opener = sql.slice(cursor).match(/^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/)?.[0];
+    if (!opener) {
+      output += sql[cursor];
+      cursor += 1;
+      continue;
+    }
+    const closeAt = sql.indexOf(opener, cursor + opener.length);
+    if (closeAt === -1) {
+      output += sql.slice(cursor);
+      break;
+    }
+    output += ' '.repeat(closeAt + opener.length - cursor);
+    cursor = closeAt + opener.length;
+  }
+  return output;
+}
+
 function assertNoEmbeddedTransactions(sql, migrationPath) {
-  const executable = stripSqlComments(sql);
+  const executable = stripDollarQuotedBodies(stripSqlComments(sql));
   if (/\b(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i.test(executable)) {
     throw new Error(`${migrationPath}: managed migrations must not contain transaction control`);
   }
@@ -224,4 +245,5 @@ export {
   loadManifest,
   prepareMigrations,
   sha256,
+  stripDollarQuotedBodies,
 };

@@ -365,7 +365,7 @@
             mime: result?.mime || blob?.type || payload.content_type,
             media_type: result?.media_type || 'audio',
             size_bytes: result?.size_bytes || blob?.size || null,
-            path: result?.path || null,
+            has_path: !!result?.path,
         });
 
         return {
@@ -504,7 +504,7 @@
                 return savePendingPhoto(base64Data, clientId, date, mealId);
             }
 
-            log('📷 Photo uploaded:', result?.path || '(no path)');
+            log('📷 Photo uploaded:', result?.path ? 'path_ok' : 'path_missing');
             return {
                 url: result?.url || null,
                 path: result?.path || null,
@@ -604,7 +604,7 @@
                 return false;
             }
 
-            log('📷 Photo deleted from storage:', path);
+            log('📷 Photo deleted from storage');
             return true;
         } catch (e) {
             logCritical('📷 deletePhoto exception:', e?.message || e);
@@ -638,7 +638,7 @@
                 return result;
             }
 
-            log('🎙 Audio uploaded:', result?.path || '(no path)');
+            log('🎙 Audio uploaded:', result?.path ? 'path_ok' : 'path_missing');
             return {
                 url: result?.url || null,
                 path: result?.path || null,

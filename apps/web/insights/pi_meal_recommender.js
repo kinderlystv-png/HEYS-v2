@@ -23,14 +23,13 @@
  * - LOG: [MEALREC] noMealsEatenToday flag in scenario evaluation
  *
  * v3.6.0 (19.02.2026):
- * - FIX: calculateOptimalTiming() now respects active insulin wave (v4.0.6)
- *   Before: timing was purely gap-based (lastMeal + 4h gap), completely ignoring wave
- *   After: idealStart = max(gap-based, waveEnd + 30min fat burn)
- *   — uses HEYS.InsulinWave.calculate() with last meal nutrients
+ * - FIX: calculateOptimalTiming() respects the canonical post-meal estimate.
+ *   idealStart = max(gap-based timing, canonical response end), with no extra
+ *   fasting or substrate-use buffer.
  * - FIX: After planner runs, timing sync — if planner first meal is later than recommender
  *   timing, update timingRec with planner's computed start so card shows correct time
  *   (was: card showed 22:44-23:00 naive gap time; now: card shows planner's 23:35-24:35)
- * - LOG: [MEALREC / timing] 🌊 Insulin wave constraint: logs waveEnd, remaining, fatBurnEnd
+ * - LOG: [MEALREC / timing] canonical response timing constraint
  * - LOG: [MEALREC.planner] 🔄 Timing sync: logs before/after when sync applied
  *
  * v3.3.1 (20.02.2026):
@@ -267,16 +266,21 @@
         const remainingKcal = Math.max(0, targetKcal - eatenKcal);
         const remainingProtein = Math.max(0, targetProtein - eatenProtein);
         const proteinProgress = eatenProtein / targetProtein;
+        const goalBlockingProteinDeficit = proteinProgress < 0.8 && remainingProtein > 10;
+        const hasMaterialProteinDeficit = proteinProgress < 0.5 && remainingProtein > 10;
 
         // Adaptive thresholds (fallback to defaults)
         const lateEatingHour = thresholds?.lateEatingHour || 21;
-        const currentHour = Math.floor(currentTime);
+        const currentHour = ((Math.floor(currentTime) % 24) + 24) % 24;
+        const hoursToSleep = Number(context?.sleepContext?.bedtimeHours) - currentTime;
 
         // Training context
         const training = context.training;
         let hoursToTraining = null;
         if (training && training.time) {
-            const trainingTime = parseTime(training.time);
+            let trainingTime = parseTime(training.time);
+            while (trainingTime < currentTime - 12) trainingTime += 24;
+            while (trainingTime > currentTime + 12) trainingTime -= 24;
             hoursToTraining = trainingTime - currentTime;
         }
 
@@ -300,13 +304,17 @@
         const scenarioCandidates = [];
 
         // 1. GOAL_REACHED (highest priority)
-        const goalReachedApplicable = remainingKcal < 50;
+        const goalReachedApplicable = remainingKcal < 50 && !goalBlockingProteinDeficit;
         scenarioCandidates.push({
             priority: 1,
             scenario: SCENARIOS.GOAL_REACHED,
             applicable: goalReachedApplicable,
-            reason: goalReachedApplicable ? 'Дневная цель достигнута' : `Остаток ${remainingKcal} ккал > 50`,
-            metadata: { remainingKcal }
+            reason: goalReachedApplicable
+                ? 'Калории и белок дня закрыты'
+                : (goalBlockingProteinDeficit
+                    ? `Калории почти закрыты, но белок ${Math.round(proteinProgress * 100)}%`
+                    : `Остаток ${remainingKcal} ккал > 50`),
+            metadata: { remainingKcal, proteinProgress, goalBlockingProteinDeficit }
         });
         if (goalReachedApplicable) {
             scenarioCandidates[scenarioCandidates.length - 1].winner = true; // Mark as winner
@@ -315,9 +323,34 @@
             console.groupEnd();
             return {
                 scenario: SCENARIOS.GOAL_REACHED,
-                reason: 'Дневная цель достигнута',
+                reason: 'Калории и белок дня закрыты',
                 icon: SCENARIO_ICONS[SCENARIOS.GOAL_REACHED],
                 metadata: { remainingKcal }
+            };
+        }
+
+        // Калорийная цель может быть уже достигнута, когда белок сильно отстаёт.
+        // Это не GOAL_REACHED: разрешаем небольшой белковый приём в пределах
+        // практической цели одного приёма, а время/сон окончательно проверит planner.
+        if (remainingKcal < 50 && goalBlockingProteinDeficit) {
+            const proteinCatchupG = Math.min(remainingProtein, getPracticalProteinCapG(profile));
+            const proteinCatchupKcal = Math.min(240, Math.max(100, proteinCatchupG * 4));
+            scenarioCandidates.push({
+                priority: 1.5,
+                scenario: SCENARIOS.PROTEIN_DEFICIT,
+                applicable: true,
+                winner: true,
+                reason: `Калории почти закрыты, белок ${Math.round(proteinProgress * 100)}%`,
+                metadata: { remainingKcal, remainingProtein, proteinProgress, proteinCatchupKcal }
+            });
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.PROTEIN_DEFICIT} (calories reached, protein incomplete)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.PROTEIN_DEFICIT,
+                reason: `Калории почти закрыты, белок ${Math.round(proteinProgress * 100)}% от цели`,
+                icon: SCENARIO_ICONS[SCENARIOS.PROTEIN_DEFICIT],
+                metadata: { remainingKcal, remainingProtein, proteinProgress, proteinCatchupKcal }
             };
         }
 
@@ -391,13 +424,24 @@
         // Priority: Sleep quality > Protein goal completion
         // Rationale: After lateEatingHour, even with protein deficit,
         // recommend light meal to avoid heavy digestion before sleep
-        const lateEveningApplicable = currentHour >= lateEatingHour && remainingKcal > 150;
+        const hasStressPriority = stress >= 4 || mood <= 2;
+        const sleepConfidence = context?.sleepContext?.confidence || 'low';
+        const lateBySleep = Number.isFinite(hoursToSleep) && hoursToSleep >= 0 && hoursToSleep <= 4;
+        const lateByClockFallback = sleepConfidence === 'low' && currentHour >= lateEatingHour;
+        const lateEveningApplicable = (lateBySleep || lateByClockFallback)
+            && remainingKcal > 150
+            && !hasMaterialProteinDeficit
+            && !hasStressPriority;
         scenarioCandidates.push({
             priority: 5,
             scenario: SCENARIOS.LATE_EVENING,
             applicable: lateEveningApplicable,
-            reason: lateEveningApplicable ? 'Поздний вечер — лёгкий приём' : (currentHour < lateEatingHour ? `Еще рано (${currentHour}:00 < ${lateEatingHour}:00)` : `Остаток ${remainingKcal} ккал <= 150`),
-            metadata: { currentHour, lateEatingHour, remainingKcal }
+            reason: lateEveningApplicable
+                ? `До сна ${hoursToSleep.toFixed(1)} ч — лёгкий приём`
+                : (hasMaterialProteinDeficit
+                    ? 'Сначала учитываем значимый дефицит белка'
+                    : (hasStressPriority ? 'Сначала учитываем стресс и настроение' : `До сна ${Number.isFinite(hoursToSleep) ? hoursToSleep.toFixed(1) + ' ч' : 'нет точной оценки'}`)),
+            metadata: { currentHour, lateEatingHour, remainingKcal, hoursToSleep, sleepConfidence, hasMaterialProteinDeficit, hasStressPriority }
         });
         if (lateEveningApplicable) {
             scenarioCandidates[scenarioCandidates.length - 1].winner = true;
@@ -406,9 +450,9 @@
             console.groupEnd();
             return {
                 scenario: SCENARIOS.LATE_EVENING,
-                reason: 'Поздний вечер — лёгкий приём',
+                reason: `До сна около ${hoursToSleep.toFixed(1)} ч — лёгкий приём`,
                 icon: SCENARIO_ICONS[SCENARIOS.LATE_EVENING],
-                metadata: { currentHour, lateEatingHour, remainingKcal }
+                metadata: { currentHour, lateEatingHour, remainingKcal, hoursToSleep, sleepConfidence }
             };
         }
 
@@ -609,12 +653,28 @@
         }
 
         // Extract context
-        const currentTime = parseTime(context.currentTime || getCurrentTime());
+        const currentTimeClock = context.currentTime || getCurrentTime();
+        const currentTime = HEYS.InsightsPI?.mealPlanner?.normalizePlanningCurrentTime?.(currentTimeClock)
+            ?? parseTime(currentTimeClock);
         const lastMeal = context.lastMeal || {};
         const dayTarget = context.dayTarget || profile.norm || {};
         const dayEaten = context.dayEaten || {};
         const training = context.training;
-        const sleepTarget = parseTime(context.sleepTarget || '23:00');
+        const sleepContext = HEYS.InsightsPI?.mealPlanner?.resolveSleepContext?.(days, profile, {
+            currentTimeHours: currentTime,
+            plannedBedtime: context.plannedBedtime || null
+        }) || {
+            bedtimeHours: parseTime(context.sleepTarget || '23:00'),
+            displayTime: context.sleepTarget || '23:00',
+            source: 'legacy_context',
+            confidence: 'low',
+            confidenceScore: 0.3,
+            sampleSize: 0,
+            variabilityMinutes: null,
+            explanation: 'Время сна взято из legacy-контекста'
+        };
+        const sleepTarget = sleepContext.bedtimeHours;
+        const resolvedContext = { ...context, sleepContext, sleepTarget: sleepContext.displayTime };
 
         // Load adaptive thresholds (v2.4 feature)
         let thresholds = null;
@@ -635,7 +695,7 @@
         const patternHints = loadPatternHints(days, profile, pIndex);
 
         // Analyze context → determine scenario (v2.4 feature)
-        const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints);
+        const contextAnalysis = analyzeCurrentContext(resolvedContext, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints);
         console.info(`${LOG_PREFIX} 🎯 Scenario detected:`, {
             scenario: contextAnalysis.scenario,
             reason: contextAnalysis.reason,
@@ -646,13 +706,15 @@
         const patternImpact = [];
 
         // Calculate timing recommendation
-        const timingRec = calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact);
+        const timingRec = calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact, pIndex);
+        timingRec.sleepTargetHours = sleepTarget;
+        timingRec.sleepContext = sleepContext;
 
         // Calculate macros recommendation (scenario-aware v2.4)
         const macrosRec = calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, patternHints, patternImpact);
 
         // Generate meal suggestions (Smart Product Picker v2.5)
-        const suggestionsResult = generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, patternHints, patternImpact);
+        const suggestionsResult = generateSmartMealSuggestions(contextAnalysis, macrosRec, resolvedContext, profile, pIndex, patternHints, patternImpact);
 
         // v3.1: Handle both grouped and flat modes
         let suggestions, mode, groups;
@@ -682,7 +744,7 @@
         });
 
         // Generate reasoning (scenario-aware v2.4)
-        const reasoning = generateReasoning(contextAnalysis, timingRec, macrosRec, dayTarget, dayEaten, training);
+        let reasoning = generateReasoning(contextAnalysis, timingRec, macrosRec, dayTarget, dayEaten, training);
 
         // 🆕 v3.1: Multi-Meal Planning (Phase 1)
         // Вызываем планировщик для расчёта всех оставшихся приёмов до сна
@@ -808,7 +870,8 @@
                     days: days,
                     pIndex: pIndex,
                     // R1-14: явный sleepStart дня имеет приоритет над усреднением истории
-                    daySleepStart: context.daySleepStart || null,
+                    sleepContext,
+                    hungerSignal: resolvedContext.hungerSignal || null,
                     isRefeedDay: !!context.isRefeedDay,
                     // R4-5: gradient stress/mood signals
                     stressMoodSignals,
@@ -821,7 +884,7 @@
                     // R12-A: currentDay (тренировки + контекст дня) для R4-8 recovery factor
                     // и POST_WORKOUT scenario. Без этого вся работа Раунда 4-8 по recovery
                     // была неактивна в production (R4-8 ищет params.currentDay?.workouts).
-                    currentDay: context.currentDay || null,
+                    currentDay: resolvedContext.currentDay || null,
                     // R12-B: glycemicLoad history для GL_TARGET_DAY override и SUGAR_RESET
                     glycemicLoadHistory: patternHints?.glycemicLoad || null,
                     addedSugarHistory: patternHints?.addedSugarDependency || null,
@@ -987,13 +1050,59 @@
                         });
 
                     } else if (mealsPlan.meals[0]) {
-                        // Single meal from planner — используем уже сгенерированные продукты
-                        if (mode === 'grouped' && groups) {
-                            mealsPlan.meals[0].groups = groups;
-                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${groups.length} groups to single planned meal`);
-                        } else if (suggestions) {
-                            mealsPlan.meals[0].suggestions = suggestions;
-                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${suggestions.length} suggestions to single planned meal`);
+                        // Single meal тоже должен получить продукты из ФИНАЛЬНЫХ
+                        // макросов planner. Раньше сюда прокидывались suggestions,
+                        // созданные до planner sync: карточка могла уже показать
+                        // 40 г белка, а picker продолжал собирать 100+ г.
+                        const plannedMeal = mealsPlan.meals[0];
+                        const singleMealMacrosRec = {
+                            ...macrosRec,
+                            protein: plannedMeal.macros.prot,
+                            carbs: plannedMeal.macros.carbs,
+                            fat: plannedMeal.macros.fat,
+                            kcal: plannedMeal.macros.kcal,
+                            remainingKcal: plannedMeal.macros.kcal,
+                            remainingMeals: 1,
+                            isLastMeal: true,
+                            targetGL: plannedMeal.targetGL ?? null
+                        };
+                        const singleMealContext = {
+                            ...contextAnalysis,
+                            scenario: plannedMeal.scenario || contextAnalysis.scenario
+                        };
+                        try {
+                            const singleMealProducts = generateSmartMealSuggestions(
+                                singleMealContext,
+                                singleMealMacrosRec,
+                                resolvedContext,
+                                profile,
+                                pIndex,
+                                patternHints || [],
+                                patternImpact
+                            );
+                            if (singleMealProducts?.mode === 'grouped' && singleMealProducts.groups) {
+                                mode = 'grouped';
+                                groups = singleMealProducts.groups;
+                                suggestions = undefined;
+                                plannedMeal.groups = groups;
+                                plannedMeal.productMode = 'grouped';
+                                console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Regenerated ${groups.length} groups from final single-meal macros`);
+                            } else {
+                                const nextSuggestions = singleMealProducts?.suggestions
+                                    || (Array.isArray(singleMealProducts) ? singleMealProducts : null);
+                                if (nextSuggestions) {
+                                    mode = 'flat';
+                                    suggestions = nextSuggestions;
+                                    groups = undefined;
+                                    plannedMeal.suggestions = suggestions;
+                                    plannedMeal.productMode = 'flat';
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Regenerated ${suggestions.length} suggestions from final single-meal macros`);
+                                }
+                            }
+                        } catch (singleMealErr) {
+                            console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Single-meal product regeneration failed, keeping initial suggestions:`, singleMealErr.message);
+                            if (mode === 'grouped' && groups) plannedMeal.groups = groups;
+                            else if (suggestions) plannedMeal.suggestions = suggestions;
                         }
                     }
                 } else {
@@ -1035,10 +1144,11 @@
             macrosRec.plannerSynced = true;
             macrosRec.plannerEmptyPlan = true;
             macrosRec.plannerEmptyReason = noPlanReason;
+            macrosRec.plannerDecision = mealsPlan.summary || null;
         }
 
         // R1-15: двусторонний timing sync. Раньше обновляли только если planner вернул
-        // ПОЗЖЕ recommender'а — но planner всегда авторитетен (он учёл волну, жиросжигание,
+        // ПОЗЖЕ recommender'а — planner авторитетен для итогового расписания.
         // deadline до сна). Если он вернул раньше — это тоже его решение.
         if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
             const firstPlannedMeal = mealsPlan.meals[0];
@@ -1058,7 +1168,7 @@
                 timingRec.idealStart = plannerStartHours;
                 timingRec.idealEnd = plannerEndHours;
                 timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
-                timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
+                timingRec.reason = 'Планировщик: после расчётного окна текущего приёма';
                 timingRec.plannerSynced = true;
             }
 
@@ -1097,6 +1207,11 @@
                 contextAnalysis.icon = SCENARIO_ICONS[plannerScenario] || contextAnalysis.icon;
                 contextAnalysis.scenarioSyncedToPlanner = true;
             }
+
+            // Timing, macros и scenario уже синхронизированы с planner — reasoning
+            // обязан пересчитаться из тех же финальных данных. Иначе карточка
+            // показывала диапазон 20–30 г, но ниже сохраняла старое «добрать 32 г».
+            reasoning = generateReasoning(contextAnalysis, timingRec, macrosRec, dayTarget, dayEaten, training);
         }
 
         const result = {
@@ -1114,6 +1229,7 @@
             confidence: 0.75, // Base confidence, will be enhanced below
             method: 'context_engine', // Context-aware pipeline
             version: '3.6', // v3.6.0: wave-aware timing + timing sync after planner
+            sleepContext,
             // 🆕 Multi-meal plan
             mealsPlan: mealsPlan?.available ? mealsPlan : null
         };
@@ -1424,41 +1540,40 @@
      * Calculate optimal meal timing (threshold-aware v2.4, wave-aware v4.0.6)
      * @private
      */
-    function calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact = []) {
+    function calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact = [], pIndex = null) {
         // P0 Fix: Check if lastMeal actually exists (not empty object)
         const hasLastMeal = lastMeal && lastMeal.time;
-        const lastMealTime = hasLastMeal ? parseTime(lastMeal.time) : 0;
+        const lastMealTime = hasLastMeal
+            ? (HEYS.InsightsPI?.mealPlanner?.clockTimeAtOrBefore?.(lastMeal.time, currentTime) ?? parseTime(lastMeal.time))
+            : 0;
         const hoursSinceLastMeal = hasLastMeal ? Math.max(0, currentTime - lastMealTime) : 0;
 
-        // v4.0.6: Calculate insulin wave end time for timing constraint
+        // Канонический ориентир завершения отклика текущего приёма.
         let waveEndHours = null;
-        const FAT_BURN_WINDOW_HOURS = 0.5; // 30 min fat burn after wave ends
         if (hasLastMeal && HEYS.InsulinWave?.calculate) {
             try {
+                const getProductFromItem = (item) => {
+                    const id = item?.productId || item?.product_id || item?.id;
+                    if (pIndex?.byId?.get && id) return pIndex.byId.get(id) || item;
+                    return item;
+                };
                 const waveData = HEYS.InsulinWave.calculate({
-                    lastMealTime: lastMeal.time,
-                    nutrients: {
-                        kcal: lastMeal.totals?.kcal || 0,
-                        protein: lastMeal.totals?.prot || lastMeal.totals?.protein || 0,
-                        carbs: lastMeal.totals?.carbs || 0,
-                        fat: lastMeal.totals?.fat || 0,
-                        glycemicLoad: lastMeal.totals?.glycemicLoad || 0
-                    },
-                    profile: null, // minimal call — profile not always available here
-                    baseWaveHours: 3
+                    meals: [lastMeal],
+                    pIndex,
+                    getProductFromItem,
+                    trainings: training ? [training] : []
                 });
                 if (waveData?.duration) {
                     waveEndHours = lastMealTime + waveData.duration / 60;
-                    console.info(`${LOG_PREFIX} [MEALREC / timing] 🌊 Insulin wave constraint:`, {
+                    console.info(`${LOG_PREFIX} [MEALREC / timing] Post-meal estimate:`, {
                         lastMeal: lastMeal.time,
-                        waveDuration: waveData.duration + 'min',
-                        waveEnd: formatTime(waveEndHours),
-                        waveRemaining: waveData.remaining + 'min',
-                        fatBurnEnd: formatTime(waveEndHours + FAT_BURN_WINDOW_HOURS)
+                        duration: waveData.duration + 'min',
+                        responseEnd: formatTime(waveEndHours),
+                        confidence: waveData.confidence?.level
                     });
                 }
             } catch (err) {
-                console.warn(`${LOG_PREFIX} [MEALREC / timing] ⚠️ InsulinWave calc failed:`, err.message);
+                console.warn(`${LOG_PREFIX} [MEALREC / timing] Canonical response estimate failed:`, err.message);
             }
         }
 
@@ -1507,7 +1622,9 @@
 
         // Case 1: Training soon (within 2h)
         if (training && training.time) {
-            const trainingTime = parseTime(training.time);
+            let trainingTime = parseTime(training.time);
+            while (trainingTime < currentTime - 12) trainingTime += 24;
+            while (trainingTime > currentTime + 12) trainingTime -= 24;
             const hoursToTraining = trainingTime - currentTime;
 
             if (hoursToTraining > 0 && hoursToTraining <= 2) {
@@ -1546,27 +1663,26 @@
             });
         }
 
-        // v4.0.6: Enforce insulin wave constraint — don't suggest eating during active wave
+        // Используем центральную оценку без дополнительного fasting-буфера.
         if (waveEndHours !== null) {
-            const waveConstraintEnd = waveEndHours + FAT_BURN_WINDOW_HOURS;
+            const waveConstraintEnd = waveEndHours;
             if (idealStart < waveConstraintEnd) {
                 const prevStart = idealStart;
                 idealStart = waveConstraintEnd;
                 idealEnd = Math.max(idealEnd, idealStart + 0.5);
-                reason = `Ждём конец инсулиновой волны + жиросжигание (${formatTime(waveEndHours)})`;
-                console.info(`${LOG_PREFIX} [MEALREC / timing] 🌊 Wave constraint applied:`, {
+                reason = `Ориентир после текущего приёма — ${formatTime(waveEndHours)}`;
+                console.info(`${LOG_PREFIX} [MEALREC / timing] Response estimate applied:`, {
                     prevStart: formatTime(prevStart),
-                    waveEnd: formatTime(waveEndHours),
-                    fatBurnEnd: formatTime(waveConstraintEnd),
+                    responseEnd: formatTime(waveEndHours),
                     newIdealStart: formatTime(idealStart),
                     newIdealEnd: formatTime(idealEnd)
                 });
                 patternImpact.push({
-                    pattern: 'InsulinWave',
+                    pattern: 'PostprandialResponse',
                     area: 'timing',
                     before: formatTime(prevStart),
                     after: formatTime(idealStart),
-                    reason: `Wave ends ${formatTime(waveEndHours)} + 30min fat burn`
+                    reason: `Estimated response window ends ${formatTime(waveEndHours)}`
                 });
             }
         }
@@ -1631,6 +1747,8 @@
         const remainingKcal = Math.max(0, targetKcal - eatenKcal);
         const remainingProtein = Math.max(0, targetProtein - eatenProtein);
         const remainingCarbs = Math.max(0, targetCarbs - eatenCarbs);
+        const proteinCatchupKcal = Number(contextAnalysis?.metadata?.proteinCatchupKcal) || 0;
+        const effectiveMealKcalBudget = Math.max(remainingKcal, proteinCatchupKcal);
 
         console.info(`${LOG_PREFIX} 📊 Remaining today:`, {
             kcal: remainingKcal,
@@ -1640,7 +1758,9 @@
         });
 
         // Estimate meals remaining today
-        const hoursUntilSleep = timingRec.idealStart ? (parseTime('23:00') - timingRec.idealStart) : 8;
+        const hoursUntilSleep = Number.isFinite(timingRec.sleepTargetHours) && Number.isFinite(timingRec.idealStart)
+            ? Math.max(0, timingRec.sleepTargetHours - timingRec.idealStart)
+            : 8;
         const mealsRemaining = Math.max(1, Math.floor(hoursUntilSleep / 4));
         console.info(`${LOG_PREFIX} ⏱️ Meals remaining estimate:`, {
             hoursUntilSleep: Math.round(hoursUntilSleep * 10) / 10,
@@ -1755,7 +1875,7 @@
 
             case SCENARIOS.PROTEIN_DEFICIT:
                 // High protein meal: max 300 kcal (or last meal override)
-                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 300);
+                mealKcal = lastMealKcalTarget || Math.min(effectiveMealKcalBudget, 300);
                 if (isLastMeal) {
                     // R1 fix (Sprint 6): use actual remaining protein need — avoids P5-cap trigger
                     // Physiological ceiling: Areta et al., 2013 — ~100g absorbed per meal
@@ -2016,15 +2136,18 @@
             });
         }
 
-        // P5 fix (v3.3.1): Physiological protein cap — max 100g absorbed per meal (Areta et al., 2013)
-        const PROTEIN_CAP_PER_MEAL_G = 100;
+        // P5: practical protein target for one meal. Старый cap=100 г ошибочно
+        // трактовал «усвоение» как полезную цель и позволял карточке предлагать
+        // почти весь дневной недобор за раз. Синхронизируемся с planner:
+        // базово 40 г, до 0.5 г/кг для крупного пользователя, максимум 60 г.
+        const PROTEIN_CAP_PER_MEAL_G = getPracticalProteinCapG(profile);
         if (mealProtein > PROTEIN_CAP_PER_MEAL_G) {
             const cappedFrom = mealProtein;
-            const protDeltaG = cappedFrom - PROTEIN_CAP_PER_MEAL_G;
             mealProtein = PROTEIN_CAP_PER_MEAL_G;
-            // Transfer excess protein kcal to carbs (protein 3kcal/g → carbs 4kcal/g → 0.75 carb equivalent)
-            mealCarbs = Math.round(mealCarbs + protDeltaG * 0.75);
-            console.warn(`${LOG_PREFIX} ⚠️ P5-cap: Protein ${cappedFrom}g → ${PROTEIN_CAP_PER_MEAL_G}g (physiological max per meal), carbs compensated to ${mealCarbs}g`);
+            // Не замещаем срезанный дневной недобор другими макросами автоматически:
+            // это изменило бы смысл цели и могло бы создать второй перекос.
+            mealKcal = mealProtein * 4 + mealCarbs * 4 + mealFat * 9;
+            console.warn(`${LOG_PREFIX} ⚠️ P5-cap: Protein ${cappedFrom}g → ${PROTEIN_CAP_PER_MEAL_G}g (practical per-meal target); excess daily deficit is not forced into this meal`);
         }
 
         // FINAL SAFETY: Never exceed remaining kcal
@@ -2032,19 +2155,19 @@
         // Epsilon 2%: ниже этого порога scale-down — это шум округлений
         // (Math.round'ы по белкам/углам/жирам), который раньше печатался как
         // «Scaled down ... scale: 100%». Реально нечего показывать.
-        if (estimatedKcal > remainingKcal * 1.02) {
-            const scale = remainingKcal / estimatedKcal;
+        if (estimatedKcal > effectiveMealKcalBudget * 1.02) {
+            const scale = effectiveMealKcalBudget / estimatedKcal;
             mealProtein = Math.round(mealProtein * scale);
             mealCarbs = Math.round(mealCarbs * scale);
             mealFat = Math.round(mealFat * scale);
-            mealKcal = remainingKcal;
+            mealKcal = effectiveMealKcalBudget;
             console.warn(`${LOG_PREFIX} ⚠️ Scaled down to fit remaining kcal:`, {
                 scale: Math.round(scale * 100) + '%',
                 finalKcal: mealKcal
             });
-        } else if (estimatedKcal > remainingKcal) {
+        } else if (estimatedKcal > effectiveMealKcalBudget) {
             // Тихая корректировка под remainingKcal без warning'а.
-            mealKcal = remainingKcal;
+            mealKcal = effectiveMealKcalBudget;
         }
 
         console.info(`${LOG_PREFIX} ✅ Final meal macros:`, {
@@ -2478,6 +2601,12 @@
         return reasoning;
     }
 
+    function getPracticalProteinCapG(profile) {
+        const rawWeight = Number(profile?.weight ?? profile?.weightKg ?? profile?.bodyMassKg);
+        const weightKg = Number.isFinite(rawWeight) && rawWeight > 20 && rawWeight < 400 ? rawWeight : 70;
+        return Math.min(60, Math.max(40, Math.round(weightKg * 0.5)));
+    }
+
     /**
      * Helper: parse time string to hours (decimal)
      * @private
@@ -2493,8 +2622,11 @@
      * @private
      */
     function formatTime(decimalHours) {
-        const hours = Math.floor(decimalHours);
-        const minutes = Math.round((decimalHours - hours) * 60);
+        if (!Number.isFinite(decimalHours)) return '—';
+        let hours = Math.floor(decimalHours);
+        let minutes = Math.round((decimalHours - hours) * 60);
+        if (minutes >= 60) { hours += 1; minutes = 0; }
+        hours = ((hours % 24) + 24) % 24;
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
 

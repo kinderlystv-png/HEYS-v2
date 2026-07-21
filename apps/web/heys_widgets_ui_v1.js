@@ -1744,60 +1744,24 @@
       );
     }
 
-    // === Past-day: специальная версия ===
-    if (isPastDay) {
-      return React.createElement(InsulinWavePastDayContent, { widget, data, d, isShort });
-    }
+    const mainLabel = status === 'complete' ? 'Окно завершено' : 'После еды';
 
-    // === Сегодня без завтрака: ночной липолиз с рекордом ===
-    if (isOvernightLipolysis) {
-      return React.createElement(InsulinWaveOvernightContent, { widget, data, d, isShort });
-    }
-
-    // Главный заголовок — нейтральный статус волны без обещаний жиросжигания.
-    const mainLabel = isLipolysis
-      ? (isNightTime ? 'Низкая волна' : 'Низкая волна')
-      : status === 'decline' ? 'Волна снижается'
-        : 'Волна активна';
-
-    const mainLabelColor = isLipolysis
-      ? '#22c55e'
-      : status === 'decline' ? '#22c55e'
-        : '#f97316'; // ярко-оранжевый = предупреждение
+    const mainLabelColor = status === 'complete' ? '#167D61' : '#2F6BFF';
 
     const timeLabelColor = '#3b82f6'; // всегда синий
 
-    // Время до липолиза или "сейчас"
-    const timeLabel = isLipolysis
-      ? 'Сейчас'
+    const timeLabel = status === 'complete'
+      ? 'Готово'
       : remaining > 0
         ? (remaining >= 60
           ? `ещё ${Math.floor(remaining / 60)}ч ${Math.round(remaining % 60)}м`
           : `ещё ${Math.round(remaining)} мин`)
         : '—';
 
-    // Сколько минут уже идёт низкая волна (по endTime как времени старта)
-    const calcLipolysisElapsed = (et) => {
-      if (!et) return 0;
-      const [h, m] = et.split(':').map(Number);
-      if (isNaN(h)) return 0;
-      const now = new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      const startMin = h * 60 + (m || 0);
-      let diff = nowMin - startMin;
-      if (diff < 0) diff += 1440;
-      return diff > 720 ? 0 : diff; // не больше 12ч
-    };
-    const lipolysisMin = isLipolysis ? calcLipolysisElapsed(endTime) : 0;
-    // Rough energy estimate, kept neutral in UI copy.
-    const lipolysisKcal = Math.round(lipolysisMin * 1.15);
-
-    const subText = isLipolysis
-      ? (lipolysisKcal > 3
-        ? `~${lipolysisKcal} ккал могли идти из запасов`
-        : (isNightTime ? 'Ночная низкая волна' : 'Спокойный промежуток'))
-      : (endTime ? `Низкая волна около ${endTime}` : 'Ждём снижения волны');
-    const subTextColor = isLipolysis ? '#22c55e' : '#eab308';
+    const subText = status === 'complete'
+      ? 'Ориентируйся на голод и план'
+      : (data?.endTimeRange ? `Диапазон ${data.endTimeRange}` : endTime ? `Ориентир ${endTime}` : 'Уточняем диапазон');
+    const subTextColor = '#6B7C93';
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
       progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
@@ -1851,7 +1815,6 @@
 
   function InsulinWaveOvernightContent({ data, d, isShort }) {
     const lipolysisMin = data?.lipolysisMinutes || 0;
-    const lipolysisKcal = data?.lipolysisKcal || 0;
     const record = data?.lipolysisRecord || {};
     const recordMin = record.minutes || 0;
     const isRecord = data?.isRecord || false;
@@ -1906,7 +1869,7 @@
       },
         React.createElement('div', {
           style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
-        }, lipolysisKcal > 0 ? `~${lipolysisKcal} ккал сейчас` : 'Липолиз идёт'),
+        }, 'Ориентир предыдущего приёма завершён'),
         recordLabel ? React.createElement('div', {
           style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
         }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
@@ -1918,7 +1881,6 @@
   function InsulinWavePastDayContent({ widget, data, d, isShort }) {
     const windowH = data.fatBurningWindowH || 0;
     const windowM = data.fatBurningWindowM || 0;
-    const kcal = data.fatBurningKcal || 0;
     const record = data.lipolysisRecord || {};
     const isRecord = data.isRecord || false;
     const windowMin = data.fatBurningWindowMin || 0;
@@ -1979,13 +1941,13 @@
       React.createElement('div', {
         style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
       }, sparkline),
-      // Bottom: kcal + record
+      // Bottom: neutral estimate copy + legacy interval record
       React.createElement('div', {
         style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
       },
         React.createElement('div', {
           style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
-        }, stillActive ? `~${kcal} ккал могли идти из запасов` : kcal > 0 ? `~${kcal} ккал из запасов` : 'Без низкой волны'),
+        }, 'Ориентируйтесь на голод и план питания'),
         !stillActive && recordLabel ? React.createElement('div', {
           style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
         }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
@@ -3593,7 +3555,7 @@
         case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316', short: 'Активна' };
         case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: '#eab308', short: 'Завершается' };
         case 'soon': return { emoji: '⏳', label: 'Скоро закончится', color: '#22c55e', short: 'Скоро' };
-        case 'lipolysis': return { emoji: '🔥', label: 'Липолиз!', color: '#10b981', short: 'Липолиз!' };
+        case 'lipolysis': return { emoji: '✓', label: 'Окно завершено', color: '#10b981', short: 'Завершено' };
         default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8', short: '—' };
       }
     };
@@ -3606,7 +3568,7 @@
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-insulin widget-insulin--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '🩸'),
+        React.createElement('div', { className: 'widget-micro__label' }, '◷'),
         React.createElement('div', { className: 'widget-insulin__micro' },
           React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
           showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null

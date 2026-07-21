@@ -21,6 +21,67 @@
     const SUPPLEMENTS_PANEL_PROFILE_FIELD = 'showDiarySupplementsPanel';
     const DISTRIBUTION_PANEL_PROFILE_FIELD = 'showDiaryDistributionPanel';
     const INSULIN_WAVE_PANEL_PROFILE_FIELD = 'showDiaryInsulinWavePanel';
+
+    function getEmptyMeals(day) {
+        return (Array.isArray(day?.meals) ? day.meals : [])
+            .map((meal, index) => ({ meal, index }))
+            .filter(({ meal }) => !Array.isArray(meal?.items) || meal.items.length === 0);
+    }
+
+    function openFirstEmptyMeal(emptyMeal) {
+        if (!emptyMeal || typeof document === 'undefined') return;
+        const selector = `.meal-card[data-meal-index="${emptyMeal.index}"]`;
+        const card = document.querySelector(selector);
+        if (!card) {
+            document.getElementById('diary-heading')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        card.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        const openAddProduct = () => {
+            const currentCard = document.querySelector(selector);
+            const addButton = currentCard?.querySelector?.('button[aria-label="Добавить продукт"]');
+            if (addButton) {
+                addButton.click();
+                return;
+            }
+            currentCard?.querySelector?.('.meal-collapsed-plaque')?.click?.();
+            window.setTimeout(() => {
+                document.querySelector(selector)
+                    ?.querySelector?.('button[aria-label="Добавить продукт"]')
+                    ?.click?.();
+            }, 180);
+        };
+        window.setTimeout(openAddProduct, 220);
+    }
+
+    function renderEmptyMealBanner(React, day) {
+        const emptyMeals = getEmptyMeals(day);
+        if (emptyMeals.length === 0) return null;
+        const count = emptyMeals.length;
+        const title = count === 1 ? 'Приём пищи пока пуст' : `Не заполнено приёмов: ${count}`;
+        const description = count === 1
+            ? 'Добавьте продукты, чтобы дневник и расчёты были точными.'
+            : 'Добавьте продукты в каждый приём, чтобы дневник и расчёты были точными.';
+
+        return React.createElement('aside', {
+            className: 'empty-meal-alert',
+            role: 'alert',
+            'aria-live': 'polite'
+        },
+            React.createElement('span', { className: 'empty-meal-alert__icon', 'aria-hidden': 'true' }, '!'),
+            React.createElement('div', { className: 'empty-meal-alert__copy' },
+                React.createElement('strong', null, title),
+                React.createElement('span', null, description)
+            ),
+            React.createElement('button', {
+                type: 'button',
+                className: 'empty-meal-alert__action',
+                onClick: () => openFirstEmptyMeal(emptyMeals[0])
+            }, 'Заполнить')
+        );
+    }
+
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -1069,6 +1130,7 @@
         };
 
         return React.createElement(React.Fragment, null,
+            renderEmptyMealBanner(React, day),
             React.createElement(DiaryCompactSummary, {
                 app,
                 date,
@@ -1236,4 +1298,6 @@
 
     HEYS.dayDiarySection = HEYS.dayDiarySection || {};
     HEYS.dayDiarySection.renderDiarySection = renderDiarySection;
+    HEYS.dayDiarySection.getEmptyMeals = getEmptyMeals;
+    HEYS.dayDiarySection.renderEmptyMealBanner = renderEmptyMealBanner;
 })(window.HEYS = window.HEYS || {});

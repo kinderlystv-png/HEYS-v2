@@ -139,6 +139,150 @@
     return Array.from(byId.values()).sort((left, right) => String(left.id).localeCompare(String(right.id)));
   }
 
+  // Hunger assessments are an append/update event log shared by tabs and
+  // devices. Whole-array LWW is unsafe here: a stale snapshot can erase events
+  // that were recorded elsewhere. There is no user-facing delete action, so
+  // absence from one side is not a tombstone.
+  function mergeHungerStatusEvents(incoming, current, options = {}) {
+    const maxEvents = Math.max(1, Number(options.maxEvents) || 120);
+    const maxBytes = Math.max(1024, Number(options.maxBytes) || (38 * 1024));
+    const byId = new Map();
+
+    const parseTimestamp = (value) => {
+      if (value == null || value === '') return 0;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) return numeric;
+      const parsed = Date.parse(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const revisionTs = (row) => Math.max(
+      parseTimestamp(row?.updatedAt),
+      parseTimestamp(row?.outcomeAt),
+      parseTimestamp(row?.recordedAt),
+      parseTimestamp(row?.createdAt)
+    );
+    const chronologyTs = (row) => (
+      parseTimestamp(row?.recordedAt)
+      || parseTimestamp(row?.createdAt)
+      || revisionTs(row)
+    );
+    const stableValueRank = (row) => {
+      try {
+        const json = JSON.stringify(row);
+        return [json.length, json];
+      } catch (_) {
+        return [0, ''];
+      }
+    };
+    const eventKey = (row) => {
+      if (row?.id != null && String(row.id).trim()) return 'id:' + String(row.id);
+      return [
+        'legacy',
+        row?.eventType || '',
+        row?.recordedAt || '',
+        row?.createdAt || '',
+        row?.source || '',
+      ].join(':');
+    };
+    const choose = (left, right) => {
+      if (!left) return right;
+      if (!right) return left;
+      const leftTs = revisionTs(left);
+      const rightTs = revisionTs(right);
+      if (leftTs !== rightTs) return rightTs > leftTs ? right : left;
+      const leftRank = stableValueRank(left);
+      const rightRank = stableValueRank(right);
+      if (leftRank[0] !== rightRank[0]) return rightRank[0] > leftRank[0] ? right : left;
+      return rightRank[1] > leftRank[1] ? right : left;
+    };
+    const absorb = (rows) => {
+      (Array.isArray(rows) ? rows : []).forEach((row) => {
+        if (!row || typeof row !== 'object') return;
+        const key = eventKey(row);
+        byId.set(key, choose(byId.get(key), row));
+      });
+    };
+
+    absorb(current);
+    absorb(incoming);
+    const merged = Array.from(byId.values()).sort((left, right) => {
+      const timeDiff = chronologyTs(left) - chronologyTs(right);
+      if (timeDiff !== 0) return timeDiff;
+      return eventKey(left).localeCompare(eventKey(right));
+    }).slice(-maxEvents);
+
+    while (merged.length > 1) {
+      try {
+        if (JSON.stringify(merged).length <= maxBytes) break;
+      } catch (_) {
+        // Drop the oldest malformed row and continue with the recoverable tail.
+      }
+      merged.shift();
+    }
+    return merged;
+  }
+
+  // Recommendation feedback is also a bounded append/update log. Different
+  // tabs can hold disjoint 30-row windows, so replacing the whole array loses
+  // both new recommendations and later outcome/reminder edits.
+  function mergeInsightsFeedback(incoming, current, options = {}) {
+    const maxRecords = Math.max(1, Number(options.maxRecords) || 30);
+    const byId = new Map();
+    const parseTimestamp = (value) => {
+      if (value == null || value === '') return 0;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) return numeric;
+      const parsed = Date.parse(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const revisionTs = (row) => {
+      const reminderTimes = row?.reminders && typeof row.reminders === 'object'
+        ? Object.values(row.reminders).map((reminder) => parseTimestamp(reminder?.shownAt))
+        : [];
+      return Math.max(
+        parseTimestamp(row?.timestamp),
+        parseTimestamp(row?.followedAt),
+        parseTimestamp(row?.outcome?.submittedAt),
+        ...reminderTimes,
+      );
+    };
+    const stableRank = (row) => {
+      try {
+        const json = JSON.stringify(row);
+        return [json.length, json];
+      } catch (_) {
+        return [0, ''];
+      }
+    };
+    const choose = (left, right) => {
+      if (!left) return right;
+      const leftTs = revisionTs(left);
+      const rightTs = revisionTs(right);
+      if (leftTs !== rightTs) return rightTs > leftTs ? right : left;
+      const leftRank = stableRank(left);
+      const rightRank = stableRank(right);
+      if (leftRank[0] !== rightRank[0]) return rightRank[0] > leftRank[0] ? right : left;
+      return rightRank[1] > leftRank[1] ? right : left;
+    };
+    const absorb = (rows) => {
+      (Array.isArray(rows) ? rows : []).forEach((row) => {
+        if (!row || typeof row !== 'object' || row.id == null || !String(row.id).trim()) return;
+        const id = String(row.id);
+        byId.set(id, choose(byId.get(id), row));
+      });
+    };
+
+    absorb(current);
+    absorb(incoming);
+    return Array.from(byId.values())
+      .sort((left, right) => {
+        const timeDiff = parseTimestamp(left?.timestamp) - parseTimestamp(right?.timestamp);
+        if (timeDiff !== 0) return timeDiff;
+        return String(left.id).localeCompare(String(right.id));
+      })
+      .slice(-maxRecords);
+  }
+
   // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
   // Removes cached display nutrients when meals/items are empty (same invariant
   // as dayMealsIntegrity).
@@ -180,9 +324,10 @@
 
   function hasSubjectiveFieldDrop(incoming, current) {
     if (!incoming || !current || typeof incoming !== 'object' || typeof current !== 'object') return false;
-    return SUBJECTIVE_DAY_FIELDS.some((field) =>
+    const missingField = SUBJECTIVE_DAY_FIELDS.some((field) =>
       hasSubjectiveValue(current[field]) && !hasSubjectiveValue(incoming[field])
     );
+    return missingField || hasMorningActivationRegression(incoming.morningActivation, current.morningActivation);
   }
 
   function firstSubjectiveValue() {
@@ -196,9 +341,113 @@
     return ma && (ma.status === 'done' || ma.status === 'missed');
   }
 
-  function morningActivationTs(ma) {
+  function morningActivationDecisionTs(ma) {
     if (!ma || typeof ma !== 'object') return 0;
     return Number(ma.decidedAt || ma.updatedAt || ma.savedAt || 0) || 0;
+  }
+
+  function morningActivationRevisionTs(ma) {
+    if (!ma || typeof ma !== 'object') return 0;
+    return Math.max(
+      morningActivationDecisionTs(ma),
+      Number(ma.skipReasonCapturedAt) || 0,
+    );
+  }
+
+  function clearedMorningActivation(ma) {
+    return !!(ma && (ma.clearedByUser === true || Number(ma.clearedAt) > 0));
+  }
+
+  function reopenedMorningActivation(ma) {
+    if (!ma || ma.status !== 'pending') return false;
+    return Object.prototype.hasOwnProperty.call(ma, 'clearedByUser')
+      && Object.prototype.hasOwnProperty.call(ma, 'clearedAt')
+      && ma.clearedByUser === null
+      && ma.clearedAt === null;
+  }
+
+  function morningActivationRichness(ma) {
+    if (!ma || typeof ma !== 'object') return 0;
+    return Object.keys(ma).reduce((score, key) => {
+      const value = ma[key];
+      if (value === undefined || value === null || value === '') return score;
+      if (typeof value === 'object') return score + Math.max(1, Object.keys(value).length);
+      return score + 1;
+    }, 0);
+  }
+
+  /**
+   * Merge one morning-activation state with a fallback without letting a
+   * freshly re-stamped partial snapshot erase a completed user decision.
+   * Explicit clear is an action too and wins when its clearedAt is newer.
+   */
+  function mergeMorningActivationState(preferred, fallback) {
+    const preferredMA = preferred && typeof preferred === 'object' ? preferred : null;
+    const fallbackMA = fallback && typeof fallback === 'object' ? fallback : null;
+    if (!preferredMA) return fallbackMA;
+    if (!fallbackMA) return preferredMA;
+
+    const preferredTerminal = terminalMorningActivation(preferredMA);
+    const fallbackTerminal = terminalMorningActivation(fallbackMA);
+    const preferredCleared = clearedMorningActivation(preferredMA);
+    const fallbackCleared = clearedMorningActivation(fallbackMA);
+    const preferredReopened = reopenedMorningActivation(preferredMA);
+    const fallbackReopened = reopenedMorningActivation(fallbackMA);
+    const preferredDecisionTs = morningActivationDecisionTs(preferredMA);
+    const fallbackDecisionTs = morningActivationDecisionTs(fallbackMA);
+    const differentTerminalDecisions = preferredTerminal && fallbackTerminal
+      && preferredDecisionTs !== fallbackDecisionTs;
+    let winner = preferredMA;
+    let loser = fallbackMA;
+
+    if (preferredReopened || (fallbackReopened && !preferredTerminal && !preferredCleared)) {
+      if (!preferredReopened) {
+        winner = fallbackMA;
+        loser = preferredMA;
+      }
+    } else if (preferredCleared || fallbackCleared) {
+      const preferredActionTs = preferredCleared ? Number(preferredMA.clearedAt) || 0 : preferredDecisionTs;
+      const fallbackActionTs = fallbackCleared ? Number(fallbackMA.clearedAt) || 0 : fallbackDecisionTs;
+      if (fallbackActionTs > preferredActionTs) {
+        winner = fallbackMA;
+        loser = preferredMA;
+      }
+    } else if (preferredTerminal || fallbackTerminal) {
+      if (!preferredTerminal || (fallbackTerminal && fallbackDecisionTs > preferredDecisionTs)) {
+        winner = fallbackMA;
+        loser = preferredMA;
+      } else if (preferredTerminal && fallbackTerminal && preferredDecisionTs === fallbackDecisionTs) {
+        const preferredRevisionTs = morningActivationRevisionTs(preferredMA);
+        const fallbackRevisionTs = morningActivationRevisionTs(fallbackMA);
+        if (fallbackRevisionTs > preferredRevisionTs
+            || (fallbackRevisionTs === preferredRevisionTs
+              && morningActivationRichness(fallbackMA) > morningActivationRichness(preferredMA))) {
+          winner = fallbackMA;
+          loser = preferredMA;
+        }
+      }
+    }
+
+    if (clearedMorningActivation(winner) || clearedMorningActivation(loser)
+        || reopenedMorningActivation(winner) || reopenedMorningActivation(loser)
+        || differentTerminalDecisions) {
+      return { ...winner };
+    }
+    return { ...loser, ...winner };
+  }
+
+  function hasMorningActivationRegression(incoming, current) {
+    if (!current || typeof current !== 'object') return false;
+    const merged = mergeMorningActivationState(incoming, current);
+    const incomingMA = incoming && typeof incoming === 'object' ? incoming : null;
+    if (!incomingMA) return !!merged;
+    return Object.keys(merged || {}).some((key) => {
+      try {
+        return JSON.stringify(merged[key]) !== JSON.stringify(incomingMA[key]);
+      } catch (_) {
+        return merged[key] !== incomingMA[key];
+      }
+    });
   }
 
   // ─── mergeDayData ────────────────────────────────────────────────────────
@@ -362,26 +611,14 @@
     const dayLocalTs = local.updatedAt || 0;
     const dayRemoteTs = remote.updatedAt || 0;
 
-    // morningActivation: terminal status wins; if both sides are terminal and
-    // carry action timestamps, keep the later actual activation decision.
+    // morningActivation: terminal decision and explicit clear are semantic
+    // actions; root day.updatedAt alone must not decide between them.
     {
       const localMA = local.morningActivation || null;
       const remoteMA = remote.morningActivation || null;
-      const localTerminal = terminalMorningActivation(localMA);
-      const remoteTerminal = terminalMorningActivation(remoteMA);
-      const localMATs = morningActivationTs(localMA);
-      const remoteMATs = morningActivationTs(remoteMA);
-      if (localTerminal && remoteTerminal && localMATs !== remoteMATs && localMATs > 0 && remoteMATs > 0) {
-        merged.morningActivation = localMATs >= remoteMATs ? localMA : remoteMA;
-      } else if (localTerminal) {
-        merged.morningActivation = localMA;
-      } else if (remoteTerminal) {
-        merged.morningActivation = remoteMA;
-      } else if (localIsNewer) {
-        merged.morningActivation = localMA != null ? localMA : (remoteMA != null ? remoteMA : null);
-      } else {
-        merged.morningActivation = remoteMA != null ? remoteMA : (localMA != null ? localMA : null);
-      }
+      merged.morningActivation = localIsNewer
+        ? mergeMorningActivationState(localMA, remoteMA)
+        : mergeMorningActivationState(remoteMA, localMA);
     }
 
     // Apply item-tombstones to a single meal's items (used when meal exists only on one side).
@@ -1023,8 +1260,12 @@
   return {
     mergeDayData,
     hasSubjectiveFieldDrop,
+    hasMorningActivationRegression,
+    mergeMorningActivationState,
     mergeChronoTombstones,
     mergePlanningRecords,
+    mergeHungerStatusEvents,
+    mergeInsightsFeedback,
     mergeItemsById,
     mergeScalarKv,
     mergeScalarKvWithOutcome,

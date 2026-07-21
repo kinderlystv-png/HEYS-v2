@@ -120,6 +120,144 @@
     };
   }
 
+  function assessExternalReplacement(current, incoming) {
+    if (!current || typeof current !== 'object' || !incoming || typeof incoming !== 'object') {
+      return {
+        safe: true,
+        reason: 'missing_comparable_day',
+        missingMealIds: [],
+        missingItemIds: [],
+        staleMealTombstoneIds: [],
+        staleItemTombstoneIds: [],
+        legacyMealsDropped: 0,
+        legacyItemsDropped: 0,
+      };
+    }
+
+    const currentMeals = Array.isArray(current.meals) ? current.meals : [];
+    const incomingMeals = Array.isArray(incoming.meals) ? incoming.meals : [];
+    const incomingMealIds = new Set(incomingMeals.map((meal) => meal?.id).filter(Boolean).map(String));
+    const incomingItemIds = new Set(incomingMeals
+      .flatMap((meal) => (Array.isArray(meal?.items) ? meal.items : []))
+      .map((item) => item?.id)
+      .filter(Boolean)
+      .map(String));
+    const deletedMealIds = incoming.deletedMealIds && typeof incoming.deletedMealIds === 'object'
+      ? incoming.deletedMealIds : {};
+    const deletedItemIds = incoming.deletedItemIds && typeof incoming.deletedItemIds === 'object'
+      ? incoming.deletedItemIds : {};
+
+    const missingMealIds = [];
+    const missingItemIds = [];
+    const staleMealTombstoneIds = [];
+    const staleItemTombstoneIds = [];
+    const coveredMealIds = new Set();
+
+    currentMeals.forEach((meal) => {
+      if (!meal?.id || incomingMealIds.has(String(meal.id))) return;
+      const id = String(meal.id);
+      const tombstoneTs = Number(deletedMealIds[id]) || 0;
+      const entityTs = Number(meal.updatedAt) || Number(current.updatedAt) || 0;
+      if (tombstoneTs > 0 && tombstoneTs >= entityTs) {
+        coveredMealIds.add(id);
+        return;
+      }
+      missingMealIds.push(id);
+      if (tombstoneTs > 0) staleMealTombstoneIds.push(id);
+    });
+
+    currentMeals.forEach((meal) => {
+      if (meal?.id && coveredMealIds.has(String(meal.id))) return;
+      (Array.isArray(meal?.items) ? meal.items : []).forEach((item) => {
+        if (!item?.id || incomingItemIds.has(String(item.id))) return;
+        const id = String(item.id);
+        const tombstoneTs = Number(deletedItemIds[id]) || 0;
+        // Keep parity with mergeItemsById: legacy items without updatedAt are
+        // covered by any explicit positive tombstone; newer item edits win.
+        const entityTs = Number(item.updatedAt) || 0;
+        if (tombstoneTs > 0 && tombstoneTs >= entityTs) return;
+        missingItemIds.push(id);
+        if (tombstoneTs > 0) staleItemTombstoneIds.push(id);
+      });
+    });
+
+    const currentLegacyMeals = currentMeals.filter((meal) => !meal?.id).length;
+    const incomingLegacyMeals = incomingMeals.filter((meal) => !meal?.id).length;
+    const legacyMealsDropped = Math.max(0, currentLegacyMeals - incomingLegacyMeals);
+    const countLegacyItems = (meals) => meals.reduce((sum, meal) => {
+      return sum + (Array.isArray(meal?.items) ? meal.items.filter((item) => !item?.id).length : 0);
+    }, 0);
+    const currentLegacyItems = countLegacyItems(currentMeals.filter((meal) => {
+      return !meal?.id || !coveredMealIds.has(String(meal.id));
+    }));
+    const incomingLegacyItems = countLegacyItems(incomingMeals);
+    const legacyItemsDropped = Math.max(0, currentLegacyItems - incomingLegacyItems);
+    const safe = missingMealIds.length === 0
+      && missingItemIds.length === 0
+      && legacyMealsDropped === 0
+      && legacyItemsDropped === 0;
+
+    return {
+      safe,
+      reason: safe ? 'no_untombstoned_drop' : 'untombstoned_drop',
+      missingMealIds,
+      missingItemIds,
+      staleMealTombstoneIds,
+      staleItemTombstoneIds,
+      legacyMealsDropped,
+      legacyItemsDropped,
+    };
+  }
+
+  function resolveExternalReplacement(current, incoming, options) {
+    const opts = options || {};
+    const directAssessment = assessExternalReplacement(current, incoming);
+    if (!current || typeof current !== 'object') {
+      return { ok: true, status: 'incoming', value: incoming, assessment: directAssessment };
+    }
+    if (!incoming || typeof incoming !== 'object') {
+      return { ok: false, status: 'blocked', value: current, assessment: directAssessment };
+    }
+
+    try {
+      if (typeof opts.isSameContent === 'function' && opts.isSameContent(current, incoming)) {
+        return { ok: true, status: 'noop', value: current, assessment: directAssessment };
+      }
+    } catch (_) { /* continue through the safe resolver */ }
+
+    if (typeof opts.mergeDayData === 'function') {
+      try {
+        const merged = opts.mergeDayData(current, incoming);
+        if (merged && typeof merged === 'object') {
+          const mergedAssessment = assessExternalReplacement(current, merged);
+          if (!mergedAssessment.safe) {
+            return { ok: false, status: 'blocked', value: current, assessment: mergedAssessment };
+          }
+          try {
+            if (typeof opts.isSameContent === 'function' && opts.isSameContent(incoming, merged)) {
+              return { ok: true, status: 'incoming', value: incoming, assessment: mergedAssessment };
+            }
+            if (typeof opts.isSameContent === 'function' && opts.isSameContent(current, merged)) {
+              return { ok: true, status: 'noop', value: current, assessment: mergedAssessment };
+            }
+          } catch (_) { /* write the verified merge */ }
+          return { ok: true, status: 'merged', value: merged, assessment: mergedAssessment };
+        }
+        // A provided merge callback returning no value after the explicit
+        // content-equality check means conflict resolution was unavailable or
+        // failed to produce a verified candidate. Do not fall back to wholesale
+        // replacement: that would bypass entity-level timestamps.
+        return { ok: false, status: 'blocked', value: current, assessment: directAssessment };
+      } catch (_) {
+        return { ok: false, status: 'blocked', value: current, assessment: directAssessment };
+      }
+    }
+
+    return directAssessment.safe
+      ? { ok: true, status: 'incoming', value: incoming, assessment: directAssessment }
+      : { ok: false, status: 'blocked', value: current, assessment: directAssessment };
+  }
+
   function mergeProtectedFields(dateStr, candidate, current, fields, opts) {
     const guard = read(dateStr);
     if (!guard || !breaksGuard(candidate, guard)) {
@@ -205,6 +343,8 @@
     verify,
     breaksGuard,
     delta,
+    assessExternalReplacement,
+    resolveExternalReplacement,
     mergeProtectedFields,
     pushTrace,
     dateFromDayKey,

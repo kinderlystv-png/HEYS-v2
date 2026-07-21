@@ -34,6 +34,13 @@
       "path": "scripts/db/migrations/2026-07-18_push_idempotency_delivery_state.sql",
       "description": "Add retry-safe claimed and delivered states for reminder pushes",
       "destructive": false
+    },
+    {
+      "id": "2026-07-21_messenger_reliability_privacy",
+      "order": 3,
+      "path": "scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql",
+      "description": "Add messenger send idempotency, desired-state mutations and durable media cleanup",
+      "destructive": false
     }
   ]
 }

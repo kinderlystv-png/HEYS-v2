@@ -6,7 +6,7 @@
 const { getPool } = require('./db-pool');
 const { initSecrets } = require('./secrets');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
-const { mergeDayData } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, mergeHungerStatusEvents, mergeInsightsFeedback } = require('./lib/heys_sync_merge_v1.cjs');
 const fs = require('fs');
 const path = require('path');
 
@@ -34,6 +34,15 @@ function requireEnv(name) {
 const IDENTITY_GUARD_KEY_RE = /^heys_(?:[0-9a-f-]{36}_)?(profile|norms|game|hr_zones|dayv2_\d{4}-\d{2}-\d{2})$/i;
 function isIdentityGuardKey(k) {
   return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
+}
+
+const HUNGER_STATUS_EVENTS_KEY = 'heys_hunger_energy_status_events_v1';
+function isHungerStatusEventsKey(key) {
+  return String(key || '') === HUNGER_STATUS_EVENTS_KEY;
+}
+const INSIGHTS_FEEDBACK_KEY = 'heys_insights_feedback';
+function isInsightsFeedbackKey(key) {
+  return String(key || '') === INSIGHTS_FEEDBACK_KEY;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1196,6 +1205,35 @@ module.exports.handler = async function (event, context) {
                 const blockedItem = { k: row.k, reason: 'critical_payload_validation_failed' };
                 blockedItems.push(blockedItem);
                 payloadBlockedItems.push(blockedItem);
+                continue;
+              }
+            }
+
+            // Legacy curator clients may still send bounded event logs through
+            // the generic REST batch path. Merge under a row lock so an old tab
+            // cannot replace the log with a stale whole-array snapshot.
+            if (isHungerStatusEventsKey(row.k) || isInsightsFeedbackKey(row.k)) {
+              try {
+                if (!protectedWriteTxStarted) {
+                  await client.query('BEGIN');
+                  protectedWriteTxStarted = true;
+                  const currentRes = await client.query(
+                    'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+                    [row.client_id, row.k]
+                  );
+                  contractCurrentValue = currentRes.rows?.[0]?.v || null;
+                }
+                row.v = isHungerStatusEventsKey(row.k)
+                  ? mergeHungerStatusEvents(row.v, contractCurrentValue)
+                  : mergeInsightsFeedback(row.v, contractCurrentValue);
+              } catch (e) {
+                if (protectedWriteTxStarted) {
+                  try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                  protectedWriteTxStarted = false;
+                }
+                console.warn('[REST POST client_kv_store] event-log merge failed:', e.message);
+                blocked++;
+                blockedItems.push({ k: row.k, reason: 'event_log_merge_failed' });
                 continue;
               }
             }

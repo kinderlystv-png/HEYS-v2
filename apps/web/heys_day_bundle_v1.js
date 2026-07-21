@@ -7743,14 +7743,14 @@
             // оригинальное position: relative — шапка работает как раньше, но без sticky.
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type + (isExpanded && !isCurrentMeal ? ' meal-header-inside--collapse-toggle' : ''),
-                onClick: isExpanded && !isCurrentMeal ? () => onToggleExpand(mealIndex, allMeals) : undefined,
+                onClick: isExpanded && !isCurrentMeal ? () => onToggleExpand(mealIndex, allMeals, isExpanded) : undefined,
                 role: isExpanded && !isCurrentMeal ? 'button' : undefined,
                 tabIndex: isExpanded && !isCurrentMeal ? 0 : undefined,
                 onKeyDown: isExpanded && !isCurrentMeal
                     ? (event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            onToggleExpand(mealIndex, allMeals);
+                            onToggleExpand(mealIndex, allMeals, isExpanded);
                         }
                     }
                     : undefined,
@@ -7901,7 +7901,7 @@
                         className: 'meal-header-collapse-btn',
                         onClick: (event) => {
                             event.stopPropagation();
-                            onToggleExpand(mealIndex, allMeals);
+                            onToggleExpand(mealIndex, allMeals, isExpanded);
                         },
                         'aria-label': 'Свернуть приём',
                         title: 'Свернуть приём',
@@ -9075,8 +9075,8 @@
                                 hasAnyOverlap
                                     ? `⚠️ перехлёст ${formatMinutes(overlapMinutes)}`
                                     : nextWave
-                                        ? `✅ липолиз ${formatMinutes(lipolysisGapNext)}`
-                                        : '🟢 последний приём'
+                                    ? `интервал ${formatMinutes(lipolysisGapNext)}`
+                                    : 'последний приём'
                             ),
                         ),
                         React.createElement('button', {
@@ -9993,7 +9993,7 @@
             const isFirst = absoluteDisplayIndex === 0;
             const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
-            const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
+            const shouldRenderCollapsedPlaque = !isExpanded;
             const compactMealQuality = shouldRenderCollapsedPlaque
                 ? getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, day, sourceMeals)
                 : null;
@@ -10013,7 +10013,7 @@
                         mealTypeInfo,
                         mealQuality: compactMealQuality,
                         pIndex,
-                        onExpand: () => toggleMealExpand(mi, sourceMeals),
+                        onExpand: () => toggleMealExpand(mi, sourceMeals, false),
                     })
                 );
             }
@@ -10180,6 +10180,7 @@
             addProductToMeal,
             prof,
             insulinWaveData,
+            currentMinute,
         } = params || {};
 
         if (!React) return { sortedMealsForDisplay: [], mealsUI: [] };
@@ -10381,6 +10382,7 @@
             insulinWaveData,
             isMealExpanded,
             isMealStale,
+            currentMinute,
             isMobile,
             isNewItem,
             openEditGramsModal,
@@ -10647,7 +10649,7 @@
                                 y: 35,
                                 textAnchor: 'middle',
                                 className: 'day-wave-overview__lipolysis-label'
-                            }, 'липолиз')
+                            }, 'интервал')
                         );
                     }),
                     targetWindows.map((window) => {
@@ -11322,7 +11324,7 @@
             return diffMinutes > 20;
         }, []);
 
-        const toggleMealExpand = React.useCallback((mealIndex, meals) => {
+        const toggleMealExpand = React.useCallback((mealIndex, meals, currentExpanded) => {
             const meal = meals && meals[mealIndex];
             const isStale = meal && isMealStale(meal);
 
@@ -11333,9 +11335,20 @@
             // setTimeout(0) сам по себе достаточен для defer'а тяжёлого re-render'а.
             setTimeout(() => {
                 if (isStale) {
-                    setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    setManualExpandedStale((prev) => ({
+                        ...prev,
+                        [mealIndex]: typeof currentExpanded === 'boolean'
+                            ? !currentExpanded
+                            : !prev[mealIndex],
+                    }));
                 } else {
-                    setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    setExpandedMeals((prev) => {
+                        const hasStoredState = Object.prototype.hasOwnProperty.call(prev, mealIndex);
+                        const effectiveExpanded = typeof currentExpanded === 'boolean'
+                            ? currentExpanded
+                            : (hasStoredState ? prev[mealIndex] : mealIndex === ((meals?.length || 0) - 1));
+                        return { ...prev, [mealIndex]: !effectiveExpanded };
+                    });
                 }
             }, 0);
         }, [isMealStale]);
@@ -13855,6 +13868,67 @@
     const SUPPLEMENTS_PANEL_PROFILE_FIELD = 'showDiarySupplementsPanel';
     const DISTRIBUTION_PANEL_PROFILE_FIELD = 'showDiaryDistributionPanel';
     const INSULIN_WAVE_PANEL_PROFILE_FIELD = 'showDiaryInsulinWavePanel';
+
+    function getEmptyMeals(day) {
+        return (Array.isArray(day?.meals) ? day.meals : [])
+            .map((meal, index) => ({ meal, index }))
+            .filter(({ meal }) => !Array.isArray(meal?.items) || meal.items.length === 0);
+    }
+
+    function openFirstEmptyMeal(emptyMeal) {
+        if (!emptyMeal || typeof document === 'undefined') return;
+        const selector = `.meal-card[data-meal-index="${emptyMeal.index}"]`;
+        const card = document.querySelector(selector);
+        if (!card) {
+            document.getElementById('diary-heading')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        card.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        const openAddProduct = () => {
+            const currentCard = document.querySelector(selector);
+            const addButton = currentCard?.querySelector?.('button[aria-label="Добавить продукт"]');
+            if (addButton) {
+                addButton.click();
+                return;
+            }
+            currentCard?.querySelector?.('.meal-collapsed-plaque')?.click?.();
+            window.setTimeout(() => {
+                document.querySelector(selector)
+                    ?.querySelector?.('button[aria-label="Добавить продукт"]')
+                    ?.click?.();
+            }, 180);
+        };
+        window.setTimeout(openAddProduct, 220);
+    }
+
+    function renderEmptyMealBanner(React, day) {
+        const emptyMeals = getEmptyMeals(day);
+        if (emptyMeals.length === 0) return null;
+        const count = emptyMeals.length;
+        const title = count === 1 ? 'Приём пищи пока пуст' : `Не заполнено приёмов: ${count}`;
+        const description = count === 1
+            ? 'Добавьте продукты, чтобы дневник и расчёты были точными.'
+            : 'Добавьте продукты в каждый приём, чтобы дневник и расчёты были точными.';
+
+        return React.createElement('aside', {
+            className: 'empty-meal-alert',
+            role: 'alert',
+            'aria-live': 'polite'
+        },
+            React.createElement('span', { className: 'empty-meal-alert__icon', 'aria-hidden': 'true' }, '!'),
+            React.createElement('div', { className: 'empty-meal-alert__copy' },
+                React.createElement('strong', null, title),
+                React.createElement('span', null, description)
+            ),
+            React.createElement('button', {
+                type: 'button',
+                className: 'empty-meal-alert__action',
+                onClick: () => openFirstEmptyMeal(emptyMeals[0])
+            }, 'Заполнить')
+        );
+    }
+
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -14903,6 +14977,7 @@
         };
 
         return React.createElement(React.Fragment, null,
+            renderEmptyMealBanner(React, day),
             React.createElement(DiaryCompactSummary, {
                 app,
                 date,
@@ -15070,6 +15145,8 @@
 
     HEYS.dayDiarySection = HEYS.dayDiarySection || {};
     HEYS.dayDiarySection.renderDiarySection = renderDiarySection;
+    HEYS.dayDiarySection.getEmptyMeals = getEmptyMeals;
+    HEYS.dayDiarySection.renderEmptyMealBanner = renderEmptyMealBanner;
 })(window.HEYS = window.HEYS || {});
 // ===== End heys_day_diary_section.js =====
 

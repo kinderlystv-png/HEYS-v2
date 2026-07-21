@@ -11673,8 +11673,8 @@
                 advices.push({
                     id: 'morning_supplements_reminder',
                     icon: '💊',
-                    text: `Время витаминов: ${suppNames}${pendingSupps.length > 3 ? ` и ещё ${pendingSupps.length - 3}` : ''}`,
-                    details: 'Утренние витамины лучше принимать с завтраком для максимального усвоения. Отметь их в карточке витаминов!',
+                    text: `Добавки по вашему плану: ${suppNames}${pendingSupps.length > 3 ? ` и ещё ${pendingSupps.length - 3}` : ''}`,
+                    details: 'Это напоминание о вашем плане. Перед отметкой проверьте дозу и ограничения в карточке курса.',
                     type: 'health',
                     priority: 0,
                     category: 'health',
@@ -11700,8 +11700,8 @@
         const eveningTimings = ['evening', 'beforeBed'];
         const eveningSupps = plannedSupplements.filter(id => {
             if (takenSupplements.includes(id)) return false;
-            const info = window.HEYS?.Supplements?.SCIENCE?.MORNING_SUPPLEMENT_SCIENCE?.[id];
-            return info && eveningTimings.includes(info.timing);
+            const timing = window.HEYS?.Supplements?.CATALOG?.[id]?.timing;
+            return eveningTimings.includes(timing);
         });
 
         if (hour >= 18 && hour <= 23 && eveningSupps.length > 0 && !eveningSupplementsAdviceShown) {
@@ -11731,8 +11731,8 @@
                 advices.push({
                     id: 'evening_supplements_reminder',
                     icon: '🌙',
-                    text: `Вечерние витамины: ${suppNames}${eveningSupps.length > 3 ? ` и ещё ${eveningSupps.length - 3}` : ''}`,
-                    details: 'Не забудь принять вечерние витамины! Магний и мелатонин лучше работают перед сном. Отметь их в карточке витаминов!',
+                    text: `Добавки по вашему вечернему плану: ${suppNames}${eveningSupps.length > 3 ? ` и ещё ${eveningSupps.length - 3}` : ''}`,
+                    details: 'Это напоминание о вашем плане. Перед отметкой проверьте дозу и ограничения в карточке курса.',
                     type: 'health',
                     priority: 0,
                     category: 'health',
@@ -13124,12 +13124,13 @@
 
         if (window.HEYS?.Supplements) {
             const Supps = window.HEYS.Supplements;
+            const allowLegacySupplementAdvice = false;
             const dateKey = day?.date || new Date().toISOString().slice(0, 10);
             const planned = Supps.getPlanned?.() || [];
             const taken = Supps.getTaken?.(dateKey) || [];
             const notTaken = planned.filter(id => !taken.includes(id));
 
-            if (hour >= 7 && hour <= 10 && !sessionStorage.getItem('heys_supp_morning')) {
+            if (allowLegacySupplementAdvice && hour >= 7 && hour <= 10 && !sessionStorage.getItem('heys_supp_morning')) {
                 const morningSupps = notTaken.filter(id => {
                     const s = Supps.CATALOG?.[id];
                     return s && (s.timing === 'morning' || s.timing === 'empty');
@@ -13152,7 +13153,7 @@
                 }
             }
 
-            if (hour >= 21 && hour <= 23 && !sessionStorage.getItem('heys_supp_evening')) {
+            if (allowLegacySupplementAdvice && hour >= 21 && hour <= 23 && !sessionStorage.getItem('heys_supp_evening')) {
                 const eveningSupps = notTaken.filter(id => {
                     const s = Supps.CATALOG?.[id];
                     return s && (s.timing === 'evening' || s.timing === 'beforeBed');
@@ -13176,7 +13177,7 @@
             }
 
             const lastMeal = (day?.meals || []).slice(-1)[0];
-            if (lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_fat_synergy')) {
+            if (allowLegacySupplementAdvice && lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_fat_synergy')) {
                 let mealFat = 0;
                 for (const item of lastMeal.items) {
                     const p = helpers.getProductForItem(item, pIndex);
@@ -13206,7 +13207,7 @@
                 }
             }
 
-            if (lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_dairy_iron')) {
+            if (allowLegacySupplementAdvice && lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_dairy_iron')) {
                 const dairyFoods = ['творог', 'молоко', 'сыр', 'йогурт', 'кефир', 'сметана'];
                 const hasDairy = lastMeal.items.some(item =>
                     dairyFoods.some(f => (item.name || '').toLowerCase().includes(f))
@@ -13228,7 +13229,7 @@
                 }
             }
 
-            if (lastMeal && !sessionStorage.getItem('heys_supp_coffee_minerals')) {
+            if (allowLegacySupplementAdvice && lastMeal && !sessionStorage.getItem('heys_supp_coffee_minerals')) {
                 const hasCoffee = (lastMeal.items || []).some(item =>
                     (item.name || '').toLowerCase().includes('кофе')
                 );
@@ -13253,7 +13254,7 @@
                 }
             }
 
-            if (lastMeal && !sessionStorage.getItem('heys_supp_iron_vitc')) {
+            if (allowLegacySupplementAdvice && lastMeal && !sessionStorage.getItem('heys_supp_iron_vitc')) {
                 const ironRichFoods = ['печень', 'говядина', 'гречка', 'чечевица', 'шпинат', 'фасоль'];
                 const hasIronFood = (lastMeal.items || []).some(item =>
                     ironRichFoods.some(f => (item.name || '').toLowerCase().includes(f))
@@ -13276,7 +13277,7 @@
             }
 
             const compliance = Supps.getComplianceStats?.();
-            if (compliance?.currentStreak >= 5 && !sessionStorage.getItem('heys_supp_streak')) {
+            if (allowLegacySupplementAdvice && compliance?.currentStreak >= 5 && !sessionStorage.getItem('heys_supp_streak')) {
                 advices.push({
                     id: 'supplements_streak',
                     icon: '🔥',
@@ -13295,9 +13296,9 @@
                 advices.push({
                     id: 'supplements_all_taken',
                     icon: '✅',
-                    text: 'Все витамины приняты! Молодец!',
-                    details: '💊 Последовательность — ключ к результату.',
-                    type: 'achievement',
+                    text: 'Пункты плана добавок отмечены',
+                    details: 'Это отметка выполнения вашего плана, а не оценка эффективности добавок.',
+                    type: 'tip',
                     priority: 55,
                     category: 'supplements',
                     triggers: ['tab_open'],
@@ -13306,7 +13307,7 @@
                 });
             }
 
-            if (!sessionStorage.getItem('heys_supp_personal_rec')) {
+            if (allowLegacySupplementAdvice && !sessionStorage.getItem('heys_supp_personal_rec')) {
                 const recs = Supps.getSmartRecommendations?.(prof, day) || [];
                 if (recs.length > 0) {
                     const rec = recs[0];

@@ -1689,6 +1689,10 @@ html.chrono-bubble-dragging .chrono-screen {
     touch-action: none;
 }
 
+.chrono-cloud__items--radial.is-layout-snap .chrono-cloud__slot {
+    transition: none;
+}
+
 .chrono-cloud__slot.is-dragged {
     transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 10;

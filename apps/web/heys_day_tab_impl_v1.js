@@ -1701,7 +1701,8 @@
             setMealQualityPopup,
             addProductToMeal,
             prof,
-            insulinWaveData
+            insulinWaveData,
+            currentMinute
         }) || {};
         const { sortedMealsForDisplay, mealsUI } = mealsDisplay;
 

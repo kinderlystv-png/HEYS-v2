@@ -109,7 +109,7 @@
         chipEl = document.createElement('div');
         chipEl.id = 'heys-loading-progress-chip';
         chipEl.style.cssText = [
-            'position:fixed', 'left:50%', 'bottom:24px',
+            'position:fixed', 'left:50%', 'bottom:calc(76px + env(safe-area-inset-bottom, 0px))',
             'transform:translateX(-50%)',
             'background:rgba(255,255,255,0.94)',
             'color:#0f172a',

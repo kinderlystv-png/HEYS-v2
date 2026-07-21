@@ -1168,21 +1168,14 @@
         const meals = dayData.meals || [];
         const mealsWithTime = meals.filter(m => m.time);
 
-        // Если сегодня нет приёмов пищи — проверяем ночной липолиз от вчера
+        // Если сегодня нет приёмов пищи — продолжаем вчерашнюю каноническую оценку.
         if (!isPastDay && mealsWithTime.length === 0) {
           return this._getOvernightLipolysisData(todayStr);
         }
         if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
 
         const profile = this._getProfile() || {};
-        const baseWaveHours = profile?.insulinWaveHours || 3;
-
-        // === Past day: специальная версия с итогами жиросжигания ===
-        if (isPastDay) {
-          return this._getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate);
-        }
-
-        // Try full InsulinWave module
+        // Единственный источник — каноническая модель; для прошлого дня берём 23:59.
         if (HEYS.InsulinWave?.calculate) {
           try {
             const pIndex = HEYS.products?.buildIndex?.() || null;
@@ -1194,95 +1187,6 @@
               meals,
               pIndex,
               getProductFromItem,
-              baseWaveHours,
-              trainings: dayData.trainings || [],
-              dayData: {
-                sleepHours: dayData.sleepHours || null,
-                sleepQuality: dayData.sleepQuality || null,
-                stressAvg: dayData.stressAvg || 0,
-                waterMl: dayData.waterMl || 0,
-                householdMin: dayData.householdMin || 0,
-                steps: dayData.steps || 0,
-                date: dayData.date,
-                lsGet: (key, fallback) => readStoredValue(key, fallback),
-                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
-              }
-            });
-            if (result) {
-              const isLipolysis = result.status === 'lipolysis' || (result.remaining <= 0 && result.status !== 'rise');
-              console.info('[widget_data.getInsulinWaveData] ✅', { status: result.status, progress: result.progress, remaining: result.remaining });
-              return {
-                hasData: true,
-                status: result.status,
-                progress: result.progress || 0,
-                remaining: result.remaining || 0,
-                endTime: result.endTime || null,
-                color: result.color,
-                lastMealTime: result.lastMealTime || result.lastMealTimeDisplay || null,
-                insulinWaveHours: result.insulinWaveHours || baseWaveHours,
-                isLipolysis,
-                isNightTime: result.isNightTime || false
-              };
-            }
-          } catch (e) {
-            console.warn('[widget_data.getInsulinWaveData] calculate failed, fallback', e);
-          }
-        }
-
-        // Fallback: simple calculation
-        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
-        const lastMeal = sorted[0];
-        const [h, m] = (lastMeal.time || '0:0').split(':').map(Number);
-        const mealMinutes = h * 60 + (m || 0);
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        const waveMinutes = baseWaveHours * 60;
-        const diffMinutes = Math.max(0, nowMinutes - mealMinutes);
-        const remaining = Math.max(0, waveMinutes - diffMinutes);
-        const progress = Math.min(100, (diffMinutes / waveMinutes) * 100);
-        const endMin = mealMinutes + waveMinutes;
-        const endTime = String(Math.floor(endMin / 60) % 24).padStart(2, '0') + ':' + String(Math.round(endMin % 60)).padStart(2, '0');
-        const isLipolysis = remaining <= 0;
-        const color = isLipolysis ? '#22c55e' : progress > 65 ? '#10b981' : progress > 25 ? '#eab308' : '#f97316';
-        const status = isLipolysis ? 'lipolysis' : progress > 65 ? 'decline' : progress > 25 ? 'plateau' : 'rise';
-        return {
-          hasData: true, status, progress, remaining, endTime, color,
-          lastMealTime: lastMeal.time, insulinWaveHours: baseWaveHours,
-          isLipolysis, isNightTime: now.getHours() >= 22 || now.getHours() < 6
-        };
-      } catch (e) {
-        console.error('[widget_data.getInsulinWaveData] ❌', e);
-        return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
-      }
-    },
-
-    /**
-     * Past-day insulin wave: итоги жиросжигания за прошлый день
-     * Считает окно от конца последней волны до завтрака следующего дня
-     */
-    _getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate) {
-      try {
-        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
-        const lastMeal = sorted[0];
-        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
-        const lastMealMin = lh * 60 + (lm || 0);
-
-        // Рассчитываем длину волны через полный модуль или fallback
-        let waveMinutes = baseWaveHours * 60;
-        if (HEYS.InsulinWave?.calculate) {
-          try {
-            const pIndex = HEYS.products?.buildIndex?.() || null;
-            const getProductFromItem = (item) => {
-              if (!pIndex?.byId?.get) return item;
-              return pIndex.byId.get(item.product_id) || item;
-            };
-            // Используем now = 23:59 выбранного дня чтобы получить корректную длину волны
-            const fakeNow = new Date(selectedDate + 'T23:59:00');
-            const result = HEYS.InsulinWave.calculate({
-              meals: dayData.meals || [],
-              pIndex,
-              getProductFromItem,
-              baseWaveHours,
               trainings: dayData.trainings || [],
               dayData: {
                 sleepHours: dayData.sleepHours || null,
@@ -1295,111 +1199,32 @@
                 lsGet: (key, fallback) => readStoredValue(key, fallback),
                 profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
               },
-              now: fakeNow
+              nowMinutes: isPastDay ? 1439 : undefined
             });
-            if (result?.insulinWaveHours) {
-              waveMinutes = Math.round(result.insulinWaveHours * 60);
+            if (result) {
+              console.info('[widget_data.getInsulinWaveData] ✅', { status: result.status, progress: result.progress, remaining: result.remaining });
+              return {
+                ...result,
+                hasData: true,
+                isPastDay
+              };
             }
-          } catch (_) { /* fallback to baseWaveHours */ }
+          } catch (e) {
+            console.warn('[widget_data.getInsulinWaveData] canonical estimate failed', e);
+            return { hasData: false, status: 'error', progress: 0, remaining: 0 };
+          }
         }
 
-        // Время конца волны (начало жиросжигания)
-        const waveEndMin = lastMealMin + waveMinutes;
-        const waveEndTimeH = Math.floor(waveEndMin / 60) % 24;
-        const waveEndTimeM = Math.round(waveEndMin % 60);
-        const waveEndTime = String(waveEndTimeH).padStart(2, '0') + ':' + String(waveEndTimeM).padStart(2, '0');
-
-        // Ищем первый приём пищи следующего дня (завтрак)
-        let nextDayFirstMealMin = -1;
-        let fatBurningStillActive = false;
-        const _todayStr = this._formatDate(new Date());
-        try {
-          const selDate = new Date(selectedDate);
-          selDate.setDate(selDate.getDate() + 1);
-          const nextDateStr = this._formatDate(selDate);
-          const nextDayData = this._getDayByDate(nextDateStr);
-          const nextMeals = (nextDayData?.meals || []).filter(m => m.time);
-          if (nextMeals.length > 0) {
-            const nextSorted = [...nextMeals].sort((a, b) => a.time.localeCompare(b.time));
-            const firstNextMeal = nextSorted[0];
-            const [nh, nm] = (firstNextMeal.time || '8:0').split(':').map(Number);
-            nextDayFirstMealMin = nh * 60 + (nm || 0);
-          } else if (nextDateStr === _todayStr) {
-            // Следующий день — сегодня и завтрака нет → жиросжигание ещё идёт
-            fatBurningStillActive = true;
-            const _now = new Date();
-            nextDayFirstMealMin = _now.getHours() * 60 + _now.getMinutes();
-          }
-        } catch (_) { /* fallback */ }
-        if (nextDayFirstMealMin < 0) nextDayFirstMealMin = 8 * 60;
-
-        // Окно жиросжигания: от конца волны до завтрака следующего дня
-        // Если волна кончилась, например, в 23:00, а завтрак в 08:00 → 9 часов
-        let fatBurningWindowMin;
-        if (waveEndMin >= 1440) {
-          // Волна кончилась уже на следующий день
-          const overflowMin = waveEndMin - 1440;
-          fatBurningWindowMin = Math.max(0, nextDayFirstMealMin - overflowMin);
-        } else {
-          // Волна кончилась в тот же день: от конца волны до полуночи + до завтрака
-          fatBurningWindowMin = (1440 - waveEndMin) + nextDayFirstMealMin;
-        }
-
-        // Не более 16ч (защита от ошибочных данных)
-        fatBurningWindowMin = Math.min(fatBurningWindowMin, 16 * 60);
-        // Если волна ещё не кончилась к завтраку следующего дня — окна нет
-        if (fatBurningWindowMin <= 0) fatBurningWindowMin = 0;
-
-        // Kcal: ~1.15 kcal/мин при базовом обмене в липолизе
-        const weight = profile?.weight || 70;
-        const kcalRate = 1.15 * (weight / 70);
-        const fatBurningKcal = Math.round(fatBurningWindowMin * kcalRate);
-
-        // Рекорд и история из Lipolysis модуля
-        let lipolysisRecord = { minutes: 0, date: null };
-        try {
-          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
-            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
-          }
-        } catch (_) { }
-
-        const fatBurningH = Math.floor(fatBurningWindowMin / 60);
-        const fatBurningM = Math.round(fatBurningWindowMin % 60);
-
-        console.info('[widget_data.getInsulinWaveData] 📅 past day', {
-          selectedDate, lastMeal: lastMeal.time, waveEndTime,
-          fatBurningWindowMin, fatBurningKcal, record: lipolysisRecord.minutes
-        });
-
-        return {
-          hasData: true,
-          isPastDay: true,
-          status: 'lipolysis',
-          progress: 100,
-          remaining: 0,
-          isLipolysis: true,
-          isNightTime: true,
-          color: '#22c55e',
-          lastMealTime: lastMeal.time,
-          endTime: waveEndTime,
-          insulinWaveHours: waveMinutes / 60,
-          // Past-day specific data
-          fatBurningWindowMin,
-          fatBurningWindowH: fatBurningH,
-          fatBurningWindowM: fatBurningM,
-          fatBurningKcal,
-          fatBurningStillActive,
-          lipolysisRecord,
-          isRecord: !fatBurningStillActive && fatBurningWindowMin > 0 && fatBurningWindowMin >= (lipolysisRecord.minutes || 0)
-        };
+        return { hasData: false, status: 'loading', progress: 0, remaining: 0 };
       } catch (e) {
-        console.error('[widget_data.getInsulinWaveData] past day ❌', e);
+        console.error('[widget_data.getInsulinWaveData] ❌', e);
         return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
       }
     },
 
     /**
-     * Ночной липолиз: сегодня нет приёмов пищи, но вчера были → жиросжигание с ночи
+     * Overnight estimate: today has no meals, so continue yesterday's canonical
+     * response clock without inferring substrate use or calories.
      */
     _getOvernightLipolysisData(todayStr) {
       try {
@@ -1412,96 +1237,20 @@
           return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
         }
 
-        const profile = this._getProfile() || {};
-        const baseWaveHours = profile?.insulinWaveHours || 3;
-
-        // Последний приём пищи вчера
-        const sorted = [...yMeals].sort((a, b) => b.time.localeCompare(a.time));
-        const lastMeal = sorted[0];
-        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
-        const lastMealMin = lh * 60 + (lm || 0);
-
-        // Длина волны
-        let waveMinutes = baseWaveHours * 60;
-        if (HEYS.InsulinWave?.calculate) {
-          try {
-            const pIndex = HEYS.products?.buildIndex?.() || null;
-            const getProductFromItem = (item) => !pIndex?.byId?.get ? item : (pIndex.byId.get(item.product_id) || item);
-            const fakeNow = new Date(yesterdayStr + 'T23:59:00');
-            const result = HEYS.InsulinWave.calculate({
-              meals: yData.meals || [], pIndex, getProductFromItem, baseWaveHours,
-              trainings: yData.trainings || [],
-              dayData: {
-                sleepHours: yData.sleepHours || null, sleepQuality: yData.sleepQuality || null,
-                stressAvg: yData.stressAvg || 0, waterMl: yData.waterMl || 0,
-                householdMin: yData.householdMin || 0, steps: yData.steps || 0,
-                date: yData.date, lsGet: (key, fallback) => readStoredValue(key, fallback),
-                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
-              },
-              now: fakeNow
-            });
-            if (result?.insulinWaveHours) waveMinutes = Math.round(result.insulinWaveHours * 60);
-          } catch (_) { /* fallback */ }
-        }
-
-        const waveEndMin = lastMealMin + waveMinutes;
-
-        // Текущие минуты с момента конца волны (через полночь)
-        const now = new Date();
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        let lipolysisMinutes;
-        if (waveEndMin >= 1440) {
-          // Волна кончилась уже сегодня
-          const overflowMin = waveEndMin - 1440;
-          lipolysisMinutes = nowMin - overflowMin;
-        } else {
-          lipolysisMinutes = (1440 - waveEndMin) + nowMin;
-        }
-
-        if (lipolysisMinutes <= 0) {
-          // Волна ещё не кончилась — инсулин высокий
-          const remainingMin = Math.abs(lipolysisMinutes);
-          return {
-            hasData: true, isOvernightWave: true,
-            status: 'active', progress: Math.min(100, ((waveMinutes - remainingMin) / waveMinutes) * 100),
-            remaining: remainingMin, isLipolysis: false, isNightTime: false,
-            color: '#3b82f6', lastMealTime: lastMeal.time,
-            endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
-            insulinWaveHours: waveMinutes / 60
-          };
-        }
-
-        // Липолиз идёт!
-        const weight = profile?.weight || 70;
-        const kcalRate = 1.15 * (weight / 70);
-        const lipolysisKcal = Math.round(lipolysisMinutes * kcalRate);
-        const lipoH = Math.floor(lipolysisMinutes / 60);
-        const lipoM = Math.round(lipolysisMinutes % 60);
-
-        let lipolysisRecord = { minutes: 0, date: null };
-        try {
-          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
-            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
-          }
-        } catch (_) { }
-
-        console.info('[widget_data] 🌙 overnight lipolysis', {
-          lastMeal: lastMeal.time, waveEndMin, lipolysisMinutes, lipolysisKcal, record: lipolysisRecord.minutes
+        if (!HEYS.InsulinWave?.calculate) return { hasData: false, status: 'loading', progress: 0, remaining: 0 };
+        const pIndex = HEYS.products?.buildIndex?.() || null;
+        const getProductFromItem = (item) => !pIndex?.byId?.get ? item : (pIndex.byId.get(item.product_id || item.productId) || item);
+        const currentDateTime = new Date();
+        const canonicalResult = HEYS.InsulinWave.calculate({
+          meals: yData.meals || [],
+          pIndex,
+          getProductFromItem,
+          trainings: yData.trainings || [],
+          nowMinutes: 1440 + currentDateTime.getHours() * 60 + currentDateTime.getMinutes()
         });
-
-        return {
-          hasData: true, isOvernightLipolysis: true,
-          status: 'lipolysis', progress: 100, remaining: 0,
-          isLipolysis: true, isNightTime: true, color: '#22c55e',
-          lastMealTime: lastMeal.time,
-          endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
-          insulinWaveHours: waveMinutes / 60,
-          lipolysisMinutes, lipolysisH: lipoH, lipolysisM: lipoM, lipolysisKcal,
-          lipolysisRecord,
-          isRecord: lipolysisMinutes > 0 && lipolysisMinutes >= (lipolysisRecord.minutes || 0)
-        };
+        return canonicalResult ? { ...canonicalResult, hasData: true, isOvernightEstimate: true } : { hasData: false, status: 'noData', progress: 0, remaining: 0 };
       } catch (e) {
-        console.error('[widget_data] overnight lipolysis ❌', e);
+        console.error('[widget_data] overnight response estimate ❌', e);
         return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
       }
     },

@@ -8,6 +8,7 @@ import {
   compareLedger,
   loadManifest,
   prepareMigrations,
+  stripDollarQuotedBodies,
 } from './migrate.mjs';
 
 test('all repository SQL files are managed or explicitly legacy', () => {
@@ -30,7 +31,17 @@ test('managed migrations are ordered, checksummed and non-destructive', () => {
 
 test('embedded transaction control is rejected but comments are ignored', () => {
   assert.doesNotThrow(() => assertNoEmbeddedTransactions('-- ROLLBACK: COMMIT\nSELECT 1;', 'ok.sql'));
+  assert.doesNotThrow(() => assertNoEmbeddedTransactions(
+    'CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql AS $$ BEGIN RETURN; END; $$;',
+    'function.sql',
+  ));
   assert.throws(() => assertNoEmbeddedTransactions('BEGIN; SELECT 1;', 'bad.sql'), /transaction control/);
+});
+
+test('dollar-quoted bodies are masked without hiding following SQL', () => {
+  const masked = stripDollarQuotedBodies('AS $body$ BEGIN; END; $body$; COMMIT;');
+  assert.doesNotMatch(masked, /BEGIN/);
+  assert.match(masked, /COMMIT/);
 });
 
 test('ledger comparison blocks checksum and unknown-history drift', () => {

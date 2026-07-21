@@ -18,6 +18,7 @@
   const HUNGER_TIMELINE_SNAP_MIN = 30;
   const HUNGER_TIMELINE_SNAP_MS = HUNGER_TIMELINE_SNAP_MIN * 60 * 1000;
   const HUNGER_TIMELINE_LONG_PRESS_MS = 520;
+  const AUTO_OPEN_RECENT_ASSESSMENT_MIN = 15;
   const MEAL_EFFECT_FOLLOWUP_KEY = 'heys_hunger_meal_effect_followups_v1';
   const MEAL_EFFECT_DELAY_MIN = 60;
   const STRESS_CALORIE_FOLLOWUP_DELAY_MIN = 60;
@@ -29,6 +30,8 @@
   const LOW_HUNGER_MEAL_MAX_LEVEL = 2;
   const LOW_HUNGER_MEAL_WINDOW_MIN = 240;
   const LOW_HUNGER_MEAL_MIN_KCAL = 15;
+  const HUNGER_MIN_LEVEL = 0;
+  const HUNGER_MAX_LEVEL = 10;
   const DEFAULT_DRAFT = { hungerLevel: 5, hungerVisual: 5, hungerTrend: 'unknown' };
   const DEFAULT_FEATURE_SETTINGS = {
     showDiaryCard: true,
@@ -83,6 +86,7 @@
   };
 
   const HUNGER_STATUS_COPY = {
+    0: 'не голоден абсолютно',
     1: 'не голоден',
     2: 'почти сыт',
     3: 'лёгкий голод',
@@ -801,6 +805,15 @@
     }
   }
 
+  function hasBlockingModal() {
+    try {
+      return HEYS.ModalManager?.getOpenModals?.()
+        ?.some?.((modalId) => modalId !== 'hunger-energy-status-modal') === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function shouldShowSmartReminder() {
     const settings = readHungerFeatureSettings();
     if (!settings.smartReminders) return true;
@@ -820,6 +833,16 @@
     }
   }
 
+  function hasRecentHungerAssessment(maxAgeMin = AUTO_OPEN_RECENT_ASSESSMENT_MIN, nowTs = Date.now()) {
+    const maxAgeMs = Math.max(0, Number(maxAgeMin) || 0) * 60 * 1000;
+    return readEvents().some((row) => {
+      if (!Number.isFinite(Number(row?.hungerLevel))) return false;
+      const recordedTs = Date.parse(row.recordedAt || row.createdAt || '');
+      const ageMs = Number(nowTs) - recordedTs;
+      return Number.isFinite(recordedTs) && ageMs >= 0 && ageMs <= maxAgeMs;
+    });
+  }
+
   function scheduleAutoOpen(reason, attempt = 0) {
     if (autoOpenTimer) clearTimeout(autoOpenTimer);
     autoOpenTimer = setTimeout(() => {
@@ -830,6 +853,7 @@
         return;
       }
       if (!readAutoOpenEnabled()) return;
+      if (hasRecentHungerAssessment()) return;
       if (!shouldShowSmartReminder()) return;
       if (!hasAppShellMounted() && attempt < 24) {
         scheduleAutoOpen(reason, attempt + 1);
@@ -839,6 +863,9 @@
         if (attempt < 24) scheduleAutoOpen(reason, attempt + 1);
         return;
       }
+      // Auto-reminders must never interrupt an in-progress meal/product flow:
+      // ModalManager.register() intentionally closes every other active modal.
+      if (hasBlockingModal()) return;
       if (findDueOutcomeFollowUp()) {
         runDueOutcomeFollowUp();
         return;
@@ -1524,7 +1551,7 @@
         type: 'hunger',
         id: row.id,
         t,
-        level: Math.max(1, Math.min(10, Math.round(hungerLevel))),
+        level: clampHungerLevel(hungerLevel),
         cravingLevel: Number.isFinite(cravingLevel) ? Math.max(1, Math.min(10, Math.round(cravingLevel))) : null,
         recordedAt: row.recordedAt || row.createdAt,
         label: 'голод ' + Math.round(hungerLevel) + '/10 ' + formatShortTime(t)
@@ -2382,7 +2409,7 @@
       else if (mealGapHours >= 5) hourlyDelta = Math.max(hourlyDelta, 0.35);
     }
     const clampedDelta = Math.max(-0.8, Math.min(1.2, hourlyDelta));
-    const level = Math.max(1, Math.min(10, Math.round((Number(preview.level) + clampedDelta * 2) * 10) / 10));
+    const level = clampHungerVisual(Math.round((Number(preview.level) + clampedDelta * 2) * 10) / 10, DEFAULT_DRAFT.hungerLevel);
     return {
       type: 'forecast',
       t: now + 2 * 60 * 60 * 1000,
@@ -2394,7 +2421,13 @@
   function clampHungerVisual(value, fallback) {
     const n = Number(value);
     if (!Number.isFinite(n)) return fallback;
-    return Math.max(1, Math.min(10, n));
+    return Math.max(HUNGER_MIN_LEVEL, Math.min(HUNGER_MAX_LEVEL, n));
+  }
+
+  function clampHungerLevel(value, fallback = DEFAULT_DRAFT.hungerLevel) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(HUNGER_MIN_LEVEL, Math.min(HUNGER_MAX_LEVEL, Math.round(n)));
   }
 
   function buildSparkTimeline({ date, day, draft, editTarget, backfillTarget, assessmentTime, settings, includeCurrentPreview = true, compactTimeAxis = false }) {
@@ -3314,6 +3347,16 @@
     return tags;
   }
 
+  function ClarificationDetails({ children, label = 'Подробнее' }) {
+    return h('details', { className: 'hes-clarification-details' },
+      h('summary', null,
+        h('span', null, label),
+        h('span', { className: 'hes-clarification-details__chevron', 'aria-hidden': 'true' }, '⌄')
+      ),
+      h('div', { className: 'hes-clarification-details__body' }, children)
+    );
+  }
+
   function LowHungerMealPrompt({ review, settings, onReason, onEditHunger, onBackfill, onExperimentOutcome, onSkip }) {
     if (!review) return null;
     const featureSettings = normalizeHungerFeatureSettings(settings || readHungerFeatureSettings());
@@ -3341,48 +3384,15 @@
         : null;
     return h('div', { className: 'hes-low-meal' },
       h('div', { className: 'hes-low-meal__title' }, 'Почему появилась еда?'),
-      h('div', { className: 'hes-low-meal__text' },
-        'Перед едой было ', review.hungerLevel, '/10 в ', review.hungerTime,
-        ', затем записано в ', review.mealTime, ': ', mealDetail
-      ),
-      h('div', { className: 'hes-low-meal__why' },
-        'Спросили, потому что перед едой был голод ', review.hungerLevel, '/10.'
+      h('div', { className: 'hes-low-meal__lead' },
+        h('strong', null, review.hungerLevel, '/10'),
+        h('span', null, 'голод перед едой')
       ),
       h('div', { className: 'hes-low-meal__suggestion' },
-        h('strong', null, 'Похоже на: ', LOW_HUNGER_REASON_SHORT_COPY[suggestedReason] || 'контекстный эпизод'),
-        h('span', null, suggestionConfidence.detail)
-      ),
-      ritualProfile && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, ritualProfile.label),
-        h('span', null, ritualProfile.detail)
-      ),
-      review.weeklySummary && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, 'За неделю'),
-        h('span', null, review.weeklySummary.label),
-        review.weeklySummary.digestLabel && h('span', null, review.weeklySummary.digestLabel)
-      ),
-      repeatText && h('div', { className: 'hes-low-meal__repeat' }, repeatText),
-      review.experimentFollowUp && h('div', { className: 'hes-low-meal__context' },
-        h('span', null, review.experimentFollowUp.title),
-        h('div', { className: 'hes-low-meal__text' }, review.experimentFollowUp.detail),
-        h('div', { className: 'hes-low-meal__context-chips' },
-          [
-            ['helped', 'Помог'],
-            ['not_tried', 'Не пробовал'],
-            ['not_helped', 'Не помог']
-          ].map(([value, label]) => h('button', {
-            key: value,
-            type: 'button',
-            onClick: () => onExperimentOutcome?.(review.experimentFollowUp.eventId, value)
-          }, label))
-        )
-      ),
-      h('div', { className: 'hes-low-meal__actions' },
-        h('button', { type: 'button', onClick: onEditHunger }, 'Прошлая оценка была ниже'),
-        h('button', { type: 'button', onClick: onBackfill }, 'Забыл оценить перед едой')
+        h('strong', null, 'Похоже на ', LOW_HUNGER_REASON_SHORT_COPY[suggestedReason] || 'контекстный эпизод')
       ),
       useCompactConfirm ? h('div', { className: 'hes-low-meal__confirm' },
-        h('span', null, 'Это ближе к: ' + (LOW_HUNGER_REASON_SHORT_COPY[suggestedReason] || 'контекстный эпизод') + '?'),
+        h('span', null, 'Верно?'),
         h('div', null,
           h('button', { type: 'button', className: 'is-suggested', onClick: () => onReason(suggestedReason) }, 'Да'),
           h('button', { type: 'button', onClick: () => setShowAllReasons(true) }, 'Другое')
@@ -3395,59 +3405,101 @@
           onClick: () => onReason(reason)
         }, label, reason === suggestedReason && h('span', null, 'подходит')))
       ),
+      h(ClarificationDetails, null,
+        h('div', { className: 'hes-low-meal__text' },
+          'Перед едой было ', review.hungerLevel, '/10 в ', review.hungerTime,
+          ', затем записано в ', review.mealTime, ': ', mealDetail
+        ),
+        h('div', { className: 'hes-low-meal__why' },
+          'Спросили, потому что перед едой был голод ', review.hungerLevel, '/10.'
+        ),
+        h('div', { className: 'hes-low-meal__detail-note' }, suggestionConfidence.detail),
+        ritualProfile && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, ritualProfile.label),
+          h('span', null, ritualProfile.detail)
+        ),
+        review.weeklySummary && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, 'За неделю'),
+          h('span', null, review.weeklySummary.label),
+          review.weeklySummary.digestLabel && h('span', null, review.weeklySummary.digestLabel)
+        ),
+        repeatText && h('div', { className: 'hes-low-meal__repeat' }, repeatText),
+        review.experimentFollowUp && h('div', { className: 'hes-low-meal__context' },
+          h('span', null, review.experimentFollowUp.title),
+          h('div', { className: 'hes-low-meal__text' }, review.experimentFollowUp.detail),
+          h('div', { className: 'hes-low-meal__context-chips' },
+            [
+              ['helped', 'Помог'],
+              ['not_tried', 'Не пробовал'],
+              ['not_helped', 'Не помог']
+            ].map(([value, label]) => h('button', {
+              key: value,
+              type: 'button',
+              onClick: () => onExperimentOutcome?.(review.experimentFollowUp.eventId, value)
+            }, label))
+          )
+        ),
+        h('div', { className: 'hes-low-meal__actions' },
+          h('button', { type: 'button', onClick: onEditHunger }, 'Исправить прошлую оценку'),
+          h('button', { type: 'button', onClick: onBackfill }, 'Добавить пропущенную оценку')
+        )
+      ),
       h('button', { className: 'hes-low-meal__quiet', type: 'button', onClick: onSkip }, 'Не спрашивать сейчас')
     );
   }
 
   function LowHungerMealResolution({ result, onBackfill, onEditHunger, onContextTag }) {
     if (!result) return null;
+    const primaryNextStep = result.nextStep || result.gentlePlan?.replacement || null;
     return h('div', { className: 'hes-low-meal hes-low-meal--resolved' },
       h('div', { className: 'hes-low-meal__title' }, 'Контекст сохранён'),
       h('div', { className: 'hes-low-meal__text' }, result.advice),
-      h('div', { className: 'hes-low-meal__saved' }, result.savedSummary || result.label),
-      result.stressCalorieLink && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, 'Связка'),
-        h('span', null, 'Стресс/нервозность → ' + result.stressCalorieLink.choiceLabel)
-      ),
-      result.nextStep && h('div', { className: 'hes-low-meal__next' },
+      primaryNextStep && h('div', { className: 'hes-low-meal__next' },
         h('span', null, 'Следующий шаг'),
-        h('strong', null, result.nextStep.title),
-        h('em', null, result.nextStep.detail)
+        h('strong', null, primaryNextStep.title),
+        primaryNextStep.detail && h('em', null, primaryNextStep.detail)
       ),
-      result.gentlePlan?.replacement && h('div', { className: 'hes-low-meal__next' },
-        h('span', null, result.gentlePlan.replacement.title),
-        h('strong', null, result.gentlePlan.replacement.detail)
-      ),
-      result.gentlePlan?.experiment && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, result.gentlePlan.experiment.title),
-        h('span', null, result.gentlePlan.experiment.detail)
-      ),
-      result.gentlePlan?.quietCue && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, result.gentlePlan.quietCue.title),
-        h('span', null, result.gentlePlan.quietCue.detail)
-      ),
-      result.upcomingCue && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, result.upcomingCue.title),
-        h('span', null, result.upcomingCue.detail)
-      ),
-      result.weeklyDigest?.digestLabel && h('div', { className: 'hes-low-meal__soft' },
-        h('strong', null, 'Итог недели'),
-        h('span', null, result.weeklyDigest.digestLabel)
-      ),
-      safeArray(result.contextOptions).length > 0 && h('div', { className: 'hes-low-meal__context' },
-        h('span', null, 'Если хотите, отметьте контекст'),
-        h('div', { className: 'hes-low-meal__context-chips' },
-          result.contextOptions.map(([value, label]) => h('button', {
-            key: value,
-            type: 'button',
-            className: result.contextTag === value ? 'is-active' : '',
-            onClick: () => onContextTag?.(value)
-          }, label))
+      h(ClarificationDetails, null,
+        h('div', { className: 'hes-low-meal__saved' }, result.savedSummary || result.label),
+        result.stressCalorieLink && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, 'Связка'),
+          h('span', null, 'Стресс/нервозность → ' + result.stressCalorieLink.choiceLabel)
+        ),
+        result.nextStep && result.gentlePlan?.replacement && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, result.gentlePlan.replacement.title),
+          h('span', null, result.gentlePlan.replacement.detail)
+        ),
+        result.gentlePlan?.experiment && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, result.gentlePlan.experiment.title),
+          h('span', null, result.gentlePlan.experiment.detail)
+        ),
+        result.gentlePlan?.quietCue && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, result.gentlePlan.quietCue.title),
+          h('span', null, result.gentlePlan.quietCue.detail)
+        ),
+        result.upcomingCue && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, result.upcomingCue.title),
+          h('span', null, result.upcomingCue.detail)
+        ),
+        result.weeklyDigest?.digestLabel && h('div', { className: 'hes-low-meal__soft' },
+          h('strong', null, 'Итог недели'),
+          h('span', null, result.weeklyDigest.digestLabel)
+        ),
+        safeArray(result.contextOptions).length > 0 && h('div', { className: 'hes-low-meal__context' },
+          h('span', null, 'Если хотите, отметьте контекст'),
+          h('div', { className: 'hes-low-meal__context-chips' },
+            result.contextOptions.map(([value, label]) => h('button', {
+              key: value,
+              type: 'button',
+              className: result.contextTag === value ? 'is-active' : '',
+              onClick: () => onContextTag?.(value)
+            }, label))
+          )
+        ),
+        h('div', { className: 'hes-low-meal__actions' },
+          h('button', { type: 'button', onClick: onEditHunger }, 'Исправить прошлую оценку'),
+          h('button', { type: 'button', onClick: onBackfill }, 'Добавить оценку перед едой')
         )
-      ),
-      h('div', { className: 'hes-low-meal__actions' },
-        h('button', { type: 'button', onClick: onEditHunger }, 'Исправить прошлую оценку'),
-        h('button', { type: 'button', onClick: onBackfill }, 'Добавить оценку перед едой')
       )
     );
   }
@@ -3477,12 +3529,12 @@
   }
 
   function getHungerTone(value) {
-    const v = Math.max(1, Math.min(10, Number(value) || DEFAULT_DRAFT.hungerLevel));
+    const v = clampHungerVisual(value, DEFAULT_DRAFT.hungerLevel);
     const green = [79, 157, 105];
     const amber = [215, 169, 40];
     const red = [216, 90, 74];
     const base = v <= 5.5
-      ? mixRgb(green, amber, (v - 1) / 4.5)
+      ? mixRgb(green, amber, v / 5.5)
       : mixRgb(amber, red, (v - 5.5) / 4.5);
     const soft = mixRgb(base, [255, 255, 255], 0.18);
     const action = mixRgb(base, [67, 69, 135], 0.36);
@@ -3508,7 +3560,7 @@
     const isFresh = Number.isFinite(previousLevel)
       && (previousDate === todayKey() || (Number.isFinite(previousMinutes) && previousMinutes <= TREND_WINDOW_MIN));
     if (!isFresh) return { ...DEFAULT_DRAFT };
-    const level = Math.max(1, Math.min(10, Math.round(previousLevel)));
+    const level = clampHungerLevel(previousLevel);
     return {
       ...DEFAULT_DRAFT,
       hungerLevel: level,
@@ -3518,9 +3570,9 @@
 
   function HungerSlider({ value, changeNote, onPreview, onCommit, onDragStart, onDragEnd }) {
     const visualValue = Number.isFinite(Number(value)) ? Number(value) : 5;
-    const roundedValue = Math.max(1, Math.min(10, Math.round(visualValue)));
+    const roundedValue = clampHungerLevel(visualValue);
     const label = String(roundedValue);
-    const fillPercent = ((Math.max(1, Math.min(10, visualValue)) - 1) / 9) * 100;
+    const fillPercent = (clampHungerVisual(visualValue, DEFAULT_DRAFT.hungerLevel) / HUNGER_MAX_LEVEL) * 100;
     const fillPx = (fillPercent / 100) * 205;
     const hungerTone = getHungerTone(visualValue);
     const handlePreview = (e) => {
@@ -3552,8 +3604,8 @@
         h('input', {
           className: 'hes-slider__range',
           type: 'range',
-          min: 1,
-          max: 10,
+          min: HUNGER_MIN_LEVEL,
+          max: HUNGER_MAX_LEVEL,
           step: 0.01,
           value: visualValue,
           'aria-label': 'Степень голода',
@@ -3820,7 +3872,7 @@
       ),
       h('div', { className: 'hes-spark__legend' },
           h('span', { className: 'hes-spark__legend-items' },
-            h('span', null, h('i', { className: 'hes-spark__legend-dot hes-spark__legend-dot--hunger' }), 'голод'),
+            h('span', null, h('i', { className: 'hes-spark__legend-dot hes-spark__legend-dot--hunger' }), 'оценка'),
           data.cravingPoints.length > 0 && h('span', null, h('i', { className: 'hes-spark__legend-dot hes-spark__legend-dot--craving' }), 'тяга'),
             h('span', null, h('i', { className: 'hes-spark__legend-line hes-spark__legend-line--meal' }), 'еда')
           ),
@@ -4100,8 +4152,8 @@
     const minutes = Number(context?.minutesSinceLastHungerEvent);
     if (!Number.isFinite(previous) || !Number.isFinite(current)) return null;
     if (!Number.isFinite(minutes) || minutes > 24 * 60) return null;
-    const previousRounded = Math.max(1, Math.min(10, Math.round(previous)));
-    const currentRounded = Math.max(1, Math.min(10, Math.round(current)));
+    const previousRounded = clampHungerLevel(previous);
+    const currentRounded = clampHungerLevel(current);
     const duration = formatShortDuration(minutes);
     if (!duration) return null;
     if (currentRounded === previousRounded) return 'Без изменений с прошлой оценки, ' + duration;
@@ -4603,7 +4655,7 @@
         recentFailedCheckpointCount: context.recentFailedCheckpointCount || 0,
         lowHungerMealReview: context.lowHungerMealReview ? {
           mealAt: context.lowHungerMealReview.mealAt || null,
-          hungerLevel: context.lowHungerMealReview.hungerLevel || null,
+          hungerLevel: context.lowHungerMealReview.hungerLevel ?? null,
           hungerAt: context.lowHungerMealReview.hungerAt || null,
           mealAnalysis: context.lowHungerMealReview.analysis || null,
           mealQuality: context.lowHungerMealReview.mealQuality || null
@@ -4843,7 +4895,7 @@
     );
     const selectedAssessmentAt = formatLocalDateTime(selectedAssessmentTime) || nowIso();
     const lowHungerMealReview = context.lowHungerMealReview || null;
-    const liveHungerLevel = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerVisual ?? activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+    const liveHungerLevel = clampHungerLevel(activeDraft.hungerVisual ?? activeDraft.hungerLevel);
     const draftForDecision = { ...activeDraft, hungerLevel: liveHungerLevel };
     const input = {
       now: selectedAssessmentAt,
@@ -4885,6 +4937,8 @@
         : getHungerChangeNote(activeDraft, context);
     const lastMealHint = getLastMealHint(result?.context || context);
     const energyBudgetSummary = result ? getEnergyBudgetSummary(result) : null;
+    const primaryNextAction = result?.log?.nextBestAction || null;
+    const showPrimaryNextAction = !!primaryNextAction && !['food', 'plan'].includes(primaryNextAction.type);
     const patternInsight = featureSettings.patternInsights ? buildPatternInsight(context) : null;
     const canShiftAssessmentTime = !settingsOpen && !result && !isEditingEvent && !isBackfillingEvent && !isLowHungerStep && !isStressCalorieFollowUp && !isHungerOutcomeFollowUp;
     const canShiftAssessmentForward = selectedAssessmentTime + HUNGER_TIMELINE_SNAP_MS <= Date.now();
@@ -4974,7 +5028,7 @@
 
     function startEditPoint(point) {
       if (!point?.id) return;
-      const level = Math.max(1, Math.min(10, Math.round(Number(point.level) || DEFAULT_DRAFT.hungerLevel)));
+      const level = clampHungerLevel(point.level);
       setResult(null);
       setDetailsOpen(false);
       setDebugOpen(false);
@@ -5005,7 +5059,7 @@
 
     function saveEditedPoint() {
       if (!editTarget?.id) return;
-      const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+      const level = clampHungerLevel(activeDraft.hungerLevel);
       const editedAt = nowIso();
       const nextT = Number(editTarget.t);
       const nextRecordedAt = Number.isFinite(nextT) ? formatLocalDateTime(nextT) : null;
@@ -5049,7 +5103,7 @@
     function startBackfillAt(timestamp) {
       if (!Number.isFinite(Number(timestamp))) return;
       const t = Number(timestamp);
-      const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+      const level = clampHungerLevel(activeDraft.hungerLevel);
       setResult(null);
       setDetailsOpen(false);
       setDebugOpen(false);
@@ -5068,7 +5122,7 @@
 
     function saveBackfillPoint() {
       if (!Number.isFinite(Number(backfillTarget?.t))) return;
-      const level = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerLevel) || DEFAULT_DRAFT.hungerLevel)));
+      const level = clampHungerLevel(activeDraft.hungerLevel);
       const recordedAt = formatLocalDateTime(backfillTarget.t);
       const savedAt = nowIso();
       const stableReasons = stableHungerPrompt ? safeArray(activeDraft.stableHungerReasons) : [];
@@ -5407,7 +5461,7 @@
           } : null,
           lowHungerMealReview: context.lowHungerMealReview ? {
             mealAt: context.lowHungerMealReview.mealAt || null,
-            hungerLevel: context.lowHungerMealReview.hungerLevel || null,
+            hungerLevel: context.lowHungerMealReview.hungerLevel ?? null,
             mealAnalysis: context.lowHungerMealReview.analysis || null,
             mealQuality: context.lowHungerMealReview.mealQuality || null
           } : null
@@ -5581,7 +5635,7 @@
             })),
             onCommit: (value) => patchDraft({
               hungerVisual: value,
-              hungerLevel: Math.max(1, Math.min(10, Math.round(value)))
+              hungerLevel: clampHungerLevel(value)
             }),
             onDragStart: () => setIsDragging(true),
             onDragEnd: () => setIsDragging(false)
@@ -5636,10 +5690,40 @@
           featureSettings.patternInsights && h(PatternInsightCard, { insight: patternInsight })
         ) : null,
         !settingsOpen && result ? h('div', {
-          className: 'hes-result' + ((detailsOpen || debugOpen) ? ' is-expanded' : '')
+          className: 'hes-result' + (detailsOpen ? ' is-expanded' : '')
         },
           h('h3', { className: 'hes-result-title' }, 'Рекомендация'),
           h('div', { className: 'hes-verdict' },
+            h('strong', { className: 'hes-verdict__title' }, getRecommendationTitle(result.decision)),
+            !showPrimaryNextAction && h('span', { className: 'hes-verdict__detail' }, getRecommendationDetail(result.decision))
+          ),
+          showPrimaryNextAction && h('div', { className: 'hes-next-action' },
+            h('span', null, 'Следующий шаг'),
+            h('strong', null, primaryNextAction.title),
+            h('em', null, primaryNextAction.detail)
+          ),
+          h('div', { className: 'hes-result-tools' },
+            h('button', {
+              type: 'button',
+              className: 'hes-details-toggle',
+              onClick: () => {
+                if (detailsOpen) setDebugOpen(false);
+                setDetailsOpen((open) => !open);
+              },
+              'aria-expanded': detailsOpen
+            }, detailsOpen ? 'Скрыть подробности' : 'Подробнее')
+          ),
+          detailsOpen && h('div', { className: 'hes-details-panel' },
+            h('div', { className: 'hes-user-why' },
+              h('div', { className: 'hes-user-why__title' }, 'Почему так'),
+              energyBudgetSummary && h('div', { className: 'hes-energy-budget' },
+                h('strong', null, energyBudgetSummary.main),
+                energyBudgetSummary.meta && h('span', null, energyBudgetSummary.meta)
+              ),
+              h('div', { className: 'hes-user-why__chips' },
+                getRecommendationReasons(result).map((reason) => h('span', { key: reason }, reason))
+              )
+            ),
             h('div', { className: 'hes-verdict__meta' },
               (hungerChangeNote || lastMealHint) && h('div', { className: 'hes-verdict__context' },
                 hungerChangeNote && h('span', null, hungerChangeNote),
@@ -5647,39 +5731,6 @@
               ),
               h('span', { className: 'hes-confidence' }, result.decision.confidence === 'high' ? 'уверенно' : result.decision.confidence === 'medium' ? 'средняя уверенность' : 'нужно уточнить')
             ),
-            h('strong', { className: 'hes-verdict__title' }, getRecommendationTitle(result.decision)),
-            h('span', { className: 'hes-verdict__detail' }, getRecommendationDetail(result.decision))
-          ),
-          h('div', { className: 'hes-user-why' },
-            h('div', { className: 'hes-user-why__title' }, 'Почему так'),
-            energyBudgetSummary && h('div', { className: 'hes-energy-budget' },
-              h('strong', null, energyBudgetSummary.main),
-              energyBudgetSummary.meta && h('span', null, energyBudgetSummary.meta)
-            ),
-            h('div', { className: 'hes-user-why__chips' },
-              getRecommendationReasons(result).map((reason) => h('span', { key: reason }, reason))
-            )
-          ),
-          result.log?.nextBestAction && !['food', 'plan'].includes(result.log.nextBestAction.type) && h('div', { className: 'hes-next-action' },
-            h('span', null, 'Следующий шаг'),
-            h('strong', null, result.log.nextBestAction.title),
-            h('em', null, result.log.nextBestAction.detail)
-          ),
-          h('div', { className: 'hes-result-tools' },
-            h('button', {
-              type: 'button',
-              className: 'hes-details-toggle',
-              onClick: () => setDetailsOpen((open) => !open),
-              'aria-expanded': detailsOpen
-            }, detailsOpen ? 'Скрыть детали' : 'Пояснения'),
-            h('button', {
-              type: 'button',
-              className: 'hes-debug-toggle',
-              onClick: () => setDebugOpen((open) => !open),
-              'aria-expanded': debugOpen
-            }, debugOpen ? 'Скрыть лог' : 'Диагностика')
-          ),
-          detailsOpen && h('div', { className: 'hes-details-panel' },
             safeArray(result.log?.patternCards).length > 0 && h('div', { className: 'hes-patterns' },
               h('div', { className: 'hes-patterns__title' }, 'Паттерн'),
               safeArray(result.log.patternCards).map((card) => h('div', { key: card.id, className: 'hes-pattern-card' },
@@ -5690,16 +5741,22 @@
             h('div', { className: 'hes-context' },
               h('div', { className: 'hes-context__title' }, 'Данные'),
               getContextBadges(result).map((badge) => h('span', { key: badge }, badge))
+            ),
+            h('button', {
+              type: 'button',
+              className: 'hes-debug-toggle',
+              onClick: () => setDebugOpen((open) => !open),
+              'aria-expanded': debugOpen
+            }, debugOpen ? 'Скрыть диагностику' : 'Диагностика'),
+            debugOpen && h('div', { className: 'hes-debug' },
+              h('div', { className: 'hes-debug__top' },
+                h('strong', null, 'Техническая диагностика'),
+                h('button', { type: 'button', onClick: copyLog }, copyDone ? 'Скопировано' : 'Скопировать лог')
+              ),
+              h(DebugSummary, { result }),
+              h('pre', null, JSON.stringify(result.log, null, 2))
             )
           ),
-          debugOpen && h('div', { className: 'hes-debug' },
-            h('div', { className: 'hes-debug__top' },
-              h('strong', null, 'Техническая диагностика'),
-              h('button', { type: 'button', onClick: copyLog }, copyDone ? 'Скопировано' : 'Скопировать лог')
-            ),
-            h(DebugSummary, { result }),
-            h('pre', null, JSON.stringify(result.log, null, 2))
-          )
         ) : null,
         !settingsOpen && !isLowHungerClarification && !isHungerOutcomeFollowUp && h('footer', { className: 'hes-actions' },
           isLowHungerResolved ? h('button', {
@@ -5781,7 +5838,7 @@
 .hes-diary-hunger-card__title{display:flex;align-items:center;gap:7px;color:#172033;font-size:14px;line-height:1.2}
 .hes-diary-hunger-card__title>span{color:#434587;font-size:12px}
 .hes-diary-hunger-card__status{border-radius:999px;background:rgba(255,255,255,.82);color:#64748b;padding:5px 8px;font-size:10px;font-weight:850;line-height:1;white-space:nowrap}
-.hes-diary-hunger-card .hes-spark{height:112px;background:rgba(255,255,255,.72)}
+.hes-diary-hunger-card .hes-spark{height:112px;border:0;background:rgba(255,255,255,.72)}
 .hes-slider{min-height:260px;border-radius:14px;background:#f8fbff;border:1px solid rgba(29,112,183,.12);padding:10px;display:grid;grid-template-columns:48px 1fr;grid-template-rows:auto 1fr;gap:8px;align-items:center}
 .hes-slider__value{grid-column:1/-1;text-align:center;font-size:32px;font-weight:900;color:#434587;line-height:1}
 .hes-slider__range{height:176px;width:44px;writing-mode:vertical-lr;direction:rtl;accent-color:#434587;justify-self:center}
@@ -5835,7 +5892,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-chip{min-height:52px;border-radius:14px;font-size:13px}
 .hes-chip.is-selected{background:#434587;color:#fff;border-color:#434587;box-shadow:0 8px 18px rgba(67,69,135,.18)}
 @keyframes hesPromptFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.hes-low-meal{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:9px}
+.hes-low-meal{border:0;border-radius:0;background:transparent;padding:4px 0;display:flex;flex-direction:column;gap:14px}
 .hes-outcome-followup{border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#fff;padding:14px;display:grid;gap:12px}
 .hes-outcome-followup__intro{display:grid;gap:5px}
 .hes-outcome-followup__intro strong{font-size:18px;line-height:1.2;color:#172033}
@@ -5845,16 +5902,20 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-outcome-followup__choices button:last-child:nth-child(odd){grid-column:1/-1}
 .hes-outcome-followup__choices button:focus-visible{outline:2px solid rgba(67,69,135,.28);outline-offset:2px}
 .hes-outcome-followup__later{min-height:44px;border:0;background:transparent;color:#64748b;font-size:12px;font-weight:850;cursor:pointer}
-.hes-low-meal__title{font-size:14px;font-weight:900;line-height:1.2;color:#434587}
+.hes-low-meal__title{font-size:20px;font-weight:900;line-height:1.2;color:#172033}
 .hes-low-meal__text{font-size:12px;font-weight:750;line-height:1.35;color:#475569}
+.hes-low-meal__lead{display:flex;align-items:baseline;gap:8px;color:#434587}
+.hes-low-meal__lead strong{font-size:28px;line-height:1;font-weight:900;letter-spacing:-.03em}
+.hes-low-meal__lead span{font-size:13px;line-height:1.2;font-weight:800;color:#64748b}
 .hes-low-meal__why{border-radius:10px;background:#fbfcff;color:#64748b;font-size:11px;font-weight:800;line-height:1.25;padding:7px 9px}
 .hes-low-meal__suggestion,.hes-low-meal__repeat{border-radius:12px;background:#f8fbff;color:#475569;font-size:12px;font-weight:850;line-height:1.25;padding:9px 10px}
-.hes-low-meal__suggestion{color:#434587;background:#eef6ff}
-.hes-low-meal__suggestion strong{display:block;font-size:12px;line-height:1.2;color:inherit}
+.hes-low-meal__suggestion{color:#434587;background:#eef6ff;padding:12px 13px}
+.hes-low-meal__suggestion strong{display:block;font-size:14px;line-height:1.25;color:inherit}
 .hes-low-meal__suggestion span{display:block;margin-top:4px;font-size:11px;line-height:1.25;color:#64748b;font-weight:750}
+.hes-low-meal__detail-note{font-size:11px;line-height:1.3;color:#64748b;font-weight:750}
 .hes-low-meal__repeat{background:#fff7ed;color:#7c2d12;border:1px solid rgba(234,88,12,.13)}
 .hes-low-meal__actions,.hes-low-meal__chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hes-low-meal__confirm{border:1px solid rgba(67,69,135,.1);border-radius:14px;background:#fbfcff;padding:10px;display:grid;gap:8px}
+.hes-low-meal__confirm{border:0;border-radius:0;background:transparent;padding:0;display:grid;gap:8px}
 .hes-low-meal__confirm>span{font-size:12px;font-weight:850;line-height:1.25;color:#334155}
 .hes-low-meal__confirm>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .hes-low-meal button{min-height:42px;border:1px solid rgba(67,69,135,.14);border-radius:12px;background:#f8fbff;color:#334155;font-size:12px;font-weight:850;line-height:1.15;padding:8px;cursor:pointer}
@@ -5877,6 +5938,13 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-low-meal__context-chips{display:flex;flex-wrap:wrap;gap:6px}
 .hes-low-meal__context-chips button{min-height:34px;border-radius:999px;padding:0 10px;font-size:11px}
 .hes-low-meal__context-chips button.is-active{background:#434587;color:#fff;border-color:#434587}
+.hes-clarification-details{border-top:1px solid rgba(67,69,135,.1);border-bottom:1px solid rgba(67,69,135,.1)}
+.hes-clarification-details summary{min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;color:#434587;font-size:12px;font-weight:850;cursor:pointer;padding:0 2px}
+.hes-clarification-details summary::-webkit-details-marker{display:none}
+.hes-clarification-details summary:focus-visible{outline:2px solid rgba(67,69,135,.28);outline-offset:3px;border-radius:8px}
+.hes-clarification-details__chevron{font-size:18px;line-height:1;transition:transform .2s ease}
+.hes-clarification-details[open] .hes-clarification-details__chevron{transform:rotate(180deg)}
+.hes-clarification-details__body{padding:2px 0 14px;display:grid;gap:10px}
 .hes-spark{height:108px;box-sizing:border-box;position:relative;border:1px solid rgba(67,69,135,.12);border-radius:16px;background:#f8fbff;padding:7px 10px 8px}
 .hes-spark__svg{display:block;width:100%;height:100%;overflow:visible}
 .hes-spark__night{fill:#172033;opacity:.09}
@@ -5963,8 +6031,8 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-feature-row__copy em{font-style:normal;font-size:12px;line-height:1.25;color:#64748b;font-weight:750}
 .hes-feature-row__state{border-radius:999px;background:#f1f5f9;color:#64748b;font-size:10px;font-weight:900;padding:5px 7px;text-transform:uppercase}
 .hes-feature-row.is-on .hes-feature-row__state{background:#eef6ff;color:#434587}
-	.hes-result{padding:10px 18px 96px;display:flex;flex-direction:column;gap:10px}
-	.hes-result.is-expanded{padding-bottom:156px}
+	.hes-result{padding:10px 18px 14px;display:flex;flex-direction:column;gap:10px}
+	.hes-result.is-expanded{padding-bottom:14px}
 	.hes-result-title{margin:1px 0 2px;font-size:17px;line-height:1.16;font-weight:750;color:#172033;letter-spacing:0}
 	.hes-verdict{border-radius:16px;background:#eef6ff;border:1px solid rgba(29,112,183,.14);padding:16px;display:flex;flex-direction:column;gap:9px}
 	.hes-verdict__meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:20px}
@@ -5996,8 +6064,9 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-context{border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#fff;padding:10px 12px;display:flex;flex-wrap:wrap;gap:7px}
 .hes-context__title{width:100%;font-size:12px;font-weight:850;color:#64748b}
 .hes-context span{border-radius:999px;background:#eef6ff;color:#475569;font-size:11px;font-weight:800;padding:6px 9px}
-  .hes-result-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
- 	.hes-details-toggle,.hes-debug-toggle{min-height:44px;border:1px solid rgba(67,69,135,.14);border-radius:12px;background:#fff;color:#434587;font-weight:850;cursor:pointer}
+  .hes-result-tools{display:block}
+	.hes-details-toggle,.hes-debug-toggle{min-height:44px;border:1px solid rgba(67,69,135,.14);border-radius:12px;background:#fff;color:#434587;font-weight:850;cursor:pointer}
+	.hes-details-toggle,.hes-details-panel>.hes-debug-toggle{width:100%}
  	.hes-details-toggle[aria-expanded="true"],.hes-debug-toggle[aria-expanded="true"]{background:#f8fbff;border-color:rgba(67,69,135,.2)}
   .hes-debug-toggle{color:#64748b}
 	.hes-details-panel{border:1px solid rgba(67,69,135,.1);border-radius:16px;background:#fbfcff;padding:10px;display:flex;flex-direction:column;gap:10px}
@@ -6051,13 +6120,14 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-spark__point-button:focus-visible .hes-spark__point{stroke:#f8fafc}
 [data-theme="dark"] .hes-slider__track::before{background:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-slider__change,[data-theme="dark"] .hes-context-summary{background:#172033;color:#cbd5e1;border-color:rgba(226,236,242,.12)}
-[data-theme="dark"] .hes-low-meal{background:#1f2937;border-color:rgba(226,236,242,.14)}
+[data-theme="dark"] .hes-low-meal{background:transparent;border-color:transparent}
 [data-theme="dark"] .hes-outcome-followup{background:#1f2937;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-outcome-followup__intro strong{color:#f8fafc}
 [data-theme="dark"] .hes-outcome-followup__intro span,[data-theme="dark"] .hes-outcome-followup__later{color:#cbd5e1}
 [data-theme="dark"] .hes-outcome-followup__choices button{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
-[data-theme="dark"] .hes-low-meal__title{color:#c7d2fe}
+[data-theme="dark"] .hes-low-meal__title{color:#f8fafc}
 [data-theme="dark"] .hes-low-meal__text{color:#cbd5e1}
+[data-theme="dark"] .hes-low-meal__lead span,[data-theme="dark"] .hes-low-meal__detail-note{color:#94a3b8}
 [data-theme="dark"] .hes-low-meal__why{background:#111827;color:#94a3b8}
 [data-theme="dark"] .hes-low-meal__suggestion,[data-theme="dark"] .hes-low-meal__next{background:#172033;border-color:rgba(226,236,242,.12)}
 [data-theme="dark"] .hes-low-meal__suggestion span{color:#cbd5e1}
@@ -6076,6 +6146,8 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-low-meal__soft span{color:#cbd5e1}
 [data-theme="dark"] .hes-low-meal__context{border-color:rgba(226,236,242,.1)}
 [data-theme="dark"] .hes-low-meal__context-chips button.is-active{background:#6366f1;color:#fff;border-color:#6366f1}
+[data-theme="dark"] .hes-clarification-details{border-color:rgba(226,236,242,.12)}
+[data-theme="dark"] .hes-clarification-details summary{color:#c7d2fe}
 [data-theme="dark"] .hes-spark__hint{background:rgba(17,24,39,.82);color:#cbd5e1}
 [data-theme="dark"] .hes-spark-menu{background:rgba(17,24,39,.96);border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-spark-menu button{background:#172033;color:#c7d2fe;border-color:rgba(226,236,242,.14)}
@@ -6096,7 +6168,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-feature-row__state{background:#111827;color:#94a3b8}
 [data-theme="dark"] .hes-feature-row.is-on .hes-feature-row__state{background:#1f2937;color:#c7d2fe}
 @keyframes hesFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@media (max-width:520px){.hes-input{padding:8px 14px 8px;gap:10px}.hes-result{padding:8px 14px 96px}.hes-result.is-expanded{padding-bottom:156px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr;row-gap:6px}.hes-slider__value{font-size:54px}.hes-slider__status{font-size:14px}.hes-slider__change{min-height:36px;max-width:260px}.hes-prompt{height:104px;min-height:104px;padding:10px}.hes-prompt__title{font-size:13px;margin-bottom:7px}.hes-chip{min-height:44px;border-radius:13px;font-size:12px;padding:6px 8px}.hes-spark{height:100px}.hes-pattern-insight{max-height:92px}.hes-actions{padding:0 14px 14px}.hes-actions .hes-primary,.hes-actions .hes-secondary{min-height:56px}}
+@media (max-width:520px){.hes-input{padding:8px 14px 8px;gap:10px}.hes-result{padding:8px 14px 12px}.hes-result.is-expanded{padding-bottom:12px}.hes-input .hes-slider{grid-template-columns:1fr 68px 1fr;row-gap:6px}.hes-slider__value{font-size:54px}.hes-slider__status{font-size:14px}.hes-slider__change{min-height:36px;max-width:260px}.hes-prompt{height:104px;min-height:104px;padding:10px}.hes-prompt__title{font-size:13px;margin-bottom:7px}.hes-chip{min-height:44px;border-radius:13px;font-size:12px;padding:6px 8px}.hes-spark{height:100px}.hes-pattern-insight{max-height:92px}.hes-actions{padding:0 14px 14px}.hes-actions .hes-primary,.hes-actions .hes-secondary{min-height:56px}}
 @media (max-height:900px){
   .hes-head{min-height:54px;padding-top:10px;padding-bottom:5px}
   .hes-time-stack{top:57px;gap:3px}
@@ -6265,7 +6337,8 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     compactDecision,
     getHungerChangeNote,
     getRecommendationDetail,
-    getNextBestAction
+    getNextBestAction,
+    hasRecentHungerAssessment
   };
 
   HEYS.HungerEnergyStatusModal = {

@@ -50,7 +50,7 @@
  * 
  * v26 features:
  * - Multi-meal timeline planning (via pi_meal_planner.js)
- * - Insulin wave-aware scheduling: meals after wave ends + 30min fat-burn window
+ * - Scheduling uses the canonical post-meal response estimate
  * - Pre-sleep buffer (3h): last meal before bedtime
  * - Budget distribution across N meals (ratios: 2=[60/40], 3=[45/35/20], 4=[35/30/20/15])
  * - Collapsed state: "2 приёма до сна · 18:30-22:30"
@@ -299,12 +299,13 @@
             } catch (e) {}
         }
         lines.push('');
-        lines.push(`Sleep target source: ${day?.sleepStart ? `day.sleepStart=${day.sleepStart}` : (prof?.sleepTarget ? `profile=${prof.sleepTarget}` : 'default 23:00')}`);
+        const sleepContext = recommendation?.sleepContext || recommendation?.mealsPlan?.summary?.sleepContext;
+        lines.push(`Sleep target source: ${sleepContext ? `${sleepContext.source}=${sleepContext.displayTime} (${sleepContext.confidence})` : (prof?.sleepTarget ? `profile=${prof.sleepTarget}` : 'resolver fallback')}`);
         lines.push(`Profile weight: ${prof?.weight || prof?.weightKg || prof?.bodyMassKg || '70 (fallback)'} кг`);
         lines.push(`Profile fastingWindow: ${prof?.fastingWindow ? JSON.stringify(prof.fastingWindow) : '(not set)'}`);
-        lines.push(`Day check-in: sleepStart=${day?.sleepStart || '(not set)'}, refeedDay=${!!day?.isRefeedDay}`);
+        lines.push(`Observed sleep: sleepStart=${day?.sleepStart || '(not set)'}, refeedDay=${!!day?.isRefeedDay}`);
         lines.push('');
-        lines.push(`Day target: ${Math.round(optimum || normAbs?.kcal || 0)} kcal (optimum=${optimum || 'N/A'}, normAbs=${normAbs?.kcal || 'N/A'})`);
+        lines.push(`Day target: ${Math.round(resolveDayTargetKcal(optimum, normAbs))} kcal (optimum=${optimum || 'N/A'}, normAbs=${normAbs?.kcal || 'N/A'})`);
         lines.push(`            P${Math.round(normAbs?.prot || 0)}г C${Math.round(normAbs?.carbs || normAbs?.carb || 0)}г F${Math.round(normAbs?.fat || 0)}г`);
         lines.push(`Day eaten:  ${Math.round(dayTot?.kcal || 0)} kcal, P${Math.round(dayTot?.prot || 0)}г C${Math.round(dayTot?.carbs || dayTot?.carb || 0)}г F${Math.round(dayTot?.fat || 0)}г`);
         const supplements = Array.isArray(day?.supplements) ? day.supplements.filter((s) => s && s.taken !== false && s.consumed !== false) : [];
@@ -359,7 +360,7 @@
                     lines.push(`    macros:  P${Math.round(m.macros?.prot || 0)}г C${Math.round(m.macros?.carbs || 0)}г F${Math.round(m.macros?.fat || 0)}г · ${Math.round(m.macros?.kcal || 0)} kcal`);
                     lines.push(`    scenario: ${m.scenario || '?'} (source: ${m.scenarioSource || '?'})${m.scenarioBaseline ? `, baseline: ${m.scenarioBaseline}` : ''}`);
                     lines.push(`    targets: GL ${m.targetGL ?? '-'}, hoursToSleep ${m.hoursToSleep != null ? Number(m.hoursToSleep).toFixed(1) + 'ч' : '?'}${m.presleepCapped ? ' [⚠ presleep capped]' : ''}`);
-                    lines.push(`    wave end: ${m.estimatedWaveEnd || '?'}, fat burn: ${m.fatBurnWindow?.start || '?'} → ${m.fatBurnWindow?.end || '?'}`);
+                    lines.push(`    response estimate: ${m.estimatedWaveEnd || '?'}`);
                     lines.push(`    actionable: ${!!m.isActionable}, locked: ${!!m.locked}, last: ${!!m.isLast}`);
                 });
 
@@ -421,7 +422,7 @@
             eatenProt: Math.round(dayTot?.prot || 0),
             eatenCarbs: Math.round(dayTot?.carbs || dayTot?.carb || 0),
             eatenFat: Math.round(dayTot?.fat || 0),
-            targetKcal: Math.round(optimum || normAbs?.kcal || 0),
+            targetKcal: Math.round(resolveDayTargetKcal(optimum, normAbs)),
             targetProt: Math.round(normAbs?.prot || 0),
             targetCarbs: Math.round(normAbs?.carbs || normAbs?.carb || 0),
             targetFat: Math.round(normAbs?.fat || 0),
@@ -512,6 +513,39 @@
         return h + m / 60;
     }
 
+    function resolveDayTargetKcal(optimum, normAbs) {
+        const candidates = [Number(optimum), Number(normAbs?.kcal)]
+            .filter((value) => Number.isFinite(value) && value > 0);
+        return candidates.length > 0 ? Math.max(...candidates) : 0;
+    }
+
+    function getFreshHungerSignal(nowTs = Date.now()) {
+        try {
+            const rows = global.HEYS?.HungerEnergyStatusStorage?.readEvents?.();
+            if (!Array.isArray(rows)) return null;
+            const latest = rows
+                .map((row) => ({
+                    row,
+                    level: Number(row?.hungerLevel ?? row?.input?.hungerLevel),
+                    recordedAt: row?.recordedAt || row?.createdAt || null,
+                    timestamp: Date.parse(row?.recordedAt || row?.createdAt || '')
+                }))
+                .filter((entry) => Number.isFinite(entry.level) && Number.isFinite(entry.timestamp))
+                .sort((a, b) => b.timestamp - a.timestamp)[0];
+            if (!latest) return null;
+            const ageMinutes = Math.max(0, Math.round((nowTs - latest.timestamp) / 60000));
+            if (ageMinutes > 180) return null;
+            return {
+                level: latest.level,
+                trend: latest.row?.hungerTrend || latest.row?.input?.hungerTrend || 'unknown',
+                recordedAt: latest.recordedAt,
+                ageMinutes
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
     /**
      * Собрать контекст для recommend() из данных дня
      */
@@ -553,10 +587,16 @@
 
         // R1-2: сортируем приёмы по времени, чтобы lastMeal был действительно поздним.
         const rawMeals = Array.isArray(day.meals) ? day.meals : [];
+        const plannerTime = global.HEYS?.InsightsPI?.mealPlanner;
+        const currentTimelineHours = plannerTime?.normalizePlanningCurrentTime?.(currentTimeStr);
         const meals = rawMeals
             .filter((m) => m && typeof m.time === 'string' && m.time.includes(':'))
             .slice()
-            .sort((a, b) => (parseTimeStr(a.time) || 0) - (parseTimeStr(b.time) || 0));
+            .sort((a, b) => {
+                const aHours = plannerTime?.clockTimeAtOrBefore?.(a.time, currentTimelineHours) ?? (parseTimeStr(a.time) || 0);
+                const bHours = plannerTime?.clockTimeAtOrBefore?.(b.time, currentTimelineHours) ?? (parseTimeStr(b.time) || 0);
+                return aHours - bHours;
+            });
         const lastMeal = meals.length > 0 ? meals[meals.length - 1] : null;
 
         // Вычислить totals для lastMeal (если есть items)
@@ -586,13 +626,10 @@
         const trainings = day.trainings || [];
         const training = trainings.length > 0 ? trainings[0] : null;
 
-        // R1-3: целевое время сна — сначала чек-ин дня (day.sleepStart),
-        // потом профиль, потом дефолт. day.sleepStart всегда побеждает,
-        // если планируем СЕГОДНЯ — это явная заявка пользователя на этот день.
-        const daySleepStart = (typeof day.sleepStart === 'string' && day.sleepStart.includes(':'))
-            ? day.sleepStart
-            : null;
-        const sleepTarget = daySleepStart || prof?.sleepTarget || '23:00';
+        // day.sleepStart заполняется как факт завершённого сна. Recommender
+        // разрешает будущее время сна из истории/профиля единым resolver.
+        const sleepTarget = prof?.sleepTarget || '23:00';
+        const hungerSignal = getFreshHungerSignal(currentTime.getTime());
 
         // R2-3: пересчитываем dayEaten из day.meals напрямую. Не доверяем входному
         // dayTot — он может отстать после быстрых add/remove (debounce + async LS).
@@ -639,12 +676,11 @@
             console.info(`${LOG_PREFIX} [PLANNER.context] 💊 supplements added: ${Math.round(supplementsImpact.kcal)} kcal, ${Math.round(supplementsImpact.prot)}g prot`);
         }
 
-        // R2-2/R2-5: dayTarget учитывает рифид и тренировочный boost.
-        // optimum, поступающий из day-stats, уже включает refeed/workout-коррекции —
-        // используем его как авторитетный источник ккал. normAbs.kcal — сырая дневная норма.
-        const targetKcalRaw = Number.isFinite(optimum) && optimum > 0
-            ? optimum
-            : (Number(normAbs.kcal) || 0);
+        // Карточка и таблица «Распределение» должны опираться на одну цель.
+        // Берём больший валидный ориентир из optimum и отображаемой normAbs:
+        // иначе planner мог поздравить с целью при 1877/2042 ккал только потому,
+        // что скрытый optimum оказался ниже строки «Норма».
+        const targetKcalRaw = resolveDayTargetKcal(optimum, normAbs);
         if (day.isRefeedDay && Number.isFinite(optimum) && optimum > (normAbs.kcal || 0)) {
             console.info(`${LOG_PREFIX} [PLANNER.context] 🔄 Refeed day: target ${Math.round(targetKcalRaw)} kcal (raw norm ${Math.round(normAbs.kcal || 0)})`);
         }
@@ -715,9 +751,7 @@
                 moodAvg: day.moodAvg
             },
             sleepTarget,
-            // R1-3: явный сигнал «время сна задано пользователем сегодня».
-            // Planner будет использовать как высший приоритет sleepTarget.
-            daySleepStart,
+            hungerSignal,
             isRefeedDay: !!day.isRefeedDay,
             lsGet: resolvedLsGet,
             sharedProducts: global.HEYS?.products?.getAll?.() || []
@@ -732,7 +766,8 @@
             dayEaten: `${Math.round(eaten.kcal)}ккал, ${Math.round(eaten.prot)}г белка`,
             dayTarget: `${Math.round(targetKcalRaw)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}, refeed=${!!day.isRefeedDay}), ${Math.round(normAbs.prot)}г белка`,
             sleepTarget,
-            daySleepStart: daySleepStart || 'inherit',
+            observedSleepStart: day.sleepStart || 'none',
+            hungerSignal: hungerSignal ? `${hungerSignal.level}/10, ${hungerSignal.ageMinutes}m old` : 'none/freshness expired',
             hasTraining: !!training,
             trainingTime: training?.time || 'none',
             hasLsGet: typeof context.lsGet === 'function',
@@ -2160,12 +2195,17 @@
 
         // 🆕 v26: Multi-meal mode detection
         const isMultiMeal = mealsPlan && mealsPlan.available && mealsPlan.meals && mealsPlan.meals.length > 1;
-        const nextMealPlan = isMultiMeal ? (mealsPlan.meals.find((m) => m.isActionable) || mealsPlan.meals[0]) : null;
+        const primaryPlannedMeal = mealsPlan?.meals?.find((m) => m.isActionable) || mealsPlan?.meals?.[0] || null;
+        const nextMealPlan = isMultiMeal ? primaryPlannedMeal : null;
         const displayGroups = isMultiMeal ? (nextMealPlan?.groups || []) : (groups || []);
         const displaySuggestions = isMultiMeal ? (nextMealPlan?.suggestions || []) : (suggestions || []);
-        const displayReasoning = isMultiMeal
+        const rawDisplayReasoning = isMultiMeal
             ? ((nextMealPlan?.reasoning && nextMealPlan.reasoning.length > 0) ? nextMealPlan.reasoning : (reasoning || []))
             : (reasoning || []);
+        const isProteinCatchupPlan = mealsPlan?.summary?.reasonCode === 'PROTEIN_DEFICIT_NEAR_GOAL';
+        const displayReasoning = isProteinCatchupPlan
+            ? rawDisplayReasoning.filter((line) => !line.includes('Белок:') && !line.includes('Осталось'))
+            : rawDisplayReasoning;
         const displayMode = isMultiMeal
             ? ((displayGroups && displayGroups.length > 0) ? 'grouped' : 'flat')
             : (mode || ((displayGroups && displayGroups.length > 0) ? 'grouped' : 'flat'));
@@ -2184,10 +2224,19 @@
             return (displaySuggestions || []).filter((p) => checkedProducts[`${p.productId || p.product}`]).length;
         })();
 
-        const logicWhy = scenarioReason || timing?.reason || displayReasoning?.[0] || 'Система сопоставила ваш текущий прогресс дня и выбрала оптимальный следующий приём.';
+        const logicWhy = isProteinCatchupPlan
+            ? 'Калории почти закрыты, поэтому план ограничен небольшой белковой порцией.'
+            : (scenarioReason || timing?.reason || displayReasoning?.[0] || 'Система сопоставила ваш текущий прогресс дня и выбрала оптимальный следующий приём.');
         const logicFocus = (() => {
+            if (isProteinCatchupPlan) {
+                return `Акцент: небольшой белковый приём — около ${Math.round(macros?.protein || primaryPlannedMeal?.macros?.prot || 0)} г, без попытки компенсировать весь дневной недобор.`;
+            }
+            if (primaryPlannedMeal?.proteinCapped) {
+                return `Акцент: до ${Math.round(primaryPlannedMeal.proteinCapG || primaryPlannedMeal.macros?.prot || 0)} г белка — весь дневной недобор за один раз закрывать не нужно.`;
+            }
             if (scenario === 'PROTEIN_DEFICIT') return 'Акцент: добрать белок и не перегрузить калории.';
             if (scenario === 'LATE_EVENING') return 'Акцент: лёгкий приём и комфортное засыпание.';
+            if (scenario === 'PRE_SLEEP') return 'Акцент: небольшая порция белка без тяжести перед сном.';
             if (scenario === 'POST_WORKOUT') return 'Акцент: восстановление — белок + умеренные углеводы.';
             if (scenario === 'PRE_WORKOUT') return 'Акцент: энергия для тренировки без тяжести.';
             if (isGoalReached) return 'Акцент: удержать результат дня без лишних калорий.';
@@ -2226,18 +2275,20 @@
         });
 
         // Scenario-aware visibility (v2.4)
-        // GOAL_REACHED: show water recommendation, hide macros
+        // GOAL_REACHED: show a dedicated terminal success state, hide macros
         // Other scenarios: show if has macros
         const remainingKcal = macros?.remainingKcal || 0;
 
-        // R8-B / R10-B: water-card показываем когда:
+        // R8-B / R10-B: terminal/fallback card показываем когда:
         //   1) Goal achieved (явно GOAL_REACHED scenario)
-        //   2) Budget exhausted (остаток <50 ккал ИЛИ ноль белка+углеводов).
+        //   2) Budget exhausted (финальная рекомендация дала ноль белка+углеводов).
         //   3) Planner вернул пустой план (R10-B plannerEmptyPlan flag)
+        // Сам по себе remainingKcal<50 больше не достаточен: при сильном дефиците
+        // белка recommender может осознанно дать небольшой protein catch-up.
         const isPlannerEmptyPlan = !!macros?.plannerEmptyPlan;
-        const shouldShowWater = isGoalReached || isPlannerEmptyPlan || remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0);
+        const shouldShowWater = isGoalReached || isPlannerEmptyPlan || (macros?.protein <= 0 && macros?.carbs <= 0);
         if (shouldShowWater) {
-            console.info(`${LOG_PREFIX} ℹ️ Budget exhausted — showing water card:`, {
+            console.info(`${LOG_PREFIX} ℹ️ Showing terminal planner card:`, {
                 scenario,
                 isGoalReached,
                 isPlannerEmptyPlan,
@@ -2245,13 +2296,73 @@
                 protein: macros?.protein,
                 carbs: macros?.carbs
             });
-            // R10-B: разный заголовок и текст для GOAL_REACHED vs empty plan
-            const isTooLate = isPlannerEmptyPlan && !isGoalReached;
-            const titleText = isTooLate ? 'Сегодня уже поздно есть' : 'Цель дня выполнена!';
+            if (isGoalReached) {
+                return h('section', {
+                    className: 'meal-rec-card widget widget--meal-rec-diary-goal',
+                    style: { position: 'relative' },
+                    role: 'status',
+                    'aria-label': 'План питания на сегодня выполнен'
+                },
+                    h('div', { className: 'meal-rec-card__goal-hero' },
+                        h('span', { className: 'meal-rec-card__goal-mark', 'aria-hidden': true },
+                            h('svg', {
+                                viewBox: '0 0 24 24',
+                                width: 24,
+                                height: 24,
+                                fill: 'none',
+                                focusable: false
+                            },
+                                h('path', {
+                                    d: 'M5 12.5 9.2 17 19 7',
+                                    stroke: 'currentColor',
+                                    strokeWidth: 2.2,
+                                    strokeLinecap: 'round',
+                                    strokeLinejoin: 'round'
+                                })
+                            )
+                        ),
+                        h('div', { className: 'meal-rec-card__goal-copy' },
+                            h('div', { className: 'meal-rec-card__goal-eyebrow' }, 'Планер · итог дня'),
+                            h('div', { className: 'meal-rec-card__goal-title' }, 'На сегодня достаточно'),
+                            h('div', { className: 'meal-rec-card__goal-subtitle' },
+                                'Калории и основной ориентир по белку — в рабочем диапазоне.'
+                            )
+                        )
+                    ),
+                    h('div', { className: 'meal-rec-card__goal-metrics', 'aria-label': 'Выполненные ориентиры' },
+                        h('div', { className: 'meal-rec-card__goal-metric' },
+                            h('span', { className: 'meal-rec-card__goal-metric-label' }, 'Калории'),
+                            h('span', { className: 'meal-rec-card__goal-metric-value' }, 'В диапазоне')
+                        ),
+                        h('div', { className: 'meal-rec-card__goal-metric' },
+                            h('span', { className: 'meal-rec-card__goal-metric-label' }, 'Белок'),
+                            h('span', { className: 'meal-rec-card__goal-metric-value' }, 'Ориентир закрыт')
+                        )
+                    ),
+                    h('div', { className: 'meal-rec-card__goal-note' },
+                        'Если голода нет, день можно завершать. Жажду закрывайте водой.'
+                    ),
+                    h('span', {
+                        className: 'meal-rec-card__diag-dot',
+                        style: { position: 'absolute', top: 8, right: 10 },
+                        onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                        title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
+                               diagCopyStatus === 'err' ? 'Не удалось скопировать' :
+                               'Скопировать диагностику',
+                        'data-status': diagCopyStatus || '',
+                        'aria-label': 'Скопировать диагностику планнера'
+                    }, diagCopyStatus === 'ok' ? '✓' : diagCopyStatus === 'err' ? '✕' : '·')
+                );
+            }
+
+            // R10-B: empty-plan fallback stays separate from GOAL_REACHED.
+            const isTooLate = isPlannerEmptyPlan;
+            const plannerDecision = macros?.plannerDecision || mealsPlan?.summary || null;
+            const titleText = isTooLate ? 'Плотный приём уже близко ко сну' : 'Приём сейчас не требуется';
             const bodyText = isTooLate
-                ? (macros?.plannerEmptyReason || 'До сна слишком мало времени для нового приёма. Если очень голодно — лёгкий белковый перекус (творог/казеин). Иначе — вода и спокойного сна.')
-                : 'Вы набрали достаточно калорий и нутриентов на сегодня. Дальше — только вода. Хороший день!';
-            // Show "goal complete, drink water" card instead of hiding
+                ? `${macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.'} ${plannerDecision?.alternatives?.[0] || 'При сильном голоде выбери небольшой лёгкий приём.'}`
+                : 'Планнер не нашёл полезного дополнительного приёма в текущем остатке дня.';
+            // Keep a visible explanation instead of hiding an empty planner result.
             return h('div', {
                 className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl',
                 style: { position: 'relative' }
@@ -2265,6 +2376,20 @@
                 ),
                 h('div', { className: 'text-sm text-blue-700 leading-relaxed' },
                     bodyText
+                ),
+                isTooLate && plannerDecision && h('details', {
+                    className: 'mt-3 text-sm text-blue-700'
+                },
+                    h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Подробнее'),
+                    h('div', { style: { marginTop: 8, display: 'grid', gap: 6 } },
+                        plannerDecision.sleepContext && h('div', null,
+                            `Сон: около ${plannerDecision.sleepContext.displayTime} · ${plannerDecision.sleepContext.explanation}`
+                        ),
+                        (plannerDecision.topFactors || []).slice(0, 4).map((factor, index) =>
+                            h('div', { key: `planner-factor-${index}` }, `• ${factor}`)
+                        ),
+                        plannerDecision.confidence === 'low' && h('div', null, 'Время сна оценено с низкой уверенностью.')
+                    )
                 ),
                 // Незаметная точка диагностики (как в основной карточке)
                 h('span', {
@@ -2511,6 +2636,18 @@
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Акцент:'),
                         h('span', { className: 'meal-rec-card__logic-text' }, logicFocus)
                     ),
+                    mealsPlan?.summary?.sleepContext && h('div', { className: 'meal-rec-card__logic-row' },
+                        h('span', { className: 'meal-rec-card__logic-label' }, 'Сон:'),
+                        h('span', { className: 'meal-rec-card__logic-text' },
+                            `около ${mealsPlan.summary.sleepContext.displayTime} · ${mealsPlan.summary.sleepContext.explanation}`
+                        )
+                    ),
+                    (mealsPlan?.summary?.topFactors || []).slice(0, 4).map((factor, index) =>
+                        h('div', { className: 'meal-rec-card__logic-row', key: `meal-plan-factor-${index}` },
+                            h('span', { className: 'meal-rec-card__logic-label' }, index === 0 ? 'Учтено:' : ''),
+                            h('span', { className: 'meal-rec-card__logic-text' }, factor)
+                        )
+                    ),
                     recommendation?.explain?.whyChanged && h('div', { className: 'meal-rec-card__logic-row' },
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Перестроен:'),
                         h('span', { className: 'meal-rec-card__logic-text' }, recommendation.explain.whyChanged)
@@ -2529,7 +2666,9 @@
                         e.stopPropagation();
                         setShowProductsModal(true);
                     }
-                }, `Показать рекомендуемые продукты${displayProductCount > 0 ? ` (${displayProductCount})` : ''}`),
+                }, displayProductCount > 0
+                    ? `Выбрать продукты · ${displayProductCount} вариантов`
+                    : 'Выбрать продукты'),
 
                 h('div', { className: 'meal-rec-card__footer' },
                     confidence !== undefined && h('span', { className: 'meal-rec-card__confidence' },

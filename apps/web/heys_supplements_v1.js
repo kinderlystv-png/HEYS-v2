@@ -19,71 +19,72 @@
 
   // === КАТАЛОГ ВИТАМИНОВ ===
   const SUPPLEMENTS_CATALOG = {
-    // === 🛡️ Иммунитет ===
-    vitD: { name: 'D3', icon: '☀️', category: 'immune', timing: 'withFat', tip: 'Лучше с жирной едой' },
-    vitC: { name: 'C', icon: '🍊', category: 'immune', timing: 'anytime', tip: 'Улучшает усвоение железа' },
-    zinc: { name: 'Цинк', icon: '🛡️', category: 'immune', timing: 'withFood', tip: 'Не сочетать с кальцием' },
-    selenium: { name: 'Селен', icon: '🔬', category: 'immune', timing: 'withFood', tip: 'С витамином E — антиоксидантный дуэт' },
+    // Внутренние category id сохранены ради совместимости. Пользовательские
+    // названия ниже описывают тип добавки, а не обещанный эффект.
+    vitD: { name: 'D3', icon: '☀️', category: 'immune', timing: 'withFat', tip: 'Польза зависит от подтверждённого показания и дозы' },
+    vitC: { name: 'C', icon: '🍊', category: 'immune', timing: 'anytime', tip: 'Универсальная профилактическая польза не подтверждена' },
+    zinc: { name: 'Цинк', icon: '🛡️', category: 'immune', timing: 'withFood', tip: 'Высокие дозы требуют проверки ограничений' },
+    selenium: { name: 'Селен', icon: '🔬', category: 'immune', timing: 'withFood', tip: 'Избыток селена небезопасен — важна точная доза' },
 
     // === 🧠 Мозг и нервы ===
-    omega3: { name: 'Омега-3', icon: '🐟', category: 'brain', timing: 'withFood', tip: 'Усиливает D3' },
-    magnesium: { name: 'Магний', icon: '💤', category: 'brain', timing: 'evening', tip: 'Расслабляет мышцы' },
-    b12: { name: 'B12', icon: '⚡', category: 'brain', timing: 'morning', tip: 'Даёт энергию' },
-    b6: { name: 'B6', icon: '🧬', category: 'brain', timing: 'morning', tip: 'С магнием — усваивается лучше' },
-    lecithin: { name: 'Лецитин', icon: '🥚', category: 'brain', timing: 'withFood', tip: 'Холин для памяти — с едой' },
+    omega3: { name: 'Омега-3', icon: '🐟', category: 'brain', timing: 'withFood', tip: 'Эффект зависит от содержания EPA/DHA и показания' },
+    magnesium: { name: 'Магний', icon: '💤', category: 'brain', timing: 'evening', tip: 'Учитывайте элементарный магний и форму препарата' },
+    b12: { name: 'B12', icon: '⚡', category: 'brain', timing: 'morning', tip: 'Польза ожидается при дефиците или особой потребности' },
+    b6: { name: 'B6', icon: '🧬', category: 'brain', timing: 'morning', tip: 'Длительный избыток связан с риском нейропатии' },
+    lecithin: { name: 'Лецитин', icon: '🥚', category: 'brain', timing: 'withFood', tip: 'Надёжный общеоздоровительный эффект не подтверждён' },
 
     // === 🦴 Кости и суставы ===
-    calcium: { name: 'Кальций', icon: '🦴', category: 'bones', timing: 'withFood', tip: 'Не с железом!' },
-    k2: { name: 'K2', icon: '🥬', category: 'bones', timing: 'withFat', tip: 'Синергия с D3' },
-    collagen: { name: 'Коллаген', icon: '✨', category: 'bones', timing: 'empty', tip: 'Натощак + витамин C' },
-    glucosamine: { name: 'Глюкозамин', icon: '🦵', category: 'bones', timing: 'withFood', tip: 'Эффект накопительный, через 4-8 недель' },
+    calcium: { name: 'Кальций', icon: '🦴', category: 'bones', timing: 'withFood', tip: 'Показание и суммарная доза важнее общего назначения «для костей»' },
+    k2: { name: 'K2', icon: '🥬', category: 'bones', timing: 'withFat', tip: 'Не является обязательной парой к D3 для всех' },
+    collagen: { name: 'Коллаген', icon: '✨', category: 'bones', timing: 'anytime', tip: 'Данные об эффекте ограничены и зависят от цели' },
+    glucosamine: { name: 'Глюкозамин', icon: '🦵', category: 'bones', timing: 'withFood', tip: 'Результаты исследований противоречивы' },
 
     // === 💪 Спорт ===
-    creatine: { name: 'Креатин', icon: '💪', category: 'sport', timing: 'afterTrain', tip: '5г в день' },
-    bcaa: { name: 'BCAA', icon: '🏋️', category: 'sport', timing: 'afterTrain', tip: 'Натощак до трени защищает мышцы' },
-    protein: { name: 'Протеин', icon: '🥛', category: 'sport', timing: 'afterTrain', tip: '30мин после трени' },
+    creatine: { name: 'Креатин', icon: '💪', category: 'sport', timing: 'anytime', tip: 'Данные относятся прежде всего к силовым и повторным интенсивным нагрузкам' },
+    bcaa: { name: 'BCAA', icon: '🏋️', category: 'sport', timing: 'anytime', tip: 'При достаточном полноценном белке дополнительная польза не подтверждена' },
+    protein: { name: 'Протеин', icon: '🥛', category: 'sport', timing: 'anytime', tip: 'Удобный способ добрать белок, если его не хватает в рационе' },
 
     // === 💇 Красота ===
-    biotin: { name: 'Биотин', icon: '💇', category: 'beauty', timing: 'withFood', tip: 'Волосы и ногти' },
-    vitE: { name: 'E', icon: '🌻', category: 'beauty', timing: 'withFat', tip: 'Защищает Омега-3 от окисления' },
-    hyaluronic: { name: 'Гиалуроновая', icon: '💧', category: 'beauty', timing: 'empty' },
+    biotin: { name: 'Биотин', icon: '💇', category: 'beauty', timing: 'withFood', tip: 'Дефицит редок; высокие дозы могут искажать анализы' },
+    vitE: { name: 'E', icon: '🌻', category: 'beauty', timing: 'withFat', tip: 'Не использовать как универсальную профилактическую добавку' },
+    hyaluronic: { name: 'Гиалуроновая', icon: '💧', category: 'beauty', timing: 'anytime', tip: 'Данные пока ограничены небольшими исследованиями' },
 
     // === 🌸 Женское здоровье ===
-    iron: { name: 'Железо', icon: '🩸', category: 'female', timing: 'empty', tip: 'С витамином C, без кальция' },
-    folic: { name: 'Фолиевая', icon: '🌸', category: 'female', timing: 'morning' },
+    iron: { name: 'Железо', icon: '🩸', category: 'female', timing: 'empty', tip: 'Не начинать без подтверждённой причины или назначения' },
+    folic: { name: 'Фолиевая', icon: '🌸', category: 'female', timing: 'morning', tip: 'Особое показание — планирование и начало беременности' },
 
     // === 💤 Сон ===
-    melatonin: { name: 'Мелатонин', icon: '🌙', category: 'sleep', timing: 'beforeBed', tip: 'За 30-60мин до сна' },
-    glycine: { name: 'Глицин', icon: '😴', category: 'sleep', timing: 'beforeBed' },
-    ltheanine: { name: 'L-теанин', icon: '🍵', category: 'sleep', timing: 'evening', tip: 'Расслабляет без сонливости' },
+    melatonin: { name: 'Мелатонин', icon: '🌙', category: 'sleep', timing: 'beforeBed', tip: 'Наиболее обоснован при отдельных циркадных нарушениях' },
+    glycine: { name: 'Глицин', icon: '😴', category: 'sleep', timing: 'beforeBed', tip: 'Данных для уверенной рекомендации недостаточно' },
+    ltheanine: { name: 'L-теанин', icon: '🍵', category: 'sleep', timing: 'evening', tip: 'Данных для уверенной рекомендации недостаточно' },
 
     // === ⚡ Энергия ===
-    coq10: { name: 'CoQ10', icon: '❤️', category: 'energy', timing: 'withFat', tip: 'Энергия для сердца' },
+    coq10: { name: 'CoQ10', icon: '❤️', category: 'energy', timing: 'withFat', tip: 'Польза зависит от конкретного медицинского показания' },
 
     // === 🧪 Метаболизм (влияют на инсулиновую волну!) ===
-    berberine: { name: 'Берберин', icon: '🌿', category: 'metabolism', timing: 'beforeMeal', insulinBonus: -0.15, tip: '💡 -15% инсулиновая волна' },
-    cinnamon: { name: 'Корица', icon: '🍂', category: 'metabolism', timing: 'withFood', insulinBonus: -0.10, tip: '💡 -10% инсулиновая волна' },
-    chromium: { name: 'Хром', icon: '⚙️', category: 'metabolism', timing: 'withFood', tip: 'Стабилизирует сахар' },
-    vinegar: { name: 'Уксус', icon: '🍎', category: 'metabolism', timing: 'beforeMeal', insulinBonus: -0.20, tip: '💡 -20% инсулиновая волна' },
+    berberine: { name: 'Берберин', icon: '🌿', category: 'metabolism', timing: 'beforeMeal', tip: 'Может взаимодействовать с лекарствами; не заменяет терапию' },
+    cinnamon: { name: 'Корица', icon: '🍂', category: 'metabolism', timing: 'withFood', tip: 'Не считать заменой лечению или гарантированным снижением сахара' },
+    chromium: { name: 'Хром', icon: '⚙️', category: 'metabolism', timing: 'withFood', tip: 'Универсальный метаболический эффект не подтверждён' },
+    vinegar: { name: 'Уксус', icon: '🍎', category: 'metabolism', timing: 'withFood', tip: 'Пищевой продукт, а не гарантированный регулятор глюкозы' },
 
     // === 🫙 Масла ===
-    flaxOil: { name: 'Льняное масло', icon: '🌱', category: 'oils', timing: 'withFood', tip: 'Не нагревать! ALA-омега-3, хранить в холоде' },
-    oliveOil: { name: 'Оливковое масло', icon: '🫒', category: 'oils', timing: 'withFood', tip: 'Нерафинированное — больше полифенолов' },
-    fishOil: { name: 'Рыбий жир (масло)', icon: '🫗', category: 'oils', timing: 'withFood', tip: 'EPA/DHA — с едой усвоение ×3' },
+    flaxOil: { name: 'Льняное масло', icon: '🌱', category: 'oils', timing: 'withFood', tip: 'Учитывайте состав, хранение и цель использования' },
+    oliveOil: { name: 'Оливковое масло', icon: '🫒', category: 'oils', timing: 'withFood', tip: 'Это пищевой продукт; HEYS не приписывает ему лечебный эффект' },
+    fishOil: { name: 'Рыбий жир (масло)', icon: '🫗', category: 'oils', timing: 'withFood', tip: 'Оценивайте количество EPA+DHA, а не только массу масла' },
   };
 
   // === КАТЕГОРИИ ===
   const SUPPLEMENT_CATEGORIES = {
-    immune: { name: 'Иммунитет', icon: '🛡️', order: 1 },
-    brain: { name: 'Мозг', icon: '🧠', order: 2 },
-    bones: { name: 'Кости', icon: '🦴', order: 3 },
-    sport: { name: 'Спорт', icon: '💪', order: 4 },
-    beauty: { name: 'Красота', icon: '💇', order: 5 },
-    female: { name: 'Женское', icon: '🌸', order: 6 },
-    sleep: { name: 'Сон', icon: '💤', order: 7 },
-    energy: { name: 'Энергия', icon: '⚡', order: 8 },
-    metabolism: { name: 'Метаболизм', icon: '🧪', order: 9 },
-    oils: { name: 'Масла', icon: '🫙', order: 10 },
+    immune: { name: 'Витамины и микроэлементы', icon: '🛡️', order: 1 },
+    brain: { name: 'Минералы и жирные кислоты', icon: '🧠', order: 2 },
+    bones: { name: 'Минералы и суставы', icon: '🦴', order: 3 },
+    sport: { name: 'Спортивное питание', icon: '💪', order: 4 },
+    beauty: { name: 'Кожа и соединительная ткань', icon: '💇', order: 5 },
+    female: { name: 'Особые потребности', icon: '🌸', order: 6 },
+    sleep: { name: 'Сон и циркадный ритм', icon: '💤', order: 7 },
+    energy: { name: 'Другие вещества', icon: '⚡', order: 8 },
+    metabolism: { name: 'Растительные и пищевые добавки', icon: '🧪', order: 9 },
+    oils: { name: 'Пищевые масла', icon: '🫙', order: 10 },
   };
 
   // === ВЗАИМОДЕЙСТВИЯ v2.0 ===
@@ -166,6 +167,11 @@
       tags: ['похудение', 'инсулин']
     },
   };
+
+  Object.values(COURSES).forEach(course => {
+    course.enabled = false;
+    course.disabledReason = 'Универсальные курсы отключены: состав должен зависеть от конкретного показания, дозы и ограничений.';
+  });
 
   // === CSS АНИМАЦИИ ===
   const ANIMATIONS_CSS = `
@@ -674,13 +680,9 @@
     };
   }
 
-  // Курсовость/паузы — мягкие рекомендации (не медицинский совет)
-  // weeksMax: после этого показать напоминание о паузе.
-  const COURSE_HINTS = {
-    melatonin: { weeksMax: 8, breakWeeks: 2, title: 'Мелатонин обычно лучше курсами' },
-    berberine: { weeksMax: 12, breakWeeks: 2, title: 'Берберин часто принимают курсом' },
-    iron: { weeksMax: 12, breakWeeks: 4, title: 'Железо — лучше по анализам' },
-  };
+  // Историю длительности сохраняем, но автоматические советы о паузе отключены:
+  // длительность зависит от конкретного показания и схемы.
+  const COURSE_HINTS = {};
 
   function parseISODateKey(dateKey) {
     if (!dateKey || typeof dateKey !== 'string') return null;
@@ -715,6 +717,20 @@
     iu: 'МЕ',
   };
 
+  const DEFAULT_SUPPLEMENT_UNITS = {
+    vitD: 'МЕ',
+    k2: 'мкг',
+    folic: 'мкг',
+    b12: 'мкг',
+    biotin: 'мкг',
+    selenium: 'мкг',
+    omega3: 'г',
+    fishOil: 'г',
+    creatine: 'г',
+    bcaa: 'г',
+    protein: 'г',
+  };
+
   function normalizeUnit(u) {
     const s = String(u || '').trim().toLowerCase();
     if (!s) return '';
@@ -738,9 +754,96 @@
     return null;
   }
 
+  function convertMassDose(dose, fromUnit, toUnit) {
+    const n = Number(dose);
+    if (!Number.isFinite(n) || n < 0) return null;
+    const from = normalizeUnit(fromUnit);
+    const to = normalizeUnit(toUnit);
+    if (from === to) return n;
+
+    const toMg = { 'мкг': 0.001, 'мг': 1, 'г': 1000 };
+    if (!toMg[from] || !toMg[to]) return null;
+    return (n * toMg[from]) / toMg[to];
+  }
+
+  function convertDoseToUnit(suppId, dose, fromUnit, toUnit) {
+    const from = normalizeUnit(fromUnit);
+    const to = normalizeUnit(toUnit);
+    if (from === to) return Number(dose);
+    if (suppId === 'vitD') return convertVitD(dose, from, to);
+    return convertMassDose(dose, from, to);
+  }
+
+  function getDoseSafetyStatus(suppId, setting = {}) {
+    const rawDose = setting?.dose;
+    if (rawDose === '' || rawDose == null) {
+      return {
+        status: 'missing',
+        text: 'Доза не указана — безопасность не оценена',
+        dose: null,
+        unit: normalizeUnit(setting?.unit || DEFAULT_SUPPLEMENT_UNITS[suppId] || 'мг'),
+      };
+    }
+
+    const dose = Number(rawDose);
+    const unit = normalizeUnit(setting?.unit || DEFAULT_SUPPLEMENT_UNITS[suppId] || 'мг');
+    if (!Number.isFinite(dose) || dose <= 0 || !unit) {
+      return { status: 'invalid', text: 'Проверьте дозу и единицу измерения', dose: null, unit };
+    }
+
+    const limits = HEYS.Supplements?.SCIENCE?.LIMITS?.[suppId];
+    const hasReviewedLimit = Boolean(limits?.reviewedAt && limits?.sourceIds?.length);
+    if (!limits?.ul || !hasReviewedLimit) {
+      return {
+        status: 'unverified',
+        text: 'Доза указана — проверенного лимита в HEYS пока нет',
+        dose,
+        unit,
+      };
+    }
+
+    const limitUnit = normalizeUnit(limits.unit || 'мг');
+    const normalizedDose = convertDoseToUnit(suppId, dose, unit, limitUnit);
+    if (!Number.isFinite(normalizedDose)) {
+      return {
+        status: 'invalid',
+        text: `Нельзя сопоставить ${unit} с лимитом в ${limitUnit}`,
+        dose,
+        unit,
+      };
+    }
+
+    const ratio = normalizedDose / Number(limits.ul);
+    if (ratio > 1) {
+      return {
+        status: 'danger',
+        text: `Доза выше UL (${limits.ul} ${limitUnit}/день)`,
+        dose: normalizedDose,
+        unit: limitUnit,
+        ratio,
+      };
+    }
+    if (ratio >= 0.8) {
+      return {
+        status: 'warning',
+        text: `Доза близка к UL (${Math.round(ratio * 100)}%)`,
+        dose: normalizedDose,
+        unit: limitUnit,
+        ratio,
+      };
+    }
+    return {
+      status: 'within_limit',
+      text: `Ниже UL (${Math.round(ratio * 100)}%)`,
+      dose: normalizedDose,
+      unit: limitUnit,
+      ratio,
+    };
+  }
+
   function getDoseDisplay(suppId, setting, bio) {
     const dose = setting?.dose;
-    const unit = normalizeUnit(setting?.unit || bio?.forms?.[setting?.form]?.unit || 'мг');
+    const unit = normalizeUnit(setting?.unit || bio?.forms?.[setting?.form]?.unit || DEFAULT_SUPPLEMENT_UNITS[suppId] || 'мг');
     if (!dose) return null;
     // Витамин D: показываем конверсию (если возможно)
     if (suppId === 'vitD') {
@@ -755,40 +858,11 @@
 
   // "Почему сейчас" — короткие причины/правила для понятности.
   function getWhyNowBadges(suppId, planned, setting, bio) {
-    const supp = SUPPLEMENTS_CATALOG[suppId];
-    if (!supp) return [];
     const res = [];
-
-    const timing = setting?.timing || supp.timing;
-    if (timing === 'withMeal') res.push({ t: 'С едой', icon: '🍽️' });
-    if (timing === 'withFat' || timing === 'withMeal') {
-      if (['vitD', 'vitE', 'vitK2'].includes(suppId)) {
-        res.push({ t: 'Лучше с жиром', icon: '🥑' });
-      }
-    }
-    if (timing === 'morning') res.push({ t: 'Утром', icon: '🌅' });
-    if (timing === 'evening' || timing === 'beforeBed') res.push({ t: 'Вечером', icon: '🌙' });
-
-    // Конфликты: подсказать разнесение
-    const conflictPairs = {
-      iron: ['calcium', 'zinc', 'magnesium'],
-      zinc: ['iron', 'calcium'],
-      calcium: ['iron', 'zinc', 'magnesium'],
-      magnesium: ['calcium'],
-    };
-    const conflictsWith = (conflictPairs[suppId] || []).filter(x => planned.includes(x));
-    if (conflictsWith.length) {
-      const names = conflictsWith.map(id => SUPPLEMENTS_CATALOG[id]?.name || id).join(', ');
-      res.push({ t: `Разнести с: ${names}`, icon: '⏱️' });
-    }
-
-    // Магний — частая путаница с "элементным".
     if (suppId === 'magnesium') {
       res.push({ t: 'Смотри "элементный Mg" на банке', icon: '⚠️' });
     }
-
-    // Ограничиваем 3 подсказками, чтобы не шумело.
-    return res.slice(0, 3);
+    return res;
   }
 
   function getSafetyWarningsForSupplement(suppId, flags) {
@@ -846,22 +920,22 @@
     }
 
     const suggestions = [];
-    // Omega-3: если рыбы мало
-    if (!planned.includes('omega3') && SUPPLEMENTS_CATALOG.omega3 && daysWithMeals >= 3 && fishMeals < 2) {
+    // Наблюдение по дневнику — повод скорректировать рацион, но не достаточное
+    // основание для назначения добавки.
+    if (daysWithMeals >= 3 && fishMeals < 2) {
       suggestions.push({
-        suppId: 'omega3',
+        suppId: null,
         icon: '🐟',
         title: 'Рыбы мало за неделю',
-        reason: 'Если рыба редко — омега‑3 может быть полезна как поддержка.',
+        reason: 'Добавьте рыбу в рацион или обсудите EPA/DHA со специалистом при конкретном показании.',
       });
     }
-    // Железо: если железных продуктов мало (и особенно для женщин — это уже покрывает profile recs, но тут именно "по рациону")
-    if (!planned.includes('iron') && SUPPLEMENTS_CATALOG.iron && daysWithMeals >= 3 && ironMeals < 2) {
+    if (daysWithMeals >= 3 && ironMeals < 2) {
       suggestions.push({
-        suppId: 'iron',
+        suppId: null,
         icon: '🩸',
         title: 'Мало железосодержащих продуктов',
-        reason: 'Если часто устаёшь — лучше начать с анализов (ферритин), а не “наугад”.',
+        reason: 'Скорректируйте рацион; добавку железа начинают после подтверждения причины или назначения.',
       });
     }
     // Пример: если много молочки и есть железо в плане — напомнить разнести (не добавка, но полезный совет)
@@ -1024,84 +1098,11 @@
    * @returns {Array} массив { id, reason }
    */
   function getSmartRecommendations(profile, dayData) {
-    const recs = [];
-    const U = HEYS.utils || {};
-    const planned = getPlannedSupplements();
+    // Пол, возраст, сезон, стресс или одна плохая ночь не подтверждают
+    // показание. Пока профиль не хранит проверяемое основание (анализ,
+    // диагноз или назначение), recommendation engine работает fail-closed.
+    return [];
 
-    if (!profile) return recs;
-
-    // По полу
-    if (profile.gender === 'Женский') {
-      if (!planned.includes('iron') && SUPPLEMENTS_CATALOG['iron'])
-        recs.push({ id: 'iron', reason: '🌸 Железо важно для женщин (менструация)' });
-      if (!planned.includes('folic') && SUPPLEMENTS_CATALOG['folic'])
-        recs.push({ id: 'folic', reason: '🌸 Фолиевая кислота — женский базис' });
-      if (!planned.includes('calcium') && SUPPLEMENTS_CATALOG['calcium'])
-        recs.push({ id: 'calcium', reason: '🦴 Кальций — профилактика остеопороза' });
-    }
-
-    // По возрасту
-    const age = profile.age || 30;
-    if (age >= 40) {
-      if (!planned.includes('vitD') && SUPPLEMENTS_CATALOG['vitD'])
-        recs.push({ id: 'vitD', reason: '☀️ После 40 D3 критичен для костей и иммунитета' });
-      if (!planned.includes('coq10') && SUPPLEMENTS_CATALOG['coq10'])
-        recs.push({ id: 'coq10', reason: '❤️ CoQ10 поддерживает сердце после 40' });
-      if (!planned.includes('omega3') && SUPPLEMENTS_CATALOG['omega3'])
-        recs.push({ id: 'omega3', reason: '🐟 Омега-3 для мозга и сердца 40+' });
-    }
-    if (age >= 50) {
-      if (!planned.includes('b12') && SUPPLEMENTS_CATALOG['b12'])
-        recs.push({ id: 'b12', reason: '⚡ После 50 B12 усваивается хуже — нужна добавка' });
-    }
-
-    // По сезону
-    const month = new Date().getMonth();
-    if (month >= 10 || month <= 2) { // Ноябрь-Февраль
-      if (!planned.includes('vitD') && SUPPLEMENTS_CATALOG['vitD'])
-        recs.push({ id: 'vitD', reason: '🧊 Зимой D3 обязателен (мало солнца)' });
-      if (!planned.includes('vitC') && SUPPLEMENTS_CATALOG['vitC'])
-        recs.push({ id: 'vitC', reason: '🍊 Витамин C для иммунитета зимой' });
-      if (!planned.includes('zinc') && SUPPLEMENTS_CATALOG['zinc'])
-        recs.push({ id: 'zinc', reason: '🛡️ Цинк — защита от простуд' });
-    }
-
-    // По данным дня
-    if (dayData) {
-      // Плохой сон → магний
-      if (dayData.sleepQuality && dayData.sleepQuality <= 3) {
-        if (!planned.includes('magnesium') && SUPPLEMENTS_CATALOG['magnesium'])
-          recs.push({ id: 'magnesium', reason: '😴 Плохой сон → попробуй магний' });
-        if (!planned.includes('melatonin') && SUPPLEMENTS_CATALOG['melatonin'])
-          recs.push({ id: 'melatonin', reason: '💤 Мелатонин поможет засыпать' });
-      }
-
-      // Высокий стресс
-      if (dayData.stressAvg && dayData.stressAvg >= 6) {
-        if (!planned.includes('magnesium') && SUPPLEMENTS_CATALOG['magnesium'])
-          recs.push({ id: 'magnesium', reason: '😰 Высокий стресс → магний успокаивает' });
-        if (!planned.includes('b6') && SUPPLEMENTS_CATALOG['b6'])
-          recs.push({ id: 'b6', reason: '🧠 B6 снижает тревожность' });
-      }
-
-      // Тренировки
-      if (dayData.trainings && dayData.trainings.length > 0) {
-        if (!planned.includes('magnesium') && SUPPLEMENTS_CATALOG['magnesium'])
-          recs.push({ id: 'magnesium', reason: '💪 После трени магний от судорог' });
-        if (!planned.includes('omega3') && SUPPLEMENTS_CATALOG['omega3'])
-          recs.push({ id: 'omega3', reason: '💪 Омега-3 для восстановления' });
-        if (!planned.includes('vitD') && SUPPLEMENTS_CATALOG['vitD'])
-          recs.push({ id: 'vitD', reason: '💪 D3 помогает мышцам восстанавливаться' });
-      }
-    }
-
-    // Удаляем дубликаты (по id)
-    const seen = new Set();
-    return recs.filter(r => {
-      if (seen.has(r.id)) return false;
-      seen.add(r.id);
-      return true;
-    });
   }
 
   // === СВЯЗЬ С ЕДОЙ ===
@@ -1115,130 +1116,8 @@
    * @returns {Array} массив советов
    */
   function getMealBasedAdvice(meals, planned, taken, pIndex) {
-    const advices = [];
-    const notTaken = planned.filter(id => !taken.includes(id));
-    if (notTaken.length === 0 || !meals || meals.length === 0) return advices;
-
-    // Анализируем последний приём пищи
-    const lastMeal = meals[meals.length - 1];
-    if (!lastMeal || !lastMeal.items?.length) return advices;
-
-    // Helper для получения продукта
-    const getProduct = (item) => {
-      if (!pIndex) return null;
-      const nameKey = (item.name || '').trim().toLowerCase();
-      if (nameKey && pIndex.byName) {
-        const found = pIndex.byName.get(nameKey);
-        if (found) return found;
-      }
-      if (item.product_id != null && pIndex.byId) {
-        return pIndex.byId.get(String(item.product_id).toLowerCase());
-      }
-      return item.fat100 !== undefined ? item : null;
-    };
-
-    // 1. Считаем жиры в последнем приёме
-    let mealFat = 0;
-    for (const item of lastMeal.items) {
-      const p = getProduct(item);
-      if (p) mealFat += (p.fat100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
-    }
-
-    // Жирная еда → жирорастворимые витамины
-    if (mealFat >= 10) {
-      const fatSoluble = notTaken.filter(id =>
-        SUPPLEMENTS_CATALOG[id]?.timing === 'withFat'
-      );
-      if (fatSoluble.length > 0) {
-        const names = fatSoluble.map(id => SUPPLEMENTS_CATALOG[id].name).join(', ');
-        advices.push({
-          type: 'synergy',
-          icon: '🥑',
-          message: `Жирный приём! Идеально для: ${names}`,
-          details: 'Жирорастворимые витамины (D, E, K, A) усваиваются в 3-4 раза лучше с жирами.',
-          suppIds: fatSoluble,
-          priority: 'high'
-        });
-      }
-    }
-
-    // 2. Еда с железом + витамин C
-    const ironRichFoods = ['печень', 'говядина', 'гречка', 'чечевица', 'шпинат', 'фасоль'];
-    const hasIronFood = lastMeal.items.some(item =>
-      ironRichFoods.some(f => (item.name || '').toLowerCase().includes(f))
-    );
-    if (hasIronFood && notTaken.includes('vitC')) {
-      advices.push({
-        type: 'synergy',
-        icon: '🍊',
-        message: 'Еда с железом! Добавь витамин C для усвоения ×3',
-        details: 'Витамин C превращает негемовое железо в легкоусваиваемую форму.',
-        suppIds: ['vitC'],
-        priority: 'high'
-      });
-    }
-
-    // 3. Молочка + НЕ принимать железо
-    const dairyFoods = ['творог', 'молоко', 'сыр', 'йогурт', 'кефир', 'сметана'];
-    const hasDairy = lastMeal.items.some(item =>
-      dairyFoods.some(f => (item.name || '').toLowerCase().includes(f))
-    );
-    if (hasDairy && notTaken.includes('iron')) {
-      advices.push({
-        type: 'warning',
-        icon: '⚠️',
-        message: 'Молочка снижает усвоение железа. Раздели на 2 часа',
-        details: 'Кальций конкурирует с железом за усвоение в кишечнике.',
-        suppIds: ['iron'],
-        priority: 'medium'
-      });
-    }
-
-    // 4. Кофе + добавки
-    const hasCoffee = lastMeal.items.some(item =>
-      (item.name || '').toLowerCase().includes('кофе')
-    );
-    if (hasCoffee) {
-      const blockedSupps = notTaken.filter(id =>
-        ['iron', 'calcium', 'zinc', 'magnesium'].includes(id)
-      );
-      if (blockedSupps.length > 0) {
-        const names = blockedSupps.map(id => SUPPLEMENTS_CATALOG[id]?.name).join(', ');
-        advices.push({
-          type: 'warning',
-          icon: '☕',
-          message: `Кофе мешает: ${names}. Подожди 1-2 часа`,
-          details: 'Танины и кофеин снижают усвоение минералов на 40-60%.',
-          suppIds: blockedSupps,
-          priority: 'medium'
-        });
-      }
-    }
-
-    // 5. Белковая еда + креатин/BCAA
-    let mealProtein = 0;
-    for (const item of lastMeal.items) {
-      const p = getProduct(item);
-      if (p) mealProtein += (p.protein100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100) / 100;
-    }
-    if (mealProtein >= 25) {
-      const sportSupps = notTaken.filter(id =>
-        ['creatine', 'bcaa', 'protein'].includes(id)
-      );
-      if (sportSupps.length > 0) {
-        const names = sportSupps.map(id => SUPPLEMENTS_CATALOG[id]?.name).join(', ');
-        advices.push({
-          type: 'synergy',
-          icon: '💪',
-          message: `Белковый приём! Отлично для: ${names}`,
-          details: 'Спортивные добавки лучше усваиваются с белковой едой.',
-          suppIds: sportSupps,
-          priority: 'low'
-        });
-      }
-    }
-
-    return advices;
+    // Дневник еды сам по себе не подтверждает показание к добавке.
+    return [];
   }
 
   /**
@@ -1246,7 +1125,7 @@
    */
   function applyCourse(courseId, options = {}) {
     const course = COURSES[courseId];
-    if (!course) return false;
+    if (!course || course.enabled !== true) return false;
 
     const current = getPlannedSupplements();
     const newSupps = [...new Set([...current, ...course.supplements])];
@@ -1493,26 +1372,10 @@
    * @returns {{ synergies: string[], conflicts: string[] }}
    */
   function checkInteractions(suppIds) {
-    const synergies = [];
-    const conflicts = [];
-
-    if (!suppIds || suppIds.length < 2) return { synergies, conflicts };
-
-    for (const interaction of INTERACTIONS.synergies) {
-      const [a, b] = interaction.pair;
-      if (suppIds.includes(a) && suppIds.includes(b)) {
-        synergies.push(interaction.desc);
-      }
-    }
-
-    for (const interaction of INTERACTIONS.conflicts) {
-      const [a, b] = interaction.pair;
-      if (suppIds.includes(a) && suppIds.includes(b)) {
-        conflicts.push(interaction.desc);
-      }
-    }
-
-    return { synergies, conflicts };
+    // Legacy-таблица не хранит источники и дату ревью, поэтому не показываем
+    // её как медицинскую рекомендацию. Проверенные ограничения идут через
+    // indication-level evidence и персональные safety flags.
+    return { synergies: [], conflicts: [] };
   }
 
   /**
@@ -1521,19 +1384,9 @@
    * @returns {number} бонус (отрицательный = волна короче)
    */
   function getInsulinWaveBonus(dateKey) {
-    const taken = getTakenSupplements(dateKey);
-    if (!taken.length) return 0;
-
-    let totalBonus = 0;
-    for (const id of taken) {
-      const supp = SUPPLEMENTS_CATALOG[id];
-      if (supp && supp.insulinBonus) {
-        totalBonus += supp.insulinBonus;
-      }
-    }
-
-    // Кепаем максимумом -30%
-    return Math.max(-0.30, totalBonus);
+    // Fail closed: отметка приёма не меняет метаболический расчёт без
+    // отдельного проверенного контракта «вещество × доза × приём пищи».
+    return 0;
   }
 
   /**
@@ -1936,12 +1789,13 @@
                     }
                   },
                   style: {
-                    background: '#3b82f6',
+                    background: '#434587',
                     color: '#fff',
                     border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    minHeight: '44px',
+                    fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer'
                   }
@@ -1958,6 +1812,7 @@
                     const supp = SUPPLEMENTS_CATALOG[id];
                     if (!supp) return null;
                     const bio = hasScience && HEYS.Supplements.SCIENCE.BIOAVAILABILITY[id];
+                    const evidenceItems = HEYS.Supplements.SCIENCE?.EVIDENCE_BY_INDICATION?.[id] || [];
                     const setting = getSupplementSetting(id) || {};
                     const history = getSupplementHistory(id);
                     const timingInfo = TIMING[supp.timing];
@@ -1966,6 +1821,7 @@
                     const cInfo = getCourseInfo(id, dateKey);
                     const sideSum = getSideEffectSummary(id);
                     const warnings = getSafetyWarningsForSupplement(id, userFlags);
+                    const doseSafety = getDoseSafetyStatus(id, setting);
 
                     return React.createElement('div', {
                       key: id,
@@ -1990,16 +1846,17 @@
                           React.createElement('span', { style: { fontWeight: '600', fontSize: '14px' } }, supp.name)
                         ),
                         // Кнопка научной карточки
-                        bio && React.createElement('button', {
+                        React.createElement('button', {
                           onClick: () => {
                             openSupplementsSciencePopup(id);
                           },
                           style: {
                             background: '#eff6ff',
                             border: '1px solid #93c5fd',
-                            borderRadius: '8px',
-                            padding: '4px 10px',
-                            fontSize: '11px',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            minHeight: '40px',
+                            fontSize: '12px',
                             fontWeight: '600',
                             color: '#1d4ed8',
                             cursor: 'pointer',
@@ -2007,7 +1864,7 @@
                             alignItems: 'center',
                             gap: '4px'
                           }
-                        }, '🔬 Наука')
+                        }, evidenceItems.length > 0 ? 'Показания' : 'Настроить')
                       ),
                       // Мета-информация
                       React.createElement('div', {
@@ -2040,10 +1897,10 @@
                         // Доза (с конвертацией единиц)
                         setting.dose && React.createElement('span', {
                           style: {
-                            background: '#f0fdf4',
+                            background: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#fee2e2' : (doseSafety.status === 'warning' ? '#fef3c7' : '#e2ecf2'),
                             padding: '2px 8px',
                             borderRadius: '6px',
-                            color: '#16a34a'
+                            color: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#b91c1c' : (doseSafety.status === 'warning' ? '#92400e' : '#334155')
                           }
                         }, getDoseDisplay(id, setting, bio)),
                         // Курсовость (недели + предупреждение о перерыве)
@@ -2075,6 +1932,18 @@
                           msg = `⚠️ ${w0}${warnings.length > 1 ? ` (+${warnings.length - 1})` : ''}`;
                           bg = '#fef2f2';
                           color = '#dc2626';
+                        } else if (doseSafety.status === 'danger' || doseSafety.status === 'invalid') {
+                          msg = doseSafety.text;
+                          bg = '#fef2f2';
+                          color = '#b91c1c';
+                        } else if (doseSafety.status === 'warning') {
+                          msg = doseSafety.text;
+                          bg = '#fffbeb';
+                          color = '#92400e';
+                        } else if (doseSafety.status === 'missing') {
+                          msg = doseSafety.text;
+                          bg = '#eaf0f4';
+                          color = '#334155';
                         } else if (needsBreak) {
                           msg = `⏰ На курсе ${cInfo.weeksOnCourse} нед. — пора перерыв`;
                           bg = '#fffbeb';
@@ -2100,7 +1969,7 @@
                             border: msg ? 'none' : '1px solid #e2e8f0'
                           }
                         },
-                          React.createElement('div', { style: { flex: 1 } }, msg || 'Советы, объяснения и детали'),
+                          React.createElement('div', { style: { flex: 1 } }, msg || 'План пользователя — проверьте дозу и показания'),
                           React.createElement('button', {
                             onClick: () => {
                               uiState.expandedSupp[id] = !isExpanded;
@@ -2363,8 +2232,22 @@
               }
             },
               React.createElement('div', { style: { fontWeight: '600', fontSize: '15px', marginBottom: '12px' } }, '📦 Готовые курсы'),
-              React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-                Object.entries(COURSES).map(([cid, course]) => {
+              (() => {
+                const availableCourses = Object.entries(COURSES).filter(([, course]) => course.enabled === true);
+                if (availableCourses.length === 0) {
+                  return React.createElement('div', {
+                    style: {
+                      background: '#eaf0f4',
+                      color: '#475569',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      fontSize: '13px',
+                      lineHeight: '1.45'
+                    }
+                  }, 'Универсальные курсы отключены. Добавьте свой план и укажите дозы; HEYS не назначает добавки без конкретного показания.');
+                }
+                return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                availableCourses.map(([cid, course]) => {
                   const isActive = course.supplements.every(id => planned.includes(id));
                   return React.createElement('button', {
                     key: cid,
@@ -2401,8 +2284,8 @@
                     ),
                     !isActive && React.createElement('span', { style: { fontSize: '12px', color: '#3b82f6', fontWeight: '600' } }, 'Добавить →')
                   );
-                })
-              )
+                }));
+              })()
             )
           )
         )
@@ -2479,6 +2362,22 @@
     }
   }
 
+  function setDiarySupplementsPanelEnabled(enabled) {
+    const profile = getProfileSafe();
+    profile.showDiarySupplementsPanel = enabled !== false;
+    saveProfileSafe(profile, 'showDiarySupplementsPanel');
+    try {
+      window.dispatchEvent(new CustomEvent('heys:diary-optional-panels-visibility-changed', {
+        detail: {
+          field: 'showDiarySupplementsPanel',
+          enabled: enabled !== false,
+        }
+      }));
+    } catch (_) {
+      // noop
+    }
+  }
+
   /**
    * Рендер карточки витаминов для вкладки статистики
    * Переработанная версия — чистая, интуитивная, с кнопкой "Мой курс"
@@ -2539,20 +2438,45 @@
           }, 'Добавки не настроены'),
           React.createElement('div', {
             style: { fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }
-          }, 'Отслеживайте приём добавок и получайте умные рекомендации'),
-          React.createElement('button', {
-            onClick: () => openMyCourseScreen(dateKey, onForceUpdate),
+          }, 'Ведите свой план и проверяйте дозы и ограничения'),
+          React.createElement('div', {
             style: {
-              background: '#3b82f6',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap'
             }
-          }, '⚙️ Настроить курс')
+          },
+            React.createElement('button', {
+              onClick: () => openMyCourseScreen(dateKey, onForceUpdate),
+              style: {
+                background: '#434587',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 20px',
+                minHeight: '44px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }
+            }, '⚙️ Настроить курс'),
+            React.createElement('button', {
+              onClick: () => setDiarySupplementsPanelEnabled(false),
+              style: {
+                background: 'transparent',
+                color: 'var(--muted, #64748b)',
+                border: '1px solid var(--border, #cbd5e1)',
+                borderRadius: '10px',
+                padding: '9px 14px',
+                minHeight: '44px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }
+            }, 'Скрыть карточку')
+          )
         )
       );
     }
@@ -3121,24 +3045,10 @@
     const forms = bio?.forms || {};
     const formIds = Object.keys(forms);
 
-    // Если нет форм — минимальная секция
-    if (formIds.length === 0) {
-      return React.createElement('div', { style: sectionStyle },
-        React.createElement('div', { style: labelStyle }, '⚙️ Мои настройки'),
-        React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } },
-          'Форму и дозу можно указать вручную в профиле'
-        )
-      );
-    }
-
     // Текущие значения
     const currentForm = setting.form || formIds[0];
     const currentDose = setting.dose || '';
-    const currentUnit = setting.unit || forms[currentForm]?.unit || 'мг';
-
-    // Получаем данные текущей формы
-    const formData = forms[currentForm] || {};
-    const absorption = formData.absorption ? Math.round(formData.absorption * 100) : null;
+    const currentUnit = normalizeUnit(setting.unit || forms[currentForm]?.unit || DEFAULT_SUPPLEMENT_UNITS[suppId] || 'мг');
 
     return React.createElement('div', { style: sectionStyle },
       React.createElement('div', { style: labelStyle }, '⚙️ Мои настройки'),
@@ -3154,8 +3064,7 @@
               key: fid,
               onClick: () => {
                 setSupplementSetting(suppId, { form: fid, unit: f.unit || 'мг' });
-                // Перерендер popup
-                window.dispatchEvent(new CustomEvent('heys:supplements-updated'));
+                openSupplementsSciencePopup(suppId);
               },
               style: {
                 padding: '4px 10px',
@@ -3167,33 +3076,147 @@
                 fontWeight: isSelected ? '600' : '400',
                 cursor: 'pointer'
               }
-            }, fid, f.absorption && ` (${Math.round(f.absorption * 100)}%)`);
+            }, fid);
           })
         )
       ),
 
-      // Биодоступность выбранной формы
-      absorption && React.createElement('div', {
-        style: {
-          fontSize: '12px',
-          color: absorption >= 50 ? '#16a34a' : (absorption >= 20 ? '#d97706' : '#dc2626'),
-          background: absorption >= 50 ? '#f0fdf4' : (absorption >= 20 ? '#fffbeb' : '#fef2f2'),
-          padding: '6px 10px',
-          borderRadius: '8px',
-          marginBottom: '10px'
-        }
-      },
-        absorption >= 50 ? '✓' : (absorption >= 20 ? '⚠️' : '✗'),
-        ` Биодоступность ${currentForm}: ${absorption}%`,
-        formData.use && ` — ${formData.use}`
-      ),
-
-      // Поле дозы (display only — упрощённо)
-      React.createElement('div', { style: { fontSize: '12px', color: '#64748b' } },
-        'Доза: ',
-        currentDose ? `${currentDose} ${currentUnit}` : 'не указана',
-        bio?.optimalDose && ` (рекомендуется: ${bio.optimalDose})`
+      React.createElement('div', { style: { marginTop: '8px' } },
+        React.createElement('div', {
+          style: { fontSize: '12px', color: '#64748b', marginBottom: '4px' }
+        }, 'Ваша суточная доза:'),
+        React.createElement('div', {
+          style: { display: 'flex', gap: '8px', alignItems: 'center' }
+        },
+          React.createElement('input', {
+            type: 'number',
+            min: '0',
+            step: 'any',
+            inputMode: 'decimal',
+            defaultValue: currentDose,
+            placeholder: 'Укажите дозу',
+            'aria-label': `Доза: ${SUPPLEMENTS_CATALOG[suppId]?.name || suppId}`,
+            onBlur: (event) => {
+              const value = event.target.value.trim();
+              setSupplementSetting(suppId, { dose: value });
+              openSupplementsSciencePopup(suppId);
+            },
+            style: {
+              flex: '1 1 120px',
+              minWidth: 0,
+              minHeight: '44px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px',
+              padding: '8px 10px',
+              fontSize: '14px',
+              background: 'var(--card, #fff)',
+              color: 'var(--text, #1e293b)'
+            }
+          }),
+          React.createElement('select', {
+            value: currentUnit,
+            'aria-label': `Единица дозы: ${SUPPLEMENTS_CATALOG[suppId]?.name || suppId}`,
+            onChange: (event) => {
+              setSupplementSetting(suppId, { unit: normalizeUnit(event.target.value) });
+              openSupplementsSciencePopup(suppId);
+            },
+            style: {
+              minHeight: '44px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px',
+              padding: '8px 10px',
+              fontSize: '14px',
+              background: 'var(--card, #fff)',
+              color: 'var(--text, #1e293b)'
+            }
+          }, ['мкг', 'мг', 'г', 'МЕ'].map(unit =>
+            React.createElement('option', { key: unit, value: unit }, unit)
+          ))
+        ),
+        React.createElement('div', {
+          style: { fontSize: '11px', color: '#64748b', marginTop: '5px', lineHeight: '1.4' }
+        }, 'Введите суммарную дозу за сутки. HEYS сравнивает только её; лечебную схему определяет специалист.')
       )
+    );
+  }
+
+  function renderEvidenceSection(suppId, sectionStyle, labelStyle) {
+    const science = HEYS.Supplements.SCIENCE;
+    const items = science?.EVIDENCE_BY_INDICATION?.[suppId] || [];
+    const sources = science?.EVIDENCE_SOURCES || {};
+    const levelMeta = {
+      strong: { label: 'Надёжные данные', color: '#166534', background: '#dcfce7' },
+      moderate: { label: 'Умеренные данные', color: '#92400e', background: '#fef3c7' },
+      limited: { label: 'Ограниченные данные', color: '#475569', background: '#e2ecf2' },
+      unsupported: { label: 'Не подтверждено', color: '#991b1b', background: '#fee2e2' },
+    };
+
+    return React.createElement('div', { style: sectionStyle },
+      React.createElement('div', { style: labelStyle }, 'Показания и доказательность'),
+      items.length === 0
+        ? React.createElement('div', {
+          style: { fontSize: '13px', color: '#475569', lineHeight: '1.45' }
+        }, 'Проверенной карточки для этой добавки пока нет. HEYS не оценивает ожидаемый эффект.')
+        : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+          items.map(item => {
+            const meta = levelMeta[item.evidenceLevel] || levelMeta.limited;
+            const itemSources = (item.sourceIds || []).map(sourceId => sources[sourceId]).filter(Boolean);
+            return React.createElement('div', {
+              key: item.id,
+              style: {
+                background: 'var(--card, #fff)',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '10px'
+              }
+            },
+              React.createElement('div', {
+                style: { display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'flex-start' }
+              },
+                React.createElement('div', { style: { fontSize: '13px', fontWeight: '600', color: '#1e293b' } }, item.label),
+                React.createElement('span', {
+                  style: {
+                    flex: '0 0 auto',
+                    padding: '3px 7px',
+                    borderRadius: '8px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    color: meta.color,
+                    background: meta.background
+                  }
+                }, meta.label)
+              ),
+              React.createElement('div', { style: { fontSize: '12px', color: '#475569', lineHeight: '1.45', marginTop: '7px' } },
+                React.createElement('div', null, React.createElement('strong', null, 'Кому: '), item.appliesTo),
+                React.createElement('div', null, React.createElement('strong', null, 'Что известно: '), item.expectedEffect),
+                item.doseRange && React.createElement('div', null, React.createElement('strong', null, 'Доза в данных: '), item.doseRange),
+                item.limitations && React.createElement('div', null, React.createElement('strong', null, 'Ограничения: '), item.limitations)
+              ),
+              item.requiresConfirmation && React.createElement('div', {
+                style: {
+                  marginTop: '8px',
+                  padding: '7px 9px',
+                  borderRadius: '8px',
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  fontSize: '12px'
+                }
+              }, `Нужно подтвердить: ${item.confirmationType || 'обсудить показание со специалистом'}`),
+              itemSources.length > 0 && React.createElement('div', {
+                style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }
+              }, itemSources.map(source => React.createElement('a', {
+                key: source.url,
+                href: source.url,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                style: { fontSize: '11px', color: '#434587', fontWeight: '600' }
+              }, source.organization)))
+            );
+          })
+        ),
+      React.createElement('div', {
+        style: { marginTop: '8px', fontSize: '10px', color: '#94a3b8' }
+      }, `Проверено: ${science?.EVIDENCE_REVIEWED_AT || 'дата не указана'}`)
     );
   }
 
@@ -3203,38 +3226,37 @@
   function renderLimitsSection(suppId, sectionStyle, labelStyle) {
     const science = HEYS.Supplements.SCIENCE;
     const limits = science?.LIMITS?.[suppId];
+    const reviewedLimits = limits?.reviewedAt && limits?.sourceIds?.length ? limits : null;
 
     // v4.0: Safety warnings на основе user flags
     const userFlags = getSupplementUserFlags();
     const safetyWarnings = getSafetyWarningsForSupplement(suppId, userFlags);
 
-    if (!limits && safetyWarnings.length === 0) return null;
-
     const setting = getSupplementSetting(suppId) || {};
-    const currentDose = parseFloat(setting.dose) || 0;
-    const ul = limits?.ul;
+    const doseSafety = getDoseSafetyStatus(suppId, setting);
 
     // v4.0: Курсовость — проверяем продолжительность
     const cInfo = getCourseInfo(suppId, new Date().toISOString().slice(0, 10));
     const courseWarning = cInfo?.needsBreak ? `⏰ На курсе ${cInfo.weeksOnCourse} недель — рекомендуется перерыв!` : null;
 
-    // Проверяем превышение UL
-    let ulWarning = null;
-    if (ul && currentDose > 0) {
-      const pct = (currentDose / ul) * 100;
-      if (pct > 100) {
-        ulWarning = { level: 'danger', text: `⚠️ Доза ${currentDose} превышает UL (${ul})!`, pct };
-      } else if (pct > 80) {
-        ulWarning = { level: 'warning', text: `⚡ Доза близка к верхнему лимиту (${Math.round(pct)}% от UL)`, pct };
-      }
-    }
-
-    const hasDanger = ulWarning?.level === 'danger' || safetyWarnings.length > 0 || courseWarning;
+    const hasDanger = doseSafety.status === 'danger'
+      || doseSafety.status === 'invalid'
+      || safetyWarnings.length > 0
+      || courseWarning;
+    const doseStatusColors = {
+      danger: { color: '#b91c1c', background: '#fee2e2' },
+      invalid: { color: '#b91c1c', background: '#fee2e2' },
+      warning: { color: '#92400e', background: '#fef3c7' },
+      missing: { color: '#334155', background: '#e2ecf2' },
+      unverified: { color: '#334155', background: '#e2ecf2' },
+      within_limit: { color: '#166534', background: '#dcfce7' },
+    };
+    const doseColors = doseStatusColors[doseSafety.status] || doseStatusColors.unverified;
 
     return React.createElement('div', {
       style: {
         ...sectionStyle,
-        background: hasDanger ? '#fef2f2' : (ulWarning ? '#fffbeb' : sectionStyle.background)
+        background: hasDanger ? '#fef2f2' : sectionStyle.background
       }
     },
       React.createElement('div', { style: labelStyle }, '⚠️ Лимиты и безопасность'),
@@ -3265,35 +3287,33 @@
         }
       }, courseWarning),
 
-      // UL (верхний лимит)
-      ul && React.createElement('div', { style: { fontSize: '13px', marginBottom: '6px' } },
+      reviewedLimits?.ul && React.createElement('div', { style: { fontSize: '13px', marginBottom: '6px' } },
         React.createElement('span', { style: { fontWeight: '600' } }, 'UL (верхний предел): '),
-        `${ul} ${limits.unit || 'мг'}/день`
+        `${reviewedLimits.ul} ${reviewedLimits.unit || 'мг'}/день`
       ),
 
-      // Предупреждение о превышении
-      ulWarning && React.createElement('div', {
+      React.createElement('div', {
         style: {
           fontSize: '12px',
           fontWeight: '600',
-          color: ulWarning.level === 'danger' ? '#dc2626' : '#d97706',
+          color: doseColors.color,
           padding: '6px 10px',
-          background: ulWarning.level === 'danger' ? '#fee2e2' : '#fef3c7',
+          background: doseColors.background,
           borderRadius: '8px',
           marginBottom: '8px'
         }
-      }, ulWarning.text),
+      }, doseSafety.text),
 
       // Риски передозировки
-      limits.toxicity && React.createElement('div', { style: { fontSize: '12px', color: '#64748b', marginBottom: '6px' } },
+      (reviewedLimits?.toxicity || reviewedLimits?.note) && React.createElement('div', { style: { fontSize: '12px', color: '#64748b', marginBottom: '6px' } },
         React.createElement('span', { style: { fontWeight: '500' } }, 'Риски: '),
-        limits.toxicity
+        reviewedLimits.toxicity || reviewedLimits.note
       ),
 
       // Рекомендуемая длительность курса
-      limits.courseDuration && React.createElement('div', { style: { fontSize: '12px', color: '#64748b' } },
+      reviewedLimits?.courseDuration && React.createElement('div', { style: { fontSize: '12px', color: '#64748b' } },
         React.createElement('span', { style: { fontWeight: '500' } }, 'Курс: '),
-        limits.courseDuration
+        reviewedLimits.courseDuration
       )
     );
   }
@@ -3352,6 +3372,7 @@
 
     const supp = SUPPLEMENTS_CATALOG[suppId];
     const bio = science.BIOAVAILABILITY[suppId];
+    const showLegacyScience = false;
 
     if (!supp) return null;
 
@@ -3450,7 +3471,7 @@
         }, '💡 ', supp.tip),
 
         // Биодоступность (если есть научные данные)
-        bio && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && bio && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '🔬 Биодоступность'),
           React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' } },
             React.createElement('div', {
@@ -3483,7 +3504,7 @@
         ),
 
         // Формы (если есть)
-        bio?.forms && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && bio?.forms && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '🧬 Формы'),
           Object.entries(bio.forms).map(([formId, form]) =>
             React.createElement('div', {
@@ -3505,7 +3526,7 @@
         ),
 
         // Оптимальное время
-        optimalTime && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && optimalTime && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '⏰ Оптимальное время'),
           React.createElement('div', { style: valueStyle },
             optimalTime.period === 'any'
@@ -3515,7 +3536,7 @@
         ),
 
         // Синергии
-        synergies.length > 0 && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && synergies.length > 0 && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '✨ Синергии'),
           synergies.map((s, i) =>
             React.createElement('div', {
@@ -3539,7 +3560,7 @@
         ),
 
         // Антагонизмы
-        antagonisms.length > 0 && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && antagonisms.length > 0 && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '⚠️ Не сочетать'),
           antagonisms.map((a, i) =>
             React.createElement('div', {
@@ -3563,7 +3584,7 @@
         ),
 
         // Советы по еде
-        foodTips.length > 0 && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && foodTips.length > 0 && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '🍽️ С едой'),
           foodTips.map((tip, i) =>
             React.createElement('div', {
@@ -3592,13 +3613,15 @@
         ),
 
         // Тестирование
-        bio?.testMarker && React.createElement('div', { style: sectionStyle },
+        showLegacyScience && bio?.testMarker && React.createElement('div', { style: sectionStyle },
           React.createElement('div', { style: labelStyle }, '🧪 Анализы'),
           React.createElement('div', { style: valueStyle }, bio.testMarker),
           bio.optimalLevel && React.createElement('div', {
             style: { fontSize: '12px', color: '#16a34a', marginTop: '4px' }
           }, '✓ Оптимум: ', bio.optimalLevel)
         ),
+
+        renderEvidenceSection(suppId, sectionStyle, labelStyle),
 
         // v3.5: Мои настройки (форма, доза)
         renderSettingsSection(suppId, bio, sectionStyle, labelStyle),
@@ -3741,6 +3764,7 @@
     getSupplementSettings,
     getSupplementSetting,
     setSupplementSetting,
+    getDoseSafetyStatus,
     getSupplementHistory,
     updateSupplementHistory,
     markSupplementsTaken,

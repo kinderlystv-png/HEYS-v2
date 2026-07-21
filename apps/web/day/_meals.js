@@ -838,14 +838,14 @@
             // оригинальное position: relative — шапка работает как раньше, но без sticky.
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type + (isExpanded && !isCurrentMeal ? ' meal-header-inside--collapse-toggle' : ''),
-                onClick: isExpanded && !isCurrentMeal ? () => onToggleExpand(mealIndex, allMeals) : undefined,
+                onClick: isExpanded && !isCurrentMeal ? () => onToggleExpand(mealIndex, allMeals, isExpanded) : undefined,
                 role: isExpanded && !isCurrentMeal ? 'button' : undefined,
                 tabIndex: isExpanded && !isCurrentMeal ? 0 : undefined,
                 onKeyDown: isExpanded && !isCurrentMeal
                     ? (event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            onToggleExpand(mealIndex, allMeals);
+                            onToggleExpand(mealIndex, allMeals, isExpanded);
                         }
                     }
                     : undefined,
@@ -996,7 +996,7 @@
                         className: 'meal-header-collapse-btn',
                         onClick: (event) => {
                             event.stopPropagation();
-                            onToggleExpand(mealIndex, allMeals);
+                            onToggleExpand(mealIndex, allMeals, isExpanded);
                         },
                         'aria-label': 'Свернуть приём',
                         title: 'Свернуть приём',
@@ -2170,8 +2170,8 @@
                                 hasAnyOverlap
                                     ? `⚠️ перехлёст ${formatMinutes(overlapMinutes)}`
                                     : nextWave
-                                        ? `✅ липолиз ${formatMinutes(lipolysisGapNext)}`
-                                        : '🟢 последний приём'
+                                    ? `интервал ${formatMinutes(lipolysisGapNext)}`
+                                    : 'последний приём'
                             ),
                         ),
                         React.createElement('button', {
@@ -3088,7 +3088,7 @@
             const isFirst = absoluteDisplayIndex === 0;
             const isCurrentMeal = isToday && isFirst && !isMealStale(meal, nowMinutes);
             const mealTypeInfo = getCompactMealTypeInfo(mi, meal, sourceMeals, pIndex);
-            const shouldRenderCollapsedPlaque = !isCurrentMeal && !isExpanded;
+            const shouldRenderCollapsedPlaque = !isExpanded;
             const compactMealQuality = shouldRenderCollapsedPlaque
                 ? getCompactMealQuality(meal, mealTypeInfo, optimum, pIndex, day, sourceMeals)
                 : null;
@@ -3108,7 +3108,7 @@
                         mealTypeInfo,
                         mealQuality: compactMealQuality,
                         pIndex,
-                        onExpand: () => toggleMealExpand(mi, sourceMeals),
+                        onExpand: () => toggleMealExpand(mi, sourceMeals, false),
                     })
                 );
             }
@@ -3275,6 +3275,7 @@
             addProductToMeal,
             prof,
             insulinWaveData,
+            currentMinute,
         } = params || {};
 
         if (!React) return { sortedMealsForDisplay: [], mealsUI: [] };
@@ -3476,6 +3477,7 @@
             insulinWaveData,
             isMealExpanded,
             isMealStale,
+            currentMinute,
             isMobile,
             isNewItem,
             openEditGramsModal,
@@ -3742,7 +3744,7 @@
                                 y: 35,
                                 textAnchor: 'middle',
                                 className: 'day-wave-overview__lipolysis-label'
-                            }, 'липолиз')
+                            }, 'интервал')
                         );
                     }),
                     targetWindows.map((window) => {
@@ -4417,7 +4419,7 @@
             return diffMinutes > 20;
         }, []);
 
-        const toggleMealExpand = React.useCallback((mealIndex, meals) => {
+        const toggleMealExpand = React.useCallback((mealIndex, meals, currentExpanded) => {
             const meal = meals && meals[mealIndex];
             const isStale = meal && isMealStale(meal);
 
@@ -4428,9 +4430,20 @@
             // setTimeout(0) сам по себе достаточен для defer'а тяжёлого re-render'а.
             setTimeout(() => {
                 if (isStale) {
-                    setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    setManualExpandedStale((prev) => ({
+                        ...prev,
+                        [mealIndex]: typeof currentExpanded === 'boolean'
+                            ? !currentExpanded
+                            : !prev[mealIndex],
+                    }));
                 } else {
-                    setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    setExpandedMeals((prev) => {
+                        const hasStoredState = Object.prototype.hasOwnProperty.call(prev, mealIndex);
+                        const effectiveExpanded = typeof currentExpanded === 'boolean'
+                            ? currentExpanded
+                            : (hasStoredState ? prev[mealIndex] : mealIndex === ((meals?.length || 0) - 1));
+                        return { ...prev, [mealIndex]: !effectiveExpanded };
+                    });
                 }
             }, 0);
         }, [isMealStale]);

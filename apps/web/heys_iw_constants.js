@@ -31,13 +31,13 @@
   };
 
   I.STATUS_CONFIG = C?.STATUS_CONFIG || {
-    // Липолиз — жиросжигание активно! Каждая минута без еды = сжигание жира
-    lipolysis: { emoji: '🔥', color: '#22c55e', label: 'Липолиз!' },
-    // Почти закончилась волна — скоро липолиз
+    // Legacy keys remain for compatibility; labels describe only the estimate.
+    lipolysis: { emoji: '✓', color: '#22c55e', label: 'Окно завершено' },
+    // Расчётное окно близко к завершению.
     almost: { emoji: '⏳', color: '#f97316', label: null },
     // Скоро закончится
     soon: { emoji: '🌊', color: '#eab308', label: null },
-    // Волна активна — инсулин высокий, жир запасается
+    // Организм ещё обрабатывает предыдущий приём.
     active: { emoji: '📈', color: '#3b82f6', label: null }
   };
 
@@ -599,180 +599,6 @@
         vsOatmeal: totalAUC / cfg.reference.oatmeal100g
       } : null
     };
-  };
-
-  // ============================================================================
-  // 🆕 INSULIN_PREDICTOR_V2 — Прогноз уровня инсулина (v4.0.0)
-  // ============================================================================
-  // 🔬 Научное обоснование: Dalla Man et al. 2007 (PMID: 17513708)
-  // Модель UVA/Padova — предиктивная модель глюкозо-инсулиновой динамики
-  // ============================================================================
-  I.INSULIN_PREDICTOR_CONFIG = C?.INSULIN_PREDICTOR_CONFIG || {
-    // Стандартные временные точки прогноза (минуты)
-    timePoints: [15, 30, 60, 90, 120],
-
-    // Уровни для интерпретации (относительно пика)
-    levels: {
-      peak: { min: 0.9, max: 1.0, label: 'Пиковый уровень' },
-      high: { min: 0.6, max: 0.9, label: 'Высокий уровень' },
-      moderate: { min: 0.3, max: 0.6, label: 'Умеренный уровень' },
-      low: { min: 0.1, max: 0.3, label: 'Низкий уровень' },
-      baseline: { min: 0, max: 0.1, label: 'Базовый уровень' }
-    },
-
-    // Пороги для рекомендаций
-    thresholds: {
-      safeToEat: 0.3,        // Безопасно есть снова (≤30% от пика)
-      fatBurning: 0.15,      // Начало жиросжигания (≤15% от пика)
-      optimalWindow: 0.25    // Оптимальное окно для следующего приёма
-    }
-  };
-
-  /**
-   * 🆕 Получить уровень инсулина на кривой в момент времени
-   * @param {Array} curve - массив точек { t, minutes, value }
-   * @param {number} minutes - время в минутах
-   * @returns {Object} { value, level, label }
-   */
-  I.getInsulinLevelAtTime = (curve, minutes) => {
-    if (!curve || curve.length === 0) {
-      return { value: 0, level: 'baseline', label: 'Нет данных' };
-    }
-
-    // Находим ближайшую точку или интерполируем
-    const waveMinutes = curve[curve.length - 1].minutes;
-    const t = Math.min(minutes / waveMinutes, 1);
-
-    // Находим точки для интерполяции
-    let prev = curve[0];
-    let next = curve[curve.length - 1];
-
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].t <= t && curve[i + 1].t >= t) {
-        prev = curve[i];
-        next = curve[i + 1];
-        break;
-      }
-    }
-
-    // Линейная интерполяция
-    const ratio = next.t === prev.t ? 0 : (t - prev.t) / (next.t - prev.t);
-    const value = prev.value + ratio * (next.value - prev.value);
-
-    // Определяем уровень
-    const cfg = I.INSULIN_PREDICTOR_CONFIG.levels;
-    let level = 'baseline';
-    let label = cfg.baseline.label;
-
-    if (value >= cfg.peak.min) { level = 'peak'; label = cfg.peak.label; }
-    else if (value >= cfg.high.min) { level = 'high'; label = cfg.high.label; }
-    else if (value >= cfg.moderate.min) { level = 'moderate'; label = cfg.moderate.label; }
-    else if (value >= cfg.low.min) { level = 'low'; label = cfg.low.label; }
-
-    return { value, level, label, minutes, t };
-  };
-
-  /**
-   * 🆕 Полный прогноз инсулина с рекомендациями
-   * @param {Array} curve - кривая волны
-   * @param {number} waveMinutes - длина волны в минутах
-   * @returns {Object} { predictions, recommendations, safeToEatAt, fatBurningAt }
-   */
-  I.predictInsulinResponse = (curve, waveMinutes) => {
-    const cfg = I.INSULIN_PREDICTOR_CONFIG;
-
-    // Прогнозы на стандартные точки
-    const predictions = cfg.timePoints.map(minutes => {
-      const result = I.getInsulinLevelAtTime(curve, minutes);
-      return {
-        minutes,
-        ...result,
-        formatted: `${minutes} мин: ${(result.value * 100).toFixed(0)}% — ${result.label}`
-      };
-    });
-
-    // Находим важные моменты
-    let safeToEatAt = null;
-    let fatBurningAt = null;
-    let optimalWindowAt = null;
-
-    for (const point of curve) {
-      const minutes = point.minutes;
-      const value = point.value;
-
-      if (safeToEatAt === null && value <= cfg.thresholds.safeToEat) {
-        safeToEatAt = minutes;
-      }
-      if (fatBurningAt === null && value <= cfg.thresholds.fatBurning) {
-        fatBurningAt = minutes;
-      }
-      if (optimalWindowAt === null && value <= cfg.thresholds.optimalWindow) {
-        optimalWindowAt = minutes;
-      }
-    }
-
-    // Рекомендации
-    const recommendations = [];
-
-    if (safeToEatAt) {
-      recommendations.push({
-        type: 'safe_to_eat',
-        minutes: safeToEatAt,
-        text: `Безопасно есть снова через ${safeToEatAt} мин`,
-        icon: '🍽️'
-      });
-    }
-
-    if (fatBurningAt) {
-      recommendations.push({
-        type: 'fat_burning',
-        minutes: fatBurningAt,
-        text: `Низкая волна ожидается через ${fatBurningAt} мин`,
-        icon: '🌿'
-      });
-    }
-
-    if (optimalWindowAt) {
-      recommendations.push({
-        type: 'optimal_window',
-        minutes: optimalWindowAt,
-        text: `Оптимальное окно для еды: после ${optimalWindowAt} мин`,
-        icon: '⭐'
-      });
-    }
-
-    return {
-      predictions,
-      recommendations,
-      safeToEatAt,
-      fatBurningAt,
-      optimalWindowAt,
-      waveMinutes,
-      summary: I.generatePredictionSummary(predictions, safeToEatAt, fatBurningAt)
-    };
-  };
-
-  /**
-   * 🆕 Генерация текстового саммари прогноза
-   */
-  I.generatePredictionSummary = (predictions, safeToEatAt, fatBurningAt) => {
-    const p30 = predictions.find(p => p.minutes === 30);
-    const p60 = predictions.find(p => p.minutes === 60);
-    const p120 = predictions.find(p => p.minutes === 120);
-
-    let summary = '';
-
-    if (p30) {
-      summary += `Через 30 мин: ${p30.label.toLowerCase()}. `;
-    }
-    if (p60) {
-      summary += `Через 1 час: ${p60.label.toLowerCase()}. `;
-    }
-    if (fatBurningAt) {
-      summary += `Низкая волна: с ${fatBurningAt} мин.`;
-    }
-
-    return summary.trim();
   };
 
   // ============================================================================
@@ -1712,23 +1538,6 @@
     maxBonus: 0.30
   };
 
-  // 🧪 ПОРОГ ЛИПОЛИЗА — при каком уровне инсулина начинается жиросжигание
-  // Sources:
-  //   - Jensen et al. 1989 (J Clin Invest 83:1168-73, PMID 2649512): инсулин в
-  //     диапазоне 15-30 µEd/mL подавляет липолиз на ~50%; >100 µEd/mL = полное
-  //     подавление. Half-maximal suppression на ~12-18 µEd/mL.
-  //   - Campbell et al. 1992 (Am J Physiol 263:E1063-9, PMID 1476177): порог
-  //     полного липолиза при insulin <5 µEd/mL (postabsorptive state).
-  //   - Nurjhan et al. 1992 (Diabetes 41:1145-51, PMID 1396721) — ED50 для
-  //     suppression of FFA release ≈ 12 µEd/mL в нормальных subjects.
-  // Используется для визуализации UI «жиросжигание / накопление».
-  I.LIPOLYSIS_THRESHOLDS = C?.LIPOLYSIS_THRESHOLDS || {
-    full: { insulinUIml: 5, lipolysisPct: 100, desc: 'Полный липолиз' },        // <5 µЕд/мл
-    partial: { insulinUIml: 15, lipolysisPct: 50, desc: '~50% липолиза' },      // 15 µЕд/мл
-    suppressed: { insulinUIml: 50, lipolysisPct: 10, desc: 'Липолиз подавлен' }, // 50 µЕд/мл
-    blocked: { insulinUIml: 100, lipolysisPct: 0, desc: 'Липолиз заблокирован' } // 100+ µЕд/мл
-  };
-
   // ⚡ REACTIVE HYPOGLYCEMIA — риск реактивной гипогликемии
   // 🔬 v4.3 (2026-05-14): источник переаттрибутирован — настоящие cite ниже.
   // 'Через 2-4 часа после высоко-GI еды возможен "провал" глюкозы'
@@ -2540,24 +2349,6 @@
    * @param {number} progress - 0-100 (процент прохождения волны)
    * @returns {{ level: number, zone: string, lipolysisPct: number, desc: string, color: string }}
    */
-  I.estimateInsulinLevel = (progress) => {
-    // Базовая модель: экспоненциальное снижение от пика (~80) до базового (~5)
-    // Формула: level = 5 + 75 × e^(-progress/25)
-    const level = Math.round(5 + 75 * Math.exp(-progress / 25));
-
-    // Определяем зону по порогам
-    if (level <= I.LIPOLYSIS_THRESHOLDS.full.insulinUIml) {
-      return { level, zone: 'full', lipolysisPct: 100, desc: I.LIPOLYSIS_THRESHOLDS.full.desc, color: '#22c55e' };
-    }
-    if (level <= I.LIPOLYSIS_THRESHOLDS.partial.insulinUIml) {
-      return { level, zone: 'partial', lipolysisPct: 50, desc: I.LIPOLYSIS_THRESHOLDS.partial.desc, color: '#eab308' };
-    }
-    if (level <= I.LIPOLYSIS_THRESHOLDS.suppressed.insulinUIml) {
-      return { level, zone: 'suppressed', lipolysisPct: 10, desc: I.LIPOLYSIS_THRESHOLDS.suppressed.desc, color: '#f97316' };
-    }
-    return { level, zone: 'blocked', lipolysisPct: 0, desc: I.LIPOLYSIS_THRESHOLDS.blocked.desc, color: '#ef4444' };
-  };
-
   /**
    * ⚡ Рассчитать риск реактивной гипогликемии для приёма пищи (v3.2.0)
    * Научное обоснование: Brun et al. 1995
@@ -2599,21 +2390,12 @@
   // 🆕 НОВЫЕ ФАКТОРЫ v3.2.0 (2025-12-10) — дополнительные улучшения
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // 🧪 SUPPLEMENTS — добавки снижающие инсулиновый ответ
-  // v4.3 (2026-05-13): берберин снижен с -15% до -3%.
-  // Shishehbor 2017 meta-analysis (PMID 28292654) подтверждает значимое
-  // снижение постпрандиальной AUC глюкозы и инсулина — vinegar -12% защитим.
-  // Cinnamon meta 2023 (PMID 37818728): -39 mg/dL глюкозы при ≤2г/день;
-  // -10% к волне — оптимистично, но допустимо для постпрандиального ответа.
-  // ⚠ Berberine: meta-анализы дают HOMA-IR WMD ≈ -1.04 — НО эффект
-  // КУМУЛЯТИВНЫЙ после недель приёма, а не острый постпрандиальный.
-  // Применять -15% к ОДНОЙ волне за «принял с едой» — некорректная time scale.
-  // Магнитуда осталась как символический флаг (-3%); TODO: перенести
-  // в `userProfile.berberineCourseDays` для хронического эффекта.
+  // 🧪 SUPPLEMENTS — fail closed. Отметка приёма не меняет расчёт волны:
+  // для этого нужен отдельный проверенный контракт вещества, дозы и еды.
   I.SUPPLEMENTS_BONUS = C?.SUPPLEMENTS_BONUS || {
-    vinegar: { bonus: -0.12, desc: 'Уксус → -12% волна' },     // Яблочный/винный уксус (acute, OK)
-    cinnamon: { bonus: -0.10, desc: 'Корица → -10% волна' },   // 1-6г корицы (acute, OK)
-    berberine: { bonus: -0.03, desc: 'Берберин → -3% волна (хронический эффект — этот acute штраф недостаточен)' } // chronic, не acute
+    vinegar: { bonus: 0, desc: 'Не учитывается без проверенного контракта' },
+    cinnamon: { bonus: 0, desc: 'Не учитывается без проверенного контракта' },
+    berberine: { bonus: 0, desc: 'Не учитывается без проверенного контракта' }
   };
 
   // 🧊 COLD EXPOSURE — холодовое воздействие активирует бурый жир

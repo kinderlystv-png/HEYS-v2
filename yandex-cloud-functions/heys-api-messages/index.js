@@ -26,6 +26,7 @@ const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const crypto = require('crypto');
+const https = require('https');
 
 // ── VAPID config: лениво, после initSecrets() ────────────────────────────
 let vapidConfigured = false;
@@ -194,8 +195,30 @@ async function rateLimitCheck(clientId) {
   } catch (e) {
     // Если БД-функция упала — лучше пропустить (open mode) чем заблокировать
     // легитимных пользователей. Это accepted ослабление при инфра-проблеме.
-    console.warn('[MSG] rate-limit check failed, fail-open:', e.message);
+    console.warn('[messages] rate-limit check unavailable, fail-open', {
+      code: e?.code || 'db_error',
+    });
     return { allowed: true };
+  } finally {
+    client.release();
+  }
+}
+
+async function requestAlreadyStored(clientId, requestId, senderRole, curatorId = null) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT 1 FROM public.client_messages
+        WHERE client_id = $1 AND sender_role = $3 AND request_id = $2
+          AND ($4::uuid IS NULL OR curator_id = $4)
+        LIMIT 1`,
+      [clientId, requestId, senderRole, curatorId],
+    );
+    return result.rows.length > 0;
+  } catch (error) {
+    console.warn('[messages] idempotency precheck unavailable', { code: error?.code || 'db_error' });
+    return null;
   } finally {
     client.release();
   }
@@ -223,13 +246,25 @@ const SUPPORTED_TRANSCRIPTION_MIME = new Set(['audio/ogg', 'audio/wav', 'audio/x
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_TRANSCRIPT_TEXT_LENGTH = 4000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function sanitizeDiagnosticValue(value) {
+  if (Array.isArray(value)) return value.map(sanitizeDiagnosticValue);
+  if (!value || typeof value !== 'object') return value;
+  const clean = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (/^(actor_id|client_id|curator_id|path|attachment_path|object_path|url|endpoint|body|transcript|token|p256dh|auth)$/i.test(key)) continue;
+    clean[key] = sanitizeDiagnosticValue(nested);
+  }
+  return clean;
+}
 
 function trace(event, details = {}) {
   try {
     console.log('[messages.trace]', JSON.stringify({
       event,
       ts: new Date().toISOString(),
-      ...details,
+      ...sanitizeDiagnosticValue(details),
     }));
   } catch (_) {
     console.log('[messages.trace]', event);
@@ -244,7 +279,6 @@ function compactAttachment(att) {
     duration_ms: Number(att.duration_ms || 0) || null,
     size_bytes: Number(att.size_bytes || 0) || null,
     transcript_status: att.transcript_status || null,
-    path: att.path || null,
   };
 }
 
@@ -358,6 +392,98 @@ function validateAttachments(attachments) {
     }
   }
   return { ok: true };
+}
+
+function getAttachmentBaseUrl() {
+  if (process.env.MESSENGER_ATTACHMENTS_BASE_URL) {
+    return process.env.MESSENGER_ATTACHMENTS_BASE_URL.replace(/\/+$/, '');
+  }
+  const bucket = process.env.S3_PHOTOS_BUCKET || 'heys-photos';
+  return `https://${bucket}.storage.yandexcloud.net`;
+}
+
+function isMessengerObjectPath(path, clientId) {
+  if (!path || !clientId || !path.startsWith(`${clientId}/`)) return false;
+  const rest = path.slice(String(clientId).length + 1);
+  return /^\d{4}-\d{2}-\d{2}\/(?:voice\/)?msg-[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(rest);
+}
+
+function validateAttachmentOwnership(attachments, clientId) {
+  const baseUrl = getAttachmentBaseUrl();
+  for (const att of attachments) {
+    if (!isMessengerObjectPath(att.path, clientId)) {
+      return { ok: false, error: 'attachment_not_owned' };
+    }
+    if (att.url !== `${baseUrl}/${att.path}`) {
+      return { ok: false, error: 'attachment_url_path_mismatch' };
+    }
+  }
+  return { ok: true };
+}
+
+function headAttachmentUrl(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, { method: 'HEAD', timeout: 3000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
+    });
+    req.on('timeout', () => req.destroy(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })));
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+async function verifyAttachmentObjectsExist(attachments, headFn = headAttachmentUrl) {
+  try {
+    const results = await Promise.all(attachments.map((attachment) => headFn(attachment.url)));
+    return results.every(Boolean)
+      ? { ok: true }
+      : { ok: false, error: 'attachment_object_not_found', statusCode: 400 };
+  } catch {
+    return { ok: false, error: 'attachment_verification_unavailable', statusCode: 503 };
+  }
+}
+
+function rpcStatusCode(result) {
+  if (result?.success) return 200;
+  const error = result?.error;
+  if (error === 'idempotency_conflict') return 409;
+  if (error === 'curator_does_not_own_client' || error === 'message_not_found_or_forbidden') return 403;
+  if (error === 'message_not_found') return 404;
+  if (error === 'message_store_failed' || error === 'idempotency_state_unavailable' ||
+      error === 'message_state_update_failed' || error === 'message_delete_failed') return 500;
+  return 400;
+}
+
+function buildGenericMessagePush(senderRole, targetClientId = null) {
+  if (senderRole === 'client') {
+    return {
+      title: 'Новое сообщение от клиента',
+      body: 'Открыть диалог',
+      tag: 'message-from-client',
+      url: targetClientId ? `/?switch_client=${targetClientId}&open_messages=1` : '/?open_messages=1',
+    };
+  }
+  return {
+    title: 'Новое сообщение от куратора',
+    body: 'Открыть диалог',
+    tag: 'message-from-curator',
+    url: '/?open_messages=1',
+  };
+}
+
+function canonicalizeJson(value) {
+  if (Array.isArray(value)) return value.map((item) => canonicalizeJson(item === undefined ? null : item));
+  if (!value || typeof value !== 'object') return value;
+  return Object.keys(value).sort().reduce((result, key) => {
+    if (value[key] !== undefined) result[key] = canonicalizeJson(value[key]);
+    return result;
+  }, {});
+}
+
+function buildSendRequestFingerprint(payload) {
+  const canonical = canonicalizeJson(payload);
+  return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
 }
 
 function stripClientTranscriptFields(att) {
@@ -517,7 +643,7 @@ async function enqueueTranscriptionJobsBestEffort(args) {
   } catch (err) {
     console.warn('[messages.transcription] enqueue failed', {
       messageId: args?.messageId,
-      error: err?.message || String(err),
+      code: err?.code || 'enqueue_failed',
     });
   }
 }
@@ -606,9 +732,9 @@ async function enqueuePendingTranscriptionForMessage(identity, messageId) {
   } catch (err) {
     console.warn('[messages.transcription] enqueue after consent failed', {
       messageId,
-      error: err?.message || String(err),
+      code: err?.code || 'enqueue_failed',
     });
-    return { queued: 0, error: err?.message || 'enqueue_failed' };
+    return { queued: 0, error: 'enqueue_failed' };
   } finally {
     conn.release();
   }
@@ -726,7 +852,8 @@ async function setTranscriptionConsent(identity, granted, event) {
     };
   } catch (err) {
     try { await conn.query('ROLLBACK'); } catch (_) { /* ignore */ }
-    return { success: false, error: err.message || 'consent_update_failed' };
+    console.error('[messages] consent update failed', { code: err?.code || 'unhandled' });
+    return { success: false, error: 'consent_update_failed' };
   } finally {
     conn.release();
   }
@@ -755,7 +882,7 @@ async function sendPushToCurator(curatorId, payload) {
   } finally {
     client.release();
   }
-  console.log(`[messages] push→curator ${curatorId}: found ${subs.length} subs`);
+  trace('push_subscriptions_loaded', { actor_role: 'curator', subscription_count: subs.length });
   if (subs.length === 0) return { sent: 0, total: 0 };
 
   const payloadStr = JSON.stringify(payload);
@@ -768,13 +895,13 @@ async function sendPushToCurator(curatorId, payload) {
     )
   );
 
-  results.forEach((r, i) => {
-    const host = (subs[i].endpoint || '').slice(0, 50);
-    if (r.status === 'fulfilled') {
-      console.log(`[messages] push→curator ok: ${host}…`);
-    } else {
-      console.log(`[messages] push→curator FAIL ${r.reason?.statusCode || '?'}: ${host}… — ${r.reason?.message || r.reason}`);
-    }
+  trace('push_delivery_completed', {
+    actor_role: 'curator',
+    sent: results.filter((r) => r.status === 'fulfilled').length,
+    failed: results.filter((r) => r.status === 'rejected').length,
+    status_codes: results
+      .filter((r) => r.status === 'rejected')
+      .map((r) => r.reason?.statusCode || 'push_error'),
   });
 
   const deadEndpoints = results
@@ -808,7 +935,7 @@ async function sendPushToClient(clientId, payload) {
   } finally {
     client.release();
   }
-  console.log(`[messages] push→client ${clientId}: found ${subs.length} subs`);
+  trace('push_subscriptions_loaded', { actor_role: 'client', subscription_count: subs.length });
   if (subs.length === 0) return { sent: 0, total: 0 };
 
   const payloadStr = JSON.stringify(payload);
@@ -821,13 +948,13 @@ async function sendPushToClient(clientId, payload) {
     )
   );
 
-  results.forEach((r, i) => {
-    const host = (subs[i].endpoint || '').slice(0, 50);
-    if (r.status === 'fulfilled') {
-      console.log(`[messages] push→client ok: ${host}…`);
-    } else {
-      console.log(`[messages] push→client FAIL ${r.reason?.statusCode || '?'}: ${host}… — ${r.reason?.message || r.reason}`);
-    }
+  trace('push_delivery_completed', {
+    actor_role: 'client',
+    sent: results.filter((r) => r.status === 'fulfilled').length,
+    failed: results.filter((r) => r.status === 'rejected').length,
+    status_codes: results
+      .filter((r) => r.status === 'rejected')
+      .map((r) => r.reason?.statusCode || 'push_error'),
   });
 
   const deadEndpoints = results
@@ -848,46 +975,11 @@ async function sendPushToClient(clientId, payload) {
   return { sent: results.filter((r) => r.status === 'fulfilled').length, total: subs.length };
 }
 
-async function fetchClientName(clientId) {
-  const pool = getPool();
-  const client = await pool.connect();
-  try {
-    const r = await client.query(
-      `SELECT name FROM clients WHERE id = $1 LIMIT 1`,
-      [clientId]
-    );
-    return r.rows[0]?.name || 'Клиент';
-  } finally {
-    client.release();
-  }
-}
-
-function buildIntentPushBody(intentType, payload) {
-  if (intentType === 'meal') {
-    return `съел ${payload.product_name} ${payload.grams}г`;
-  }
-  if (intentType === 'training') {
-    return `тренировался: ${payload.training_type}, ${payload.duration_min} мин`;
-  }
-  if (intentType === 'weight') {
-    return `вес: ${payload.weight_kg} кг`;
-  }
-  return 'новое сообщение';
-}
-
 // ── Endpoint handlers ────────────────────────────────────────────────────
 
 async function handleSend(identity, body) {
   if (identity.kind === 'client') {
-    const rateRes = await rateLimitCheck(identity.id);
-    if (!rateRes.allowed) {
-      return {
-        statusCode: 429,
-        body: { error: 'rate_limit_exceeded', retry_after: rateRes.retryAfter },
-      };
-    }
-
-    const { body: msgBody, intent_type, intent_payload, attachments } = body || {};
+    const { body: msgBody, intent_type, intent_payload, attachments, request_id: requestId } = body || {};
     const inputAttachments = Array.isArray(attachments) ? attachments : [];
     trace('send.request', {
       actor_role: 'client',
@@ -896,7 +988,24 @@ async function handleSend(identity, body) {
       intent_type: intent_type || null,
       attachments: inputAttachments.length,
       audio: compactAudio(inputAttachments),
+      request_id: requestId || null,
     });
+    if (!UUID_RE.test(String(requestId || ''))) {
+      return { statusCode: 400, body: { error: 'invalid_request_id' } };
+    }
+    if (msgBody !== undefined && msgBody !== null && typeof msgBody !== 'string') {
+      return { statusCode: 400, body: { error: 'invalid_body' } };
+    }
+    const replayCandidate = await requestAlreadyStored(identity.id, requestId, 'client');
+    if (!replayCandidate) {
+      const rateRes = await rateLimitCheck(identity.id);
+      if (!rateRes.allowed) {
+        return {
+          statusCode: 429,
+          body: { error: 'rate_limit_exceeded', retry_after: rateRes.retryAfter },
+        };
+      }
+    }
     if ((!msgBody || msgBody.trim().length === 0) && !intent_type && inputAttachments.length === 0) {
       return { statusCode: 400, body: { error: 'body_intent_or_attachment_required' } };
     }
@@ -907,10 +1016,32 @@ async function handleSend(identity, body) {
     if (!attachmentsValidation.ok) {
       return { statusCode: 400, body: { error: attachmentsValidation.error } };
     }
+    const attachmentsOwnership = validateAttachmentOwnership(inputAttachments, identity.id);
+    if (!attachmentsOwnership.ok) {
+      trace('attachment_rejected', {
+        actor_role: 'client', request_id: requestId, error: attachmentsOwnership.error,
+      });
+      return { statusCode: 400, body: { error: attachmentsOwnership.error } };
+    }
+    const attachmentObjects = replayCandidate
+      ? { ok: true }
+      : await verifyAttachmentObjectsExist(inputAttachments);
+    if (!attachmentObjects.ok) {
+      trace('attachment_rejected', {
+        actor_role: 'client', request_id: requestId, error: attachmentObjects.error,
+      });
+      return { statusCode: attachmentObjects.statusCode, body: { error: attachmentObjects.error } };
+    }
     const intentValidation = validateIntent(intent_type || null, intent_payload || null);
     if (!intentValidation.ok) {
       return { statusCode: 400, body: { error: intentValidation.error } };
     }
+    const requestFingerprint = buildSendRequestFingerprint({
+      body: msgBody?.trim() || null,
+      intent_type: intent_type || null,
+      intent_payload: intent_payload || null,
+      attachments: inputAttachments.map(stripClientTranscriptFields),
+    });
     const transcription = await prepareAttachmentsForSend(identity, inputAttachments);
     const attachmentsArr = transcription.attachments;
 
@@ -919,13 +1050,15 @@ async function handleSend(identity, body) {
     let rpcResult;
     try {
       const r = await conn.query(
-        `SELECT public.send_message_as_client($1, $2, $3, $4, $5) AS result`,
+        `SELECT public.send_message_as_client_v2($1, $2, $3, $4, $5, $6, $7) AS result`,
         [
           identity.sessionToken,
           msgBody || null,
           intent_type || null,
           intent_payload ? JSON.stringify(intent_payload) : null,
           JSON.stringify(attachmentsArr),
+          requestId,
+          requestFingerprint,
         ]
       );
       rpcResult = r.rows[0]?.result;
@@ -940,58 +1073,53 @@ async function handleSend(identity, body) {
         error: rpcResult?.error || 'rpc_failed',
         audio: compactAudio(attachmentsArr),
       });
-      return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
+      const result = rpcResult || { success: false, error: 'rpc_failed' };
+      return { statusCode: rpcStatusCode(result), body: result };
     }
 
-    trace('send.saved', {
+    trace(rpcResult.replayed ? 'send_replayed' : 'send_created', {
       actor_role: 'client',
-      client_id: rpcResult.client_id || identity.id,
-      curator_id: rpcResult.curator_id || null,
       message_id: rpcResult.message_id,
+      request_id: requestId,
       audio: compactAudio(attachmentsArr),
       transcription_jobs: transcription.jobs.length,
     });
 
-    await enqueueTranscriptionJobsBestEffort({
-      messageId: rpcResult.message_id,
-      actorRole: 'client',
-      clientId: rpcResult.client_id || identity.id,
-      curatorId: rpcResult.curator_id || null,
-      jobs: transcription.jobs,
-    });
+    if (!rpcResult.replayed) {
+      await enqueueTranscriptionJobsBestEffort({
+        messageId: rpcResult.message_id,
+        actorRole: 'client',
+        clientId: rpcResult.client_id || identity.id,
+        curatorId: rpcResult.curator_id || null,
+        jobs: transcription.jobs,
+      });
 
-    // Push куратору (best-effort, не блокирует ответ)
-    const clientName = await fetchClientName(identity.id);
-    const attachmentBadge = buildAttachmentBadge(attachmentsArr);
-    const baseBody = intent_type
-      ? buildIntentPushBody(intent_type, intent_payload)
-      : msgBody
-        ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
-        : attachmentsArr.some((att) => normalizeAttachmentType(att) === 'audio')
-          ? 'голосовое сообщение'
-          : 'фото';
-    const pushBody = baseBody + attachmentBadge;
-    // Payload минимальный — match формату cron-reminders payload'а,
-    // который реально доезжает до Android в background. requireInteraction
-    // и renotify могут тихо подавлять показ при battery saver / minified PWA.
-    const pushPayload = {
-      title: `${clientName}: ${pushBody}`,
-      body: 'Открыть сообщение',
-      tag: `message-from-${identity.id}`,
-      url: `/?switch_client=${identity.id}&open_messages=1`,
-    };
-    sendPushToCurator(rpcResult.curator_id, pushPayload).catch((err) => {
-      console.error('[messages] push to curator failed:', err.message);
-    });
+      const pushPayload = buildGenericMessagePush('client', identity.id);
+      sendPushToCurator(rpcResult.curator_id, pushPayload).then(() => {
+        trace('push_generic_sent', { actor_role: 'client', message_id: rpcResult.message_id });
+      }).catch(() => {
+        console.error('[messages] push to curator failed');
+      });
+    }
 
     return {
       statusCode: 200,
-      body: { success: true, message_id: rpcResult.message_id, created_at: rpcResult.created_at },
+      body: {
+        success: true,
+        message_id: rpcResult.message_id,
+        created_at: rpcResult.created_at,
+        replayed: !!rpcResult.replayed,
+      },
     };
   }
 
   // curator → client
-  const { client_id, body: msgBody, attachments: curatorAttachments } = body || {};
+  const {
+    client_id,
+    body: msgBody,
+    attachments: curatorAttachments,
+    request_id: requestId,
+  } = body || {};
   const inputCuratorAttachments = Array.isArray(curatorAttachments) ? curatorAttachments : [];
   trace('send.request', {
     actor_role: 'curator',
@@ -1000,10 +1128,18 @@ async function handleSend(identity, body) {
     has_body: Boolean(msgBody && msgBody.trim()),
     attachments: inputCuratorAttachments.length,
     audio: compactAudio(inputCuratorAttachments),
+    request_id: requestId || null,
   });
   if (!client_id || typeof client_id !== 'string') {
     return { statusCode: 400, body: { error: 'client_id_required' } };
   }
+  if (!UUID_RE.test(String(requestId || ''))) {
+    return { statusCode: 400, body: { error: 'invalid_request_id' } };
+  }
+  if (msgBody !== undefined && msgBody !== null && typeof msgBody !== 'string') {
+    return { statusCode: 400, body: { error: 'invalid_body' } };
+  }
+  const replayCandidate = await requestAlreadyStored(client_id, requestId, 'curator', identity.id);
   if ((!msgBody || msgBody.trim().length === 0) && inputCuratorAttachments.length === 0) {
     return { statusCode: 400, body: { error: 'body_or_attachment_required' } };
   }
@@ -1014,6 +1150,29 @@ async function handleSend(identity, body) {
   if (!curatorAttachmentsValidation.ok) {
     return { statusCode: 400, body: { error: curatorAttachmentsValidation.error } };
   }
+  const curatorAttachmentsOwnership = validateAttachmentOwnership(inputCuratorAttachments, client_id);
+  if (!curatorAttachmentsOwnership.ok) {
+    trace('attachment_rejected', {
+      actor_role: 'curator', request_id: requestId, error: curatorAttachmentsOwnership.error,
+    });
+    return { statusCode: 400, body: { error: curatorAttachmentsOwnership.error } };
+  }
+  const curatorAttachmentObjects = replayCandidate
+    ? { ok: true }
+    : await verifyAttachmentObjectsExist(inputCuratorAttachments);
+  if (!curatorAttachmentObjects.ok) {
+    trace('attachment_rejected', {
+      actor_role: 'curator', request_id: requestId, error: curatorAttachmentObjects.error,
+    });
+    return {
+      statusCode: curatorAttachmentObjects.statusCode,
+      body: { error: curatorAttachmentObjects.error },
+    };
+  }
+  const requestFingerprint = buildSendRequestFingerprint({
+    body: msgBody?.trim() || null,
+    attachments: inputCuratorAttachments.map(stripClientTranscriptFields),
+  });
   const curatorTranscription = await prepareAttachmentsForSend(identity, inputCuratorAttachments);
   const curatorAttachmentsArr = curatorTranscription.attachments;
 
@@ -1022,8 +1181,8 @@ async function handleSend(identity, body) {
   let rpcResult;
   try {
     const r = await conn.query(
-      `SELECT public.send_message_as_curator($1, $2, $3, $4) AS result`,
-      [identity.id, client_id, msgBody || null, JSON.stringify(curatorAttachmentsArr)]
+      `SELECT public.send_message_as_curator_v2($1, $2, $3, $4, $5, $6) AS result`,
+      [identity.id, client_id, msgBody || null, JSON.stringify(curatorAttachmentsArr), requestId, requestFingerprint]
     );
     rpcResult = r.rows[0]?.result;
   } finally {
@@ -1038,47 +1197,43 @@ async function handleSend(identity, body) {
       error: rpcResult?.error || 'rpc_failed',
       audio: compactAudio(curatorAttachmentsArr),
     });
-    return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
+    const result = rpcResult || { success: false, error: 'rpc_failed' };
+    return { statusCode: rpcStatusCode(result), body: result };
   }
 
-  trace('send.saved', {
+  trace(rpcResult.replayed ? 'send_replayed' : 'send_created', {
     actor_role: 'curator',
-    curator_id: identity.id,
-    client_id,
     message_id: rpcResult.message_id,
+    request_id: requestId,
     audio: compactAudio(curatorAttachmentsArr),
     transcription_jobs: curatorTranscription.jobs.length,
   });
 
-  await enqueueTranscriptionJobsBestEffort({
-    messageId: rpcResult.message_id,
-    actorRole: 'curator',
-    clientId: client_id,
-    curatorId: identity.id,
-    jobs: curatorTranscription.jobs,
-  });
+  if (!rpcResult.replayed) {
+    await enqueueTranscriptionJobsBestEffort({
+      messageId: rpcResult.message_id,
+      actorRole: 'curator',
+      clientId: client_id,
+      curatorId: identity.id,
+      jobs: curatorTranscription.jobs,
+    });
 
-  // Push клиенту (best-effort)
-  const curatorAttachmentBadge = buildAttachmentBadge(curatorAttachmentsArr);
-  const baseCuratorBody = msgBody
-    ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
-    : curatorAttachmentsArr.some((att) => normalizeAttachmentType(att) === 'audio')
-      ? 'голосовое сообщение'
-      : 'фото';
-  const pushBody = baseCuratorBody + curatorAttachmentBadge;
-  const pushPayload = {
-    title: 'Сообщение от куратора',
-    body: pushBody,
-    tag: 'message-from-curator',
-    url: '/?open_messages=1',
-  };
-  sendPushToClient(client_id, pushPayload).catch((err) => {
-    console.error('[messages] push to client failed:', err.message);
-  });
+    const pushPayload = buildGenericMessagePush('curator');
+    sendPushToClient(client_id, pushPayload).then(() => {
+      trace('push_generic_sent', { actor_role: 'curator', message_id: rpcResult.message_id });
+    }).catch(() => {
+      console.error('[messages] push to client failed');
+    });
+  }
 
   return {
     statusCode: 200,
-    body: { success: true, message_id: rpcResult.message_id, created_at: rpcResult.created_at },
+    body: {
+      success: true,
+      message_id: rpcResult.message_id,
+      created_at: rpcResult.created_at,
+      replayed: !!rpcResult.replayed,
+    },
   };
 }
 
@@ -1235,7 +1390,7 @@ async function handleDelete(identity, body) {
   }
 }
 
-async function handleToggleAcked(identity, body) {
+async function handleSetAcked(identity, body) {
   if (identity.kind !== 'client') {
     return { statusCode: 403, body: { error: 'client_only' } };
   }
@@ -1243,15 +1398,18 @@ async function handleToggleAcked(identity, body) {
   if (!messageId || typeof messageId !== 'string') {
     return { statusCode: 400, body: { error: 'message_id_required' } };
   }
+  if (typeof body?.desired_state !== 'boolean') {
+    return { statusCode: 400, body: { error: 'desired_state_required' } };
+  }
   const pool = getPool();
   const conn = await pool.connect();
   try {
     const r = await conn.query(
-      `SELECT public.toggle_message_acked_as_client($1, $2) AS result`,
-      [identity.sessionToken, messageId]
+      `SELECT public.set_message_acked_as_client($1, $2, $3) AS result`,
+      [identity.sessionToken, messageId, body.desired_state]
     );
     const result = r.rows[0]?.result || { success: false, error: 'rpc_no_result' };
-    return { statusCode: result.success ? 200 : 400, body: result };
+    return { statusCode: rpcStatusCode(result), body: result };
   } finally {
     conn.release();
   }
@@ -1337,7 +1495,7 @@ async function handleTranscriptionConsent(identity, body, event) {
   };
 }
 
-async function handleToggleDone(identity, body) {
+async function handleSetDone(identity, body) {
   if (identity.kind !== 'curator') {
     return { statusCode: 403, body: { error: 'curator_only' } };
   }
@@ -1345,15 +1503,18 @@ async function handleToggleDone(identity, body) {
   if (!messageId || typeof messageId !== 'string') {
     return { statusCode: 400, body: { error: 'message_id_required' } };
   }
+  if (typeof body?.desired_state !== 'boolean') {
+    return { statusCode: 400, body: { error: 'desired_state_required' } };
+  }
   const pool = getPool();
   const conn = await pool.connect();
   try {
     const r = await conn.query(
-      `SELECT public.toggle_message_done_by_curator($1, $2) AS result`,
-      [identity.id, messageId]
+      `SELECT public.set_message_done_by_curator($1, $2, $3) AS result`,
+      [identity.id, messageId, body.desired_state]
     );
     const result = r.rows[0]?.result || { success: false, error: 'rpc_no_result' };
-    return { statusCode: result.success ? 200 : 400, body: result };
+    return { statusCode: rpcStatusCode(result), body: result };
   } finally {
     conn.release();
   }
@@ -1361,6 +1522,18 @@ async function handleToggleDone(identity, body) {
 
 module.exports._test = {
   validateAttachments,
+  validateAttachmentOwnership,
+  verifyAttachmentObjectsExist,
+  isMessengerObjectPath,
+  getAttachmentBaseUrl,
+  sanitizeDiagnosticValue,
+  rpcStatusCode,
+  buildGenericMessagePush,
+  canonicalizeJson,
+  buildSendRequestFingerprint,
+  handleSend,
+  handleSetDone,
+  handleSetAcked,
   buildAttachmentBadge,
   normalizeAttachmentType,
   normalizeMime,
@@ -1437,13 +1610,19 @@ module.exports.handler = async function (event) {
         res = await handleEdit(identity, body);
         break;
       case 'toggle-done':
-        res = await handleToggleDone(identity, body);
+        res = { statusCode: 410, body: { error: 'use_set_done' } };
+        break;
+      case 'set-done':
+        res = await handleSetDone(identity, body);
         break;
       case 'unread-count':
         res = await handleUnreadCount(identity, query);
         break;
       case 'toggle-acked':
-        res = await handleToggleAcked(identity, body);
+        res = { statusCode: 410, body: { error: 'use_set_acked' } };
+        break;
+      case 'set-acked':
+        res = await handleSetAcked(identity, body);
         break;
       case 'transcription-consent':
         res = await handleTranscriptionConsent(identity, body, event);
@@ -1453,11 +1632,11 @@ module.exports.handler = async function (event) {
     }
     return { statusCode: res.statusCode, headers: cors, body: JSON.stringify(res.body) };
   } catch (err) {
-    console.error('[messages] handler error:', err.message, err.stack);
+    console.error('[messages] handler error', { code: err?.code || 'unhandled' });
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({ error: 'internal_error', message: err.message }),
+      body: JSON.stringify({ error: 'internal_error' }),
     };
   }
 };

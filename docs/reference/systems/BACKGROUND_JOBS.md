@@ -116,6 +116,12 @@ Photo cleanup сравнивает UUID prefixes bucket с таблицей `cli
 через soft-grace и ограничено hard cap за запуск. Результат сохраняется в
 `photo_cleanup_log`.
 
+Тот же worker обслуживает messenger media lifecycle. Hard-delete сообщения
+атомарно сохраняет attachment paths в `messenger_media_cleanup_queue`; worker
+забирает строки с lease/retry и подтверждает удаление отдельно. Дополнительный
+проход удаляет только canonical messenger objects старше семи дней, которых нет
+в `client_messages.attachments`. Meal/day photos в этот namespace не входят.
+
 Versioned migration предварительно создаёт строки с одним schedule grace window;
 при конфликте она меняет только порог и не изображает новый успешный запуск.
 Каждый отдельный scheduled worker обновляет heartbeat только после завершённого
@@ -154,11 +160,13 @@ cooldown, а результат попытки фиксируется в БД. H
    одновременно.
 8. Ошибка одного backup/client/drip item не останавливает весь batch.
 9. Photo deletion требует явного opt-in и двух проходов через soft-grace.
-10. HTTP 200 фонового worker не всегда означает отсутствие внутренних ошибок;
+10. Messenger cleanup не удаляет referenced attachment или объект вне messenger
+    namespace; общий hard cap действует на все виды удаления.
+11. HTTP 200 фонового worker не всегда означает отсутствие внутренних ошибок;
     нужно читать structured result/heartbeat.
-11. Source schedule — ожидание; реальное расписание доказывается только YC
+12. Source schedule — ожидание; реальное расписание доказывается только YC
     state.
-12. Обязательный heartbeat отсутствует или stale — это ошибка, а не неизвестное
+13. Обязательный heartbeat отсутствует или stale — это ошибка, а не неизвестное
     состояние; backup оценивается прямо по журналу запусков.
 
 ## Подтверждённые слабые места и пробелы
@@ -176,6 +184,10 @@ cooldown, а результат попытки фиксируется в БД. H
   немного разные состояния клиента.
 - Photo cleanup safety зависит от production `DRY_RUN` и истории
   `photo_cleanup_log`; source не доказывает, включено ли реальное удаление.
+- Durable messenger cleanup требует применённой migration
+  `2026-07-21_messenger_reliability_privacy`; без неё worker безопасно
+  пропускает отсутствующую очередь, но hard-delete ещё не имеет crash-safe
+  cleanup.
 - Шесть новых heartbeat появятся только после применения seed migration и
   production deploy изменённых workers. До rollout внешний strict check
   намеренно сообщает `missing`; это ожидаемый state, а не false green.
@@ -199,6 +211,7 @@ cooldown, а результат попытки фиксируется в БД. H
 | B11 | Reminder delivery state имеет отдельные contract tests; прочие workers покрыты точечно                  | `find yandex-cloud-functions -path '_/**tests**/_' -type f                                                                                                                    \| sort                                                                                                                                                                       \| rg 'maintenance                                              \| reminder \| drip \| cleanup \| speech \| backup \| ops'` | проверено 2026-07-18                                         |
 | B12 | SpeechKit и snapshot включены в function/trigger/dead-man contracts                                     | `rg -n 'speechkit                                                                                                                                                             \| snapshot' yandex-cloud-functions/function-inventory.cjs yandex-cloud-functions/check-heys-ops-status.cjs`                                                                                                                                                                                              | исправлено 2026-07-18                                        |
 | B13 | Шесть standalone workers пишут heartbeat после рабочего прохода                                         | `rg -n 'recordWorkerHeartbeat                                                                                                                                                 \| cron_photo_cleanup' yandex-cloud-functions/heys-{cron-reminders,cron-security-alerts,cron-speechkit-transcribe,cron-trial-drip,cron-photo-cleanup,snapshot-demo}/index.js`                                                                                                                             | source contract и test проверены 2026-07-18; ещё не deployed |
+| B17 | Messenger cleanup различает durable queue, stale unreferenced media и diary photos                      | `yandex-cloud-functions/heys-cron-photo-cleanup/index.js`, `yandex-cloud-functions/heys-cron-photo-cleanup/__tests__/messenger-cleanup-contract.test.cjs`                                                                                                                                                                                                                                                                                                                               | проверено 2026-07-21                                         |
 | B14 | External dead-man проверяет missing/stale heartbeat и backup двумя прямыми DB queries без worker invoke | `node --test yandex-cloud-functions/__tests__/check-heys-ops-status.test.cjs`; `node yandex-cloud-functions/check-heys-ops-status.cjs --dead-man --strict --json`                                                                                                                                                                                                                                                                                                                       | тесты pass; live ожидаемо missing для 6 новых rows до deploy |
 | B15 | В YC активны все 17 ожидаемых triggers и опубликованы все 9 automation functions                        | read-only `yc serverless trigger list --format json`; `yc serverless function list --format json`; `evaluateTrigger`                                                                                                                                                                                                                                                                                                                                                                    | проверено 2026-07-18; расхождений нет                        |
 | B16 | Seed migration задаёт grace window для всех шести новых heartbeat                                       | `sed -n '1,35p' database/2026-07-18_automation_worker_heartbeats.sql`                                                                                                                                                                                                                                                                                                                                                                                                                   | source проверен 2026-07-18; migration не применялась         |

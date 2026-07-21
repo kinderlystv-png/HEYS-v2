@@ -1259,50 +1259,24 @@
     function simulateFood(food, context) {
       const { currentWave, currentRisk, dayTot, optimum, profile, trainings } = context;
 
-      // 1. Расчёт новой инсулиновой волны
-      const gl = ((food.gi || 50) * (food.carbs || 0)) / 100;
-      const baseWaveHours = profile?.insulinWaveHours || 3;
-
-      // Модификаторы волны (из InsulinWave module)
-      let waveMultiplier = 1.0;
-
-      // GI модификатор
-      if (food.gi >= 70) waveMultiplier *= 1.2;
-      else if (food.gi >= 55) waveMultiplier *= 1.1;
-      else if (food.gi <= 35) waveMultiplier *= 0.85;
-
-      // GL модификатор (плавная кривая)
-      const glMult = 0.15 + (Math.min(gl, 40) / 40) ** 0.6 * 1.15;
-      waveMultiplier *= Math.min(1.3, Math.max(0.2, glMult));
-
-      // Белок удлиняет (инсулиногенный эффект)
-      if (food.prot >= 30) waveMultiplier *= 1.10;
-      else if (food.prot >= 20) waveMultiplier *= 1.05;
-
-      // Клетчатка сокращает
-      if (food.fiber >= 8) waveMultiplier *= 0.85;
-      else if (food.fiber >= 5) waveMultiplier *= 0.92;
-
-      // Жиры удлиняют
-      if (food.fat >= 20) waveMultiplier *= 1.10;
-      else if (food.fat >= 10) waveMultiplier *= 1.05;
-
-      // Activity Context (если есть тренировка)
-      let activityBonus = 0;
-      if (trainings && trainings.length > 0) {
-        const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-        for (const t of trainings) {
-          const tMin = parseInt((t.time || '').split(':')[0]) * 60 + parseInt((t.time || '').split(':')[1] || 0);
-          const gap = Math.abs(nowMin - tMin);
-          if (gap <= 120) {
-            activityBonus = -0.25; // POST-workout
-            break;
-          }
-        }
-      }
-      waveMultiplier *= (1 + activityBonus);
-
-      const newWaveMinutes = Math.round(baseWaveHours * 60 * waveMultiplier);
+      // 1. Каноническая оценка для выбранной еды
+      const model = HEYS.InsulinWave?.ResponseModel;
+      if (!model?.estimate) throw new Error('Canonical postprandial ResponseModel is unavailable');
+      const product = {
+        name: food.name || 'Сценарий еды',
+        carbs100: Number(food.carbs) || 0,
+        protein100: Number(food.prot ?? food.protein) || 0,
+        fat100: Number(food.fat) || 0,
+        fiber100: Number(food.fiber) || 0,
+        gi: Number.isFinite(Number(food.gi)) ? Number(food.gi) : undefined,
+        foodForm: food.foodForm,
+      };
+      const responseEstimate = model.estimate({
+        meal: { time: new Date().toTimeString().slice(0, 5), items: [{ grams: 100, ...product }] },
+        getProductFromItem: () => product,
+        trainings: trainings || [],
+      });
+      const newWaveMinutes = responseEstimate.estimatedWindow.centralMinutes;
       const newWaveEndTime = new Date(Date.now() + newWaveMinutes * 60 * 1000);
       const newWaveEndStr = newWaveEndTime.toTimeString().slice(0, 5);
 
@@ -1310,21 +1284,16 @@
       let waveImpact = 'neutral';
       let waveCompare = null;
 
-      if (currentWave && currentWave.status !== 'lipolysis') {
-        // Сейчас волна активна — добавление еды продлит её
+      if (currentWave && currentWave.status === 'settling') {
         waveImpact = 'extends';
         waveCompare = {
           before: currentWave.remaining || 0,
           after: newWaveMinutes,
           diff: newWaveMinutes - (currentWave.remaining || 0)
         };
-      } else if (currentWave && currentWave.status === 'lipolysis') {
-        // Сейчас липолиз — еда прервёт его
-        waveImpact = 'interrupts';
-        waveCompare = {
-          lipolysisLost: currentWave.lipolysisMinutes || 0,
-          newWaveMinutes
-        };
+      } else if (currentWave && currentWave.status === 'complete') {
+        waveImpact = 'new-window';
+        waveCompare = { newWaveMinutes };
       }
 
       // 3. Расчёт влияния на риск срыва
@@ -1361,11 +1330,11 @@
       const advice = [];
 
       // Совет про тайминг
-      if (currentWave && currentWave.status !== 'lipolysis' && currentWave.remaining >= 60) {
+      if (currentWave && currentWave.status === 'settling' && currentWave.remaining >= 60) {
         advice.push({
           type: 'timing',
           icon: '⏳',
-          text: `Подожди ${Math.round(currentWave.remaining / 60 * 10) / 10}ч до конца текущей волны`,
+          text: `Расчётное окно текущего приёма — ещё около ${Math.round(currentWave.remaining / 60 * 10) / 10} ч. При сильном голоде ориентируйся на самочувствие и план.`,
           priority: 1
         });
       }
@@ -1377,7 +1346,7 @@
           advice.push({
             type: 'alternative',
             icon: '💡',
-            text: `Замени на ${healthyAlt.emoji} ${healthyAlt.name} — волна на ${Math.round((waveMultiplier - 0.85) / waveMultiplier * 100)}% короче`,
+            text: `Сравни с ${healthyAlt.emoji} ${healthyAlt.name}: состав даст другой профиль отклика`,
             priority: 2,
             altPreset: healthyAlt
           });
@@ -1426,8 +1395,8 @@
           endTime: newWaveEndStr,
           impact: waveImpact,
           compare: waveCompare,
-          multiplier: waveMultiplier,
-          gl
+          confidence: responseEstimate.confidence,
+          gl: responseEstimate.responseLoad.estimatedGlycemicLoad.central
         },
         risk: {
           before: currentRisk || 0,
@@ -1624,11 +1593,11 @@
 
           // Metrics grid
           h('div', { className: 'whatif-result__grid' },
-            // Инсулиновая волна
+            // Расчётный отклик
             h('div', { className: 'whatif-result__card' },
               h('div', { className: 'whatif-result__card-header' },
                 h('span', { className: 'whatif-result__card-emoji' }, '🌊'),
-                h('span', null, 'Волна')
+                h('span', null, 'Окно после еды')
               ),
               h('div', { className: 'whatif-result__card-value' },
                 simulation.wave.hours, 'ч'
@@ -1636,8 +1605,8 @@
               h('div', { className: 'whatif-result__card-detail' },
                 'до ', simulation.wave.endTime
               ),
-              simulation.wave.impact === 'interrupts' && h('div', { className: 'whatif-result__card-warning' },
-                '⚠️ Прервёт липолиз!'
+              simulation.wave.impact === 'extends' && h('div', { className: 'whatif-result__card-warning' },
+                'Составы приёмов частично наложатся по времени'
               )
             ),
 

@@ -97,6 +97,28 @@ function validateProfile(value, errors) {
   }
 }
 
+function validateTombstoneMap(value, field, errors) {
+  const fieldPath = `$.${field}`;
+  if (!isPlainObject(value)) {
+    pushError(errors, 'invalid_field_type', fieldPath, `${field} must be an object map`);
+    return;
+  }
+  for (const [entityId, timestamp] of Object.entries(value)) {
+    if (!entityId.trim()) {
+      pushError(errors, 'invalid_tombstone_id', fieldPath, `${field} keys must be non-empty entity IDs`);
+      continue;
+    }
+    if (typeof timestamp !== 'number' || !Number.isFinite(timestamp) || timestamp <= 0) {
+      pushError(
+        errors,
+        'invalid_tombstone_timestamp',
+        `${fieldPath}.${entityId}`,
+        `${field} values must be finite positive timestamps`,
+      );
+    }
+  }
+}
+
 function validateDay(value, contract, errors) {
   if (!isPlainObject(value)) {
     pushError(errors, 'invalid_type', '$', 'day payload must be an object');
@@ -105,10 +127,13 @@ function validateDay(value, contract, errors) {
   if (value.date !== undefined && value.date !== contract.dateKey) {
     pushError(errors, 'date_mismatch', '$.date', 'day date must match the storage key');
   }
-  for (const field of ['meals', 'trainings', 'householdActivities', 'deletedMealIds', 'deletedItemIds', 'deletedMealItemIds']) {
+  for (const field of ['meals', 'trainings', 'householdActivities', 'deletedMealItemIds']) {
     if (value[field] !== undefined && !Array.isArray(value[field])) {
       pushError(errors, 'invalid_field_type', `$.${field}`, `${field} must be an array`);
     }
+  }
+  for (const field of ['deletedMealIds', 'deletedItemIds']) {
+    if (value[field] !== undefined) validateTombstoneMap(value[field], field, errors);
   }
   for (const [index, meal] of (Array.isArray(value.meals) ? value.meals : []).entries()) {
     if (!isPlainObject(meal)) {

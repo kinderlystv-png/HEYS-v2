@@ -194,6 +194,68 @@ describe('Meal Recommender v2.6', () => {
             expect(result.version).toBe('3.6'); // v3.6.0: wave-aware timing + timing sync after planner
         });
 
+        it('passes the same resolved sleep context into the planner', () => {
+            const sleepContext = {
+                bedtimeHours: 27.5,
+                displayTime: '03:30',
+                source: 'observed_history',
+                confidence: 'high',
+                confidenceScore: 0.9,
+                sampleSize: 7,
+                variabilityMinutes: 15,
+                explanation: 'Время сна оценено по 7 последним ночам'
+            };
+            let plannerSleepContext = null;
+            HEYS.InsightsPI.mealPlanner.resolveSleepContext = () => sleepContext;
+            HEYS.InsightsPI.mealPlanner.planRemainingMeals = (params) => {
+                plannerSleepContext = params.sleepContext;
+                return {
+                    available: true,
+                    meals: [{
+                        index: 0,
+                        timeStart: '22:30',
+                        timeEnd: '23:00',
+                        macros: { prot: 25, carbs: 30, fat: 10, kcal: 310 },
+                        scenario: 'BALANCED',
+                        scenarioSource: 'planner',
+                        isActionable: true
+                    }],
+                    summary: { totalMeals: 1, sleepTarget: '03:30', sleepContext }
+                };
+            };
+            const result = HEYS.InsightsPI.mealRecommender.recommend({
+                currentTime: '20:30',
+                lastMeal: { time: '17:00' },
+                dayTarget: { kcal: 2000, protein: 130, carbs: 220 },
+                dayEaten: { kcal: 1300, protein: 80, carbs: 140 }
+            }, { norm: { prot: 130, carb: 220, kcal: 2000 }, optimum: 2000 }, {}, [
+                { sleepStart: '03:20' },
+                { sleepStart: '03:30' },
+                { sleepStart: '03:40' }
+            ]);
+
+            expect(result.sleepContext).toBe(sleepContext);
+            expect(plannerSleepContext).toBe(sleepContext);
+        });
+
+        it('does not turn the whole daily protein deficit into one meal target', () => {
+            const result = HEYS.InsightsPI.mealRecommender.recommend({
+                currentTime: '20:30',
+                lastMeal: { time: '18:00', protein: 15, carbs: 40 },
+                dayTarget: { kcal: 2000, protein: 200, carbs: 180 },
+                dayEaten: { kcal: 1300, protein: 50, carbs: 145 },
+                sleepTarget: '02:00'
+            }, {
+                weight: 70,
+                norm: { prot: 200, carb: 180, kcal: 2000 },
+                optimum: 2000
+            }, {}, []);
+
+            expect(result.available).toBe(true);
+            expect(result.macros.protein).toBeLessThanOrEqual(40);
+            expect(Number(result.macros.proteinRange.split('-')[1])).toBeLessThanOrEqual(45);
+        });
+
         it('returns error for missing context', () => {
             const result = HEYS.InsightsPI.mealRecommender.recommend(null, {}, {}, []);
 
@@ -319,6 +381,63 @@ describe('Meal Recommender v2.6', () => {
             expect(result.suggestions[0].product).toBe('Вода');
         });
 
+        it('does not mark the day complete when calories are reached but protein is far behind', () => {
+            const result = HEYS.InsightsPI.mealRecommender.recommend({
+                currentTime: '21:30',
+                lastMeal: { time: '18:15' },
+                dayTarget: { kcal: 2042, protein: 204, carbs: 176, fat: 79 },
+                dayEaten: { kcal: 2042, protein: 81, carbs: 176, fat: 103 },
+                sleepTarget: '02:08'
+            }, {
+                weight: 92,
+                norm: { prot: 204, carb: 176, kcal: 2042 },
+                optimum: 2042
+            }, {}, []);
+
+            expect(result.available).toBe(true);
+            expect(result.scenario).toBe('PROTEIN_DEFICIT');
+            expect(result.macros.protein).toBeGreaterThan(0);
+            expect(result.macros.protein).toBeLessThanOrEqual(46);
+            expect(result.macros.kcal).toBeGreaterThan(0);
+        });
+
+        it('rebuilds reasoning from final planner macros and PRE_SLEEP scenario', () => {
+            HEYS.InsightsPI.mealPlanner.planRemainingMeals = () => ({
+                available: true,
+                meals: [{
+                    index: 0,
+                    timeStart: '00:20',
+                    timeEnd: '00:50',
+                    macros: { prot: 25, carbs: 9, fat: 4, kcal: 172 },
+                    scenario: 'PRE_SLEEP',
+                    scenarioSource: 'planner_light',
+                    isActionable: true
+                }],
+                summary: {
+                    totalMeals: 1,
+                    totalMacros: { prot: 25, carbs: 9, kcal: 172 },
+                    reasonCode: 'PROTEIN_DEFICIT_NEAR_GOAL'
+                }
+            });
+
+            const result = HEYS.InsightsPI.mealRecommender.recommend({
+                currentTime: '22:15',
+                lastMeal: { time: '21:20' },
+                dayTarget: { kcal: 2042, protein: 204, carbs: 176, fat: 79 },
+                dayEaten: { kcal: 1877, protein: 81, carbs: 176, fat: 103 },
+                sleepTarget: '02:08'
+            }, {
+                weight: 92,
+                norm: { prot: 204, carb: 176, kcal: 2042 },
+                optimum: 2042
+            }, {}, [{ date: '2026-07-19' }, { date: '2026-07-20' }, { date: '2026-07-21' }]);
+
+            expect(result.scenario).toBe('PRE_SLEEP');
+            expect(result.macros.protein).toBe(25);
+            expect(result.reasoning.some((line) => line.includes('Нужно добрать'))).toBe(false);
+            expect(result.reasoning.some((line) => line.includes('Белок: 40%'))).toBe(true);
+        });
+
         it('detects LIGHT_SNACK scenario (50-150 kcal remaining)', () => {
             const context = {
                 currentTime: '17:00',
@@ -423,9 +542,10 @@ describe('Meal Recommender v2.6', () => {
             expect(result.scenario).toBe('PROTEIN_DEFICIT');
             // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1
             expect(result.macros.kcal).toBeLessThanOrEqual(800);
-            // Very high protein ratio
-            const proteinRatio = result.macros.protein / (result.macros.protein + result.macros.carbs);
-            expect(proteinRatio).toBeGreaterThan(0.45); // >45% protein
+            // Белок остаётся приоритетом, но дневной недобор не превращается
+            // в 70–100 г за один приём.
+            expect(result.macros.protein).toBeGreaterThanOrEqual(25);
+            expect(result.macros.protein).toBeLessThanOrEqual(40);
             expect(result.suggestions.some(s => s.product.includes('Курин') || s.product.includes('Творог'))).toBe(true);
         });
 
@@ -630,8 +750,7 @@ describe('Meal Recommender v2.6', () => {
             expect(result.scenario).toBe('PROTEIN_DEFICIT'); // Higher priority
         });
 
-        it('LATE_EVENING takes priority over PROTEIN_DEFICIT at boundary', () => {
-            // Test current behavior: LATE_EVENING checked before PROTEIN_DEFICIT
+        it('material protein deficit is preserved near sleep', () => {
             // Mock adaptive threshold with late eating at 21:00
             global.HEYS.InsightsPI.thresholds.getAdaptiveThresholds = () => ({
                 lateEatingHour: 21.0,
@@ -651,8 +770,7 @@ describe('Meal Recommender v2.6', () => {
 
             const result = HEYS.InsightsPI.mealRecommender.recommend(context, profile, {}, [{ date: '2024-01-01' }]);
 
-            // Current behavior: LATE_EVENING has higher priority (checked first)
-            expect(result.scenario).toBe('LATE_EVENING');
+            expect(result.scenario).toBe('PROTEIN_DEFICIT');
             // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1 && remaining > 300
             expect(result.macros.kcal).toBeLessThanOrEqual(700); // 90% of 700 remaining kcal
         });

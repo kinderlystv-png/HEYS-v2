@@ -193,12 +193,23 @@ const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
 const MIN_AUDIO_BYTES = 1024;
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
 
+function sanitizeDiagnosticValue(value) {
+  if (Array.isArray(value)) return value.map(sanitizeDiagnosticValue);
+  if (!value || typeof value !== 'object') return value;
+  const clean = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (/^(actor_id|client_id|curator_id|path|attachment_path|object_path|url|endpoint|body|transcript|token|p256dh|auth)$/i.test(key)) continue;
+    clean[key] = sanitizeDiagnosticValue(nested);
+  }
+  return clean;
+}
+
 function trace(event, details = {}) {
   try {
     console.log('[media.trace]', JSON.stringify({
       event,
       ts: new Date().toISOString(),
-      ...details,
+      ...sanitizeDiagnosticValue(details),
     }));
   } catch (_) {
     console.log('[media.trace]', event);
@@ -444,7 +455,7 @@ async function handleUpload(identity, body) {
       ACL: 'public-read',
     }));
   } catch (err) {
-    console.error('[photos] S3 PutObject failed:', err.message);
+    console.error('[photos] S3 PutObject failed', { code: err?.name || 'storage_error' });
     trace('upload.s3_put.failed', {
       actor_role: identity.kind,
       actor_id: identity.id,
@@ -453,9 +464,9 @@ async function handleUpload(identity, body) {
       content_type: realContentType,
       bytes: buf.length,
       path: key,
-      error: err?.message || String(err),
+      error_code: err?.name || 'storage_error',
     });
-    return { statusCode: 500, body: { error: 's3_put_failed', detail: err.message } };
+    return { statusCode: 500, body: { error: 's3_put_failed' } };
   }
 
   trace('upload.ok', {
@@ -511,12 +522,30 @@ async function handleDelete(identity, body) {
     }
   }
 
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    const referenced = await conn.query(
+      `SELECT 1
+         FROM public.client_messages m
+         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(m.attachments, '[]'::jsonb)) attachment
+        WHERE attachment->>'path' = $1
+        LIMIT 1`,
+      [path]
+    );
+    if (referenced.rows.length) {
+      return { statusCode: 409, body: { error: 'attachment_in_use' } };
+    }
+  } finally {
+    conn.release();
+  }
+
   try {
     const s3 = getS3();
     await s3.send(new DeleteObjectCommand({ Bucket: getBucket(), Key: path }));
   } catch (err) {
-    console.error('[photos] delete failed:', err.message);
-    return { statusCode: 500, body: { error: 'delete_failed', detail: err.message } };
+    console.error('[photos] delete failed', { code: err?.name || 'storage_error' });
+    return { statusCode: 500, body: { error: 'delete_failed' } };
   }
 
   return { statusCode: 200, body: { success: true } };
@@ -531,6 +560,7 @@ module.exports._test = {
   MIN_AUDIO_BYTES,
   hasAudioSignature,
   parseUploadData,
+  sanitizeDiagnosticValue,
 };
 
 // ── Main handler ─────────────────────────────────────────────────────────
@@ -587,11 +617,11 @@ module.exports.handler = async function (event) {
     }
     return { statusCode: res.statusCode, headers: cors, body: JSON.stringify(res.body) };
   } catch (err) {
-    console.error('[photos] handler error:', err.message, err.stack);
+    console.error('[photos] handler error', { code: err?.code || 'unhandled' });
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({ error: 'internal_error', message: err.message }),
+      body: JSON.stringify({ error: 'internal_error' }),
     };
   }
 };

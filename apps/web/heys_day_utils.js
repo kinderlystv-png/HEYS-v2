@@ -2060,6 +2060,14 @@
         let merged = base;
         for (let i = 0; i < SUBJECTIVE_DAY_FIELDS.length; i++) {
             const f = SUBJECTIVE_DAY_FIELDS[i];
+            if (f === 'morningActivation' && typeof HEYS.sync?.mergeMorningActivationState === 'function') {
+                const resolved = HEYS.sync.mergeMorningActivationState(base[f], lsDay[f]);
+                if (resolved && resolved !== base[f]) {
+                    if (merged === base) merged = { ...base };
+                    merged[f] = resolved;
+                }
+                continue;
+            }
             if (hasDefinedValue(lsDay[f]) && !hasDefinedValue(base[f])) {
                 if (merged === base) merged = { ...base };
                 merged[f] = lsDay[f];

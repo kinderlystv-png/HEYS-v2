@@ -1,5 +1,8 @@
 {
-  "version": "hash:af203be2cce1",
+  "version": "hash:e6b3e6beabf0",
+  "modelVersion": "5.0.0",
+  "modelKind": "heuristic",
+  "modelSource": "embedded-response-model-v5",
   "GI_CATEGORIES": {
     "low": {
       "min": 0,
@@ -36,9 +39,9 @@
   },
   "STATUS_CONFIG": {
     "lipolysis": {
-      "emoji": "🔥",
+      "emoji": "✓",
       "color": "#22c55e",
-      "label": "Липолиз!"
+      "label": "Окно завершено"
     },
     "almost": {
       "emoji": "⏳",
@@ -1197,16 +1200,16 @@
   },
   "SUPPLEMENTS_BONUS": {
     "vinegar": {
-      "bonus": -0.2,
-      "desc": "Уксус → -20% волна"
+      "bonus": 0,
+      "desc": "Не учитывается без проверенного контракта вещества, дозы и приёма пищи"
     },
     "cinnamon": {
-      "bonus": -0.1,
-      "desc": "Корица → -10% волна"
+      "bonus": 0,
+      "desc": "Не учитывается без проверенного контракта вещества, дозы и приёма пищи"
     },
     "berberine": {
-      "bonus": -0.15,
-      "desc": "Берберин → -15% волна"
+      "bonus": 0,
+      "desc": "Не учитывается без проверенного контракта вещества, дозы и приёма пищи"
     }
   },
   "COLD_EXPOSURE_BONUS": {

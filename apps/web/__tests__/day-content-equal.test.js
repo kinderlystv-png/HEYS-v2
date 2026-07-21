@@ -1,10 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 const originalWindow = global.window;
 const originalHEYS = global.HEYS;
+const require = createRequire(import.meta.url);
+const syncMerge = require('../../../yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
 
 function loadDayUtils() {
   global.window = global;
@@ -20,7 +23,7 @@ function loadDayUtils() {
       delete this._d[k];
     },
   };
-  global.HEYS = {};
+  global.HEYS = { sync: syncMerge };
   const src = fs.readFileSync(path.resolve(__dirname, '../heys_day_utils.js'), 'utf8');
   eval(src);
 }
@@ -101,5 +104,65 @@ describe('HEYS.dayUtils day content equality', () => {
     const a = { ...base };
     const b = { ...base, supplementsPlanned: [{ id: 's2' }] };
     expect(isSameDayStorageMergeContent(a, b)).toBe(false);
+  });
+
+  it('mergeSubjectiveFieldsPreferFresh preserves a terminal activation from a stale-tab snapshot', () => {
+    loadDayUtils();
+    const { mergeSubjectiveFieldsPreferFresh } = global.HEYS.dayUtils;
+    const snapshot = {
+      date: '2026-07-20',
+      updatedAt: 4000,
+      _sourceId: 'stale-tab',
+      moodMorning: 8,
+      morningActivation: { copyId: 'ma-9' },
+    };
+    const freshLsDay = {
+      date: '2026-07-20',
+      updatedAt: 3000,
+      _sourceId: 'active-tab',
+      moodMorning: 7,
+      morningActivation: {
+        copyId: 'ma-9',
+        status: 'missed',
+        decidedAt: 2000,
+        skipReasonId: 'low_energy',
+        skipReasonPending: false,
+        skipReasonCapturedAt: 2500,
+      },
+    };
+
+    const merged = mergeSubjectiveFieldsPreferFresh(snapshot, freshLsDay);
+
+    expect(merged.moodMorning).toBe(8);
+    expect(merged.morningActivation).toMatchObject({
+      status: 'missed',
+      skipReasonId: 'low_energy',
+      skipReasonPending: false,
+    });
+  });
+
+  it('mergeSubjectiveFieldsPreferFresh keeps an explicit activation clear', () => {
+    loadDayUtils();
+    const { mergeSubjectiveFieldsPreferFresh } = global.HEYS.dayUtils;
+    const snapshot = {
+      morningActivation: {
+        status: 'pending',
+        clearedByUser: true,
+        clearedAt: 3000,
+      },
+    };
+    const freshLsDay = {
+      morningActivation: {
+        status: 'done',
+        decidedAt: 2000,
+        intensity: 'medium',
+      },
+    };
+
+    expect(mergeSubjectiveFieldsPreferFresh(snapshot, freshLsDay).morningActivation).toMatchObject({
+      status: 'pending',
+      clearedByUser: true,
+      clearedAt: 3000,
+    });
   });
 });

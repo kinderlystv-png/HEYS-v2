@@ -3159,7 +3159,7 @@
           .replace(/инсулинорезистентност[ьи]/gi, 'снижения чувствительности к инсулину')
           .replace(/кардиометаболическ[а-я]+/gi, 'сердечно-метаболических')
           .replace(/ультра[-\s]?переработанн[а-я]+/gi, 'сильно переработанные')
-          .replace(/липолиз/gi, 'сжигание жира')
+          .replace(/липолиз/gi, 'расчётное окно после еды')
           .replace(/прокси/gi, 'косвенная оценка')
           .replace(/HbA1c/gi, 'долгосрочный сахар крови (HbA1c)')
           .replace(/LDL/gi, '«плохой» холестерин (LDL)')
@@ -4751,36 +4751,27 @@
         }
       }, []);
 
-      // Форматирование времени окончания волны
+      // Форматирование расчётного окна после еды
       const getWaveEndInfo = () => {
         if (!insulinWaveData) return null;
 
-        const { status, remaining, endTime, currentPhase } = insulinWaveData;
+        const { status, remaining, endTimeRange } = insulinWaveData;
 
-        if (status === 'lipolysis') {
+        if (status === 'complete') {
           return {
-            status: 'burning',
-            label: '🔥 Липолиз активен',
-            desc: 'Сейчас идёт активное жиросжигание',
+            status: 'complete',
+            label: '✓ Расчётное окно завершено',
+            desc: 'Следующий приём определяй по голоду, самочувствию и плану питания.',
             tone: 'success'
           };
         }
 
-        if (status === 'active' && remaining > 0) {
+        if (status === 'settling' && remaining > 0) {
           return {
-            status: 'wave',
-            label: `⏳ ${remaining} мин до окончания волны`,
-            desc: `Окончание в ${endTime}${currentPhase ? ` • Фаза: ${currentPhase}` : ''}`,
+            status: 'response',
+            label: `◷ Около ${Math.round(remaining)} мин`,
+            desc: `Ориентир завершения: ${endTimeRange}. Это оценка, а не измерение.`,
             tone: 'warning'
-          };
-        }
-
-        if (status === 'almost') {
-          return {
-            status: 'almost',
-            label: `⚡ ${remaining} мин до липолиза`,
-            desc: 'Скоро начнётся жиросжигание',
-            tone: 'info'
           };
         }
 
@@ -4794,7 +4785,7 @@
           '📊 Анализ прошлого дня'
         ),
 
-        // 🆕 Insulin Wave Status
+        // Расчётное окно после еды
         waveEndInfo && h('div', {
           className: `forecast-panel__wave-status forecast-panel__wave-status--${waveEndInfo.tone || 'info'}`
         },
@@ -4842,22 +4833,19 @@
           )
         ),
 
-        // 🆕 Next Meal Recommendation based on insulin wave
-        insulinWaveData && insulinWaveData.status !== 'lipolysis' && h('div', { className: 'forecast-panel__section' },
+        insulinWaveData && h('div', { className: 'forecast-panel__section' },
           h('div', { className: 'forecast-panel__section-header' },
             h('span', { className: 'forecast-panel__section-title' }, '🍽️ Следующий приём пищи'),
             h(getInfoButton(), { infoKey: 'NEXT_MEAL', size: 'small' })
           ),
           h('div', { className: 'forecast-panel__next-meal' },
             h('div', { className: 'forecast-panel__next-meal-time' },
-              insulinWaveData.remaining < 30
-                ? '⚡ Скоро можно есть!'
-                : `Рекомендуется после ${insulinWaveData.endTime}`
+              insulinWaveData.status === 'complete'
+                ? 'Ориентируйся на голод и план'
+                : `Расчётный диапазон: ${insulinWaveData.endTimeRange}`
             ),
             h('div', { className: 'forecast-panel__next-meal-tip' },
-              insulinWaveData.remaining < 60
-                ? 'Подготовь лёгкий перекус с белком'
-                : 'Дождись окончания волны для лучшего усвоения'
+              'Диапазон не является запретом на еду.'
             )
           )
         ),

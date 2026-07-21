@@ -52,6 +52,14 @@
   const INSULIN_INDEX_FACTORS = I?.INSULIN_INDEX_FACTORS;
 
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
+    const responseModel = HEYS.InsulinWave?.ResponseModel;
+    if (!responseModel?.analyzeMeal) {
+      throw new Error('InsulinWave.Calc: canonical ResponseModel dependency is not loaded');
+    }
+    return responseModel.analyzeMeal({ meal, pIndex, getProductFromItem });
+
+    /* istanbul ignore next -- unreachable legacy body kept only until downstream
+       consumers finish migrating from Calc-specific diagnostic fields. */
     let totalGrams = 0;
     let weightedGI = 0;  // 🔬 v3.0.1: Теперь взвешиваем по углеводам, не по граммам!
     let totalCarbsForGI = 0;  // 🆕 Сумма углеводов для расчёта средневзвешенного ГИ

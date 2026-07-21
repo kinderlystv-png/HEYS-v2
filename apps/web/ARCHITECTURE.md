@@ -296,17 +296,26 @@ sources only.
 
 ### Источники истины
 
-| Поле                     | Источник                                                                                             | Замечания                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------- |
-| `currentTime`            | `new Date()`                                                                                         | Только для сегодняшнего `day.date`.                                                        |
-| `lastMeal`               | `day.meals` отсортированы по `time` ASC, берётся последний                                           | Сортировка обязательна — meals могут быть not-in-order.                                    |
-| `dayEaten`               | Пересчитан из `day.meals` через `HEYS.models.mealTotals`                                             | Не доверяем входному `dayTot` — может отстать в гонке add/remove.                          |
-| `dayEaten` + supplements | `day.supplements[*]` с `macros`/`totals`/`nutrition` (не `taken=false`)                              | Без этого протеиновый шейк не считается.                                                   |
-| `dayTarget.kcal`         | `optimum                                                                                             |                                                                                            | normAbs.kcal` | `optimum` уже включает workout boost и refeed-надбавку из [heys_day_stats_vm_v1.js](heys_day_stats_vm_v1.js). |
-| `sleepTarget`            | приоритет: `day.sleepStart` → среднее из истории `days[].sleepStart` → `profile.sleepTarget` → 23:00 | Кластеризация до/после полуночи в `estimateSleepTarget` (избегаем смешения 23:50 и 01:30). |
-| `profile.weight`         | `getWeightKg(profile)`: weight → weightKg → bodyMassKg → 70                                          | Для MPS и POST_WORKOUT (Areta 2013, Ivy 2004).                                             |
+| Поле                     | Источник                                                                                  | Замечания                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `currentTime`            | `new Date()`                                                                              | Только для сегодняшнего `day.date`.                                                                                 |
+| `lastMeal`               | `day.meals` отсортированы по `time` ASC, берётся последний                                | Сортировка обязательна — meals могут быть not-in-order.                                                             |
+| `dayEaten`               | Пересчитан из `day.meals` через `HEYS.models.mealTotals`                                  | Не доверяем входному `dayTot` — может отстать в гонке add/remove.                                                   |
+| `dayEaten` + supplements | `day.supplements[*]` с `macros`/`totals`/`nutrition` (не `taken=false`)                   | Без этого протеиновый шейк не считается.                                                                            |
+| `dayTarget.kcal`         | `optimum                                                                                  |                                                                                                                     | normAbs.kcal` | `optimum` уже включает workout boost и refeed-надбавку из [heys_day_stats_vm_v1.js](heys_day_stats_vm_v1.js). |
+| `sleepContext`           | `plannedBedtime` → взвешенная медиана `days[].sleepStart` → `profile.sleepTarget` → 23:00 | `day.sleepStart` — факт прошедшей ночи. Resolver возвращает bedtime, source, confidence, sample size и variability. |
+| `profile.weight`         | `getWeightKg(profile)`: weight → weightKg → bodyMassKg → 70                               | Для MPS и POST_WORKOUT (Areta 2013, Ivy 2004).                                                                      |
 
 ### Адаптивные ветви
+
+- **Единая шкала ночи**: recommender и planner используют один `sleepContext`;
+  00:30, 03:30 и 05:00 хранятся как 24.5, 27.5 и 29.0 внутри расчёта, а UI
+  показывает обычное `HH:MM`.
+- **Свежий голод**: planner учитывает оценку не старше 180 минут; отсутствующий
+  или устаревший сигнал не подменяется нулём.
+- **Пустой план**: summary содержит `decision`, `reasonCode`, `topFactors`,
+  `tradeoffs`, `alternatives` и `sleepContext`. UI показывает компромисс и
+  вариант при сильном голоде вместо запрета.
 
 - **Late dinner → morning**: если `lastMeal.time >= 20:00` И
   `currentTime < 12:00`, волна сбрасывается (`hasLastMeal = false`) — это новый

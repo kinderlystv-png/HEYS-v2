@@ -4187,7 +4187,15 @@
         const fittedCloudHeight = containerSize.height > 0
             ? Math.max(120, Math.min(cloudHeight, containerSize.height))
             : cloudHeight;
-        const dragHeightReserve = drag ? (drag.releasing ? 72 : 112) : 0;
+        const releaseProgress = drag && drag.releasing
+            ? Math.max(0, Math.min(1, Number(drag.releaseProgress) || 0))
+            : 0;
+        // Reserve и дополнительный release-gap сходят к resting-значениям
+        // вместе с кружком. Поэтому снятие drag больше не меняет центр облака
+        // на 36px одним кадром и не запускает остаточный reflow.
+        const dragHeightReserve = drag
+            ? (drag.releasing ? 72 * (1 - releaseProgress) : 112)
+            : 0;
         const displayCloudHeight = fittedCloudHeight + dragHeightReserve;
         const halfH = fittedCloudHeight / 2;
 
@@ -4209,7 +4217,9 @@
                     lockedIds[drag.id] = true;
                 }
                 const activeGap = drag
-                    ? (drag.releasing ? RELEASE_BUBBLE_GAP : DRAG_BUBBLE_GAP)
+                    ? (drag.releasing
+                        ? BUBBLE_GAP + (RELEASE_BUBBLE_GAP - BUBBLE_GAP) * (1 - releaseProgress)
+                        : DRAG_BUBBLE_GAP)
                     : BUBBLE_GAP;
                 const reflowed = reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds, activeGap);
                 // reflowAroundOverrides клампит ВСЕ кружки к границам облака (и на
@@ -4223,7 +4233,7 @@
                 }
                 return reflowed;
             },
-            [positioned, slotOverrides, halfW, halfH, drag]
+            [positioned, slotOverrides, halfW, halfH, drag, releaseProgress]
         );
         const releaseRafRef = useRef(0);
         const internalTrashRef = useRef(null);
@@ -4245,14 +4255,26 @@
         // Signature по чистому input layout'а (без overrides), чтобы сам drop
         // не триггерил сброс (drop меняет slotOverrides, но id+minutes — нет).
         const layoutSignatureRef = useRef('');
+        const [, releaseLayoutSnap] = useState(0);
         const inputSignature = activities.map((a) =>
             a.id + ':' + Math.round(radiusForMinutes(minutesByActivity[a.id] || 0, maxMin, sizeScale))
         ).join('|');
+        const shouldSnapLayout = !drag
+            && !!layoutSignatureRef.current
+            && layoutSignatureRef.current !== inputSignature;
         useEffect(() => {
             if (layoutSignatureRef.current && layoutSignatureRef.current !== inputSignature) {
-                setSlotOverrides({});
+                // Оставляем is-layout-snap минимум на один paint: новые координаты
+                // после записи применяются сразу, без пересекающихся transition-path.
+                const frameId = requestAnimationFrame(() => {
+                    setSlotOverrides({});
+                    layoutSignatureRef.current = inputSignature;
+                    releaseLayoutSnap((value) => value + 1);
+                });
+                return () => cancelAnimationFrame(frameId);
             }
             layoutSignatureRef.current = inputSignature;
+            return undefined;
         }, [inputSignature]);
 
         const handleDragStart = useCallback((id, baseX, baseY, radius) => {
@@ -4314,26 +4336,34 @@
                     const ndx = startDx + (targetDx - startDx) * eased;
                     const ndy = startDy + (targetDy - startDy) * eased;
                     if (t >= 1) {
-                        releaseRafRef.current = 0;
-                        // НЕ пинним позицию: раскладка всегда возвращается к packed
-                        // (gravity-пакинг, большой по центру). Чистим возможный
-                        // прежний override этого кружка, если был.
-                        setSlotOverrides((cur) => {
-                            if (!(releaseId in cur)) return cur;
-                            const next = { ...cur };
-                            delete next[releaseId];
-                            return next;
+                        // Сначала рисуем один точный финальный release-кадр:
+                        // reserve=0, gap=BUBBLE_GAP, координаты=target. Только на
+                        // следующем кадре снимаем служебное drag-состояние.
+                        setDrag((cur) => (cur ? {
+                            ...cur,
+                            dx: targetDx,
+                            dy: targetDy,
+                            releaseProgress: 1,
+                        } : cur));
+                        releaseRafRef.current = requestAnimationFrame(() => {
+                            releaseRafRef.current = 0;
+                            setSlotOverrides((cur) => {
+                                if (!(releaseId in cur)) return cur;
+                                const next = { ...cur };
+                                delete next[releaseId];
+                                return next;
+                            });
+                            setDrag(null);
                         });
-                        setDrag(null);
                         return;
                     }
-                    setDrag((cur) => (cur ? { ...cur, dx: ndx, dy: ndy } : cur));
+                    setDrag((cur) => (cur ? { ...cur, dx: ndx, dy: ndy, releaseProgress: t } : cur));
                     releaseRafRef.current = requestAnimationFrame(step);
                 };
                 releaseRafRef.current = requestAnimationFrame(step);
-                return { ...prev, releasing: true };
+                return { ...prev, releasing: true, releaseProgress: 0 };
             });
-        }, [halfW, halfH, positioned, onDragDelete, setTrashVisualState]);
+        }, [positioned, onDragDelete, setTrashVisualState]);
 
         const releasing = !!(drag && drag.releasing);
 
@@ -4354,7 +4384,9 @@
             ref: cloudRef,
         },
             h('div', {
-                className: 'chrono-cloud__items chrono-cloud__items--radial' + (releasing ? ' is-releasing' : ''),
+                className: 'chrono-cloud__items chrono-cloud__items--radial'
+                    + (shouldSnapLayout ? ' is-layout-snap' : '')
+                    + (releasing ? ' is-releasing' : ''),
                 style: { '--cloud-height': displayCloudHeight + 'px' },
             },
                 displayed.map(({ activity, x: slotX, y: slotY, radius }) => {

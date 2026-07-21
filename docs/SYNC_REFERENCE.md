@@ -1,6 +1,6 @@
 # HEYS — хранение и синхронизация
 
-> **Статус:** проверено по коду 2026-07-17<br> **Охват:** web-клиент;
+> **Статус:** проверено по коду 2026-07-20<br> **Охват:** web-клиент;
 > local-first запись, download/upload, очереди, события и переключение
 > клиента<br> **Не охвачено:** полный контракт каждого RPC, схема PostgreSQL и
 > эксплуатационные метрики<br> **Перепроверить при изменениях:**
@@ -72,7 +72,8 @@
 4. Cloud хранит `client_id` отдельно, поэтому перед upload scoped key
    нормализуется обратно в логический `heys_*` key.
 5. Для `dayv2` действуют дополнительные гейты: совпадение даты, наличие
-   признаков реального изменения и запрет отправки бессодержательного дня.
+   признаков реального изменения, запрет отправки бессодержательного дня и
+   ID/tombstone-проверка каждой автоматической внешней замены.
 6. Прямая запись в `localStorage` допустима только для явно global/runtime
    ключей или внутри sync-механизма. Продуктовый код должен предпочитать
    доменный API или `HEYS.store`.
@@ -93,6 +94,29 @@
 
 Очередь и in-flight нужно рассматривать вместе. UI не должен считать upload
 завершённым только потому, что основной массив pending временно пуст.
+
+Перед отправкой каждого `dayv2` из pending/in-flight `saveClientViaRPC` повторно
+читает актуальный client-scoped LS. Если queued snapshot отличается, общий
+resolver объединяет их через `mergeDayData(..., { forceKeepAll: true })`,
+поэтому same-ID поля решаются по entity timestamps, а fresh/stale tombstones —
+по существующему tombstone-контракту. Canonical queued payload проходит как
+no-op; реальный merge не создаёт новый queue item и стабилизирует root merge
+metadata, поэтому retry того же batch не меняет timestamps. Недоступный или
+падающий resolver/merge блокирует RPC: существующий upload runtime возвращает
+исходный in-flight item в pending.
+
+`heys_hunger_energy_status_events_v1` — отдельный append/update log, а не
+атомарный LWW-массив. Browser merge-save, RPC/REST legacy batch и foreground
+hot-sync объединяют его по `event.id`; для одинакового ID выигрывает более
+свежий `updatedAt`, а отсутствие события в одном snapshot не считается
+удалением. После детерминированной сортировки применяется прежний лимит 120
+событий / 38 КБ с сохранением самого свежего хвоста.
+
+`heys_insights_feedback` синхронизируется тем же merge-before-write принципом:
+рекомендации объединяются по `record.id`, обновления `followed`, `outcome` и
+`reminders` выбираются по их временам, затем сохраняются 30 самых свежих
+записей. Канонический browser key остаётся `heys_insights_feedback_<clientId>`;
+cloud key не содержит client suffix, потому что client уже задан колонкой.
 
 ## Download: две фазы и delta
 
@@ -140,6 +164,23 @@ heysSyncCompleted { clientId, phase: 'full', ... }
 error), поэтому потребитель должен опираться на `phase`/`phaseA`, а не на один
 необязательный флаг вроде `viaYandex`.
 
+### Защита dayv2 от delayed external snapshot
+
+Автоматические inbound-пути (`bootstrap`, full/delta, `fetchDays`, hot/live
+refresh и server merge) не считают больший `day.updatedAt` доказательством
+удаления. Перед записью внешнего дня в localStorage общий gate сравнивает точные
+`meal.id`/`item.id`: исчезновение разрешено только если входящий
+`deletedMealIds`/`deletedItemIds` tombstone не старее соответствующей сущности.
+Любой содержательно отличающийся снимок при наличии локального baseline
+объединяется через `mergeDayData(..., { forceKeepAll: true })`: конфликт полей
+существующего item (например, граммов) решается по `item.updatedAt`, а не по
+`day.updatedAt`. Результат проверяется повторно, а при недоступном/ошибочном
+merge сохраняется текущий день. Periodic reconciler и обработчик внешнего
+`heys:day-updated` применяют тот же контракт перед переносом LS в React;
+содержательно одинаковый результат считается no-op, чтобы не создавать повторные
+LS writes и upload-loop. Явный force pull сохраняет отдельный
+`preferRemote`-контракт и не относится к автоматическим background-путям.
+
 ## Upload- и UI-события
 
 | Событие               | Что означает                                                                  |
@@ -184,6 +225,12 @@ error), поэтому потребитель должен опираться н
 6. Нельзя принимать пустой профиль, planning-массив или день за безопасную
    замену непустых локальных данных без соответствующего delete/tombstone
    контракта.
+7. Нельзя считать отсутствие meal/item во внешнем `dayv2` удалением только из-за
+   большего `updatedAt` или совпавшего количества строк: нужен свежий tombstone.
+8. Нельзя разрешать конфликт полей одинакового `item.id` по `day.updatedAt`:
+   автоматический inbound обязан учитывать `item.updatedAt` через общий merge.
+9. Нельзя отправлять queued/in-flight `dayv2`, отличающийся от актуального LS,
+   без того же entity-level merge: pending dedup не защищает уже начатый upload.
 
 ## Подтверждённые слабые места и зоны особого риска
 
@@ -207,19 +254,30 @@ error), поэтому потребитель должен опираться н
 - ошибка возвращает batch в очередь, success очищает его и даёт upload event;
 - Phase A разблокирует нужный UI, но не выдаётся за полную историю;
 - full/delta не затирает pending local mutation;
+- delayed `dayv2` без tombstones не уменьшает точный набор meal/item IDs ни в
+  localStorage, ни после periodic reconcile;
+- свежие tombstones проходят, старые не побеждают более новое изменение
+  сущности;
+- stale in-flight `dayv2` перед RPC объединяется с актуальным LS, а его старый
+  ack не очищает появившуюся во время upload более свежую pending-запись;
+- повторная отправка того же resolved payload не меняет merge timestamps;
 - switch A → B не переносит profile/day/planning writes A в B;
 - global/session/local-only/backup keys не уходят в client cloud store;
 - listeners различают download completion и upload completion.
 
 ## Facts Table
 
-| ID  | Утверждение                                                             | Источник                                 | Проверка                                                                                                  | Статус               |
-| --- | ----------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------- |
-| S1  | `Store.set` пишет scoped LS/cache/watchers и вызывает cloud save        | `apps/web/heys_storage_layer_v1.js`      | `rg -n -e 'Store.set = function' -e 'global.HEYS.saveClientKey' apps/web/heys_storage_layer_v1.js`        | проверено 2026-07-17 |
-| S2  | Production pending key называется `heys_pending_client_sync_queue`      | `apps/web/heys_pending_queue_pure_v1.js` | `rg -n 'heys_pending_client_sync_queue' apps/web/heys_pending_queue_pure_v1.js`                           | проверено 2026-07-17 |
-| S3  | Универсальная загрузка идёт через `syncClient` → `bootstrapClientSync`  | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'cloud.syncClient =' -e 'cloud.bootstrapClientSync =' apps/web/heys_storage_supabase_v1.js`     | проверено 2026-07-17 |
-| S4  | Phase A определяется расширяемым `criticalBaseKeys` и событием `phaseA` | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'criticalBaseKeys' -e 'phaseA: true' apps/web/heys_storage_supabase_v1.js`                      | проверено 2026-07-17 |
-| S5  | Full/delta download dispatch-ит `phase: 'full'`                         | `apps/web/heys_storage_supabase_v1.js`   | `rg -n "phase: 'full'" apps/web/heys_storage_supabase_v1.js`                                              | проверено 2026-07-17 |
-| S6  | Upload имеет отдельные `data-uploaded` и `queue-drained` события        | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'heys:data-uploaded' -e 'heys:queue-drained' apps/web/heys_storage_supabase_v1.js`              | проверено 2026-07-17 |
-| S7  | Online upload debounce начинается с 500 мс                              | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'function scheduleClientPush' -e 'navigator.onLine ? 500' apps/web/heys_storage_supabase_v1.js` | проверено 2026-07-17 |
-| S8  | Switch имеет отдельный guarded flow                                     | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'cloud.switchClient =' -e '_switchClientInProgress' apps/web/heys_storage_supabase_v1.js`       | проверено 2026-07-17 |
+| ID  | Утверждение                                                             | Источник                                 | Проверка                                                                                                                         | Статус               |
+| --- | ----------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| S1  | `Store.set` пишет scoped LS/cache/watchers и вызывает cloud save        | `apps/web/heys_storage_layer_v1.js`      | `rg -n -e 'Store.set = function' -e 'global.HEYS.saveClientKey' apps/web/heys_storage_layer_v1.js`                               | проверено 2026-07-17 |
+| S2  | Production pending key называется `heys_pending_client_sync_queue`      | `apps/web/heys_pending_queue_pure_v1.js` | `rg -n 'heys_pending_client_sync_queue' apps/web/heys_pending_queue_pure_v1.js`                                                  | проверено 2026-07-17 |
+| S3  | Универсальная загрузка идёт через `syncClient` → `bootstrapClientSync`  | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'cloud.syncClient =' -e 'cloud.bootstrapClientSync =' apps/web/heys_storage_supabase_v1.js`                            | проверено 2026-07-17 |
+| S4  | Phase A определяется расширяемым `criticalBaseKeys` и событием `phaseA` | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'criticalBaseKeys' -e 'phaseA: true' apps/web/heys_storage_supabase_v1.js`                                             | проверено 2026-07-17 |
+| S5  | Full/delta download dispatch-ит `phase: 'full'`                         | `apps/web/heys_storage_supabase_v1.js`   | `rg -n "phase: 'full'" apps/web/heys_storage_supabase_v1.js`                                                                     | проверено 2026-07-17 |
+| S6  | Upload имеет отдельные `data-uploaded` и `queue-drained` события        | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'heys:data-uploaded' -e 'heys:queue-drained' apps/web/heys_storage_supabase_v1.js`                                     | проверено 2026-07-17 |
+| S7  | Online upload debounce начинается с 500 мс                              | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'function scheduleClientPush' -e 'navigator.onLine ? 500' apps/web/heys_storage_supabase_v1.js`                        | проверено 2026-07-17 |
+| S8  | Switch имеет отдельный guarded flow                                     | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'cloud.switchClient =' -e '_switchClientInProgress' apps/web/heys_storage_supabase_v1.js`                              | проверено 2026-07-17 |
+| S9  | Automatic inbound dayv2 проходит общий ID/tombstone gate                | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'writeAutomaticInboundDayKey' -e "source: 'fetchDays'" apps/web/heys_storage_supabase_v1.js`                           | проверено 2026-07-20 |
+| S10 | Periodic reconcile проверяет LS тем же resolver до `setDay`             | `apps/web/heys_day_effects.js`           | `rg -n -e 'resolveExternalReplacement(reactDay, lsDay' -e 'SKIP_RECONCILE_EXTERNAL' apps/web/heys_day_effects.js`                | проверено 2026-07-20 |
+| S11 | Automatic inbound разрешает same-ID конфликты через entity-level merge  | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'resolveExternalReplacement(currentValue, incomingValue' -e 'forceKeepAll: true' apps/web/heys_storage_supabase_v1.js` | проверено 2026-07-20 |
+| S12 | Outbound dayv2 перед RPC сверяется с актуальным client-scoped LS        | `apps/web/heys_storage_supabase_v1.js`   | `rg -n -e 'rehydrateDayv2UploadItemFromLocal' -e 'DAYV2_OUTGOING_' -e 'preparedItems' apps/web/heys_storage_supabase_v1.js`      | проверено 2026-07-20 |

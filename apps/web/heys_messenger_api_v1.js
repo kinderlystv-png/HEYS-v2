@@ -76,6 +76,25 @@
   const RETRY_STATUSES = new Set([500, 502, 503, 504]);
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  function createRequestId() {
+    try {
+      if (global.crypto?.randomUUID) return global.crypto.randomUUID();
+      const bytes = new Uint8Array(16);
+      global.crypto?.getRandomValues?.(bytes);
+      if (bytes.some(Boolean)) {
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      }
+    } catch { /* fallback below */ }
+    const hex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16));
+    hex[12] = '4';
+    hex[16] = ((parseInt(hex[16], 16) & 3) | 8).toString(16);
+    const value = hex.join('');
+    return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+  }
+
   async function call(path, opts = {}) {
     const token = getBearerToken();
     const url = API_URL + path;
@@ -85,9 +104,9 @@
       ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
     };
     const body = opts.body ? JSON.stringify(opts.body) : undefined;
-    let lastNetworkError = null;
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    const retryable = opts.retryable === true || (opts.retryable !== false && method === 'GET');
+    const maxAttempts = retryable ? 3 : 1;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       let res;
       try {
         res = await fetch(url, {
@@ -97,12 +116,11 @@
           credentials: 'include',
         });
       } catch (err) {
-        lastNetworkError = err;
-        if (attempt < 2) {
+        if (attempt + 1 < maxAttempts) {
           await sleep(180 * (attempt + 1));
           continue;
         }
-        return { success: false, error: 'network_error', detail: err.message };
+        return { success: false, error: 'network_error' };
       }
 
       let json = null;
@@ -114,7 +132,7 @@
 
       if (res.ok) return json || { success: true };
 
-      if (RETRY_STATUSES.has(res.status) && attempt < 2) {
+      if (RETRY_STATUSES.has(res.status) && attempt + 1 < maxAttempts) {
         await sleep(220 * (attempt + 1));
         continue;
       }
@@ -128,7 +146,7 @@
       };
     }
 
-    return { success: false, error: 'network_error', detail: lastNetworkError?.message || null };
+    return { success: false, error: 'network_error' };
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -142,8 +160,13 @@
    *   audio — {type:'audio', url, path, filename?, mime?, duration_ms, size_bytes?, waveform?,
    *            transcript_status?, transcript_text?, transcript_provider?, transcript_created_at?, transcript_error?}
    */
-  async function send(payload) {
-    return call('/messages/send', { method: 'POST', body: payload });
+  async function send(payload, options = {}) {
+    const requestId = options.requestId || createRequestId();
+    return call('/messages/send', {
+      method: 'POST',
+      body: { ...payload, request_id: requestId },
+      retryable: true,
+    });
   }
 
   async function getTranscriptionConsent() {
@@ -157,6 +180,7 @@
         granted: !!granted,
         ...(opts.message_id ? { message_id: opts.message_id } : {}),
       },
+      retryable: true,
     });
   }
 
@@ -188,28 +212,22 @@
    *   curator: { client_id, up_to_ts? }
    */
   async function markRead(payload = {}) {
-    return call('/messages/mark-read', { method: 'POST', body: payload });
+    return call('/messages/mark-read', { method: 'POST', body: payload, retryable: true });
   }
 
-  /**
-   * Куратор отмечает сообщение клиента как «обработанное» (toggle).
-   * Повторный вызов снимает отметку. Только для куратора.
-   */
-  async function toggleDone(messageId) {
-    return call('/messages/toggle-done', {
+  async function setDone(messageId, desiredState) {
+    return call('/messages/set-done', {
       method: 'POST',
-      body: { message_id: messageId },
+      body: { message_id: messageId, desired_state: !!desiredState },
+      retryable: true,
     });
   }
 
-  /**
-   * Клиент подтверждает / снимает подтверждение на сообщении куратора.
-   * Симметрично toggleDone — но для клиента над курaторским сообщением.
-   */
-  async function toggleAcked(messageId) {
-    return call('/messages/toggle-acked', {
+  async function setAcked(messageId, desiredState) {
+    return call('/messages/set-acked', {
       method: 'POST',
-      body: { message_id: messageId },
+      body: { message_id: messageId, desired_state: !!desiredState },
+      retryable: true,
     });
   }
 
@@ -221,6 +239,7 @@
     return call('/messages/delete', {
       method: 'POST',
       body: { message_id: messageId },
+      retryable: true,
     });
   }
 
@@ -233,6 +252,7 @@
     return call('/messages/edit', {
       method: 'POST',
       body: { message_id: messageId, body: newBody },
+      retryable: true,
     });
   }
 
@@ -397,8 +417,8 @@
     getThread,
     getInbox,
     markRead,
-    toggleDone,
-    toggleAcked,
+    setDone,
+    setAcked,
     deleteMessage,
     editMessage,
     getUnreadCount,
@@ -409,6 +429,7 @@
     _getBearerToken: getBearerToken, // exposed for testing/debug
     _looksLikeCuratorToken: looksLikeCuratorToken,
     _API_URL: API_URL,
+    _createRequestId: createRequestId,
   };
 
   if (typeof window !== 'undefined') {

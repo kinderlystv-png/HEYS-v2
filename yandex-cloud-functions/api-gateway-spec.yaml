@@ -576,6 +576,19 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/set-done:
+    post:
+      summary: Set message done state
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages set-done
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
   /messages/toggle-acked:
     post:
       summary: Toggle message acked state
@@ -590,6 +603,19 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/set-acked:
+    post:
+      summary: Set message acknowledged state
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages set-acked
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
   /messages/delete:
     post:
       summary: Delete message

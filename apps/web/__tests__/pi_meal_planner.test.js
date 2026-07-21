@@ -76,6 +76,10 @@ describe('Meal Planner v1.0', () => {
             }
         };
 
+        // Production dependency: future meal timing uses the canonical v5 estimator.
+        const responseModelPath = path.join(__dirname, '../heys_iw_response_model.js');
+        loadScriptAsModule(responseModelPath);
+
         // Load the meal planner module
         const plannerPath = path.join(__dirname, '../insights/pi_meal_planner.js');
         loadScriptAsModule(plannerPath);
@@ -177,9 +181,8 @@ describe('Meal Planner v1.0', () => {
 
             const duration = planner.estimateWaveDuration(macros, profile);
 
-            // v1.6+: personal wave skips modifiers — returns exact base when insulinWaveHours set
-            expect(duration).toBeGreaterThanOrEqual(3.5); // Should be >= base
-            expect(duration).toBeLessThanOrEqual(5.0); // Max cap
+            expect(duration).toBeGreaterThan(3);
+            expect(duration).toBeLessThanOrEqual(6); // canonical model bound
         });
 
         it('estimates wave for high-protein meal (shorter wave)', () => {
@@ -201,7 +204,8 @@ describe('Meal Planner v1.0', () => {
 
             const duration = planner.estimateWaveDuration(macros, profile);
 
-            expect(duration).toBeCloseTo(3.5, 0.5); // Near base ± 0.5h
+            expect(duration).toBeGreaterThanOrEqual(2.5);
+            expect(duration).toBeLessThanOrEqual(4);
         });
     });
 
@@ -240,6 +244,123 @@ describe('Meal Planner v1.0', () => {
             const sleepTarget = planner.estimateSleepTarget(days, profile);
 
             expect(sleepTarget).toBe(23.0);
+        });
+    });
+
+    describe('Smart sleep context', () => {
+        it('marks the no-history, no-preference fallback as low confidence', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([], {}, { currentTimeHours: 20 });
+            expect(sleep.displayTime).toBe('23:00');
+            expect(sleep.source).toBe('fallback');
+            expect(sleep.confidence).toBe('low');
+            expect(sleep.sampleSize).toBe(0);
+        });
+
+        it.each([
+            ['23:30', 23.5],
+            ['00:30', 24.5],
+            ['02:00', 26],
+            ['03:30', 27.5],
+            ['05:00', 29]
+        ])('keeps profile bedtime %s on the continuous night timeline', (sleepTarget, expected) => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([], { sleepTarget }, { currentTimeHours: 20 });
+            expect(sleep.bedtimeHours).toBe(expected);
+            expect(sleep.displayTime).toBe(sleepTarget);
+            expect(sleep.source).toBe('profile_preference');
+        });
+
+        it('normalizes current time after midnight against the same bedtime occurrence', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            expect(planner.normalizePlanningCurrentTime('01:15')).toBe(25.25);
+            const sleep = planner.resolveSleepContext([], { sleepTarget: '03:30' }, { currentTimeHours: 25.25 });
+            expect(sleep.bedtimeHours).toBe(27.5);
+        });
+
+        it('uses the next night when the bedtime has passed after the 03:00 HEYS-day boundary', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([], { sleepTarget: '03:30' }, { currentTimeHours: 3.75 });
+            expect(sleep.bedtimeHours).toBe(27.5);
+        });
+
+        it('handles a cluster around midnight without producing a midday average', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([
+                { sleepStart: '23:50' },
+                { sleepStart: '00:20' },
+                { sleepStart: '00:40' }
+            ], {}, { currentTimeHours: 20 });
+            expect(sleep.bedtimeHours).toBeGreaterThan(23);
+            expect(sleep.bedtimeHours).toBeLessThan(25.5);
+        });
+
+        it('resists a single bedtime outlier', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([
+                { sleepStart: '03:20' },
+                { sleepStart: '03:30' },
+                { sleepStart: '20:00' },
+                { sleepStart: '03:35' },
+                { sleepStart: '03:30' }
+            ], {}, { currentTimeHours: 20 });
+            expect(sleep.displayTime).toBe('03:30');
+        });
+
+        it('lowers confidence for a variable sleep history', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext([
+                { sleepStart: '20:00' },
+                { sleepStart: '23:00' },
+                { sleepStart: '05:00' }
+            ], {}, { currentTimeHours: 18 });
+            expect(sleep.confidence).toBe('low');
+            expect(sleep.variabilityMinutes).toBeGreaterThan(90);
+        });
+
+        it('uses a dedicated planned bedtime without treating observed sleep as a plan', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleep = planner.resolveSleepContext(
+                [{ sleepStart: '23:00' }, { sleepStart: '23:10' }, { sleepStart: '22:50' }],
+                {},
+                { plannedBedtime: '03:30', currentTimeHours: 20 }
+            );
+            expect(sleep.displayTime).toBe('03:30');
+            expect(sleep.source).toBe('planned_bedtime');
+        });
+
+        it('keeps the screenshot regression actionable for a stable 03:30 sleeper', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '20:38',
+                lastMeal: { time: '18:15', items: [], totals: { kcal: 551, prot: 13, carbs: 44, fat: 38 } },
+                dayTarget: { kcal: 2012, prot: 201, carbs: 176, fat: 78 },
+                dayEaten: { kcal: 1662, prot: 73, carbs: 144, fat: 96 },
+                profile: { weight: 70 },
+                days: Array.from({ length: 7 }, () => ({ sleepStart: '03:30' })),
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            expect(result.meals.length).toBeGreaterThan(0);
+            expect(result.summary.sleepContext.displayTime).toBe('03:30');
+            expect(result.summary.reasonCode).not.toBe('NO_USEFUL_MEAL_WINDOW');
+        });
+
+        it('uses only a fresh high-hunger signal in the near-sleep tradeoff', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const base = {
+                currentTime: '20:30',
+                lastMeal: { time: '18:00', items: [], totals: { kcal: 500, prot: 25, carbs: 50, fat: 18 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 70 },
+                dayEaten: { kcal: 1800, prot: 110, carbs: 180, fat: 60 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            };
+            const fresh = planner.planRemainingMeals({ ...base, hungerSignal: { level: 8, ageMinutes: 20 } });
+            const stale = planner.planRemainingMeals({ ...base, hungerSignal: { level: 8, ageMinutes: 240 } });
+            expect(fresh.summary.reasonCode).toBe('FRESH_HIGH_HUNGER');
+            expect(stale.summary.reasonCode).not.toBe('FRESH_HIGH_HUNGER');
         });
     });
 
@@ -735,19 +856,18 @@ describe('Meal Planner v1.0', () => {
     //  Round 1 — Correctness fixes
     // ============================================================
     describe('Round 1 — Correctness fixes', () => {
-        it('R1-7: explicit daySleepStart overrides historical avg', () => {
+        it('R1-7: retrospective daySleepStart does not override historical bedtime', () => {
             const planner = HEYS.InsightsPI.mealPlanner;
-            // Profile + historical days suggest 23:00, but day's check-in says 22:00 → should win.
+            // day.sleepStart — факт прошедшей ночи, а не план на будущую.
             const days = Array.from({ length: 5 }, (_, i) => ({
                 date: `2026-05-0${i + 1}`,
                 sleepStart: '23:00',
                 meals: [{ time: '20:00', items: [] }]
             }));
             const sleepTarget = planner.estimateSleepTarget(days, { sleepTarget: '23:00' }, {
-                explicitSleepStart: '22:00',
                 currentTimeHours: 18
             });
-            expect(planner.formatTime(sleepTarget)).toBe('22:00');
+            expect(planner.formatTime(sleepTarget)).toBe('23:00');
         });
 
         it('R1-7: after-midnight cluster wins majority', () => {
@@ -950,8 +1070,8 @@ describe('Meal Planner v1.0', () => {
         it('R3-3: cold start (no history) uses profile.sleepTarget', () => {
             const planner = HEYS.InsightsPI.mealPlanner;
             const sleepTarget = planner.estimateSleepTarget([], { sleepTarget: '00:30' });
-            // 00:30 → 24.5h (treated as after midnight)
-            expect(sleepTarget).toBe(0.5);
+            // 00:30 → 24.5h на непрерывной шкале следующей ночи.
+            expect(sleepTarget).toBe(24.5);
         });
     });
 
@@ -1017,6 +1137,78 @@ describe('Meal Planner v1.0', () => {
             const a = planner.parseTime(withoutStress.summary?.lastMealDeadline || '00:00');
             const b = planner.parseTime(withStress.summary?.lastMealDeadline || '00:00');
             expect(b).toBeLessThanOrEqual(a);
+        });
+
+        it('R4-5: stress shift does not erase a valid post-wave meal window', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Скриншот-регрессия: расчётное окно заканчивается в 22:18.
+            // Базовый deadline при сне в 02:08 — 23:08; stress shift до 22:38
+            // нельзя применять, иначе разница всего в 10 минут превращается в «не ешь».
+            HEYS.InsulinWave.calculate = () => ({ duration: 243 });
+            const result = planner.planRemainingMeals({
+                currentTime: '21:32',
+                lastMeal: { time: '18:15', items: [], totals: { kcal: 551, prot: 13, carbs: 44, fat: 38 } },
+                dayTarget: { kcal: 2012, prot: 201, carbs: 176, fat: 78 },
+                dayEaten: { kcal: 1662, prot: 73, carbs: 144, fat: 96 },
+                profile: { sleepTarget: '02:08', weight: 70 },
+                days: [],
+                pIndex: {},
+                stressMoodSignals: { stressLevel: 'moderate', moodLevel: 'neutral' }
+            });
+
+            expect(result.available).toBe(true);
+            expect(result.meals.length).toBeGreaterThan(0);
+            expect(result.meals[0].timeStart).toBe('22:18');
+            expect(result.summary?.reasonCode).not.toBe('NO_USEFUL_MEAL_WINDOW');
+            expect(result.meals[0].macros.prot).toBe(40);
+            expect(result.meals[0].proteinCapped).toBe(true);
+            expect(result.meals[0].macros.kcal).toBe(
+                result.meals[0].macros.prot * 4
+                + result.meals[0].macros.carbs * 4
+                + result.meals[0].macros.fat * 9
+            );
+            expect(result.summary.totalMacros.prot).toBe(40);
+            expect(result.summary.totalMacros.kcal).toBe(result.meals[0].macros.kcal);
+            expect(result.summary.advisories.some((a) => a.key === 'practical_protein_cap')).toBe(true);
+        });
+
+        it('does not return GOAL_REACHED when calories are closed but protein is only 40%', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '21:30',
+                lastMeal: { time: '18:15', items: [], totals: { kcal: 551, prot: 13, carbs: 44, fat: 38 } },
+                dayTarget: { kcal: 2042, prot: 204, carbs: 176, fat: 79 },
+                dayEaten: { kcal: 2042, prot: 81, carbs: 176, fat: 103 },
+                profile: { sleepTarget: '02:08', weight: 92 },
+                days: [],
+                pIndex: {}
+            });
+
+            expect(result.available).toBe(true);
+            expect(result.meals.length).toBe(1);
+            expect(result.summary.reasonCode).not.toBe('GOAL_REACHED');
+            expect(result.meals[0].macros.prot).toBe(46);
+            expect(result.meals[0].macros.kcal).toBe(184);
+            expect(result.summary.topFactors.some((factor) => factor.includes('белок 40%'))).toBe(true);
+        });
+
+        it('explains light protein timing from the planned meal, not from now', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            HEYS.InsulinWave.calculate = () => ({ duration: 150 });
+            const result = planner.planRemainingMeals({
+                currentTime: '22:20',
+                lastMeal: { time: '21:20', items: [], totals: { kcal: 215, prot: 8, carbs: 32, fat: 7 } },
+                dayTarget: { kcal: 2042, prot: 204, carbs: 176, fat: 79 },
+                dayEaten: { kcal: 1877, prot: 81, carbs: 176, fat: 103 },
+                profile: { sleepTarget: '02:08', weight: 92 },
+                days: [],
+                pIndex: {}
+            });
+
+            expect(result.summary.reasonCode).toBe('PROTEIN_DEFICIT_NEAR_GOAL');
+            expect(result.meals[0].timeStart).toBe('00:20');
+            expect(result.summary.topFactors[0]).toContain('за 1.8 ч до сна');
+            expect(result.summary.topFactors[0]).not.toContain('3.8');
         });
 
         it('R4-6: waveOverlapPct > 40% → advisory в summary', () => {
@@ -1099,8 +1291,8 @@ describe('Meal Planner v1.0', () => {
         it('R5-A: formatTime делает carry minutes→hours при m=60', () => {
             const planner = HEYS.InsightsPI.mealPlanner;
             // Граничные случаи где Math.round может выдать m=60
-            expect(planner.formatTime(24.9999999)).toBe('25:00');
-            expect(planner.formatTime(25.0)).toBe('25:00');
+            expect(planner.formatTime(24.9999999)).toBe('01:00');
+            expect(planner.formatTime(25.0)).toBe('01:00');
             // Внутренние нормальные значения не ломаются
             expect(planner.formatTime(14.5)).toBe('14:30');
             expect(planner.formatTime(0.5)).toBe('00:30');
@@ -1603,8 +1795,7 @@ describe('Meal Planner v1.0', () => {
                 lastMeal: { time: '13:55', items: [], totals: { kcal: 494, prot: 42, carbs: 64, fat: 12 } },
                 dayTarget: { kcal: 1484, prot: 86.6, carbs: 123.7, fat: 44 },
                 dayEaten: { kcal: 649, prot: 48, carbs: 84.2, fat: 18.7 },
-                profile: { weight: 52.1 },
-                daySleepStart: '01:30'
+                profile: { weight: 52.1, sleepTarget: '01:30' }
             });
             expect(result.available).toBe(true);
             const totalFatInPlan = result.meals.reduce((s, m) => s + (m.macros?.fat || 0), 0);

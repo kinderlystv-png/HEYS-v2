@@ -1647,17 +1647,23 @@
     }
 
     try {
-      const dayv2Items = items.filter((item) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')));
-      if (dayv2Items.length > 0) {
-        for (const item of dayv2Items) {
+      const requiresMergeSave = (item) => {
+        const key = String(item?.k || '');
+        return /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)
+          || key === 'heys_hunger_energy_status_events_v1'
+          || key === 'heys_insights_feedback';
+      };
+      const protectedItems = items.filter(requiresMergeSave);
+      if (protectedItems.length > 0) {
+        for (const item of protectedItems) {
           const lastSeen = Number((item.v && item.v.updatedAt) || 0);
           const merged = await mergeSaveKV(clientId, item.k, item.v, lastSeen, item._ctx || contextId || null);
           if (!merged?.success) {
-            return { success: false, saved: preMergedSaved, error: merged?.error || 'merge_save_required_for_dayv2' };
+            return { success: false, saved: preMergedSaved, error: merged?.error || 'merge_save_required_for_protected_key' };
           }
           preMergedSaved += 1;
         }
-        items = items.filter((item) => !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')));
+        items = items.filter((item) => !requiresMergeSave(item));
         if (items.length === 0) {
           return { success: true, saved: preMergedSaved };
         }

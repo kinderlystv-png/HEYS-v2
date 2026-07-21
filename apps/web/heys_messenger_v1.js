@@ -20,6 +20,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const MAX_VOICE_DURATION_MS = 5 * 60 * 1000;
   const MIN_VOICE_BYTES = 1024;
+  const THREAD_PAGE_LIMIT = 50;
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function formatTime(iso) {
@@ -102,6 +103,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }
     return parts.join('|');
+  }
+
+  function compareMessagesAsc(a, b) {
+    const byTime = String(a?.created_at || '').localeCompare(String(b?.created_at || ''));
+    return byTime || String(a?.id || '').localeCompare(String(b?.id || ''));
+  }
+
+  function mergeMessagePage(existing, incoming) {
+    const byId = new Map();
+    for (const message of Array.isArray(existing) ? existing : []) {
+      if (message?.id) byId.set(message.id, message);
+    }
+    for (const message of Array.isArray(incoming) ? incoming : []) {
+      if (message?.id) byId.set(message.id, message);
+    }
+    return Array.from(byId.values()).sort(compareMessagesAsc);
+  }
+
+  function mergeLatestMessagePage(existing, incoming) {
+    const latest = (Array.isArray(incoming) ? incoming : []).slice().sort(compareMessagesAsc);
+    if (latest.length === 0) return [];
+    const oldestLatestTs = latest[0]?.created_at || '';
+    const olderLoaded = (Array.isArray(existing) ? existing : []).filter(
+      (message) => String(message?.created_at || '') < oldestLatestTs,
+    );
+    return mergeMessagePage(olderLoaded, latest);
+  }
+
+  function getPrependScrollTop(previousHeight, previousTop, nextHeight) {
+    return Number(previousTop || 0) + Math.max(0, Number(nextHeight || 0) - Number(previousHeight || 0));
+  }
+
+  function getLatestForeignReadTs(messages, viewerRole) {
+    const sorted = (Array.isArray(messages) ? messages : []).slice().sort(compareMessagesAsc);
+    if (!sorted.some((message) => message?.sender_role !== viewerRole)) return null;
+    return sorted[sorted.length - 1]?.created_at || null;
   }
 
   function getWaveformBars(att) {
@@ -850,6 +887,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showOldMessages, setShowOldMessages] = useState(false);
+    const [hasMoreHistory, setHasMoreHistory] = useState(false);
+    const [loadingOlder, setLoadingOlder] = useState(false);
     const [pendingPhotos, setPendingPhotos] = useState([]); // [{tempId, localPreview, status:'uploading'|'done'|'error', url?, path?, filename?, width?, height?}]
     const [pendingAudio, setPendingAudio] = useState(null); // {tempId, status, localUrl, url?, path?, mime, duration_ms, size_bytes}
     const [recordingState, setRecordingState] = useState('idle'); // idle|recording|stopping
@@ -874,8 +913,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const transcriptionConsentRef = useRef(null);
     const optimisticAudioUrlsRef = useRef(new Set());
     const localAudioByRemoteRef = useRef(new Map());
+    const mountedRef = useRef(true);
+    const threadGenerationRef = useRef(0);
+    const threadContextKeyRef = useRef(null);
+    const prependScrollRef = useRef(null);
+    const historyPaginationStartedRef = useRef(false);
+    const pendingMediaRef = useRef({ photos: [], audio: null });
+    const cancelledUploadIdsRef = useRef(new Set());
     const isCurator = isCuratorMode();
     const viewerRole = isCurator ? 'curator' : 'client';
+    const threadContextKey = `${viewerRole}:${curatorViewClientId || ''}`;
+    if (threadContextKeyRef.current !== threadContextKey) {
+      threadContextKeyRef.current = threadContextKey;
+      threadGenerationRef.current += 1;
+    }
 
     const rememberLocalAudio = useCallback((attachment) => {
       if (!attachment?.localUrl) return;
@@ -927,75 +978,110 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       void refreshTranscriptionConsent();
     }, [refreshTranscriptionConsent]);
 
-    const fetchAndMerge = useCallback(async ({ silent = false } = {}) => {
-      if (!silent) setLoading(true);
-      const opts = isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {};
+    const fetchAndMerge = useCallback(async ({ silent = false, beforeTs = null, prepend = false } = {}) => {
+      const generation = threadGenerationRef.current;
+      if (!silent && !prepend) setLoading(true);
+      if (prepend) setLoadingOlder(true);
+      const opts = {
+        ...(isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {}),
+        ...(beforeTs ? { before_ts: beforeTs } : {}),
+        limit: THREAD_PAGE_LIMIT,
+      };
       const res = await HEYS.MessengerAPI.getThread(opts);
-      if (!silent) setLoading(false);
+      if (!mountedRef.current || generation !== threadGenerationRef.current) return;
+      if (!silent && !prepend) setLoading(false);
+      if (prepend) setLoadingOlder(false);
       if (!res?.success) {
+        if (prepend) prependScrollRef.current = null;
         if (!silent) setError(res?.error || 'unknown_error');
         return;
       }
       const sorted = (res.messages || []).slice().reverse().map(hydrateLocalAudio);
+      if (prepend) {
+        historyPaginationStartedRef.current = true;
+        setHasMoreHistory(sorted.length >= THREAD_PAGE_LIMIT);
+      } else if (!historyPaginationStartedRef.current) {
+        setHasMoreHistory(sorted.length >= THREAD_PAGE_LIMIT);
+      }
 
-      // Smart merge: если пользователь сейчас редактирует сообщение, мы
-      // не перезаписываем его свежим body с сервера (потеряет ввод).
-      // Editing state живёт в MessageBubble local state — мы не знаем какие
-      // именно editing. Простое правило: если timestamps совпадают (та же
-      // запись) и body отличается локально только текстом — оставим local.
-      // Для простоты в MVP: просто берём server-truth, edit-mode пересоздаст
-      // bubble если кнопка ✎ остаётся активной (textarea сохранится через
-      // useState внутри bubble — он привязан к key=m.id, не пересоздаётся).
       setMessages((prev) => {
-        // Detect новые foreign сообщения для звука
-        if (prev.length === 0 && lastForeignIdRef.current == null) {
-          const lastForeign = sorted
-            .slice()
-            .reverse()
-            .find((m) => m.sender_role !== viewerRole);
+        if (!prepend && prev.length === 0 && lastForeignIdRef.current == null) {
+          const lastForeign = sorted.slice().reverse().find((m) => m.sender_role !== viewerRole);
           lastForeignIdRef.current = lastForeign?.id || null;
-          return sorted;
+        } else if (!prepend) {
+          const prevIds = new Set(prev.map((m) => m.id));
+          const newForeign = sorted.find(
+            (m) => !prevIds.has(m.id) && m.sender_role !== viewerRole
+          );
+          if (newForeign && lastForeignIdRef.current !== newForeign.id) {
+            lastForeignIdRef.current = newForeign.id;
+            try {
+              const audio = window.HEYS?.audio;
+              if (audio?.preview) {
+                audio.preview('notify');
+                setTimeout(() => audio.preview('notify'), 220);
+              } else if (audio?.play) {
+                audio.play('notify');
+                setTimeout(() => audio.play('notify'), 220);
+              }
+            } catch { /* ignore */ }
+            try {
+              if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
+            } catch { /* ignore */ }
+          }
         }
-        const prevIds = new Set(prev.map((m) => m.id));
-        const newForeign = sorted.find(
-          (m) => !prevIds.has(m.id) && m.sender_role !== viewerRole
-        );
-        if (newForeign && lastForeignIdRef.current !== newForeign.id) {
-          lastForeignIdRef.current = newForeign.id;
-          // Очевидный сигнал: двойной chime + вибрация (на мобиле очень
-          // заметна). HEYS.audio.preview('notify') обходит quiet hours
-          // и громче чем play() — для входящего сообщения это правильно.
-          try {
-            const audio = window.HEYS?.audio;
-            if (audio?.preview) {
-              audio.preview('notify');
-              setTimeout(() => audio.preview('notify'), 220);
-            } else if (audio?.play) {
-              audio.play('notify');
-              setTimeout(() => audio.play('notify'), 220);
-            }
-          } catch { /* ignore */ }
-          try {
-            if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
-          } catch { /* ignore */ }
-        }
-        return sorted;
+        return prepend
+          ? mergeMessagePage(prev, sorted)
+          : mergeLatestMessagePage(prev, sorted);
       });
 
-      // Mark read — только при первом load (не silent)
-      if (!silent && sorted.length > 0) {
-        const latestTs = sorted[sorted.length - 1].created_at;
-        const markPayload =
-          isCurator && curatorViewClientId
+      if (prepend) {
+        try {
+          console.info('[HEYS.messenger] history_page_loaded', { count: sorted.length });
+        } catch { /* ignore */ }
+      }
+
+      // The visible modal marks newly displayed foreign messages read even on silent polls.
+      if (!prepend) {
+        const latestTs = getLatestForeignReadTs(sorted, viewerRole);
+        if (latestTs) {
+          const markPayload = isCurator && curatorViewClientId
             ? { client_id: curatorViewClientId, up_to_ts: latestTs }
             : { up_to_ts: latestTs };
-        HEYS.MessengerAPI.markRead(markPayload)
-          .then(() => HEYS.MessengerAPI.refreshFabUnread?.())
-          .catch(() => {});
+          HEYS.MessengerAPI.markRead(markPayload)
+            .then(() => {
+              HEYS.MessengerAPI.refreshFabUnread?.();
+              if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+            })
+            .catch(() => {});
+        }
       }
     }, [isCurator, curatorViewClientId, viewerRole, hydrateLocalAudio]);
 
     const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
+
+    const loadOlderHistory = useCallback(async () => {
+      if (loadingOlder || !hasMoreHistory || messages.length === 0) return;
+      const el = threadRef.current;
+      if (el) {
+        prependScrollRef.current = { height: el.scrollHeight, top: el.scrollTop };
+        wasAtBottomRef.current = false;
+      }
+      await fetchAndMerge({
+        silent: false,
+        beforeTs: messages[0]?.created_at || null,
+        prepend: true,
+      });
+    }, [fetchAndMerge, hasMoreHistory, loadingOlder, messages]);
+
+    useEffect(() => {
+      lastForeignIdRef.current = null;
+      setMessages([]);
+      historyPaginationStartedRef.current = false;
+      setShowOldMessages(false);
+      setHasMoreHistory(false);
+      setError(null);
+    }, [isCurator, curatorViewClientId]);
 
     useEffect(() => {
       loadThread();
@@ -1066,6 +1152,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     useEffect(() => {
       const el = threadRef.current;
       if (!el) return;
+      if (prependScrollRef.current) {
+        const previous = prependScrollRef.current;
+        prependScrollRef.current = null;
+        el.scrollTop = getPrependScrollTop(previous.height, previous.top, el.scrollHeight);
+        return;
+      }
       if (wasAtBottomRef.current) {
         el.scrollTop = el.scrollHeight;
       }
@@ -1096,6 +1188,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setLightbox({ attachments, index });
     };
 
+    const deleteUploadedAttachmentBestEffort = useCallback((attachment) => {
+      if (!attachment?.path) return;
+      const deleteFn = isAudioAttachment(attachment)
+        ? (window.HEYS?.StorageMedia?.deleteAudio || window.HEYS?.cloud?.deleteAudio)
+        : (window.HEYS?.StoragePhotos?.deletePhoto || window.HEYS?.cloud?.deletePhoto);
+      if (typeof deleteFn !== 'function') return;
+      Promise.resolve(deleteFn(attachment.path)).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+      pendingMediaRef.current = { photos: pendingPhotos, audio: pendingAudio };
+    }, [pendingPhotos, pendingAudio]);
+
     const cleanupRecordingHandles = () => {
       if (recordTickRef.current) {
         clearInterval(recordTickRef.current);
@@ -1112,7 +1217,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       recordStreamRef.current = null;
     };
 
-    useEffect(() => () => {
+    useEffect(() => {
+      mountedRef.current = true;
+      return () => {
+      mountedRef.current = false;
+      threadGenerationRef.current += 1;
+      for (const photo of pendingMediaRef.current.photos || []) {
+        cancelledUploadIdsRef.current.add(photo.tempId);
+        deleteUploadedAttachmentBestEffort(photo);
+      }
+      if (pendingMediaRef.current.audio) {
+        cancelledUploadIdsRef.current.add(pendingMediaRef.current.audio.tempId);
+        deleteUploadedAttachmentBestEffort(pendingMediaRef.current.audio);
+      }
       try {
         if (recorderRef.current && recorderRef.current.state !== 'inactive') {
           recorderRef.current.stop();
@@ -1128,7 +1245,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
       optimisticAudioUrlsRef.current.clear();
       localAudioByRemoteRef.current.clear();
-    }, []);
+      };
+    }, [deleteUploadedAttachmentBestEffort]);
 
     const uploadVoiceBlob = async (blob, durationMs, tempId) => {
       if (!blob || blob.size < MIN_VOICE_BYTES) {
@@ -1207,6 +1325,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (result?.error || !result?.url) {
           setPendingAudio((prev) => prev && prev.tempId === tempId ? { ...prev, status: 'error' } : prev);
           setError(result?.error || 'audio_upload_failed');
+          return;
+        }
+        if (cancelledUploadIdsRef.current.has(tempId)) {
+          cancelledUploadIdsRef.current.delete(tempId);
+          deleteUploadedAttachmentBestEffort({ type: 'audio', path: result.path });
           return;
         }
         setPendingAudio((prev) => prev && prev.tempId === tempId
@@ -1326,6 +1449,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const removePendingAudio = () => {
       if (recordingState === 'recording') stopVoiceRecording();
+      if (pendingAudio?.tempId) cancelledUploadIdsRef.current.add(pendingAudio.tempId);
+      deleteUploadedAttachmentBestEffort(pendingAudio);
       if (pendingAudioUrlRef.current) {
         URL.revokeObjectURL(pendingAudioUrlRef.current);
         pendingAudioUrlRef.current = null;
@@ -1382,6 +1507,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setError(result?.error || 'photo_upload_failed');
             continue;
           }
+          if (cancelledUploadIdsRef.current.has(tempId)) {
+            cancelledUploadIdsRef.current.delete(tempId);
+            deleteUploadedAttachmentBestEffort({ type: 'image', path: result.path });
+            continue;
+          }
           setPendingPhotos((prev) =>
             prev.map((p) => p.tempId === tempId
               ? { ...p, status: 'done', url: result.url, path: result.path }
@@ -1397,6 +1527,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const removePendingPhoto = (tempId) => {
+      const pending = pendingPhotos.find((photo) => photo.tempId === tempId);
+      cancelledUploadIdsRef.current.add(tempId);
+      deleteUploadedAttachmentBestEffort(pending);
       setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
     };
 
@@ -1484,7 +1617,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             consentDecided: !!liveConsent?.decided,
             transcriptStatus: audioAttachment.transcript_status || 'none',
             durationMs: audioAttachment.duration_ms,
-            path: audioAttachment.path,
           });
         } catch { /* ignore */ }
       }
@@ -1604,20 +1736,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.MessengerAPI.refreshInbox?.();
     };
 
-    // Унифицированный toggle ack для обеих ролей. Симметричная семантика:
-    //   - viewerRole='curator' тапает ✓ на client-msg → done_at (RPC toggle-done)
-    //   - viewerRole='client' тапает ✓ на curator-msg → acked_at (RPC toggle-acked)
+    // Desired-state ack для обеих ролей: повтор безопасен и не меняет состояние обратно.
     // Оптимистично переключаем соответствующее поле в local state, на ошибку — rollback.
     const handleToggleAck = async (message) => {
       const field = isCurator ? 'done_at' : 'acked_at';
       const prevValue = message[field] || null;
       const optimisticValue = prevValue ? null : new Date().toISOString();
+      const desiredState = !prevValue;
       setMessages((prev) =>
         prev.map((m) => (m.id === message.id ? { ...m, [field]: optimisticValue } : m))
       );
       const res = isCurator
-        ? await HEYS.MessengerAPI.toggleDone(message.id)
-        : await HEYS.MessengerAPI.toggleAcked(message.id);
+        ? await HEYS.MessengerAPI.setDone(message.id, desiredState)
+        : await HEYS.MessengerAPI.setAcked(message.id, desiredState);
       if (!res?.success) {
         setMessages((prev) =>
           prev.map((m) => (m.id === message.id ? { ...m, [field]: prevValue } : m))
@@ -1757,15 +1888,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                   const nodes = [];
 
-                  // Кнопка «Показать ранее» — если есть скрытые
-                  if (!showOldMessages && oldMessages.length > 0) {
+                  // «Показать ранее» раскрывает загруженное и при необходимости
+                  // запрашивает следующую серверную страницу.
+                  if (!showOldMessages && (oldMessages.length > 0 || hasMoreHistory)) {
                     nodes.push(
                       React.createElement('button', {
                         key: 'show-older',
                         type: 'button',
                         className: 'messenger-show-older',
-                        onClick: () => setShowOldMessages(true),
-                      }, `↑ Показать ранее (${oldMessages.length})`),
+                        disabled: loadingOlder,
+                        onClick: () => {
+                          setShowOldMessages(true);
+                          if (hasMoreHistory) void loadOlderHistory();
+                        },
+                      }, loadingOlder
+                        ? 'Загружаю...'
+                        : `↑ Показать ранее${oldMessages.length ? ` (${oldMessages.length})` : ''}`),
+                    );
+                  } else if (showOldMessages && hasMoreHistory) {
+                    nodes.push(
+                      React.createElement('button', {
+                        key: 'load-older',
+                        type: 'button',
+                        className: 'messenger-show-older',
+                        disabled: loadingOlder,
+                        onClick: () => void loadOlderHistory(),
+                      }, loadingOlder ? 'Загружаю...' : '↑ Загрузить более ранние'),
                     );
                   }
 
@@ -1908,7 +2056,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   ? `включена${formatConsentDate(transcriptionConsent.created_at) ? ' с ' + formatConsentDate(transcriptionConsent.created_at) : ''}`
                   : transcriptionConsent?.decided
                     ? 'выключена'
-                    : 'спросим перед первым OggOpus голосовым',
+                    : 'спросим перед первой расшифровкой голосового сообщения',
               ),
             ),
             React.createElement('button', {
@@ -2222,6 +2370,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     closeModal,
     MessengerModal,
     FabButton,
+    _test: {
+      compareMessagesAsc,
+      mergeMessagePage,
+      mergeLatestMessagePage,
+      getPrependScrollTop,
+      getLatestForeignReadTs,
+      THREAD_PAGE_LIMIT,
+    },
   };
 
   // Subscribe to deep-link event from heys_app_shortcuts_v1

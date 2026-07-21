@@ -90,15 +90,29 @@
       if (cloudTs <= localTs) return; // local is already fresh (or equal)
 
       const sync = HEYS.sync;
-      if (!sync || typeof sync.mergeDayData !== 'function') {
-        console.warn('[HEYS.live] HEYS.sync.mergeDayData unavailable — skipping merge');
+      const guardApi = HEYS.dayMutationGuard;
+      if (!sync || typeof sync.mergeDayData !== 'function'
+          || !guardApi || typeof guardApi.resolveExternalReplacement !== 'function') {
+        console.warn('[HEYS.live] day merge/gate unavailable — skipping external write');
         return;
       }
 
-      const merged = sync.mergeDayData(local, cloudBlob);
-      if (!merged) return; // identical content (mergeDayData returns null when same)
+      let resolved;
+      try {
+        resolved = guardApi.resolveExternalReplacement(local, cloudBlob, {
+          mergeDayData: (localDay, remoteDay) => sync.mergeDayData(localDay, remoteDay, { forceKeepAll: true }),
+          isSameContent: (left, right) => !!(
+            HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
+            && HEYS.dayUtils.isSameDayHydratedContent(left, right)
+          ),
+        });
+      } catch (_) {
+        console.warn('[HEYS.live] day resolver exception — skipping external write', { date });
+        return;
+      }
+      if (!resolved?.ok || resolved.status === 'noop') return;
+      const merged = resolved.value;
 
-      const guardApi = HEYS.dayMutationGuard;
       const guard = guardApi?.read?.(date);
       if (guard && guardApi?.breaksGuard?.(merged, guard)) {
         console.warn('[HEYS.live] 🛡️ Skip live-refresh write: protected mutation rollback', {

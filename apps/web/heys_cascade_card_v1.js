@@ -134,10 +134,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     steps_partial: 0.3, // 70-99%
     steps_half: 0.0,    // 50-69%
     steps_low: -0.3,    // < 50% (не 0)
-    // Витамины/добавки
-    supplements_all: 0.5,
-    supplements_half: 0.2,
-    supplements_poor: -0.2,
+    // Добавки отслеживаются отдельно и не меняют оценку дня.
+    supplements_all: 0,
+    supplements_half: 0,
+    supplements_poor: 0,
     // Инсулиновые волны
     insulin_gap_great: 1.0,   // avgGap ≥ 240 мин
     insulin_gap_good: 0.5,    // 180-239 мин
@@ -1431,13 +1431,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     // ── 8. Supplements ──
-    var retSuppTaken = day.supplementsTaken || 0;
-    var retSuppPlanned = day.supplementsPlanned || 0;
-    if (retSuppPlanned > 0) {
-      var suppRatio = (typeof retSuppTaken === 'number' ? retSuppTaken : (Array.isArray(retSuppTaken) ? retSuppTaken.length : 0))
-        / (typeof retSuppPlanned === 'number' ? retSuppPlanned : (Array.isArray(retSuppPlanned) ? retSuppPlanned.length : 0));
-      addWeight(clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5));
-    }
+    // Трекинг плана не является доказательством пользы и не влияет на score.
 
     // ── 9. Insulin wave approximation (meal gap proxy) ──
     if (meals.length >= 2) {
@@ -1685,14 +1679,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       estScore += calculateHouseholdScore(retHM);
     }
 
-    // ── 8. Supplements: simple ratio ──
-    var retSuppTaken = day.supplementsTaken || 0;
-    var retSuppPlanned = day.supplementsPlanned || 0;
-    if (retSuppPlanned > 0) {
-      var suppRatio = (typeof retSuppTaken === 'number' ? retSuppTaken : (Array.isArray(retSuppTaken) ? retSuppTaken.length : 0))
-        / (typeof retSuppPlanned === 'number' ? retSuppPlanned : (Array.isArray(retSuppPlanned) ? retSuppPlanned.length : 0));
-      estScore += clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5);
-    }
+    // ── 8. Supplements ──
+    // Историческая оценка также не получает бонуса или штрафа за добавки.
 
     // ── 9. Insulin wave approximation (meal gap proxy) ──
     // Can approximate from meal times: good gaps → bonus
@@ -1918,7 +1906,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (d.steps > 0) factorCounts.steps++;
       if (d.weightMorning > 0) factorCounts.checkin++;
       if (d.measurements && Object.keys(d.measurements).some(function (k) { return d.measurements[k] > 0; })) factorCounts.measurements++;
-      if (d.supplementsTaken && d.supplementsTaken.length > 0) factorCounts.supplements++;
+      // Добавки не участвуют в confidence/scoring каскада.
       if (d.meals && d.meals.length >= 2) factorCounts.insulin++;
       if (d.trainings && d.trainings.length > 0) factorCounts.training++;
     }
@@ -2861,65 +2849,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
 
-    // ── ШАГ 9: Витамины (continuous + streak bonus) ─────
-    var suppTaken = (day && day.supplementsTaken) ? day.supplementsTaken.length : 0;
-    var suppPlannedRaw = (day && day.supplementsPlanned) || (prof && prof.plannedSupplements) || 0;
-    var suppPlanned = Array.isArray(suppPlannedRaw) ? suppPlannedRaw.length : (typeof suppPlannedRaw === 'number' ? suppPlannedRaw : 0);
-
-    // Если плана нет, но витамины выпиты — считаем план выполненным на 100%
-    if (suppPlanned === 0 && suppTaken > 0) {
-      suppPlanned = suppTaken;
-    }
-
-    var suppConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.supplementsTaken && d.supplementsTaken.length; });
-    confidenceMap.supplements = suppConfidence;
-
-    if (suppPlanned > 0) {
-      var suppRatio = suppTaken / suppPlanned;
-      // Continuous scoring: ratio × 0.7 - 0.1
-      var rawSupp = clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5);
-
-      // Streak bonus
-      var suppStreak = countConsecutive(prevDays14, function (d) {
-        if (!d || !d.supplementsTaken) return false;
-        var st = d.supplementsTaken.length || 0;
-        var spRaw = d.supplementsPlanned || d.plannedSupplements || suppPlanned;
-        var sp = Array.isArray(spRaw) ? spRaw.length : (typeof spRaw === 'number' ? spRaw : 0);
-        if (sp === 0 && st > 0) sp = st;
-        return sp > 0 && (st / sp) >= 0.8;
-      });
-      var suppStreakBonus = suppStreak >= 7 ? 0.2 : suppStreak >= 3 ? 0.1 : 0;
-
-      // Habit break penalty
-      if (suppTaken === 0 && suppStreak >= 3) {
-        rawSupp = -0.3;
-        suppStreakBonus = 0;
-      }
-
-      rawSupp = clamp(rawSupp + suppStreakBonus, -0.3, 0.7);
-      var suppWeight = rawSupp * suppConfidence;
-      rawWeights.supplements = rawSupp;
-      score += suppWeight;
-      events.push({
-        type: 'supplements',
-        time: null,
-        positive: rawSupp > 0,
-        icon: EVENT_ICONS.supplements,
-        label: suppRatio >= 1 ? 'Добавки: всё' : ('Добавки: ' + suppTaken + '/' + suppPlanned),
-        sortKey: 550,
-        weight: suppWeight
-      });
-      console.info('[HEYS.cascade] 💊 Supplements (model v2.1.0 continuous + streak):', {
-        taken: suppTaken, planned: suppPlanned, ratio: +suppRatio.toFixed(2),
-        formula: 'clamp(' + suppRatio.toFixed(2) + '×0.7-0.1)',
-        streak: suppStreak, streakBonus: +suppStreakBonus.toFixed(2),
-        rawWeight: +rawSupp.toFixed(2), confidence: suppConfidence,
-        adjustedWeight: +suppWeight.toFixed(2)
-      });
-    } else {
-      rawWeights.supplements = 0;
-      console.info('[HEYS.cascade] 💊 No supplement plan configured — ШАГ 9 skipped');
-    }
+    // ── ШАГ 9: Добавки ────────────────────────────────────
+    // Трекинг доступен в карточке курса, но не меняет каскадный score.
+    confidenceMap.supplements = 0;
+    rawWeights.supplements = 0;
 
     // ── ШАГ 10: Инсулиновые волны (sigmoid overlap + log2 gap + post-training + night fasting) ──
     var insulinConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.meals && d.meals.length >= 2 ? 1 : 0; });
@@ -4442,7 +4375,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var hasWeightCheckin = (day.weightMorning || 0) > 0;
     var hasSleepData = !!(day.sleepStart);
     var hasMeasData = !!(day.measurements && Object.keys(day.measurements).some(function (k) { return day.measurements[k] > 0; }));
-    var hasSupplements = !!(day.supplementsTaken && day.supplementsTaken.length > 0);
+    var hasSupplements = false;
 
     if (!hasMeals && !hasTrainings && !hasSteps && !hasHousehold && !hasWeightCheckin && !hasSleepData && !hasMeasData && !hasSupplements) {
       console.info('[HEYS.cascade] ⏭️ No activity data yet — card not shown');

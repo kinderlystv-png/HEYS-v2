@@ -9,7 +9,7 @@ const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 const PLANNING_RECORD_MERGE_KEYS = new Set([
@@ -24,6 +24,16 @@ const PLANNING_RECORD_MERGE_KEYS = new Set([
   'heys_planning_links_v1',
 ]);
 const MORNING_CHECKIN_PROGRESS_KEY_RE = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/i;
+const HUNGER_STATUS_EVENTS_KEY = 'heys_hunger_energy_status_events_v1';
+const INSIGHTS_FEEDBACK_KEY = 'heys_insights_feedback';
+
+function isHungerStatusEventsKey(key) {
+  return String(key || '') === HUNGER_STATUS_EVENTS_KEY;
+}
+
+function isInsightsFeedbackKey(key) {
+  return String(key || '') === INSIGHTS_FEEDBACK_KEY;
+}
 
 function curatorActionDateFromKey(key) {
   const m = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})/);
@@ -663,7 +673,8 @@ async function detectCrossClientDayv2ContentDup(client, curatorId, clientId, k, 
 async function prefetchGuardedCurrentValues(client, clientId, items, lockRows = false) {
   const guardedKeys = [];
   for (const it of items) {
-    if (it && typeof it.k === 'string' && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k))) {
+    if (it && typeof it.k === 'string'
+        && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k) || isHungerStatusEventsKey(it.k) || isInsightsFeedbackKey(it.k))) {
       guardedKeys.push(it.k);
     }
   }
@@ -694,6 +705,34 @@ function mergeBatchDayv2ExistingRows(items, currentByKey) {
     const merged = mergeDayData(it.v, currentValue, { forceKeepAll: true });
     if (!merged) continue;
     it.v = merged;
+    mergedCount += 1;
+  }
+  return mergedCount;
+}
+
+function mergeBatchHungerExistingRows(items, currentByKey) {
+  if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
+  let mergedCount = 0;
+  for (const it of items) {
+    if (!it || !isHungerStatusEventsKey(it.k)) continue;
+    const current = currentByKey.get(it.k);
+    const currentValue = current && current.v;
+    if (!Array.isArray(currentValue)) continue;
+    it.v = mergeHungerStatusEvents(it.v, currentValue);
+    mergedCount += 1;
+  }
+  return mergedCount;
+}
+
+function mergeBatchInsightsFeedbackExistingRows(items, currentByKey) {
+  if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
+  let mergedCount = 0;
+  for (const it of items) {
+    if (!it || !isInsightsFeedbackKey(it.k)) continue;
+    const current = currentByKey.get(it.k);
+    const currentValue = current && current.v;
+    if (!Array.isArray(currentValue)) continue;
+    it.v = mergeInsightsFeedback(it.v, currentValue);
     mergedCount += 1;
   }
   return mergedCount;
@@ -2886,6 +2925,12 @@ module.exports.handler = async function (event, context) {
                 `_Curator state не очистился между switch'ами — meals идентичны другому клиенту того же curator._`
               );
             }
+          } else if (isHungerStatusEventsKey(k)) {
+            mergedValue = mergeHungerStatusEvents(incomingValue, currentValue);
+            mergeOutcome = 'hunger_events_merged';
+          } else if (isInsightsFeedbackKey(k)) {
+            mergedValue = mergeInsightsFeedback(incomingValue, currentValue);
+            mergeOutcome = 'insights_feedback_merged';
           } else if (MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)) {
             const hasMorningConflict = hasMorningCheckinProgressConflict(incomingValue, currentValue);
             mergedValue = mergeMorningCheckinProgress(incomingValue, currentValue);
@@ -3164,6 +3209,8 @@ module.exports.handler = async function (event, context) {
         // Best-effort audit: only when actual merge happened (don't spam on every save).
         if (mergeOutcome === 'day_merged'
           || mergeOutcome === 'scalar_merged'
+          || mergeOutcome === 'hunger_events_merged'
+          || mergeOutcome === 'insights_feedback_merged'
           || mergeOutcome === 'morning_checkin_progress_conflict_merged') {
           try {
             await client.query(
@@ -3607,18 +3654,20 @@ module.exports.handler = async function (event, context) {
       const keysList = items.map(it => it && it.k).filter(k => typeof k === 'string');
       const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(key));
       const hasCriticalBatchKey = keysList.some((key) => !!classifyCriticalKey(key));
+      const hasHungerBatchKey = keysList.some(isHungerStatusEventsKey);
+      const hasInsightsFeedbackBatchKey = keysList.some(isInsightsFeedbackKey);
       let dayv2BatchTxStarted = false;
       let oldByKey = new Map();
       let oldUpdatedAtByKey = new Map();
       let oldSelectOk = true;
       if (keysList.length > 0) {
         try {
-          if (hasDayv2BatchKey || hasCriticalBatchKey) {
+          if (hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) {
             await client.query('BEGIN');
             dayv2BatchTxStarted = true;
           }
           const oldRows = await client.query(
-            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey) ? ' FOR UPDATE' : ''),
+            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) ? ' FOR UPDATE' : ''),
             [targetClientId, keysList]
           );
           for (const row of oldRows.rows) {
@@ -3737,6 +3786,20 @@ module.exports.handler = async function (event, context) {
       );
       if (dayv2Merged > 0) {
         console.warn('[batch_upsert_client_kv_by_curator] dayv2_guard_merged:', dayv2Merged);
+      }
+      const hungerMerged = mergeBatchHungerExistingRows(
+        items,
+        new Map(Array.from(oldByKey.entries()).map(([k, v]) => [k, { v }]))
+      );
+      if (hungerMerged > 0) {
+        console.warn('[batch_upsert_client_kv_by_curator] hunger_events_merged:', hungerMerged);
+      }
+      const insightsFeedbackMerged = mergeBatchInsightsFeedbackExistingRows(
+        items,
+        new Map(Array.from(oldByKey.entries()).map(([k, v]) => [k, { v }]))
+      );
+      if (insightsFeedbackMerged > 0) {
+        console.warn('[batch_upsert_client_kv_by_curator] insights_feedback_merged:', insightsFeedbackMerged);
       }
       if (items.length === 0) {
         if (dayv2BatchTxStarted) {
@@ -4202,7 +4265,7 @@ module.exports.handler = async function (event, context) {
       // 🛡️ Payload contracts + identity guard for session batch path.
       // Skip resolution entirely если нет guarded keys (избегаем лишнего DB roundtrip).
       const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string'
-        && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k)));
+        && (isIdentityGuardKey(it.k) || classifyCriticalKey(it.k) || isHungerStatusEventsKey(it.k) || isInsightsFeedbackKey(it.k)));
       if (hasGuardedKey && params.p_session_token) {
         let resolvedSessionClientId = null;
         try {
@@ -4224,7 +4287,13 @@ module.exports.handler = async function (event, context) {
           const hasCriticalBatchKey = params.p_items.some((it) =>
             it && typeof it.k === 'string' && !!classifyCriticalKey(it.k)
           );
-          if (hasDayv2BatchKey || hasCriticalBatchKey) {
+          const hasHungerBatchKey = params.p_items.some((it) =>
+            it && typeof it.k === 'string' && isHungerStatusEventsKey(it.k)
+          );
+          const hasInsightsFeedbackBatchKey = params.p_items.some((it) =>
+            it && typeof it.k === 'string' && isInsightsFeedbackKey(it.k)
+          );
+          if (hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) {
             await client.query('BEGIN');
             params.__protectedWriteTxStarted = true;
           }
@@ -4232,7 +4301,7 @@ module.exports.handler = async function (event, context) {
             client,
             resolvedSessionClientId,
             params.p_items,
-            hasDayv2BatchKey || hasCriticalBatchKey
+            hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey
           );
           const payloadBlockedSessionKeys = [];
           const blockedSessionKeys = [];
@@ -4272,6 +4341,14 @@ module.exports.handler = async function (event, context) {
           const dayv2Merged = mergeBatchDayv2ExistingRows(params.p_items, prevMap);
           if (dayv2Merged > 0) {
             console.warn('[batch_upsert_client_kv_by_session] dayv2_guard_merged:', dayv2Merged);
+          }
+          const hungerMerged = mergeBatchHungerExistingRows(params.p_items, prevMap);
+          if (hungerMerged > 0) {
+            console.warn('[batch_upsert_client_kv_by_session] hunger_events_merged:', hungerMerged);
+          }
+          const insightsFeedbackMerged = mergeBatchInsightsFeedbackExistingRows(params.p_items, prevMap);
+          if (insightsFeedbackMerged > 0) {
+            console.warn('[batch_upsert_client_kv_by_session] insights_feedback_merged:', insightsFeedbackMerged);
           }
           if (params.p_items.length === 0) {
             if (params.__protectedWriteTxStarted) {

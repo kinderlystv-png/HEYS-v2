@@ -129,7 +129,7 @@
     first_steps: { id: 'first_steps', name: 'Первые шаги', desc: 'Указать шаги хотя бы раз', story: 'Первые шаги — движение тоже в фокусе.', xp: 20, icon: '👟', category: 'onboarding', rarity: 'common' },
     first_water: { id: 'first_water', name: 'Водный старт', desc: 'Первый раз добавить воду', story: 'Первый стакан — маленький шаг к большой энергии.', xp: 20, icon: '💧', category: 'onboarding', rarity: 'common' },
     first_advice: { id: 'first_advice', name: 'Первый совет', desc: 'Прочитать совет', story: 'Первый совет — бережный старт.', xp: 15, icon: '💡', category: 'onboarding', rarity: 'common' },
-    first_supplements: { id: 'first_supplements', name: 'Первые витамины', desc: 'Отметить приём добавок', story: 'Витамины отмечены — регулярность началась.', xp: 20, icon: '💊', category: 'onboarding', rarity: 'common' },
+    first_supplements: { id: 'first_supplements', name: 'Первый план добавок', desc: 'Отметить пункт своего плана', story: 'Отмечено выполнение личного плана — без оценки эффективности добавки.', xp: 20, icon: '💊', category: 'onboarding', rarity: 'common' },
     first_training: { id: 'first_training', name: 'Активный старт', desc: 'Первая тренировка', story: 'Первая тренировка — тело услышало твой сигнал.', xp: 30, icon: '🏃', category: 'onboarding', rarity: 'common' },
     first_household: { id: 'first_household', name: 'Первый быт', desc: 'Первая бытовая активность', story: 'Бытовая активность тоже считается — классный старт.', xp: 20, icon: '🏠', category: 'onboarding', rarity: 'common' },
 

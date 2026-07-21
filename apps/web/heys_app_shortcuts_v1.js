@@ -179,7 +179,7 @@
             // Ждём пока DayTab смонтируется и вызываем addMeal
             const tryAddMeal = () => {
                 if (window.HEYS?.Day?.addMeal) {
-                    window.HEYS.Day.addMeal();
+                    window.HEYS.Day.addMeal({ skipPlateGuide: true });
                     // Вибрация при успешном открытии
                     if (navigator.vibrate) navigator.vibrate(15);
                     // Сбрасываем флаг после небольшой задержки
@@ -239,7 +239,7 @@
                             if (skipTabSwitchRef) skipTabSwitchRef.current = false;
                             // TODO: Открыть модал добавления еды с превью изображения
                             if (window.HEYS?.Day?.addMeal) {
-                                window.HEYS.Day.addMeal();
+                                window.HEYS.Day.addMeal({ skipPlateGuide: true });
                             }
                         }, 500);
 

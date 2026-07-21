@@ -10,6 +10,316 @@
     return;
   }
 
+  const EVIDENCE_REVIEWED_AT = '2026-07-21';
+
+  const EVIDENCE_SOURCES = {
+    nih_vitamin_d: {
+      title: 'Vitamin D — Fact Sheet for Health Professionals',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    efsa_vitamin_b6: {
+      title: 'Scientific opinion on the tolerable upper intake level for vitamin B6',
+      organization: 'EFSA',
+      url: 'https://www.efsa.europa.eu/en/efsajournal/pub/8006',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nih_iron: {
+      title: 'Iron — Fact Sheet for Health Professionals',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nih_magnesium: {
+      title: 'Magnesium — Fact Sheet for Health Professionals',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nih_biotin: {
+      title: 'Biotin — Fact Sheet for Health Professionals',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/Biotin-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nih_sport: {
+      title: 'Dietary Supplements for Exercise and Athletic Performance',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/ExerciseAndAthleticPerformance-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nih_omega3: {
+      title: 'Omega-3 Fatty Acids — Fact Sheet for Health Professionals',
+      organization: 'NIH Office of Dietary Supplements',
+      url: 'https://ods.od.nih.gov/factsheets/Omega3FattyAcids-HealthProfessional/',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    uspstf_folic: {
+      title: 'Folic Acid Supplementation to Prevent Neural Tube Defects',
+      organization: 'USPSTF',
+      url: 'https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/folic-acid-for-the-prevention-of-neural-tube-defects-preventive-medication',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    uspstf_vitamins: {
+      title: 'Vitamin, Mineral, and Multivitamin Supplementation to Prevent CVD and Cancer',
+      organization: 'USPSTF',
+      url: 'https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/vitamin-supplementation-to-prevent-cvd-and-cancer-preventive-medication',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    nccih_melatonin: {
+      title: 'Melatonin: What You Need To Know',
+      organization: 'NCCIH',
+      url: 'https://www.nccih.nih.gov/health/melatonin-what-you-need-to-know',
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+  };
+
+  const EVIDENCE_BY_INDICATION = {
+    vitD: [
+      {
+        id: 'confirmed-deficiency',
+        label: 'Коррекция подтверждённого дефицита',
+        evidenceLevel: 'strong',
+        appliesTo: 'Люди с подтверждённым дефицитом или назначением специалиста',
+        requiresConfirmation: true,
+        confirmationType: '25(OH)D или назначение специалиста',
+        form: 'Доза зависит от исходного уровня и схемы лечения',
+        doseRange: null,
+        duration: 'По схеме с повторной оценкой',
+        expectedEffect: 'Коррекция дефицита и связанных с ним нарушений',
+        limitations: 'Не доказывает универсальную пользу для иммунитета у человека без дефицита',
+        contraindications: ['Гиперкальциемия', 'Высокие дозы без контроля'],
+        interactionIds: [],
+        sourceIds: ['nih_vitamin_d'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+      {
+        id: 'general-immune-support',
+        label: 'Профилактика простуд без дефицита',
+        evidenceLevel: 'unsupported',
+        appliesTo: 'Здоровые взрослые без подтверждённого дефицита',
+        requiresConfirmation: false,
+        form: null,
+        doseRange: null,
+        duration: null,
+        expectedEffect: 'Убедительный универсальный эффект не подтверждён',
+        limitations: 'Нельзя обещать защиту от простуд только по сезону',
+        contraindications: [],
+        interactionIds: [],
+        sourceIds: ['nih_vitamin_d'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    iron: [
+      {
+        id: 'confirmed-iron-deficiency',
+        label: 'Подтверждённый дефицит железа',
+        evidenceLevel: 'strong',
+        appliesTo: 'Люди с подтверждённым дефицитом и установленной причиной',
+        requiresConfirmation: true,
+        confirmationType: 'Анализы и оценка причины дефицита',
+        form: 'Выбирается с учётом переносимости и назначения',
+        doseRange: null,
+        duration: 'До коррекции запасов под контролем',
+        expectedEffect: 'Восполнение дефицита железа',
+        limitations: 'Пол, усталость или состав нескольких приёмов пищи сами по себе не являются показанием',
+        contraindications: ['Перегрузка железом', 'Приём без установленной причины'],
+        interactionIds: ['calcium'],
+        sourceIds: ['nih_iron'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    magnesium: [
+      {
+        id: 'confirmed-deficiency',
+        label: 'Коррекция подтверждённого дефицита',
+        evidenceLevel: 'strong',
+        appliesTo: 'Люди с подтверждённым недостатком или назначением',
+        requiresConfirmation: true,
+        confirmationType: 'Клиническая оценка или назначение',
+        form: 'Учитывается количество элементарного магния',
+        doseRange: null,
+        duration: 'Индивидуально',
+        expectedEffect: 'Коррекция недостатка магния',
+        limitations: 'Одна плохая ночь не подтверждает дефицит',
+        contraindications: ['Нарушение функции почек без наблюдения'],
+        interactionIds: [],
+        sourceIds: ['nih_magnesium'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+      {
+        id: 'migraine-prevention',
+        label: 'Профилактика мигрени',
+        evidenceLevel: 'moderate',
+        appliesTo: 'Часть взрослых с мигренью',
+        requiresConfirmation: true,
+        confirmationType: 'Обсуждение со специалистом',
+        form: 'Дозы в исследованиях могут превышать обычный UL добавок',
+        doseRange: null,
+        duration: 'По согласованной схеме',
+        expectedEffect: 'Возможное умеренное снижение частоты приступов',
+        limitations: 'Не является универсальным средством для сна или стресса',
+        contraindications: ['Нарушение функции почек'],
+        interactionIds: [],
+        sourceIds: ['nih_magnesium'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    b6: [
+      {
+        id: 'anxiety-without-deficiency',
+        label: 'Снижение тревожности без подтверждённого дефицита',
+        evidenceLevel: 'unsupported',
+        appliesTo: 'Здоровые взрослые',
+        requiresConfirmation: false,
+        form: null,
+        doseRange: null,
+        duration: null,
+        expectedEffect: 'Недостаточно данных для рекомендации',
+        limitations: 'Длительный избыток связан с периферической нейропатией',
+        contraindications: ['Суммарная доза выше UL'],
+        interactionIds: [],
+        sourceIds: ['efsa_vitamin_b6'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    creatine: [
+      {
+        id: 'repeated-high-intensity-performance',
+        label: 'Повторные интенсивные нагрузки и силовые тренировки',
+        evidenceLevel: 'strong',
+        appliesTo: 'Здоровые взрослые, выполняющие силовые или повторные интенсивные нагрузки',
+        requiresConfirmation: false,
+        form: 'Креатин моногидрат',
+        doseRange: 'Обычно 3–5 г/день без обязательной загрузки',
+        duration: 'Регулярный приём вместе с тренировками',
+        expectedEffect: 'Улучшение мощности и тренировочной адаптации у части пользователей',
+        limitations: 'Не заменяет тренировочную программу и достаточное питание',
+        contraindications: ['Заболевания почек — только после консультации'],
+        interactionIds: [],
+        sourceIds: ['nih_sport'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    bcaa: [
+      {
+        id: 'adequate-protein-intake',
+        label: 'Дополнительный эффект при достаточном полноценном белке',
+        evidenceLevel: 'unsupported',
+        appliesTo: 'Люди с достаточным потреблением полноценного белка',
+        requiresConfirmation: false,
+        form: null,
+        doseRange: null,
+        duration: null,
+        expectedEffect: 'Устойчивое преимущество не показано',
+        limitations: 'Полноценный белок уже содержит BCAA и другие незаменимые аминокислоты',
+        contraindications: [],
+        interactionIds: [],
+        sourceIds: ['nih_sport'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    biotin: [
+      {
+        id: 'hair-nails-without-deficiency',
+        label: 'Волосы и ногти без подтверждённого дефицита',
+        evidenceLevel: 'unsupported',
+        appliesTo: 'Люди без редкого дефицита биотина',
+        requiresConfirmation: false,
+        form: null,
+        doseRange: null,
+        duration: null,
+        expectedEffect: 'Убедительная польза не подтверждена',
+        limitations: 'Высокие дозы могут искажать гормональные и кардиологические анализы',
+        contraindications: ['Лабораторные исследования без предупреждения врача'],
+        interactionIds: [],
+        sourceIds: ['nih_biotin'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    omega3: [
+      {
+        id: 'high-triglycerides',
+        label: 'Снижение повышенных триглицеридов',
+        evidenceLevel: 'strong',
+        appliesTo: 'Люди с подтверждённой гипертриглицеридемией',
+        requiresConfirmation: true,
+        confirmationType: 'Липидограмма и схема специалиста',
+        form: 'Учитывается сумма EPA+DHA, а не масса рыбьего жира',
+        doseRange: 'Лекарственные дозы назначаются специалистом',
+        duration: 'С контролем липидограммы',
+        expectedEffect: 'Снижение уровня триглицеридов',
+        limitations: 'Не доказывает улучшение памяти у здорового взрослого',
+        contraindications: ['Высокие дозы при антикоагулянтной терапии без согласования'],
+        interactionIds: [],
+        sourceIds: ['nih_omega3'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    folic: [
+      {
+        id: 'neural-tube-defect-prevention',
+        label: 'Профилактика дефектов нервной трубки',
+        evidenceLevel: 'strong',
+        appliesTo: 'Люди, планирующие или способные к беременности',
+        requiresConfirmation: false,
+        form: 'Фолиевая кислота',
+        doseRange: '400–800 мкг/день для стандартной группы риска',
+        duration: 'До зачатия и на ранних сроках по рекомендации',
+        expectedEffect: 'Снижение риска дефектов нервной трубки',
+        limitations: 'Особые группы риска требуют отдельной схемы',
+        contraindications: [],
+        interactionIds: [],
+        sourceIds: ['uspstf_folic'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    vitE: [
+      {
+        id: 'cvd-cancer-prevention',
+        label: 'Профилактика сердечно-сосудистых заболеваний и рака',
+        evidenceLevel: 'avoid',
+        appliesTo: 'Живущие самостоятельно небеременные взрослые без известных дефицитов',
+        requiresConfirmation: false,
+        form: null,
+        doseRange: null,
+        duration: null,
+        expectedEffect: 'Профилактическая польза не подтверждена',
+        limitations: 'USPSTF рекомендует не использовать витамин E для этой цели',
+        contraindications: [],
+        interactionIds: [],
+        sourceIds: ['uspstf_vitamins'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+    melatonin: [
+      {
+        id: 'circadian-disruption',
+        label: 'Джетлаг и отдельные нарушения циркадного ритма',
+        evidenceLevel: 'moderate',
+        appliesTo: 'Люди с конкретным циркадным нарушением',
+        requiresConfirmation: true,
+        confirmationType: 'Понятная циркадная цель или рекомендация специалиста',
+        form: null,
+        doseRange: null,
+        duration: 'Кратко и по конкретной цели',
+        expectedEffect: 'Возможное сокращение времени адаптации или сдвиг фазы сна',
+        limitations: 'Не является первым методом лечения хронической бессонницы',
+        contraindications: [],
+        interactionIds: [],
+        sourceIds: ['nccih_melatonin'],
+        reviewedAt: EVIDENCE_REVIEWED_AT,
+      },
+    ],
+  };
+
+  function getEvidenceForSupplement(suppId) {
+    return Array.isArray(EVIDENCE_BY_INDICATION[suppId])
+      ? EVIDENCE_BY_INDICATION[suppId].map(item => ({ ...item }))
+      : [];
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔬 НАУЧНАЯ БАЗА ДАННЫХ — БИОДОСТУПНОСТЬ
   // ═══════════════════════════════════════════════════════════════════════════
@@ -23,12 +333,12 @@
       minFatGrams: 5,                 // Минимум 5г для эффекта
       halfLife: '2-3 недели',         // Период полувыведения
       storage: 'жировая ткань',
-      toxicityRisk: 'низкий при <10000 IU/день',
+      toxicityRisk: 'UL для стандартного взрослого — 4000 IU/день; более высокие дозы требуют отдельной схемы',
       synergists: ['vitK2', 'magnesium', 'calcium'],
       mechanism: 'Холекальциферол абсорбируется в тонком кишечнике через мицеллы желчных кислот. Жиры стимулируют выброс желчи → увеличение мицелл → лучшая абсорбция.',
-      optimalDose: '1000-4000 IU/день',
+      optimalDose: null,
       testMarker: '25(OH)D в крови',
-      optimalLevel: '40-60 нг/мл'
+      optimalLevel: null
     },
 
     // Витамин K2 (MK-7)
@@ -72,7 +382,7 @@
       storage: 'ферритин, гемоглобин',
       synergists: ['vitC', 'vitA', 'copper'],
       mechanism: 'Негемовое Fe3+ → Fe2+ (витамин C) → DMT1 транспортер → ферритин/трансферрин',
-      optimalDose: '18мг/день (женщины), 8мг/день (мужчины)',
+      optimalDose: null,
       testMarker: 'ферритин + трансферрин',
       toxicityRisk: 'средний — не принимать без анализов'
     },
@@ -93,7 +403,7 @@
       storage: 'кости (60%), мышцы (39%)',
       synergists: ['vitB6', 'vitD'],
       mechanism: 'Mg — кофактор 600+ ферментов. Критичен для ATP, синтеза белка, нервной проводимости.',
-      optimalDose: '400-600мг элементарного Mg',
+      optimalDose: null,
       testMarker: 'Mg в эритроцитах (не сыворотка!)',
       bestTime: 'вечер (релаксация)'
     },
@@ -265,11 +575,13 @@
 
   const LIMITS = {
     vitD: {
-      ul: 10000,
-      unit: 'IU',
+      ul: 4000,
+      unit: 'МЕ',
       note: 'Высокие дозы повышают риск гиперкальциемии. Контроль 25(OH)D и Ca при длительном приёме.',
       courseMaxDays: 120,
-      courseNote: 'Высокие дозы обычно курсами с контролем анализов.'
+      courseNote: 'Более высокие дозы — только в отдельной лечебной схеме.',
+      sourceIds: ['nih_vitamin_d'],
+      reviewedAt: EVIDENCE_REVIEWED_AT,
     },
     vitC: {
       ul: 2000,
@@ -281,7 +593,9 @@
       ul: 350,
       unit: 'mg',
       note: 'UL относится к ДОБАВКАМ (элементарный Mg), не к Mg из пищи. При проблемах с почками — осторожно.',
-      courseMaxDays: 365
+      courseMaxDays: 365,
+      sourceIds: ['nih_magnesium'],
+      reviewedAt: EVIDENCE_REVIEWED_AT,
     },
     zinc: {
       ul: 40,
@@ -295,7 +609,9 @@
       unit: 'mg',
       note: 'Железо без анализов не принимать. Риск перегруза железом. Ориентируйся на ферритин/трансферрин.',
       courseMaxDays: 60,
-      courseNote: 'Курс зависит от дефицита; обычно с анализами и пересмотром дозы.'
+      courseNote: 'Курс зависит от дефицита; обычно с анализами и пересмотром дозы.',
+      sourceIds: ['nih_iron'],
+      reviewedAt: EVIDENCE_REVIEWED_AT,
     },
     omega3: {
       ul: 3,
@@ -308,6 +624,19 @@
     },
     coq10: {
       note: 'Обычно хорошо переносится. Высокие дозы обсуждать с врачом при терапии и хронических заболеваниях.'
+    },
+    b6: {
+      ul: 12.5,
+      unit: 'mg',
+      note: 'UL EFSA для взрослых учитывает суммарное поступление. Длительный избыток связан с периферической нейропатией.',
+      courseMaxDays: 365,
+      sourceIds: ['efsa_vitamin_b6'],
+      reviewedAt: EVIDENCE_REVIEWED_AT,
+    },
+    biotin: {
+      note: 'Высокие дозы биотина могут искажать результаты гормональных и кардиологических анализов. Сообщите врачу и лаборатории о приёме.',
+      sourceIds: ['nih_biotin'],
+      reviewedAt: EVIDENCE_REVIEWED_AT,
     }
   };
 
@@ -879,7 +1208,7 @@
   /**
    * Расширенные рекомендации на основе всего контекста
    */
-  function getScientificRecommendations(profile, dayData, meals) {
+  function getLegacyScientificRecommendations(profile, dayData, meals) {
     const recs = [];
     const hour = new Date().getHours();
     const month = new Date().getMonth();
@@ -1057,6 +1386,12 @@
     }
 
     return Array.from(seen.values());
+  }
+
+  function getScientificRecommendations() {
+    // Нет подтверждённого показания в профиле — нет рекомендации добавки.
+    // Evidence-карточки остаются доступны для уже выбранного пользователем плана.
+    return [];
   }
 
   function priorityOrder(p) {
@@ -1561,7 +1896,7 @@
    * @param {Object} context - контекст (profile, mealCount, hasEaten)
    * @returns {Object|null} совет для модуля Advice
    */
-  function generateMorningSupplementAdvice(plannedSupplements, context = {}) {
+  function generateLegacyMorningSupplementAdvice(plannedSupplements, context = {}) {
     if (!plannedSupplements || plannedSupplements.length === 0) return null;
 
     const hour = new Date().getHours();
@@ -1743,7 +2078,7 @@
    * @param {Object} context - контекст { mealCount, hasEaten, profile }
    * @returns {Object|null} - объект совета или null
    */
-  function generateEveningSupplementAdvice(plannedSupplements, context = {}) {
+  function generateLegacyEveningSupplementAdvice(plannedSupplements, context = {}) {
     if (!plannedSupplements || plannedSupplements.length === 0) return null;
 
     const hour = new Date().getHours();
@@ -1864,6 +2199,58 @@
     };
   }
 
+  function createNeutralSupplementReminder(plannedSupplements, period) {
+    if (!Array.isArray(plannedSupplements) || plannedSupplements.length === 0) return null;
+
+    const hour = new Date().getHours();
+    const isMorning = period === 'morning';
+    if (isMorning ? (hour < 6 || hour > 12) : (hour < 18 || hour > 23)) return null;
+
+    const allowedTimings = isMorning
+      ? ['morning', 'empty', 'withFood', 'withFat', 'beforeMeal', 'anytime']
+      : ['evening', 'beforeBed'];
+    const suppIds = plannedSupplements.filter(id => {
+      const timing = HEYS.Supplements?.CATALOG?.[id]?.timing;
+      return allowedTimings.includes(timing);
+    });
+    if (suppIds.length === 0) return null;
+
+    const names = suppIds
+      .map(id => HEYS.Supplements?.CATALOG?.[id]?.name || id)
+      .join(', ');
+
+    return {
+      id: isMorning ? 'morning_supplements_reminder' : 'evening_supplements_reminder',
+      icon: isMorning ? '🌅' : '🌙',
+      text: isMorning ? 'Добавки по вашему утреннему плану' : 'Добавки по вашему вечернему плану',
+      details: `${names}. Отмечайте приём только по своей схеме; проверьте дозу и предупреждения в карточке курса.`,
+      type: 'health',
+      priority: 1,
+      category: 'health',
+      isReminder: true,
+      triggers: ['product_added'],
+      ttl: 10000,
+      suppIds,
+      action: {
+        label: 'Отметить по плану',
+        onClick: () => {
+          const dateKey = HEYS.dayUtils?.todayISO?.()
+            || HEYS.utils?.getTodayKey?.()
+            || new Date().toISOString().slice(0, 10);
+          HEYS.Supplements?.markSupplementsTaken?.(dateKey, suppIds);
+        }
+      }
+    };
+  }
+
+  function generateMorningSupplementAdvice(plannedSupplements) {
+    return createNeutralSupplementReminder(plannedSupplements, 'morning');
+  }
+
+  function generateEveningSupplementAdvice(plannedSupplements) {
+    return createNeutralSupplementReminder(plannedSupplements, 'evening');
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 📤 ЭКСПОРТ В ОСНОВНОЙ МОДУЛЬ
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1872,25 +2259,16 @@
   Object.assign(HEYS.Supplements, {
     // Научные базы данных
     SCIENCE: {
+      EVIDENCE_REVIEWED_AT,
+      EVIDENCE_SOURCES,
+      EVIDENCE_BY_INDICATION,
       BIOAVAILABILITY,
       LIMITS,
-      CIRCADIAN_OPTIMAL,
-      INTERACTIONS_EXTENDED,
-      CYCLE_SUPPLEMENTS,
-      DEFICIENCY_SYMPTOMS,
-      FOOD_NUTRIENT_SOURCES,
-      MORNING_SUPPLEMENT_SCIENCE  // 🆕 Научные обоснования времени приёма
     },
 
-    // Научные функции
-    getSupplementScience,
-    getOptimalTime,
-    getSynergies,
-    getAntagonisms,
-    getFoodTips,
-    getCycleRecommendations,
-    analyzeSymptoms,
-    analyzeMealNutrients,
+    // Проверенный публичный контракт; legacy-эвристики остаются внутренними
+    // и не могут попасть в пользовательские рекомендации.
+    getEvidenceForSupplement,
     getScientificRecommendations,
     generateMorningSupplementAdvice,  // 🆕 Генерация утреннего совета
     generateEveningSupplementAdvice   // 🆕 Генерация вечернего совета

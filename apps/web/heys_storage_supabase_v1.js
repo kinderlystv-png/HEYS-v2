@@ -249,6 +249,8 @@
     'heys_meal_presets_v1',   // Готовые наборы для добавления продуктов в приём
     'heys_suggested_presets_v1',
     'heys_suggested_presets_dismissed_v1',
+    'heys_hunger_energy_status_events_v1',
+    'heys_insights_feedback',
 
     // Советы (advice)
     'heys_advice_settings',   // Настройки (автопоказ, звук)
@@ -1583,6 +1585,18 @@
     };
   }
 
+  function stabilizeDayv2MergeMeta(merged, left, right) {
+    if (!merged || typeof merged !== 'object') return merged;
+    const next = {
+      ...merged,
+      updatedAt: Math.max(getDayPayloadUpdatedAt(left), getDayPayloadUpdatedAt(right)),
+    };
+    const inheritedMergedAt = Math.max(Number(left?._mergedAt) || 0, Number(right?._mergedAt) || 0);
+    if (inheritedMergedAt > 0) next._mergedAt = inheritedMergedAt;
+    else delete next._mergedAt;
+    return next;
+  }
+
   function readLocalDayPayloadForUpload(originalKey, normalizedKey, clientId) {
     try {
       const scopedKey = scopeKeyForClientStorage(originalKey || normalizedKey, clientId);
@@ -1599,44 +1613,77 @@
   }
 
   function rehydrateDayv2UploadItemFromLocal(item, clientId) {
-    if (!item || !clientId || !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item.k || ''))) return item;
+    const passthrough = { ok: true, status: 'noop', item };
+    if (!item || !clientId || !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item.k || ''))) return passthrough;
     const dateMatch = String(item.k).match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
     const dateStr = dateMatch && dateMatch[1];
     const localDay = readLocalDayPayloadForUpload(item.originalKey, item.k, clientId);
-    if (!localDay || typeof localDay !== 'object') return item;
+    if (!localDay || typeof localDay !== 'object') return passthrough;
 
     const queuedSummary = summarizeDayPayload(item.v);
     const localSummary = summarizeDayPayload(localDay);
     const guardApi = HEYS.dayMutationGuard;
-    const guard = guardApi?.read?.(dateStr);
-    const guardWouldBreak = guard && guardApi.breaksGuard(item.v, guard) && !guardApi.breaksGuard(localDay, guard);
-    const localIsClearlyAhead =
-      localSummary.updatedAt > queuedSummary.updatedAt &&
-      (localSummary.meals > queuedSummary.meals || localSummary.items > queuedSummary.items);
+    const trace = (status, reason, assessment, outgoingSummary) => {
+      pushSyncTrace(`DAYV2_OUTGOING_${status.toUpperCase()}`, {
+        date: dateStr,
+        source: 'saveClientViaRPC',
+        outcome: `outgoing_${status}`,
+        reason,
+        mealIds: (outgoingSummary?.mealIds || localSummary.mealIds || []).slice(-8),
+        itemIds: (outgoingSummary?.itemIds || localSummary.itemIds || []).slice(-16),
+        missingMealIds: assessment?.missingMealIds || [],
+        missingItemIds: assessment?.missingItemIds || [],
+        staleMealTombstoneIds: assessment?.staleMealTombstoneIds || [],
+        staleItemTombstoneIds: assessment?.staleItemTombstoneIds || [],
+      }, status === 'blocked' ? 'warn' : undefined);
+    };
 
-    if (!guardWouldBreak && !localIsClearlyAhead) return item;
+    if (!guardApi || typeof guardApi.resolveExternalReplacement !== 'function') {
+      trace('blocked', 'guard_unavailable');
+      return { ok: false, status: 'blocked', item, reason: 'guard_unavailable' };
+    }
 
-    let nextValue = localDay;
+    if (isSameFetchedDayContent(localDay, item.v)) {
+      trace('noop', 'content_equal', null, queuedSummary);
+      return passthrough;
+    }
+
+    let resolved;
     try {
-      const merged = mergeDayData(localDay, item.v, { forceKeepAll: true });
-      if (merged && Array.isArray(merged.meals)) nextValue = merged;
-    } catch (_) { /* keep fresh local fallback */ }
+      resolved = guardApi.resolveExternalReplacement(localDay, item.v, {
+        mergeDayData: (local, queued) => stabilizeDayv2MergeMeta(
+          mergeDayData(local, queued, { forceKeepAll: true }),
+          local,
+          queued,
+        ),
+        isSameContent: isSameFetchedDayContent,
+      });
+    } catch (_) {
+      trace('blocked', 'resolver_exception');
+      return { ok: false, status: 'blocked', item, reason: 'resolver_exception' };
+    }
 
-    const nextSummary = summarizeDayPayload(nextValue);
-    guardApi?.pushTrace?.('uploadRehydrates', {
-      key: item.k,
-      date: dateStr,
-      reason: guardWouldBreak ? 'active_mutation_guard' : 'fresh_local_ahead',
-      guardAction: guard?.action || null,
-      queued: queuedSummary,
-      local: localSummary,
-      outgoing: nextSummary,
-    }, '[HEYS.syncTrace] DAYV2_UPLOAD_REHYDRATED');
+    const assessment = resolved?.assessment || {};
+    if (!resolved?.ok || !resolved.value || typeof resolved.value !== 'object') {
+      const reason = assessment.reason || 'resolver_blocked';
+      trace('blocked', reason, assessment);
+      return { ok: false, status: 'blocked', item, reason };
+    }
 
+    if (resolved.status === 'incoming') {
+      trace('noop', 'queued_already_canonical', assessment, queuedSummary);
+      return passthrough;
+    }
+
+    const outgoingSummary = summarizeDayPayload(resolved.value);
+    trace('merged', 'entity_level_merge', assessment, outgoingSummary);
     return {
-      ...item,
-      v: nextValue,
-      updated_at: new Date().toISOString(),
+      ok: true,
+      status: 'merged',
+      item: {
+        ...item,
+        v: resolved.value,
+      },
     };
   }
 
@@ -3296,6 +3343,91 @@
       }
     } catch (_) { /* best-effort dedup */ }
     return false;
+  }
+
+  function resolveAutomaticInboundDayValue(key, incomingValue, source) {
+    const dayDate = String(key || '').match(/dayv2_(\d{4}-\d{2}-\d{2})$/)?.[1] || null;
+    let currentValue = null;
+    try {
+      const raw = global.localStorage?.getItem?.(key);
+      if (raw) currentValue = tryParse(raw);
+    } catch (_) { /* no local baseline */ }
+    if (!currentValue || typeof currentValue !== 'object') {
+      return { ok: true, status: 'incoming', value: incomingValue };
+    }
+
+    const guardApi = HEYS.dayMutationGuard;
+    if (!guardApi || typeof guardApi.resolveExternalReplacement !== 'function') {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_BLOCKED', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+        reason: 'guard_unavailable',
+      }, 'warn');
+      return { ok: false, status: 'blocked', value: currentValue };
+    }
+
+    if (isSameFetchedDayContent(currentValue, incomingValue)) {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_NOOP', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+      });
+      return {
+        ok: true,
+        status: 'noop',
+        value: currentValue,
+        assessment: guardApi.assessExternalReplacement?.(currentValue, incomingValue),
+      };
+    }
+
+    let resolved;
+    try {
+      resolved = guardApi.resolveExternalReplacement(currentValue, incomingValue, {
+        mergeDayData: (local, remote) => mergeDayData(local, remote, { forceKeepAll: true }),
+        isSameContent: isSameFetchedDayContent,
+      });
+    } catch (_) {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_BLOCKED', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+        reason: 'resolver_exception',
+      }, 'warn');
+      return { ok: false, status: 'blocked', value: currentValue };
+    }
+    const assessment = resolved.assessment || {};
+    if (!resolved.ok) {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_BLOCKED', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+        reason: assessment.reason || 'unsafe_external_replacement',
+        missingMealIds: assessment.missingMealIds || [],
+        missingItemIds: assessment.missingItemIds || [],
+        staleMealTombstoneIds: assessment.staleMealTombstoneIds || [],
+        staleItemTombstoneIds: assessment.staleItemTombstoneIds || [],
+        legacyMealsDropped: assessment.legacyMealsDropped || 0,
+        legacyItemsDropped: assessment.legacyItemsDropped || 0,
+      }, 'warn');
+      return resolved;
+    }
+    if (resolved.status === 'merged') {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_MERGED', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+      });
+    } else if (resolved.status === 'noop') {
+      pushSyncTrace('DAYV2_EXTERNAL_GATE_NOOP', {
+        date: dayDate,
+        source: source || 'automatic-inbound',
+      });
+    }
+    return resolved;
+  }
+
+  function writeAutomaticInboundDayKey(key, incomingValue, options = {}) {
+    const source = options.source || 'automatic-inbound';
+    const resolved = resolveAutomaticInboundDayValue(key, incomingValue, source);
+    if (!resolved.ok) return false;
+    if (resolved.status === 'noop') return true;
+    return writeDayKeyWithQuotaGuard(key, resolved.value, options);
   }
 
   /** Debounced disk writes for hot pending queues (client + user) — reduces main-thread churn */
@@ -6048,7 +6180,15 @@
           }
 
           // Глобальный ключ или ключ текущего клиента — загружаем
-          ls.setItem(key, JSON.stringify(valueToStore));
+          if (isDayKey) {
+            const wroteDay = writeAutomaticInboundDayKey(key, valueToStore, {
+              preserveRecentDuringHydration: true,
+              source: 'bootstrap',
+            });
+            if (!wroteDay) return;
+          } else {
+            ls.setItem(key, JSON.stringify(valueToStore));
+          }
           logProductsCloudWrite('bootstrap', key, valueToStore);
           loadedCount++;
         } catch (e) { }
@@ -6235,7 +6375,15 @@
             }
           }
 
-          ls.setItem(localKey, JSON.stringify(valueToStore));
+          if (isDayKey) {
+            const wroteDay = writeAutomaticInboundDayKey(localKey, valueToStore, {
+              preserveRecentDuringHydration: true,
+              source: 'yandex-sync',
+            });
+            if (!wroteDay) return;
+          } else {
+            ls.setItem(localKey, JSON.stringify(valueToStore));
+          }
           logProductsCloudWrite('yandex-sync', localKey, valueToStore);
           syncedKeys.push(row.k); // Сохраняем оригинальный ключ для инвалидации
           loadedCount++;
@@ -6365,7 +6513,7 @@
       const liveCtx = contextState.contextId
         || ((cloud._writeContext && cloud._writeContext.clientId === clientId)
           ? cloud._writeContext.contextId : null);
-      const yandexItems = items.map(item => ({
+      const preparedItems = items.map(item => ({
         // Queue items carry the normalized cloud key. Rebuild the canonical
         // client-scoped key before a merge response is written back locally.
         originalKey: scopeKeyForClientStorage(item.k, clientId),
@@ -6376,6 +6524,15 @@
         _ctx: liveCtx || item._ctx || null,
         updated_at: item.updated_at || new Date().toISOString()
       })).map(item => rehydrateDayv2UploadItemFromLocal(item, clientId));
+      const blockedDayItem = preparedItems.find((prepared) => !prepared?.ok);
+      if (blockedDayItem) {
+        return {
+          success: false,
+          error: `dayv2_outgoing_blocked:${blockedDayItem.reason || 'unknown'}`,
+          saved: 0,
+        };
+      }
+      const yandexItems = preparedItems.map((prepared) => prepared.item);
 
       // 📊 L0 telemetry (server-revision rollout): count writes that go out WITHOUT a
       // write-context. This is the gate for the eventual HEYS_WRITE_CONTEXT_STRICT flip
@@ -6401,7 +6558,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_commands_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}|heys_hunger_energy_status_events_v1|heys_insights_feedback|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1|heys_planning_goals_v1|heys_planning_entity_tombstones_v1|heys_planning_goal_map_records_v1|heys_planning_commands_v1|heys_planning_projects|heys_planning_tasks|heys_planning_slots|heys_planning_links_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -6418,6 +6575,8 @@
       };
       const isDayv2MergeKey = (k) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
       const isMorningCheckinMergeKey = (k) => /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
+      const isHungerEventsMergeKey = (k) => String(k || '') === 'heys_hunger_energy_status_events_v1';
+      const isInsightsFeedbackMergeKey = (k) => String(k || '') === 'heys_insights_feedback';
       const isSubscriptionRequiredError = (err) => String(err || '').toLowerCase().includes('subscription_required');
       const subscriptionRejectedKeys = [];
       const blockDayv2BatchFallback = (k, err) => {
@@ -6480,8 +6639,42 @@
                   localWriteValue = result.v;
                 }
               }
+              if (isHungerEventsMergeKey(it.k) && it.originalKey) {
+                try {
+                  const currentLocalEvents = global.HEYS?.store?.readSafe?.(it.originalKey, []);
+                  const mergeHungerEvents = global.HEYS?.sync?.mergeHungerStatusEvents;
+                  if (Array.isArray(currentLocalEvents) && typeof mergeHungerEvents === 'function') {
+                    // The merge RPC may finish after another local assessment.
+                    // Re-union the response with the live log before write-back.
+                    localWriteValue = mergeHungerEvents(currentLocalEvents, result.v);
+                  }
+                } catch (_) {
+                  localWriteValue = result.v;
+                }
+              }
+              if (isInsightsFeedbackMergeKey(it.k) && it.originalKey) {
+                try {
+                  const currentLocalFeedback = global.HEYS?.store?.readSafe?.(it.originalKey, []);
+                  const mergeInsightsFeedback = global.HEYS?.sync?.mergeInsightsFeedback;
+                  if (Array.isArray(currentLocalFeedback) && typeof mergeInsightsFeedback === 'function') {
+                    localWriteValue = mergeInsightsFeedback(currentLocalFeedback, result.v);
+                  }
+                } catch (_) {
+                  localWriteValue = result.v;
+                }
+              }
+              const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
+              let shouldApplyLocalWrite = true;
+              if (dateMatch && it.originalKey) {
+                const resolvedDay = resolveAutomaticInboundDayValue(it.originalKey, localWriteValue, 'server-merge');
+                if (!resolvedDay.ok || resolvedDay.status === 'noop') {
+                  shouldApplyLocalWrite = false;
+                } else {
+                  localWriteValue = resolvedDay.value;
+                }
+              }
               // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
-              if (lsSetRaw && it.originalKey) {
+              if (shouldApplyLocalWrite && lsSetRaw && it.originalKey) {
                 try {
                   lsSetRaw(it.originalKey, JSON.stringify(localWriteValue));
                   global.HEYS?.store?.invalidate?.(it.originalKey);
@@ -6489,8 +6682,7 @@
                   console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
                 }
               }
-              const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
-              if (dateMatch && typeof global.dispatchEvent === 'function') {
+              if (shouldApplyLocalWrite && dateMatch && typeof global.dispatchEvent === 'function') {
                 try {
                   global.dispatchEvent(new CustomEvent('heys:day-updated', {
                     detail: { date: dateMatch[1], source: 'server-merge', outcome: result.outcome }
@@ -6523,7 +6715,7 @@
               console.warn('[merge-save] subscription_required for', it.k, '— dropping denied pending write');
               continue;
             }
-            if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k)) {
+            if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k) || isHungerEventsMergeKey(it.k) || isInsightsFeedbackMergeKey(it.k)) {
               blockDayv2BatchFallback(it.k, result.error);
               break;
             }
@@ -6546,7 +6738,7 @@
             console.warn('[merge-save] subscription_required exception for', it.k, '— dropping denied pending write');
             continue;
           }
-          if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k)) {
+          if (isDayv2MergeKey(it.k) || isMorningCheckinMergeKey(it.k) || isHungerEventsMergeKey(it.k) || isInsightsFeedbackMergeKey(it.k)) {
             blockDayv2BatchFallback(it.k, e.message);
             break;
           }
@@ -7978,7 +8170,15 @@
                 }
               }
 
-              ls.setItem(key, JSON.stringify(valueToStore));
+              if (key.includes('dayv2_')) {
+                const wroteDay = writeAutomaticInboundDayKey(key, valueToStore, {
+                  preserveRecentDuringHydration: true,
+                  source: 'delta-light',
+                });
+                if (!wroteDay) return;
+              } else {
+                ls.setItem(key, JSON.stringify(valueToStore));
+              }
               logProductsCloudWrite('delta-light', key, valueToStore);
               lightSyncedKeys.push(row.k);
               lightKeysWritten++;
@@ -8585,7 +8785,8 @@
                   backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
                   const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
                     preserveRecentDuringHydration: true,
-                    nowTs: now
+                    nowTs: now,
+                    source: 'force-sync',
                   });
                   if (!wroteDay) {
                     skippedDayMirrorKeys.push(key);
@@ -8616,9 +8817,10 @@
                   if (merged) {
                     // 🔇 PERF: Отключено
                     // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
-                    const wroteMergedDay = writeDayKeyWithQuotaGuard(key, merged, {
+                    const wroteMergedDay = writeAutomaticInboundDayKey(key, merged, {
                       preserveRecentDuringHydration: true,
-                      nowTs: now
+                      nowTs: now,
+                      source: 'full-sync-merge',
                     });
                     if (!wroteMergedDay) {
                       skippedDayMirrorKeys.push(key);
@@ -9707,9 +9909,10 @@
             const end = Math.min(startIdx + CHUNK_SIZE, batchedDayV2Writes.length);
             for (let i = startIdx; i < end; i++) {
               const { key, valueToSave } = batchedDayV2Writes[i];
-              const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
+              const wroteDay = writeAutomaticInboundDayKey(key, valueToSave, {
                 preserveRecentDuringHydration: true,
-                nowTs: now
+                nowTs: now,
+                source: 'cloud-sync',
               });
               if (!wroteDay) {
                 skippedDayMirrorKeys.push(key);
@@ -10255,7 +10458,10 @@
             backupDayV2BeforeOverwrite(targetKey, valueToStore, 'fetchDays');
           }
           const wroteDay = isDayKey
-            ? writeDayKeyWithQuotaGuard(targetKey, valueToStore, { preserveRecentDuringHydration: false })
+            ? writeAutomaticInboundDayKey(targetKey, valueToStore, {
+              preserveRecentDuringHydration: false,
+              source: 'fetchDays',
+            })
             : safeSetItem(targetKey, JSON.stringify(valueToStore));
           if (!wroteDay) {
             return;
@@ -13169,6 +13375,7 @@
 
   function getScopedClientStorageKey(clientId, baseKey) {
     if (!baseKey) return baseKey;
+    if (baseKey === 'heys_insights_feedback') return `heys_insights_feedback_${clientId}`;
     const normalized = scopeKeyForClientStorage(baseKey, clientId);
     if (isForeignClientScopedKey(normalized, clientId)) return null;
     return normalized;
@@ -13467,12 +13674,32 @@
             return false; // local is newer — don't overwrite
           }
         } catch (_) { /* parse error — proceed normally */ }
-        const wroteDay = writeDayKeyWithQuotaGuard(scopedKey, value, {
+        const wroteDay = writeAutomaticInboundDayKey(scopedKey, value, {
           preserveRecentDuringHydration: true,
           nowTs: Date.now(),
           source: source || 'hot-sync'
         });
         if (!wroteDay) return false;
+      } else if (baseKey === 'heys_hunger_energy_status_events_v1') {
+        const mergeHungerEvents = global.HEYS?.sync?.mergeHungerStatusEvents;
+        if (typeof mergeHungerEvents !== 'function') return false;
+        const localEvents = Array.isArray(previousValue) ? previousValue : [];
+        const remoteEvents = Array.isArray(value) ? value : [];
+        const mergedEvents = mergeHungerEvents(remoteEvents, localEvents);
+        const reserialized = JSON.stringify(mergedEvents);
+        if (currentRaw === reserialized) return false;
+        global.localStorage.setItem(scopedKey, reserialized);
+        value = mergedEvents;
+      } else if (baseKey === 'heys_insights_feedback') {
+        const mergeInsightsFeedback = global.HEYS?.sync?.mergeInsightsFeedback;
+        if (typeof mergeInsightsFeedback !== 'function') return false;
+        const localFeedback = Array.isArray(previousValue) ? previousValue : [];
+        const remoteFeedback = Array.isArray(value) ? value : [];
+        const mergedFeedback = mergeInsightsFeedback(remoteFeedback, localFeedback);
+        const reserialized = JSON.stringify(mergedFeedback);
+        if (currentRaw === reserialized) return false;
+        global.localStorage.setItem(scopedKey, reserialized);
+        value = mergedFeedback;
       } else if (baseKey === 'heys_game') {
         // Hot-sync merge для game state — без этого hot-sync затирает свежий
         // dailyBonusClaimed из локальной claim-action. Паттерн как у dayv2_/widget_layout,
@@ -13592,6 +13819,13 @@
       }
 
       dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, value, source);
+
+      if (baseKey === 'heys_hunger_energy_status_events_v1'
+          && typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:hunger-energy-status-updated', {
+          detail: value
+        }));
+      }
 
       if (baseKey.includes('widget_layout') && typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', {

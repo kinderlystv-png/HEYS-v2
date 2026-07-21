@@ -1,341 +1,236 @@
-/**
- * @fileoverview Critical tests for Insulin Wave Module (33 factors)
- * 
- * Проверяет:
- * 1. Continuous GL Multiplier (v3.0.0)
- * 2. Personal Baseline Wave (Age/BMI/Gender)
- * 3. Activity Contexts (Post-workout, etc.)
- * 4. Kcal-based wave reduction
- */
-
 import fs from 'fs';
 import path from 'path';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const originalWindow = global.window;
-const originalHEYS = global.HEYS;
-
-// Mock global HEYS object
-global.HEYS = {
-  utils: {
-    lsGet: () => null
-  },
-  Cycle: {
-    getCyclePhase: () => ({ insulinWaveMultiplier: 1.0 }),
-    getInsulinWaveMultiplier: () => 1.0
-  }
+const originalWindow = globalThis.window;
+const originalHEYS = globalThis.HEYS;
+const read = (name) => fs.readFileSync(path.resolve(__dirname, '..', name), 'utf8');
+const load = (name) => {
+  // eslint-disable-next-line no-eval
+  eval(read(name));
 };
 
-// Mock window object for modules
-global.window = global;
+const productionOrder = [
+  'heys_models_v1.js',
+  'heys_iw_shim.js',
+  'heys_iw_patterns.js',
+  'heys_iw_constants.js',
+  'heys_iw_utils.js',
+  'heys_iw_lipolysis.js',
+  'heys_iw_response_model.js',
+  'heys_iw_calc.js',
+  'heys_iw_graph.js',
+  'heys_iw_ndte.js',
+  'heys_iw_ui.js',
+  'heys_insulin_wave_v1.js',
+];
 
-// Load modules in correct order: shim -> constants -> main
-// 1. Shim creates HEYS.InsulinWave.__internals namespace
-const shimPath = path.resolve(__dirname, '../heys_iw_shim.js');
-const shimContent = fs.readFileSync(shimPath, 'utf8');
-eval(shimContent);
+const resolveItem = (item) => item.product || item;
+const makeMeal = (time, product, grams = 100, id = time) => ({ id, time, items: [{ grams, product }] });
 
-// 2. Constants populates __internals with all constants
-const constantsPath = path.resolve(__dirname, '../heys_iw_constants.js');
-const constantsContent = fs.readFileSync(constantsPath, 'utf8');
-eval(constantsContent);
-
-// 3. Main module uses constants from __internals
-const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
-const mainContent = fs.readFileSync(mainPath, 'utf8');
-eval(mainContent);
-
-const uiPath = path.resolve(__dirname, '../heys_iw_ui.js');
-
-describe('Insulin Wave Module (Critical)', () => {
-  const IW = global.HEYS.InsulinWave;
-  // Access internal functions via __internals for v3 compatibility
-  const I = IW.__internals || {};
-
-  it('should be loaded correctly', () => {
-    expect(IW).toBeDefined();
-    expect(typeof IW.calculate).toBe('function');
-  });
-
-  describe('1. Continuous GL Multiplier (v3.0.0)', () => {
-    it('should return correct multipliers for key GL points', () => {
-      // Skip if internal function not exposed (after refactoring)
-      const fn = IW.calculateContinuousGLMultiplier || I.calculateContinuousGLMultiplier;
-      if (!fn) {
-        console.log('⚠️ calculateContinuousGLMultiplier moved to __internals, testing via calculate()');
-        return; // Internal function not exposed - test via main API
-      }
-
-      // GL=5 -> ~0.48 (v3.0.0 table)
-      const gl5 = fn(5);
-      expect(gl5).toBeGreaterThan(0.4);
-      expect(gl5).toBeLessThan(0.6);
-
-      // GL=20 -> ~0.85 (actually ~0.91 in v3.5.6)
-      const gl20 = fn(20);
-      expect(gl20).toBeGreaterThan(0.8);
-      expect(gl20).toBeLessThan(0.95);
-
-      // GL=40 -> 1.30 (max)
-      const gl40 = fn(40);
-      expect(gl40).toBeCloseTo(1.3, 1);
-    });
-  });
-
-  describe('2. Personal Baseline Wave', () => {
-    it('should calculate baseline for standard profile', () => {
-      const fn = IW.calculatePersonalBaselineWave || I.calculatePersonalBaselineWave;
-      if (!fn) {
-        console.log('⚠️ calculatePersonalBaselineWave moved to __internals, testing via calculate()');
-        return; // Internal function not exposed - test via main API
-      }
-
-      const profile = { age: 25, weight: 70, height: 175, gender: 'Мужской' }; // BMI ~22.8 (Normal)
-      const res = fn(profile);
-      // Base 3.0 * (1 + 0.03 male) = 3.09
-      expect(res.baseHours).toBeCloseTo(3.09, 1);
-    });
-
-    it('should increase wave for older age and high BMI', () => {
-      const fn = IW.calculatePersonalBaselineWave || I.calculatePersonalBaselineWave;
-      if (!fn) {
-        console.log('⚠️ calculatePersonalBaselineWave moved to __internals, testing via calculate()');
-        return; // Internal function not exposed - test via main API
-      }
-
-      const profile = { age: 50, weight: 100, height: 175, gender: 'Мужской' }; // BMI ~32.6 (Obese)
-      // Age 45-59: +10%
-      // BMI 30+: +15%
-      // Male: +3%
-      // Total: +28% -> 3.0 * 1.28 = 3.84
-      const res = fn(profile);
-      expect(res.baseHours).toBeGreaterThan(3.5);
-    });
-  });
-
-  describe('3. Activity Contexts', () => {
-    it('should detect POST-WORKOUT context', () => {
-      const context = IW.calculateActivityContext({
-        mealTimeMin: 14 * 60, // 14:00
-        mealKcal: 500,
-        trainings: [{ time: '13:00', type: 'cardio', duration: 45, kcal: 400 }],
-        householdMin: 0,
-        steps: 0
-      });
-
-      expect(context.type).toBe('post');
-      expect(context.waveBonus).toBeLessThan(0); // Should reduce wave
-    });
-
-    it('should detect PERI-WORKOUT context', () => {
-      const context = IW.calculateActivityContext({
-        mealTimeMin: 13 * 60 + 15, // 13:15
-        mealKcal: 200,
-        trainings: [{ time: '13:00', type: 'strength', duration: 60, kcal: 300 }],
-        householdMin: 0,
-        steps: 0
-      });
-
-      expect(context.type).toBe('peri');
-      expect(context.harmMultiplier).toBeLessThan(1.0); // Should reduce harm
-    });
-
-    it('should detect HOUSEHOLD context without trainings', () => {
-      const context = IW.calculateActivityContext({
-        mealTimeMin: 8 * 60 + 30,
-        mealKcal: 51,
-        trainings: [],
-        householdMin: 30,
-        steps: 0
-      });
-
-      expect(context).toBeTruthy();
-      expect(context.type).toBe('household');
-      expect(context.badge).toContain('Умеренный быт');
-      expect(context.harmMultiplier).toBeLessThan(1.0);
-    });
-  });
-
-  describe('v4.3 — Scientific audit corrections', () => {
-    it('dairy waveMultiplier > 1.0 (prolongs wave per Toffolon 2021 / Henry 2024)', () => {
-      // v4.2 был < 1.0 (укорачивал волну, что противоречило литературе).
-      // v4.3: все 4 типа dairy + pureProtein должны быть >= 1.0
-      const factors = I.INSULIN_INDEX_FACTORS;
-      expect(factors).toBeDefined();
-      expect(factors.liquidDairy.waveMultiplier).toBeGreaterThanOrEqual(1.05);
-      expect(factors.softDairy.waveMultiplier).toBeGreaterThanOrEqual(1.0);
-      expect(factors.hardDairy.waveMultiplier).toBeGreaterThanOrEqual(1.0);
-      expect(factors.pureProtein.waveMultiplier).toBeGreaterThanOrEqual(1.0);
-    });
-
-    it('liquidDairyCompensation no longer applied (band-aid removed)', () => {
-      // Костыль `liquidDairyCompensation=1.08` удалён в обоих местах.
-      // grep его не должен найти как активное выражение (только в комментариях).
-      const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
-      const src = fs.readFileSync(mainPath, 'utf8');
-      // Не должно быть строки с присваиванием = ... liquidDairyCompensation (vars + assign)
-      // и не должно быть умножения на эту переменную в finalMultiplier.
-      const activeAssignments = src.match(/^[\s]*const liquidDairyCompensation = /gm);
-      expect(activeAssignments).toBeNull();
-      // В finalMultiplier нет ссылки
-      expect(src).not.toMatch(/finalMultiplier\s*=.*\*\s*liquidDairyCompensation/);
-    });
-
-    it('alcohol bonuses ranking inverted (strong = neutral, beer = mild +5%)', () => {
-      // Прежде: strong +25%, medium +18%, weak +10%. Этанол подавляет глюконеогенез,
-      // глюкоза падает, не растёт (Brand-Miller 2007, Davies 2002).
-      // Новые значения отражают что прирост волны идёт от УГЛЕВОДОВ в напитке.
-      const ab = I.ALCOHOL_BONUS;
-      expect(ab).toBeDefined();
-      expect(ab.high.bonus).toBeLessThanOrEqual(0.05); // крепкое не должно увеличивать волну
-      expect(ab.medium.bonus).toBeLessThanOrEqual(0.05); // вино не должно увеличивать волну
-      expect(ab.low.bonus).toBeLessThanOrEqual(0.10); // пиво — маленький бонус от мальтозы
-      // Старое ранжирование "крепче = больше волна" перевёрнуто
-      expect(ab.high.bonus).toBeLessThanOrEqual(ab.low.bonus);
-    });
-
-    it('GL giMult ramp starts at GL=10 (Atkinson 2008), GL_CATEGORIES в low зоне ≤10', () => {
-      // Atkinson 2008 (PMID 18835944): low ≤10, medium 11-19, high ≥20.
-      // Проверяем что GL_CATEGORIES соответствует консенсусу — `low.max=10`.
-      const cats = I.GL_CATEGORIES;
-      expect(cats).toBeDefined();
-      expect(cats.low.max).toBe(10);    // low ≤10
-      expect(cats.medium.max).toBe(20); // medium <20 → 10-19
-      expect(cats.high.max).toBe(30);   // high <30 → 20-29 + veryHigh ≥30
-    });
-
-    it('stress bonus magnitudes calibrated (high=8%, medium=4%)', () => {
-      // v4.2 был +15%/+8% (без источника). v4.3: +8%/+4% (Yan 2020 + общая критика).
-      const sb = I.STRESS_BONUS;
-      expect(sb).toBeDefined();
-      expect(sb.high.bonus).toBeLessThanOrEqual(0.10);
-      expect(sb.medium.bonus).toBeLessThanOrEqual(0.05);
-    });
-
-    it('R14-1A: ChatGPT Research tags removed from constants', () => {
-      // v4.3: 9 цитат «(ChatGPT Research)» были помечены как источник.
-      // Заменены на v4.3 атрибутирование (рядом стоят настоящие cite — Nuttall, Holt, etc).
-      const constantsPath = path.resolve(__dirname, '../heys_iw_constants.js');
-      const src = fs.readFileSync(constantsPath, 'utf8');
-      // Не должно быть активного use «ChatGPT Research» как источника.
-      const matches = src.match(/ChatGPT Research/g);
-      expect(matches).toBeNull();
-    });
-
-    it('R14-1B: IR Score computed once per day (not per-meal)', () => {
-      // Архитектурная проверка: irScore должен считаться один раз внутри
-      // calculate() и применяться ко всем приёмам. Если бы это было per-meal
-      // (например, в цикле по meals), тест поймал бы N вызовов.
-      let irScoreCallCount = 0;
-      const originalCalc = I.calculateIRScore;
-      I.calculateIRScore = (...args) => {
-        irScoreCallCount++;
-        return originalCalc(...args);
-      };
-      // Симулируем день с 4 приёмами через calculate() — это один вызов
-      try {
-        IW.calculate({
-          meals: [
-            { id: 'm1', time: '08:00', items: [] },
-            { id: 'm2', time: '12:00', items: [] },
-            { id: 'm3', time: '16:00', items: [] },
-            { id: 'm4', time: '20:00', items: [] }
-          ],
-          pIndex: { byId: new Map() },
-          getProductFromItem: () => null,
-          baseWaveHours: 3,
-          dayData: { profile: { age: 35, weight: 70, height: 175 }, sleepHours: 7, stressAvg: 4 }
-        });
-      } catch (e) {
-        // OK if calculate fails on empty items — мы только проверяем call count
-      }
-      I.calculateIRScore = originalCalc;
-      // calculateIRScore должен быть вызван 0 или 1 раз — НЕ 4 раза (per-meal).
-      expect(irScoreCallCount).toBeLessThanOrEqual(1);
-    });
-
-    it('sleep deprivation moderate (4-5h) calibrated to +12%', () => {
-      // v4.2: +15%. v4.3: +12% (между Donga 2010 -25% для 4ч и Buxton 2010 -11% для 5ч недели).
-      const slb = I.SLEEP_BONUS;
-      expect(slb).toBeDefined();
-      expect(slb.severe.bonus).toBeCloseTo(0.20, 2); // <4ч: Donga 2010
-      expect(slb.moderate.bonus).toBeLessThanOrEqual(0.13); // 4-5ч: 12%
-    });
-  });
-
-  describe('4. Kcal-based Wave Reduction (v3.5.0)', () => {
-    it('should reduce wave significantly for high-kcal workout (POST)', () => {
-      // Mock internal helper if needed, or test via calculateActivityContext
-      // But calculateActivityContext returns waveBonus based on kcal
-
-      const context = IW.calculateActivityContext({
-        mealTimeMin: 14 * 60 + 15, // 14:15 (15 min after workout)
-        mealKcal: 500,
-        trainings: [{
-          time: '12:00',
-          type: 'cardio',
-          duration: 120,
-          z: [0, 0, 60, 60], // 120 min HIIT -> ~1200 kcal
-          kcal: 1200
-        }],
-        householdMin: 0,
-        steps: 0
-      });
-
-      // v3.7.7: Multiplicative model (not additive)
-      // Tier 1 (0-30min) = -40% base
-      // kcalMultiplier (1200 ккал) = ×1.50
-      // typeBonus (cardio) = ×1.15
-      // Combined: -40% × 1.50 × 1.15 = -69% → capped at -60%
-      expect(context.waveBonus).toBeLessThanOrEqual(-0.5);
-      expect(context.waveBonus).toBeGreaterThanOrEqual(-0.65);
-    });
-  });
-
-  describe('Insulin Wave UI resilience', () => {
-    it('renders expanded section when legacy wave data has no GI category', () => {
-      const originalReact = global.React;
-      const originalDocument = global.document;
-      const originalUI = global.HEYS.InsulinWave.UI;
-
-      global.document = {
-        documentElement: {
-          getAttribute: () => null
-        }
-      };
-      global.React = {
-        useState: (initial) => [initial, () => { }],
-        createElement: (type, props, ...children) => {
-          if (typeof type === 'function') return type({ ...(props || {}), children });
-          return { type, props: props || {}, children };
-        }
-      };
-
-      try {
-        const uiContent = fs.readFileSync(uiPath, 'utf8');
-        eval(uiContent);
-
-        expect(() => {
-          global.HEYS.InsulinWave.UI.renderExpandedSection({
-            avgGI: 0,
-            glycemicLoad: 0,
-            status: 'active',
-            waveHistory: []
-          });
-        }).not.toThrow();
-      } finally {
-        global.React = originalReact;
-        if (originalDocument === undefined) delete global.document;
-        else global.document = originalDocument;
-        if (originalUI === undefined) delete global.HEYS.InsulinWave.UI;
-        else global.HEYS.InsulinWave.UI = originalUI;
-      }
-    });
-  });
+beforeAll(() => {
+  globalThis.window = globalThis;
+  globalThis.HEYS = { utils: { lsGet: () => null, lsSet: () => undefined } };
+  for (const file of productionOrder) load(file);
 });
 
 afterAll(() => {
-  global.window = originalWindow;
-  global.HEYS = originalHEYS;
+  globalThis.window = originalWindow;
+  globalThis.HEYS = originalHEYS;
+});
+
+describe('Postprandial response model v5', () => {
+  const fullProduct = {
+    name: 'Крупа', carbs100: 40, protein100: 10, fat100: 5, fiber100: 6,
+    simple100: 2, complex100: 38, gi: 50, foodForm: 'whole',
+  };
+
+  it('keeps real GL unchanged when Insulin Index changes', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const lowIi = model.analyzeMeal({ meal: makeMeal('12:00', { ...fullProduct, insulinIndex: 20 }), getProductFromItem: resolveItem });
+    const highIi = model.analyzeMeal({ meal: makeMeal('12:00', { ...fullProduct, insulinIndex: 120 }), getProductFromItem: resolveItem });
+    expect(lowIi.glycemicLoad).toBe(20);
+    expect(highIi.glycemicLoad).toBe(20);
+    expect(highIi.insulinDemandProxy.score).toBeGreaterThan(lowIi.insulinDemandProxy.score);
+  });
+
+  it('represents low-carb protein response as a separate proxy', () => {
+    const estimate = globalThis.HEYS.InsulinWave.ResponseModel.estimate({
+      meal: makeMeal('12:00', { name: 'Протеин', carbs100: 1, protein100: 80, fat100: 2, fiber100: 0, gi: 20, foodForm: 'liquid' }),
+      getProductFromItem: resolveItem,
+    });
+    expect(estimate.responseLoad.estimatedGlycemicLoad.central).toBeLessThan(1);
+    expect(estimate.responseLoad.insulinDemandProxy.score).toBeGreaterThan(0);
+    expect(estimate.responseLoad.insulinDemandProxy.reliability).toBe('category-heuristic');
+  });
+
+  it('uses liquid form for shape without applying it twice to duration', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const base = { ...fullProduct, simple100: 30, complex100: 10 };
+    const liquid = model.estimate({ meal: makeMeal('12:00', { ...base, foodForm: 'liquid' }), getProductFromItem: resolveItem });
+    const solid = model.estimate({ meal: makeMeal('12:00', { ...base, foodForm: 'whole' }), getProductFromItem: resolveItem });
+    expect(liquid.responseShape.type).toBe('fast');
+    expect(Math.abs(liquid.estimatedWindow.centralMinutes - solid.estimatedWindow.centralMinutes)).toBeLessThanOrEqual(15);
+  });
+
+  it('uses inferred food form for shape but not for data completeness', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const inferred = model.estimate({
+      meal: makeMeal('12:00', { ...fullProduct, name: 'Кефир', foodForm: undefined }),
+      getProductFromItem: resolveItem,
+    });
+    const explicit = model.estimate({
+      meal: makeMeal('12:00', { ...fullProduct, name: 'Кефир', foodForm: 'liquid' }),
+      getProductFromItem: resolveItem,
+    });
+
+    expect(inferred.responseShape.type).toBe('fast');
+    expect(inferred.confidence.dataQuality.formCoverage).toBe(0);
+    expect(inferred.confidence.dataQuality.missingFields).toContain('foodForm');
+    expect(inferred.confidence.level).toBe('medium');
+    expect(inferred.confidence.score).toBeLessThan(explicit.confidence.score);
+  });
+
+  it('does not reduce a fatty mixed meal to GL-only duration', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const lean = model.estimate({ meal: makeMeal('12:00', { ...fullProduct, fat100: 3 }), getProductFromItem: resolveItem });
+    const fatty = model.estimate({ meal: makeMeal('12:00', { ...fullProduct, fat100: 35 }), getProductFromItem: resolveItem });
+    expect(fatty.responseLoad.estimatedGlycemicLoad.central).toBe(lean.responseLoad.estimatedGlycemicLoad.central);
+    expect(fatty.responseShape.type).toBe('prolonged');
+    expect(fatty.estimatedWindow.centralMinutes).toBeGreaterThan(lean.estimatedWindow.centralMinutes);
+  });
+
+  it('lowers confidence and widens the range when GI is missing', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const known = model.estimate({ meal: makeMeal('12:00', fullProduct), getProductFromItem: resolveItem });
+    const missing = model.estimate({ meal: makeMeal('12:00', { ...fullProduct, gi: undefined }), getProductFromItem: resolveItem });
+    expect(missing.responseLoad.glycemicLoad).toBeNull();
+    expect(missing.confidence.score).toBeLessThan(known.confidence.score);
+    expect(missing.confidence.dataQuality.missingFields).toContain('GI');
+    expect(missing.estimatedWindow.upperMinutes - missing.estimatedWindow.lowerMinutes)
+      .toBeGreaterThan(known.estimatedWindow.upperMinutes - known.estimatedWindow.lowerMinutes);
+  });
+
+  it('keeps golden fixtures finite and inside explicit bounds', () => {
+    const fixtures = [
+      ['fast-carbs', { ...fullProduct, simple100: 38, complex100: 2, gi: 85, foodForm: 'liquid' }],
+      ['whole-low-gl', { ...fullProduct, carbs100: 12, simple100: 1, complex100: 11, gi: 30, foodForm: 'whole' }],
+      ['protein-zero-carb', { name: 'Яйца', carbs100: 0, protein100: 25, fat100: 18, fiber100: 0, foodForm: 'whole' }],
+      ['dairy-drink', { name: 'Кефир', carbs100: 5, protein100: 3, fat100: 2, fiber100: 0, gi: 35, foodForm: 'liquid' }],
+      ['fatty-mixed', { ...fullProduct, fat100: 40 }],
+      ['incomplete-snapshot', { name: 'Неизвестное блюдо', carbs100: 30 }],
+    ];
+    for (const [name, product] of fixtures) {
+      const result = globalThis.HEYS.InsulinWave.ResponseModel.estimate({ meal: makeMeal('23:30', product), getProductFromItem: resolveItem });
+      expect(Number.isFinite(result.estimatedWindow.centralMinutes), name).toBe(true);
+      expect(result.estimatedWindow.centralMinutes, name).toBeGreaterThanOrEqual(45);
+      expect(result.estimatedWindow.centralMinutes, name).toBeLessThanOrEqual(360);
+      expect(result.estimatedWindow.lowerMinutes, name).toBeLessThanOrEqual(result.estimatedWindow.centralMinutes);
+      expect(result.estimatedWindow.upperMinutes, name).toBeGreaterThanOrEqual(result.estimatedWindow.centralMinutes);
+    }
+  });
+
+  it('uses the exact latest history response as the current response', () => {
+    const result = globalThis.HEYS.InsulinWave.calculate({
+      meals: [makeMeal('08:00', fullProduct), makeMeal('13:00', { ...fullProduct, gi: 60 })],
+      getProductFromItem: resolveItem,
+      nowMinutes: 14 * 60,
+    });
+    expect(result.currentResponse).toBe(result.waveHistory.at(-1));
+    expect(result.responseLoad).toBe(result.waveHistory.at(-1).responseLoad);
+    expect(result.duration).toBe(result.waveHistory.at(-1).duration);
+  });
+
+  it('is deterministic on the first and repeated load', () => {
+    const params = { meals: [makeMeal('12:00', fullProduct)], getProductFromItem: resolveItem, nowMinutes: 13 * 60 };
+    expect(globalThis.HEYS.InsulinWave.calculate(params)).toEqual(globalThis.HEYS.InsulinWave.calculate(params));
+    expect(globalThis.HEYS.InsulinWave.ResponseModel.CONFIG.source).toBe('embedded-response-model-v5');
+  });
+
+  it('uses the canonical previous end for overlap composition', () => {
+    const result = globalThis.HEYS.InsulinWave.calculate({
+      meals: [makeMeal('12:00', fullProduct, 100, 'a'), makeMeal('13:00', fullProduct, 100, 'b')],
+      getProductFromItem: resolveItem,
+      nowMinutes: 14 * 60,
+    });
+    expect(result.overlaps[0].overlapMinutes).toBe(result.waveHistory[0].endMin - result.waveHistory[1].startMin);
+    expect(result.overlaps[0].composition.durationAdjusted).toBe(false);
+  });
+
+  it('does not apply a negative second-meal duration bonus', () => {
+    const meal = makeMeal('13:00', fullProduct, 100, 'b');
+    const alone = globalThis.HEYS.InsulinWave.calculate({ meals: [meal], getProductFromItem: resolveItem, nowMinutes: 14 * 60 });
+    const close = globalThis.HEYS.InsulinWave.calculate({
+      meals: [makeMeal('12:30', fullProduct, 100, 'a'), meal], getProductFromItem: resolveItem, nowMinutes: 14 * 60,
+    });
+    expect(close.waveHistory.at(-1).duration).toBe(alone.duration);
+    expect(close.trace.some((entry) => entry.minutes === -15)).toBe(false);
+  });
+
+  it('supports late meals and explicit 24:xx times', () => {
+    const result = globalThis.HEYS.InsulinWave.calculate({
+      meals: [makeMeal('23:30', fullProduct, 100, 'late'), makeMeal('24:30', fullProduct, 100, 'after-midnight')],
+      getProductFromItem: resolveItem,
+      nowMinutes: 25 * 60,
+    });
+    expect(result.currentResponse.id).toBe('after-midnight');
+    expect(result.currentResponse.startMin).toBe(1470);
+    expect(result.endTimeDisplay).toMatch(/^0[1-6]:/);
+  });
+
+  it('applies activity only when it is close to the meal', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const meal = makeMeal('14:00', fullProduct);
+    const none = model.estimate({ meal, getProductFromItem: resolveItem, trainings: [] });
+    const near = model.estimate({ meal, getProductFromItem: resolveItem, trainings: [{ time: '13:00', duration: 45 }] });
+    const far = model.estimate({ meal, getProductFromItem: resolveItem, trainings: [{ time: '08:00', duration: 45 }] });
+    expect(near.estimatedWindow.centralMinutes).toBeLessThan(none.estimatedWindow.centralMinutes);
+    expect(far.estimatedWindow.centralMinutes).toBe(none.estimatedWindow.centralMinutes);
+  });
+
+  it('stays deterministic and finite for hundreds of generated meals', () => {
+    let seed = 90210;
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    for (let index = 0; index < 500; index += 1) {
+      const product = {
+        name: `fixture-${index}`,
+        carbs100: random() * 80,
+        protein100: random() * 50,
+        fat100: random() * 60,
+        fiber100: random() * 20,
+        simple100: random() * 20,
+        gi: random() > 0.15 ? random() * 100 : undefined,
+        foodForm: ['whole', 'processed', 'liquid'][index % 3],
+      };
+      const params = { meal: makeMeal('12:00', product, random() * 500), getProductFromItem: resolveItem };
+      const first = globalThis.HEYS.InsulinWave.ResponseModel.estimate(params);
+      const second = globalThis.HEYS.InsulinWave.ResponseModel.estimate(params);
+      expect(first).toEqual(second);
+      expect(Number.isFinite(first.estimatedWindow.centralMinutes)).toBe(true);
+      expect(first.estimatedWindow.centralMinutes).toBeGreaterThanOrEqual(45);
+      expect(first.estimatedWindow.centralMinutes).toBeLessThanOrEqual(360);
+    }
+  });
+
+  it('keeps unsafe physiological claims out of active response UI sources', () => {
+    const uiSource = [
+      'heys_iw_ui.js',
+      'heys_iw_graph.js',
+      'heys_day_insulin_wave_ui_v1.js',
+    ].map(read).join('\n');
+    expect(uiSource).not.toMatch(/липолиз|жиросжиган|жир запасается|µU\/mL|мкЕд\/мл|не ешь подольше/i);
+    expect(uiSource).toContain('Это эвристическая оценка');
+    expect(uiSource).toContain('не запрещает есть');
+  });
+
+  it('fails loudly on missing required dependencies and input', () => {
+    expect(() => globalThis.HEYS.InsulinWave.calculate({ meals: [makeMeal('12:00', fullProduct)] }))
+      .toThrow(/getProductFromItem/);
+    expect(() => globalThis.HEYS.InsulinWave.ResponseModel.estimate({ meal: { time: '12:00' }, getProductFromItem: resolveItem }))
+      .toThrow(/meal\.items/);
+  });
 });

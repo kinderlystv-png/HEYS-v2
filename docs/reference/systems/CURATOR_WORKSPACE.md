@@ -88,6 +88,17 @@ Messenger также различает роль: curator передаёт expli
 нет. Shell лишь отображает inbox cache; polling/backoff принадлежат
 MessengerAPI.
 
+Отправка сообщения использует стабильный `request_id` одной пользовательской
+операции. HTTP retry повторяет тот же ключ, а DB-функция возвращает исходное
+сообщение при совпадающем canonical payload либо `idempotency_conflict` при
+повторном использовании ключа с другим payload. Статусы `done/acked` задаются
+как желаемое boolean-состояние, поэтому повтор запроса не переключает их назад.
+
+Thread загружается страницами через `before`; UI объединяет страницы по
+`message.id`, сохраняет scroll при prepend и не даёт ответу старого client
+context обновить новый диалог. Свежий silent poll в открытом окне также вызывает
+`mark-read`, не меняя отдельную семантику action-badge по `done_at/acked_at`.
+
 ## Инварианты
 
 1. До выбора реального клиента нельзя читать/мигрировать client product/data.
@@ -101,6 +112,10 @@ MessengerAPI.
 8. Событие `heys:client-changed` отправляется после фиксации глобального
    context.
 9. TypeScript prototype не используется как источник runtime-контрактов.
+10. Retry одного send возвращает один `message_id` и не создаёт повторный push.
+11. Вложения сообщения принимаются только из canonical messenger namespace
+    выбранного клиента; произвольные HTTPS URL не являются доверенными.
+12. Push сообщает только о новом сообщении и не содержит текст переписки.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -138,6 +153,8 @@ MessengerAPI.
 | C9  | Storage запрашивает curator write-context capability                  | `sed -n '11740,11785p' apps/web/heys_storage_supabase_v1.js`                                                                                                                                                                 | проверено 2026-07-17 |
 | C10 | Prototype не импортируется вне своей директории/demo в `apps/web/src` | `rg -n 'CuratorPanel' apps/web/src --glob '*.{ts,tsx}'`                                                                                                                                                                      | проверено 2026-07-17 |
 | C11 | Есть guard tests для login/switch/access, но prototype test skipped   | `rg --files apps/web/**tests**                                                                                                                                  \| rg '(curator         \| client-switch \| client-access)'` | проверено 2026-07-17 |
+| C12 | Messenger send retry-safe по request ID и canonical fingerprint       | `apps/web/heys_messenger_api_v1.js`, `yandex-cloud-functions/heys-api-messages/index.js`, `scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql`                                                               | проверено 2026-07-21 |
+| C13 | История использует cursor pagination и merge по ID                    | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                 | проверено 2026-07-21 |
 
 ## Связанные источники
 

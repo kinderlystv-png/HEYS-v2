@@ -470,7 +470,7 @@
                 // иначе hot-sync → setDay → autosave → upload → hot-sync loop
                 // 2026-06-03: server-merge добавлен — это ответ сервера на upload (round-trip),
                 // тоже внешний; без него server-merge re-apply минул 3-сек окно и замыкал echo-петлю.
-                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge'];
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge', 'live-refresh'];
                 const isExternalSource = externalSources.includes(source);
 
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
@@ -801,12 +801,56 @@
                             if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
                                 return prevDay;
                             }
+                            let candidateDay = newDay;
+                            if (isExternalSource && prevDay) {
+                                const guardApi = HEYS.dayMutationGuard;
+                                const mergeApi = HEYS.sync;
+                                if (!guardApi
+                                    || typeof guardApi.resolveExternalReplacement !== 'function'
+                                    || !mergeApi
+                                    || typeof mergeApi.mergeDayData !== 'function') {
+                                    recordDayDecision('SKIP_EXTERNAL_RESOLVE', source, 'day merge/gate unavailable');
+                                    return prevDay;
+                                }
+                                let resolved;
+                                try {
+                                    resolved = guardApi.resolveExternalReplacement(prevDay, normalizedDay, {
+                                        mergeDayData: (local, remote) => mergeApi.mergeDayData(local, remote, { forceKeepAll: true }),
+                                        isSameContent: (left, right) => {
+                                            const dayUtils = HEYS.dayUtils;
+                                            return !!(dayUtils && typeof dayUtils.isSameDayStorageMergeContent === 'function')
+                                                && dayUtils.isSameDayStorageMergeContent(left, right);
+                                        },
+                                    });
+                                } catch (_) {
+                                    recordDayDecision('SKIP_EXTERNAL_RESOLVE', source, 'resolver exception');
+                                    return prevDay;
+                                }
+                                if (!resolved?.ok) {
+                                    const assessment = resolved?.assessment || {};
+                                    recordDayDecision(
+                                        'SKIP_EXTERNAL_RESOLVE',
+                                        source,
+                                        'reason=' + (assessment.reason || 'merge_failed')
+                                        + ', meals=' + (assessment.missingMealIds || []).length
+                                        + ', items=' + (assessment.missingItemIds || []).length
+                                    );
+                                    return prevDay;
+                                }
+                                if (resolved.status === 'noop') {
+                                    recordDayDecision('SKIP_EXTERNAL_NOOP', source, 'entity content unchanged');
+                                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, storageUpdatedAt);
+                                    return prevDay;
+                                }
+                                candidateDay = ensureDay(resolved.value, profNow);
+                                recordDayDecision('APPLY_EXTERNAL_MERGED', source, 'entity-level merge verified');
+                            }
                             // React может быть новее LS (debounced autosave): ref ещё не поднят, тогда
                             // внешний heys:day-updated с «тем же» storageUpdatedAt откатывает UI (дневник силы).
                             const prevUpdatedAt = prevDay?.updatedAt || 0;
                             // Не откатывать по LS даже при forceReload: hot-sync может шлют forceReload
                             // со снимком до autosave и стирать дневник конструктора.
-                            if (storageUpdatedAt < prevUpdatedAt) {
+                            if (!isExternalSource && storageUpdatedAt < prevUpdatedAt) {
                                 // Clock-skew rescue: the day-level stamp on THIS device ran ahead of
                                 // the other device's edit, so by day.updatedAt the LS day looks
                                 // "older" — but it may carry a strictly NEWER per-item edit (curator↔
@@ -859,7 +903,7 @@
                                 }
                                 return false;
                             };
-                            if (__dayHasStrengthBuilder(prevDay) && !__dayHasStrengthBuilder(newDay)) {
+                            if (__dayHasStrengthBuilder(prevDay) && !__dayHasStrengthBuilder(candidateDay)) {
                                 return prevDay;
                             }
                             /** Сумма длин workoutLog.exercises по слотам workout_builder (для анти-отката hot-sync). */
@@ -876,7 +920,7 @@
                                 return s;
                             };
                             var prevWbRows = __sumWbExerciseLengths(prevDay);
-                            var newWbRows = __sumWbExerciseLengths(newDay);
+                            var newWbRows = __sumWbExerciseLengths(candidateDay);
                             /** Same tab date as patchTraining / LS; prevDay.date can lag right after reload. */
                             var dkGuard = (prevDay && prevDay.date) || date;
                             var lastCommitWb = HEYS && HEYS.Day && HEYS.Day._lastWbRowsByDate && dkGuard
@@ -898,7 +942,7 @@
                             var wbOverlayFromRemoteish =
                                 isExternalSource || source === 'foreground-hot-sync';
                             /** Only when snapshot is not strictly newer than React: allow cloud/other tab to win by updatedAt. */
-                            var incomingUp = (newDay && newDay.updatedAt) || 0;
+                            var incomingUp = (candidateDay && candidateDay.updatedAt) || 0;
                             var prevUpWb = (prevDay && prevDay.updatedAt) || 0;
                             if (
                                 wbOverlayFromRemoteish &&
@@ -909,14 +953,16 @@
                             }
                             const prevMealsCount = (prevDay?.meals || []).length;
                             const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
-                            const mealsDown = storageMealsCount < prevMealsCount;
-                            const itemsDown = storageItemsCount < prevItemsCount;
+                            const candidateMealsCount = (candidateDay?.meals || []).length;
+                            const candidateItemsCount = (candidateDay?.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
+                            const mealsDown = candidateMealsCount < prevMealsCount;
+                            const itemsDown = candidateItemsCount < prevItemsCount;
                             const guardApi = HEYS.dayMutationGuard;
-                            const activeMutationGuard = guardApi?.read?.((newDay && newDay.date) || updatedDate || date);
+                            const activeMutationGuard = guardApi?.read?.((candidateDay && candidateDay.date) || updatedDate || date);
                             if (
                                 isExternalSource &&
                                 activeMutationGuard &&
-                                guardApi?.breaksGuard?.(newDay, activeMutationGuard)
+                                guardApi?.breaksGuard?.(candidateDay, activeMutationGuard)
                             ) {
                                 recordDayDecision(
                                     'SKIP_PROTECTED_MUTATION_ROLLBACK',
@@ -963,58 +1009,13 @@
                                 return prevDay;
                             }
 
-                            // v25.8.6.6+: Защита от cloud/fetchDays/hot-sync отката количества приёмов И продуктов.
-                            // Внешние источники не должны уменьшать локально подтвержденные meals/items
-                            // (кейс: продукт добавлен в существующий приём, meal count не изменился,
-                            // но облако ещё не получило новый item — hot-sync перезаписывает и item пропадает).
-                            // A genuine cross-device DELETE drops the item count AND carries an
-                            // explicit deletedItemIds tombstone for the dropped item(s). That is not
-                            // a "rollback to block" — it must show. Exempt it from the guard so the
-                            // explicit-delete flow (removeItem → tombstone) propagates to the other
-                            // device's UI. Plain count-drops with no tombstone stay blocked (stale-cloud
-                            // anti-rollback protection unchanged).
-                            const droppedItemsAllTombstoned = (() => {
-                                try {
-                                    const tomb = (normalizedDay.deletedItemIds && typeof normalizedDay.deletedItemIds === 'object')
-                                        ? normalizedDay.deletedItemIds : null;
-                                    if (!tomb) return false;
-                                    const nextIds = new Set((normalizedDay.meals || [])
-                                        .flatMap(m => (m?.items || []).map(it => String(it?.id))));
-                                    const dropped = (prevDay?.meals || [])
-                                        .flatMap(m => (m?.items || []).map(it => String(it?.id)))
-                                        .filter(id => id && id !== 'undefined' && !nextIds.has(id));
-                                    return dropped.length > 0 && dropped.every(id => Number(tomb[id]) > 0);
-                                } catch (_) { return false; }
-                            })();
-
-                            const shouldSkipExternalMealsRollback =
-                                isExternalSource &&
-                                (mealsDown || itemsDown) &&
-                                !droppedItemsAllTombstoned;
-
-                            if (shouldSkipExternalMealsRollback) {
-                                recordDayDecision('SKIP_EXTERNAL_ROLLBACK', source, `items ${storageItemsCount}<${prevItemsCount}, no tombstone`);
-                                console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals/items rollback)', {
-                                    source,
-                                    updatedDate,
-                                    prevMealsCount,
-                                    storageMealsCount,
-                                    prevItemsCount,
-                                    storageItemsCount,
-                                    storageUpdatedAt,
-                                    currentUpdatedAt,
-                                    forceReload
-                                });
-                                return prevDay;
-                            }
-
                             // Обновляем ref только если приняли данные из storage
                             recordDayDecision('APPLIED', source, 'updatedAt ' + storageUpdatedAt + ', items ' + storageItemsCount + ', forceReload=' + !!forceReload);
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
                             // Равный updatedAt: снимок из LS/облака может отстать по waterMl на один тик
                             // (persist через Store + hot-sync с тем же timestamp).
-                            var mergedForReturn = newDay;
+                            var mergedForReturn = candidateDay;
                             if (storageUpdatedAt === prevUpdatedAt && prevDay && mergedForReturn) {
                                 var prevWml = +(prevDay.waterMl || 0);
                                 var nextWml = +(mergedForReturn.waterMl || 0);
@@ -1129,7 +1130,8 @@
                         if (rawSig !== null && rawSig === lastRawSig) return;
                     }
                     if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
-                    const lsDay = readDayV2(date, lsGet).value;
+                    const lsRead = readDayV2(date, lsGet);
+                    const lsDay = lsRead.value;
                     if (rawSig !== null) lastRawSig = rawSig; // это LS-состояние сейчас будет обработано
                     if (!lsDay || typeof lsDay !== 'object' || !isMeaningfulDayData(lsDay)) return;
                     const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
@@ -1138,33 +1140,76 @@
                         ? HEYS.dayUtils.isSameDayHydratedContent(reactDay, lsDay)
                         : false;
                     if (same) return; // screen already matches storage
+                    let dayToApply = lsDay;
+                    const guardApi = HEYS.dayMutationGuard;
+                    if (!guardApi
+                        || typeof guardApi.assessExternalReplacement !== 'function'
+                        || typeof guardApi.resolveExternalReplacement !== 'function') {
+                        recordDayDecision('SKIP_RECONCILE_EXTERNAL', 'interval', 'day mutation guard unavailable');
+                        return;
+                    }
+                    if (!HEYS.sync || typeof HEYS.sync.mergeDayData !== 'function') {
+                        recordDayDecision('SKIP_RECONCILE_EXTERNAL', 'interval', 'day merge unavailable');
+                        return;
+                    }
+                    let resolved;
+                    try {
+                        resolved = guardApi.resolveExternalReplacement(reactDay, lsDay, {
+                            mergeDayData: (local, remote) => HEYS.sync.mergeDayData(local, remote, { forceKeepAll: true }),
+                            isSameContent: (left, right) => {
+                                return !!(HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function')
+                                    && HEYS.dayUtils.isSameDayHydratedContent(left, right);
+                            },
+                        });
+                    } catch (_) {
+                        recordDayDecision('SKIP_RECONCILE_EXTERNAL', 'interval', 'resolver exception');
+                        return;
+                    }
+                    if (!resolved?.ok) {
+                        const assessment = resolved?.assessment || {};
+                        recordDayDecision(
+                            'SKIP_RECONCILE_EXTERNAL',
+                            'interval',
+                            'reason=' + (assessment.reason || 'merge_failed')
+                            + ', meals=' + (assessment.missingMealIds || []).length
+                            + ', items=' + (assessment.missingItemIds || []).length
+                        );
+                        return;
+                    }
+                    if (resolved.status === 'noop') return;
+                    dayToApply = resolved.value;
+                    if (resolved.status === 'merged') {
+                        try {
+                            lsSet(lsRead.key, dayToApply);
+                            HEYS.store?.invalidate?.(lsRead.key);
+                            if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
+                        } catch (_) {
+                            recordDayDecision('SKIP_RECONCILE_EXTERNAL', 'interval', 'repair write failed');
+                            return;
+                        }
+                        recordDayDecision('RECONCILE_MERGED_EXTERNAL', 'interval', 'entity-level merge repaired LS before apply');
+                    }
                     // Already reconciled this exact LS items-state? Don't re-apply (loop guard).
-                    const lsKey = (lsDay.meals || []).map(m =>
+                    const lsKey = (dayToApply.meals || []).map(m =>
                         (m && m.items || []).map(i => (i && i.id) + ':' + (i && i.grams)).join(',')
                     ).join('|')
-                        + '#w' + (lsDay.waterMl || 0)
-                        + '#s' + (lsDay.steps || 0)
-                        + '#wt' + (lsDay.weightMorning || 0)
-                        + '#sq' + (lsDay.sleepQuality || 0)
-                        + '#ss' + (lsDay.sleepStart || '')
-                        + '#se' + (lsDay.sleepEnd || '')
-                        + '#mm' + (lsDay.moodMorning || 0)
-                        + '#wm' + (lsDay.wellbeingMorning || 0);
+                        + '#w' + (dayToApply.waterMl || 0)
+                        + '#s' + (dayToApply.steps || 0)
+                        + '#wt' + (dayToApply.weightMorning || 0)
+                        + '#sq' + (dayToApply.sleepQuality || 0)
+                        + '#ss' + (dayToApply.sleepStart || '')
+                        + '#se' + (dayToApply.sleepEnd || '')
+                        + '#mm' + (dayToApply.moodMorning || 0)
+                        + '#wm' + (dayToApply.wellbeingMorning || 0);
                     if (lsKey === lastReconciledKey) return;
                     lastReconciledKey = lsKey;
-                    // Content differs → apply localStorage AS-IS (it is the synced truth;
-                    // the local autosave always writes an edit to LS within its debounce,
-                    // well before the block window above clears, so this can't revert a live
-                    // local edit). Do NOT mergeDayData here: that adds _mergedAt, re-normalizes
-                    // trainings and bumps updatedAt=now, producing a THIRD representation the
-                    // reconciler then sees as a fresh diff → re-applies → re-uploads every tick
-                    // (cloud spinner / dayv2 upload storm, 2026-06-05). Applying ensureDay(lsDay)
-                    // — the same shape the normal day-updated handler writes — converges and
-                    // then isSameDayHydratedContent is true → reconciler goes quiet, no writes.
+                    // The shared resolver has already applied entity-level timestamps. It writes
+                    // a repaired LS candidate only for a real merge; incoming/noop results avoid
+                    // timestamp churn and converge without another storage write on the next tick.
                     const profNow = getProfile();
                     recordDayDecision('PERIODIC_RECONCILE', 'interval', 'React/LS content diff — apply LS');
-                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, lsDay.updatedAt || 0);
-                    setDay(() => ensureDay(lsDay, profNow));
+                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, dayToApply.updatedAt || 0);
+                    setDay(() => ensureDay(dayToApply, profNow));
                 } catch (_) { /* noop — reconciler must never break render */ }
             };
             const reconcileId = setInterval(reconcile, 3000);

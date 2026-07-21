@@ -15,7 +15,13 @@ beforeAll(() => {
   // eslint-disable-next-line no-eval
   eval(read('heys_iw_constants.js'));
   // eslint-disable-next-line no-eval
+  eval(read('heys_iw_utils.js'));
+  // eslint-disable-next-line no-eval
+  eval(read('heys_iw_response_model.js'));
+  // eslint-disable-next-line no-eval
   eval(read('heys_iw_calc.js'));
+  // eslint-disable-next-line no-eval
+  eval(read('heys_insulin_wave_v1.js'));
   // eslint-disable-next-line no-eval
   eval(read('heys_day_insulin_wave_data_v1.js'));
   // eslint-disable-next-line no-eval
@@ -41,7 +47,6 @@ describe('meal item grams contract', () => {
     const readerFiles = [
       'heys_iw_calc.js',
       'heys_iw_constants.js',
-      'heys_day_insulin_wave_data_v1.js',
       'heys_day_stats_vm_v1.js',
       'insights/pi_analytics_api.js',
       'insights/pi_product_picker.js',
@@ -50,7 +55,6 @@ describe('meal item grams contract', () => {
       'advice/_other.js',
       'advice/_timing.js',
       'heys_supplements_science_v1.js',
-      'heys_supplements_v1.js',
       'heys_day_copy_meal_modal_v1.js',
       'day/_meals.js',
       'heys_storage_layer_v1.js',
@@ -100,8 +104,8 @@ describe('meal item grams contract', () => {
       useMemo: (factory) => factory(),
     };
     const products = {
-      high: { gi: 100 },
-      low: { gi: 20 },
+      high: { gi: 100, carbs100: 10, protein100: 0, fat100: 0, fiber100: 0, foodForm: 'whole' },
+      low: { gi: 20, carbs100: 10, protein100: 0, fat100: 0, fiber100: 0, foodForm: 'whole' },
     };
     const result = globalThis.HEYS.dayInsulinWaveData.computeInsulinWaveData({
       React,
@@ -111,11 +115,11 @@ describe('meal item grams contract', () => {
       },
       getProductFromItem: (item) => products[item.id],
       getProfile: () => ({ insulinWaveHours: 3 }),
-      HEYS: { models: globalThis.HEYS.models },
+      HEYS: globalThis.HEYS,
     });
 
     expect(result.avgGI).toBe(20);
-    expect(result.giCategory.text).toBe('low');
+    expect(result.giCategory.text).toBe('Низкий GI');
   });
 
   it('keeps zero-gram items out of macro popup history', () => {

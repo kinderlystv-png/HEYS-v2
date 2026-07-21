@@ -160,6 +160,30 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain("global.addEventListener?.('heys:checkin-complete', onCheckinComplete)");
   });
 
+  it('does not auto-open hunger clarification over an active meal modal', () => {
+    expect(uiSource).toContain('function hasBlockingModal()');
+    expect(uiSource).toContain("modalId !== 'hunger-energy-status-modal'");
+    expect(uiSource).toContain('if (hasBlockingModal()) return;');
+    expect(uiSource.indexOf('if (hasBlockingModal()) return;')).toBeLessThan(
+      uiSource.indexOf('if (findDueOutcomeFollowUp())')
+    );
+  });
+
+  it('does not auto-open within 15 minutes of the previous hunger assessment', () => {
+    Storage.writeEvents([
+      { id: 'recent', recordedAt: '2026-07-04T11:45:00Z', hungerLevel: 4 }
+    ]);
+
+    expect(Adapter.hasRecentHungerAssessment()).toBe(true);
+
+    Storage.writeEvents([
+      { id: 'older', recordedAt: '2026-07-04T11:44:59Z', hungerLevel: 4 }
+    ]);
+
+    expect(Adapter.hasRecentHungerAssessment()).toBe(false);
+    expect(uiSource).toContain('if (hasRecentHungerAssessment()) return;');
+  });
+
   it('stores hunger events as cloud-ready idempotent rows', () => {
     const row = Storage.addEvent({
       id: 'event-1',
@@ -1669,7 +1693,9 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('cooking_taste');
     expect(uiSource).toContain('Спросили, потому что');
     expect(uiSource).toContain('Итог недели');
-    expect(uiSource).toContain('Это ближе к:');
+    expect(uiSource).toContain("function ClarificationDetails({ children, label = 'Подробнее' })");
+    expect(uiSource).toContain("h('details', { className: 'hes-clarification-details' }");
+    expect(uiSource).toContain("h('span', null, 'Верно?')");
     expect(uiSource).toContain('Другое');
     expect(uiSource).toContain('Не спрашивать сейчас');
   });
@@ -1971,10 +1997,14 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('dayTdeeKcal: context.dayTdeeKcal ?? null');
     expect(uiSource).toContain("meta.push('затраты ' + tdee)");
     expect(uiSource).toContain("className: 'hes-result-tools'");
-    expect(uiSource).toContain("className: 'hes-result' + ((detailsOpen || debugOpen) ? ' is-expanded' : '')");
-    expect(uiSource).toContain('.hes-result.is-expanded{padding-bottom:156px}');
-    expect(uiSource).toContain("debugOpen ? 'Скрыть лог' : 'Диагностика'");
-    expect(uiSource).toContain("detailsOpen ? 'Скрыть детали' : 'Пояснения'");
+    expect(uiSource).toContain("className: 'hes-result' + (detailsOpen ? ' is-expanded' : '')");
+    expect(uiSource).toContain('.hes-result.is-expanded{padding-bottom:14px}');
+    expect(uiSource).toContain("const showPrimaryNextAction = !!primaryNextAction && !['food', 'plan'].includes(primaryNextAction.type)");
+    expect(uiSource).toContain("!showPrimaryNextAction && h('span', { className: 'hes-verdict__detail' }");
+    expect(uiSource).toContain("detailsOpen ? 'Скрыть подробности' : 'Подробнее'");
+    expect(uiSource).toContain("debugOpen ? 'Скрыть диагностику' : 'Диагностика'");
+    expect(uiSource.indexOf("detailsOpen && h('div', { className: 'hes-details-panel'")).toBeLessThan(uiSource.indexOf("className: 'hes-user-why'"));
+    expect(uiSource.indexOf("detailsOpen && h('div', { className: 'hes-details-panel'")).toBeLessThan(uiSource.indexOf("className: 'hes-debug-toggle'"));
     expect(uiSource).toContain("h('strong', null, 'Техническая диагностика')");
     expect(uiSource).not.toContain("h('div', { className: 'hes-reasons__title' }, 'Ключевые причины')");
     expect(uiSource).toContain('function formatTraceImpact(row)');
@@ -1986,7 +2016,9 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain('}) : h(MissingPrompt');
     expect(uiSource).toContain('context,');
     expect(uiSource).toContain('.hes-prompt.is-empty{opacity:0;background:transparent;border-color:transparent;pointer-events:none}');
-    expect(uiSource).toContain('const liveHungerLevel = Math.max(1, Math.min(10, Math.round(Number(activeDraft.hungerVisual ?? activeDraft.hungerLevel)');
+    expect(uiSource).toContain("0: 'не голоден абсолютно'");
+    expect(uiSource).toContain('const liveHungerLevel = clampHungerLevel(activeDraft.hungerVisual ?? activeDraft.hungerLevel)');
+    expect(uiSource).toContain('min: HUNGER_MIN_LEVEL');
     expect(uiSource).toContain('hungerLevel: liveHungerLevel');
     expect(uiSource).toContain('const requiredInputs = isPastDraft ? [] : getRequiredInputs(previewDecision, draftForDecision)');
     expect(uiSource).toContain("'stable:' + stableHungerPrompt.type + ':' + (stableHungerPrompt.question || '')");

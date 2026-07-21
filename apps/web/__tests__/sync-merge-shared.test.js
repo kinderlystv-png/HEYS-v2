@@ -23,7 +23,11 @@ const mergeModulePath = path.resolve(__dirname, '../../../yandex-cloud-functions
 const {
   mergeDayData,
   hasSubjectiveFieldDrop,
+  hasMorningActivationRegression,
+  mergeMorningActivationState,
   mergeChronoTombstones,
+  mergeHungerStatusEvents,
+  mergeInsightsFeedback,
   mergeItemsById,
   mergeScalarKv,
   mergeMorningCheckinProgress,
@@ -195,6 +199,37 @@ describe('mergeDayData — lost-update prevention', () => {
     }, current)).toBe(false);
   });
 
+  test('server-side subjective guard detects partial morningActivation regression', () => {
+    const incoming = makeDay(4000, [makeMeal('snack')], {
+      _sourceId: 'stale-tab',
+      morningActivation: { copyId: 'ma-9' },
+    });
+    const current = makeDay(3000, [makeMeal('breakfast')], {
+      _sourceId: 'active-tab',
+      morningActivation: {
+        copyId: 'ma-9',
+        status: 'missed',
+        decidedAt: 2000,
+        skipReasonId: 'low_energy',
+        skipReasonPending: false,
+        skipReasonCapturedAt: 2500,
+      },
+    });
+
+    expect(hasMorningActivationRegression(incoming.morningActivation, current.morningActivation)).toBe(true);
+    expect(hasSubjectiveFieldDrop(incoming, current)).toBe(true);
+
+    const merged = mergeDayData(incoming, current, { forceKeepAll: true });
+    expect(merged.morningActivation).toMatchObject({
+      copyId: 'ma-9',
+      status: 'missed',
+      decidedAt: 2000,
+      skipReasonId: 'low_energy',
+      skipReasonPending: false,
+      skipReasonCapturedAt: 2500,
+    });
+  });
+
   test('server-side merge fills missing check-in fields from current cloud day', () => {
     const incoming = makeDay(3000, [makeMeal('snack', [makeItem('coffee')])]);
     const current = makeDay(2000, [makeMeal('breakfast', [makeItem('eggs')])], {
@@ -230,6 +265,56 @@ describe('mergeDayData — lost-update prevention', () => {
 
     expect(merged.morningActivation).toEqual(current.morningActivation);
   });
+
+  test('same terminal decision keeps the captured reason and post-state', () => {
+    const stale = {
+      status: 'missed',
+      decidedAt: 2000,
+      skipReasonId: null,
+      skipReasonPending: true,
+    };
+    const complete = {
+      status: 'missed',
+      decidedAt: 2000,
+      skipReasonId: 'low_energy',
+      skipReasonPending: false,
+      skipReasonCapturedAt: 2500,
+      postState: { mood: 5 },
+      postEffect: { moodDelta: -1 },
+    };
+
+    expect(mergeMorningActivationState(stale, complete)).toEqual(complete);
+  });
+
+  test('a later terminal decision wins even when the older decision captured its reason later', () => {
+    const olderWithLateReason = {
+      status: 'missed',
+      decidedAt: 2000,
+      skipReasonId: 'low_energy',
+      skipReasonCapturedAt: 5000,
+    };
+    const laterDecision = { status: 'done', decidedAt: 4000, intensity: 'medium' };
+
+    expect(mergeMorningActivationState(laterDecision, olderWithLateReason)).toEqual(laterDecision);
+  });
+
+  test('explicit clear wins an older terminal decision and a newer decision can be recorded later', () => {
+    const terminal = { status: 'done', decidedAt: 2000, intensity: 'medium' };
+    const cleared = { status: 'pending', clearedByUser: true, clearedAt: 3000 };
+    const repeated = { status: 'missed', decidedAt: 4000, skipReasonPending: true };
+
+    expect(mergeMorningActivationState(cleared, terminal)).toMatchObject(cleared);
+    expect(hasMorningActivationRegression(cleared, terminal)).toBe(false);
+    expect(mergeMorningActivationState(repeated, cleared)).toMatchObject(repeated);
+  });
+
+  test('explicit pending reopen remains possible after a cleared activation', () => {
+    const cleared = { status: 'pending', clearedByUser: true, clearedAt: 3000 };
+    const reopened = { status: 'pending', firstMealTime: '10:00', clearedByUser: null, clearedAt: null };
+
+    expect(mergeMorningActivationState(reopened, cleared)).toEqual(reopened);
+    expect(hasMorningActivationRegression(reopened, cleared)).toBe(false);
+  });
 });
 
 describe('heys-api-rpc batch dayv2 guard contract', () => {
@@ -246,7 +331,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     expect(rpcSource).toContain('const merged = mergeDayData(it.v, currentValue, { forceKeepAll: true });');
     expect(rpcSource).not.toContain('if (!hasSubjectiveFieldDrop(it.v, currentValue)) continue;');
     expect(rpcSource).toContain("const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\\d{4}-\\d{2}-\\d{2}$/i.test(key));");
-    expect(rpcSource).toContain("'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey) ? ' FOR UPDATE' : '')");
+    expect(rpcSource).toContain("'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) ? ' FOR UPDATE' : '')");
     expect(rpcSource).toMatch(/mergeBatchDayv2ExistingRows\([\s\S]*?\)\s*;\s+if \(dayv2Merged > 0\)[\s\S]*?SELECT \* FROM batch_upsert_client_kv_by_curator/);
   });
 
@@ -260,11 +345,22 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     expect(rpcSource).toContain('direct upsert_client_kv_by_session(dayv2) bypasses');
     expect(rpcSource).toContain('params.p_value = merged;');
     expect(rpcSource).toContain("console.warn('[upsert_client_kv_by_session] dayv2_guard_merged:', params.p_key);");
-    expect(rpcSource).toMatch(/const prevMap = await prefetchGuardedCurrentValues\([\s\S]*?hasDayv2BatchKey \|\| hasCriticalBatchKey[\s\S]*?\);/);
+    expect(rpcSource).toMatch(/const prevMap = await prefetchGuardedCurrentValues\([\s\S]*?hasDayv2BatchKey \|\| hasCriticalBatchKey \|\| hasHungerBatchKey \|\| hasInsightsFeedbackBatchKey[\s\S]*?\);/);
     expect(rpcSource).toContain("await client.query('COMMIT');");
     expect(rpcSource.indexOf('direct upsert_client_kv_by_session(dayv2) bypasses')).toBeLessThan(
       rpcSource.indexOf('const TYPE_HINTS'),
     );
+  });
+
+  test('merge-save routes partial morningActivation regressions through mergeDayData', () => {
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);');
+    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)');
+    expect(rpcSource).toContain("hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged'");
   });
 
   test('REST client_kv_store dayv2 writes merge existing cloud row before safe upsert', () => {
@@ -273,7 +369,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
       'utf8',
     );
 
-    expect(restSource).toContain("const { mergeDayData } = require('./lib/heys_sync_merge_v1.cjs');");
+    expect(restSource).toContain("const { mergeDayData, mergeHungerStatusEvents, mergeInsightsFeedback } = require('./lib/heys_sync_merge_v1.cjs');");
     expect(restSource).toContain("[REST POST client_kv_store] dayv2_guard_merged:");
     expect(restSource).toContain('SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE');
     expect(restSource).toContain('const merged = mergeDayData(row.v, currentValue, { forceKeepAll: true });');
@@ -312,6 +408,126 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     expect(hotSyncSource.indexOf('value = mergeMorningCheckinInboundValue(scopedKey, value);')).toBeLessThan(
       hotSyncSource.indexOf('serialized = JSON.stringify(value);'),
     );
+  });
+
+  test('hunger events use merge-save and legacy server batch guards', () => {
+    const storageSource = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+    const restSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rest/index.js'),
+      'utf8',
+    );
+
+    expect(storageSource).toContain('heys_morning_checkin_progress_v1_\\d{4}-\\d{2}-\\d{2}|heys_hunger_energy_status_events_v1|heys_insights_feedback|heys_norms');
+    expect(storageSource).toContain("baseKey === 'heys_hunger_energy_status_events_v1'");
+    expect(rpcSource).toContain('mergedValue = mergeHungerStatusEvents(incomingValue, currentValue);');
+    expect(rpcSource).toContain('mergeBatchHungerExistingRows(params.p_items, prevMap)');
+    expect(rpcSource).toContain("'[batch_upsert_client_kv_by_curator] hunger_events_merged:'");
+    expect(restSource).toContain('? mergeHungerStatusEvents(row.v, contractCurrentValue)');
+    expect(restSource.indexOf('? mergeHungerStatusEvents(row.v, contractCurrentValue)')).toBeLessThan(
+      restSource.indexOf('SELECT safe_upsert_client_kv'),
+    );
+  });
+
+  test('insights feedback uses merge-save, legacy server guards, and canonical local scope', () => {
+    const storageSource = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
+    const yandexSource = fs.readFileSync(path.resolve(__dirname, '../heys_yandex_api_v1.js'), 'utf8');
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+    const restSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rest/index.js'),
+      'utf8',
+    );
+
+    expect(storageSource).toContain("baseKey === 'heys_insights_feedback'");
+    expect(storageSource).toContain('return `heys_insights_feedback_${clientId}`;');
+    expect(yandexSource).toContain("key === 'heys_insights_feedback'");
+    expect(rpcSource).toContain('mergedValue = mergeInsightsFeedback(incomingValue, currentValue);');
+    expect(rpcSource).toContain('mergeBatchInsightsFeedbackExistingRows(params.p_items, prevMap)');
+    expect(restSource).toContain(': mergeInsightsFeedback(row.v, contractCurrentValue);');
+  });
+});
+
+describe('mergeHungerStatusEvents', () => {
+  const event = (id, recordedAt, updatedAt = recordedAt, extra = {}) => ({
+    id,
+    eventType: 'hunger_fixed',
+    hungerLevel: 1,
+    recordedAt,
+    updatedAt,
+    ...extra,
+  });
+
+  test('unions events from concurrent snapshots and rejects stale omission as deletion', () => {
+    const current = [event('cloud', '2026-07-21T12:47:34')];
+    const incoming = [event('tab', '2026-07-21T15:57:05')];
+
+    expect(mergeHungerStatusEvents(incoming, current).map((row) => row.id))
+      .toEqual(['cloud', 'tab']);
+    expect(mergeHungerStatusEvents([], current).map((row) => row.id))
+      .toEqual(['cloud']);
+  });
+
+  test('same id keeps the freshest row and converges independently of argument order', () => {
+    const stale = event('same', '2026-07-21T16:52:52', '2026-07-21T16:52:52', { hungerLevel: 5 });
+    const fresh = event('same', '2026-07-21T16:52:52', '2026-07-21T16:53:07', { hungerLevel: 1 });
+    const left = mergeHungerStatusEvents([stale], [fresh]);
+    const right = mergeHungerStatusEvents([fresh], [stale]);
+
+    expect(left).toEqual(right);
+    expect(left[0].hungerLevel).toBe(1);
+    expect(mergeHungerStatusEvents(left, right)).toEqual(left);
+  });
+
+  test('storage cap removes oldest events and preserves the newest tail', () => {
+    const rows = Array.from({ length: 8 }, (_, index) => event(
+      'event-' + index,
+      `2026-07-21T${String(10 + index).padStart(2, '0')}:00:00`,
+      undefined,
+      { note: 'x'.repeat(180) },
+    ));
+    const merged = mergeHungerStatusEvents(rows, [], { maxEvents: 8, maxBytes: 1200 });
+
+    expect(merged.length).toBeLessThan(8);
+    expect(merged.at(-1).id).toBe('event-7');
+    expect(merged[0].id).not.toBe('event-0');
+  });
+});
+
+describe('mergeInsightsFeedback', () => {
+  const feedback = (id, timestamp, extra = {}) => ({ id, timestamp, followed: null, ...extra });
+
+  test('unions disjoint snapshots and keeps only the latest bounded window', () => {
+    const current = [feedback('cloud', '2026-07-21T10:00:00Z')];
+    const incoming = [feedback('tab', '2026-07-21T11:00:00Z')];
+    expect(mergeInsightsFeedback(incoming, current).map((row) => row.id))
+      .toEqual(['cloud', 'tab']);
+
+    const rows = Array.from({ length: 35 }, (_, index) => feedback(
+      `row-${index}`,
+      new Date(Date.UTC(2026, 6, 1, 10, index)).toISOString(),
+    ));
+    const merged = mergeInsightsFeedback(rows, []);
+    expect(merged).toHaveLength(30);
+    expect(merged[0].id).toBe('row-5');
+    expect(merged.at(-1).id).toBe('row-34');
+  });
+
+  test('same id preserves later outcome/reminder enrichment and converges', () => {
+    const stale = feedback('same', '2026-07-21T10:00:00Z');
+    const fresh = feedback('same', '2026-07-21T10:00:00Z', {
+      outcome: { quickRating: 5, submittedAt: '2026-07-21T12:00:00Z' },
+    });
+    const left = mergeInsightsFeedback([stale], [fresh]);
+    const right = mergeInsightsFeedback([fresh], [stale]);
+    expect(left).toEqual(right);
+    expect(left[0].outcome.quickRating).toBe(5);
+    expect(mergeInsightsFeedback(left, right)).toEqual(left);
   });
 });
 
