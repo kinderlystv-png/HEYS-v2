@@ -482,6 +482,8 @@
     onComplete,
     onClose,
     initialStep = 0,
+    initialSlideInDirection = null,
+    modalClassName = '',
     showProgress = true,
     showStreak = true,
     showGreeting = true,
@@ -505,7 +507,11 @@
     const [validationError, setValidationError] = useState(false);
     const [validationMessage, setValidationMessage] = useState(null);
     const [savingStep, setSavingStep] = useState(false);
-    const [slideInDirection, setSlideInDirection] = useState(null); // Для shake-анимации
+    const [slideInDirection, setSlideInDirection] = useState(() =>
+      initialSlideInDirection === 'from-right' || initialSlideInDirection === 'from-left'
+        ? initialSlideInDirection
+        : null
+    ); // Для входа в flow и переходов между шагами
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
@@ -523,6 +529,12 @@
       // Закрывает race, если регистрация случилась между первым render и effect.
       handleStepRegistered();
       return () => document.removeEventListener('heys-step-registered', handleStepRegistered);
+    }, []);
+
+    useEffect(() => {
+      if (!slideInDirection) return undefined;
+      const timer = setTimeout(() => setSlideInDirection(null), 250);
+      return () => clearTimeout(timer);
     }, []);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
@@ -1002,7 +1014,7 @@
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', {
-          className: 'mc-modal',
+          className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}`,
           'data-heys-step-modal': 'true',
           'data-heys-step-id': currentConfig.id,
           'data-heys-saving': savingStep ? 'true' : 'false'

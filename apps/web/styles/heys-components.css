@@ -1468,6 +1468,379 @@ body.tour-active .ios-pwa-banner {
   color: #111827;
 }
 
+/* === Balanced plate guide before ordinary meal creation === */
+@font-face {
+  font-family: 'HEYS Manrope';
+  src: url('/fonts/manrope/Manrope-Variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+.confirm-modal:has(.meal-plate-guide) {
+  position: relative;
+  width: min(100%, 420px);
+  max-width: 420px;
+  height: min(calc(100vw + 310px), 770px, calc(100dvh - 40px));
+  max-height: calc(100dvh - 40px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: none;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  overscroll-behavior: contain;
+}
+
+.mc-modal--meal-create {
+  width: 100%;
+  max-width: min(420px, calc(100vw - 40px));
+  height: min(calc(100vw + 310px), 770px, calc(100dvh - 40px));
+  max-height: calc(100dvh - 40px);
+}
+
+.mc-modal--meal-create .mc-step-content[data-heys-step-id="mealTime"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-modal--meal-create .meal-time-step {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  padding: 22px 0 6px;
+}
+
+.confirm-modal:has(.meal-plate-guide) .confirm-modal-text {
+  padding: 0;
+  color: #334155;
+}
+
+.confirm-modal:has(.meal-plate-guide) > .confirm-modal-buttons {
+  display: none;
+}
+
+.meal-plate-guide {
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.meal-plate-guide--slide-left {
+  pointer-events: none;
+  animation: mc-slide-out-left 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.meal-plate-guide__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 18px 12px 18px 20px;
+  background: #ffffff;
+}
+
+.meal-plate-guide__close {
+  flex: 0 0 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0 0 3px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: #77799b;
+  font-size: 27px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.meal-plate-guide__hero {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #ffffff;
+  margin-top: 12px;
+}
+
+.meal-plate-guide__image {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.meal-plate-guide__leaders {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.meal-plate-guide__leaders path {
+  fill: none;
+  stroke: #696b96;
+  stroke-width: 1.35;
+  stroke-dasharray: 1 4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.meal-plate-guide__leaders circle {
+  fill: #ffffff;
+  stroke: #434587;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.meal-plate-guide__callout {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  width: 19%;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0;
+  background: transparent;
+  color: #434587;
+  line-height: 1.05;
+  pointer-events: none;
+}
+
+.meal-plate-guide__callout strong {
+  font-family: 'HEYS Manrope', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-size: 23px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.meal-plate-guide__callout span {
+  color: #666983;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.08;
+  white-space: pre-line;
+}
+
+.meal-plate-guide__callout--vegetables {
+  bottom: 1%;
+  left: 12%;
+  width: 30%;
+  text-align: center;
+}
+
+.meal-plate-guide__callout--protein {
+  top: 1%;
+  left: 52%;
+  width: 22%;
+  text-align: center;
+}
+
+.meal-plate-guide__callout--grains {
+  right: 13%;
+  bottom: 1%;
+  width: 22%;
+  text-align: center;
+}
+
+.meal-plate-guide__hero-title {
+  color: #434587;
+  font-family: 'HEYS Manrope', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-size: clamp(25px, 6.8vw, 30px);
+  font-weight: 520;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  word-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+.meal-plate-guide__body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 40px;
+  padding: 42px 20px max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+.meal-plate-guide__effects {
+  margin: 0;
+}
+
+.meal-plate-guide__effects-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.meal-plate-guide__effect {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.meal-plate-guide__effect-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.meal-plate-guide__effect-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.meal-plate-guide__effect-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  line-height: 1.1;
+}
+
+.meal-plate-guide__effect-copy strong {
+  display: flex;
+  min-height: 25px;
+  align-items: flex-start;
+  justify-content: center;
+  color: #42455f;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.12;
+}
+
+.meal-plate-guide__effect-copy span {
+  color: #8a8da3;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.meal-plate-guide__effect--heart .meal-plate-guide__effect-icon {
+  color: #e11d48;
+}
+
+.meal-plate-guide__effect--glucose .meal-plate-guide__effect-icon {
+  color: #ea580c;
+}
+
+.meal-plate-guide__effect--brain .meal-plate-guide__effect-icon {
+  color: #7c3aed;
+}
+
+.meal-plate-guide__effect--gut .meal-plate-guide__effect-icon {
+  color: #3f8b2d;
+}
+
+.meal-plate-guide__continue {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 14px;
+  background: #434587;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: 0 14px 28px -22px rgba(67, 69, 135, 0.9);
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.meal-plate-guide__continue:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.meal-plate-guide__continue:disabled,
+.meal-plate-guide__close:disabled {
+  cursor: default;
+}
+
+.meal-plate-guide__close:focus-visible,
+.meal-plate-guide__continue:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.45);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .meal-plate-guide__close:hover {
+    background: #f3f5fb;
+  }
+
+  .meal-plate-guide__continue:hover {
+    background: #37396f;
+  }
+
+}
+
+@media (max-width: 620px) {
+  .meal-plate-guide__header {
+    min-height: 82px;
+  }
+
+  .meal-plate-guide__hero-title {
+    font-size: clamp(24px, 6.8vw, 28px);
+  }
+
+  .meal-plate-guide__body {
+    padding: 38px 16px max(22px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-height: 700px) {
+  .meal-plate-guide__body {
+    gap: 7px;
+    padding-top: 12px;
+  }
+
+  .meal-plate-guide__effect-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .meal-plate-guide__effect-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meal-plate-guide--slide-left {
+    animation: none;
+  }
+
+  .meal-plate-guide__continue {
+    transition: none;
+  }
+}
+
+[data-theme="dark"] .confirm-modal:has(.meal-plate-guide),
+[data-theme="dark"] .meal-plate-guide,
+[data-theme="dark"] .meal-plate-guide__header {
+  background: #ffffff;
+  color: #1e293b;
+}
+
 /* === Confirm modal custom action layout (multi-add food flow) === */
 .confirm-modal-buttons--custom {
   display: flex;

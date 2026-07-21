@@ -1259,6 +1259,8 @@
     HEYS.StepModal.show({
       steps: ['mealTime', 'mealMood'],
       title: 'Новый приём',
+      initialSlideInDirection: options.initialSlideInDirection || null,
+      modalClassName: 'mc-modal--meal-create',
       showProgress: true,
       showStreak: false,
       showGreeting: false,
