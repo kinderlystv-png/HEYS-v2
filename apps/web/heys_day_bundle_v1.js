@@ -6957,6 +6957,264 @@
         } catch (_) { /* noop */ }
     }
 
+    const MEAL_PLATE_VARIANTS = [
+        {
+            id: 'balanced-plate',
+            source: 'single',
+            src: '/img/meal-plate-guide/balanced-plate-1254.webp',
+            srcSet: '/img/meal-plate-guide/balanced-plate-640.webp 640w, /img/meal-plate-guide/balanced-plate-1254.webp 1254w',
+            width: 1254,
+            height: 1254,
+            alt: 'Сбалансированная тарелка с овощами, рыбой, цельнозерновым гарниром и полезными жирами',
+        },
+        {
+            id: 'plate-chicken-quinoa',
+            source: 'single',
+            src: '/img/meal-plate-guide/plate-chicken-quinoa-640.webp',
+            width: 640,
+            height: 640,
+            alt: 'Тарелка с овощами, курицей и киноа',
+        },
+        {
+            id: 'plate-salmon-rice',
+            source: 'single',
+            src: '/img/meal-plate-guide/plate-salmon-rice-640.webp',
+            width: 640,
+            height: 640,
+            alt: 'Тарелка с овощами, лососем и цельнозерновым рисом',
+        },
+        {
+            id: 'plate-chickpeas-grains',
+            source: 'single',
+            src: '/img/meal-plate-guide/plate-chickpeas-grains-640.webp',
+            width: 640,
+            height: 640,
+            alt: 'Тарелка с овощами, нутом, авокадо и крупой',
+        },
+        {
+            id: 'plate-fish-quinoa',
+            source: 'single',
+            src: '/img/meal-plate-guide/plate-fish-quinoa-640.webp',
+            width: 640,
+            height: 640,
+            alt: 'Тарелка с овощами, белой рыбой и киноа',
+        },
+        {
+            id: 'plate-chicken-avocado',
+            source: 'single',
+            src: '/img/meal-plate-guide/plate-chicken-avocado-640.webp',
+            width: 640,
+            height: 640,
+            alt: 'Тарелка с овощами, курицей, авокадо и киноа',
+        },
+    ];
+
+    const MEAL_PLATE_EFFECTS = [
+        { id: 'heart', title: 'Сердце', text: 'Поддержка сосудов' },
+        { id: 'glucose', title: 'Сахар крови', text: 'Более стабильный уровень' },
+        { id: 'brain', title: 'Мозг', text: 'Поддержка памяти' },
+        { id: 'gut', title: 'Кишечник', text: 'Поддержка микрофлоры' },
+    ];
+
+    function chooseMealPlateVariant(lastIndex = -1, randomValue = Math.random()) {
+        const count = MEAL_PLATE_VARIANTS.length;
+        const normalizedRandom = Number.isFinite(Number(randomValue))
+            ? Math.max(0, Math.min(0.999999, Number(randomValue)))
+            : 0;
+        let index = Math.floor(normalizedRandom * count);
+        if (count > 1 && index === lastIndex) index = (index + 1) % count;
+        return { index, variant: MEAL_PLATE_VARIANTS[index] };
+    }
+
+    let lastMealPlateVariantIndex = -1;
+
+    function getNextMealPlateVariant() {
+        const selection = chooseMealPlateVariant(lastMealPlateVariantIndex);
+        lastMealPlateVariantIndex = selection.index;
+        return selection.variant;
+    }
+
+    function MealPlateGuidePicture({ variant }) {
+        return React.createElement('img', {
+            className: 'meal-plate-guide__image',
+            src: variant.src,
+            srcSet: variant.srcSet || undefined,
+            sizes: variant.srcSet ? '(max-width: 620px) 310px, 340px' : undefined,
+            width: variant.width,
+            height: variant.height,
+            alt: variant.alt,
+            loading: 'eager',
+            decoding: 'async',
+            draggable: false,
+        });
+    }
+
+    function MealPlateEffectIcon({ type }) {
+        const commonProps = {
+            viewBox: '0 0 48 48',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: '2.6',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': true,
+        };
+
+        if (type === 'heart') {
+            return React.createElement('svg', commonProps,
+                React.createElement('path', { d: 'M24 41 8.8 27.6C3.2 22.7 4 12.6 12.2 9.6c4.5-1.6 8.4.5 11.8 4.2 3.4-3.7 7.3-5.8 11.8-4.2 8.2 3 9 13.1 3.4 18Z' }),
+                React.createElement('path', { d: 'M5.5 26h9.4l2.5-5.2 3.7 11.4 4.1-17.1 4 14.4 2.8-5.2 2.5 1.7h8' })
+            );
+        }
+
+        if (type === 'glucose') {
+            return React.createElement('svg', commonProps,
+                React.createElement('path', { d: 'M24 5.5S12 20.2 12 28.5a12 12 0 0 0 24 0C36 20.2 24 5.5 24 5.5Z' })
+            );
+        }
+
+        if (type === 'brain') {
+            return React.createElement('svg', commonProps,
+                React.createElement('path', { d: 'M24 13.4c-1.8-4.2-7.3-5.5-10.6-2.2-2.5 2.5-2.2 6-.8 8-4.5.3-7.5 3.2-7.5 7 0 3.4 2.3 6.1 5.5 6.8-.9 4.5 2.4 8.5 7 8.5 3 0 5.5-1.8 6.4-4.4Z' }),
+                React.createElement('path', { d: 'M24 13.4c1.8-4.2 7.3-5.5 10.6-2.2 2.5 2.5 2.2 6 .8 8 4.5.3 7.5 3.2 7.5 7 0 3.4-2.3 6.1-5.5 6.8.9 4.5-2.4 8.5-7 8.5-3 0-5.5-1.8-6.4-4.4Z' }),
+                React.createElement('path', { d: 'M24 13.4v23.7' })
+            );
+        }
+
+        return React.createElement('svg', commonProps,
+            React.createElement('path', { d: 'M12.5 10.5c-3.2 0-5.7 2.5-5.7 5.7 0 2.1 1.1 4 2.9 5-1.8 1.1-2.9 3-2.9 5.1 0 2.3 1.3 4.2 3.2 5.2-1.5 1.1-2.4 2.8-2.4 4.7 0 3.1 2.4 5.6 5.5 5.6h2.5c.5 2.8 2.9 4.9 5.8 4.9h5.2c2.9 0 5.3-2.1 5.8-4.9h2.5c3.1 0 5.5-2.5 5.5-5.6 0-1.9-.9-3.6-2.4-4.7 1.9-1 3.2-2.9 3.2-5.2 0-2.1-1.1-4-2.9-5.1 1.8-1 2.9-2.9 2.9-5 0-3.2-2.5-5.7-5.7-5.7h-3.6c-1.4 1.8-3.3 2.7-5.4 2.7s-4-.9-5.4-2.7c-1.4 1.8-3.3 2.7-5.4 2.7s-4-.9-5.4-2.7Z' }),
+            React.createElement('path', { d: 'M14 19.5c3.2-2.2 6.6 2.2 10 0s6.8 2.2 10 0M14 26.5c3.2-2.2 6.6 2.2 10 0s6.8 2.2 10 0M14 33.5c3.2-2.2 6.6 2.2 10 0s6.8 2.2 10 0M24 37v5.2c0 2.3 1.8 4.1 4.1 4.1s4.1-1.8 4.1-4.1' })
+        );
+    }
+
+    function MealPlateGuideContent({ variant, onContinue, onCancel }) {
+        const [isAdvancing, setIsAdvancing] = React.useState(false);
+        const transitionTimerRef = React.useRef(null);
+
+        React.useEffect(() => () => {
+            if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+        }, []);
+
+        const handleContinue = () => {
+            if (isAdvancing) return;
+            setIsAdvancing(true);
+            transitionTimerRef.current = setTimeout(() => {
+                onContinue({ initialSlideInDirection: 'from-right' });
+            }, 200);
+        };
+
+        return React.createElement('div', {
+            className: `meal-plate-guide${isAdvancing ? ' meal-plate-guide--slide-left' : ''}`,
+        },
+            React.createElement('div', { className: 'meal-plate-guide__header' },
+                React.createElement('div', { className: 'meal-plate-guide__hero-title' }, 'Это — важно.'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'meal-plate-guide__close',
+                    onClick: onCancel,
+                    disabled: isAdvancing,
+                    'aria-label': 'Закрыть напоминание',
+                }, '×')
+            ),
+            React.createElement('div', { className: 'meal-plate-guide__hero' },
+                React.createElement(MealPlateGuidePicture, { variant }),
+                React.createElement('svg', {
+                    className: 'meal-plate-guide__leaders',
+                    viewBox: '0 0 100 100',
+                    preserveAspectRatio: 'none',
+                    'aria-hidden': true,
+                },
+                    React.createElement('path', { d: 'M 27 88 C 30 78 35 64 39 49' }),
+                    React.createElement('path', { d: 'M 63 13 C 63 22 64 31 65 40' }),
+                    React.createElement('path', { d: 'M 74 87 C 70 78 67 69 65 63' }),
+                    React.createElement('circle', { cx: '39', cy: '49', r: '1.25' }),
+                    React.createElement('circle', { cx: '65', cy: '40', r: '1.25' }),
+                    React.createElement('circle', { cx: '65', cy: '63', r: '1.25' })
+                ),
+                React.createElement('div', {
+                    className: 'meal-plate-guide__callout meal-plate-guide__callout--vegetables',
+                },
+                    React.createElement('strong', null, '½'),
+                    React.createElement('span', null, 'овощи\nи фрукты')
+                ),
+                React.createElement('div', {
+                    className: 'meal-plate-guide__callout meal-plate-guide__callout--protein',
+                },
+                    React.createElement('strong', null, '¼'),
+                    React.createElement('span', null, 'белок')
+                ),
+                React.createElement('div', {
+                    className: 'meal-plate-guide__callout meal-plate-guide__callout--grains',
+                },
+                    React.createElement('strong', null, '¼'),
+                    React.createElement('span', null, 'крупы')
+                )
+            ),
+            React.createElement('div', { className: 'meal-plate-guide__body' },
+                React.createElement('div', { className: 'meal-plate-guide__effects' },
+                    React.createElement('div', { className: 'meal-plate-guide__effects-grid' },
+                        MEAL_PLATE_EFFECTS.map((effect) => React.createElement('div', {
+                            className: `meal-plate-guide__effect meal-plate-guide__effect--${effect.id}`,
+                            key: effect.id,
+                        },
+                            React.createElement('div', { className: 'meal-plate-guide__effect-icon' },
+                                React.createElement(MealPlateEffectIcon, { type: effect.id })
+                            ),
+                            React.createElement('div', { className: 'meal-plate-guide__effect-copy' },
+                                React.createElement('strong', null, effect.title),
+                                React.createElement('span', null, effect.text)
+                            )
+                        ))
+                    )
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'meal-plate-guide__continue',
+                    onClick: handleContinue,
+                    disabled: isAdvancing,
+                }, 'Создать приём')
+            )
+        );
+    }
+
+    function showMealPlateGuide({ onContinue } = {}) {
+        if (!HEYS.ConfirmModal?.show || typeof onContinue !== 'function') return false;
+
+        const variant = getNextMealPlateVariant();
+        let didContinue = false;
+        const continueFlow = (transitionOptions = {}) => {
+            if (didContinue) return;
+            didContinue = true;
+            try {
+                onContinue(transitionOptions);
+            } finally {
+                HEYS.ConfirmModal?.hide?.();
+            }
+        };
+        const cancelFlow = () => HEYS.ConfirmModal?.hide?.();
+
+        HEYS.ConfirmModal.show({
+            icon: '',
+            title: '',
+            text: React.createElement(MealPlateGuideContent, {
+                variant,
+                onContinue: continueFlow,
+                onCancel: cancelFlow,
+            }),
+            confirmText: '',
+            cancelText: '',
+            onConfirm: continueFlow,
+        });
+        return true;
+    }
+
+    HEYS.mealPlateGuide = {
+        variants: MEAL_PLATE_VARIANTS,
+        chooseVariant: chooseMealPlateVariant,
+        getNextVariant: getNextMealPlateVariant,
+        show: showMealPlateGuide,
+    };
+
     function resolveMealIndex(day, mealIndex, mealId) {
         const mealsList = Array.isArray(day?.meals) ? day.meals : [];
         if (mealId) {
@@ -11438,14 +11696,10 @@
             return context;
         }, []);
 
-        const addMeal = React.useCallback(async () => {
-            if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление приёма пищи недоступно');
-                return;
-            }
-
+        const runAddMealFlow = React.useCallback(async (transitionOptions = {}) => {
             if (isMobile && HEYS.MealStep) {
                 HEYS.MealStep.showAddMeal({
+                    initialSlideInDirection: transitionOptions.initialSlideInDirection || null,
                     dateKey: date,
                     meals: day.meals,
                     pIndex,
@@ -12106,6 +12360,20 @@
                 } catch (_) { /* noop */ }
             }
         }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields]);
+
+        const addMeal = React.useCallback((options = {}) => {
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление приёма пищи недоступно');
+                return;
+            }
+
+            if (options?.skipPlateGuide === true) {
+                return runAddMealFlow();
+            }
+
+            const guideWasShown = showMealPlateGuide({ onContinue: runAddMealFlow });
+            if (!guideWasShown) return runAddMealFlow();
+        }, [runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});
 
