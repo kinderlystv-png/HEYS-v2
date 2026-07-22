@@ -8,6 +8,7 @@ const {
   latestFunctionConfig,
   latestScalingConfig,
   quotaMapFromResponse,
+  resolveCloudId,
 } = require('../check-serverless-capacity.cjs');
 
 function healthySnapshot() {
@@ -98,4 +99,23 @@ test('normalizes live quota and function version responses', () => {
     zoneRequestsLimit: 40,
     provisionedInstancesCount: 0,
   });
+});
+
+test('resolves cloud id from the configured folder when CI has no cloud-id', () => {
+  const calls = [];
+  const cloudId = resolveCloudId({
+    readText: (_command, args) => {
+      calls.push(args);
+      return args.at(-1) === 'folder-id' ? 'folder-1' : '';
+    },
+    readJson: (_command, args) => {
+      calls.push(args);
+      return { cloud_id: 'cloud-1' };
+    },
+  });
+
+  assert.equal(cloudId, 'cloud-1');
+  assert.deepEqual(calls.at(-1), [
+    'resource-manager', 'folder', 'get', 'folder-1', '--format', 'json',
+  ]);
 });

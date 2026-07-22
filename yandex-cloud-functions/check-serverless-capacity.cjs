@@ -47,8 +47,23 @@ function latestScalingConfig(policies) {
   };
 }
 
+function resolveCloudId({ readText = runText, readJson = runJson } = {}) {
+  const configuredCloudId = readText('yc', ['config', 'get', 'cloud-id']);
+  if (configuredCloudId) return configuredCloudId;
+
+  const folderId = readText('yc', ['config', 'get', 'folder-id']);
+  if (!folderId) throw new Error('Yandex Cloud cloud-id and folder-id are not configured');
+
+  const folder = readJson('yc', [
+    'resource-manager', 'folder', 'get', folderId,
+    '--format', 'json',
+  ]);
+  if (!folder?.cloud_id) throw new Error(`Cannot resolve cloud-id from folder ${folderId}`);
+  return folder.cloud_id;
+}
+
 function collectLiveSnapshot() {
-  const cloudId = runText('yc', ['config', 'get', 'cloud-id']);
+  const cloudId = resolveCloudId();
   const quotaResponse = runJson('yc', [
     'quota-manager', 'quota-limit', 'list',
     '--service', 'serverless-functions',
@@ -128,4 +143,5 @@ module.exports = {
   latestScalingConfig,
   main,
   quotaMapFromResponse,
+  resolveCloudId,
 };
