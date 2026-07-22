@@ -45,12 +45,14 @@ cd yandex-cloud-functions
 
 ### 3. GitHub Actions (автомониторинг 24/7)
 
-**API Health Monitor (v5.0.1)** — каждые 15 минут проверяет все endpoints:
+**API Health Monitor** — каждые 10 минут проверяет endpoints и serverless quota
+errors:
 
-- ⏱️ Интервал: **15 минут** (96 проверок/день)
+- ⏱️ Интервал: **10 минут**
 - 🕐 График: **24/7** (было: только 09:00-23:00 MSK)
 - 🔄 Auto-healing: автоматический re-deploy при обнаружении 502
-- 📢 Telegram alerts: при падении любого endpoint
+- 📢 Telegram alerts: endpoint failure или точный `429/503` в rpc/rest logs
+- 🧪 No-retry operational canary: RPC + REST не маскируют краткий quota-инцидент
 
 **Что улучшено (11 февраля 2026)**:
 
@@ -153,6 +155,8 @@ yc serverless function logs heys-api-rpc --since 30m
 
 ## 📚 Полная документация
 
+- [SERVERLESS_CAPACITY_RUNBOOK.md](SERVERLESS_CAPACITY_RUNBOOK.md) — квоты,
+  Retry-After, operational canary и mixed sync load-test
 - [MONITORING_GUIDE.md](MONITORING_GUIDE.md) — полное описание системы
 - [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md) — инструкции по деплою
 - [DISASTER_RECOVERY_RUNBOOK.md](DISASTER_RECOVERY_RUNBOOK.md) — действия при

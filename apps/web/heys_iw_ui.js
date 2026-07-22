@@ -20,10 +20,58 @@
     return { color: '#A64B2A', bg: 'rgba(218,112,74,.11)', label: 'Мало данных' };
   }
 
+  const missingInputLabel = (field) => field === 'foodForm' ? 'форма продуктов' : field;
+
+  const signedMinutes = (minutes) => {
+    const value = Math.round((Number(minutes) || 0) * 10) / 10;
+    if (value === 0) return '0 мин';
+    return `${value > 0 ? '+' : '−'}${Math.abs(value)} мин`;
+  };
+
+  function CalculationTrace({ data }) {
+    const calculation = data?.estimatedWindow?.calculation;
+    if (!calculation) return null;
+    const contributions = Array.isArray(calculation.contributions) ? calculation.contributions : [];
+    const rangeWasCapped = calculation.centralWasCapped || calculation.lowerWasCapped || calculation.upperWasCapped;
+    return h('div', { style: {
+      marginTop: 10, padding: '11px 12px', borderRadius: 12,
+      background: 'rgba(67,69,135,.055)', border: '1px solid rgba(67,69,135,.10)',
+    } },
+      h('div', { style: { fontSize: 11, fontWeight: 750, color: '#434587', marginBottom: 7 } }, 'Диагностика расчёта'),
+      h('div', { style: { display: 'grid', gap: 5 } },
+        contributions.map((item) => h('div', {
+          key: item.code,
+          style: { display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, fontSize: 10.5, lineHeight: 1.35 },
+        },
+          h('span', { style: { color: '#63738A' } }, `${item.label}: ${item.formula}`),
+          h('span', { style: { color: '#33435A', fontWeight: 650, fontVariantNumeric: 'tabular-nums' } }, signedMinutes(item.minutes))
+        ))
+      ),
+      calculation.fallbackApplied && h('div', { style: { marginTop: 7, fontSize: 10.5, color: '#9A6700' } },
+        `Недостаточно входных данных: применена резервная оценка ${calculation.fallbackMinutes} мин.`
+      ),
+      h('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(67,69,135,.10)', fontSize: 10.5, lineHeight: 1.5, color: '#52657D' } },
+        calculation.centralWasCapped && h(React.Fragment, null,
+          `Расчёт до ограничения: ${formatMinutes(calculation.rawCentralMinutes)}`,
+          h('br'),
+          `Применён предел модели: ${formatMinutes(calculation.centralMinutes)}`,
+          h('br')
+        ),
+        rangeWasCapped
+          ? `Исходная неопределённость модели: ${calculation.uncertaintyPercent}%; границы ограничены пределами.`
+          : `Центр: ${formatMinutes(calculation.centralMinutes)} · неопределённость ±${calculation.uncertaintyPercent}%`,
+        h('br'),
+        `${rangeWasCapped ? 'Диапазон после ограничений' : 'Диапазон'}: ${formatMinutes(calculation.lowerMinutes)}–${formatMinutes(calculation.upperMinutes)} · таймер до верхней границы ${formatMinutes(calculation.upperMinutes)}`
+      )
+    );
+  }
+
+  const renderCalculationTrace = (data) => h(CalculationTrace, { data });
+
   function renderProgressBar(data) {
     if (!React || !data) return null;
-    const completed = data.status === 'complete';
-    const progress = Math.max(0, Math.min(100, Number(data.progress) || 0));
+    const completed = (data.rangeStatus || data.status) === 'complete';
+    const progress = Math.max(0, Math.min(100, Number(data.rangeProgress ?? data.progress) || 0));
     return h('div', { style: { marginTop: 12 } },
       h('div', { style: { height: 8, borderRadius: 999, overflow: 'hidden', background: 'rgba(47,107,255,.10)' } },
         h('div', { style: {
@@ -81,13 +129,14 @@
       ),
       h('div', { style: { marginTop: 10, padding: '10px 12px', borderRadius: 12, background: tone.bg, color: tone.color } },
         h('div', { style: { fontSize: 12, fontWeight: 700 } }, `${tone.label} · ${data.confidence?.score ?? 0}%`),
-        missing.length > 0 && h('div', { style: { marginTop: 4, fontSize: 11, lineHeight: 1.45 } }, `Не хватает: ${missing.join(', ')}.`)
+        missing.length > 0 && h('div', { style: { marginTop: 4, fontSize: 11, lineHeight: 1.45 } }, `Не хватает: ${missing.map(missingInputLabel).join(', ')}.`)
       ),
       assumptions.length > 0 && h('div', { style: { marginTop: 10, fontSize: 11, lineHeight: 1.5, color: '#6B7C93' } },
         assumptions.map((text, index) => h('div', { key: index }, `• ${text}`))
       ),
+      renderCalculationTrace(data),
       h('div', { style: { marginTop: 12, fontSize: 11, lineHeight: 1.5, color: '#7A8BA3' } },
-        `Версия модели ${data.modelVersion}. Это эвристическая оценка по составу еды, а не измерение гормонов или глюкозы.`
+        `Версия модели ${data.modelVersion}. Это эвристическая неперсонализированная оценка по составу еды, а не измерение гормонов или глюкозы.`
       ),
       data.hasOverlaps && h('div', { style: { marginTop: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(245,183,49,.10)', color: '#795500', fontSize: 11, lineHeight: 1.45 } },
         `Составы соседних приёмов частично накладываются по времени (${formatMinutes(data.worstOverlap?.overlapMinutes)}). Это контекст, а не запрет на следующий приём.`
@@ -129,6 +178,7 @@
     ProgressBarComponent: ({ data }) => renderProgressBar(data),
     renderProgressBar,
     renderWaveHistory,
+    renderCalculationTrace,
     renderExpandedSection,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

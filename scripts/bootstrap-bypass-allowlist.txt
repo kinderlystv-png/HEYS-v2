@@ -260,4 +260,4 @@ apps/web/heys_app_auth_init_v1.js:625
 apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371
-apps/web/heys_yandex_api_v1.js:96
+apps/web/heys_yandex_api_v1.js:252

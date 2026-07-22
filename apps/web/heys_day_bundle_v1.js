@@ -6946,6 +6946,96 @@
             + '-' + String(d.getDate()).padStart(2, '0');
     }
 
+    function formatMealDateLabel(dateKey, includeWeekday = false) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+        if (!match) return String(dateKey || '');
+
+        const dateValue = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        if (Number.isNaN(dateValue.getTime())) return String(dateKey || '');
+
+        const label = new Intl.DateTimeFormat('ru-RU', {
+            ...(includeWeekday ? { weekday: 'long' } : {}),
+            day: 'numeric',
+            month: 'long',
+        }).format(dateValue);
+        return label.charAt(0).toUpperCase() + label.slice(1);
+    }
+
+    function MealDateWarning({ dateKey, todayKey }) {
+        const targetLabel = formatMealDateLabel(dateKey, true);
+        const todayLabel = formatMealDateLabel(todayKey);
+
+        return React.createElement('div', {
+            className: 'meal-date-warning',
+            role: 'alert',
+            'aria-live': 'assertive',
+        },
+            React.createElement('div', { className: 'meal-date-warning__badge' }, 'НЕ СЕГОДНЯ'),
+            React.createElement('div', { className: 'meal-date-warning__date' }, targetLabel),
+            React.createElement('div', { className: 'meal-date-warning__question' },
+                'Точно записать новый приём на эту дату?'
+            ),
+            React.createElement('p', { className: 'meal-date-warning__copy' },
+                'Он появится в выбранном дне, а не в сегодняшнем дневнике.'
+            ),
+            React.createElement('div', { className: 'meal-date-warning__today' },
+                'Сегодня — ', React.createElement('strong', null, todayLabel)
+            )
+        );
+    }
+
+    async function confirmMealCreationDate(dateKey, { onReturnToday } = {}) {
+        const todayKey = _getTodayISO();
+        if (!dateKey || dateKey === todayKey) return true;
+        if (!HEYS.ConfirmModal?.show) {
+            HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
+            return false;
+        }
+
+        const targetShortLabel = formatMealDateLabel(dateKey);
+        const todayShortLabel = formatMealDateLabel(todayKey);
+        const result = await HEYS.ConfirmModal.show({
+            icon: '⚠️',
+            title: 'Выбрана другая дата',
+            text: React.createElement(MealDateWarning, { dateKey, todayKey }),
+            actions: [
+                {
+                    key: 'return-today',
+                    label: `Вернуться на сегодня · ${todayShortLabel}`,
+                    value: 'today',
+                    style: 'primary',
+                    variant: 'fill',
+                    row: 0,
+                    isDefault: true,
+                    isCancel: true,
+                    className: 'meal-date-warning__today-action',
+                },
+                {
+                    key: 'confirm-other-date',
+                    label: `Да, записать на ${targetShortLabel}`,
+                    value: 'confirm',
+                    style: 'warning',
+                    variant: 'fill',
+                    row: 1,
+                    className: 'meal-date-warning__confirm-action',
+                },
+            ],
+            defaultActionValue: 'today',
+            cancelActionValue: 'today',
+        });
+
+        if (result === 'today') {
+            onReturnToday?.(todayKey);
+            return false;
+        }
+        return result === 'confirm';
+    }
+
+    HEYS.mealDateGuard = {
+        confirm: confirmMealCreationDate,
+        formatDateLabel: formatMealDateLabel,
+    };
+
     function dispatchMealFlowFinished(detail) {
         try {
             window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
@@ -7027,6 +7117,113 @@
     }
 
     let lastMealPlateVariantIndex = -1;
+    let preparedMealPlateVariant = null;
+    let preparedMealPlateVariantIndex = -1;
+    let preparedMealPlateImage = null;
+    let preparedMealPlatePromise = null;
+    let mealPlatePreparationScheduled = false;
+    const activeMealPlatePreloadImages = new Set();
+
+    const MEAL_PLATE_IDLE_TIMEOUT_MS = 4000;
+    const MEAL_PLATE_IDLE_FALLBACK_DELAY_MS = 1200;
+
+    function canPreloadMealPlateVariant() {
+        const connection = global.navigator?.connection;
+        if (connection?.saveData === true) return false;
+        return !['slow-2g', '2g'].includes(String(connection?.effectiveType || '').toLowerCase());
+    }
+
+    function preloadMealPlateVariant(variant) {
+        if (!variant || typeof global.Image !== 'function') {
+            return { image: null, promise: Promise.resolve(variant || null) };
+        }
+
+        const image = new global.Image();
+        image.decoding = 'async';
+        if ('fetchPriority' in image) image.fetchPriority = 'low';
+        if (variant.srcSet) image.srcset = variant.srcSet;
+        if (variant.srcSet) image.sizes = '(max-width: 620px) 310px, 340px';
+        image.src = variant.src;
+
+        const decodePromise = typeof image.decode === 'function'
+            ? Promise.resolve().then(() => image.decode())
+            : new Promise((resolve) => {
+                image.onload = resolve;
+                image.onerror = resolve;
+            });
+
+        return {
+            image,
+            promise: decodePromise.catch(() => null).then(() => variant),
+        };
+    }
+
+    function prepareNextMealPlateVariant() {
+        if (!canPreloadMealPlateVariant()) return Promise.resolve(null);
+        if (preparedMealPlateVariant) {
+            return preparedMealPlatePromise || Promise.resolve(preparedMealPlateVariant);
+        }
+
+        const selection = chooseMealPlateVariant(lastMealPlateVariantIndex);
+        const preload = preloadMealPlateVariant(selection.variant);
+        preparedMealPlateVariant = selection.variant;
+        preparedMealPlateVariantIndex = selection.index;
+        preparedMealPlateImage = preload.image;
+        preparedMealPlatePromise = preload.promise;
+        return preparedMealPlatePromise;
+    }
+
+    function runScheduledMealPlatePreparation() {
+        mealPlatePreparationScheduled = false;
+        prepareNextMealPlateVariant().catch(() => null);
+    }
+
+    function scheduleNextMealPlateVariantPreparation() {
+        if (mealPlatePreparationScheduled || preparedMealPlateVariant || !canPreloadMealPlateVariant()) return false;
+        mealPlatePreparationScheduled = true;
+
+        const scheduleWhenIdle = () => {
+            if (typeof global.requestIdleCallback === 'function') {
+                global.requestIdleCallback(runScheduledMealPlatePreparation, { timeout: MEAL_PLATE_IDLE_TIMEOUT_MS });
+                return;
+            }
+            global.setTimeout(runScheduledMealPlatePreparation, MEAL_PLATE_IDLE_FALLBACK_DELAY_MS);
+        };
+
+        if (global.document?.readyState === 'complete') {
+            scheduleWhenIdle();
+        } else {
+            global.addEventListener?.('load', scheduleWhenIdle, { once: true });
+        }
+        return true;
+    }
+
+    function consumePreparedMealPlateVariant() {
+        if (!preparedMealPlateVariant) {
+            const variant = getNextMealPlateVariant();
+            scheduleNextMealPlateVariantPreparation();
+            return variant;
+        }
+
+        const variant = preparedMealPlateVariant;
+        const variantIndex = preparedMealPlateVariantIndex;
+        const image = preparedMealPlateImage;
+        const preloadPromise = preparedMealPlatePromise;
+
+        preparedMealPlateVariant = null;
+        preparedMealPlateVariantIndex = -1;
+        preparedMealPlateImage = null;
+        preparedMealPlatePromise = null;
+        lastMealPlateVariantIndex = variantIndex;
+
+        if (image && preloadPromise) {
+            activeMealPlatePreloadImages.add(image);
+            preloadPromise.finally(() => activeMealPlatePreloadImages.delete(image));
+        }
+
+        scheduleNextMealPlateVariantPreparation();
+        return variant;
+    }
 
     function getNextMealPlateVariant() {
         const selection = chooseMealPlateVariant(lastMealPlateVariantIndex);
@@ -7180,7 +7377,7 @@
     function showMealPlateGuide({ onContinue } = {}) {
         if (!HEYS.ConfirmModal?.show || typeof onContinue !== 'function') return false;
 
-        const variant = getNextMealPlateVariant();
+        const variant = consumePreparedMealPlateVariant();
         let didContinue = false;
         const continueFlow = (transitionOptions = {}) => {
             if (didContinue) return;
@@ -7212,8 +7409,14 @@
         variants: MEAL_PLATE_VARIANTS,
         chooseVariant: chooseMealPlateVariant,
         getNextVariant: getNextMealPlateVariant,
+        prepareNextVariant: prepareNextMealPlateVariant,
+        consumePreparedVariant: consumePreparedMealPlateVariant,
+        schedulePreparation: scheduleNextMealPlateVariantPreparation,
+        getPreparedVariant: () => preparedMealPlateVariant,
         show: showMealPlateGuide,
     };
+
+    scheduleNextMealPlateVariantPreparation();
 
     function resolveMealIndex(day, mealIndex, mealId) {
         const mealsList = Array.isArray(day?.meals) ? day.meals : [];
@@ -7640,7 +7843,9 @@
             return [...list].sort((a, b) => IWUtils.normalizeToHeysDay(a.startMin) - IWUtils.normalizeToHeysDay(b.startMin));
         }, [insulinWaveData.waveHistory]);
 
-        const currentWaveIndex = React.useMemo(() => waveHistorySorted.findIndex((w) => w.time === meal.time), [waveHistorySorted, meal.time]);
+        const currentWaveIndex = React.useMemo(() => waveHistorySorted.findIndex((wave) => (
+            meal.id ? wave.id === meal.id : wave.time === meal.time
+        )), [waveHistorySorted, meal.id, meal.time]);
         const currentWave = currentWaveIndex >= 0 ? waveHistorySorted[currentWaveIndex] : null;
         const prevWave = currentWaveIndex > 0 ? waveHistorySorted[currentWaveIndex - 1] : null;
         const nextWave = (currentWaveIndex >= 0 && currentWaveIndex < waveHistorySorted.length - 1) ? waveHistorySorted[currentWaveIndex + 1] : null;
@@ -9535,7 +9740,7 @@
                                 React.createElement('h3', {
                                     className: 'wave-details-popup__title',
                                     style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
-                                }, 'Расчёт волны'),
+                                }, 'Диагностика окна'),
                                 React.createElement('button', {
                                     className: 'wave-details-popup__close',
                                     onClick: () => setShowWaveCalcPopup(false),
@@ -9557,25 +9762,12 @@
                                     color: '#fff',
                                 },
                             },
-                                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
+                                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Центральная оценка'),
                                 React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
                                 React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
                             ),
 
-                            React.createElement('div', {
-                                className: 'wave-details-popup__formula',
-                                style: {
-                                    background: '#f8fafc',
-                                    borderRadius: '10px',
-                                    padding: '12px',
-                                    marginBottom: '16px',
-                                    fontSize: '11px',
-                                    fontFamily: 'monospace',
-                                    color: '#64748b',
-                                    textAlign: 'center',
-                                },
-                            }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
-                            + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+                            InsulinWave.renderCalculationTrace?.(currentWave),
 
                             React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
                                 React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
@@ -9602,18 +9794,6 @@
                                 React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
                                     React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
                                     React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
-                                ),
-                            ),
-
-                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
-                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                    React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
-                                ),
-                                currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                    React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-                                    React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
                                 ),
                             ),
 
@@ -12374,11 +12554,28 @@
             }
         }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields]);
 
-        const addMeal = React.useCallback((options = {}) => {
+        const mealDateGuardPendingRef = React.useRef(false);
+
+        const addMeal = React.useCallback(async (options = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
                 HEYS.Paywall?.showBlockedToast?.('Добавление приёма пищи недоступно');
                 return;
             }
+
+            if (mealDateGuardPendingRef.current) return false;
+            mealDateGuardPendingRef.current = true;
+            let dateConfirmed = false;
+            try {
+                dateConfirmed = await confirmMealCreationDate(date, {
+                    onReturnToday: (todayKey) => {
+                        const setSelectedDate = global.__heysSetSelectedDate || HEYS.ui?.setSelectedDate;
+                        setSelectedDate?.(todayKey);
+                    },
+                });
+            } finally {
+                mealDateGuardPendingRef.current = false;
+            }
+            if (!dateConfirmed) return false;
 
             if (options?.skipPlateGuide === true) {
                 return runAddMealFlow();
@@ -12386,7 +12583,7 @@
 
             const guideWasShown = showMealPlateGuide({ onContinue: runAddMealFlow });
             if (!guideWasShown) return runAddMealFlow();
-        }, [runAddMealFlow]);
+        }, [date, runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});
 

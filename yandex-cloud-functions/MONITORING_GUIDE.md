@@ -11,7 +11,7 @@
 
 **Что делает**:
 
-- ⏰ Запускается каждые 15 минут (автоматически)
+- ⏰ Запускается каждые 10 минут (автоматически)
 - 🔍 Проверяет 4 критических endpoint'а:
   - `/health` — общее состояние API
   - `/rpc` — RPC endpoint (get_shared_products)
@@ -19,6 +19,8 @@
   - `/auth/login` — Auth endpoint (должен вернуть 401, не 502!)
 - 📧 Отправляет уведомление в Telegram при падении
 - ✅ Silent при успехе (не спамит каждые 15 минут)
+- 🧪 Выполняет отдельный no-retry RPC + REST canary
+- 🚨 Сканирует rpc/rest Cloud Function logs на точные `429` и `503` за 20 минут
 
 **Триггеры**:
 
@@ -159,6 +161,10 @@ cd yandex-cloud-functions
 | HTTP 502 на critical endpoint | 1 раз         | Немедленный алерт |
 | Deployment Failed             | 1 раз         | Алерт + логи      |
 | RPC latency > 5s              | 3 раза подряд | Warning           |
+| HTTP 429/503 в rpc/rest logs  | 1 раз         | Немедленный алерт |
+
+Capacity policy, quota gate и mixed Phase A + uploads load-test описаны в
+[SERVERLESS_CAPACITY_RUNBOOK.md](SERVERLESS_CAPACITY_RUNBOOK.md).
 
 ---
 

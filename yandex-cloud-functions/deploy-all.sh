@@ -19,6 +19,14 @@ VALIDATE_SCRIPT="$SCRIPT_DIR/validate-env.sh"
 HEALTH_SCRIPT="$SCRIPT_DIR/health-check.sh"
 TEST_SCRIPT="$SCRIPT_DIR/test-functions.sh"
 CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
+CAPACITY_POLICY="$SCRIPT_DIR/serverless-capacity-policy.cjs"
+CAPACITY_CHECK="$SCRIPT_DIR/check-serverless-capacity.cjs"
+
+API_INSTANCE_CONCURRENCY="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceConcurrency")"
+API_INSTANCE_ADMISSION_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceAdmissionLimit")"
+API_ZONE_INSTANCES_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.scaling.zoneInstancesLimit")"
+API_ZONE_REQUESTS_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.scaling.zoneRequestsLimit")"
+OVERLOAD_RETRY_AFTER_SECONDS="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.overloadRetryAfterSeconds")"
 
 # Parse flags
 TARGET_FUNC=""
@@ -484,6 +492,13 @@ build_env_flags() {
         env_flags+=" --environment HEYS_WRITE_CONTEXT_STRICT=1"
     fi
 
+    # Server-side overload shed: reserve one slot per instance for recovery and
+    # return an explicit Retry-After before the platform-wide quota is reached.
+    if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
+        env_flags+=" --environment HEYS_INSTANCE_ADMISSION_LIMIT=$API_INSTANCE_ADMISSION_LIMIT"
+        env_flags+=" --environment HEYS_OVERLOAD_RETRY_AFTER_SECONDS=$OVERLOAD_RETRY_AFTER_SECONDS"
+    fi
+
     echo "$env_flags"
 }
 
@@ -556,18 +571,21 @@ deploy_function() {
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 
-    # Concurrency: API-функции и Telegram bot получают concurrency=4 — один контейнер
-    # обслуживает до 4 параллельных запросов. Подняли с 2 → 4 (2026-06-15)
-    # для запаса под burst/cold-start.
+    # Runtime concurrency берётся из serverless-capacity-policy.cjs. Handler guard
+    # не ниже runtime concurrency, чтобы не создавать искусственные 429 до того,
+    # как Cloud Functions запустит дополнительный экземпляр.
     local concurrency_flag=""
     if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ || "$func_name" == "heys-bot-client" ]]; then
-        concurrency_flag="--concurrency 4"
+        concurrency_flag="--concurrency $API_INSTANCE_CONCURRENCY"
     fi
 
     if [ "$DRY_RUN" = true ]; then
         echo -e "${BLUE}🧪 Dry-run $func_name${NC}"
         echo "   runtime=$runtime entrypoint=$entrypoint memory=$memory timeout=$timeout"
         if [ -n "$concurrency_flag" ]; then echo "   $concurrency_flag"; fi
+        if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
+            echo "   scaling: zone-instances=$API_ZONE_INSTANCES_LIMIT zone-requests=$API_ZONE_REQUESTS_LIMIT"
+        fi
         if [ -n "$sa_flag" ]; then echo "   service-account=aje85rjgpj4nk9m384ek"; fi
         echo "   env keys:"
         env_key_names "$env_flags" | sed 's/^/      /'
@@ -628,6 +646,16 @@ deploy_function() {
             echo -e "${RED}❌ ERROR: KV payload contracts not found at $CONTRACT_SRC${NC}"
             exit 1
         fi
+
+        CAPACITY_GUARD_SRC="$SCRIPT_DIR/shared/serverless-capacity-guard.js"
+        CAPACITY_GUARD_DST="$CONTRACT_DST_DIR/serverless-capacity-guard.js"
+        if [ -f "$CAPACITY_GUARD_SRC" ]; then
+            cp "$CAPACITY_GUARD_SRC" "$CAPACITY_GUARD_DST"
+            echo -e "${BLUE}ℹ️  Synced capacity guard: shared/serverless-capacity-guard.js${NC}"
+        else
+            echo -e "${RED}❌ ERROR: capacity guard not found at $CAPACITY_GUARD_SRC${NC}"
+            exit 1
+        fi
     fi
 
     # Pre-build zip with explicit exclusions.
@@ -674,6 +702,14 @@ deploy_function() {
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ $func_name deployed successfully${NC}"
+        if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
+            yc serverless function set-scaling-policy \
+                --name "$func_name" \
+                --tag '$latest' \
+                --zone-instances-limit "$API_ZONE_INSTANCES_LIMIT" \
+                --zone-requests-limit "$API_ZONE_REQUESTS_LIMIT"
+            echo -e "${GREEN}✅ $func_name scaling policy: instances=$API_ZONE_INSTANCES_LIMIT requests=$API_ZONE_REQUESTS_LIMIT per zone${NC}"
+        fi
     else
         echo -e "${RED}❌ Failed to deploy $func_name${NC}"
         exit 1
@@ -744,6 +780,27 @@ done < <(selected_functions)
 
 echo -e "${BLUE}🧪 Running mandatory pre-deploy function gate...${NC}"
 "$TEST_SCRIPT" "${PREDEPLOY_TARGETS[@]}"
+
+CAPACITY_REQUIRED=false
+for func_name in "${PREDEPLOY_TARGETS[@]}"; do
+    if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
+        CAPACITY_REQUIRED=true
+        break
+    fi
+done
+
+if [ "$CAPACITY_REQUIRED" = true ]; then
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${YELLOW}⏭️  Capacity quota gate skipped in dry-run mode${NC}"
+    else
+        if [ ! -f "$CAPACITY_CHECK" ]; then
+            echo -e "${RED}❌ Capacity check is missing: $CAPACITY_CHECK${NC}"
+            exit 1
+        fi
+        echo -e "${BLUE}🧮 Verifying serverless quota has >=2x target headroom...${NC}"
+        node "$CAPACITY_CHECK" --strict --quota-only
+    fi
+fi
 
 # Main execution
 SHOULD_UPDATE_GATEWAY=false

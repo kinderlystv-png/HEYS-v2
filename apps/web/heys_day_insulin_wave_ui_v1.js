@@ -5,11 +5,26 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const MOD = {};
 
-  const toneForConfidence = (level) => {
-    if (level === 'high') return { bg: 'rgba(31,157,125,.10)', color: '#167D61', label: 'данных достаточно' };
-    if (level === 'medium') return { bg: 'rgba(245,183,49,.13)', color: '#8A6200', label: 'есть допущения' };
-    return { bg: 'rgba(218,112,74,.12)', color: '#9A492E', label: 'мало данных' };
-  };
+  function TimerDigits({ React, minutes, countUp = false }) {
+    const initial = Math.max(0, Math.round((Number(minutes) || 0) * 60));
+    const [elapsedSeconds, setElapsedSeconds] = React.useState(initial);
+
+    React.useEffect(() => {
+      setElapsedSeconds(initial);
+      const interval = setInterval(() => {
+        setElapsedSeconds((value) => countUp ? value + 1 : Math.max(0, value - 1));
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [initial, countUp]);
+
+    const hours = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(elapsedSeconds % 60).padStart(2, '0');
+    return React.createElement('div', { style: {
+      fontSize: 40, lineHeight: 1, fontWeight: 800, color: '#fff', letterSpacing: 1.5,
+      fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 8px rgba(0,0,0,.20)',
+    } }, `${hours}:${mins}:${seconds}`);
+  }
 
   MOD.renderInsulinWaveIndicator = function renderInsulinWaveIndicator({
     React,
@@ -27,16 +42,52 @@
     const root = providedHEYS || global.HEYS || {};
     const IW = root.InsulinWave;
     const isLoading = data.status === 'loading';
-    const complete = data.status === 'complete';
-    const confidence = toneForConfidence(data.confidence?.level);
-    const range = data.estimatedWindow?.rangeLabel || data.endTimeRange || data.endTimeDisplay || '—';
-    const shapeReason = data.responseShape?.drivers?.[0]
-      ? `Главный фактор: ${data.responseShape.drivers[0]}.`
-      : 'Выраженного доминирующего фактора нет.';
+    const rangeStatus = data.rangeStatus || data.status;
+    const complete = rangeStatus === 'complete';
+    const scheduled = rangeStatus === 'scheduled';
+    const timerValue = complete
+      ? (data.minutesAfterWindow ?? 0)
+      : (data.rangeRemaining ?? data.remaining);
 
     const toggle = (event) => {
       event?.stopPropagation?.();
       if (typeof setInsulinExpanded === 'function') setInsulinExpanded(!insulinExpanded);
+    };
+
+    const renderPrimaryState = () => {
+      if (scheduled) {
+        return h('div', { style: { marginTop: 14, fontSize: 13, color: '#6B7C93' } }, 'Приём ещё впереди');
+      }
+      if (complete) {
+        return h(React.Fragment, null,
+          h('div', { style: {
+            marginTop: 14, padding: '15px 12px 13px', borderRadius: 16, textAlign: 'center',
+            background: 'linear-gradient(135deg,#15936D,#19B584)',
+            boxShadow: '0 8px 20px rgba(21,147,109,.22)',
+          } },
+            h('div', { style: { marginBottom: 8, fontSize: 12, color: 'rgba(255,255,255,.88)', fontWeight: 600 } }, 'После расчётного восстановления условий для липолиза'),
+            h(TimerDigits, { React, minutes: timerValue, countUp: true })
+          ),
+          h('div', { style: {
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8,
+            minHeight: 38, padding: '8px 12px', borderRadius: 12,
+            background: 'rgba(16,185,129,.11)', border: '1px solid rgba(16,185,129,.24)',
+            color: '#167D61', fontSize: 13, fontWeight: 750,
+          } }, h('span', null, '🌿'), h('span', null, 'Расчётные условия для липолиза восстановлены'))
+        );
+      }
+      return h(React.Fragment, null,
+        h('div', { style: {
+          marginTop: 14, padding: '15px 12px 13px', borderRadius: 16, textAlign: 'center',
+          background: 'linear-gradient(135deg,#1D70B7,#52A0D8)',
+          boxShadow: '0 8px 20px rgba(29,112,183,.22)',
+        } },
+          h('div', { style: { marginBottom: 8, fontSize: 12, color: 'rgba(255,255,255,.88)', fontWeight: 600 } }, 'До расчётного восстановления условий для липолиза'),
+          h(TimerDigits, { React, minutes: timerValue })
+        ),
+        IW?.renderWaveChart?.({ ...data, status: rangeStatus }),
+        h('div', { style: { marginTop: 7, fontSize: 10, color: '#7A8BA3', textAlign: 'center' } }, 'Ориентир не запрещает есть.')
+      );
     };
 
     return h('section', {
@@ -59,46 +110,18 @@
         position: 'absolute', width: 150, height: 150, borderRadius: '50%', right: -72, top: -88,
         background: 'radial-gradient(circle,rgba(109,142,255,.18),rgba(109,142,255,0) 70%)', pointerEvents: 'none',
       } }),
-      h('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, position: 'relative' } },
-        h('div', null,
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-            h('span', { style: {
-              display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: 12,
-              background: 'linear-gradient(145deg,#EAF0FF,#DDE8FF)', color: '#2F6BFF', fontSize: 18,
-            } }, '◷'),
-            h('div', null,
-              h('div', { style: { fontWeight: 760, fontSize: 15, letterSpacing: '-.01em' } }, 'Расчётное окно после еды'),
-              h('div', { style: { marginTop: 2, fontSize: 11, color: '#7A8BA3' } }, isLoading ? 'модель загружается' : `эвристическая модель · v${data.modelVersion}`)
-            )
-          )
-        ),
-        !isLoading && h('span', { style: {
-          padding: '5px 8px', borderRadius: 999, background: confidence.bg, color: confidence.color,
-          fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap',
-        } }, confidence.label)
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, position: 'relative' } },
+        h('span', { style: {
+          display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 11,
+          background: 'linear-gradient(145deg,#EAF0FF,#DDE8FF)', color: '#2F6BFF', fontSize: 17,
+        } }, '◷'),
+        h('div', { style: { fontWeight: 760, fontSize: 15, letterSpacing: '-.01em' } }, 'Отклик после еды')
       ),
 
       isLoading
-        ? h('div', { style: { marginTop: 14, fontSize: 13, color: '#6B7C93' } }, 'Уточняем состав приёма и диапазон времени…')
+        ? h('div', { style: { marginTop: 14, fontSize: 13, color: '#6B7C93' } }, 'Рассчитываем ориентир…')
         : h(React.Fragment, null,
-          h('div', { style: { marginTop: 16, display: 'flex', alignItems: 'baseline', gap: 7, position: 'relative' } },
-            h('span', { style: { fontSize: 12, color: '#6B7C93' } }, complete ? 'Оценка завершена' : 'Ориентир завершения'),
-            h('strong', { style: { fontSize: 20, lineHeight: 1, color: complete ? '#167D61' : '#2F6BFF', fontVariantNumeric: 'tabular-nums' } }, complete ? 'сейчас' : range)
-          ),
-          h('div', { style: { marginTop: 9, fontSize: 13, lineHeight: 1.5, color: '#52657D' } },
-            complete
-              ? 'Расчётный период прошёл. Решение о следующем приёме зависит от голода, самочувствия и плана питания.'
-              : `${data.responseShape?.label || 'Смешанный профиль'}. ${shapeReason}`
-          ),
-          IW?.renderProgressBar?.(data),
-          IW?.renderWaveChart?.(data),
-          h('div', { style: {
-            marginTop: 12, padding: '10px 12px', borderRadius: 13, background: 'rgba(47,107,255,.055)',
-            fontSize: 12, lineHeight: 1.5, color: '#405572',
-          } },
-            h('strong', { style: { color: '#2F6BFF' } }, 'Что делать: '),
-            'ориентируйся на свежую оценку голода и дневной план. Этот диапазон не запрещает есть.'
-          ),
+          renderPrimaryState(),
           h('button', {
             type: 'button',
             onClick: toggle,
@@ -108,7 +131,7 @@
               background: insulinExpanded ? 'rgba(47,107,255,.10)' : 'transparent', color: '#2F6BFF',
               fontSize: 12, fontWeight: 700, cursor: 'pointer',
             },
-          }, insulinExpanded ? 'Скрыть детали' : 'Почему такой диапазон'),
+          }, insulinExpanded ? 'Скрыть' : 'Подробнее'),
           insulinExpanded && h('div', { onClick: (event) => event.stopPropagation() },
             IW?.renderExpandedSection?.(data)
           )

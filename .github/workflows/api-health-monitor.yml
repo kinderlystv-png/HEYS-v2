@@ -5,7 +5,7 @@ name: API Health Monitor
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/10 * * * *"
   workflow_dispatch: # Ручной запуск для тестирования
   push:
     branches: [main]
@@ -36,6 +36,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Setup Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Configure Yandex Cloud read access
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
+          YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+        run: |
+          if [ -z "$YC_SERVICE_ACCOUNT_KEY" ] || [ -z "$YC_FOLDER_ID" ]; then
+            echo "::error::YC_SERVICE_ACCOUNT_KEY / YC_FOLDER_ID are required for quota-error monitoring"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$YC_SERVICE_ACCOUNT_KEY" > key.json
+          yc config profile create health-monitor
+          yc config set service-account-key key.json
+          yc config set folder-id "$YC_FOLDER_ID"
+          rm key.json
 
       - name: Test Health Endpoint
         id: health
@@ -137,6 +158,14 @@ jobs:
 
           echo "✅ REST endpoint passed"
 
+      - name: Run no-retry RPC + REST operational canary
+        id: capacity_canary
+        run: node yandex-cloud-functions/serverless-ops-canary.cjs --strict
+
+      - name: Alert on recent Cloud Functions 429/503 logs
+        id: quota_errors
+        run: node yandex-cloud-functions/check-serverless-error-logs.cjs --since 20m --strict
+
       - name: Test Auth Endpoint
         id: auth
         run: |
@@ -221,6 +250,8 @@ jobs:
           MESSAGE="${MESSAGE}*Health*: ${{ steps.health.outputs.http_code || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*RPC*: ${{ steps.rpc.outputs.http_code || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*REST*: ${{ steps.rest.outputs.http_code || 'N/A' }}%0A"
+          MESSAGE="${MESSAGE}*Capacity canary*: ${{ steps.capacity_canary.outcome || 'N/A' }}%0A"
+          MESSAGE="${MESSAGE}*429/503 log scan*: ${{ steps.quota_errors.outcome || 'N/A' }}%0A"
           MESSAGE="${MESSAGE}*Auth*: ${{ steps.auth.outputs.http_code || 'N/A' }}%0A%0A"
           MESSAGE="${MESSAGE}*Dead-man*: ${{ steps.deadman.outcome || 'N/A' }}%0A%0A"
           MESSAGE="${MESSAGE}🔄 Auto-redeploy: ${{ steps.redeploy.outcome || 'not-triggered' }}%0A"

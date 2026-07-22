@@ -131,9 +131,15 @@
       : getNowMinutes(now, latest.startMin);
     const elapsedMinutes = Math.max(0, nowMinutes - latest.startMin);
     const remaining = Math.max(0, latest.endMin - nowMinutes);
-    const progress = Math.max(0, Math.min(100, elapsedMinutes / latest.duration * 100));
+    const rangeRemaining = Math.max(0, latest.latestEndMin - nowMinutes);
+    const minutesAfterWindow = Math.max(0, nowMinutes - latest.latestEndMin);
+    const centralProgress = Math.max(0, Math.min(100, elapsedMinutes / latest.duration * 100));
+    const rangeDuration = Math.max(1, latest.latestEndMin - latest.startMin);
+    const rangeProgress = Math.max(0, Math.min(100, elapsedMinutes / rangeDuration * 100));
+    const progress = centralProgress;
     const status = nowMinutes < latest.startMin ? 'scheduled' : remaining > 0 ? 'settling' : 'complete';
-    latest.isActive = status === 'settling';
+    const rangeStatus = nowMinutes < latest.startMin ? 'scheduled' : rangeRemaining > 0 ? 'settling' : 'complete';
+    latest.isActive = rangeStatus === 'settling';
     const overlaps = buildOverlaps(waveHistory);
     const gaps = waveHistory.slice(1).map((entry, index) => entry.startMin - waveHistory[index].startMin);
     const avgGapToday = gaps.length ? Math.round(gaps.reduce((sum, value) => sum + value, 0) / gaps.length) : 0;
@@ -168,7 +174,12 @@
         ? 'Ориентируйся на голод, самочувствие и план питания.'
         : `Ориентировочное завершение: ${windowRange}. Это оценка, а не измерение.` ,
       progress,
+      centralProgress,
+      rangeProgress,
       remaining,
+      rangeRemaining,
+      rangeStatus,
+      minutesAfterWindow,
       lastMealTime: latest.time,
       lastMealTimeDisplay: latest.timeDisplay,
       endTime: latest.endTime,
@@ -255,8 +266,8 @@
   Object.assign(HEYS.InsulinWave, {
     calculate,
     useInsulinWave,
-    VERSION: Model?.VERSION || '5.0.0',
-    MODEL_VERSION: Model?.VERSION || '5.0.0',
+    VERSION: Model?.VERSION || '5.0.1',
+    MODEL_VERSION: Model?.VERSION || '5.0.1',
     estimatePostprandialResponse: Model?.estimate,
     calculateMealNutrients: Calc?.calculateMealNutrients,
     utils: HEYS.InsulinWave.utils,
@@ -272,6 +283,7 @@
   if (UI) Object.assign(HEYS.InsulinWave, {
     renderProgressBar: UI.renderProgressBar,
     renderWaveHistory: UI.renderWaveHistory,
+    renderCalculationTrace: UI.renderCalculationTrace,
     renderExpandedSection: UI.renderExpandedSection,
     MealWaveExpandSection: UI.MealWaveExpandSection,
     renderActivityContextBadge: UI.renderActivityContextBadge,

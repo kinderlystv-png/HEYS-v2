@@ -88,8 +88,195 @@ describe('Postprandial response model v5', () => {
     expect(inferred.responseShape.type).toBe('fast');
     expect(inferred.confidence.dataQuality.formCoverage).toBe(0);
     expect(inferred.confidence.dataQuality.missingFields).toContain('foodForm');
+    expect(inferred.confidence.dataQuality.assumptions).toContain('Форма части продуктов определена по названию; это предположение модели.');
+    expect(inferred.responseShape.drivers).toContain('жидкая форма — предположение');
+    expect(inferred.nutrients.decisionRatios).toMatchObject({
+      nutrientLiquidRatioRaw: 1,
+      knownLiquidNutrientRatioRaw: 0,
+      inferredLiquidNutrientRatioRaw: 1,
+    });
+    expect(explicit.responseShape.drivers).toContain('жидкая форма');
+    expect(explicit.responseShape.drivers).not.toContain('жидкая форма — предположение');
     expect(inferred.confidence.level).toBe('medium');
     expect(inferred.confidence.score).toBeLessThan(explicit.confidence.score);
+  });
+
+  it('does not let a zero-macro drink make a mixed meal liquid-shaped', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const meal = {
+      id: 'coffee-meal',
+      time: '12:00',
+      items: [
+        { grams: 300, product: { name: 'Американо', carbs100: 0, protein100: 0, fat100: 0, fiber100: 0, foodForm: 'liquid' } },
+        { grams: 100, product: fullProduct },
+      ],
+    };
+    const result = model.estimate({ meal, getProductFromItem: resolveItem });
+
+    expect(result.nutrients.liquidRatio).toBeGreaterThanOrEqual(0.5);
+    expect(result.nutrients.nutrientLiquidRatio).toBe(0);
+    expect(result.nutrients.decisionRatios.nutrientLiquidRatioRaw).toBe(0);
+    expect(result.responseShape.type).toBe('mixed');
+    const withoutCoffee = model.estimate({ meal: makeMeal('12:00', fullProduct), getProductFromItem: resolveItem });
+    expect(result.estimatedWindow.centralMinutes).toBe(withoutCoffee.estimatedWindow.centralMinutes);
+    expect(result.trace.find((entry) => entry.code === 'RESPONSE_SHAPE')).toMatchObject({
+      nutrientLiquidRatio: 0,
+      nutrientLiquidRatioRaw: 0,
+    });
+  });
+
+  it('uses unrounded nutrient liquid ratios at the 0.5 shape threshold', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const makeRatioMeal = (liquidCarbs, solidCarbs) => ({
+      id: `liquid-ratio-${liquidCarbs}`,
+      time: '12:00',
+      items: [
+        { grams: 100, product: {
+          name: 'Liquid fixture', carbs100: liquidCarbs, protein100: 0, fat100: 0,
+          fiber100: 0, simple100: 0, complex100: liquidCarbs, gi: 50, foodForm: 'liquid',
+        } },
+        { grams: 100, product: {
+          name: 'Solid fixture', carbs100: solidCarbs, protein100: 0, fat100: 0,
+          fiber100: 0, simple100: 0, complex100: solidCarbs, gi: 50, foodForm: 'whole',
+        } },
+      ],
+    });
+    const below = model.estimate({ meal: makeRatioMeal(49, 51), getProductFromItem: resolveItem });
+    const boundary = model.estimate({ meal: makeRatioMeal(50, 50), getProductFromItem: resolveItem });
+
+    expect(below.nutrients.decisionRatios.nutrientLiquidRatioRaw).toBeCloseTo(0.49, 8);
+    expect(below.nutrients.nutrientLiquidRatio).toBe(0.5);
+    expect(below.responseShape.type).toBe('mixed');
+    expect(below.responseShape.drivers).not.toContain('жидкая форма');
+    expect(boundary.nutrients.decisionRatios.nutrientLiquidRatioRaw).toBe(0.5);
+    expect(boundary.responseShape.type).toBe('fast');
+    expect(boundary.responseShape.drivers).toContain('жидкая форма');
+  });
+
+  it('uses unrounded processed ratios at the 0.5 shape threshold', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const makeProcessedMeal = (processedGrams, wholeGrams) => ({
+      id: `processed-ratio-${processedGrams}`,
+      time: '12:00',
+      items: [
+        { grams: processedGrams, product: {
+          name: 'Processed fixture', carbs100: 20, protein100: 0, fat100: 0,
+          fiber100: 0, simple100: 0, complex100: 20, gi: 50, foodForm: 'processed',
+        } },
+        { grams: wholeGrams, product: {
+          name: 'Whole fixture', carbs100: 20, protein100: 0, fat100: 0,
+          fiber100: 0, simple100: 0, complex100: 20, gi: 50, foodForm: 'whole',
+        } },
+      ],
+    });
+    const below = model.estimate({ meal: makeProcessedMeal(49, 51), getProductFromItem: resolveItem });
+    const boundary = model.estimate({ meal: makeProcessedMeal(50, 50), getProductFromItem: resolveItem });
+
+    expect(below.nutrients.decisionRatios.processedRatioRaw).toBeCloseTo(0.49, 8);
+    expect(below.nutrients.processedRatio).toBe(0.5);
+    expect(below.responseShape.type).toBe('mixed');
+    expect(below.responseShape.drivers).not.toContain('обработанная форма');
+    expect(boundary.nutrients.decisionRatios.processedRatioRaw).toBe(0.5);
+    expect(boundary.responseShape.type).toBe('fast');
+    expect(boundary.responseShape.drivers).toContain('обработанная форма');
+  });
+
+  it.each([
+    ['water', 'Вода'],
+    ['black coffee', 'Чёрный кофе'],
+    ['tea', 'Чай'],
+  ])('does not let zero-macro %s dilute the processed shape ratio', (_label, name) => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const processedProduct = {
+      name: 'Processed fixture', carbs100: 20, protein100: 0, fat100: 0,
+      fiber100: 0, simple100: 0, complex100: 20, gi: 50, foodForm: 'processed',
+    };
+    const base = model.estimate({
+      meal: makeMeal('12:00', processedProduct),
+      getProductFromItem: resolveItem,
+    });
+    const withDrink = model.estimate({
+      meal: {
+        id: `processed-with-${_label}`,
+        time: '12:00',
+        items: [
+          { grams: 100, product: processedProduct },
+          { grams: 1000, product: {
+            name, carbs100: 0, protein100: 0, fat100: 0,
+            fiber100: 0, simple100: 0, complex100: 0, gi: 0, foodForm: 'liquid',
+          } },
+        ],
+      },
+      getProductFromItem: resolveItem,
+    });
+
+    expect(withDrink.nutrients.decisionRatios.processedRatioRaw)
+      .toBe(base.nutrients.decisionRatios.processedRatioRaw);
+    expect(withDrink.nutrients.processedRatio).toBe(0.1);
+    expect(withDrink.responseShape.drivers).toEqual(base.responseShape.drivers);
+    expect(withDrink.responseShape.type).toBe(base.responseShape.type);
+    expect(withDrink.estimatedWindow).toEqual(base.estimatedWindow);
+  });
+
+  it('keeps nutrient-bearing drinks in canonical shape decisions', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const result = model.estimate({
+      meal: {
+        id: 'processed-with-caloric-drink',
+        time: '12:00',
+        items: [
+          { grams: 100, product: {
+            name: 'Processed fixture', carbs100: 20, protein100: 0, fat100: 0,
+            fiber100: 0, simple100: 0, complex100: 20, gi: 50, foodForm: 'processed',
+          } },
+          { grams: 150, product: {
+            name: 'Caloric drink', carbs100: 20, protein100: 0, fat100: 0,
+            fiber100: 0, simple100: 0, complex100: 20, gi: 50, foodForm: 'liquid',
+          } },
+        ],
+      },
+      getProductFromItem: resolveItem,
+    });
+
+    expect(result.nutrients.decisionRatios.processedRatioRaw).toBeCloseTo(0.4, 8);
+    expect(result.responseShape.drivers).not.toContain('обработанная форма');
+    expect(result.responseShape.drivers).toContain('жидкая форма');
+  });
+
+  it('uses unrounded simple-carb ratios at the 0.6 shape threshold', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const makeSimpleMeal = (simpleCarbs) => makeMeal('12:00', {
+      name: `Simple ratio ${simpleCarbs}`,
+      carbs100: 100, protein100: 0, fat100: 0, fiber100: 0,
+      simple100: simpleCarbs, complex100: 100 - simpleCarbs, gi: 50, foodForm: 'whole',
+    });
+    const below = model.estimate({ meal: makeSimpleMeal(59), getProductFromItem: resolveItem });
+    const boundary = model.estimate({ meal: makeSimpleMeal(60), getProductFromItem: resolveItem });
+
+    expect(below.nutrients.decisionRatios.simpleRatioRaw).toBeCloseTo(0.59, 8);
+    expect(below.nutrients.simpleRatio).toBe(0.6);
+    expect(below.responseShape.type).toBe('mixed');
+    expect(below.responseShape.drivers).not.toContain('высокая доля простых углеводов');
+    expect(boundary.nutrients.decisionRatios.simpleRatioRaw).toBe(0.6);
+    expect(boundary.responseShape.type).toBe('fast');
+    expect(boundary.responseShape.drivers).toContain('высокая доля простых углеводов');
+  });
+
+  it('keeps nutrient-bearing liquids relevant to response shape', () => {
+    const model = globalThis.HEYS.InsulinWave.ResponseModel;
+    const result = model.estimate({
+      meal: makeMeal('12:00', { ...fullProduct, simple100: 30, complex100: 10, foodForm: 'liquid' }),
+      getProductFromItem: resolveItem,
+    });
+
+    expect(result.nutrients.nutrientLiquidRatio).toBe(1);
+    expect(result.nutrients.decisionRatios).toMatchObject({
+      nutrientLiquidRatioRaw: 1,
+      knownLiquidNutrientRatioRaw: 1,
+      inferredLiquidNutrientRatioRaw: 0,
+    });
+    expect(result.responseShape.type).toBe('fast');
+    expect(result.responseShape.drivers).toContain('жидкая форма');
   });
 
   it('does not reduce a fatty mixed meal to GL-only duration', () => {
@@ -140,6 +327,80 @@ describe('Postprandial response model v5', () => {
     expect(result.currentResponse).toBe(result.waveHistory.at(-1));
     expect(result.responseLoad).toBe(result.waveHistory.at(-1).responseLoad);
     expect(result.duration).toBe(result.waveHistory.at(-1).duration);
+  });
+
+  it('uses the upper estimate bound for the UI countdown and post-window timer', () => {
+    const params = { meals: [makeMeal('12:00', fullProduct)], getProductFromItem: resolveItem };
+    const initial = globalThis.HEYS.InsulinWave.calculate({ ...params, nowMinutes: 12 * 60 });
+    const centralEnd = initial.currentResponse.endMin;
+    const latestEnd = initial.currentResponse.latestEndMin;
+    const insideRange = globalThis.HEYS.InsulinWave.calculate({ ...params, nowMinutes: centralEnd + 1 });
+    const atRangeEnd = globalThis.HEYS.InsulinWave.calculate({ ...params, nowMinutes: latestEnd });
+    const afterRange = globalThis.HEYS.InsulinWave.calculate({ ...params, nowMinutes: latestEnd + 37 });
+
+    expect(insideRange.status).toBe('complete');
+    expect(insideRange.rangeStatus).toBe('settling');
+    expect(insideRange.rangeRemaining).toBe(latestEnd - centralEnd - 1);
+    expect(insideRange.centralProgress).toBe(100);
+    expect(insideRange.rangeProgress).toBeLessThan(100);
+    expect(insideRange.progress).toBe(insideRange.centralProgress);
+    expect(insideRange.minutesAfterWindow).toBe(0);
+    expect(atRangeEnd.rangeStatus).toBe('complete');
+    expect(atRangeEnd.rangeProgress).toBe(100);
+    expect(atRangeEnd.minutesAfterWindow).toBe(0);
+    expect(afterRange.rangeStatus).toBe('complete');
+    expect(afterRange.rangeRemaining).toBe(0);
+    expect(afterRange.minutesAfterWindow).toBe(37);
+  });
+
+  it('applies uncertainty before capping a duration at the model maximum', () => {
+    const product = {
+      name: 'Capped fixture', carbs100: 66.9, protein100: 31.8, fat100: 63.3,
+      fiber100: 5.3, simple100: 0, complex100: 66.9, gi: 100,
+    };
+    const result = globalThis.HEYS.InsulinWave.ResponseModel.estimate({
+      meal: makeMeal('21:05', product),
+      getProductFromItem: resolveItem,
+    });
+    const calculation = result.estimatedWindow.calculation;
+
+    expect(calculation.preClampMinutes).toBeCloseTo(396.6, 1);
+    expect(calculation.rawCentralMinutes).toBeCloseTo(396.6, 1);
+    expect(calculation.rawLowerMinutes).toBeCloseTo(301.4, 1);
+    expect(calculation.centralMinutes).toBe(360);
+    expect(calculation.lowerMinutes).toBe(301);
+    expect(calculation.upperMinutes).toBe(360);
+    expect(calculation.centralWasCapped).toBe(true);
+    expect(calculation.upperWasCapped).toBe(true);
+  });
+
+  it('places the qualitative profile peak near peakTimingEstimateMin on the upper-bound timeline', () => {
+    const result = globalThis.HEYS.InsulinWave.ResponseModel.estimate({
+      meal: makeMeal('12:00', { ...fullProduct, fat100: 63.3, foodForm: 'whole' }),
+      getProductFromItem: resolveItem,
+    });
+    const peakPoint = result.responseProfile.reduce((best, point) => point.value > best.value ? point : best);
+    const peakMinute = peakPoint.t * result.estimatedWindow.upperMinutes;
+
+    expect(result.responseShape.type).toBe('prolonged');
+    expect(peakMinute).toBeCloseTo(result.responseShape.peakTimingEstimateMin, -1);
+  });
+
+  it('exposes one diagnostic duration calculation for the card and every meal', () => {
+    const result = globalThis.HEYS.InsulinWave.calculate({
+      meals: [makeMeal('12:00', fullProduct, 100, 'meal-a')],
+      getProductFromItem: resolveItem,
+      nowMinutes: 13 * 60,
+    });
+    const calculation = result.estimatedWindow.calculation;
+    const contributionTotal = calculation.contributions.reduce((sum, item) => sum + item.minutes, 0);
+
+    expect(calculation.formulaVersion).toBe('duration-v5');
+    expect(contributionTotal).toBeCloseTo(calculation.preClampMinutes, 1);
+    expect(calculation.centralMinutes).toBe(result.estimatedWindow.centralMinutes);
+    expect(calculation.upperMinutes).toBe(result.currentResponse.latestEndMin - result.currentResponse.startMin);
+    expect(calculation.timerBoundary).toBe('upper');
+    expect(result.currentResponse.estimatedWindow.calculation).toEqual(calculation);
   });
 
   it('is deterministic on the first and repeated load', () => {
@@ -216,15 +477,63 @@ describe('Postprandial response model v5', () => {
     }
   });
 
-  it('keeps unsafe physiological claims out of active response UI sources', () => {
+  it('qualifies lipolysis wording and keeps unsafe physiological claims out of active UI', () => {
     const uiSource = [
       'heys_iw_ui.js',
       'heys_iw_graph.js',
       'heys_day_insulin_wave_ui_v1.js',
+      'heys_meal_step_v1.js',
     ].map(read).join('\n');
-    expect(uiSource).not.toMatch(/липолиз|жиросжиган|жир запасается|µU\/mL|мкЕд\/мл|не ешь подольше/i);
-    expect(uiSource).toContain('Это эвристическая оценка');
+    expect(uiSource).not.toMatch(/липолиз (начался|идёт|активен)|жиросжиган|жир запасается|µU\/mL|мкЕд\/мл|не ешь подольше/i);
+    expect(uiSource).toContain('До расчётного восстановления условий для липолиза');
+    expect(uiSource).not.toContain('Липолиз ориентировочно через');
+    expect(uiSource).toContain('После расчётного восстановления условий для липолиза');
+    expect(uiSource).toContain('countUp: true');
+    expect(uiSource).toContain('Расчётные условия для липолиза восстановлены');
+    expect(uiSource).toContain('Это эвристическая неперсонализированная оценка');
     expect(uiSource).toContain('не запрещает есть');
+    expect(uiSource).not.toContain('Инсулиновая волна ещё активна');
+    expect(uiSource).not.toContain('не прерывают липолиз');
+  });
+
+  it('keeps the current-moment graph marker distinct and smoothly interpolated', () => {
+    const graphSource = read('heys_iw_graph.js');
+    const marker = globalThis.HEYS.InsulinWave.Graph.interpolateMarker([
+      { x: 0, y: 10 },
+      { x: 20, y: 30 },
+    ], 0.25);
+
+    expect(graphSource).toContain('iw-response-chart__current-marker');
+    expect(graphSource).toContain('iwCurrentMarkerGlow');
+    expect(graphSource).toContain('r: 9');
+    expect(graphSource).toContain('data.rangeProgress ?? data.progress');
+    expect(marker).toEqual({ x: 5, y: 15 });
+    expect(marker.x).not.toBe(0);
+    expect(marker.x).not.toBe(20);
+  });
+
+  it('uses range state in every active user-facing progress consumer', () => {
+    const uiSource = read('heys_iw_ui.js');
+    const mealStepSource = read('heys_meal_step_v1.js');
+
+    expect(uiSource).toContain('data.rangeProgress ?? data.progress');
+    expect(uiSource).toContain("(data.rangeStatus || data.status) === 'complete'");
+    expect(mealStepSource).toContain("(wave.rangeStatus || wave.status) !== 'settling'");
+    expect(mealStepSource).not.toContain("wave.status === 'lipolysis'");
+  });
+
+  it('uses canonical meal diagnostics instead of the retired multiplier popup', () => {
+    const mealCardSource = read('day/_meals.js');
+    expect(mealCardSource).toContain('InsulinWave.renderCalculationTrace?.(currentWave)');
+    expect(mealCardSource).toContain('meal.id ? wave.id === meal.id');
+    expect(mealCardSource).not.toContain('База × Множитель');
+    expect(mealCardSource).not.toContain('currentWave.circadianMultiplier');
+  });
+
+  it('uses user-facing labels for inferred food form details', () => {
+    const uiSource = read('heys_iw_ui.js');
+    expect(uiSource).toContain("field === 'foodForm' ? 'форма продуктов'");
+    expect(uiSource).not.toContain('Не хватает: ${missing.join');
   });
 
   it('fails loudly on missing required dependencies and input', () => {

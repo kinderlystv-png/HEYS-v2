@@ -30,7 +30,7 @@ afterAll(() => {
 describe('InsulinWave compatibility canary', () => {
   it('exposes the canonical API and thin legacy aliases', () => {
     const IW = globalThis.HEYS.InsulinWave;
-    expect(IW.VERSION).toBe('5.0.0');
+    expect(IW.VERSION).toBe('5.0.1');
     expect(typeof IW.calculate).toBe('function');
     expect(typeof IW.estimatePostprandialResponse).toBe('function');
     expect(typeof IW.calculateMealNutrients).toBe('function');
@@ -48,7 +48,7 @@ describe('InsulinWave compatibility canary', () => {
       nowMinutes: 13 * 60,
     });
     expect(result).not.toBeNull();
-    expect(result.modelVersion).toBe('5.0.0');
+    expect(result.modelVersion).toBe('5.0.1');
     expect(result.estimateKind).toBe('heuristic');
     expect(result.estimatedWindow.rangeLabel).toMatch(/^\d{2}:\d{2}–\d{2}:\d{2}$/);
     expect(result.insulinWaveHours).toBe(result.duration / 60);

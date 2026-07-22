@@ -39,6 +39,11 @@ const COMMON_DEPLOY_FILES = new Set([
   'yandex-cloud-functions/deploy-all.sh',
   'yandex-cloud-functions/test-functions.sh',
   'yandex-cloud-functions/function-inventory.cjs',
+  'yandex-cloud-functions/serverless-capacity-policy.cjs',
+  'yandex-cloud-functions/check-serverless-capacity.cjs',
+  'yandex-cloud-functions/check-serverless-error-logs.cjs',
+  'yandex-cloud-functions/serverless-ops-canary.cjs',
+  'yandex-cloud-functions/serverless-sync-load-test.cjs',
 ]);
 
 function listFunctions({ group = null, autoOnly = false } = {}) {

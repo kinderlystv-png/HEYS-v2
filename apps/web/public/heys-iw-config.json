@@ -1,5 +1,8 @@
 {
-  "version": "hash:e6b3e6beabf0",
+  "version": "hash:80e97476969f",
+  "modelVersion": "5.0.1",
+  "modelKind": "heuristic",
+  "modelSource": "embedded-response-model-v5",
   "GI_CATEGORIES": {
     "low": {
       "min": 0,
@@ -36,9 +39,9 @@
   },
   "STATUS_CONFIG": {
     "lipolysis": {
-      "emoji": "🔥",
+      "emoji": "✓",
       "color": "#22c55e",
-      "label": "Липолиз!"
+      "label": "Окно завершено"
     },
     "almost": {
       "emoji": "⏳",

@@ -73,7 +73,14 @@
     // New [2000,5000,10000] gives 7s — enough for CF warm-up.
     MAX_RETRIES: 2,
     RETRY_DELAY_MS: 2000,
-    RETRY_DELAY_ESCALATION_MS: [2000, 4500, 7000]
+    RETRY_DELAY_ESCALATION_MS: [2000, 4500, 7000],
+
+    // One browser tab must stay well below the Yandex Functions concurrent
+    // request quota. Every HTTP attempt (including retries) goes through the
+    // shared priority scheduler below; waits never occupy a slot.
+    REQUEST_MAX_CONCURRENCY: 3,
+    REQUEST_BACKOFF_BASE_MS: 2000,
+    REQUEST_BACKOFF_MAX_MS: 30000
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -89,6 +96,155 @@
     : null;
   const PIN_COOKIE_SESSION_HINT_KEY = 'heys_pin_cookie_session_hint';
   const CURATOR_COOKIE_SESSION_HINT_KEY = 'heys_curator_cookie_session_hint';
+
+  const REQUEST_PRIORITY = Object.freeze({ critical: 0, normal: 1, background: 2 });
+  let _requestInFlight = 0;
+  let _requestSequence = 0;
+  let _requestQueue = [];
+  let _requestBackoffUntil = 0;
+  let _requestBackoffReason = null;
+  let _requestFailureStreak = 0;
+  let _requestBackoffTimer = null;
+
+  function normalizeRequestPriority(priority) {
+    return Object.prototype.hasOwnProperty.call(REQUEST_PRIORITY, priority) ? priority : 'normal';
+  }
+
+  function scheduleRequestDrain(delayMs = 0) {
+    if (_requestBackoffTimer) return;
+    _requestBackoffTimer = setTimeout(() => {
+      _requestBackoffTimer = null;
+      drainRequestQueue();
+    }, Math.max(0, delayMs));
+  }
+
+  function drainRequestQueue() {
+    if (_requestInFlight >= CONFIG.REQUEST_MAX_CONCURRENCY || _requestQueue.length === 0) return;
+
+    const backoffLeft = _requestBackoffUntil - Date.now();
+    if (backoffLeft > 0) {
+      scheduleRequestDrain(backoffLeft);
+      return;
+    }
+
+    _requestQueue.sort((left, right) => {
+      const priorityDiff = REQUEST_PRIORITY[left.priority] - REQUEST_PRIORITY[right.priority];
+      return priorityDiff || left.sequence - right.sequence;
+    });
+
+    while (_requestInFlight < CONFIG.REQUEST_MAX_CONCURRENCY && _requestQueue.length > 0) {
+      const entry = _requestQueue.shift();
+      _requestInFlight += 1;
+      Promise.resolve()
+        .then(entry.task)
+        .then(entry.resolve, entry.reject)
+        .finally(() => {
+          _requestInFlight = Math.max(0, _requestInFlight - 1);
+          drainRequestQueue();
+        });
+    }
+  }
+
+  function scheduleRequestAttempt(task, meta = {}) {
+    return new Promise((resolve, reject) => {
+      _requestQueue.push({
+        task,
+        resolve,
+        reject,
+        priority: normalizeRequestPriority(meta.priority),
+        requestClass: meta.requestClass || 'api',
+        sequence: _requestSequence++
+      });
+      drainRequestQueue();
+    });
+  }
+
+  function parseRetryAfterMs(response) {
+    const raw = response?.headers?.get?.('Retry-After');
+    if (!raw) return 0;
+    const seconds = Number(raw);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+    const dateMs = Date.parse(raw);
+    return Number.isFinite(dateMs) ? Math.max(0, dateMs - Date.now()) : 0;
+  }
+
+  function openRequestBackoff(response, attempt, reason) {
+    _requestFailureStreak += 1;
+    const retryAfterMs = parseRetryAfterMs(response);
+    const exponentialMs = Math.min(
+      CONFIG.REQUEST_BACKOFF_MAX_MS,
+      CONFIG.REQUEST_BACKOFF_BASE_MS * Math.pow(2, Math.min(_requestFailureStreak - 1, 4))
+    );
+    const configuredMs = CONFIG.RETRY_DELAY_ESCALATION_MS[attempt] || CONFIG.RETRY_DELAY_MS;
+    const delayMs = Math.min(
+      CONFIG.REQUEST_BACKOFF_MAX_MS,
+      Math.max(retryAfterMs, exponentialMs, configuredMs)
+    );
+    const nextUntil = Date.now() + delayMs;
+    if (nextUntil > _requestBackoffUntil) {
+      _requestBackoffUntil = nextUntil;
+      _requestBackoffReason = reason || 'transient';
+      if (_requestBackoffTimer) {
+        clearTimeout(_requestBackoffTimer);
+        _requestBackoffTimer = null;
+      }
+      scheduleRequestDrain(delayMs);
+      console.warn('[HEYS.api] Backpressure enabled', {
+        reason: _requestBackoffReason,
+        delayMs,
+        queued: _requestQueue.length,
+        inFlight: _requestInFlight
+      });
+    }
+    return _requestBackoffUntil;
+  }
+
+  function markRequestRecovered() {
+    if (Date.now() < _requestBackoffUntil) return;
+    const recoveredReason = _requestBackoffReason;
+    _requestFailureStreak = 0;
+    _requestBackoffReason = null;
+    _requestBackoffUntil = 0;
+    if (recoveredReason && typeof global.dispatchEvent === 'function' && typeof global.CustomEvent === 'function') {
+      try {
+        global.dispatchEvent(new global.CustomEvent('heys:api-recovered', {
+          detail: { reason: recoveredReason }
+        }));
+      } catch (_) { /* best-effort recovery signal */ }
+    }
+  }
+
+  function classifyRpcPriority(fnName) {
+    if (/^(batch_get_client_kv_by_session|get_client_kv_by_session|verify_client_pin|get_client_salt)/.test(fnName)) {
+      return 'critical';
+    }
+    if (/(upsert_client_kv|merge_save_client_kv|issue_write_context|log_consents|delete_my_account|purge_health_data)/.test(fnName)) {
+      return 'critical';
+    }
+    if (/^(log_|append_|track_)/.test(fnName)) return 'background';
+    return 'normal';
+  }
+
+  function classifyRestPriority(table, method, requestedPriority) {
+    if (requestedPriority) return normalizeRequestPriority(requestedPriority);
+    if (table === 'client_kv_store' && method !== 'GET') return 'critical';
+    if (table === 'client_log_trace' || table === 'client_event_log') return 'background';
+    return 'normal';
+  }
+
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('online', () => {
+      if (_requestBackoffReason !== 'network') return;
+      _requestBackoffUntil = Date.now();
+      _requestFailureStreak = 0;
+      _requestBackoffReason = null;
+      if (_requestBackoffTimer) {
+        clearTimeout(_requestBackoffTimer);
+        _requestBackoffTimer = null;
+      }
+      drainRequestQueue();
+    });
+  }
 
   function setCookieSessionHint(kind, active) {
     const key = kind === 'curator' ? CURATOR_COOKIE_SESSION_HINT_KEY : PIN_COOKIE_SESSION_HINT_KEY;
@@ -175,28 +331,38 @@
   /**
    * Выполнить запрос с retry (exponential backoff + нарастающий таймаут)
    */
-  async function fetchWithRetry(url, options, retries = CONFIG.MAX_RETRIES) {
+  async function fetchWithRetry(url, options, retries = CONFIG.MAX_RETRIES, requestMeta = {}) {
     let lastError;
 
     for (let i = 0; i <= retries; i++) {
       // ⏱️ Нарастающий таймаут (см. CONFIG.TIMEOUT_ESCALATION_MS)
       const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
-        const response = await fetchWithTimeout(url, options, timeoutMs);
+        const response = await scheduleRequestAttempt(
+          () => fetchWithTimeout(url, options, timeoutMs),
+          requestMeta
+        );
 
-        // 🔄 v58 FIX: Retry on server errors (502/503/504) — cold start recovery
+        // Retry transient capacity/server errors. 429 must participate in the
+        // same global backpressure window; otherwise independent callers retry
+        // together and keep the cloud function above quota.
         // Yandex API Gateway returns 502 when cloud function times out on cold start.
         // Without this check, fetchWithRetry returns 502 as valid response (no retry).
-        const retryableStatuses = [502, 503, 504];
+        const retryableStatuses = [429, 502, 503, 504];
         if (retryableStatuses.includes(response.status)) {
           const msg = `Server error ${response.status} (retryable)`;
+          openRequestBackoff(response, i, `http_${response.status}`);
           err(`Attempt ${i + 1}/${retries + 1}: ${msg}`);
           throw new Error(msg);
         }
 
+        markRequestRecovered();
         return response;
       } catch (e) {
         lastError = e;
+        if (!String(e?.message || '').includes('(retryable)')) {
+          openRequestBackoff(null, i, 'network');
+        }
         err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
@@ -204,7 +370,8 @@
           // PERF NEW-14: jitter ±30% — десинхронизирует ретраи между вкладками/клиентами,
           // чтобы после cold-start 502 не приходила thundering herd через 2с/4.5с/7с в lockstep.
           const jitter = (Math.random() - 0.5) * 0.6 * baseDelay; // ±30% от base
-          const delay = Math.max(100, Math.round(baseDelay + jitter));
+          const backoffLeft = Math.max(0, _requestBackoffUntil - Date.now());
+          const delay = Math.max(100, backoffLeft, Math.round(baseDelay + jitter));
           console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms (base=${baseDelay}±30%)...`);
           await new Promise(r => setTimeout(r, delay));
         }
@@ -369,7 +536,7 @@
    * @param {object} params - Параметры функции
    * @returns {Promise<{data: any, error: any}>}
    */
-  async function rpc(fnName, params = {}) {
+  async function rpc(fnName, params = {}, requestOptions = {}) {
     const url = `${CONFIG.API_URL}${CONFIG.ENDPOINTS.RPC}?fn=${encodeURIComponent(fnName)}`;
 
     try {
@@ -403,6 +570,9 @@
         // subdomain (app.heyslab.ru → api.heyslab.ru). Without `include`
         // the browser drops the cookie even though CORS allows credentials.
         credentials: 'include'
+      }, CONFIG.MAX_RETRIES, {
+        priority: requestOptions.priority || classifyRpcPriority(fnName),
+        requestClass: requestOptions.requestClass || `rpc:${fnName}`
       });
 
       const data = await response.json();
@@ -450,7 +620,10 @@
    * @returns {Promise<{data: any, error: any}>}
    */
   async function rest(table, options = {}) {
-    const { method = 'GET', filters = {}, data = null, select, limit, offset, order, upsert, onConflict } = options;
+    const {
+      method = 'GET', filters = {}, data = null, select, limit, offset, order,
+      upsert, onConflict, requestPriority, requestClass
+    } = options;
 
     // Строим URL с параметрами (формат: /rest/{table}?params)
     const params = new URLSearchParams();
@@ -507,7 +680,10 @@
         fetchOptions.body = JSON.stringify(data);
       }
 
-      const response = await fetchWithRetry(url, fetchOptions);
+      const response = await fetchWithRetry(url, fetchOptions, CONFIG.MAX_RETRIES, {
+        priority: classifyRestPriority(table, method, requestPriority),
+        requestClass: requestClass || `rest:${method}:${table}`
+      });
       const result = await response.json();
 
       // v60: REST POST возвращает {success, rowCount, inserted} вместо массива
@@ -543,7 +719,7 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ to: phone, msg: message })
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'normal', requestClass: 'sms' });
 
       const data = await response.json();
 
@@ -575,7 +751,7 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(leadData)
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'normal', requestClass: 'lead' });
 
       const data = await response.json();
 
@@ -640,7 +816,7 @@
         // (heys_curator_jwt, HttpOnly, Domain=.heyslab.ru). credentials:'include'
         // обязателен для cross-subdomain cookie carriage.
         credentials: 'include'
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'critical', requestClass: 'auth:curator-login' });
 
       const data = await response.json();
 
@@ -714,7 +890,7 @@
         headers,
         credentials: 'include',
         body: JSON.stringify(token ? { token } : {})
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'critical', requestClass: 'auth:curator-verify' });
 
       const data = await response.json();
 
@@ -1397,6 +1573,8 @@
       // only, which silently stripped revision.
       const result = await rest('client_kv_store', {
         select: 'k,v,revision,updated_at',
+        requestPriority: 'critical',
+        requestClass: 'phase-a:curator-kv-batch',
         filters: {
           'eq.client_id': clientId,
           'in.k': `(${keys.join(',')})`
@@ -1434,6 +1612,8 @@
       if (keys && keys.length > 0) {
         const subsetResult = await rest('client_kv_store', {
           select: 'k,v,updated_at',
+          requestPriority: 'critical',
+          requestClass: 'phase-a:curator-kv-subset',
           filters: {
             'eq.client_id': clientId,
             'in.k': `(${keys.join(',')})`
@@ -1463,7 +1643,7 @@
         method: 'GET',
         headers: curatorAuth.headers,
         credentials: 'include'
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'normal', requestClass: 'sync:curator-kv-all' });
 
       const result = await response.json();
       if (!response.ok) {
@@ -2096,7 +2276,7 @@
         method: 'GET',
         headers: curatorAuth.headers,
         credentials: 'include'
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'normal', requestClass: 'curator:clients' });
 
       const result = await response.json();
 
@@ -2189,7 +2369,7 @@
         headers: curatorAuth.headers,
         credentials: 'include',
         body: JSON.stringify({ name: name || `Клиент ${Date.now()}` })
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'critical', requestClass: 'curator:create-client' });
 
       const result = await response.json();
 
@@ -2235,7 +2415,7 @@
         headers: curatorAuth.headers,
         credentials: 'include',
         body: JSON.stringify(data)
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'critical', requestClass: 'curator:update-client' });
 
       const result = await response.json();
 
@@ -2280,7 +2460,7 @@
         method: 'DELETE',
         headers: curatorAuth.headers,
         credentials: 'include'
-      });
+      }, CONFIG.MAX_RETRIES, { priority: 'critical', requestClass: 'curator:delete-client' });
 
       const result = await response.json();
 
@@ -3070,7 +3250,14 @@
     _debug: () => ({
       isOnline: _isOnline,
       lastError: _lastError != null ? String(_lastError.message || _lastError).slice(0, 200) : null,
-      lastErrorAt: _lastErrorAt || 0
+      lastErrorAt: _lastErrorAt || 0,
+      requests: {
+        inFlight: _requestInFlight,
+        queued: _requestQueue.length,
+        maxConcurrency: CONFIG.REQUEST_MAX_CONCURRENCY,
+        backoffUntil: _requestBackoffUntil || 0,
+        backoffReason: _requestBackoffReason
+      }
     })
   };
 

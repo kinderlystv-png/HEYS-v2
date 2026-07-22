@@ -12893,6 +12893,23 @@
     startForegroundAutoSyncLoop();
   });
 
+  // navigator.onLine may stay true while VPN/mobile routing is broken. The
+  // central API dispatcher emits this signal after its circuit breaker sees a
+  // real successful response, so the critical day keys get another pull even
+  // when the browser never emitted an `online` event.
+  global.addEventListener('heys:api-recovered', function (event) {
+    const reason = event?.detail?.reason || 'transient';
+    addSyncLogEntry('api-recovered', { reason, pending: cloud.getPendingCount() });
+    recoverStalledClientUpload('api-recovered');
+
+    if (clientUpsertQueue.length > 0 && !clientUpsertTimer) scheduleClientPush();
+    if (upsertQueue.length > 0 && !upsertTimer) schedulePush();
+    notifyPendingChange();
+
+    requestForegroundAutoSync('api-recovered', { minGapMs: 0 }).catch(() => { });
+    startForegroundAutoSyncLoop();
+  });
+
   // Когда сеть пропадает — логируем
   global.addEventListener('offline', function () {
     addSyncLogEntry('offline', { pending: cloud.getPendingCount() });

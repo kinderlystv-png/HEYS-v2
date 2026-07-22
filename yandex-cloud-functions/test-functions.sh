@@ -41,6 +41,11 @@ export VAPID_PRIVATE_KEY="${VAPID_PRIVATE_KEY:-contract-test-private-key}"
 export VAPID_SUBJECT="${VAPID_SUBJECT:-mailto:contract-test@heyslab.ru}"
 
 node --test "$SCRIPT_DIR/shared/__tests__/kv-payload-contracts.test.cjs"
+node --test "$SCRIPT_DIR/shared/__tests__/serverless-capacity-guard.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/serverless-capacity-policy.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/serverless-capacity-contract.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/serverless-operations.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/serverless-sync-load-test.test.cjs"
 
 for function_name in "${TARGETS[@]}"; do
   function_dir="$SCRIPT_DIR/$function_name"
@@ -54,6 +59,10 @@ for function_name in "${TARGETS[@]}"; do
   if [[ "$function_name" == "heys-api-rpc" || "$function_name" == "heys-api-rest" ]]; then
     if ! cmp -s "$SCRIPT_DIR/shared/kv-payload-contracts.js" "$function_dir/shared/kv-payload-contracts.js"; then
       echo "KV payload contract mirror is stale for $function_name" >&2
+      exit 1
+    fi
+    if ! cmp -s "$SCRIPT_DIR/shared/serverless-capacity-guard.js" "$function_dir/shared/serverless-capacity-guard.js"; then
+      echo "Serverless capacity guard mirror is stale for $function_name" >&2
       exit 1
     fi
   fi

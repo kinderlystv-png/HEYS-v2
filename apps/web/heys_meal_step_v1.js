@@ -41,6 +41,14 @@
   // Pad number to 2 digits
   const pad2 = (n) => String(n).padStart(2, '0');
 
+  const formatPostprandialRemaining = (minutes) => {
+    const value = Math.max(0, Math.round(Number(minutes) || 0));
+    if (value < 60) return `${value} мин`;
+    const hours = Math.floor(value / 60);
+    const rest = value % 60;
+    return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
+  };
+
   // ============================================================
   // ХЕЛПЕРЫ ВРЕМЕНИ
   // ============================================================
@@ -662,8 +670,8 @@
       if (!analytics || !analytics.trackDataOperation) return;
       analytics.trackDataOperation('insulin_wave_warning', {
         action,
-        remainingMinutes: wave?.remaining ?? null,
-        status: wave?.status || null
+        remainingMinutes: wave?.rangeRemaining ?? wave?.remaining ?? null,
+        status: wave?.rangeStatus || wave?.status || null
       });
     }, [analytics]);
 
@@ -699,7 +707,7 @@
       if (!isSelectedTimeCloseToNow()) return false;
       const wave = cachedWave || computeWaveData();
       if (!wave) return false;
-      if (wave.status === 'lipolysis') return false;
+      if ((wave.rangeStatus || wave.status) !== 'settling') return false;
       setHasShownWarning(true);
       setWarningOpen(true);
       trackInsulinEvent('show', wave);
@@ -779,22 +787,20 @@
             }
           },
             React.createElement('span', null, '⚠️'),
-            React.createElement('span', null, 'Инсулиновая волна ещё активна')
+            React.createElement('span', null, 'Расчётный постпрандиальный период ещё продолжается')
           ),
           // Progress bar wrapper с отступами
           React.createElement('div', { style: { margin: '4px 0' } },
             (insulinWave?.renderProgressBar && cachedWave)
               ? insulinWave.renderProgressBar(cachedWave)
               : React.createElement('div', { style: { fontSize: '14px', color: '#475569' } },
-                (cachedWave?.endTimeDisplay || cachedWave?.endTime)
-                  ? `Липолиз откроется в ${cachedWave.endTimeDisplay || cachedWave.endTime}`
-                  : 'Волна ещё не завершена — подождите немного')
+                `До расчётного восстановления условий для липолиза осталось около ${formatPostprandialRemaining(cachedWave?.rangeRemaining ?? cachedWave?.remaining)}`)
           ),
           React.createElement('div', { style: { fontSize: '14px', color: '#334155', lineHeight: 1.6 } },
-            'Если поесть сейчас, волна продлится и липолиз отложится.'
+            `До расчётного восстановления условий для липолиза осталось около ${formatPostprandialRemaining(cachedWave?.rangeRemaining ?? cachedWave?.remaining)}. Ориентируйся также на голод, самочувствие и дневной план. Эта оценка не запрещает есть.`
           ),
           React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } },
-            '💧 Вода, чай или кофе без сахара — не прерывают липолиз'
+            '💧 Напитки без калорий обычно не меняют расчёт пищевой нагрузки модели.'
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', paddingTop: '4px' } },
             React.createElement('button', {

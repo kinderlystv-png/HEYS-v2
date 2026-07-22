@@ -6,9 +6,12 @@
 const { getPool } = require('./db-pool');
 const { initSecrets } = require('./secrets');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
+const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
 const { mergeDayData, mergeHungerStatusEvents, mergeInsightsFeedback } = require('./lib/heys_sync_merge_v1.cjs');
 const fs = require('fs');
 const path = require('path');
+
+const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rest' });
 
 // Загрузка CA сертификата Yandex Cloud
 const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
@@ -451,7 +454,7 @@ function isAllowedOrigin(origin) {
   return !!origin && ALLOWED_ORIGINS.includes(origin);
 }
 
-module.exports.handler = async function (event, context) {
+async function handleRestRequest(event, context) {
   await initSecrets();
   const origin = event.headers?.origin || event.headers?.Origin || null;
   const corsHeaders = getCorsHeaders(origin);
@@ -1641,5 +1644,21 @@ module.exports.handler = async function (event, context) {
 
   } finally {
     client.release();
+  }
+}
+
+module.exports.handler = async function (event, context) {
+  if (event?.httpMethod === 'OPTIONS') return handleRestRequest(event, context);
+
+  const permit = requestCapacityGuard.tryEnter();
+  if (!permit.ok) {
+    const origin = event?.headers?.origin || event?.headers?.Origin || null;
+    return requestCapacityGuard.withCorsHeaders(permit.response, getCorsHeaders(origin));
+  }
+
+  try {
+    return await handleRestRequest(event, context);
+  } finally {
+    permit.release();
   }
 };

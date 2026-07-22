@@ -1841,6 +1841,99 @@ body.tour-active .ios-pwa-banner {
   color: #1e293b;
 }
 
+/* === Meal creation date guard === */
+.confirm-modal:has(.meal-date-warning) {
+  overflow: hidden;
+  border: 2px solid #f97316;
+  box-shadow:
+    0 28px 70px -28px rgba(194, 65, 12, 0.65),
+    0 0 0 5px rgba(251, 146, 60, 0.18);
+}
+
+.meal-date-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  margin: 4px -4px 2px;
+  padding: 18px 16px 16px;
+  border: 2px solid #fb923c;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 58%, #fed7aa 100%);
+  color: #7c2d12;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.meal-date-warning__badge {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  box-shadow: 0 8px 18px -10px rgba(153, 27, 27, 0.9);
+}
+
+.meal-date-warning__date {
+  color: #9a3412;
+  font-size: clamp(24px, 7vw, 30px);
+  font-weight: 900;
+  line-height: 1.08;
+}
+
+.meal-date-warning__question {
+  color: #7c2d12;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.meal-date-warning__copy {
+  margin: 0;
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.meal-date-warning__today {
+  margin-top: 2px;
+  padding: 7px 11px;
+  border: 1px solid rgba(194, 65, 12, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #7c2d12;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.meal-date-warning__today-action {
+  min-height: 68px;
+  font-size: 16px;
+}
+
+.meal-date-warning__confirm-action {
+  height: 54px;
+  min-height: 54px;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .confirm-modal:has(.meal-date-warning) {
+  border-color: #fb923c;
+  box-shadow:
+    0 28px 70px -28px rgba(249, 115, 22, 0.72),
+    0 0 0 5px rgba(251, 146, 60, 0.22);
+}
+
+[data-theme="dark"] .meal-date-warning {
+  background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 58%, #fed7aa 100%);
+  color: #7c2d12;
+}
+
 /* === Confirm modal custom action layout (multi-add food flow) === */
 .confirm-modal-buttons--custom {
   display: flex;

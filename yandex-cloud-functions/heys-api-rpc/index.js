@@ -9,8 +9,11 @@ const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
+const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
+
+const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rpc' });
 
 const PLANNING_RECORD_MERGE_KEYS = new Set([
   'heys_planning_checklist_tombstones_v1',
@@ -1613,7 +1616,7 @@ function logCuratorAccessFireAndForget(pool, fnName, curatorId, params, ip, user
   })();
 }
 
-module.exports.handler = async function (event, context) {
+async function handleRpcRequest(event, context) {
   await initSecrets();
   // 🔐 P0: Conditional logging — no request details in production
   debugLog('[RPC Handler] Request received');
@@ -2538,7 +2541,7 @@ module.exports.handler = async function (event, context) {
       if (_attempt === 2) {
         return {
           statusCode: 503,
-          headers: corsHeaders,
+          headers: { ...corsHeaders, 'Retry-After': String(requestCapacityGuard.retryAfterSeconds) },
           body: JSON.stringify({ error: 'Service temporarily unavailable', message: 'Database connection failed after 3 attempts' })
         };
       }
@@ -4897,6 +4900,22 @@ module.exports.handler = async function (event, context) {
         code: error.code || 'INTERNAL_ERROR'
       })
     };
+  }
+}
+
+module.exports.handler = async function (event, context) {
+  if (event?.httpMethod === 'OPTIONS') return handleRpcRequest(event, context);
+
+  const permit = requestCapacityGuard.tryEnter();
+  if (!permit.ok) {
+    const origin = event?.headers?.origin || event?.headers?.Origin || '';
+    return requestCapacityGuard.withCorsHeaders(permit.response, getCorsHeaders(origin));
+  }
+
+  try {
+    return await handleRpcRequest(event, context);
+  } finally {
+    permit.release();
   }
 };
 // deployed at 2026-02-05 01:25:37

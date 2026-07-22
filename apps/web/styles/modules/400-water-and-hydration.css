@@ -878,6 +878,7 @@ html.dark .water-tip-text {
   /* Выше меню .tabs (z-index: 1000) */
 }
 
+body:has(.iw-response-card.expanded) .fab-group,
 body:has(.advice-list-overlay) .fab-group,
 body:has(.macro-toast.visible) .fab-group {
   opacity: 0;
