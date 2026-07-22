@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.23.1a0eddde",
+      "buildHash": "1a0eddde",
+      "date": "2026-07-23",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "resolve cloud id from configured folder",
+      "items": [
+        {
+          "type": "fix",
+          "title": "resolve cloud id from configured folder",
+          "description": "resolve cloud id from configured folder"
+        }
+      ],
+      "coveredCommits": ["1a0eddde"]
+    },
+    {
       "version": "2026.07.22.f9326610",
       "buildHash": "f9326610",
       "date": "2026-07-22",
@@ -143,37 +159,6 @@
         }
       ],
       "coveredCommits": ["e10811ba"]
-    },
-    {
-      "version": "2026.07.18.90bb2022",
-      "buildHash": "90bb2022",
-      "date": "2026-07-18",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Надёжность данных и тренировок",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Надёжное сохранение дневника",
-          "description": "HEYS теперь сообщает об ошибке записи сразу и не показывает успех, пока данные не сохранены."
-        },
-        {
-          "type": "fix",
-          "title": "Корректные продукты и порции",
-          "description": "Неполные карточки продуктов нельзя выбрать до загрузки состава, а позиция с 0 г больше не превращается в 100 г."
-        },
-        {
-          "type": "fix",
-          "title": "Безопасное продолжение тренировок",
-          "description": "Мобильность и другие тренировки подтверждают сохранение, а незавершённую запись можно повторить без дублей."
-        },
-        {
-          "type": "fix",
-          "title": "Строгая проверка доступа",
-          "description": "До подтверждения подписки дневник остаётся только для чтения и не разрешает случайные изменения."
-        }
-      ],
-      "coveredCommits": ["a7a7aa02", "a5c01506", "67fc869f", "8559f107", "c2699583", "b9695eaa", "dd849853"]
     }
   ]
 }
