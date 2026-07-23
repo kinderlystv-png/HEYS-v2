@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.23.7a9b2ee1",
+      "buildHash": "7a9b2ee1",
+      "date": "2026-07-23",
+      "kind": "technical",
+      "profile": "technical-backend-api",
+      "title": "Повышена надёжность мониторинга API",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Мониторинг API стал надёжнее",
+          "description": "Проверка перегрузки serverless API теперь завершается предсказуемо и не зависает при чтении облачных логов."
+        }
+      ],
+      "coveredCommits": ["7a9b2ee1"]
+    },
+    {
       "version": "2026.07.23.7ff8fef6",
       "buildHash": "7ff8fef6",
       "date": "2026-07-23",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["728f0c93"]
-    },
-    {
-      "version": "2026.07.18.8ff40e5c",
-      "buildHash": "8ff40e5c",
-      "date": "2026-07-18",
-      "kind": "technical",
-      "profile": "technical-backend-api",
-      "title": "Надёжнее работает контроль фоновых задач",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутреннюю проверку",
-          "description": "Исправили подключение проверки фоновых задач, чтобы система могла вовремя обнаруживать сбои."
-        }
-      ],
-      "coveredCommits": ["8ff40e5c"]
     }
   ]
 }
