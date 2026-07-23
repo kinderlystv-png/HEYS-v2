@@ -103,10 +103,10 @@
             totalMeals: days.reduce((sum, d) => sum + (d.meals?.length || 0), 0),
             confidence: days.length >= CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS ? 0.8 : 0.5,
             insight: avgGap < idealGap * 0.7
-                ? `Часто ешь раньше чем через ${waveHours}ч — инсулин не успевает упасть`
+                ? 'Следующий приём часто добавляется до завершения оценки предыдущего. Выбирайте частоту по голоду, самочувствию, медицинским ограничениям и способности соблюдать рацион.'
                 : avgGap > idealGap * 1.3
                     ? 'Большие перерывы между едой — риск переедания'
-                    : `Отличный тайминг! Среднее между приёмами: ${Math.round(avgGap / 60)}ч ${Math.round(avgGap % 60)}мин`
+                    : `Среднее между приёмами: ${Math.round(avgGap / 60)}ч ${Math.round(avgGap % 60)}мин`
         };
     }
 
@@ -128,7 +128,7 @@
                 overlapCount: 0,
                 avgOverlapPct: 0,
                 confidence: days.length >= CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS ? 0.8 : 0.5,
-                insight: '🎉 Нет перехлёста волн — отличный тайминг!',
+                insight: 'Все приёмы разделены интервалами длиннее расчётной длительности.',
                 score: 100
             };
         }
@@ -144,7 +144,7 @@
             avgOverlapPct: Math.round(avgOverlapPct),
             worstOverlaps: overlaps.slice(0, 3),
             confidence: days.length >= CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS ? 0.8 : 0.5,
-            insight: `${overlaps.length} раз ел до окончания инсулиновой волны — липолиз не успевал начаться`,
+            insight: `${overlaps.length} раз следующий приём был добавлен до завершения оценки предыдущего. Это описывает частоту и состав приёмов; вывод о снижении жировой массы делайте по долгосрочному тренду.`,
             score: Math.round(score)
         };
     }

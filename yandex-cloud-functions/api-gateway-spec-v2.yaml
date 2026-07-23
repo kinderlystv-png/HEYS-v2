@@ -1,3 +1,5 @@
+# HISTORICAL SNAPSHOT ONLY. Production deploys use api-gateway-spec.yaml.
+# Keep this file for legacy comparison; never pass it to `yc ... update`.
 openapi: 3.0.0
 info:
   title: HEYS API

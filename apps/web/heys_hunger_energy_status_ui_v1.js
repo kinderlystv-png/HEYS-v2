@@ -547,8 +547,11 @@
       hungerEventId: next.hungerEventId,
       hungerLevelBeforeMeal: next.hungerLevelBeforeMeal,
       hungerAt: next.hungerAt,
+      mealId: next.mealId,
       mealAt: next.mealAt,
       mealSignature: next.mealSignature,
+      mealEpisodeKey: next.mealEpisodeKey,
+      acknowledgedAt: next.acknowledgedAt,
       mealAnalysis: next.mealAnalysis,
       mealQuality: next.mealQuality,
       patternKey: next.patternKey,
@@ -1638,6 +1641,12 @@
       .slice(0, 220);
   }
 
+  function lowHungerMealEpisodeKey(mealId, mealAt, signature) {
+    if (mealId) return 'meal:' + String(mealId);
+    if (!mealAt) return null;
+    return 'meal:' + String(mealAt) + ':' + String(signature || '');
+  }
+
   function lowHungerPatternKey(category, signature, joined) {
     if (category === 'caffeine_additions' || category === 'near_zero_drink') return 'caffeine_additions:coffee_additions';
     if (category === 'alcohol') return 'alcohol:context';
@@ -2187,12 +2196,17 @@
     };
   }
 
-  function findLowHungerMealReason(mealAt, hungerEventId, signature) {
+  function findLowHungerMealReason(mealAt, hungerEventId, signature, mealId) {
+    const mealEpisodeKey = lowHungerMealEpisodeKey(mealId, mealAt, signature);
     return readEvents().find((row) =>
       LOW_HUNGER_RESOLVED_EVENT_TYPES.includes(row?.eventType) &&
-      row?.mealAt === mealAt &&
-      row?.hungerEventId === hungerEventId &&
-      (!signature || row?.mealSignature === signature)
+      (
+        (mealEpisodeKey && row?.mealEpisodeKey === mealEpisodeKey) ||
+        (
+          row?.mealAt === mealAt &&
+          (!signature || !row?.mealSignature || row.mealSignature === signature)
+        )
+      )
     ) || null;
   }
 
@@ -2202,6 +2216,7 @@
     const mealContext = findLastMealContext(date, primaryDay);
     const meal = mealContext?.meal;
     const mealAt = mealContext?.at;
+    const mealId = meal?.id || null;
     const mealT = timestampOf(mealAt);
     if (!meal || !Number.isFinite(mealT)) return null;
     const analysis = analyzeMealForLowHungerReview(meal);
@@ -2216,7 +2231,7 @@
       .filter((event) => event.t <= mealT && mealT - event.t <= LOW_HUNGER_MEAL_WINDOW_MIN * 60 * 1000)
       .sort((a, b) => b.t - a.t)[0];
     if (!beforeMeal || Number(beforeMeal.level) > LOW_HUNGER_MEAL_MAX_LEVEL) return null;
-    if (findLowHungerMealReason(mealAt, beforeMeal.id, analysis.signature)) return null;
+    if (findLowHungerMealReason(mealAt, beforeMeal.id, analysis.signature, mealId)) return null;
     const clarificationsDisabled = featureSettings.lowHungerClarifications === false;
     const dailyPromptLimit = getLowHungerDailyPromptLimit(featureSettings);
     const dailyPromptLimitReached = lowHungerPromptCountForDate(date) >= dailyPromptLimit;
@@ -2238,9 +2253,11 @@
     const backfillT = Math.max(beforeMeal.t + HUNGER_TIMELINE_SNAP_MS, mealT - HUNGER_TIMELINE_SNAP_MS);
     return {
       meal,
+      mealId,
       mealAt,
       mealTime: formatShortTime(mealT),
       mealSignature: analysis.signature,
+      mealEpisodeKey: lowHungerMealEpisodeKey(mealId, mealAt, analysis.signature),
       analysis,
       mealQuality: buildMealQualityLog(mealQuality),
       patternStats,
@@ -2257,7 +2274,7 @@
 
   function recordPassiveLowHungerContext(review) {
     if (!review?.passiveContext) return null;
-    if (findLowHungerMealReason(review.mealAt, review.hungerEvent?.id, review.mealSignature)) return null;
+    if (findLowHungerMealReason(review.mealAt, review.hungerEvent?.id, review.mealSignature, review.mealId)) return null;
     const recordedAt = nowIso();
     const reason = review.passiveContext.reason || review.analysis?.suggestedReason || 'caffeine_additions';
     return addEvent({
@@ -2268,8 +2285,10 @@
       hungerEventId: review.hungerEvent?.id || null,
       hungerLevelBeforeMeal: review.hungerLevel,
       hungerAt: review.hungerAt || null,
+      mealId: review.mealId || null,
       mealAt: review.mealAt,
       mealSignature: review.mealSignature || null,
+      mealEpisodeKey: review.mealEpisodeKey || null,
       mealAnalysis: review.analysis || null,
       mealQuality: review.mealQuality || null,
       patternKey: review.analysis?.patternKey || null,
@@ -5189,8 +5208,11 @@
         hungerEventId: lowHungerMealReview.hungerEvent?.id || null,
         hungerLevelBeforeMeal: lowHungerMealReview.hungerLevel,
         hungerAt: lowHungerMealReview.hungerAt || null,
+        mealId: lowHungerMealReview.mealId || null,
         mealAt: lowHungerMealReview.mealAt,
         mealSignature: lowHungerMealReview.mealSignature || null,
+        mealEpisodeKey: lowHungerMealReview.mealEpisodeKey || null,
+        acknowledgedAt: reasonAt,
         mealAnalysis: lowHungerMealReview.analysis || null,
         mealQuality: lowHungerMealReview.mealQuality || null,
         patternKey: lowHungerMealReview.analysis?.patternKey || null,
@@ -5312,8 +5334,11 @@
         hungerEventId: review.hungerEvent?.id || null,
         hungerLevelBeforeMeal: review.hungerLevel,
         hungerAt: review.hungerAt || null,
+        mealId: review.mealId || null,
         mealAt: review.mealAt,
         mealSignature: review.mealSignature || null,
+        mealEpisodeKey: review.mealEpisodeKey || null,
+        acknowledgedAt: recordedAt,
         mealAnalysis: review.analysis || null,
         mealQuality: review.mealQuality || null,
         patternKey: review.analysis?.patternKey || null,

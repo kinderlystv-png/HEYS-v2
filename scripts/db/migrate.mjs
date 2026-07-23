@@ -175,6 +175,11 @@ function compareLedger(prepared, applied) {
   return { drift, pending };
 }
 
+function assertNoPendingMigrations(comparison) {
+  if (comparison.pending.length === 0) return;
+  throw new Error(`Pending production migrations: ${comparison.pending.map((migration) => migration.id).join(', ')}`);
+}
+
 function buildApplySql(pending) {
   const parts = [
     'BEGIN;',
@@ -217,7 +222,11 @@ async function main(argv = process.argv.slice(2)) {
   }
   console.log(`Ledger: ${applied.length} applied, ${comparison.pending.length} pending`);
   comparison.pending.forEach((migration) => console.log(`  pending ${migration.order}: ${migration.id}`));
-  if (command === '--status' || comparison.pending.length === 0) return;
+  if (command === '--status') {
+    if (argv.includes('--require-current')) assertNoPendingMigrations(comparison);
+    return;
+  }
+  if (comparison.pending.length === 0) return;
   if (!argv.includes('--confirm-production')) {
     throw new Error('--apply requires --confirm-production');
   }
@@ -238,6 +247,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
 }
 
 export {
+  assertNoPendingMigrations,
   assertNoEmbeddedTransactions,
   buildApplySql,
   buildInventory,

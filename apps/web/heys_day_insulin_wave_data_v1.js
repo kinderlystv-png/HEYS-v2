@@ -24,6 +24,13 @@
     return date.toISOString().slice(0, 10);
   };
 
+  const localEffectiveToday = (now) => {
+    const date = new Date(now.getTime());
+    if (date.getHours() < 3) date.setDate(date.getDate() - 1);
+    const pad2 = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  };
+
   HEYS.dayInsulinWaveData.computeInsulinWaveData = function computeInsulinWaveData(ctx) {
     const {
       React,
@@ -59,9 +66,17 @@
         throw new TypeError('dayInsulinWaveData: getProductFromItem must be a function');
       }
 
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const today = HEYSRef.dayUtils?.todayISO?.()
+        || HEYSRef.models?.todayISO?.()
+        || localEffectiveToday(now);
       const selectedDate = safeDay.date || today;
       const isPastDay = selectedDate < today;
+      const isCurrentDay = selectedDate === today;
+      const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+      const effectiveNowMinutes = isCurrentDay && minuteOfDay < 180
+        ? minuteOfDay + 1440
+        : minuteOfDay;
       const profile = typeof getProfile === 'function' ? getProfile() : {};
       const calculateFor = (sourceDay, nowMinutes) => HEYSRef.InsulinWave.calculate({
         meals: sourceDay.meals || [],
@@ -73,8 +88,7 @@
       });
 
       if (meals.some((meal) => meal?.time)) {
-        const now = new Date();
-        const result = calculateFor(safeDay, isPastDay ? 1439 : now.getHours() * 60 + now.getMinutes());
+        const result = calculateFor(safeDay, isPastDay ? 1439 : effectiveNowMinutes);
         return result ? { ...result, isPastDay } : null;
       }
 
@@ -83,8 +97,7 @@
         const yesterdayIso = previousDate(today);
         const yesterday = typeof safeGet === 'function' ? safeGet(`heys_dayv2_${yesterdayIso}`, null) : null;
         if (yesterday?.meals?.some((meal) => meal?.time)) {
-          const now = new Date();
-          const result = calculateFor(yesterday, 1440 + now.getHours() * 60 + now.getMinutes());
+          const result = calculateFor(yesterday, 1440 + minuteOfDay);
           return result ? { ...result, isOvernightEstimate: true, sourceDate: yesterdayIso } : null;
         }
       }

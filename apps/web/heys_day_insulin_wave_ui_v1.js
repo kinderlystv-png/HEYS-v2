@@ -65,15 +65,20 @@
             background: 'linear-gradient(135deg,#15936D,#19B584)',
             boxShadow: '0 8px 20px rgba(21,147,109,.22)',
           } },
-            h('div', { style: { marginBottom: 8, fontSize: 12, color: 'rgba(255,255,255,.88)', fontWeight: 600 } }, 'После расчётного восстановления условий для липолиза'),
-            h(TimerDigits, { React, minutes: timerValue, countUp: true })
+            h(TimerDigits, { React, minutes: timerValue, countUp: true }),
+            h('div', { style: { marginTop: 9, fontSize: 10.5, lineHeight: 1.4, color: 'rgba(255,255,255,.88)' } },
+              'Расчёт по времени и составу еды, а не измерение липолиза.'
+            )
           ),
           h('div', { style: {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8,
             minHeight: 38, padding: '8px 12px', borderRadius: 12,
             background: 'rgba(16,185,129,.11)', border: '1px solid rgba(16,185,129,.24)',
             color: '#167D61', fontSize: 13, fontWeight: 750,
-          } }, h('span', null, '🌿'), h('span', null, 'Расчётные условия для липолиза восстановлены'))
+          } }, h('span', null, '✓'), h('span', null, 'Окно открыто')),
+          h('div', { style: { marginTop: 7, fontSize: 10.5, lineHeight: 1.4, color: '#7A8BA3', textAlign: 'center' } },
+            'Если голода нет, можно продолжить паузу. При голоде или по плану можно есть раньше.'
+          ),
         );
       }
       return h(React.Fragment, null,
@@ -82,18 +87,23 @@
           background: 'linear-gradient(135deg,#1D70B7,#52A0D8)',
           boxShadow: '0 8px 20px rgba(29,112,183,.22)',
         } },
-          h('div', { style: { marginBottom: 8, fontSize: 12, color: 'rgba(255,255,255,.88)', fontWeight: 600 } }, 'До расчётного восстановления условий для липолиза'),
-          h(TimerDigits, { React, minutes: timerValue })
+          h('div', { style: { marginBottom: 8, fontSize: 12, color: 'rgba(255,255,255,.88)', fontWeight: 600 } }, 'До конца окна'),
+          h(TimerDigits, { React, minutes: timerValue }),
+          h('div', { style: { marginTop: 9, fontSize: 10.5, lineHeight: 1.4, color: 'rgba(255,255,255,.88)' } },
+            'Расчёт по времени и составу еды, а не измерение липолиза.'
+          )
         ),
         IW?.renderWaveChart?.({ ...data, status: rangeStatus }),
-        h('div', { style: { marginTop: 7, fontSize: 10, color: '#7A8BA3', textAlign: 'center' } }, 'Ориентир не запрещает есть.')
+        h('div', { style: { marginTop: 7, fontSize: 10.5, lineHeight: 1.4, color: '#7A8BA3', textAlign: 'center' } },
+          'Если голода нет, можно подождать ещё. При голоде или по плану можно есть раньше.'
+        )
       );
     };
 
     return h('section', {
       className: `insulin-wave-indicator iw-response-card${insulinExpanded ? ' expanded' : ''}`,
       id: 'tour-insulin-wave',
-      'aria-label': 'Расчётное окно после еды',
+      'aria-label': 'Окно для сжигания жира',
       style: {
         margin: '10px 0',
         padding: 16,
@@ -110,12 +120,15 @@
         position: 'absolute', width: 150, height: 150, borderRadius: '50%', right: -72, top: -88,
         background: 'radial-gradient(circle,rgba(109,142,255,.18),rgba(109,142,255,0) 70%)', pointerEvents: 'none',
       } }),
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, position: 'relative' } },
-        h('span', { style: {
-          display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 11,
-          background: 'linear-gradient(145deg,#EAF0FF,#DDE8FF)', color: '#2F6BFF', fontSize: 17,
-        } }, '◷'),
-        h('div', { style: { fontWeight: 760, fontSize: 15, letterSpacing: '-.01em' } }, 'Отклик после еды')
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, position: 'relative' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+          h('span', { style: {
+            display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 11,
+            background: 'linear-gradient(145deg,#EAF0FF,#DDE8FF)', color: '#2F6BFF', fontSize: 17,
+          } }, '◷'),
+          h('div', { style: { fontWeight: 760, fontSize: 15, letterSpacing: '-.01em' } }, 'Окно для сжигания жира')
+        ),
+        data.lastMealTimeDisplay && h('div', { style: { color: '#6B7C93', fontSize: 12, fontVariantNumeric: 'tabular-nums' } }, data.lastMealTimeDisplay)
       ),
 
       isLoading

@@ -166,13 +166,13 @@
       trace: latest.trace,
       currentResponse: latest,
       status,
-      statusLabel: complete ? 'Ориентир завершён' : status === 'scheduled' ? 'Приём ещё впереди' : 'Идёт расчётное окно после еды',
+      statusLabel: complete ? 'Окно открыто' : status === 'scheduled' ? 'Приём ещё впереди' : 'До конца окна',
       emoji: complete ? '✓' : '◷',
       color: complete ? '#16a34a' : '#2F6BFF',
-      text: complete ? 'Окно завершено' : formatDuration(remaining),
+      text: complete ? 'Окно открыто' : formatDuration(remaining),
       subtext: complete
-        ? 'Ориентируйся на голод, самочувствие и план питания.'
-        : `Ориентировочное завершение: ${windowRange}. Это оценка, а не измерение.` ,
+        ? 'Если голода нет, можно продолжить паузу. При голоде или по плану можно есть раньше.'
+        : `Ориентировочное начало: ${windowRange}. Это расчёт, а не измерение липолиза.` ,
       progress,
       centralProgress,
       rangeProgress,

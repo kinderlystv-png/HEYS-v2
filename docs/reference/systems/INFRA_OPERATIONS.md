@@ -89,6 +89,13 @@ tooling и gateway spec. Оба шага — predeploy tests и фактичес
 отключённая функция завершает workflow ошибкой. Gateway-only изменение не
 превращается в полный deploy.
 
+Перед публикацией backend workflow fail-closed проверяет ledger production
+миграций: при любой pending managed migration deploy не начинается. После
+публикации messenger-функции и обновления Gateway workflow отдельно проверяет
+desired-state маршруты `set-acked` и `set-done`: unauthenticated POST обязан
+доходить до функции и вернуть `401`, а CORS preflight — `204`; `404` считается
+ошибкой маршрутизации.
+
 CI deploy публикует function versions, но не вызывает trigger ensure; изменение
 timer topology остаётся отдельной явно разрешаемой операцией. Локальный не-CI
 release-flow сохраняет существующий explicit ensure для SpeechKit.
@@ -142,6 +149,8 @@ versioned seed migration и отдельно разрешённого production
 8. Production SQL использует TLS и versioned migrations.
 9. Source, generated artifacts и deployment evidence не смешиваются в один
    неявный commit агентом.
+10. Backend deploy останавливается при отставшем migration ledger или отсутствии
+    production Gateway-маршрутов desired-state messenger API.
 
 ## Подтверждённые слабые места и пробелы
 

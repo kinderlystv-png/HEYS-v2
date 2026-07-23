@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  assertNoPendingMigrations,
   assertNoEmbeddedTransactions,
   buildApplySql,
   buildInventory,
@@ -10,6 +11,14 @@ import {
   prepareMigrations,
   stripDollarQuotedBodies,
 } from './migrate.mjs';
+
+test('production-current gate rejects pending migrations', () => {
+  assert.doesNotThrow(() => assertNoPendingMigrations({ pending: [] }));
+  assert.throws(
+    () => assertNoPendingMigrations({ pending: [{ id: '2026-07-21_required_contract' }] }),
+    /Pending production migrations: 2026-07-21_required_contract/,
+  );
+});
 
 test('all repository SQL files are managed or explicitly legacy', () => {
   const manifest = loadManifest();

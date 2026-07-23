@@ -166,12 +166,15 @@
         // компрессированной строки падал → caught → return def → UI видел null
         // даже когда данные есть. Через Store.get идёт корректный decompress.
         const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
+        const currentClientPrefix = `heys_${window.HEYS.currentClientId}_`;
+        const isCurrentClientScopedKey = String(key || '').startsWith(currentClientPrefix);
         // includes() ловит оба варианта: unscoped (`heys_planning_chrono_activities`)
         // и уже scoped через nsKey (`heys_<cid>_planning_chrono_activities`).
         // Прошлая версия с `/^heys_planning_/` не матчила scoped — отсюда тек
         // null из lsGet даже когда данные были в LS.
         const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'))
-          || key.includes('_planning_');
+          || key.includes('_planning_')
+          || isCurrentClientScopedKey;
         if (isClientSpecific) {
           const result = window.HEYS.store.get(key, def);
           // 🔍 DEBUG v59: Логируем загрузку dayv2

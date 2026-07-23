@@ -348,6 +348,31 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(store.get(key, null).trainings).toEqual([]);
   });
 
+  test('round-trips a compressed scoped Hunger journal after clearing memory cache', () => {
+    const store = loadStorageLayer();
+    const key = 'heys_hunger_energy_status_events_v1';
+    const scopedKey = `heys_${CLIENT_ID}_hunger_energy_status_events_v1`;
+    const events = Array.from({ length: 18 }, (_, index) => ({
+      id: `hunger-event-${index}`,
+      eventType: index === 17 ? 'low_hunger_meal_reason' : 'hunger_fixed',
+      date: '2026-07-23',
+      recordedAt: `2026-07-23T${String(index).padStart(2, '0')}:00:00.000Z`,
+      mealEpisodeKey: index === 17 ? 'meal:meal-1' : null,
+      acknowledgedAt: index === 17 ? '2026-07-23T11:55:00.000Z' : null,
+      reason: index === 17 ? 'caffeine_additions' : null,
+    }));
+
+    expect(store.set(key, events)).toBe(true);
+    expect(mockStorage._store[scopedKey]).toMatch(/^¤Z¤/);
+
+    store.flushMemory();
+    expect(store.get(scopedKey, [])).toEqual(events);
+
+    const coreSource = fs.readFileSync(path.resolve(__dirname, '../heys_core_v12.js'), 'utf8');
+    expect(coreSource).toContain('isCurrentClientScopedKey');
+    expect(coreSource).toContain('|| isCurrentClientScopedKey;');
+  });
+
   test('cleanup v2 removes old scoped auth/session copies', () => {
     const scopedPinKey = `heys_${CLIENT_ID}_heys_pin_auth_client`;
     const scopedSessionKey = `heys_${CLIENT_ID}_heys_session_token`;

@@ -91,6 +91,26 @@ describe('messenger retry-safe transport', () => {
     expect(api.toggleAcked).toBeUndefined();
   });
 
+  it('uses the client desired-state acknowledgement endpoint without toggling on retry', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: 'internal_error' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, acked_at: 'now' }) });
+    const api = loadAPI();
+
+    const pending = api.setAcked('message-1', true);
+    await vi.runAllTimersAsync();
+    await pending;
+
+    expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+      'http://localhost:4001/messages/set-acked',
+      'http://localhost:4001/messages/set-acked',
+    ]);
+    expect(fetchSpy.mock.calls.map(([, options]) => JSON.parse(options.body))).toEqual([
+      { message_id: 'message-1', desired_state: true },
+      { message_id: 'message-1', desired_state: true },
+    ]);
+  });
+
   it('generates a different UUID for a new send action', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -155,6 +175,17 @@ describe('messenger ack reconciliation', () => {
     expect(isAmbiguousMutationFailure({ error: 'network_error' })).toBe(true);
     expect(isAmbiguousMutationFailure({ statusCode: 503 })).toBe(true);
     expect(isAmbiguousMutationFailure({ statusCode: 400 })).toBe(false);
+  });
+
+  it('allows only one in-flight acknowledgement mutation per message id', () => {
+    const { acquireMessageMutation } = loadMessengerInternals();
+    const pending = new Set();
+
+    expect(acquireMessageMutation(pending, 'm1')).toBe(true);
+    expect(acquireMessageMutation(pending, 'm1')).toBe(false);
+    expect(acquireMessageMutation(pending, 'm2')).toBe(true);
+    pending.delete('m1');
+    expect(acquireMessageMutation(pending, 'm1')).toBe(true);
   });
 
   it('confirms both setting and clearing an acknowledgement from server truth', () => {

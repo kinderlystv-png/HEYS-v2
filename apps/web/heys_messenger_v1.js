@@ -180,6 +180,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return { verified: confirmation.found, ...confirmation };
   }
 
+  function acquireMessageMutation(pendingIds, messageId) {
+    if (!pendingIds || !messageId || pendingIds.has(messageId)) return false;
+    pendingIds.add(messageId);
+    return true;
+  }
+
   function getWaveformBars(att) {
     if (Array.isArray(att?.waveform) && att.waveform.length >= 12) {
       return att.waveform.slice(0, 32).map((v) => Math.max(0.18, Math.min(1, Number(v) || 0.18)));
@@ -488,6 +494,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     message,
     viewerRole,
     onToggleAck,
+    ackPending = false,
     onDelete,
     onReply,
     onEdit,
@@ -504,7 +511,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const myAckAt = isCurator ? message.done_at : message.acked_at;
     const theirAckAt = isCurator ? message.acked_at : message.done_at;
     const ackAt = myAckAt || theirAckAt;
-    const isAcked = !!ackAt;
+    const hasAnyAck = !!ackAt;
+    const isMyAcked = !!myAckAt;
     const canDelete = isMine; // каждый удаляет только свои
     const canReply = !isMine; // отвечать можно только на чужие
     const canEdit = isMine && !message.intent_type; // intent редактировать нельзя
@@ -527,7 +535,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Метка под пузырём: показываем что сделал каждый
     // (если есть обе метки — обе строкой; если только одна — её)
     const ackLabel = (() => {
-      if (!isAcked) return null;
+      if (!hasAnyAck) return null;
       const parts = [];
       if (message.done_at) parts.push(`✓ Обработано ${formatTime(message.done_at)}`);
       if (message.acked_at) parts.push(`✓ Принято ${formatTime(message.acked_at)}`);
@@ -537,7 +545,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const bubbleClasses = [
       'msg-bubble',
       isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs',
-      isAcked ? 'msg-bubble-done' : '',
+      hasAnyAck ? 'msg-bubble-done' : '',
     ].filter(Boolean).join(' ');
 
     const handleDeleteClick = () => {
@@ -598,10 +606,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const ackButton = canMarkAck
       ? React.createElement('button', {
           type: 'button',
-          className: `msg-ack-outside ${isAcked ? 'msg-ack-outside-active' : ''}`,
+          className: `msg-ack-outside ${isMyAcked ? 'msg-ack-outside-active' : ''}`,
           onClick: () => onToggleAck?.(message),
-          'aria-label': isAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
-          title: isAcked
+          disabled: ackPending,
+          'aria-busy': ackPending ? 'true' : undefined,
+          'aria-label': ackPending
+            ? 'Сохраняем отметку'
+            : isMyAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
+          title: ackPending
+            ? 'Сохраняем отметку'
+            : isMyAcked
             ? 'Снять отметку'
             : (isCurator ? 'Отметить как обработанное' : 'Я прочитал и принял'),
         }, '✓')
@@ -948,6 +962,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deletingMessageId, setDeletingMessageId] = useState(null);
+    const [pendingAckMessageIds, setPendingAckMessageIds] = useState(() => new Set());
     const threadRef = useRef(null);
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -960,6 +975,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const pendingAudioUrlRef = useRef(null);
     const pendingTranscriptionMessageRef = useRef(null);
     const ackVerificationRef = useRef(null);
+    const ackMutationIdsRef = useRef(new Set());
     const transcriptionConsentRef = useRef(null);
     const optimisticAudioUrlsRef = useRef(new Set());
     const localAudioByRemoteRef = useRef(new Map());
@@ -1151,6 +1167,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setHasMoreHistory(false);
       setError(null);
       ackVerificationRef.current = null;
+      ackMutationIdsRef.current.clear();
+      setPendingAckMessageIds(new Set());
     }, [isCurator, curatorViewClientId]);
 
     useEffect(() => {
@@ -1809,6 +1827,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Desired-state ack для обеих ролей: повтор безопасен и не меняет состояние обратно.
     // Оптимистично переключаем соответствующее поле в local state, на ошибку — rollback.
     const handleToggleAck = async (message) => {
+      if (!acquireMessageMutation(ackMutationIdsRef.current, message?.id)) return;
       const field = isCurator ? 'done_at' : 'acked_at';
       const prevValue = message[field] || null;
       const optimisticValue = prevValue ? null : new Date().toISOString();
@@ -1817,58 +1836,70 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const verificationClientId = isCurator
         ? (curatorViewClientId || getCurrentClientId())
         : null;
+      setPendingAckMessageIds((current) => new Set(current).add(message.id));
       setError(null);
       setMessages((prev) =>
         prev.map((m) => (m.id === message.id ? { ...m, [field]: optimisticValue } : m))
       );
-      const res = isCurator
-        ? await HEYS.MessengerAPI.setDone(message.id, desiredState)
-        : await HEYS.MessengerAPI.setAcked(message.id, desiredState);
-      if (!res?.success) {
-        if (isAmbiguousMutationFailure(res)) {
-          const pendingVerification = {
-            messageId: message.id,
-            field,
-            desiredState,
-          };
-          ackVerificationRef.current = pendingVerification;
-          setError(ACK_CONFIRMING_ERROR);
-          const verification = await verifyMessageMutation(HEYS.MessengerAPI, {
-            message,
-            field,
-            desiredState,
-            threadOptions: verificationClientId
-              ? { client_id: verificationClientId }
-              : {},
-          });
-          if (!mountedRef.current || generation !== threadGenerationRef.current) return;
-          if (verification.verified) {
-            ackVerificationRef.current = null;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === message.id ? { ...m, [field]: verification.value } : m))
-            );
-            setError(verification.confirmed ? null : ACK_FAILED_ERROR);
-            if (verification.confirmed) {
-              HEYS.MessengerAPI.refreshFabUnread?.();
-              if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+      try {
+        const res = isCurator
+          ? await HEYS.MessengerAPI.setDone(message.id, desiredState)
+          : await HEYS.MessengerAPI.setAcked(message.id, desiredState);
+        if (!res?.success) {
+          if (isAmbiguousMutationFailure(res)) {
+            const pendingVerification = {
+              messageId: message.id,
+              field,
+              desiredState,
+            };
+            ackVerificationRef.current = pendingVerification;
+            setError(ACK_CONFIRMING_ERROR);
+            const verification = await verifyMessageMutation(HEYS.MessengerAPI, {
+              message,
+              field,
+              desiredState,
+              threadOptions: verificationClientId
+                ? { client_id: verificationClientId }
+                : {},
+            });
+            if (!mountedRef.current || generation !== threadGenerationRef.current) return;
+            if (verification.verified) {
+              ackVerificationRef.current = null;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === message.id ? { ...m, [field]: verification.value } : m))
+              );
+              setError(verification.confirmed ? null : ACK_FAILED_ERROR);
+              if (verification.confirmed) {
+                HEYS.MessengerAPI.refreshFabUnread?.();
+                if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+              }
             }
+            return;
           }
+          setMessages((prev) =>
+            prev.map((m) => (m.id === message.id ? { ...m, [field]: prevValue } : m))
+          );
+          setError(ACK_FAILED_ERROR);
           return;
         }
+        const serverValue = isCurator ? res.done_at : res.acked_at;
         setMessages((prev) =>
-          prev.map((m) => (m.id === message.id ? { ...m, [field]: prevValue } : m))
+          prev.map((m) => (m.id === message.id ? { ...m, [field]: serverValue || null } : m))
         );
-        setError(ACK_FAILED_ERROR);
-        return;
+        // Меняет unread — мгновенно обновляем все badges.
+        HEYS.MessengerAPI.refreshFabUnread?.();
+        // Inbox cache актуален только для куратора (он показывает счёт по клиентам)
+        if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+      } finally {
+        ackMutationIdsRef.current.delete(message.id);
+        if (mountedRef.current && generation === threadGenerationRef.current) {
+          setPendingAckMessageIds((current) => {
+            const next = new Set(current);
+            next.delete(message.id);
+            return next;
+          });
+        }
       }
-      const serverValue = isCurator ? res.done_at : res.acked_at;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === message.id ? { ...m, [field]: serverValue || null } : m))
-      );
-      // Меняет unread — мгновенно обновляем все badges.
-      HEYS.MessengerAPI.refreshFabUnread?.();
-      // Inbox cache актуален только для куратора (он показывает счёт по клиентам)
-      if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
     };
 
     const handleTranscriptionConsentChoice = async (granted) => {
@@ -2047,6 +2078,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         message: m,
                         viewerRole,
                         onToggleAck: handleToggleAck,
+                        ackPending: pendingAckMessageIds.has(m.id),
                         onDelete: requestDeleteMessage,
                         onReply: handleReply,
                         onEdit: handleEditMessage,
@@ -2485,6 +2517,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       getMessageStateConfirmation,
       getVerificationBeforeTs,
       verifyMessageMutation,
+      acquireMessageMutation,
       formatMessengerError,
       THREAD_PAGE_LIMIT,
     },

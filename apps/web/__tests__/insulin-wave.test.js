@@ -1,10 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const originalWindow = globalThis.window;
 const originalHEYS = globalThis.HEYS;
+const originalReact = globalThis.React;
+const testReact = {
+  Fragment: Symbol('Fragment'),
+  useState: (initial) => [initial, () => undefined],
+  useEffect: () => undefined,
+  useMemo: (factory) => factory(),
+  createElement(type, props, ...children) {
+    if (typeof type === 'function') return type({ ...(props || {}), children });
+    return { type, props: { ...(props || {}), children } };
+  },
+};
 const read = (name) => fs.readFileSync(path.resolve(__dirname, '..', name), 'utf8');
 const load = (name) => {
   // eslint-disable-next-line no-eval
@@ -24,6 +35,8 @@ const productionOrder = [
   'heys_iw_ndte.js',
   'heys_iw_ui.js',
   'heys_insulin_wave_v1.js',
+  'heys_day_insulin_wave_ui_v1.js',
+  'heys_day_insulin_wave_data_v1.js',
 ];
 
 const resolveItem = (item) => item.product || item;
@@ -31,14 +44,23 @@ const makeMeal = (time, product, grams = 100, id = time) => ({ id, time, items: 
 
 beforeAll(() => {
   globalThis.window = globalThis;
+  globalThis.React = testReact;
   globalThis.HEYS = { utils: { lsGet: () => null, lsSet: () => undefined } };
   for (const file of productionOrder) load(file);
 });
 
 afterAll(() => {
   globalThis.window = originalWindow;
+  globalThis.React = originalReact;
   globalThis.HEYS = originalHEYS;
 });
+
+const collectText = (node) => {
+  if (node === null || node === undefined || node === false) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  const children = node?.props?.children || [];
+  return (Array.isArray(children) ? children : [children]).map(collectText).join(' ');
+};
 
 describe('Postprandial response model v5', () => {
   const fullProduct = {
@@ -329,7 +351,7 @@ describe('Postprandial response model v5', () => {
     expect(result.duration).toBe(result.waveHistory.at(-1).duration);
   });
 
-  it('uses the upper estimate bound for the UI countdown and post-window timer', () => {
+  it('uses the upper estimate bound for the UI countdown and completion state', () => {
     const params = { meals: [makeMeal('12:00', fullProduct)], getProductFromItem: resolveItem };
     const initial = globalThis.HEYS.InsulinWave.calculate({ ...params, nowMinutes: 12 * 60 });
     const centralEnd = initial.currentResponse.endMin;
@@ -440,6 +462,32 @@ describe('Postprandial response model v5', () => {
     expect(result.endTimeDisplay).toMatch(/^0[1-6]:/);
   });
 
+  it('keeps a late meal active after midnight inside the HEYS day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 24, 0, 24));
+    let result;
+    try {
+      const HEYSRef = {
+        ...globalThis.HEYS,
+        dayUtils: { todayISO: () => '2026-07-23' },
+      };
+      result = HEYSRef.dayInsulinWaveData.computeInsulinWaveData({
+        React: testReact,
+        day: { date: '2026-07-23', meals: [makeMeal('23:55', fullProduct)] },
+        currentMinute: Math.floor(Date.now() / 60000),
+        getProductFromItem: resolveItem,
+        getProfile: () => ({}),
+        HEYS: HEYSRef,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(result.currentResponse.startMin).toBe(23 * 60 + 55);
+    expect(result.rangeStatus).not.toBe('scheduled');
+    expect(result.statusLabel).not.toBe('Приём ещё впереди');
+  });
+
   it('applies activity only when it is close to the meal', () => {
     const model = globalThis.HEYS.InsulinWave.ResponseModel;
     const meal = makeMeal('14:00', fullProduct);
@@ -477,23 +525,82 @@ describe('Postprandial response model v5', () => {
     }
   });
 
-  it('qualifies lipolysis wording and keeps unsafe physiological claims out of active UI', () => {
+  it('uses plain meal-based labels and keeps unsafe physiological claims out of active UI and Insights', () => {
     const uiSource = [
       'heys_iw_ui.js',
       'heys_iw_graph.js',
       'heys_day_insulin_wave_ui_v1.js',
       'heys_meal_step_v1.js',
+      'heys_insulin_wave_v1.js',
     ].map(read).join('\n');
-    expect(uiSource).not.toMatch(/липолиз (начался|идёт|активен)|жиросжиган|жир запасается|µU\/mL|мкЕд\/мл|не ешь подольше/i);
-    expect(uiSource).toContain('До расчётного восстановления условий для липолиза');
-    expect(uiSource).not.toContain('Липолиз ориентировочно через');
-    expect(uiSource).toContain('После расчётного восстановления условий для липолиза');
+    const insightSource = [
+      'insights/pi_constants.js',
+      'insights/pi_early_warning.js',
+      'insights/patterns/timing.js',
+      'insights/pi_ui_whatif.js',
+      'insights/pi_ui_rings.js',
+    ].map(read).join('\n');
+    const activeSource = `${uiSource}\n${insightSource}`;
+
+    expect(activeSource).not.toMatch(/Прерв[её]т липолиз|липолиз не успевал начаться|блокировк[аи] (?:липолиза|жиросжигания)|ид[её]т жиросжигание|Жиросжигание!|инсулин (?:не успевает упасть|вернулся к базовому уровню)/i);
+    expect(uiSource).toContain('Окно для сжигания жира');
+    expect(uiSource).toContain('До конца окна');
+    expect(uiSource).not.toContain('Время с начала ориентировочного окна');
     expect(uiSource).toContain('countUp: true');
-    expect(uiSource).toContain('Расчётные условия для липолиза восстановлены');
-    expect(uiSource).toContain('Это эвристическая неперсонализированная оценка');
-    expect(uiSource).toContain('не запрещает есть');
-    expect(uiSource).not.toContain('Инсулиновая волна ещё активна');
-    expect(uiSource).not.toContain('не прерывают липолиз');
+    expect(uiSource).not.toContain('Отклик после еды');
+    expect(uiSource).not.toContain('ориентировочного отклика');
+    expect(uiSource).toContain('не измерение липолиза');
+    expect(uiSource).toContain('можно есть раньше');
+    expect(insightSource).toContain('долгосрочному тренду');
+    expect(insightSource).toContain('голоду, самочувствию, медицинским ограничениям');
+  });
+
+  it('shows practical guidance to clients and scopes curator guidance to curator sessions', () => {
+    const render = globalThis.HEYS.InsulinWave.UI.renderExpandedSection;
+    const data = {
+      confidence: { level: 'high', score: 90, dataQuality: {} },
+      responseLoad: {},
+      responseShape: {},
+      estimatedWindow: {},
+      modelVersion: '5.0.1',
+    };
+
+    globalThis.HEYS.auth = { isCuratorSession: () => false };
+    const clientText = collectText(render(data));
+    expect(clientText).toContain('Как использовать');
+    expect(clientText).toContain('таймер помогает выдержать паузу');
+    expect(clientText).toContain('При голоде, слабости или по плану можно есть раньше');
+    expect(clientText).not.toContain('Для разбора с клиентом');
+
+    globalThis.HEYS.auth = { isCuratorSession: () => true };
+    const curatorText = collectText(render(data));
+    expect(curatorText).toContain('Для разбора с клиентом сначала оцените тренд веса и энергетического баланса');
+    expect(curatorText).toContain('Расчёт окна используйте как вторичный контекст состава и времени приёма');
+  });
+
+  it('shows elapsed time after the estimated fat-burning window opens', () => {
+    const card = globalThis.HEYS.dayInsulinWaveUI.renderInsulinWaveIndicator({
+      React: testReact,
+      insulinWaveData: {
+        status: 'complete',
+        rangeStatus: 'complete',
+        minutesAfterWindow: 8 * 60,
+        lastMealTimeDisplay: '11:50',
+      },
+      insulinExpanded: false,
+      setInsulinExpanded: () => undefined,
+      mobileSubTab: 'diary',
+      isMobile: true,
+      HEYS: globalThis.HEYS,
+    });
+    const cardText = collectText(card);
+
+    expect(cardText).toContain('Окно для сжигания жира');
+    expect(cardText).toContain('11:50');
+    expect(cardText).not.toContain('Время с начала ориентировочного окна');
+    expect(cardText).toContain('Окно открыто');
+    expect(cardText).toContain('можно есть раньше');
+    expect(cardText).toContain('08:00:00');
   });
 
   it('keeps the current-moment graph marker distinct and smoothly interpolated', () => {

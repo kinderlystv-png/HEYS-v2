@@ -114,6 +114,7 @@
     const missing = quality.missingFields || [];
     const assumptions = quality.assumptions || [];
     const tone = confidenceTone(data.confidence?.level);
+    const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
     return h('div', { style: { marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(43,64,91,.09)' } },
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
         h('div', { style: { padding: '10px 11px', borderRadius: 12, background: '#F6F8FC' } },
@@ -138,6 +139,25 @@
       h('div', { style: { marginTop: 12, fontSize: 11, lineHeight: 1.5, color: '#7A8BA3' } },
         `Версия модели ${data.modelVersion}. Это эвристическая неперсонализированная оценка по составу еды, а не измерение гормонов или глюкозы.`
       ),
+      h('div', { style: {
+        marginTop: 12, padding: '11px 12px', borderRadius: 12,
+        background: 'rgba(47,107,255,.07)', color: '#33435A', fontSize: 11, lineHeight: 1.5,
+      } },
+        h('div', { style: { marginBottom: 4, color: '#2F6BFF', fontWeight: 750 } }, 'Как использовать'),
+        h('div', null,
+          'Если голода нет и следующий приём не запланирован, таймер помогает выдержать паузу. При голоде, слабости или по плану можно есть раньше. Для снижения жировой массы важнее средний энергетический баланс, тренд веса, достаточное количество белка и силовые тренировки.'
+        )
+      ),
+      isCuratorSession && h('div', { style: {
+        marginTop: 10, padding: '11px 12px', borderRadius: 12,
+        background: 'rgba(67,69,135,.055)', border: '1px solid rgba(67,69,135,.10)',
+        color: '#52657D', fontSize: 11, lineHeight: 1.5,
+      } },
+        h('div', { style: { marginBottom: 4, color: '#434587', fontWeight: 750 } }, 'Для куратора'),
+        h('div', null,
+          'Для разбора с клиентом сначала оцените тренд веса и энергетического баланса, белок, силовые тренировки, голод и соблюдаемость плана. Расчёт окна используйте как вторичный контекст состава и времени приёма.'
+        )
+      ),
       data.hasOverlaps && h('div', { style: { marginTop: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(245,183,49,.10)', color: '#795500', fontSize: 11, lineHeight: 1.45 } },
         `Составы соседних приёмов частично накладываются по времени (${formatMinutes(data.worstOverlap?.overlapMinutes)}). Это контекст, а не запрет на следующий приём.`
       ),
@@ -150,7 +170,7 @@
     const gap = nextWave ? nextWave.startMin - waveData.endMin : null;
     return h('div', { style: { margin: '8px 12px 12px', padding: 12, borderRadius: 14, background: '#F6F8FC', color: '#3D4B63' } },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 } },
-        h('strong', null, waveData.responseShape?.label || 'Расчётное окно после еды'),
+        h('strong', null, waveData.responseShape?.label || 'Окно для сжигания жира'),
         h('span', { style: { color: '#2F6BFF', fontVariantNumeric: 'tabular-nums' } }, `${waveData.timeDisplay}–${waveData.endTimeDisplay}`)
       ),
       h('div', { style: { marginTop: 6, fontSize: 11, lineHeight: 1.45, color: '#6B7C93' } },

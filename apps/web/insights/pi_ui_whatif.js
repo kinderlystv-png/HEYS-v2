@@ -222,11 +222,11 @@
 
         // Metrics grid
         h('div', { className: 'whatif-result__grid' },
-          // Инсулиновая волна
+          // Оценка после нового приёма
           h('div', { className: 'whatif-result__card' },
             h('div', { className: 'whatif-result__card-header' },
               h('span', { className: 'whatif-result__card-emoji' }, '🌊'),
-              h('span', null, 'Волна')
+              h('span', null, 'После нового приёма')
             ),
             h('div', { className: 'whatif-result__card-value' },
               simulation.wave.hours, 'ч'
@@ -235,7 +235,7 @@
               'до ', simulation.wave.endTime
             ),
             simulation.wave.impact === 'interrupts' && h('div', { className: 'whatif-result__card-warning' },
-              '⚠️ Прервёт липолиз!'
+              'Новая оценка начнётся до завершения предыдущей'
             )
           ),
 

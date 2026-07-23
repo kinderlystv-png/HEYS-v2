@@ -12305,8 +12305,11 @@
     // пользовательских действий, а не из React re-render после cloud sync.
     const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
     const _isMorningCheckinProgress = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(String(normalizedKey || ''));
+    // Append-only journal: server merge + hot-sync already union rows by event.id.
+    // Dropping a user acknowledgement here makes the same meal prompt reappear.
+    const _isHungerStatusEvents = normalizedKey === 'heys_hunger_energy_status_events_v1';
     const _isProducts = normalizedKey === 'heys_products' || k === 'heys_products' || (k && k.includes('products'));
-    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isMorningCheckinProgress && !_isDefaultTabSync) {
+    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isMorningCheckinProgress && !_isHungerStatusEvents && !_isDefaultTabSync) {
       // FUNDAMENTAL FIX: для products — не теряем write молча, ставим retry после grace period
       if (_isProducts) {
         scheduleProductsPostWindowRetry(client_id);
@@ -12326,6 +12329,9 @@
     }
     if (_inGracePeriod && _isMorningCheckinProgress) {
       pushSyncTrace('GRACE_PERIOD_BYPASS_morning_checkin', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
+    }
+    if (_inGracePeriod && _isHungerStatusEvents) {
+      pushSyncTrace('GRACE_PERIOD_BYPASS_hunger_events', { key: normalizedKey, graceAge: Math.round(_graceAge), events: Array.isArray(value) ? value.length : null });
     }
 
     // Диагностика: логируем добавление dayv2 в upload queue с caller
@@ -12787,7 +12793,8 @@
     const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
     const _skBaseKey = stripClientScopePrefixes(String(k || '')).key;
     const _isMorningCheckinLedger = /^heys_morning_checkin_progress_v1_\d{4}-\d{2}-\d{2}$/.test(_skBaseKey);
-    if (_skGrace < 10000 && !_isMorningCheckinLedger) return;
+    const _isHungerStatusEvents = _skBaseKey === 'heys_hunger_energy_status_events_v1';
+    if (_skGrace < 10000 && !_isMorningCheckinLedger && !_isHungerStatusEvents) return;
 
     // Получаем client_id для client-level данных (products, days)
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;

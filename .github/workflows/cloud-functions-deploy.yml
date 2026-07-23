@@ -162,6 +162,12 @@ jobs:
           write_env_var S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
           write_env_var YC_FOLDER_ID "${{ secrets.YC_FOLDER_ID }}"
 
+      - name: Verify production database migrations are current
+        env:
+          PGPASSWORD: ${{ secrets.PG_PASSWORD }}
+          PGSSLROOTCERT: ${{ github.workspace }}/yandex-cloud-functions/certs/root.crt
+        run: node scripts/db/migrate.mjs --status --require-current
+
       - name: Determine deployment target
         id: deployment-target
         if: github.event_name == 'push'
@@ -290,6 +296,36 @@ jobs:
               -H "Access-Control-Request-Method: POST"
           }
 
+          check_messenger_set_acked() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X POST "https://api.heyslab.ru/messages/set-acked" \
+              -H "Content-Type: application/json" \
+              -H "Origin: https://app.heyslab.ru" \
+              -d '{"message_id":"00000000-0000-0000-0000-000000000000","desired_state":true}'
+          }
+
+          check_messenger_set_done() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X POST "https://api.heyslab.ru/messages/set-done" \
+              -H "Content-Type: application/json" \
+              -H "Origin: https://app.heyslab.ru" \
+              -d '{"message_id":"00000000-0000-0000-0000-000000000000","desired_state":true}'
+          }
+
+          check_messenger_set_acked_preflight() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X OPTIONS "https://api.heyslab.ru/messages/set-acked" \
+              -H "Origin: https://app.heyslab.ru" \
+              -H "Access-Control-Request-Method: POST"
+          }
+
+          check_messenger_set_done_preflight() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X OPTIONS "https://api.heyslab.ru/messages/set-done" \
+              -H "Origin: https://app.heyslab.ru" \
+              -H "Access-Control-Request-Method: POST"
+          }
+
           echo "⏳ Waiting 15s for functions to warm up..."
           sleep 15
 
@@ -299,6 +335,10 @@ jobs:
           retry_http_check "REST endpoint" "200" check_rest
           retry_http_check "Client logout preflight" "204" check_client_logout_preflight
           retry_http_check "Curator logout preflight" "204" check_curator_logout_preflight
+          retry_http_check "Messenger set-acked route" "401" check_messenger_set_acked
+          retry_http_check "Messenger set-done route" "401" check_messenger_set_done
+          retry_http_check "Messenger set-acked preflight" "204" check_messenger_set_acked_preflight
+          retry_http_check "Messenger set-done preflight" "204" check_messenger_set_done_preflight
 
           echo "🧭 Verifying every deployed HEYS function runtime..."
           while IFS= read -r function_name; do

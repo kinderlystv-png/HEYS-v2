@@ -46,6 +46,7 @@ node --test "$SCRIPT_DIR/__tests__/serverless-capacity-policy.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-contract.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-operations.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-sync-load-test.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/messenger-gateway-contract.test.cjs"
 
 for function_name in "${TARGETS[@]}"; do
   function_dir="$SCRIPT_DIR/$function_name"

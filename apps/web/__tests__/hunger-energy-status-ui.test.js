@@ -1350,6 +1350,53 @@ describe('Hunger Energy Status UI adapter', () => {
     });
   });
 
+  it('keeps acknowledgement scoped to one meal episode when the linked hunger event changes', () => {
+    vi.setSystemTime(new Date('2026-07-05T18:20:00'));
+    Adapter.writeHungerFeatureSettings({ lowHungerDailyPromptLimit: 3 });
+    Storage.writeEvents([
+      {
+        id: 'acknowledged-evening-coffee',
+        eventType: 'low_hunger_meal_reason',
+        date: '2026-07-05',
+        recordedAt: '2026-07-05T17:30:00',
+        hungerEventId: 'old-hunger-event-id',
+        mealId: 'evening-coffee',
+        mealAt: '2026-07-05T17:20:00',
+        mealSignature: 'латте с сиропом',
+        mealEpisodeKey: 'meal:evening-coffee',
+        acknowledgedAt: '2026-07-05T17:30:00',
+        reason: 'caffeine_additions'
+      },
+      {
+        id: 'new-hunger-event-id',
+        source: 'day-fab',
+        createdAt: '2026-07-05T17:00:00',
+        recordedAt: '2026-07-05T17:00:00',
+        hungerLevel: 1
+      }
+    ]);
+    const day = {
+      date: '2026-07-05',
+      meals: [{
+        id: 'evening-coffee',
+        time: '17:20',
+        items: [{ name: 'Латте с сиропом', grams: 250, kcal100: 90, carbs100: 12, fat100: 3, protein100: 3 }]
+      }]
+    };
+
+    expect(Adapter.buildLowHungerMealReview('2026-07-05', day)).toBeNull();
+
+    day.meals[0] = {
+      id: 'second-evening-coffee',
+      time: '18:00',
+      items: [{ name: 'Латте с сиропом', grams: 250, kcal100: 90, carbs100: 12, fat100: 3, protein100: 3 }]
+    };
+    expect(Adapter.buildLowHungerMealReview('2026-07-05', day)).toMatchObject({
+      mealId: 'second-evening-coffee',
+      passiveContext: null
+    });
+  });
+
   it('can turn low-hunger food clarifications into passive context only', () => {
     vi.setSystemTime(new Date('2026-07-05T18:20:00'));
     const day = {
@@ -1673,6 +1720,9 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(uiSource).toContain("!isLowHungerClarification && !isHungerOutcomeFollowUp && h('footer'");
     expect(uiSource).toContain('isLowHungerClarification ? h(LowHungerMealPrompt');
     expect(uiSource).toContain('patternKey: lowHungerMealReview.analysis?.patternKey || null');
+    expect(uiSource).toContain('mealEpisodeKey: lowHungerMealReview.mealEpisodeKey || null');
+    expect(uiSource).toContain('acknowledgedAt: reasonAt');
+    expect(uiSource).toContain('acknowledgedAt: recordedAt');
     expect(uiSource).toContain('analyticsTags');
     expect(uiSource).toContain('curatorTag');
     expect(uiSource).toContain("mode: 'inline_only'");

@@ -433,11 +433,13 @@
       // Center content
       h('div', { className: 'metabolic-ring__center' },
         h('div', { className: 'metabolic-ring__emoji' }, phase.emoji),
-        showLabel && h('div', { className: 'metabolic-ring__label' }, phase.label),
-        phase.timeToLipolysis > 0 && h('div', { className: 'metabolic-ring__time' },
-          `${Math.round(phase.timeToLipolysis * 60)} мин`
+        showLabel && h('div', { className: 'metabolic-ring__label' },
+          phase.isLipolysis || phase.timeToLipolysis > 0 ? 'Окно для сжигания жира' : phase.label
         ),
-        phase.isLipolysis && h('div', { className: 'metabolic-ring__lipolysis' }, '🔥 Жиросжигание!')
+        phase.timeToLipolysis > 0 && h('div', { className: 'metabolic-ring__time' },
+          `До конца: ${Math.round(phase.timeToLipolysis * 60)} мин`
+        ),
+        phase.isLipolysis && h('div', { className: 'metabolic-ring__lipolysis' }, 'Окно открыто')
       )
     );
   }

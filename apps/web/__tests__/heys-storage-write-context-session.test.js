@@ -311,6 +311,23 @@ describe('HEYS.cloud write-context unavailable upload behavior', () => {
     window.HEYS = originalHEYS;
   });
 
+  it('keeps Hunger acknowledgements queued during the post-sync grace window', () => {
+    window.HEYS.cloud._syncCompletedAt = Date.now();
+
+    window.HEYS.cloud.saveClientKey('client-1', 'heys_wake_note', { text: 'mirror candidate' });
+    expect(window.HEYS.cloud.getPendingCount()).toBe(0);
+
+    window.HEYS.cloud.saveClientKey('client-1', 'heys_hunger_energy_status_events_v1', [{
+      id: 'low-hunger-ack-1',
+      eventType: 'low_hunger_meal_reason',
+      mealEpisodeKey: 'meal:meal-1',
+      acknowledgedAt: '2026-07-23T11:55:00.000Z',
+      reason: 'caffeine_additions',
+    }]);
+
+    expect(window.HEYS.cloud.getPendingCount()).toBe(1);
+  });
+
   it('keeps a local save queued and emits a transient background event when write-context is temporarily unavailable', async () => {
     window.HEYS.cloud.saveClientKey('client-1', 'heys_wake_note', { text: 'local first' });
 
