@@ -21,6 +21,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const MAX_VOICE_DURATION_MS = 5 * 60 * 1000;
   const MIN_VOICE_BYTES = 1024;
   const THREAD_PAGE_LIMIT = 50;
+  const ACK_CONFIRMING_ERROR = 'Не удалось подтвердить отметку. Проверяем автоматически…';
+  const ACK_FAILED_ERROR = 'Не удалось изменить отметку. Повторите попытку.';
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function formatTime(iso) {
@@ -139,6 +141,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const sorted = (Array.isArray(messages) ? messages : []).slice().sort(compareMessagesAsc);
     if (!sorted.some((message) => message?.sender_role !== viewerRole)) return null;
     return sorted[sorted.length - 1]?.created_at || null;
+  }
+
+  function isAmbiguousMutationFailure(result) {
+    return result?.error === 'network_error' || [500, 502, 503, 504].includes(result?.statusCode);
+  }
+
+  function getMessageStateConfirmation(messages, messageId, field, desiredState) {
+    const message = (Array.isArray(messages) ? messages : []).find((item) => item?.id === messageId);
+    if (!message) return { found: false, confirmed: false, value: null };
+    const value = message[field] || null;
+    return {
+      found: true,
+      confirmed: !!value === !!desiredState,
+      value,
+    };
+  }
+
+  function getVerificationBeforeTs(message) {
+    const createdAt = Date.parse(message?.created_at || '');
+    return Number.isFinite(createdAt) ? new Date(createdAt + 1).toISOString() : null;
+  }
+
+  async function verifyMessageMutation(api, options) {
+    const beforeTs = getVerificationBeforeTs(options.message);
+    const response = await api.getThread({
+      ...(options.threadOptions || {}),
+      ...(beforeTs ? { before_ts: beforeTs } : {}),
+      limit: 10,
+    });
+    if (!response?.success) return { verified: false, confirmed: false, value: null };
+    const confirmation = getMessageStateConfirmation(
+      response.messages,
+      options.message.id,
+      options.field,
+      options.desiredState,
+    );
+    return { verified: confirmation.found, ...confirmation };
   }
 
   function getWaveformBars(att) {
@@ -877,6 +916,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return `Последнее сообщение ${formatTime(last?.created_at)}`;
   }
 
+  function formatMessengerError(error) {
+    const value = String(error || '').trim();
+    if (!value) return '';
+    if (/[А-Яа-яЁё]/.test(value)) return value;
+    if (value === 'network_error') {
+      return 'Не удалось связаться с сервером. Повторите попытку.';
+    }
+    return 'Не удалось выполнить действие. Повторите попытку.';
+  }
+
   // ── Main MessengerModal ──────────────────────────────────────────────
   function MessengerModal({ onClose, curatorViewClientId }) {
     const [messages, setMessages] = useState([]);
@@ -910,6 +959,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const recordStopTimerRef = useRef(null);
     const pendingAudioUrlRef = useRef(null);
     const pendingTranscriptionMessageRef = useRef(null);
+    const ackVerificationRef = useRef(null);
     const transcriptionConsentRef = useRef(null);
     const optimisticAudioUrlsRef = useRef(new Set());
     const localAudioByRemoteRef = useRef(new Map());
@@ -997,6 +1047,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return;
       }
       const sorted = (res.messages || []).slice().reverse().map(hydrateLocalAudio);
+      const pendingAck = ackVerificationRef.current;
+      if (pendingAck) {
+        const confirmation = getMessageStateConfirmation(
+          sorted,
+          pendingAck.messageId,
+          pendingAck.field,
+          pendingAck.desiredState,
+        );
+        if (confirmation.found) {
+          ackVerificationRef.current = null;
+          setError((current) => current === ACK_CONFIRMING_ERROR
+            ? (confirmation.confirmed ? null : ACK_FAILED_ERROR)
+            : current);
+          if (confirmation.confirmed) {
+            HEYS.MessengerAPI.refreshFabUnread?.();
+            if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+          }
+        }
+      }
       if (prepend) {
         historyPaginationStartedRef.current = true;
         setHasMoreHistory(sorted.length >= THREAD_PAGE_LIMIT);
@@ -1081,6 +1150,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setShowOldMessages(false);
       setHasMoreHistory(false);
       setError(null);
+      ackVerificationRef.current = null;
     }, [isCurator, curatorViewClientId]);
 
     useEffect(() => {
@@ -1743,6 +1813,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const prevValue = message[field] || null;
       const optimisticValue = prevValue ? null : new Date().toISOString();
       const desiredState = !prevValue;
+      const generation = threadGenerationRef.current;
+      const verificationClientId = isCurator
+        ? (curatorViewClientId || getCurrentClientId())
+        : null;
+      setError(null);
       setMessages((prev) =>
         prev.map((m) => (m.id === message.id ? { ...m, [field]: optimisticValue } : m))
       );
@@ -1750,10 +1825,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? await HEYS.MessengerAPI.setDone(message.id, desiredState)
         : await HEYS.MessengerAPI.setAcked(message.id, desiredState);
       if (!res?.success) {
+        if (isAmbiguousMutationFailure(res)) {
+          const pendingVerification = {
+            messageId: message.id,
+            field,
+            desiredState,
+          };
+          ackVerificationRef.current = pendingVerification;
+          setError(ACK_CONFIRMING_ERROR);
+          const verification = await verifyMessageMutation(HEYS.MessengerAPI, {
+            message,
+            field,
+            desiredState,
+            threadOptions: verificationClientId
+              ? { client_id: verificationClientId }
+              : {},
+          });
+          if (!mountedRef.current || generation !== threadGenerationRef.current) return;
+          if (verification.verified) {
+            ackVerificationRef.current = null;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === message.id ? { ...m, [field]: verification.value } : m))
+            );
+            setError(verification.confirmed ? null : ACK_FAILED_ERROR);
+            if (verification.confirmed) {
+              HEYS.MessengerAPI.refreshFabUnread?.();
+              if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+            }
+          }
+          return;
+        }
         setMessages((prev) =>
           prev.map((m) => (m.id === message.id ? { ...m, [field]: prevValue } : m))
         );
-        setError(res?.error || 'toggle_ack_failed');
+        setError(ACK_FAILED_ERROR);
         return;
       }
       const serverValue = isCurator ? res.done_at : res.acked_at;
@@ -1967,7 +2072,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
         // Error banner
         error &&
-          React.createElement('div', { className: 'messenger-error' }, error),
+          React.createElement('div', { className: 'messenger-error' }, formatMessengerError(error)),
         // Reply-preview (если выбрано сообщение для ответа)
         replyTo &&
           React.createElement(
@@ -2376,6 +2481,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       mergeLatestMessagePage,
       getPrependScrollTop,
       getLatestForeignReadTs,
+      isAmbiguousMutationFailure,
+      getMessageStateConfirmation,
+      getVerificationBeforeTs,
+      verifyMessageMutation,
+      formatMessengerError,
       THREAD_PAGE_LIMIT,
     },
   };

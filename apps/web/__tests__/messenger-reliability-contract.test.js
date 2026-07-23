@@ -109,6 +109,101 @@ describe('messenger retry-safe transport', () => {
   });
 });
 
+describe('messenger error copy', () => {
+  beforeEach(() => {
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('never exposes transport error codes to the user', () => {
+    const { formatMessengerError } = loadMessengerInternals();
+
+    expect(formatMessengerError('network_error')).toBe(
+      'Не удалось связаться с сервером. Повторите попытку.',
+    );
+    expect(formatMessengerError('http_503')).toBe('Не удалось выполнить действие. Повторите попытку.');
+  });
+
+  it('keeps an already user-facing explanation unchanged', () => {
+    const { formatMessengerError } = loadMessengerInternals();
+
+    expect(formatMessengerError('Не удалось удалить сообщение. Повторите попытку чуть позже.')).toBe(
+      'Не удалось удалить сообщение. Повторите попытку чуть позже.',
+    );
+  });
+});
+
+describe('messenger ack reconciliation', () => {
+  beforeEach(() => {
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('treats a lost mutation response as ambiguous', () => {
+    const { isAmbiguousMutationFailure } = loadMessengerInternals();
+
+    expect(isAmbiguousMutationFailure({ error: 'network_error' })).toBe(true);
+    expect(isAmbiguousMutationFailure({ statusCode: 503 })).toBe(true);
+    expect(isAmbiguousMutationFailure({ statusCode: 400 })).toBe(false);
+  });
+
+  it('confirms both setting and clearing an acknowledgement from server truth', () => {
+    const { getMessageStateConfirmation } = loadMessengerInternals();
+    const done = [{ id: 'm1', done_at: '2026-07-23T01:11:00.000Z' }];
+    const cleared = [{ id: 'm1', done_at: null }];
+
+    expect(getMessageStateConfirmation(done, 'm1', 'done_at', true)).toMatchObject({
+      found: true,
+      confirmed: true,
+      value: '2026-07-23T01:11:00.000Z',
+    });
+    expect(getMessageStateConfirmation(cleared, 'm1', 'done_at', false)).toMatchObject({
+      found: true,
+      confirmed: true,
+      value: null,
+    });
+    expect(getMessageStateConfirmation(done, 'missing', 'done_at', true).found).toBe(false);
+  });
+
+  it('builds a verification cursor that includes the target message', () => {
+    const { getVerificationBeforeTs } = loadMessengerInternals();
+
+    expect(getVerificationBeforeTs({ created_at: '2026-07-23T01:11:00.000Z' })).toBe(
+      '2026-07-23T01:11:00.001Z',
+    );
+  });
+
+  it('reads server truth after an ambiguous acknowledgement response', async () => {
+    const { verifyMessageMutation } = loadMessengerInternals();
+    const getThread = vi.fn().mockResolvedValue({
+      success: true,
+      messages: [{ id: 'm1', done_at: '2026-07-23T01:11:00.000Z' }],
+    });
+
+    await expect(verifyMessageMutation({ getThread }, {
+      message: { id: 'm1', created_at: '2026-07-23T01:11:00.000Z' },
+      field: 'done_at',
+      desiredState: true,
+      threadOptions: { client_id: 'client-1' },
+    })).resolves.toMatchObject({ verified: true, confirmed: true });
+    expect(getThread).toHaveBeenCalledWith({
+      client_id: 'client-1',
+      before_ts: '2026-07-23T01:11:00.001Z',
+      limit: 10,
+    });
+  });
+});
+
 describe('messenger cursor page merge', () => {
   beforeEach(() => {
     window.HEYS = {};

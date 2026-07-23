@@ -76,13 +76,14 @@ jobs:
             exit 1
           fi
 
-          # Проверка статуса БД
-          DB_STATUS=$(echo "$BODY" | jq -r '.checks.database.status // "unknown"')
-          if [ "$DB_STATUS" != "ok" ]; then
-            echo "::warning::Database status: $DB_STATUS"
+          # /health имеет плоский контракт; БД отдельно проверяют RPC/REST/Auth steps ниже.
+          HEALTH_STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
+          if [ "$HEALTH_STATUS" != "ok" ]; then
+            echo "::error::Health payload status: $HEALTH_STATUS"
+            exit 1
           fi
 
-          echo "✅ Health check passed"
+          echo "✅ Health check passed (status: $HEALTH_STATUS)"
 
       - name: Test RPC Endpoint
         id: rpc

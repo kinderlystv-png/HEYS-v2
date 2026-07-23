@@ -147,7 +147,7 @@
 
             if (T.time) {
                 const [h, m] = T.time.split(':').map(Number);
-                setPendingTrainingTime({ hours: hourToWheelIndex(h || 10), minutes: m || 0 });
+                setPendingTrainingTime({ hours: hourToWheelIndex(Number.isFinite(h) ? h : 10), minutes: m || 0 });
             } else {
                 setPendingTrainingTime({ hours: hourToWheelIndex(now.getHours()), minutes: now.getMinutes() });
             }
@@ -272,4 +272,3 @@
     };
 
 })(window);
-

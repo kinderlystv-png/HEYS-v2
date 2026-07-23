@@ -51,3 +51,14 @@ test('scheduled monitoring runs no-retry canary and exact 429\/503 log scan', ()
   assert.match(workflow, /Capacity canary/);
   assert.match(workflow, /429\/503 log scan/);
 });
+
+test('health monitor follows the flat production health contract', () => {
+  const workflow = fs.readFileSync(
+    path.resolve(ROOT, '..', '.github/workflows/api-health-monitor.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /jq -r '\.status \/\/ "unknown"'/);
+  assert.match(workflow, /Health payload status:/);
+  assert.doesNotMatch(workflow, /\.checks\.database\.status/);
+  assert.doesNotMatch(workflow, /Database status: unknown/);
+});

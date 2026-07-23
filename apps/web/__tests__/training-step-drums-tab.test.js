@@ -70,6 +70,17 @@ function findButtonByText(node, needle) {
   return null;
 }
 
+function findNodeByClassName(node, className) {
+  if (!node) return null;
+  if (node.args?.[1]?.className === className) return node;
+  const children = Array.isArray(node) ? node : (node.args ? node.args.slice(2) : []);
+  for (const child of children) {
+    const found = findNodeByClassName(child, className);
+    if (found) return found;
+  }
+  return null;
+}
+
 describe('training step drums tab', () => {
   beforeEach(() => {
     delete globalThis.window;
@@ -99,6 +110,23 @@ describe('training step drums tab', () => {
       icon: '🧘',
       label: 'Мобильность',
     });
+  });
+
+  it('keeps midnight as 00 instead of replacing it with the fallback hour', () => {
+    const { registeredSteps } = setupTrainingStep();
+    const changes = [];
+    const tree = registeredSteps['training-info'].component({
+      data: { type: 'cardio', time: '00:35' },
+      onChange: (next) => changes.push(next),
+      context: { dateKey: '2026-07-23', trainingIndex: 0 },
+    });
+
+    const timePicker = findNodeByClassName(tree, 'ts-time-wheels');
+    expect(timePicker).not.toBeNull();
+    expect(timePicker.args[1]).toMatchObject({ hours: 0, minutes: 35 });
+
+    timePicker.args[1].onHoursChange(0);
+    expect(changes.at(-1)?.time).toBe('00:35');
   });
 
   it('persists mobilityLog through the shared training step storage contract', () => {

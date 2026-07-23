@@ -527,7 +527,7 @@
     const [hours, minutes] = useMemo(() => {
       if (time) {
         const [h, m] = time.split(':').map(Number);
-        return [h || 10, m || 0];
+        return [Number.isFinite(h) ? h : 10, m || 0];
       }
       const now = new Date();
       return [now.getHours(), Math.floor(now.getMinutes() / 5) * 5];
