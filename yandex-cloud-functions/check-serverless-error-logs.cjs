@@ -5,6 +5,30 @@ const { execFileSync } = require('node:child_process');
 
 const WATCHED_FUNCTIONS = Object.freeze(['heys-api-rpc', 'heys-api-rest']);
 const OVERLOAD_CODE_RE = /\bCode:\s*(429|503)\b/i;
+const OVERLOAD_LOG_FILTER = 'message: "Code: 429" OR message: "Code: 503"';
+const YC_COMMAND_TIMEOUT_MS = 30_000;
+
+function readYcJson(args) {
+  const output = execFileSync('yc', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 8 * 1024 * 1024,
+    timeout: YC_COMMAND_TIMEOUT_MS,
+  });
+  return JSON.parse(output);
+}
+
+function buildLogReadArgs(functionId, since, logGroup = 'default') {
+  return [
+    'logging', 'read', logGroup,
+    '--since', since,
+    '--resource-ids', functionId,
+    '--filter', OVERLOAD_LOG_FILTER,
+    '--limit', '200',
+    '--max-response-size', '4M',
+    '--format', 'json',
+  ];
+}
 
 function parseOverloadEntries(entries, functionName) {
   const incidents = [];
@@ -24,18 +48,12 @@ function parseOverloadEntries(entries, functionName) {
 }
 
 function readFunctionLogs(functionName, since) {
-  const output = execFileSync('yc', [
-    'serverless', 'function', 'logs', functionName,
-    '--since', since,
-    '--limit', '2000',
-    '--max-response-size', '16M',
+  const functionInfo = readYcJson([
+    'serverless', 'function', 'get', functionName,
     '--format', 'json',
-  ], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    maxBuffer: 32 * 1024 * 1024,
-  });
-  return JSON.parse(output);
+  ]);
+  const logGroup = process.env.YC_LOG_GROUP_NAME || 'default';
+  return readYcJson(buildLogReadArgs(functionInfo.id, since, logGroup));
 }
 
 function checkLogs({ since = '20m' } = {}) {
@@ -79,8 +97,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  OVERLOAD_LOG_FILTER,
   OVERLOAD_CODE_RE,
   WATCHED_FUNCTIONS,
+  buildLogReadArgs,
   checkLogs,
   parseOverloadEntries,
 };

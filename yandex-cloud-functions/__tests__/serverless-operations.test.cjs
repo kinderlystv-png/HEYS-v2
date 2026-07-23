@@ -3,7 +3,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseOverloadEntries } = require('../check-serverless-error-logs.cjs');
+const {
+  OVERLOAD_LOG_FILTER,
+  buildLogReadArgs,
+  parseOverloadEntries,
+} = require('../check-serverless-error-logs.cjs');
 const { parseRetryAfter, runCanary } = require('../serverless-ops-canary.cjs');
 
 function response(status, body, headers = {}) {
@@ -22,6 +26,17 @@ test('log parser only captures exact platform 429/503 codes', () => {
 
   assert.deepEqual(incidents.map((item) => item.status), [429, 503]);
   assert.deepEqual(incidents.map((item) => item.requestId), ['one', 'two']);
+});
+
+test('log scan uses filtered Cloud Logging read for the watched function', () => {
+  const args = buildLogReadArgs('function-id', '20m');
+
+  assert.deepEqual(args.slice(0, 3), ['logging', 'read', 'default']);
+  assert.deepEqual(args.slice(args.indexOf('--resource-ids'), args.indexOf('--resource-ids') + 2), [
+    '--resource-ids',
+    'function-id',
+  ]);
+  assert.equal(args[args.indexOf('--filter') + 1], OVERLOAD_LOG_FILTER);
 });
 
 test('Retry-After accepts positive delta seconds or a future HTTP date', () => {
