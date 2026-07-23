@@ -45,7 +45,7 @@ function loadBanner({ url = '/' } = {}) {
       ackCuratorChangelog: vi.fn().mockResolvedValue({ ok: true }),
     },
     utils: {
-      lsSet: vi.fn((key, value) => Storage.prototype.setItem.call(window.localStorage, key, value)),
+      lsSet: vi.fn((key, value) => Storage.prototype.setItem.call(window.localStorage, key, JSON.stringify(value))),
     },
     ui: {
       switchTab: vi.fn(),
@@ -283,6 +283,40 @@ describe('CuratorActionsBanner review modal', () => {
       entryIds: ['11111111-1111-4111-8111-111111111111'],
       untilTs: '2026-07-05T09:00:00.000Z',
     });
+    expect(window.HEYS.utils.lsSet).not.toHaveBeenCalled();
+  });
+
+  it('acks from runtime queue when browser storage writes fail', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+
+    await banner.checkAndShow();
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledWith({
+      entryIds: ['11111111-1111-4111-8111-111111111111'],
+      untilTs: '2026-07-05T09:00:00.000Z',
+    });
+  });
+
+  it('does not reopen entries while a failed ack is queued for retry', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+    window.HEYS.YandexAPI.ackCuratorChangelog.mockResolvedValue({ ok: false });
+
+    await banner.checkAndShow();
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledTimes(2);
   });
 
   it('force-opens from push URL without waiting for live accumulation', async () => {

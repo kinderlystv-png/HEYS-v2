@@ -34,6 +34,10 @@ service-worker engine.
    Подтверждение хранится в browser-global `localStorage`, а при его отказе — в
    runtime и `sessionStorage`, чтобы закрытие модалки не запускало цикл
    повторных открытий на iOS.
+8. Подтверждение модалки правок куратора сначала попадает в browser-global
+   runtime/local/session очередь, затем отправляется на сервер по entry id.
+   Pending entry id скрывается из повторного ответа до успешного ack, поэтому
+   отказ browser storage или временная ошибка RPC не открывает модалку по кругу.
 
 ## Cache routing
 
@@ -106,6 +110,8 @@ Messenger push использует приватный generic preview: «Нов
 8. Push payload URL не должен обходить допустимую navigation policy.
 9. Messenger push не содержит пользовательский текст или attachment metadata.
 10. Отказ `localStorage` не должен превращать закрытие `What's New` в цикл.
+11. «Ознакомился» в модалке правок куратора не зависит от client-scoped `lsSet`:
+    ack должен уйти из runtime-очереди даже при отказе browser storage.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -134,18 +140,21 @@ Messenger push использует приватный generic preview: «Нов
 - `apps/web/__tests__/client-switch-reload-guard.test.js` — switch/reload guard.
 - `apps/web/__tests__/push-agent.test.js` — push-related agent behavior (не Web
   Push delivery E2E).
+- `apps/web/__tests__/curator-actions-banner.test.js` — очередь и retry
+  подтверждения модалки правок куратора.
 
 ## Facts Table
 
-| ID  | Утверждение                                                                 | Проверка                                                                                                                                               | Статус               |
-| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| W1  | SW пропускается и unregister-ится на localhost/demo                         | `sed -n '720,755p' apps/web/heys_platform_apis_v1.js`                                                                                                  | проверено 2026-07-17 |
-| W2  | SW регистрируется как `/sw.js` и обрабатывает controllerchange              | `rg -n -F -e "register('/sw.js')" -e "addEventListener('controllerchange'" apps/web/heys_platform_apis_v1.js`                                          | проверено 2026-07-17 |
-| W3  | API cache routing различает no-store auth, RPC и KV SWR                     | `sed -n '266,335p' apps/web/public/sw.js`                                                                                                              | проверено 2026-07-17 |
-| W4  | Client switch инвалидирует SW KV cache                                      | `rg -n -e 'CLIENT_SWITCH' -e 'CLEAR_API_KV' apps/web/public/sw.js apps/web/heys_storage_supabase_v1.js`                                                | проверено 2026-07-17 |
-| W5  | Background sync лишь postMessage-ит START, ждёт 1 с и COMPLETE              | `sed -n '745,770p' apps/web/public/sw.js`                                                                                                              | проверено 2026-07-17 |
-| W6  | Browser push требует capability/permission и iOS standalone                 | `sed -n '120,180p' apps/web/heys_push_v1.js`                                                                                                           | проверено 2026-07-17 |
-| W7  | Push backend резолвит client/curator identity и auth-гейтит private actions | `sed -n '90,175p' yandex-cloud-functions/heys-api-push/index.js && sed -n '380,445p' yandex-cloud-functions/heys-api-push/index.js`                    | проверено 2026-07-17 |
-| W8  | SW показывает notification, обрабатывает click и subscription change        | `rg -n -F -e "addEventListener('push'" -e "addEventListener('notificationclick'" -e "addEventListener('pushsubscriptionchange'" apps/web/public/sw.js` | проверено 2026-07-17 |
-| W9  | Gateway содержит все пять push routes                                       | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                       | проверено 2026-07-17 |
-| W10 | `What's New` переживает отказ `localStorage` без повторного открытия        | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                 | проверено 2026-07-23 |
+| ID  | Утверждение                                                                  | Проверка                                                                                                                                               | Статус               |
+| --- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| W1  | SW пропускается и unregister-ится на localhost/demo                          | `sed -n '720,755p' apps/web/heys_platform_apis_v1.js`                                                                                                  | проверено 2026-07-17 |
+| W2  | SW регистрируется как `/sw.js` и обрабатывает controllerchange               | `rg -n -F -e "register('/sw.js')" -e "addEventListener('controllerchange'" apps/web/heys_platform_apis_v1.js`                                          | проверено 2026-07-17 |
+| W3  | API cache routing различает no-store auth, RPC и KV SWR                      | `sed -n '266,335p' apps/web/public/sw.js`                                                                                                              | проверено 2026-07-17 |
+| W4  | Client switch инвалидирует SW KV cache                                       | `rg -n -e 'CLIENT_SWITCH' -e 'CLEAR_API_KV' apps/web/public/sw.js apps/web/heys_storage_supabase_v1.js`                                                | проверено 2026-07-17 |
+| W5  | Background sync лишь postMessage-ит START, ждёт 1 с и COMPLETE               | `sed -n '745,770p' apps/web/public/sw.js`                                                                                                              | проверено 2026-07-17 |
+| W6  | Browser push требует capability/permission и iOS standalone                  | `sed -n '120,180p' apps/web/heys_push_v1.js`                                                                                                           | проверено 2026-07-17 |
+| W7  | Push backend резолвит client/curator identity и auth-гейтит private actions  | `sed -n '90,175p' yandex-cloud-functions/heys-api-push/index.js && sed -n '380,445p' yandex-cloud-functions/heys-api-push/index.js`                    | проверено 2026-07-17 |
+| W8  | SW показывает notification, обрабатывает click и subscription change         | `rg -n -F -e "addEventListener('push'" -e "addEventListener('notificationclick'" -e "addEventListener('pushsubscriptionchange'" apps/web/public/sw.js` | проверено 2026-07-17 |
+| W9  | Gateway содержит все пять push routes                                        | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                       | проверено 2026-07-17 |
+| W10 | `What's New` переживает отказ `localStorage` без повторного открытия         | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                 | проверено 2026-07-23 |
+| W11 | Ack правок куратора переживает отказ storage и не открывает pending повторно | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                    | проверено 2026-07-23 |

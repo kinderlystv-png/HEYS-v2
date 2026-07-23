@@ -39,6 +39,7 @@
   let _previousFocus = null;
   let _bodyOverflowBeforeModal = '';
   let _modalKeydownHandler = null;
+  let _ackQueueCache = null;
 
   // ─── Utilities ────────────────────────────────────────────────────
 
@@ -468,25 +469,52 @@
 
   // ─── Local state: pending ack + snooze ────────────────────────────
 
-  function readAckQueue(nowMs = Date.now()) {
+  function normalizeAckQueue(queue, nowMs = Date.now()) {
+    return (Array.isArray(queue) ? queue : [])
+      .filter(item => item && Array.isArray(item.entryIds))
+      .filter(item => !item.queuedAt || (nowMs - Number(item.queuedAt)) < ACK_QUEUE_TTL_MS)
+      .slice(-MAX_ACK_QUEUE_ITEMS);
+  }
+
+  function readPersistedAckQueue(storage, nowMs) {
     try {
-      const raw = localStorage.getItem(ACK_QUEUE_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(arr)) return [];
-      return arr
-        .filter(item => item && Array.isArray(item.entryIds))
-        .filter(item => !item.queuedAt || (nowMs - Number(item.queuedAt)) < ACK_QUEUE_TTL_MS)
-        .slice(-MAX_ACK_QUEUE_ITEMS);
+      const raw = storage?.getItem?.(ACK_QUEUE_KEY);
+      return normalizeAckQueue(raw ? JSON.parse(raw) : [], nowMs);
     } catch (_) {
       return [];
     }
   }
 
+  function getBrowserStorage(name) {
+    try { return window[name] || null; } catch (_) { return null; }
+  }
+
+  function readAckQueue(nowMs = Date.now()) {
+    if (_ackQueueCache === null) {
+      const localQueue = readPersistedAckQueue(getBrowserStorage('localStorage'), nowMs);
+      const sessionQueue = readPersistedAckQueue(getBrowserStorage('sessionStorage'), nowMs);
+      _ackQueueCache = localQueue.length > 0 ? localQueue : sessionQueue;
+    }
+    _ackQueueCache = normalizeAckQueue(_ackQueueCache, nowMs);
+    return _ackQueueCache.slice();
+  }
+
   function writeAckQueue(queue) {
+    const next = normalizeAckQueue(queue);
+    _ackQueueCache = next;
+    const serialized = JSON.stringify(next);
+
+    // Browser-global operational state: HEYS.utils.lsSet scopes heys_* keys
+    // to a client and JSON-serializes values, while this queue is read globally.
     try {
-      const next = (Array.isArray(queue) ? queue : []).slice(-MAX_ACK_QUEUE_ITEMS);
-      if (next.length === 0) localStorage.removeItem(ACK_QUEUE_KEY);
-      else HEYS.utils?.lsSet?.(ACK_QUEUE_KEY, JSON.stringify(next));
+      const storage = getBrowserStorage('localStorage');
+      if (next.length === 0) storage?.removeItem?.(ACK_QUEUE_KEY);
+      else storage?.setItem?.(ACK_QUEUE_KEY, serialized);
+    } catch (_) {}
+    try {
+      const storage = getBrowserStorage('sessionStorage');
+      if (next.length === 0) storage?.removeItem?.(ACK_QUEUE_KEY);
+      else storage?.setItem?.(ACK_QUEUE_KEY, serialized);
     } catch (_) {}
   }
 
@@ -534,9 +562,15 @@
           ? { entryIds: item.entryIds, untilTs: item.untilTs }
           : item.untilTs;
         const res = await HEYS.YandexAPI.ackCuratorChangelog(payload);
-        if (!res || res.ok === false) remaining.push(item);
-      } catch (_) {
+        if (!res || res.ok === false) {
+          remaining.push(item);
+          console.warn('[HEYS.curatorReview] ack queued for retry', { entryCount: item.entryIds?.length || 0 });
+        } else {
+          console.info('[HEYS.curatorReview] ack succeeded', { entryCount: item.entryIds?.length || 0 });
+        }
+      } catch (e) {
         remaining.push(item);
+        console.warn('[HEYS.curatorReview] ack queued for retry', { entryCount: item.entryIds?.length || 0, error: e?.message || 'unknown' });
       }
     }
     writeAckQueue(remaining);
@@ -792,6 +826,7 @@
     });
     backdrop.querySelector('.ca-modal__ack-btn').addEventListener('click', () => {
       const shownEntries = _reviewEntries.slice();
+      console.info('[HEYS.curatorReview] ack requested', { entryCount: shownEntries.length });
       enqueueAckForEntries(shownEntries);
       _entries = _entries.filter(e => !entryIds(shownEntries).includes(e.id));
       _reviewEntries = [];
