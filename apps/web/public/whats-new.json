@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.23.bdca85c2",
+      "buildHash": "bdca85c2",
+      "date": "2026-07-23",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "надёжные отметки сообщений и корректное время тренировок",
+      "items": [
+        {
+          "type": "fix",
+          "title": "надёжные отметки сообщений и корректное время тренировок",
+          "description": "надёжные отметки сообщений и корректное время тренировок"
+        }
+      ],
+      "coveredCommits": ["bdca85c2"]
+    },
+    {
       "version": "2026.07.23.08e40150",
       "buildHash": "08e40150",
       "date": "2026-07-23",
@@ -134,22 +150,6 @@
       "date": "2026-07-18",
       "kind": "technical",
       "profile": "technical-infra-tests",
-      "title": "Обновление планирования, чекина и надёжности HEYS",
-      "items": [
-        {
-          "type": "feat",
-          "title": "Обновление планирования и чекина",
-          "description": "Добавлены задачи по выбранным датам, стабильное локальное сохранение утреннего чекина и исправлены повторные служебные модалки."
-        }
-      ],
-      "coveredCommits": ["a3468caa", "76a2edf6", "7f578a4d", "6583cb0f", "0c5ea2d6", "c64850d3"]
-    },
-    {
-      "version": "2026.07.18.ab732323",
-      "buildHash": "ab732323",
-      "date": "2026-07-18",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
       "title": "Обновление планирования, чекина и надёжности HEYS",
       "items": [
         {
