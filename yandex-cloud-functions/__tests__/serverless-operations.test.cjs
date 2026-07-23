@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  DEFAULT_LOG_GROUP_ID,
   OVERLOAD_LOG_FILTER,
   buildLogReadArgs,
   parseOverloadEntries,
@@ -29,9 +30,11 @@ test('log parser only captures exact platform 429/503 codes', () => {
 });
 
 test('log scan uses filtered Cloud Logging read for the watched function', () => {
-  const args = buildLogReadArgs('function-id', '20m');
+  const until = '2026-07-23T13:30:00.000Z';
+  const args = buildLogReadArgs('function-id', '20m', until);
 
-  assert.deepEqual(args.slice(0, 3), ['logging', 'read', 'default']);
+  assert.deepEqual(args.slice(0, 4), ['logging', 'read', '--group-id', DEFAULT_LOG_GROUP_ID]);
+  assert.equal(args[args.indexOf('--until') + 1], until);
   assert.deepEqual(args.slice(args.indexOf('--resource-ids'), args.indexOf('--resource-ids') + 2), [
     '--resource-ids',
     'function-id',

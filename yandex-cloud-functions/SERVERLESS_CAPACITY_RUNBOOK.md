@@ -74,8 +74,9 @@ node yandex-cloud-functions/check-serverless-error-logs.cjs --since 20m --strict
 
 Workflow `API Health Monitor` запускается каждые 10 минут. Он выполняет RPC и
 REST без маскирующего retry, затем сканирует Cloud Function logs на точные коды
-`429` и `503`. Проверка использует серверный фильтр Cloud Logging и 30-секундный
-timeout на каждую CLI-команду, чтобы недоступность чтения логов завершалась
+`429` и `503`. Проверка обращается напрямую к production log group и resource
+ID, задаёт закрытый временной диапазон, использует серверный фильтр Cloud
+Logging и 30-секундный timeout. Поэтому недоступность чтения логов завершается
 явной ошибкой, а не зависанием workflow. Любой найденный код проваливает
 workflow и попадает в Telegram alert.
 

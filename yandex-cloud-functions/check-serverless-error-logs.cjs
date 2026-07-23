@@ -3,7 +3,12 @@
 
 const { execFileSync } = require('node:child_process');
 
-const WATCHED_FUNCTIONS = Object.freeze(['heys-api-rpc', 'heys-api-rest']);
+const WATCHED_RESOURCES = Object.freeze({
+  'heys-api-rpc': 'd4e9e90es31bgjp87j8i',
+  'heys-api-rest': 'd4ea4j7eh05rtkjubipt',
+});
+const WATCHED_FUNCTIONS = Object.freeze(Object.keys(WATCHED_RESOURCES));
+const DEFAULT_LOG_GROUP_ID = 'e23ndggvq798r3v3eepq';
 const OVERLOAD_CODE_RE = /\bCode:\s*(429|503)\b/i;
 const OVERLOAD_LOG_FILTER = 'message: "Code: 429" OR message: "Code: 503"';
 const YC_COMMAND_TIMEOUT_MS = 30_000;
@@ -18,10 +23,12 @@ function readYcJson(args) {
   return JSON.parse(output);
 }
 
-function buildLogReadArgs(functionId, since, logGroup = 'default') {
+function buildLogReadArgs(functionId, since, until, logGroupId = DEFAULT_LOG_GROUP_ID) {
   return [
-    'logging', 'read', logGroup,
+    'logging', 'read',
+    '--group-id', logGroupId,
     '--since', since,
+    '--until', until,
     '--resource-ids', functionId,
     '--filter', OVERLOAD_LOG_FILTER,
     '--limit', '200',
@@ -48,12 +55,10 @@ function parseOverloadEntries(entries, functionName) {
 }
 
 function readFunctionLogs(functionName, since) {
-  const functionInfo = readYcJson([
-    'serverless', 'function', 'get', functionName,
-    '--format', 'json',
-  ]);
-  const logGroup = process.env.YC_LOG_GROUP_NAME || 'default';
-  return readYcJson(buildLogReadArgs(functionInfo.id, since, logGroup));
+  const functionId = WATCHED_RESOURCES[functionName];
+  if (!functionId) throw new Error(`Unknown watched function: ${functionName}`);
+  const logGroupId = process.env.YC_LOG_GROUP_ID || DEFAULT_LOG_GROUP_ID;
+  return readYcJson(buildLogReadArgs(functionId, since, new Date().toISOString(), logGroupId));
 }
 
 function checkLogs({ since = '20m' } = {}) {
@@ -97,9 +102,11 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_LOG_GROUP_ID,
   OVERLOAD_LOG_FILTER,
   OVERLOAD_CODE_RE,
   WATCHED_FUNCTIONS,
+  WATCHED_RESOURCES,
   buildLogReadArgs,
   checkLogs,
   parseOverloadEntries,
