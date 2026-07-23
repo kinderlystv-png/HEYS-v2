@@ -105,15 +105,19 @@ async function executeRequest(request, fetchImpl = fetch) {
     try { body = text ? JSON.parse(text) : null; } catch (_) { body = text; }
     const overload = response.status === 429 || response.status === 503;
     const retryAfterSeconds = parseRetryAfter(response.headers.get('retry-after'));
+    const rpcFailure = request.kind?.startsWith('upload-')
+      ? findExplicitRpcFailure(body)
+      : null;
     return {
       ...request,
-      ok: response.ok && !overload,
+      ok: response.ok && !overload && !rpcFailure,
       status: response.status,
       overload,
       retryAfterSeconds,
       retryAfterValid: !overload || retryAfterSeconds !== null,
       latencyMs: Date.now() - startedAt,
       body,
+      error: rpcFailure,
     };
   } catch (error) {
     return {
@@ -127,6 +131,20 @@ async function executeRequest(request, fetchImpl = fetch) {
       error: error.message,
     };
   }
+}
+
+function findExplicitRpcFailure(value) {
+  if (!value || typeof value !== 'object') return null;
+  if (!Array.isArray(value) && value.success === false) {
+    return typeof value.error === 'string' && value.error
+      ? value.error
+      : 'rpc_success_false';
+  }
+  for (const nested of Object.values(value)) {
+    const failure = findExplicitRpcFailure(nested);
+    if (failure) return failure;
+  }
+  return null;
 }
 
 function extractItems(body) {
@@ -265,6 +283,7 @@ module.exports = {
   buildTargetWave,
   executeRequest,
   extractItems,
+  findExplicitRpcFailure,
   readScenario,
   runLoadTest,
 };

@@ -101,6 +101,10 @@ Credentials не хранятся в git. Создать `/tmp/heys-capacity-cli
 
 Нужно шесть dedicated test clients. Защитить и запустить:
 
+У каждого клиента effective subscription status должен быть `trial` или
+`active`, иначе KV-write вернётся с HTTP 200, но с логическим
+`subscription_required`. Load-test считает такой ответ hard failure.
+
 ```bash
 chmod 600 /tmp/heys-capacity-clients.json
 node yandex-cloud-functions/serverless-sync-load-test.cjs \

@@ -52,6 +52,26 @@ test('request result preserves overload and Retry-After for exact-body recovery'
   assert.equal(result.options.body, request.options.body);
 });
 
+test('HTTP 200 upload with explicit RPC failure is a hard failure', async () => {
+  const request = {
+    client: 'one',
+    kind: 'upload-1',
+    url: 'https://example.test/rpc?fn=batch_upsert_client_kv_by_session',
+    options: { method: 'POST', body: '{"same":true}' },
+  };
+  const result = await executeRequest(request, async () => response(200, {
+    batch_upsert_client_kv_by_session: {
+      success: false,
+      error: 'subscription_required',
+      saved: 0,
+    },
+  }));
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 200);
+  assert.equal(result.error, 'subscription_required');
+});
+
 test('six-client target load reaches 20 in flight and verifies both uploads', async () => {
   const storedBySession = new Map();
   let activeFetches = 0;
