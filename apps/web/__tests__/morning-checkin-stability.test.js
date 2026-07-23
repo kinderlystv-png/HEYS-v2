@@ -148,8 +148,12 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('emitMorningCheckinStatus(dateKey, clientId, traceEvent, { ledger: written });');
     expect(MORNING_SRC).toContain("emitMorningCheckinStatus(dateKey, clientId, 'step_status', { ledger: written });");
     expect(STORAGE_SRC).toContain("'heys_morning_checkin_progress_v1_' // Resumable/exact-once morning flow ledger");
-    expect(STORAGE_SRC).toContain('if (_skGrace < 10000 && !_isMorningCheckinLedger) return;');
-    expect(STORAGE_SRC).toContain('!_isMorningCheckinProgress && !_isDefaultTabSync');
+    expect(STORAGE_SRC).toContain(
+      'if (_skGrace < 10000 && !_isMorningCheckinLedger && !_isHungerStatusEvents) return;',
+    );
+    expect(STORAGE_SRC).toContain(
+      '!_isMorningCheckinProgress && !_isHungerStatusEvents && !_isDefaultTabSync',
+    );
     expect(STORAGE_SRC).toContain("GRACE_PERIOD_BYPASS_morning_checkin");
   });
 
