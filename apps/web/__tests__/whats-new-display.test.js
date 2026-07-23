@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const LEGACY_SEEN_KEY = 'heys_whats_new_last_seen';
 const ACK_KEY = 'heys_whats_new_last_acknowledged';
+const SESSION_ACK_KEY = 'heys_whats_new_session_acknowledged';
 const UPDATE_LOCK_TIMEOUT_MS = 30000;
+const modalSource = fs.readFileSync(
+    path.resolve(__dirname, '..', 'heys_whats_new_modal_v1.js'),
+    'utf8',
+);
 
 let mockLocalStorage;
 let mockSessionStorage;
+let mockRuntimeAcknowledgedVersion;
 let mockNow;
 
 function getStorageValue(storage, key) {
@@ -13,7 +21,9 @@ function getStorageValue(storage, key) {
 }
 
 function resolveSeenVersion(data) {
-    const acknowledgedVersion = getStorageValue(mockLocalStorage, ACK_KEY);
+    const acknowledgedVersion = mockRuntimeAcknowledgedVersion
+        || getStorageValue(mockSessionStorage, SESSION_ACK_KEY)
+        || getStorageValue(mockLocalStorage, ACK_KEY);
     if (acknowledgedVersion) return acknowledgedVersion;
 
     const legacySeenVersion = getStorageValue(mockLocalStorage, LEGACY_SEEN_KEY);
@@ -25,6 +35,20 @@ function resolveSeenVersion(data) {
     }
 
     return legacySeenVersion;
+}
+
+function persistAcknowledgedVersion(version, {
+    localStorageAvailable = true,
+    sessionStorageAvailable = true,
+} = {}) {
+    mockRuntimeAcknowledgedVersion = version;
+    if (sessionStorageAvailable) {
+        mockSessionStorage[SESSION_ACK_KEY] = version;
+    }
+    if (localStorageAvailable) {
+        mockLocalStorage[ACK_KEY] = version;
+        mockLocalStorage[LEGACY_SEEN_KEY] = version;
+    }
 }
 
 function getUnseenReleases(data) {
@@ -112,6 +136,7 @@ describe('What\'s New display guarantees', () => {
     beforeEach(() => {
         mockLocalStorage = {};
         mockSessionStorage = {};
+        mockRuntimeAcknowledgedVersion = '';
         mockNow = Date.now();
     });
 
@@ -146,6 +171,34 @@ describe('What\'s New display guarantees', () => {
         const unseen = getUnseenReleases(releases);
 
         expect(unseen).toHaveLength(0);
+    });
+
+    it('does not reopen in a loop when iOS localStorage acknowledgement fails', () => {
+        persistAcknowledgedVersion('2026.04.04.9c35ee01', {
+            localStorageAvailable: false,
+            sessionStorageAvailable: false,
+        });
+
+        expect(getUnseenReleases(releases)).toHaveLength(0);
+    });
+
+    it('keeps the acknowledgement across an update reload via sessionStorage fallback', () => {
+        persistAcknowledgedVersion('2026.04.04.9c35ee01', {
+            localStorageAvailable: false,
+        });
+        mockRuntimeAcknowledgedVersion = '';
+
+        expect(getUnseenReleases(releases)).toHaveLength(0);
+    });
+
+    it('wires runtime and session fallbacks into the production modal source', () => {
+        const readStart = modalSource.indexOf('function getAcknowledgedVersion()');
+        const persistStart = modalSource.indexOf('function persistAcknowledgedVersion(version)');
+
+        expect(modalSource.slice(readStart, readStart + 300)).toContain('runtimeAcknowledgedVersion');
+        expect(modalSource.slice(readStart, readStart + 300)).toContain('SESSION_ACK_KEY');
+        expect(modalSource.slice(persistStart, persistStart + 500)).toContain('runtimeAcknowledgedVersion = version');
+        expect(modalSource.slice(persistStart, persistStart + 500)).toContain('setSessionStorageValue(SESSION_ACK_KEY, version)');
     });
 
     it('keeps older acknowledged history and shows only newer releases above it', () => {

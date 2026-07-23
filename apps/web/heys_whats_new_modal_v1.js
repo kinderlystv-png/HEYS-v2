@@ -8,12 +8,12 @@
     if (!React) return;
 
     const MODULE_VERIFICATION_MARK = '2026-04-07-whats-new-followup-1';
-
     const { useState, useEffect, useCallback, useRef } = React;
-
     const LEGACY_SEEN_KEY = 'heys_whats_new_last_seen';
     const ACK_KEY = 'heys_whats_new_last_acknowledged';
+    const SESSION_ACK_KEY = 'heys_whats_new_session_acknowledged';
     const FETCH_TIMEOUT = 5000;
+    let runtimeAcknowledgedVersion = '';
 
     // --- Type badges ---
     const TYPE_CONFIG = {
@@ -67,11 +67,23 @@
     }
 
     function setStorageValue(key, value) {
-        try { localStorage.setItem(key, value); } catch { /* noop */ }
+        try { localStorage.setItem(key, value); return localStorage.getItem(key) === value; } catch { return false; }
     }
 
     function removeStorageValue(key) {
         try { localStorage.removeItem(key); } catch { /* noop */ }
+    }
+
+    function getSessionStorageValue(key) {
+        try { return sessionStorage.getItem(key) || ''; } catch { return ''; }
+    }
+
+    function setSessionStorageValue(key, value) {
+        try { sessionStorage.setItem(key, value); } catch { /* noop */ }
+    }
+
+    function removeSessionStorageValue(key) {
+        try { sessionStorage.removeItem(key); } catch { /* noop */ }
     }
 
     function getLegacySeenVersion() {
@@ -79,7 +91,9 @@
     }
 
     function getAcknowledgedVersion() {
-        return getStorageValue(ACK_KEY);
+        return runtimeAcknowledgedVersion
+            || getSessionStorageValue(SESSION_ACK_KEY)
+            || getStorageValue(ACK_KEY);
     }
 
     function extractBuildHash(version) {
@@ -110,8 +124,13 @@
 
     function persistAcknowledgedVersion(version) {
         if (!version) return;
-        setStorageValue(ACK_KEY, version);
-        setStorageValue(LEGACY_SEEN_KEY, version);
+        runtimeAcknowledgedVersion = version;
+        setSessionStorageValue(SESSION_ACK_KEY, version);
+        const acknowledgedSaved = setStorageValue(ACK_KEY, version);
+        const legacySaved = setStorageValue(LEGACY_SEEN_KEY, version);
+        if (!acknowledgedSaved || !legacySaved) {
+            console.warn('[HEYS.WhatsNew] localStorage acknowledgement unavailable — using session fallback');
+        }
     }
 
     function resolveSeenVersion(data) {
@@ -406,6 +425,8 @@
         inspectUnseen,
         // Utility: reset seen state (for testing)
         resetSeen: function () {
+            runtimeAcknowledgedVersion = '';
+            removeSessionStorageValue(SESSION_ACK_KEY);
             removeStorageValue(LEGACY_SEEN_KEY);
             removeStorageValue(ACK_KEY);
         },

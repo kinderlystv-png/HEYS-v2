@@ -30,6 +30,10 @@ service-worker engine.
    auth-sync guard, чтобы не оборвать PIN download.
 6. Online/offline events управляют системным banner; данные при offline
    продолжают писаться local-first через общий storage/sync слой.
+7. `What's New` показывается только после совпадения runtime и release hash.
+   Подтверждение хранится в browser-global `localStorage`, а при его отказе — в
+   runtime и `sessionStorage`, чтобы закрытие модалки не запускало цикл
+   повторных открытий на iOS.
 
 ## Cache routing
 
@@ -101,6 +105,7 @@ Messenger push использует приватный generic preview: «Нов
 7. Permission prompt вызывается только из понятного user flow.
 8. Push payload URL не должен обходить допустимую navigation policy.
 9. Messenger push не содержит пользовательский текст или attachment metadata.
+10. Отказ `localStorage` не должен превращать закрытие `What's New` в цикл.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -143,3 +148,4 @@ Messenger push использует приватный generic preview: «Нов
 | W7  | Push backend резолвит client/curator identity и auth-гейтит private actions | `sed -n '90,175p' yandex-cloud-functions/heys-api-push/index.js && sed -n '380,445p' yandex-cloud-functions/heys-api-push/index.js`                    | проверено 2026-07-17 |
 | W8  | SW показывает notification, обрабатывает click и subscription change        | `rg -n -F -e "addEventListener('push'" -e "addEventListener('notificationclick'" -e "addEventListener('pushsubscriptionchange'" apps/web/public/sw.js` | проверено 2026-07-17 |
 | W9  | Gateway содержит все пять push routes                                       | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                       | проверено 2026-07-17 |
+| W10 | `What's New` переживает отказ `localStorage` без повторного открытия        | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                 | проверено 2026-07-23 |
