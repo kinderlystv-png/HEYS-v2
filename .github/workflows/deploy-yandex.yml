@@ -25,7 +25,6 @@ permissions:
 
 env:
   NODE_VERSION: "22"
-  PNPM_VERSION: "8"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
   YC_BUCKET_DEMO: try-heyslab-ru # Demo PWA → try.heyslab.ru
@@ -126,7 +125,6 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: ${{ env.PNPM_VERSION }}
           cache: true
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -161,7 +159,6 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: ${{ env.PNPM_VERSION }}
           cache: true
 
       - name: Install dependencies
