@@ -126,9 +126,27 @@ context обновить новый диалог. Свежий silent poll в о
 Точечное представление читает `get_client_observability_by_curator`, общее —
 `get_curator_observability_overview`. Оба RPC curator-only: gateway подставляет
 `p_curator_id` из проверенного JWT, SQL повторно проверяет `clients.curator_id`.
+Gateway возвращает scalar JSON-функции в объекте с именем RPC; оба UI-пути
+разворачивают эту обёртку перед чтением `summary`, `sessions` и `logins`.
 Точечный доступ пишет audit middleware, агрегатный — сама SQL-функция один раз
 на запрос. RPC не возвращают raw console, phone, IP, cookie/token или значения
 здоровья; отчёт копирует только те же безопасные поля.
+
+Проблемная сессия имеет действие «Скопировать полный лог»: отчёт включает
+идентификаторы запуска/build/device, итог, длительность, счётчики и полный
+timeline структурированных событий с allowlisted context. Дневник, сообщения,
+телефон, IP, токены и raw console в отчёт не попадают. После `boot_ready`
+неструктурированная ошибка зависимости помечает запуск как `degraded`, а не
+`failed`; фатальный статус требует именованного lifecycle-события сбоя.
+
+Curator inbox использует health-check соединения перед запросом и один retry на
+новом PostgreSQL client при протухшем pooled socket. Это не превращает успешную
+загрузку панели в повторяющийся `500` на первом warm-запросе.
+
+Фоновые запросы истории геймификации выбирают curator RPC до client-session RPC,
+если присутствует любой подтверждённый curator context. Curator HttpOnly cookie
+не считается PIN-cookie и не вызывает ожидаемо запрещённые `*_by_session`
+запросы.
 
 ## Инварианты
 
@@ -153,6 +171,8 @@ context обновить новый диалог. Свежий silent poll в о
     `done/acked`; сообщения с другими id не блокируются.
 16. Диагностика клиента доступна только его куратору и не раскрывает raw console
     или содержимое health/user data.
+17. `failed` означает именованный lifecycle-сбой; ошибка зависимости после
+    `boot_ready` остаётся видимым отклонением, но не фатальным запуском.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -177,25 +197,27 @@ context обновить новый диалог. Свежий silent poll в о
 
 ## Facts Table
 
-| ID  | Утверждение                                                                | Проверка                                                                                                                                                                                                                     | Статус               |
-| --- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| C1  | TypeScript CuratorPanel использует mock API и placeholder tabs             | `sed -n '1,90p' apps/web/src/components/CuratorPanel/CuratorPanelContainer.tsx && sed -n '1,230p' apps/web/src/components/CuratorPanel/hooks/useCuratorData.ts`                                                              | проверено 2026-07-17 |
-| C2  | Его component tests целиком skipped                                        | `sed -n '65,85p' apps/web/src/components/CuratorPanel/__tests__/CuratorPanel.test.tsx`                                                                                                                                       | проверено 2026-07-17 |
-| C3  | Active state/CRUD принадлежат `useCloudClients` в legacy hooks             | `sed -n '1995,2415p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                          | проверено 2026-07-17 |
-| C4  | List fetch имеет in-flight guard и local cache fallback                    | `sed -n '2055,2195p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                          | проверено 2026-07-17 |
-| C5  | Gate содержит clients, queue, moderation и diagnostics tabs                | `rg -n "setCuratorTab\('(clients\|queue\|moderation\|diagnostics)'" apps/web/heys_app_gate_flow_v1.js`                                                                                                                       | проверено 2026-07-24 |
-| C6  | Gate switch обновляет current id после `cloud.switchClient`                | `sed -n '2325,2385p' apps/web/heys_app_gate_flow_v1.js`                                                                                                                                                                      | проверено 2026-07-17 |
-| C7  | Client CRUD разделяет profile update и PIN reset                           | `sed -n '2195,2335p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                          | проверено 2026-07-17 |
-| C8  | Curator RPC allowlist содержит clients/create/write-context contracts      | `sed -n '930,1008p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                            | проверено 2026-07-17 |
-| C9  | Storage запрашивает curator write-context capability                       | `sed -n '11740,11785p' apps/web/heys_storage_supabase_v1.js`                                                                                                                                                                 | проверено 2026-07-17 |
-| C10 | Prototype не импортируется вне своей директории/demo в `apps/web/src`      | `rg -n 'CuratorPanel' apps/web/src --glob '*.{ts,tsx}'`                                                                                                                                                                      | проверено 2026-07-17 |
-| C11 | Есть guard tests для login/switch/access, но prototype test skipped        | `rg --files apps/web/**tests**                                                                                                                                  \| rg '(curator         \| client-switch \| client-access)'` | проверено 2026-07-17 |
-| C12 | Messenger send retry-safe по request ID и canonical fingerprint            | `apps/web/heys_messenger_api_v1.js`, `yandex-cloud-functions/heys-api-messages/index.js`, `scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql`                                                               | проверено 2026-07-21 |
-| C13 | История использует cursor pagination и merge по ID                         | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                 | проверено 2026-07-21 |
-| C14 | Messenger преобразует технические ошибки в пользовательский текст          | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                 | проверено 2026-07-23 |
-| C15 | Потерянный ответ `done/acked` разрешается контрольным чтением server truth | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                 | проверено 2026-07-23 |
-| C16 | Диагностика проверяет ownership и не возвращает raw console/user content   | `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                                                               | проверено 2026-07-24 |
-| C17 | Общая диагностика использует один RPC, server filters и cursor pagination  | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                     | проверено 2026-07-24 |
+| ID  | Утверждение                                                                              | Проверка                                                                                                                                                                                                                               | Статус               |
+| --- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| C1  | TypeScript CuratorPanel использует mock API и placeholder tabs                           | `sed -n '1,90p' apps/web/src/components/CuratorPanel/CuratorPanelContainer.tsx && sed -n '1,230p' apps/web/src/components/CuratorPanel/hooks/useCuratorData.ts`                                                                        | проверено 2026-07-17 |
+| C2  | Его component tests целиком skipped                                                      | `sed -n '65,85p' apps/web/src/components/CuratorPanel/__tests__/CuratorPanel.test.tsx`                                                                                                                                                 | проверено 2026-07-17 |
+| C3  | Active state/CRUD принадлежат `useCloudClients` в legacy hooks                           | `sed -n '1995,2415p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                                    | проверено 2026-07-17 |
+| C4  | List fetch имеет in-flight guard и local cache fallback                                  | `sed -n '2055,2195p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                                    | проверено 2026-07-17 |
+| C5  | Gate содержит clients, queue, moderation и diagnostics tabs                              | `rg -n "setCuratorTab\('(clients\|queue\|moderation\|diagnostics)'" apps/web/heys_app_gate_flow_v1.js`                                                                                                                                 | проверено 2026-07-24 |
+| C6  | Gate switch обновляет current id после `cloud.switchClient`                              | `sed -n '2325,2385p' apps/web/heys_app_gate_flow_v1.js`                                                                                                                                                                                | проверено 2026-07-17 |
+| C7  | Client CRUD разделяет profile update и PIN reset                                         | `sed -n '2195,2335p' apps/web/heys_app_hooks_v1.js`                                                                                                                                                                                    | проверено 2026-07-17 |
+| C8  | Curator RPC allowlist содержит clients/create/write-context contracts                    | `sed -n '930,1008p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                      | проверено 2026-07-17 |
+| C9  | Storage запрашивает curator write-context capability                                     | `sed -n '11740,11785p' apps/web/heys_storage_supabase_v1.js`                                                                                                                                                                           | проверено 2026-07-17 |
+| C10 | Prototype не импортируется вне своей директории/demo в `apps/web/src`                    | `rg -n 'CuratorPanel' apps/web/src --glob '*.{ts,tsx}'`                                                                                                                                                                                | проверено 2026-07-17 |
+| C11 | Есть guard tests для login/switch/access, но prototype test skipped                      | `rg --files apps/web/**tests**                                                                                                                                  \| rg '(curator         \| client-switch \| client-access)'`           | проверено 2026-07-17 |
+| C12 | Messenger send retry-safe по request ID и canonical fingerprint                          | `apps/web/heys_messenger_api_v1.js`, `yandex-cloud-functions/heys-api-messages/index.js`, `scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql`                                                                         | проверено 2026-07-21 |
+| C13 | История использует cursor pagination и merge по ID                                       | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                           | проверено 2026-07-21 |
+| C14 | Messenger преобразует технические ошибки в пользовательский текст                        | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                           | проверено 2026-07-23 |
+| C15 | Потерянный ответ `done/acked` разрешается контрольным чтением server truth               | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                           | проверено 2026-07-23 |
+| C16 | Диагностика проверяет ownership и не возвращает raw console/user content                 | `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                                                                         | проверено 2026-07-24 |
+| C17 | Общая диагностика использует один RPC, server filters и cursor pagination                | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                               | проверено 2026-07-24 |
+| C18 | UI разворачивает scalar RPC, а curator cookie не идёт в client-session RPC               | `apps/web/heys_client_diagnostics_v1.js`, `apps/web/heys_gamification_v1.js`, `apps/web/__tests__/client-session-observability.test.js`                                                                                                | проверено 2026-07-24 |
+| C19 | Полный лог безопасен, outcome отличает fatal от post-ready error, inbox переподключается | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql`, `yandex-cloud-functions/heys-api-messages/index.js`, `apps/web/__tests__/client-session-observability.test.js` | проверено 2026-07-24 |
 
 ## Связанные источники
 

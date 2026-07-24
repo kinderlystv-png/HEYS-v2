@@ -16,7 +16,10 @@ const swSource = fs.readFileSync(path.join(webRoot, 'heys_platform_apis_v1.js'),
 const curatorChangesSource = fs.readFileSync(path.join(webRoot, 'heys_curator_actions_banner_v1.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(webRoot, 'heys_storage_supabase_v1.js'), 'utf8');
 const gateSource = fs.readFileSync(path.join(webRoot, 'heys_app_gate_flow_v1.js'), 'utf8');
+const gamificationSource = fs.readFileSync(path.join(webRoot, 'heys_gamification_v1.js'), 'utf8');
 const rpcSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-rpc/index.js'), 'utf8');
+const messagesSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-messages/index.js'), 'utf8');
+const classificationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql'), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -149,6 +152,69 @@ describe('client session observability', () => {
     expect(diagnosticsSource).toContain('Автообновление 60 сек');
     expect(diagnosticsSource).toContain('p_problem_stage');
     expect(diagnosticsSource).toContain('p_cursor_started_at');
+  });
+
+  it('unwraps scalar JSON RPC responses before rendering dashboard totals', () => {
+    const context = { document: {}, navigator: {}, console };
+    context.window = context;
+    context.globalThis = context;
+    vm.runInNewContext(diagnosticsSource, context, { filename: 'heys_client_diagnostics_v1.js' });
+
+    const payload = { summary: { launches: 2, active_clients: 2 }, sessions: [{ boot_id: 'boot-1' }] };
+    const wrapped = { data: { get_curator_observability_overview: payload }, error: null };
+    const direct = { data: payload, error: null };
+
+    expect(context.HEYS.ClientDiagnostics._test.unwrapRpcPayload(wrapped, 'get_curator_observability_overview')).toBe(payload);
+    expect(context.HEYS.ClientDiagnostics._test.unwrapRpcPayload(direct, 'get_curator_observability_overview')).toBe(payload);
+  });
+
+  it('copies a complete structured failure report without private context fields', () => {
+    const context = { document: {}, navigator: {}, console };
+    context.window = context;
+    context.globalThis = context;
+    vm.runInNewContext(diagnosticsSource, context, { filename: 'heys_client_diagnostics_v1.js' });
+
+    const report = context.HEYS.ClientDiagnostics._test.sessionDebugReport('Полтавский', 'client-1', {
+      boot_id: 'boot-1', outcome: 'degraded', problem_stage: 'warning', problem_event: null,
+      last_success_event: 'boot_ready', started_at: '2026-07-24T11:24:44Z', last_event_at: '2026-07-24T11:25:56Z',
+      duration_ms: 72000, build_id: 'abc123', device_id: 'device-1', device_class: 'mobile', os_name: 'Android',
+      browser_name: 'Chrome', display_mode: 'standalone', event_count: 9, error_count: 1, warning_count: 0,
+      initial_sync_completed: true,
+      events: [{ at: '2026-07-24T11:24:44Z', name: 'boot_ready', status: 'ready', level: 'info', source: 'bootstrap', duration_ms: 800,
+        context: { phase: 'ready', online: true, token: 'secret-token', phone: '+79990000000', body: 'private diary text' } }],
+    });
+
+    expect(report).toContain('HEYS — полный безопасный лог сбоя');
+    expect(report).toContain('boot_id: boot-1');
+    expect(report).toContain('build_id: abc123');
+    expect(report).toContain('source=bootstrap');
+    expect(report).toContain('"phase":"ready"');
+    expect(report).not.toContain('secret-token');
+    expect(report).not.toContain('+79990000000');
+    expect(report).not.toContain('private diary text');
+    expect(diagnosticsSource).toContain('Скопировать полный лог');
+  });
+
+  it('reconnects the curator inbox after a stale pooled database connection', () => {
+    const inboxBlock = messagesSource.split('async function handleInbox')[1].split('async function handleMarkRead')[0];
+    expect(messagesSource).toContain("const { getPool, acquireHealthyClient } = require('./shared/db-pool')");
+    expect(inboxBlock).toContain('await acquireHealthyClient()');
+    expect(inboxBlock).not.toContain('pool.connect()');
+  });
+
+  it('keeps raw dependency errors degraded after boot_ready instead of reporting a fatal launch', () => {
+    expect(classificationSource).toContain("event_name IN ('boot_failed', 'app_runtime_failed')");
+    expect(classificationSource).toContain("event_name IS NOT NULL AND event_status = 'failed'");
+    expect(classificationSource).toContain("WHEN bool_or(event_name = 'boot_ready') THEN");
+    expect(classificationSource).toContain("level IN ('warn', 'error')");
+    expect(classificationSource).not.toContain("event_status = 'failed' OR level = 'error') THEN 'failed'");
+  });
+
+  it('keeps curator cookies off client-session gamification RPCs', () => {
+    expect(gamificationSource).toContain('function hasCuratorAuditContext(context = {})');
+    expect(gamificationSource).toMatch(/function hasCookieSessionCarrier\(\)[\s\S]*getCuratorToken\?\.\(\)[\s\S]*hasCuratorAuditContext\(\{ curatorToken \}\)[\s\S]*return false;[\s\S]*heys_pin_cookie_session_hint/);
+    expect(gamificationSource).not.toMatch(/function hasCookieSessionCarrier\(\)[\s\S]{0,700}heys_curator_cookie_session_hint/);
+    expect(gamificationSource).toMatch(/const auditContext = getAuditContext\(\);[\s\S]*const isCuratorSession = hasCuratorAuditContext\(auditContext\);[\s\S]*const canUseCurator = isCuratorSession && clientId;/);
   });
 
   it('records aggregate sync and write lifecycle events without raw storage values', () => {

@@ -790,13 +790,28 @@
     };
   }
 
+  function hasCuratorAuditContext(context = {}) {
+    try {
+      if (context.curatorToken) return true;
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+      if (HEYS.YandexAPI?.hasCookieSessionHint?.('curator')) return true;
+      if (HEYS.cloud?.getUser?.()) return true;
+      return !!localStorage.getItem('heys_curator_session')
+        || !!localStorage.getItem('heys_curator_cookie_session_hint');
+    } catch (_) {
+      return false;
+    }
+  }
+
   function hasCookieSessionCarrier() {
     try {
+      // This flag controls calls to *_by_session RPCs. A curator cookie is a
+      // different identity and must never be treated as a client PIN session.
+      const curatorToken = HEYS.YandexAPI?.getCuratorToken?.() || null;
+      if (hasCuratorAuditContext({ curatorToken })) return false;
       if (HEYS.cloud?.isPinAuthClient?.()) return true;
       if (HEYS.YandexAPI?.hasCookieSessionHint?.('pin')) return true;
-      if (HEYS.auth?.isCuratorSession?.() === true) return true;
-      return !!localStorage.getItem('heys_pin_cookie_session_hint')
-        || !!localStorage.getItem('heys_curator_cookie_session_hint');
+      return !!localStorage.getItem('heys_pin_cookie_session_hint');
     } catch (_) {
       return false;
     }
@@ -837,12 +852,12 @@
     const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
     const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
     const startedAt = Date.now();
-    const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
-
     if (!HEYS.YandexAPI?.rpc) return false;
     if (isAuditRpcBlocked()) return false;
 
-    const { sessionToken, curatorToken, clientId, hasCookieSession } = getAuditContext();
+    const auditContext = getAuditContext();
+    const { sessionToken, curatorToken, clientId, hasCookieSession } = auditContext;
+    const isCuratorSession = hasCuratorAuditContext(auditContext);
     const body = {
       p_action: payload.action,
       p_reason: payload.reason || null,
@@ -1034,8 +1049,6 @@
     const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
     const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
     const startedAt = Date.now();
-    const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
-
     const unwrapPayload = (data) => {
       if (!data) return {};
       if (data.items || data.total || data.success === false || data.success === true) return data;
@@ -1057,7 +1070,9 @@
     }
 
     const { limit = 50, offset = 0 } = options;
-    const { sessionToken, curatorToken, clientId, hasCookieSession } = getAuditContext();
+    const auditContext = getAuditContext();
+    const { sessionToken, curatorToken, clientId, hasCookieSession } = auditContext;
+    const isCuratorSession = hasCuratorAuditContext(auditContext);
     if (!sessionToken && !hasCookieSession && (!isCuratorSession || !clientId)) {
       return { items: [], total: 0, skipped: true, reason: 'auth_context_not_ready' };
     }

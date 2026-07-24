@@ -22,7 +22,7 @@
  *   client → /send: 30 сообщений/минуту/client (in-memory counter, reset on cold start).
  */
 
-const { getPool } = require('./shared/db-pool');
+const { getPool, acquireHealthyClient } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const crypto = require('crypto');
@@ -1277,8 +1277,7 @@ async function handleInbox(identity) {
   if (identity.kind !== 'curator') {
     return { statusCode: 403, body: { error: 'curator_only' } };
   }
-  const pool = getPool();
-  const conn = await pool.connect();
+  const conn = await acquireHealthyClient();
   try {
     const r = await conn.query(
       `SELECT public.get_curator_unread_counts($1) AS result`,
