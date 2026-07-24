@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1784891773161';
+const CACHE_VERSION = 'heys-1784894993645';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
