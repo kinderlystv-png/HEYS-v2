@@ -82,8 +82,9 @@ describe('integrate-agents', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('git merge --no-ff --no-edit codex/a');
     expect(result.stdout).toContain('git merge --no-ff --no-edit codex/b');
-    // prepare-release + generated/release commits are planned, not executed.
-    expect(result.stdout).toContain('prepare-release.mjs');
+    // Release metadata is skipped while What's New is centrally disabled.
+    expect(result.stdout).toContain("What's New disabled centrally; integration skipped release metadata.");
+    expect(result.stdout).not.toContain('prepare-release.mjs');
     expect(git(['rev-parse', 'HEAD'])).toBe(before);
     expect(git(['status', '--porcelain'])).toBe(status);
   });
