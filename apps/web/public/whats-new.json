@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.07.24.6fd28bac",
+      "buildHash": "6fd28bac",
+      "date": "2026-07-24",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Диагностика запусков",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Надёжнее отображаются сбои",
+          "description": "Панель куратора точнее отличает сбой запуска от временного отклонения и позволяет скопировать полный безопасный лог для разбора. Target commit: 6fd28bac."
+        }
+      ],
+      "coveredCommits": ["6fd28bac"]
+    },
+    {
       "version": "2026.07.24.745b3c83",
       "buildHash": "745b3c83",
       "date": "2026-07-24",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["7ff8fef6"]
-    },
-    {
-      "version": "2026.07.23.1a0eddde",
-      "buildHash": "1a0eddde",
-      "date": "2026-07-23",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "resolve cloud id from configured folder",
-      "items": [
-        {
-          "type": "fix",
-          "title": "resolve cloud id from configured folder",
-          "description": "resolve cloud id from configured folder"
-        }
-      ],
-      "coveredCommits": ["1a0eddde"]
     }
   ]
 }
