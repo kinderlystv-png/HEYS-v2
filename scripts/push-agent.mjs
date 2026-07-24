@@ -353,6 +353,66 @@ function sleepSeconds(seconds) {
   run('sleep', [String(safeSeconds)], { stdio: 'ignore' });
 }
 
+function isTransientGitPushFailure(output) {
+  const message = String(output || '').toLowerCase();
+  if (!message) return false;
+
+  return [
+    /\b(?:http\/\d(?:\.\d)?\s*)?(?:500|502|503|504)\b/,
+    /internal server error/,
+    /service unavailable/,
+    /bad gateway/,
+    /gateway timeout/,
+    /could not resolve host/,
+    /temporary failure in name resolution/,
+    /network is unreachable/,
+    /failed to connect/,
+    /connection (?:timed out|reset|closed)/,
+    /remote end hung up unexpectedly/,
+    /unexpected disconnect/,
+  ].some((pattern) => pattern.test(message));
+}
+
+function buildGitPushArgs(remote, branch) {
+  return ['push', remote, `HEAD:${branch}`];
+}
+
+function pushGitWithRetry({
+  remote,
+  branch,
+  headSha,
+  maxAttempts = 3,
+  runPush = () =>
+    runGit(buildGitPushArgs(remote, branch), {
+      mutates: true,
+      stdio: 'pipe',
+      env: { HEYS_PUSH_AGENT_PRECHECKED_HEAD: headSha },
+    }),
+  sleep = sleepSeconds,
+  onRetry = writeLine,
+} = {}) {
+  const attempts = Math.max(1, Number(maxAttempts) || 1);
+  let result = { status: 1, stdout: '', stderr: '' };
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    result = runPush(attempt) || result;
+    if (result.stdout) process.stdout.write(String(result.stdout));
+    if (result.stderr) process.stderr.write(String(result.stderr));
+    if (result.status === 0) return result;
+
+    const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+    if (!isTransientGitPushFailure(output) || attempt === attempts) return result;
+
+    const delaySeconds = 2 ** attempt;
+    onRetry(
+      `Transient git push failure (attempt ${attempt}/${attempts}); retrying same HEAD in ${delaySeconds}s...`,
+    );
+    sleep(delaySeconds);
+  }
+
+  return result;
+}
+
 function parseJsonArray(text) {
   try {
     const parsed = JSON.parse(String(text || ''));
@@ -744,10 +804,7 @@ function push() {
 
   const { remote, branch } = getPushTarget();
   const headSha = getGitOutput(['rev-parse', 'HEAD']);
-  const result = runGit(['push', remote, branch], {
-    mutates: true,
-    env: { HEYS_PUSH_AGENT_PRECHECKED_HEAD: headSha },
-  });
+  const result = pushGitWithRetry({ remote, branch, headSha });
   if (result.status !== 0) process.exit(result.status || 1);
   const deployed = waitForDeploy({ branch, headSha });
   if (deployed) verifyProductionDeployment({ headSha });
@@ -773,6 +830,7 @@ if (import.meta.url === invokedPath) {
 export {
   assertMutatingRunConfirmed,
   buildItemsJsonFromOptions,
+  buildGitPushArgs,
   buildPreflightCommandArgs,
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
@@ -781,7 +839,9 @@ export {
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
   isDeployedHashCompatible,
+  isTransientGitPushFailure,
   parseCliArgs,
+  pushGitWithRetry,
   shouldRunPreflight,
   shouldWatchDeploy,
 };

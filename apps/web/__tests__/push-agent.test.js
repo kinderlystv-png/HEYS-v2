@@ -10,6 +10,7 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
   buildItemsJsonFromOptions,
+  buildGitPushArgs,
   buildPreflightCommandArgs,
   buildPrepareReleaseAutoArgs,
   collectBundleFiles,
@@ -17,7 +18,9 @@ const {
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
   isDeployedHashCompatible,
+  isTransientGitPushFailure,
   parseCliArgs,
+  pushGitWithRetry,
   shouldWatchDeploy,
   shouldRunPreflight,
 } = await import(scriptUrl);
@@ -58,6 +61,10 @@ describe('push-agent CLI helpers', () => {
     expect(parsed.options.get('--remote')).toBe('upstream');
     expect(parsed.options.get('--branch')).toBe('release/test');
     expect(parsed.options.get('--title')).toBe('Sync fixes');
+  });
+
+  it('pushes the prechecked HEAD explicitly when the worktree is detached', () => {
+    expect(buildGitPushArgs('origin', 'main')).toEqual(['push', 'origin', 'HEAD:main']);
   });
 
   it('builds a single explicit release item from scalar options', () => {
@@ -181,6 +188,61 @@ describe('push-agent CLI helpers', () => {
       ),
     ).toBe(true);
     expect(isDeployedHashCompatible('deadbeef', '12345678', () => false)).toBe(false);
+  });
+
+  it('retries only transient git push failures and keeps the same prechecked run', () => {
+    const results = [
+      { status: 1, stdout: '', stderr: 'remote: Internal Server Error\nfatal: HTTP 500' },
+      { status: 1, stdout: '', stderr: 'fatal: unable to access: connection reset' },
+      { status: 0, stdout: '', stderr: '' },
+    ];
+    const attempts = [];
+    const delays = [];
+
+    const result = pushGitWithRetry({
+      remote: 'origin',
+      branch: 'main',
+      headSha: '12345678abcdef',
+      runPush: (attempt) => {
+        attempts.push(attempt);
+        return results[attempt - 1];
+      },
+      sleep: (seconds) => delays.push(seconds),
+      onRetry: () => {},
+    });
+
+    expect(result.status).toBe(0);
+    expect(attempts).toEqual([1, 2, 3]);
+    expect(delays).toEqual([2, 4]);
+  });
+
+  it('does not retry auth, hook, or non-fast-forward push failures', () => {
+    const terminalFailures = [
+      'Permission denied (publickey).',
+      'pre-push hook declined',
+      '! [rejected] main -> main (non-fast-forward)',
+    ];
+
+    for (const stderr of terminalFailures) {
+      let attempts = 0;
+      const result = pushGitWithRetry({
+        remote: 'origin',
+        branch: 'main',
+        headSha: '12345678abcdef',
+        runPush: () => {
+          attempts += 1;
+          return { status: 1, stdout: '', stderr };
+        },
+        sleep: () => {
+          throw new Error('terminal failures must not sleep');
+        },
+        onRetry: () => {},
+      });
+
+      expect(result.status).toBe(1);
+      expect(attempts).toBe(1);
+      expect(isTransientGitPushFailure(stderr)).toBe(false);
+    }
   });
 
   it('uses the Yandex deploy workflow as the default watch target', () => {

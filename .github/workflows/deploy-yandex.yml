@@ -26,11 +26,6 @@ permissions:
 env:
   NODE_VERSION: "22"
   PNPM_VERSION: "8"
-  # Opt the remaining Node20-runtime actions (cache@v3,
-  # pnpm/action-setup@v2) onto Node 24 — the official migration path GitHub forces on
-  # 2026-06-16. Avoids the risky major bumps (setup-node@v5 breaks pnpm lookup in jobs
-  # without a preceding pnpm/action-setup). checkout is already @v5 (native Node 24).
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
   YC_BUCKET_DEMO: try-heyslab-ru # Demo PWA → try.heyslab.ru
@@ -47,7 +42,7 @@ jobs:
     outputs:
       release_only: ${{ steps.classify.outputs.release_only }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           # Usually enough to include the currently deployed hash. The classifier
           # deepens below only when production is older than this shallow window.
@@ -118,7 +113,7 @@ jobs:
     # use a tz-naive `now`. If this job goes red, deploy-artifact is skipped by design.
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           # The unit suite includes prepare-release range tests against older
           # commits, so this job still needs full history.
@@ -129,9 +124,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
+          cache: true
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run full apps/web unit suite
@@ -147,7 +143,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           # Deep enough for normal deployed..HEAD checks; deepened on demand below.
           fetch-depth: 256
@@ -163,39 +159,13 @@ jobs:
           package-manager-cache: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      # Turbo cache для ускорения инкрементных сборок
-      - name: Setup Turbo cache
-        uses: actions/cache@v3
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
+          cache: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Rebuild and verify legacy bundles from clean source
-        run: |
-          pnpm bundle:legacy
-          node scripts/verify-legacy-bundles.mjs
 
       # TODO: Fix CI test environment (tests pass locally but fail in CI)
       # - name: Run critical tests
@@ -214,7 +184,7 @@ jobs:
           set -e  # Exit on first error
 
           # Запуск билдов в background
-          pnpm --filter @heys/web run build &
+          pnpm --filter @heys/web run build:ci &
           PID_PWA=$!
           pnpm --filter @heys/landing run build &
           PID_LANDING=$!
@@ -344,7 +314,7 @@ jobs:
           fi
 
       - name: Upload PWA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pwa-dist
           path: apps/web/dist
@@ -352,7 +322,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Landing artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: landing-out
           path: apps/landing/out
@@ -364,6 +334,10 @@ jobs:
     needs: [detect, test, build-artifact]
     if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ru-central1
 
     steps:
       - name: Download PWA artifact
@@ -400,15 +374,6 @@ jobs:
             echo "⚠️ sw.js not found in PWA artifact"
             echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
           fi
-
-      - name: Configure AWS CLI for Yandex Cloud
-        # AWS CLI уже предустановлен на ubuntu-latest!
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
-          aws configure set default.region ru-central1
-          aws configure set default.s3.max_concurrent_requests 30
-          aws configure set default.s3.max_queue_size 10000
 
       - name: Deploy PWA to Yandex Object Storage
         run: |
@@ -628,41 +593,29 @@ jobs:
           echo "✅ Landing deployment complete!"
 
       - name: Invalidate CDN cache
-        continue-on-error: true
-        timeout-minutes: 4
+        timeout-minutes: 3
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
-          # CDN Resource IDs (из infra/README.md)
-          CDN_PWA_ID: bc8rvrvenqslkmti5yts
+          # app.heyslab.ru is served directly from Object Storage/nginx and has no
+          # Yandex CDN resource. Only the two active CDN resources are purged here.
           CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
           CDN_LANDING_ID: bc8rk3pnqppsfime3nth
         run: |
-          # Пропускаем если нет токена
+          set -euo pipefail
+
           if [ -z "$YC_TOKEN" ]; then
-            echo "⏭️ Skipping CDN invalidation (no YC_OAUTH_TOKEN)"
-            exit 0
+            echo "::error::YC_OAUTH_TOKEN is required for CDN invalidation"
+            exit 1
           fi
 
-          # Устанавливаем YC CLI
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           export PATH="$HOME/yandex-cloud/bin:$PATH"
-
-          # Конфигурируем
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          purge_cdn() {
-            if ! timeout 45s yc cdn cache purge "$@"; then
-              echo "⚠️ CDN purge skipped or timed out: $*"
-            fi
-          }
-
-          # === PWA CDN Invalidation ===
-          echo "🔄 Purging CDN cache for PWA..."
-
-          # Критичные файлы (без кэша)
-          purge_cdn --resource-id "$CDN_PWA_ID" \
+          echo "🔄 Purging mutable Demo entrypoints..."
+          timeout 45s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
             --path "/" \
             --path "/index.html" \
             --path "/sw.js" \
@@ -673,62 +626,12 @@ jobs:
             --path "/whats-new.json" \
             --path "/react-bundle.js"
 
-          # === Demo CDN Invalidation ===
-          echo "🔄 Purging CDN cache for Demo PWA..."
-          purge_cdn --resource-id "$CDN_DEMO_ID" \
-            --path "/" \
-            --path "/index.html" \
-            --path "/sw.js" \
-            --path "/manifest.json" \
-            --path "/manifest.webmanifest" \
-            --path "/version.json" \
-            --path "/build-meta.json" \
-            --path "/whats-new.json" \
-            --path "/react-bundle.js"
-
-          # ВСЕ кастомные JS файлы — динамический список!
-          echo "🔄 Purging all heys_*.js files..."
-          JS_PATHS=""
-          for jsfile in apps/web/dist/heys_*.js; do
-            if [ -f "$jsfile" ]; then
-              filename=$(basename "$jsfile")
-              JS_PATHS="$JS_PATHS --path /$filename"
-              echo "  → /$filename"
-            fi
-          done
-
-          if [ -n "$JS_PATHS" ]; then
-            purge_cdn --resource-id "$CDN_PWA_ID" $JS_PATHS
-            purge_cdn --resource-id "$CDN_DEMO_ID" $JS_PATHS
-          fi
-
-          # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
-          echo "🔄 Purging legal docs from CDN cache..."
-          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/dist/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
-          echo "  Legal docs version: ${DOCS_VERSION:-unknown}"
-
-          purge_cdn --resource-id "$CDN_PWA_ID" \
-            --path "/docs/user-agreement.md" \
-            --path "/docs/privacy-policy.md" \
-            --path "/docs/consent-forms.md" \
-            --path "/docs/chat-rules.md"
-
-          # Версионированные пути юридики
-          if [ -n "$DOCS_VERSION" ]; then
-            purge_cdn --resource-id "$CDN_PWA_ID" \
-              --path "/docs/v${DOCS_VERSION}/user-agreement.md" \
-              --path "/docs/v${DOCS_VERSION}/privacy-policy.md" \
-              --path "/docs/v${DOCS_VERSION}/consent-forms.md" \
-              --path "/docs/v${DOCS_VERSION}/chat-rules.md"
-          fi
-
-          # === Landing CDN Invalidation ===
-          echo "🔄 Purging CDN cache for Landing..."
-          purge_cdn --resource-id "$CDN_LANDING_ID" \
+          echo "🔄 Purging mutable Landing entrypoints..."
+          timeout 45s yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
             --path "/" \
             --path "/index.html"
 
-          echo "✅ CDN cache purged for all critical paths"
+          echo "✅ Active CDN resources purged"
 
       - name: Health check
         run: |
@@ -753,6 +656,51 @@ jobs:
           fi
 
           echo "✅ Health checks passed (origin OK, CDN propagation is async)"
+
+      - name: Verify production build metadata and bundles
+        run: |
+          set -euo pipefail
+
+          EXPECTED_HASH=$(jq -r '.hash // empty' apps/web/dist/build-meta.json)
+          if [ -z "$EXPECTED_HASH" ]; then
+            echo "::error::Artifact build-meta.json has no hash"
+            exit 1
+          fi
+
+          REMOTE_HASH=""
+          for attempt in 1 2 3 4 5 6; do
+            REMOTE_HASH=$(curl -fsS -m 15 "https://app.heyslab.ru/build-meta.json?bust=$(date +%s)" 2>/dev/null \
+              | jq -r '.hash // empty' || true)
+            if [ "$REMOTE_HASH" = "$EXPECTED_HASH" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 6 ]; then
+              echo "⏳ Production metadata not current yet ($REMOTE_HASH != $EXPECTED_HASH), retrying..."
+              sleep 5
+            fi
+          done
+
+          if [ "$REMOTE_HASH" != "$EXPECTED_HASH" ]; then
+            echo "::error::Production hash $REMOTE_HASH does not match artifact hash $EXPECTED_HASH"
+            exit 1
+          fi
+
+          mapfile -t BUNDLES < <(jq -r '
+            to_entries[]
+            | (.value.file // .value)
+            | select(type == "string" and test("\\.bundle\\.[0-9a-f]{8,64}\\.js$"; "i"))
+          ' apps/web/dist/bundle-manifest.json)
+
+          if [ "${#BUNDLES[@]}" -eq 0 ]; then
+            echo "::error::Artifact manifest contains no hash bundles"
+            exit 1
+          fi
+
+          for bundle in "${BUNDLES[@]}"; do
+            curl -fsS -m 20 --range 0-0 -o /dev/null "https://app.heyslab.ru/$bundle"
+          done
+
+          echo "✅ Production verified: $EXPECTED_HASH, ${#BUNDLES[@]} hash bundle(s) available"
 
       - name: Deployment summary
         run: |
@@ -790,8 +738,12 @@ jobs:
     needs: detect
     if: needs.detect.outputs.release_only == 'true'
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ru-central1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -805,14 +757,6 @@ jobs:
             }
             console.log('✅ whats-new.json valid, top release:', data.releases[0].version);
           "
-
-      - name: Setup AWS CLI for Yandex S3
-        # Secret names синхронизированы с deploy-artifact job —
-        # YC_ACCESS_KEY_ID / YC_SECRET_ACCESS_KEY, не S3_KEY_ID/SECRET.
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
-          aws configure set default.region ru-central1
 
       - name: Upload whats-new.json + build-meta.json to PWA bucket
         run: |
@@ -861,43 +805,28 @@ jobs:
           fi
 
       - name: Invalidate CDN cache
-        continue-on-error: true
         timeout-minutes: 3
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
-          # Same CDN_PWA_ID as in deploy-artifact job.
-          CDN_PWA_ID: bc8rvrvenqslkmti5yts
           CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
         run: |
+          set -euo pipefail
+
           if [ -z "$YC_TOKEN" ]; then
-            echo "⏭️ Skipping CDN invalidation (no YC_OAUTH_TOKEN)"
-            exit 0
+            echo "::error::YC_OAUTH_TOKEN is required for CDN invalidation"
+            exit 1
           fi
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           export PATH="$HOME/yandex-cloud/bin:$PATH"
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          purge_cdn() {
-            if ! timeout 45s yc cdn cache purge "$@"; then
-              echo "⚠️ CDN purge skipped or timed out: $*"
-            fi
-          }
-
-          # Базовые 2 файла + директория whats-new/* для скриншотов релиз-заметок.
-          # CDN-провайдер интерпретирует /whats-new/* как wildcard на префикс —
-          # инвалидирует все объекты под этим путём. Иначе при замене существующего
-          # скрина с тем же именем CDN бы отдавал старую версию до естественной
-          # экспирации (cache-control: immutable max-age=1y).
-          purge_cdn --resource-id "$CDN_PWA_ID" \
+          # Release-note assets are immutable and must use unique names. Only the
+          # mutable metadata entrypoints need invalidation on the active Demo CDN.
+          timeout 45s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
             --path "/whats-new.json" \
-            --path "/build-meta.json" \
-            --path "/whats-new/*"
-          purge_cdn --resource-id "$CDN_DEMO_ID" \
-            --path "/whats-new.json" \
-            --path "/build-meta.json" \
-            --path "/whats-new/*"
+            --path "/build-meta.json"
 
       - name: Fast-path summary
         run: |
@@ -909,20 +838,18 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Commit: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
 
-  # Post-deploy sanity check: server actually reflects HEAD.
-  # 2026-06-01: добавлено как страховка от "deploy success, но прод не обновился"
-  # (incident: fast-path после failed full деплоя оставлял прод на старом hash'е).
-  # Full-build path требует exact match, fast-path допускает ancestor (build-meta
-  # часто отстаёт на 1 commit при chore(release) bumps).
+  # Fast-path still needs git ancestry: it deliberately reuses the previous
+  # build-meta hash, so an exact artifact-hash check is not possible there.
   verify-deploy:
-    name: Verify deployed state vs HEAD
+    name: Verify fast deploy ancestry
     runs-on: ubuntu-latest
-    needs: [detect, deploy-artifact, fast-release-bump]
+    needs: [detect, fast-release-bump]
     if: |
       always() && needs.detect.result == 'success' &&
-      (needs.deploy-artifact.result == 'success' || needs.fast-release-bump.result == 'success')
+      needs.detect.outputs.release_only == 'true' &&
+      needs.fast-release-bump.result == 'success'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 256
 
@@ -935,11 +862,10 @@ jobs:
             | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
             || echo "")
           HEAD=$(git rev-parse --short=8 HEAD)
-          RELEASE_ONLY="${{ needs.detect.outputs.release_only }}"
 
           echo "🔍 Deployed: $DEPLOYED"
           echo "🔍 HEAD:     $HEAD"
-          echo "🔍 Path:     $([ "$RELEASE_ONLY" = "true" ] && echo fast-deploy || echo full-build)"
+          echo "🔍 Path:     fast-deploy"
 
           if [ -z "$DEPLOYED" ]; then
             echo "::error::Cannot fetch deployed build-meta.json after deploy — upload broken or CDN stale"
@@ -956,29 +882,12 @@ jobs:
             exit 0
           fi
 
-          if [ "$RELEASE_ONLY" = "true" ]; then
-            # Fast-deploy не запускает update-version.cjs — build-meta может отставать
-            # на 1+ commit. Допускаем если deployed = ancestor HEAD.
-            if git merge-base --is-ancestor "$DEPLOYED" HEAD 2>/dev/null; then
-              echo "⚠️ Hash mismatch ($DEPLOYED != $HEAD) but deployed is ancestor of HEAD — OK for fast-path"
-              exit 0
-            fi
-            echo "::error::Fast-deploy left server with hash $DEPLOYED — NOT in HEAD history"
-            exit 1
-          fi
-
-          # Full build stamps build-meta via update-version.cjs with the MEANINGFUL
-          # commit (resolveReleaseTargetRef), which legitimately lags HEAD when a
-          # release/meta commit (e.g. `chore(release): bump whats-new build hash`) sits
-          # on top. Accept when the deployed hash is an ancestor of HEAD — the deployed
-          # code IS in HEAD's history; only a bookkeeping commit follows it. (Mirrors the
-          # fast-path fallback above; empty/non-ancestor hashes still fail below.)
           if git merge-base --is-ancestor "$DEPLOYED" HEAD 2>/dev/null; then
-            echo "✅ Deployed $DEPLOYED is an ancestor of HEAD $HEAD (release/meta commit on top) — verified"
+            echo "✅ Fast deploy preserved ancestor build $DEPLOYED for HEAD $HEAD"
             exit 0
           fi
 
-          echo "::error::Full build success но server hash $DEPLOYED не в истории HEAD $HEAD — update-version.cjs или upload broken"
+          echo "::error::Fast deploy left server with hash $DEPLOYED outside HEAD history"
           exit 1
 
   # Cloud Functions деплоятся отдельным workflow: .github/workflows/cloud-functions-deploy.yml

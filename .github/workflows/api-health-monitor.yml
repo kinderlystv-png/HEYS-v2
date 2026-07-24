@@ -15,9 +15,6 @@ on:
 
 env:
   API_BASE_URL: https://api.heyslab.ru
-  # Force the Node20-runtime JS action (github-script@v7) onto Node 24 — GitHub
-  # force-removes Node20 on 2026-06-16. See deploy-yandex.yml for the original rollout.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   health-check:
@@ -30,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -218,7 +215,7 @@ jobs:
         id: redeploy
         if: github.event_name == 'schedule' && failure() && (steps.rest.outcome == 'failure' || steps.rpc.outcome == 'failure')
         continue-on-error: true # Не падать, если триггер не сработал
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             try {
