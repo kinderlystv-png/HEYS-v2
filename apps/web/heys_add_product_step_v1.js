@@ -2318,6 +2318,50 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return dedupeProductsForPicker(sorted).slice(0, 20);
   }
 
+  // Продукты из приёмов за сегодня и два предыдущих календарных дня.
+  function computeRecentProducts(products, options = {}) {
+    if (!Array.isArray(products) || products.length === 0) return [];
+
+    const usageStats = options.usageStats instanceof Map
+      ? options.usageStats
+      : new Map(Array.isArray(options.usageStats) ? options.usageStats : []);
+    const hiddenSet = options.hidden instanceof Set
+      ? options.hidden
+      : new Set(Array.isArray(options.hidden) ? options.hidden : []);
+    const now = Number(options.now) || Date.now();
+    const cutoff = new Date(now);
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - 2);
+    const cutoffTs = cutoff.getTime();
+
+    const getLastUsed = (product) => {
+      const pid = String(product?.id || product?.product_id || product?.name || '');
+      const rawName = String(product?.name || '').trim();
+      const normalizedName = normalizeName(rawName);
+      const searchName = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
+        ? HEYS.SmartSearchWithTypos.utils.normalizeText(rawName)
+        : normalizedName;
+      const candidates = [pid, normalizedName, searchName, rawName]
+        .filter(Boolean)
+        .map((key) => Number(usageStats.get(key)?.lastUsed) || 0);
+      return candidates.length > 0 ? Math.max(...candidates) : 0;
+    };
+
+    const sorted = products
+      .map((product) => ({ product, lastUsed: getLastUsed(product) }))
+      .filter(({ product, lastUsed }) => {
+        const pid = String(product?.id || product?.product_id || product?.name || '');
+        return !!pid && !hiddenSet.has(pid) && lastUsed >= cutoffTs && lastUsed <= now;
+      })
+      .sort((a, b) => {
+        if (a.lastUsed !== b.lastUsed) return b.lastUsed - a.lastUsed;
+        return String(a.product?.name || '').localeCompare(String(b.product?.name || ''), 'ru');
+      })
+      .map(({ product }) => product);
+
+    return dedupeProductsForPicker(sorted);
+  }
+
   // === Категории для фильтрации ===
   const CATEGORIES = [
     { id: 'all', name: 'Все', icon: '📋' },
@@ -3654,6 +3698,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [quickList, setQuickList] = useState('smart');
     const [showSharedProducts, setShowSharedProducts] = useState(true);
 
     // v25.8.6.7: Sync searchQuery from StepModal's getInitialData
@@ -4275,6 +4320,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         usageStats: effectiveUsageStats
       }),
       [latestProducts, dateKey, favorites, hiddenProducts, effectiveUsageStats, usageWindowDays]
+    );
+
+    const recentProducts = useMemo(() =>
+      computeRecentProducts(latestProducts, {
+        hidden: hiddenProducts,
+        usageStats: effectiveUsageStats
+      }),
+      [latestProducts, hiddenProducts, effectiveUsageStats]
     );
 
     // Fallback для модалки: если нет частот/избранных, показываем рабочий список, а не пустой экран.
@@ -5490,6 +5543,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         },
           React.createElement('span', { className: 'aps-barcode-notice__icon', 'aria-hidden': 'true' }, 'i'),
           React.createElement('span', null, barcodeNotice.text)
+        ),
+        !showSearch && React.createElement('div', {
+          className: 'aps-quick-filters',
+          role: 'group',
+          'aria-label': 'Подборка продуктов'
+        },
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-quick-filter' + (quickList === 'smart' ? ' active' : ''),
+            onClick: () => setQuickList('smart'),
+            'aria-pressed': quickList === 'smart'
+          }, '⚡ Частые и избранные'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-quick-filter' + (quickList === 'recent' ? ' active' : ''),
+            onClick: () => setQuickList('recent'),
+            'aria-pressed': quickList === 'recent'
+          }, '🕘 Недавние · 3 дня')
         )
       ),
 
@@ -5546,14 +5617,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         // Умный список: часто + недавно используемые (объединённый)
-        shouldRenderSettledProducts && !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, '⚡ Частые и избранные'),
+        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p, true, true, true))
           )
         ),
 
-        shouldRenderSettledProducts && !showSearch && showSharedProducts && React.createElement('div', { className: 'aps-section' },
+        shouldRenderSettledProducts && !showSearch && quickList === 'recent' && React.createElement('div', { className: 'aps-section' },
+          recentProducts.length > 0
+            ? React.createElement('div', { className: 'aps-products-list' },
+              recentProducts.map(p => renderProductCard(p, true, true, true))
+            )
+            : React.createElement('div', { className: 'aps-empty' },
+              React.createElement('span', null, 'За последние 3 дня продуктов нет')
+            )
+        ),
+
+        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && showSharedProducts && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' },
             sharedCatalogLoading && visibleSharedCatalogPreview.length === 0
               ? '🌐 Общие продукты: загрузка...'
@@ -5570,7 +5650,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         // Fallback: если умный список пуст, всё равно показываем продукты
-        shouldRenderSettledProducts && !showSearch && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '🧩 Ваши продукты (резервный список)'),
           React.createElement('div', { className: 'aps-products-list' },
             modalFallbackProducts.map(p => renderProductCard(p, true, true, true))
@@ -9797,6 +9877,7 @@ NOVA: 1
     BarcodeScanIcon,
     getCategoryIcon,
     computeSmartProducts,
+    computeRecentProducts,
     updateSharedProduct,
     updateSharedProductPortions
   };

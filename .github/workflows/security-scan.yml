@@ -139,6 +139,7 @@ jobs:
         with:
           name: sast-results
           path: security-reports/
+          digest-mismatch: warn
         continue-on-error: true
 
       - name: Download Dependency Results
@@ -146,6 +147,7 @@ jobs:
         with:
           name: dependency-results
           path: security-reports/
+          digest-mismatch: warn
         continue-on-error: true
 
       - name: Generate Security Report

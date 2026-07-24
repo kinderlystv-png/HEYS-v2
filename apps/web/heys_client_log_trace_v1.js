@@ -508,6 +508,7 @@
       };
       if (structured) {
         Object.keys(structured).forEach(function (key) { entry[key] = structured[key]; });
+        entry.client_id = getClientId();
         entry.boot_id = BOOT_ID;
         entry.build_id = RUNTIME.buildId;
         entry.device_id = DEVICE_ID;
@@ -569,7 +570,7 @@
     var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : null;
     return entries.map(function (e) {
       return {
-        client_id: cid,
+        client_id: e.client_id || cid,
         client_ts: e.client_ts,
         level: e.level,
         message: e.message,
@@ -601,6 +602,13 @@
 
     // Drain до FLUSH_BATCH строк
     var slice = ring.splice(0, FLUSH_BATCH);
+    var currentClientId = getClientId();
+    if (!currentClientId) {
+      var deferredStructured = slice.filter(function (entry) { return !!entry.event_id; });
+      slice = slice.filter(function (entry) { return !entry.event_id; });
+      if (deferredStructured.length) ring = deferredStructured.concat(ring).slice(-RING_MAX);
+      if (!slice.length) return;
+    }
     var dropped = ringDropped; ringDropped = 0;
     if (dropped > 0) {
       slice.unshift({
@@ -638,7 +646,15 @@
         keepalive: true,
         credentials: 'include'
       }).then(function (response) {
-        if (response && response.ok) acknowledgeStructuredEvents(structuredEventIds);
+        if (!response || !response.ok) throw new Error('trace_flush_rejected');
+        return typeof response.json === 'function' ? response.json().catch(function () { return null; }) : null;
+      }).then(function (result) {
+        if (result && result.structuredAccepted === false) {
+          var retryRows = slice.filter(function (entry) { return !!entry.event_id; });
+          if (retryRows.length) ring = retryRows.concat(ring).slice(-RING_MAX);
+          return;
+        }
+        acknowledgeStructuredEvents(structuredEventIds);
       }).catch(function () {
         // Raw console rows may be dropped. Structured events remain in the
         // bounded local queue and return to the in-memory queue for online retry.
@@ -755,7 +771,10 @@
   global.addEventListener('heys:progress', function (ev) {
     var phase = ev && ev.detail && ev.detail.phase ? String(ev.detail.phase) : '';
     if (!phase) return;
-    if (phase === 'ready') event('app_shell_ready', { source: 'bootstrap', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
+    if (phase === 'ready') {
+      event('app_shell_ready', { source: 'bootstrap', status: 'ready', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
+      event('boot_ready', { source: 'bootstrap', status: 'ready', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
+    }
     else if (phase.indexOf('bundle') !== -1 || phase.indexOf('postboot') !== -1) {
       event('boot_phase_ready', { source: 'bootstrap', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
     }

@@ -50,7 +50,7 @@ function installHeysStub() {
 }
 
 describe('AddProductStep smart products', () => {
-  const now = Date.parse('2026-07-05T12:00:00Z');
+  const now = new Date(2026, 6, 5, 12).getTime();
 
   beforeEach(() => {
     vi.spyOn(Date, 'now').mockReturnValue(now);
@@ -111,5 +111,48 @@ describe('AddProductStep smart products', () => {
     expect(source).toContain('if (productsWatchSignatureRef.current === nextSignature) return;');
     expect(source).toContain('if (!isOverlayProductsEnabledForAddStep() && HEYS.products?.watch)');
     expect(source).toContain('invalidateSharedBarcodeNameIndex();');
+  });
+
+  it('shows products used during the last three calendar days, newest first', () => {
+    const products = [
+      { id: 'today', name: 'Сегодня' },
+      { id: 'yesterday', name: 'Вчера' },
+      { id: 'two-days-ago', name: 'Позавчера' },
+      { id: 'too-old', name: 'Слишком давно' },
+      { id: 'hidden', name: 'Скрытый' },
+    ];
+    const usageStats = new Map([
+      ['today', { count: 1, lastUsed: new Date(2026, 6, 5, 10).getTime() }],
+      ['yesterday', { count: 1, lastUsed: new Date(2026, 6, 4, 8).getTime() }],
+      ['two-days-ago', { count: 1, lastUsed: new Date(2026, 6, 3, 0).getTime() }],
+      ['too-old', { count: 1, lastUsed: new Date(2026, 6, 2, 23, 59, 59).getTime() }],
+      ['hidden', { count: 1, lastUsed: new Date(2026, 6, 5, 11).getTime() }],
+    ]);
+
+    const result = window.HEYS.AddProductStep.computeRecentProducts(products, {
+      usageStats,
+      hidden: new Set(['hidden']),
+      now,
+    });
+
+    expect(result.map((product) => product.id)).toEqual([
+      'today',
+      'yesterday',
+      'two-days-ago',
+    ]);
+  });
+
+  it('resolves recent usage by normalized product name', () => {
+    const products = [{ id: 'milk', name: '  Молоко Ёлки  ' }];
+    const usageStats = new Map([
+      ['молоко елки', { count: 1, lastUsed: new Date(2026, 6, 4, 0).getTime() }],
+    ]);
+
+    const result = window.HEYS.AddProductStep.computeRecentProducts(products, {
+      usageStats,
+      now,
+    });
+
+    expect(result.map((product) => product.id)).toEqual(['milk']);
   });
 });

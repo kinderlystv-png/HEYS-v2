@@ -91,11 +91,11 @@ missing/неполный shared base возвращает `shared_nutrients_pend
 При включённом overlay commit gate требует client id и cloud API, сохраняет
 overlay и затем читает его обратно. Обычная запись остаётся plain array для
 совместимости со старым reader, после неё публикуется versioned manifest. При
-HTTP 413 background upload делит массив на основной блок и numbered tails:
-tails и main пишутся первыми, manifest — последним. Новый reader применяет
-поколение только при совпадении числа блоков, row count и canonical hashes;
-частичная отправка сохраняет предыдущий локальный snapshot и повторяется из
-pending queue. Старый cloud layout без manifest по-прежнему читается как legacy.
+HTTP 413 background upload делит массив на основной блок и numbered tails: tails
+и main пишутся первыми, manifest — последним. Новый reader применяет поколение
+только при совпадении числа блоков, row count и canonical hashes; частичная
+отправка сохраняет предыдущий локальный snapshot и повторяется из pending queue.
+Старый cloud layout без manifest по-прежнему читается как legacy.
 
 Изменения общей базы идут через разные server contracts: PIN-клиент создаёт
 pending product/change request, curator может использовать защищённую direct
@@ -127,6 +127,11 @@ Search cache очищается на sync/product update events, usage statistic
 периодически пересобираются из истории. Поэтому результат зависит не только от
 строки запроса, но и от текущего client history/favorites и content version.
 
+В модалке добавления продукта быстрый фильтр «Недавние» использует тот же
+client-scoped usage snapshot: показывает без дублей продукты из приёмов за
+сегодня и два предыдущих календарных дня и сортирует их по `lastUsed` от новых к
+старым. Скрытые продукты в эту подборку не попадают.
+
 Workspace package `@heys/search` имеет собственный TypeScript API и tests, но
 прямых импортов его runtime-класса в текущем пользовательском web path не
 найдено. Он участвует в dependency build и упоминается dynamic-import registry,
@@ -148,6 +153,8 @@ Workspace package `@heys/search` имеет собственный TypeScript AP
 10. Legacy `heys_products` — rollback/fallback, не источник для boot top-up.
 11. Sharded overlay принимается только целым поколением по manifest; main/tails
     остаются plain arrays для backward compatibility.
+12. «Недавние» строятся из той же client-scoped истории использования, что и
+    персонализация поиска; отдельная глобальная история не создаётся.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -185,4 +192,4 @@ Workspace package `@heys/search` имеет собственный TypeScript AP
 | P10 | `@heys/search` не импортируется активным web product flow                                | `rg -n '@heys/search                                                        \| SmartSearchEngine' apps/web --glob '!**/node_modules/**' --glob '!**/dist/**'`                                                                                                                                                                                                                                  | проверено 2026-07-17: только dependency/config/dynamic registry, не AddProductStep runtime |
 | P11 | Production overlay tests выполняют source через VM                                       | `sed -n '1,80p' apps/web/__tests__/overlay-cloud-snapshot-suppress.test.js`                                                                                                                                                                                                                                                                                                                    | проверено 2026-07-17                                                                       |
 | P12 | Legacy protection test повторяет локальную симуляцию                                     | `sed -n '1,110p' apps/web/__tests__/products-protection.test.js`                                                                                                                                                                                                                                                                                                                               | проверено 2026-07-17                                                                       |
-| P13 | Overlay выше RPC budget дробится и принимается только по целому manifest generation         | `pnpm exec vitest run apps/web/__tests__/overlay-shard-codec.test.js apps/web/__tests__/product-commit-gate-contract.test.js apps/web/__tests__/hot-sync-curator-path.test.js --no-coverage`                                                                                                                                                                                                       | проверено 2026-07-18: 26 тестов                                                           |
+| P13 | Overlay выше RPC budget дробится и принимается только по целому manifest generation      | `pnpm exec vitest run apps/web/__tests__/overlay-shard-codec.test.js apps/web/__tests__/product-commit-gate-contract.test.js apps/web/__tests__/hot-sync-curator-path.test.js --no-coverage`                                                                                                                                                                                                   | проверено 2026-07-18: 26 тестов                                                            |

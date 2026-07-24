@@ -29,13 +29,20 @@ SELECT
         WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
         ELSE 'ready'
       END
-    WHEN max(client_ts) < now() - interval '90 seconds' THEN 'abandoned'
+    WHEN bool_or(event_name = 'boot_started')
+      AND max(client_ts) < now() - interval '90 seconds' THEN 'abandoned'
+    WHEN max(client_ts) < now() - interval '90 seconds'
+      AND bool_or(event_name IS NOT NULL) THEN
+      CASE
+        WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
+        ELSE 'ready'
+      END
     ELSE 'starting'
   END AS outcome,
   count(*) FILTER (WHERE level = 'warn' OR event_status IN ('degraded', 'timeout'))::integer AS warning_count,
-  bool_or(event_name = 'sync_cycle_completed') AS initial_sync_completed,
+  bool_or(event_name IN ('initial_sync_ready', 'sync_cycle_completed')) AS initial_sync_completed,
   (array_agg(event_name ORDER BY client_ts DESC, id DESC)
-    FILTER (WHERE event_status IN ('completed', 'ready', 'uploaded') OR event_name IN ('boot_ready', 'sync_cycle_completed', 'write_uploaded')))[1]
+    FILTER (WHERE event_status IN ('completed', 'ready', 'uploaded') OR event_name IN ('boot_ready', 'initial_sync_ready', 'sync_cycle_completed', 'write_uploaded')))[1]
     AS last_success_event,
   (array_agg(event_name ORDER BY client_ts DESC, id DESC)
     FILTER (
@@ -49,6 +56,6 @@ WHERE client_id IS NOT NULL
 GROUP BY client_id, boot_id;
 
 COMMENT ON VIEW public.client_app_session_summary_v1 IS
-  'Structured client launch summary. Raw dependency errors after boot_ready degrade a session; only named lifecycle failures mark it failed.';
+  'Structured client launch summary. Abandoned requires boot_started without boot_ready; orphan structured activity is not mislabeled as a boot failure.';
 
 COMMIT;

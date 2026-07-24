@@ -48,7 +48,7 @@ function createLoggerRuntime() {
     },
     fetch: vi.fn((url, options) => {
       requests.push({ url, options });
-      return Promise.resolve({ ok: true });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ structuredAccepted: true }) });
     }),
     Blob,
     crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000' },
@@ -63,12 +63,13 @@ function createLoggerRuntime() {
   context.window = context;
   context.globalThis = context;
   vm.runInNewContext(loggerSource, context, { filename: 'heys_client_log_trace_v1.js' });
-  return { context, requests, localStorage };
+  return { context, requests, localStorage, listeners };
 }
 
 describe('client session observability', () => {
   it('emits a structured iPhone/PWA event and strips non-allowlisted context', async () => {
     const { context, requests } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 
     context.HEYS.LogTrace.event('whats_new_shown', {
       source: 'whats_new',
@@ -109,10 +110,52 @@ describe('client session observability', () => {
     expect(queued.length).toBeLessThanOrEqual(200);
   });
 
+  it('defers structured boot events until a client context exists', () => {
+    const { context, requests, localStorage } = createLoggerRuntime();
+    context.HEYS.LogTrace.flush();
+
+    expect(requests).toHaveLength(0);
+    expect(JSON.parse(localStorage.getItem('_heys_observability_queue_v1')))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'boot_started' })]));
+  });
+
+  it('emits the boot_ready event expected by the session classifier', async () => {
+    const { context, requests, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    listeners['heys:progress']({ detail: { phase: 'ready' } });
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+
+    const rows = JSON.parse(requests[0].options.body);
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_name: 'app_shell_ready', event_status: 'ready' }),
+      expect.objectContaining({ event_name: 'boot_ready', event_status: 'ready' }),
+    ]));
+  });
+
+  it('keeps structured events queued when the server has no verified identity', async () => {
+    const { context, localStorage } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    context.fetch = vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ structuredAccepted: false }),
+    }));
+    context.HEYS.LogTrace.event('write_queued', { source: 'sync', status: 'queued', count: 1 });
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(JSON.parse(localStorage.getItem('_heys_observability_queue_v1')))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'write_queued' })]));
+  });
+
   it('forces server-side identity and idempotent inserts', () => {
     expect(restSource).toContain('resolveTelemetryIdentity(event, client, claimedClientId)');
     expect(restSource).toContain("return { clientId: null, actorRole: 'anonymous', trustLevel: 'anonymous' }");
     expect(restSource).toContain('ON CONFLICT DO NOTHING');
+    expect(restSource).toContain("identity.actorRole === 'anonymous' && row?.event_id");
+    expect(restSource).toContain('structuredAccepted: identity.actorRole !== \'anonymous\'');
   });
 
   it('redacts bearer tokens and restricts curator diagnostics by ownership', () => {
@@ -208,6 +251,9 @@ describe('client session observability', () => {
     expect(classificationSource).toContain("WHEN bool_or(event_name = 'boot_ready') THEN");
     expect(classificationSource).toContain("level IN ('warn', 'error')");
     expect(classificationSource).not.toContain("event_status = 'failed' OR level = 'error') THEN 'failed'");
+    expect(classificationSource).toContain("bool_or(event_name = 'boot_started')");
+    expect(classificationSource).toContain("AND bool_or(event_name IS NOT NULL)");
+    expect(classificationSource).toContain("event_name IN ('initial_sync_ready', 'sync_cycle_completed')");
   });
 
   it('keeps curator cookies off client-session gamification RPCs', () => {

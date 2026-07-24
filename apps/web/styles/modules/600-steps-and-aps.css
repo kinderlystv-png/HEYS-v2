@@ -2345,6 +2345,56 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   padding-left: 2px;
 }
 
+.aps-quick-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-top: 2px;
+  scrollbar-width: none;
+}
+
+.aps-quick-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.aps-quick-filter {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aps-quick-filter.active {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--color-white);
+}
+
+.aps-quick-filter:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+}
+
+[data-theme='dark'] .aps-quick-filter {
+  border-color: #4b5563;
+  background: #374151;
+  color: #d1d5db;
+}
+
+[data-theme='dark'] .aps-quick-filter.active {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--color-white);
+}
+
 /* Список продуктов */
 .aps-products-list {
   display: flex;

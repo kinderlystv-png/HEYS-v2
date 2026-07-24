@@ -72,6 +72,11 @@ Client observability фиксирует один набор событий на 
 `queue_size`, безопасную `key_group`) и нормализованную причину; storage keys и
 значения дневника в telemetry не уходят.
 
+Structured boot-события не отправляются до появления client context, а REST не
+принимает их под anonymous identity. `abandoned` требует явного `boot_started`
+без последующего `boot_ready`; отдельное sync/write-событие не считается сбоем
+загрузки.
+
 Следствие: это **wake-up bridge**, а не автономная background upload гарантия.
 Без открытого client window он ничего не отправляет; `SYNC_COMPLETE` означает
 окончание фиксированной задержки, а не подтверждённый drain cloud queue.

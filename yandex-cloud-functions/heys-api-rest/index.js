@@ -1059,6 +1059,13 @@ async function handleRestRequest(event, context) {
           let skipped = 0;
 
           for (const row of rawRows) {
+            // Structured lifecycle rows must remain retryable until the request
+            // has a server-verified client/curator identity. Inserting them as
+            // anonymous would consume event_id and orphan the boot timeline.
+            if (identity.actorRole === 'anonymous' && row?.event_id) {
+              skipped++;
+              continue;
+            }
             const lvl = LEVELS.has(row.level) ? row.level : 'log';
             const msg = typeof row.message === 'string' ? row.message.slice(0, MAX_MSG_LEN) : String(row.message ?? '').slice(0, MAX_MSG_LEN);
             if (!msg) { skipped++; continue; }
@@ -1105,9 +1112,14 @@ async function handleRestRequest(event, context) {
 
           if (inserted === 0) {
             return {
-              statusCode: 400,
+              statusCode: identity.actorRole === 'anonymous' ? 202 : 400,
               headers: corsHeaders,
-              body: JSON.stringify({ error: 'No valid rows', skipped })
+              body: JSON.stringify({
+                success: identity.actorRole === 'anonymous',
+                inserted: 0,
+                skipped,
+                structuredAccepted: identity.actorRole !== 'anonymous'
+              })
             };
           }
 
@@ -1123,7 +1135,13 @@ async function handleRestRequest(event, context) {
           return {
             statusCode: 200,
             headers: corsHeaders,
-            body: JSON.stringify({ success: true, inserted: accepted, duplicates: inserted - accepted, skipped })
+            body: JSON.stringify({
+              success: true,
+              inserted: accepted,
+              duplicates: inserted - accepted,
+              skipped,
+              structuredAccepted: identity.actorRole !== 'anonymous'
+            })
           };
         }
 
