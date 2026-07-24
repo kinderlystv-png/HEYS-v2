@@ -7,7 +7,7 @@
  * 3. Сброс счётчика попыток при успешном обновлении
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 
@@ -343,7 +343,11 @@ describe('PWA update protection', () => {
     });
 
     it('не активирует обновление автоматически из install handler', () => {
-      const swSource = readFileSync(join(process.cwd(), 'apps/web/public/sw.js'), 'utf8');
+      const webCwdPath = join(process.cwd(), 'public/sw.js');
+      const swPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/public/sw.js');
+      const swSource = readFileSync(swPath, 'utf8');
       const installHandler = swSource.slice(
         swSource.indexOf("self.addEventListener('install'"),
         swSource.indexOf("self.addEventListener('activate'")
