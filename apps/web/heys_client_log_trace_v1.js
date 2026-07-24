@@ -52,8 +52,14 @@
     }
   })();
   // SESSION_ID identifies the browser tab; BOOT_ID identifies this exact page load.
-  // A reload/update therefore starts a fresh diagnostic session even in the same tab.
+  // ACTIVE_VISIT_ID identifies a cold start or one foreground return inside that boot.
   var BOOT_ID = randomId('boot');
+  var ACTIVE_VISIT_ID = randomId('visit');
+  var ACTIVE_VISIT_KIND = 'cold_start';
+  var VISIT_STARTED_AT = Date.now();
+  var VISIT_READY_EMITTED = false;
+  var hiddenAt = null;
+  var lastResumeAt = 0;
   var DEVICE_ID = (function () {
     try {
       var k = '_heys_observability_device';
@@ -105,7 +111,8 @@
     from: 1, to: 1, online: 1, attempt: 1, result: 1,
     bundle: 1, route: 1, tab: 1, flow_kind: 1,
     count: 1, queue_size: 1, key_group: 1, problem_stage: 1,
-    days_received: 1, min_required: 1
+    days_received: 1, min_required: 1,
+    visit_kind: 1, absence_ms: 1, auth_state: 1, sync_state: 1
   };
 
   function sanitizeEventContext(input) {
@@ -507,7 +514,8 @@
         message: c.message,
         args: c.args,
         client_ts: new Date().toISOString(),
-        page_url: typeof location !== 'undefined' ? location.href.slice(0, 1000) : null
+        page_url: typeof location !== 'undefined' ? location.href.slice(0, 1000) : null,
+        visit_id: ACTIVE_VISIT_ID
       };
       if (structured) {
         if (!RUNTIME.buildId || RUNTIME.buildId === 'unknown') {
@@ -517,6 +525,7 @@
         Object.keys(structured).forEach(function (key) { entry[key] = structured[key]; });
         entry.client_id = getClientId();
         entry.boot_id = BOOT_ID;
+        entry.visit_id = ACTIVE_VISIT_ID;
         entry.build_id = RUNTIME.buildId === 'unknown' ? null : RUNTIME.buildId;
         entry.device_id = DEVICE_ID;
         entry.device_class = RUNTIME.deviceClass;
@@ -587,6 +596,7 @@
         page_url: e.page_url,
         event_id: e.event_id || null,
         boot_id: e.boot_id || BOOT_ID,
+        visit_id: e.visit_id || e.boot_id || ACTIVE_VISIT_ID,
         event_name: e.event_name || null,
         event_source: e.event_source || null,
         event_status: e.event_status || null,
@@ -709,6 +719,50 @@
     return structured.event_id;
   }
 
+  function currentAuthState() {
+    return getClientId() ? 'authenticated' : 'pending';
+  }
+
+  function currentSyncState() {
+    try {
+      var cloud = global.HEYS && global.HEYS.cloud;
+      if (!cloud) return 'unavailable';
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
+      if ((typeof cloud.isSyncing === 'function' && cloud.isSyncing()) ||
+          (typeof cloud.isUploadInProgress === 'function' && cloud.isUploadInProgress())) return 'active';
+      if (typeof cloud.getPendingCount === 'function' && Number(cloud.getPendingCount()) > 0) return 'pending';
+      return 'idle';
+    } catch (_) { return 'unknown'; }
+  }
+
+  function startResumeVisit(source) {
+    var now = Date.now();
+    if (now - lastResumeAt < 1000) return;
+    lastResumeAt = now;
+    var absenceMs = hiddenAt == null ? null : Math.max(0, now - hiddenAt);
+    hiddenAt = null;
+    ACTIVE_VISIT_ID = randomId('visit');
+    ACTIVE_VISIT_KIND = 'resume';
+    VISIT_STARTED_AT = now;
+    VISIT_READY_EMITTED = false;
+    event('visit_started', {
+      source: source || 'visibility', phase: 'foreground', visit_kind: 'resume',
+      absence_ms: absenceMs, auth_state: currentAuthState(), sync_state: currentSyncState(),
+      online: typeof navigator !== 'undefined' ? navigator.onLine : true
+    });
+    event('app_foregrounded', {
+      source: source || 'visibility', phase: 'foreground', visit_kind: 'resume',
+      absence_ms: absenceMs, auth_state: currentAuthState(), sync_state: currentSyncState()
+    });
+    if (getClientId() && global.__heysAppReady) {
+      VISIT_READY_EMITTED = true;
+      event('visit_ready', {
+        source: 'app', status: 'ready', phase: 'foreground', visit_kind: 'resume',
+        auth_state: 'authenticated', sync_state: currentSyncState(), durationMs: Date.now() - VISIT_STARTED_AT
+      });
+    }
+  }
+
   // Periodic flush
   setInterval(function () {
     if (ring.length > 0 && Date.now() - lastFlushAt > FLUSH_INTERVAL_MS - 1000) {
@@ -719,9 +773,17 @@
   // Visibility / unload
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') flush('visibilitychange');
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        flush('visibilitychange');
+      } else if (document.visibilityState === 'visible' && hiddenAt != null) {
+        startResumeVisit('visibility');
+      }
     });
   }
+  global.addEventListener('pageshow', function (event) {
+    if (event && event.persisted) startResumeVisit('pageshow');
+  });
   global.addEventListener('pagehide', function () { flush('pagehide'); });
   global.addEventListener('beforeunload', function () { flush('beforeunload'); });
 
@@ -746,18 +808,26 @@
         recentTraces: recentTraces.length,
         sessionId: SESSION_ID,
         bootId: BOOT_ID,
+        visitId: ACTIVE_VISIT_ID,
+        visitKind: ACTIVE_VISIT_KIND,
         deviceId: DEVICE_ID,
         runtime: RUNTIME,
         endpoint: ENDPOINT
       };
     },
     sessionId: SESSION_ID,
-    bootId: BOOT_ID
+    bootId: BOOT_ID,
+    visitId: function () { return ACTIVE_VISIT_ID; }
   };
 
   // Маркер для timing-диагностики (отдельный console.info чтобы поймать сам бутстрап в логе)
   orig.info('[heys.log-trace] installed v1, session=' + SESSION_ID + ', endpoint=' + ENDPOINT);
 
+  event('visit_started', {
+    source: 'bootstrap', phase: 'bootstrap', visit_kind: 'cold_start',
+    auth_state: currentAuthState(), sync_state: currentSyncState(),
+    online: typeof navigator !== 'undefined' ? navigator.onLine : true
+  });
   event('boot_started', {
     source: 'bootstrap',
     phase: 'bootstrap',
@@ -773,6 +843,13 @@
   });
   global.addEventListener('heys:client-changed', function () {
     event('client_context_ready', { source: 'auth', phase: 'identity' });
+    if (ACTIVE_VISIT_KIND === 'resume' && global.__heysAppReady && !VISIT_READY_EMITTED) {
+      VISIT_READY_EMITTED = true;
+      event('visit_ready', {
+        source: 'auth', status: 'ready', phase: 'foreground', visit_kind: 'resume',
+        auth_state: currentAuthState(), sync_state: currentSyncState(), durationMs: Date.now() - VISIT_STARTED_AT
+      });
+    }
   });
   global.addEventListener('heysSyncCompleted', function () {
     event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: Date.now() - BOOT_STARTED_AT });

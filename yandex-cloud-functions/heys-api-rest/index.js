@@ -414,7 +414,7 @@ const ALLOWED_COLUMNS = {
   // client_log_trace — клиентский console buffer (см. миграцию 2026-06-01)
   client_log_trace: [
     'id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
-    'event_id', 'boot_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
+    'event_id', 'boot_id', 'visit_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
     'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
   ],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
@@ -1022,7 +1022,8 @@ async function handleRestRequest(event, context) {
             'release_version', 'unseen_count', 'update_version',
             'pending_count', 'missing_days_count', 'action', 'mode',
             'from', 'to', 'online', 'attempt', 'result', 'bundle', 'route', 'tab', 'flow_kind',
-            'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required'
+            'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required',
+            'visit_kind', 'absence_ms', 'auth_state', 'sync_state'
           ]);
 
           const rawRows = Array.isArray(body) ? body : [body];
@@ -1049,7 +1050,7 @@ async function handleRestRequest(event, context) {
 
           const cols = [
             'client_id', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
-            'event_id', 'boot_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
+            'event_id', 'boot_id', 'visit_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
             'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
           ];
           const values = [];
@@ -1098,11 +1099,11 @@ async function handleRestRequest(event, context) {
               if (serialized.length <= MAX_CONTEXT_BYTES) context = serialized;
             }
 
-            placeholders.push(`(${Array.from({ length: cols.length }, (_, index) => `$${p + index}${index === 4 || index === 23 ? '::jsonb' : ''}`).join(', ')})`);
+            placeholders.push(`(${Array.from({ length: cols.length }, (_, index) => `$${p + index}${index === 4 || index === 24 ? '::jsonb' : ''}`).join(', ')})`);
             p += cols.length;
             values.push(
               identity.clientId, cts.toISOString(), lvl, msg, argsJson, sid, ua, url,
-              uuid(row.event_id), textMeta(row.boot_id), textMeta(row.event_name), textMeta(row.event_source),
+              uuid(row.event_id), textMeta(row.boot_id), textMeta(row.visit_id), textMeta(row.event_name), textMeta(row.event_source),
               textMeta(row.event_status), textMeta(row.flow_id), duration, textMeta(row.build_id),
               textMeta(row.device_id), textMeta(row.device_class), textMeta(row.os_name), textMeta(row.browser_name),
               textMeta(row.display_mode), identity.actorRole, identity.trustLevel, context

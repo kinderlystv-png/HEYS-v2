@@ -41,6 +41,13 @@
       "path": "scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql",
       "description": "Add messenger send idempotency, desired-state mutations and durable media cleanup",
       "destructive": false
+    },
+    {
+      "id": "2026-07-24_client_visit_observability",
+      "order": 4,
+      "path": "scripts/db/migrations/2026-07-24_client_visit_observability.sql",
+      "description": "Track cold starts and foreground resumes as separate client visits",
+      "destructive": false
     }
   ]
 }

@@ -75,6 +75,7 @@
 
   var EVENT_LABELS = {
     pin_success: 'Вход выполнен', pin_failed: 'Ошибка входа', pin_rate_limited: 'Вход временно ограничен',
+    visit_started: 'Посещение началось', app_foregrounded: 'Приложение открыто из фона', visit_ready: 'Посещение готово',
     boot_started: 'Запуск приложения', boot_ready: 'Приложение готово', boot_failed: 'Ошибка запуска',
     app_runtime_failed: 'Ошибка приложения', sync_cycle_started: 'Синхронизация началась',
     sync_cycle_completed: 'Синхронизация завершена', sync_cycle_failed: 'Ошибка синхронизации',
@@ -92,11 +93,11 @@
   function eventLabel(name) { return EVENT_LABELS[name] || String(name || 'Событие').replace(/_/g, ' '); }
   function contextLabel(context) {
     if (!context || typeof context !== 'object') return '';
-    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней' };
+    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней', visit_kind: 'тип посещения', absence_ms: 'в фоне, мс', auth_state: 'авторизация', sync_state: 'синхронизация' };
     return Object.keys(context).map(function (key) { return (labels[key] || key) + ': ' + context[key]; }).join(' · ');
   }
 
-  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count', 'days_received', 'min_required'];
+  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count', 'days_received', 'min_required', 'visit_kind', 'absence_ms', 'auth_state', 'sync_state'];
 
   function safeContext(context) {
     if (!context || typeof context !== 'object') return {};
@@ -115,6 +116,8 @@
       'Клиент: ' + (clientName || session.client_name || 'Без имени'),
       'client_id: ' + (clientId || session.client_id || 'unknown'),
       'boot_id: ' + (session.boot_id || 'unknown'),
+      'visit_id: ' + (session.visit_id || 'unknown'),
+      'Тип посещения: ' + (session.visit_kind === 'resume' ? 'возврат из фона' : 'холодный запуск'),
       'Статус: ' + status[0] + ' (' + (session.outcome || 'starting') + ')',
       'Проблемный этап: ' + (session.problem_stage || 'не определён'),
       'Проблемное событие: ' + (session.problem_event || 'не определено'),
@@ -171,11 +174,11 @@
     var lines = [
       'HEYS — панель диагностики',
       'Сформировано: ' + formatDate(data && data.generated_at),
-      'Запусков: ' + Number(summary.launches || 0) + ' | Штатно: ' + Number(summary.ready || 0) + ' | Сбоев: ' + Number(summary.failed || 0),
+      'Посещений: ' + Number(summary.visits || summary.launches || 0) + ' | Штатно: ' + Number(summary.ready || 0) + ' | Сбоев: ' + Number(summary.failed || 0),
       ''
     ];
     (data && data.sessions || []).forEach(function (session) {
-      lines.push([session.client_name || 'Клиент', formatDate(session.started_at), (STATUS[session.outcome] || STATUS.starting)[0], session.device_class, session.os_name, session.browser_name, session.display_mode, 'build=' + (session.build_id || 'unknown')].filter(Boolean).join(' | '));
+      lines.push([session.client_name || 'Клиент', formatDate(session.started_at), session.visit_kind === 'resume' ? 'возврат' : 'запуск', (STATUS[session.outcome] || STATUS.starting)[0], session.device_class, session.os_name, session.browser_name, session.display_mode, 'build=' + (session.build_id || 'unknown')].filter(Boolean).join(' | '));
       if (session.problem_stage) lines.push('  Проблемный этап: ' + (STAGE_LABELS[session.problem_stage] || session.problem_stage));
       (session.events || []).forEach(function (event) { lines.push('  ' + formatDate(event.at) + ' ' + eventLabel(event.name) + ' ' + (event.status || '')); });
     });
@@ -267,9 +270,9 @@
     }
 
     var summary = data.summary || {};
-    return h('section', { className: 'cdo', 'aria-label': 'Диагностика клиентских запусков' },
+    return h('section', { className: 'cdo', 'aria-label': 'Диагностика клиентских посещений' },
       h('div', { className: 'cdo-head' },
-        h('div', null, h('div', { className: 'cdo-title' }, 'Диагностика'), h('div', { className: 'cdo-note' }, 'Запуски, входы и синхронизация клиентов. Ошибки показаны без содержимого дневника.')),
+        h('div', null, h('div', { className: 'cdo-title' }, 'Диагностика'), h('div', { className: 'cdo-note' }, 'Посещения, входы и синхронизация клиентов. Ошибки показаны без содержимого дневника.')),
         h('div', null,
           h('div', { className: 'cdo-actions' },
             h('button', { type: 'button', className: 'cdo-primary' + (filters.status === 'problems' ? ' is-active' : ''), onClick: function () { update('status', filters.status === 'problems' ? 'all' : 'problems'); } }, filters.status === 'problems' ? 'Показать все' : 'Показать сбои'),
@@ -280,7 +283,7 @@
         )
       ),
       h('div', { className: 'cdo-metrics' },
-        metric('Активных клиентов', summary.active_clients), metric('Запусков', summary.launches), metric('Штатно · ' + Number(summary.success_rate || 0) + '%', summary.ready, 'ready'), metric('Сбои', summary.failed, 'failed', 'bad'), metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
+        metric('Активных клиентов', summary.active_clients), metric('Посещений', summary.visits || summary.launches), metric('Штатно · ' + Number(summary.success_rate || 0) + '%', summary.ready, 'ready'), metric('Сбои', summary.failed, 'failed', 'bad'), metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
       ),
       h('div', { className: 'cdo-filters' },
         h('input', { className: 'cdo-control cdo-search', type: 'search', placeholder: 'Поиск клиента…', value: searchQuery, onChange: function (e) { setSearchQuery(e.target.value); }, 'aria-label': 'Поиск клиента' }),
@@ -295,16 +298,16 @@
       ),
       error && h('div', { className: 'cd-error' }, error),
       !error && loading && !(data.sessions || []).length && h('div', { className: 'cdo-empty' }, 'Загружаю диагностику…'),
-      !error && !loading && !(data.sessions || []).length && h('div', { className: 'cdo-empty' }, filters.status === 'problems' ? 'Сбоев за выбранный период нет' : 'Запусков за выбранный период нет'),
+      !error && !loading && !(data.sessions || []).length && h('div', { className: 'cdo-empty' }, filters.status === 'problems' ? 'Сбоев за выбранный период нет' : 'Посещений за выбранный период нет'),
       h('div', { className: 'cdo-list' }, (data.sessions || []).map(function (session) {
         var status = STATUS[session.outcome] || STATUS.starting;
-        var key = session.client_id + ':' + session.boot_id;
+        var key = session.client_id + ':' + (session.visit_id || session.boot_id);
         var isOpen = !!expanded[key];
         var isProblem = isProblemOutcome(session.outcome);
         var problemText = session.problem_stage ? 'Проблема: ' + (STAGE_LABELS[session.problem_stage] || session.problem_stage) : 'Последний успешный этап: ' + eventLabel(session.last_success_event);
         return h('article', { key: key, className: 'cdo-session cdo-session--' + status[1] },
           h('button', { type: 'button', className: 'cdo-row', 'aria-expanded': isOpen, onClick: function () { setExpanded(function (prev) { var next = Object.assign({}, prev); next[key] = !prev[key]; return next; }); } },
-            h('div', null, h('div', { className: 'cdo-client' }, session.client_name || 'Клиент'), h('div', { className: 'cdo-small' }, formatDate(session.started_at))),
+            h('div', null, h('div', { className: 'cdo-client' }, session.client_name || 'Клиент'), h('div', { className: 'cdo-small' }, formatDate(session.started_at) + ' · ' + (session.visit_kind === 'resume' ? 'возврат' : 'запуск'))),
             h('div', null, h('span', { className: 'cd-status cd-status--' + status[1] }, status[0]), h('div', { className: 'cdo-small' }, formatDuration(session.duration_ms))),
             h('div', null, h('div', null, [session.device_class, session.os_name, session.browser_name].filter(Boolean).join(' · ') || 'Не определено'), h('div', { className: 'cdo-small' }, (session.display_mode || '—') + ' · ' + (session.build_id || 'unknown'))),
             h('div', { className: session.problem_stage ? 'cdo-problem' : 'cdo-ok' }, problemText),
@@ -348,6 +351,7 @@
     top.appendChild(el('span', 'cd-device', [session.device_class, session.os_name, session.browser_name, session.display_mode].filter(Boolean).join(' · ') || 'Устройство не определено'));
     button.appendChild(top);
     var meta = el('div', 'cd-meta');
+    meta.appendChild(el('span', '', session.visit_kind === 'resume' ? 'Возврат из фона' : 'Холодный запуск'));
     meta.appendChild(el('span', '', 'Версия: ' + (session.build_id || 'unknown')));
     meta.appendChild(el('span', '', 'Длительность: ' + formatDuration(session.duration_ms)));
     meta.appendChild(el('span', '', 'Событий: ' + Number(session.event_count || 0)));
@@ -400,12 +404,12 @@
     var modal = el('section', 'cd-modal');
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Диагностика загрузок клиента');
+    modal.setAttribute('aria-label', 'Диагностика посещений клиента');
     root.appendChild(modal);
 
     var head = el('header', 'cd-head');
     var heading = el('div');
-    heading.appendChild(el('div', 'cd-title', 'Диагностика загрузок'));
+    heading.appendChild(el('div', 'cd-title', 'Диагностика посещений'));
     heading.appendChild(el('div', 'cd-subtitle', options.clientName || 'Клиент'));
     head.appendChild(heading);
     var closeButton = el('button', 'cd-icon-btn', '×');
@@ -416,7 +420,7 @@
     var range = el('select', 'cd-control');
     [['24h', '24 часа'], ['7d', '7 дней'], ['30d', '30 дней']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; range.appendChild(o); });
     var status = el('select', 'cd-control');
-    [['all', 'Все запуски'], ['problems', 'Только проблемы'], ['ready', 'Только штатные']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; status.appendChild(o); });
+    [['all', 'Все посещения'], ['problems', 'Только проблемы'], ['ready', 'Только штатные']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; status.appendChild(o); });
     var copy = el('button', 'cd-copy', 'Скопировать отчёт'); copy.type = 'button'; copy.disabled = true;
     toolbar.appendChild(range); toolbar.appendChild(status); toolbar.appendChild(copy); modal.appendChild(toolbar);
     var body = el('div', 'cd-body'); modal.appendChild(body);
@@ -432,7 +436,7 @@
         var rightProblem = ['failed', 'degraded', 'abandoned'].includes(right.outcome) ? 1 : 0;
         return rightProblem - leftProblem || Date.parse(right.started_at || 0) - Date.parse(left.started_at || 0);
       });
-      body.appendChild(el('div', 'cd-summary', sessions.length + ' запусков · ошибки и незавершённые загрузки показаны первыми'));
+      body.appendChild(el('div', 'cd-summary', sessions.length + ' посещений · ошибки и незавершённые загрузки показаны первыми'));
       if (!sessions.length) body.appendChild(el('div', 'cd-empty', 'За выбранный период событий нет'));
       sessions.forEach(function (session) { body.appendChild(renderSession(session, options.clientName, options.clientId)); });
       var logins = state.data && state.data.logins || [];

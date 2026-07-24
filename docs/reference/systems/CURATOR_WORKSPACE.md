@@ -110,18 +110,20 @@ context обновить новый диалог. Свежий silent poll в о
 текущей роли (`acked_at` для клиента или `done_at` для куратора), тогда как
 пузырь сообщения может одновременно показывать обе отметки участников.
 
-## Диагностика запусков и синхронизации
+## Диагностика посещений и синхронизации
 
-Четвёртая вкладка curator gate показывает все клиентские запуски без
+Четвёртая вкладка curator gate показывает все клиентские посещения без
 переключения client context. Первый слой содержит сводные метрики, server-side
-фильтры и список запусков; главное действие «Показать сбои». Раскрытие строки
-показывает русскоязычный timeline входа, загрузки, модалок, sync и
-агрегированных пакетов сохранения. Автообновление выполняется раз в 60 секунд
-только пока вкладка открыта; длинные выборки продолжаются cursor pagination.
+фильтры и список посещений; главное действие «Показать сбои». Холодный запуск и
+каждый возврат PWA из фона получают отдельный `visit_id`, сохраняя общий
+неизменяемый `boot_id` загрузки страницы. Раскрытие строки показывает
+русскоязычный timeline входа, загрузки, модалок, sync и агрегированных пакетов
+сохранения. Автообновление выполняется раз в 60 секунд только пока вкладка
+открыта; длинные выборки продолжаются cursor pagination.
 
 В карточке клиента остаётся точечная диагностика. Оба представления показывают
-исход запуска, время, устройство, PWA/browser, build и длительность; проблемные
-и незавершённые сессии выделены.
+тип посещения, исход, время, устройство, PWA/browser, build и длительность;
+проблемные и незавершённые посещения выделены.
 
 Точечное представление читает `get_client_observability_by_curator`, общее —
 `get_curator_observability_overview`. Оба RPC curator-only: gateway подставляет
@@ -222,6 +224,7 @@ Curator inbox использует health-check соединения перед 
 | C17 | Общая диагностика использует один RPC, server filters и cursor pagination                | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                               | проверено 2026-07-24 |
 | C18 | UI разворачивает scalar RPC, а curator cookie не идёт в client-session RPC               | `apps/web/heys_client_diagnostics_v1.js`, `apps/web/heys_gamification_v1.js`, `apps/web/__tests__/client-session-observability.test.js`                                                                                                | проверено 2026-07-24 |
 | C19 | Полный лог безопасен, outcome отличает fatal от post-ready error, inbox переподключается | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql`, `yandex-cloud-functions/heys-api-messages/index.js`, `apps/web/__tests__/client-session-observability.test.js` | проверено 2026-07-24 |
+| C20 | Cold start и каждый foreground resume имеют разные `visit_id` при общем `boot_id`        | `apps/web/heys_client_log_trace_v1.js`, `scripts/db/migrations/2026-07-24_client_visit_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                                   | проверено 2026-07-24 |
 
 ## Связанные источники
 

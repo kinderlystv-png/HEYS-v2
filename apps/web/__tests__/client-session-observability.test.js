@@ -22,6 +22,7 @@ const gamificationSource = fs.readFileSync(path.join(webRoot, 'heys_gamification
 const rpcSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-rpc/index.js'), 'utf8');
 const messagesSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-messages/index.js'), 'utf8');
 const classificationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql'), 'utf8');
+const visitMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_visit_observability.sql'), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -35,8 +36,10 @@ function storage() {
 function createLoggerRuntime(options = {}) {
   const requests = [];
   const listeners = {};
+  const documentListeners = {};
   const localStorage = storage();
   const sessionStorage = storage();
+  let uuidCounter = 0;
   const context = {
     console: { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     location: { hostname: 'app.heyslab.ru', href: 'https://app.heyslab.ru/' },
@@ -46,14 +49,14 @@ function createLoggerRuntime(options = {}) {
     document: {
       scripts: options.scripts || [{ src: 'https://app.heyslab.ru/boot-app.bundle.abc123ef.js' }],
       visibilityState: 'visible',
-      addEventListener: vi.fn(),
+      addEventListener: vi.fn((name, handler) => { documentListeners[name] = handler; }),
     },
     fetch: vi.fn((url, options) => {
       requests.push({ url, options });
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ structuredAccepted: true }) });
     }),
     Blob,
-    crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000' },
+    crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-' + String(426614174000 + uuidCounter++).padStart(12, '0') },
     setInterval: vi.fn(() => 1),
     clearInterval: vi.fn(),
     setTimeout: vi.fn(() => 1),
@@ -65,7 +68,7 @@ function createLoggerRuntime(options = {}) {
   context.window = context;
   context.globalThis = context;
   vm.runInNewContext(loggerSource, context, { filename: 'heys_client_log_trace_v1.js' });
-  return { context, requests, localStorage, listeners };
+  return { context, requests, localStorage, listeners, documentListeners };
 }
 
 describe('client session observability', () => {
@@ -180,6 +183,34 @@ describe('client session observability', () => {
     expect(rows.find((row) => row.event_name === 'test_after_bundle')?.build_id).toBe('deadbeef');
   });
 
+  it('starts a distinct visit when an authenticated PWA returns from background', async () => {
+    const { context, requests, documentListeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    context.__heysAppReady = true;
+    context.navigator.sendBeacon = vi.fn(() => true);
+    const coldVisit = context.HEYS.LogTrace.stats().visitId;
+
+    context.document.visibilityState = 'hidden';
+    documentListeners.visibilitychange();
+    context.document.visibilityState = 'visible';
+    documentListeners.visibilitychange();
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+
+    const rows = requests.flatMap((request) => JSON.parse(request.options.body));
+    const resume = rows.find((row) => row.event_name === 'app_foregrounded');
+    expect(resume).toMatchObject({
+      boot_id: '123e4567-e89b-42d3-a456-426614174000',
+      event_status: 'ok',
+      event_context: expect.objectContaining({ visit_kind: 'resume', auth_state: 'authenticated' }),
+    });
+    expect(resume.visit_id).toBeTruthy();
+    expect(resume.visit_id).not.toBe(coldVisit);
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_name: 'visit_ready', visit_id: resume.visit_id }),
+    ]));
+  });
+
   it('keeps structured events queued when the server has no verified identity', async () => {
     const { context, localStorage } = createLoggerRuntime();
     context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
@@ -203,6 +234,7 @@ describe('client session observability', () => {
     expect(restSource).toContain('ON CONFLICT DO NOTHING');
     expect(restSource).toContain("identity.actorRole === 'anonymous' && row?.event_id");
     expect(restSource).toContain('structuredAccepted: identity.actorRole !== \'anonymous\'');
+    expect(restSource).toContain("'event_id', 'boot_id', 'visit_id'");
   });
 
   it('redacts bearer tokens and restricts curator diagnostics by ownership', () => {
@@ -303,6 +335,16 @@ describe('client session observability', () => {
     expect(classificationSource).toContain("event_name IN ('initial_sync_ready', 'sync_cycle_completed')");
     expect(classificationSource).toContain("event_status IN ('degraded', 'timeout', 'failed')");
     expect(classificationSource).toContain("build_id IS NOT NULL AND build_id <> 'unknown'");
+  });
+
+  it('keeps foreground visits separate from immutable page-load boots in curator diagnostics', () => {
+    expect(visitMigrationSource).toContain('ADD COLUMN IF NOT EXISTS visit_id text');
+    expect(visitMigrationSource).toContain('COALESCE(t.visit_id, t.boot_id) AS effective_visit_id');
+    expect(visitMigrationSource).toContain("event_context->>'visit_kind' = 'resume'");
+    expect(visitMigrationSource).toContain("'visit_id', s.visit_id");
+    expect(visitMigrationSource).toContain('COALESCE(t.visit_id, t.boot_id) = s.visit_id');
+    expect(diagnosticsSource).toContain("session.visit_kind === 'resume' ? 'возврат' : 'запуск'");
+    expect(diagnosticsSource).toContain("'visit_id: ' + (session.visit_id || 'unknown')");
   });
 
   it('keeps curator cookies off client-session gamification RPCs', () => {

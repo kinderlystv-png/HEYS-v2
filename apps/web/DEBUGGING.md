@@ -215,19 +215,22 @@ for render loops, timers, polling, or every item in a large collection.
 
 ### Client session observability
 
-Every page load gets a new `boot_id`; the pseudonymous `device_id` survives
-reloads. Structured events include build hash, device class, OS, browser and
-display mode. The core sequence is `boot_started` → `app_shell_ready` →
-`initial_sync_ready` → `day_screen_ready` → `boot_ready`; failures use
-`boot_failed`, `app_runtime_failed` or a degraded status. SW transitions, What's
-New, morning-checkin steps (including `yesterdayVerify`) and hunger prompts add
-their own events.
+Every page load gets a new immutable `boot_id`; every cold start and foreground
+resume gets a separate `visit_id`, so multiple visits may belong to one boot.
+The pseudonymous `device_id` survives reloads. A resume emits `visit_started` →
+`app_foregrounded` → `visit_ready` with safe auth/sync state and time spent in
+the background. Structured events include build hash, device class, OS, browser
+and display mode. The cold-start sequence is `visit_started` → `boot_started` →
+`app_shell_ready` → `initial_sync_ready` → `day_screen_ready` → `boot_ready`;
+failures use `boot_failed`, `app_runtime_failed` or a degraded status. SW
+transitions, What's New, morning-checkin steps (including `yesterdayVerify`) and
+hunger prompts add their own events.
 
 Structured events are kept in a bounded local queue until an authenticated POST
 succeeds. `event_id` makes beacon/fetch retries idempotent. The REST API
 resolves `client_id` from the HttpOnly client session or verified curator JWT;
 an anonymous caller cannot claim another client. Curator UI reads a safe
-per-client timeline through `get_client_observability_by_curator` and the
+per-visit timeline through `get_client_observability_by_curator` and the
 all-client dashboard through `get_curator_observability_overview`. The latter
 applies filters and cursor pagination on the server in one RPC. Sync telemetry
 is aggregated per cycle/upload batch (`sync_cycle_*`, `write_*`), never per KV
