@@ -144,6 +144,19 @@ timeline структурированных событий с allowlisted contex
 `failed`; фатальный статус требует именованного lifecycle-события сбоя.
 Именованные warning-события также заполняют `problem_event`, поэтому безопасный
 отчёт показывает конкретное отклонение, а не только общий этап «предупреждение».
+Первый фактически видимый кадр отделён от `app_shell_ready` и `boot_ready`:
+диагностика получает `first_visible_frame`, а таймаут и результат ручного
+восстановления — именованные `blank_screen_*` события только с allowlisted
+phase/reason/screen/attempt/online context.
+
+Над фильтрами общей диагностики находится независимое действие дневного
+мегалога. Оно всегда запрашивает все `failed/degraded/abandoned` посещения от
+локальной полуночи куратора, проходит cursor pagination до конца с page size 100
+и отказывается копировать частичный результат при сломанном cursor. Отчёт
+сначала показывает статусы, этапы, события и почасовую динамику, затем без
+клиентского сокращения добавляет полный безопасный timeline каждого проблемного
+посещения в хронологическом порядке. Текущие экранные фильтры на состав мегалога
+не влияют.
 
 Curator inbox использует health-check соединения перед запросом и один retry на
 новом PostgreSQL client при протухшем pooled socket. Это не превращает успешную
@@ -181,6 +194,8 @@ Curator inbox использует health-check соединения перед 
     `boot_ready` остаётся видимым отклонением, но не фатальным запуском.
 18. Известные EWS/sync warning имеют именованное событие и безопасный контекст;
     штатный resume check-in остаётся информационным событием `plan_resumed`.
+19. `first_visible_frame` подтверждается после paint и дедуплицируется на boot;
+    blank-screen recovery не запускает автоматический reload.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -227,6 +242,8 @@ Curator inbox использует health-check соединения перед 
 | C18 | UI разворачивает scalar RPC, а curator cookie не идёт в client-session RPC               | `apps/web/heys_client_diagnostics_v1.js`, `apps/web/heys_gamification_v1.js`, `apps/web/__tests__/client-session-observability.test.js`                                                                                                | проверено 2026-07-24 |
 | C19 | Полный лог безопасен, outcome отличает fatal от post-ready error, inbox переподключается | `apps/web/heys_client_diagnostics_v1.js`, `scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql`, `yandex-cloud-functions/heys-api-messages/index.js`, `apps/web/__tests__/client-session-observability.test.js` | проверено 2026-07-24 |
 | C20 | Cold start и каждый foreground resume имеют разные `visit_id` при общем `boot_id`        | `apps/web/heys_client_log_trace_v1.js`, `scripts/db/migrations/2026-07-24_client_visit_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                                   | проверено 2026-07-24 |
+| C21 | Полный лог различает boot readiness, фактический paint и blank-screen recovery           | `apps/web/heys_app_initialize_v1.js`, `apps/web/heys_app_tabs_v1.js`, `apps/web/heys_client_diagnostics_v1.js`, `apps/web/__tests__/blank-screen-guard.test.js`                                                                        | проверено 2026-07-24 |
+| C22 | Дневной мегалог проходит все problem pages и не копирует частичный результат             | `apps/web/heys_client_diagnostics_v1.js`, `apps/web/__tests__/diagnostics-daily-megalog.test.js`                                                                                                                                       | проверено 2026-07-24 |
 
 ## Связанные источники
 

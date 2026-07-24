@@ -87,6 +87,15 @@ gate. Известные отклонения EWS и первого sync batch �
 приложение отправляет `heys:client-changed` и немедленно flush'ит сохранённые
 `visit_started` и `boot_started`, не ожидая периодического интервала.
 
+Для returning session React mount больше не уничтожает последний видимый
+skeleton без замены: boot visual guard держит его отдельным слоем до
+подтверждённого двойным `requestAnimationFrame` paint видимого Day/active-tab
+контента. Таймаут 15 секунд показывает ручные действия «Повторить» и
+«Перезагрузить приложение»; retry перезапускает Day sync без автоматического
+reload. Один boot получает не более одного `first_visible_frame`,
+`blank_screen_guard_triggered` и `blank_screen_recovery_failed`; успешный paint
+после timeout дополнительно фиксирует `blank_screen_recovered`.
+
 Следствие: это **wake-up bridge**, а не автономная background upload гарантия.
 Без открытого client window он ничего не отправляет; `SYNC_COMPLETE` означает
 окончание фиксированной задержки, а не подтверждённый drain cloud queue.
@@ -244,3 +253,4 @@ SW update state machine публикует структурированные с
 | W19 | Full deploy проверяет metadata/bundles inline; ancestry job только для fast path    | `rg -n -e "Verify production build metadata and bundles" -e "Verify fast deploy ancestry" .github/workflows/deploy-yandex.yml`                                     | проверено 2026-07-24 |
 | W20 | Full Vitest разделён на два обязательных shard; migration gate выполняется один раз | `rg -n -e "matrix:" -e "--shard=" -e "if: matrix.shard == 1" .github/workflows/deploy-yandex.yml`                                                                  | проверено 2026-07-24 |
 | W21 | Bundle-only HEAD проверяется по source SHA; artifact manifest — внутри deploy job   | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
+| W22 | Visual guard держит skeleton до paint и даёт ручной recovery без reload-цикла       | `pnpm exec vitest run apps/web/__tests__/blank-screen-guard.test.js`                                                                                               | проверено 2026-07-24 |

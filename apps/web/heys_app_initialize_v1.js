@@ -8,6 +8,217 @@
         return HEYS[name] || fallback || {};
     };
 
+    function createBlankScreenGuard(options) {
+        const opts = options || {};
+        const timeoutMs = Number(opts.timeoutMs) || 15000;
+        const retryTimeoutMs = Number(opts.retryTimeoutMs) || 10000;
+        const now = typeof opts.now === 'function' ? opts.now : () => Date.now();
+        const schedule = typeof opts.setTimeout === 'function' ? opts.setTimeout : window.setTimeout.bind(window);
+        const cancel = typeof opts.clearTimeout === 'function' ? opts.clearTimeout : window.clearTimeout.bind(window);
+        const raf = typeof opts.requestAnimationFrame === 'function'
+            ? opts.requestAnimationFrame
+            : (window.requestAnimationFrame || ((callback) => schedule(callback, 16))).bind(window);
+        let rootElement = null;
+        let overlay = null;
+        let skeletonTemplate = null;
+        let timeoutId = null;
+        let observer = null;
+        let startedAt = now();
+        let armed = false;
+        let frameReported = false;
+        let guardTriggered = false;
+        let recoveryFailedReported = false;
+        let attempt = 0;
+
+        function emit(name, status, level, reason, screen) {
+            window.HEYS?.LogTrace?.event?.(name, {
+                source: 'blank-screen-guard',
+                status,
+                phase: 'first-visible-frame',
+                reason,
+                screen: screen || 'day',
+                attempt,
+                online: typeof navigator === 'undefined' ? true : navigator.onLine !== false,
+                durationMs: Math.max(0, now() - startedAt)
+            }, level);
+        }
+
+        function clearTimer() {
+            if (timeoutId !== null) cancel(timeoutId);
+            timeoutId = null;
+        }
+
+        function disconnectObserver() {
+            if (observer) observer.disconnect();
+            observer = null;
+        }
+
+        function removeOverlay() {
+            if (overlay?.parentNode) overlay.parentNode.removeChild(overlay);
+            overlay = null;
+        }
+
+        function isVisible(element) {
+            if (!element || !element.isConnected) return false;
+            let style = null;
+            try { style = window.getComputedStyle(element); } catch (_) { /* best-effort */ }
+            if (style && (
+                style.display === 'none'
+                || style.visibility === 'hidden'
+                || (style.opacity !== '' && Number(style.opacity) === 0)
+            )) return false;
+            const rect = typeof element.getBoundingClientRect === 'function' ? element.getBoundingClientRect() : null;
+            return !!rect && rect.width > 1 && rect.height > 1;
+        }
+
+        function visibleFrameElement(candidate) {
+            if (isVisible(candidate)) return candidate;
+            if (!rootElement) return null;
+            const marked = rootElement.querySelector('[data-heys-visible-frame]');
+            return isVisible(marked) ? marked : null;
+        }
+
+        function finishVisibleFrame(params) {
+            if (frameReported) return false;
+            const details = params || {};
+            const element = visibleFrameElement(details.element);
+            if (!element) return false;
+            frameReported = true;
+            clearTimer();
+            disconnectObserver();
+            if (window.__heysSkelVisible) {
+                window.__heysSkelReplacedAt = now();
+                window.__heysSkelVisible = false;
+                window.__heysPerfMark?.('Skeleton: replaced after confirmed visible frame');
+            }
+            removeOverlay();
+            emit('first_visible_frame', 'ok', 'info', details.reason || 'visible_content_painted', details.screen || 'day');
+            if (guardTriggered) {
+                emit('blank_screen_recovered', 'ok', 'info', details.reason || 'visible_content_painted', details.screen || 'day');
+            }
+            return true;
+        }
+
+        function reportVisibleFrame(params) {
+            if (frameReported) return false;
+            raf(() => raf(() => finishVisibleFrame(params)));
+            return true;
+        }
+
+        function scanForVisibleFrame(reason) {
+            reportVisibleFrame({ reason: reason || 'visible_marker_detected', screen: 'day' });
+        }
+
+        function restoreSkeleton() {
+            if (!overlay || !skeletonTemplate) return;
+            overlay.replaceChildren(skeletonTemplate.cloneNode(true));
+            overlay.style.pointerEvents = 'none';
+        }
+
+        function reloadApp() {
+            window.location.reload();
+        }
+
+        function reportRecoveryFailed(reason) {
+            if (recoveryFailedReported) return;
+            recoveryFailedReported = true;
+            emit('blank_screen_recovery_failed', 'failed', 'error', reason, 'day');
+        }
+
+        function showRecovery() {
+            if (!overlay) return;
+            overlay.style.pointerEvents = 'auto';
+            overlay.innerHTML = '';
+            const card = document.createElement('div');
+            card.setAttribute('role', 'alert');
+            card.style.cssText = 'width:min(400px,calc(100% - 32px));margin:auto;padding:28px 24px;border-radius:18px;background:#fff;color:#111827;box-shadow:0 12px 36px rgba(15,23,42,.18);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center';
+            const title = document.createElement('h2');
+            title.textContent = 'Экран не загрузился';
+            title.style.cssText = 'margin:0 0 8px;font-size:20px';
+            const text = document.createElement('p');
+            text.textContent = 'Данные сохранены. Попробуйте продолжить загрузку или перезапустите приложение.';
+            text.style.cssText = 'margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.45';
+            const retry = document.createElement('button');
+            retry.type = 'button';
+            retry.textContent = 'Повторить';
+            retry.style.cssText = 'width:100%;padding:13px 18px;border:0;border-radius:10px;background:#4964c7;color:#fff;font-size:16px;font-weight:600';
+            const reload = document.createElement('button');
+            reload.type = 'button';
+            reload.textContent = 'Перезагрузить приложение';
+            reload.style.cssText = 'width:100%;margin-top:10px;padding:12px 18px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font-size:15px;font-weight:600';
+            retry.addEventListener('click', retryRecovery);
+            reload.addEventListener('click', reloadApp);
+            card.append(title, text, retry, reload);
+            overlay.appendChild(card);
+        }
+
+        function onTimeout() {
+            if (frameReported) return;
+            if (!guardTriggered) {
+                guardTriggered = true;
+                emit('blank_screen_guard_triggered', 'degraded', 'warn', 'first_visible_frame_timeout', 'day');
+            } else if (attempt > 0) {
+                reportRecoveryFailed('retry_timeout');
+            }
+            showRecovery();
+        }
+
+        function armTimer(delay) {
+            clearTimer();
+            timeoutId = schedule(onTimeout, delay);
+        }
+
+        function retryRecovery() {
+            if (frameReported) return;
+            attempt += 1;
+            restoreSkeleton();
+            try {
+                window.dispatchEvent(new CustomEvent('heys:blank-screen-retry', { detail: { attempt } }));
+            } catch (_) { /* best-effort */ }
+            armTimer(retryTimeoutMs);
+            scanForVisibleFrame('retry_visible_content');
+        }
+
+        function arm(element) {
+            if (armed || frameReported || !element || !window.__heysHasSession) return false;
+            armed = true;
+            rootElement = element;
+            startedAt = Number(window.__heysBootStart) || now();
+            const sourceSkeleton = element.querySelector('.heys-skeleton');
+            overlay = document.createElement('div');
+            overlay.id = 'heys-boot-visual-guard';
+            overlay.setAttribute('aria-live', 'polite');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;overflow:auto;background:var(--bg-primary,#f8fafc);pointer-events:none';
+            skeletonTemplate = sourceSkeleton
+                ? sourceSkeleton.cloneNode(true)
+                : Object.assign(document.createElement('div'), { textContent: 'Загружаем приложение…' });
+            overlay.appendChild(skeletonTemplate.cloneNode(true));
+            document.body.appendChild(overlay);
+            if (opts.observe !== false && typeof window.MutationObserver === 'function') {
+                observer = new window.MutationObserver(() => scanForVisibleFrame('visible_marker_detected'));
+                observer.observe(element, { childList: true, subtree: true, attributes: true });
+            }
+            armTimer(timeoutMs);
+            return true;
+        }
+
+        function destroy() {
+            clearTimer();
+            disconnectObserver();
+            removeOverlay();
+        }
+
+        return {
+            arm,
+            destroy,
+            reportVisibleFrame,
+            retryRecovery,
+            _test: { finishVisibleFrame, isVisible, onTimeout }
+        };
+    }
+
+    HEYS.AppInitializer._test = Object.assign({}, HEYS.AppInitializer._test, { createBlankScreenGuard });
+
     HEYS.AppInitializer.initializeApp = function initializeApp() {
         // Логи инициализации отключены для чистой консоли
         const React = window.React,
@@ -159,8 +370,11 @@
             // v10.1 FOUC fix: delay React mount until main.css loaded
             // HTML skeleton stays visible → clean transition to styled app
             const doRender = () => {
+                const blankScreenGuard = HEYS.BlankScreenGuard || createBlankScreenGuard();
+                HEYS.BlankScreenGuard = blankScreenGuard;
+                const blankScreenGuardArmed = blankScreenGuard.arm(rootElement);
                 // 🦴 Log skeleton replacement
-                if (window.__heysSkelVisible) {
+                if (window.__heysSkelVisible && !blankScreenGuardArmed) {
                     var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
                     window.__heysSkelReplacedAt = Date.now();
                     window.__heysSkelVisible = false;

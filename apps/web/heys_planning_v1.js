@@ -19,12 +19,9 @@
         { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
         { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
         { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
+        { id: 'reading', label: 'Книги', shortLabel: 'Книги', icon: 'К' },
     ];
-    const SUBNAV_RENDER_ITEMS = [
-        SUBNAV_ITEMS[0],
-        { id: 'matrix', label: 'Матрица Эйзенхауэра', shortLabel: 'Матрица', action: 'taskMatrix' },
-        ...SUBNAV_ITEMS.slice(1),
-    ];
+    const SUBNAV_RENDER_ITEMS = SUBNAV_ITEMS;
     const DEFAULT_HOME_SCREEN = 'calendar';
 
     function resolvePlanningHomeScreen(candidate) {
@@ -3004,6 +3001,8 @@
             ? HEYS.PlanningGantt.GanttScreen
             : (HEYS.PlanningSchedule && HEYS.PlanningSchedule.GanttScreen);
         const ChronoScreen = HEYS.PlanningChrono && HEYS.PlanningChrono.ChronoScreen;
+        const ReadingScreen = HEYS.PlanningReading && HEYS.PlanningReading.ReadingScreen;
+        const ReadingIcon = HEYS.PlanningReading && HEYS.PlanningReading.ReadingIcon;
         const usePlanningState = Planning.Hooks && Planning.Hooks.usePlanningState;
 
         return {
@@ -3011,6 +3010,8 @@
             CalendarScreen,
             GanttScreen,
             ChronoScreen,
+            ReadingScreen,
+            ReadingIcon,
             TaskMatrixModal,
             MatrixIcon,
             buildResolvedTaskProjectMap,
@@ -3118,8 +3119,9 @@
             if (activeScreen === 'chrono') return runtime.ChronoScreen;
             if (activeScreen === 'checklists') return ChecklistsScreen;
             if (activeScreen === 'goals') return GoalSettingScreen;
+            if (activeScreen === 'reading') return runtime.ReadingScreen;
             return runtime.TasksScreen;
-        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.TasksScreen]);
+        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.ReadingScreen, runtime.TasksScreen]);
 
         const activeProjects = useMemo(() => (
             Array.isArray(planState?.projects)
@@ -3134,7 +3136,7 @@
             return runtime.buildResolvedTaskProjectMap(Array.isArray(planState?.tasks) ? planState.tasks : [], activeProjects);
         }, [activeProjects, planState?.tasks, runtime.buildResolvedTaskProjectMap]);
 
-        if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen || !runtime.ChronoScreen) {
+        if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen || !runtime.ChronoScreen || !runtime.ReadingScreen) {
             console.warn('[HEYS.planning] Planning split modules are not ready yet');
             return h(PlanningFallback);
         }
@@ -3160,7 +3162,7 @@
                     },
                 },
                     h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' },
-                        isAction && runtime.MatrixIcon ? h(runtime.MatrixIcon) : item.icon,
+                        item.id === 'reading' && runtime.ReadingIcon ? h(runtime.ReadingIcon) : (isAction && runtime.MatrixIcon ? h(runtime.MatrixIcon) : item.icon),
                     ),
                     h('span', {
                         className: 'planning-subnav__label',

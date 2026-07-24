@@ -338,6 +338,8 @@ export const LEGACY_BUNDLES = {
         'heys_planning_chrono_v1.js',
         'heys_planning_checklists_v1.js',
         'heys_planning_goal_map_v1.js',
+        'heys_reading_catalog_v1.js',
+        'heys_planning_reading_v1.js',
         'heys_planning_v1.js',
     ],
 };

@@ -4102,6 +4102,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
                 { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
                 { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
+                { id: 'reading', label: 'Книги', shortLabel: 'Книги', icon: 'К' },
             ];
             const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
                 ? window.HEYS.Planning.SUBNAV_ITEMS
@@ -4845,12 +4846,23 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             RationTabWithCloudSync,
             UserTabWithCloudSync,
         } = props;
+        const tabContentRef = React.useRef(null);
+        const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
 
         const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
         React.useEffect(function() {
             window.addEventListener('heys:postboot-lazy-ready', _tickPostboot);
             return function() { window.removeEventListener('heys:postboot-lazy-ready', _tickPostboot); };
         }, []);
+
+        React.useEffect(() => {
+            if (!clientId || isDayTab) return;
+            window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
+                element: tabContentRef.current,
+                screen: tab,
+                reason: 'tab_content_painted'
+            });
+        }, [clientId, isDayTab, tab]);
 
         const TAB_SKELETON_DELAY_MS = 240;
         const tabSkeletonSince = window.__heysTabSkeletonSince = window.__heysTabSkeletonSince || Object.create(null);
@@ -4906,6 +4918,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             'div',
             {
+                ref: tabContentRef,
+                'data-heys-visible-frame': isDayTab ? undefined : tab,
                 className: 'tab-content-swipeable' +
                     (slideDirection === 'out-left' ? ' slide-out-left' : '') +
                     (slideDirection === 'out-right' ? ' slide-out-right' : '') +
@@ -4933,6 +4947,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     selectedDate,
                     setSelectedDate,
                     subTab: (tab === 'stats' || tab === 'diary' || tab === 'activity') ? tab : 'stats',
+                    isActive: isDayTab,
                 }))
             ),
             (tab !== 'stats' && tab !== 'diary' && tab !== 'activity') && (

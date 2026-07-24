@@ -30,6 +30,7 @@
       '.cd-empty,.cd-loading,.cd-error{padding:36px 18px;text-align:center;color:#74758c;background:#fff;border:1px solid #e6e6ef;border-radius:14px}.cd-error{color:#963d3d;border-color:#efcccc}',
       '.cdo{max-width:1180px;margin:0 auto;color:#282941}.cdo-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}.cdo-title{font-size:22px;font-weight:760}.cdo-note{font-size:13px;color:#74758c;margin-top:4px}.cdo-actions{display:flex;gap:8px;flex-wrap:wrap}.cdo-primary,.cdo-secondary,.cdo-more{min-height:44px;border-radius:11px;padding:0 15px;font:inherit;font-weight:700;cursor:pointer}.cdo-primary{border:1px solid #434587;background:#434587;color:#fff}.cdo-primary.is-active{background:#303260}.cdo-secondary,.cdo-more{border:1px solid #d9d9e8;background:#fff;color:#434587}.cdo-updated{font-size:12px;color:#7b7c91;text-align:right;margin-top:5px}',
       '.cdo-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:14px}.cdo-metric{border:1px solid #e2e2ed;background:#fff;border-radius:13px;padding:13px;text-align:left;cursor:pointer;color:inherit}.cdo-metric strong{display:block;font-size:22px}.cdo-metric span{font-size:12px;color:#727389}.cdo-metric--bad{border-color:#edc6c6}.cdo-metric--warn{border-color:#ead9ae}',
+      '.cdo-megalog{margin-bottom:14px}.cdo-mega-btn{width:100%;min-height:48px;border:1px solid rgba(67,69,135,.34);border-radius:13px;background:#f4f4fb;color:#434587;padding:10px 16px;font:inherit;font-weight:750;cursor:pointer}.cdo-mega-btn:hover{background:#ececf8}.cdo-mega-btn:disabled{cursor:wait;opacity:.68}',
       '.cdo-filters{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:9px;padding:13px;background:#fff;border:1px solid #e4e4ed;border-radius:14px;margin-bottom:14px}.cdo-control{min-height:44px;border:1px solid #d8d8e6;border-radius:10px;background:#fff;color:#343553;padding:0 11px;font:inherit;min-width:0}.cdo-search{grid-column:span 2}.cdo-list{display:flex;flex-direction:column;gap:9px}.cdo-session{background:#fff;border:1px solid #e4e4ee;border-radius:14px;overflow:hidden}.cdo-session--failed{border-color:#e6b5b5;background:#fffafa}.cdo-session--degraded,.cdo-session--abandoned{border-color:#ead6a1}.cdo-row{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(120px,.8fr) minmax(170px,1.1fr) minmax(120px,.8fr) auto;gap:12px;align-items:center;width:100%;padding:14px;border:0;background:transparent;text-align:left;color:inherit;cursor:pointer}.cdo-client{font-weight:750}.cdo-small{font-size:12px;color:#75768b;margin-top:3px}.cdo-problem{font-size:13px;color:#873d3d}.cdo-ok{font-size:13px;color:#347052}.cdo-chevron{color:#7779ad;font-size:18px}.cdo-detail{border-top:1px solid #e9e9f1;padding:14px}.cdo-detail-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:8px}.cdo-full-log{border-color:#434587;background:#434587;color:#fff}.cdo-timeline{display:flex;flex-direction:column}.cdo-event{display:grid;grid-template-columns:80px 190px 1fr;gap:10px;position:relative;padding:8px 8px 8px 20px;font-size:13px}.cdo-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cdo-event--failed:before{background:#b94a4a}.cdo-event-context{color:#76778b;word-break:break-word}.cdo-empty{padding:34px 18px;text-align:center;background:#fff;border:1px solid #e5e5ee;border-radius:14px;color:#727389}.cdo-more{align-self:center;margin:12px auto 0;display:block}',
       '@media(max-width:640px){.cd-backdrop{padding:0;align-items:flex-end}.cd-modal{max-height:94vh;border-radius:20px 20px 0 0}.cd-head{padding:18px 16px 14px}.cd-toolbar{padding:12px 16px}.cd-body{padding:14px 16px 24px}.cd-toolbar .cd-control{flex:1 1 120px;min-width:0;width:auto}.cd-copy{width:100%;margin-left:0}.cd-device{width:100%;margin-left:0}.cd-session-btn{padding:14px}}'
       ,'@media(max-width:760px){.cdo-head{display:block}.cdo-actions{margin-top:12px}.cdo-actions>*{flex:1}.cdo-actions .cdo-primary{flex-basis:100%}.cdo-updated{text-align:left}.cdo-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.cdo-metric:first-child{grid-column:span 2}.cdo-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.cdo-search{grid-column:span 2}.cdo-row{grid-template-columns:1fr auto;padding:13px}.cdo-row>div:nth-child(2),.cdo-row>div:nth-child(3),.cdo-row>div:nth-child(4){grid-column:1 / -1}.cdo-chevron{grid-column:2;grid-row:1}.cdo-event{grid-template-columns:68px 1fr}.cdo-event-context{grid-column:2}.cdo-detail{padding:10px}.cdo-primary,.cdo-secondary,.cdo-more,.cdo-control{min-height:44px}}',
@@ -86,7 +87,11 @@
     hunger_prompt_shown: 'Показан голод', hunger_prompt_submitted: 'Голод заполнен',
     morning_checkin_shown: 'Показан чекин', morning_checkin_completed: 'Чекин завершён',
     ews_input_insufficient: 'Недостаточно данных для раннего предупреждения',
-    initial_sync_fallback_wait: 'Синхронизация ждала резервные данные'
+    initial_sync_fallback_wait: 'Синхронизация ждала резервные данные',
+    first_visible_frame: 'Первый экран действительно показан',
+    blank_screen_guard_triggered: 'Экран не появился вовремя',
+    blank_screen_recovered: 'Экран восстановлен',
+    blank_screen_recovery_failed: 'Не удалось восстановить экран'
   };
   var STAGE_LABELS = { boot: 'загрузка', sync: 'синхронизация', write: 'сохранение', runtime: 'работа приложения', warning: 'предупреждение' };
 
@@ -185,6 +190,120 @@
     return lines.join('\n');
   }
 
+  function localDayStartIso(nowValue) {
+    var day = nowValue == null ? new Date() : new Date(nowValue);
+    day.setHours(0, 0, 0, 0);
+    return day.toISOString();
+  }
+
+  function buildDailyProblemsParams(cursor, nowValue) {
+    return {
+      p_since: localDayStartIso(nowValue),
+      p_client_id: null,
+      p_search: null,
+      p_statuses: ['failed', 'degraded', 'abandoned'],
+      p_device_class: null,
+      p_display_mode: null,
+      p_build_id: null,
+      p_problem_stage: null,
+      p_sort: 'newest',
+      p_cursor_started_at: cursor && cursor.started_at || null,
+      p_cursor_boot_id: cursor && cursor.boot_id || null,
+      p_cursor_problem_rank: cursor && cursor.problem_rank != null ? cursor.problem_rank : null,
+      p_cursor_duration_ms: cursor && cursor.duration_ms != null ? cursor.duration_ms : null,
+      p_limit: 100
+    };
+  }
+
+  async function fetchAllDailyProblemVisits(rpc, nowValue) {
+    if (typeof rpc !== 'function') throw new Error('observability_rpc_unavailable');
+    var sessions = [];
+    var seenVisits = Object.create(null);
+    var seenCursors = Object.create(null);
+    var cursor = null;
+    var firstPayload = null;
+    do {
+      var response = await rpc('get_curator_observability_overview', buildDailyProblemsParams(cursor, nowValue));
+      if (response && response.error) throw new Error(response.error.message || response.error);
+      var payload = unwrapRpcPayload(response, 'get_curator_observability_overview') || { sessions: [] };
+      if (!firstPayload) firstPayload = payload;
+      (payload.sessions || []).forEach(function (session) {
+        var key = [session.client_id || '', session.visit_id || session.boot_id || '', session.started_at || ''].join(':');
+        if (seenVisits[key]) return;
+        seenVisits[key] = true;
+        sessions.push(session);
+      });
+      if (!payload.has_more) break;
+      if (!payload.next_cursor) throw new Error('observability_cursor_missing');
+      var cursorKey = JSON.stringify(payload.next_cursor);
+      if (seenCursors[cursorKey]) throw new Error('observability_cursor_repeated');
+      seenCursors[cursorKey] = true;
+      cursor = payload.next_cursor;
+    } while (true);
+    sessions.sort(function (left, right) {
+      return new Date(left.started_at).getTime() - new Date(right.started_at).getTime()
+        || String(left.visit_id || left.boot_id || '').localeCompare(String(right.visit_id || right.boot_id || ''));
+    });
+    return {
+      since: localDayStartIso(nowValue),
+      generated_at: firstPayload && firstPayload.generated_at || new Date().toISOString(),
+      sessions: sessions
+    };
+  }
+
+  function dailyMegaLogReport(data) {
+    var sessions = data && data.sessions || [];
+    var clientIds = Object.create(null);
+    var outcomes = { failed: 0, degraded: 0, abandoned: 0 };
+    var stages = Object.create(null);
+    var problemEvents = Object.create(null);
+    var hours = Object.create(null);
+    sessions.forEach(function (session) {
+      if (session.client_id) clientIds[session.client_id] = true;
+      if (Object.prototype.hasOwnProperty.call(outcomes, session.outcome)) outcomes[session.outcome] += 1;
+      var stage = session.problem_stage || 'unknown';
+      stages[stage] = (stages[stage] || 0) + 1;
+      var problemEvent = session.problem_event || 'не определено';
+      problemEvents[problemEvent] = (problemEvents[problemEvent] || 0) + 1;
+      var hour = String(new Date(session.started_at).getHours()).padStart(2, '0') + ':00–' + String(new Date(session.started_at).getHours()).padStart(2, '0') + ':59';
+      if (!hours[hour]) hours[hour] = { total: 0, failed: 0, degraded: 0, abandoned: 0 };
+      hours[hour].total += 1;
+      if (Object.prototype.hasOwnProperty.call(hours[hour], session.outcome)) hours[hour][session.outcome] += 1;
+    });
+    function countLines(values, label) {
+      var keys = Object.keys(values).sort();
+      return keys.length ? keys.map(function (key) { return '  ' + (label ? label(key) : key) + ': ' + values[key]; }) : ['  нет'];
+    }
+    var lines = [
+      'HEYS — мегалог всех проблемных посещений за сегодня',
+      'Сформировано: ' + new Date(data && data.generated_at || Date.now()).toISOString(),
+      'Период: ' + formatDate(data && data.since) + ' — ' + formatDate(data && data.generated_at),
+      'Проблемных посещений: ' + sessions.length,
+      'Клиентов с проблемами: ' + Object.keys(clientIds).length,
+      'Статусы: сбоев ' + outcomes.failed + ' | с отклонениями ' + outcomes.degraded + ' | не завершено ' + outcomes.abandoned,
+      '',
+      'Проблемные этапы:'
+    ].concat(countLines(stages, function (key) { return STAGE_LABELS[key] || key; }), [
+      '',
+      'Проблемные события:'
+    ], countLines(problemEvents, eventLabel), [
+      '',
+      'Динамика по часам:'
+    ], Object.keys(hours).sort().map(function (hour) {
+      var row = hours[hour];
+      return '  ' + hour + ' | всего ' + row.total + ' | сбоев ' + row.failed + ' | отклонений ' + row.degraded + ' | не завершено ' + row.abandoned;
+    }), [
+      '',
+      'Полные безопасные логи в хронологическом порядке:'
+    ]);
+    if (!sessions.length) lines.push('Проблемных посещений за сегодня нет.');
+    sessions.forEach(function (session, index) {
+      lines.push('', '════════════════════════════════════════', 'ПОСЕЩЕНИЕ ' + (index + 1) + ' ИЗ ' + sessions.length, sessionDebugReport(session.client_name, session.client_id, session));
+    });
+    lines.push('', 'Приватность: без дневника, сообщений, телефона, IP-адреса и токенов.');
+    return lines.join('\n');
+  }
+
   function rangeSince(range) {
     var hours = range === '30d' ? 24 * 30 : (range === '7d' ? 24 * 7 : 24);
     return new Date(Date.now() - hours * 3600000).toISOString();
@@ -232,6 +351,7 @@
     var _error = React.useState(''), error = _error[0], setError = _error[1];
     var _updated = React.useState(null), updatedAt = _updated[0], setUpdatedAt = _updated[1];
     var _expanded = React.useState({}), expanded = _expanded[0], setExpanded = _expanded[1];
+    var _megaLoading = React.useState(false), megaLoading = _megaLoading[0], setMegaLoading = _megaLoading[1];
 
     React.useEffect(function () {
       var timer = setTimeout(function () { setFilters(function (prev) { return Object.assign({}, prev, { search: searchQuery.trim() }); }); }, 300);
@@ -268,6 +388,17 @@
       try { await copyText(overviewReport(data)); HEYS.Toast?.success?.('Отчёт скопирован'); }
       catch (_) { HEYS.Toast?.warning?.('Не удалось скопировать отчёт'); }
     }
+    async function copyDailyMegaLog() {
+      setMegaLoading(true);
+      try {
+        var megaData = await fetchAllDailyProblemVisits(HEYS.YandexAPI.rpc.bind(HEYS.YandexAPI), new Date());
+        await copyText(dailyMegaLogReport(megaData));
+        HEYS.Toast?.success?.('Мегалог скопирован: ' + megaData.sessions.length + ' посещений');
+      } catch (megaError) {
+        HEYS.Toast?.warning?.('Не удалось собрать полный мегалог');
+        HEYS.analytics?.trackError?.(megaError, { context: 'curator_observability_daily_megalog' });
+      } finally { setMegaLoading(false); }
+    }
 
     var summary = data.summary || {};
     return h('section', { className: 'cdo', 'aria-label': 'Диагностика клиентских посещений' },
@@ -284,6 +415,9 @@
       ),
       h('div', { className: 'cdo-metrics' },
         metric('Активных клиентов', summary.active_clients), metric('Посещений', summary.visits || summary.launches), metric('Штатно · ' + Number(summary.success_rate || 0) + '%', summary.ready, 'ready'), metric('Сбои', summary.failed, 'failed', 'bad'), metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
+      ),
+      h('div', { className: 'cdo-megalog' },
+        h('button', { type: 'button', className: 'cdo-mega-btn', onClick: copyDailyMegaLog, disabled: megaLoading }, megaLoading ? 'Собираю все проблемные входы за сегодня…' : 'Скопировать мегалог проблем за сегодня')
       ),
       h('div', { className: 'cdo-filters' },
         h('input', { className: 'cdo-control cdo-search', type: 'search', placeholder: 'Поиск клиента…', value: searchQuery, onChange: function (e) { setSearchQuery(e.target.value); }, 'aria-label': 'Поиск клиента' }),
@@ -493,6 +627,6 @@
     show: show,
     close: close,
     Overview: Overview,
-    _test: { buildOverviewParams: buildOverviewParams, eventLabel: eventLabel, overviewReport: overviewReport, sessionDebugReport: sessionDebugReport, unwrapRpcPayload: unwrapRpcPayload }
+    _test: { buildOverviewParams: buildOverviewParams, buildDailyProblemsParams: buildDailyProblemsParams, fetchAllDailyProblemVisits: fetchAllDailyProblemVisits, dailyMegaLogReport: dailyMegaLogReport, eventLabel: eventLabel, overviewReport: overviewReport, sessionDebugReport: sessionDebugReport, unwrapRpcPayload: unwrapRpcPayload }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

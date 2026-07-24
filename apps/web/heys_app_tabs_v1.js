@@ -131,8 +131,10 @@
     // DAYTAB_GATE_AFTER_PHASE_A_MS removed — Phase A triggers immediate render (gated=false)
 
     function DayTabWithCloudSync(props) {
-        const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
+        const { clientId, products, selectedDate, setSelectedDate, subTab, isActive = true } = props;
         const [loading, setLoading] = React.useState(true);
+        const [blankScreenRetryAttempt, setBlankScreenRetryAttempt] = React.useState(0);
+        const visibleFrameRef = React.useRef(null);
         const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.DayTab;
         const showSkeleton = useDelayedSkeleton(needsSkeleton, 'daytab');
 
@@ -146,6 +148,12 @@
             return () => {
                 console.info('[HEYS.sceleton] 💀 DayTabWithCloudSync UNMOUNTED');
             };
+        }, []);
+
+        React.useEffect(() => {
+            const retry = (event) => setBlankScreenRetryAttempt(Number(event?.detail?.attempt) || 1);
+            window.addEventListener('heys:blank-screen-retry', retry);
+            return () => window.removeEventListener('heys:blank-screen-retry', retry);
         }, []);
 
         React.useEffect(() => {
@@ -277,7 +285,16 @@
                 }
 
             };
-        }, [clientId]);
+        }, [clientId, blankScreenRetryAttempt]);
+
+        React.useEffect(() => {
+            if (!isActive || loading || !clientId || !window.HEYS?.DayTab) return;
+            window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
+                element: visibleFrameRef.current,
+                screen: 'day',
+                reason: blankScreenRetryAttempt > 0 ? 'retry_day_content_painted' : 'day_content_painted'
+            });
+        }, [isActive, loading, clientId, blankScreenRetryAttempt]);
 
         // 🔐 Не рендерим DayTab пока нет клиента — иначе advice показываются до входа!
         if (!clientId) {
@@ -287,19 +304,22 @@
         if (loading || !window.HEYS || !window.HEYS.DayTab) {
             return showSkeleton ? React.createElement(DayTabSkeleton) : null;
         }
-        return React.createElement(window.HEYS.DayTab, {
-            // 🛡️ 2026-05-31: key включает selectedDate → React unmount+mount
-            // DayTab при смене даты. dayRaw initializer пересчитывается → читает
-            // scoped LS для новой date свежо. Без этого useState dayRaw запускался
-            // ТОЛЬКО при mount → dayRaw залипал, курaтор видел today's meals под
-            // всеми датами.
-            key: `daytab-${clientId || 'none'}-${selectedDate || 'today'}`,
-            clientId,
-            products,
-            selectedDate,
-            setSelectedDate,
-            subTab
-        });
+        return React.createElement('div', {
+            ref: visibleFrameRef,
+            'data-heys-visible-frame': isActive ? 'day' : undefined
+        }, React.createElement(window.HEYS.DayTab, {
+                // 🛡️ 2026-05-31: key включает selectedDate → React unmount+mount
+                // DayTab при смене даты. dayRaw initializer пересчитывается → читает
+                // scoped LS для новой date свежо. Без этого useState dayRaw запускался
+                // ТОЛЬКО при mount → dayRaw залипал, курaтор видел today's meals под
+                // всеми датами.
+                key: `daytab-${clientId || 'none'}-${selectedDate || 'today'}`,
+                clientId,
+                products,
+                selectedDate,
+                setSelectedDate,
+                subTab
+            }));
     }
 
     // 🚀 PERF: Memoize DayTabWithCloudSync so it does NOT re-render when AppRoot re-renders

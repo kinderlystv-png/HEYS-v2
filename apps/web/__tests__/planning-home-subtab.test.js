@@ -48,8 +48,9 @@ describe('HEYS Planning home subtab helpers', () => {
         expect(window.HEYS.Planning.getInitialHomeScreen('tasks')).toBe('tasks');
         expect(window.HEYS.Planning.getInitialHomeScreen('goals')).toBe('goals');
         expect(window.HEYS.Planning.getInitialHomeScreen('checklists')).toBe('checklists');
+        expect(window.HEYS.Planning.getInitialHomeScreen('reading')).toBe('reading');
         expect(window.HEYS.Planning.getInitialHomeScreen('unknown')).toBe('calendar');
-        expect(window.HEYS.Planning.SUBNAV_ITEMS.map((item) => item.id)).toEqual(['tasks', 'goals', 'calendar', 'chrono', 'checklists']);
+        expect(window.HEYS.Planning.SUBNAV_ITEMS.map((item) => item.id)).toEqual(['tasks', 'goals', 'calendar', 'chrono', 'checklists', 'reading']);
     });
 
     it('auto-syncs to home screen only when at DEFAULT fallback, never when already on a real screen', () => {
