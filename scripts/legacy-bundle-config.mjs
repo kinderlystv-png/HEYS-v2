@@ -1,3 +1,8 @@
+export const READING_BOOK_SOURCES = [
+    'reading/books/carl-sewell-customers-for-life_v1.js',
+    'reading/books/ray-dalio-principles_v1.js',
+];
+
 export const LEGACY_BUNDLES = {
     'boot-core': [
         'heys_dev_utils.js',
@@ -339,6 +344,7 @@ export const LEGACY_BUNDLES = {
         'heys_planning_checklists_v1.js',
         'heys_planning_goal_map_v1.js',
         'heys_reading_catalog_v1.js',
+        ...READING_BOOK_SOURCES,
         'heys_planning_reading_v1.js',
         'heys_planning_v1.js',
     ],

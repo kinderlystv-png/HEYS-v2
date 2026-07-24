@@ -24,6 +24,9 @@ const messagesSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functio
 const classificationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql'), 'utf8');
 const visitMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_visit_observability.sql'), 'utf8');
 const pinLoginMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_pin_login_observability.sql'), 'utf8');
+const clientEntryMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_entry_observability.sql'), 'utf8');
+const runtimeEnvMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-25_client_observability_runtime_env.sql'), 'utf8');
+const devServerSource = fs.readFileSync(path.join(repoRoot, 'packages/core/src/server.js'), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -152,7 +155,7 @@ describe('client session observability', () => {
 
   it('announces fresh React PIN login only after the client id is installed', () => {
     const installAt = gateSource.indexOf('setClientId(targetClientId);');
-    const notifyAt = gateSource.indexOf("detail: { clientId: targetClientId, source: 'pin-login' }");
+    const notifyAt = gateSource.indexOf("detail: { clientId: targetClientId, source: 'pin-login', startVisit: true }");
     expect(installAt).toBeGreaterThan(-1);
     expect(notifyAt).toBeGreaterThan(installAt);
   });
@@ -244,6 +247,85 @@ describe('client session observability', () => {
     ]));
   });
 
+  it('starts a distinct visit for an explicit repeat client entry without splitting initial auth', async () => {
+    let now = 1000;
+    const { context, localStorage, listeners } = createLoggerRuntime({ now: () => now });
+    const coldVisit = context.HEYS.LogTrace.stats().visitId;
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    context.__heysAppReady = true;
+
+    listeners['heys:client-changed']({
+      detail: { clientId: context.HEYS.currentClientId, source: 'pin-login', startVisit: true },
+    });
+    expect(context.HEYS.LogTrace.stats().visitId).toBe(coldVisit);
+
+    now = 2500;
+    listeners['heys:client-changed']({
+      detail: { clientId: context.HEYS.currentClientId, source: 'pin-login', startVisit: true },
+    });
+    const entryVisit = context.HEYS.LogTrace.stats().visitId;
+    expect(entryVisit).not.toBe(coldVisit);
+    expect(context.HEYS.LogTrace.stats().visitKind).toBe('client_entry');
+    const rows = JSON.parse(localStorage.getItem('_heys_observability_queue_v1'));
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        event_name: 'visit_started',
+        visit_id: entryVisit,
+        event_context: expect.objectContaining({ visit_kind: 'client_entry', source: 'pin-login' }),
+      }),
+      expect.objectContaining({ event_name: 'client_opened', visit_id: entryVisit }),
+      expect.objectContaining({ event_name: 'visit_ready', visit_id: entryVisit }),
+    ]));
+  });
+
+  it('deduplicates client context readiness and does not split duplicate entry notifications', () => {
+    const { context, localStorage, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    listeners['heys:client-changed']({ detail: { clientId: context.HEYS.currentClientId, source: 'pin-login', startVisit: true } });
+    const visitId = context.HEYS.LogTrace.stats().visitId;
+    listeners['heys:client-changed']({ detail: { clientId: context.HEYS.currentClientId, source: 'pin-login', startVisit: true } });
+    expect(context.HEYS.LogTrace.stats().visitId).toBe(visitId);
+    const rows = JSON.parse(localStorage.getItem('_heys_observability_queue_v1'));
+    expect(rows.filter((row) => row.event_name === 'client_context_ready')).toHaveLength(1);
+  });
+
+  it('records client context again after the active client changes', () => {
+    const { context, localStorage, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    listeners['heys:client-changed']({ detail: { clientId: context.HEYS.currentClientId } });
+    context.HEYS.currentClientId = '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc';
+    listeners['heys:client-changed']({ detail: { clientId: context.HEYS.currentClientId } });
+    const rows = JSON.parse(localStorage.getItem('_heys_observability_queue_v1'));
+    expect(rows.filter((row) => row.event_name === 'client_context_ready')).toHaveLength(2);
+  });
+
+  it('distinguishes Phase A from full readiness and deduplicates each signal', () => {
+    const { context, localStorage, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phaseA: true } });
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phaseA: true } });
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phase: 'hot' } });
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phase: 'full', error: true } });
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phase: 'full' } });
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phase: 'full' } });
+    const rows = JSON.parse(localStorage.getItem('_heys_observability_queue_v1'));
+    expect(rows.filter((row) => row.event_name === 'initial_sync_phase_a_ready')).toHaveLength(1);
+    expect(rows.filter((row) => row.event_name === 'initial_sync_ready')).toHaveLength(1);
+    expect(rows.find((row) => row.event_name === 'initial_sync_ready').event_context)
+      .toMatchObject({ phase: 'initial_sync', result: 'full' });
+  });
+
+  it('does not report fallback wait after critical readiness in the same visit', () => {
+    const { context, localStorage, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    listeners.heysSyncCompleted({ detail: { clientId: context.HEYS.currentClientId, phaseA: true } });
+    context.console.warn('[HEYS.sync]', {
+      event: 'initial_sync_fallback_wait', source: 'sync', status: 'degraded', reason: 'critical_batch_unavailable',
+    });
+    const rows = JSON.parse(localStorage.getItem('_heys_observability_queue_v1'));
+    expect(rows.filter((row) => row.event_name === 'initial_sync_fallback_wait')).toHaveLength(0);
+  });
+
   it('measures resume sync readiness from the current sync cycle instead of page boot', async () => {
     let now = 1000;
     const { context, requests, listeners, documentListeners } = createLoggerRuntime({ now: () => now });
@@ -291,6 +373,51 @@ describe('client session observability', () => {
     expect(pinLoginMigrationSource).toContain('NOT EXISTS');
     expect(pinLoginMigrationSource).toContain("THEN 'abandoned'");
     expect(pinLoginMigrationSource).toContain("'pin_success'::text AS last_success_event");
+  });
+
+  it('classifies explicit client entries separately in the visit summary', () => {
+    expect(clientEntryMigrationSource).toContain("event_context->>'visit_kind' = 'client_entry'");
+    expect(clientEntryMigrationSource).toContain("THEN 'client_entry'");
+    expect(diagnosticsSource).toContain("kind === 'client_entry'");
+    expect(runtimeEnvMigrationSource).toContain('login_without_trace AS');
+    expect(runtimeEnvMigrationSource).toContain("'pin-' || se.id::text AS visit_id");
+    expect(runtimeEnvMigrationSource).toContain('UNION ALL');
+  });
+
+  it('labels telemetry environment on the server and hides non-production visits by default', () => {
+    expect(restSource).toContain('function resolveTelemetryRuntimeEnv(event)');
+    expect(restSource).toContain("process.env.NODE_ENV === 'development'");
+    expect(restSource).toContain("process.env.NODE_ENV === 'test'");
+    expect(restSource).toContain("'runtime_env'");
+    expect(restSource).not.toContain('row.runtime_env');
+    expect(devServerSource).toContain("headers['x-heys-runtime-env'] = 'local'");
+    expect(devServerSource).toContain("/^\\/rest\\/client_log_trace");
+    expect(restSource).toContain("event?.headers?.['x-heys-runtime-env']");
+    const corsBlock = restSource.split('function getCorsHeaders')[1].split('async function handleRestRequest')[0];
+    const allowHeadersLine = corsBlock.split('\n').find((line) => line.includes('Access-Control-Allow-Headers'));
+    expect(allowHeadersLine).not.toContain('x-heys-runtime-env');
+    expect(runtimeEnvMigrationSource).toContain("ADD COLUMN IF NOT EXISTS runtime_env text NOT NULL DEFAULT 'production'");
+    expect(runtimeEnvMigrationSource).toContain("p_include_nonproduction boolean DEFAULT false");
+    expect(runtimeEnvMigrationSource).toContain("COALESCE(p_include_nonproduction, false) OR s.runtime_env = 'production'");
+
+    const context = { document: {}, navigator: {}, console };
+    context.window = context;
+    context.globalThis = context;
+    vm.runInNewContext(diagnosticsSource, context, { filename: 'heys_client_diagnostics_v1.js' });
+    const baseFilters = { range: '24h', clientId: '', search: '', status: 'all', device: '', mode: '', build: '', stage: '', sort: 'problems' };
+
+    expect(context.HEYS.ClientDiagnostics._test.buildOverviewParams(baseFilters, null).p_include_nonproduction).toBeUndefined();
+    expect(context.HEYS.ClientDiagnostics._test.buildOverviewParams({ ...baseFilters, includeNonProduction: true }, null).p_include_nonproduction).toBe(true);
+    expect(context.HEYS.ClientDiagnostics._test.buildDailyProblemsParams(null, new Date('2026-07-25T12:00:00Z')).p_include_nonproduction).toBeUndefined();
+    expect(context.HEYS.ClientDiagnostics._test.buildDailyProblemsParams(null, new Date('2026-07-25T12:00:00Z'), true).p_include_nonproduction).toBe(true);
+    expect(diagnosticsSource).toContain('Включая локальные тесты');
+  });
+
+  it('keeps unnamed console warnings from degrading a ready visit', () => {
+    expect(runtimeEnvMigrationSource).toContain("level = 'error' OR (event_name IS NOT NULL AND (level = 'warn' OR event_status IN ('degraded', 'timeout', 'failed')))");
+    expect(runtimeEnvMigrationSource).toContain("count(*) FILTER (WHERE event_name IS NOT NULL AND (level = 'warn' OR event_status IN ('degraded', 'timeout')))");
+    expect(runtimeEnvMigrationSource).toContain("'pin_success'::text AS last_success_event");
+    expect(runtimeEnvMigrationSource).toContain("'production'::text AS runtime_env");
   });
 
   it('forces server-side identity and idempotent inserts', () => {
@@ -408,16 +535,16 @@ describe('client session observability', () => {
     expect(visitMigrationSource).toContain("event_context->>'visit_kind' = 'resume'");
     expect(visitMigrationSource).toContain("'visit_id', s.visit_id");
     expect(visitMigrationSource).toContain('COALESCE(t.visit_id, t.boot_id) = s.visit_id');
-    expect(diagnosticsSource).toContain("session.visit_kind === 'resume' ? 'возврат' : 'запуск'");
+    expect(diagnosticsSource).toContain("if (kind === 'resume')");
+    expect(diagnosticsSource).toContain("if (kind === 'client_entry')");
     expect(diagnosticsSource).toContain("'visit_id: ' + (session.visit_id || 'unknown')");
   });
 
   it('keeps routine EWS insufficiency visible without degrading a ready visit', () => {
-    expect(visitMigrationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
-    expect(pinLoginMigrationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
+    expect(runtimeEnvMigrationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
     expect(classificationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
-    expect(visitMigrationSource).toMatch(/count\(\*\) FILTER \(WHERE level = 'warn' OR event_status IN \('degraded', 'timeout'\)\)/);
-    expect(visitMigrationSource).toMatch(/array_agg\(event_name[\s\S]*level IN \('warn', 'error'\)[\s\S]*AS problem_event/);
+    expect(runtimeEnvMigrationSource).toMatch(/count\(\*\) FILTER \(WHERE event_name IS NOT NULL AND \(level = 'warn' OR event_status IN \('degraded', 'timeout'\)\)\)/);
+    expect(runtimeEnvMigrationSource).toMatch(/array_agg\(event_name[\s\S]*level IN \('warn', 'error'\)[\s\S]*AS problem_event/);
   });
 
   it('keeps curator cookies off client-session gamification RPCs', () => {

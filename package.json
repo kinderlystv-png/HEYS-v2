@@ -83,6 +83,8 @@
     "push:preflight": "node scripts/push-preflight.mjs",
     "push:ready": "node scripts/release-prepare-and-commit.mjs",
     "push:safe": "node scripts/push-safe.mjs",
+    "reading:check": "node scripts/validate-reading-catalog.mjs",
+    "reading:new": "node scripts/create-reading-summary.mjs",
     "release": "pnpm run build:packages && changeset publish",
     "release:prepare-and-commit": "node scripts/release-prepare-and-commit.mjs",
     "security:l6-watchdogs": "node scripts/security/l6-watchdogs-check.mjs",

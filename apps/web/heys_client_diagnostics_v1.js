@@ -76,7 +76,7 @@
 
   var EVENT_LABELS = {
     pin_success: 'Вход выполнен', pin_failed: 'Ошибка входа', pin_rate_limited: 'Вход временно ограничен',
-    visit_started: 'Посещение началось', app_foregrounded: 'Приложение открыто из фона', visit_ready: 'Посещение готово',
+    visit_started: 'Посещение началось', client_opened: 'Клиент открыт', app_foregrounded: 'Приложение открыто из фона', visit_ready: 'Посещение готово',
     boot_started: 'Запуск приложения', boot_ready: 'Приложение готово', boot_failed: 'Ошибка запуска',
     app_runtime_failed: 'Ошибка приложения', sync_cycle_started: 'Синхронизация началась',
     sync_cycle_completed: 'Синхронизация завершена', sync_cycle_failed: 'Ошибка синхронизации',
@@ -87,6 +87,8 @@
     hunger_prompt_shown: 'Показан голод', hunger_prompt_submitted: 'Голод заполнен',
     morning_checkin_shown: 'Показан чекин', morning_checkin_completed: 'Чекин завершён',
     ews_input_insufficient: 'Недостаточно данных для раннего предупреждения',
+    initial_sync_phase_a_ready: 'Критические данные первого экрана готовы',
+    initial_sync_ready: 'Полная синхронизация готова',
     initial_sync_fallback_wait: 'Синхронизация ждала резервные данные',
     first_visible_frame: 'Первый экран действительно показан',
     blank_screen_guard_triggered: 'Экран не появился вовремя',
@@ -96,6 +98,16 @@
   var STAGE_LABELS = { boot: 'загрузка', sync: 'синхронизация', write: 'сохранение', runtime: 'работа приложения', warning: 'предупреждение' };
 
   function eventLabel(name) { return EVENT_LABELS[name] || String(name || 'Событие').replace(/_/g, ' '); }
+  function visitKindLabel(kind, compact) {
+    if (kind === 'resume') return compact ? 'возврат' : 'возврат из фона';
+    if (kind === 'client_entry') return compact ? 'вход' : 'вход в клиента';
+    return compact ? 'запуск' : 'холодный запуск';
+  }
+  function runtimeEnvLabel(runtimeEnv) {
+    if (runtimeEnv === 'local') return 'локальный QA';
+    if (runtimeEnv === 'test') return 'автотест';
+    return 'production';
+  }
   function contextLabel(context) {
     if (!context || typeof context !== 'object') return '';
     var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней', visit_kind: 'тип посещения', absence_ms: 'в фоне, мс', auth_state: 'авторизация', sync_state: 'синхронизация' };
@@ -122,7 +134,8 @@
       'client_id: ' + (clientId || session.client_id || 'unknown'),
       'boot_id: ' + (session.boot_id || 'unknown'),
       'visit_id: ' + (session.visit_id || 'unknown'),
-      'Тип посещения: ' + (session.visit_kind === 'resume' ? 'возврат из фона' : 'холодный запуск'),
+      'Тип посещения: ' + visitKindLabel(session.visit_kind, false),
+      'Окружение: ' + runtimeEnvLabel(session.runtime_env),
       'Статус: ' + status[0] + ' (' + (session.outcome || 'starting') + ')',
       'Проблемный этап: ' + (session.problem_stage || 'не определён'),
       'Проблемное событие: ' + (session.problem_event || 'не определено'),
@@ -183,7 +196,7 @@
       ''
     ];
     (data && data.sessions || []).forEach(function (session) {
-      lines.push([session.client_name || 'Клиент', formatDate(session.started_at), session.visit_kind === 'resume' ? 'возврат' : 'запуск', (STATUS[session.outcome] || STATUS.starting)[0], session.device_class, session.os_name, session.browser_name, session.display_mode, 'build=' + (session.build_id || 'unknown')].filter(Boolean).join(' | '));
+      lines.push([session.client_name || 'Клиент', formatDate(session.started_at), visitKindLabel(session.visit_kind, true), runtimeEnvLabel(session.runtime_env), (STATUS[session.outcome] || STATUS.starting)[0], session.device_class, session.os_name, session.browser_name, session.display_mode, 'build=' + (session.build_id || 'unknown')].filter(Boolean).join(' | '));
       if (session.problem_stage) lines.push('  Проблемный этап: ' + (STAGE_LABELS[session.problem_stage] || session.problem_stage));
       (session.events || []).forEach(function (event) { lines.push('  ' + formatDate(event.at) + ' ' + eventLabel(event.name) + ' ' + (event.status || '')); });
     });
@@ -196,8 +209,8 @@
     return day.toISOString();
   }
 
-  function buildDailyProblemsParams(cursor, nowValue) {
-    return {
+  function buildDailyProblemsParams(cursor, nowValue, includeNonProduction) {
+    var params = {
       p_since: localDayStartIso(nowValue),
       p_client_id: null,
       p_search: null,
@@ -213,9 +226,11 @@
       p_cursor_duration_ms: cursor && cursor.duration_ms != null ? cursor.duration_ms : null,
       p_limit: 100
     };
+    if (includeNonProduction) params.p_include_nonproduction = true;
+    return params;
   }
 
-  async function fetchAllDailyProblemVisits(rpc, nowValue) {
+  async function fetchAllDailyProblemVisits(rpc, nowValue, includeNonProduction) {
     if (typeof rpc !== 'function') throw new Error('observability_rpc_unavailable');
     var sessions = [];
     var seenVisits = Object.create(null);
@@ -223,7 +238,7 @@
     var cursor = null;
     var firstPayload = null;
     do {
-      var response = await rpc('get_curator_observability_overview', buildDailyProblemsParams(cursor, nowValue));
+      var response = await rpc('get_curator_observability_overview', buildDailyProblemsParams(cursor, nowValue, includeNonProduction));
       if (response && response.error) throw new Error(response.error.message || response.error);
       var payload = unwrapRpcPayload(response, 'get_curator_observability_overview') || { sessions: [] };
       if (!firstPayload) firstPayload = payload;
@@ -310,7 +325,7 @@
   }
 
   function buildOverviewParams(filters, cursor) {
-    return {
+    var params = {
       p_since: rangeSince(filters.range),
       p_client_id: filters.clientId || null,
       p_search: filters.search || null,
@@ -326,6 +341,8 @@
       p_cursor_duration_ms: cursor && cursor.duration_ms != null ? cursor.duration_ms : null,
       p_limit: 50
     };
+    if (filters.includeNonProduction) params.p_include_nonproduction = true;
+    return params;
   }
 
   function unwrapRpcPayload(response, functionName) {
@@ -343,7 +360,7 @@
     ensureStyles();
     var h = React.createElement;
     var clients = props && props.clients || [];
-    var initialFilters = { range: '24h', clientId: '', search: '', status: 'all', device: '', mode: '', build: '', stage: '', sort: 'problems' };
+    var initialFilters = { range: '24h', clientId: '', search: '', status: 'all', device: '', mode: '', build: '', stage: '', sort: 'problems', includeNonProduction: false };
     var _filters = React.useState(initialFilters), filters = _filters[0], setFilters = _filters[1];
     var _query = React.useState(''), searchQuery = _query[0], setSearchQuery = _query[1];
     var _data = React.useState({ summary: {}, sessions: [], next_cursor: null, has_more: false }), data = _data[0], setData = _data[1];
@@ -391,7 +408,7 @@
     async function copyDailyMegaLog() {
       setMegaLoading(true);
       try {
-        var megaData = await fetchAllDailyProblemVisits(HEYS.YandexAPI.rpc.bind(HEYS.YandexAPI), new Date());
+        var megaData = await fetchAllDailyProblemVisits(HEYS.YandexAPI.rpc.bind(HEYS.YandexAPI), new Date(), filters.includeNonProduction);
         await copyText(dailyMegaLogReport(megaData));
         HEYS.Toast?.success?.('Мегалог скопирован: ' + megaData.sessions.length + ' посещений');
       } catch (megaError) {
@@ -426,6 +443,7 @@
         h('select', { className: 'cdo-control', value: filters.status, onChange: function (e) { update('status', e.target.value); }, 'aria-label': 'Статус' }, option('all', 'Все статусы'), option('problems', 'Только проблемы'), option('ready', 'Штатно'), option('failed', 'Сбой'), option('degraded', 'С отклонениями'), option('abandoned', 'Не завершено'), option('starting', 'Загружается')),
         h('select', { className: 'cdo-control', value: filters.device, onChange: function (e) { update('device', e.target.value); }, 'aria-label': 'Устройство' }, option('', 'Все устройства'), option('mobile', 'Телефон'), option('tablet', 'Планшет'), option('desktop', 'Компьютер')),
         h('select', { className: 'cdo-control', value: filters.mode, onChange: function (e) { update('mode', e.target.value); }, 'aria-label': 'Режим запуска' }, option('', 'Браузер и приложение'), option('standalone', 'Установленное приложение'), option('browser', 'Браузер')),
+        h('select', { className: 'cdo-control', value: filters.includeNonProduction ? 'all' : 'production', onChange: function (e) { update('includeNonProduction', e.target.value === 'all'); }, 'aria-label': 'Окружение' }, option('production', 'Только рабочие входы'), option('all', 'Включая локальные тесты')),
         h('input', { className: 'cdo-control', value: filters.build, onChange: function (e) { update('build', e.target.value.trim()); }, placeholder: 'Версия / build', 'aria-label': 'Версия приложения' }),
         h('select', { className: 'cdo-control', value: filters.stage, onChange: function (e) { update('stage', e.target.value); }, 'aria-label': 'Проблемный этап' }, option('', 'Все этапы'), option('boot', 'Загрузка'), option('sync', 'Синхронизация'), option('write', 'Сохранение'), option('runtime', 'Работа приложения'), option('warning', 'Предупреждение')),
         h('select', { className: 'cdo-control', value: filters.sort, onChange: function (e) { update('sort', e.target.value); }, 'aria-label': 'Сортировка' }, option('problems', 'Сначала проблемы'), option('newest', 'Сначала новые'), option('duration', 'Самые долгие'))
@@ -441,9 +459,9 @@
         var problemText = session.problem_stage ? 'Проблема: ' + (STAGE_LABELS[session.problem_stage] || session.problem_stage) : 'Последний успешный этап: ' + eventLabel(session.last_success_event);
         return h('article', { key: key, className: 'cdo-session cdo-session--' + status[1] },
           h('button', { type: 'button', className: 'cdo-row', 'aria-expanded': isOpen, onClick: function () { setExpanded(function (prev) { var next = Object.assign({}, prev); next[key] = !prev[key]; return next; }); } },
-            h('div', null, h('div', { className: 'cdo-client' }, session.client_name || 'Клиент'), h('div', { className: 'cdo-small' }, formatDate(session.started_at) + ' · ' + (session.visit_kind === 'resume' ? 'возврат' : 'запуск'))),
+            h('div', null, h('div', { className: 'cdo-client' }, session.client_name || 'Клиент'), h('div', { className: 'cdo-small' }, formatDate(session.started_at) + ' · ' + visitKindLabel(session.visit_kind, true))),
             h('div', null, h('span', { className: 'cd-status cd-status--' + status[1] }, status[0]), h('div', { className: 'cdo-small' }, formatDuration(session.duration_ms))),
-            h('div', null, h('div', null, [session.device_class, session.os_name, session.browser_name].filter(Boolean).join(' · ') || 'Не определено'), h('div', { className: 'cdo-small' }, (session.display_mode || '—') + ' · ' + (session.build_id || 'unknown'))),
+            h('div', null, h('div', null, [session.device_class, session.os_name, session.browser_name].filter(Boolean).join(' · ') || 'Не определено'), h('div', { className: 'cdo-small' }, (session.display_mode || '—') + ' · ' + (session.build_id || 'unknown') + ' · ' + runtimeEnvLabel(session.runtime_env))),
             h('div', { className: session.problem_stage ? 'cdo-problem' : 'cdo-ok' }, problemText),
             h('span', { className: 'cdo-chevron', 'aria-hidden': 'true' }, isOpen ? '⌃' : '⌄')
           ),
@@ -485,7 +503,7 @@
     top.appendChild(el('span', 'cd-device', [session.device_class, session.os_name, session.browser_name, session.display_mode].filter(Boolean).join(' · ') || 'Устройство не определено'));
     button.appendChild(top);
     var meta = el('div', 'cd-meta');
-    meta.appendChild(el('span', '', session.visit_kind === 'resume' ? 'Возврат из фона' : 'Холодный запуск'));
+    meta.appendChild(el('span', '', visitKindLabel(session.visit_kind, false).replace(/^./, function (char) { return char.toUpperCase(); })));
     meta.appendChild(el('span', '', 'Версия: ' + (session.build_id || 'unknown')));
     meta.appendChild(el('span', '', 'Длительность: ' + formatDuration(session.duration_ms)));
     meta.appendChild(el('span', '', 'Событий: ' + Number(session.event_count || 0)));
@@ -532,7 +550,7 @@
     ensureStyles();
     document.body.style.overflow = 'hidden';
 
-    var state = { range: '24h', status: 'all', data: null };
+    var state = { range: '24h', status: 'all', includeNonProduction: false, data: null };
     var root = el('div', 'cd-backdrop');
     activeRoot = root;
     var modal = el('section', 'cd-modal');
@@ -555,8 +573,10 @@
     [['24h', '24 часа'], ['7d', '7 дней'], ['30d', '30 дней']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; range.appendChild(o); });
     var status = el('select', 'cd-control');
     [['all', 'Все посещения'], ['problems', 'Только проблемы'], ['ready', 'Только штатные']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; status.appendChild(o); });
+    var environment = el('select', 'cd-control');
+    [['production', 'Только рабочие входы'], ['all', 'Включая локальные тесты']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; environment.appendChild(o); });
     var copy = el('button', 'cd-copy', 'Скопировать отчёт'); copy.type = 'button'; copy.disabled = true;
-    toolbar.appendChild(range); toolbar.appendChild(status); toolbar.appendChild(copy); modal.appendChild(toolbar);
+    toolbar.appendChild(range); toolbar.appendChild(status); toolbar.appendChild(environment); toolbar.appendChild(copy); modal.appendChild(toolbar);
     var body = el('div', 'cd-body'); modal.appendChild(body);
 
     function draw() {
@@ -591,9 +611,9 @@
       var hours = state.range === '30d' ? 24 * 30 : (state.range === '7d' ? 24 * 7 : 24);
       var since = new Date(Date.now() - hours * 3600000).toISOString();
       try {
-        var response = await HEYS.YandexAPI.rpc('get_client_observability_by_curator', {
-          p_client_id: options.clientId, p_since: since, p_limit: 100
-        });
+        var rpcParams = { p_client_id: options.clientId, p_since: since, p_limit: 100 };
+        if (state.includeNonProduction) rpcParams.p_include_nonproduction = true;
+        var response = await HEYS.YandexAPI.rpc('get_client_observability_by_curator', rpcParams);
         if (response && response.error) throw new Error(response.error.message || response.error);
         state.data = unwrapRpcPayload(response, 'get_client_observability_by_curator') || { sessions: [], logins: [] };
         copy.disabled = false;
@@ -606,6 +626,7 @@
 
     range.addEventListener('change', function () { state.range = range.value; load(); });
     status.addEventListener('change', function () { state.status = status.value; draw(); });
+    environment.addEventListener('change', function () { state.includeNonProduction = environment.value === 'all'; load(); });
     copy.addEventListener('click', async function () {
       if (!state.data) return;
       try {

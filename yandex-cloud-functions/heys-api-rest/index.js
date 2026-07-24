@@ -415,7 +415,8 @@ const ALLOWED_COLUMNS = {
   client_log_trace: [
     'id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
     'event_id', 'boot_id', 'visit_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
-    'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
+    'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context',
+    'runtime_env'
   ],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients, kv_store, shared_products_pending, consents — removed
@@ -501,6 +502,16 @@ function getCorsHeaders(origin) {
 
 function isAllowedOrigin(origin) {
   return !!origin && ALLOWED_ORIGINS.includes(origin);
+}
+
+function resolveTelemetryRuntimeEnv(event) {
+  const configured = String(process.env.HEYS_RUNTIME_ENV || '').trim().toLowerCase();
+  if (configured === 'production' || configured === 'local' || configured === 'test') return configured;
+  if (process.env.NODE_ENV === 'test') return 'test';
+  if (process.env.NODE_ENV === 'development') return 'local';
+  const proxyValue = String(event?.headers?.['x-heys-runtime-env'] || event?.headers?.['X-Heys-Runtime-Env'] || '').trim().toLowerCase();
+  if (proxyValue === 'local' || proxyValue === 'test') return proxyValue;
+  return 'production';
 }
 
 async function handleRestRequest(event, context) {
@@ -1047,11 +1058,13 @@ async function handleRestRequest(event, context) {
           const firstClaimedClientId = rawRows.find(row => typeof row?.client_id === 'string')?.client_id || null;
           const claimedClientId = /^[0-9a-f-]{36}$/i.test(firstClaimedClientId || '') ? firstClaimedClientId : null;
           const identity = await resolveTelemetryIdentity(event, client, claimedClientId);
+          const runtimeEnv = resolveTelemetryRuntimeEnv(event);
 
           const cols = [
             'client_id', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
             'event_id', 'boot_id', 'visit_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
-            'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
+            'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context',
+            'runtime_env'
           ];
           const values = [];
           const placeholders = [];
@@ -1106,7 +1119,7 @@ async function handleRestRequest(event, context) {
               uuid(row.event_id), textMeta(row.boot_id), textMeta(row.visit_id), textMeta(row.event_name), textMeta(row.event_source),
               textMeta(row.event_status), textMeta(row.flow_id), duration, textMeta(row.build_id),
               textMeta(row.device_id), textMeta(row.device_class), textMeta(row.os_name), textMeta(row.browser_name),
-              textMeta(row.display_mode), identity.actorRole, identity.trustLevel, context
+              textMeta(row.display_mode), identity.actorRole, identity.trustLevel, context, runtimeEnv
             );
             inserted++;
           }
@@ -1130,7 +1143,7 @@ async function handleRestRequest(event, context) {
 
           console.log('[REST POST client_log_trace]', {
             accepted, duplicates: inserted - accepted, skipped, total: rawRows.length,
-            trustLevel: identity.trustLevel, actorRole: identity.actorRole
+            trustLevel: identity.trustLevel, actorRole: identity.actorRole, runtimeEnv
           });
 
           return {

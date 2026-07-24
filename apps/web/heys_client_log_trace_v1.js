@@ -62,6 +62,12 @@
   var LAST_SYNC_DURATION_MS = null;
   var hiddenAt = null;
   var lastResumeAt = 0;
+  var lastClientEntryAt = 0;
+  var lastClientEntryClientId = null;
+  var LAST_CLIENT_ID = null;
+  var LAST_CONTEXT_READY_KEY = null;
+  var LAST_PHASE_A_READY_KEY = null;
+  var LAST_FULL_SYNC_READY_KEY = null;
   var DEVICE_ID = (function () {
     try {
       var k = '_heys_observability_device';
@@ -287,6 +293,10 @@
   function deriveStructuredMeta(level, args) {
     var meta = extractTraceMeta(args);
     if (!meta.body || !meta.event) return null;
+    if (meta.event === 'initial_sync_fallback_wait') {
+      var fallbackKey = ACTIVE_VISIT_ID + ':' + (getClientId() || 'anonymous');
+      if (LAST_PHASE_A_READY_KEY === fallbackKey || LAST_FULL_SYNC_READY_KEY === fallbackKey) return null;
+    }
     var body = meta.body;
     return {
       event_id: randomId('event'),
@@ -764,6 +774,7 @@
     VISIT_READY_EMITTED = false;
     ACTIVE_SYNC_STARTED_AT = null;
     LAST_SYNC_DURATION_MS = null;
+    resetVisitReadiness();
     event('visit_started', {
       source: source || 'visibility', phase: 'foreground', visit_kind: 'resume',
       absence_ms: absenceMs, auth_state: currentAuthState(), sync_state: currentSyncState(),
@@ -780,6 +791,44 @@
         auth_state: 'authenticated', sync_state: currentSyncState(), durationMs: Date.now() - VISIT_STARTED_AT
       });
     }
+  }
+
+  function resetVisitReadiness() {
+    LAST_CONTEXT_READY_KEY = null;
+    LAST_PHASE_A_READY_KEY = null;
+    LAST_FULL_SYNC_READY_KEY = null;
+  }
+
+  function startClientEntryVisit(source, clientId) {
+    var now = Date.now();
+    if (clientId && clientId === lastClientEntryClientId && now - lastClientEntryAt < 1000) return false;
+    lastClientEntryAt = now;
+    lastClientEntryClientId = clientId || null;
+    ACTIVE_VISIT_ID = randomId('visit');
+    ACTIVE_VISIT_KIND = 'client_entry';
+    VISIT_STARTED_AT = now;
+    VISIT_READY_EMITTED = false;
+    ACTIVE_SYNC_STARTED_AT = null;
+    LAST_SYNC_DURATION_MS = null;
+    resetVisitReadiness();
+    event('visit_started', {
+      source: source || 'client-entry', phase: 'identity', visit_kind: 'client_entry',
+      auth_state: currentAuthState(), sync_state: currentSyncState(),
+      online: typeof navigator !== 'undefined' ? navigator.onLine : true
+    });
+    event('client_opened', {
+      source: source || 'client-entry', phase: 'identity', visit_kind: 'client_entry',
+      auth_state: currentAuthState(), sync_state: currentSyncState()
+    });
+    if (getClientId() && global.__heysAppReady) {
+      VISIT_READY_EMITTED = true;
+      event('visit_ready', {
+        source: source || 'client-entry', status: 'ready', phase: 'identity',
+        visit_kind: 'client_entry', auth_state: 'authenticated',
+        sync_state: currentSyncState(), durationMs: Date.now() - VISIT_STARTED_AT
+      });
+    }
+    return true;
   }
 
   // Periodic flush
@@ -860,8 +909,21 @@
   global.addEventListener('offline', function () {
     event('network_offline', { source: 'browser', status: 'degraded', online: false }, 'warn');
   });
-  global.addEventListener('heys:client-changed', function () {
-    event('client_context_ready', { source: 'auth', phase: 'identity' });
+  global.addEventListener('heys:client-changed', function (ev) {
+    var detail = ev && ev.detail && typeof ev.detail === 'object' ? ev.detail : {};
+    var nextClientId = detail.clientId || getClientId() || null;
+    var shouldStartVisit = detail.startVisit === true && LAST_CLIENT_ID !== null;
+    if (shouldStartVisit) startClientEntryVisit(detail.source || 'client-entry', nextClientId);
+    else if (detail.startVisit === true) {
+      lastClientEntryAt = Date.now();
+      lastClientEntryClientId = nextClientId;
+    }
+    LAST_CLIENT_ID = nextClientId;
+    var contextReadyKey = ACTIVE_VISIT_ID + ':' + (nextClientId || 'anonymous');
+    if (LAST_CONTEXT_READY_KEY !== contextReadyKey) {
+      LAST_CONTEXT_READY_KEY = contextReadyKey;
+      event('client_context_ready', { source: 'auth', phase: 'identity' });
+    }
     if (ACTIVE_VISIT_KIND === 'resume' && global.__heysAppReady && !VISIT_READY_EMITTED) {
       VISIT_READY_EMITTED = true;
       event('visit_ready', {
@@ -871,11 +933,26 @@
     }
     flush('client-changed');
   });
-  global.addEventListener('heysSyncCompleted', function () {
+  global.addEventListener('heysSyncCompleted', function (ev) {
+    var detail = ev && ev.detail && typeof ev.detail === 'object' ? ev.detail : {};
+    var clientId = detail.clientId || getClientId() || null;
+    var readinessKey = ACTIVE_VISIT_ID + ':' + (clientId || 'anonymous');
     var durationMs = ACTIVE_SYNC_STARTED_AT == null
       ? (LAST_SYNC_DURATION_MS == null ? Date.now() - VISIT_STARTED_AT : LAST_SYNC_DURATION_MS)
       : Date.now() - ACTIVE_SYNC_STARTED_AT;
-    event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: durationMs });
+    if (detail.phaseA === true) {
+      if (LAST_PHASE_A_READY_KEY === readinessKey) return;
+      LAST_PHASE_A_READY_KEY = readinessKey;
+      event('initial_sync_phase_a_ready', {
+        source: detail.source || 'sync', status: 'ready', phase: 'critical_sync', durationMs: durationMs
+      });
+      return;
+    }
+    if (detail.phase !== 'full' || detail.error === true || LAST_FULL_SYNC_READY_KEY === readinessKey) return;
+    LAST_FULL_SYNC_READY_KEY = readinessKey;
+    event('initial_sync_ready', {
+      source: detail.source || 'sync', status: 'ready', phase: 'initial_sync', result: 'full', durationMs: durationMs
+    });
   });
   global.addEventListener('heys:progress', function (ev) {
     var phase = ev && ev.detail && ev.detail.phase ? String(ev.detail.phase) : '';

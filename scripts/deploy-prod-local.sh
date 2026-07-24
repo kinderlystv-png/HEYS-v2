@@ -12,6 +12,18 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Scoped deploy is the default. The legacy-compatible emergency full deploy
+# below is reachable only through an explicit --full decision.
+FULL_DEPLOY=0
+for arg in "$@"; do
+  case "$arg" in
+    --full) FULL_DEPLOY=1 ;;
+  esac
+done
+if [ "$FULL_DEPLOY" != "1" ]; then
+  exec "$ROOT/scripts/deploy-web-scoped.sh" "$@"
+fi
+
 # === Config ===
 YC_BUCKET_PWA="heys-app"
 YC_BUCKET_DEMO="try-heyslab-ru"
@@ -25,6 +37,7 @@ SKIP_LANDING=0
 SKIP_CDN=0
 for arg in "$@"; do
   case "$arg" in
+    --full)         : ;;
     --skip-landing) SKIP_LANDING=1 ;;
     --skip-cdn)     SKIP_CDN=1 ;;
   esac

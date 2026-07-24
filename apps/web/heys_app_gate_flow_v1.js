@@ -1954,7 +1954,7 @@
                                             setClientId(targetClientId);
                                             try {
                                                 window.dispatchEvent(new CustomEvent('heys:client-changed', {
-                                                    detail: { clientId: targetClientId, source: 'pin-login' }
+                                                    detail: { clientId: targetClientId, source: 'pin-login', startVisit: true }
                                                 }));
                                             } catch (_) { }
                                             resolveCriticalReady();
@@ -2389,7 +2389,9 @@
                                                                         setClientId(c.id);
                                                                         console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
                                                                         window.__heysLastDispatchedClientId = c.id;
-                                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+                                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                                                                            detail: { clientId: c.id, source: 'curator-client-open', startVisit: true }
+                                                                        }));
                                                                     }, 0);
                                                                 }
                                                             },

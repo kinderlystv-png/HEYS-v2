@@ -32,16 +32,10 @@ WITH visit_events AS (
     CASE
       WHEN bool_or(event_name IN ('boot_failed', 'app_runtime_failed') OR (event_name IS NOT NULL AND event_status = 'failed')) THEN 'failed'
       WHEN bool_or(event_name IN ('boot_ready', 'visit_ready')) THEN
-        CASE WHEN bool_or(
-          (level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed'))
-          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
-        ) THEN 'degraded' ELSE 'ready' END
+        CASE WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded' ELSE 'ready' END
       WHEN bool_or(event_name IN ('boot_started', 'visit_started')) AND max(client_ts) < now() - interval '90 seconds' THEN 'abandoned'
       WHEN max(client_ts) < now() - interval '90 seconds' AND bool_or(event_name IS NOT NULL) THEN
-        CASE WHEN bool_or(
-          (level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed'))
-          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
-        ) THEN 'degraded' ELSE 'ready' END
+        CASE WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded' ELSE 'ready' END
       ELSE 'starting'
     END AS outcome,
     count(*) FILTER (WHERE level = 'warn' OR event_status IN ('degraded', 'timeout'))::integer AS warning_count,

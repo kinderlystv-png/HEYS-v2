@@ -4670,7 +4670,8 @@ async function handleRpcRequest(event, context) {
         'p_curator_id': '::uuid',
         'p_client_id': '::uuid',
         'p_since': '::timestamptz',
-        'p_limit': '::int'
+        'p_limit': '::int',
+        'p_include_nonproduction': '::boolean'
       },
       'get_curator_observability_overview': {
         'p_curator_id': '::uuid',
@@ -4680,7 +4681,8 @@ async function handleRpcRequest(event, context) {
         'p_cursor_started_at': '::timestamptz',
         'p_cursor_problem_rank': '::int',
         'p_cursor_duration_ms': '::int',
-        'p_limit': '::int'
+        'p_limit': '::int',
+        'p_include_nonproduction': '::boolean'
       },
       'admin_extend_trial': {
         'p_client_id': '::uuid',

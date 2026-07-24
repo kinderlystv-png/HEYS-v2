@@ -377,6 +377,9 @@ async function proxyToProd(req, res) {
     // heys-api-rest / heys-api-auth: без ALLOW_LOCALHOST_ORIGINS=1 на CF Origin «http://localhost:3001»
     // даёт 403 {error:'cors_denied'}. Это server→server hop — подставляем разрешённый prod-origin (BFF).
     headers.origin = 'https://app.heyslab.ru';
+    if (/^\/rest\/client_log_trace(?:\?|$)/.test(req.originalUrl || '')) {
+      headers['x-heys-runtime-env'] = 'local';
+    }
     // Иначе undici запрашивает gzip, декодирует body, но может оставить Content-Encoding — браузер ломается (ERR_CONTENT_DECODING_FAILED).
     headers['accept-encoding'] = 'identity';
     if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {

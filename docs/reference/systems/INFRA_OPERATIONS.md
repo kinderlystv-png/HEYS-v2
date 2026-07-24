@@ -151,6 +151,15 @@ versioned seed migration и отдельно разрешённого production
    неявный commit агентом.
 10. Backend deploy останавливается при отставшем migration ledger или отсутствии
     production Gateway-маршрутов desired-state messenger API.
+11. Ручной scoped web deploy и CI проверяют bundle/hash-контракт через
+    `scripts/web-deploy-scope.mjs`. Перед ручной публикацией показывается полный
+    выбранный scope; после подтверждения любое новое source-изменение прерывает
+    upload. Решение о допустимости совместного scope остаётся за пользователем.
+12. `scripts/deploy-frontend.sh` — compatibility entrypoint к
+    `scripts/deploy-web-scoped.sh`, а не отдельный build/upload flow. Не legacy-
+    изменения (CSS/assets/config) fail-closed направляются в canonical full CI
+    deploy. `scripts/deploy-prod-local.sh` также запускает scoped flow по
+    умолчанию; прежний emergency full deploy требует отдельного явного `--full`.
 
 ## Подтверждённые слабые места и пробелы
 

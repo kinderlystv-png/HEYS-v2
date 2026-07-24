@@ -55,6 +55,20 @@
       "path": "scripts/db/migrations/2026-07-24_pin_login_observability.sql",
       "description": "Expose PIN logins with missing client telemetry as unfinished visits",
       "destructive": false
+    },
+    {
+      "id": "2026-07-24_client_entry_observability",
+      "order": 6,
+      "path": "scripts/db/migrations/2026-07-24_client_entry_observability.sql",
+      "description": "Track explicit PIN logins and curator client opens as separate visits",
+      "destructive": false
+    },
+    {
+      "id": "2026-07-25_client_observability_runtime_env",
+      "order": 7,
+      "path": "scripts/db/migrations/2026-07-25_client_observability_runtime_env.sql",
+      "description": "Separate server-derived local and test telemetry from production visit diagnostics",
+      "destructive": false
     }
   ]
 }

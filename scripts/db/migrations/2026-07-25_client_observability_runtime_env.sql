@@ -1,15 +1,35 @@
--- Treat every cold start and foreground resume as a separate client visit while
--- preserving boot_id as the immutable page-load identifier.
+-- Separate local/test telemetry from production observability while preserving
+-- explicit client-entry and synthetic PIN-only visit contracts.
+-- ROLLBACK: restore the order-6 observability view/functions, then drop
+-- idx_client_log_trace_runtime_env_ts, the runtime_env constraint and column.
 
 ALTER TABLE public.client_log_trace
-  ADD COLUMN IF NOT EXISTS visit_id text;
+  ADD COLUMN IF NOT EXISTS runtime_env text NOT NULL DEFAULT 'production';
 
-CREATE INDEX IF NOT EXISTS idx_client_log_trace_client_visit_ts
-  ON public.client_log_trace (client_id, visit_id, client_ts DESC)
-  WHERE client_id IS NOT NULL AND visit_id IS NOT NULL;
+DO $block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.client_log_trace'::regclass
+      AND conname = 'client_log_trace_runtime_env_check'
+  ) THEN
+    ALTER TABLE public.client_log_trace
+      ADD CONSTRAINT client_log_trace_runtime_env_check
+      CHECK (runtime_env IN ('production', 'local', 'test'));
+  END IF;
+END;
+$block$;
 
-COMMENT ON COLUMN public.client_log_trace.visit_id IS
-  'Cold-start or foreground-resume visit. Multiple visits may share one immutable boot_id.';
+UPDATE public.client_log_trace
+SET runtime_env = 'local'
+WHERE runtime_env = 'production'
+  AND page_url ~* '^https?://(localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?(?:/|$)';
+
+CREATE INDEX IF NOT EXISTS idx_client_log_trace_runtime_env_ts
+  ON public.client_log_trace (runtime_env, client_ts DESC);
+
+COMMENT ON COLUMN public.client_log_trace.runtime_env IS
+  'Server-derived telemetry environment. Browser payloads cannot choose this value.';
 
 CREATE OR REPLACE VIEW public.client_app_visit_summary_v1 AS
 WITH visit_events AS (
@@ -18,12 +38,13 @@ WITH visit_events AS (
   WHERE t.client_id IS NOT NULL
     AND t.boot_id IS NOT NULL
     AND t.actor_role = 'client'
-)
+), traced_visits AS (
 SELECT
   client_id,
   effective_visit_id AS visit_id,
   max(boot_id) AS boot_id,
   CASE
+    WHEN bool_or(event_name = 'visit_started' AND event_context->>'visit_kind' = 'client_entry') THEN 'client_entry'
     WHEN bool_or(event_name = 'visit_started' AND event_context->>'visit_kind' = 'resume') THEN 'resume'
     ELSE 'cold_start'
   END AS visit_kind,
@@ -45,7 +66,10 @@ SELECT
     ) THEN 'failed'
     WHEN bool_or(event_name IN ('boot_ready', 'visit_ready')) THEN
       CASE
-        WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
+        WHEN bool_or(
+          (level = 'error' OR (event_name IS NOT NULL AND (level = 'warn' OR event_status IN ('degraded', 'timeout', 'failed'))))
+          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
+        ) THEN 'degraded'
         ELSE 'ready'
       END
     WHEN bool_or(event_name IN ('boot_started', 'visit_started'))
@@ -53,12 +77,15 @@ SELECT
     WHEN max(client_ts) < now() - interval '90 seconds'
       AND bool_or(event_name IS NOT NULL) THEN
       CASE
-        WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
+        WHEN bool_or(
+          (level = 'error' OR (event_name IS NOT NULL AND (level = 'warn' OR event_status IN ('degraded', 'timeout', 'failed'))))
+          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
+        ) THEN 'degraded'
         ELSE 'ready'
       END
     ELSE 'starting'
   END AS outcome,
-  count(*) FILTER (WHERE level = 'warn' OR event_status IN ('degraded', 'timeout'))::integer AS warning_count,
+  count(*) FILTER (WHERE event_name IS NOT NULL AND (level = 'warn' OR event_status IN ('degraded', 'timeout')))::integer AS warning_count,
   bool_or(event_name IN ('initial_sync_ready', 'sync_cycle_completed')) AS initial_sync_completed,
   (array_agg(event_name ORDER BY client_ts DESC, id DESC)
     FILTER (WHERE event_status IN ('completed', 'ready', 'uploaded') OR event_name IN ('visit_ready', 'boot_ready', 'initial_sync_ready', 'sync_cycle_completed', 'write_uploaded')))[1]
@@ -71,18 +98,72 @@ SELECT
           OR event_status IN ('degraded', 'timeout', 'failed')
           OR event_name IN ('boot_failed', 'app_runtime_failed', 'sync_cycle_failed', 'write_failed')
         )
-    ))[1] AS problem_event
+    ))[1] AS problem_event,
+  CASE
+    WHEN bool_or(runtime_env = 'test') THEN 'test'
+    WHEN bool_or(runtime_env = 'local') THEN 'local'
+    ELSE 'production'
+  END AS runtime_env
 FROM visit_events
-GROUP BY client_id, effective_visit_id;
+GROUP BY client_id, effective_visit_id
+), login_without_trace AS (
+  SELECT
+    se.client_id,
+    'pin-' || se.id::text AS visit_id,
+    'pin-' || se.id::text AS boot_id,
+    'cold_start'::text AS visit_kind,
+    se.created_at AS started_at,
+    se.created_at AS last_event_at,
+    0::integer AS duration_ms,
+    NULL::text AS build_id,
+    NULL::text AS device_id,
+    CASE WHEN COALESCE(se.user_agent, '') ~* 'Mobile|Android|iPhone' THEN 'mobile' ELSE 'desktop' END AS device_class,
+    CASE
+      WHEN COALESCE(se.user_agent, '') ~* 'iPhone|iPad|iPod' THEN 'iOS'
+      WHEN COALESCE(se.user_agent, '') ~* 'Android' THEN 'Android'
+      ELSE 'other'
+    END AS os_name,
+    CASE
+      WHEN COALESCE(se.user_agent, '') ~* 'CriOS|Chrome' THEN 'Chrome'
+      WHEN COALESCE(se.user_agent, '') ~* 'Safari' THEN 'Safari'
+      ELSE 'other'
+    END AS browser_name,
+    'unknown'::text AS display_mode,
+    1::integer AS event_count,
+    0::integer AS error_count,
+    CASE WHEN se.created_at < now() - interval '90 seconds' THEN 'abandoned' ELSE 'starting' END AS outcome,
+    0::integer AS warning_count,
+    false AS initial_sync_completed,
+    'pin_success'::text AS last_success_event,
+    NULL::text AS problem_event,
+    'production'::text AS runtime_env
+  FROM public.security_events se
+  WHERE se.event_type = 'pin_success'
+    AND se.client_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.client_log_trace t
+      WHERE t.client_id = se.client_id
+        AND t.actor_role = 'client'
+        AND t.boot_id IS NOT NULL
+        AND t.client_ts BETWEEN se.created_at - interval '5 seconds' AND se.created_at + interval '2 minutes'
+    )
+)
+SELECT * FROM traced_visits
+UNION ALL
+SELECT * FROM login_without_trace;
 
 COMMENT ON VIEW public.client_app_visit_summary_v1 IS
-  'Structured client visit summary. Cold starts and foreground resumes are separate; boot_id remains the page-load identity.';
+  'Structured cold starts, explicit client entries and foreground resumes with server-derived runtime environment, plus PIN logins whose startup telemetry never arrived.';
+
+DROP FUNCTION IF EXISTS public.get_client_observability_by_curator(uuid, uuid, timestamptz, integer);
 
 CREATE OR REPLACE FUNCTION public.get_client_observability_by_curator(
   p_curator_id uuid,
   p_client_id uuid,
   p_since timestamptz DEFAULT now() - interval '24 hours',
-  p_limit integer DEFAULT 50
+  p_limit integer DEFAULT 50,
+  p_include_nonproduction boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -108,7 +189,9 @@ BEGIN
   WITH selected_sessions AS (
     SELECT s.*
     FROM public.client_app_visit_summary_v1 s
-    WHERE s.client_id = p_client_id AND s.started_at >= v_since
+    WHERE s.client_id = p_client_id
+      AND s.started_at >= v_since
+      AND (COALESCE(p_include_nonproduction, false) OR s.runtime_env = 'production')
     ORDER BY (s.outcome IN ('failed', 'degraded', 'abandoned')) DESC, s.started_at DESC
     LIMIT v_limit
   ), session_payload AS (
@@ -116,6 +199,7 @@ BEGIN
       'visit_id', s.visit_id,
       'visit_kind', s.visit_kind,
       'boot_id', s.boot_id,
+      'runtime_env', s.runtime_env,
       'started_at', s.started_at,
       'last_event_at', s.last_event_at,
       'duration_ms', s.duration_ms,
@@ -147,6 +231,7 @@ BEGIN
         WHERE t.client_id = p_client_id
           AND COALESCE(t.visit_id, t.boot_id) = s.visit_id
           AND t.actor_role = 'client'
+          AND t.runtime_env = s.runtime_env
           AND t.event_name IS NOT NULL
       ), '[]'::jsonb)
     ) AS payload, s.started_at
@@ -182,6 +267,14 @@ BEGIN
 END;
 $function$;
 
+REVOKE ALL ON FUNCTION public.get_client_observability_by_curator(uuid, uuid, timestamptz, integer, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_client_observability_by_curator(uuid, uuid, timestamptz, integer, boolean) TO heys_rpc;
+
+DROP FUNCTION IF EXISTS public.get_curator_observability_overview(
+  uuid, timestamptz, uuid, text, text[], text, text, text, text, text,
+  timestamptz, text, integer, integer, integer
+);
+
 CREATE OR REPLACE FUNCTION public.get_curator_observability_overview(
   p_curator_id uuid,
   p_since timestamptz DEFAULT now() - interval '24 hours',
@@ -197,7 +290,8 @@ CREATE OR REPLACE FUNCTION public.get_curator_observability_overview(
   p_cursor_boot_id text DEFAULT NULL,
   p_cursor_problem_rank integer DEFAULT NULL,
   p_cursor_duration_ms integer DEFAULT NULL,
-  p_limit integer DEFAULT 50
+  p_limit integer DEFAULT 50,
+  p_include_nonproduction boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -227,7 +321,11 @@ BEGIN
   PERFORM public.log_data_access(
     'curator', p_curator_id, p_client_id, 'get_curator_observability_overview',
     ARRAY['client_log_trace', 'security_events'], false, NULL, NULL,
-    jsonb_build_object('since', v_since, 'filtered_client', p_client_id IS NOT NULL)
+    jsonb_build_object(
+      'since', v_since,
+      'filtered_client', p_client_id IS NOT NULL,
+      'include_nonproduction', COALESCE(p_include_nonproduction, false)
+    )
   );
 
   WITH owned_sessions AS (
@@ -249,6 +347,7 @@ BEGIN
     FROM public.client_app_visit_summary_v1 s
     JOIN public.clients c ON c.id = s.client_id AND c.curator_id = p_curator_id
     WHERE s.started_at >= v_since
+      AND (COALESCE(p_include_nonproduction, false) OR s.runtime_env = 'production')
       AND (p_client_id IS NULL OR s.client_id = p_client_id)
       AND (NULLIF(trim(COALESCE(p_search, '')), '') IS NULL OR c.name ILIKE '%' || trim(p_search) || '%')
       AND (p_statuses IS NULL OR cardinality(p_statuses) = 0 OR s.outcome = ANY(p_statuses))
@@ -304,6 +403,7 @@ BEGIN
       'visit_id', s.visit_id,
       'visit_kind', s.visit_kind,
       'boot_id', s.boot_id,
+      'runtime_env', s.runtime_env,
       'started_at', s.started_at,
       'last_event_at', s.last_event_at,
       'duration_ms', s.duration_ms,
@@ -335,6 +435,7 @@ BEGIN
           FROM public.client_log_trace t
           WHERE t.client_id = s.client_id
             AND COALESCE(t.visit_id, t.boot_id) = s.visit_id
+            AND t.runtime_env = s.runtime_env
             AND t.actor_role = 'client' AND t.event_name IS NOT NULL
           UNION ALL
           SELECT
@@ -401,3 +502,12 @@ BEGIN
   RETURN v_result;
 END;
 $function$;
+
+REVOKE ALL ON FUNCTION public.get_curator_observability_overview(
+  uuid, timestamptz, uuid, text, text[], text, text, text, text, text,
+  timestamptz, text, integer, integer, integer, boolean
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_curator_observability_overview(
+  uuid, timestamptz, uuid, text, text[], text, text, text, text, text,
+  timestamptz, text, integer, integer, integer, boolean
+) TO heys_rpc;

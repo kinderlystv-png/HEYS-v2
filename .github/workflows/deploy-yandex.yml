@@ -307,6 +307,9 @@ jobs:
 
           echo "✅ boot-core is aligned with build-meta version $VERSION"
 
+      - name: Verify shared web deploy contract
+        run: node scripts/web-deploy-scope.mjs verify --files=scripts/legacy-bundle-config.mjs --dist=apps/web/dist
+
       - name: Read SW cache version
         run: |
           if [ -f apps/web/dist/sw.js ]; then
