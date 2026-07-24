@@ -118,6 +118,39 @@
         const sourceRefs = renderSourceRefs(block, book, onNavigate);
         if (block.type === 'heading') return h('h2', { key, id: getSectionId(book, block) }, block.text);
         if (block.type === 'lead') return h('p', { key, className: 'reading-block reading-block--lead' }, block.text, sourceRefs);
+        if (block.type === 'quick-summary') return h('section', {
+            key,
+            id: getSectionId(book, block),
+            className: 'reading-block reading-block--quick-summary',
+            'aria-labelledby': getSectionId(book, block) + '-title',
+        },
+        h('p', { className: 'reading-block__eyebrow' }, 'Краткая выжимка · пересказ'),
+        h('h2', { id: getSectionId(book, block) + '-title' }, block.title),
+        h('ol', null, block.items.map((item, index) => h('li', { key: block.id + '-' + index }, h('span', null, item)))),
+        sourceRefs,
+        );
+        if (block.type === 'applicability') {
+            const fields = [
+                ['strength', 'Что полезно'],
+                ['worksWhen', 'Когда работает'],
+                ['limitations', 'Где граница'],
+                ['experiment', 'Как проверить'],
+            ];
+            return h('section', {
+                key,
+                id: getSectionId(book, block),
+                className: 'reading-block reading-block--applicability',
+                'aria-labelledby': getSectionId(book, block) + '-title',
+            },
+            h('p', { className: 'reading-block__eyebrow' }, 'Второе мнение · HEYS'),
+            h('h2', { id: getSectionId(book, block) + '-title' }, block.title),
+            h('div', { className: 'reading-applicability__grid' }, fields.map(([field, label]) => h('section', {
+                key: field,
+                className: 'reading-applicability__item reading-applicability__item--' + field,
+            }, h('h3', null, label), h('p', null, block[field])))),
+            sourceRefs,
+            );
+        }
         if (block.type === 'quote') return h('blockquote', { key, className: 'reading-block reading-block--quote' },
             h('p', null, '«' + block.text + '»'),
             h('footer', null, block.attribution && '— ' + block.attribution, sourceRefs),
@@ -252,6 +285,8 @@
         };
 
         const headings = book.blocks.filter((block) => block.type === 'heading');
+        const quickLayerBlocks = book.blocks.slice(0, 4);
+        const fullSummaryBlocks = book.blocks.slice(4);
 
         const reader = h('div', {
             ref: rootRef,
@@ -272,6 +307,8 @@
                 h('div', { className: 'reading-reader__eyebrow' }, book.author + ' · ' + book.year + ' · ' + HEYS.Reading.estimateReadingMinutes(book) + ' мин'),
                 h('h1', { id: 'reading-reader-title' }, book.title),
                 h('p', { className: 'reading-reader__practical' }, book.practicalValue),
+                quickLayerBlocks.map((block) => renderBlock(block, book, navigateWithinReader)),
+                h('p', { className: 'reading-reader__depth-label' }, 'Полный разбор'),
                 h('details', { className: 'reading-toc' },
                     h('summary', null, h('span', null, 'Содержание'), h('span', null, headings.length + ' разделов')),
                     h('nav', { 'aria-label': 'Содержание книги' }, headings.map((heading, index) => h('a', {
@@ -280,7 +317,7 @@
                         onClick: (event) => navigateWithinReader(event, getSectionId(book, heading)),
                     }, h('span', null, index + 1), heading.text))),
                 ),
-                book.blocks.map((block) => renderBlock(block, book, navigateWithinReader)),
+                fullSummaryBlocks.map((block) => renderBlock(block, book, navigateWithinReader)),
                 h('section', { className: 'reading-sources', 'aria-labelledby': 'reading-sources-title' },
                     h('h2', { id: 'reading-sources-title' }, 'Источники и ссылки'),
                     h('ol', null, book.sources.map((source, index) => h('li', { key: source.url, id: getSourceId(book, index + 1) },

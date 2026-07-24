@@ -36,7 +36,10 @@ describe('reading authoring contract', () => {
         expect(Reading.getBookWordCount(book)).toBeGreaterThanOrEqual(1800);
         expect(Reading.getBookWordCount(book)).toBeLessThanOrEqual(2200);
         expect(book.editorialRank).toBe(20);
+        expect(book.schemaVersion).toBe(2);
         expect(book.topics).toContain('service');
+        expect(book.blocks[2]).toMatchObject({ type: 'quick-summary', voice: 'retelling' });
+        expect(book.blocks[3]).toMatchObject({ type: 'applicability', voice: 'review' });
         expect(book.blocks.filter((block) => block.voice === 'review').length).toBeGreaterThan(5);
         expect(book.blocks.some((block) => block.type === 'details')).toBe(true);
         expect(Reading.getCatalogDiagnostics().errors).toEqual([]);
@@ -52,7 +55,10 @@ describe('reading authoring contract', () => {
         expect(Reading.getBookWordCount(book)).toBeLessThanOrEqual(2200);
         expect(book.sources).toHaveLength(4);
         expect(book.editorialRank).toBe(10);
-        expect(book.blocks.filter((block) => block.type === 'details')).toHaveLength(2);
+        expect(book.schemaVersion).toBe(2);
+        expect(book.blocks[2].items).toHaveLength(6);
+        expect(book.blocks[3]).toMatchObject({ type: 'applicability', voice: 'review' });
+        expect(book.blocks.filter((block) => block.type === 'details')).toHaveLength(3);
         expect(book.blocks.filter((block) => block.sectionRole === 'decision-process')).toHaveLength(1);
         expect(book.blocks.some((block) => block.text?.includes('Боль + осмысление'))).toBe(true);
         expect(Reading.getCatalogDiagnostics().errors).toEqual([]);
@@ -120,15 +126,59 @@ describe('reading authoring contract', () => {
         ]));
     });
 
+    it('requires separate quick-summary and applicability blocks with enough depth', () => {
+        const { context, Reading } = createReading();
+        vm.runInContext(dalioSource, context);
+        const book = structuredClone(Reading.BOOKS[0]);
+        book.blocks[2].voice = 'review';
+        book.blocks[2].items = book.blocks[2].items.slice(0, 4);
+        book.blocks[3].voice = 'retelling';
+        book.blocks[3].strength = 'Краткая оценка 8/10.';
+        book.blocks[3].worksWhen = 'Краткое условие.';
+        book.blocks[3].limitations = 'Краткое ограничение.';
+        book.blocks[3].experiment = 'Краткая проверка.';
+        const result = Reading.validateBookSummary(book, [book]);
+        expect(result.errors).toEqual(expect.arrayContaining([
+            expect.objectContaining({ code: 'E_QUICK_SUMMARY_VOICE', path: 'ray-dalio-principles.blocks[2].voice' }),
+            expect.objectContaining({ code: 'E_QUICK_SUMMARY_ITEMS', path: 'ray-dalio-principles.blocks[2].items' }),
+            expect.objectContaining({ code: 'E_APPLICABILITY_VOICE', path: 'ray-dalio-principles.blocks[3].voice' }),
+            expect.objectContaining({ code: 'E_APPLICABILITY_VOLUME', path: 'ray-dalio-principles.blocks[3]' }),
+            expect.objectContaining({ code: 'E_REVIEW_RATING', path: 'ray-dalio-principles.blocks[3]' }),
+        ]));
+    });
+
+    it('enforces an open thesis and accordion rhythm in long sections', () => {
+        const { context, Reading } = createReading();
+        vm.runInContext(sewellSource, context);
+        const book = structuredClone(Reading.BOOKS[0]);
+        const contextHeadingIndex = book.blocks.findIndex((block) => block.sectionRole === 'context');
+        const contextDetailsIndex = book.blocks.findIndex((block) => block.id === 'retention-evidence');
+        const [contextDetails] = book.blocks.splice(contextDetailsIndex, 1);
+        book.blocks.splice(contextHeadingIndex + 1, 0, contextDetails);
+
+        const coreDetails = book.blocks.find((block) => block.id === 'recovery-evidence');
+        coreDetails.type = 'paragraph';
+        delete coreDetails.title;
+        delete coreDetails.summary;
+        const result = Reading.validateBookSummary(book, [book]);
+        expect(result.errors).toEqual(expect.arrayContaining([
+            expect.objectContaining({ code: 'E_SECTION_OPENING', path: expect.stringContaining('.blocks[') }),
+            expect.objectContaining({ code: 'E_SECTION_DISCLOSURE', path: expect.stringContaining('.blocks[') }),
+            expect.objectContaining({ code: 'E_DISCLOSURE_RHYTHM', path: expect.stringContaining('.blocks[') }),
+        ]));
+    });
+
     it('requires a substantial second opinion, including visible critique', () => {
         const { context, Reading } = createReading();
         vm.runInContext(dalioSource, context);
         const book = structuredClone(Reading.BOOKS[0]);
-        const reviewBlocks = book.blocks.filter((block) => block.voice === 'review');
-        reviewBlocks.forEach((block, index) => {
-            if (index > 0) block.voice = 'retelling';
-        });
-        reviewBlocks[0].text = 'Краткая оценка.';
+        book.blocks.filter((block) => block.voice === 'review' && block.type !== 'applicability')
+            .forEach((block) => { block.voice = 'retelling'; });
+        const applicability = book.blocks.find((block) => block.type === 'applicability');
+        applicability.strength = 'Краткая оценка.';
+        applicability.worksWhen = 'Краткое условие.';
+        applicability.limitations = 'Краткое ограничение.';
+        applicability.experiment = 'Краткая проверка.';
         const critiqueHeadingIndex = book.blocks.findIndex((block) => block.sectionRole === 'critique');
         const critiqueParagraph = book.blocks.slice(critiqueHeadingIndex + 1).find((block) => block.type === 'paragraph');
         critiqueParagraph.voice = 'retelling';

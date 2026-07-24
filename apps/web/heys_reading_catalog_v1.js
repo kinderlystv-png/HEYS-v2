@@ -4,14 +4,22 @@
     const HEYS = window.HEYS = window.HEYS || {};
     const Reading = HEYS.Reading = HEYS.Reading || {};
 
-    const SCHEMA_VERSION = 1;
+    const SCHEMA_VERSION = 2;
     const WORDS_PER_MINUTE = 180;
     const PUBLISHED_WORDS_MIN = 1800;
     const PUBLISHED_WORDS_MAX = 2200;
     const REVIEW_BLOCKS_MIN = 3;
     const REVIEW_WORDS_MIN = 180;
+    const QUICK_SUMMARY_ITEMS_MIN = 5;
+    const QUICK_SUMMARY_ITEMS_MAX = 7;
+    const QUICK_SUMMARY_WORDS_MIN = 180;
+    const QUICK_SUMMARY_WORDS_MAX = 300;
+    const APPLICABILITY_WORDS_MIN = 180;
+    const APPLICABILITY_FIELD_WORDS_MIN = 30;
+    const LONG_SECTION_WORDS_MIN = 260;
+    const OPEN_BLOCKS_RUN_MAX = 5;
     const STATUSES = new Set(['draft', 'published']);
-    const BLOCK_TYPES = new Set(['lead', 'heading', 'paragraph', 'details', 'quote', 'example', 'callout', 'list', 'verdict']);
+    const BLOCK_TYPES = new Set(['lead', 'heading', 'quick-summary', 'applicability', 'paragraph', 'details', 'quote', 'example', 'callout', 'list', 'verdict']);
     const CALLOUT_TONES = new Set(['insight', 'practice', 'caution']);
     const PARAGRAPH_VOICES = new Set(['retelling', 'review']);
     const SECTION_ROLES = new Set([
@@ -56,7 +64,17 @@
     }
 
     function getBlockText(block) {
-        return [block?.text, block?.title, block?.summary, block?.attribution, ...(Array.isArray(block?.items) ? block.items : [])]
+        return [
+            block?.text,
+            block?.title,
+            block?.summary,
+            block?.attribution,
+            block?.strength,
+            block?.worksWhen,
+            block?.limitations,
+            block?.experiment,
+            ...(Array.isArray(block?.items) ? block.items : []),
+        ]
             .filter(Boolean)
             .join(' ');
     }
@@ -176,6 +194,10 @@
         const addError = (code, path, message) => errors.push(issue(book, 'error', code, path, message));
         const addWarning = (code, path, message) => warnings.push(issue(book, 'warning', code, path, message));
         const isPublished = book?.status === 'published';
+        const addPublicationIssue = (errorCode, warningCode, path, message) => {
+            if (isPublished) addError(errorCode, path, message);
+            else addWarning(warningCode, path, message);
+        };
 
         if (book?.schemaVersion !== SCHEMA_VERSION) addError('E_SCHEMA_VERSION', 'schemaVersion', 'Ожидается schemaVersion ' + SCHEMA_VERSION);
         if (!STATUSES.has(book?.status)) addError('E_STATUS', 'status', 'Допустимы только draft и published');
@@ -224,6 +246,8 @@
         if (!Array.isArray(book?.blocks) || !book.blocks.length) addError('E_BLOCKS_EMPTY', 'blocks', 'Саммари должно содержать блоки');
         if (book?.blocks?.[0]?.type !== 'lead') addError('E_LEAD_POSITION', 'blocks[0]', 'Первым блоком должен быть lead');
         if (book?.blocks?.[1]?.type !== 'verdict') addError('E_VERDICT_POSITION', 'blocks[1]', 'Вторым блоком должен быть короткий verdict');
+        if (book?.blocks?.[2]?.type !== 'quick-summary') addPublicationIssue('E_QUICK_SUMMARY_POSITION', 'W_QUICK_SUMMARY_POSITION_DRAFT', 'blocks[2]', 'После начального verdict должен идти блок quick-summary');
+        if (book?.blocks?.[3]?.type !== 'applicability') addPublicationIssue('E_APPLICABILITY_POSITION', 'W_APPLICABILITY_POSITION_DRAFT', 'blocks[3]', 'После quick-summary должен идти блок applicability');
 
         const blockIds = new Set();
         const headingRoles = [];
@@ -234,8 +258,13 @@
         let consecutiveParagraphs = 0;
         let calloutCount = 0;
         let quoteCount = 0;
+        let quickSummaryWordCount = 0;
+        let applicabilityWordCount = 0;
         const headingTexts = [];
         const proseTexts = [];
+        const quickSummaryItems = [];
+        const quickSummaryIndexes = [];
+        const applicabilityIndexes = [];
         (book?.blocks || []).forEach((block, index) => {
             const path = 'blocks[' + index + ']';
             if (!String(block?.id || '').trim()) addError('E_BLOCK_ID', path + '.id', 'Блок должен иметь стабильный id');
@@ -243,16 +272,29 @@
             blockIds.add(block?.id);
             if (!BLOCK_TYPES.has(block?.type)) addError('E_BLOCK_TYPE', path + '.type', 'Неизвестный тип блока: ' + block?.type);
 
-            const textValues = [block?.text, block?.title, block?.summary, block?.attribution, ...(Array.isArray(block?.items) ? block.items : [])];
+            const textValues = [
+                block?.text,
+                block?.title,
+                block?.summary,
+                block?.attribution,
+                block?.strength,
+                block?.worksWhen,
+                block?.limitations,
+                block?.experiment,
+                ...(Array.isArray(block?.items) ? block.items : []),
+            ];
             textValues.filter(Boolean).forEach((value) => {
                 if (hasRawMarkup(value)) addError('E_RAW_MARKUP', path, 'HTML и Markdown-ссылки в контенте запрещены');
                 if (isPublished && hasPublishedPlaceholder(value)) addError('E_PLACEHOLDER', path, 'В опубликованной книге остался маркер заполнения');
             });
+            if ((block?.voice === 'review' || block?.type === 'applicability' || block?.type === 'verdict') && /(?:^|\s)\d+(?:[.,]\d+)?\s*(?:\/|из)\s*(?:5|10)(?!\d)/i.test(getBlockText(block))) {
+                addError('E_REVIEW_RATING', path, 'Числовые оценки книг в review запрещены');
+            }
 
             if (block?.type === 'list') {
                 if (!Array.isArray(block.items) || !block.items.length || block.items.some((item) => !String(item || '').trim())) addError('E_LIST_EMPTY', path + '.items', 'Список должен содержать непустые элементы');
                 if (typeof block.ordered !== 'boolean') addError('E_LIST_ORDERED', path + '.ordered', 'ordered должен быть boolean');
-            } else if (!String(block?.text || '').trim()) {
+            } else if (!['quick-summary', 'applicability'].includes(block?.type) && !String(block?.text || '').trim()) {
                 addError('E_BLOCK_TEXT', path + '.text', 'Текст блока не заполнен');
             }
 
@@ -261,7 +303,39 @@
                 headingRoles.push(block.sectionRole);
                 if (!SECTION_ROLES.has(block.sectionRole)) addError('E_SECTION_ROLE', path + '.sectionRole', 'Неизвестная роль раздела: ' + block.sectionRole);
             }
-            if (block?.type === 'paragraph') {
+            if (block?.type === 'quick-summary') {
+                consecutiveParagraphs = 0;
+                quickSummaryIndexes.push(index);
+                if (!String(block.title || '').trim()) addError('E_QUICK_SUMMARY_TITLE', path + '.title', 'Быстрому слою нужен заголовок');
+                if (block.voice !== 'retelling') addError('E_QUICK_SUMMARY_VOICE', path + '.voice', 'quick-summary должен иметь voice: retelling');
+                if (!Array.isArray(block.items) || block.items.length < QUICK_SUMMARY_ITEMS_MIN || block.items.length > QUICK_SUMMARY_ITEMS_MAX || block.items.some((item) => !String(item || '').trim())) {
+                    addError('E_QUICK_SUMMARY_ITEMS', path + '.items', 'quick-summary должен содержать от ' + QUICK_SUMMARY_ITEMS_MIN + ' до ' + QUICK_SUMMARY_ITEMS_MAX + ' непустых тезисов');
+                }
+                quickSummaryWordCount += countWords((block.items || []).join(' '));
+                quickSummaryItems.push(...(block.items || []));
+                hasRetelling = true;
+                if (quickSummaryWordCount < QUICK_SUMMARY_WORDS_MIN || quickSummaryWordCount > QUICK_SUMMARY_WORDS_MAX) {
+                    addPublicationIssue('E_QUICK_SUMMARY_VOLUME', 'W_QUICK_SUMMARY_VOLUME_DRAFT', path + '.items', 'Быстрый слой должен содержать ' + QUICK_SUMMARY_WORDS_MIN + '–' + QUICK_SUMMARY_WORDS_MAX + ' слов, сейчас: ' + quickSummaryWordCount);
+                }
+            } else if (block?.type === 'applicability') {
+                consecutiveParagraphs = 0;
+                applicabilityIndexes.push(index);
+                if (!String(block.title || '').trim()) addError('E_APPLICABILITY_TITLE', path + '.title', 'Проверке применимости нужен заголовок');
+                if (block.voice !== 'review') addError('E_APPLICABILITY_VOICE', path + '.voice', 'applicability должен иметь voice: review');
+                const fieldNames = ['strength', 'worksWhen', 'limitations', 'experiment'];
+                fieldNames.forEach((field) => {
+                    const words = countWords(block[field]);
+                    if (!String(block[field] || '').trim()) addError('E_APPLICABILITY_FIELD', path + '.' + field, 'Поле ' + field + ' обязательно');
+                    else if (words < APPLICABILITY_FIELD_WORDS_MIN) addPublicationIssue('E_APPLICABILITY_FIELD_DEPTH', 'W_APPLICABILITY_FIELD_DEPTH_DRAFT', path + '.' + field, 'Поле ' + field + ' должно содержать минимум ' + APPLICABILITY_FIELD_WORDS_MIN + ' слов, сейчас: ' + words);
+                });
+                applicabilityWordCount += countWords(fieldNames.map((field) => block[field]).join(' '));
+                if (applicabilityWordCount < APPLICABILITY_WORDS_MIN) addPublicationIssue('E_APPLICABILITY_VOLUME', 'W_APPLICABILITY_VOLUME_DRAFT', path, 'Проверка применимости должна содержать минимум ' + APPLICABILITY_WORDS_MIN + ' слов, сейчас: ' + applicabilityWordCount);
+                if (applicabilityWordCount > 420) addWarning('W_APPLICABILITY_LONG', path, 'Проверка применимости длиннее 420 слов и перегружает быстрый слой');
+                hasReview = true;
+                reviewBlockCount += 1;
+                reviewWordCount += applicabilityWordCount;
+                proseTexts.push(...fieldNames.map((field) => block[field]));
+            } else if (block?.type === 'paragraph') {
                 consecutiveParagraphs += 1;
                 if (!PARAGRAPH_VOICES.has(block.voice)) addError('E_PARAGRAPH_VOICE', path + '.voice', 'Укажите voice: retelling или review');
                 hasRetelling = hasRetelling || block.voice === 'retelling';
@@ -307,6 +381,9 @@
             });
         });
 
+        if (quickSummaryIndexes.length !== 1) addPublicationIssue('E_QUICK_SUMMARY_REQUIRED', 'W_QUICK_SUMMARY_REQUIRED_DRAFT', 'blocks', 'Саммари должно содержать ровно один блок quick-summary, сейчас: ' + quickSummaryIndexes.length);
+        if (applicabilityIndexes.length !== 1) addPublicationIssue('E_APPLICABILITY_REQUIRED', 'W_APPLICABILITY_REQUIRED_DRAFT', 'blocks', 'Саммари должно содержать ровно один блок applicability, сейчас: ' + applicabilityIndexes.length);
+
         REQUIRED_SECTION_ROLES.forEach((role) => {
             const matches = headingRoles.filter((item) => item === role).length;
             if (matches !== 1) addError('E_REQUIRED_SECTION', 'blocks', 'Раздел ' + role + ' должен встречаться ровно один раз');
@@ -331,11 +408,26 @@
             ? []
             : (book?.blocks || []).slice(critiqueHeadingIndex + 1, critiqueEndIndex < 0 ? undefined : critiqueEndIndex);
         const hasVisibleCritiqueReview = critiqueBlocks.some((block) => block.type === 'paragraph' && block.voice === 'review');
+        const audienceHeadingIndex = (book?.blocks || []).findIndex((block) => block.type === 'heading' && block.sectionRole === 'audience');
+        const audienceEndIndex = audienceHeadingIndex < 0
+            ? -1
+            : (book?.blocks || []).findIndex((block, index) => index > audienceHeadingIndex && block.type === 'heading');
+        const audienceBlocks = audienceHeadingIndex < 0
+            ? []
+            : (book?.blocks || []).slice(audienceHeadingIndex + 1, audienceEndIndex < 0 ? undefined : audienceEndIndex);
+        const hasAudienceGuidance = audienceBlocks.some((block) => block.type === 'paragraph' && block.voice === 'review');
+        const originalHeadingIndex = (book?.blocks || []).findIndex((block) => block.type === 'heading' && block.sectionRole === 'original-verdict');
+        const originalBlocks = originalHeadingIndex < 0 ? [] : (book?.blocks || []).slice(originalHeadingIndex + 1);
+        const originalVerdictText = originalBlocks.filter((block) => block.type === 'verdict').map(getBlockText).join(' ');
         if (isPublished && reviewBlockCount < REVIEW_BLOCKS_MIN) addError('E_REVIEW_DEPTH', 'blocks', 'Собственное ревью должно быть встроено минимум в ' + REVIEW_BLOCKS_MIN + ' смысловых блока, сейчас: ' + reviewBlockCount);
         if (!isPublished && reviewBlockCount < REVIEW_BLOCKS_MIN) addWarning('W_REVIEW_DEPTH_DRAFT', 'blocks', 'До публикации нужно минимум ' + REVIEW_BLOCKS_MIN + ' смысловых блока собственного ревью, сейчас: ' + reviewBlockCount);
         if (isPublished && reviewWordCount < REVIEW_WORDS_MIN) addError('E_REVIEW_VOLUME', 'blocks', 'Собственное ревью должно содержать минимум ' + REVIEW_WORDS_MIN + ' слов, сейчас: ' + reviewWordCount);
         if (!isPublished && reviewWordCount < REVIEW_WORDS_MIN) addWarning('W_REVIEW_VOLUME_DRAFT', 'blocks', 'До публикации нужно минимум ' + REVIEW_WORDS_MIN + ' слов собственного ревью, сейчас: ' + reviewWordCount);
         if (critiqueHeadingIndex >= 0 && !hasVisibleCritiqueReview) addError('E_CRITIQUE_REVIEW', 'blocks[' + critiqueHeadingIndex + ']', 'Раздел critique должен содержать открытый paragraph с voice: review');
+        if (audienceHeadingIndex >= 0 && !hasAudienceGuidance) addPublicationIssue('E_AUDIENCE_GUIDANCE', 'W_AUDIENCE_GUIDANCE_DRAFT', 'blocks[' + audienceHeadingIndex + ']', 'Раздел audience должен содержать открытый paragraph с voice: review');
+        if (originalHeadingIndex >= 0 && (!originalVerdictText || !/оригинал/i.test(originalVerdictText) || !/(стоит|достаточно|нужен|нужна|читать)/i.test(originalVerdictText))) {
+            addPublicationIssue('E_ORIGINAL_VERDICT', 'W_ORIGINAL_VERDICT_DRAFT', 'blocks[' + originalHeadingIndex + ']', 'Финальный verdict должен прямо отвечать, стоит ли читать оригинал');
+        }
         duplicateValues(headingTexts).forEach((heading) => addWarning('W_HEADING_DUPLICATE', 'blocks', 'Повторяется заголовок: ' + heading));
         headingTexts.forEach((heading, index) => {
             const normalized = normalizeReadingText(heading);
@@ -346,6 +438,10 @@
             })) addWarning('W_HEADING_SIMILAR', 'blocks', 'Заголовки слишком похожи: ' + heading);
         });
         duplicateValues(proseTexts).forEach(() => addWarning('W_THESIS_REPEAT', 'blocks', 'Один и тот же абзац повторяется в нескольких разделах'));
+        quickSummaryItems.forEach((item) => {
+            const normalized = normalizeReadingText(item);
+            if (proseTexts.some((text) => normalizeReadingText(text) === normalized)) addWarning('W_QUICK_SUMMARY_DUPLICATE', 'blocks', 'Тезис быстрого слоя дословно повторён в полном тексте');
+        });
         if (quoteCount > 3 || quoteCount > Math.max(2, Math.floor((book?.blocks?.length || 0) * 0.12))) addWarning('W_QUOTE_DENSITY', 'blocks', 'В саммари слишком много цитат');
         if (calloutCount > Math.max(3, Math.floor((book?.blocks?.length || 0) * 0.3))) addWarning('W_CALLOUT_DENSITY', 'blocks', 'Слишком большая доля текста оформлена callout-блоками');
 
@@ -353,13 +449,30 @@
         let currentSection = null;
         (book?.blocks || []).forEach((block, index) => {
             if (block.type === 'heading') {
-                currentSection = { index, words: 0 };
+                currentSection = { index, role: block.sectionRole, words: 0, details: 0, openRun: 0, maxOpenRun: 0, firstContentType: '' };
                 sectionWordCounts.push(currentSection);
-            } else if (currentSection) currentSection.words += countWords(getBlockText(block));
+            } else if (currentSection) {
+                currentSection.words += countWords(getBlockText(block));
+                if (!currentSection.firstContentType) currentSection.firstContentType = block.type;
+                if (block.type === 'details') {
+                    currentSection.details += 1;
+                    currentSection.openRun = 0;
+                } else {
+                    currentSection.openRun += 1;
+                    currentSection.maxOpenRun = Math.max(currentSection.maxOpenRun, currentSection.openRun);
+                }
+            }
         });
         const sectionWordsTotal = sectionWordCounts.reduce((sum, section) => sum + section.words, 0);
         sectionWordCounts.forEach((section) => {
             if (section.words > 500 && section.words > sectionWordsTotal * 0.45) addWarning('W_SECTION_LONG', 'blocks[' + section.index + ']', 'Раздел занимает непропорционально большую часть саммари');
+            if (section.firstContentType === 'details') addPublicationIssue('E_SECTION_OPENING', 'W_SECTION_OPENING_DRAFT', 'blocks[' + section.index + ']', 'Раздел должен начинаться с открытого тезиса до аккордеона');
+            if (section.words >= LONG_SECTION_WORDS_MIN && !['audience', 'original-verdict'].includes(section.role) && section.details === 0) {
+                addPublicationIssue('E_SECTION_DISCLOSURE', 'W_SECTION_DISCLOSURE_DRAFT', 'blocks[' + section.index + ']', 'В длинном разделе нужен хотя бы один details-блок для вторичного контекста');
+            }
+            if (section.words >= LONG_SECTION_WORDS_MIN && section.maxOpenRun > OPEN_BLOCKS_RUN_MAX) {
+                addPublicationIssue('E_DISCLOSURE_RHYTHM', 'W_DISCLOSURE_RHYTHM_DRAFT', 'blocks[' + section.index + ']', 'Более ' + OPEN_BLOCKS_RUN_MAX + ' открытых блоков подряд нарушают переход от общего к частному');
+            }
         });
 
         const words = getBookWordCount(book);
@@ -371,7 +484,16 @@
         if (!/(журнал|поиск|правил|вести|запис|провер|сравн|использ|созда|определ|обсуж)/i.test(String(book?.practicalValue || ''))) addWarning('W_PRACTICAL_ABSTRACT', 'practicalValue', 'Практическая ценность не содержит понятного действия');
 
         if (Array.isArray(catalog) && catalog.filter((item) => item?.id === book?.id).length > 1) addError('E_BOOK_ID_DUPLICATE', 'id', 'Повторяющийся id книги: ' + book?.id);
-        return { valid: errors.length === 0, errors, warnings, wordCount: words };
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings,
+            wordCount: words,
+            quickSummaryWordCount,
+            applicabilityWordCount,
+            reviewBlockCount,
+            reviewWordCount,
+        };
     }
 
     function lintBookSummary(book) {
@@ -455,6 +577,14 @@
         PUBLISHED_WORDS_MAX,
         REVIEW_BLOCKS_MIN,
         REVIEW_WORDS_MIN,
+        QUICK_SUMMARY_ITEMS_MIN,
+        QUICK_SUMMARY_ITEMS_MAX,
+        QUICK_SUMMARY_WORDS_MIN,
+        QUICK_SUMMARY_WORDS_MAX,
+        APPLICABILITY_WORDS_MIN,
+        APPLICABILITY_FIELD_WORDS_MIN,
+        LONG_SECTION_WORDS_MIN,
+        OPEN_BLOCKS_RUN_MAX,
         TOPICS,
         TAGS,
         COVER_TONES,

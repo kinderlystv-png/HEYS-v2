@@ -40,6 +40,7 @@ for (const entry of attempts) {
     const headings = book.blocks?.filter((block) => block.type === 'heading').length || 0;
     console.log(`${entry.result.valid ? '✓' : '✗'} ${book.id} [${book.status}]`);
     console.log(`  ${entry.result.wordCount} слов · ${Reading.estimateReadingMinutes(book)} минут · ${headings} разделов · ${book.sources?.length || 0} источника`);
+    console.log(`  быстрый слой: ${entry.result.quickSummaryWordCount} слов · применимость: ${entry.result.applicabilityWordCount} слов · review: ${entry.result.reviewWordCount} слов / ${entry.result.reviewBlockCount} блоков`);
     for (const issue of [...entry.result.errors, ...entry.result.warnings]) {
         console.log(`  ${issue.severity === 'error' ? 'ERROR' : 'WARN'} ${issue.code} ${issue.path}: ${issue.message}`);
     }

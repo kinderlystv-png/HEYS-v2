@@ -1,6 +1,6 @@
 # Планировщик: задачи, календарь, chrono, чек-листы, цели и книги
 
-> **Статус:** core-контракты проверены 2026-07-18<br> **Охват:** web store,
+> **Статус:** core-контракты проверены 2026-07-25<br> **Охват:** web store,
 > локальное/облачное хранение, merge/delete, cloud pull, основные UI-границы и
 > тесты<br> **Не охвачено:** детальная UX-логика каждого экрана, все поля каждой
 > сущности, визуальный Gantt layout и planning-agent OpenAPI<br>
@@ -51,22 +51,29 @@ Phase A / refreshPlanningFromCloud → merge + tombstones + anti-wipe guards
 Книжные саммари не входят в Planning Store и не синхронизируются как
 пользовательские данные. Каждая книга регистрируется отдельным source-файлом
 через `HEYS.Reading.registerBook`; порядок загрузки задаёт
-`READING_BOOK_SOURCES`. Команды `pnpm reading:new` и `pnpm reading:check`
-поддерживают manifest и проверяют редакционный контракт до публикации. Размер
-шрифта и тема ридера сохраняются только локально в
+`READING_BOOK_SOURCES`. Контракт Reading v2 требует после начального вердикта
+два разных блока: `quick-summary` с пересказом пяти–семи тезисов и
+`applicability` с редакторской оценкой силы, условий, границ и проверочного
+эксперимента. Команды `pnpm reading:new` и `pnpm reading:check` поддерживают
+manifest и проверяют этот контракт до публикации. Подробности реализации и точки
+ревью зафиксированы в
+[`READING_CONTRACT_V2_PROTOCOL.md`](../../implementation/READING_CONTRACT_V2_PROTOCOL.md).
+Размер шрифта и тема ридера сохраняются только локально в
 `heys_reading_preferences_v1`; это UI-настройка, она не входит в Planning Store
 и не отправляется в cloud sync. `editorialRank` управляет сортировкой
 «Рекомендуемые», `sourceIds` отображаются в reader как нумерованные сноски, а
-блок `details` даёт единый аккордеон для вторичного контекста. Ключевые выводы
-книги остаются вне аккордеонов. Reader строит содержание по heading-блокам и
-поддерживает прямую ссылку через query-параметр `reading=<book-id>`. Позиция и
-процент чтения хранятся локально в `heys_reading_progress_v1`, используются для
-действия «Продолжить чтение» и не входят в Planning Store или cloud sync. При
-поиске карточка показывает фрагмент блока с совпадением вместо общего вердикта.
-Опубликованное саммари обязано совмещать пересказ с собственным редакторским
-ревью: минимум три блока `voice: 'review'` и 180 слов оценки, включая открытый
-review-абзац в разделе `critique`. Валидатор отклоняет нейтральный конспект или
-критику, спрятанную только в аккордеоне.
+блок `details` даёт единый аккордеон для вторичного контекста. Каждый раздел
+начинается открытым тезисом; длинные разделы распределяют механику,
+доказательства и оговорки по аккордеонам, а ключевые выводы остаются открытыми.
+Reader строит содержание по heading-блокам и поддерживает прямую ссылку через
+query-параметр `reading=<book-id>`. Позиция и процент чтения хранятся локально в
+`heys_reading_progress_v1`, используются для действия «Продолжить чтение» и не
+входят в Planning Store или cloud sync. При поиске карточка показывает фрагмент
+блока с совпадением вместо общего вердикта. Опубликованное саммари обязано
+совмещать пересказ с собственным редакторским ревью: минимум три блока
+`voice: 'review'` и 180 слов оценки, включая открытый review-абзац в разделе
+`critique`. Валидатор отклоняет нейтральный конспект или критику, спрятанную
+только в аккордеоне.
 
 Канонические логические ключи объявлены в `Planning.Constants.KEYS`. Основные
 группы: projects, tasks, slots, links, chrono activities/entries/snapshots,
@@ -151,8 +158,10 @@ pending local mutation, tombstones и anti-wipe проверки могут со
     union во всех cloud-pull путях и не могут быть удалены старым
     remote-массивом.
 11. Опубликованное книжное саммари содержит не только пересказ, но и
-    содержательное собственное ревью; раздел критики остаётся видимым без
-    раскрытия `details`.
+    содержательное собственное ревью; быстрый пересказ и применимость имеют
+    разные типы блоков и редакторские голоса.
+12. Раздел начинается открытым тезисом; существенная критика, аудитория и
+    вердикт об оригинале не зависят от раскрытия `details`.
 
 ## Ошибки и защитные механизмы
 
@@ -193,7 +202,7 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 - `apps/web/__tests__/planning-task-matrix.test.js` — группировка матрицы и
   контракт календарных слотов задачи на выбранные даты.
 - `apps/web/__tests__/reading-authoring-contract.test.js` — manifest, объём,
-  источники и обязательная глубина собственного ревью.
+  быстрый слой, применимость, источники, review и ритм раскрытий.
 - `apps/web/__tests__/planning-*-ui.test.js` и render tests — ключевые
   UI-сценарии.
 
@@ -210,4 +219,5 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 | P7  | Основной UI экспортируется как `HEYS.PlanningTab`                               | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                    | проверено 2026-07-17 |
 | P8  | Application и agent ingest входят в RPC handler                                 | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js` | проверено 2026-07-17 |
 | P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                 | проверено 2026-07-18 |
-| P10 | Published Reading требует встроенное собственное ревью                          | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                               | проверено 2026-07-25 |
+| P10 | Published Reading требует быстрый пересказ и отдельную проверку применимости    | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                               | проверено 2026-07-25 |
+| P11 | Длинные разделы Reading идут от открытого тезиса к вторичному `details`         | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                               | проверено 2026-07-25 |
