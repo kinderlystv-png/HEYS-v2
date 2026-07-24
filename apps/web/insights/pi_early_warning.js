@@ -4301,6 +4301,9 @@
 
         if (!Array.isArray(days) || days.length < THRESHOLDS.MIN_DAYS_FOR_ANALYSIS) {
             console.warn('ews / detect ⚠️ input.invalid:', {
+                event: 'ews_input_insufficient',
+                source: 'ews',
+                status: 'degraded',
                 reason: 'insufficient_data',
                 daysReceived: days?.length || 0,
                 minRequired: THRESHOLDS.MIN_DAYS_FOR_ANALYSIS

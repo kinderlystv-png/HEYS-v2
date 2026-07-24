@@ -1022,7 +1022,7 @@ async function handleRestRequest(event, context) {
             'release_version', 'unseen_count', 'update_version',
             'pending_count', 'missing_days_count', 'action', 'mode',
             'from', 'to', 'online', 'attempt', 'result', 'bundle', 'route', 'tab', 'flow_kind',
-            'count', 'queue_size', 'key_group', 'problem_stage'
+            'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required'
           ]);
 
           const rawRows = Array.isArray(body) ? body : [body];

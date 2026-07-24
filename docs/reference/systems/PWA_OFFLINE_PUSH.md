@@ -75,7 +75,12 @@ Client observability фиксирует один набор событий на 
 Structured boot-события не отправляются до появления client context, а REST не
 принимает их под anonymous identity. `abandoned` требует явного `boot_started`
 без последующего `boot_ready`; отдельное sync/write-событие не считается сбоем
-загрузки.
+загрузки. `app_shell_ready` отмечает только готовность каркаса, а канонический
+`boot_ready` приходит из Day tab после снятия sync gate. Известные отклонения
+EWS и первого sync batch сохраняются как warning, но получают безопасные
+структурированные причины и числовой контекст; build определяется и по
+`boot-app.bundle.<hash>.js`, включая повторное определение после раннего старта
+логгера.
 
 Следствие: это **wake-up bridge**, а не автономная background upload гарантия.
 Без открытого client window он ничего не отправляет; `SYNC_COMPLETE` означает

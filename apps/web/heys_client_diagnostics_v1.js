@@ -83,18 +83,20 @@
     whats_new_shown: 'Показано «Что нового»', whats_new_acknowledged: '«Что нового» закрыто',
     curator_changes_shown: 'Показаны правки куратора', curator_changes_acknowledged: 'Правки куратора прочитаны',
     hunger_prompt_shown: 'Показан голод', hunger_prompt_submitted: 'Голод заполнен',
-    morning_checkin_shown: 'Показан чекин', morning_checkin_completed: 'Чекин завершён'
+    morning_checkin_shown: 'Показан чекин', morning_checkin_completed: 'Чекин завершён',
+    ews_input_insufficient: 'Недостаточно данных для раннего предупреждения',
+    initial_sync_fallback_wait: 'Синхронизация ждала резервные данные'
   };
   var STAGE_LABELS = { boot: 'загрузка', sync: 'синхронизация', write: 'сохранение', runtime: 'работа приложения', warning: 'предупреждение' };
 
   function eventLabel(name) { return EVENT_LABELS[name] || String(name || 'Событие').replace(/_/g, ' '); }
   function contextLabel(context) {
     if (!context || typeof context !== 'object') return '';
-    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы' };
+    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней' };
     return Object.keys(context).map(function (key) { return (labels[key] || key) + ': ' + context[key]; }).join(' · ');
   }
 
-  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count'];
+  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count', 'days_received', 'min_required'];
 
   function safeContext(context) {
     if (!context || typeof context !== 'object') return {};

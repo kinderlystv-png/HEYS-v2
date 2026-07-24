@@ -15,6 +15,8 @@ const whatsNewSource = fs.readFileSync(path.join(webRoot, 'heys_whats_new_modal_
 const swSource = fs.readFileSync(path.join(webRoot, 'heys_platform_apis_v1.js'), 'utf8');
 const curatorChangesSource = fs.readFileSync(path.join(webRoot, 'heys_curator_actions_banner_v1.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(webRoot, 'heys_storage_supabase_v1.js'), 'utf8');
+const ewsSource = fs.readFileSync(path.join(webRoot, 'insights/pi_early_warning.js'), 'utf8');
+const tabsSource = fs.readFileSync(path.join(webRoot, 'heys_app_tabs_v1.js'), 'utf8');
 const gateSource = fs.readFileSync(path.join(webRoot, 'heys_app_gate_flow_v1.js'), 'utf8');
 const gamificationSource = fs.readFileSync(path.join(webRoot, 'heys_gamification_v1.js'), 'utf8');
 const rpcSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-rpc/index.js'), 'utf8');
@@ -30,7 +32,7 @@ function storage() {
   };
 }
 
-function createLoggerRuntime() {
+function createLoggerRuntime(options = {}) {
   const requests = [];
   const listeners = {};
   const localStorage = storage();
@@ -42,7 +44,7 @@ function createLoggerRuntime() {
     localStorage,
     sessionStorage,
     document: {
-      scripts: [{ src: 'https://app.heyslab.ru/boot-app.abc123ef.js' }],
+      scripts: options.scripts || [{ src: 'https://app.heyslab.ru/boot-app.bundle.abc123ef.js' }],
       visibilityState: 'visible',
       addEventListener: vi.fn(),
     },
@@ -119,7 +121,7 @@ describe('client session observability', () => {
       .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'boot_started' })]));
   });
 
-  it('emits the boot_ready event expected by the session classifier', async () => {
+  it('does not mark the full boot ready when only the app shell is ready', async () => {
     const { context, requests, listeners } = createLoggerRuntime();
     context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
     listeners['heys:progress']({ detail: { phase: 'ready' } });
@@ -129,8 +131,53 @@ describe('client session observability', () => {
     const rows = JSON.parse(requests[0].options.body);
     expect(rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ event_name: 'app_shell_ready', event_status: 'ready' }),
-      expect.objectContaining({ event_name: 'boot_ready', event_status: 'ready' }),
     ]));
+    expect(rows).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_name: 'boot_ready' }),
+    ]));
+    expect(tabsSource).toContain("HEYS?.LogTrace?.event?.('boot_ready'");
+  });
+
+  it('keeps known warning deviations structured with safe debugging context', async () => {
+    const { context, requests } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+
+    context.console.warn('ews / detect ⚠️ input.invalid:', {
+      event: 'ews_input_insufficient', source: 'ews', status: 'degraded',
+      reason: 'insufficient_data', daysReceived: 3, minRequired: 6,
+    });
+    context.console.warn('[HEYS.sync] Critical first-frame batch unavailable; keeping startup barrier until fallback', {
+      event: 'initial_sync_fallback_wait', source: 'sync', status: 'degraded',
+      reason: 'critical_batch_unavailable',
+    });
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+
+    const rows = JSON.parse(requests[0].options.body);
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        event_name: 'ews_input_insufficient', event_source: 'ews', event_status: 'degraded',
+        event_context: expect.objectContaining({ reason: 'insufficient_data', days_received: 3, min_required: 6 }),
+      }),
+      expect.objectContaining({
+        event_name: 'initial_sync_fallback_wait', event_source: 'sync', event_status: 'degraded',
+        event_context: expect.objectContaining({ reason: 'critical_batch_unavailable' }),
+      }),
+    ]));
+  });
+
+  it('refreshes an initially unknown build id after the boot bundle appears', async () => {
+    const { context, requests } = createLoggerRuntime({ scripts: [] });
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    context.HEYS.LogTrace.event('test_before_bundle', { source: 'test' });
+    context.document.scripts = [{ src: 'https://app.heyslab.ru/boot-app.bundle.deadbeef.js' }];
+    context.HEYS.LogTrace.event('test_after_bundle', { source: 'test' });
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+
+    const rows = JSON.parse(requests[0].options.body);
+    expect(rows.find((row) => row.event_name === 'test_before_bundle')?.build_id).toBe('deadbeef');
+    expect(rows.find((row) => row.event_name === 'test_after_bundle')?.build_id).toBe('deadbeef');
   });
 
   it('keeps structured events queued when the server has no verified identity', async () => {
@@ -254,6 +301,8 @@ describe('client session observability', () => {
     expect(classificationSource).toContain("bool_or(event_name = 'boot_started')");
     expect(classificationSource).toContain("AND bool_or(event_name IS NOT NULL)");
     expect(classificationSource).toContain("event_name IN ('initial_sync_ready', 'sync_cycle_completed')");
+    expect(classificationSource).toContain("event_status IN ('degraded', 'timeout', 'failed')");
+    expect(classificationSource).toContain("build_id IS NOT NULL AND build_id <> 'unknown'");
   });
 
   it('keeps curator cookies off client-session gamification RPCs', () => {
@@ -269,7 +318,9 @@ describe('client session observability', () => {
     expect(storageSource).toContain('observabilityKeyGroup');
     expect(storageSource).toContain("return 'diary'");
     expect(loggerSource).toContain('key_group: 1');
-    expect(restSource).toContain("'count', 'queue_size', 'key_group', 'problem_stage'");
+    expect(restSource).toContain("'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required'");
+    expect(ewsSource).toContain("event: 'ews_input_insufficient'");
+    expect(storageSource).toContain("event: 'initial_sync_fallback_wait'");
   });
 
   it('covers the user-visible overlays and update lifecycle with stable events', () => {

@@ -11,7 +11,7 @@ SELECT
   min(client_ts) AS started_at,
   max(client_ts) AS last_event_at,
   greatest(0, floor(extract(epoch FROM (max(client_ts) - min(client_ts))) * 1000))::integer AS duration_ms,
-  max(build_id) FILTER (WHERE build_id IS NOT NULL) AS build_id,
+  max(build_id) FILTER (WHERE build_id IS NOT NULL AND build_id <> 'unknown') AS build_id,
   max(device_id) FILTER (WHERE device_id IS NOT NULL) AS device_id,
   max(device_class) FILTER (WHERE device_class IS NOT NULL) AS device_class,
   max(os_name) FILTER (WHERE os_name IS NOT NULL) AS os_name,
@@ -47,7 +47,11 @@ SELECT
   (array_agg(event_name ORDER BY client_ts DESC, id DESC)
     FILTER (
       WHERE event_name IS NOT NULL
-        AND (level = 'error' OR event_status = 'failed' OR event_name IN ('boot_failed', 'app_runtime_failed', 'sync_cycle_failed', 'write_failed'))
+        AND (
+          level IN ('warn', 'error')
+          OR event_status IN ('degraded', 'timeout', 'failed')
+          OR event_name IN ('boot_failed', 'app_runtime_failed', 'sync_cycle_failed', 'write_failed')
+        )
     ))[1] AS problem_event
 FROM public.client_log_trace
 WHERE client_id IS NOT NULL

@@ -84,7 +84,7 @@
       var scripts = document.scripts || [];
       for (var i = scripts.length - 1; i >= 0; i--) {
         var src = scripts[i].src || '';
-        var match = src.match(/boot-app\.([a-f0-9]+)\.js/i);
+        var match = src.match(/boot-app\.(?:bundle\.)?([a-f0-9]+)\.js/i);
         if (match) { buildId = match[1]; break; }
       }
     } catch (_) { /* noop */ }
@@ -104,7 +104,8 @@
     pending_count: 1, missing_days_count: 1, action: 1, mode: 1,
     from: 1, to: 1, online: 1, attempt: 1, result: 1,
     bundle: 1, route: 1, tab: 1, flow_kind: 1,
-    count: 1, queue_size: 1, key_group: 1, problem_stage: 1
+    count: 1, queue_size: 1, key_group: 1, problem_stage: 1,
+    days_received: 1, min_required: 1
   };
 
   function sanitizeEventContext(input) {
@@ -286,7 +287,9 @@
       duration_ms: Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.min(86400000, Math.round(Number(body.durationMs)))) : null,
       event_context: sanitizeEventContext(Object.assign({}, body, {
         step_id: body.step_id || body.stepId,
-        missing_days_count: body.missing_days_count || body.missingDaysCount
+        missing_days_count: body.missing_days_count || body.missingDaysCount,
+        days_received: body.days_received ?? body.daysReceived,
+        min_required: body.min_required ?? body.minRequired
       }))
     };
   }
@@ -507,10 +510,14 @@
         page_url: typeof location !== 'undefined' ? location.href.slice(0, 1000) : null
       };
       if (structured) {
+        if (!RUNTIME.buildId || RUNTIME.buildId === 'unknown') {
+          var refreshedRuntime = detectRuntime();
+          if (refreshedRuntime.buildId && refreshedRuntime.buildId !== 'unknown') RUNTIME.buildId = refreshedRuntime.buildId;
+        }
         Object.keys(structured).forEach(function (key) { entry[key] = structured[key]; });
         entry.client_id = getClientId();
         entry.boot_id = BOOT_ID;
-        entry.build_id = RUNTIME.buildId;
+        entry.build_id = RUNTIME.buildId === 'unknown' ? null : RUNTIME.buildId;
         entry.device_id = DEVICE_ID;
         entry.device_class = RUNTIME.deviceClass;
         entry.os_name = RUNTIME.osName;
@@ -585,7 +592,9 @@
         event_status: e.event_status || null,
         flow_id: e.flow_id || null,
         duration_ms: e.duration_ms == null ? null : e.duration_ms,
-        build_id: e.build_id || RUNTIME.buildId,
+        build_id: e.build_id && e.build_id !== 'unknown'
+          ? e.build_id
+          : (RUNTIME.buildId !== 'unknown' ? RUNTIME.buildId : null),
         device_id: e.device_id || DEVICE_ID,
         device_class: e.device_class || RUNTIME.deviceClass,
         os_name: e.os_name || RUNTIME.osName,
@@ -773,7 +782,6 @@
     if (!phase) return;
     if (phase === 'ready') {
       event('app_shell_ready', { source: 'bootstrap', status: 'ready', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
-      event('boot_ready', { source: 'bootstrap', status: 'ready', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
     }
     else if (phase.indexOf('bundle') !== -1 || phase.indexOf('postboot') !== -1) {
       event('boot_phase_ready', { source: 'bootstrap', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });

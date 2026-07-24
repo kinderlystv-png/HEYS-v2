@@ -136,6 +136,8 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("affectedKeys: Array.isArray(meta.affectedKeys) ? meta.affectedKeys : null");
     expect(MORNING_SRC).toContain("HEYS.LogTrace.trace(level, '[CHECKIN.flow]', payload)");
     expect(MORNING_SRC).toContain("const level = isProblem ? 'warn' : 'info';");
+    expect(MORNING_SRC).toContain("console.info('[MorningCheckin] ↩️ Resuming flow with unfinished steps'");
+    expect(MORNING_SRC).not.toContain("console.warn('[MorningCheckin] ↩️ Resuming flow with unfinished steps'");
     expect(LOG_TRACE_SRC).toContain("console.info('[CHECKIN.trace] status_event'");
     expect(LOG_TRACE_SRC).not.toContain("console.warn('[CHECKIN.trace] status_event'");
   });

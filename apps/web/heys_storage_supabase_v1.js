@@ -7599,7 +7599,12 @@
           && typeof cloud.ensureCriticalSyncReady === 'function') {
           const criticalResult = await cloud.ensureCriticalSyncReady(client_id);
           if (!criticalResult?.criticalReady && !cloud.isCriticalSyncReady(client_id)) {
-            console.warn('[HEYS.sync] Critical first-frame batch unavailable; keeping startup barrier until fallback');
+            console.warn('[HEYS.sync] Critical first-frame batch unavailable; keeping startup barrier until fallback', {
+              event: 'initial_sync_fallback_wait',
+              source: 'sync',
+              status: 'degraded',
+              reason: 'critical_batch_unavailable'
+            });
           }
         }
 

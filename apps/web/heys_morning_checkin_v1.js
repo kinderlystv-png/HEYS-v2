@@ -1006,7 +1006,7 @@
 
     const flowStatus = existingProgress?.steps?.__flow__?.status || null;
     if (existingProgress && remainingProgressSteps.length > 0) {
-      console.warn('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
+      console.info('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
         flowId: existingProgress.flowId,
         remainingSteps: remainingProgressSteps.map((row) => row.id),
         flowStatus
