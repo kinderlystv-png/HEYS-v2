@@ -372,6 +372,11 @@ jobs:
             echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
           fi
 
+      - name: Configure S3 transfer concurrency
+        run: |
+          aws configure set default.s3.max_concurrent_requests 30
+          aws configure set default.s3.max_queue_size 10000
+
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
