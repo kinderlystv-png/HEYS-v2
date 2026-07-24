@@ -118,6 +118,7 @@ function renderGoals(state) {
         },
         PlanningSchedule: { CalendarScreen: StubScreen, GanttScreen: StubScreen },
         PlanningChrono: { ChronoScreen: StubScreen },
+        PlanningReading: { ReadingScreen: StubScreen, ReadingIcon: StubScreen },
         featureFlags: { isEnabled: () => false },
     };
     window.React = React;
