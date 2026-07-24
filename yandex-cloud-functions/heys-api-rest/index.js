@@ -98,6 +98,51 @@ function getCookieValue(cookieHeader, name) {
   return null;
 }
 
+async function resolveTelemetryIdentity(event, client, claimedClientId) {
+  const h = event.headers || {};
+  const cookie = h.cookie || h.Cookie || '';
+  const auth = h.Authorization || h.authorization || '';
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : null;
+  const sessionToken = String(
+    h['X-Session-Token'] || h['x-session-token'] ||
+    getCookieValue(cookie, 'heys_session_token') ||
+    (bearer && bearer.split('.').length !== 3 ? bearer : '') || ''
+  ).trim();
+
+  if (sessionToken) {
+    try {
+      const result = await client.query(
+        'SELECT client_id FROM client_sessions WHERE token_hash = sha256($1::bytea) AND expires_at > now() AND revoked_at IS NULL LIMIT 1',
+        [sessionToken]
+      );
+      if (result.rows[0]?.client_id) {
+        return { clientId: result.rows[0].client_id, actorRole: 'client', trustLevel: 'authenticated' };
+      }
+    } catch (_) { /* anonymous fallback */ }
+  }
+
+  const curatorToken = getCookieValue(cookie, 'heys_curator_jwt') ||
+    (bearer && bearer.split('.').length === 3 ? bearer : null);
+  if (curatorToken && claimedClientId && process.env.JWT_SECRET) {
+    const verified = verifyCuratorJwt(curatorToken, process.env.JWT_SECRET);
+    const curatorId = verified.valid && verified.payload?.role === 'curator' ? verified.payload.sub : null;
+    if (curatorId) {
+      try {
+        const owned = await client.query(
+          'SELECT id FROM clients WHERE id = $1::uuid AND curator_id = $2::uuid LIMIT 1',
+          [claimedClientId, curatorId]
+        );
+        if (owned.rowCount > 0) {
+          return { clientId: claimedClientId, actorRole: 'curator', trustLevel: 'curator' };
+        }
+      } catch (_) { /* anonymous fallback */ }
+    }
+  }
+
+  // Never trust a browser-supplied client id without an authenticated capability.
+  return { clientId: null, actorRole: 'anonymous', trustLevel: 'anonymous' };
+}
+
 // 🛡️ Content-fingerprint dup check для dayv2 (incident 2026-06-02 #8):
 // ловит partial pollution где writer_cid правильный (свой) но meals
 // идентичны свежей записи другого клиента того же curator. REST POST
@@ -367,7 +412,11 @@ const ALLOWED_COLUMNS = {
   // `changed_revision` added 2026-06-03 (L2): per-scope server-revision high-watermark.
   client_change_markers: ['client_id', 'scope', 'changed_at', 'changed_revision'],
   // client_log_trace — клиентский console buffer (см. миграцию 2026-06-01)
-  client_log_trace: ['id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url'],
+  client_log_trace: [
+    'id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
+    'event_id', 'boot_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
+    'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
+  ],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients, kv_store, shared_products_pending, consents — removed
 };
@@ -955,9 +1004,9 @@ async function handleRestRequest(event, context) {
         const rowsPreview = Array.isArray(body) ? body.length : 1;
         console.log('[REST POST REQUEST]', { table: tableName, rows: rowsPreview, params: Object.keys(params) });
 
-        // 📝 client_log_trace — батчевый INSERT клиентского console buffer.
-        // Никакой авторизации/UPSERT: append-only, TTL 14 дней (heys-maintenance).
-        // Жёсткие лимиты чтобы public POST не превратился в DoS-вектор.
+        // 📝 client_log_trace — console buffer + structured lifecycle telemetry.
+        // Identity is always resolved server-side. An unauthenticated caller may
+        // submit diagnostics, but cannot attach them to an arbitrary client.
         if (tableName === 'client_log_trace') {
           const MAX_ROWS_PER_BATCH = 500;
           const MAX_MSG_LEN = 4000;
@@ -965,7 +1014,16 @@ async function handleRestRequest(event, context) {
           const MAX_UA_LEN = 500;
           const MAX_URL_LEN = 1000;
           const MAX_SESSION_LEN = 100;
+          const MAX_META_LEN = 100;
+          const MAX_CONTEXT_BYTES = 2000;
           const LEVELS = new Set(['log', 'info', 'warn', 'error', 'debug']);
+          const CONTEXT_KEYS = new Set([
+            'phase', 'step', 'step_id', 'screen', 'source', 'reason',
+            'release_version', 'unseen_count', 'update_version',
+            'pending_count', 'missing_days_count', 'action', 'mode',
+            'from', 'to', 'online', 'attempt', 'result', 'bundle', 'route', 'tab', 'flow_kind',
+            'count', 'queue_size', 'key_group', 'problem_stage'
+          ]);
 
           const rawRows = Array.isArray(body) ? body : [body];
           if (rawRows.length === 0) {
@@ -985,8 +1043,15 @@ async function handleRestRequest(event, context) {
 
           // UA / URL — общие для batch'a (берём из заголовков fallback)
           const headerUA = (event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '').slice(0, MAX_UA_LEN);
+          const firstClaimedClientId = rawRows.find(row => typeof row?.client_id === 'string')?.client_id || null;
+          const claimedClientId = /^[0-9a-f-]{36}$/i.test(firstClaimedClientId || '') ? firstClaimedClientId : null;
+          const identity = await resolveTelemetryIdentity(event, client, claimedClientId);
 
-          const cols = ['client_id', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url'];
+          const cols = [
+            'client_id', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url',
+            'event_id', 'boot_id', 'event_name', 'event_source', 'event_status', 'flow_id', 'duration_ms', 'build_id',
+            'device_id', 'device_class', 'os_name', 'browser_name', 'display_mode', 'actor_role', 'trust_level', 'event_context'
+          ];
           const values = [];
           const placeholders = [];
           let p = 1;
@@ -997,8 +1062,6 @@ async function handleRestRequest(event, context) {
             const lvl = LEVELS.has(row.level) ? row.level : 'log';
             const msg = typeof row.message === 'string' ? row.message.slice(0, MAX_MSG_LEN) : String(row.message ?? '').slice(0, MAX_MSG_LEN);
             if (!msg) { skipped++; continue; }
-            // client_id: optional, ignore malformed (не блокируем batch)
-            const cid = (typeof row.client_id === 'string' && /^[0-9a-f-]{32,36}$/i.test(row.client_id)) ? row.client_id : null;
             // client_ts: optional, default now()
             let cts = row.client_ts ? new Date(row.client_ts) : new Date();
             if (Number.isNaN(cts.getTime())) cts = new Date();
@@ -1013,9 +1076,30 @@ async function handleRestRequest(event, context) {
             const sid = typeof row.session_id === 'string' ? row.session_id.slice(0, MAX_SESSION_LEN) : null;
             const ua = (typeof row.user_agent === 'string' ? row.user_agent : headerUA).slice(0, MAX_UA_LEN);
             const url = typeof row.page_url === 'string' ? row.page_url.slice(0, MAX_URL_LEN) : null;
+            const uuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null;
+            const textMeta = (value) => typeof value === 'string' ? value.slice(0, MAX_META_LEN) : null;
+            const duration = Number.isFinite(Number(row.duration_ms)) ? Math.max(0, Math.min(86400000, Math.round(Number(row.duration_ms)))) : null;
+            let context = null;
+            if (row.event_context && typeof row.event_context === 'object' && !Array.isArray(row.event_context)) {
+              const safe = {};
+              for (const [key, value] of Object.entries(row.event_context)) {
+                if (!CONTEXT_KEYS.has(key)) continue;
+                if (typeof value === 'string') safe[key] = value.slice(0, 160);
+                else if (typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) safe[key] = value;
+              }
+              const serialized = JSON.stringify(safe);
+              if (serialized.length <= MAX_CONTEXT_BYTES) context = serialized;
+            }
 
-            placeholders.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++}::jsonb, $${p++}, $${p++}, $${p++})`);
-            values.push(cid, cts.toISOString(), lvl, msg, argsJson, sid, ua, url);
+            placeholders.push(`(${Array.from({ length: cols.length }, (_, index) => `$${p + index}${index === 4 || index === 23 ? '::jsonb' : ''}`).join(', ')})`);
+            p += cols.length;
+            values.push(
+              identity.clientId, cts.toISOString(), lvl, msg, argsJson, sid, ua, url,
+              uuid(row.event_id), textMeta(row.boot_id), textMeta(row.event_name), textMeta(row.event_source),
+              textMeta(row.event_status), textMeta(row.flow_id), duration, textMeta(row.build_id),
+              textMeta(row.device_id), textMeta(row.device_class), textMeta(row.os_name), textMeta(row.browser_name),
+              textMeta(row.display_mode), identity.actorRole, identity.trustLevel, context
+            );
             inserted++;
           }
 
@@ -1027,15 +1111,19 @@ async function handleRestRequest(event, context) {
             };
           }
 
-          const query = `INSERT INTO "client_log_trace" (${cols.map(c => `"${c}"`).join(', ')}) VALUES ${placeholders.join(', ')}`;
-          await client.query(query, values);
+          const query = `INSERT INTO "client_log_trace" (${cols.map(c => `"${c}"`).join(', ')}) VALUES ${placeholders.join(', ')} ON CONFLICT DO NOTHING`;
+          const insertResult = await client.query(query, values);
+          const accepted = insertResult.rowCount;
 
-          console.log('[REST POST client_log_trace]', { inserted, skipped, total: rawRows.length });
+          console.log('[REST POST client_log_trace]', {
+            accepted, duplicates: inserted - accepted, skipped, total: rawRows.length,
+            trustLevel: identity.trustLevel, actorRole: identity.actorRole
+          });
 
           return {
             statusCode: 200,
             headers: corsHeaders,
-            body: JSON.stringify({ success: true, inserted, skipped })
+            body: JSON.stringify({ success: true, inserted: accepted, duplicates: inserted - accepted, skipped })
           };
         }
 

@@ -1219,6 +1219,35 @@
   let _deferUserPushBackoffMs = 2500;
   const USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS = 2500;
   const USER_QUEUE_NO_CLIENT_BACKOFF_MAX_MS = 30000;
+  let _observedSyncFailurePending = false;
+
+  function observabilityReason(error) {
+    const text = String(error?.message || error || '').toLowerCase();
+    if (!navigator.onLine || /offline|network|fetch|connection/.test(text)) return 'network';
+    if (/timeout|timed out|abort/.test(text)) return 'timeout';
+    if (/auth|token|session|401|403/.test(text)) return 'auth';
+    if (/write_context/.test(text)) return 'write_context';
+    if (/413|payload/.test(text)) return 'payload';
+    return 'server';
+  }
+
+  function traceClientSyncEvent(clientId, name, context, level) {
+    if (!_pinAuthClientId || _pinAuthClientId !== clientId) return;
+    try { global.HEYS?.LogTrace?.event?.(name, Object.assign({ source: 'sync' }, context || {}), level); }
+    catch (_) { /* diagnostics must never affect sync */ }
+  }
+
+  function observabilityKeyGroup(batch) {
+    const groups = new Set((batch || []).map((item) => {
+      const key = String(item?.k || '').replace(/^heys_[0-9a-f-]+_/, 'heys_');
+      if (key.includes('dayv2_')) return 'diary';
+      if (key.includes('profile') || key.includes('norms')) return 'profile';
+      if (key.includes('products')) return 'products';
+      if (key.includes('checkin')) return 'checkin';
+      return 'settings';
+    }));
+    return groups.size === 1 ? Array.from(groups)[0] : 'mixed';
+  }
 
   cloud.syncClient = async function (clientId, options = {}) {
     // Deduplication: если sync для этого же клиента уже идёт — вернём тот же Promise
@@ -1247,6 +1276,9 @@
     _scopeFixSummaryLogged = false;
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
+    const syncTraceStartedAt = Date.now();
+    let syncTraceResult = null;
+    traceClientSyncEvent(clientId, 'sync_cycle_started', { status: 'started', attempt: options.force ? 2 : 1, online: navigator.onLine });
 
     // � PERF v7.0: Set _syncInFlight IMMEDIATELY (before async ensureValidToken)
     // to prevent race condition: DayTabWithCloudSync and syncEffects can call syncClient
@@ -1255,7 +1287,8 @@
       try {
         const syncMethodReady = await waitForSyncMethodReady();
         if (!syncMethodReady) {
-          return { success: false, deferred: true, error: 'sync_method_not_ready' };
+          syncTraceResult = { success: false, deferred: true, error: 'sync_method_not_ready' };
+          return syncTraceResult;
         }
 
         // User-queue: clientId уже известен sync-циклу, даже если heys_client_current ещё не записан в LS
@@ -1274,11 +1307,12 @@
           const tokenResult = await cloud.ensureValidToken();
           if (!tokenResult.valid) {
             logCritical('🔐 [SYNC] Токен недействителен:', tokenResult.error);
-            return {
+            syncTraceResult = {
               success: false,
               authRequired: true,
               error: tokenResult.error
             };
+            return syncTraceResult;
           }
           if (tokenResult.refreshed) {
             logCritical('🔄 [SYNC] Токен обновлён перед синхронизацией');
@@ -1322,8 +1356,23 @@
           logCritical('🔄 [SYNC] Pattern cache invalidated after successful sync');
         }
 
-        return result;
+        syncTraceResult = result;
+        return syncTraceResult;
+      } catch (syncTraceError) {
+        syncTraceResult = { success: false, error: syncTraceError };
+        throw syncTraceError;
       } finally {
+        const syncTraceDuration = Date.now() - syncTraceStartedAt;
+        if (syncTraceResult?.success) {
+          traceClientSyncEvent(clientId, 'sync_cycle_completed', { status: 'completed', durationMs: syncTraceDuration, result: syncTraceResult.skipped ? 'skipped' : 'synced' });
+          if (_observedSyncFailurePending) {
+            traceClientSyncEvent(clientId, 'sync_recovered', { status: 'completed', durationMs: syncTraceDuration, result: 'recovered' });
+            _observedSyncFailurePending = false;
+          }
+        } else {
+          _observedSyncFailurePending = true;
+          traceClientSyncEvent(clientId, 'sync_cycle_failed', { status: 'failed', durationMs: syncTraceDuration, reason: observabilityReason(syncTraceResult?.error) }, 'error');
+        }
         // Очищаем in-flight после завершения
         if (_syncInFlight && _syncInFlight.clientId === clientId) {
           _syncInFlight = null;
@@ -10979,7 +11028,14 @@
     _uploadInFlightCount = filteredBatch.length;
     _uploadStartedAt = Date.now();
     const _uploadStartTs = _uploadStartedAt;
+    const _observedUploadClientId = filteredBatch[0]?.client_id || null;
+    const _observedUploadGroup = observabilityKeyGroup(filteredBatch);
     const uploadRunId = ++_clientUploadRunId;
+    traceClientSyncEvent(_observedUploadClientId, 'write_queued', {
+      status: 'queued', count: filteredBatch.length,
+      queue_size: filteredBatch.length + clientUpsertQueue.length,
+      key_group: _observedUploadGroup
+    });
     scheduleClientUploadWatchdog('upload-start');
     // One progress ceiling update per upload attempt (not on every pending-change).
     try {
@@ -11027,6 +11083,7 @@
       requeueClientInFlightBatch(filteredBatch, 'sync-disabled');
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
+      traceClientSyncEvent(_observedUploadClientId, 'write_failed', { status: 'failed', count: filteredBatch.length, key_group: _observedUploadGroup, reason: 'auth' }, 'error');
       notifySyncCompletedIfDrained();
       return;
     }
@@ -11038,6 +11095,7 @@
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       incrementRetry();
+      traceClientSyncEvent(_observedUploadClientId, 'write_failed', { status: 'failed', count: filteredBatch.length, key_group: _observedUploadGroup, reason: 'network' }, 'warn');
       // Запланировать повторную попытку с exponential backoff
       scheduleClientPush();
       notifySyncCompletedIfDrained();
@@ -11140,6 +11198,11 @@
           }
           addSyncLogEntry(isWriteContextError ? 'upload_deferred' : 'upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           _lastUploadFailAt = Date.now();
+          traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
+            status: 'failed', durationMs: Date.now() - _uploadStartTs,
+            count: hydratedBatch.length, key_group: _observedUploadGroup,
+            reason: observabilityReason(anyError)
+          }, isWriteContextError ? 'warn' : 'error');
           const uploadErrorKind = isWriteContextError ? 'write-context' : (isAuthError ? 'auth' : classifyUploadError(anyError));
           const existingDiag = _lastUploadDiag;
           const hasFreshDetailed413 = uploadErrorKind === '413'
@@ -11200,6 +11263,11 @@
           addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: _uploadDurationMs });
           _lastSuccessfulUploadMs = _uploadDurationMs;
           _lastUploadOkAt = Date.now();
+          traceClientSyncEvent(_observedUploadClientId, 'write_uploaded', {
+            status: 'uploaded', durationMs: _uploadDurationMs,
+            count: totalSaved, key_group: _observedUploadGroup,
+            queue_size: clientUpsertQueue.length
+          });
           clearClientInFlightBatch({ notify: false });
         }
 
@@ -11286,6 +11354,11 @@
         clearClientInFlightBatch({ notify: false });
         persistClientQueueDurabilityState();
         notifyPendingChange();
+        traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
+          status: 'failed', durationMs: Date.now() - _uploadStartTs,
+          count: failedItems.length, key_group: _observedUploadGroup,
+          reason: observabilityReason(results.find(r => !r.success)?.error)
+        }, 'error');
 
         const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
         if (authError) {
@@ -11306,6 +11379,11 @@
 
       // Критический лог: данные отправлены в облако (только успешные)
       if (successItems.length > 0) {
+        traceClientSyncEvent(_observedUploadClientId, 'write_uploaded', {
+          status: 'uploaded', durationMs: Date.now() - _uploadStartTs,
+          count: successItems.length, key_group: _observedUploadGroup,
+          queue_size: clientUpsertQueue.length
+        });
         const types = {};
         const otherKeys = []; // DEBUG: какие ключи попадают в "other"
         successItems.forEach(item => {
@@ -11354,6 +11432,11 @@
       logCritical('❌ Ошибка сохранения в облако:', e.message || e);
       addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(e?.message || e).slice(0, 80) });
       _lastUploadFailAt = Date.now();
+      traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
+        status: 'failed', durationMs: Date.now() - _uploadStartTs,
+        count: uniqueBatch.length, key_group: _observedUploadGroup,
+        reason: observabilityReason(e)
+      }, 'error');
       recordUploadDiag({
         kind: classifyUploadError(e),
         error: String(e?.message || e || '').slice(0, 240),

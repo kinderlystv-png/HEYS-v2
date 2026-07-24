@@ -178,6 +178,22 @@
                         window.__heysGatedRender = false;
                     }
                     console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
+                    const degraded = /fallback|error|no cloud/i.test(reason || '');
+                    window.HEYS?.LogTrace?.event?.('day_screen_ready', {
+                        source: 'day_tab',
+                        status: degraded ? 'degraded' : 'ok',
+                        reason,
+                        screen: 'day'
+                    }, degraded ? 'warn' : 'info');
+                    if (!window.__heysBootReadyReported) {
+                        window.__heysBootReadyReported = true;
+                        window.HEYS?.LogTrace?.event?.('boot_ready', {
+                            source: 'day_tab',
+                            status: degraded ? 'degraded' : 'ok',
+                            reason,
+                            screen: 'day'
+                        }, degraded ? 'warn' : 'info');
+                    }
                     // boot_optimized_v1: defer the heavy App-tree render via startTransition
                     // so Header/Skeleton stay interactive while DayTab subtree commits in
                     // a deferred lane. Saves ~150-300ms perceived jank

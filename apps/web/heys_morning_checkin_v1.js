@@ -1824,6 +1824,18 @@
     };
   }
 
+  function createMorningStepShownTrace(plan) {
+    return ({ stepId }) => {
+      traceMorningCheckin('step_shown', {
+        dateKey: plan.dateKey,
+        clientId: plan.clientId,
+        flowId: plan.flowId,
+        stepId,
+        status: 'shown'
+      });
+    };
+  }
+
   function dispatchMorningCheckinDayRefresh(dateKey, source) {
     const freshDay = getFreshMorningDay(dateKey);
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -2128,7 +2140,8 @@
         forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
         requireStepAck: true,
         allowProgressForwardNav: false,
-        onStepSaved: createMorningStepAck(plan)
+        onStepSaved: createMorningStepAck(plan),
+        onStepShown: createMorningStepShownTrace(plan)
       });
     }
 
@@ -2228,7 +2241,8 @@
           forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
           requireStepAck: true,
           allowProgressForwardNav: false,
-          onStepSaved: createMorningStepAck(plan)
+          onStepSaved: createMorningStepAck(plan),
+          onStepShown: createMorningStepShownTrace(plan)
         });
       }
     },

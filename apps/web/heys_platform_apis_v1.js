@@ -159,6 +159,22 @@
     _swUpdateStateLog.push(entry);
     if (_swUpdateStateLog.length > _SW_STATE_LOG_MAX) _swUpdateStateLog.shift();
     console.info(`[SW-SM] ${from} → ${to} (${source})`);
+    const eventByState = {
+      detected: 'sw_update_detected',
+      downloading: 'sw_update_downloading',
+      ready: 'sw_update_ready',
+      activating: 'sw_update_activating',
+      reloading: 'sw_reload_requested'
+    };
+    if (eventByState[to]) {
+      HEYS.LogTrace?.event?.(eventByState[to], {
+        source: 'service_worker',
+        from,
+        to,
+        reason: source,
+        update_version: _updateVersion || null
+      });
+    }
   }
 
   function getSwUpdateState() { return _swUpdateState; }
@@ -1095,6 +1111,11 @@
       } else {
         // Первичная или незапрошенная активация SW — НЕ прерываем текущую загрузку.
         console.log('[SW] Controller activation outside update lifecycle, no reload needed');
+        HEYS.LogTrace?.event?.('sw_reload_suppressed', {
+          source: 'service_worker',
+          reason: 'outside_update_lifecycle',
+          status: 'ok'
+        });
       }
     });
   }

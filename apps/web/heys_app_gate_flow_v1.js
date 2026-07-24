@@ -2081,11 +2081,12 @@
                                         'div',
                                         {
                                             style: {
-                                                display: 'flex',
-                                                gap: 6,
-                                                background: 'rgba(0,0,0,0.25)',
-                                                borderRadius: 10,
-                                                padding: 4
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                                            gap: 4,
+                                            background: 'rgba(0,0,0,0.25)',
+                                            borderRadius: 10,
+                                            padding: 4
                                             }
                                         },
                                         React.createElement(
@@ -2097,10 +2098,10 @@
                                                 },
                                                 style: {
                                                     flex: 1,
-                                                    padding: '8px 14px',
+                                                    padding: '8px 3px',
                                                     border: 'none',
                                                     borderRadius: 8,
-                                                    fontSize: 13,
+                                                    fontSize: 11,
                                                     fontWeight: 600,
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s',
@@ -2119,10 +2120,10 @@
                                                 },
                                                 style: {
                                                     flex: 1,
-                                                    padding: '8px 14px',
+                                                    padding: '8px 3px',
                                                     border: 'none',
                                                     borderRadius: 8,
-                                                    fontSize: 13,
+                                                    fontSize: 11,
                                                     fontWeight: 600,
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s',
@@ -2144,10 +2145,10 @@
                                                 },
                                                 style: {
                                                     flex: 1,
-                                                    padding: '8px 14px',
+                                                    padding: '8px 3px',
                                                     border: 'none',
                                                     borderRadius: 8,
-                                                    fontSize: 13,
+                                                    fontSize: 11,
                                                     fontWeight: 600,
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s',
@@ -2156,6 +2157,29 @@
                                                 }
                                             },
                                             React.createElement(PendingProductsBadge, null, '✅ Заявки')
+                                        ),
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => {
+                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Диагностика');
+                                                    setCuratorTab('diagnostics');
+                                                },
+                                                style: {
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    padding: '8px 3px',
+                                                    border: 'none',
+                                                    borderRadius: 8,
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    background: curatorTab === 'diagnostics' ? 'rgba(255,255,255,0.95)' : 'transparent',
+                                                    color: curatorTab === 'diagnostics' ? '#0f172a' : 'rgba(255,255,255,0.8)'
+                                                }
+                                            },
+                                            '◉ Диагн.'
                                         )
                                     ),
                                     // Warnings (cache/error) в хедере
@@ -2478,6 +2502,16 @@
                                                                     },
                                                                     React.createElement('button', {
                                                                         className: 'btn-icon',
+                                                                        title: 'Диагностика загрузок',
+                                                                        'aria-label': `Диагностика загрузок: ${c.name}`,
+                                                                        onClick: (e) => {
+                                                                            e.stopPropagation();
+                                                                            HEYS.ClientDiagnostics?.show?.({ clientId: c.id, clientName: c.name });
+                                                                        },
+                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid #c7c8df', background: '#f5f5fb', color: '#434587', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                                                                    }, '◉'),
+                                                                    React.createElement('button', {
+                                                                        className: 'btn-icon',
                                                                         title: 'Скопировать ID',
                                                                         onClick: (e) => {
                                                                             console.info('[HEYS.gate] 🆔 Копирование ID', { clientId: c.id });
@@ -2532,7 +2566,11 @@
                                     curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin),
 
                                     // === TAB: MODERATION (Заявки на продукты) ===
-                                    curatorTab === 'moderation' && React.createElement(ModerationTab, { clients })
+                                    curatorTab === 'moderation' && React.createElement(ModerationTab, { clients }),
+
+                                    // === TAB: DIAGNOSTICS (client launches and sync) ===
+                                    curatorTab === 'diagnostics' && HEYS.ClientDiagnostics?.Overview
+                                        && React.createElement(HEYS.ClientDiagnostics.Overview, { clients })
                                 ),
 
                                 // FOOTER: Кнопка создания (прибита к низу)

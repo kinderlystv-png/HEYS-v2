@@ -565,8 +565,14 @@
         if (!res || res.ok === false) {
           remaining.push(item);
           console.warn('[HEYS.curatorReview] ack queued for retry', { entryCount: item.entryIds?.length || 0 });
+          HEYS.LogTrace?.event?.('curator_changes_ack_deferred', {
+            source: 'curator_changes', status: 'degraded', pending_count: item.entryIds?.length || 0
+          }, 'warn');
         } else {
           console.info('[HEYS.curatorReview] ack succeeded', { entryCount: item.entryIds?.length || 0 });
+          HEYS.LogTrace?.event?.('curator_changes_acknowledged', {
+            source: 'curator_changes', pending_count: item.entryIds?.length || 0
+          });
         }
       } catch (e) {
         remaining.push(item);
@@ -812,6 +818,9 @@
 
     const modal = backdrop.querySelector('.ca-modal');
     const closeAsLater = () => {
+      HEYS.LogTrace?.event?.('curator_changes_dismissed', {
+        source: 'curator_changes', status: 'degraded', pending_count: entries.length
+      }, 'warn');
       markSnoozed();
       removeExistingModal();
       scheduleReviewAttempt(SNOOZE_MS);
@@ -866,6 +875,9 @@
       document.body.style.overflow = 'hidden';
     } catch (_) {}
     document.body.appendChild(backdrop);
+    HEYS.LogTrace?.event?.('curator_changes_shown', {
+      source: 'curator_changes', pending_count: entries.length
+    });
     document.addEventListener('keydown', _modalKeydownHandler);
     _modalEl = backdrop;
     const primary = backdrop.querySelector('.ca-modal__ack-btn');

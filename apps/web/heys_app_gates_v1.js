@@ -18,6 +18,11 @@
                 }
                 componentDidCatch(error, info) {
                     console.error('[HEYS] ErrorBoundary caught:', error, info);
+                    HEYS.LogTrace?.event?.(window.__heysAppReady ? 'app_runtime_failed' : 'boot_failed', {
+                        source: 'error_boundary',
+                        status: 'failed',
+                        phase: window.__heysAppReady ? 'runtime' : 'boot'
+                    }, 'error');
                 }
                 render() {
                     if (this.state.hasError) {

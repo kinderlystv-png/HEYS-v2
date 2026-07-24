@@ -57,8 +57,20 @@
   let outcomeFollowUpTimer = null;
   let pageScrollLock = null;
   let modalOpenSeq = 0;
+  let activeTelemetryOpen = null;
   let lastEventReadCompactionSig = '';
   const autoOpenShownClients = new Set();
+
+  function traceHungerUi(eventName, meta, level) {
+    try {
+      HEYS.LogTrace?.event?.(eventName, {
+        source: meta?.source || 'hunger',
+        status: meta?.status || 'ok',
+        mode: meta?.mode || null,
+        reason: meta?.reason || null
+      }, level);
+    } catch (_) { /* observability must not affect hunger UI */ }
+  }
 
   const STATUS_COPY = {
     fed: 'Еда ещё обрабатывается',
@@ -5299,6 +5311,8 @@
         answeredAt: outcomeAt,
         answer: outcome
       });
+      if (activeTelemetryOpen) activeTelemetryOpen.completed = true;
+      traceHungerUi('hunger_followup_answered', { source: state.source, mode: 'stress_calorie' });
       planNextMealEffectTimer();
       hide();
     }
@@ -5307,6 +5321,8 @@
       const followUp = state.hungerOutcomeFollowUp;
       if (!followUp?.id || !outcome) return;
       recordOutcomeFollowUp(followUp.id, outcome);
+      if (activeTelemetryOpen) activeTelemetryOpen.completed = true;
+      traceHungerUi('hunger_followup_answered', { source: state.source, mode: 'outcome' });
       hide();
     }
 
@@ -5531,6 +5547,11 @@
       setDebugOpen(false);
       setCopyDone(false);
       planNextOutcomeFollowUp();
+      if (activeTelemetryOpen) activeTelemetryOpen.completed = true;
+      traceHungerUi('hunger_prompt_submitted', {
+        source: state.source || 'hunger-fab',
+        mode: state.mealEffectFollowUp ? 'meal_effect' : 'assessment'
+      });
     }
 
     function resetInput() {
@@ -6279,6 +6300,13 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
       _initialDraft: getInitialDraftForState(modalOptions)
     };
     if (!ensureRoot()) return false;
+    activeTelemetryOpen = {
+      id: seededOptions._openId,
+      source: modalOptions.source || 'hunger-fab',
+      mode: modalOptions.hungerOutcomeFollowUp ? 'outcome' : (modalOptions.stressCalorieFollowUp ? 'stress_calorie' : (modalOptions.mealEffectFollowUp ? 'meal_effect' : 'assessment')),
+      completed: false
+    };
+    traceHungerUi('hunger_prompt_shown', activeTelemetryOpen);
     if (HEYS.ModalManager) modalCleanup = HEYS.ModalManager.register('hunger-energy-status-modal', () => hide(true));
     const apply = () => {
       if (setModalState) setModalState(seededOptions);
@@ -6289,6 +6317,10 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
   }
 
   function hide(skipManagerNotify) {
+    if (activeTelemetryOpen) {
+      traceHungerUi(activeTelemetryOpen.completed ? 'hunger_prompt_completed' : 'hunger_prompt_dismissed', activeTelemetryOpen, activeTelemetryOpen.completed ? 'info' : 'warn');
+      activeTelemetryOpen = null;
+    }
     if (modalCleanup && !skipManagerNotify) {
       modalCleanup();
       modalCleanup = null;

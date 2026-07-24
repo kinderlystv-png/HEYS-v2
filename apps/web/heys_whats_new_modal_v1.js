@@ -326,8 +326,17 @@
                         if (!cancelled) setVisible(true);
                     });
                     console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), waiting for explicit acknowledgement of', inspection.latestVersion);
+                    HEYS.LogTrace?.event?.('whats_new_shown', {
+                        source: 'whats_new',
+                        release_version: inspection.latestVersion,
+                        unseen_count: unseen.length
+                    });
                 } else {
                     console.info('[HEYS.WhatsNew] Modal mount deferred —', inspection.reason || 'no_unseen');
+                    HEYS.LogTrace?.event?.('whats_new_deferred', {
+                        source: 'whats_new',
+                        reason: inspection.reason || 'no_unseen'
+                    });
                     if (onCloseRef.current) onCloseRef.current();
                 }
             });
@@ -365,12 +374,17 @@
             if (latestVersionRef.current) {
                 persistAcknowledgedVersion(latestVersionRef.current);
                 console.info('[HEYS.WhatsNew] Acknowledged release', latestVersionRef.current);
+                HEYS.LogTrace?.event?.('whats_new_acknowledged', {
+                    source: 'whats_new',
+                    release_version: latestVersionRef.current,
+                    unseen_count: Array.isArray(releases) ? releases.length : 0
+                });
             }
             setVisible(false);
             setTimeout(() => {
                 if (onCloseRef.current) onCloseRef.current();
             }, 250); // match CSS transition duration
-        }, []);
+        }, [releases]);
 
         const handleBackdropClick = useCallback((e) => {
             if (e.target === backdropRef.current) {

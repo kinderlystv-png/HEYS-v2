@@ -67,6 +67,12 @@ durable data queue: он посылает открытым client windows `SYNC_
 секунду и затем посылает `SYNC_COMPLETE`. Page-side `SYNC_START` вызывает cloud
 sync, если приложение открыто.
 
+Client observability фиксирует один набор событий на реальный цикл, а не на
+каждый ключ: `sync_cycle_started/completed/failed`, `sync_recovered` и
+`write_queued/uploaded/failed`. Контекст содержит только агрегаты (`count`,
+`queue_size`, безопасную `key_group`) и нормализованную причину; storage keys и
+значения дневника в telemetry не уходят.
+
 Следствие: это **wake-up bridge**, а не автономная background upload гарантия.
 Без открытого client window он ничего не отправляет; `SYNC_COMPLETE` означает
 окончание фиксированной задержки, а не подтверждённый drain cloud queue.
@@ -146,6 +152,11 @@ Messenger push использует приватный generic preview: «Нов
 - `apps/web/__tests__/curator-actions-banner.test.js` — очередь и retry
   подтверждения модалки правок куратора.
 
+SW update state machine публикует структурированные события
+`sw_update_detected/downloading/ready/activating`, `sw_reload_requested` и
+`sw_reload_suppressed`. Они входят в один `boot_id` с событиями What's New и
+позволяют отличить штатное обновление PWA от повторного reload-цикла.
+
 ## Facts Table
 
 | ID  | Утверждение                                                                  | Проверка                                                                                                                                               | Статус               |
@@ -161,3 +172,5 @@ Messenger push использует приватный generic preview: «Нов
 | W9  | Gateway содержит все пять push routes                                        | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                       | проверено 2026-07-17 |
 | W10 | `What's New` переживает отказ `localStorage` без повторного открытия         | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                 | проверено 2026-07-23 |
 | W11 | Ack правок куратора переживает отказ storage и не открывает pending повторно | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                    | проверено 2026-07-23 |
+| W12 | SW lifecycle и reload suppression входят в структурированный boot timeline   | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                               | проверено 2026-07-24 |
+| W13 | Sync/write telemetry агрегирована по циклу/пакету и не содержит значений     | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                               | проверено 2026-07-24 |

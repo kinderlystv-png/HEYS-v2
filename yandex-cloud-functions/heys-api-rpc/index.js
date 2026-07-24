@@ -1001,6 +1001,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'create_client_with_pin',           // Создание клиента (только куратор!)
   'reset_client_pin',                 // Сброс PIN клиента
   'get_curator_clients',              // Список клиентов куратора
+  'get_client_observability_by_curator', // Structured client boot/session diagnostics
+  'get_curator_observability_overview', // Aggregate curator diagnostics dashboard
   'admin_get_all_clients',            // 🆕 Список всех клиентов (JWT-only v4.0)
 
   // === SUBSCRIPTION MANAGEMENT ===
@@ -4663,6 +4665,22 @@ async function handleRpcRequest(event, context) {
       // 🔐 JWT-only: functions that need p_curator_id type hint
       'admin_get_all_clients': {
         'p_curator_id': '::uuid'
+      },
+      'get_client_observability_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid',
+        'p_since': '::timestamptz',
+        'p_limit': '::int'
+      },
+      'get_curator_observability_overview': {
+        'p_curator_id': '::uuid',
+        'p_since': '::timestamptz',
+        'p_client_id': '::uuid',
+        'p_statuses': '::text[]',
+        'p_cursor_started_at': '::timestamptz',
+        'p_cursor_problem_rank': '::int',
+        'p_cursor_duration_ms': '::int',
+        'p_limit': '::int'
       },
       'admin_extend_trial': {
         'p_client_id': '::uuid',

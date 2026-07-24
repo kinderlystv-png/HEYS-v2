@@ -25,6 +25,19 @@
   var FLUSH_INTERVAL_MS = 20000; // periodic flush каждые 20s (раньше 30s — снижаем риск overflow до flush)
   var FLUSH_BATCH = 300;         // max строк за один POST (сервер capped 500)
   var MAX_MSG_LEN = 4000;        // обрезка длинных строк
+  function randomId(prefix) {
+    try {
+      if (global.crypto && typeof global.crypto.randomUUID === 'function') return global.crypto.randomUUID();
+    } catch (_) { /* fallback below */ }
+    if (prefix === 'event') {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (char) {
+        var value = Math.random() * 16 | 0;
+        return (char === 'x' ? value : (value & 0x3 | 0x8)).toString(16);
+      });
+    }
+    return (prefix || 'id') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
   var SESSION_ID = (function () {
     try {
       var k = '_heys_log_session';
@@ -38,6 +51,99 @@
       return 'no-ss-' + Date.now().toString(36);
     }
   })();
+  // SESSION_ID identifies the browser tab; BOOT_ID identifies this exact page load.
+  // A reload/update therefore starts a fresh diagnostic session even in the same tab.
+  var BOOT_ID = randomId('boot');
+  var DEVICE_ID = (function () {
+    try {
+      var k = '_heys_observability_device';
+      var v = localStorage.getItem(k);
+      if (!v) {
+        v = randomId('device');
+        localStorage.setItem(k, v);
+      }
+      return v;
+    } catch (_) {
+      return randomId('ephemeral-device');
+    }
+  })();
+  var BOOT_STARTED_AT = Date.now();
+  var OFFLINE_QUEUE_KEY = '_heys_observability_queue_v1';
+  var OFFLINE_QUEUE_MAX = 200;
+
+  function detectRuntime() {
+    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+    var ios = /iPhone|iPad|iPod/i.test(ua);
+    var android = /Android/i.test(ua);
+    var standalone = false;
+    try {
+      standalone = !!((global.matchMedia && global.matchMedia('(display-mode: standalone)').matches) || navigator.standalone);
+    } catch (_) { /* noop */ }
+    var buildId = null;
+    try {
+      var scripts = document.scripts || [];
+      for (var i = scripts.length - 1; i >= 0; i--) {
+        var src = scripts[i].src || '';
+        var match = src.match(/boot-app\.([a-f0-9]+)\.js/i);
+        if (match) { buildId = match[1]; break; }
+      }
+    } catch (_) { /* noop */ }
+    return {
+      buildId: buildId || (global.HEYS && global.HEYS.version) || global.APP_VERSION || 'unknown',
+      deviceClass: /iPad|Tablet/i.test(ua) ? 'tablet' : (/Mobile|iPhone|Android/i.test(ua) ? 'mobile' : 'desktop'),
+      osName: ios ? 'iOS' : (android ? 'Android' : (/Windows/i.test(ua) ? 'Windows' : (/Mac OS/i.test(ua) ? 'macOS' : 'other'))),
+      browserName: /CriOS|Chrome/i.test(ua) ? 'Chrome' : (/FxiOS|Firefox/i.test(ua) ? 'Firefox' : (/Safari/i.test(ua) ? 'Safari' : 'other')),
+      displayMode: standalone ? 'standalone' : 'browser'
+    };
+  }
+  var RUNTIME = detectRuntime();
+
+  var EVENT_CONTEXT_KEYS = {
+    phase: 1, step: 1, step_id: 1, screen: 1, source: 1, reason: 1,
+    release_version: 1, unseen_count: 1, update_version: 1,
+    pending_count: 1, missing_days_count: 1, action: 1, mode: 1,
+    from: 1, to: 1, online: 1, attempt: 1, result: 1,
+    bundle: 1, route: 1, tab: 1, flow_kind: 1,
+    count: 1, queue_size: 1, key_group: 1, problem_stage: 1
+  };
+
+  function sanitizeEventContext(input) {
+    var out = {};
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+    Object.keys(input).forEach(function (key) {
+      if (!EVENT_CONTEXT_KEYS[key]) return;
+      var value = input[key];
+      if (typeof value === 'string') out[key] = value.slice(0, 160);
+      else if (typeof value === 'number' && Number.isFinite(value)) out[key] = value;
+      else if (typeof value === 'boolean') out[key] = value;
+    });
+    return out;
+  }
+
+  function readOfflineEvents() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed.slice(-OFFLINE_QUEUE_MAX) : [];
+    } catch (_) { return []; }
+  }
+
+  function writeOfflineEvents(events) {
+    try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(events.slice(-OFFLINE_QUEUE_MAX))); }
+    catch (_) { /* diagnostics must never break the app */ }
+  }
+
+  function persistStructuredEvent(entry) {
+    var queue = readOfflineEvents();
+    queue.push(entry);
+    writeOfflineEvents(queue);
+  }
+
+  function acknowledgeStructuredEvents(eventIds) {
+    if (!eventIds || !eventIds.length) return;
+    var accepted = {};
+    eventIds.forEach(function (id) { if (id) accepted[id] = 1; });
+    writeOfflineEvents(readOfflineEvents().filter(function (entry) { return !accepted[entry.event_id]; }));
+  }
 
   // Original methods — никогда НЕ заменяются, чтобы flush() не зацикливался.
   var orig = {
@@ -48,7 +154,7 @@
     debug: console.debug ? console.debug.bind(console) : console.log.bind(console)
   };
 
-  var ring = []; // [{level, message, args, client_ts, page_url}]
+  var ring = readOfflineEvents(); // raw console rows + persisted structured lifecycle events
   var ringDropped = 0;
   var lastFlushAt = 0;
   var flushInProgress = false;
@@ -164,6 +270,24 @@
       source: body && body.source ? String(body.source) : null,
       flowId: body && body.flowId ? String(body.flowId) : null,
       body: body
+    };
+  }
+
+  function deriveStructuredMeta(level, args) {
+    var meta = extractTraceMeta(args);
+    if (!meta.body || !meta.event) return null;
+    var body = meta.body;
+    return {
+      event_id: randomId('event'),
+      event_name: String(meta.event).slice(0, 100),
+      event_source: String(meta.source || meta.prefix.replace(/^\[|\]$/g, '') || 'app').slice(0, 100),
+      event_status: String(body.status || (level === 'error' ? 'failed' : 'ok')).slice(0, 40),
+      flow_id: meta.flowId ? String(meta.flowId).slice(0, 100) : null,
+      duration_ms: Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.min(86400000, Math.round(Number(body.durationMs)))) : null,
+      event_context: sanitizeEventContext(Object.assign({}, body, {
+        step_id: body.step_id || body.stepId,
+        missing_days_count: body.missing_days_count || body.missingDaysCount
+      }))
     };
   }
 
@@ -367,20 +491,33 @@
     }
   }
 
-  function push(level, args) {
+  function push(level, args, explicitStructured) {
     try {
       var c = captureArgs(args);
       if (ring.length >= RING_MAX) {
         ring.shift();
         ringDropped++;
       }
-      ring.push({
+      var structured = explicitStructured || deriveStructuredMeta(level, args);
+      var entry = {
         level: level,
         message: c.message,
         args: c.args,
         client_ts: new Date().toISOString(),
         page_url: typeof location !== 'undefined' ? location.href.slice(0, 1000) : null
-      });
+      };
+      if (structured) {
+        Object.keys(structured).forEach(function (key) { entry[key] = structured[key]; });
+        entry.boot_id = BOOT_ID;
+        entry.build_id = RUNTIME.buildId;
+        entry.device_id = DEVICE_ID;
+        entry.device_class = RUNTIME.deviceClass;
+        entry.os_name = RUNTIME.osName;
+        entry.browser_name = RUNTIME.browserName;
+        entry.display_mode = RUNTIME.displayMode;
+        persistStructuredEvent(entry);
+      }
+      ring.push(entry);
       rememberTrace(level, args);
     } catch (_) { /* never throw из console patch */ }
   }
@@ -395,12 +532,20 @@
 
   // Global error handlers
   global.addEventListener('error', function (ev) {
-    push('error', ['[window.error]', ev.message, ev.filename + ':' + ev.lineno + ':' + ev.colno, ev.error && ev.error.stack]);
+    push('error', ['[window.error]', ev.message, ev.filename + ':' + ev.lineno + ':' + ev.colno, ev.error && ev.error.stack], {
+      event_id: randomId('event'), event_name: global.__heysAppReady ? 'app_runtime_failed' : 'boot_failed',
+      event_source: 'window', event_status: 'failed', flow_id: null,
+      duration_ms: Date.now() - BOOT_STARTED_AT, event_context: { phase: global.__heysAppReady ? 'runtime' : 'boot' }
+    });
     flush('error-event');
   });
   global.addEventListener('unhandledrejection', function (ev) {
     var reason = ev.reason;
-    push('error', ['[unhandledrejection]', reason && (reason.message || reason)]);
+    push('error', ['[unhandledrejection]', reason && (reason.message || reason)], {
+      event_id: randomId('event'), event_name: global.__heysAppReady ? 'app_runtime_failed' : 'boot_failed',
+      event_source: 'promise', event_status: 'failed', flow_id: null,
+      duration_ms: Date.now() - BOOT_STARTED_AT, event_context: { phase: global.__heysAppReady ? 'runtime' : 'boot' }
+    });
     flush('unhandledrejection');
   });
 
@@ -431,7 +576,21 @@
         args: e.args,
         session_id: SESSION_ID,
         user_agent: ua,
-        page_url: e.page_url
+        page_url: e.page_url,
+        event_id: e.event_id || null,
+        boot_id: e.boot_id || BOOT_ID,
+        event_name: e.event_name || null,
+        event_source: e.event_source || null,
+        event_status: e.event_status || null,
+        flow_id: e.flow_id || null,
+        duration_ms: e.duration_ms == null ? null : e.duration_ms,
+        build_id: e.build_id || RUNTIME.buildId,
+        device_id: e.device_id || DEVICE_ID,
+        device_class: e.device_class || RUNTIME.deviceClass,
+        os_name: e.os_name || RUNTIME.osName,
+        browser_name: e.browser_name || RUNTIME.browserName,
+        display_mode: e.display_mode || RUNTIME.displayMode,
+        event_context: e.event_context || null
       };
     });
   }
@@ -454,6 +613,7 @@
     }
     var batch = buildBatch(slice);
     var payload = JSON.stringify(batch);
+    var structuredEventIds = slice.map(function (entry) { return entry.event_id; }).filter(Boolean);
     lastFlushAt = Date.now();
 
     // Под visibilitychange/pagehide — sendBeacon (fire-and-forget, не блокирует unload).
@@ -475,10 +635,15 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: payload,
-        keepalive: true
+        keepalive: true,
+        credentials: 'include'
+      }).then(function (response) {
+        if (response && response.ok) acknowledgeStructuredEvents(structuredEventIds);
       }).catch(function () {
-        // Сетевой сбой — НЕ возвращаем строки в ring (риск зацикливания).
-        // Просто теряем batch — это диагностика, не критичные данные.
+        // Raw console rows may be dropped. Structured events remain in the
+        // bounded local queue and return to the in-memory queue for online retry.
+        var retryRows = slice.filter(function (entry) { return !!entry.event_id; });
+        if (retryRows.length) ring = retryRows.concat(ring).slice(-RING_MAX);
       }).then(function () {
         flushInProgress = false;
       });
@@ -498,6 +663,25 @@
     setTimeout(function () {
       try { flush('trace-direct'); } catch (_) {}
     }, 250);
+  }
+
+  function event(eventName, context, level) {
+    var safeName = String(eventName || '').replace(/[^a-z0-9_.-]+/gi, '_').slice(0, 100);
+    if (!safeName) return null;
+    var input = context && typeof context === 'object' ? context : {};
+    var lvl = (level === 'warn' || level === 'error' || level === 'debug') ? level : 'info';
+    var structured = {
+      event_id: randomId('event'),
+      event_name: safeName,
+      event_source: String(input.source || 'app').slice(0, 100),
+      event_status: String(input.status || (lvl === 'error' ? 'failed' : 'ok')).slice(0, 40),
+      flow_id: input.flowId ? String(input.flowId).slice(0, 100) : null,
+      duration_ms: Number.isFinite(Number(input.durationMs)) ? Math.max(0, Math.min(86400000, Math.round(Number(input.durationMs)))) : null,
+      event_context: sanitizeEventContext(input)
+    };
+    push(lvl, ['[HEYS.observability]', { event: safeName, source: structured.event_source, status: structured.event_status }], structured);
+    if (lvl === 'error') flush('structured-error');
+    return structured.event_id;
   }
 
   // Periodic flush
@@ -521,6 +705,7 @@
   global.HEYS.LogTrace = {
     flush: function () { flush('manual'); },
     trace: trace,
+    event: event,
     makeFlowId: makeFlowId,
     lastFlowId: lastFlowId,
     verifyKvWrite: verifyKvWrite,
@@ -535,14 +720,59 @@
         lastFlushAt: lastFlushAt,
         recentTraces: recentTraces.length,
         sessionId: SESSION_ID,
+        bootId: BOOT_ID,
+        deviceId: DEVICE_ID,
+        runtime: RUNTIME,
         endpoint: ENDPOINT
       };
     },
-    sessionId: SESSION_ID
+    sessionId: SESSION_ID,
+    bootId: BOOT_ID
   };
 
   // Маркер для timing-диагностики (отдельный console.info чтобы поймать сам бутстрап в логе)
   orig.info('[heys.log-trace] installed v1, session=' + SESSION_ID + ', endpoint=' + ENDPOINT);
+
+  event('boot_started', {
+    source: 'bootstrap',
+    phase: 'bootstrap',
+    online: typeof navigator !== 'undefined' ? navigator.onLine : true
+  });
+
+  global.addEventListener('online', function () {
+    event('network_online', { source: 'browser', online: true });
+    flush('online');
+  });
+  global.addEventListener('offline', function () {
+    event('network_offline', { source: 'browser', status: 'degraded', online: false }, 'warn');
+  });
+  global.addEventListener('heys:client-changed', function () {
+    event('client_context_ready', { source: 'auth', phase: 'identity' });
+  });
+  global.addEventListener('heysSyncCompleted', function () {
+    event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: Date.now() - BOOT_STARTED_AT });
+  });
+  global.addEventListener('heys:progress', function (ev) {
+    var phase = ev && ev.detail && ev.detail.phase ? String(ev.detail.phase) : '';
+    if (!phase) return;
+    if (phase === 'ready') event('app_shell_ready', { source: 'bootstrap', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
+    else if (phase.indexOf('bundle') !== -1 || phase.indexOf('postboot') !== -1) {
+      event('boot_phase_ready', { source: 'bootstrap', phase: phase, durationMs: Date.now() - BOOT_STARTED_AT });
+    }
+  });
+  (function waitForPostboot() {
+    var attempts = 0;
+    var timer = setInterval(function () {
+      attempts++;
+      if (global.__heysPostbootDone) {
+        clearInterval(timer);
+        event('postboot_ready', { source: 'bootstrap', phase: 'postboot', durationMs: Date.now() - BOOT_STARTED_AT });
+      } else if (attempts >= 120) {
+        clearInterval(timer);
+        event('postboot_timeout', { source: 'bootstrap', status: 'degraded', phase: 'postboot', durationMs: Date.now() - BOOT_STARTED_AT }, 'warn');
+      }
+    }, 500);
+  })();
 
   // === [CHECKIN.trace] — облачный трейс шагов чекина (TASK-012) ===
   // Слушает heys:day-updated, логирует presence ключевых полей дня + source +

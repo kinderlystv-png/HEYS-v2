@@ -384,8 +384,9 @@
     throw lastError;
   }
 
-  /** Production curator auth is cookie-only. Localhost may keep a token in
-   * memory because the production Domain=.heyslab.ru cookie cannot be set. */
+  /** Production curator auth is cookie-only. Localhost also receives an
+   * HttpOnly cookie through the dev proxy, while the response token remains an
+   * in-memory fallback for the current page lifetime. */
   function getCuratorToken() {
     if (!isLocalBrowserDev || !_devCuratorToken) return null;
     if (!_curatorTokenLogged) {
@@ -406,7 +407,11 @@
   function shouldTryCookieCuratorRequest() {
     try {
       const host = global.location && global.location.hostname || '';
-      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+      if (!host) return false;
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return hasCookieSessionHint('curator');
+      }
+      return true;
     } catch (_) {
       return false;
     }
@@ -487,6 +492,8 @@
     'create_client_with_pin',
     'reset_client_pin',
     'get_curator_clients',
+    'get_client_observability_by_curator',
+    'get_curator_observability_overview',
     'admin_get_all_clients',
 
     // === SUBSCRIPTION MANAGEMENT ===

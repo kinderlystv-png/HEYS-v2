@@ -543,6 +543,36 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
   });
 
+  it('curator-only RPC can use the rewritten HttpOnly curator cookie on localhost after reload', async () => {
+    const api = loadYandexAPI({
+      hostname: 'localhost',
+      storageSeed: { heys_curator_cookie_session_hint: '1' },
+    });
+    global.fetch.mockResolvedValue(createJsonResponse([]));
+
+    const result = await api.rpc('get_curator_clients', {});
+
+    expect(result).toEqual({ data: [], error: null });
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('http://localhost:4001/rpc?fn=get_curator_clients');
+    expect(options.credentials).toBe('include');
+    expect(options.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+  });
+
+  it('curator-only RPC on localhost still fails closed without a restored cookie session hint', async () => {
+    const api = loadYandexAPI({ hostname: 'localhost' });
+
+    const result = await api.rpc('get_curator_clients', {});
+
+    expect(result.error).toMatchObject({
+      message: 'Требуется авторизация куратора',
+      code: 'UNAUTHORIZED',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('saveKV keeps curator runtime context on curator RPC when JWT is cookie-only', async () => {
     const api = loadYandexAPI({
       hostname: 'app.heyslab.ru',

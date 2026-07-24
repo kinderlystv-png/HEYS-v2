@@ -498,6 +498,7 @@
     forceVisibleStepIds = [],
     requireStepAck = false,
     onStepSaved = null,
+    onStepShown = null,
     allowProgressForwardNav = true
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
@@ -519,6 +520,7 @@
     const actionInFlightRef = useRef(false);
     const transitionInFlightRef = useRef(false);
     const savedStepSigsRef = useRef({});
+    const shownStepSigRef = useRef('');
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
     const [registryVersion, setRegistryVersion] = useState(0);
@@ -584,6 +586,15 @@
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
+
+    useEffect(() => {
+      if (!currentConfig || typeof onStepShown !== 'function') return;
+      const signature = contextKey + ':' + currentStepIndex + ':' + currentConfig.id;
+      if (shownStepSigRef.current === signature) return;
+      shownStepSigRef.current = signature;
+      try { onStepShown({ stepId: currentConfig.id, config: currentConfig, index: currentStepIndex, context }); }
+      catch (_) { /* observability callback must not affect the flow */ }
+    }, [context, contextKey, currentConfig, currentStepIndex, onStepShown]);
 
     // Мемоизированные данные
     const greeting = useMemo(() => getTimeBasedGreeting(), []);

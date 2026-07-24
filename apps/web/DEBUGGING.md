@@ -202,6 +202,7 @@ even if React code, lazy bundles, or console filters are stale.
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `makeFlowId(scope)`                                       | Create one stable action id, e.g. `chrono-add-mr...`.                                                      |
 | `trace(level, prefix, body)`                              | Immediate trace write; flushes quickly.                                                                    |
+| `event(name, context, level)`                             | Privacy-allowlisted lifecycle/UI event with boot, build and device metadata; retries offline.              |
 | `verifyKvWrite({ prefix, flowId, key, expectedSummary })` | Delayed cloud KV readback; logs `cloud_readback_ok`, `cloud_readback_mismatch`, or `cloud_readback_error`. |
 | `summarizeValue(value)`                                   | Privacy-safe summary with `kind`, `length`, `hash`, and small tail info.                                   |
 | `recent()`                                                | Local in-memory trace viewer data for the current tab.                                                     |
@@ -211,6 +212,27 @@ even if React code, lazy bundles, or console filters are stale.
 Use `verifyKvWrite` only on important writes. It reads cloud after a short
 delay, so it is useful for "did it reach cloud?" questions, but too expensive
 for render loops, timers, polling, or every item in a large collection.
+
+### Client session observability
+
+Every page load gets a new `boot_id`; the pseudonymous `device_id` survives
+reloads. Structured events include build hash, device class, OS, browser and
+display mode. The core sequence is `boot_started` → `app_shell_ready` →
+`initial_sync_ready` → `day_screen_ready` → `boot_ready`; failures use
+`boot_failed`, `app_runtime_failed` or a degraded status. SW transitions, What's
+New, morning-checkin steps (including `yesterdayVerify`) and hunger prompts add
+their own events.
+
+Structured events are kept in a bounded local queue until an authenticated POST
+succeeds. `event_id` makes beacon/fetch retries idempotent. The REST API
+resolves `client_id` from the HttpOnly client session or verified curator JWT;
+an anonymous caller cannot claim another client. Curator UI reads a safe
+per-client timeline through `get_client_observability_by_curator` and the
+all-client dashboard through `get_curator_observability_overview`. The latter
+applies filters and cursor pagination on the server in one RPC. Sync telemetry
+is aggregated per cycle/upload batch (`sync_cycle_*`, `write_*`), never per KV
+value. Raw console messages, health values, phones, IPs and tokens are not
+returned.
 
 ### How to query cloud trace
 
