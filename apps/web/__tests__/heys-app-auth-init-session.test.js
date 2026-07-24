@@ -188,6 +188,35 @@ describe('HEYS.AppAuthInit session restore', () => {
     expect(setIsInitializing).toHaveBeenCalledWith(false);
   });
 
+  it('announces restored cookie PIN context for immediate diagnostics flush', async () => {
+    storage._store.heys_pin_cookie_session_hint = '1';
+    window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn().mockResolvedValue({
+      data: { id: 'client-cookie-1', name: 'Client' },
+      error: null,
+    });
+    const cloud = {
+      setPinAuthClient: vi.fn(),
+      syncClient: vi.fn().mockResolvedValue({ success: true }),
+    };
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud,
+      setProducts: vi.fn(), setClients: vi.fn(), setClientsSource: vi.fn(),
+      setClientId: vi.fn(), setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(), setCloudUser: vi.fn(), setStatus: vi.fn(), setIsInitializing: vi.fn(),
+    });
+
+    await flushPromises();
+
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:client-changed',
+      detail: expect.objectContaining({ clientId: 'client-cookie-1', source: 'pin-cookie-restore' }),
+    }));
+  });
+
   it('does not probe cookie-only sessions without a local session hint', async () => {
     window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn();
     window.HEYS.YandexAPI.verifyCuratorToken = vi.fn();
@@ -269,6 +298,7 @@ describe('HEYS.AppAuthInit session restore', () => {
       isCriticalSyncReady: vi.fn(() => true),
       syncClient: vi.fn().mockResolvedValue({ success: true }),
     };
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
     const appAuthInit = loadAppAuthInit();
 
     appAuthInit.runAuthInit({
@@ -287,6 +317,10 @@ describe('HEYS.AppAuthInit session restore', () => {
 
     expect(cloud.isCriticalSyncReady).toHaveBeenCalledWith(clientId);
     expect(setIsInitializing).toHaveBeenCalledWith(false);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:client-changed',
+      detail: expect.objectContaining({ clientId, source: 'pin-session-restore' }),
+    }));
     await flushPromises();
   });
 

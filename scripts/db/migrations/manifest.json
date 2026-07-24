@@ -48,6 +48,13 @@
       "path": "scripts/db/migrations/2026-07-24_client_visit_observability.sql",
       "description": "Track cold starts and foreground resumes as separate client visits",
       "destructive": false
+    },
+    {
+      "id": "2026-07-24_pin_login_observability",
+      "order": 5,
+      "path": "scripts/db/migrations/2026-07-24_pin_login_observability.sql",
+      "description": "Expose PIN logins with missing client telemetry as unfinished visits",
+      "destructive": false
     }
   ]
 }

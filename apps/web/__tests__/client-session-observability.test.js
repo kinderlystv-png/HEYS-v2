@@ -23,6 +23,7 @@ const rpcSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/he
 const messagesSource = fs.readFileSync(path.join(repoRoot, 'yandex-cloud-functions/heys-api-messages/index.js'), 'utf8');
 const classificationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_session_outcome_classification.sql'), 'utf8');
 const visitMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_client_visit_observability.sql'), 'utf8');
+const pinLoginMigrationSource = fs.readFileSync(path.join(repoRoot, 'scripts/db/migrations/2026-07-24_pin_login_observability.sql'), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -122,6 +123,34 @@ describe('client session observability', () => {
     expect(requests).toHaveLength(0);
     expect(JSON.parse(localStorage.getItem('_heys_observability_queue_v1')))
       .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'boot_started' })]));
+  });
+
+  it('flushes the preserved visit start as soon as PIN client context is ready', async () => {
+    const { context, requests, localStorage, listeners } = createLoggerRuntime();
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+
+    listeners['heys:client-changed']({ detail: { source: 'pin-login' } });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(requests).toHaveLength(1);
+    const rows = JSON.parse(requests[0].options.body);
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        client_id: 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a',
+        event_name: 'visit_started',
+      }),
+      expect.objectContaining({ event_name: 'client_context_ready' }),
+    ]));
+    expect(JSON.parse(localStorage.getItem('_heys_observability_queue_v1')))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'visit_started' })]));
+  });
+
+  it('announces fresh React PIN login only after the client id is installed', () => {
+    const installAt = gateSource.indexOf('setClientId(targetClientId);');
+    const notifyAt = gateSource.indexOf("detail: { clientId: targetClientId, source: 'pin-login' }");
+    expect(installAt).toBeGreaterThan(-1);
+    expect(notifyAt).toBeGreaterThan(installAt);
   });
 
   it('does not mark the full boot ready when only the app shell is ready', async () => {
@@ -226,6 +255,13 @@ describe('client session observability', () => {
 
     expect(JSON.parse(localStorage.getItem('_heys_observability_queue_v1')))
       .toEqual(expect.arrayContaining([expect.objectContaining({ event_name: 'write_queued' })]));
+  });
+
+  it('keeps a PIN success visible as an unfinished visit when telemetry is absent', () => {
+    expect(pinLoginMigrationSource).toContain("se.event_type = 'pin_success'");
+    expect(pinLoginMigrationSource).toContain('NOT EXISTS');
+    expect(pinLoginMigrationSource).toContain("THEN 'abandoned'");
+    expect(pinLoginMigrationSource).toContain("'pin_success'::text AS last_success_event");
   });
 
   it('forces server-side identity and idempotent inserts', () => {

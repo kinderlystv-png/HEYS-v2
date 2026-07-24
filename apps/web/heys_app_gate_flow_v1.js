@@ -1952,6 +1952,11 @@
                                                 window.HEYS.currentClientId = targetClientId;
                                             } catch (_) { }
                                             setClientId(targetClientId);
+                                            try {
+                                                window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                                                    detail: { clientId: targetClientId, source: 'pin-login' }
+                                                }));
+                                            } catch (_) { }
                                             resolveCriticalReady();
                                         };
                                         const phaseAHandler = (e) => {

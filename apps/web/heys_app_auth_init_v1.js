@@ -13,6 +13,17 @@
         } catch (_) { }
     };
 
+    const notifyPinClientReady = (clientId, source) => {
+        if (!clientId) return;
+        window.HEYS = window.HEYS || {};
+        window.HEYS.currentClientId = clientId;
+        try {
+            window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                detail: { clientId, source: source || 'pin-auth' }
+            }));
+        } catch (_) { }
+    };
+
     const runAuthInit = ({
         U,
         cloud,
@@ -372,6 +383,7 @@
 
             // Загружаем локальные данные
             initLocalData();
+            notifyPinClientReady(pinAuthClient, 'pin-session-restore');
             setStatus('online');
 
             // 🚀 Stage 2: dismiss gate as soon as Phase A finishes (5 critical keys, 1 RPC).
@@ -555,8 +567,7 @@
                     initLocalData();
                     setStatus('online');
                     setClientId(cid);
-                    window.HEYS = window.HEYS || {};
-                    window.HEYS.currentClientId = cid;
+                    notifyPinClientReady(cid, 'pin-cookie-restore');
 
                     return cloudRef.syncClient(cid)
                         .then(() => {
@@ -620,8 +631,7 @@
                 initLocalData();
                 setStatus('online');
                 setClientId(cid);
-                window.HEYS = window.HEYS || {};
-                window.HEYS.currentClientId = cid;
+                notifyPinClientReady(cid, 'pin-login');
                 try { localStorage.setItem('heys_client_current', JSON.stringify(cid)); } catch (_) { }
                 cloudRef.syncClient(cid)
                     .then(function () { devLog('[AuthInit] static client login synced'); })

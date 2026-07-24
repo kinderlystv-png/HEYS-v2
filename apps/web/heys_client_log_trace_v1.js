@@ -166,6 +166,7 @@
   var ringDropped = 0;
   var lastFlushAt = 0;
   var flushInProgress = false;
+  var flushRequested = false;
   var recentTraces = [];
   var RECENT_TRACE_MAX = 250;
   var readbackTimers = {};
@@ -616,7 +617,10 @@
   }
 
   function flush(reason) {
-    if (flushInProgress) return;
+    if (flushInProgress) {
+      flushRequested = true;
+      return;
+    }
     if (ring.length === 0) return;
 
     // Drain до FLUSH_BATCH строк
@@ -681,6 +685,10 @@
         if (retryRows.length) ring = retryRows.concat(ring).slice(-RING_MAX);
       }).then(function () {
         flushInProgress = false;
+        if (flushRequested) {
+          flushRequested = false;
+          flush('pending');
+        }
       });
     } catch (_) {
       flushInProgress = false;
@@ -850,6 +858,7 @@
         auth_state: currentAuthState(), sync_state: currentSyncState(), durationMs: Date.now() - VISIT_STARTED_AT
       });
     }
+    flush('client-changed');
   });
   global.addEventListener('heysSyncCompleted', function () {
     event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: Date.now() - BOOT_STARTED_AT });
