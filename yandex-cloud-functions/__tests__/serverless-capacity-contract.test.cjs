@@ -41,6 +41,14 @@ test('deploy gate syncs the guard and refuses rpc/rest deploy below capacity pol
   assert.match(source, /--zone-requests-limit/);
 });
 
+test('deploy passes database and JWT secrets through Lockbox placeholders only', () => {
+  const source = read('deploy-all.sh');
+  assert.match(source, /PG_PASSWORD=__IN_LOCKBOX__heys-database__/);
+  assert.match(source, /JWT_SECRET=__IN_LOCKBOX__heys-app-secrets__/);
+  assert.doesNotMatch(source, /for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD PG_SSL/);
+  assert.doesNotMatch(source, /_add_required JWT_SECRET/);
+});
+
 test('scheduled monitoring runs no-retry canary and exact 429\/503 log scan', () => {
   const workflow = fs.readFileSync(
     path.resolve(ROOT, '..', '.github/workflows/api-health-monitor.yml'),

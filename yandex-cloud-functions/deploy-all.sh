@@ -364,9 +364,10 @@ build_env_flags() {
     # PG + LOCKBOX_DB_SECRET_ID — для всех функций с БД (кроме health/sms)
     if [[ ! "$func_name" =~ (health|sms) ]]; then
         local k
-        for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD PG_SSL; do
+        for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_SSL; do
             _add_required "$k"
         done
+        env_flags+=" --environment PG_PASSWORD=__IN_LOCKBOX__heys-database__"
         env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$LOCKBOX_DB_ID"
     fi
 
@@ -435,7 +436,7 @@ build_env_flags() {
     # SEC-024 v2 (2026-06-14): добавлен heys-api-rest для curator-JWT verify в
     # enforceClientKvAuthForGet middleware (cross-client read detection для кураторов).
     if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]] || [[ "$func_name" == "heys-api-photos" ]] || [[ "$func_name" == "heys-api-rest" ]]; then
-        _add_required JWT_SECRET
+        env_flags+=" --environment JWT_SECRET=__IN_LOCKBOX__heys-app-secrets__"
     fi
 
     # SESSION_SECRET — только auth
