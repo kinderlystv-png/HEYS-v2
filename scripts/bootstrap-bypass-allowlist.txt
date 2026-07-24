@@ -264,3 +264,8 @@ apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371
 apps/web/heys_yandex_api_v1.js:252
+
+# Reading preferences and progress are intentionally device-local UI state;
+# they are not client data and must not enter Store/cloud synchronization.
+apps/web/heys_planning_reading_v1.js:29
+apps/web/heys_planning_reading_v1.js:56
