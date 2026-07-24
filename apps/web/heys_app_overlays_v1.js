@@ -409,7 +409,7 @@
                 )
             ),
             // === What's New modal (after update) ===
-            !isConsentBlocking && !isMorningCheckinBlocking && showWhatsNew && HEYS.WhatsNew && React.createElement(HEYS.WhatsNew.WhatsNewModal, {
+            HEYS.ReleaseFeatures?.whatsNewEnabled === true && !isConsentBlocking && !isMorningCheckinBlocking && showWhatsNew && HEYS.WhatsNew && React.createElement(HEYS.WhatsNew.WhatsNewModal, {
                 onClose: dismissWhatsNew,
             }),
             // === Client Switch Overlay (curator only, self-managed via events) ===

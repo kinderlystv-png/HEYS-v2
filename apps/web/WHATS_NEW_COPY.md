@@ -1,5 +1,10 @@
 # What's New Copy Guide
 
+> **Временно выключено.** `apps/web/heys_release_features_v1.js` содержит
+> `whatsNewEnabled: false`; обычные source-push не требуют и не создают
+> release-entry. Этот guide и история сохранены для повторного включения по
+> чек-листу в `docs/reference/systems/PWA_OFFLINE_PUSH.md`.
+
 Короткий рабочий слой для релизных заметок HEYS. Полный тон продукта остаётся в
 [`apps/landing/COPY_VOICE.md`](../landing/COPY_VOICE.md); этот файл нужен, чтобы
 быстро написать один аккуратный entry для `apps/web/public/whats-new.json`.
@@ -47,20 +52,15 @@
 > `coveredCommits` (какие user-facing коммиты покрыты) проставляется
 > автоматически из push-range.
 
-Для одиночного technical/ручного пуша с явной командой на push и явным релизным
-текстом:
+Пока флаг выключен, канонический push:
 
 ```bash
-pnpm push:agent -- --confirm-push --title="Синхронизация активностей стала устойчивее" \
-  --item-title="Удалённые круги активностей больше не возвращаются из старой копии" \
-  --item-description="Если круг активности удалён на одном устройстве, приложение защищает эту правку от старых данных, которые могли прийти во время синхронизации."
+pnpm push:agent -- --confirm-push
 ```
 
-`push:agent` проверит `What's New`, при необходимости добавит entry и follow-up
-commit с автоматическим `coveredCommits`, выполнит push с активными pre-push
-guards и дождётся зелёного `Deploy to Yandex Cloud` для свежего `HEAD`. Если в
-staging уже лежат не-release файлы, команда остановится, чтобы случайно не
-включить их в follow-up commit для `What's New`.
+`push:agent` проверяет source-only scope, secrets, static guards и релевантные
+тесты, выполняет push, дожидается deploy и проверяет production
+`build-meta.json` и hash-bundles. Release-файлы и seen-state он не меняет.
 
 Получить готовый шаблон команды:
 
@@ -75,33 +75,26 @@ pnpm push:agent -- --status
 ```
 
 `pnpm push:safe` deprecated и не должен использоваться как shortcut: `HUSKY=0`
-не является нормальным push-flow. `pnpm push:preflight` можно запускать отдельно
-как прогрев/диагностику локальных blockers; для старого one-command поведения
-добавь к `push:agent` флаг `--preflight`. Расширенные warn-only diagnostics,
-например счётчик `React.startTransition`, запускаются через
+не является нормальным push-flow. `pnpm push:preflight -- --full` — явный
+локальный полный suite. Расширенные warn-only diagnostics, например счётчик
+`React.startTransition`, запускаются через
 `pnpm push:preflight -- --diagnostics`.
 
 Проверить без commit и push:
 
 ```bash
-pnpm push:agent -- --dry-run --no-push --title="..." \
-  --item-title="..." \
-  --item-description="..."
+pnpm push:agent -- --dry-run --no-push
 ```
 
 Для нестандартного remote или ветки:
 
 ```bash
-pnpm push:agent -- --confirm-push --remote=origin --branch=main --title="..." \
-  --item-title="..." \
-  --item-description="..."
+pnpm push:agent -- --confirm-push --remote=origin --branch=main
 ```
 
 Не ждать GitHub Actions после push можно только для технического отладочного
 сценария:
 
 ```bash
-pnpm push:agent -- --confirm-push --no-watch --title="..." \
-  --item-title="..." \
-  --item-description="..."
+pnpm push:agent -- --confirm-push --no-watch
 ```

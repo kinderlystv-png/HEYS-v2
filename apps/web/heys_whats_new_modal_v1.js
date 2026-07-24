@@ -15,6 +15,23 @@
     const FETCH_TIMEOUT = 5000;
     let runtimeAcknowledgedVersion = '';
 
+    function isEnabled() {
+        return HEYS.ReleaseFeatures?.whatsNewEnabled === true;
+    }
+
+    function createDisabledInspectionResult() {
+        return {
+            ok: true,
+            hasUnseen: false,
+            reason: 'disabled',
+            latestVersion: '',
+            legacySeenVersion: getLegacySeenVersion(),
+            acknowledgedVersion: getAcknowledgedVersion(),
+            resolvedSeenVersion: '',
+            unseenReleases: [],
+        };
+    }
+
     // --- Type badges ---
     const TYPE_CONFIG = {
         feature: { emoji: '🆕', label: 'Новое', badgeClass: 'wn-badge--feature' },
@@ -194,6 +211,8 @@
     }
 
     async function inspectUnseen() {
+        if (!isEnabled()) return createDisabledInspectionResult();
+
         const [data, buildMeta] = await Promise.all([
             fetchWhatsNew(),
             fetchBuildMeta(),
@@ -431,6 +450,7 @@
     // --- Public API ---
     HEYS.WhatsNew = {
         WhatsNewModal,
+        isEnabled,
         // Utility: check if there are unseen releases without showing modal
         checkUnseen: async function () {
             const inspection = await inspectUnseen();

@@ -711,7 +711,12 @@
             }, [tab]);
 
             React.useEffect(() => {
-                if (isLandingDemoEmbed) {
+                const whatsNewEnabled = HEYS.ReleaseFeatures?.whatsNewEnabled === true;
+                if (!whatsNewEnabled || isLandingDemoEmbed) {
+                    if (whatsNewRetryTimeoutRef.current) {
+                        clearTimeout(whatsNewRetryTimeoutRef.current);
+                        whatsNewRetryTimeoutRef.current = null;
+                    }
                     if (showWhatsNew) setShowWhatsNew(false);
                     return undefined;
                 }

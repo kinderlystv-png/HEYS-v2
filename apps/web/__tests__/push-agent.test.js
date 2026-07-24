@@ -10,10 +10,13 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
   buildItemsJsonFromOptions,
+  buildPreflightCommandArgs,
   buildPrepareReleaseAutoArgs,
+  collectBundleFiles,
   getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
+  isDeployedHashCompatible,
   parseCliArgs,
   shouldWatchDeploy,
   shouldRunPreflight,
@@ -21,9 +24,13 @@ const {
 
 describe('push-agent CLI helpers', () => {
   it('refuses mutating runs without explicit confirmation', () => {
-    const result = spawnSync('node', [SCRIPT_PATH, '--title=x', '--item-title=y', '--item-description=z'], {
-      encoding: 'utf8',
-    });
+    const result = spawnSync(
+      'node',
+      [SCRIPT_PATH, '--title=x', '--item-title=y', '--item-description=z'],
+      {
+        encoding: 'utf8',
+      },
+    );
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('requires explicit --confirm-push');
@@ -136,10 +143,44 @@ describe('push-agent CLI helpers', () => {
     expect(shouldWatchDeploy('feature/test')).toBe(false);
   });
 
-  it('runs preflight only when explicitly requested for a mutating push', () => {
-    expect(shouldRunPreflight(new Set())).toBe(false);
+  it('runs canonical preflight by default, including dry-run', () => {
+    expect(shouldRunPreflight(new Set())).toBe(true);
     expect(shouldRunPreflight(new Set(['--preflight']))).toBe(true);
-    expect(shouldRunPreflight(new Set(['--preflight', '--dry-run']))).toBe(false);
+    expect(shouldRunPreflight(new Set(['--dry-run']))).toBe(true);
+    expect(shouldRunPreflight(new Set(['--status']))).toBe(false);
+  });
+
+  it('passes an explicit dry-run baseline through to canonical preflight', () => {
+    expect(
+      buildPreflightCommandArgs({
+        remote: 'origin',
+        branch: 'main',
+        baseRef: 'HEAD~1',
+        full: false,
+      }),
+    ).toEqual(['push:preflight', '--', '--base=HEAD~1', '--ref=HEAD']);
+  });
+
+  it('collects only content-hashed legacy bundles from production manifest', () => {
+    expect(
+      collectBundleFiles({
+        core: { file: 'boot-core.bundle.12345678abcd.js' },
+        lazy: 'postboot-1-game-lazy.bundle.abcdef123456.js',
+        unhashed: { file: 'react-bundle.js' },
+      }),
+    ).toEqual(['boot-core.bundle.12345678abcd.js', 'postboot-1-game-lazy.bundle.abcdef123456.js']);
+  });
+
+  it('accepts exact/short production hashes and a newer descendant only', () => {
+    expect(isDeployedHashCompatible('12345678', '12345678abcdef')).toBe(true);
+    expect(
+      isDeployedHashCompatible(
+        'abcdef12',
+        '12345678',
+        (head, deployed) => head === '12345678' && deployed === 'abcdef12',
+      ),
+    ).toBe(true);
+    expect(isDeployedHashCompatible('deadbeef', '12345678', () => false)).toBe(false);
   });
 
   it('uses the Yandex deploy workflow as the default watch target', () => {

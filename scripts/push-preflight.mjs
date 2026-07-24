@@ -14,15 +14,24 @@
  *   pnpm push:preflight -- --diagnostics
  */
 
-import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isGeneratedFile, isReleaseFile } from './legacy-bundle-config.mjs';
+import { getChangedFilesBetween } from './pre-push-vitest-cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const args = new Set(process.argv.slice(2).filter((arg) => arg !== '--'));
 const verbose = args.has('--verbose');
-let testsWillRunOnPush = false;
+const REF = getCliOption('--ref') || 'HEAD';
+const BASE_REF = getCliOption('--base') || process.env.HEYS_PUSH_BASE_REF || '';
+
+function getCliOption(name) {
+  const prefix = `${name}=`;
+  const arg = process.argv.find((item) => item.startsWith(prefix));
+  return arg ? arg.slice(prefix.length).trim() : '';
+}
 
 function writeLine(text = '') {
   process.stdout.write(`${text}\n`);
@@ -40,7 +49,7 @@ function run(command, commandArgs, options = {}) {
     shell: false,
     env: process.env,
   });
-  return result.status || 0;
+  return Number.isInteger(result.status) ? result.status : 1;
 }
 
 function runCaptured(command, commandArgs, options = {}) {
@@ -52,7 +61,7 @@ function runCaptured(command, commandArgs, options = {}) {
     env: process.env,
   });
   return {
-    status: result.status || 0,
+    status: Number.isInteger(result.status) ? result.status : 1,
     stdout: String(result.stdout || '').trim(),
     stderr: String(result.stderr || '').trim(),
   };
@@ -105,24 +114,85 @@ function runGate(label, command, commandArgs, options = {}) {
 
 function runTestsIfNeeded({ failures }) {
   writeLine('');
-  writeLine('7) Vitest pre-push cache');
+  writeLine(args.has('--full') ? '7) Full Vitest preflight' : '7) Relevant Vitest tests');
 
-  const statusArgs = ['scripts/pre-push-vitest-cache.mjs', '--status', '--ref=HEAD'];
-  const status = runCaptured('node', statusArgs);
-  printCapturedOutput(status);
-  if (status.status !== 0) return failures + 1;
-
-  const isMiss = /\bmiss\b/i.test(`${status.stdout}\n${status.stderr}`);
-  if (args.has('--skip-tests') && isMiss) {
-    testsWillRunOnPush = true;
-    return failures;
-  }
-
-  if (!isMiss) return failures;
-
-  const runStatus = run('node', ['scripts/pre-push-vitest-cache.mjs', '--run-if-needed', '--ref=HEAD']);
+  const testArgs = ['scripts/pre-push-vitest-cache.mjs', '--run-if-needed', `--ref=${REF}`];
+  if (BASE_REF) testArgs.push(`--base=${BASE_REF}`);
+  if (args.has('--full')) testArgs.push('--full');
+  if (args.has('--skip-tests')) testArgs.push('--skip-tests');
+  const runStatus = run('node', testArgs);
   if (runStatus !== 0) return failures + 1;
   return failures;
+}
+
+function runScopeGate() {
+  const range = getChangedFilesBetween({ baseRef: BASE_REF, ref: REF });
+  if (!range.ok) {
+    writeError(`Cannot resolve outgoing range ${range.baseRef}..${range.ref}.`);
+    writeError(`Next command: git fetch origin ${range.baseRef.replace(/^origin\//, '')}`);
+    return false;
+  }
+  const forbidden = range.files.filter((file) => isGeneratedFile(file) || isReleaseFile(file));
+  if (process.env.HEYS_INTEGRATION === '1' || process.env.HEYS_SHIP === '1') {
+    writeLine(`   OK: explicit integration mode; ${range.files.length} outgoing file(s)`);
+    return true;
+  }
+  if (forbidden.length === 0) {
+    writeLine(`   OK: source-only range; ${range.files.length} outgoing file(s)`);
+    return true;
+  }
+  writeError('   FAILED: source-only push contains generated/release files:');
+  forbidden.forEach((file) => writeError(`     - ${file}`));
+  writeError(
+    '   Next command: create a source-only commit; let CI/integration rebuild generated artifacts.',
+  );
+  return false;
+}
+
+function runGitleaksGate() {
+  const range = getChangedFilesBetween({ baseRef: BASE_REF, ref: REF });
+  if (!range.ok) return false;
+  if (range.files.length === 0) {
+    writeLine(`2) Secret scan (${range.baseRef}..${range.ref})`);
+    writeLine('   OK: no outgoing committed files');
+    return true;
+  }
+  const version = runCaptured('gitleaks', ['version']);
+  if (version.status !== 0) {
+    writeError('   FAILED: gitleaks is not installed; secret scan was not started.');
+    writeError('   Next command (macOS): brew install gitleaks');
+    return false;
+  }
+  return runGate(
+    `2) Secret scan (${range.baseRef}..${range.ref})`,
+    'gitleaks',
+    ['git', '--redact', '--no-banner', `--log-opts=${range.baseRef}..${range.ref}`, '.'],
+    { compactSuccess: true },
+  );
+}
+
+function runMigrationSafetyGate() {
+  const range = getChangedFilesBetween({ baseRef: BASE_REF, ref: REF });
+  if (!range.ok) return false;
+  const migrationChanged = range.files.some(
+    (file) =>
+      file.startsWith('scripts/db/migrations/') ||
+      file === 'scripts/db/migrate.mjs' ||
+      file === 'scripts/db/migrate.test.mjs',
+  );
+
+  if (!migrationChanged) {
+    writeLine('3) Migration safety');
+    writeLine('   OK: no migration contract changes in outgoing range');
+    return true;
+  }
+
+  return runGate(
+    '3) Migration safety',
+    process.execPath,
+    ['--test', 'scripts/db/migrate.test.mjs'],
+    { compactSuccess: true },
+  );
 }
 
 function main() {
@@ -132,28 +202,31 @@ function main() {
   printGitContext();
 
   let failures = 0;
+  writeLine('');
+  writeLine('1) Source-only scope');
+  if (!runScopeGate()) failures += 1;
+  if (!runGitleaksGate()) failures += 1;
+  if (!runMigrationSafetyGate()) failures += 1;
+
   const gates = [
-    ['1) What\'s New gate', 'pnpm', ['prepare-release:check']],
     [
-      '2) direct localStorage writes',
+      '4) direct localStorage writes',
       'node',
       ['scripts/lint-direct-localstorage-writes.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
     [
-      '3) unscoped client writes',
+      '5) unscoped client writes',
       'node',
       ['scripts/lint-unscoped-client-writes.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
     [
-      '4) raw sessionStorage.clear guard',
+      '6) raw sessionStorage.clear guard',
       'node',
       ['scripts/lint-raw-session-clear.mjs', '--ref=HEAD'],
       { compactSuccess: true },
     ],
-    ['5) bundle size budget', 'node', ['scripts/lint-bundle-size.mjs', '--ref=HEAD']],
-    ['6) legacy bundles match HEAD', 'node', ['scripts/verify-legacy-bundles.mjs', '--ref=HEAD']],
   ];
 
   for (const [label, command, commandArgs, options] of gates) {
@@ -163,26 +236,30 @@ function main() {
   if (args.has('--diagnostics')) {
     writeLine('');
     writeLine('Diagnostics: React.startTransition counter is not a blocking pre-push gate.');
-    runGate('   React.startTransition counter', 'node', ['scripts/lint-react-start-transition.mjs'], {
-      compactSuccess: true,
-    });
+    runGate(
+      '   React.startTransition counter',
+      'node',
+      ['scripts/lint-react-start-transition.mjs'],
+      {
+        compactSuccess: true,
+      },
+    );
   }
 
   failures = runTestsIfNeeded({ failures });
 
   writeLine('');
   if (failures === 0) {
-    if (testsWillRunOnPush) {
-      writeLine('OK: blocking gates are green, but Vitest was not warmed because --skip-tests was used.');
-      writeLine('Next git push will still run full apps/web Vitest unless the cache is warmed first.');
-      return;
-    }
-    writeLine('OK: local preflight is green. Next git push should only repeat fast gates and skip Vitest if source is unchanged.');
+    writeLine(
+      args.has('--full')
+        ? 'OK: local full preflight is green; CI will reuse the same source SHA as its deploy gate.'
+        : 'OK: fast local scope/security/static/relevant-test gates are green; CI owns clean bundles and the full suite.',
+    );
     return;
   }
 
   writeError(`FAILED: ${failures} blocking gate(s) would stop git push.`);
-  writeError('Common fix for release text: pnpm push:agent -- --print-command');
+  writeError('Fix the single reported gate, then rerun: pnpm push:preflight');
   process.exit(1);
 }
 

@@ -21,12 +21,12 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isWhatsNewEnabled } from './release-features.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
 const BUNDLE_SIZE = path.join(__dirname, 'lint-bundle-size.mjs');
-const LEGACY_BUNDLES = path.join(__dirname, 'verify-legacy-bundles.mjs');
 const VITEST_CACHE = path.join(__dirname, 'pre-push-vitest-cache.mjs');
 const RELEASE_META_PATH_RE = /^apps\/web\/public\/whats-new(?:\.json|\/)/;
 const DEFAULT_DEPLOY_WORKFLOW = 'Deploy to Yandex Cloud';
@@ -62,7 +62,13 @@ function hasFlag(name) {
 }
 
 function shouldRunPreflight(flags = cli.flags) {
-  return flags.has('--preflight') && !flags.has('--dry-run');
+  return !flags.has('--status') && !flags.has('--print-command');
+}
+
+function buildPreflightCommandArgs({ remote, branch, baseRef = '', full = false }) {
+  const args = ['push:preflight', '--', `--base=${baseRef || `${remote}/${branch}`}`, '--ref=HEAD'];
+  if (full) args.push('--full');
+  return args;
 }
 
 function getOption(name) {
@@ -74,8 +80,10 @@ function assertMutatingRunConfirmed() {
   if (hasFlag('--confirm-push')) return;
 
   writeError('push-agent requires explicit --confirm-push for mutating runs.');
-  writeError('This helper can create a whats-new follow-up commit and run git push.');
-  writeError('Preview only: pnpm push:agent -- --dry-run --no-push --title="..." --item-title="..." --item-description="..."');
+  writeError(
+    'This helper runs source/security/test gates, pushes, waits for deploy, and verifies production.',
+  );
+  writeError('Preview only: pnpm push:agent -- --dry-run --no-push');
   writeError('Template: pnpm push:agent -- --print-command');
   process.exit(2);
 }
@@ -168,22 +176,31 @@ function tryAutoFromCommits() {
       try {
         commits = getGitOutput(['log', '-20', '--pretty=format:%s|%h']).split('\n').filter(Boolean);
         range = 'HEAD~20..HEAD';
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     }
     if (commits.length === 0) return null;
 
     // Парсим commit messages (conventional commits).
-    const parsed = commits.map(line => {
+    const parsed = commits.map((line) => {
       const [subject, hash] = line.split('|');
       const m = /^([a-z]+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/.exec(subject || '');
       if (!m) return { type: 'chore', scope: null, subject: subject || '', hash, raw: subject };
-      return { type: m[1], scope: m[2] || null, breaking: !!m[3], subject: m[4], hash, raw: subject };
+      return {
+        type: m[1],
+        scope: m[2] || null,
+        breaking: !!m[3],
+        subject: m[4],
+        hash,
+        raw: subject,
+      };
     });
 
     // User-facing types: feat, fix, perf. Остальные (chore/docs/test/refactor) — technical.
-    const userFacing = parsed.filter(c => ['feat', 'fix', 'perf'].includes(c.type));
+    const userFacing = parsed.filter((c) => ['feat', 'fix', 'perf'].includes(c.type));
     // Skip release/whats-new коммиты сами.
-    const meaningful = parsed.filter(c => c.type !== 'chore' || !/release/i.test(c.scope || ''));
+    const meaningful = parsed.filter((c) => c.type !== 'chore' || !/release/i.test(c.scope || ''));
 
     if (meaningful.length === 0) return null;
 
@@ -193,22 +210,30 @@ function tryAutoFromCommits() {
     if (userFacing.length > 0) {
       const primary = userFacing[0];
       title = humanizeCommit(primary);
-      const description = userFacing.length > 1
-        ? userFacing.map(c => '• ' + humanizeCommit(c)).join('\n')
-        : (primary.subject + (primary.scope ? ` (зона: ${primary.scope})` : ''));
-      items = [{
-        type: primary.type,
-        title,
-        description,
-      }];
+      const description =
+        userFacing.length > 1
+          ? userFacing.map((c) => '• ' + humanizeCommit(c)).join('\n')
+          : primary.subject + (primary.scope ? ` (зона: ${primary.scope})` : '');
+      items = [
+        {
+          type: primary.type,
+          title,
+          description,
+        },
+      ];
     } else {
       // Technical-only batch.
       title = 'Технические улучшения';
-      items = [{
-        type: 'improvement',
-        title: 'Улучшили внутренние процессы',
-        description: meaningful.slice(0, 5).map(c => '• ' + (c.scope ? `[${c.scope}] ` : '') + c.subject).join('\n'),
-      }];
+      items = [
+        {
+          type: 'improvement',
+          title: 'Улучшили внутренние процессы',
+          description: meaningful
+            .slice(0, 5)
+            .map((c) => '• ' + (c.scope ? `[${c.scope}] ` : '') + c.subject)
+            .join('\n'),
+        },
+      ];
     }
 
     return {
@@ -292,14 +317,11 @@ function buildSuggestedCommand() {
 }
 
 function printSuggestedCommandAndExit() {
-  writeLine('Suggested non-interactive command:');
-  writeLine(buildSuggestedCommand());
+  writeLine('Canonical non-interactive command:');
+  writeLine('pnpm push:agent -- --confirm-push');
   writeLine('');
   writeLine('Note: git push still runs the normal .husky/pre-push guards.');
-  writeLine('Optional warm-up before push: pnpm push:preflight');
-  writeLine('Optional one-command warm-up: add --preflight.');
-  writeLine('');
-  writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
+  writeLine('Optional full local suite: pnpm push:preflight -- --full');
   process.exit(0);
 }
 
@@ -357,14 +379,16 @@ function findDeployRunForHead({ workflow, branch, headSha }) {
   if (result.status !== 0) return null;
 
   const runs = parseJsonArray(result.stdout);
-  return runs.find((runItem) => {
-    const runHead = String(runItem?.headSha || '');
-    return runHead && (runHead === headSha || runHead.startsWith(headSha));
-  }) || null;
+  return (
+    runs.find((runItem) => {
+      const runHead = String(runItem?.headSha || '');
+      return runHead && (runHead === headSha || runHead.startsWith(headSha));
+    }) || null
+  );
 }
 
 function waitForDeploy({ branch, headSha }) {
-  if (!shouldWatchDeploy(branch)) return;
+  if (!shouldWatchDeploy(branch)) return false;
 
   const { workflow, waitSeconds, lookupAttempts, intervalSeconds } = getDeployWatchConfig();
   writeLine('');
@@ -400,6 +424,118 @@ function waitForDeploy({ branch, headSha }) {
   );
   if (watch.status !== 0) process.exit(watch.status || 1);
   writeLine('Deploy is green.');
+  return true;
+}
+
+function parseJsonObject(text) {
+  try {
+    const parsed = JSON.parse(String(text || ''));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function collectBundleFiles(manifest) {
+  if (!manifest || typeof manifest !== 'object') return [];
+  const files = new Set();
+  for (const value of Object.values(manifest)) {
+    const candidate = typeof value === 'string' ? value : value?.file;
+    if (typeof candidate !== 'string') continue;
+    if (/\.bundle\.[0-9a-f]{8,64}\.js$/i.test(candidate)) files.add(candidate);
+  }
+  return [...files];
+}
+
+function isDeployedHashCompatible(deployedHash, headSha, isAncestor = () => false) {
+  const deployed = String(deployedHash || '').trim();
+  const head = String(headSha || '').trim();
+  if (!deployed || !head) return false;
+  if (head.startsWith(deployed) || deployed.startsWith(head)) return true;
+  return isAncestor(head, deployed);
+}
+
+function fetchJson(url) {
+  const result = run(
+    'curl',
+    ['-fsS', '--max-time', '20', `${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`],
+    {
+      stdio: 'pipe',
+    },
+  );
+  if (result.status !== 0) return null;
+  return parseJsonObject(result.stdout);
+}
+
+function productionHashIsCompatible(deployedHash, headSha) {
+  return isDeployedHashCompatible(deployedHash, headSha, (head, deployed) => {
+    runGit(['fetch', '--quiet', 'origin', getPushTarget().branch], { stdio: 'ignore' });
+    const deployedFull = getGitOutput(['rev-parse', deployed]);
+    if (!deployedFull) return false;
+    return (
+      runGit(['merge-base', '--is-ancestor', head, deployedFull], { stdio: 'ignore' }).status === 0
+    );
+  });
+}
+
+function verifyProductionDeployment({
+  headSha,
+  appUrl = getOption('--app-url') || 'https://app.heyslab.ru',
+}) {
+  writeLine('Verifying production build-meta and hash bundles...');
+  let meta = null;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    meta = fetchJson(`${appUrl}/build-meta.json`);
+    if (meta?.hash && productionHashIsCompatible(meta.hash, headSha)) break;
+    if (attempt < 6) sleepSeconds(5);
+  }
+
+  if (!meta?.hash || !productionHashIsCompatible(meta.hash, headSha)) {
+    writeError(
+      `Production verification failed: build-meta hash ${meta?.hash || '<missing>'} does not contain pushed ${headSha.slice(0, 8)}.`,
+    );
+    writeError(`Next command: curl -fsS '${appUrl}/build-meta.json?_cb=$(date +%s)'`);
+    process.exit(1);
+  }
+
+  const manifest = fetchJson(`${appUrl}/bundle-manifest.json`);
+  const bundleFiles = collectBundleFiles(manifest);
+  if (bundleFiles.length === 0) {
+    writeError('Production verification failed: bundle-manifest contains no hash bundles.');
+    writeError(`Next command: curl -fsS '${appUrl}/bundle-manifest.json?_cb=$(date +%s)'`);
+    process.exit(1);
+  }
+
+  for (const file of bundleFiles) {
+    const probe = run(
+      'curl',
+      [
+        '-fsS',
+        '--max-time',
+        '20',
+        '--range',
+        '0-0',
+        '-o',
+        '/dev/null',
+        '-w',
+        '%{http_code}',
+        `${appUrl}/${file}`,
+      ],
+      { stdio: 'pipe' },
+    );
+    const code = String(probe.stdout || '').trim();
+    if (probe.status !== 0 || !['200', '206'].includes(code)) {
+      writeError(
+        `Production verification failed: ${file} is unavailable (HTTP ${code || 'error'}).`,
+      );
+      writeError(`Next command: curl -I '${appUrl}/${file}'`);
+      process.exit(1);
+    }
+  }
+
+  writeLine(
+    `Production verified: ${meta.version || '<version missing>'} (${meta.hash}), ${bundleFiles.length} hash bundle(s) available.`,
+  );
 }
 
 function summarizeCommandOutput(text) {
@@ -425,8 +561,12 @@ function printPreflightSummary() {
   writeLine('');
   writeLine('Preflight summary:');
   printSummaryGate('bundle-size', process.execPath, [BUNDLE_SIZE]);
-  printSummaryGate('legacy bundles', process.execPath, [LEGACY_BUNDLES, '--ref=HEAD']);
-  printSummaryGate('Vitest cache', process.execPath, [VITEST_CACHE, '--status', '--ref=HEAD']);
+  writeLine('  legacy bundles: rebuilt and verified by clean deploy CI');
+  printSummaryGate('optional full Vitest cache', process.execPath, [
+    VITEST_CACHE,
+    '--status',
+    '--ref=HEAD',
+  ]);
 }
 
 function printStatusAndExit() {
@@ -458,6 +598,11 @@ function printStatusAndExit() {
 
   writeLine('');
   writeLine('Whats New check:');
+  if (!isWhatsNewEnabled()) {
+    writeLine('  disabled centrally; release metadata will not be changed');
+    printPreflightSummary();
+    process.exit(0);
+  }
   const check = checkWhatsNew();
   if (check.status === 0) {
     writeLine('  ok');
@@ -482,6 +627,10 @@ function assertReleaseCommitStagingIsClean() {
 }
 
 function ensureReleaseEntry() {
+  if (!isWhatsNewEnabled()) {
+    writeLine("What's New is disabled centrally; release entry and seen-state stay unchanged.");
+    return;
+  }
   writeLine('Checking Whats New...');
   const check = checkWhatsNew();
   if (check.status === 0) {
@@ -567,10 +716,6 @@ function ensureReleaseEntry() {
 }
 
 function push() {
-  if (hasFlag('--no-push')) {
-    writeLine('Prepared release entry. Push skipped because --no-push was provided.');
-    return;
-  }
   const dirtyLines = getWorkingTreeStatusLines();
   if (dirtyLines.length > 0) {
     writeLine('');
@@ -582,8 +727,19 @@ function push() {
 
   if (shouldRunPreflight()) {
     writeLine('Running push preflight before git push...');
-    const preflight = run('pnpm', ['push:preflight'], { mutates: true });
+    const target = getPushTarget();
+    const preflightArgs = buildPreflightCommandArgs({
+      ...target,
+      baseRef: getOption('--base'),
+      full: hasFlag('--full'),
+    });
+    const preflight = run('pnpm', preflightArgs);
     if (preflight.status !== 0) process.exit(preflight.status || 1);
+  }
+
+  if (hasFlag('--no-push')) {
+    writeLine('Local push gates completed. Push skipped because --no-push was provided.');
+    return;
   }
 
   const { remote, branch } = getPushTarget();
@@ -593,7 +749,8 @@ function push() {
     env: { HEYS_PUSH_AGENT_PRECHECKED_HEAD: headSha },
   });
   if (result.status !== 0) process.exit(result.status || 1);
-  waitForDeploy({ branch, headSha });
+  const deployed = waitForDeploy({ branch, headSha });
+  if (deployed) verifyProductionDeployment({ headSha });
 }
 
 function main() {
@@ -614,14 +771,17 @@ if (import.meta.url === invokedPath) {
 }
 
 export {
+  assertMutatingRunConfirmed,
   buildItemsJsonFromOptions,
+  buildPreflightCommandArgs,
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
-  assertMutatingRunConfirmed,
+  collectBundleFiles,
   getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
-  shouldWatchDeploy,
-  shouldRunPreflight,
+  isDeployedHashCompatible,
   parseCliArgs,
+  shouldRunPreflight,
+  shouldWatchDeploy,
 };

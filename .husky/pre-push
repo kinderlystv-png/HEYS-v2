@@ -1,162 +1,25 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# 2026-06-01: WHATS-NEW gate включён обратно. До этого был обёрнут в `if false`
-# (маркер WHATS-NEW-OFF-UNTIL-2026-06-11). За время отключения случился incident:
-# fix(insights/test) без entry прошёл локально, упал в CI Yandex Cloud деплое.
-# Non-tty ветка (Claude Code, scripts) — non-interactive `prepare-release:check`
-# с exit 1 при неуспехе. Tty ветка — интерактивный prompt с push:ready.
-echo "📝 Проверка What's New для текущего deploy/push..."
-
-check_status=0
+# Canonical local gate: fast source-scope, secret/static guards and relevant
+# tests only. Clean legacy rebuild + full apps/web Vitest remain fail-closed in
+# Deploy to Yandex Cloud for the same pushed source SHA.
 current_head=$(git rev-parse HEAD 2>/dev/null || true)
 if [ -n "$HEYS_PUSH_AGENT_PRECHECKED_HEAD" ] && [ "$HEYS_PUSH_AGENT_PRECHECKED_HEAD" = "$current_head" ]; then
-  echo "✅ What's New уже проверен push:agent для HEAD ${current_head}."
-else
-  pnpm prepare-release:check || check_status=$?
+  echo "✅ Fast push gates already passed in push:agent for HEAD ${current_head}."
+  exit 0
 fi
 
-if [ -t 1 ]; then
-  echo ""
-  node scripts/prepare-release.mjs --preview || true
-
-  if [ "$check_status" -ne 0 ]; then
-    echo ""
-    echo "⚠️ What's New не готов: нужно подтвердить тексты нововведений и/или скриншоты."
-    echo "💡 Рекомендуемый сценарий перед push: pnpm push:ready"
-    echo "   Эта команда сразу показывает тексты, спрашивает про скрины, валидирует What's New и при необходимости делает follow-up commit."
-    printf "Запустить pnpm push:ready сейчас? [Y/n] "
-    read answer
-    case "$answer" in
-      n|N)
-        echo "❌ Push отменён. Сначала запусти pnpm push:ready."
-        exit 1
-        ;;
-      *)
-        pnpm push:ready -- --skip-preview || exit 1
-        pnpm prepare-release:check || {
-          echo "❌ What's New всё ещё не готов. Push отменён."
-          exit 1
-        }
-        ;;
-    esac
-  else
-    echo ""
-    echo "✅ What's New уже готов."
-    echo "💬 Перед push можно:"
-    echo "   • просто продолжить пуш;"
-    echo "   • открыть pnpm push:ready и подправить формулировки/скрины;"
-    echo "   • отменить push."
-    printf "Продолжить push / открыть push:ready / отменить? [Y/e/n] "
-    read answer
-    case "$answer" in
-      e|E|у|У)
-        pnpm push:ready -- --skip-preview || exit 1
-        pnpm prepare-release:check || {
-          echo "❌ What's New после редактирования не прошёл проверку. Push отменён."
-          exit 1
-        }
-        ;;
-      n|N|т|Т)
-        echo "❌ Push отменён пользователем."
-        exit 1
-        ;;
-      *)
-        echo "✅ Продолжаем push с текущим What's New."
-        ;;
-    esac
-  fi
-else
-  if [ "$check_status" -ne 0 ]; then
-    echo "❌ Push отменён. Для non-interactive agent flow:"
-    echo "   1) pnpm push:agent -- --print-command"
-    echo "   2) pnpm push:agent -- --confirm-push --title=\"...\" --item-title=\"...\" --item-description=\"...\""
-    echo "   Для ручного интерактивного flow: pnpm push:ready"
-    exit 1
-  fi
-fi
-
-echo "🔍 Проверка прямых localStorage.setItem (Phase 3 lint gate, warn-only)..."
-localstorage_output=$(node scripts/lint-direct-localstorage-writes.mjs --ref=HEAD 2>&1)
-localstorage_status=$?
-if [ "$localstorage_status" -eq 0 ]; then
-  printf '%s\n' "$localstorage_output" | tail -n 2
-else
-  printf '%s\n' "$localstorage_output"
-  echo "❌ localStorage lint завершился с ошибкой (новые нелистованные вызовы). Push отменён."
+remote_name=${1:-origin}
+branch_name=$(git branch --show-current 2>/dev/null || true)
+if [ -z "$branch_name" ]; then
+  echo "❌ Cannot determine current branch. Push cancelled."
+  echo "Next command: git branch --show-current"
   exit 1
 fi
 
-echo "🔒 Проверка unscoped writes к per-client keys (anti-pollution guard)..."
-unscoped_output=$(node scripts/lint-unscoped-client-writes.mjs --ref=HEAD 2>&1)
-unscoped_status=$?
-if [ "$unscoped_status" -eq 0 ]; then
-  printf '%s\n' "$unscoped_output" | tail -n 3
-else
-  printf '%s\n' "$unscoped_output"
-  echo "❌ Найден unscoped write к client-specific ключу. Это primary pollution vector"
-  echo "   (см. incident fc1ce544: Александра → Poplanton)."
-  echo "💡 Исправь scoped key через HEYS.utils.lsSet или добавь в allowlist:"
-  echo "   scripts/unscoped-client-writes-allowlist.txt"
-  exit 1
-fi
+base_ref="${remote_name}/${branch_name}"
+echo "🔍 Fast pre-push gates for ${base_ref}..HEAD..."
+node scripts/push-preflight.mjs --base="$base_ref" --ref=HEAD || exit 1
 
-echo "🔒 Проверка raw sessionStorage.clear() (drop fence preservation guard)..."
-raw_session_output=$(node scripts/lint-raw-session-clear.mjs --ref=HEAD 2>&1)
-raw_session_status=$?
-if [ "$raw_session_status" -eq 0 ]; then
-  printf '%s\n' "$raw_session_output" | tail -n 2
-else
-  printf '%s\n' "$raw_session_output"
-  echo "❌ Найден raw sessionStorage.clear() — сносит heys_drop_fence_*."
-  echo "💡 Используй clearSessionStoragePreservingDropFences() или inline preserve,"
-  echo "   либо добавь сайт в scripts/raw-session-clear-allowlist.txt с обоснованием."
-  exit 1
-fi
-
-echo "📦 Проверка bundle size budget (P0-D, +5% guard)..."
-node scripts/lint-bundle-size.mjs --ref=HEAD || {
-  echo "❌ Bundle size guard: critical-path бандл вырос >+5% от baseline. Push отменён."
-  echo "💡 Если рост оправдан — добавь [bundle-size-ok] в commit message."
-  exit 1
-}
-
-# 2026-06-04: fail-loud гейт против stale-деплоя. В source-only модели
-# (агенты не пересобирают бандлы — это делает `pnpm agents:integrate`) деплой
-# катит закоммиченные хеш-бандлы из public/, а не полностью пересобирает их из
-# исходников. ci.yml с verify-legacy-bundles выключен на push в main → если
-# source ушёл на main без интеграции, прод тихо уехал бы на старых бандлах.
-# Здесь ловим рассинхрон source↔bundle (source_fingerprint mismatch) ДО push.
-# --ref=HEAD: сверяем КОММИТНУТОЕ состояние (то, что пушится), а не рабочее
-# дерево. Иначе незакоммиченный bundle-source WIP параллельного агента в общем
-# checkout ложно валит наш самосогласованный HEAD и блокирует пуш.
-echo "🔗 Проверка соответствия legacy-бандлов исходникам (anti-stale-deploy)..."
-node scripts/verify-legacy-bundles.mjs --ref=HEAD || {
-  echo "❌ Бандлы не соответствуют исходникам (source изменён без пересборки)."
-  echo "💡 Запусти integration-проход, который пересоберёт бандлы:"
-  echo "   pnpm agents:integrate --confirm-integration --branches=... --title=\"...\" --items='[...]'"
-  echo "   (или, для одиночной правки, scoped rebuild по своему source scope + явный commit/shipping flow)."
-  exit 1
-}
-
-echo "🧪 Запуск полного test suite..."
-
-# До 2026-05-21 здесь был whitelist из 14 «критических» файлов. За время его
-# существования в extended suite незаметно накопилось 32 падающих теста
-# (см. коммиты 4bda3d76, 39bf818e — расследование и фикс). Прогон полного
-# suite дороже всего на ~3 сек (4s → 7s), но ловит регрессии вроде
-# stale-моков и path-багов на pre-push, а не через жалобы клиентов.
-#
-# `--retry=1` — vitest сам перепрогоняет упавшие тесты ещё раз. Это спасает
-# от transient-flake из-за shared global state (config `isolate: false`).
-# Если тест падает на ВТОРОЙ попытке — push всё равно блокируется, реальные
-# регрессии не маскируются.
-# 2026-07-01: source-SHA cache вынесен в общий helper, чтобы `push:preflight`
-# и pre-push считали один и тот же cache hit/miss. Full apps/web Vitest остаётся
-# обязательным на cache miss; preflight только прогревает этот cache заранее.
-node scripts/pre-push-vitest-cache.mjs --run-if-needed --ref=HEAD || {
-  echo "❌ Тесты не прошли! Push отменён."
-  exit 1
-}
-
-echo "✅ Все тесты прошли!"
+echo "✅ Fast local gates passed; CI owns clean bundles and the full suite."
