@@ -157,6 +157,12 @@ SW update state machine публикует структурированные с
 `sw_reload_suppressed`. Они входят в один `boot_id` с событиями What's New и
 позволяют отличить штатное обновление PWA от повторного reload-цикла.
 
+Обязательный утренний check-in загружает StepModal и проверку пропущенных дней
+из независимых lazy chunks. Если проверка дней загрузилась раньше и исчерпала
+короткие retry, она повторно регистрирует шаг по `heys-stepmodal-ready`; пока
+конфигурация шага ещё не готова, блокирующая модалка показывает статус загрузки,
+а не скрывает приложение пустым экраном.
+
 ## Facts Table
 
 | ID  | Утверждение                                                                  | Проверка                                                                                                                                               | Статус               |
@@ -174,3 +180,4 @@ SW update state machine публикует структурированные с
 | W11 | Ack правок куратора переживает отказ storage и не открывает pending повторно | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                    | проверено 2026-07-23 |
 | W12 | SW lifecycle и reload suppression входят в структурированный boot timeline   | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                               | проверено 2026-07-24 |
 | W13 | Sync/write telemetry агрегирована по циклу/пакету и не содержит значений     | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                               | проверено 2026-07-24 |
+| W14 | Lazy race StepModal/yesterdayVerify восстанавливает обязательный первый шаг  | `npx vitest run apps/web/__tests__/morning-checkin-flow-resume.test.js`                                                                                | проверено 2026-07-24 |

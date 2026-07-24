@@ -995,7 +995,25 @@
     }, [onClose]);
 
     if (!currentConfig) {
-      return null;
+      const missingStepIds = steps
+        .filter((stepId) => typeof stepId === 'string' && !StepRegistry[stepId]);
+      return React.createElement('div', {
+        className: 'mc-backdrop',
+        'data-heys-step-modal-loading': 'true'
+      },
+        React.createElement('div', {
+          className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}`,
+          role: 'status',
+          'aria-live': 'polite'
+        },
+          React.createElement('div', { className: 'mc-step-content mc-step-content--loading' },
+            React.createElement('div', { className: 'yv-loading' }, 'Загружаем следующий шаг…'),
+            missingStepIds.length > 0 && React.createElement('div', {
+              className: 'mc-loading-hint'
+            }, 'Это может занять несколько секунд.')
+          )
+        )
+      );
     }
 
     const slideClass = slideDirection === 'left' ? 'mc-slide-left' :

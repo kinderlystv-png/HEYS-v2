@@ -1620,6 +1620,11 @@
   }
 
   function registerYesterdayVerifyStep() {
+    if (_stepRegistered && HEYS.StepModal?.registry?.yesterdayVerify) {
+      notifyYesterdayVerifyReady('already-registered');
+      return;
+    }
+
     if (!HEYS.StepModal?.registerStep) {
       if (_registerRetries < 20) {
         _registerRetries++;
@@ -1669,6 +1674,14 @@
     notifyYesterdayVerifyReady('step-registered');
     devLog('[YesterdayVerify] ✅ Step registered');
   }
+
+  // postboot chunks load independently. On a slow iPhone the bounded retry
+  // above may finish before the UI chunk exposes StepModal. StepModal emits
+  // this readiness event after replacing its registry, so re-register the
+  // required first check-in step instead of leaving the blocking overlay blank.
+  try {
+    document.addEventListener('heys-stepmodal-ready', registerYesterdayVerifyStep, { once: true });
+  } catch (_) { /* document may be unavailable in non-browser tests */ }
 
   // Запускаем регистрацию
   registerYesterdayVerifyStep();

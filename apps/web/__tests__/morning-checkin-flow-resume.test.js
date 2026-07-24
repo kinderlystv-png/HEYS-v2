@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
+const YESTERDAY_VERIFY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const SYNC_MERGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_sync_merge_v1.js'), 'utf8');
 const DATE_KEY = '2026-07-17';
 const CLIENT_ID = 'client-1';
@@ -117,6 +118,26 @@ afterEach(() => {
 });
 
 describe('StepModal forced visibility', () => {
+  it('re-registers yesterdayVerify when StepModal becomes ready after its retry started', () => {
+    window.React = React;
+    window.HEYS = {};
+    // eslint-disable-next-line no-new-func
+    new Function(YESTERDAY_VERIFY_SRC)();
+
+    const registry = {};
+    window.HEYS.StepModal = {
+      registry,
+      registerStep: (id, config) => { registry[id] = config; },
+    };
+    act(() => {
+      document.dispatchEvent(new CustomEvent('heys-stepmodal-ready'));
+    });
+
+    expect(registry.yesterdayVerify).toBeTruthy();
+    expect(window.HEYS.YesterdayVerifyReady).toBe(true);
+    expect(window.HEYS.YesterdayVerify.stepRegistered).toBe(true);
+  });
+
   it('renders a frozen planned step when its config registers after mount', () => {
     const modal = loadStepModal();
     const view = render(React.createElement(modal.Component, {
@@ -125,7 +146,7 @@ describe('StepModal forced visibility', () => {
       showTip: false,
     }));
 
-    expect(view.container.textContent).toBe('');
+    expect(screen.getByText('Загружаем следующий шаг…')).toBeTruthy();
     act(() => {
       modal.registerStep('sleepTime', {
         title: 'Сон',
@@ -134,6 +155,15 @@ describe('StepModal forced visibility', () => {
     });
 
     expect(screen.getByText('sleep-time-ready')).toBeTruthy();
+  });
+
+  it('announces StepModal readiness so an earlier lazy step can re-register', () => {
+    const ready = vi.fn();
+    document.addEventListener('heys-stepmodal-ready', ready, { once: true });
+
+    loadStepModal();
+
+    expect(ready).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a planned step visible without changing ordinary shouldShow filtering', () => {
