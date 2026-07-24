@@ -185,15 +185,21 @@ SW update state machine публикует структурированные с
    release-entry и не подхватывает dirty generated-файлы. Временные network/HTTP
    5xx ошибки `git push` повторяются максимум два раза для того же уже
    проверенного HEAD; auth, hook и non-fast-forward ошибки завершают flow сразу.
-5. Deploy CI на том же source SHA запускает full Vitest, затем выполняет
-   `prebuild` → React bundle → одну чистую legacy-сборку с verification → Vite;
-   любая ошибка блокирует deploy.
+5. Deploy CI на том же source SHA запускает полный Vitest suite в двух
+   обязательных параллельных shard и migration safety gate ровно в одном из них.
+   Затем выполняется `prebuild` → React bundle → одна чистая legacy-сборка с
+   verification → Vite; любая ошибка блокирует deploy.
 6. Full deploy в своём же job сверяет production `build-meta.json` с hash
    собранного артефакта и проверяет доступность всех hash-bundles. Отдельная
    ancestry-проверка остаётся только у fast release path.
 7. `app.heyslab.ru` не имеет Yandex CDN resource и не требует purge. Workflow
    очищает только mutable entrypoints существующих Demo/Landing CDN; ошибка
    реального purge блокирует deploy, а не маскируется как success.
+8. Если поверх source-коммита существует generated bundle-only commit,
+   `push-agent` сверяет `build-meta.hash` с ближайшим содержательным source SHA,
+   а production manifest — с hash-bundles из bundle-коммита. Поэтому корректный
+   двухкоммитный deploy не считается ошибкой, но stale manifest остаётся
+   блокирующим сбоем post-check.
 
 ## Повторное включение What's New
 
@@ -210,24 +216,26 @@ SW update state machine публикует структурированные с
 
 ## Facts Table
 
-| ID  | Утверждение                                                                      | Проверка                                                                                                                                                           | Статус               |
-| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| W1  | SW пропускается и unregister-ится на localhost/demo                              | `sed -n '720,755p' apps/web/heys_platform_apis_v1.js`                                                                                                              | проверено 2026-07-17 |
-| W2  | SW регистрируется как `/sw.js` и обрабатывает controllerchange                   | `rg -n -F -e "register('/sw.js')" -e "addEventListener('controllerchange'" apps/web/heys_platform_apis_v1.js`                                                      | проверено 2026-07-17 |
-| W3  | API cache routing различает no-store auth, RPC и KV SWR                          | `sed -n '266,335p' apps/web/public/sw.js`                                                                                                                          | проверено 2026-07-17 |
-| W4  | Client switch инвалидирует SW KV cache                                           | `rg -n -e 'CLIENT_SWITCH' -e 'CLEAR_API_KV' apps/web/public/sw.js apps/web/heys_storage_supabase_v1.js`                                                            | проверено 2026-07-17 |
-| W5  | Background sync лишь postMessage-ит START, ждёт 1 с и COMPLETE                   | `sed -n '745,770p' apps/web/public/sw.js`                                                                                                                          | проверено 2026-07-17 |
-| W6  | Browser push требует capability/permission и iOS standalone                      | `sed -n '120,180p' apps/web/heys_push_v1.js`                                                                                                                       | проверено 2026-07-17 |
-| W7  | Push backend резолвит client/curator identity и auth-гейтит private actions      | `sed -n '90,175p' yandex-cloud-functions/heys-api-push/index.js && sed -n '380,445p' yandex-cloud-functions/heys-api-push/index.js`                                | проверено 2026-07-17 |
-| W8  | SW показывает notification, обрабатывает click и subscription change             | `rg -n -F -e "addEventListener('push'" -e "addEventListener('notificationclick'" -e "addEventListener('pushsubscriptionchange'" apps/web/public/sw.js`             | проверено 2026-07-17 |
-| W9  | Gateway содержит все пять push routes                                            | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                                   | проверено 2026-07-17 |
-| W10 | `What's New` переживает отказ `localStorage` без повторного открытия             | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                             | проверено 2026-07-23 |
-| W11 | Ack правок куратора переживает отказ storage и не открывает pending повторно     | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                                | проверено 2026-07-23 |
-| W12 | SW lifecycle и reload suppression входят в структурированный boot timeline       | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                                           | проверено 2026-07-24 |
-| W13 | Sync/write telemetry агрегирована по циклу/пакету и не содержит значений         | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                                           | проверено 2026-07-24 |
-| W14 | Lazy race StepModal/yesterdayVerify восстанавливает обязательный первый шаг      | `npx vitest run apps/web/__tests__/morning-checkin-flow-resume.test.js`                                                                                            | проверено 2026-07-24 |
-| W15 | Центральный флаг выключает modal/fetch/retry и не меняет seen-state              | `pnpm exec vitest run apps/web/__tests__/release-features.test.js apps/web/__tests__/whats-new-display.test.js`                                                    | проверено 2026-07-24 |
-| W16 | Deploy CI сам собирает и верифицирует legacy artifact перед upload               | `rg -n -e "build:ci" -e "verify-legacy-bundles" .github/workflows/deploy-yandex.yml apps/web/package.json`                                                         | проверено 2026-07-24 |
-| W17 | Migration safety остаётся обязательной локально для SQL diff и всегда в CI       | `node --test scripts/db/migrate.test.mjs && rg -n -e "Migration safety" -e "migration safety gate" scripts/push-preflight.mjs .github/workflows/deploy-yandex.yml` | проверено 2026-07-24 |
-| W18 | Transient push повторяется без повтора preflight, terminal push не повторяется   | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
-| W19 | Full deploy проверяет metadata/bundles inline; ancestry job только для fast path | `rg -n -e "Verify production build metadata and bundles" -e "Verify fast deploy ancestry" .github/workflows/deploy-yandex.yml`                                     | проверено 2026-07-24 |
+| ID  | Утверждение                                                                         | Проверка                                                                                                                                                           | Статус               |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| W1  | SW пропускается и unregister-ится на localhost/demo                                 | `sed -n '720,755p' apps/web/heys_platform_apis_v1.js`                                                                                                              | проверено 2026-07-17 |
+| W2  | SW регистрируется как `/sw.js` и обрабатывает controllerchange                      | `rg -n -F -e "register('/sw.js')" -e "addEventListener('controllerchange'" apps/web/heys_platform_apis_v1.js`                                                      | проверено 2026-07-17 |
+| W3  | API cache routing различает no-store auth, RPC и KV SWR                             | `sed -n '266,335p' apps/web/public/sw.js`                                                                                                                          | проверено 2026-07-17 |
+| W4  | Client switch инвалидирует SW KV cache                                              | `rg -n -e 'CLIENT_SWITCH' -e 'CLEAR_API_KV' apps/web/public/sw.js apps/web/heys_storage_supabase_v1.js`                                                            | проверено 2026-07-17 |
+| W5  | Background sync лишь postMessage-ит START, ждёт 1 с и COMPLETE                      | `sed -n '745,770p' apps/web/public/sw.js`                                                                                                                          | проверено 2026-07-17 |
+| W6  | Browser push требует capability/permission и iOS standalone                         | `sed -n '120,180p' apps/web/heys_push_v1.js`                                                                                                                       | проверено 2026-07-17 |
+| W7  | Push backend резолвит client/curator identity и auth-гейтит private actions         | `sed -n '90,175p' yandex-cloud-functions/heys-api-push/index.js && sed -n '380,445p' yandex-cloud-functions/heys-api-push/index.js`                                | проверено 2026-07-17 |
+| W8  | SW показывает notification, обрабатывает click и subscription change                | `rg -n -F -e "addEventListener('push'" -e "addEventListener('notificationclick'" -e "addEventListener('pushsubscriptionchange'" apps/web/public/sw.js`             | проверено 2026-07-17 |
+| W9  | Gateway содержит все пять push routes                                               | `sed -n '430,505p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                                   | проверено 2026-07-17 |
+| W10 | `What's New` переживает отказ `localStorage` без повторного открытия                | `rg -n "SESSION_ACK_KEY\|runtimeAcknowledgedVersion" apps/web/heys_whats_new_modal_v1.js apps/web/__tests__/whats-new-display.test.js`                             | проверено 2026-07-23 |
+| W11 | Ack правок куратора переживает отказ storage и не открывает pending повторно        | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                                | проверено 2026-07-23 |
+| W12 | SW lifecycle и reload suppression входят в структурированный boot timeline          | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                                           | проверено 2026-07-24 |
+| W13 | Sync/write telemetry агрегирована по циклу/пакету и не содержит значений            | `npx vitest run apps/web/__tests__/client-session-observability.test.js`                                                                                           | проверено 2026-07-24 |
+| W14 | Lazy race StepModal/yesterdayVerify восстанавливает обязательный первый шаг         | `npx vitest run apps/web/__tests__/morning-checkin-flow-resume.test.js`                                                                                            | проверено 2026-07-24 |
+| W15 | Центральный флаг выключает modal/fetch/retry и не меняет seen-state                 | `pnpm exec vitest run apps/web/__tests__/release-features.test.js apps/web/__tests__/whats-new-display.test.js`                                                    | проверено 2026-07-24 |
+| W16 | Deploy CI сам собирает и верифицирует legacy artifact перед upload                  | `rg -n -e "build:ci" -e "verify-legacy-bundles" .github/workflows/deploy-yandex.yml apps/web/package.json`                                                         | проверено 2026-07-24 |
+| W17 | Migration safety остаётся обязательной локально для SQL diff и всегда в CI          | `node --test scripts/db/migrate.test.mjs && rg -n -e "Migration safety" -e "migration safety gate" scripts/push-preflight.mjs .github/workflows/deploy-yandex.yml` | проверено 2026-07-24 |
+| W18 | Transient push повторяется без повтора preflight, terminal push не повторяется      | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
+| W19 | Full deploy проверяет metadata/bundles inline; ancestry job только для fast path    | `rg -n -e "Verify production build metadata and bundles" -e "Verify fast deploy ancestry" .github/workflows/deploy-yandex.yml`                                     | проверено 2026-07-24 |
+| W20 | Full Vitest разделён на два обязательных shard; migration gate выполняется один раз | `rg -n -e "matrix:" -e "--shard=" -e "if: matrix.shard == 1" .github/workflows/deploy-yandex.yml`                                                                  | проверено 2026-07-24 |
+| W21 | Bundle-only HEAD проверяется по source SHA и точному production manifest            | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |

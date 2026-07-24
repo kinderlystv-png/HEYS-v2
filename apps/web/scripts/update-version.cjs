@@ -15,23 +15,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-
-const RELEASE_META_FILE_PATTERNS = [
-  /^apps\/web\/public\/whats-new\.json$/,
-  /^apps\/web\/public\/whats-new\//,
-  /^apps\/web\/public\/build-meta\.json$/,
-  /^apps\/web\/public\/version\.json$/,
-  /^apps\/web\/public\/sw\.js$/,
-  /^apps\/web\/index\.html$/,
-  /^apps\/web\/bundle-manifest\.json$/,
-  /^apps\/web\/public\/(?:bundle-manifest|lazy-manifest)\.json$/,
-  /^apps\/web\/heys_(advice|day|day_meals)_bundle_v1\.js$/,
-  /^apps\/web\/heys_pwa_module_v1\.js$/,
-  /^apps\/web\/public\/.*\.bundle\..*\.js(\.gz)?$/,
-  /^scripts\/prepare-release\.mjs$/,
-  /^scripts\/release-prepare-and-commit\.mjs$/,
-  /^\.github\/workflows\/whats-new-guard\.yml$/,
-];
+const {
+  isBuildArtifactOnlyFile: isReleaseMetaOnlyFile,
+} = require('../../../scripts/build-meta-target.cjs');
 
 let cachedReleaseTarget = null;
 
@@ -60,10 +46,6 @@ function getGitCommitTimestamp(ref = 'HEAD') {
     return null;
   }
   return timestampSeconds * 1000;
-}
-
-function isReleaseMetaOnlyFile(filePath) {
-  return RELEASE_META_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 
 function getCommitFiles(ref = 'HEAD') {

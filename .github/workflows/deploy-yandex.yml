@@ -46,6 +46,9 @@ jobs:
           # Usually enough to include the currently deployed hash. The classifier
           # deepens below only when production is older than this shallow window.
           fetch-depth: 256
+          # Keep commit history for range classification without downloading
+          # historical bundle contents. Current blobs are fetched lazily.
+          filter: blob:none
 
       - uses: actions/setup-node@v6
         with:
@@ -98,15 +101,19 @@ jobs:
             echo "📦 Full build: code changes since $DEPLOYED_HASH"
           fi
 
-  # 🧪 Gate: run the full apps/web suite once in CI before any prod upload.
+  # 🧪 Gate: run the full apps/web suite across two required shards before upload.
   # Closes the hole where a --no-verify push or a GitHub-UI merge could
   # deploy untested code (ci.yml is PR-only and historically red, so it is no gate).
   # Skipped for release-only (whats-new) pushes — no code changes there.
   test:
-    name: Unit tests (deploy gate)
+    name: Unit tests (deploy gate) (${{ matrix.shard }}/2)
     needs: detect
     if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     # HARD gate: a red suite blocks the deploy. The full apps/web suite is green under
     # the CI timezone (UTC) — the one tz-fragile test (heys_relapse_risk) was fixed to
     # use a tz-naive `now`. If this job goes red, deploy-artifact is skipped by design.
@@ -128,9 +135,10 @@ jobs:
           cache: true
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run full apps/web unit suite
-        run: cd apps/web && pnpm exec vitest run --retry=1
+      - name: Run apps/web unit suite shard ${{ matrix.shard }}/2
+        run: cd apps/web && pnpm exec vitest run --retry=1 --shard=${{ matrix.shard }}/2
       - name: Run migration safety gate
+        if: matrix.shard == 1
         run: node --test scripts/db/migrate.test.mjs
 
   build-artifact:

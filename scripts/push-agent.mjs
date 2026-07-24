@@ -19,11 +19,15 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isWhatsNewEnabled } from './release-features.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const requireFromHere = createRequire(import.meta.url);
+const { isBuildArtifactOnlyFile } = requireFromHere('./build-meta-target.cjs');
 const ROOT_DIR = path.join(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
 const BUNDLE_SIZE = path.join(__dirname, 'lint-bundle-size.mjs');
@@ -507,6 +511,66 @@ function collectBundleFiles(manifest) {
   return [...files];
 }
 
+function resolveProductionSourceSha(
+  headSha,
+  {
+    maxDepth = 20,
+    getCommitFiles = (revision) => {
+      const output = getGitOutput([
+        'diff-tree',
+        '--root',
+        '--no-commit-id',
+        '--name-only',
+        '-r',
+        revision,
+      ]);
+      return output ? output.split(/\r?\n/).filter(Boolean) : [];
+    },
+    getParentSha = (revision) => getGitOutput(['rev-parse', `${revision}^`]),
+  } = {},
+) {
+  const originalHead = String(headSha || '').trim();
+  if (!originalHead) return '';
+
+  let revision = originalHead;
+  for (let depth = 0; depth < maxDepth && revision; depth += 1) {
+    const files = getCommitFiles(revision);
+    if (files.length > 0 && files.some((file) => !isBuildArtifactOnlyFile(file))) {
+      return revision;
+    }
+    revision = getParentSha(revision);
+  }
+
+  return originalHead;
+}
+
+function hashesReferToSameCommit(leftHash, rightHash) {
+  const left = String(leftHash || '').trim();
+  const right = String(rightHash || '').trim();
+  return Boolean(left && right && (left.startsWith(right) || right.startsWith(left)));
+}
+
+function getMissingBundleFiles(expectedFiles, deployedFiles) {
+  const deployed = new Set(deployedFiles);
+  return expectedFiles.filter((file) => !deployed.has(file));
+}
+
+function collectLocalBundleFiles() {
+  for (const relativePath of [
+    'apps/web/public/bundle-manifest.json',
+    'apps/web/bundle-manifest.json',
+  ]) {
+    try {
+      const manifest = parseJsonObject(fs.readFileSync(path.join(ROOT_DIR, relativePath), 'utf8'));
+      const files = collectBundleFiles(manifest);
+      if (files.length > 0) return files;
+    } catch {
+      // Try the next canonical manifest location.
+    }
+  }
+  return [];
+}
+
 function isDeployedHashCompatible(deployedHash, headSha, isAncestor = () => false) {
   const deployed = String(deployedHash || '').trim();
   const head = String(headSha || '').trim();
@@ -542,17 +606,18 @@ function verifyProductionDeployment({
   headSha,
   appUrl = getOption('--app-url') || 'https://app.heyslab.ru',
 }) {
+  const sourceSha = resolveProductionSourceSha(headSha);
   writeLine('Verifying production build-meta and hash bundles...');
   let meta = null;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     meta = fetchJson(`${appUrl}/build-meta.json`);
-    if (meta?.hash && productionHashIsCompatible(meta.hash, headSha)) break;
+    if (meta?.hash && productionHashIsCompatible(meta.hash, sourceSha)) break;
     if (attempt < 6) sleepSeconds(5);
   }
 
-  if (!meta?.hash || !productionHashIsCompatible(meta.hash, headSha)) {
+  if (!meta?.hash || !productionHashIsCompatible(meta.hash, sourceSha)) {
     writeError(
-      `Production verification failed: build-meta hash ${meta?.hash || '<missing>'} does not contain pushed ${headSha.slice(0, 8)}.`,
+      `Production verification failed: build-meta hash ${meta?.hash || '<missing>'} does not contain source ${sourceSha.slice(0, 8)} for pushed ${headSha.slice(0, 8)}.`,
     );
     writeError(`Next command: curl -fsS '${appUrl}/build-meta.json?_cb=$(date +%s)'`);
     process.exit(1);
@@ -564,6 +629,20 @@ function verifyProductionDeployment({
     writeError('Production verification failed: bundle-manifest contains no hash bundles.');
     writeError(`Next command: curl -fsS '${appUrl}/bundle-manifest.json?_cb=$(date +%s)'`);
     process.exit(1);
+  }
+
+  if (sourceSha !== headSha && hashesReferToSameCommit(meta.hash, sourceSha)) {
+    const expectedBundleFiles = collectLocalBundleFiles();
+    const missingBundleFiles = getMissingBundleFiles(expectedBundleFiles, bundleFiles);
+    if (expectedBundleFiles.length === 0 || missingBundleFiles.length > 0) {
+      writeError(
+        `Production verification failed: bundle-only ${headSha.slice(0, 8)} is not represented by the production manifest.`,
+      );
+      if (missingBundleFiles.length > 0) {
+        writeError(`Missing hash bundles: ${missingBundleFiles.join(', ')}`);
+      }
+      process.exit(1);
+    }
   }
 
   for (const file of bundleFiles) {
@@ -594,7 +673,7 @@ function verifyProductionDeployment({
   }
 
   writeLine(
-    `Production verified: ${meta.version || '<version missing>'} (${meta.hash}), ${bundleFiles.length} hash bundle(s) available.`,
+    `Production verified: ${meta.version || '<version missing>'} (source ${meta.hash}, pushed ${headSha.slice(0, 8)}), ${bundleFiles.length} hash bundle(s) available.`,
   );
 }
 
@@ -829,19 +908,23 @@ if (import.meta.url === invokedPath) {
 
 export {
   assertMutatingRunConfirmed,
-  buildItemsJsonFromOptions,
   buildGitPushArgs,
+  buildItemsJsonFromOptions,
   buildPreflightCommandArgs,
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
   collectBundleFiles,
   getDeployWatchConfig,
+  getMissingBundleFiles,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
+  hashesReferToSameCommit,
+  isBuildArtifactOnlyFile,
   isDeployedHashCompatible,
   isTransientGitPushFailure,
   parseCliArgs,
   pushGitWithRetry,
+  resolveProductionSourceSha,
   shouldRunPreflight,
   shouldWatchDeploy,
 };

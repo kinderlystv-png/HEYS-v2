@@ -17,10 +17,14 @@ const {
   getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
+  getMissingBundleFiles,
+  hashesReferToSameCommit,
+  isBuildArtifactOnlyFile,
   isDeployedHashCompatible,
   isTransientGitPushFailure,
   parseCliArgs,
   pushGitWithRetry,
+  resolveProductionSourceSha,
   shouldWatchDeploy,
   shouldRunPreflight,
 } = await import(scriptUrl);
@@ -188,6 +192,44 @@ describe('push-agent CLI helpers', () => {
       ),
     ).toBe(true);
     expect(isDeployedHashCompatible('deadbeef', '12345678', () => false)).toBe(false);
+  });
+
+  it('resolves a bundle-only HEAD to the nearest meaningful source commit', () => {
+    const filesByCommit = {
+      bundle: [
+        'apps/web/public/boot-app.bundle.12345678abcd.js',
+        'apps/web/public/bundle-manifest.json',
+        'apps/web/index.html',
+      ],
+      source: ['apps/web/heys_client_log_trace_v1.js'],
+    };
+    const parents = { bundle: 'source', source: 'older' };
+
+    expect(
+      resolveProductionSourceSha('bundle', {
+        getCommitFiles: (revision) => filesByCommit[revision] || [],
+        getParentSha: (revision) => parents[revision] || '',
+      }),
+    ).toBe('source');
+    expect(isBuildArtifactOnlyFile('apps/web/public/sw.js')).toBe(true);
+    expect(isBuildArtifactOnlyFile('apps/web/heys_client_log_trace_v1.js')).toBe(false);
+  });
+
+  it('keeps source HEAD unchanged and detects stale bundle manifests', () => {
+    expect(
+      resolveProductionSourceSha('source', {
+        getCommitFiles: () => ['scripts/push-agent.mjs'],
+        getParentSha: () => 'older',
+      }),
+    ).toBe('source');
+    expect(hashesReferToSameCommit('fd265029', 'fd265029abcdef')).toBe(true);
+    expect(hashesReferToSameCommit('fd265029', '66270e79')).toBe(false);
+    expect(
+      getMissingBundleFiles(
+        ['boot-core.bundle.aaaabbbb.js', 'boot-app.bundle.ccccdddd.js'],
+        ['boot-core.bundle.aaaabbbb.js'],
+      ),
+    ).toEqual(['boot-app.bundle.ccccdddd.js']);
   });
 
   it('retries only transient git push failures and keeps the same prechecked run', () => {
