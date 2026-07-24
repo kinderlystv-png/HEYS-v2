@@ -21,13 +21,16 @@ service-worker engine.
 
 1. `registerServiceWorker()` не регистрирует SW на localhost и в demo mode;
    существующие registrations там удаляются.
-2. В production регистрируется `/sw.js`, сохраняется registration и подключаются
-   update/message/controller listeners.
+2. В production `/sw.js` регистрируется только после завершения postboot, чтобы
+   активация worker не обрывала стартовые lazy bundle-запросы. Registration
+   сохраняется, подключаются update/message/controller listeners.
 3. `updatefound` показывает update flow только при существующем
    controller/active worker; первая установка не считается обновлением.
 4. Update lock, state machine и fallback timers защищают от параллельных reload.
-5. `controllerchange` перезагружает страницу только для real update и учитывает
-   auth-sync guard, чтобы не оборвать PIN download.
+5. Install handler не вызывает `skipWaiting` сам: обновление активируется только
+   явным page-side update lifecycle. `controllerchange` перезагружает страницу,
+   только если есть pending/lock/non-idle update state; незапрошенная смена
+   controller во время boot не прерывает текущую страницу.
 6. Online/offline events управляют системным banner; данные при offline
    продолжают писаться local-first через общий storage/sync слой.
 7. `What's New` показывается только после совпадения runtime и release hash.

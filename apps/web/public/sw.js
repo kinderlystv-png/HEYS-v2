@@ -91,8 +91,10 @@ self.addEventListener('install', (event) => {
   // v9.9: Two-phase install:
   //   Phase 1 (blocking): CSS precache — prevents FOUC after cache clear
   //   Phase 2 (background): HTML, icons, boot bundles — non-blocking
+  // Updates stay waiting until the page explicitly sends SKIP_WAITING. Activating
+  // here can replace the controller while iOS is still loading lazy bundles.
   event.waitUntil(
-    // Phase 1: Cache all CSS files BEFORE skipWaiting
+    // Phase 1: Cache all CSS files before the worker becomes install-ready.
     // Old caches are cleared on activate, so CSS must be in new cache
     // before the new SW takes control. Without this, main.css requests
     // hit network (staleWhileRevalidate finds no cache) → 10s FOUC.
@@ -114,11 +116,7 @@ self.addEventListener('install', (event) => {
         );
       })
       .then(() => {
-        console.log('[SW] ✅ CSS precached — calling skipWaiting');
-        return self.skipWaiting();
-      })
-      .then(() => {
-        console.log('[SW] ✅ skipWaiting done — SW now active (CSS in cache)');
+        console.log('[SW] ✅ CSS precached — waiting for controlled activation');
 
         // Phase 2: Non-CSS assets + boot bundles in BACKGROUND
         setTimeout(() => {

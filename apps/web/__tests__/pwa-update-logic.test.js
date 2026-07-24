@@ -7,6 +7,8 @@
  * 3. Сброс счётчика попыток при успешном обновлении
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 const UPDATE_COOLDOWN_MS = 60000; // 1 минута
@@ -114,6 +116,20 @@ function detectBundleStaleState({
   }
 
   return { stale: false, reason: 'in_sync', action: 'none' };
+}
+
+function shouldReloadForControllerChange({
+  updateState,
+  hadControllerBefore,
+  hasPendingUpdate,
+  hasUpdateLock,
+}) {
+  const hasExplicitUpdate = updateState !== 'idle' || hasPendingUpdate || hasUpdateLock;
+  return hasExplicitUpdate && (hadControllerBefore || hasPendingUpdate || hasUpdateLock);
+}
+
+function shouldRegisterServiceWorker({ postbootDone }) {
+  return postbootDone;
 }
 
 describe('PWA update protection', () => {
@@ -299,6 +315,41 @@ describe('PWA update protection', () => {
       expect(result.stale).toBe(false);
       expect(result.reason).toBe('in_sync');
       expect(result.action).toBe('none');
+    });
+  });
+
+  describe('safe Service Worker activation', () => {
+    it('не перезагружает страницу при незапрошенном controllerchange во время boot', () => {
+      expect(shouldReloadForControllerChange({
+        updateState: 'idle',
+        hadControllerBefore: true,
+        hasPendingUpdate: false,
+        hasUpdateLock: false,
+      })).toBe(false);
+    });
+
+    it('перезагружает страницу для подтверждённого update lifecycle', () => {
+      expect(shouldReloadForControllerChange({
+        updateState: 'activating',
+        hadControllerBefore: true,
+        hasPendingUpdate: true,
+        hasUpdateLock: true,
+      })).toBe(true);
+    });
+
+    it('не регистрирует worker до завершения postboot', () => {
+      expect(shouldRegisterServiceWorker({ postbootDone: false })).toBe(false);
+      expect(shouldRegisterServiceWorker({ postbootDone: true })).toBe(true);
+    });
+
+    it('не активирует обновление автоматически из install handler', () => {
+      const swSource = readFileSync(join(process.cwd(), 'apps/web/public/sw.js'), 'utf8');
+      const installHandler = swSource.slice(
+        swSource.indexOf("self.addEventListener('install'"),
+        swSource.indexOf("self.addEventListener('activate'")
+      );
+
+      expect(installHandler).not.toContain('self.skipWaiting()');
     });
   });
 });

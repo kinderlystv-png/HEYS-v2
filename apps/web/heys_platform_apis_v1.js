@@ -979,6 +979,7 @@
           const hasExistingSW = registration.active || navigator.serviceWorker.controller;
           if (!hasExistingSW) {
             console.log('[SW] First-time install, no update modal needed');
+            transitionSwUpdateState(SW_UPDATE_STATES.IDLE, 'first-install');
             return;
           }
 
@@ -1044,12 +1045,27 @@
       if (refreshing) return;
 
       // 🔒 Показываем модалку и делаем reload ТОЛЬКО если это реальное обновление
-      // Реальное обновление: был контроллер до этого ИЛИ есть флаг pending_update
-      const isRealUpdate = hadControllerBefore ||
-        sessionStorage.getItem('heys_pending_update') === 'true' ||
-        isUpdateLocked();
+      // Сам по себе предыдущий controller недостаточен: iOS может активировать новый
+      // worker вне page-side lifecycle и оборвать boot-запросы. Reload разрешён только
+      // когда приложение уже зафиксировало явное обновление.
+      const hasPendingUpdate = sessionStorage.getItem('heys_pending_update') === 'true';
+      const hasUpdateLock = isUpdateLocked();
+      const hasExplicitUpdate = _swUpdateState !== SW_UPDATE_STATES.IDLE ||
+        hasPendingUpdate ||
+        hasUpdateLock;
+      const isRealUpdate = hasExplicitUpdate &&
+        (hadControllerBefore || hasPendingUpdate || hasUpdateLock);
 
-      console.log('[SW] Update check:', { hadControllerBefore, isRealUpdate });
+      console.log('[SW] Update check:', {
+        hadControllerBefore,
+        updateState: _swUpdateState,
+        hasPendingUpdate,
+        hasUpdateLock,
+        isRealUpdate,
+      });
+
+      // После первого controllerchange последующие активации уже имеют предыдущий controller.
+      hadControllerBefore = true;
 
       if (isRealUpdate) {
         // Реальное обновление — показываем модалку и делаем reload
@@ -1077,10 +1093,27 @@
         };
         setTimeout(doReload, 500);
       } else {
-        // Первичная установка SW — НЕ делаем reload, страница уже загружена
-        console.log('[SW] First-time controller activation, no reload needed');
+        // Первичная или незапрошенная активация SW — НЕ прерываем текущую загрузку.
+        console.log('[SW] Controller activation outside update lifecycle, no reload needed');
       }
     });
+  }
+
+  const SW_REGISTRATION_POLL_MS = 250;
+
+  function registerServiceWorkerWhenBootStable() {
+    const tryRegister = () => {
+      const postbootDone = window.__heysPostbootDone === true;
+
+      if (postbootDone) {
+        registerServiceWorker();
+        return;
+      }
+
+      setTimeout(tryRegister, SW_REGISTRATION_POLL_MS);
+    };
+
+    tryRegister();
   }
 
   // === Централизованная функция skipWaiting с debounce и проверками ===
@@ -2991,9 +3024,9 @@
   window.showManualRefreshPrompt = window.showManualRefreshPrompt || showManualRefreshPrompt;
   window.checkServerVersion = window.checkServerVersion || checkServerVersion;
 
-  // 🚀 Auto-register Service Worker on module load
-  // This was previously called from runVersionGuard() in heys_app_v12.js
-  registerServiceWorker();
+  // 🚀 Register only after postboot settles: SW activation during lazy bundle
+  // loading can abort requests on iOS and leave the app on a blank screen.
+  registerServiceWorkerWhenBootStable();
 
   if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
     console.log('[PlatformAPIs] ✅ Module loaded successfully');
