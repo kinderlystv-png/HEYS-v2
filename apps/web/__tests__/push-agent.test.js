@@ -17,8 +17,6 @@ const {
   getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
-  getMissingBundleFiles,
-  hashesReferToSameCommit,
   isBuildArtifactOnlyFile,
   isDeployedHashCompatible,
   isTransientGitPushFailure,
@@ -215,21 +213,13 @@ describe('push-agent CLI helpers', () => {
     expect(isBuildArtifactOnlyFile('apps/web/heys_client_log_trace_v1.js')).toBe(false);
   });
 
-  it('keeps source HEAD unchanged and detects stale bundle manifests', () => {
+  it('keeps a meaningful source HEAD unchanged', () => {
     expect(
       resolveProductionSourceSha('source', {
         getCommitFiles: () => ['scripts/push-agent.mjs'],
         getParentSha: () => 'older',
       }),
     ).toBe('source');
-    expect(hashesReferToSameCommit('fd265029', 'fd265029abcdef')).toBe(true);
-    expect(hashesReferToSameCommit('fd265029', '66270e79')).toBe(false);
-    expect(
-      getMissingBundleFiles(
-        ['boot-core.bundle.aaaabbbb.js', 'boot-app.bundle.ccccdddd.js'],
-        ['boot-core.bundle.aaaabbbb.js'],
-      ),
-    ).toEqual(['boot-app.bundle.ccccdddd.js']);
   });
 
   it('retries only transient git push failures and keeps the same prechecked run', () => {

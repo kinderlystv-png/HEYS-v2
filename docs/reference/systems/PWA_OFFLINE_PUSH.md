@@ -197,9 +197,9 @@ SW update state machine публикует структурированные с
    реального purge блокирует deploy, а не маскируется как success.
 8. Если поверх source-коммита существует generated bundle-only commit,
    `push-agent` сверяет `build-meta.hash` с ближайшим содержательным source SHA,
-   а production manifest — с hash-bundles из bundle-коммита. Поэтому корректный
-   двухкоммитный deploy не считается ошибкой, но stale manifest остаётся
-   блокирующим сбоем post-check.
+   а не с generated HEAD. Точное совпадение production manifest с каноническим
+   CI-артефактом проверяет сам deploy job; после него `push-agent` дополнительно
+   проверяет доступность всех опубликованных hash-bundles.
 
 ## Повторное включение What's New
 
@@ -238,4 +238,4 @@ SW update state machine публикует структурированные с
 | W18 | Transient push повторяется без повтора preflight, terminal push не повторяется      | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
 | W19 | Full deploy проверяет metadata/bundles inline; ancestry job только для fast path    | `rg -n -e "Verify production build metadata and bundles" -e "Verify fast deploy ancestry" .github/workflows/deploy-yandex.yml`                                     | проверено 2026-07-24 |
 | W20 | Full Vitest разделён на два обязательных shard; migration gate выполняется один раз | `rg -n -e "matrix:" -e "--shard=" -e "if: matrix.shard == 1" .github/workflows/deploy-yandex.yml`                                                                  | проверено 2026-07-24 |
-| W21 | Bundle-only HEAD проверяется по source SHA и точному production manifest            | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
+| W21 | Bundle-only HEAD проверяется по source SHA; artifact manifest — внутри deploy job   | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |

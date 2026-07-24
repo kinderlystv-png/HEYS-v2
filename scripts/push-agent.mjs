@@ -19,7 +19,6 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -544,33 +543,6 @@ function resolveProductionSourceSha(
   return originalHead;
 }
 
-function hashesReferToSameCommit(leftHash, rightHash) {
-  const left = String(leftHash || '').trim();
-  const right = String(rightHash || '').trim();
-  return Boolean(left && right && (left.startsWith(right) || right.startsWith(left)));
-}
-
-function getMissingBundleFiles(expectedFiles, deployedFiles) {
-  const deployed = new Set(deployedFiles);
-  return expectedFiles.filter((file) => !deployed.has(file));
-}
-
-function collectLocalBundleFiles() {
-  for (const relativePath of [
-    'apps/web/public/bundle-manifest.json',
-    'apps/web/bundle-manifest.json',
-  ]) {
-    try {
-      const manifest = parseJsonObject(fs.readFileSync(path.join(ROOT_DIR, relativePath), 'utf8'));
-      const files = collectBundleFiles(manifest);
-      if (files.length > 0) return files;
-    } catch {
-      // Try the next canonical manifest location.
-    }
-  }
-  return [];
-}
-
 function isDeployedHashCompatible(deployedHash, headSha, isAncestor = () => false) {
   const deployed = String(deployedHash || '').trim();
   const head = String(headSha || '').trim();
@@ -629,20 +601,6 @@ function verifyProductionDeployment({
     writeError('Production verification failed: bundle-manifest contains no hash bundles.');
     writeError(`Next command: curl -fsS '${appUrl}/bundle-manifest.json?_cb=$(date +%s)'`);
     process.exit(1);
-  }
-
-  if (sourceSha !== headSha && hashesReferToSameCommit(meta.hash, sourceSha)) {
-    const expectedBundleFiles = collectLocalBundleFiles();
-    const missingBundleFiles = getMissingBundleFiles(expectedBundleFiles, bundleFiles);
-    if (expectedBundleFiles.length === 0 || missingBundleFiles.length > 0) {
-      writeError(
-        `Production verification failed: bundle-only ${headSha.slice(0, 8)} is not represented by the production manifest.`,
-      );
-      if (missingBundleFiles.length > 0) {
-        writeError(`Missing hash bundles: ${missingBundleFiles.join(', ')}`);
-      }
-      process.exit(1);
-    }
   }
 
   for (const file of bundleFiles) {
@@ -915,10 +873,8 @@ export {
   buildSuggestedCommand,
   collectBundleFiles,
   getDeployWatchConfig,
-  getMissingBundleFiles,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
-  hashesReferToSameCommit,
   isBuildArtifactOnlyFile,
   isDeployedHashCompatible,
   isTransientGitPushFailure,
