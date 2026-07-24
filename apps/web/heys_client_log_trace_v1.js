@@ -58,6 +58,8 @@
   var ACTIVE_VISIT_KIND = 'cold_start';
   var VISIT_STARTED_AT = Date.now();
   var VISIT_READY_EMITTED = false;
+  var ACTIVE_SYNC_STARTED_AT = null;
+  var LAST_SYNC_DURATION_MS = null;
   var hiddenAt = null;
   var lastResumeAt = 0;
   var DEVICE_ID = (function () {
@@ -712,6 +714,13 @@
     var safeName = String(eventName || '').replace(/[^a-z0-9_.-]+/gi, '_').slice(0, 100);
     if (!safeName) return null;
     var input = context && typeof context === 'object' ? context : {};
+    if (safeName === 'sync_cycle_started') {
+      ACTIVE_SYNC_STARTED_AT = Date.now();
+      LAST_SYNC_DURATION_MS = null;
+    } else if (safeName === 'sync_cycle_completed' || safeName === 'sync_cycle_failed') {
+      LAST_SYNC_DURATION_MS = Number.isFinite(Number(input.durationMs)) ? Math.max(0, Number(input.durationMs)) : null;
+      ACTIVE_SYNC_STARTED_AT = null;
+    }
     var lvl = (level === 'warn' || level === 'error' || level === 'debug') ? level : 'info';
     var structured = {
       event_id: randomId('event'),
@@ -753,6 +762,8 @@
     ACTIVE_VISIT_KIND = 'resume';
     VISIT_STARTED_AT = now;
     VISIT_READY_EMITTED = false;
+    ACTIVE_SYNC_STARTED_AT = null;
+    LAST_SYNC_DURATION_MS = null;
     event('visit_started', {
       source: source || 'visibility', phase: 'foreground', visit_kind: 'resume',
       absence_ms: absenceMs, auth_state: currentAuthState(), sync_state: currentSyncState(),
@@ -861,7 +872,10 @@
     flush('client-changed');
   });
   global.addEventListener('heysSyncCompleted', function () {
-    event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: Date.now() - BOOT_STARTED_AT });
+    var durationMs = ACTIVE_SYNC_STARTED_AT == null
+      ? (LAST_SYNC_DURATION_MS == null ? Date.now() - VISIT_STARTED_AT : LAST_SYNC_DURATION_MS)
+      : Date.now() - ACTIVE_SYNC_STARTED_AT;
+    event('initial_sync_ready', { source: 'sync', phase: 'initial_sync', durationMs: durationMs });
   });
   global.addEventListener('heys:progress', function (ev) {
     var phase = ev && ev.detail && ev.detail.phase ? String(ev.detail.phase) : '';

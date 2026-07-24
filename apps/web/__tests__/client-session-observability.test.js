@@ -40,6 +40,9 @@ function createLoggerRuntime(options = {}) {
   const documentListeners = {};
   const localStorage = storage();
   const sessionStorage = storage();
+  class RuntimeDate extends Date {
+    static now() { return typeof options.now === 'function' ? options.now() : Date.now(); }
+  }
   let uuidCounter = 0;
   const context = {
     console: { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -47,6 +50,7 @@ function createLoggerRuntime(options = {}) {
     navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Version/18.5 Mobile Safari/604.1', onLine: true, standalone: true },
     localStorage,
     sessionStorage,
+    Date: RuntimeDate,
     document: {
       scripts: options.scripts || [{ src: 'https://app.heyslab.ru/boot-app.bundle.abc123ef.js' }],
       visibilityState: 'visible',
@@ -240,6 +244,31 @@ describe('client session observability', () => {
     ]));
   });
 
+  it('measures resume sync readiness from the current sync cycle instead of page boot', async () => {
+    let now = 1000;
+    const { context, requests, listeners, documentListeners } = createLoggerRuntime({ now: () => now });
+    context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    context.__heysAppReady = true;
+    context.navigator.sendBeacon = vi.fn(() => true);
+
+    now = 200000;
+    context.document.visibilityState = 'hidden';
+    documentListeners.visibilitychange();
+    now = 201000;
+    context.document.visibilityState = 'visible';
+    documentListeners.visibilitychange();
+    now = 201100;
+    context.HEYS.LogTrace.event('sync_cycle_started', { source: 'sync', status: 'started' });
+    now = 201450;
+    listeners.heysSyncCompleted({ detail: { phase: 'full' } });
+    context.HEYS.LogTrace.flush();
+    await Promise.resolve();
+
+    const rows = requests.flatMap((request) => JSON.parse(request.options.body));
+    const syncReady = rows.find((row) => row.event_name === 'initial_sync_ready' && row.visit_id === context.HEYS.LogTrace.stats().visitId);
+    expect(syncReady?.duration_ms).toBe(350);
+  });
+
   it('keeps structured events queued when the server has no verified identity', async () => {
     const { context, localStorage } = createLoggerRuntime();
     context.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
@@ -381,6 +410,14 @@ describe('client session observability', () => {
     expect(visitMigrationSource).toContain('COALESCE(t.visit_id, t.boot_id) = s.visit_id');
     expect(diagnosticsSource).toContain("session.visit_kind === 'resume' ? 'возврат' : 'запуск'");
     expect(diagnosticsSource).toContain("'visit_id: ' + (session.visit_id || 'unknown')");
+  });
+
+  it('keeps routine EWS insufficiency visible without degrading a ready visit', () => {
+    expect(visitMigrationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
+    expect(pinLoginMigrationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
+    expect(classificationSource).toContain("event_name IS DISTINCT FROM 'ews_input_insufficient'");
+    expect(visitMigrationSource).toMatch(/count\(\*\) FILTER \(WHERE level = 'warn' OR event_status IN \('degraded', 'timeout'\)\)/);
+    expect(visitMigrationSource).toMatch(/array_agg\(event_name[\s\S]*level IN \('warn', 'error'\)[\s\S]*AS problem_event/);
   });
 
   it('keeps curator cookies off client-session gamification RPCs', () => {

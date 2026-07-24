@@ -26,7 +26,10 @@ SELECT
     ) THEN 'failed'
     WHEN bool_or(event_name = 'boot_ready') THEN
       CASE
-        WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
+        WHEN bool_or(
+          (level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed'))
+          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
+        ) THEN 'degraded'
         ELSE 'ready'
       END
     WHEN bool_or(event_name = 'boot_started')
@@ -34,7 +37,10 @@ SELECT
     WHEN max(client_ts) < now() - interval '90 seconds'
       AND bool_or(event_name IS NOT NULL) THEN
       CASE
-        WHEN bool_or(level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed')) THEN 'degraded'
+        WHEN bool_or(
+          (level IN ('warn', 'error') OR event_status IN ('degraded', 'timeout', 'failed'))
+          AND event_name IS DISTINCT FROM 'ews_input_insufficient'
+        ) THEN 'degraded'
         ELSE 'ready'
       END
     ELSE 'starting'
