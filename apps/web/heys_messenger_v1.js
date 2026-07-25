@@ -2089,16 +2089,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     );
                     msgIdx++;
                   }
-                  // Пустое состояние: если рекент пуст, но есть старые сообщения
-                  if (visibleMessages.length === 0 && oldMessages.length > 0) {
-                    nodes.push(
-                      React.createElement(
-                        'div',
-                        { key: 'no-recent', className: 'messenger-empty' },
-                        `Нет сообщений за последние ${RECENT_DAYS_LIMIT} дней.`,
-                      ),
-                    );
-                  }
                   return nodes;
                 })(),
         ),
