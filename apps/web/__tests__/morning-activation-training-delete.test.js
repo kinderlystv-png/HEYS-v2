@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const originalHEYS = global.HEYS;
 const originalWindow = global.window;
 const originalReact = global.React;
+const originalRequestAnimationFrame = global.requestAnimationFrame;
 const TRAININGS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_trainings_v1.js'), 'utf8');
 
 function makeReactTree() {
@@ -42,6 +43,9 @@ function loadTrainingsModule(dayState) {
     Day: {
       getDay: () => dayState.current,
       requestFlush: vi.fn(),
+      setLastLoadedUpdatedAt: vi.fn(),
+      setBlockCloudUpdates: vi.fn(),
+      markPendingMutation: vi.fn(),
     },
     Undo: {
       runAction: vi.fn((options) => {
@@ -63,10 +67,14 @@ describe('morning activation replacement training deletion', () => {
     global.HEYS = originalHEYS;
     global.window = originalWindow;
     global.React = originalReact;
+    global.requestAnimationFrame = originalRequestAnimationFrame;
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it('clears the habit state when the first-half replacement training is deleted and restores it on undo', async () => {
+    vi.useFakeTimers();
+    global.requestAnimationFrame = (callback) => callback();
     const initialMorningActivation = {
       status: 'done',
       replacement: 'first_half_training',
@@ -103,6 +111,7 @@ describe('morning activation replacement training deletion', () => {
       trainingTypes: [{ id: 'strength', label: 'Силовая', icon: '💪' }],
       TR: [replacementTraining],
       kcalMin: [0, 5, 0, 0],
+      dateKey: '2026-06-09',
       r0: (v) => Math.round(v || 0),
     });
     const removeButton = findNode(tree, (node) =>
@@ -120,10 +129,17 @@ describe('morning activation replacement training deletion', () => {
       clearedByUser: true,
       followupSnoozeUntilMealCount: null,
     });
+    expect(global.HEYS.Day.markPendingMutation).toHaveBeenCalledWith('2026-06-09');
+    expect(global.HEYS.Day.setBlockCloudUpdates).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(50);
+    expect(global.HEYS.Day.requestFlush).toHaveBeenCalledWith({ force: true });
 
     undo();
 
     expect(dayState.current.trainings).toEqual([replacementTraining]);
     expect(dayState.current.morningActivation).toEqual(initialMorningActivation);
+    expect(global.HEYS.Day.markPendingMutation).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(50);
+    expect(global.HEYS.Day.requestFlush).toHaveBeenCalledTimes(2);
   });
 });

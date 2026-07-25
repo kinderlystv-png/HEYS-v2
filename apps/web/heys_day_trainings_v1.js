@@ -2512,6 +2512,28 @@
       }
     }
 
+    function prepareTrainingMutation(updatedAt) {
+      try {
+        const mutationDate = dateKey || HEYS.Day?.getDay?.()?.date;
+        HEYS.Day?.setLastLoadedUpdatedAt?.(updatedAt);
+        HEYS.Day?.setBlockCloudUpdates?.(updatedAt + 15000);
+        if (mutationDate) HEYS.Day?.markPendingMutation?.(mutationDate);
+      } catch (_) { /* noop */ }
+    }
+
+    function flushTrainingMutationAfterCommit() {
+      const requestFlush = function () {
+        global.setTimeout(function () {
+          HEYS.Day?.requestFlush?.({ force: true });
+        }, 50);
+      };
+      if (typeof global.requestAnimationFrame === 'function') {
+        global.requestAnimationFrame(requestFlush);
+      } else {
+        requestFlush();
+      }
+    }
+
     const removeTraining = async (ti) => {
       const confirmed = await HEYS.ConfirmModal?.confirmDelete({
         icon: '🏋️',
@@ -2538,6 +2560,8 @@
         duration: 5000,
         errorMessage: 'Не удалось удалить тренировку',
         apply: () => {
+          const mutationTs = Date.now();
+          prepareTrainingMutation(mutationTs);
           if (typeof setDay === 'function') {
             setDay((prevDay) => {
               const oldTrainings = prevDay.trainings || [emptyTraining, emptyTraining, emptyTraining];
@@ -2546,7 +2570,7 @@
                 ...oldTrainings.slice(ti + 1),
                 emptyTraining
               ].slice(0, 3);
-              const nextDay = { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
+              const nextDay = { ...prevDay, trainings: newTrainings, updatedAt: mutationTs };
               if (removedMorningActivation) {
                 nextDay.morningActivation = {
                   ...(prevDay.morningActivation || {}),
@@ -2571,12 +2595,8 @@
               });
             } catch (_) { /* noop */ }
           }
-          // Форсируем запись в store/облако — без этого sync не триггерится
-          global.setTimeout(function () {
-            if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
-              HEYS.Day.requestFlush({ force: true });
-            }
-          }, 16);
+          // Ждём commit React: иначе flush может прочитать старый dayRef и вернуть удалённую тренировку из облака.
+          flushTrainingMutationAfterCommit();
           return {
             trainings: previousTrainings,
             visibleTrainings: previousVisibleTrainings,
@@ -2584,12 +2604,14 @@
           };
         },
         undo: (context) => {
+          const mutationTs = Date.now();
+          prepareTrainingMutation(mutationTs);
           if (typeof setDay === 'function') {
             setDay((prevDay) => {
               const nextDay = {
                 ...prevDay,
                 trainings: (context?.trainings || []).map(cloneTraining),
-                updatedAt: Date.now(),
+                updatedAt: mutationTs,
               };
               if (context?.morningActivation) {
                 nextDay.morningActivation = context.morningActivation;
@@ -2600,6 +2622,7 @@
           if (typeof setVisibleTrainings === 'function' && context) {
             setVisibleTrainings(context.visibleTrainings);
           }
+          flushTrainingMutationAfterCommit();
         },
       });
     };
