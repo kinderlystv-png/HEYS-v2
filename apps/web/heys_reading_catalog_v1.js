@@ -4,10 +4,21 @@
     const HEYS = window.HEYS = window.HEYS || {};
     const Reading = HEYS.Reading = HEYS.Reading || {};
 
-    const SCHEMA_VERSION = 2;
+    const SCHEMA_VERSION = 3;
+    const PERSONALIZATION_SCHEMA_VERSION = 2;
+    const PERSONALIZATION_PROJECT_IDS = Object.freeze(['kinderly', 'heys']);
+    const GENERIC_PERSONALIZATION_QUESTIONS = new Set([
+        'как эту идею можно применить',
+        'как применить эту идею',
+        'как это можно применить',
+        'что можно улучшить',
+    ]);
     const WORDS_PER_MINUTE = 180;
-    const PUBLISHED_WORDS_MIN = 1800;
-    const PUBLISHED_WORDS_MAX = 2200;
+    const DEPTH_PROFILES = Object.freeze({
+        compact: Object.freeze({ minWords: 1200, maxWords: 1700 }),
+        standard: Object.freeze({ minWords: 1700, maxWords: 2400 }),
+        deep: Object.freeze({ minWords: 2400, maxWords: 3400 }),
+    });
     const REVIEW_BLOCKS_MIN = 3;
     const REVIEW_WORDS_MIN = 180;
     const QUICK_SUMMARY_ITEMS_MIN = 5;
@@ -22,6 +33,19 @@
     const BLOCK_TYPES = new Set(['lead', 'heading', 'quick-summary', 'applicability', 'paragraph', 'details', 'quote', 'example', 'callout', 'list', 'verdict']);
     const CALLOUT_TONES = new Set(['insight', 'practice', 'caution']);
     const PARAGRAPH_VOICES = new Set(['retelling', 'review']);
+    const HIGHLIGHT_TARGETS = Object.freeze({
+        lead: Object.freeze(['text']),
+        applicability: Object.freeze(['strength', 'worksWhen', 'limitations', 'experiment']),
+        paragraph: Object.freeze(['text']),
+        details: Object.freeze(['text']),
+        example: Object.freeze(['text']),
+        callout: Object.freeze(['text']),
+        verdict: Object.freeze(['text']),
+    });
+    const HIGHLIGHT_FRAGMENTS_MAX = 2;
+    const HIGHLIGHT_COVERAGE_WARN_MIN = 8;
+    const HIGHLIGHT_COVERAGE_WARN_MAX = 18;
+    const HIGHLIGHT_COVERAGE_ERROR_MAX = 25;
     const SECTION_ROLES = new Set([
         'overview', 'context', 'core-ideas', 'decision-process', 'application',
         'critique', 'audience', 'original-verdict',
@@ -44,6 +68,13 @@
         { id: 'feedback', label: 'обратная связь' },
     ]);
     const COVER_TONES = Object.freeze(['violet', 'blue', 'green', 'rose']);
+    const EDITORIAL_ROLES = Object.freeze({
+        'popular-canon': Object.freeze({
+            id: 'popular-canon',
+            label: 'Популярный канон',
+            description: 'Книга включена из-за широкой известности и влияния. Плашка не означает редакционную рекомендацию.',
+        }),
+    });
     const TOPIC_MAP = new Map(TOPICS.map((item) => [item.id, item]));
     const TAG_MAP = new Map(TAGS.map((item) => [item.id, item]));
     const BOOKS = [];
@@ -87,6 +118,51 @@
         return (book?.blocks || []).reduce((total, block) => total + countWords(getBlockText(block)), 0);
     }
 
+    function getHighlightTargets(block) {
+        return HIGHLIGHT_TARGETS[block?.type] || [];
+    }
+
+    function countExactOccurrences(text, fragment) {
+        if (!fragment) return 0;
+        let count = 0;
+        let offset = 0;
+        while (offset <= text.length - fragment.length) {
+            const index = text.indexOf(fragment, offset);
+            if (index < 0) break;
+            count += 1;
+            offset = index + Math.max(1, fragment.length);
+        }
+        return count;
+    }
+
+    function getBookHighlightStats(book) {
+        let eligibleFields = 0;
+        let markedFields = 0;
+        let eligibleWords = 0;
+        let highlightedWords = 0;
+        (book?.blocks || []).forEach((block) => {
+            getHighlightTargets(block).forEach((target) => {
+                const text = String(block?.[target] || '').trim();
+                if (!text) return;
+                eligibleFields += 1;
+                eligibleWords += countWords(text);
+                const fragments = block?.highlights?.[target];
+                if (!Array.isArray(fragments) || !fragments.length) return;
+                markedFields += 1;
+                highlightedWords += fragments.reduce((sum, fragment) => sum + countWords(fragment), 0);
+            });
+        });
+        const coveragePercent = eligibleWords > 0 ? Math.round((highlightedWords / eligibleWords) * 1000) / 10 : 0;
+        return {
+            eligibleFields,
+            markedFields,
+            eligibleWords,
+            highlightedWords,
+            coveragePercent,
+            readingMinutes: Math.max(1, Math.ceil(highlightedWords / WORDS_PER_MINUTE)),
+        };
+    }
+
     function estimateReadingMinutes(book) {
         return Math.max(1, Math.ceil(getBookWordCount(book) / WORDS_PER_MINUTE));
     }
@@ -99,12 +175,20 @@
         return TAG_MAP.get(id)?.label || id;
     }
 
+    function getEditorialRole(id) {
+        return EDITORIAL_ROLES[id] || null;
+    }
+
     function getBookSearchText(book) {
+        const editorialRole = getEditorialRole(book?.editorialRole);
         return normalizeReadingText([
             book?.title,
             book?.author,
             book?.verdict,
             book?.practicalValue,
+            book?.editorialRole,
+            editorialRole?.label,
+            editorialRole?.description,
             ...(book?.topics || []).flatMap((id) => [id, getTopicLabel(id)]),
             ...(book?.tags || []).flatMap((id) => [id, getTagLabel(id)]),
             ...(book?.blocks || []).map(getBlockText),
@@ -176,6 +260,11 @@
         return { bookId, severity, code, path: bookId + '.' + path, message };
     }
 
+    function personalizationIssue(overlay, code, path, message) {
+        const profileId = String(overlay?.profileId || 'unknown');
+        return { profileId, severity: 'error', code, path: profileId + '.' + path, message };
+    }
+
     function hasRawMarkup(value) {
         const text = String(value == null ? '' : value);
         return /<\/?[a-z][^>]*>/i.test(text) || /\[[^\]]+\]\([^)]+\)/.test(text);
@@ -202,6 +291,7 @@
         const addError = (code, path, message) => errors.push(issue(book, 'error', code, path, message));
         const addWarning = (code, path, message) => warnings.push(issue(book, 'warning', code, path, message));
         const isPublished = book?.status === 'published';
+        const depthProfile = DEPTH_PROFILES[book?.depthProfile];
         const addPublicationIssue = (errorCode, warningCode, path, message) => {
             if (isPublished) addError(errorCode, path, message);
             else addWarning(warningCode, path, message);
@@ -209,6 +299,7 @@
 
         if (book?.schemaVersion !== SCHEMA_VERSION) addError('E_SCHEMA_VERSION', 'schemaVersion', 'Ожидается schemaVersion ' + SCHEMA_VERSION);
         if (!STATUSES.has(book?.status)) addError('E_STATUS', 'status', 'Допустимы только draft и published');
+        if (!depthProfile) addError('E_DEPTH_PROFILE', 'depthProfile', 'Допустимые профили глубины: compact, standard, deep');
         ['id', 'title', 'author', 'verdict', 'practicalValue', 'coverTone'].forEach((field) => {
             if (!String(book?.[field] || '').trim()) addError('E_REQUIRED', field, 'Обязательное поле не заполнено');
         });
@@ -221,6 +312,7 @@
         if (!Number.isInteger(book?.year)) addError('E_YEAR', 'year', 'Год должен быть целым числом');
         if (!Number.isInteger(book?.editorialRank) || book.editorialRank < 1) addError('E_EDITORIAL_RANK', 'editorialRank', 'Редакционный порядок должен быть целым числом от 1');
         if (!COVER_TONES.includes(book?.coverTone)) addError('E_COVER_TONE', 'coverTone', 'Неизвестная тема обложки');
+        if (book?.editorialRole != null && !getEditorialRole(book.editorialRole)) addError('E_EDITORIAL_ROLE', 'editorialRole', 'Допустима только редакционная роль popular-canon');
 
         if (!Array.isArray(book?.topics) || book.topics.length < 1 || book.topics.length > 3) addError('E_TOPICS_COUNT', 'topics', 'У книги должно быть от 1 до 3 тем');
         (book?.topics || []).forEach((id, index) => {
@@ -294,6 +386,49 @@
             textValues.filter(Boolean).forEach((value) => {
                 if (hasRawMarkup(value)) addError('E_RAW_MARKUP', path, 'HTML и Markdown-ссылки в контенте запрещены');
                 if (isPublished && hasPublishedPlaceholder(value)) addError('E_PLACEHOLDER', path, 'В опубликованной книге остался маркер заполнения');
+            });
+            const allowedHighlightTargets = getHighlightTargets(block);
+            const highlightMap = block?.highlights;
+            if (highlightMap != null && (typeof highlightMap !== 'object' || Array.isArray(highlightMap))) {
+                addError('E_HIGHLIGHT_FORMAT', path + '.highlights', 'highlights должен быть объектом с точными фрагментами текста');
+            }
+            Object.keys(highlightMap && typeof highlightMap === 'object' && !Array.isArray(highlightMap) ? highlightMap : {}).forEach((target) => {
+                if (!allowedHighlightTargets.includes(target)) addError('E_HIGHLIGHT_TARGET', path + '.highlights.' + target, 'Поле ' + target + ' нельзя размечать у блока ' + block?.type);
+            });
+            allowedHighlightTargets.forEach((target) => {
+                const targetPath = path + '.highlights.' + target;
+                const targetText = String(block?.[target] || '').trim();
+                if (!targetText) return;
+                const fragments = highlightMap?.[target];
+                if (!Array.isArray(fragments) || fragments.length < 1 || fragments.length > HIGHLIGHT_FRAGMENTS_MAX) {
+                    addPublicationIssue('E_HIGHLIGHT_REQUIRED', 'W_HIGHLIGHT_REQUIRED_DRAFT', targetPath, 'Нужен массив из одного или двух ключевых фрагментов');
+                    return;
+                }
+                const ranges = [];
+                fragments.forEach((rawFragment, fragmentIndex) => {
+                    const fragmentPath = targetPath + '[' + fragmentIndex + ']';
+                    const fragment = String(rawFragment || '').trim();
+                    if (!fragment) {
+                        addError('E_HIGHLIGHT_EMPTY', fragmentPath, 'Ключевой фрагмент не должен быть пустым');
+                        return;
+                    }
+                    if (fragment !== rawFragment) addError('E_HIGHLIGHT_TRIM', fragmentPath, 'Ключевой фрагмент не должен начинаться или заканчиваться пробелом');
+                    if (hasRawMarkup(fragment)) addError('E_RAW_MARKUP', fragmentPath, 'HTML и Markdown в ключевом фрагменте запрещены');
+                    if (isPublished && hasPublishedPlaceholder(fragment)) addError('E_PLACEHOLDER', fragmentPath, 'В ключевом фрагменте остался маркер заполнения');
+                    const occurrences = countExactOccurrences(targetText, fragment);
+                    if (occurrences === 0) {
+                        addError('E_HIGHLIGHT_NOT_FOUND', fragmentPath, 'Ключевой фрагмент должен дословно входить в исходный текст');
+                        return;
+                    }
+                    if (occurrences > 1) {
+                        addError('E_HIGHLIGHT_AMBIGUOUS', fragmentPath, 'Ключевой фрагмент встречается в исходном тексте больше одного раза');
+                        return;
+                    }
+                    const start = targetText.indexOf(fragment);
+                    const end = start + fragment.length;
+                    if (ranges.some((range) => start < range.end && end > range.start)) addError('E_HIGHLIGHT_OVERLAP', fragmentPath, 'Ключевые фрагменты не должны пересекаться');
+                    ranges.push({ start, end });
+                });
             });
             if ((block?.voice === 'review' || block?.type === 'applicability' || block?.type === 'verdict') && /(?:^|\s)\d+(?:[.,]\d+)?\s*(?:\/|из)\s*(?:5|10)(?!\d)/i.test(getBlockText(block))) {
                 addError('E_REVIEW_RATING', path, 'Числовые оценки книг в review запрещены');
@@ -483,9 +618,20 @@
             }
         });
 
+        const highlightStats = getBookHighlightStats(book);
+        if (highlightStats.eligibleFields > 0 && highlightStats.markedFields > 0) {
+            if (highlightStats.coveragePercent > HIGHLIGHT_COVERAGE_ERROR_MAX) {
+                addError('E_HIGHLIGHT_DENSITY', 'blocks', 'Маркер покрывает ' + highlightStats.coveragePercent + '% eligible-текста; максимум — ' + HIGHLIGHT_COVERAGE_ERROR_MAX + '%');
+            } else if (highlightStats.coveragePercent < HIGHLIGHT_COVERAGE_WARN_MIN || highlightStats.coveragePercent > HIGHLIGHT_COVERAGE_WARN_MAX) {
+                addWarning('W_HIGHLIGHT_DENSITY', 'blocks', 'Ориентир покрытия маркером — ' + HIGHLIGHT_COVERAGE_WARN_MIN + '–' + HIGHLIGHT_COVERAGE_WARN_MAX + '%, сейчас: ' + highlightStats.coveragePercent + '%');
+            }
+        }
         const words = getBookWordCount(book);
-        if (isPublished && (words < PUBLISHED_WORDS_MIN || words > PUBLISHED_WORDS_MAX)) addError('E_WORD_COUNT', 'blocks', 'Опубликованное саммари должно содержать 1800–2200 слов, сейчас: ' + words);
-        if (!isPublished && (words < PUBLISHED_WORDS_MIN || words > PUBLISHED_WORDS_MAX)) addWarning('W_WORD_COUNT_DRAFT', 'blocks', 'До публикации нужен объём 1800–2200 слов, сейчас: ' + words);
+        if (depthProfile && (words < depthProfile.minWords || words > depthProfile.maxWords)) {
+            const expected = depthProfile.minWords + '–' + depthProfile.maxWords;
+            if (isPublished) addError('E_WORD_COUNT', 'blocks', 'Профиль ' + book.depthProfile + ' требует объём ' + expected + ' слов, сейчас: ' + words);
+            else addWarning('W_WORD_COUNT_DRAFT', 'blocks', 'До публикации профиль ' + book.depthProfile + ' требует объём ' + expected + ' слов, сейчас: ' + words);
+        }
         if (countWords(book?.verdict) < 10) addWarning('W_VERDICT_SHORT', 'verdict', 'Вердикт слишком короткий');
         if (!/(читать|полез|стоит|взять|примен|огранич)/i.test(String(book?.verdict || ''))) addWarning('W_VERDICT_ABSTRACT', 'verdict', 'Вердикт не даёт достаточно конкретной оценки');
         if (countWords(book?.practicalValue) < 6) addWarning('W_PRACTICAL_SHORT', 'practicalValue', 'Практическая ценность сформулирована слишком кратко');
@@ -497,10 +643,14 @@
             errors,
             warnings,
             wordCount: words,
+            depthProfile: book?.depthProfile || null,
+            wordCountMin: depthProfile?.minWords ?? null,
+            wordCountMax: depthProfile?.maxWords ?? null,
             quickSummaryWordCount,
             applicabilityWordCount,
             reviewBlockCount,
             reviewWordCount,
+            highlightStats,
         };
     }
 
@@ -517,6 +667,66 @@
             warnings: results.flatMap((entry) => entry.result.warnings),
             results,
         };
+    }
+
+    function validatePersonalizationOverlay(overlay, books = getPublishedBooks()) {
+        const errors = [];
+        const addError = (code, path, message) => errors.push(personalizationIssue(overlay, code, path, message));
+        const catalog = Array.isArray(books) ? books : [];
+        const publishedIds = new Set(catalog.map((book) => book?.id).filter(Boolean));
+        const overlayBooks = overlay?.books && typeof overlay.books === 'object' && !Array.isArray(overlay.books)
+            ? overlay.books
+            : null;
+
+        if (overlay?.schemaVersion !== PERSONALIZATION_SCHEMA_VERSION) addError('E_PERSONALIZATION_SCHEMA', 'schemaVersion', 'Ожидается schemaVersion ' + PERSONALIZATION_SCHEMA_VERSION);
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(overlay?.profileId || ''))) addError('E_PERSONALIZATION_PROFILE', 'profileId', 'profileId должен быть в kebab-case');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(overlay?.clientId || ''))) addError('E_PERSONALIZATION_CLIENT', 'clientId', 'Нужен корректный clientId');
+        if (!String(overlay?.label || '').trim()) addError('E_PERSONALIZATION_LABEL', 'label', 'Нужна нейтральная подпись персонального слоя');
+        if (!overlayBooks) addError('E_PERSONALIZATION_BOOKS', 'books', 'Нужен объект books');
+
+        if (overlayBooks) {
+            Object.entries(overlayBooks).forEach(([bookId, entry]) => {
+                const path = 'books.' + bookId;
+                if (!publishedIds.has(bookId)) addError('E_PERSONALIZATION_BOOK_UNKNOWN', path, 'Персональный слой ссылается на неизвестную опубликованную книгу');
+                if (!String(entry?.summary || '').trim() || countWords(entry?.summary) < 18) addError('E_PERSONALIZATION_SUMMARY', path + '.summary', 'Краткая применимость должна содержать минимум 18 слов');
+                if (!Array.isArray(entry?.projects) || entry.projects.length < 1 || entry.projects.length > PERSONALIZATION_PROJECT_IDS.length) {
+                    addError('E_PERSONALIZATION_PROJECTS', path + '.projects', 'Нужен один или два проекта с содержательной связью');
+                    return;
+                }
+                const projectIds = entry.projects.map((project) => project?.id);
+                duplicateValues(projectIds).forEach((projectId) => addError('E_PERSONALIZATION_PROJECT_DUPLICATE', path + '.projects', 'Проект повторяется: ' + projectId));
+                entry.projects.forEach((project, index) => {
+                    const projectPath = path + '.projects[' + index + ']';
+                    if (!PERSONALIZATION_PROJECT_IDS.includes(project?.id)) addError('E_PERSONALIZATION_PROJECT_UNKNOWN', projectPath + '.id', 'Допустимы только kinderly и heys');
+                    if (!String(project?.title || '').trim()) addError('E_PERSONALIZATION_PROJECT_TITLE', projectPath + '.title', 'Нужно название проекта');
+                    if (!String(project?.relevance || '').trim() || countWords(project?.relevance) < 20) addError('E_PERSONALIZATION_RELEVANCE', projectPath + '.relevance', 'Связь с проектом должна содержать минимум 20 слов');
+                    const questions = Array.isArray(project?.questions) ? project.questions : [];
+                    const hasWeakQuestion = questions.some((question) => {
+                        const value = String(question || '').trim();
+                        const normalized = normalizeReadingText(value.replace(/\?+$/, ''));
+                        return !value.endsWith('?') || countWords(value) < 6 || GENERIC_PERSONALIZATION_QUESTIONS.has(normalized);
+                    });
+                    if (questions.length < 1 || questions.length > 8 || hasWeakQuestion) {
+                        addError('E_PERSONALIZATION_QUESTIONS', projectPath + '.questions', 'Нужно от одного до восьми содержательных открытых вопросов, связанных с идеями книги');
+                    }
+                    if (!String(project?.caution || '').trim() || countWords(project?.caution) < 12) addError('E_PERSONALIZATION_CAUTION', projectPath + '.caution', 'Нужно существенное ограничение минимум из 12 слов');
+                    [project?.title, project?.relevance, project?.caution, ...(project?.questions || [])].filter(Boolean).forEach((value) => {
+                        if (hasRawMarkup(value)) addError('E_PERSONALIZATION_MARKUP', projectPath, 'HTML и Markdown-ссылки в персональном слое запрещены');
+                        if (hasPublishedPlaceholder(value)) addError('E_PERSONALIZATION_PLACEHOLDER', projectPath, 'В персональном слое остался маркер заполнения');
+                    });
+                });
+                if (hasRawMarkup(entry?.summary)) addError('E_PERSONALIZATION_MARKUP', path + '.summary', 'HTML и Markdown-ссылки в персональном слое запрещены');
+                if (hasPublishedPlaceholder(entry?.summary)) addError('E_PERSONALIZATION_PLACEHOLDER', path + '.summary', 'В персональном слое остался маркер заполнения');
+            });
+        }
+
+        return { valid: errors.length === 0, errors, bookCount: overlayBooks ? Object.keys(overlayBooks).length : 0 };
+    }
+
+    function getPersonalizedBookOverlay(overlay, bookId, books = getPublishedBooks()) {
+        const result = validatePersonalizationOverlay(overlay, books);
+        if (!result.valid) return null;
+        return overlay.books?.[bookId] || null;
     }
 
     function assertPublishedCatalog(books = getPublishedBooks()) {
@@ -580,9 +790,10 @@
 
     Object.assign(Reading, {
         SCHEMA_VERSION,
+        PERSONALIZATION_SCHEMA_VERSION,
+        PERSONALIZATION_PROJECT_IDS: PERSONALIZATION_PROJECT_IDS.slice(),
         WORDS_PER_MINUTE,
-        PUBLISHED_WORDS_MIN,
-        PUBLISHED_WORDS_MAX,
+        DEPTH_PROFILES,
         REVIEW_BLOCKS_MIN,
         REVIEW_WORDS_MIN,
         QUICK_SUMMARY_ITEMS_MIN,
@@ -593,9 +804,13 @@
         APPLICABILITY_FIELD_WORDS_MIN,
         LONG_SECTION_WORDS_MIN,
         OPEN_BLOCKS_RUN_MAX,
+        HIGHLIGHT_COVERAGE_WARN_MIN,
+        HIGHLIGHT_COVERAGE_WARN_MAX,
+        HIGHLIGHT_COVERAGE_ERROR_MAX,
         TOPICS,
         TAGS,
         COVER_TONES,
+        EDITORIAL_ROLES,
         REQUIRED_SECTION_ROLES: REQUIRED_SECTION_ROLES.slice(),
         ALLOWED_BLOCK_TYPES: Array.from(BLOCK_TYPES),
         registerBook,
@@ -604,6 +819,8 @@
         getCatalogDiagnostics,
         validateBookSummary,
         validateReadingCatalog,
+        validatePersonalizationOverlay,
+        getPersonalizedBookOverlay,
         assertPublishedCatalog,
         lintBookSummary,
         normalizeReadingText,
@@ -613,10 +830,13 @@
         sortBooks,
         formatBookCount,
         getBookWordCount,
+        getBookHighlightStats,
+        getHighlightTargets,
         estimateReadingMinutes,
         getBookById,
         getTopicLabel,
         getTagLabel,
+        getEditorialRole,
     });
 
     Object.defineProperty(Reading, 'BOOKS', { configurable: true, enumerable: true, get: getPublishedBooks });
