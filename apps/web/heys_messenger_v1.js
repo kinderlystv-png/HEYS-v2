@@ -211,11 +211,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return !coarsePointer;
   }
 
-  function focusMessageInputFromGesture(event, iosDevice = isIOSDevice()) {
+  function focusMessageInputFromGesture(event, iosDevice = isIOSDevice(), forceRefocus = false) {
     const input = event?.currentTarget;
     if (!iosDevice || !input || input.disabled || typeof input.focus !== 'function') return false;
     try {
+      const selectionStart = input.selectionStart;
+      const selectionEnd = input.selectionEnd;
+      if (forceRefocus && document.activeElement === input && typeof input.blur === 'function') {
+        input.blur();
+      }
       if (document.activeElement !== input) input.focus();
+      if (
+        forceRefocus &&
+        document.activeElement === input &&
+        Number.isInteger(selectionStart) &&
+        Number.isInteger(selectionEnd) &&
+        typeof input.setSelectionRange === 'function'
+      ) {
+        input.setSelectionRange(selectionStart, selectionEnd);
+      }
     } catch {
       return false;
     }
@@ -1198,6 +1212,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const keyboardAttemptIdRef = useRef(0);
     const keyboardAttemptTimerRef = useRef(null);
     const lastKeyboardFailureRef = useRef(null);
+    const keyboardRefocusInProgressRef = useRef(false);
     const fileInputRef = useRef(null);
     const recorderRef = useRef(null);
     const recordChunksRef = useRef([]);
@@ -1269,7 +1284,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         active: document.activeElement === inputElement,
         viewportVisible: hasKeyboardViewportEvidence(attempt.baseline, currentViewport),
         viewportSupported: currentViewport.supported,
-        surface: attempt.surface,
       });
       if (!code) {
         confirmKeyboardAttempt('keyboard-visible');
@@ -1292,7 +1306,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, KEYBOARD_CONFIRM_DELAY_MS);
     }, [clearKeyboardAttemptTimer, evaluateKeyboardAttempt]);
 
-    const beginKeyboardAttempt = useCallback((trigger = 'gesture') => {
+    const beginKeyboardAttempt = useCallback((trigger = 'gesture', startedActive = false) => {
       if (!isIOSDevice()) return null;
       const current = keyboardAttemptRef.current;
       const now = Date.now();
@@ -1303,6 +1317,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         surface: getKeyboardSurface(),
         baseline: getKeyboardViewportSnapshot(),
         startedAt: now,
+        startedActive,
       };
       keyboardAttemptIdRef.current = attempt.id;
       keyboardAttemptRef.current = attempt;
@@ -1312,23 +1327,36 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [scheduleKeyboardAttemptCheck]);
 
     const handleKeyboardGestureStart = useCallback(() => {
-      beginKeyboardAttempt('gesture');
+      beginKeyboardAttempt('gesture', document.activeElement === inputRef.current);
     }, [beginKeyboardAttempt]);
 
     const handleKeyboardClick = useCallback((event) => {
-      const attempt = keyboardAttemptRef.current || beginKeyboardAttempt('click');
+      const attempt = keyboardAttemptRef.current || beginKeyboardAttempt(
+        'click',
+        document.activeElement === inputRef.current,
+      );
       if (!attempt) return;
-      focusMessageInputFromGesture(event, true);
+      const forceRefocus = attempt.trigger === 'gesture' && attempt.startedActive === false;
+      keyboardRefocusInProgressRef.current = forceRefocus;
+      try {
+        focusMessageInputFromGesture(event, true, forceRefocus);
+      } finally {
+        keyboardRefocusInProgressRef.current = false;
+      }
     }, [beginKeyboardAttempt]);
 
     const handleKeyboardRetry = useCallback(() => {
       const inputElement = inputRef.current;
       if (!inputElement) return;
-      beginKeyboardAttempt('retry');
+      beginKeyboardAttempt('retry', document.activeElement === inputElement);
+      keyboardRefocusInProgressRef.current = true;
+      let focused = false;
       try {
-        if (document.activeElement === inputElement) inputElement.blur();
-        inputElement.focus();
-      } catch {
+        focused = focusMessageInputFromGesture({ currentTarget: inputElement }, true, true);
+      } finally {
+        keyboardRefocusInProgressRef.current = false;
+      }
+      if (!focused) {
         const attempt = keyboardAttemptRef.current;
         if (attempt) evaluateKeyboardAttempt(attempt.id);
       }
@@ -2615,6 +2643,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onFocus: () => setInputFocused(true),
               onBlur: () => {
                 setInputFocused(false);
+                if (keyboardRefocusInProgressRef.current) return;
                 clearKeyboardAttemptTimer();
                 keyboardAttemptRef.current = null;
               },
@@ -2755,9 +2784,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return appleWebKitRuntime && (classicIOSPlatform || ipadDesktopMode);
   }
 
+  function shouldContainMessengerTouchMove({
+    insideThread = false,
+    scrollTop = 0,
+    scrollHeight = 0,
+    clientHeight = 0,
+    deltaY = 0,
+  } = {}) {
+    if (!insideThread) return true;
+    const maxScrollTop = Math.max(0, Number(scrollHeight) - Number(clientHeight));
+    if (maxScrollTop <= 0) return true;
+    if (deltaY > 0 && Number(scrollTop) <= 0) return true;
+    if (deltaY < 0 && Number(scrollTop) >= maxScrollTop - 1) return true;
+    return false;
+  }
+
   function lockPageScroll({
     useFixedBody = !isIOSDevice(),
     lockOverflow = !isIOSDevice(),
+    containTouch = isIOSDevice(),
   } = {}) {
     if (pageScrollLock || typeof document === 'undefined') return;
     const body = document.body;
@@ -2776,6 +2821,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       overscrollBehavior: body.style.overscrollBehavior,
       rootOverflow: root.style.overflow,
       rootOverscrollBehavior: root.style.overscrollBehavior,
+      touchStartHandler: null,
+      touchMoveHandler: null,
     };
     if (lockOverflow) {
       root.style.overflow = 'hidden';
@@ -2790,6 +2837,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       body.style.right = '0';
       body.style.width = '100%';
     }
+    if (containTouch) {
+      let lastTouchY = null;
+      pageScrollLock.touchStartHandler = (event) => {
+        lastTouchY = Number(event.touches?.[0]?.clientY);
+      };
+      pageScrollLock.touchMoveHandler = (event) => {
+        const currentTouchY = Number(event.touches?.[0]?.clientY);
+        if (!Number.isFinite(currentTouchY) || !Number.isFinite(lastTouchY)) return;
+        const deltaY = currentTouchY - lastTouchY;
+        lastTouchY = currentTouchY;
+        const target = typeof event.target?.closest === 'function'
+          ? event.target
+          : event.target?.parentElement;
+        const thread = typeof target?.closest === 'function'
+          ? target.closest('.messenger-thread')
+          : null;
+        if (shouldContainMessengerTouchMove({
+          insideThread: !!thread,
+          scrollTop: thread?.scrollTop,
+          scrollHeight: thread?.scrollHeight,
+          clientHeight: thread?.clientHeight,
+          deltaY,
+        }) && event.cancelable) {
+          event.preventDefault();
+        }
+      };
+      document.addEventListener('touchstart', pageScrollLock.touchStartHandler, {
+        capture: true,
+        passive: true,
+      });
+      document.addEventListener('touchmove', pageScrollLock.touchMoveHandler, {
+        capture: true,
+        passive: false,
+      });
+    }
   }
 
   function unlockPageScroll() {
@@ -2798,6 +2880,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const root = document.documentElement;
     const saved = pageScrollLock;
     pageScrollLock = null;
+    if (saved.touchStartHandler) {
+      document.removeEventListener('touchstart', saved.touchStartHandler, true);
+    }
+    if (saved.touchMoveHandler) {
+      document.removeEventListener('touchmove', saved.touchMoveHandler, true);
+    }
     body.style.position = saved.position;
     body.style.top = saved.top;
     body.style.left = saved.left;
@@ -2999,6 +3087,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       classifyKeyboardAttempt,
       getKeyboardDiagnostic,
       isIOSDevice,
+      shouldContainMessengerTouchMove,
       showInAppMessageToast,
       hideInAppMessageToast,
       lockPageScroll,

@@ -161,8 +161,10 @@ describe('messenger page scroll lock', () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 420);
   });
 
-  it('leaves the iOS page scroll container untouched so textarea focus can open the keyboard', () => {
+  it('keeps the iOS body unfixed while installing and removing the touch containment guard', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+    const removeEventListener = vi.spyOn(document, 'removeEventListener');
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)',
     );
@@ -179,12 +181,44 @@ describe('messenger page scroll lock', () => {
     expect(document.body.style.top).toBe('');
     expect(document.body.style.overflow).toBe('auto');
     expect(document.documentElement.style.overflow).toBe('');
+    expect(addEventListener).toHaveBeenCalledWith('touchmove', expect.any(Function), {
+      capture: true,
+      passive: false,
+    });
 
     messenger.unlockPageScroll();
     expect(document.body.style.position).toBe('relative');
     expect(document.body.style.overflow).toBe('auto');
     expect(document.documentElement.style.overflow).toBe('');
     expect(scrollTo).not.toHaveBeenCalled();
+    expect(removeEventListener).toHaveBeenCalledWith('touchmove', expect.any(Function), true);
+  });
+
+  it('contains background touch scroll but allows the messenger thread away from its edges', () => {
+    const { shouldContainMessengerTouchMove } = loadMessengerInternals();
+
+    expect(shouldContainMessengerTouchMove({ insideThread: false, deltaY: -20 })).toBe(true);
+    expect(shouldContainMessengerTouchMove({
+      insideThread: true,
+      scrollTop: 0,
+      scrollHeight: 1000,
+      clientHeight: 500,
+      deltaY: 20,
+    })).toBe(true);
+    expect(shouldContainMessengerTouchMove({
+      insideThread: true,
+      scrollTop: 500,
+      scrollHeight: 1000,
+      clientHeight: 500,
+      deltaY: -20,
+    })).toBe(true);
+    expect(shouldContainMessengerTouchMove({
+      insideThread: true,
+      scrollTop: 250,
+      scrollHeight: 1000,
+      clientHeight: 500,
+      deltaY: -20,
+    })).toBe(false);
   });
 });
 
@@ -340,11 +374,29 @@ describe('messenger composer keyboard', () => {
     textarea.remove();
   });
 
+  it('can force the proven blur-focus recovery while preserving the caret', () => {
+    const { focusMessageInputFromGesture } = loadMessengerInternals();
+    const textarea = document.createElement('textarea');
+    textarea.value = 'hello';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.setSelectionRange(2, 4);
+    const blur = vi.spyOn(textarea, 'blur');
+    const focus = vi.spyOn(textarea, 'focus');
+
+    expect(focusMessageInputFromGesture({ currentTarget: textarea }, true, true)).toBe(true);
+    expect(blur).toHaveBeenCalledOnce();
+    expect(focus).toHaveBeenCalledOnce();
+    expect([textarea.selectionStart, textarea.selectionEnd]).toEqual([2, 4]);
+  });
+
   it('keeps the gesture start passive and performs focus recovery on click', () => {
     expect(messengerSource).toContain('onPointerDown: handleKeyboardGestureStart');
     expect(messengerSource).toContain('onTouchStart: handleKeyboardGestureStart');
     expect(messengerSource).toContain('onClick: handleKeyboardClick');
     expect(messengerSource).not.toContain('onTouchStart: focusMessageInputFromGesture');
+    expect(messengerSource).toContain("attempt.trigger === 'gesture' && attempt.startedActive === false");
+    expect(messengerSource).toContain('focusMessageInputFromGesture(event, true, forceRefocus)');
   });
 
   it('detects keyboard viewport shrink without mistaking a small viewport change for a keyboard', () => {

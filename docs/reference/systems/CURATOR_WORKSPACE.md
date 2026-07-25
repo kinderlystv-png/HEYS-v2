@@ -116,6 +116,19 @@ cache-busting и через альтернативную форму URL того
 allowlisted этап попытки и не включает текст сообщения, client id или user
 agent.
 
+Если до первого касания поле было неактивно, click-фаза того же жеста выполняет
+синхронный `blur → focus` и восстанавливает позицию курсора. Это тот же
+recovery, который доступен через «Повторить», но он не запускается для
+последующих тапов по уже активному полю. На iOS страница остаётся без
+`position: fixed`, а non-passive touch guard разрешает прокрутку внутри thread и
+останавливает жест на его границах, чтобы контент вкладки под модальным окном не
+двигался.
+
+Если до первого касания поле было неактивно, click-фаза того же жеста выполняет
+синхронный `blur → focus` и восстанавливает позицию курсора. Это тот же
+recovery, который доступен через «Повторить», но он не запускается для
+последующих тапов по уже активному полю.
+
 Каждая операция `done/acked` блокируется отдельно по `message.id`: повторный
 клик по тому же сообщению не создаёт конкурирующий запрос, а отметка другого
 сообщения остаётся независимой. Кнопка действия отражает собственное состояние
@@ -230,6 +243,8 @@ Curator inbox использует health-check соединения перед 
     явного фильтра; окружение назначается сервером, а не browser payload.
 22. Диагностика iOS-клавиатуры описывает только наблюдаемый этап сбоя и не
     передаёт текст сообщения, client id или user agent.
+23. Открытый messenger не передаёт touch-scroll вкладке под ним; на iOS thread
+    остаётся прокручиваемым без фиксации body.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -284,6 +299,7 @@ Curator inbox использует health-check соединения перед 
 | C23 | Явный повторный вход/открытие клиента получает отдельный `client_entry` visit                      | `apps/web/heys_client_log_trace_v1.js`, `apps/web/heys_app_gate_flow_v1.js`, `scripts/db/migrations/2026-07-24_client_entry_observability.sql`, `apps/web/__tests__/client-session-observability.test.js`                                                    | проверено 2026-07-24 |
 | C24 | Server-derived local/test посещения сохраняются отдельно от production-сводки                      | `packages/core/src/server.js`, `yandex-cloud-functions/heys-api-rest/index.js`, `scripts/db/migrations/2026-07-25_client_observability_runtime_env.sql`, `apps/web/heys_client_diagnostics_v1.js`, `apps/web/__tests__/client-session-observability.test.js` | проверено 2026-07-25 |
 | C25 | Web-composer отличает реальный iOS/WebKit от desktop emulation и показывает безопасную диагностику | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                                                 | проверено 2026-07-25 |
+| C26 | Первый iOS-тап применяет recovery, а touch guard изолирует scroll модального thread                | `apps/web/heys_messenger_v1.js`, `apps/web/styles/modules/1000-messenger.css`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                   | проверено 2026-07-25 |
 
 ## Связанные источники
 
