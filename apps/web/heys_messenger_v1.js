@@ -2340,9 +2340,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   let inAppToastNode = null;
   let inAppToastTimer = null;
   let inAppUnreadBaseline = null;
+  let pageScrollLock = null;
+
+  function lockPageScroll() {
+    if (pageScrollLock || typeof document === 'undefined') return;
+    const body = document.body;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    pageScrollLock = {
+      scrollY,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+  }
+
+  function unlockPageScroll() {
+    if (!pageScrollLock || typeof document === 'undefined') return;
+    const body = document.body;
+    const saved = pageScrollLock;
+    pageScrollLock = null;
+    body.style.position = saved.position;
+    body.style.top = saved.top;
+    body.style.left = saved.left;
+    body.style.right = saved.right;
+    body.style.width = saved.width;
+    body.style.overflow = saved.overflow;
+    window.scrollTo(0, saved.scrollY);
+  }
 
   function openModal(opts = {}) {
     if (mountNode) return; // уже открыт
+    lockPageScroll();
     mountNode = document.createElement('div');
     mountNode.className = 'messenger-portal';
     document.body.appendChild(mountNode);
@@ -2362,6 +2399,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       mountNode = null;
       mountedRoot = null;
+      unlockPageScroll();
     };
 
     const el = React.createElement(MessengerModal, {
@@ -2393,6 +2431,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
     mountNode = null;
     mountedRoot = null;
+    unlockPageScroll();
   }
 
   function playInAppMessageCue() {
@@ -2515,6 +2554,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       acquireMessageMutation,
       formatMessengerError,
       shouldSendMessageOnEnter,
+      lockPageScroll,
+      unlockPageScroll,
       THREAD_PAGE_LIMIT,
     },
   };

@@ -129,6 +129,38 @@ describe('messenger retry-safe transport', () => {
   });
 });
 
+describe('messenger page scroll lock', () => {
+  beforeEach(() => {
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    document.body.removeAttribute('style');
+    vi.restoreAllMocks();
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('freezes the page while open and restores its exact scroll position', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 420 });
+    document.body.style.overflow = 'auto';
+    const messenger = loadMessengerInternals();
+
+    messenger.lockPageScroll();
+    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.top).toBe('-420px');
+    expect(document.body.style.overflow).toBe('hidden');
+
+    messenger.unlockPageScroll();
+    expect(document.body.style.position).toBe('');
+    expect(document.body.style.top).toBe('');
+    expect(document.body.style.overflow).toBe('auto');
+    expect(scrollTo).toHaveBeenCalledWith(0, 420);
+  });
+});
+
 describe('messenger error copy', () => {
   beforeEach(() => {
     window.HEYS = {};

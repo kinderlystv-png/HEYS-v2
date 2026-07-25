@@ -96,6 +96,7 @@ body.planning-tab-active .fab-group .message-fab {
   align-items: flex-end;
   justify-content: center;
   animation: messenger-fade-in 0.15s ease-out;
+  overscroll-behavior: contain;
 }
 
 @keyframes messenger-fade-in {
