@@ -355,6 +355,23 @@ describe('PWA update protection', () => {
 
       expect(installHandler).not.toContain('self.skipWaiting()');
     });
+
+    it('не прерывает активную пошаговую форму перезагрузкой', () => {
+      const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
+      const platformPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_platform_apis_v1.js');
+      const platformSource = readFileSync(platformPath, 'utf8');
+      const managerCwdPath = join(process.cwd(), 'heys_modal_manager_v1.js');
+      const managerPath = existsSync(managerCwdPath)
+        ? managerCwdPath
+        : join(process.cwd(), 'apps/web/heys_modal_manager_v1.js');
+      const managerSource = readFileSync(managerPath, 'utf8');
+
+      expect(platformSource).toContain('runWhenManagedModalsClose(finishUpdate');
+      expect(platformSource).toContain('runWhenManagedModalsClose(scheduleReload');
+      expect(managerSource).toContain("document.dispatchEvent(new CustomEvent('heys:modal-stack-idle'))");
+    });
   });
 
   describe('PWA version diagnostics', () => {

@@ -1272,6 +1272,10 @@
       showGreeting: false,
       showTip: false,
       finishLabel: 'Добавить', // Создание — "Добавить"
+      // Сначала записываем новый приём в Day state/local storage, и только затем
+      // закрываем модалку и возобновляем cloud sync. Иначе свежий cloud pull мог
+      // визуально "перезагрузить" дневник и затереть только что созданный приём.
+      closeOnComplete: 'after',
       context: {
         dateKey,
         meals: options.meals,

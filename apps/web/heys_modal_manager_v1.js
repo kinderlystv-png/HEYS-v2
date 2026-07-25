@@ -120,6 +120,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     _unregister(modalId) {
       openModals.delete(modalId);
       modalClosers.delete(modalId);
+      if (openModals.size === 0 && !syncState.transitioning && typeof document !== 'undefined') {
+        document.dispatchEvent(new CustomEvent('heys:modal-stack-idle'));
+      }
     },
 
     _pauseSyncForModal() {

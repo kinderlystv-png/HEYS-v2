@@ -114,6 +114,15 @@
   let _updateAvailable = false;
   let _updateVersion = null;
 
+  function runWhenManagedModalsClose(callback, source = 'unknown') {
+    const modalManager = HEYS.ModalManager;
+    if (!modalManager?.getOpenCount || modalManager.getOpenCount() === 0) return false;
+
+    console.info(`[SW] ⏸️ Update deferred until the active flow closes (${source})`);
+    document.addEventListener('heys:modal-stack-idle', callback, { once: true });
+    return true;
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 🔄 SW UPDATE STATE MACHINE (P3 hardening)
   // Lightweight diagnostic layer — tracks phases and detects illegal transitions.
@@ -1011,8 +1020,9 @@
           sessionStorage.setItem('heys_pending_update', 'true');
           setUpdateLock();
 
-          // Показываем UI обновления
-          showUpdateModal('downloading');
+          // Не перекрываем незавершённую пользовательскую форму обновлением.
+          const updateUiDeferred = HEYS.ModalManager?.getOpenCount?.() > 0;
+          if (!updateUiDeferred) showUpdateModal('downloading');
           transitionSwUpdateState(SW_UPDATE_STATES.DOWNLOADING, 'updatefound-modal');
 
           // 🔒 Fallback: если через 10 секунд модалка ещё на экране — убираем
@@ -1030,12 +1040,14 @@
               console.log('[SW] 🎉 New version ready!');
               transitionSwUpdateState(SW_UPDATE_STATES.READY, 'sw-installed');
               clearTimeout(swUpdateTimeout); // Отменяем fallback
-              // Упрощённая анимация: ready → reloading → reload
-              updateModalStage('ready');
-              setTimeout(() => {
-                updateModalStage('reloading');
-                forceUpdateAndReload(false);
-              }, 800);
+              const finishUpdate = () => {
+                showUpdateModal('ready');
+                setTimeout(() => {
+                  updateModalStage('reloading');
+                  forceUpdateAndReload(false);
+                }, 800);
+              };
+              if (!runWhenManagedModalsClose(finishUpdate, 'sw-installed')) finishUpdate();
             }
           });
         });
@@ -1084,9 +1096,8 @@
       hadControllerBefore = true;
 
       if (isRealUpdate) {
-        // Реальное обновление — показываем модалку и делаем reload
+        // Реальное обновление — перезагружаем только после завершения активной формы.
         refreshing = true;
-        showUpdateModal('reloading');
 
         // v63: НЕ ждём завершения sync перед reload.
         // Предыдущее поведение (v61/v62) откладывало reload до окончания sync (до 15с),
@@ -1107,7 +1118,11 @@
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
         };
-        setTimeout(doReload, 500);
+        const scheduleReload = () => {
+          showUpdateModal('reloading');
+          setTimeout(doReload, 500);
+        };
+        if (!runWhenManagedModalsClose(scheduleReload, 'controllerchange')) scheduleReload();
       } else {
         // Первичная или незапрошенная активация SW — НЕ прерываем текущую загрузку.
         console.log('[SW] Controller activation outside update lifecycle, no reload needed');

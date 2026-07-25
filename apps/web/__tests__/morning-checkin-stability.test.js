@@ -15,6 +15,7 @@ const DAY_HANDLERS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_da
 const DAY_EFFECTS_SRC_DIRECT = fs.readFileSync(path.resolve(__dirname, '../heys_day_effects.js'), 'utf8');
 const STORAGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_storage_supabase_v1.js'), 'utf8');
 const LOG_TRACE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_client_log_trace_v1.js'), 'utf8');
+const MEAL_STEP_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_meal_step_v1.js'), 'utf8');
 
 describe('morning check-in stability', () => {
   it('freezes visible step configs before save-driven shouldShow changes can shift indexes', () => {
@@ -46,6 +47,10 @@ describe('morning check-in stability', () => {
     expect(STEP_MODAL_SRC).toContain("'data-heys-step-modal': 'true'");
     expect(STEP_MODAL_SRC).toContain("'data-heys-step-id': currentConfig.id");
     expect(STEP_MODAL_SRC).toContain("'data-heys-saving': savingStep ? 'true' : 'false'");
+  });
+
+  it('commits a new meal before closing the modal and resuming cloud sync', () => {
+    expect(MEAL_STEP_SRC).toContain("closeOnComplete: 'after'");
   });
 
   it('prevents progress dots from advancing strict morning flow and refreshes final day data with payload', () => {
