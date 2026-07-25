@@ -158,6 +158,32 @@ describe('messenger error copy', () => {
   });
 });
 
+describe('messenger composer keyboard', () => {
+  beforeEach(() => {
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('keeps Enter as a line break on touch devices', () => {
+    const { shouldSendMessageOnEnter } = loadMessengerInternals();
+
+    expect(shouldSendMessageOnEnter({ key: 'Enter', shiftKey: false }, true)).toBe(false);
+  });
+
+  it('sends on plain Enter only for non-touch pointers', () => {
+    const { shouldSendMessageOnEnter } = loadMessengerInternals();
+
+    expect(shouldSendMessageOnEnter({ key: 'Enter', shiftKey: false }, false)).toBe(true);
+    expect(shouldSendMessageOnEnter({ key: 'Enter', shiftKey: true }, false)).toBe(false);
+    expect(shouldSendMessageOnEnter({ key: 'Enter', isComposing: true }, false)).toBe(false);
+  });
+});
+
 describe('messenger ack reconciliation', () => {
   beforeEach(() => {
     window.HEYS = {};

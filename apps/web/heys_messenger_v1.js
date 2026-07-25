@@ -163,6 +163,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return Number.isFinite(createdAt) ? new Date(createdAt + 1).toISOString() : null;
   }
 
+  function shouldSendMessageOnEnter(event, coarsePointer = window.matchMedia?.('(pointer: coarse)').matches) {
+    if (event?.key !== 'Enter' || event.shiftKey || event.isComposing) return false;
+    return !coarsePointer;
+  }
+
   async function verifyMessageMutation(api, options) {
     const beforeTs = getVerificationBeforeTs(options.message);
     const response = await api.getThread({
@@ -1760,7 +1765,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (shouldSendMessageOnEnter(e)) {
         e.preventDefault();
         handleSend();
       }
@@ -2509,6 +2514,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       verifyMessageMutation,
       acquireMessageMutation,
       formatMessengerError,
+      shouldSendMessageOnEnter,
       THREAD_PAGE_LIMIT,
     },
   };
