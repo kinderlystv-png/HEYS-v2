@@ -370,6 +370,9 @@ describe('PWA update protection', () => {
 
       expect(platformSource).toContain('runWhenManagedModalsClose(finishUpdate');
       expect(platformSource).toContain('runWhenManagedModalsClose(scheduleReload');
+      expect(platformSource).toContain('const waitForStableIdle = () =>');
+      expect(platformSource).toContain('modalManager.getOpenCount() === 0');
+      expect(platformSource).toContain("document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true })");
       expect(managerSource).toContain("document.dispatchEvent(new CustomEvent('heys:modal-stack-idle'))");
     });
   });

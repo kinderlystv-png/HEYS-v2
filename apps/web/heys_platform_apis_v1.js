@@ -119,7 +119,18 @@
     if (!modalManager?.getOpenCount || modalManager.getOpenCount() === 0) return false;
 
     console.info(`[SW] ⏸️ Update deferred until the active flow closes (${source})`);
-    document.addEventListener('heys:modal-stack-idle', callback, { once: true });
+    const waitForStableIdle = () => {
+      // Step flows briefly have an empty modal stack while replacing one modal
+      // with the next. Do not treat that transition frame as the end of the flow.
+      setTimeout(() => {
+        if (modalManager.getOpenCount() === 0) {
+          callback();
+          return;
+        }
+        document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true });
+      }, 300);
+    };
+    document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true });
     return true;
   }
 
