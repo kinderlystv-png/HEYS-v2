@@ -2771,6 +2771,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   let inAppToastTimer = null;
   let inAppUnreadBaseline = null;
   let pageScrollLock = null;
+  let pageScrollRestoreFrame = null;
+  let pageScrollRestoreTimer = null;
+  let pageScrollRestoreToken = 0;
 
   function isIOSDevice({
     platform = typeof navigator !== 'undefined' ? navigator.platform : '',
@@ -2799,12 +2802,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return false;
   }
 
+  function cancelPendingPageScrollRestore() {
+    pageScrollRestoreToken += 1;
+    if (pageScrollRestoreFrame !== null && typeof global.cancelAnimationFrame === 'function') {
+      global.cancelAnimationFrame(pageScrollRestoreFrame);
+    }
+    if (pageScrollRestoreTimer !== null) clearTimeout(pageScrollRestoreTimer);
+    pageScrollRestoreFrame = null;
+    pageScrollRestoreTimer = null;
+  }
+
   function lockPageScroll({
     useFixedBody = !isIOSDevice(),
     lockOverflow = !isIOSDevice(),
     containTouch = isIOSDevice(),
   } = {}) {
     if (pageScrollLock || typeof document === 'undefined') return;
+    cancelPendingPageScrollRestore();
     const body = document.body;
     const root = document.documentElement;
     const scrollY = window.scrollY || window.pageYOffset || 0;
@@ -2895,7 +2909,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     body.style.overscrollBehavior = saved.overscrollBehavior;
     root.style.overflow = saved.rootOverflow;
     root.style.overscrollBehavior = saved.rootOverscrollBehavior;
-    if (saved.useFixedBody) window.scrollTo(0, saved.scrollY);
+    const restoreToken = ++pageScrollRestoreToken;
+    const restoreScrollPosition = () => {
+      if (restoreToken !== pageScrollRestoreToken || pageScrollLock) return;
+      window.scrollTo(0, saved.scrollY);
+    };
+    restoreScrollPosition();
+    if (!saved.useFixedBody) {
+      if (typeof global.requestAnimationFrame === 'function') {
+        pageScrollRestoreFrame = global.requestAnimationFrame(() => {
+          pageScrollRestoreFrame = null;
+          restoreScrollPosition();
+        });
+      }
+      pageScrollRestoreTimer = setTimeout(() => {
+        pageScrollRestoreTimer = null;
+        restoreScrollPosition();
+      }, 420);
+    }
   }
 
   function openModal(opts = {}) {

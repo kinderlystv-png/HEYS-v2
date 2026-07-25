@@ -135,6 +135,7 @@ describe('messenger page scroll lock', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     document.body.removeAttribute('style');
     document.documentElement.removeAttribute('style');
     vi.restoreAllMocks();
@@ -162,6 +163,7 @@ describe('messenger page scroll lock', () => {
   });
 
   it('keeps the iOS body unfixed while installing and removing the touch containment guard', () => {
+    vi.useFakeTimers();
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     const addEventListener = vi.spyOn(document, 'addEventListener');
     const removeEventListener = vi.spyOn(document, 'removeEventListener');
@@ -190,7 +192,9 @@ describe('messenger page scroll lock', () => {
     expect(document.body.style.position).toBe('relative');
     expect(document.body.style.overflow).toBe('auto');
     expect(document.documentElement.style.overflow).toBe('');
-    expect(scrollTo).not.toHaveBeenCalled();
+    expect(scrollTo).toHaveBeenCalledWith(0, 240);
+    vi.runAllTimers();
+    expect(scrollTo).toHaveBeenCalledTimes(3);
     expect(removeEventListener).toHaveBeenCalledWith('touchmove', expect.any(Function), true);
   });
 
