@@ -304,14 +304,32 @@ describe('messenger composer keyboard', () => {
     expect(shouldSendMessageOnEnter({ key: 'Enter', isComposing: true }, false)).toBe(false);
   });
 
-  it('focuses the textarea synchronously from an iOS touch gesture', () => {
-    const { focusMessageInputOnTouchEnd } = loadMessengerInternals();
+  it('focuses the textarea synchronously from an iOS user gesture', () => {
+    const { focusMessageInputFromGesture } = loadMessengerInternals();
     const textarea = document.createElement('textarea');
     const focus = vi.spyOn(textarea, 'focus');
 
-    expect(focusMessageInputOnTouchEnd({ currentTarget: textarea }, true)).toBe(true);
-    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
-    expect(focusMessageInputOnTouchEnd({ currentTarget: textarea }, false)).toBe(false);
+    expect(focusMessageInputFromGesture({ currentTarget: textarea }, true)).toBe(true);
+    expect(focus).toHaveBeenCalledWith();
+    expect(focusMessageInputFromGesture({ currentTarget: textarea }, false)).toBe(false);
+  });
+
+  it('does not refocus an already active textarea', () => {
+    const { focusMessageInputFromGesture } = loadMessengerInternals();
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.focus();
+    const focus = vi.spyOn(textarea, 'focus');
+
+    expect(focusMessageInputFromGesture({ currentTarget: textarea }, true)).toBe(true);
+    expect(focus).not.toHaveBeenCalled();
+    textarea.remove();
+  });
+
+  it('binds iOS focus recovery before the native click fallback', () => {
+    expect(messengerSource).toContain('onTouchStart: focusMessageInputFromGesture');
+    expect(messengerSource).toContain('onClick: focusMessageInputFromGesture');
+    expect(messengerSource).not.toContain('onTouchEnd: focusMessageInput');
   });
 });
 

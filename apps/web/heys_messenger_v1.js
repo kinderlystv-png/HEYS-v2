@@ -209,14 +209,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return !coarsePointer;
   }
 
-  function focusMessageInputOnTouchEnd(event, iosDevice = isIOSDevice()) {
+  function focusMessageInputFromGesture(event, iosDevice = isIOSDevice()) {
     const input = event?.currentTarget;
     if (!iosDevice || !input || input.disabled || typeof input.focus !== 'function') return false;
-    try {
-      input.focus({ preventScroll: true });
-    } catch {
-      input.focus();
-    }
+    if (document.activeElement !== input) input.focus();
     return true;
   }
 
@@ -2387,12 +2383,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
             value: input,
             onChange: (e) => setInput(e.target.value),
-            onTouchEnd: focusMessageInputOnTouchEnd,
+            onTouchStart: focusMessageInputFromGesture,
+            onClick: focusMessageInputFromGesture,
             onFocus: () => setInputFocused(true),
             onBlur: () => setInputFocused(false),
             onKeyDown: handleKeyDown,
             disabled: sending,
-            inputMode: 'text',
             rows: 2,
             maxLength: 2000,
             ref: inputRef,
@@ -2729,7 +2725,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       acquireMessageMutation,
       formatMessengerError,
       shouldSendMessageOnEnter,
-      focusMessageInputOnTouchEnd,
+      focusMessageInputFromGesture,
       showInAppMessageToast,
       hideInAppMessageToast,
       lockPageScroll,

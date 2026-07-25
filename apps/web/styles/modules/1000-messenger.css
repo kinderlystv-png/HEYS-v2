@@ -1753,7 +1753,7 @@ body.planning-tab-active .fab-group .message-fab {
     0 8px 20px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-  touch-action: manipulation;
+  touch-action: auto;
   -webkit-user-select: text;
   user-select: text;
 }
