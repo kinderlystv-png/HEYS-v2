@@ -11,8 +11,8 @@ overrides:
   '@isaacs/brace-expansion': '>=5.0.1'
   ajv@>=8.0.0 <8.18.0: 8.18.0
   basic-ftp: '>=5.2.0'
-  brace-expansion: 2.1.2
   body-parser: 1.20.6
+  brace-expansion: 5.0.8
   cookie: '>=0.7.0'
   defu: '>=6.1.5'
   dompurify: 3.4.12
@@ -30,14 +30,14 @@ overrides:
   lodash: '>=4.17.23'
   minimatch@>=9.0.0 <9.0.7: 9.0.7
   minimatch@>=5.0.0 <5.1.8: 5.1.8
-  minimatch@<3.1.4: 3.1.4
+  minimatch@>=3 <4: 3.1.4
   path-to-regexp: 0.1.13
   picomatch: '>=4.0.4'
   postcss: '>=8.5.18'
   qs: '>=6.14.2'
   rollup: '>=4.59.0'
-  shell-quote: 1.9.0
   sharp: 0.35.3
+  shell-quote: 1.9.0
   tar: '>=7.5.21'
   tar-fs: '>=3.1.1'
   test-exclude>glob: '>=10.5.0'
@@ -48,6 +48,14 @@ overrides:
   vite: 6.4.3
   ws: '>=8.20.1'
   yaml: '>=2.8.3'
+
+patchedDependencies:
+  minimatch@3.1.4:
+    hash: dxp24xikds6r7jtrhgmcx62x6y
+    path: patches/minimatch@3.1.4.patch
+  minimatch@5.1.8:
+    hash: ogs33trs4dpbkrskm3w5eudhky
+    path: patches/minimatch@5.1.8.patch
 
 importers:
 
@@ -2576,7 +2584,7 @@ packages:
       ignore: 5.3.2
       import-fresh: 3.3.1
       js-yaml: 4.3.0
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
       - supports-color
@@ -2626,7 +2634,7 @@ packages:
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
       debug: 4.4.1
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -6950,8 +6958,9 @@ packages:
       - supports-color
     dev: true
 
-  /balanced-match@1.0.2:
-    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
+  /balanced-match@4.0.4:
+    resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
+    engines: {node: 18 || 20 || >=22}
     dev: true
 
   /bare-events@2.6.1:
@@ -7082,10 +7091,11 @@ packages:
       big-integer: 1.6.52
     dev: true
 
-  /brace-expansion@2.1.2:
-    resolution: {integrity: sha512-w5JZcKgdhDOgOwm8H+KgbosopHMuGcl6qbulwjtz3SM7I7P3yW1eAjzMPLrIE+NQ9vjgANKHWeMHnrT0OXW1oA==}
+  /brace-expansion@5.0.8:
+    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+    engines: {node: 20 || >=22}
     dependencies:
-      balanced-match: 1.0.2
+      balanced-match: 4.0.4
     dev: true
 
   /braces@3.0.3:
@@ -8444,7 +8454,7 @@ packages:
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
       object.fromentries: 2.0.8
       object.groupby: 1.0.3
       object.values: 1.2.1
@@ -8503,7 +8513,7 @@ packages:
       estraverse: 5.3.0
       hasown: 2.0.2
       jsx-ast-utils: 3.3.5
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
       object.entries: 1.1.9
       object.fromentries: 2.0.8
       object.values: 1.2.1
@@ -8862,7 +8872,7 @@ packages:
   /filelist@1.0.4:
     resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
     dependencies:
-      minimatch: 5.1.8
+      minimatch: 5.1.8(patch_hash=ogs33trs4dpbkrskm3w5eudhky)
     dev: true
 
   /fill-range@7.1.1:
@@ -10855,33 +10865,35 @@ packages:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
     dependencies:
-      brace-expansion: 2.1.2
+      brace-expansion: 5.0.8
     dev: true
 
-  /minimatch@3.1.4:
+  /minimatch@3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y):
     resolution: {integrity: sha512-twmL+S8+7yIsE9wsqgzU3E8/LumN3M3QELrBZ20OdmQ9jB2JvW5oZtBEmft84k/Gs5CG9mqtWc6Y9vW+JEzGxw==}
     dependencies:
-      brace-expansion: 2.1.2
+      brace-expansion: 5.0.8
     dev: true
+    patched: true
 
   /minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
     dependencies:
-      brace-expansion: 2.1.2
+      brace-expansion: 5.0.8
     dev: true
 
-  /minimatch@5.1.8:
+  /minimatch@5.1.8(patch_hash=ogs33trs4dpbkrskm3w5eudhky):
     resolution: {integrity: sha512-7RN35vit8DeBclkofOVmBY0eDAZZQd1HzmukRdSyz95CRh8FT54eqnbj0krQr3mrHR6sfRyYkyhwBWjoV5uqlQ==}
     engines: {node: '>=10'}
     dependencies:
-      brace-expansion: 2.1.2
+      brace-expansion: 5.0.8
     dev: true
+    patched: true
 
   /minimatch@9.0.7:
     resolution: {integrity: sha512-MOwgjc8tfrpn5QQEvjijjmDVtMw2oL88ugTevzxQnzRLm6l3fVEF2gzU0kYeYYKD8C66+IdGX6peJ4MyUlUnPg==}
     engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
-      brace-expansion: 2.1.2
+      brace-expansion: 5.0.8
     dev: true
 
   /minimist@1.2.8:
@@ -11079,7 +11091,7 @@ packages:
     resolution: {integrity: sha512-tmPX422rYgofd4epzrNoOXiE8XFZYOcCq1vD7MAXCDO+O+zndlA2ztdKKMa+EeuBG5tHETpr4ml4RGgpqDCCAg==}
     engines: {node: '>= 0.10.5'}
     dependencies:
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
     dev: true
 
   /node-fetch-native@1.6.7:
@@ -13468,7 +13480,7 @@ packages:
     dependencies:
       '@istanbuljs/schema': 0.1.3
       glob: 13.0.6
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
     dev: true
 
   /test-exclude@7.0.1:
