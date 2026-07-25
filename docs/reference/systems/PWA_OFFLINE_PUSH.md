@@ -18,8 +18,9 @@
 service-worker engine.
 
 Установленная PWA фиксируется в `portrait-primary` через web manifest;
-`HEYS.PlatformAPIs` дополнительно применяет runtime-lock при запуске и возврате
-из фона. Обычная вкладка браузера ориентацию не блокирует.
+`HEYS.PlatformAPIs` дополнительно применяет runtime-lock при запуске, первом
+жесте пользователя и возврате из фона. Обычная вкладка браузера ориентацию не
+блокирует.
 
 ## Service Worker lifecycle
 

@@ -756,6 +756,40 @@ body.planning-tab-active .fab-group .message-fab {
   transition: transform 0.25s ease, filter 0.25s ease;
 }
 
+.msg-attachment-item img.is-loading {
+  opacity: 0;
+}
+
+.msg-attachment-item.is-failed {
+  cursor: default;
+}
+
+.msg-attachment-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  color: #475569;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.msg-attachment-error button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 999px;
+  background: #fff;
+  color: #2563eb;
+  font: inherit;
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   .msg-attachment-item:hover img {
   transform: scale(1.035);

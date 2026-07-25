@@ -244,6 +244,41 @@ describe('messenger error copy', () => {
   });
 });
 
+describe('messenger photo recovery', () => {
+  beforeEach(() => {
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('retries Yandex photos through a cache-busted URL and the path-style host', () => {
+    const { getPhotoSourceCandidates } = loadMessengerInternals();
+    const original = 'https://heys-photos.storage.yandexcloud.net/client/day/message/photo.jpg';
+
+    expect(getPhotoSourceCandidates({ url: original }, 2)).toEqual([
+      original,
+      `${original}?_heys_img_retry=2-direct`,
+      'https://storage.yandexcloud.net/heys-photos/client/day/message/photo.jpg?_heys_img_retry=2-path',
+    ]);
+  });
+
+  it('does not rewrite local previews or unrelated image hosts', () => {
+    const { getPhotoSourceCandidates } = loadMessengerInternals();
+
+    expect(getPhotoSourceCandidates({ localPreview: 'data:image/jpeg;base64,abc' })).toEqual([
+      'data:image/jpeg;base64,abc',
+    ]);
+    expect(getPhotoSourceCandidates({ url: 'https://images.example.test/photo.jpg' }, 1)).toEqual([
+      'https://images.example.test/photo.jpg',
+      'https://images.example.test/photo.jpg?_heys_img_retry=1-direct',
+    ]);
+  });
+});
+
 describe('messenger composer keyboard', () => {
   beforeEach(() => {
     window.HEYS = {};

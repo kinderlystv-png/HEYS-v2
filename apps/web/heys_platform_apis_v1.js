@@ -2765,13 +2765,29 @@
     }
   }
 
+  const INSTALLED_PWA_DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'];
+  let installedPwaPortraitLocked = false;
+  let installedPwaPortraitLockPending = false;
+
   function isInstalledPwa() {
-    return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+    return navigator.standalone === true || INSTALLED_PWA_DISPLAY_MODES.some((mode) =>
+      window.matchMedia?.(`(display-mode: ${mode})`).matches,
+    );
   }
 
-  function enforceInstalledPwaPortrait() {
-    if (!isInstalledPwa()) return;
-    void lockOrientation('portrait-primary');
+  async function enforceInstalledPwaPortrait() {
+    if (!isInstalledPwa() || !screen.orientation?.lock || installedPwaPortraitLockPending) return;
+    installedPwaPortraitLockPending = true;
+    try {
+      const result = await lockOrientation('portrait-primary');
+      installedPwaPortraitLocked = result.success === true;
+    } finally {
+      installedPwaPortraitLockPending = false;
+    }
+  }
+
+  function retryInstalledPwaPortraitFromGesture() {
+    if (!installedPwaPortraitLocked) void enforceInstalledPwaPortrait();
   }
 
   function unlockOrientation() {
@@ -2796,9 +2812,15 @@
     }
   };
 
-  enforceInstalledPwaPortrait();
+  void enforceInstalledPwaPortrait();
+  document.addEventListener('pointerdown', retryInstalledPwaPortraitFromGesture, { capture: true, passive: true });
+  document.addEventListener('touchstart', retryInstalledPwaPortraitFromGesture, { capture: true, passive: true });
+  document.addEventListener('click', retryInstalledPwaPortraitFromGesture, { capture: true, passive: true });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) enforceInstalledPwaPortrait();
+    if (!document.hidden) {
+      installedPwaPortraitLocked = false;
+      void enforceInstalledPwaPortrait();
+    }
   });
 
   // === Fullscreen API ===

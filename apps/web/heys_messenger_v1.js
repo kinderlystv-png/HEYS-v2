@@ -95,6 +95,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return att?.url || att?.path || att?.localPreview || att?.tempId || idx;
   }
 
+  function withPhotoRetryToken(value, token) {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'https:') return value;
+      url.searchParams.set('_heys_img_retry', String(token));
+      return url.toString();
+    } catch {
+      return value;
+    }
+  }
+
+  function getYandexPathStylePhotoUrl(value) {
+    try {
+      const url = new URL(value);
+      const suffix = '.storage.yandexcloud.net';
+      if (url.protocol !== 'https:' || !url.hostname.endsWith(suffix)) return null;
+      const bucket = url.hostname.slice(0, -suffix.length);
+      if (!bucket) return null;
+      url.hostname = 'storage.yandexcloud.net';
+      url.pathname = `/${bucket}${url.pathname}`;
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  function getPhotoSourceCandidates(att, retryCycle = 0) {
+    const primary = String(att?.url || att?.localPreview || '').trim();
+    if (!primary) return [''];
+    if (!primary.startsWith('https://')) return [primary];
+
+    const candidates = [
+      primary,
+      withPhotoRetryToken(primary, `${retryCycle}-direct`),
+    ];
+    const pathStyle = getYandexPathStylePhotoUrl(primary);
+    if (pathStyle) candidates.push(withPhotoRetryToken(pathStyle, `${retryCycle}-path`));
+    if (att?.localPreview && att.localPreview !== primary) candidates.push(att.localPreview);
+    return Array.from(new Set(candidates));
+  }
+
   function pendingTranscriptKey(messages) {
     const parts = [];
     for (const message of Array.isArray(messages) ? messages : []) {
@@ -465,6 +506,107 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // eager=true для последних сообщений (в viewport при открытии) — грузятся
   // сразу, мгновенный показ. Для остальных — lazy, чтобы не качать тысячи
   // фото из длинной истории при каждом открытии треда.
+  function useReliablePhotoSource(attachment) {
+    const [sourceIndex, setSourceIndex] = useState(0);
+    const [retryCycle, setRetryCycle] = useState(0);
+    const [status, setStatus] = useState('loading');
+    const retryTimerRef = useRef(null);
+    const candidates = getPhotoSourceCandidates(attachment, retryCycle);
+    const source = candidates[Math.min(sourceIndex, candidates.length - 1)] || '';
+
+    useEffect(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      setSourceIndex(0);
+      setRetryCycle(0);
+      setStatus('loading');
+    }, [attachment?.url, attachment?.localPreview]);
+
+    useEffect(() => () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    }, []);
+
+    const onLoad = useCallback(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      setStatus('loaded');
+    }, []);
+
+    const onError = useCallback(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (sourceIndex >= candidates.length - 1) {
+        retryTimerRef.current = null;
+        setStatus('failed');
+        return;
+      }
+      setStatus('retrying');
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        setSourceIndex((current) => current + 1);
+      }, 250 * (sourceIndex + 1));
+    }, [candidates.length, sourceIndex]);
+
+    const retry = useCallback(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      setRetryCycle((current) => current + 1);
+      setSourceIndex(0);
+      setStatus('loading');
+    }, []);
+
+    return { source, status, onLoad, onError, retry };
+  }
+
+  function MessagePhoto({ attachment, photos, index, onPhotoClick, eager }) {
+    const reliable = useReliablePhotoSource(attachment);
+    return React.createElement(
+      'div',
+      {
+        className: `msg-attachment-item${reliable.status === 'failed' ? ' is-failed' : ''}`,
+        onClick: () => {
+          if (reliable.status !== 'failed') onPhotoClick?.(photos, index);
+        },
+      },
+      attachment.pending
+        ? React.createElement('div', { className: 'msg-attachment-pending' }, '…')
+        : null,
+      React.createElement('img', {
+        src: reliable.source,
+        alt: attachment.filename || 'фото',
+        loading: eager ? 'eager' : 'lazy',
+        decoding: 'async',
+        width: attachment.width || undefined,
+        height: attachment.height || undefined,
+        onLoad: reliable.onLoad,
+        onError: reliable.onError,
+        className: reliable.status === 'loaded' ? '' : 'is-loading',
+      }),
+      reliable.status === 'failed' && React.createElement(
+        'div',
+        { className: 'msg-attachment-error' },
+        React.createElement('span', null, 'Не удалось загрузить фото'),
+        React.createElement('button', {
+          type: 'button',
+          onClick: (event) => {
+            event.stopPropagation();
+            reliable.retry();
+          },
+        }, 'Повторить'),
+      ),
+    );
+  }
+
+  function LightboxPhoto({ attachment }) {
+    const reliable = useReliablePhotoSource(attachment);
+    return React.createElement('img', {
+      src: reliable.source,
+      alt: attachment?.filename || 'фото',
+      onLoad: reliable.onLoad,
+      onError: reliable.onError,
+      onClick: (event) => event.stopPropagation(),
+    });
+  }
+
   function MessageAttachments({ attachments, onPhotoClick, eager, transcriptionGranted = false }) {
     if (!attachments || attachments.length === 0) return null;
     const audio = attachments.filter(isAudioAttachment);
@@ -483,23 +625,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         'div',
         { className: `msg-attachments msg-attachments-count-${Math.min(photos.length, 4)}` },
         photos.map((att, idx) =>
-          React.createElement('div', {
+          React.createElement(MessagePhoto, {
             key: attachmentKey(att, idx),
-            className: 'msg-attachment-item',
-            onClick: () => onPhotoClick?.(photos, idx),
-          },
-            att.pending
-              ? React.createElement('div', { className: 'msg-attachment-pending' }, '…')
-              : null,
-            React.createElement('img', {
-              src: att.url || att.localPreview || '',
-              alt: att.filename || 'фото',
-              loading: eager ? 'eager' : 'lazy',
-              decoding: 'async',
-              width: att.width || undefined,
-              height: att.height || undefined,
-            }),
-          ),
+            attachment: att,
+            photos,
+            index: idx,
+            onPhotoClick,
+            eager,
+          }),
         ),
       ),
     );
@@ -2319,10 +2452,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               className: 'messenger-lightbox',
               onClick: () => setLightbox(null),
             },
-            React.createElement('img', {
-              src: lightbox.attachments[lightbox.index]?.url,
-              alt: 'фото',
-              onClick: (e) => e.stopPropagation(),
+            React.createElement(LightboxPhoto, {
+              attachment: lightbox.attachments[lightbox.index],
             }),
             React.createElement('button', {
               type: 'button',
@@ -2606,6 +2737,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       THREAD_PAGE_LIMIT,
     },
   };
+
+  HEYS.Messenger._test.getPhotoSourceCandidates = getPhotoSourceCandidates;
 
   // Subscribe to deep-link event from heys_app_shortcuts_v1
   if (typeof window !== 'undefined') {

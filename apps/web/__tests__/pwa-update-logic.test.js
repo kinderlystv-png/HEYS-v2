@@ -386,9 +386,11 @@ describe('PWA update protection', () => {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
       expect(manifest.orientation).toBe('portrait-primary');
-      expect(platformSource).toContain("window.matchMedia?.('(display-mode: standalone)').matches");
+      expect(platformSource).toContain("['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay']");
+      expect(platformSource).toContain('window.matchMedia?.(`(display-mode: ${mode})`).matches');
       expect(platformSource).toContain('navigator.standalone === true');
-      expect(platformSource).toContain("void lockOrientation('portrait-primary')");
+      expect(platformSource).toContain("await lockOrientation('portrait-primary')");
+      expect(platformSource).toContain("document.addEventListener('pointerdown', retryInstalledPwaPortraitFromGesture");
       expect(platformSource).toContain("document.addEventListener('visibilitychange'");
     });
   });
