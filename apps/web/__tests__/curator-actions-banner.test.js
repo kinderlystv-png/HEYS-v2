@@ -151,6 +151,23 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
   });
 
+  it('opens a curator-added training immediately with its details', async () => {
+    const training = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T10:00:00.000Z', [
+      { type: 'training_added', kind: 'Кардио', duration_min: 60, time: '19:50' },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince
+      .mockResolvedValueOnce(response([]))
+      .mockResolvedValueOnce(response([training], '2026-07-05T10:00:00.000Z'));
+
+    await banner.checkAndShow();
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+    expect(document.querySelector('.ca-modal__summary')?.textContent).toBe('+1 тренировка');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Тренировка: Кардио · 60 мин (19:50)');
+  });
+
   it('treats a changed PIN session as a new initial backlog', async () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T10:00:00.000Z');
     const banner = loadBanner();

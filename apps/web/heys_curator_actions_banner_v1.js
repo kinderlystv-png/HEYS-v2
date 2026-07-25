@@ -1026,6 +1026,13 @@
     return Math.max(0, firstMs + LIVE_ACCUMULATE_MS - serverNowMs);
   }
 
+  function hasImmediateReviewAction(entries) {
+    return (entries || []).some((entry) => {
+      const actions = entry?.actions?.actions;
+      return Array.isArray(actions) && actions.some((action) => action?.type === 'training_added');
+    });
+  }
+
   async function autoAckInvisibleEntries(entries) {
     if (!entries || entries.length === 0) return;
     enqueueAckForEntries(entries);
@@ -1099,7 +1106,12 @@
         return;
       }
 
-      const delay = computeLiveDelayMs(split.visible, serverNowMs);
+      // A curator-added workout is a complete, actionable event and must be
+      // shown immediately. Meal edits keep the accumulation window so a series
+      // of product changes still arrives as one calm review modal.
+      const delay = hasImmediateReviewAction(split.visible)
+        ? 0
+        : computeLiveDelayMs(split.visible, serverNowMs);
       if (delay <= 0) attemptOpenReview();
       else scheduleReviewAttempt(delay);
     } finally {
@@ -1154,6 +1166,7 @@
       splitVisibleEntries,
       reconcileEntriesWithCurrentDays,
       computeLiveDelayMs,
+      hasImmediateReviewAction,
       targetDateFromEntries,
       filterEntriesAfterPendingAck,
       enqueueAckForEntries,
