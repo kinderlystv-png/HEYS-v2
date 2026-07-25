@@ -356,4 +356,19 @@ describe('PWA update protection', () => {
       expect(installHandler).not.toContain('self.skipWaiting()');
     });
   });
+
+  describe('PWA version diagnostics', () => {
+    it('includes the running version and loaded boot bundle in the copied sync log', () => {
+      const webCwdPath = join(process.cwd(), 'heys_app_shell_v1.js');
+      const shellPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_app_shell_v1.js');
+      const shellSource = readFileSync(shellPath, 'utf8');
+
+      expect(shellSource).toContain("rt.runtimeVersion = String(HEYS?.version || window.APP_VERSION || 'unknown')");
+      expect(shellSource).toContain('version:      ${rt.runtimeVersion');
+      expect(shellSource).toContain('bootApp:      ${rt.loadedBootApp');
+      expect(shellSource).toContain('appMode:      ${rt.pwaMode');
+    });
+  });
 });

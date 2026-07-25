@@ -1771,6 +1771,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     rt.isPin = !!HEYS?.cloud?.isPinAuthClient?.();
                     rt.client = (HEYS?.cloud?.getCurrentClientId?.() || clientIdValue || '').slice(0, 8);
                     rt.online = navigator.onLine;
+                    rt.runtimeVersion = String(HEYS?.version || window.APP_VERSION || 'unknown');
+                    rt.loadedBootApp = (() => {
+                        try {
+                            const src = Array.from(document.scripts || [])
+                                .map((script) => script.src || '')
+                                .find((value) => /boot-app\.bundle\.[a-f0-9]+\.js(?:\?|$)/.test(value));
+                            return src ? new URL(src, window.location.href).pathname.split('/').pop() : 'unknown';
+                        } catch (_) {
+                            return 'unknown';
+                        }
+                    })();
+                    rt.pwaMode = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true
+                        ? 'standalone'
+                        : 'browser';
                     const lsSyncTs = localStorage.getItem(`heys_${clientIdValue}_last_sync_ts`);
                     rt.lastSyncTs = lsSyncTs || null;
                     // Queues
@@ -2651,6 +2665,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 })();
                 const lines = [
                     `=== HEYS Sync Debug Snapshot @ ${ts} ===`,
+                    `version:      ${rt.runtimeVersion || 'unknown'}`,
+                    `bootApp:      ${rt.loadedBootApp || 'unknown'}`,
+                    `appMode:      ${rt.pwaMode || 'unknown'}`,
                     `status:       ${rt.status}`,
                     `online:       ${rt.online}`,
                     `isAuth:       ${rt.isAuth}  isPin: ${rt.isPin}  client: ${rt.client}***`,
@@ -2681,7 +2698,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 const text = lines.join('\n');
                 if (navigator?.clipboard?.writeText) {
                     navigator.clipboard.writeText(text).then(() => {
-                        HEYS?.Toast?.success?.('Sync debug скопирован');
+                        HEYS?.Toast?.success?.(`Лог скопирован · ${rt.runtimeVersion || 'версия неизвестна'}`);
                     }).catch(() => { });
                 }
             } catch (e) { /* noop */ }
