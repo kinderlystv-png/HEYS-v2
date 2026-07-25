@@ -422,7 +422,7 @@ https://yookassa.ru/my/merchant/integration
 - [ ] Протестировать все endpoint'ы
 - [ ] Настроить webhook ЮKassa
 - [ ] Протестировать платежи в песочнице
-- [ ] Отключить Vercel API routes
+- [ ] Удалить устаревшие API routes прежнего хостинга
 
 </details>
 

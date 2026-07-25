@@ -133,10 +133,10 @@ Supabase (Германия), даже после миграции БД в РФ �
 - [ ] Документировать в
       [ANALYTICS_AUDIT_2025-01.md](./ANALYTICS_AUDIT_2025-01.md)
 
-### 6. ✅ Переезд с Vercel на Yandex Cloud — ЗАВЕРШЁН `[TECH]` `[LEGAL]`
+### 6. ✅ Переезд на Yandex Cloud — ЗАВЕРШЁН `[TECH]` `[LEGAL]`
 
-**Проблема:** API-функции на Vercel (rpc.js, rest.js, sms.js) **обрабатывали
-ПДн** на серверах вне РФ (Frankfurt/USA). Это нарушало 152-ФЗ!
+**Проблема:** прежний зарубежный хостинг API-функций (rpc.js, rest.js, sms.js)
+**обрабатывал ПДн** на серверах вне РФ (Frankfurt/USA). Это нарушало 152-ФЗ!
 
 **Статус:** ✅ **ПОЛНОСТЬЮ ЗАВЕРШЕНО** (2025-12-24)
 
@@ -177,7 +177,7 @@ Supabase (Германия), даже после миграции БД в РФ �
 | 3    | Cloud Functions | 9 функций: rpc, rest, sms, health, leads, auth, payments + backup, maintenance |
 | 4    | Landing         | Next.js static → https://heyslab.ru ✅                                         |
 | 5    | DNS/SSL         | Let's Encrypt auto-renew                                                       |
-| 6    | Vercel          | Полностью отключён                                                             |
+| 6    | Прежний хостинг | Полностью отключён                                                             |
 | 7    | PWA VM          | Nginx proxy `158.160.53.194` → https://app.heyslab.ru ✅                       |
 
 > 📝 **Детали**: [YANDEX_DEPLOY_SETUP.md](./YANDEX_DEPLOY_SETUP.md)
@@ -1580,7 +1580,7 @@ SSL: verify-full
 | v3.7   | 2025-12-24 | **⚖️ 152-ФЗ Compliance Audit**: (1) **Supabase JS CDN удалён** из `index.html` — SDK больше НЕ загружается; (2) **GA4/Meta Pixel отключены** (`null`) — трансграничка без уведомления РКН; (3) **Telegram ПДн минимизированы** — только `lead_id`, без имени/телефона; (4) Секция 4 обновлена; (5) Статус изменён на SOFT LAUNCH; (6) Исправлен триггер триала (чек-ин, не еда)                                                                                                                                                                                                                                                        |
 | v3.6   | 2025-12-24 | **📊 Launch Readiness Audit**: Проведён полный анализ готовности к запуску — **79% готово** (55/70 задач). Добавлена секция 17.1 с критическими блокерами (ЮKassa/webhook/фискализация). Dead code анализ завершён — **нет мёртвого кода**. Технический долг обновлён: 2/3 задач выполнено. До запуска: 2-5 дней после получения ЮKassa credentials                                                                                                                                                                                                                                                                                    |
 | v3.5   | 2025-12-24 | **🔧 PWA → Nginx VM Migration**: Полный переезд PWA с Yandex CDN на Nginx VM (`app-heyslab-proxy`, IP `158.160.53.194`). Причина: CDN игнорировал Cache-Control заголовки S3, SW не обновлялся. Nginx: Ubuntu 20.04, Let's Encrypt SSL (auto-renew). Безопасность: UFW firewall, fail2ban, SSH key-only с IP restriction. Landing остался на CDN. **Миграция Yandex Cloud 100% завершена!**                                                                                                                                                                                                                                            |
-| v3.4   | 2025-12-23 | **🚀 FULL PRODUCTION DEPLOYMENT**: Все 3 endpoint'а работают: heyslab.ru (лендинг), app.heyslab.ru (PWA), api.heyslab.ru (API). Object Storage (heys-app, heys-static), CDN настроен, SSL работает. **ЮKassa разблокирована** — сайт готов для регистрации! GitHub Actions автодеплой функционирует. Vercel полностью заменён Yandex Cloud                                                                                                                                                                                                                                                                                             |
+| v3.4   | 2025-12-23 | **🚀 FULL PRODUCTION DEPLOYMENT**: Все 3 endpoint'а работают: heyslab.ru (лендинг), app.heyslab.ru (PWA), api.heyslab.ru (API). Object Storage (heys-app, heys-static), CDN настроен, SSL работает. **ЮKassa разблокирована** — сайт готов для регистрации! GitHub Actions автодеплой функционирует. Прежний хостинг полностью заменён Yandex Cloud                                                                                                                                                                                                                                                                                    |
 | v3.3   | 2025-12-22 | **🔧 RPC Audit Complete**: Созданы 6 недостающих SQL-функций (`client_pin_auth`, `create_client_with_pin`, `reset_client_pin`, `get_client_data`, `get_curator_clients`, `create_pending_product`). Исправлен баг `created_at` → `updated_at` в 2 функциях. Создана таблица `pending_products`. Все API эндпоинты протестированы и работают через `api.heyslab.ru`                                                                                                                                                                                                                                                                     |
 | ...    | ...        | ...                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 

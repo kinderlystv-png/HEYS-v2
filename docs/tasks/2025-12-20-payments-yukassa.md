@@ -157,7 +157,7 @@ const payment = await fetch('https://api.yookassa.ru/v3/payments', {
     amount: { value: '12990.00', currency: 'RUB' },
     confirmation: { 
       type: 'redirect', 
-      return_url: 'https://heys-v2-web.vercel.app/payment-success' 
+      return_url: 'https://app.heyslab.ru/payment-success'
     },
     capture: true,
     description: 'HEYS Pro подписка на 1 месяц',
@@ -222,7 +222,7 @@ const payment = await fetch('https://api.yookassa.ru/v3/payments', {
 ## 📦 Environment Variables
 
 ```env
-# ЮKassa (Vercel)
+# ЮKassa (Yandex Cloud)
 YUKASSA_SHOP_ID=xxx
 YUKASSA_SECRET_KEY=xxx
 YUKASSA_WEBHOOK_SECRET=xxx

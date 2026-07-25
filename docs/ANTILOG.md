@@ -294,7 +294,7 @@ overhead.
 
 4. **`apps/landing` (`output: 'export'`)** — Next.js конфиг сейчас без
    `removeConsole`. При статическом экспорте SWC-трансформация
-   `compiler.removeConsole` работает. Нужно проверить, что Vercel-деплой
+   `compiler.removeConsole` работает. Нужно проверить, что Yandex-деплой
    поднимает именно production build.
 
 ---

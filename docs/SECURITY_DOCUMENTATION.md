@@ -273,7 +273,8 @@ CLI (`yc serverless function version create ... --environment`), т.к. CLI
 - Object Storage — Yandex S3 (ru-central1)
 - CDN — Yandex CDN
 - Cloud Functions — Yandex Cloud (московский регион)
-- Никаких данных в Vercel, Railway, Supabase, AWS или европейских DC
+- Никаких данных во внешних зарубежных PaaS, Railway, Supabase, AWS или
+  европейских DC
 
 **Аналитика отключена:**
 

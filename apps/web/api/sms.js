@@ -1,4 +1,4 @@
-// Vercel Serverless Function — SMS.ru Proxy
+// Legacy serverless function — SMS.ru Proxy
 // Обходит CORS для отправки SMS
 
 export default async function handler(req, res) {

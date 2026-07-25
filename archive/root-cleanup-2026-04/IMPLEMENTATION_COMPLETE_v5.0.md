@@ -177,7 +177,7 @@ updated
 
 - [ ] `pnpm build`
 - [ ] Git commit + push
-- [ ] Vercel deploy
+- [ ] Production deploy
 - [ ] Smoke test (app.heyslab.ru)
 
 ---

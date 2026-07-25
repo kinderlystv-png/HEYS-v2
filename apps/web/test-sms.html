@@ -155,9 +155,9 @@
       try {
         // Используем серверный прокси для обхода CORS
         const isLocalhost = window.location.hostname === 'localhost';
-        const proxyUrl = isLocalhost 
-          ? '/api/sms'  // Локально через Vite proxy или Vercel dev
-          : 'https://heys-v2-web.vercel.app/api/sms';  // Продакшн
+        const proxyUrl = isLocalhost
+          ? '/api/sms'  // Локально через Vite proxy
+          : 'https://api.heyslab.ru/sms';  // Продакшн в Yandex Cloud
         
         log(`🔗 Proxy: ${proxyUrl}`);
         

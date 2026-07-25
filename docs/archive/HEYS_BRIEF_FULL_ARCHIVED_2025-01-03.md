@@ -129,10 +129,11 @@ Supabase (Германия), даже после миграции БД в РФ �
 - [ ] Документировать в
       [ANALYTICS_AUDIT_2025-01.md](./ANALYTICS_AUDIT_2025-01.md)
 
-### 5. ✅ Переезд с Vercel на Yandex Cloud — ЗАВЕРШЁН `[TECH]` `[LEGAL]`
+### 5. ✅ Переезд на Yandex Cloud — ЗАВЕРШЁН `[TECH]` `[LEGAL]`
 
-**Проблема:** API-функции на Vercel (rpc.js, rest.js, sms.js) **обрабатывали
-ПДн** на серверах вне РФ (Frankfurt/USA). Это нарушало 152-ФЗ!
+**Проблема:** API-функции на прежнем зарубежном хостинге (rpc.js, rest.js,
+sms.js) **обрабатывали ПДн** на серверах вне РФ (Frankfurt/USA). Это нарушало
+152-ФЗ!
 
 **Статус:** ✅ **ПОЛНОСТЬЮ ЗАВЕРШЕНО** (2025-12-24)
 
@@ -208,7 +209,7 @@ Supabase (Германия), даже после миграции БД в РФ �
   - [x] Next.js static export задеплоен
   - [x] Создана функция `heys-api-leads` для формы ✅
   - [x] Обновлён TrialForm.tsx → `api.heyslab.ru/leads` ✅
-  - [x] Удалён `vercel.json` из apps/landing ✅
+  - [x] Удалён конфиг прежнего хостинга из apps/landing ✅
   - [x] Обновлён `.env.example` (убран Supabase) ✅
   - [x] **https://heyslab.ru РАБОТАЕТ!** 🎉
 
@@ -219,10 +220,10 @@ Supabase (Германия), даже после миграции БД в РФ �
   - [x] Smoke-тест: heyslab.ru=200, app.heyslab.ru=200,
         api.heyslab.ru/health=200
 
-- [x] **Этап 6: Отключение Vercel** ✅ ВЫПОЛНЕНО 2025-12-22
-  - [x] Удалён `vercel.json` из apps/web ✅
-  - [x] Удалён `vercel.json` из apps/landing ✅
-  - [x] Удалить проект из Vercel Dashboard ✅
+- [x] **Этап 6: Отключение прежнего хостинга** ✅ ВЫПОЛНЕНО 2025-12-22
+  - [x] Удалён конфиг прежнего хостинга из apps/web ✅
+  - [x] Удалён конфиг прежнего хостинга из apps/landing ✅
+  - [x] Удалён проект из панели прежнего хостинга ✅
   - [x] Архивировать старые API файлы ✅
 
 - [x] **Этап 7: PWA → Nginx VM Proxy** ✅ ВЫПОЛНЕНО 2025-12-24
@@ -1656,7 +1657,7 @@ SSL: verify-full
 | **Cloud Functions**   | `d5d7939njvjp27ofsok0.apigw.yandexcloud.net` (rpc/rest/sms/leads/health)    |
 | ~~CDN (PWA)~~         | ~~bc8rvrvenqslkmti5yts~~ **(ОТКЛЮЧЁН 2025-12-24, переехал на Nginx VM)** ❌ |
 | ~~Supabase (legacy)~~ | ~~ukqolcziqcuplqfgrmsh.supabase.co~~ **(ОТКЛЮЧЁН 2025-12-22)**              |
-| ~~Vercel (legacy)~~   | ~~heys-v2-web.vercel.app~~ **(МИГРИРОВАНО 2025-12-23)**                     |
+| ~~Прежний хостинг~~   | ~~Старый production-домен~~ **(МИГРИРОВАНО 2025-12-23)**                    |
 
 ---
 
@@ -1672,13 +1673,13 @@ SSL: verify-full
 | v3.7   | 2025-12-24 | **⚖️ 152-ФЗ Compliance Audit**: (1) **Supabase JS CDN удалён** из `index.html` — SDK больше НЕ загружается; (2) **GA4/Meta Pixel отключены** (`null`) — трансграничка без уведомления РКН; (3) **Telegram ПДн минимизированы** — только `lead_id`, без имени/телефона; (4) Секция 4 обновлена; (5) Статус изменён на SOFT LAUNCH; (6) Исправлен триггер триала (чек-ин, не еда)                                                                                                                                                                                                                                                        |
 | v3.6   | 2025-12-24 | **📊 Launch Readiness Audit**: Проведён полный анализ готовности к запуску — **79% готово** (55/70 задач). Добавлена секция 17.1 с критическими блокерами (ЮKassa/webhook/фискализация). Dead code анализ завершён — **нет мёртвого кода**. Технический долг обновлён: 2/3 задач выполнено. До запуска: 2-5 дней после получения ЮKassa credentials                                                                                                                                                                                                                                                                                    |
 | v3.5   | 2025-12-24 | **🔧 PWA → Nginx VM Migration**: Полный переезд PWA с Yandex CDN на Nginx VM (`app-heyslab-proxy`, IP `158.160.53.194`). Причина: CDN игнорировал Cache-Control заголовки S3, SW не обновлялся. Nginx: Ubuntu 20.04, Let's Encrypt SSL (auto-renew). Безопасность: UFW firewall, fail2ban, SSH key-only с IP restriction. Landing остался на CDN. **Миграция Yandex Cloud 100% завершена!**                                                                                                                                                                                                                                            |
-| v3.4   | 2025-12-23 | **🚀 FULL PRODUCTION DEPLOYMENT**: Все 3 endpoint'а работают: heyslab.ru (лендинг), app.heyslab.ru (PWA), api.heyslab.ru (API). Object Storage (heys-app, heys-static), CDN настроен, SSL работает. **ЮKassa разблокирована** — сайт готов для регистрации! GitHub Actions автодеплой функционирует. Vercel полностью заменён Yandex Cloud                                                                                                                                                                                                                                                                                             |
+| v3.4   | 2025-12-23 | **🚀 FULL PRODUCTION DEPLOYMENT**: Все 3 endpoint'а работают: heyslab.ru (лендинг), app.heyslab.ru (PWA), api.heyslab.ru (API). Object Storage (heys-app, heys-static), CDN настроен, SSL работает. **ЮKassa разблокирована** — сайт готов для регистрации! GitHub Actions автодеплой функционирует. Прежний хостинг полностью заменён Yandex Cloud                                                                                                                                                                                                                                                                                    |
 | v3.3   | 2025-12-22 | **🔧 RPC Audit Complete**: Созданы 6 недостающих SQL-функций (`client_pin_auth`, `create_client_with_pin`, `reset_client_pin`, `get_client_data`, `get_curator_clients`, `create_pending_product`). Исправлен баг `created_at` → `updated_at` в 2 функциях. Создана таблица `pending_products`. Все API эндпоинты протестированы и работают через `api.heyslab.ru`                                                                                                                                                                                                                                                                     |
 | v3.2   | 2025-12-22 | **🔧 Cloud Functions FIX**: Исправлены критические ошибки в `heys-api-rest`: (1) Удалён дублирующий UNIQUE constraint на `client_kv_store` (конфликтовал с PRIMARY KEY), (2) Исправлены env vars — код использует `PG_*` (PG*HOST, PG_PORT...), а не `DB*\*`. Upsert операции теперь работают корректно                                                                                                                                                                                                                                                                                                                                |
 | v3.1   | 2025-12-22 | **🔌 Supabase SDK отключён**: Все операции с данными переведены на `YandexAPI` (`heys_yandex_api_v1.js`). Удалены legacy файлы `apps/web/api/supabase/`. `cloud.client.from()`/`rpc()` больше не используются. Оставшиеся упоминания Supabase — только в комментариях и `.env.example`. База данных: Yandex.Cloud PostgreSQL                                                                                                                                                                                                                                                                                                           |
 | v3.0   | 2025-12-22 | **🚀 PRODUCTION LAUNCH**: Обновлён статус брифа — это больше не MVP, а полноценный запуск продукта. Все критические блоки завершены: платежи, юридика, дневник, триал, аналитика. Обновлены маркеры `[MVP]` → `[READY]`                                                                                                                                                                                                                                                                                                                                                                                                                |
 | v2.1   | 2025-12-21 | **✅ Yandex Cloud Functions задеплоены**: 5 serverless функций (heys-api-rpc/rest/sms/leads/health), API Gateway `d5d7939njvjp27ofsok0.apigw.yandexcloud.net`, PostgreSQL RPC (12 операций), REST CRUD, SMS.ru интеграция, Telegram уведомления. SQL миграция `yandex_postgresql_setup.sql`. Деплой гайд `DEPLOY_GUIDE.md`                                                                                                                                                                                                                                                                                                             |
-| v2.0   | 2025-12-21 | **🚀 План миграции Vercel → Yandex Cloud**: Добавлен критический блокер #5 — API функции на Vercel обрабатывают ПДн вне РФ (нарушение 152-ФЗ). Детальный план: 6 этапов (Object Storage, CDN, Cloud Functions, Landing, DNS, Vercel shutdown). Оценка: 2-3 дня, ~4100₽/мес. Чеклист с env variables                                                                                                                                                                                                                                                                                                                                    |
+| v2.0   | 2025-12-21 | **🚀 План миграции на Yandex Cloud**: Добавлен критический блокер #5 — API-функции прежнего зарубежного хостинга обрабатывают ПДн вне РФ (нарушение 152-ФЗ). Детальный план: 6 этапов (Object Storage, CDN, Cloud Functions, Landing, DNS, отключение прежнего хостинга). Оценка: 2-3 дня, ~4100₽/мес. Чеклист с env variables                                                                                                                                                                                                                                                                                                         |
 | v1.9   | 2025-12-20 | **🇷🇺 Миграция на Yandex.Cloud**: Полный переезд базы данных из Supabase (Германия) на Yandex.Cloud PostgreSQL 16.10 (Россия). Мигрировано 513 записей (clients, consents, shared_products, client_kv_store). Соответствие 152-ФЗ ч.5 ст.18 — первичное хранение ПДн в РФ. Критический блокер запуска **ЗАКРЫТ**                                                                                                                                                                                                                                                                                                                        |
 | v1.8   | 2025-12-20 | **Операционные протоколы**: Создан `docs/operations/CURATOR_PROTOCOLS.md` — отметки (👍✅❓⚠), шаблоны касаний (утро/обед/вечер), Day 0/7 сценарии, лимит слотов (3 триала + 14 Pro), анти-срыв протокол, стоп-ситуации                                                                                                                                                                                                                                                                                                                                                                                                               |
 | v1.7   | 2025-12-20 | **SEO лендинга**: Полная настройка meta tags (title, description, keywords), Open Graph (VK, Facebook, Telegram), Twitter Card, robots, JSON-LD, PWA manifest, генерация иконок через sharp (favicon.ico, icon-192/512, apple-touch-icon, og-image.png 1200×630)                                                                                                                                                                                                                                                                                                                                                                       |

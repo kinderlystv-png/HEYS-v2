@@ -10843,7 +10843,7 @@ details[open] .lh-clump-toggletext--hide { display: block;}
         }
         var Ae = { toBase64: yt, fromBase64: xt };
         function se() {
-          let o = window.location.host.endsWith('.vercel.app'),
+          let o = false,
             e = new URLSearchParams(window.location.search).has('dev');
           return o
             ? `https://${window.location.host}/gh-pages`

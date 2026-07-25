@@ -141,7 +141,6 @@ function findFiles(projectPath, pattern, options = {}) {
     'node_modules',
     'dist',
     'build',
-    '.vercel',
     '.husky',
     'coverage',
     '.nyc_output',
@@ -579,7 +578,7 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.${ext}',
     include: ['**/__tests__/**/*.{${ext},${ext}x}', '**/*.{test,spec}.{${ext},${ext}x}'],
-    exclude: ['node_modules', 'dist', '.next', '.vercel'],
+    exclude: ['node_modules', 'dist', '.next'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

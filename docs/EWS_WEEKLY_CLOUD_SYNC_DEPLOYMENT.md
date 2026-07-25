@@ -219,7 +219,7 @@ grep "pi_early_warning.js?v=" apps/web/index.html
 # Ожидаемый результат: "pi_early_warning.js?v=23"
 
 # 3.3. Деплой на app.heyslab.ru (через ваш CI/CD)
-# Например: rsync, Vercel, Netlify, etc.
+# Через основной workflow `.github/workflows/deploy-yandex.yml`.
 ```
 
 ### 4. Тестирование

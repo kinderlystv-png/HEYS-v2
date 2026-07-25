@@ -816,7 +816,7 @@ refactor(core): simplify event handling logic
 <h3>🚀 Next-Generation Gaming Experience Platform</h3>
 
 [Documentation](https://kinderlystv-png.github.io/HEYS-v2/) •
-[Demo](https://heys-demo.vercel.app) •
+[Demo](https://try.heyslab.ru) •
 [Report Bug](https://github.com/kinderlystv-png/HEYS-v2/issues) •
 [Request Feature](https://github.com/kinderlystv-png/HEYS-v2/discussions)
 

@@ -54,7 +54,6 @@ const ALLOWED_ORIGINS = new Set([
   'https://www.heyslab.ru',
   'https://app.heyslab.ru',
   'https://heys-static.website.yandexcloud.net',
-  'https://heys-v2-web.vercel.app',
   ...(ALLOW_LOCALHOST_ORIGINS ? [
     'http://localhost:3001',
     'http://127.0.0.1:3001',
@@ -498,7 +497,6 @@ const MOBILE_WEB_ALLOWED_RETURN_HOSTS = new Set([
   'heyslab.ru',
   'www.heyslab.ru',
   'heys-static.website.yandexcloud.net',
-  'heys-v2-web.vercel.app',
   ...(ALLOW_LOCALHOST_ORIGINS ? ['localhost', '127.0.0.1'] : []),
 ]);
 

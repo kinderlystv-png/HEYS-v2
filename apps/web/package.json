@@ -12,7 +12,6 @@
     "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
     "build:dist": "vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp react-bundle.js dist/ && mkdir -p dist/styles/modules && cp styles/*.css dist/styles/ && cp styles/modules/*.css dist/styles/modules/ && cp -r advice/*.js dist/advice/ && cp -r day/*.js dist/day/ && cp -r widgets/*.js dist/widgets/ && mkdir -p dist/hobby && cp -r hobby/* dist/hobby/",
     "build:react": "npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify --outfile=react-bundle.js --target=es2020",
-    "build:vercel": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/ && mkdir -p dist/hobby && cp -r hobby/* dist/hobby/",
     "bundle:fingers": "node scripts/bundle-fingers.cjs",
     "bundle:mobility": "node scripts/bundle-mobility.cjs",
     "check:mobility-map": "node mobility/methodology/tools/impl-coverage.mjs",

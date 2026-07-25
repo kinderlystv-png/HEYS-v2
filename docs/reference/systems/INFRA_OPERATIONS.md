@@ -1,6 +1,6 @@
 # Инфраструктура и эксплуатация
 
-> **Статус:** repository contracts и YC functions/triggers проверены 2026-07-18
+> **Статус:** repository contracts и YC functions/triggers проверены 2026-07-25
 > **Охват:** frontend delivery, Cloud Functions deploy, gateway, secrets,
 > database access, monitoring и release evidence **Не подтверждено:**
 > DNS/VM/CDN, сертификаты, GitHub secrets, последние workflow runs и публикация
@@ -105,6 +105,11 @@ release-flow сохраняет существующий explicit ensure для 
 Runtime code загружает DB/App/S3 secrets из Lockbox через общую модель overlay.
 Локальный `.env`/GitHub secrets нужны deploy tooling, но raw production secrets
 не должны становиться постоянными function env values.
+
+Production CORS и mobile return-host allowlists содержат только домены HEYS на
+Yandex Cloud (`heyslab.ru`, `app.heyslab.ru`, статический origin) и явно
+включаемые localhost-origin. Домены прежних хостингов не входят в runtime
+allowlists.
 
 Production SQL выполняется через `scripts/db/psql.sh`: wrapper получает пароль
 из Lockbox при отсутствии `PGPASSWORD` и включает TLS verification. Изменения

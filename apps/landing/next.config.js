@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Static export for Vercel
+  output: 'export', // Static export for Yandex Object Storage
   images: {
     unoptimized: true, // For static export
   },

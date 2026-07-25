@@ -22,7 +22,7 @@
 **Задачи (порядок выполнения)**:
 | № | Задача | Время | Критичность |
 |---|--------|-------|-------------|
-| 0 | Cache-Control в vercel.json | 2 мин | Страховка |
+| 0 | Cache-Control в конфиге хостинга | 2 мин | Страховка |
 | 0.5 | **Фикс forceUpdateAndReload()** | 5 мин | **ГЛАВНЫЙ ФИКС** |
 | 1 | Счётчик попыток + cooldown | 10 мин | Защита |
 | 2 | UI для ручного обновления | 10 мин | UX |
@@ -73,7 +73,7 @@
 
 ### Сетевые/кэш проверки:
 
-- [x] **HTTP кеш version.json**: SW уже не кэширует, добавим `Cache-Control` в vercel.json для страховки
+- [x] **HTTP кеш version.json**: SW уже не кэширует, добавим `Cache-Control` в конфиге хостинга для страховки
 - [x] **SW scope**: ✅ Регистрируется как `/sw.js` (строка 191), scope = `/`
 - [x] **Мульти-вкладки**: Пока игнорируем (редкий кейс)
 
@@ -119,7 +119,7 @@
 |------|--------------|
 | `apps/web/heys_app_v12.js` | `checkServerVersion()`, `runVersionGuard()`, `isUpdateLocked()`, `forceUpdateAndReload()` |
 | `apps/web/public/sw.js` | `staleWhileRevalidate()` (строка 215), message handler (строка 89), `PRECACHE_URLS` |
-| `apps/web/vercel.json` | Headers для статики — влияют на HTTP-кэш браузера |
+| Конфиг статического хостинга | Headers для статики — влияют на HTTP-кэш браузера |
 
 ---
 
@@ -127,7 +127,7 @@
 
 ### 0. Cache-Control для version.json (страховка)
 
-**Файл**: `apps/web/vercel.json`
+**Файл**: конфиг статического хостинга
 
 **Примечание**: SW уже не кэширует version.json, но добавим header для страховки от HTTP-кэша браузера.
 
@@ -387,7 +387,7 @@ if (window.location.search.includes('_v=')) {
 
 - [x] `forceUpdateAndReload()` НЕ делает setTimeout reload — полагается на существующий глобальный `controllerchange` listener
 - [x] Fallback 5 сек с cache-bust для редких случаев когда `controllerchange` не срабатывает
-- [x] `vercel.json` содержит `Cache-Control: no-cache` для `/version.json`
+- [x] Конфиг хостинга содержит `Cache-Control: no-cache` для `/version.json`
 - [ ] Нет бесконечного цикла обновлений (требует тест после деплоя)
 - [x] После 2 неудачных попыток — ручной промпт
 - [x] Успешное обновление сбрасывает счётчик
@@ -402,7 +402,7 @@ if (window.location.search.includes('_v=')) {
 | Риск | Вероятность | Импакт | Митигация |
 |------|-------------|--------|-----------|
 | `controllerchange` не срабатывает | Низкая | Высокий | Fallback с timeout 3 сек + cache-bust параметр |
-| CDN/браузер кешит `version.json` | Низкая (SW bypass есть) | Средний | `Cache-Control` в vercel.json для страховки |
+| CDN/браузер кешит `version.json` | Низкая (SW bypass есть) | Средний | `Cache-Control` в конфиге хостинга для страховки |
 | Мульти-вкладки троггерят reload | Низкая | Низкий | Пока игнорируем — `controllerchange` срабатывает один раз |
 | SW не очищает старые кеши | ~~Средняя~~ **Не проблема** | — | Новый SW при install создаёт новый кэш, старый удаляется при activate |
 
@@ -436,4 +436,4 @@ git checkout HEAD -- apps/web/heys_app_v12.js apps/web/public/sw.js
 - `apps/web/heys_app_v12.js` — основная логика обновления
 - `apps/web/public/sw.js` — Service Worker
 - `apps/web/public/version.json` — файл версии (генерируется при билде)
-- `apps/web/vercel.json` — HTTP headers (Cache-Control для version.json)
+- Конфиг статического хостинга — HTTP headers (Cache-Control для version.json)

@@ -350,7 +350,6 @@ const ALLOWED_ORIGINS = [
   'https://www.heyslab.ru',
   'https://app.heyslab.ru',
   'https://heys-static.website.yandexcloud.net',
-  'https://heys-v2-web.vercel.app',
   ...(ALLOW_LOCALHOST_ORIGINS ? [
     'http://localhost:3001',
     'http://127.0.0.1:3001',
