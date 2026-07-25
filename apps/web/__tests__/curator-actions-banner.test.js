@@ -46,6 +46,7 @@ function loadBanner({ url = '/' } = {}) {
     },
     utils: {
       lsSet: vi.fn((key, value) => Storage.prototype.setItem.call(window.localStorage, key, JSON.stringify(value))),
+      lsGet: vi.fn(() => null),
     },
     ui: {
       switchTab: vi.fn(),
@@ -243,6 +244,45 @@ describe('CuratorActionsBanner review modal', () => {
       '5 июля',
       '4 июля',
     ]);
+  });
+
+  it('hides and auto-acks a curator meal that the client already deleted', async () => {
+    const breakfast = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'breakfast', meal_label: 'Завтрак', items: [{ item_id: 'oats', name: 'Овсянка' }] },
+    ]);
+    const deletedLunch = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T09:05:00.000Z', [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'lunch', meal_label: 'Обед', items: [{ item_id: 'soup', name: 'Суп' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.utils.lsGet.mockReturnValue({
+      meals: [{ id: 'breakfast', items: [{ id: 'oats', name: 'Овсянка' }] }],
+      deletedMealIds: { lunch: Date.now() },
+    });
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([deletedLunch, breakfast]));
+
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Завтрак');
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Обед');
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledWith({
+      entryIds: ['33333333-3333-4333-8333-333333333333'],
+      untilTs: '2026-07-05T09:05:00.000Z',
+    });
+  });
+
+  it('hides products that the client removed from a curator-added meal', () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      {
+        type: 'meal_item_added', date: '2026-07-05', meal_id: 'lunch', meal_label: 'Обед', count: 2,
+        items: [{ item_id: 'soup', name: 'Суп' }, { item_id: 'bread', name: 'Хлеб' }],
+      },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.utils.lsGet.mockReturnValue({ meals: [{ id: 'lunch', items: [{ id: 'soup', name: 'Суп' }] }] });
+
+    const [reconciled] = banner._test.reconcileEntriesWithCurrentDays([entry]);
+
+    expect(reconciled.actions.actions[0]).toMatchObject({ count: 1, items: [{ item_id: 'soup', name: 'Суп' }] });
   });
 
   it('postpones opening while the tab is hidden and opens on visibilitychange', async () => {

@@ -468,6 +468,64 @@
     return { visible, invisible };
   }
 
+  function readCurrentDayForAction(entry, action) {
+    const date = targetDateForAction(entry, action);
+    if (!date) return null;
+    try {
+      const getter = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
+        ? HEYS.utils.lsGet.bind(HEYS.utils)
+        : null;
+      return getter ? getter(`heys_dayv2_${date}`, null) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function reconcileMealAction(entry, action) {
+    if (!action || !['meal_added', 'meal_item_added', 'meal_item_changed'].includes(action.type)) {
+      return action;
+    }
+    if (!action.meal_id) return action;
+    const day = readCurrentDayForAction(entry, action);
+    if (!day || !Array.isArray(day.meals)) return action;
+    const meal = day.meals.find(candidate => candidate && candidate.id === action.meal_id);
+    if (!meal) return null;
+
+    const currentItems = Array.isArray(meal.items) ? meal.items : [];
+    if (action.type === 'meal_item_changed') {
+      if (!action.item_id) return action;
+      const currentItem = currentItems.find(item => item && item.id === action.item_id);
+      if (!currentItem) return null;
+      if (action.to_grams != null && Number(currentItem.grams) !== Number(action.to_grams)) return null;
+      if (action.to_name && currentItem.name !== action.to_name) return null;
+      return action;
+    }
+
+    const sourceItems = Array.isArray(action.items) ? action.items : [];
+    const currentItemIds = new Set(currentItems.map(item => item && item.id).filter(Boolean));
+    const items = sourceItems.filter(item => !item?.item_id || currentItemIds.has(item.item_id));
+    if (sourceItems.length > 0 && items.length === 0) return null;
+    return {
+      ...action,
+      items,
+      ...(action.type === 'meal_item_added' ? { count: items.length || action.count } : {}),
+    };
+  }
+
+  function reconcileEntriesWithCurrentDays(entries) {
+    return (entries || []).map((entry) => {
+      const actions = entry?.actions?.actions;
+      if (!Array.isArray(actions)) return entry;
+      const currentActions = actions
+        .map(action => reconcileMealAction(entry, action))
+        .filter(Boolean);
+      return {
+        ...entry,
+        actions: { ...entry.actions, actions: currentActions },
+      };
+    });
+  }
+
   // ─── Local state: pending ack + snooze ────────────────────────────
 
   function normalizeAckQueue(queue, nowMs = Date.now()) {
@@ -1003,18 +1061,19 @@
       const serverNowMs = parseTsMs(res.server_now) || Date.now();
       const rawEntries = Array.isArray(res.entries) ? res.entries : [];
       const filtered = filterEntriesAfterPendingAck(rawEntries);
-      const split = splitVisibleEntries(filtered);
+      const reconciled = reconcileEntriesWithCurrentDays(filtered);
+      const split = splitVisibleEntries(reconciled);
 
       if (split.invisible.length > 0) {
         await autoAckInvisibleEntries(split.invisible);
       }
       if (split.visible.length === 0) {
-        if (rawEntries.length === 0) {
-          _entries = [];
-          _reviewEntries = [];
-          _hasMore = false;
-          clearReviewTimer();
-        }
+        _entries = [];
+        _reviewEntries = [];
+        _renderedEntries = [];
+        _hasMore = false;
+        clearReviewTimer();
+        removeExistingModal();
         return;
       }
 
@@ -1093,6 +1152,7 @@
       actionText,
       dedupAndCollapse,
       splitVisibleEntries,
+      reconcileEntriesWithCurrentDays,
       computeLiveDelayMs,
       targetDateFromEntries,
       filterEntriesAfterPendingAck,
