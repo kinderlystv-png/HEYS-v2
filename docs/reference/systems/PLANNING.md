@@ -51,22 +51,43 @@ Phase A / refreshPlanningFromCloud → merge + tombstones + anti-wipe guards
 Книжные саммари не входят в Planning Store и не синхронизируются как
 пользовательские данные. Каждая книга регистрируется отдельным source-файлом
 через `HEYS.Reading.registerBook`; порядок загрузки задаёт
-`READING_BOOK_SOURCES`. Контракт Reading v2 требует после начального вердикта
+`READING_BOOK_SOURCES`. Контракт Reading v3 требует после начального вердикта
 два разных блока: `quick-summary` с пересказом пяти–семи тезисов и
 `applicability` с редакторской оценкой силы, условий, границ и проверочного
-эксперимента. Команды `pnpm reading:new` и `pnpm reading:check` поддерживают
-manifest и проверяют этот контракт до публикации. Подробности реализации и точки
-ревью зафиксированы в
-[`READING_CONTRACT_V2_PROTOCOL.md`](../../implementation/READING_CONTRACT_V2_PROTOCOL.md).
-Размер шрифта и тема ридера сохраняются только локально в
+эксперимента. Ридер повторно использует тот же `quick-summary` в свёрнутом
+финальном блоке «Книга в N тезисах», поэтому второй авторский список в схеме не
+нужен. Команды `pnpm reading:new` и `pnpm reading:check` поддерживают manifest и
+проверяют этот контракт до публикации. Обзор адресован самостоятельному
+читателю: быстрый слой содержит все существенные тезисы, модели, ограничения и
+вердикт, а полный слой добавляет основания и примеры. HEYS обозначает
+редакционный голос, а не адаптацию под внутренний продуктовый контекст.
+Персональная применимость хранится отдельно в client-scoped ключе
+`heys_reading_personalization_v1`. Профиль Полтавского содержит только
+содержательные связи с Kinderly и/или HEYS: до восьми связанных с книгой
+вопросов, без обязательного покрытия каталога и выдуманной конкретики. Ридер
+получает overlay через session-safe KV; публичный каталог, поиск, «Главное» и
+расчёт времени его не учитывают. Все подходящие текстовые поля содержат
+дословные `highlights`: ридер показывает их маркером и строит из них режим
+«Главное», не меняя прогресс полного текста. Подробности — в
+[`READING_CONTRACT_V3_PROTOCOL.md`](../../implementation/READING_CONTRACT_V3_PROTOCOL.md).
+Обязательный `depthProfile` задаёт диапазон полного текста: `compact` — 1 200–1
+700 слов, `standard` — 1 700–2 400, `deep` — 2 400–3 400. Профиль не меняет
+быстрый слой; дополнительный контекст остаётся во втором слое `details`. Размер
+шрифта, тема, видимость и цвет маркера сохраняются только локально в
 `heys_reading_preferences_v1`; это UI-настройка, она не входит в Planning Store
 и не отправляется в cloud sync. `editorialRank` управляет сортировкой
-«Рекомендуемые», `sourceIds` отображаются в reader как нумерованные сноски, а
-блок `details` даёт единый аккордеон для вторичного контекста. Каждый раздел
-начинается открытым тезисом; длинные разделы распределяют механику,
-доказательства и оговорки по аккордеонам, а ключевые выводы остаются открытыми.
-Reader строит содержание по heading-блокам и поддерживает прямую ссылку через
-query-параметр `reading=<book-id>`. Позиция и процент чтения хранятся локально в
+«Рекомендуемые». Необязательное `editorialRole: 'popular-canon'` отмечает книгу,
+включённую в библиотеку из-за широкой известности и влияния: карточка показывает
+спокойную плашку на обложке, а reader поясняет, что она не означает редакционную
+рекомендацию. Роль не заменяет темы и теги. `sourceIds` отображаются в reader
+как нумерованные сноски, а блок `details` даёт единый аккордеон для вторичного
+контекста. Каждый раздел начинается открытым тезисом; длинные разделы
+распределяют механику, доказательства и оговорки по аккордеонам, а ключевые
+выводы остаются открытыми. Карточки библиотеки используют
+`content-visibility: auto`, чтобы рост каталога не заставлял браузер
+перерисовывать элементы вне viewport при прокрутке. Reader строит содержание по
+heading-блокам и поддерживает прямую ссылку через query-параметр
+`reading=<book-id>`. Позиция и процент чтения хранятся локально в
 `heys_reading_progress_v1`, используются для действия «Продолжить чтение» и не
 входят в Planning Store или cloud sync. При поиске карточка показывает фрагмент
 блока с совпадением вместо общего вердикта. Опубликованное саммари обязано
@@ -162,6 +183,10 @@ pending local mutation, tombstones и anti-wipe проверки могут со
     разные типы блоков и редакторские голоса.
 12. Раздел начинается открытым тезисом; существенная критика, аудитория и
     вердикт об оригинале не зависят от раскрытия `details`.
+13. Объём опубликованного саммари соответствует обязательному `depthProfile`, но
+    быстрый слой и критические открытые выводы не зависят от профиля.
+14. Персональный Reading overlay не входит в публичный каталог и показывается
+    только при совпадении текущего `clientId` с client-scoped данными.
 
 ## Ошибки и защитные механизмы
 
@@ -201,23 +226,26 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 - `apps/web/__tests__/planning-home-subtab.test.js` — навигационный контракт.
 - `apps/web/__tests__/planning-task-matrix.test.js` — группировка матрицы и
   контракт календарных слотов задачи на выбранные даты.
-- `apps/web/__tests__/reading-authoring-contract.test.js` — manifest, объём,
-  быстрый слой, применимость, источники, review и ритм раскрытий.
+- `apps/web/__tests__/reading-authoring-contract.test.js` — manifest, профили
+  объёма, быстрый слой, применимость, источники, review и ритм раскрытий.
 - `apps/web/__tests__/planning-*-ui.test.js` и render tests — ключевые
   UI-сценарии.
 
 ## Facts Table
 
-| ID  | Утверждение                                                                     | Проверка                                                                                                                 | Статус               |
-| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| P1  | Ключи и storage classes объявлены в planning store                              | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                      | проверено 2026-07-17 |
-| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`                | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                   | проверено 2026-07-17 |
-| P3  | Cloud refresh получает batch и применяет tombstones до основных данных          | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                 | проверено 2026-07-17 |
-| P4  | Pending local mutation блокирует cloud overwrite                                | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                         | проверено 2026-07-17 |
-| P5  | Active chrono timer local-only, completed entry cloud-synced                    | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                  | проверено 2026-07-17 |
-| P6  | Planning keys включены в Phase A                                                | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                    | проверено 2026-07-17 |
-| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                               | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                    | проверено 2026-07-17 |
-| P8  | Application и agent ingest входят в RPC handler                                 | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js` | проверено 2026-07-17 |
-| P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                 | проверено 2026-07-18 |
-| P10 | Published Reading требует быстрый пересказ и отдельную проверку применимости    | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                               | проверено 2026-07-25 |
-| P11 | Длинные разделы Reading идут от открытого тезиса к вторичному `details`         | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                               | проверено 2026-07-25 |
+| ID  | Утверждение                                                                                     | Проверка                                                                                                                                                     | Статус               |
+| --- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| P1  | Ключи и storage classes объявлены в planning store                                              | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                                                          | проверено 2026-07-17 |
+| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`                                | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                                                       | проверено 2026-07-17 |
+| P3  | Cloud refresh получает batch и применяет tombstones до основных данных                          | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                                                     | проверено 2026-07-17 |
+| P4  | Pending local mutation блокирует cloud overwrite                                                | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                                                             | проверено 2026-07-17 |
+| P5  | Active chrono timer local-only, completed entry cloud-synced                                    | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                                                      | проверено 2026-07-17 |
+| P6  | Planning keys включены в Phase A                                                                | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                                                        | проверено 2026-07-17 |
+| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                                               | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                                                        | проверено 2026-07-17 |
+| P8  | Application и agent ingest входят в RPC handler                                                 | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js`                                     | проверено 2026-07-17 |
+| P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором                 | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                                                     | проверено 2026-07-18 |
+| P10 | Published Reading требует быстрый пересказ и отдельную проверку применимости                    | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                   | проверено 2026-07-25 |
+| P11 | Длинные разделы Reading идут от открытого тезиса к вторичному `details`                         | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                   | проверено 2026-07-25 |
+| P12 | Объём Reading проверяется по обязательному `depthProfile`                                       | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                             | проверено 2026-07-25 |
+| P13 | Смысловые `highlights` дословны, ограничены по плотности и питают «Главное»                     | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check` | проверено 2026-07-25 |
+| P14 | Профиль Полтавского содержит только содержательные вопросы и загружается через client-scoped KV | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check` | проверено 2026-07-25 |
