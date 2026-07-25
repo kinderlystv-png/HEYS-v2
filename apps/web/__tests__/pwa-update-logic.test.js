@@ -373,7 +373,7 @@ describe('PWA update protection', () => {
   });
 
   describe('PWA orientation lock', () => {
-    it('keeps installed PWA in portrait without locking ordinary browser tabs', () => {
+    it('locks supported PWAs and gives iOS phones a portrait fallback', () => {
       const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
       const platformPath = existsSync(webCwdPath)
         ? webCwdPath
@@ -390,6 +390,11 @@ describe('PWA update protection', () => {
       expect(platformSource).toContain('window.matchMedia?.(`(display-mode: ${mode})`).matches');
       expect(platformSource).toContain('navigator.standalone === true');
       expect(platformSource).toContain("await lockOrientation('portrait-primary')");
+      expect(platformSource).toContain('if (isAppleMobileWebKit() || !isInstalledPwa()');
+      expect(platformSource).toContain('if (!isAppleMobileWebKit() || !isInstalledPwa() || !document.body');
+      expect(platformSource).toContain("gate.id = 'heys-mobile-landscape-gate'");
+      expect(platformSource).toContain('Верните телефон в вертикальное положение');
+      expect(platformSource).toContain('(orientation: landscape) and (max-height: 520px) and (hover: none) and (pointer: coarse)');
       expect(platformSource).toContain("document.addEventListener('pointerdown', retryInstalledPwaPortraitFromGesture");
       expect(platformSource).toContain("document.addEventListener('visibilitychange'");
     });

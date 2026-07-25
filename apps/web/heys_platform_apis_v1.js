@@ -2775,8 +2775,17 @@
     );
   }
 
+  function isAppleMobileWebKit() {
+    const ua = String(navigator.userAgent || '');
+    return /iPhone|iPod|iPad/i.test(ua)
+      || (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+  }
+
   async function enforceInstalledPwaPortrait() {
-    if (!isInstalledPwa() || !screen.orientation?.lock || installedPwaPortraitLockPending) return;
+    // iOS exposes parts of Screen Orientation API, but a web app cannot reliably
+    // lock the device there. Do not trigger a failed/system-facing request; the
+    // landscape fallback below gives the user a stable portrait-only experience.
+    if (isAppleMobileWebKit() || !isInstalledPwa() || !screen.orientation?.lock || installedPwaPortraitLockPending) return;
     installedPwaPortraitLockPending = true;
     try {
       const result = await lockOrientation('portrait-primary');
@@ -2822,6 +2831,52 @@
       void enforceInstalledPwaPortrait();
     }
   });
+
+  function installMobileLandscapeFallback() {
+    if (!isAppleMobileWebKit() || !isInstalledPwa() || !document.body || document.getElementById('heys-mobile-landscape-gate')) return;
+
+    const gate = document.createElement('div');
+    gate.id = 'heys-mobile-landscape-gate';
+    gate.setAttribute('role', 'status');
+    gate.setAttribute('aria-live', 'polite');
+    gate.setAttribute('aria-hidden', 'true');
+    gate.innerHTML = [
+      '<div aria-hidden="true" style="width:44px;height:70px;border:3px solid currentColor;border-radius:10px;position:relative;box-sizing:border-box">',
+      '<span style="position:absolute;left:50%;bottom:5px;width:5px;height:5px;border-radius:50%;background:currentColor;transform:translateX(-50%)"></span>',
+      '</div>',
+      '<strong style="font-size:20px;line-height:1.25">Верните телефон в вертикальное положение</strong>',
+      '<span style="max-width:280px;font-size:14px;line-height:1.45;color:#667085">HEYS продолжит с того же места.</span>',
+    ].join('');
+    Object.assign(gate.style, {
+      alignItems: 'center',
+      background: '#f8fbf8',
+      color: '#28372f',
+      flexDirection: 'column',
+      gap: '18px',
+      inset: '0',
+      justifyContent: 'center',
+      padding: 'max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left))',
+      position: 'fixed',
+      textAlign: 'center',
+      zIndex: '2147483647',
+    });
+    document.body.appendChild(gate);
+
+    const syncGate = () => {
+      const landscapePhone = window.matchMedia?.('(orientation: landscape) and (max-height: 520px) and (hover: none) and (pointer: coarse)').matches === true;
+      gate.style.display = landscapePhone ? 'flex' : 'none';
+      gate.setAttribute('aria-hidden', landscapePhone ? 'false' : 'true');
+    };
+    syncGate();
+    window.addEventListener('resize', syncGate, { passive: true });
+    window.addEventListener('orientationchange', syncGate, { passive: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installMobileLandscapeFallback, { once: true });
+  } else {
+    installMobileLandscapeFallback();
+  }
 
   // === Fullscreen API ===
   // Управление полноэкранным режимом
