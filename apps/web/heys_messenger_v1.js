@@ -21,6 +21,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const MAX_VOICE_DURATION_MS = 5 * 60 * 1000;
   const MIN_VOICE_BYTES = 1024;
   const THREAD_PAGE_LIMIT = 50;
+  const KEYBOARD_CONFIRM_DELAY_MS = 900;
+  const KEYBOARD_VIEWPORT_MIN_SHRINK_PX = 96;
   const ACK_CONFIRMING_ERROR = 'Не удалось подтвердить отметку. Проверяем автоматически…';
   const ACK_FAILED_ERROR = 'Не удалось изменить отметку. Повторите попытку.';
 
@@ -212,8 +214,89 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function focusMessageInputFromGesture(event, iosDevice = isIOSDevice()) {
     const input = event?.currentTarget;
     if (!iosDevice || !input || input.disabled || typeof input.focus !== 'function') return false;
-    if (document.activeElement !== input) input.focus();
-    return true;
+    try {
+      if (document.activeElement !== input) input.focus();
+    } catch {
+      return false;
+    }
+    return document.activeElement === input;
+  }
+
+  function getKeyboardSurface({
+    iosDevice = isIOSDevice(),
+    standalone = global.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true,
+  } = {}) {
+    if (!iosDevice) return 'other';
+    return standalone ? 'ios-pwa' : 'ios-browser';
+  }
+
+  function getKeyboardViewportSnapshot({
+    viewport = global.visualViewport,
+    innerHeight = global.innerHeight,
+    clientHeight = document.documentElement?.clientHeight,
+  } = {}) {
+    const viewportHeight = Number(viewport?.height);
+    const layoutHeight = Math.max(
+      Number(innerHeight) || 0,
+      Number(clientHeight) || 0,
+      Number.isFinite(viewportHeight) ? viewportHeight : 0,
+    );
+    return {
+      supported: Number.isFinite(viewportHeight) && viewportHeight > 0,
+      viewportHeight: Number.isFinite(viewportHeight) ? viewportHeight : layoutHeight,
+      layoutHeight,
+      offsetTop: Math.max(0, Number(viewport?.offsetTop) || 0),
+    };
+  }
+
+  function hasKeyboardViewportEvidence(baseline, current) {
+    if (!baseline?.supported || !current?.supported) return false;
+    const threshold = Math.max(
+      KEYBOARD_VIEWPORT_MIN_SHRINK_PX,
+      Math.min(150, Math.round((baseline.viewportHeight || baseline.layoutHeight || 0) * 0.14)),
+    );
+    const heightShrink = Math.max(0, Number(baseline.viewportHeight) - Number(current.viewportHeight));
+    const currentInset = Math.max(
+      0,
+      Number(current.layoutHeight) - Number(current.viewportHeight) - Number(current.offsetTop || 0),
+    );
+    return Math.max(heightShrink, currentInset) >= threshold;
+  }
+
+  function classifyKeyboardAttempt({
+    disabled = false,
+    active = false,
+    viewportVisible = false,
+    viewportSupported = false,
+    inputObserved = false,
+  } = {}) {
+    if (inputObserved || viewportVisible) return null;
+    if (disabled) return 'composer_disabled';
+    if (!active) return 'focus_rejected';
+    if (viewportSupported) return 'viewport_unchanged';
+    return 'keyboard_unconfirmed';
+  }
+
+  function getKeyboardDiagnostic(code) {
+    const details = {
+      composer_disabled: {
+        detail: 'Поле пока недоступно: сообщение отправляется.',
+        supportCode: 'KB-IOS-DISABLED',
+      },
+      focus_rejected: {
+        detail: 'Поле не получило фокус.',
+        supportCode: 'KB-IOS-FOCUS',
+      },
+      viewport_unchanged: {
+        detail: 'Поле активно, но показ клавиатуры не удалось подтвердить.',
+        supportCode: 'KB-IOS-VIEWPORT',
+      },
+      keyboard_unconfirmed: {
+        detail: 'Поле активно, но показ клавиатуры не удалось подтвердить.',
+        supportCode: 'KB-IOS-UNCONFIRMED',
+      },
+    };
+    return details[code] ? { code, ...details[code] } : null;
   }
 
   async function verifyMessageMutation(api, options) {
@@ -1092,6 +1175,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [sending, setSending] = useState(false);
     const [input, setInput] = useState('');
     const [inputFocused, setInputFocused] = useState(false);
+    const [keyboardDiagnostic, setKeyboardDiagnostic] = useState(null);
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showOldMessages, setShowOldMessages] = useState(false);
@@ -1110,6 +1194,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [pendingAckMessageIds, setPendingAckMessageIds] = useState(() => new Set());
     const threadRef = useRef(null);
     const inputRef = useRef(null);
+    const keyboardAttemptRef = useRef(null);
+    const keyboardAttemptIdRef = useRef(0);
+    const keyboardAttemptTimerRef = useRef(null);
+    const lastKeyboardFailureRef = useRef(null);
     const fileInputRef = useRef(null);
     const recorderRef = useRef(null);
     const recordChunksRef = useRef([]);
@@ -1138,6 +1226,132 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       threadContextKeyRef.current = threadContextKey;
       threadGenerationRef.current += 1;
     }
+
+    const clearKeyboardAttemptTimer = useCallback(() => {
+      if (!keyboardAttemptTimerRef.current) return;
+      clearTimeout(keyboardAttemptTimerRef.current);
+      keyboardAttemptTimerRef.current = null;
+    }, []);
+
+    const traceKeyboardEvent = useCallback((eventName, attempt, reason, level = 'info') => {
+      try {
+        HEYS.LogTrace?.event?.(eventName, {
+          source: 'messenger',
+          status: level === 'warn' ? 'degraded' : 'ok',
+          screen: 'messenger',
+          reason,
+          mode: attempt?.surface || getKeyboardSurface(),
+          attempt: Number(attempt?.id || 0),
+        }, level);
+      } catch { /* diagnostics must not affect the composer */ }
+    }, []);
+
+    const confirmKeyboardAttempt = useCallback((reason) => {
+      const attempt = keyboardAttemptRef.current;
+      clearKeyboardAttemptTimer();
+      keyboardAttemptRef.current = null;
+      setKeyboardDiagnostic(null);
+      if (lastKeyboardFailureRef.current) {
+        const failure = lastKeyboardFailureRef.current;
+        lastKeyboardFailureRef.current = null;
+        traceKeyboardEvent('messenger_keyboard_recovered', attempt || failure, reason || failure.code, 'info');
+      }
+    }, [clearKeyboardAttemptTimer, traceKeyboardEvent]);
+
+    const evaluateKeyboardAttempt = useCallback((attemptId) => {
+      const attempt = keyboardAttemptRef.current;
+      if (!attempt || attempt.id !== attemptId) return;
+      keyboardAttemptTimerRef.current = null;
+      const inputElement = inputRef.current;
+      const currentViewport = getKeyboardViewportSnapshot();
+      const code = classifyKeyboardAttempt({
+        disabled: !!inputElement?.disabled,
+        active: document.activeElement === inputElement,
+        viewportVisible: hasKeyboardViewportEvidence(attempt.baseline, currentViewport),
+        viewportSupported: currentViewport.supported,
+        surface: attempt.surface,
+      });
+      if (!code) {
+        confirmKeyboardAttempt('keyboard-visible');
+        return;
+      }
+      const diagnostic = getKeyboardDiagnostic(code);
+      if (!diagnostic) return;
+      const next = { ...diagnostic, attempt: attempt.id, surface: attempt.surface };
+      setKeyboardDiagnostic(next);
+      if (lastKeyboardFailureRef.current?.attempt !== attempt.id) {
+        lastKeyboardFailureRef.current = next;
+        traceKeyboardEvent('messenger_keyboard_failed', attempt, code, 'warn');
+      }
+    }, [confirmKeyboardAttempt, traceKeyboardEvent]);
+
+    const scheduleKeyboardAttemptCheck = useCallback((attempt) => {
+      clearKeyboardAttemptTimer();
+      keyboardAttemptTimerRef.current = setTimeout(() => {
+        evaluateKeyboardAttempt(attempt.id);
+      }, KEYBOARD_CONFIRM_DELAY_MS);
+    }, [clearKeyboardAttemptTimer, evaluateKeyboardAttempt]);
+
+    const beginKeyboardAttempt = useCallback((trigger = 'gesture') => {
+      if (!isIOSDevice()) return null;
+      const current = keyboardAttemptRef.current;
+      const now = Date.now();
+      if (current && now - current.startedAt < 250) return current;
+      const attempt = {
+        id: keyboardAttemptIdRef.current + 1,
+        trigger,
+        surface: getKeyboardSurface(),
+        baseline: getKeyboardViewportSnapshot(),
+        startedAt: now,
+      };
+      keyboardAttemptIdRef.current = attempt.id;
+      keyboardAttemptRef.current = attempt;
+      setKeyboardDiagnostic(null);
+      scheduleKeyboardAttemptCheck(attempt);
+      return attempt;
+    }, [scheduleKeyboardAttemptCheck]);
+
+    const handleKeyboardGestureStart = useCallback(() => {
+      beginKeyboardAttempt('gesture');
+    }, [beginKeyboardAttempt]);
+
+    const handleKeyboardClick = useCallback((event) => {
+      const attempt = keyboardAttemptRef.current || beginKeyboardAttempt('click');
+      if (!attempt) return;
+      focusMessageInputFromGesture(event, true);
+    }, [beginKeyboardAttempt]);
+
+    const handleKeyboardRetry = useCallback(() => {
+      const inputElement = inputRef.current;
+      if (!inputElement) return;
+      beginKeyboardAttempt('retry');
+      try {
+        if (document.activeElement === inputElement) inputElement.blur();
+        inputElement.focus();
+      } catch {
+        const attempt = keyboardAttemptRef.current;
+        if (attempt) evaluateKeyboardAttempt(attempt.id);
+      }
+    }, [beginKeyboardAttempt, evaluateKeyboardAttempt]);
+
+    useEffect(() => {
+      const viewport = global.visualViewport;
+      if (!viewport) return undefined;
+      const handleViewportResize = () => {
+        const attempt = keyboardAttemptRef.current;
+        if (!attempt || document.activeElement !== inputRef.current) return;
+        if (hasKeyboardViewportEvidence(attempt.baseline, getKeyboardViewportSnapshot())) {
+          confirmKeyboardAttempt('viewport-resized');
+        }
+      };
+      viewport.addEventListener('resize', handleViewportResize);
+      return () => viewport.removeEventListener('resize', handleViewportResize);
+    }, [confirmKeyboardAttempt]);
+
+    useEffect(() => () => {
+      clearKeyboardAttemptTimer();
+      keyboardAttemptRef.current = null;
+    }, [clearKeyboardAttemptTimer]);
 
     const rememberLocalAudio = useCallback((attachment) => {
       if (!attachment?.localUrl) return;
@@ -1905,6 +2119,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const handleKeyDown = (e) => {
+      confirmKeyboardAttempt('keyboard-input');
       if (shouldSendMessageOnEnter(e)) {
         e.preventDefault();
         handleSend();
@@ -2345,6 +2560,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: [
               'messenger-input-row',
               inputFocused ? 'messenger-input-row--focused' : '',
+              keyboardDiagnostic ? 'messenger-input-row--keyboard-error' : '',
               (input.trim() || pendingPhotos.length > 0 || pendingAudio || recordingState !== 'idle')
                 ? 'messenger-input-row--active'
                 : '',
@@ -2378,21 +2594,66 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               title: recordingState === 'recording' ? 'Остановить запись' : 'Записать голосовое',
             }, recordingState === 'recording' ? '■' : '🎙'),
           ),
-          React.createElement('textarea', {
-            className: 'messenger-input',
-            placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
-            value: input,
-            onChange: (e) => setInput(e.target.value),
-            onTouchStart: focusMessageInputFromGesture,
-            onClick: focusMessageInputFromGesture,
-            onFocus: () => setInputFocused(true),
-            onBlur: () => setInputFocused(false),
-            onKeyDown: handleKeyDown,
-            disabled: sending,
-            rows: 2,
-            maxLength: 2000,
-            ref: inputRef,
-          }),
+          React.createElement(
+            'div',
+            {
+              className: `messenger-input-stack${keyboardDiagnostic ? ' messenger-input-stack--error' : ''}`,
+            },
+            React.createElement('textarea', {
+              className: 'messenger-input',
+              placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
+              value: input,
+              onChange: (e) => {
+                confirmKeyboardAttempt('text-input');
+                setInput(e.target.value);
+              },
+              onBeforeInput: () => confirmKeyboardAttempt('before-input'),
+              onInput: () => confirmKeyboardAttempt('text-input'),
+              onPointerDown: handleKeyboardGestureStart,
+              onTouchStart: handleKeyboardGestureStart,
+              onClick: handleKeyboardClick,
+              onFocus: () => setInputFocused(true),
+              onBlur: () => {
+                setInputFocused(false);
+                clearKeyboardAttemptTimer();
+                keyboardAttemptRef.current = null;
+              },
+              onKeyDown: handleKeyDown,
+              disabled: sending,
+              rows: 2,
+              maxLength: 2000,
+              ref: inputRef,
+              'aria-invalid': keyboardDiagnostic ? 'true' : undefined,
+              'aria-describedby': keyboardDiagnostic ? 'messenger-keyboard-diagnostic' : undefined,
+            }),
+            keyboardDiagnostic && React.createElement(
+              'div',
+              {
+                id: 'messenger-keyboard-diagnostic',
+                className: 'messenger-keyboard-diagnostic',
+                role: 'alert',
+                'aria-live': 'polite',
+              },
+              React.createElement(
+                'div',
+                { className: 'messenger-keyboard-diagnostic__text' },
+                React.createElement('strong', null, 'Не удалось открыть клавиатуру на iPhone.'),
+                React.createElement('span', null, keyboardDiagnostic.detail),
+                React.createElement(
+                  'span',
+                  null,
+                  'Если повтор не поможет, сделайте скриншот и отправьте куратору. ',
+                  React.createElement('b', null, `Код: ${keyboardDiagnostic.supportCode}`),
+                ),
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'messenger-keyboard-diagnostic__retry',
+                onClick: handleKeyboardRetry,
+                disabled: sending,
+              }, 'Повторить'),
+            ),
+          ),
           React.createElement(
             'button',
             {
@@ -2482,10 +2743,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   let inAppUnreadBaseline = null;
   let pageScrollLock = null;
 
-  function isIOSDevice() {
+  function isIOSDevice({
+    platform = typeof navigator !== 'undefined' ? navigator.platform : '',
+    maxTouchPoints = typeof navigator !== 'undefined' ? navigator.maxTouchPoints : 0,
+    vendor = typeof navigator !== 'undefined' ? navigator.vendor : '',
+  } = {}) {
     if (typeof navigator === 'undefined') return false;
-    return /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
-      (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+    const appleWebKitRuntime = /Apple/i.test(vendor || '');
+    const classicIOSPlatform = /^(iPad|iPhone|iPod)$/.test(platform || '');
+    const ipadDesktopMode = platform === 'MacIntel' && Number(maxTouchPoints) > 1;
+    return appleWebKitRuntime && (classicIOSPlatform || ipadDesktopMode);
   }
 
   function lockPageScroll({
@@ -2726,6 +2993,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       formatMessengerError,
       shouldSendMessageOnEnter,
       focusMessageInputFromGesture,
+      getKeyboardSurface,
+      getKeyboardViewportSnapshot,
+      hasKeyboardViewportEvidence,
+      classifyKeyboardAttempt,
+      getKeyboardDiagnostic,
+      isIOSDevice,
       showInAppMessageToast,
       hideInAppMessageToast,
       lockPageScroll,

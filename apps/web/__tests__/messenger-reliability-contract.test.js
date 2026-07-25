@@ -166,6 +166,9 @@ describe('messenger page scroll lock', () => {
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)',
     );
+    vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('iPhone');
+    vi.spyOn(window.navigator, 'vendor', 'get').mockReturnValue('Apple Computer, Inc.');
+    vi.spyOn(window.navigator, 'maxTouchPoints', 'get').mockReturnValue(5);
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 240 });
     document.body.style.position = 'relative';
     document.body.style.overflow = 'auto';
@@ -285,6 +288,7 @@ describe('messenger composer keyboard', () => {
   });
 
   afterEach(() => {
+    document.body.innerHTML = '';
     globalThis.React = originalReact;
     globalThis.ReactDOM = originalReactDOM;
     window.HEYS = originalHEYS;
@@ -307,11 +311,21 @@ describe('messenger composer keyboard', () => {
   it('focuses the textarea synchronously from an iOS user gesture', () => {
     const { focusMessageInputFromGesture } = loadMessengerInternals();
     const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
     const focus = vi.spyOn(textarea, 'focus');
 
     expect(focusMessageInputFromGesture({ currentTarget: textarea }, true)).toBe(true);
     expect(focus).toHaveBeenCalledWith();
     expect(focusMessageInputFromGesture({ currentTarget: textarea }, false)).toBe(false);
+  });
+
+  it('reports a rejected focus instead of treating the focus call as success', () => {
+    const { focusMessageInputFromGesture } = loadMessengerInternals();
+    const textarea = document.createElement('textarea');
+    const focus = vi.spyOn(textarea, 'focus');
+
+    expect(focusMessageInputFromGesture({ currentTarget: textarea }, true)).toBe(false);
+    expect(focus).toHaveBeenCalledWith();
   });
 
   it('does not refocus an already active textarea', () => {
@@ -326,10 +340,89 @@ describe('messenger composer keyboard', () => {
     textarea.remove();
   });
 
-  it('binds iOS focus recovery before the native click fallback', () => {
-    expect(messengerSource).toContain('onTouchStart: focusMessageInputFromGesture');
-    expect(messengerSource).toContain('onClick: focusMessageInputFromGesture');
-    expect(messengerSource).not.toContain('onTouchEnd: focusMessageInput');
+  it('keeps the gesture start passive and performs focus recovery on click', () => {
+    expect(messengerSource).toContain('onPointerDown: handleKeyboardGestureStart');
+    expect(messengerSource).toContain('onTouchStart: handleKeyboardGestureStart');
+    expect(messengerSource).toContain('onClick: handleKeyboardClick');
+    expect(messengerSource).not.toContain('onTouchStart: focusMessageInputFromGesture');
+  });
+
+  it('detects keyboard viewport shrink without mistaking a small viewport change for a keyboard', () => {
+    const { hasKeyboardViewportEvidence } = loadMessengerInternals();
+    const baseline = { supported: true, viewportHeight: 844, layoutHeight: 844, offsetTop: 0 };
+
+    expect(hasKeyboardViewportEvidence(baseline, {
+      supported: true,
+      viewportHeight: 520,
+      layoutHeight: 844,
+      offsetTop: 0,
+    })).toBe(true);
+    expect(hasKeyboardViewportEvidence(baseline, {
+      supported: true,
+      viewportHeight: 790,
+      layoutHeight: 844,
+      offsetTop: 0,
+    })).toBe(false);
+    expect(hasKeyboardViewportEvidence(baseline, {
+      supported: false,
+      viewportHeight: 0,
+      layoutHeight: 844,
+      offsetTop: 0,
+    })).toBe(false);
+  });
+
+  it('classifies focus and keyboard evidence without inventing a system cause', () => {
+    const { classifyKeyboardAttempt } = loadMessengerInternals();
+
+    expect(classifyKeyboardAttempt({ inputObserved: true })).toBeNull();
+    expect(classifyKeyboardAttempt({ viewportVisible: true })).toBeNull();
+    expect(classifyKeyboardAttempt({ disabled: true })).toBe('composer_disabled');
+    expect(classifyKeyboardAttempt({ active: false })).toBe('focus_rejected');
+    expect(classifyKeyboardAttempt({ active: true, viewportSupported: true, surface: 'ios-pwa' }))
+      .toBe('viewport_unchanged');
+    expect(classifyKeyboardAttempt({ active: true, viewportSupported: false, surface: 'ios-browser' }))
+      .toBe('keyboard_unconfirmed');
+  });
+
+  it('distinguishes iOS PWA, browser, and non-iOS surfaces', () => {
+    const { getKeyboardSurface } = loadMessengerInternals();
+
+    expect(getKeyboardSurface({ iosDevice: true, standalone: true }))
+      .toBe('ios-pwa');
+    expect(getKeyboardSurface({ iosDevice: true, standalone: false }))
+      .toBe('ios-browser');
+    expect(getKeyboardSurface({ iosDevice: false, standalone: true }))
+      .toBe('other');
+  });
+
+  it('does not treat Chrome DevTools mobile emulation as a real iOS device', () => {
+    const { isIOSDevice } = loadMessengerInternals();
+
+    expect(isIOSDevice({ platform: 'MacIntel', maxTouchPoints: 1, vendor: 'Google Inc.' }))
+      .toBe(false);
+    expect(isIOSDevice({ platform: 'iPhone', maxTouchPoints: 5, vendor: 'Apple Computer, Inc.' }))
+      .toBe(true);
+    expect(isIOSDevice({ platform: 'MacIntel', maxTouchPoints: 5, vendor: 'Apple Computer, Inc.' }))
+      .toBe(true);
+  });
+
+  it('returns support-safe diagnostics without message or device identifiers', () => {
+    const { getKeyboardDiagnostic } = loadMessengerInternals();
+    const diagnostic = getKeyboardDiagnostic('viewport_unchanged');
+
+    expect(diagnostic).toEqual({
+      code: 'viewport_unchanged',
+      detail: 'Поле активно, но показ клавиатуры не удалось подтвердить.',
+      supportCode: 'KB-IOS-VIEWPORT',
+    });
+    expect(JSON.stringify(diagnostic)).not.toMatch(/client|message|user-agent|token/i);
+  });
+
+  it('binds and cleans up the visual viewport keyboard listener', () => {
+    expect(messengerSource).not.toContain("addEventListener('heys:native-keyboard-state'");
+    expect(messengerSource).toContain("viewport.addEventListener('resize', handleViewportResize)");
+    expect(messengerSource).toContain("viewport.removeEventListener('resize', handleViewportResize)");
+    expect(messengerSource).toContain('clearKeyboardAttemptTimer();');
   });
 });
 
