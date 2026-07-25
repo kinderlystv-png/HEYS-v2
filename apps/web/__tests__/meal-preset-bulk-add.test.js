@@ -264,6 +264,14 @@ describe('Meal preset bulk add', () => {
     expect(currentDay.meals[1].items).toHaveLength(0);
   });
 
+  it('marks a newly created mobile meal as pending before the next modal can open', () => {
+    const mealsSource = readDayMealsSource();
+
+    expect(mealsSource).toContain("HEYS.Day?.markPendingMutation?.(date);");
+    expect(mealsSource).toContain("persistDayData(newDayData, 'create_meal_mobile_flow');");
+    expect(mealsSource).toContain('HEYS.Day?.requestFlush?.({ force: true });');
+  });
+
   it('dispatches meal-flow-finished after a single product add', async () => {
     const setDay = vi.fn((updater) => {
       currentDay = updater(currentDay);
