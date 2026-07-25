@@ -2765,6 +2765,15 @@
     }
   }
 
+  function isInstalledPwa() {
+    return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+  }
+
+  function enforceInstalledPwaPortrait() {
+    if (!isInstalledPwa()) return;
+    void lockOrientation('portrait-primary');
+  }
+
   function unlockOrientation() {
     if (!screen.orientation?.unlock) {
       return { success: false, reason: 'not_supported' };
@@ -2786,6 +2795,11 @@
       return () => screen.orientation?.removeEventListener('change', callback);
     }
   };
+
+  enforceInstalledPwaPortrait();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) enforceInstalledPwaPortrait();
+  });
 
   // === Fullscreen API ===
   // Управление полноэкранным режимом

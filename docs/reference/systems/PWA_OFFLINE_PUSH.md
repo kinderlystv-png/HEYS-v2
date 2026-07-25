@@ -17,6 +17,10 @@
 `HEYS.PWA` — тонкий compatibility facade над update helpers, а не отдельный
 service-worker engine.
 
+Установленная PWA фиксируется в `portrait-primary` через web manifest;
+`HEYS.PlatformAPIs` дополнительно применяет runtime-lock при запуске и возврате
+из фона. Обычная вкладка браузера ориентацию не блокирует.
+
 ## Service Worker lifecycle
 
 1. `registerServiceWorker()` не регистрирует SW на localhost и в demo mode;

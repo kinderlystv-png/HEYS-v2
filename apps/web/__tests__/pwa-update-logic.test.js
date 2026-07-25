@@ -371,4 +371,25 @@ describe('PWA update protection', () => {
       expect(shellSource).toContain('appMode:      ${rt.pwaMode');
     });
   });
+
+  describe('PWA orientation lock', () => {
+    it('keeps installed PWA in portrait without locking ordinary browser tabs', () => {
+      const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
+      const platformPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_platform_apis_v1.js');
+      const platformSource = readFileSync(platformPath, 'utf8');
+      const manifestCwdPath = join(process.cwd(), 'public/manifest.json');
+      const manifestPath = existsSync(manifestCwdPath)
+        ? manifestCwdPath
+        : join(process.cwd(), 'apps/web/public/manifest.json');
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+
+      expect(manifest.orientation).toBe('portrait-primary');
+      expect(platformSource).toContain("window.matchMedia?.('(display-mode: standalone)').matches");
+      expect(platformSource).toContain('navigator.standalone === true');
+      expect(platformSource).toContain("void lockOrientation('portrait-primary')");
+      expect(platformSource).toContain("document.addEventListener('visibilitychange'");
+    });
+  });
 });
