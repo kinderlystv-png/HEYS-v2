@@ -15,6 +15,7 @@ import { describe, test, expect } from 'vitest';
 import { pathToFileURL, fileURLToPath } from 'url';
 import path from 'path';
 import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
 
 // Resolve path relative to THIS test file (not process.cwd()) — pre-push runs
 // vitest from apps/web/ but the script lives at <repo>/scripts/.
@@ -22,6 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/prepare-release.mjs');
 const REPO_ROOT = path.resolve(__dirname, '../../../');
+const DEPLOY_WORKFLOW_PATH = path.join(REPO_ROOT, '.github/workflows/deploy-yandex.yml');
 const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
@@ -157,6 +159,22 @@ describe('--is-release-only-push CLI flag (Phase B integration)', () => {
     // we just verify the script runs and returns a valid exit code (0 or 1).
     const result = runFlag('', '');
     expect([0, 1]).toContain(result);
+  });
+});
+
+describe('deploy workflow checkout scope', () => {
+  const workflow = readFileSync(DEPLOY_WORKFLOW_PATH, 'utf8');
+
+  test('keeps full commit history but omits historical blobs for release range tests', () => {
+    expect(workflow).toMatch(
+      /name: Checkout code[\s\S]*?prepare-release range tests[\s\S]*?fetch-depth: 0\s+filter: blob:none/,
+    );
+  });
+
+  test('uses bounded partial history for classify, build, and fast-path verification', () => {
+    expect(workflow.match(/fetch-depth: 32/g)).toHaveLength(3);
+    expect(workflow.match(/filter: blob:none/g)).toHaveLength(4);
+    expect(workflow).toContain('git fetch --no-tags --prune --unshallow origin');
   });
 });
 

@@ -45,7 +45,7 @@ jobs:
         with:
           # Usually enough to include the currently deployed hash. The classifier
           # deepens below only when production is older than this shallow window.
-          fetch-depth: 256
+          fetch-depth: 32
           # Keep commit history for range classification without downloading
           # historical bundle contents. Current blobs are fetched lazily.
           filter: blob:none
@@ -122,8 +122,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           # The unit suite includes prepare-release range tests against older
-          # commits, so this job still needs full history.
+          # commits, so this job still needs full commit/tree history. Historical
+          # blobs are fetched lazily; the current worktree remains complete.
           fetch-depth: 0
+          filter: blob:none
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -151,8 +153,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          # Deep enough for normal deployed..HEAD checks; deepened on demand below.
-          fetch-depth: 256
+          # update-version.cjs scans at most 20 commits; avoid downloading older
+          # history and historical blobs for a build of the current worktree.
+          fetch-depth: 32
+          filter: blob:none
           submodules: false
 
       - name: Fix git safe directory
@@ -864,7 +868,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 256
+          # Usually contains the preserved build hash; deepen only on a miss below.
+          fetch-depth: 32
+          filter: blob:none
 
       - name: Compare deployed hash with HEAD
         run: |
