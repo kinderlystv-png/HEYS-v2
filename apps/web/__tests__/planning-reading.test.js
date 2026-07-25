@@ -17,6 +17,7 @@ const goodStrategyBadStrategySource = fs.readFileSync(path.resolve(__dirname, '.
 const noiseSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/kahneman-sibony-sunstein-noise_v1.js'), 'utf8');
 const checklistManifestoSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/atul-gawande-checklist-manifesto_v1.js'), 'utf8');
 const sevenHabitsSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/stephen-covey-seven-habits_v1.js'), 'utf8');
+const powerOfNowSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/eckhart-tolle-power-of-now_v1.js'), 'utf8');
 const poltavskyOverlay = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../reading/personalization/poltavsky_v1.json'), 'utf8'));
 const uiSource = fs.readFileSync(path.resolve(__dirname, '../heys_planning_reading_v1.js'), 'utf8');
 
@@ -35,6 +36,7 @@ function loadReading() {
     (0, eval)(noiseSource);
     (0, eval)(checklistManifestoSource);
     (0, eval)(sevenHabitsSource);
+    (0, eval)(powerOfNowSource);
     (0, eval)(uiSource);
     return { catalog: window.HEYS.Reading, ui: window.HEYS.PlanningReading };
 }
@@ -150,6 +152,7 @@ describe('planning reading catalog and UI', () => {
             'kahneman-sibony-sunstein-noise',
             'daniel-kahneman-thinking-fast-and-slow',
             'stephen-covey-seven-habits',
+            'eckhart-tolle-power-of-now',
         ]);
         const later = { ...catalog.BOOKS[0], id: 'later-book', title: 'Позже', editorialRank: 20 };
         const earlier = { ...catalog.BOOKS[0], id: 'earlier-book', title: 'Раньше', editorialRank: 5 };

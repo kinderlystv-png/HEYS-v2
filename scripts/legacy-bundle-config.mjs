@@ -2,6 +2,7 @@ export const READING_BOOK_SOURCES = [
     'reading/books/atul-gawande-checklist-manifesto_v1.js',
     'reading/books/carl-sewell-customers-for-life_v1.js',
     'reading/books/daniel-kahneman-thinking-fast-and-slow_v1.js',
+    'reading/books/eckhart-tolle-power-of-now_v1.js',
     'reading/books/james-clear-atomic-habits_v1.js',
     'reading/books/kahneman-sibony-sunstein-noise_v1.js',
     'reading/books/michael-gerber-e-myth-revisited_v1.js',

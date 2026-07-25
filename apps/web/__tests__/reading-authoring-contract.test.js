@@ -18,6 +18,7 @@ const goodStrategyBadStrategySource = fs.readFileSync(path.join(webRoot, 'readin
 const noiseSource = fs.readFileSync(path.join(webRoot, 'reading/books/kahneman-sibony-sunstein-noise_v1.js'), 'utf8');
 const checklistManifestoSource = fs.readFileSync(path.join(webRoot, 'reading/books/atul-gawande-checklist-manifesto_v1.js'), 'utf8');
 const sevenHabitsSource = fs.readFileSync(path.join(webRoot, 'reading/books/stephen-covey-seven-habits_v1.js'), 'utf8');
+const powerOfNowSource = fs.readFileSync(path.join(webRoot, 'reading/books/eckhart-tolle-power-of-now_v1.js'), 'utf8');
 const poltavskyOverlay = JSON.parse(fs.readFileSync(path.join(webRoot, 'reading/personalization/poltavsky_v1.json'), 'utf8'));
 
 function createReading() {
@@ -52,6 +53,7 @@ describe('reading authoring contract', () => {
         expect(READING_BOOK_SOURCES).toContain('reading/books/kahneman-sibony-sunstein-noise_v1.js');
         expect(READING_BOOK_SOURCES).toContain('reading/books/atul-gawande-checklist-manifesto_v1.js');
         expect(READING_BOOK_SOURCES).toContain('reading/books/stephen-covey-seven-habits_v1.js');
+        expect(READING_BOOK_SOURCES).toContain('reading/books/eckhart-tolle-power-of-now_v1.js');
     });
 
     it('registers the practical and conceptual calibration books under schema v3', () => {
@@ -111,7 +113,7 @@ describe('reading authoring contract', () => {
 
     it('keeps public summaries universal and validates the separate Poltavsky overlay', () => {
         const { context, Reading } = createReading();
-        [sewellSource, dalioSource, atomicHabitsSource, thinkingFastAndSlowSource, unreasonableHospitalitySource, eMythSource, goodStrategyBadStrategySource, noiseSource, checklistManifestoSource, sevenHabitsSource]
+        [sewellSource, dalioSource, atomicHabitsSource, thinkingFastAndSlowSource, unreasonableHospitalitySource, eMythSource, goodStrategyBadStrategySource, noiseSource, checklistManifestoSource, sevenHabitsSource, powerOfNowSource]
             .forEach((source) => vm.runInContext(source, context));
 
         const publicContent = JSON.stringify(Reading.BOOKS);
@@ -121,7 +123,7 @@ describe('reading authoring contract', () => {
         });
 
         const result = Reading.validatePersonalizationOverlay(poltavskyOverlay, Reading.BOOKS);
-        expect(result).toMatchObject({ valid: true, bookCount: 10, errors: [] });
+        expect(result).toMatchObject({ valid: true, bookCount: 11, errors: [] });
         Reading.BOOKS.forEach((book) => {
             const entry = Reading.getPersonalizedBookOverlay(poltavskyOverlay, book.id, Reading.BOOKS);
             expect(entry.projects.map((project) => project.id)).toEqual(['kinderly', 'heys']);
@@ -130,7 +132,7 @@ describe('reading authoring contract', () => {
         const selective = structuredClone(poltavskyOverlay);
         delete selective.books['ray-dalio-principles'];
         selective.books['carl-sewell-customers-for-life'].projects = selective.books['carl-sewell-customers-for-life'].projects.slice(0, 1);
-        expect(Reading.validatePersonalizationOverlay(selective, Reading.BOOKS)).toMatchObject({ valid: true, bookCount: 9, errors: [] });
+        expect(Reading.validatePersonalizationOverlay(selective, Reading.BOOKS)).toMatchObject({ valid: true, bookCount: 10, errors: [] });
 
         const generic = structuredClone(poltavskyOverlay);
         generic.books['ray-dalio-principles'].projects[0].questions = ['Как эту идею можно применить?'];
@@ -226,6 +228,28 @@ describe('reading authoring contract', () => {
         expect(book.blocks.find((block) => block.id === 'pseudo-listening')?.sourceIds).toContain('listening-meta');
         expect(book.blocks.find((block) => block.id === 'compromise-boundary')?.sourceIds).toContain('team-diversity-meta');
         expect(book.blocks.find((block) => block.id === 'win-win-boundary')?.sourceIds).toContain('negotiation-meta');
+        expect(Reading.getCatalogDiagnostics().errors).toEqual([]);
+    });
+
+    it('registers Tolle as a bounded presence practice rather than a clinical or metaphysical proof', () => {
+        const { context, Reading } = createReading();
+        vm.runInContext(powerOfNowSource, context);
+        const book = Reading.getBookById('eckhart-tolle-power-of-now');
+        expectBookFitsDepthProfile(Reading, book, 'standard');
+        expect(book.status).toBe('published');
+        expect(book.editorialRank).toBe(50);
+        expect(book.editorialRole).toBeUndefined();
+        expect(book.blocks[2]).toMatchObject({ type: 'quick-summary', voice: 'retelling' });
+        expect(book.blocks[2].items).toHaveLength(6);
+        expect(book.blocks[3]).toMatchObject({ type: 'applicability', voice: 'review' });
+        expect(book.blocks.find((block) => block.id === 'evidence-boundary')?.sourceIds).toEqual(
+            expect.arrayContaining(['decentering-meta', 'meditation-meta']),
+        );
+        expect(book.blocks.find((block) => block.id === 'spiritual-bypass')?.sourceIds).toContain('spiritual-bypass');
+        expect(book.blocks.find((block) => block.id === 'biological-boundary')?.sourceIds).toContain('google-books');
+        expect(book.blocks.find((block) => block.id === 'gender-boundary')?.sourceIds).toContain('google-books');
+        expect(book.blocks.find((block) => block.id === 'critique')?.text).toContain('плохо допускает опровержение');
+        expect(book.blocks.find((block) => block.id === 'meditation-safety')?.sourceIds).toContain('adverse-events');
         expect(Reading.getCatalogDiagnostics().errors).toEqual([]);
     });
 
