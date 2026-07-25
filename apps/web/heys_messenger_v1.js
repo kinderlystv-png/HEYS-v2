@@ -168,6 +168,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return !coarsePointer;
   }
 
+  function focusMessageInputOnTouchEnd(event, iosDevice = isIOSDevice()) {
+    const input = event?.currentTarget;
+    if (!iosDevice || !input || input.disabled || typeof input.focus !== 'function') return false;
+    try {
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
+    }
+    return true;
+  }
+
   async function verifyMessageMutation(api, options) {
     const beforeTs = getVerificationBeforeTs(options.message);
     const response = await api.getThread({
@@ -2243,10 +2254,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
             value: input,
             onChange: (e) => setInput(e.target.value),
+            onTouchEnd: focusMessageInputOnTouchEnd,
             onFocus: () => setInputFocused(true),
             onBlur: () => setInputFocused(false),
             onKeyDown: handleKeyDown,
             disabled: sending,
+            inputMode: 'text',
             rows: 2,
             maxLength: 2000,
             ref: inputRef,
@@ -2348,7 +2361,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
   }
 
-  function lockPageScroll({ useFixedBody = !isIOSDevice() } = {}) {
+  function lockPageScroll({
+    useFixedBody = !isIOSDevice(),
+    lockOverflow = !isIOSDevice(),
+  } = {}) {
     if (pageScrollLock || typeof document === 'undefined') return;
     const body = document.body;
     const root = document.documentElement;
@@ -2356,6 +2372,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     pageScrollLock = {
       scrollY,
       useFixedBody,
+      lockOverflow,
       position: body.style.position,
       top: body.style.top,
       left: body.style.left,
@@ -2366,10 +2383,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       rootOverflow: root.style.overflow,
       rootOverscrollBehavior: root.style.overscrollBehavior,
     };
-    root.style.overflow = 'hidden';
-    root.style.overscrollBehavior = 'none';
-    body.style.overflow = 'hidden';
-    body.style.overscrollBehavior = 'none';
+    if (lockOverflow) {
+      root.style.overflow = 'hidden';
+      root.style.overscrollBehavior = 'none';
+      body.style.overflow = 'hidden';
+      body.style.overscrollBehavior = 'none';
+    }
     if (useFixedBody) {
       body.style.position = 'fixed';
       body.style.top = `-${scrollY}px`;
@@ -2394,7 +2413,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     body.style.overscrollBehavior = saved.overscrollBehavior;
     root.style.overflow = saved.rootOverflow;
     root.style.overscrollBehavior = saved.rootOverscrollBehavior;
-    window.scrollTo(0, saved.scrollY);
+    if (saved.useFixedBody) window.scrollTo(0, saved.scrollY);
   }
 
   function openModal(opts = {}) {
@@ -2579,6 +2598,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       acquireMessageMutation,
       formatMessengerError,
       shouldSendMessageOnEnter,
+      focusMessageInputOnTouchEnd,
       showInAppMessageToast,
       hideInAppMessageToast,
       lockPageScroll,

@@ -161,23 +161,27 @@ describe('messenger page scroll lock', () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 420);
   });
 
-  it('locks iOS scrolling without fixing the body so textarea focus can open the keyboard', () => {
+  it('leaves the iOS page scroll container untouched so textarea focus can open the keyboard', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)',
+    );
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 240 });
     document.body.style.position = 'relative';
+    document.body.style.overflow = 'auto';
     const messenger = loadMessengerInternals();
 
-    messenger.lockPageScroll({ useFixedBody: false });
+    messenger.lockPageScroll();
     expect(document.body.style.position).toBe('relative');
     expect(document.body.style.top).toBe('');
-    expect(document.body.style.overflow).toBe('hidden');
-    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.documentElement.style.overflow).toBe('');
 
     messenger.unlockPageScroll();
     expect(document.body.style.position).toBe('relative');
-    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.overflow).toBe('auto');
     expect(document.documentElement.style.overflow).toBe('');
-    expect(scrollTo).toHaveBeenCalledWith(0, 240);
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });
 
@@ -263,6 +267,16 @@ describe('messenger composer keyboard', () => {
     expect(shouldSendMessageOnEnter({ key: 'Enter', shiftKey: false }, false)).toBe(true);
     expect(shouldSendMessageOnEnter({ key: 'Enter', shiftKey: true }, false)).toBe(false);
     expect(shouldSendMessageOnEnter({ key: 'Enter', isComposing: true }, false)).toBe(false);
+  });
+
+  it('focuses the textarea synchronously from an iOS touch gesture', () => {
+    const { focusMessageInputOnTouchEnd } = loadMessengerInternals();
+    const textarea = document.createElement('textarea');
+    const focus = vi.spyOn(textarea, 'focus');
+
+    expect(focusMessageInputOnTouchEnd({ currentTarget: textarea }, true)).toBe(true);
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(focusMessageInputOnTouchEnd({ currentTarget: textarea }, false)).toBe(false);
   });
 });
 
