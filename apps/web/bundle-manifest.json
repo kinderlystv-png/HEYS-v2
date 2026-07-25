@@ -24,12 +24,12 @@
     "builtAt": "2026-07-25T07:48:46.589Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.c80723b6eaaf.js",
-    "hash": "c80723b6eaaf",
-    "sourceFingerprint": "5ec704187ad7",
+    "file": "boot-app.bundle.92dfd884d940.js",
+    "hash": "92dfd884d940",
+    "sourceFingerprint": "472d9903a781",
     "fileCount": 52,
-    "size": 1199455,
-    "builtAt": "2026-07-25T07:48:49.531Z"
+    "size": 1199148,
+    "builtAt": "2026-07-25T13:59:23.509Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.66abdbb7b961.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-07-25T07:48:55.391Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.c0f9b8bb79eb.js",
-    "hash": "c0f9b8bb79eb",
-    "sourceFingerprint": "ef62ec47c276",
-    "fileCount": 61,
-    "size": 3416419,
-    "builtAt": "2026-07-25T07:49:01.747Z"
+    "file": "postboot-3-ui-lazy.bundle.575eafedfce7.js",
+    "hash": "575eafedfce7",
+    "sourceFingerprint": "a3f7f8362878",
+    "fileCount": 67,
+    "size": 4222598,
+    "builtAt": "2026-07-25T14:29:10.105Z"
   }
 }
