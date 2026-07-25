@@ -2342,30 +2342,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   let inAppUnreadBaseline = null;
   let pageScrollLock = null;
 
-  function lockPageScroll() {
+  function isIOSDevice() {
+    if (typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+      (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+  }
+
+  function lockPageScroll({ useFixedBody = !isIOSDevice() } = {}) {
     if (pageScrollLock || typeof document === 'undefined') return;
     const body = document.body;
+    const root = document.documentElement;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     pageScrollLock = {
       scrollY,
+      useFixedBody,
       position: body.style.position,
       top: body.style.top,
       left: body.style.left,
       right: body.style.right,
       width: body.style.width,
       overflow: body.style.overflow,
+      overscrollBehavior: body.style.overscrollBehavior,
+      rootOverflow: root.style.overflow,
+      rootOverscrollBehavior: root.style.overscrollBehavior,
     };
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.left = '0';
-    body.style.right = '0';
-    body.style.width = '100%';
+    root.style.overflow = 'hidden';
+    root.style.overscrollBehavior = 'none';
     body.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    if (useFixedBody) {
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.left = '0';
+      body.style.right = '0';
+      body.style.width = '100%';
+    }
   }
 
   function unlockPageScroll() {
     if (!pageScrollLock || typeof document === 'undefined') return;
     const body = document.body;
+    const root = document.documentElement;
     const saved = pageScrollLock;
     pageScrollLock = null;
     body.style.position = saved.position;
@@ -2374,6 +2391,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     body.style.right = saved.right;
     body.style.width = saved.width;
     body.style.overflow = saved.overflow;
+    body.style.overscrollBehavior = saved.overscrollBehavior;
+    root.style.overflow = saved.rootOverflow;
+    root.style.overscrollBehavior = saved.rootOverscrollBehavior;
     window.scrollTo(0, saved.scrollY);
   }
 
@@ -2466,26 +2486,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (mountNode) return;
     hideInAppMessageToast();
 
-    const node = document.createElement('button');
-    node.type = 'button';
+    const node = document.createElement('div');
     node.className = 'messenger-inapp-toast';
-    node.setAttribute('aria-label', 'Открыть новое сообщение в мессенджере');
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
     node.innerHTML = `
       <span class="messenger-inapp-toast__icon" aria-hidden="true">💬</span>
       <span class="messenger-inapp-toast__copy">
-        <strong>Новое сообщение</strong>
-        <span>${unreadCount > 1 ? `${unreadCount} непрочитанных` : 'Нажмите, чтобы открыть диалог'}</span>
+        <strong>Куратор написал сообщение</strong>
+        <span>${unreadCount > 1 ? `${unreadCount} непрочитанных сообщений` : 'Откройте диалог, чтобы прочитать'}</span>
       </span>
-      <span class="messenger-inapp-toast__arrow" aria-hidden="true">›</span>
+      <span class="messenger-inapp-toast__actions">
+        <button class="messenger-inapp-toast__later" type="button">Позже</button>
+        <button class="messenger-inapp-toast__read" type="button">Прочитать</button>
+      </span>
     `;
-    node.addEventListener('click', () => {
+    node.querySelector('.messenger-inapp-toast__later')?.addEventListener('click', () => {
+      hideInAppMessageToast();
+    });
+    node.querySelector('.messenger-inapp-toast__read')?.addEventListener('click', () => {
       hideInAppMessageToast();
       openModal();
     });
     document.body.appendChild(node);
     inAppToastNode = node;
     requestAnimationFrame(() => node.classList.add('is-visible'));
-    inAppToastTimer = setTimeout(hideInAppMessageToast, 6000);
     playInAppMessageCue();
   }
 
@@ -2554,6 +2579,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       acquireMessageMutation,
       formatMessengerError,
       shouldSendMessageOnEnter,
+      showInAppMessageToast,
+      hideInAppMessageToast,
       lockPageScroll,
       unlockPageScroll,
       THREAD_PAGE_LIMIT,

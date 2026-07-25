@@ -136,6 +136,7 @@ describe('messenger page scroll lock', () => {
 
   afterEach(() => {
     document.body.removeAttribute('style');
+    document.documentElement.removeAttribute('style');
     vi.restoreAllMocks();
     globalThis.React = originalReact;
     globalThis.ReactDOM = originalReactDOM;
@@ -158,6 +159,55 @@ describe('messenger page scroll lock', () => {
     expect(document.body.style.top).toBe('');
     expect(document.body.style.overflow).toBe('auto');
     expect(scrollTo).toHaveBeenCalledWith(0, 420);
+  });
+
+  it('locks iOS scrolling without fixing the body so textarea focus can open the keyboard', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 240 });
+    document.body.style.position = 'relative';
+    const messenger = loadMessengerInternals();
+
+    messenger.lockPageScroll({ useFixedBody: false });
+    expect(document.body.style.position).toBe('relative');
+    expect(document.body.style.top).toBe('');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    messenger.unlockPageScroll();
+    expect(document.body.style.position).toBe('relative');
+    expect(document.body.style.overflow).toBe('');
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(scrollTo).toHaveBeenCalledWith(0, 240);
+  });
+});
+
+describe('messenger in-app notification', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    window.HEYS = {};
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    vi.stubGlobal('requestAnimationFrame', (callback) => callback());
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('keeps unread messages unread when postponed and opens the messenger on read', () => {
+    const messenger = loadMessengerInternals();
+
+    messenger.showInAppMessageToast(1);
+    expect(document.querySelector('.messenger-inapp-toast__read')?.textContent).toBe('Прочитать');
+    document.querySelector('.messenger-inapp-toast__later').click();
+    expect(document.querySelector('.messenger-portal')).toBeFalsy();
+
+    messenger.showInAppMessageToast(1);
+    document.querySelector('.messenger-inapp-toast__read').click();
+    expect(document.querySelector('.messenger-portal')).toBeTruthy();
   });
 });
 

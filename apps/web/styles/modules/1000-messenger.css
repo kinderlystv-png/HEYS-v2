@@ -109,6 +109,7 @@ body.planning-tab-active .fab-group .message-fab {
   width: 100%;
   max-width: 600px;
   height: 90vh;
+  height: 90dvh;
   max-height: 720px;
   background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 46%, #f8fafc 100%);
   color: var(--heys-text-primary, #111827);
@@ -1582,7 +1583,7 @@ body.planning-tab-active .fab-group .message-fab {
   width: min(calc(100vw - 28px), 390px);
   min-height: 64px;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 10px 14px 10px 12px;
@@ -1595,7 +1596,6 @@ body.planning-tab-active .fab-group .message-fab {
     0 20px 54px rgba(15, 23, 42, 0.22),
     0 8px 20px rgba(37, 99, 235, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.80);
-  cursor: pointer;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -16px) scale(0.98);
@@ -1648,11 +1648,34 @@ body.planning-tab-active .fab-group .message-fab {
   white-space: nowrap;
 }
 
-.messenger-inapp-toast__arrow {
-  color: #2563eb;
-  font-size: 1.6rem;
-  font-weight: 700;
-  line-height: 1;
+.messenger-inapp-toast__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.messenger-inapp-toast__later,
+.messenger-inapp-toast__read {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.messenger-inapp-toast__later {
+  background: transparent;
+  color: #64748b;
+}
+
+.messenger-inapp-toast__read {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.24);
 }
 
 .messenger-input-row {

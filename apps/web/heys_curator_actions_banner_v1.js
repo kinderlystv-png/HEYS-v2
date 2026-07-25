@@ -29,6 +29,7 @@
   let _modalEl = null;
   let _entries = [];
   let _reviewEntries = [];
+  let _renderedEntries = [];
   let _hasMore = false;
   let _checkInFlight = false;
   let _mounted = false;
@@ -703,6 +704,7 @@
     _sessionContextKey = contextKey;
     _entries = [];
     _reviewEntries = [];
+    _renderedEntries = [];
     _hasMore = false;
     _initialCheckDone = false;
     clearReviewTimer();
@@ -758,6 +760,7 @@
   function renderModal() {
     removeExistingModal();
     const entries = _reviewEntries.slice();
+    _renderedEntries = entries;
     const summary = summarizeEntries(entries) || 'Обновлены данные';
     const targetRegistry = Object.create(null);
     let targetSeq = 0;
@@ -834,15 +837,17 @@
       if (target) openTargetInDiary(target);
     });
     backdrop.querySelector('.ca-modal__ack-btn').addEventListener('click', () => {
-      const shownEntries = _reviewEntries.slice();
+      const shownEntries = _renderedEntries.slice();
       console.info('[HEYS.curatorReview] ack requested', { entryCount: shownEntries.length });
       enqueueAckForEntries(shownEntries);
       _entries = _entries.filter(e => !entryIds(shownEntries).includes(e.id));
-      _reviewEntries = [];
+      _reviewEntries = _reviewEntries.filter(e => !entryIds(shownEntries).includes(e.id));
+      _renderedEntries = [];
       removeExistingModal();
       flushPendingAcks().catch((e) => {
         console.warn('[HEYS.curatorReview] ack retry failed:', e?.message);
       });
+      if (_reviewEntries.length > 0) scheduleReviewAttempt(0);
     });
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) closeAsLater();
@@ -1016,6 +1021,13 @@
       _entries = split.visible;
       _reviewEntries = split.visible;
       _hasMore = res.has_more === true;
+
+      if (_modalEl) {
+        const renderedIds = entryIds(_renderedEntries).sort().join(',');
+        const nextIds = entryIds(_reviewEntries).sort().join(',');
+        if (renderedIds !== nextIds) renderModal();
+        return;
+      }
 
       if (_forceOpenOnce) {
         _forceOpenOnce = false;

@@ -192,6 +192,59 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal__summary')?.textContent).toBe('+3 продукта');
   });
 
+  it('updates an open modal and acknowledges newly rendered entries', async () => {
+    const breakfast = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'meal_added', meal_id: 'breakfast', meal_label: 'Завтрак', time: '09:30', items: [{ name: 'Овсянка' }] },
+    ]);
+    const lunch = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T09:05:00.000Z', [
+      { type: 'meal_added', meal_id: 'lunch', meal_label: 'Обед', time: '13:30', items: [{ name: 'Суп' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince
+      .mockResolvedValueOnce(response([breakfast]))
+      .mockResolvedValueOnce(response([lunch, breakfast]));
+
+    await banner.checkAndShow();
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Завтрак');
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Обед');
+
+    await banner.checkAndShow();
+    expect(document.querySelector('.ca-modal__summary')?.textContent).toBe('+2 приёма пищи');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledWith({
+      entryIds: [
+        '33333333-3333-4333-8333-333333333333',
+        '11111111-1111-4111-8111-111111111111',
+      ],
+      untilTs: '2026-07-05T09:05:00.000Z',
+    });
+  });
+
+  it('keeps changes for different days in one modal grouped by date', async () => {
+    const today = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'breakfast', meal_label: 'Завтрак', items: [{ name: 'Овсянка' }] },
+    ]);
+    const yesterday = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-04T09:00:00.000Z', [
+      { type: 'meal_added', date: '2026-07-04', meal_id: 'lunch', meal_label: 'Обед', items: [{ name: 'Суп' }] },
+    ]);
+    yesterday.keys = ['heys_dayv2_2026-07-04'];
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([today, yesterday]));
+
+    await banner.checkAndShow();
+
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(document.querySelectorAll('.ca-modal__group')).toHaveLength(2);
+    expect(Array.from(document.querySelectorAll('.ca-modal__date')).map(node => node.textContent)).toEqual([
+      '5 июля',
+      '4 июля',
+    ]);
+  });
+
   it('postpones opening while the tab is hidden and opens on visibilitychange', async () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
