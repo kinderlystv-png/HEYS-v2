@@ -9,6 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const catalogSource = fs.readFileSync(path.resolve(__dirname, '../heys_reading_catalog_v1.js'), 'utf8');
 const sewellSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/carl-sewell-customers-for-life_v1.js'), 'utf8');
 const dalioSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/ray-dalio-principles_v1.js'), 'utf8');
+const atomicHabitsSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/james-clear-atomic-habits_v1.js'), 'utf8');
+const thinkingFastAndSlowSource = fs.readFileSync(path.resolve(__dirname, '../reading/books/daniel-kahneman-thinking-fast-and-slow_v1.js'), 'utf8');
 const uiSource = fs.readFileSync(path.resolve(__dirname, '../heys_planning_reading_v1.js'), 'utf8');
 
 function loadReading() {
@@ -18,6 +20,8 @@ function loadReading() {
     (0, eval)(catalogSource);
     (0, eval)(sewellSource);
     (0, eval)(dalioSource);
+    (0, eval)(atomicHabitsSource);
+    (0, eval)(thinkingFastAndSlowSource);
     (0, eval)(uiSource);
     return { catalog: window.HEYS.Reading, ui: window.HEYS.PlanningReading };
 }
@@ -58,10 +62,13 @@ describe('planning reading catalog and UI', () => {
         const { catalog } = loadReading();
         expect(catalog.normalizeReadingText('  Всё ЁЩЁ  ')).toBe('все еще');
         expect(catalog.filterBooks(catalog.BOOKS, { query: 'Рэй Далио' })).toHaveLength(1);
-        expect(catalog.filterBooks(catalog.BOOKS, { query: 'системность' })).toHaveLength(2);
+        expect(catalog.filterBooks(catalog.BOOKS, { query: 'атом прив' }).map((book) => book.id)).toEqual(['james-clear-atomic-habits']);
+        expect(catalog.filterBooks(catalog.BOOKS, { query: 'Канем' }).map((book) => book.id)).toEqual(['daniel-kahneman-thinking-fast-and-slow']);
+        expect(catalog.filterBooks(catalog.BOOKS, { query: 'системность' })).toHaveLength(4);
         expect(catalog.filterBooks(catalog.BOOKS, { query: 'клиенты лояльность' })).toHaveLength(1);
         expect(catalog.filterBooks([{ ...catalog.BOOKS[0], title: 'Всё ещё возможно' }], { query: 'все еще' })).toHaveLength(1);
-        expect(catalog.filterBooks(catalog.BOOKS, { query: 'Боль осмысление', topic: 'thinking', tags: ['decisions'] })).toHaveLength(1);
+        expect(catalog.filterBooks(catalog.BOOKS, { query: 'Боль осмысление' }).map((book) => book.id)).toEqual(['ray-dalio-principles']);
+        expect(catalog.filterBooks(catalog.BOOKS, { topic: 'service', tags: ['customers', 'loyalty'] }).map((book) => book.id)).toEqual(['carl-sewell-customers-for-life']);
         expect(catalog.filterBooks(catalog.BOOKS, { query: 'Далио', topic: 'management', tags: [] })).toHaveLength(1);
         expect(catalog.estimateReadingMinutes(catalog.BOOKS[0])).toBeGreaterThan(1);
         expect(catalog.getBookById('ray-dalio-principles')?.id).toBe('ray-dalio-principles');
@@ -88,7 +95,12 @@ describe('planning reading catalog and UI', () => {
         const original = catalog.BOOKS.slice();
         expect(catalog.sortBooks(catalog.BOOKS, 'author')).not.toBe(catalog.BOOKS);
         expect(catalog.BOOKS).toEqual(original);
-        expect(catalog.sortBooks(catalog.BOOKS, 'recommended').map((book) => book.id)).toEqual(['ray-dalio-principles', 'carl-sewell-customers-for-life']);
+        expect(catalog.sortBooks(catalog.BOOKS, 'recommended').map((book) => book.id)).toEqual([
+            'ray-dalio-principles',
+            'carl-sewell-customers-for-life',
+            'james-clear-atomic-habits',
+            'daniel-kahneman-thinking-fast-and-slow',
+        ]);
         const later = { ...catalog.BOOKS[0], id: 'later-book', title: 'Позже', editorialRank: 20 };
         const earlier = { ...catalog.BOOKS[0], id: 'earlier-book', title: 'Раньше', editorialRank: 5 };
         expect(catalog.sortBooks([later, earlier], 'recommended').map((book) => book.id)).toEqual(['earlier-book', 'later-book']);

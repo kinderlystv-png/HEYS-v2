@@ -1,5 +1,7 @@
 export const READING_BOOK_SOURCES = [
     'reading/books/carl-sewell-customers-for-life_v1.js',
+    'reading/books/daniel-kahneman-thinking-fast-and-slow_v1.js',
+    'reading/books/james-clear-atomic-habits_v1.js',
     'reading/books/ray-dalio-principles_v1.js',
 ];
 

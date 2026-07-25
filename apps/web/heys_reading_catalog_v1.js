@@ -58,6 +58,10 @@
             .trim();
     }
 
+    function tokenizeReadingText(value) {
+        return normalizeReadingText(value).match(/[\p{L}\p{N}]+/gu) || [];
+    }
+
     function countWords(value) {
         const normalized = String(value == null ? '' : value).trim();
         return normalized ? normalized.split(/\s+/).filter(Boolean).length : 0;
@@ -108,14 +112,18 @@
     }
 
     function filterBooks(books, filters = {}) {
-        const queryTokens = normalizeReadingText(filters.query).split(/\s+/).filter(Boolean);
+        const queryTokens = tokenizeReadingText(filters.query);
         const topic = filters.topic || 'all';
         const tags = Array.isArray(filters.tags) ? filters.tags : [];
         return (Array.isArray(books) ? books : []).filter((book) => {
             if (topic !== 'all' && topic !== 'Все' && !(book.topics || []).includes(topic)) return false;
             if (tags.some((tag) => !(book.tags || []).includes(tag))) return false;
-            const searchText = getBookSearchText(book);
-            return queryTokens.every((token) => searchText.includes(token));
+            const searchTokens = new Set(tokenizeReadingText(getBookSearchText(book)));
+            const titleAndAuthorTokens = tokenizeReadingText([book?.title, book?.author].filter(Boolean).join(' '));
+            return queryTokens.every((token) => (
+                searchTokens.has(token)
+                || titleAndAuthorTokens.some((candidate) => candidate.startsWith(token))
+            ));
         });
     }
 

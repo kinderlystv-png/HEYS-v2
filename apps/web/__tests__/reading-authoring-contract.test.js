@@ -10,6 +10,8 @@ const webRoot = path.resolve(__dirname, '..');
 const coreSource = fs.readFileSync(path.join(webRoot, 'heys_reading_catalog_v1.js'), 'utf8');
 const sewellSource = fs.readFileSync(path.join(webRoot, 'reading/books/carl-sewell-customers-for-life_v1.js'), 'utf8');
 const dalioSource = fs.readFileSync(path.join(webRoot, 'reading/books/ray-dalio-principles_v1.js'), 'utf8');
+const atomicHabitsSource = fs.readFileSync(path.join(webRoot, 'reading/books/james-clear-atomic-habits_v1.js'), 'utf8');
+const thinkingFastAndSlowSource = fs.readFileSync(path.join(webRoot, 'reading/books/daniel-kahneman-thinking-fast-and-slow_v1.js'), 'utf8');
 
 function createReading() {
     const context = { window: {}, structuredClone, console: { error() {} } };
@@ -27,6 +29,25 @@ describe('reading authoring contract', () => {
         expect([...READING_BOOK_SOURCES].sort()).toEqual(disk);
         expect(READING_BOOK_SOURCES).toContain('reading/books/ray-dalio-principles_v1.js');
         expect(READING_BOOK_SOURCES).toContain('reading/books/carl-sewell-customers-for-life_v1.js');
+        expect(READING_BOOK_SOURCES).toContain('reading/books/james-clear-atomic-habits_v1.js');
+        expect(READING_BOOK_SOURCES).toContain('reading/books/daniel-kahneman-thinking-fast-and-slow_v1.js');
+    });
+
+    it('registers the practical and conceptual calibration books under schema v2', () => {
+        const { context, Reading } = createReading();
+        vm.runInContext(atomicHabitsSource, context);
+        vm.runInContext(thinkingFastAndSlowSource, context);
+        expect(Reading.BOOKS).toHaveLength(2);
+        Reading.BOOKS.forEach((book) => {
+            expect(book.schemaVersion).toBe(2);
+            expect(Reading.getBookWordCount(book)).toBeGreaterThanOrEqual(1800);
+            expect(Reading.getBookWordCount(book)).toBeLessThanOrEqual(2200);
+            expect(book.blocks[2]).toMatchObject({ type: 'quick-summary', voice: 'retelling' });
+            expect(book.blocks[3]).toMatchObject({ type: 'applicability', voice: 'review' });
+        });
+        expect(Reading.getBookById('james-clear-atomic-habits')?.blocks.some((block) => block.type === 'details')).toBe(true);
+        expect(Reading.getBookById('daniel-kahneman-thinking-fast-and-slow')?.blocks.some((block) => block.id === 'priming-replication')).toBe(true);
+        expect(Reading.getCatalogDiagnostics().errors).toEqual([]);
     });
 
     it('registers Sewell as an independent reviewed summary', () => {
