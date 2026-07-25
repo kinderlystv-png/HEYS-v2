@@ -441,7 +441,7 @@ build_env_flags() {
 
     # SESSION_SECRET — только auth
     if [[ "$func_name" == "heys-api-auth" ]]; then
-        _add_required SESSION_SECRET
+        env_flags+=" --environment SESSION_SECRET=__IN_LOCKBOX__heys-app-secrets__"
     fi
 
     # Payments: YUKASSA_* + INTERNAL_CRON_TOKEN (poll-фолбэк P0.4)
