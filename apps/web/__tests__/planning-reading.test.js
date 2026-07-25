@@ -55,6 +55,7 @@ describe('planning reading catalog and UI', () => {
         });
         history.replaceState({}, '', '/');
         localStorage.removeItem('heys_reading_preferences_v1');
+        localStorage.removeItem('heys_client-a_reading_preferences_v1');
         localStorage.removeItem('heys_reading_progress_v1');
         sessionStorage.removeItem('heys_reading_position_v1:ray-dalio-principles');
         vi.restoreAllMocks();
@@ -294,8 +295,10 @@ describe('planning reading catalog and UI', () => {
         await waitFor(() => expect(screen.getByRole('dialog').scrollTop).toBe(420));
     });
 
-    it('keeps reader font size and theme as local reading preferences', async () => {
+    it('syncs reader font size and theme as client reading preferences', async () => {
         const { ui } = loadReading();
+        window.HEYS.currentClientId = 'client-a';
+        window.HEYS.cloud = { saveClientKey: vi.fn() };
         render(React.createElement(ui.ReadingScreen));
         fireEvent.click(screen.getByRole('button', { name: /Открыть «Принципы/ }));
         const dialog = screen.getByRole('dialog');
@@ -308,16 +311,20 @@ describe('planning reading catalog and UI', () => {
 
         expect(dialog.classList.contains('reading-reader--dark')).toBe(true);
         expect(dialog.style.getPropertyValue('--reading-reader-font-size')).toBe('17px');
-        await waitFor(() => expect(JSON.parse(localStorage.getItem('heys_reading_preferences_v1'))).toEqual({
+        await waitFor(() => expect(JSON.parse(localStorage.getItem('heys_client-a_reading_preferences_v1'))).toMatchObject({
             fontSize: 17,
             theme: 'dark',
             markerEnabled: true,
             markerColor: 'yellow',
         }));
+        const stored = JSON.parse(localStorage.getItem('heys_client-a_reading_preferences_v1'));
+        expect(stored.updatedAt).toBeGreaterThan(0);
+        expect(window.HEYS.cloud.saveClientKey).toHaveBeenCalledWith('client-a', 'heys_reading_preferences_v1', stored);
     });
 
     it('renders semantic markers and persists their visibility and color locally', async () => {
         const { ui } = loadReading();
+        window.HEYS.currentClientId = 'client-a';
         render(React.createElement(ui.ReadingScreen));
         fireEvent.click(screen.getByRole('button', { name: /Открыть «Принципы/ }));
         const dialog = screen.getByRole('dialog');
@@ -330,10 +337,53 @@ describe('planning reading catalog and UI', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Выключить маркер' }));
         expect(dialog.querySelector('mark.reading-text-mark')).toBeNull();
 
-        await waitFor(() => expect(JSON.parse(localStorage.getItem('heys_reading_preferences_v1'))).toMatchObject({
+        await waitFor(() => expect(JSON.parse(localStorage.getItem('heys_client-a_reading_preferences_v1'))).toMatchObject({
             markerEnabled: false,
             markerColor: 'blue',
         }));
+    });
+
+    it('applies newer cloud preferences to an open reader', async () => {
+        const { ui } = loadReading();
+        window.HEYS.currentClientId = 'client-a';
+        render(React.createElement(ui.ReadingScreen));
+        fireEvent.click(screen.getByRole('button', { name: /Открыть «Принципы/ }));
+
+        const cloudPreferences = {
+            fontSize: 14,
+            theme: 'dark',
+            markerEnabled: false,
+            markerColor: 'rose',
+            updatedAt: Date.now() + 1000,
+        };
+        localStorage.setItem('heys_client-a_reading_preferences_v1', JSON.stringify(cloudPreferences));
+        fireEvent(window, new CustomEvent('heys:reading-preferences-updated', {
+            detail: { clientId: 'client-a', preferences: cloudPreferences, source: 'test' },
+        }));
+
+        await waitFor(() => expect(screen.getByRole('dialog').classList.contains('reading-reader--dark')).toBe(true));
+        expect(screen.getByRole('dialog').classList.contains('reading-reader--marker-rose')).toBe(true);
+        expect(screen.getByRole('slider', { name: 'Размер текста' }).value).toBe('14');
+        expect(screen.getByRole('button', { name: 'Включить маркер' })).toBeTruthy();
+    });
+
+    it('ignores cloud reader preferences addressed to another client', async () => {
+        const { ui } = loadReading();
+        window.HEYS.currentClientId = 'client-a';
+        render(React.createElement(ui.ReadingScreen));
+        fireEvent.click(screen.getByRole('button', { name: /Открыть «Принципы/ }));
+
+        fireEvent(window, new CustomEvent('heys:reading-preferences-updated', {
+            detail: {
+                clientId: 'client-b',
+                source: 'test',
+                preferences: { fontSize: 14, theme: 'dark', markerEnabled: false, markerColor: 'rose', updatedAt: Date.now() + 1000 },
+            },
+        }));
+
+        await Promise.resolve();
+        expect(screen.getByRole('dialog').classList.contains('reading-reader--dark')).toBe(false);
+        expect(screen.getByRole('slider', { name: 'Размер текста' }).value).toBe('18');
     });
 
     it('builds “Главное” from highlights without changing full-reading progress', async () => {

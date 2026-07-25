@@ -306,6 +306,9 @@
     'heys_planning_entity_tombstones_v1',
     'heys_planning_goal_map_records_v1',
     'heys_planning_commands_v1',
+
+    // Reading toolbar preferences (font size, theme and semantic marker).
+    'heys_reading_preferences_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -13436,6 +13439,7 @@
       'heys_planning_entity_tombstones_v1',
       'heys_planning_goal_map_records_v1',
       'heys_planning_commands_v1',
+      'heys_reading_preferences_v1',
     ];
   }
 
@@ -13645,6 +13649,12 @@
           remoteUpdatedAt: value && value.updatedAt,
         });
         return false;
+      }
+
+      if (baseKey === 'heys_reading_preferences_v1') {
+        const localUpdatedAt = Number(previousValue?.updatedAt) || 0;
+        const remoteUpdatedAt = Number(value?.updatedAt) || 0;
+        if (localUpdatedAt >= remoteUpdatedAt) return false;
       }
 
       // 🔢 L3 revision gate (pull-side, additive). Skip applying a revision we have
@@ -13982,6 +13992,12 @@
       if (baseKey.startsWith('heys_planning_') && typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heys:planning-updated', {
           detail: { key: baseKey, source }
+        }));
+      }
+
+      if (baseKey === 'heys_reading_preferences_v1' && typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:reading-preferences-updated', {
+          detail: { preferences: value, source, clientId }
         }));
       }
 

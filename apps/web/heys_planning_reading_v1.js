@@ -24,33 +24,53 @@
     ]);
     const MARKER_COLOR_IDS = new Set(MARKER_COLORS.map((color) => color.id));
 
-    function readReaderPreferences() {
-        try {
-            const stored = JSON.parse(localStorage.getItem(READER_PREFERENCES_KEY) || '{}');
-            return {
-                fontSize: Math.min(READER_FONT_MAX, Math.max(READER_FONT_MIN, Number(stored.fontSize) || READER_FONT_DEFAULT)),
-                theme: stored.theme === 'dark' ? 'dark' : 'light',
-                markerEnabled: stored.markerEnabled !== false,
-                markerColor: MARKER_COLOR_IDS.has(stored.markerColor) ? stored.markerColor : 'yellow',
-            };
-        } catch (_) {
-            return { fontSize: READER_FONT_DEFAULT, theme: 'light', markerEnabled: true, markerColor: 'yellow' };
-        }
-    }
-
-    function writeReaderPreferences(preferences) {
-        try { localStorage.setItem(READER_PREFERENCES_KEY, JSON.stringify(preferences)); } catch (_) { /* local preference is optional */ }
-    }
-
     function getCurrentReadingClientId() {
         try {
             if (HEYS.currentClientId) return String(HEYS.currentClientId);
-            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') return String(HEYS.cloud.getClientId() || '');
+            if (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function') return String(HEYS.cloud.getCurrentClientId() || '');
             if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') return String(HEYS.utils.lsGet('heys_client_current', '') || '');
             return String(localStorage.getItem('heys_client_current') || '').replace(/^"|"$/g, '');
         } catch (_) {
             return '';
         }
+    }
+
+    function getReaderPreferencesStorageKey(clientId = getCurrentReadingClientId()) {
+        return clientId ? `heys_${clientId}_reading_preferences_v1` : READER_PREFERENCES_KEY;
+    }
+
+    function normalizeReaderPreferences(stored = {}) {
+        return {
+            fontSize: Math.min(READER_FONT_MAX, Math.max(READER_FONT_MIN, Number(stored.fontSize) || READER_FONT_DEFAULT)),
+            theme: stored.theme === 'dark' ? 'dark' : 'light',
+            markerEnabled: stored.markerEnabled !== false,
+            markerColor: MARKER_COLOR_IDS.has(stored.markerColor) ? stored.markerColor : 'yellow',
+            updatedAt: Math.max(0, Number(stored.updatedAt) || 0),
+        };
+    }
+
+    function readReaderPreferences() {
+        try {
+            const storageKey = getReaderPreferencesStorageKey();
+            const stored = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
+                ? HEYS.utils.lsGet(storageKey, {})
+                : JSON.parse(localStorage.getItem(storageKey) || '{}');
+            return normalizeReaderPreferences(stored);
+        } catch (_) {
+            return normalizeReaderPreferences();
+        }
+    }
+
+    function writeReaderPreferences(preferences) {
+        try {
+            const clientId = getCurrentReadingClientId();
+            const storageKey = getReaderPreferencesStorageKey(clientId);
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') HEYS.utils.lsSet(storageKey, preferences);
+            else localStorage.setItem(storageKey, JSON.stringify(preferences));
+            if (clientId && HEYS.cloud && typeof HEYS.cloud.saveClientKey === 'function') {
+                HEYS.cloud.saveClientKey(clientId, READER_PREFERENCES_KEY, preferences);
+            }
+        } catch (_) { /* local preference and cloud sync are best-effort */ }
     }
 
     async function loadReadingPersonalization(clientId = getCurrentReadingClientId()) {
@@ -376,6 +396,7 @@
         const viewModeEffectReadyRef = useRef(false);
         const progressSaveTimerRef = useRef(0);
         const progressChangeRef = useRef(onProgressChange);
+        const preferencesReadyRef = useRef(false);
         progressChangeRef.current = onProgressChange;
         viewModeRef.current = viewMode;
 
@@ -438,7 +459,28 @@
             };
         }, [book.id, returnFocusRef, scrollPositionsRef]);
 
-        useEffect(() => { writeReaderPreferences(preferences); }, [preferences]);
+        useEffect(() => {
+            if (!preferencesReadyRef.current) {
+                preferencesReadyRef.current = true;
+                return undefined;
+            }
+            writeReaderPreferences({ ...preferences, updatedAt: Date.now() });
+            return undefined;
+        }, [preferences.fontSize, preferences.theme, preferences.markerEnabled, preferences.markerColor]);
+
+        useEffect(() => {
+            const handleCloudPreferences = (event) => {
+                const activeClientId = getCurrentReadingClientId();
+                const eventClientId = String(event?.detail?.clientId || '');
+                if (eventClientId && eventClientId !== activeClientId) return;
+                const incoming = event?.detail?.preferences
+                    ? normalizeReaderPreferences(event.detail.preferences)
+                    : readReaderPreferences();
+                setPreferences((current) => incoming.updatedAt > current.updatedAt ? incoming : current);
+            };
+            window.addEventListener('heys:reading-preferences-updated', handleCloudPreferences);
+            return () => window.removeEventListener('heys:reading-preferences-updated', handleCloudPreferences);
+        }, []);
 
         useEffect(() => {
             if (!viewModeEffectReadyRef.current) {
