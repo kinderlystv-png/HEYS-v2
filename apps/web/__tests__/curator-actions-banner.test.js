@@ -168,6 +168,21 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Тренировка: Кардио · 60 мин (19:50)');
   });
 
+  it('renders the same training only once when it appears in multiple changelog entries', async () => {
+    const action = { type: 'training_added', kind: 'Кардио', duration_min: 60, time: '19:50' };
+    const first = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:55:00.000Z', [action]);
+    const second = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T10:00:00.000Z', [action]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([second, first]));
+
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal__summary')?.textContent).toBe('+1 тренировка');
+    const trainingCards = Array.from(document.querySelectorAll('.ca-modal__item-text'))
+      .filter((node) => node.textContent?.includes('Тренировка: Кардио · 60 мин (19:50)'));
+    expect(trainingCards).toHaveLength(1);
+  });
+
   it('treats a changed PIN session as a new initial backlog', async () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T10:00:00.000Z');
     const banner = loadBanner();

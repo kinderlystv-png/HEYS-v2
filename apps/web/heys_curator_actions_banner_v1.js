@@ -829,18 +829,17 @@
     };
     const groups = groupByDate(entries);
     const groupsHtml = groups.map(([date, groupEntries]) => {
-      const itemsHtml = groupEntries.map((entry) => {
-        const raw = (entry.actions && entry.actions.actions) || [];
-        const collapsed = dedupAndCollapse(raw);
-        return collapsed.map(a => {
-          const targetId = registerTarget(entry, a);
+      const raw = groupEntries.flatMap((entry) => (entry.actions && entry.actions.actions) || []);
+      const collapsed = dedupAndCollapse(raw);
+      const targetEntry = groupEntries[0] || null;
+      const itemsHtml = collapsed.map(a => {
+          const targetId = registerTarget(targetEntry, a);
           if (a.type === 'meal_card') return renderMealCardHtml(a, targetId);
           const txt = actionText(a);
           return txt ? `<li class="ca-modal__item"><span class="ca-modal__item-text">${escapeHtml(txt)}</span>${renderShowButtonHtml(targetId)}</li>` : '';
         })
         .filter(Boolean)
         .join('');
-      }).join('');
       if (!itemsHtml) return '';
       return `
         <div class="ca-modal__group">
