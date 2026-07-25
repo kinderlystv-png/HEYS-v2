@@ -7,6 +7,8 @@ const initializerSource = fs.readFileSync(path.join(webRoot, 'heys_app_initializ
 const diagnosticsSource = fs.readFileSync(path.join(webRoot, 'heys_client_diagnostics_v1.js'), 'utf8');
 const tabsSource = fs.readFileSync(path.join(webRoot, 'heys_app_tabs_v1.js'), 'utf8');
 const shellSource = fs.readFileSync(path.join(webRoot, 'heys_app_shell_v1.js'), 'utf8');
+const hungerSource = fs.readFileSync(path.join(webRoot, 'heys_hunger_energy_status_ui_v1.js'), 'utf8');
+const stepModalSource = fs.readFileSync(path.join(webRoot, 'heys_step_modal_v1.js'), 'utf8');
 
 function visible(element) {
   element.getBoundingClientRect = () => ({ width: 390, height: 600, top: 0, left: 0, right: 390, bottom: 600 });
@@ -72,6 +74,13 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(tabsSource).toContain('BlankScreenGuard?.reportVisibleFrame?.({');
     expect(shellSource).toContain("'data-heys-visible-frame': isDayTab ? undefined : tab");
     expect(tabsSource).toContain("HEYS?.LogTrace?.event?.('boot_ready'");
+  });
+
+  it('accepts auto-opened hunger and check-in modals as visible first frames', () => {
+    expect(hungerSource).toContain("screen: 'hunger-assessment'");
+    expect(hungerSource).toContain("reason: 'hunger_prompt_painted'");
+    expect(stepModalSource).toContain("screen: 'step-modal'");
+    expect(stepModalSource).toContain("reason: 'step_modal_painted'");
   });
 
   it('keeps the skeleton until a visible frame is confirmed after paint', () => {

@@ -4840,6 +4840,11 @@
       if (!state) return undefined;
       document.body.classList.add('hunger-energy-modal-open');
       lockPageScroll();
+      HEYS.BlankScreenGuard?.reportVisibleFrame?.({
+        element: modalRoot?.querySelector?.('.hes-backdrop'),
+        screen: 'hunger-assessment',
+        reason: 'hunger_prompt_painted'
+      });
       setDraft({ ...(state._initialDraft || getInitialDraftForState(state)), _openId: state._openId || 0 });
       setContextPatch({});
       setResult(null);
@@ -6318,7 +6323,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 
   function hide(skipManagerNotify) {
     if (activeTelemetryOpen) {
-      traceHungerUi(activeTelemetryOpen.completed ? 'hunger_prompt_completed' : 'hunger_prompt_dismissed', activeTelemetryOpen, activeTelemetryOpen.completed ? 'info' : 'warn');
+      traceHungerUi(activeTelemetryOpen.completed ? 'hunger_prompt_completed' : 'hunger_prompt_dismissed', activeTelemetryOpen, 'info');
       activeTelemetryOpen = null;
     }
     if (modalCleanup && !skipManagerNotify) {

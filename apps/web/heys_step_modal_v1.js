@@ -1221,6 +1221,13 @@
       modalRootInstance = ReactDOM.createRoot(modalRoot);
     }
     modalRootInstance.render(currentModalElement);
+    requestAnimationFrame(() => {
+      HEYS.BlankScreenGuard?.reportVisibleFrame?.({
+        element: modalRoot?.querySelector?.('[data-heys-step-modal]'),
+        screen: 'step-modal',
+        reason: 'step_modal_painted'
+      });
+    });
   }
 
   function hideStepModal(options = {}) {

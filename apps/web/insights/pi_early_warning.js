@@ -1306,6 +1306,7 @@
         // 2. Sync current week to cloud (if enabled). Post PR-C PIN sessions
         // carry auth in HttpOnly cookie, so JS-readable sessionToken is optional.
         if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
+            let saveTimeoutMs = CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS;
             try {
                 // Helper function: validate token content (not just existence)
                 const isValidToken = (token) => {
@@ -1379,7 +1380,6 @@
                     weekStart: currentWeekSnapshot.weekStart
                 });
 
-                let saveTimeoutMs = CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS;
                 try {
                     const pending = typeof HEYS?.cloud?.getPendingCount === 'function'
                         ? (HEYS.cloud.getPendingCount() || 0)
@@ -1426,13 +1426,24 @@
                     });
                 }
             } catch (error) {
-                console.error('ews / weekly ☁️ save.cloud.error:', {
-                    message: error.message,
-                    code: error.code,
-                    details: error.details,
-                    raw: error.raw,
-                    stack: error.stack?.split('\n')[0]
-                });
+                if (error?.message === 'Cloud save timeout') {
+                    HEYS.LogTrace?.event?.('write_failed', {
+                        source: 'ews',
+                        status: 'degraded',
+                        reason: 'cloud_save_timeout',
+                        key_group: 'ews_weekly',
+                        durationMs: saveTimeoutMs
+                    }, 'warn');
+                    console.warn('ews / weekly ☁️ save.cloud.timeout: local cache retained');
+                } else {
+                    console.error('ews / weekly ☁️ save.cloud.error:', {
+                        message: error?.message,
+                        code: error?.code,
+                        details: error?.details,
+                        raw: error?.raw,
+                        stack: error?.stack?.split('\n')[0]
+                    });
+                }
                 // Non-critical: localStorage already saved
             }
         }

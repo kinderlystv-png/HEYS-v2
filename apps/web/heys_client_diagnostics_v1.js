@@ -93,11 +93,16 @@
     first_visible_frame: 'Первый экран действительно показан',
     blank_screen_guard_triggered: 'Экран не появился вовремя',
     blank_screen_recovered: 'Экран восстановлен',
-    blank_screen_recovery_failed: 'Не удалось восстановить экран'
+    blank_screen_recovery_failed: 'Не удалось восстановить экран',
+    unstructured_console_error: 'Скрытая системная ошибка'
   };
   var STAGE_LABELS = { boot: 'загрузка', sync: 'синхронизация', write: 'сохранение', runtime: 'работа приложения', warning: 'предупреждение' };
 
   function eventLabel(name) { return EVENT_LABELS[name] || String(name || 'Событие').replace(/_/g, ' '); }
+  function problemEventName(session) {
+    if (session && session.problem_event) return session.problem_event;
+    return Number(session && session.error_count || 0) > 0 ? 'unstructured_console_error' : 'не определено';
+  }
   function visitKindLabel(kind, compact) {
     if (kind === 'resume') return compact ? 'возврат' : 'возврат из фона';
     if (kind === 'client_entry') return compact ? 'вход' : 'вход в клиента';
@@ -138,7 +143,7 @@
       'Окружение: ' + runtimeEnvLabel(session.runtime_env),
       'Статус: ' + status[0] + ' (' + (session.outcome || 'starting') + ')',
       'Проблемный этап: ' + (session.problem_stage || 'не определён'),
-      'Проблемное событие: ' + (session.problem_event || 'не определено'),
+      'Проблемное событие: ' + problemEventName(session),
       'Последний успешный этап: ' + (session.last_success_event || 'не определён'),
       'Начало: ' + (session.started_at || 'unknown'),
       'Последнее событие: ' + (session.last_event_at || 'unknown'),
@@ -151,7 +156,8 @@
       '',
       'События:'
     ];
-    (session.events || []).forEach(function (event, index) {
+    var events = session.events || [];
+    events.forEach(function (event, index) {
       var context = safeContext(event.context);
       lines.push([
         String(index + 1) + '.', event.at || 'unknown', event.name || 'event',
@@ -160,7 +166,14 @@
         'context=' + JSON.stringify(context)
       ].join(' | '));
     });
-    if (!(session.events || []).length) lines.push('Нет структурированных событий.');
+    if (!events.length) lines.push('Нет структурированных событий.');
+    var structuredErrorCount = events.filter(function (event) {
+      return event && (event.level === 'error' || event.status === 'failed');
+    }).length;
+    var hiddenErrorCount = Math.max(0, Number(session.error_count || 0) - structuredErrorCount);
+    if (hiddenErrorCount > 0) {
+      lines.push('', 'Скрытые системные ошибки: ' + hiddenErrorCount + '. Текст raw console не включён из-за требований приватности.');
+    }
     lines.push('', 'Приватность: без дневника, сообщений, телефона, IP-адреса и токенов.');
     return lines.join('\n');
   }
@@ -278,7 +291,7 @@
       if (Object.prototype.hasOwnProperty.call(outcomes, session.outcome)) outcomes[session.outcome] += 1;
       var stage = session.problem_stage || 'unknown';
       stages[stage] = (stages[stage] || 0) + 1;
-      var problemEvent = session.problem_event || 'не определено';
+      var problemEvent = problemEventName(session);
       problemEvents[problemEvent] = (problemEvents[problemEvent] || 0) + 1;
       var hour = String(new Date(session.started_at).getHours()).padStart(2, '0') + ':00–' + String(new Date(session.started_at).getHours()).padStart(2, '0') + ':59';
       if (!hours[hour]) hours[hour] = { total: 0, failed: 0, degraded: 0, abandoned: 0 };

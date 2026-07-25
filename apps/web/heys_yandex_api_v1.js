@@ -352,7 +352,7 @@
         if (retryableStatuses.includes(response.status)) {
           const msg = `Server error ${response.status} (retryable)`;
           openRequestBackoff(response, i, `http_${response.status}`);
-          err(`Attempt ${i + 1}/${retries + 1}: ${msg}`);
+          console.warn('[HEYS.api] ⚠️', `Attempt ${i + 1}/${retries + 1}: ${msg}`);
           throw new Error(msg);
         }
 
@@ -363,7 +363,11 @@
         if (!String(e?.message || '').includes('(retryable)')) {
           openRequestBackoff(null, i, 'network');
         }
-        err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
+        if (i < retries) {
+          console.warn('[HEYS.api] ⚠️', `Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
+        } else {
+          err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
+        }
 
         if (i < retries) {
           const baseDelay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;

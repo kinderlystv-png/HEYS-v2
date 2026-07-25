@@ -562,6 +562,8 @@ describe('client session observability', () => {
     expect(loggerSource).toContain('key_group: 1');
     expect(restSource).toContain("'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required'");
     expect(ewsSource).toContain("event: 'ews_input_insufficient'");
+    expect(ewsSource).toContain("HEYS.LogTrace?.event?.('write_failed'");
+    expect(ewsSource).toContain("key_group: 'ews_weekly'");
     expect(storageSource).toContain("event: 'initial_sync_fallback_wait'");
   });
 
@@ -573,5 +575,6 @@ describe('client session observability', () => {
     expect(curatorChangesSource).toContain("HEYS.LogTrace?.event?.('curator_changes_shown'");
     expect(swSource).toContain("reloading: 'sw_reload_requested'");
     expect(swSource).toContain("HEYS.LogTrace?.event?.('sw_reload_suppressed'");
+    expect(hungerSource).toContain("activeTelemetryOpen, 'info'");
   });
 });

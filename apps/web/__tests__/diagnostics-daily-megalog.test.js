@@ -110,6 +110,19 @@ describe('curator daily diagnostics megalog', () => {
     expect(report).not.toContain('…[truncated]');
   });
 
+  it('explains redacted raw errors instead of reporting an undefined problem', () => {
+    const report = api.dailyMegaLogReport({
+      since: '2026-07-23T21:00:00.000Z',
+      generated_at: '2026-07-24T12:00:00.000Z',
+      sessions: [session({ problem_event: null, error_count: 3, events: [] })],
+    });
+
+    expect(report).toContain('Скрытая системная ошибка: 1');
+    expect(report).toContain('Проблемное событие: unstructured_console_error');
+    expect(report).toContain('Скрытые системные ошибки: 3.');
+    expect(report).not.toContain('Проблемное событие: не определено');
+  });
+
   it('places the independent megalog action above the filters', () => {
     const actionIndex = diagnosticsSource.indexOf("h('div', { className: 'cdo-megalog' }");
     const filtersIndex = diagnosticsSource.indexOf("h('div', { className: 'cdo-filters' }");

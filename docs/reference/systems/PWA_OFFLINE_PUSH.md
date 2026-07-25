@@ -96,11 +96,12 @@ hot/error/повторные `heysSyncCompleted` не объявляют initial
 Для returning session React mount больше не уничтожает последний видимый
 skeleton без замены: boot visual guard держит его отдельным слоем до
 подтверждённого двойным `requestAnimationFrame` paint видимого Day/active-tab
-контента. Таймаут 15 секунд показывает ручные действия «Повторить» и
-«Перезагрузить приложение»; retry перезапускает Day sync без автоматического
-reload. Один boot получает не более одного `first_visible_frame`,
-`blank_screen_guard_triggered` и `blank_screen_recovery_failed`; успешный paint
-после timeout дополнительно фиксирует `blank_screen_recovered`.
+контента или автоматически открытой hunger/check-in модалки. Таймаут 15 секунд
+показывает ручные действия «Повторить» и «Перезагрузить приложение»; retry
+перезапускает Day sync без автоматического reload. Один boot получает не более
+одного `first_visible_frame`, `blank_screen_guard_triggered` и
+`blank_screen_recovery_failed`; успешный paint после timeout дополнительно
+фиксирует `blank_screen_recovered`.
 
 Следствие: это **wake-up bridge**, а не автономная background upload гарантия.
 Без открытого client window он ничего не отправляет; `SYNC_COMPLETE` означает
