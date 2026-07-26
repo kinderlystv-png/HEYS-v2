@@ -1993,6 +1993,20 @@
             prevDay.sleepQuality === newDay.sleepQuality;
     }
 
+    // Full semantic fingerprint for the rare periodic reconcile path. Unlike the
+    // lightweight hydrated-content comparator, this includes deletion tombstones
+    // and every other day field while ignoring only recursive sync timestamps.
+    function buildDayReconcileKey(day) {
+        if (!day || typeof day !== 'object') return '';
+        try {
+            const stripStamps = HEYS.sync && HEYS.sync.stripDayMutationStamps;
+            const comparable = typeof stripStamps === 'function' ? stripStamps(day) : day;
+            return JSON.stringify(comparable);
+        } catch (_) {
+            return '';
+        }
+    }
+
     function isSameDayStorageMergeContent(prevDay, newDay) {
         if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
         const pm = prevDay.meals || [];
@@ -2148,6 +2162,7 @@
         getDaysCacheStats,
         preloadMonthDays,
         isSameDayHydratedContent,
+        buildDayReconcileKey,
         isSameDayStorageMergeContent,
         // Subjective (check-in) anti-clobber
         SUBJECTIVE_DAY_FIELDS,

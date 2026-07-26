@@ -709,6 +709,7 @@
 
     const now = new Date();
     const fallbackTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const mutationTs = Date.now();
     trainings[trainingIndex] = {
       ...prev,
       type: 'hobby',
@@ -723,10 +724,11 @@
       stress: prev.stress || Math.max(1, log.metrics.tensionScore),
       comment: prev.comment || '',
       hobbyLog: log,
+      updatedAt: mutationTs,
     };
     day.date = dateKey;
     day.trainings = trainings;
-    day.updatedAt = Date.now();
+    day.updatedAt = mutationTs;
 
     try {
       HEYS.Day?.setLastLoadedUpdatedAt?.(day.updatedAt);

@@ -189,6 +189,9 @@ in-flight batch: старый payload не уходит как окончате�
 Удаление тренировки хранится в самом `dayv2` как `deletedTrainings`: общий
 browser/server merge применяет этот tombstone до позиционного объединения
 `trainings[]`, чтобы старая cloud-копия не могла воскресить удалённую запись.
+Служебный root timestamp stale-снимка не превращается в timestamp новой
+тренировки; периодический React/LS repair сравнивается до записи и не создаёт
+трёхсекундный upload-loop.
 
 Журнал оценок голода синхронизируется как коллекция событий: серверные
 merge-save и legacy batch-пути, а также foreground hot-sync объединяют строки по

@@ -106,6 +106,29 @@ describe('HEYS.dayUtils day content equality', () => {
     expect(isSameDayStorageMergeContent(a, b)).toBe(false);
   });
 
+  it('buildDayReconcileKey ignores sync stamps but includes training tombstones', () => {
+    loadDayUtils();
+    const { buildDayReconcileKey } = global.HEYS.dayUtils;
+    const base = {
+      date: '2026-07-26',
+      updatedAt: 1000,
+      meals: [],
+      trainings: [{ type: 'hobby', z: [0, 45, 0, 0], updatedAt: 900 }],
+    };
+    const sameContentNewStamps = {
+      ...base,
+      updatedAt: 5000,
+      trainings: [{ ...base.trainings[0], updatedAt: 4900 }],
+    };
+    const withDeletion = {
+      ...sameContentNewStamps,
+      deletedTrainings: [{ tombstoneId: 'delete-1', signature: 'fields:hobby||||', deletedAt: 5100 }],
+    };
+
+    expect(buildDayReconcileKey(base)).toBe(buildDayReconcileKey(sameContentNewStamps));
+    expect(buildDayReconcileKey(withDeletion)).not.toBe(buildDayReconcileKey(base));
+  });
+
   it('mergeSubjectiveFieldsPreferFresh preserves a terminal activation from a stale-tab snapshot', () => {
     loadDayUtils();
     const { mergeSubjectiveFieldsPreferFresh } = global.HEYS.dayUtils;

@@ -201,6 +201,7 @@
             const existingTrainings = day.trainings || [];
             const newTrainings = [...existingTrainings];
             const idx = editingTrainingIndex;
+            const mutationTs = Date.now();
 
             while (newTrainings.length <= idx) {
                 newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '', mood: 5, wellbeing: 5, stress: 5, comment: '' });
@@ -214,10 +215,11 @@
                 mood: pendingTrainingQuality || 5,
                 wellbeing: pendingTrainingFeelAfter || 5,
                 stress: 5,
-                comment: pendingTrainingComment
+                comment: pendingTrainingComment,
+                updatedAt: mutationTs
             };
 
-            setDay(prev => ({ ...prev, trainings: newTrainings, updatedAt: Date.now() }));
+            setDay(prev => ({ ...prev, trainings: newTrainings, updatedAt: mutationTs }));
             setShowTrainingPicker(false);
             setTrainingPickerStep(1);
             setEditingTrainingIndex(null);

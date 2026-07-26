@@ -384,6 +384,7 @@
       ...patch
     });
 
+    const mutationTs = Date.now();
     const finalTraining = {
       z: merged.zones,
       time: merged.time,
@@ -392,7 +393,8 @@
       mood: merged.mood,
       wellbeing: merged.wellbeing,
       stress: merged.stress,
-      comment: merged.comment
+      comment: merged.comment,
+      updatedAt: mutationTs
     };
 
     if (merged.fingersLog && typeof merged.fingersLog === 'object') {
@@ -430,7 +432,7 @@
     trainings[trainingIndex] = finalTraining;
 
     day.trainings = trainings;
-    day.updatedAt = Date.now();
+    day.updatedAt = mutationTs;
     const saved = saveDayFields(dateKey, day, ['trainings'], 'training-step');
     if (!saved) return false;
 

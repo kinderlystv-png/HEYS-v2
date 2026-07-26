@@ -1124,6 +1124,9 @@ describe('day mutation guard', () => {
     expect(effectsSource).toContain('resolveExternalReplacement(reactDay, lsDay');
     expect(effectsSource).toContain('SKIP_RECONCILE_EXTERNAL');
     expect(effectsSource).toContain('RECONCILE_MERGED_EXTERNAL');
+    expect(effectsSource).toContain('buildDayReconcileKey(dayToApply)');
+    expect(effectsSource.indexOf("reconcileKey === lastReconciledKey"))
+      .toBeLessThan(effectsSource.indexOf('lsSet(lsRead.key, dayToApply)'));
     expect(liveRefreshSource).toContain('resolveExternalReplacement(local, cloudBlob');
     expect(liveRefreshSource).not.toContain('preferRemote: true');
   });

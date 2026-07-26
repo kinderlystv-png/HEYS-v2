@@ -205,6 +205,54 @@ describe('mergeDayData — lost-update prevention', () => {
     expect(merged.trainings[0]).toMatchObject({ type: 'hobby', time: '10:40', updatedAt: 4000 });
   });
 
+  test('stamper does not promote a stale tombstoned training from a fresh day timestamp', () => {
+    const staleTraining = {
+      z: [0, 45, 0, 0],
+      type: 'hobby',
+      activityLabel: 'Активное хобби',
+      time: '10:40',
+      updatedAt: 1500,
+    };
+    const signature = trainingDeletionSignature(staleTraining);
+    const prev = makeDay(3000, [], {
+      trainings: [{ z: [0, 0, 0, 0], updatedAt: 3000 }],
+      deletedTrainings: [{ tombstoneId: 'delete-1', signature, deletedAt: 3000, index: 0 }],
+    });
+    const staleReactWrite = makeDay(5000, [], { trainings: [staleTraining] });
+
+    const stamped = stampDayv2ChangedEntities(prev, staleReactWrite);
+
+    expect(stamped.trainings[0].updatedAt).toBe(1500);
+    expect(stamped.deletedTrainings).toEqual([
+      expect.objectContaining({ tombstoneId: 'delete-1', deletedAt: 3000 }),
+    ]);
+    const merged = mergeDayData(prev, stamped, { forceKeepAll: true });
+    expect(merged.trainings[0].z).toEqual([0, 0, 0, 0]);
+  });
+
+  test('stamper keeps an explicit training edit newer than its tombstone', () => {
+    const restoredTraining = {
+      z: [0, 45, 0, 0],
+      type: 'hobby',
+      activityLabel: 'Активное хобби',
+      time: '10:40',
+      updatedAt: 4000,
+    };
+    const signature = trainingDeletionSignature(restoredTraining);
+    const prev = makeDay(3000, [], {
+      trainings: [{ z: [0, 0, 0, 0], updatedAt: 3000 }],
+      deletedTrainings: [{ tombstoneId: 'delete-1', signature, deletedAt: 3000, index: 0 }],
+    });
+
+    const stamped = stampDayv2ChangedEntities(prev, makeDay(4000, [], { trainings: [restoredTraining] }));
+
+    expect(stamped.trainings[0].updatedAt).toBe(4000);
+    expect(mergeDayData(prev, stamped, { forceKeepAll: true }).trainings[0]).toMatchObject({
+      type: 'hobby',
+      updatedAt: 4000,
+    });
+  });
+
   test('deletion detection — local newer & meal absent → treated as deleted (default mode)', () => {
     const local = makeDay(2000, []); // no meals, fresher
     const remote = makeDay(1500, [makeMeal('breakfast')]);

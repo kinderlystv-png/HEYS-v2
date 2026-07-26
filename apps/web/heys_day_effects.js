@@ -1086,9 +1086,9 @@
         // unreliable) and, if they differ, apply via a DIRECT setDay (urgent update,
         // commits even under the storm). Converges the screen to LS within one tick.
         React.useEffect(() => {
-            // Closure guard (resets per date): the exact LS items-state we last applied.
-            // Belt-and-suspenders against any residual flap — apply each distinct storage
-            // state at most once so the reconciler can never become a write loop.
+            // Closure guard (resets per date): the exact semantic state last reconciled.
+            // Includes trainings/tombstones and ignores recursive updatedAt stamps so a
+            // repair write cannot schedule the same repair again three seconds later.
             let lastReconciledKey = '';
             // ⚡ PERF A1 (2026-06-13): fast-path — если сырая LS-строка дня не менялась
             // с прошлого тика, пропускаем parse (50–150 КБ) и deep compare целиком.
@@ -1178,6 +1178,11 @@
                     }
                     if (resolved.status === 'noop') return;
                     dayToApply = resolved.value;
+                    const reconcileKey = (HEYS.dayUtils && typeof HEYS.dayUtils.buildDayReconcileKey === 'function')
+                        ? HEYS.dayUtils.buildDayReconcileKey(dayToApply)
+                        : '';
+                    if (reconcileKey && reconcileKey === lastReconciledKey) return;
+                    if (reconcileKey) lastReconciledKey = reconcileKey;
                     if (resolved.status === 'merged') {
                         try {
                             lsSet(lsRead.key, dayToApply);
@@ -1189,20 +1194,6 @@
                         }
                         recordDayDecision('RECONCILE_MERGED_EXTERNAL', 'interval', 'entity-level merge repaired LS before apply');
                     }
-                    // Already reconciled this exact LS items-state? Don't re-apply (loop guard).
-                    const lsKey = (dayToApply.meals || []).map(m =>
-                        (m && m.items || []).map(i => (i && i.id) + ':' + (i && i.grams)).join(',')
-                    ).join('|')
-                        + '#w' + (dayToApply.waterMl || 0)
-                        + '#s' + (dayToApply.steps || 0)
-                        + '#wt' + (dayToApply.weightMorning || 0)
-                        + '#sq' + (dayToApply.sleepQuality || 0)
-                        + '#ss' + (dayToApply.sleepStart || '')
-                        + '#se' + (dayToApply.sleepEnd || '')
-                        + '#mm' + (dayToApply.moodMorning || 0)
-                        + '#wm' + (dayToApply.wellbeingMorning || 0);
-                    if (lsKey === lastReconciledKey) return;
-                    lastReconciledKey = lsKey;
                     // The shared resolver has already applied entity-level timestamps. It writes
                     // a repaired LS candidate only for a real merge; incoming/noop results avoid
                     // timestamp churn and converge without another storage write on the next tick.

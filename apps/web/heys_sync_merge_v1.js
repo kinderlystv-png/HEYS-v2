@@ -1238,6 +1238,10 @@
       })
       : nextDay.meals;
 
+    const mergedDeletedTrainings = mergeTrainingTombstones(
+      prevDay && prevDay.deletedTrainings,
+      nextDay.deletedTrainings,
+    );
     const prevTrainingsById = mapByIdOrIndex(prevDay.trainings);
     const trainings = Array.isArray(nextDay.trainings)
       ? nextDay.trainings.map((training, index) => {
@@ -1253,9 +1257,17 @@
         }
         dayChanged = true;
         const prevTrainingTs = Number(prevTraining && prevTraining.updatedAt) || 0;
-        const trainingTs = mutationTs >= prevTrainingTs
-          ? mutationTs
-          : (Number(training.updatedAt) || mutationTs);
+        const explicitTrainingTs = Number(training.updatedAt) || 0;
+        // A stale React snapshot can re-introduce a deleted training while carrying
+        // a fresh day.updatedAt from reconcile/autosave. Do not turn that root stamp
+        // into a newer entity stamp: the tombstone must still win. A genuine user
+        // re-add/edit supplies its own training.updatedAt > deletedAt.
+        const tombstoneTs = matchingTrainingDeletionTs(training, mergedDeletedTrainings);
+        const trainingTs = tombstoneTs > 0
+          ? explicitTrainingTs
+          : (mutationTs >= prevTrainingTs
+            ? mutationTs
+            : (explicitTrainingTs || mutationTs));
         return { ...training, updatedAt: trainingTs || undefined };
       })
       : nextDay.trainings;
@@ -1279,11 +1291,6 @@
         if (incomingTs > existingTs) mergedDeletedItemIds[id] = incomingTs;
       });
     }
-    const mergedDeletedTrainings = mergeTrainingTombstones(
-      prevDay && prevDay.deletedTrainings,
-      nextDay.deletedTrainings,
-    );
-
     // HMR-safe: при mutationTs=0 (нет источника TS) не выставляем явный day.updatedAt,
     // оставляем nextDay-значение как есть. Иначе на dayChanged-path мы бы получали 0,
     // что хоть и блокируется HMR-guard, но создаёт false signal для downstream debug.

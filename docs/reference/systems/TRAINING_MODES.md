@@ -76,7 +76,10 @@ key, debounce-ит snapshot, не перезаписывает более све
 Удаление обычной записи добавляет в день `deletedTrainings` с устойчивой
 сигнатурой и временем удаления. Browser/server merge отбрасывает совпадающую
 старую запись, поэтому stale cloud snapshot не возвращает тренировку; явное
-повторное добавление с более новым `updatedAt` остаётся допустимым.
+повторное добавление с более новым entity-level `updatedAt` остаётся допустимым.
+Root `day.updatedAt` не повышает timestamp совпавшей tombstoned-тренировки, а
+периодический React/LS reconcile дедуплицирует repair до записи по полному
+семантическому состоянию дня, включая `deletedTrainings`.
 
 Эти side effects не образуют общую транзакцию. Fingers сохраняет day log, затем
 best-effort обновляет edge/tissue/progression histories; падение вторичной

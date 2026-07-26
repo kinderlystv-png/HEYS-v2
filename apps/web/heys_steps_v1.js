@@ -981,6 +981,7 @@
     let dayData = getFreshDayData(dateKey);
     dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
+    const mutationTs = Date.now();
     let changed = removeMorningActivationArtifacts(dayData);
 
     if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
@@ -1000,7 +1001,8 @@
         mood: state.postState?.mood ?? 0,
         wellbeing: state.postState?.wellbeing ?? 0,
         stress: state.postState?.stress ?? 0,
-        comment: ''
+        comment: '',
+        updatedAt: mutationTs
       };
       const emptyIndex = trainings.findIndex((training) => {
         const totalMinutes = Array.isArray(training?.z)
@@ -1021,7 +1023,7 @@
 
     if (!changed) return;
 
-    dayData.updatedAt = Date.now();
+    dayData.updatedAt = mutationTs;
     saveDayData(dateKey, dayData);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -4360,6 +4362,7 @@
     let dayData = getFreshDayData(dateKey);
     dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     removeMorningActivationArtifacts(dayData);
+    const mutationTs = Math.max(Date.now(), getLatestDayUpdatedAt(dateKey) + 1);
 
     const trainingEntry = {
       z: [0, 45, 0, 0],
@@ -4367,7 +4370,8 @@
       type: 'strength',
       activityLabel: 'Тренировка в первой половине дня',
       source: 'morning_activation_replacement',
-      comment: 'Вместо утренней зарядки'
+      comment: 'Вместо утренней зарядки',
+      updatedAt: mutationTs
     };
     const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
     const emptyIndex = trainings.findIndex((training) => {
@@ -4396,7 +4400,7 @@
       followupSnoozeUntilMealCount: null,
       replacement: 'first_half_training'
     };
-    dayData.updatedAt = Math.max(Date.now(), getLatestDayUpdatedAt(dateKey) + 1);
+    dayData.updatedAt = mutationTs;
     saveDayData(dateKey, dayData);
     notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-replacement');
     if (typeof window !== 'undefined') {
