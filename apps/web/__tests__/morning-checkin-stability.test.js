@@ -75,9 +75,7 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain("window.addEventListener('heys:queue-drained'");
     expect(MORNING_SRC).toContain("traceMorningCheckin('flow_cloud_synced'");
     expect(MORNING_SRC).toContain("syncNote: cloudPending ? (opts.syncNote || 'flush_timeout') : null");
-    expect(DAY_EFFECTS_SRC).toContain("'#sq' + (dayToApply.sleepQuality || 0)");
-    expect(DAY_EFFECTS_SRC).toContain("'#mm' + (dayToApply.moodMorning || 0)");
-    expect(DAY_EFFECTS_SRC).toContain("'#wm' + (dayToApply.wellbeingMorning || 0)");
+    expect(DAY_EFFECTS_SRC).toContain('buildDayReconcileKey(dayToApply)');
   });
 
   it('acknowledges a successfully persisted weight without waiting for a read-back render', () => {
