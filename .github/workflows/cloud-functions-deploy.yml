@@ -128,8 +128,6 @@ jobs:
           PG_SSL: ${{ secrets.PG_SSL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
@@ -153,8 +151,8 @@ jobs:
           write_env_var PG_SSL "$PG_SSL"
           write_env_var JWT_SECRET "$JWT_SECRET"
           write_env_var SESSION_SECRET "$SESSION_SECRET"
-          write_env_var TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
-          write_env_var TELEGRAM_CHAT_ID "$TELEGRAM_CHAT_ID"
+          write_env_var TELEGRAM_BOT_TOKEN "__IN_LOCKBOX__heys-app-secrets__"
+          write_env_var TELEGRAM_CHAT_ID "__IN_LOCKBOX__heys-app-secrets__"
           write_env_var SMS_API_KEY "$SMS_API_KEY"
           write_env_var VAPID_PUBLIC_KEY "$VAPID_PUBLIC_KEY"
           write_env_var VAPID_PRIVATE_KEY "$VAPID_PRIVATE_KEY"

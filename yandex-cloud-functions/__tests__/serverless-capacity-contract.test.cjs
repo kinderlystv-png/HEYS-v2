@@ -51,6 +51,27 @@ test('deploy passes database, JWT and session secrets through Lockbox placeholde
   assert.doesNotMatch(source, /_add_required SESSION_SECRET/);
 });
 
+test('deploy workflow keeps Telegram plaintext out of function env', () => {
+  const workflow = fs.readFileSync(
+    path.resolve(ROOT, '..', '.github/workflows/cloud-functions-deploy.yml'),
+    'utf8',
+  );
+  const createEnvStep = workflow.slice(
+    workflow.indexOf('- name: Create .env file'),
+    workflow.indexOf('- name: Verify production database migrations are current'),
+  );
+  const notificationSteps = workflow.slice(workflow.indexOf('- name: Notify Telegram on Success'));
+
+  assert.doesNotMatch(createEnvStep, /secrets\.TELEGRAM_(?:BOT_TOKEN|CHAT_ID)/);
+  assert.match(
+    createEnvStep,
+    /write_env_var TELEGRAM_BOT_TOKEN "__IN_LOCKBOX__heys-app-secrets__"/,
+  );
+  assert.match(createEnvStep, /write_env_var TELEGRAM_CHAT_ID "__IN_LOCKBOX__heys-app-secrets__"/);
+  assert.match(notificationSteps, /TELEGRAM_BOT_TOKEN: \$\{\{ secrets\.TELEGRAM_BOT_TOKEN \}\}/);
+  assert.match(notificationSteps, /TELEGRAM_CHAT_ID: \$\{\{ secrets\.TELEGRAM_CHAT_ID \}\}/);
+});
+
 test('scheduled monitoring runs no-retry canary and exact 429\/503 log scan', () => {
   const workflow = fs.readFileSync(
     path.resolve(ROOT, '..', '.github/workflows/api-health-monitor.yml'),
