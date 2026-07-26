@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 beforeAll(async () => {
     global.window = global;
@@ -414,5 +414,56 @@ describe('Early Warning System', () => {
             expect(result[0].rankingMultiplier).toBeLessThanOrEqual(3.0);
             expect(result[0].rankingMultiplier).toBeGreaterThan(1.0);
         });
+    });
+});
+
+describe('EWS derived persistence dedup', () => {
+    beforeEach(() => {
+        global.localStorage.clear();
+        global.HEYS.currentClientId = null;
+        global.HEYS.cloud = null;
+        global.HEYS.YandexAPI = null;
+    });
+
+    it('does not rewrite unchanged daily warning trends', () => {
+        const setItemSpy = vi.spyOn(global.localStorage, 'setItem');
+        const warnings = [{ type: 'SLEEP_DEBT', severity: 'high' }];
+
+        global.HEYS.InsightsPI.earlyWarning.trackTrends(warnings);
+        const writesAfterFirstPass = setItemSpy.mock.calls
+            .filter(([key]) => String(key).endsWith('ews_trends_v1')).length;
+
+        global.HEYS.InsightsPI.earlyWarning.trackTrends(warnings);
+        const writesAfterSecondPass = setItemSpy.mock.calls
+            .filter(([key]) => String(key).endsWith('ews_trends_v1')).length;
+
+        expect(writesAfterFirstPass).toBe(1);
+        expect(writesAfterSecondPass).toBe(1);
+        setItemSpy.mockRestore();
+    });
+
+    it('does not rewrite unchanged weekly progress within the same day', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-07-26T08:00:00.000Z'));
+        const setItemSpy = vi.spyOn(global.localStorage, 'setItem');
+
+        await global.HEYS.InsightsPI.earlyWarning.calculateWeeklyProgress([], 10);
+        vi.setSystemTime(new Date('2026-07-26T08:05:00.000Z'));
+        await global.HEYS.InsightsPI.earlyWarning.calculateWeeklyProgress([], 10);
+
+        const weeklyWrites = setItemSpy.mock.calls
+            .filter(([key]) => String(key).endsWith('ews_weekly_v1'));
+        expect(weeklyWrites).toHaveLength(1);
+
+        setItemSpy.mockRestore();
+        vi.useRealTimers();
+    });
+
+    it('treats computed_at as volatile for an otherwise identical push snapshot', () => {
+        const isSame = global.HEYS.InsightsPI.earlyWarning._isSameDerivedContent;
+        const previous = [{ pattern_id: 'sleep', severity: 'high', computed_at: '2026-07-26T08:00:00.000Z' }];
+        const next = [{ pattern_id: 'sleep', severity: 'high', computed_at: '2026-07-26T08:05:00.000Z' }];
+
+        expect(isSame(previous, next, ['computed_at'])).toBe(true);
     });
 });

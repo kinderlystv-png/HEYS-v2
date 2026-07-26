@@ -135,6 +135,40 @@
         return cid ? ('heys_' + cid + '_' + legacyKey.replace(/^heys_/, '')) : legacyKey;
     }
 
+    function _ewsComparableValue(value, volatileKeys = []) {
+        const ignored = new Set(volatileKeys);
+        const normalize = (input) => {
+            if (Array.isArray(input)) return input.map(normalize);
+            if (!input || typeof input !== 'object') return input;
+            const output = {};
+            Object.keys(input).sort().forEach((key) => {
+                if (!ignored.has(key)) output[key] = normalize(input[key]);
+            });
+            return output;
+        };
+        try {
+            return JSON.stringify(normalize(value));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function _isSameEwsDerivedContent(previousValue, nextValue, volatileKeys = []) {
+        if (previousValue === nextValue) return true;
+        const previousComparable = _ewsComparableValue(previousValue, volatileKeys);
+        const nextComparable = _ewsComparableValue(nextValue, volatileKeys);
+        return previousComparable !== null && previousComparable === nextComparable;
+    }
+
+    function _readEwsScopedValue(logicalKey) {
+        try {
+            const raw = localStorage.getItem(_ewsScopedKey(logicalKey));
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
     // Trends tracking configuration
     const TRENDS_CONFIG = {
         MAX_AGE_DAYS: 30,        // Keep occurrences for 30 days
@@ -797,16 +831,24 @@
         });
 
         try {
+            const storageKey = _ewsScopedKey(TRENDS_STORAGE_KEY);
+            const previousValue = _readEwsScopedValue(TRENDS_STORAGE_KEY);
+            if (_isSameEwsDerivedContent(previousValue, trendsData, ['updatedAt'])) {
+                console.info('ews / trends ⏭️ save.noop:', { reason: 'unchanged_content' });
+                return false;
+            }
             trendsData.updatedAt = Date.now();
             // [audit] EWS derived analytics cache (trends) — direct LS by design,
             // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
-            localStorage.setItem(_ewsScopedKey(TRENDS_STORAGE_KEY), JSON.stringify(trendsData));
+            localStorage.setItem(storageKey, JSON.stringify(trendsData));
             console.info('ews / trends ✅ save.success:', {
                 size: JSON.stringify(trendsData).length,
                 lastUpdated: trendsData.lastUpdated
             });
+            return true;
         } catch (error) {
             console.error('ews / trends ❌ save.error:', error.message);
+            return false;
         }
     }
 
@@ -1288,24 +1330,37 @@
             weeksCount: progressData.weeks?.length || 0
         });
 
+        let contentChanged = true;
+
         // 1. Save to localStorage first (fast, always succeeds)
         try {
-            progressData.updatedAt = Date.now();
-            // [audit] EWS derived weekly progress cache — direct LS by design,
-            // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
-            localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
-            console.info('ews / weekly ✅ save.success:', {
-                size: JSON.stringify(progressData).length,
-                lastUpdated: progressData.lastUpdated,
-                target: 'localStorage'
-            });
+            const storageKey = _ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY);
+            const previousValue = _readEwsScopedValue(WEEKLY_PROGRESS_STORAGE_KEY);
+            contentChanged = !_isSameEwsDerivedContent(
+                previousValue,
+                progressData,
+                ['updatedAt', 'lastUpdateTimestamp']
+            );
+            if (contentChanged) {
+                progressData.updatedAt = Date.now();
+                // [audit] EWS derived weekly progress cache — direct LS by design,
+                // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
+                localStorage.setItem(storageKey, JSON.stringify(progressData));
+                console.info('ews / weekly ✅ save.success:', {
+                    size: JSON.stringify(progressData).length,
+                    lastUpdated: progressData.lastUpdated,
+                    target: 'localStorage'
+                });
+            } else {
+                console.info('ews / weekly ⏭️ save.noop:', { reason: 'unchanged_content' });
+            }
         } catch (error) {
             console.error('ews / weekly ❌ save.error:', error.message);
         }
 
         // 2. Sync current week to cloud (if enabled). Post PR-C PIN sessions
         // carry auth in HttpOnly cookie, so JS-readable sessionToken is optional.
-        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
+        if (contentChanged && CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
             let saveTimeoutMs = CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS;
             try {
                 // Helper function: validate token content (not just existence)
@@ -4776,8 +4831,15 @@
                     computed_at: new Date().toISOString(),
                 }));
             if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-                HEYS.utils.lsSet('heys_ews_snapshot', criticalSnapshot);
-                console.info('ews / snapshot ✅ saved:', { count: criticalSnapshot.length });
+                const previousSnapshot = typeof HEYS.utils.lsGet === 'function'
+                    ? HEYS.utils.lsGet('heys_ews_snapshot', null)
+                    : null;
+                if (_isSameEwsDerivedContent(previousSnapshot, criticalSnapshot, ['computed_at'])) {
+                    console.info('ews / snapshot ⏭️ save.noop:', { reason: 'unchanged_content' });
+                } else {
+                    HEYS.utils.lsSet('heys_ews_snapshot', criticalSnapshot);
+                    console.info('ews / snapshot ✅ saved:', { count: criticalSnapshot.length });
+                }
             }
         } catch (e) {
             console.warn('ews / snapshot ❌ failed:', e?.message);
@@ -4846,6 +4908,7 @@
         // cases. Tests share identical input signatures (same date range +
         // anonymous profile) so cached results pollute across cases.
         _clearDetectCache: () => _detectCache.clear(),
+        _isSameDerivedContent: _isSameEwsDerivedContent,
         version: '4.2.0'
     };
 
