@@ -8214,16 +8214,26 @@
                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
+                        // Creation is a user mutation just like adding an item. Keep the
+                        // fresh day authoritative immediately: a fast modal dismissal or
+                        // PWA reload must not let an older cloud snapshot erase this meal.
+                        HEYS.Day?.setLastLoadedUpdatedAt?.(newUpdatedAt);
+                        HEYS.Day?.setBlockCloudUpdates?.(newUpdatedAt + 15000);
+                        HEYS.Day?.markPendingMutation?.(date);
+
                         const baseDay = protectCheckinFields(dayRef.current || {});
                         const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
                         const newDayData = protectCheckinFields({ ...baseDay, meals: newMeals, updatedAt: newUpdatedAt });
-                        const key = _scopedDayKey(date);
+                        // Keep the ref in sync before React commits. requestFlush() and a
+                        // newly opened product modal both read this ref synchronously.
+                        dayRef.current = newDayData;
                         try {
-                            lsSet(key, newDayData);
+                            persistDayData(newDayData, 'create_meal_mobile_flow');
                         } catch (e) {
                             trackError(e, { source: 'day/_meals.js', action: 'save_meal' });
                         }
                         setDay(() => newDayData);
+                        HEYS.Day?.requestFlush?.({ force: true });
 
                         if (window.HEYS && window.HEYS.analytics) {
                             window.HEYS.analytics.trackDataOperation('meal-created');
