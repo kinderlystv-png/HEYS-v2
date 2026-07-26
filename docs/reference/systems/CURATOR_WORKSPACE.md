@@ -38,6 +38,12 @@ heys_client_current + HEYS.currentClientId + heys:client-changed
 обновляется после завершения загрузки. Это защищает от чтения/записи ключей под
 новым id до фактической смены namespace.
 
+Logout также завершает data context полностью: storage/runtime очищаются, React
+получает `heys:client-changed` с пустым `clientId` и перемонтируется до
+следующего входа. Факт ранее активного клиента сохраняется в page-lifetime
+reload guard, включая восстановленные PIN-сессии, которые не проходили через
+`switchClient` при старте.
+
 ## Владельцы ответственности
 
 | Область                                          | Точка                                              |

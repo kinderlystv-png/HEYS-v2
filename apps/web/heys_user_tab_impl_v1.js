@@ -745,7 +745,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return { emoji: '💪💪', color: '#3b82f6', label: 'Агрессивный набор' };
         };
 
-        return React.createElement('div', { className: 'page page-user' },
+        return React.createElement('div', { className: 'page page-user', 'data-curator-target': 'profile' },
             React.createElement('div', { className: 'profile-accordion' },
 
                 // === СЕКЦИЯ 1: Базовые параметры ===

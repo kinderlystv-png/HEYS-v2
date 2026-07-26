@@ -226,6 +226,7 @@ test('training added (empty slot → filled)', () => {
   const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 1);
   assert.equal(actions[0].type, 'training_added');
+  assert.equal(actions[0].training_index, 0);
   assert.equal(actions[0].kind, 'Бег');
   assert.equal(actions[0].duration_min, 30);
 });
@@ -236,6 +237,7 @@ test('training removed (filled → empty)', () => {
   const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 1);
   assert.equal(actions[0].type, 'training_removed');
+  assert.equal(actions[0].training_index, 0);
   assert.equal(actions[0].kind, 'Бег');
 });
 

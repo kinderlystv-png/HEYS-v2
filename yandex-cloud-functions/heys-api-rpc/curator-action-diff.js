@@ -318,13 +318,13 @@ function diffTrainings(oldTr, newTr, actions) {
     const oEmpty = isEmptyTraining(o);
     const nEmpty = isEmptyTraining(n);
     if (oEmpty && !nEmpty) {
-      const a = { type: 'training_added', kind: trainingLabel(n) };
+      const a = { type: 'training_added', kind: trainingLabel(n), training_index: i };
       const d = trainingDurationMin(n);
       if (d) a.duration_min = d;
       if (n && n.time) a.time = n.time;
       actions.push(a);
     } else if (!oEmpty && nEmpty) {
-      actions.push({ type: 'training_removed', kind: trainingLabel(o) });
+      actions.push({ type: 'training_removed', kind: trainingLabel(o), training_index: i });
     }
   }
 }

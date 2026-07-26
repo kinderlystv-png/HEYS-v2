@@ -3051,7 +3051,7 @@
             setClearActiveOpen(false);
         };
 
-        return h('div', { className: 'planning-tasks-screen' },
+        return h('div', { className: 'planning-tasks-screen', 'data-curator-target': 'planning' },
             h('div', { className: 'planning-tasks-header' },
                 h('section', { ref: quickAddCardRef },
                     h(TaskComposerCard, {

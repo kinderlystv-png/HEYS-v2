@@ -5,7 +5,7 @@
 //   1) After full heysSyncCompleted — RPC get_my_curator_changelog_since.
 //   2) Initial backlog opens as a centered review modal after app blockers clear.
 //   3) Live updates during an active session accumulate for 30 minutes.
-//   4) "Ознакомился" acks only entries shown in this modal by entry id.
+//   4) "Ознакомился" acks only shown entries and opens their primary diary target.
 //   5) "Позже" / close / Esc snoozes for the current session and does not ack.
 //   6) ?openCuratorFeed=1 from push opens immediately, except over blocking modals.
 //
@@ -136,9 +136,10 @@
     const itemId = a.item_id || null;
     const firstItem = Array.isArray(a.items) ? a.items.find(Boolean) : null;
     const firstItemId = firstItem?.item_id || null;
+    const trainingIndex = Number.isInteger(a.training_index) ? a.training_index : null;
 
-    if (itemId) target.selectors.push(`[data-item-id="${cssEscape(itemId)}"]`);
-    if (firstItemId) target.selectors.push(`[data-item-id="${cssEscape(firstItemId)}"]`);
+    if (itemId && a.type !== 'meal_item_removed') target.selectors.push(`[data-item-id="${cssEscape(itemId)}"]`);
+    if (firstItemId && a.type !== 'meal_item_removed') target.selectors.push(`[data-item-id="${cssEscape(firstItemId)}"]`);
     if (mealId) target.selectors.push(`[data-meal-id="${cssEscape(mealId)}"]`);
     if (mealTime) target.selectors.push(`[data-meal-time="${cssEscape(mealTime)}"]`);
 
@@ -152,9 +153,13 @@
         target.selectors.push('[data-curator-target="steps"]', '.activity-steps-card', '.compact-activity');
         break;
       case 'training_added':
+        target.tab = 'activity';
+        if (trainingIndex != null) target.selectors.push(`[data-training-index="${trainingIndex}"]`);
+        target.selectors.push('[data-curator-target="training"]', '.month-trainings-card', '.compact-activity');
+        break;
       case 'training_removed':
         target.tab = 'activity';
-        target.selectors.push('[data-curator-target="training"]', '.month-trainings-card', '.compact-activity');
+        target.selectors.push('[data-curator-target="training-summary"]', '.month-trainings-card', '[data-curator-target="activity"]');
         break;
       case 'weight_set':
         target.tab = 'stats';
@@ -165,14 +170,23 @@
         target.selectors.push('[data-curator-target="sleep"]', '.sleep-card');
         break;
       case 'profile_changed':
+        target.tab = 'user';
+        target.selectors.push('[data-curator-target="profile"]', '.page-user');
+        break;
       case 'norms_changed':
         target.tab = 'user';
+        target.selectors.push('#profile-section-norms', '[data-curator-target="profile"]', '.page-user');
         break;
       case 'planning_changed':
         target.tab = 'tasks';
+        target.selectors.push('[data-curator-target="planning"]', '.planning-tasks-screen', '.planning-tab');
+        break;
+      case 'meal_removed':
+        target.tab = 'diary';
+        target.selectors.push('#diary-heading');
         break;
       default:
-        target.selectors.push('.meal-card', '#water-card', '.activity-section');
+        target.selectors.push('#diary-heading', '.meal-card', '#water-card', '.activity-section');
         break;
     }
 
@@ -383,7 +397,7 @@
           break;
         case 'meal_removed':    mealRemovedByName.add(a.name || '?'); break;
         case 'training_added': {
-          const k = `${a.kind || ''}|${a.duration_min || ''}|${a.time || ''}`;
+          const k = `${a.training_index ?? ''}|${a.kind || ''}|${a.duration_min || ''}|${a.time || ''}`;
           if (!trainAddedByKey.has(k)) trainAddedByKey.set(k, a);
           break;
         }
@@ -821,10 +835,12 @@
     _renderedEntries = entries;
     const summary = summarizeEntries(entries) || 'Обновлены данные';
     const targetRegistry = Object.create(null);
+    let primaryTarget = null;
     let targetSeq = 0;
     const registerTarget = (entry, action) => {
       const id = 'ca_target_' + (++targetSeq);
       targetRegistry[id] = buildActionTarget(entry, action);
+      if (!primaryTarget) primaryTarget = targetRegistry[id];
       return id;
     };
     const groups = groupByDate(entries);
@@ -900,7 +916,8 @@
       _entries = _entries.filter(e => !entryIds(shownEntries).includes(e.id));
       _reviewEntries = _reviewEntries.filter(e => !entryIds(shownEntries).includes(e.id));
       _renderedEntries = [];
-      removeExistingModal();
+      if (primaryTarget) openTargetInDiary(primaryTarget);
+      else removeExistingModal();
       flushPendingAcks().catch((e) => {
         console.warn('[HEYS.curatorReview] ack retry failed:', e?.message);
       });
@@ -1161,6 +1178,7 @@
     _test: {
       summarizeEntries,
       actionText,
+      buildActionTarget,
       dedupAndCollapse,
       splitVisibleEntries,
       reconcileEntriesWithCurrentDays,

@@ -369,6 +369,60 @@ describe('CuratorActionsBanner review modal', () => {
     expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
   });
 
+  it('routes every curator action to a real product surface', () => {
+    const banner = loadBanner();
+    const build = banner._test.buildActionTarget;
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
+    const cases = [
+      [{ type: 'meal_added', meal_id: 'meal-1' }, 'diary', '[data-meal-id="meal-1"]'],
+      [{ type: 'meal_item_removed', meal_id: 'meal-1', item_id: 'gone-item' }, 'diary', '[data-meal-id="meal-1"]'],
+      [{ type: 'meal_removed' }, 'diary', '#diary-heading'],
+      [{ type: 'water_set' }, 'diary', '#water-card'],
+      [{ type: 'steps_set' }, 'activity', '[data-curator-target="steps"]'],
+      [{ type: 'training_added', kind: 'Зарядка', training_index: 2 }, 'activity', '[data-training-index="2"]'],
+      [{ type: 'training_removed', training_index: 1 }, 'activity', '[data-curator-target="training-summary"]'],
+      [{ type: 'weight_set' }, 'stats', '[data-curator-target="weight"]'],
+      [{ type: 'sleep_set' }, 'stats', '[data-curator-target="sleep"]'],
+      [{ type: 'profile_changed' }, 'user', '[data-curator-target="profile"]'],
+      [{ type: 'norms_changed' }, 'user', '#profile-section-norms'],
+      [{ type: 'planning_changed' }, 'tasks', '[data-curator-target="planning"]'],
+    ];
+
+    for (const [action, tab, selector] of cases) {
+      const target = build(entry, action);
+      expect(target.tab).toBe(tab);
+      expect(target.selectors[0]).toBe(selector);
+    }
+  });
+
+  it('keeps every curator target selector backed by a rendered DOM marker', () => {
+    const sources = [
+      '../heys_day_water_v1.js',
+      '../heys_day_activity_v1.js',
+      '../heys_day_trainings_v1.js',
+      '../heys_day_main_block_v1.js',
+      '../heys_day_side_block_v1.js',
+      '../heys_day_diary_section.js',
+      '../heys_user_tab_impl_v1.js',
+      '../heys_planning_tasks_v1.js',
+    ].map((relativePath) => fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8')).join('\n');
+
+    for (const marker of [
+      "id: 'water-card'",
+      "'data-curator-target': 'steps'",
+      "'data-curator-target': 'training'",
+      "'data-curator-target': 'training-summary'",
+      "'data-curator-target': 'weight'",
+      "'data-curator-target': 'sleep'",
+      "id: 'diary-heading'",
+      "'data-curator-target': 'profile'",
+      "id: 'norms'",
+      "'data-curator-target': 'planning'",
+    ]) {
+      expect(sources).toContain(marker);
+    }
+  });
+
   it('extracts target date from scoped dayv2 keys', () => {
     const banner = loadBanner();
     const date = banner._test.targetDateFromEntries([
@@ -409,6 +463,53 @@ describe('CuratorActionsBanner review modal', () => {
       untilTs: '2026-07-05T09:00:00.000Z',
     });
     expect(window.HEYS.utils.lsSet).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges and opens the primary training with scroll and pulse', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'training_added', date: '2026-07-05', kind: 'Активное хобби', duration_min: 45, time: '10:40' },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+    const training = document.createElement('div');
+    training.setAttribute('data-curator-target', 'training');
+    training.scrollIntoView = vi.fn();
+    document.body.appendChild(training);
+
+    await banner.checkAndShow();
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledWith({
+      entryIds: ['11111111-1111-4111-8111-111111111111'],
+      untilTs: '2026-07-05T09:00:00.000Z',
+    });
+    expect(window.HEYS.ui.setSelectedDate).toHaveBeenCalledWith('2026-07-05');
+    expect(window.HEYS.ui.switchTab).toHaveBeenCalledWith('activity');
+    expect(training.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    expect(training.classList.contains('ca-scroll-highlight')).toBe(true);
+  });
+
+  it('acknowledges a water update and scrolls to the water card', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'water_set', date: '2026-07-05', to: 1800 },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+    const waterCard = document.createElement('div');
+    waterCard.id = 'water-card';
+    waterCard.scrollIntoView = vi.fn();
+    document.body.appendChild(waterCard);
+
+    await banner.checkAndShow();
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(window.HEYS.ui.switchTab).toHaveBeenCalledWith('diary');
+    expect(waterCard.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    expect(waterCard.classList.contains('ca-scroll-highlight')).toBe(true);
   });
 
   it('acks from runtime queue when browser storage writes fail', async () => {

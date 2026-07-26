@@ -461,7 +461,7 @@
       ),
 
       // Тренировки за последние 30 дней (сводка)
-      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'training' },
+      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'training-summary' },
         React.createElement('div', { className: 'month-trainings-card-header' },
           React.createElement('span', { className: 'month-trainings-card-title' }, '📋 Тренировки за 30 дней')
         ),
