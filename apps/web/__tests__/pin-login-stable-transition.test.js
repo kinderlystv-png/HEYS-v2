@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import vm from 'vm';
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,12 +12,18 @@ const initializerSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_app_initialize_v1.js'),
   'utf8',
 );
+const hooksSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_app_hooks_v1.js'),
+  'utf8',
+);
+const storageSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_storage_supabase_v1.js'),
+  'utf8',
+);
 
-function decideReactKey({ previousClientId, currentKey, nextClientId }) {
-  if (previousClientId === nextClientId) return currentKey;
-  if (!previousClientId && nextClientId) return currentKey;
-  return nextClientId || '__no_client__';
-}
+const initializerWindow = { HEYS: {} };
+vm.runInNewContext(initializerSource, { window: initializerWindow });
+const resolveClientTreeKey = initializerWindow.HEYS.AppInitializer._test.resolveClientTreeKey;
 
 describe('stable PIN-login transition', () => {
   it('keeps the login screen busy until critical data has set the client', () => {
@@ -34,25 +41,30 @@ describe('stable PIN-login transition', () => {
   });
 
   it('does not remount the tree on anonymous-to-first-client activation', () => {
-    expect(decideReactKey({
-      previousClientId: null,
-      currentKey: '__no_client__',
-      nextClientId: 'client-a',
-    })).toBe('__no_client__');
-    expect(initializerSource).toContain('if (!previous && next) return;');
+    expect(resolveClientTreeKey(null, 'client-a', '__no_client__')).toBe('__no_client__');
+    expect(initializerSource).toContain('if (!previousClientId && nextClientId) return currentKey;');
   });
 
   it('still remounts for real client switches and logout', () => {
-    expect(decideReactKey({
-      previousClientId: 'client-a',
-      currentKey: 'client-a',
-      nextClientId: 'client-b',
-    })).toBe('client-b');
-    expect(decideReactKey({
-      previousClientId: 'client-a',
-      currentKey: 'client-a',
-      nextClientId: null,
-    })).toBe('__no_client__');
-    expect(initializerSource).toContain("setReactKey(next || '__no_client__')");
+    expect(resolveClientTreeKey('client-a', 'client-b', 'client-a')).toBe('client-b');
+    expect(resolveClientTreeKey('client-a', null, 'client-a')).toBe('__no_client__');
+    expect(initializerSource).toContain('return nextClientId || \'__no_client__\';');
+  });
+
+  it('resets the tree and blocks first-activation optimization after logout', () => {
+    const alexDayState = { weightMorning: 51.9, sleepStart: '03:30', sleepEnd: '11:10' };
+    let currentKey = 'alexandra';
+    let mountedDayState = alexDayState;
+
+    const logoutKey = resolveClientTreeKey('alexandra', null, currentKey);
+    if (logoutKey !== currentKey) mountedDayState = {};
+    currentKey = logoutKey;
+
+    expect(currentKey).toBe('__no_client__');
+    expect(mountedDayState).toEqual({});
+    expect(storageSource).toContain('if (previousClientId) cloud._clientActivatedThisPage = true;');
+    expect(storageSource).toContain("detail: { clientId: null, previousClientId, source: 'logout' }");
+    expect(hooksSource).toContain("source: 'logout-fallback'");
+    expect(initializerSource).toContain('resolveClientTreeKey(previous, next, currentKey)');
   });
 });

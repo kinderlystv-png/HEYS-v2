@@ -2530,11 +2530,25 @@
         }, [cloud, fetchClientsFromCloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer, U]);
 
         const cloudSignOut = useCallback(async () => {
+            const previousClientId = (() => {
+                try {
+                    return window.HEYS?.currentClientId || readGlobalValue('heys_client_current', '') || null;
+                } catch (_) {
+                    return null;
+                }
+            })();
+            let cloudHandledClientReset = false;
             try {
-                if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
+                if (cloud && typeof cloud.signOut === 'function') {
+                    await cloud.signOut();
+                    cloudHandledClientReset = true;
+                }
             } catch (_) { }
             if (window.HEYS) {
                 window.HEYS.currentClientId = null;
+                if (previousClientId && window.HEYS.cloud) {
+                    window.HEYS.cloud._clientActivatedThisPage = true;
+                }
                 if (window.HEYS.store?.flushMemory) {
                     window.HEYS.store.flushMemory();
                 }
@@ -2555,6 +2569,15 @@
             setStatus('offline');
             setSyncVer((v) => v + 1);
             removeGlobalValue('heys_last_client_id');
+            // Normally cloud.signOut owns the context event. Keep a fail-closed
+            // fallback for partial boot/offline cases where cloud is unavailable.
+            if (!cloudHandledClientReset) {
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                        detail: { clientId: null, previousClientId, source: 'logout-fallback' }
+                    }));
+                } catch (_) { }
+            }
         }, [cloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer]);
 
         // 🚪 FORCE LOGOUT: Слушаем событие и автоматически выходим на экран логина

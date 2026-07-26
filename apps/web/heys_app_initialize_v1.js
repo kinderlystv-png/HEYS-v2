@@ -8,6 +8,13 @@
         return HEYS[name] || fallback || {};
     };
 
+    function resolveClientTreeKey(previousClientId, nextClientId, currentKey) {
+        if (previousClientId === nextClientId) return currentKey;
+        // Fresh anonymous → first-client activation is already gated by Phase A.
+        if (!previousClientId && nextClientId) return currentKey;
+        return nextClientId || '__no_client__';
+    }
+
     function createBlankScreenGuard(options) {
         const opts = options || {};
         const timeoutMs = Number(opts.timeoutMs) || 15000;
@@ -217,7 +224,10 @@
         };
     }
 
-    HEYS.AppInitializer._test = Object.assign({}, HEYS.AppInitializer._test, { createBlankScreenGuard });
+    HEYS.AppInitializer._test = Object.assign({}, HEYS.AppInitializer._test, {
+        createBlankScreenGuard,
+        resolveClientTreeKey,
+    });
 
     HEYS.AppInitializer.initializeApp = function initializeApp() {
         // Логи инициализации отключены для чистой консоли
@@ -422,13 +432,7 @@
                                 || null;
                             const previous = activeClientRef.current;
                             activeClientRef.current = next;
-                            if (previous === next) return;
-                            // Anonymous/login → first client already transitions in-place via
-                            // App's own setClientId after Phase A. Remounting here immediately
-                            // repeated AuthInit and produced several visible flashes.
-                            if (!previous && next) return;
-                            // Real client↔client switch and logout still get a clean tree.
-                            setReactKey(next || '__no_client__');
+                            setReactKey((currentKey) => resolveClientTreeKey(previous, next, currentKey));
                         };
                         window.addEventListener('heys:client-changed', handler);
                         return () => window.removeEventListener('heys:client-changed', handler);

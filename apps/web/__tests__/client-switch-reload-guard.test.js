@@ -22,13 +22,15 @@ import { describe, expect, it } from 'vitest';
 function createSwitchReloadDecider() {
     // Эмулирует module-singleton `cloud` в рамках одной загрузки страницы.
     const cloud = { _clientActivatedThisPage: undefined };
-    return function decide({ oldClientId = null, reloadDisabled = false } = {}) {
+    const decide = function decide({ oldClientId = null, reloadDisabled = false } = {}) {
         const hadPriorClientThisPage = cloud._clientActivatedThisPage === true;
         cloud._clientActivatedThisPage = true;
         const firstActivationNoReload = !hadPriorClientThisPage && !oldClientId;
         const willReload = !reloadDisabled && !firstActivationNoReload;
         return { willReload, firstActivationNoReload };
     };
+    decide.markPriorClientOnLogout = () => { cloud._clientActivatedThisPage = true; };
+    return decide;
 }
 
 describe('switchClient reload guard (first-activation optimization)', () => {
@@ -53,6 +55,15 @@ describe('switchClient reload guard (first-activation optimization)', () => {
         const first = decide({ oldClientId: null }); // вход под A
         expect(first.willReload).toBe(false);
         const relogin = decide({ oldClientId: null }); // logout (client_current стёрт) → вход под B
+        expect(relogin.firstActivationNoReload).toBe(false);
+        expect(relogin.willReload).toBe(true);
+    });
+
+    it('SAFETY: restored client→logout→login also reloads even without an earlier switchClient call', () => {
+        const decide = createSwitchReloadDecider();
+        // Restored sessions use syncClient directly, so switchClient has not set the flag.
+        decide.markPriorClientOnLogout();
+        const relogin = decide({ oldClientId: null });
         expect(relogin.firstActivationNoReload).toBe(false);
         expect(relogin.willReload).toBe(true);
     });

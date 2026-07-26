@@ -6458,6 +6458,10 @@
 
   // === Sync Loading Skeleton for WidgetsTab ===
   function WidgetsSyncSkeleton() {
+    const SharedTabSkeleton = HEYS.AppSkeletons?.TabSkeleton;
+    if (SharedTabSkeleton) {
+      return React.createElement(SharedTabSkeleton, { tab: 'widgets', className: 'widgets-sync-skeleton' });
+    }
     return React.createElement('div', {
       className: 'widgets-sync-skeleton',
       style: { padding: '0 8px', marginTop: 8 }

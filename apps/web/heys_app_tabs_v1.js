@@ -98,8 +98,12 @@
         return visible;
     }
 
-    // Skeleton для DayTab — показываем пока грузится
-    function DayTabSkeleton() {
+    // Skeleton для DayTab — структура зависит от открытого дневного подраздела.
+    function DayTabSkeleton({ subTab = 'diary' } = {}) {
+        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
+        if (SharedTabSkeleton) {
+            return React.createElement(SharedTabSkeleton, { tab: subTab });
+        }
         return React.createElement('div', { className: 'day-tab-skeleton', style: { padding: 16 } },
             // Sparkline skeleton
             React.createElement('div', {
@@ -298,11 +302,11 @@
 
         // 🔐 Не рендерим DayTab пока нет клиента — иначе advice показываются до входа!
         if (!clientId) {
-            return showSkeleton ? React.createElement(DayTabSkeleton) : null;
+            return showSkeleton ? React.createElement(DayTabSkeleton, { subTab }) : null;
         }
 
         if (loading || !window.HEYS || !window.HEYS.DayTab) {
-            return showSkeleton ? React.createElement(DayTabSkeleton) : null;
+            return showSkeleton ? React.createElement(DayTabSkeleton, { subTab }) : null;
         }
         return React.createElement('div', {
             ref: visibleFrameRef,
@@ -339,6 +343,10 @@
 
     // Skeleton для Ration/Products
     function RationSkeleton() {
+        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
+        if (SharedTabSkeleton) {
+            return React.createElement(SharedTabSkeleton, { tab: 'ration' });
+        }
         return React.createElement('div', { style: { padding: 16 } },
             React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
             ...Array.from({ length: 5 }, (_, i) =>
@@ -892,6 +900,10 @@
 
     // Skeleton для UserTab
     function UserSkeleton() {
+        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
+        if (SharedTabSkeleton) {
+            return React.createElement(SharedTabSkeleton, { tab: 'user' });
+        }
         return React.createElement('div', { style: { padding: 16 } },
             React.createElement('div', { className: 'skeleton-header', style: { width: 120, marginBottom: 16 } }),
             React.createElement('div', { className: 'skeleton-block', style: { height: 100, marginBottom: 12 } }),

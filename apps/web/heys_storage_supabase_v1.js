@@ -5735,6 +5735,19 @@
   };
 
   cloud.signOut = function () {
+    const previousClientId = (() => {
+      try {
+        return (global.HEYS && global.HEYS.currentClientId)
+          || cloud.getCurrentClientId?.()
+          || null;
+      } catch (_) {
+        return null;
+      }
+    })();
+    // A restored PIN session may never call switchClient(), so the reload guard
+    // cannot infer that this page already contained another client's live state.
+    // Preserve that fact before clearing the runtime context.
+    if (previousClientId) cloud._clientActivatedThisPage = true;
     armLogoutSuppression();
     try {
       global.HEYS = global.HEYS || {};
@@ -5791,6 +5804,13 @@
     } catch (e) { }
     try {
       window.dispatchEvent(new Event('heys:auth-changed'));
+    } catch (_) { }
+    // Logout is a real client-context transition. RootWithKey must remount the
+    // whole app before another PIN client can be activated on the same page.
+    try {
+      window.dispatchEvent(new CustomEvent('heys:client-changed', {
+        detail: { clientId: null, previousClientId, source: 'logout' }
+      }));
     } catch (_) { }
     setTimeout(() => {
       try {
