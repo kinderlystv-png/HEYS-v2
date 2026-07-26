@@ -138,6 +138,59 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return Array.from(new Set(candidates));
   }
 
+  function getPhotoSourceCandidateType(att, source, sourceIndex) {
+    const primary = String(att?.url || att?.localPreview || '').trim();
+    if (sourceIndex === 0 || source === primary) return 'direct';
+    if (att?.localPreview && source === att.localPreview) return 'local-preview';
+    try {
+      const pathStyle = getYandexPathStylePhotoUrl(primary);
+      if (pathStyle && new URL(source).hostname === 'storage.yandexcloud.net') return 'path-style';
+    } catch { /* use the generic cache-bust classification */ }
+    return 'cache-bust';
+  }
+
+  function getPhotoSurface(runtime = {}) {
+    const nav = runtime.navigator || global.navigator || {};
+    const userAgent = String(nav.userAgent || '');
+    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+    let standalone = nav.standalone === true;
+    try {
+      const matchMediaFn = runtime.matchMedia || global.matchMedia;
+      standalone = standalone || !!matchMediaFn?.call(global, '(display-mode: standalone)')?.matches;
+    } catch { /* keep the navigator-derived value */ }
+    return `${mobile ? 'mobile' : 'desktop'}-${standalone ? 'pwa' : 'browser'}`;
+  }
+
+  function buildPhotoFailureDiagnostic(details = {}, runtime = {}) {
+    const nav = runtime.navigator || global.navigator || {};
+    const effectiveType = String(nav.connection?.effectiveType || 'unknown').toLowerCase();
+    const safeEffectiveType = ['slow-2g', '2g', '3g', '4g'].includes(effectiveType)
+      ? effectiveType
+      : 'unknown';
+    const safeCandidateType = ['direct', 'cache-bust', 'path-style', 'local-preview', 'api-fallback'].includes(details.candidateType)
+      ? details.candidateType
+      : 'unknown';
+    const attemptCount = Math.max(1, Math.min(1000, Math.round(Number(details.attemptCount) || 1)));
+    return {
+      source: 'messenger',
+      status: 'degraded',
+      screen: 'messenger',
+      online: nav.onLine !== false,
+      effective_type: safeEffectiveType,
+      candidate_type: safeCandidateType,
+      attempt_count: attemptCount,
+      surface: getPhotoSurface(runtime),
+    };
+  }
+
+  function tracePhotoLoadFailure(details, runtime) {
+    const diagnostic = buildPhotoFailureDiagnostic(details, runtime);
+    try {
+      HEYS.LogTrace?.event?.('messenger_photo_load_failed', diagnostic, 'warn');
+    } catch { /* diagnostics must not affect photo recovery */ }
+    return diagnostic;
+  }
+
   function pendingTranscriptKey(messages) {
     const parts = [];
     for (const message of Array.isArray(messages) ? messages : []) {
@@ -602,14 +655,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function useReliablePhotoSource(attachment) {
     const [sourceIndex, setSourceIndex] = useState(0);
     const [retryCycle, setRetryCycle] = useState(0);
+    const [fallbackSource, setFallbackSource] = useState(null);
     const [status, setStatus] = useState('loading');
     const retryTimerRef = useRef(null);
+    const fallbackRequestRef = useRef(0);
+    const fallbackPendingRef = useRef(false);
+    const fallbackObjectUrlRef = useRef(null);
     const candidates = getPhotoSourceCandidates(attachment, retryCycle);
-    const source = candidates[Math.min(sourceIndex, candidates.length - 1)] || '';
+    const source = fallbackSource || candidates[Math.min(sourceIndex, candidates.length - 1)] || '';
+
+    const clearFallbackSource = () => {
+      fallbackRequestRef.current += 1;
+      fallbackPendingRef.current = false;
+      if (fallbackObjectUrlRef.current) {
+        try { URL.revokeObjectURL(fallbackObjectUrlRef.current); } catch { /* ignore */ }
+        fallbackObjectUrlRef.current = null;
+      }
+      setFallbackSource(null);
+    };
 
     useEffect(() => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
+      clearFallbackSource();
       setSourceIndex(0);
       setRetryCycle(0);
       setStatus('loading');
@@ -617,6 +685,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      fallbackRequestRef.current += 1;
+      fallbackPendingRef.current = false;
+      if (fallbackObjectUrlRef.current) {
+        try { URL.revokeObjectURL(fallbackObjectUrlRef.current); } catch { /* ignore */ }
+        fallbackObjectUrlRef.current = null;
+      }
     }, []);
 
     const onLoad = useCallback(() => {
@@ -627,8 +701,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const onError = useCallback(() => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (fallbackSource) {
+        tracePhotoLoadFailure({
+          candidateType: 'api-fallback',
+          attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
+        });
+        setStatus('failed');
+        return;
+      }
       if (sourceIndex >= candidates.length - 1) {
         retryTimerRef.current = null;
+        const fetchFallback = HEYS.MessengerAPI?.fetchPhotoBlob;
+        if (attachment?.path && typeof fetchFallback === 'function' && !fallbackPendingRef.current) {
+          const requestId = fallbackRequestRef.current + 1;
+          fallbackRequestRef.current = requestId;
+          fallbackPendingRef.current = true;
+          setStatus('retrying');
+          Promise.resolve(fetchFallback(attachment.path)).then((result) => {
+            if (fallbackRequestRef.current !== requestId) return;
+            fallbackPendingRef.current = false;
+            if (!result?.success || !result.blob || typeof URL.createObjectURL !== 'function') {
+              tracePhotoLoadFailure({
+                candidateType: 'api-fallback',
+                attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
+              });
+              setStatus('failed');
+              return;
+            }
+            const objectUrl = URL.createObjectURL(result.blob);
+            fallbackObjectUrlRef.current = objectUrl;
+            setFallbackSource(objectUrl);
+            setStatus('loading');
+          }).catch(() => {
+            if (fallbackRequestRef.current !== requestId) return;
+            fallbackPendingRef.current = false;
+            tracePhotoLoadFailure({
+              candidateType: 'api-fallback',
+              attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
+            });
+            setStatus('failed');
+          });
+          return;
+        }
+        tracePhotoLoadFailure({
+          candidateType: getPhotoSourceCandidateType(attachment, source, sourceIndex),
+          attemptCount: retryCycle * candidates.length + sourceIndex + 1,
+        });
         setStatus('failed');
         return;
       }
@@ -637,11 +755,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         retryTimerRef.current = null;
         setSourceIndex((current) => current + 1);
       }, 250 * (sourceIndex + 1));
-    }, [candidates.length, sourceIndex]);
+    }, [attachment, candidates.length, fallbackSource, retryCycle, source, sourceIndex]);
 
     const retry = useCallback(() => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
+      clearFallbackSource();
       setRetryCycle((current) => current + 1);
       setSourceIndex(0);
       setStatus('loading');
@@ -677,7 +796,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       reliable.status === 'failed' && React.createElement(
         'div',
         { className: 'msg-attachment-error' },
-        React.createElement('span', null, 'Не удалось загрузить фото'),
+        React.createElement('span', null, 'Не удалось показать фото'),
         React.createElement('button', {
           type: 'button',
           onClick: (event) => {
@@ -3128,6 +3247,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   HEYS.Messenger._test.getPhotoSourceCandidates = getPhotoSourceCandidates;
+  HEYS.Messenger._test.getPhotoSourceCandidateType = getPhotoSourceCandidateType;
+  HEYS.Messenger._test.buildPhotoFailureDiagnostic = buildPhotoFailureDiagnostic;
+  HEYS.Messenger._test.tracePhotoLoadFailure = tracePhotoLoadFailure;
+  HEYS.Messenger._test.MessagePhoto = MessagePhoto;
 
   // Subscribe to deep-link event from heys_app_shortcuts_v1
   if (typeof window !== 'undefined') {

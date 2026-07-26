@@ -149,6 +149,55 @@
     return { success: false, error: 'network_error' };
   }
 
+  async function fetchPhotoBlob(path) {
+    if (!path || typeof path !== 'string') return { success: false, error: 'path_required' };
+    const token = getBearerToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let res;
+      try {
+        const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+          ? AbortSignal.timeout(8000)
+          : undefined;
+        res = await fetch(`${API_URL}/photos/read`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ path }),
+          ...(signal ? { signal } : {}),
+        });
+      } catch {
+        if (attempt === 0) {
+          await sleep(220);
+          continue;
+        }
+        return { success: false, error: 'network_error' };
+      }
+      if (res.ok) {
+        const blob = await res.blob();
+        if (!blob?.size || !String(blob.type || '').startsWith('image/')) {
+          return { success: false, error: 'invalid_photo_response' };
+        }
+        return { success: true, blob };
+      }
+      let json = null;
+      try { json = await res.json(); } catch { /* non-JSON error */ }
+      if (RETRY_STATUSES.has(res.status) && attempt === 0) {
+        await sleep(220);
+        continue;
+      }
+      return {
+        success: false,
+        error: json?.error || `http_${res.status}`,
+        statusCode: res.status,
+      };
+    }
+    return { success: false, error: 'network_error' };
+  }
+
   // ── Public API ───────────────────────────────────────────────────────
 
   /**
@@ -421,6 +470,7 @@
     setAcked,
     deleteMessage,
     editMessage,
+    fetchPhotoBlob,
     getUnreadCount,
     getInboxCache,
     refreshInbox,

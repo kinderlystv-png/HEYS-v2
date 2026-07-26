@@ -3,6 +3,7 @@
  *
  * Endpoints (mapped via API Gateway):
  *   POST   /photos/upload   — upload image bytes to S3
+ *   POST   /photos/read     — authenticated messenger image fallback
  *   POST   /photos/delete   — deletes object from bucket
  *   POST   /media/upload    — upload voice/audio bytes to S3 (same function alias)
  *   POST   /media/delete    — deletes media object from bucket
@@ -19,7 +20,7 @@
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const crypto = require('crypto');
-const { S3Client, DeleteObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // ── S3 client (Yandex Object Storage) ────────────────────────────────────
 let s3Client = null;
@@ -245,6 +246,22 @@ function buildKey({ clientId, date, mealId, ext, mediaType }) {
     ? `voice/${sanitizeSegment(mealId) || 'message'}`
     : (sanitizeSegment(mealId) || 'misc');
   return `${cid}/${d}/${purpose}/${randomId()}.${ext}`;
+}
+
+function isMessengerImagePath(path, clientId) {
+  if (!path || !clientId || !String(path).startsWith(`${clientId}/`)) return false;
+  const rest = String(path).slice(String(clientId).length + 1);
+  return /^\d{4}-\d{2}-\d{2}\/msg-[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(rest);
+}
+
+async function objectBodyToBuffer(body) {
+  if (Buffer.isBuffer(body)) return body;
+  if (body && typeof body.transformToByteArray === 'function') {
+    return Buffer.from(await body.transformToByteArray());
+  }
+  const chunks = [];
+  for await (const chunk of body || []) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
 }
 
 function hasAudioSignature(buf, contentType) {
@@ -551,6 +568,84 @@ async function handleDelete(identity, body) {
   return { statusCode: 200, body: { success: true } };
 }
 
+async function handleRead(identity, body) {
+  const path = typeof body?.path === 'string' ? body.path : '';
+  const clientId = path.split('/')[0] || '';
+  if (!isMessengerImagePath(path, clientId)) {
+    return { statusCode: 400, body: { error: 'invalid_attachment_path' } };
+  }
+
+  if (identity.kind === 'client' && clientId !== identity.id) {
+    return { statusCode: 403, body: { error: 'attachment_not_owned' } };
+  }
+
+  const pool = getPool();
+  const conn = await pool.connect();
+  let attachmentMime = null;
+  try {
+    if (identity.kind === 'curator') {
+      const ownership = await conn.query(
+        `SELECT 1 FROM clients WHERE id = $1 AND curator_id = $2`,
+        [clientId, identity.id]
+      );
+      if (!ownership.rows.length) {
+        return { statusCode: 403, body: { error: 'curator_does_not_own_client' } };
+      }
+    }
+
+    const referenced = await conn.query(
+      `SELECT attachment->>'mime' AS mime
+         FROM public.client_messages m
+         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(m.attachments, '[]'::jsonb)) attachment
+        WHERE m.client_id = $2
+          AND attachment->>'path' = $1
+          AND COALESCE(attachment->>'type', 'image') = 'image'
+        LIMIT 1`,
+      [path, clientId]
+    );
+    if (!referenced.rows.length) {
+      return { statusCode: 404, body: { error: 'attachment_not_found' } };
+    }
+    attachmentMime = String(referenced.rows[0]?.mime || '').split(';')[0].trim().toLowerCase();
+  } finally {
+    conn.release();
+  }
+
+  try {
+    const object = await getS3().send(new GetObjectCommand({ Bucket: getBucket(), Key: path }));
+    const data = await objectBodyToBuffer(object.Body);
+    if (!data.length || data.length > MAX_IMAGE_BYTES) {
+      return { statusCode: data.length ? 413 : 404, body: { error: data.length ? 'too_large' : 'attachment_not_found' } };
+    }
+    const objectMime = String(object.ContentType || '').split(';')[0].trim().toLowerCase();
+    const contentType = IMAGE_MIME_TO_EXT[objectMime]
+      ? objectMime
+      : (IMAGE_MIME_TO_EXT[attachmentMime] ? attachmentMime : null);
+    if (!contentType) {
+      return { statusCode: 415, body: { error: 'unsupported_image_type' } };
+    }
+    trace('read.ok', {
+      actor_role: identity.kind,
+      bytes: data.length,
+      content_type: contentType,
+    });
+    return {
+      statusCode: 200,
+      body: data.toString('base64'),
+      isBase64Encoded: true,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'private, no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    };
+  } catch (err) {
+    const notFound = err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404;
+    console.error('[photos] read failed', { code: err?.name || 'storage_error' });
+    return { statusCode: notFound ? 404 : 502, body: { error: notFound ? 'attachment_not_found' : 'storage_read_failed' } };
+  }
+}
+
 module.exports._test = {
   normalizeUploadMeta,
   buildKey,
@@ -561,6 +656,8 @@ module.exports._test = {
   hasAudioSignature,
   parseUploadData,
   sanitizeDiagnosticValue,
+  isMessengerImagePath,
+  objectBodyToBuffer,
 };
 
 // ── Main handler ─────────────────────────────────────────────────────────
@@ -583,7 +680,7 @@ module.exports.handler = async function (event) {
 
   const path = event.path || event.url || '';
   const pathParts = path.split('?')[0].split('/').filter(Boolean);
-  // ['photos', 'upload' | 'delete']
+  // ['photos', 'upload' | 'read' | 'delete']
   const action = pathParts[1] || '';
 
   const identity = await resolveIdentity(
@@ -609,11 +706,22 @@ module.exports.handler = async function (event) {
       case 'upload':
         res = await handleUpload(identity, body);
         break;
+      case 'read':
+        res = await handleRead(identity, body);
+        break;
       case 'delete':
         res = await handleDelete(identity, body);
         break;
       default:
         res = { statusCode: 404, body: { error: 'unknown_action', action } };
+    }
+    if (res.isBase64Encoded) {
+      return {
+        statusCode: res.statusCode,
+        headers: { ...cors, ...res.headers },
+        body: res.body,
+        isBase64Encoded: true,
+      };
     }
     return { statusCode: res.statusCode, headers: cors, body: JSON.stringify(res.body) };
   } catch (err) {

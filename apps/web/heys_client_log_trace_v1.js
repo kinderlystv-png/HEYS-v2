@@ -117,6 +117,7 @@
     release_version: 1, unseen_count: 1, update_version: 1,
     pending_count: 1, missing_days_count: 1, action: 1, mode: 1,
     from: 1, to: 1, online: 1, attempt: 1, result: 1,
+    effective_type: 1, candidate_type: 1, attempt_count: 1, surface: 1,
     bundle: 1, route: 1, tab: 1, flow_kind: 1,
     count: 1, queue_size: 1, key_group: 1, problem_stage: 1,
     days_received: 1, min_required: 1,

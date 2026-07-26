@@ -695,6 +695,20 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4e93t0lrfu4ng62pqa1
 
+  /photos/read:
+    post:
+      summary: Authenticated messenger photo fallback
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight for authenticated photo fallback
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+
   /photos/delete:
     post:
       summary: Delete photo

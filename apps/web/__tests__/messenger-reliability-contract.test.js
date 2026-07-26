@@ -1,10 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 
+import { act, fireEvent, render } from '@testing-library/react';
+import * as RealReact from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_api_v1.js'), 'utf8');
 const messengerSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_v1.js'), 'utf8');
+const logTraceSource = fs.readFileSync(path.resolve(__dirname, '../heys_client_log_trace_v1.js'), 'utf8');
 const originalReact = globalThis.React;
 const originalReactDOM = globalThis.ReactDOM;
 const originalHEYS = window.HEYS;
@@ -23,6 +26,13 @@ function loadMessengerInternals() {
     useMemo: (fn) => fn(),
     createElement: () => null,
   };
+  globalThis.ReactDOM = { createRoot: () => ({ render: () => {}, unmount: () => {} }) };
+  eval(messengerSource);
+  return window.HEYS.Messenger._test;
+}
+
+function loadMessengerComponentInternals() {
+  globalThis.React = RealReact;
   globalThis.ReactDOM = { createRoot: () => ({ render: () => {}, unmount: () => {} }) };
   eval(messengerSource);
   return window.HEYS.Messenger._test;
@@ -126,6 +136,29 @@ describe('messenger retry-safe transport', () => {
     expect(requestIds[0]).toMatch(/^[0-9a-f-]{36}$/i);
     expect(requestIds[1]).toMatch(/^[0-9a-f-]{36}$/i);
     expect(requestIds[0]).not.toBe(requestIds[1]);
+  });
+
+  it('fetches an authenticated photo blob through the API fallback', async () => {
+    const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => blob,
+    });
+    localStorage.setItem('heys_session_token', JSON.stringify('session-token'));
+    const api = loadAPI();
+
+    await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/file.jpg'))
+      .resolves.toEqual({ success: true, blob });
+    expect(fetchSpy).toHaveBeenCalledWith('http://localhost:4001/photos/read', expect.objectContaining({
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer session-token',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ path: 'client/2026-07-25/msg-photo/file.jpg' }),
+    }));
   });
 });
 
@@ -291,20 +324,25 @@ describe('messenger photo recovery', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
     globalThis.React = originalReact;
     globalThis.ReactDOM = originalReactDOM;
     window.HEYS = originalHEYS;
   });
 
   it('retries Yandex photos through a cache-busted URL and the path-style host', () => {
-    const { getPhotoSourceCandidates } = loadMessengerInternals();
+    const { getPhotoSourceCandidates, getPhotoSourceCandidateType } = loadMessengerInternals();
     const original = 'https://heys-photos.storage.yandexcloud.net/client/day/message/photo.jpg';
+    const candidates = getPhotoSourceCandidates({ url: original }, 2);
 
-    expect(getPhotoSourceCandidates({ url: original }, 2)).toEqual([
+    expect(candidates).toEqual([
       original,
       `${original}?_heys_img_retry=2-direct`,
       'https://storage.yandexcloud.net/heys-photos/client/day/message/photo.jpg?_heys_img_retry=2-path',
     ]);
+    expect(candidates.map((source, index) => getPhotoSourceCandidateType({ url: original }, source, index)))
+      .toEqual(['direct', 'cache-bust', 'path-style']);
   });
 
   it('does not rewrite local previews or unrelated image hosts', () => {
@@ -317,6 +355,102 @@ describe('messenger photo recovery', () => {
       'https://images.example.test/photo.jpg',
       'https://images.example.test/photo.jpg?_heys_img_retry=1-direct',
     ]);
+  });
+
+  it('reports an allowlisted privacy-safe diagnostic only after candidate exhaustion', () => {
+    const { tracePhotoLoadFailure } = loadMessengerInternals();
+    const event = vi.fn();
+    window.HEYS.LogTrace = { event };
+
+    const diagnostic = tracePhotoLoadFailure({
+      candidateType: 'path-style',
+      attemptCount: 6,
+      url: 'https://storage.example.test/private-photo.jpg',
+      path: 'private/client/path.jpg',
+      client_id: 'private-client',
+      filename: 'private-name.jpg',
+      body: 'private message',
+    }, {
+      navigator: {
+        onLine: true,
+        userAgent: 'Mozilla/5.0 (Linux; Android 15; Mobile)',
+        connection: { effectiveType: '3g' },
+      },
+      matchMedia: () => ({ matches: true }),
+    });
+
+    expect(diagnostic).toEqual({
+      source: 'messenger',
+      status: 'degraded',
+      screen: 'messenger',
+      online: true,
+      effective_type: '3g',
+      candidate_type: 'path-style',
+      attempt_count: 6,
+      surface: 'mobile-pwa',
+    });
+    expect(event).toHaveBeenCalledWith('messenger_photo_load_failed', diagnostic, 'warn');
+    for (const forbiddenKey of ['url', 'path', 'client_id', 'filename', 'body']) {
+      expect(diagnostic).not.toHaveProperty(forbiddenKey);
+    }
+    expect(JSON.stringify(diagnostic)).not.toContain('private-photo');
+    expect(messengerSource).toContain('const fetchFallback = HEYS.MessengerAPI?.fetchPhotoBlob');
+    expect(messengerSource).toContain('fetchFallback(attachment.path)');
+    expect(messengerSource).toContain("candidateType: 'api-fallback'");
+    expect(logTraceSource).toContain('effective_type: 1, candidate_type: 1, attempt_count: 1, surface: 1');
+    expect(messengerSource).toContain('Не удалось показать фото');
+    expect(messengerSource).not.toContain('Не удалось загрузить фото');
+  });
+
+  it('loads the API blob only after direct candidates fail and revokes it on cleanup', async () => {
+    vi.useFakeTimers();
+    const attachment = {
+      url: 'https://heys-photos.storage.yandexcloud.net/client/2026-07-25/msg-photo/file.jpg',
+      path: 'client/2026-07-25/msg-photo/file.jpg',
+      type: 'image',
+      mime: 'image/jpeg',
+    };
+    const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
+    const fetchPhotoBlob = vi.fn().mockResolvedValue({ success: true, blob });
+    const createObjectURL = vi.fn().mockReturnValue('blob:api-photo');
+    const revokeObjectURL = vi.fn();
+    const createDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'createObjectURL');
+    const revokeDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'revokeObjectURL');
+    Object.defineProperty(globalThis.URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(globalThis.URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    window.HEYS = { MessengerAPI: { fetchPhotoBlob } };
+    const { MessagePhoto } = loadMessengerComponentInternals();
+    const view = render(RealReact.createElement(MessagePhoto, {
+      attachment,
+      photos: [attachment],
+      index: 0,
+      eager: true,
+    }));
+
+    try {
+      const image = () => view.container.querySelector('img');
+      fireEvent.error(image());
+      await act(async () => vi.advanceTimersByTimeAsync(251));
+      fireEvent.error(image());
+      await act(async () => vi.advanceTimersByTimeAsync(501));
+      expect(fetchPhotoBlob).not.toHaveBeenCalled();
+
+      fireEvent.error(image());
+      await act(async () => { await Promise.resolve(); });
+
+      expect(fetchPhotoBlob).toHaveBeenCalledWith(attachment.path);
+      expect(image().getAttribute('src')).toBe('blob:api-photo');
+      fireEvent.load(image());
+      expect(view.queryByText('Не удалось показать фото')).toBeNull();
+      view.unmount();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:api-photo');
+    } finally {
+      if (view.container.isConnected) view.unmount();
+      if (createDescriptor) Object.defineProperty(globalThis.URL, 'createObjectURL', createDescriptor);
+      else delete globalThis.URL.createObjectURL;
+      if (revokeDescriptor) Object.defineProperty(globalThis.URL, 'revokeObjectURL', revokeDescriptor);
+      else delete globalThis.URL.revokeObjectURL;
+    }
   });
 });
 
