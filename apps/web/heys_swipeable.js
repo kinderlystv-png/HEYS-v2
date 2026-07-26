@@ -4,6 +4,8 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  const SWIPE_INTENT_DISTANCE = 24;
+  const HORIZONTAL_DOMINANCE_RATIO = 1.8;
 
   function safeVibrate(pattern) {
     if (!navigator.vibrate) return;
@@ -86,20 +88,19 @@
         const deltaX = touch.clientX - touchState.current.startX;
         const deltaY = touch.clientY - touchState.current.startY;
 
-        // 🎯 R-SWIPE-SENSITIVITY (2026-05-14): на чувствительных экранах (iPhone)
-        // при вертикальной прокрутке мелкое горизонтальное дрожание пальца раньше
-        // триггерило свайп-меню. Чиним двумя загрузками:
-        //   1. Поднимаем gate-порог распознавания жеста с 15px до 18px (меньше
-        //      шанс распознать микродвижение как намеренный жест).
-        //   2. Горизонтальный режим включается ТОЛЬКО если |dx| > 1.6 × |dy|
-        //      (угол < ~32° от горизонтали). Любое менее очевидное движение —
-        //      классифицируется как вертикальный скролл и swipe-меню не блокирует
-        //      прокрутку. Раньше было |dy| > |dx| (диагональ 45° могла уйти не туда).
-        if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 18 || Math.abs(deltaY) > 18)) {
-          touchState.current.isVerticalScroll = !(Math.abs(deltaX) > 1.6 * Math.abs(deltaY));
+        // Не захватываем жест, пока пользователь явно не показал горизонтальное
+        // намерение. Особенно важно для iPhone: preventDefault до определения
+        // направления может остановить вертикальный скролл на первом же движении.
+        if (
+          touchState.current.isVerticalScroll === null
+          && (Math.abs(deltaX) > SWIPE_INTENT_DISTANCE || Math.abs(deltaY) > SWIPE_INTENT_DISTANCE)
+        ) {
+          touchState.current.isVerticalScroll = !(
+            Math.abs(deltaX) > HORIZONTAL_DOMINANCE_RATIO * Math.abs(deltaY)
+          );
         }
 
-        if (touchState.current.isVerticalScroll) return;
+        if (touchState.current.isVerticalScroll !== false) return;
 
         e.preventDefault();
 

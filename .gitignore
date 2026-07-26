@@ -79,6 +79,13 @@ dist
 # Gatsby files
 .cache/
 public
+# Landing source assets are intentionally versioned; keep the hero demo visible
+# to Git while generated public directories remain ignored by default.
+!apps/landing/public/
+apps/landing/public/*
+!apps/landing/public/hero-curator-demo.mp4
+!apps/landing/public/hero-curator-demo.webm
+!apps/landing/public/hero-curator-demo-poster.jpg
 # But keep legal docs in apps/web/public/docs
 !apps/web/public/docs/
 !apps/web/public/

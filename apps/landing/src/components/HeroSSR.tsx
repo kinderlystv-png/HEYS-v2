@@ -3,7 +3,14 @@
 
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import logoHeroBlue from '../assets/logo-hero-blue.png';
 
@@ -49,7 +56,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
     if (natural <= 0) return;
     const available = slot.clientHeight;
     // Small safety margin so we don't sit pixel-flush against the fold.
-    const next = Math.min(1, Math.max(0.6, (available - 4) / natural));
+    const next = Math.min(1, Math.max(0.6, (available - 12) / natural));
     setContentScale((prev) => (Math.abs(prev - next) < 0.004 ? prev : next));
   }, []);
 
@@ -196,25 +203,30 @@ export default function HeroSSR({ content }: HeroSSRProps) {
         <div
           ref={fitContentRef}
           className="hero-mobile-content mx-auto w-full max-w-[1024px] px-4 pb-4 pt-2 md:px-6 md:pb-24 md:pt-8"
-          style={{
-            transform:
-              contentScale === 1
-                ? 'translateY(var(--hero-mobile-content-shift-y, 0px))'
-                : `translateY(var(--hero-mobile-content-shift-y, 0px)) scale(${contentScale})`,
-            transformOrigin: 'center center',
-            willChange: 'transform',
-          }}
+          style={
+            {
+              transform:
+                contentScale === 1
+                  ? 'translateY(var(--hero-mobile-content-shift-y, 0px))'
+                  : `translateY(var(--hero-mobile-content-shift-y, 0px)) scale(${contentScale})`,
+              transformOrigin: 'center center',
+              willChange: 'transform',
+              '--hero-content-scale': contentScale,
+            } as CSSProperties
+          }
         >
           <div className="hero-mobile-grid grid grid-cols-1 items-center lg:grid-cols-[1fr_400px] lg:gap-14">
-            {/* Mobile: Phone — above text, bleeds off right edge, bottom cropped */}
+            {/* One video instance reflows above the copy on mobile and beside it on desktop. */}
             <div
-              className={`flex lg:hidden order-1 justify-center transition-all duration-700 ease-out ${
-                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              className={`order-1 flex justify-center transition-all duration-700 ease-out lg:order-2 lg:items-center ${
+                mounted
+                  ? 'translate-y-0 opacity-100 lg:translate-x-0'
+                  : 'translate-y-12 opacity-0 lg:translate-x-12 lg:translate-y-0'
               }`}
-              style={{ transitionDelay: '200ms' }}
+              style={{ transitionDelay: '600ms' }}
             >
-              <div className="hero-mobile-phone relative w-[48%] max-w-[180px] sm:w-[44%]">
-                <HeroFlowDemo compact />
+              <div className="hero-mobile-phone relative w-[48%] max-w-[180px] sm:w-[44%] lg:w-full lg:max-w-[400px]">
+                <HeroFlowDemo />
               </div>
             </div>
 
@@ -258,7 +270,10 @@ export default function HeroSSR({ content }: HeroSSRProps) {
               >
                 <a
                   href="#curator"
-                  className="hero-mobile-primary inline-flex items-center justify-center gap-2 bg-[#1D70B7] px-6 py-3 text-white font-semibold rounded-2xl hover:bg-[#185F9D] active:scale-95 transition-all text-[14px] tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)]"
+                  className="hero-mobile-primary inline-flex items-center justify-center gap-2 bg-[#1D70B7] px-6 py-3 text-white font-semibold rounded-2xl hover:bg-[#185F9D] transition-all text-[14px] tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)]"
+                  style={{
+                    transform: 'scale(max(1, calc(0.88 / var(--hero-content-scale, 1))))',
+                  }}
                 >
                   {content.hero.ctaPrimary}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -282,18 +297,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                   {content.hero.microtext}
                 </p>
               ) : null}
-            </div>
-
-            {/* Right Column — Phone (desktop only) */}
-            <div
-              className={`hidden lg:flex order-2 justify-center items-center transition-all duration-700 ease-out ${
-                mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
-              }`}
-              style={{ transitionDelay: '600ms' }}
-            >
-              <div className="relative w-full max-w-[400px]">
-                <HeroFlowDemo />
-              </div>
             </div>
           </div>
         </div>
