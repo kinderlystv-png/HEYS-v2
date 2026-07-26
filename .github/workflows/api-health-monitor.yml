@@ -5,7 +5,7 @@ name: API Health Monitor
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch: # Ручной запуск для тестирования
   push:
     branches: [main]
@@ -237,36 +237,26 @@ jobs:
       # Алерт в Telegram при падении (только для schedule/push, не для manual)
       - name: Send Telegram Alert on Failure
         if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
-        continue-on-error: true # Не падать, если Telegram не настроен
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE: |
+            🚨 *HEYS Health / Dead-Man Check Failed*
+
+            ❌ One or more health checks failed
+            🕐 Run: ${{ github.run_id }}
+            🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            *Health*: ${{ steps.health.outputs.http_code || 'N/A' }}
+            *RPC*: ${{ steps.rpc.outputs.http_code || 'N/A' }}
+            *REST*: ${{ steps.rest.outputs.http_code || 'N/A' }}
+            *Capacity canary*: ${{ steps.capacity_canary.outcome || 'N/A' }}
+            *429/503 log scan*: ${{ steps.quota_errors.outcome || 'N/A' }}
+            *Auth*: ${{ steps.auth.outputs.http_code || 'N/A' }}
+            *Dead-man*: ${{ steps.deadman.outcome || 'N/A' }}
+            *Auto-redeploy*: ${{ steps.redeploy.outcome || 'not-triggered' }}
         run: |
-          MESSAGE="🚨 *HEYS Health / Dead-Man Check Failed*%0A%0A"
-          MESSAGE="${MESSAGE}❌ One or more health checks failed%0A"
-          MESSAGE="${MESSAGE}🕐 Time: $(date -u +'%Y-%m-%d %H:%M:%S UTC')%0A"
-          MESSAGE="${MESSAGE}🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})%0A%0A"
-          MESSAGE="${MESSAGE}*Health*: ${{ steps.health.outputs.http_code || 'N/A' }}%0A"
-          MESSAGE="${MESSAGE}*RPC*: ${{ steps.rpc.outputs.http_code || 'N/A' }}%0A"
-          MESSAGE="${MESSAGE}*REST*: ${{ steps.rest.outputs.http_code || 'N/A' }}%0A"
-          MESSAGE="${MESSAGE}*Capacity canary*: ${{ steps.capacity_canary.outcome || 'N/A' }}%0A"
-          MESSAGE="${MESSAGE}*429/503 log scan*: ${{ steps.quota_errors.outcome || 'N/A' }}%0A"
-          MESSAGE="${MESSAGE}*Auth*: ${{ steps.auth.outputs.http_code || 'N/A' }}%0A%0A"
-          MESSAGE="${MESSAGE}*Dead-man*: ${{ steps.deadman.outcome || 'N/A' }}%0A%0A"
-          MESSAGE="${MESSAGE}🔄 Auto-redeploy: ${{ steps.redeploy.outcome || 'not-triggered' }}%0A"
-          MESSAGE="${MESSAGE}📝 Action: Monitor workflow or run \`./deploy-all.sh\` manually if redeploy fails"
-
-          # Проверка, что токены настроены
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "⚠️ Telegram secrets not configured, skipping alert"
-            exit 0
-          fi
-
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=Markdown" \
-            -d "disable_web_page_preview=true"
+          node scripts/ci/send-telegram-alert.mjs
 
       # Успешный результат — silent (не спамим в Telegram каждые 5 минут)
       - name: Summary

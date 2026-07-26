@@ -24,7 +24,7 @@ YC timer triggers
   ├─ heys-snapshot-demo → hourly public demo snapshots
   └─ heys-bot-client → three long-poll heartbeats (см. TELEGRAM.md)
 
-api-health-monitor.yml (каждые 15 минут)
+api-health-monitor.yml (каждые 6 часов)
   → HTTP API checks
   → прямой DB dead-man: heartbeat + backup_run_log
 ```
@@ -66,6 +66,10 @@ heartbeat и синхронизирует backup marker. Это внутренн
 scheduled dead-man отдельно читает ту же таблицу и `backup_run_log`, не вызывая
 maintenance. Handler-level ошибка возвращает `500` и best-effort отправляет
 Telegram alert.
+
+Утренний отчёт считается успешным и обновляет `daily_report` heartbeat только
+после подтверждённой доставки в Telegram. Неизвестное состояние любой bot queue
+помечает `Ops health` как требующее проверки, а не оставляет зелёный заголовок.
 
 ## Напоминания и сообщения
 
@@ -148,8 +152,16 @@ scheduled dead-man использует отдельный режим `--dead-ma
 
 Security alerts раз в 15 минут выполняют независимые правила. Ошибка одного
 правила становится `query_error`, не прерывая остальные; Telegram имеет
-cooldown, а результат попытки фиксируется в БД. HTTP 200 означает завершение
-сканирования, а не отсутствие `query_error`/`logged_only` внутри results.
+cooldown, а результат попытки фиксируется в БД. `query_error`, `check_error` и
+`logged_only` возвращают HTTP 500 и не обновляют healthy heartbeat; ошибка
+Telegram дополнительно фиксируется как открытый ops incident.
+
+Cross-client блокировки сначала синхронно попадают в `data_loss_audit`, не
+ожидая Telegram в API write-path. Security worker читает только audit ID новее
+последнего подтверждённо доставленного watermark: failed send остаётся для
+retry, successful send исключает повтор и агрегирует burst в одно сообщение.
+Versioned baseline migration исключает повторную рассылку исторических событий
+при первом rollout.
 
 ## Инварианты
 
@@ -218,6 +230,7 @@ cooldown, а результат попытки фиксируется в БД. H
 | B13 | Шесть standalone workers пишут heartbeat после рабочего прохода                                         | `rg -n 'recordWorkerHeartbeat                                                                                                                                                 \| cron_photo_cleanup' yandex-cloud-functions/heys-{cron-reminders,cron-security-alerts,cron-speechkit-transcribe,cron-trial-drip,cron-photo-cleanup,snapshot-demo}/index.js`                                                                                                                             | source contract и test проверены 2026-07-18; ещё не deployed |
 | B17 | Messenger cleanup различает durable queue, stale unreferenced media и diary photos                      | `yandex-cloud-functions/heys-cron-photo-cleanup/index.js`, `yandex-cloud-functions/heys-cron-photo-cleanup/__tests__/messenger-cleanup-contract.test.cjs`                                                                                                                                                                                                                                                                                                                               | проверено 2026-07-21                                         |
 | B18 | Client trace использует единый 30-day retention target, cleanup остаётся dry-run                        | `scripts/db/migrations/2026-07-24_client_session_observability.sql`, `yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                                                                                                                                                                                                                                                                 | source проверен 2026-07-24; delete не включён                |
+| B19 | Telegram delivery failure блокирует heartbeat, а cross-client audit использует durable watermark retry  | `node --test yandex-cloud-functions/heys-maintenance/__tests__/telegram-delivery.test.cjs yandex-cloud-functions/heys-cron-security-alerts/__tests__/telegram-delivery.test.cjs yandex-cloud-functions/heys-api-rpc/__tests__/durable-ops-alert-policy.test.js`; `scripts/db/migrations/2026-07-26_cross_client_alert_watermark.sql`                                                                                                                                                    | source проверен 2026-07-26                                   |
 | B14 | External dead-man проверяет missing/stale heartbeat и backup двумя прямыми DB queries без worker invoke | `node --test yandex-cloud-functions/__tests__/check-heys-ops-status.test.cjs`; `node yandex-cloud-functions/check-heys-ops-status.cjs --dead-man --strict --json`                                                                                                                                                                                                                                                                                                                       | тесты pass; live ожидаемо missing для 6 новых rows до deploy |
 | B15 | В YC активны все 17 ожидаемых triggers и опубликованы все 9 automation functions                        | read-only `yc serverless trigger list --format json`; `yc serverless function list --format json`; `evaluateTrigger`                                                                                                                                                                                                                                                                                                                                                                    | проверено 2026-07-18; расхождений нет                        |
 | B16 | Seed migration задаёт grace window для всех шести новых heartbeat                                       | `sed -n '1,35p' database/2026-07-18_automation_worker_heartbeats.sql`                                                                                                                                                                                                                                                                                                                                                                                                                   | source проверен 2026-07-18; migration не применялась         |

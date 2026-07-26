@@ -69,6 +69,13 @@
       "path": "scripts/db/migrations/2026-07-25_client_observability_runtime_env.sql",
       "description": "Separate server-derived local and test telemetry from production visit diagnostics",
       "destructive": false
+    },
+    {
+      "id": "2026-07-26_cross_client_alert_watermark",
+      "order": 8,
+      "path": "scripts/db/migrations/2026-07-26_cross_client_alert_watermark.sql",
+      "description": "Seed the durable Telegram delivery watermark for cross-client audit alerts",
+      "destructive": false
     }
   ]
 }

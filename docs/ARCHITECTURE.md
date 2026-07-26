@@ -155,7 +155,7 @@ Move logic from legacy to modern when all criteria are true:
 
 - **Package Manager**: pnpm 8.10+, Node >= 18
 - **Build System**: Turbo + Vite
-- **CI/CD**: GitHub Actions (lint, tests, API monitoring every 15 min)
+- **CI/CD**: GitHub Actions (lint, tests, API monitoring every 6 hours)
 - **Frontend hosting**: Nginx VM -> Yandex S3 (PWA), Yandex CDN (landing)
 - **API hosting**: Yandex Cloud Functions (9 functions, api.heyslab.ru)
 - **Secrets**: `yandex-cloud-functions/.env` -> deploy via `deploy-all.sh`
@@ -466,7 +466,7 @@ cd yandex-cloud-functions
 
 - `./health-check.sh` — checks all YCF endpoints
 - `./validate-env.sh` — validates secrets before deploy
-- GitHub Actions API Monitor — every 15 min, auto-redeploy on 502
+- GitHub Actions API Monitor — every 6 hours, auto-redeploy on 502
 - Telegram alerts on failures
 
 ### Data Quality Monitoring (v4.8.8)
@@ -509,7 +509,7 @@ pnpm arch:check   # Architecture rules
 1. Lint + TypeScript check
 2. Unit tests (vitest)
 3. Build check (pnpm build)
-4. API Health Monitor (every 15 min + after each push)
+4. API Health Monitor (every 6 hours + after backend/workflow pushes)
    -> Health + RPC + REST endpoints
    -> Auto-redeploy on 502 errors
    -> Telegram alerts

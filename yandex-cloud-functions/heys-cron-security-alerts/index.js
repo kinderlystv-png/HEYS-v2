@@ -11,8 +11,7 @@
  *
  * Env vars (загружаются deploy-all.sh):
  *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD
- *   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (опционально — без них функция
- *   только логирует в БД)
+ *   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (обязательны для healthy heartbeat)
  */
 
 const http = require('http');
@@ -199,9 +198,45 @@ const RULES = [
              < NOW() - INTERVAL '30 hours'
     `,
   },
+  {
+    key: 'cross_client_write_blocked',
+    cooldownMinutes: 0,
+    label: '🛡️ Cross-client запись заблокирована',
+    description:
+      'Защитный контур отклонил запись данных одного клиента в состояние другого. ' +
+      'События доставляются из DB-backed audit с retry до подтверждённого Telegram success.',
+    sql: `
+      WITH delivered AS (
+        SELECT $1::text AS _window_unused,
+               COALESCE(MAX((payload->>'max_audit_id')::bigint), 0) AS max_audit_id
+          FROM security_alerts_log
+         WHERE rule_key = 'cross_client_write_blocked'
+           AND telegram_sent_at IS NOT NULL
+           AND payload ? 'max_audit_id'
+      )
+      SELECT audit.id::bigint AS audit_id,
+             left(audit.client_id::text, 8) AS client,
+             audit.key,
+             audit.action,
+             audit.reason,
+             audit.created_at
+        FROM data_loss_audit audit
+        CROSS JOIN delivered
+       WHERE audit.id > delivered.max_audit_id
+         AND audit.allowed = FALSE
+         AND audit.action IN (
+           'cross_client_dayv2_content_dup',
+           'cross_client_profile_blocked',
+           'cross_client_blob_blocked'
+         )
+       ORDER BY audit.id
+       LIMIT 50
+    `,
+  },
 ];
 
-async function isOnCooldown(client, ruleKey) {
+async function isOnCooldown(client, ruleKey, cooldownMinutes = COOLDOWN_MINUTES) {
+  if (cooldownMinutes <= 0) return false;
   const res = await client.query(
     `SELECT 1
        FROM security_alerts_log
@@ -209,7 +244,7 @@ async function isOnCooldown(client, ruleKey) {
         AND telegram_sent_at IS NOT NULL
         AND telegram_sent_at > NOW() - ($2 || ' minutes')::INTERVAL
       LIMIT 1`,
-    [ruleKey, COOLDOWN_MINUTES],
+    [ruleKey, cooldownMinutes],
   );
   return res.rows.length > 0;
 }
@@ -226,6 +261,43 @@ async function recordAlert(client, ruleKey, payload, sent, messageId) {
       sent ? new Date() : null,
       messageId || null,
     ],
+  );
+}
+
+function buildAlertPayload(rows, telegramReason) {
+  const payload = {
+    count: rows.length,
+    sample: rows.slice(0, 5),
+    telegram_reason: telegramReason,
+  };
+  const auditIds = rows.map((row) => Number(row.audit_id)).filter(Number.isSafeInteger);
+  if (auditIds.length > 0) payload.max_audit_id = Math.max(...auditIds);
+  return payload;
+}
+
+function evaluateMonitorResults(results) {
+  const errorStatuses = new Set(['query_error', 'check_error', 'logged_only']);
+  const errors = results.filter((result) => errorStatuses.has(result.status));
+  return { healthy: errors.length === 0, errors };
+}
+
+async function syncTelegramDeliveryIncident(client, results) {
+  const failures = results.filter((result) => result.status === 'logged_only');
+  if (failures.length === 0) {
+    await client.query(
+      `SELECT public.resolve_ops_incident('heys-cron-security-alerts', 'telegram_delivery_failed')`,
+    );
+    return;
+  }
+  await client.query(
+    `SELECT public.record_ops_incident(
+       'heys-cron-security-alerts',
+       'telegram_delivery_failed',
+       'critical',
+       'Security alert Telegram delivery failed',
+       $1::jsonb
+     )`,
+    [JSON.stringify({ rules: failures.map((item) => item.rule), count: failures.length })],
   );
 }
 
@@ -366,27 +438,32 @@ async function sendTelegram(rule, rows) {
     `\n\n_Правило: ${rule.key}_\n` +
     `_152-ФЗ ст. 22.3 — при подтверждении уведомить РКН в 24ч._`;
 
+  const sendOnce = async (parseMode) => {
+    const body = { chat_id: chatId, text };
+    if (parseMode) body.parse_mode = parseMode;
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json().catch(() => ({}));
+    return { resp, data };
+  };
+
   try {
-    const resp = await fetch(
-      `https://api.telegram.org/bot${botToken}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: 'Markdown',
-        }),
-      },
-    );
-    const data = await resp.json();
-    if (!data.ok) {
-      console.error('[security-alerts] Telegram API error:', data);
-      return { sent: false, messageId: null, reason: data.description || 'tg error' };
+    let attempt = await sendOnce('Markdown');
+    if (!attempt.data.ok && attempt.resp.status === 400) {
+      console.warn('[security-alerts] Telegram Markdown rejected; retrying plain text');
+      attempt = await sendOnce(null);
+    }
+    if (!attempt.resp.ok || !attempt.data.ok) {
+      console.error('[security-alerts] Telegram API error:', attempt.data);
+      return { sent: false, messageId: null, reason: attempt.data.description || `HTTP ${attempt.resp.status}` };
     }
     return {
       sent: true,
-      messageId: data.result?.message_id ? String(data.result.message_id) : null,
+      messageId: attempt.data.result?.message_id ? String(attempt.data.result.message_id) : null,
       reason: null,
     };
   } catch (error) {
@@ -419,17 +496,13 @@ module.exports.handler = async function () {
         continue;
       }
 
-      if (await isOnCooldown(client, rule.key)) {
+      if (await isOnCooldown(client, rule.key, rule.cooldownMinutes)) {
         results.push({ rule: rule.key, status: 'cooldown', triggered: rows.length });
         continue;
       }
 
       const telegram = await sendTelegram(rule, rows);
-      const payload = {
-        count: rows.length,
-        sample: rows.slice(0, 5),
-        telegram_reason: telegram.reason,
-      };
+      const payload = buildAlertPayload(rows, telegram.reason);
       await recordAlert(client, rule.key, payload, telegram.sent, telegram.messageId);
 
       results.push({
@@ -473,13 +546,20 @@ module.exports.handler = async function () {
       results.push({ rule: 'concurrency_watch', status: 'check_error', error: err.message });
     }
 
-    const hasCheckErrors = results.some((result) => result.status === 'query_error' || result.status === 'check_error');
-    if (!hasCheckErrors) await recordWorkerHeartbeat(client);
+    try {
+      await syncTelegramDeliveryIncident(client, results);
+    } catch (error) {
+      console.error('[security-alerts] delivery incident sync failed:', error.message);
+      results.push({ rule: 'telegram_delivery', status: 'check_error', error: error.message });
+    }
+
+    const monitorState = evaluateMonitorResults(results);
+    if (monitorState.healthy) await recordWorkerHeartbeat(client);
 
     return {
-      statusCode: 200,
+      statusCode: monitorState.healthy ? 200 : 500,
       body: JSON.stringify({
-        success: true,
+        success: monitorState.healthy,
         checked_rules: RULES.length + 1,
         results,
         window_minutes: WINDOW_MINUTES,
@@ -494,4 +574,12 @@ module.exports.handler = async function () {
   } finally {
     client.release();
   }
+};
+
+module.exports.__test = {
+  buildAlertPayload,
+  evaluateMonitorResults,
+  crossClientRule: RULES.find((rule) => rule.key === 'cross_client_write_blocked'),
+  sendTelegram,
+  syncTelegramDeliveryIncident,
 };

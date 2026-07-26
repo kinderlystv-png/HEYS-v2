@@ -10,6 +10,7 @@ const { initSecrets } = require('./shared/secrets');
 const { getPool } = require('./shared/db-pool');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
 const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
+const { shouldSendImmediateTelegramAlert: _shouldSendTgAlert } = require('./ops-alert-policy.cjs');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
@@ -339,33 +340,11 @@ function extractCuratorIdFromJwtPayload(payload) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 🔔 Real-time Telegram alert for profile pollution events (2026-06-01 wave 2).
-// Fire-and-forget HTTPS POST к Telegram Bot API. Env (TELEGRAM_BOT_TOKEN,
-// TELEGRAM_CHAT_ID) populates from Lockbox через initSecrets. Dedup
-// 5min per (client_id, action) чтобы не спамить если повтор.
+// 🔔 Best-effort realtime Telegram alert for non-durable diagnostic events.
+// Cross-client blocks are excluded here: data_loss_audit is their durable
+// outbox, drained and deduped by heys-cron-security-alerts without blocking the
+// API write path.
 // ─────────────────────────────────────────────────────────────────────────
-const _tgAlertLastSent = new Map(); // `${clientId}:${action}` → ts
-const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
-
-// Per-action dedupe overrides (мс). Кросс-client pollution attempts ловим
-// аггресивно — 30 сек, чтобы видеть каждый burst в real-time во время тестов.
-// При прод-эксплуатации события редкие, дедупа достаточно.
-const TG_ALERT_DEDUP_BY_ACTION = {
-  cross_client_dayv2_content_dup: 30 * 1000,
-  cross_client_profile_blocked:   30 * 1000,
-  cross_client_blob_blocked:      30 * 1000,
-};
-
-function _shouldSendTgAlert(clientId, action) {
-  const key = `${clientId}:${action}`;
-  const now = Date.now();
-  const last = _tgAlertLastSent.get(key) || 0;
-  const ttl = TG_ALERT_DEDUP_BY_ACTION[action] || TG_ALERT_DEDUP_MS;
-  if (now - last < ttl) return false;
-  _tgAlertLastSent.set(key, now);
-  return true;
-}
-
 function sendTgAlertFireAndForget(text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;

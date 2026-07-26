@@ -291,35 +291,9 @@ async function validateContextForWriteRest(client, ctxId, suppliedClientId, k) {
   return { ok: true, status: 'ok', effectiveClientId: suppliedClientId };
 }
 
-const _tgAlertLastSent = new Map();
-const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
-// Per-action dedupe overrides — для cross-client pollution events ставим
-// 30 сек чтобы видеть каждый burst в real-time. Symmetric к heys-api-rpc.
-const TG_ALERT_DEDUP_BY_ACTION = {
-  cross_client_dayv2_content_dup: 30 * 1000,
-  cross_client_profile_blocked:   30 * 1000,
-  cross_client_blob_blocked:      30 * 1000,
-};
-function shouldSendTgAlert(clientId, action) {
-  const key = `${clientId}:${action}`;
-  const now = Date.now();
-  const last = _tgAlertLastSent.get(key) || 0;
-  const ttl = TG_ALERT_DEDUP_BY_ACTION[action] || TG_ALERT_DEDUP_MS;
-  if (now - last < ttl) return false;
-  _tgAlertLastSent.set(key, now);
-  return true;
-}
-function sendTgAlertFireAndForget(text) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
-  const body = JSON.stringify({ chat_id: chatId, text: text.slice(0, 3800), parse_mode: 'Markdown' });
-  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  }).catch((err) => console.warn('[tg-alert] send failed:', err.message));
-}
+// Cross-client guards only persist data_loss_audit here. That table is the
+// durable outbox consumed by heys-cron-security-alerts, so API writes never
+// wait for Telegram and repeated serverless instances cannot spam the chat.
 
 // PG config loaded lazily inside handler (after OPTIONS check)
 // This allows CORS preflight to work even if DB env is misconfigured
@@ -1268,16 +1242,6 @@ async function handleRestRequest(event, context) {
               } catch (e) {
                 console.warn('[REST POST] audit insert failed:', e.message);
               }
-              if (shouldSendTgAlert(row.client_id, auditAction)) {
-                sendTgAlertFireAndForget(
-                  `🛡️ *${auditAction}*\n` +
-                  `key: \`${row.k}\`\n` +
-                  `client: \`${expectedWriter}\`\n` +
-                  `source: \`rest_post\`\n` +
-                  `incoming writer: \`${incomingWriter}\`` +
-                  (snapshotId ? `\n_Forensic snapshot #${snapshotId}._` : '')
-                );
-              }
               continue;
             }
 
@@ -1383,16 +1347,6 @@ async function handleRestRequest(event, context) {
                     [row.client_id, row.k, `rest_post dup_from=${conflictCid} dup_key=${dup.conflictKey}`]
                   );
                 } catch (e) { console.warn('[REST POST] dup audit insert failed:', e.message); }
-                if (shouldSendTgAlert(row.client_id, 'cross_client_dayv2_content_dup')) {
-                  sendTgAlertFireAndForget(
-                    `🛡️ *cross_client_dayv2_content_dup*\n` +
-                    `key: \`${row.k}\`\n` +
-                    `client: \`${expected}\`\n` +
-                    `source: \`rest_post\`\n` +
-                    `dup with client: \`${conflictCid}\` (within 5 min)\n` +
-                    `_Curator state не очистился между switch'ами — meals идентичны._`
-                  );
-                }
                 continue;
               }
 

@@ -117,6 +117,32 @@ async function sendTelegramNotification(message) {
   }
 }
 
+function summarizeTelegramChecks(tgChecks) {
+  const bad = tgChecks.filter((item) => item.status === 'ok' && (item.pending > 0 || item.webhook || item.last_error));
+  const unknown = tgChecks.filter((item) => item.status !== 'ok');
+  if (bad.length > 0) {
+    return {
+      hasProblem: true,
+      line: `🚨 Telegram: ${bad.map((item) => `${item.label} pending=${item.pending} webhook=${item.webhook ? 'on' : 'off'}`).join(', ')}`,
+    };
+  }
+  if (unknown.length > 0) {
+    return {
+      hasProblem: true,
+      line: `⚠️ Telegram queue check failed: ${tgChecks.filter((item) => item.status === 'ok').map((item) => `${item.label}=0`).join(', ') || 'none checked'}; unknown ${unknown.map((item) => item.label).join(', ')}`,
+    };
+  }
+  return { hasProblem: false, line: '✅ Telegram queues 0, webhooks off' };
+}
+
+async function deliverRequiredTelegram(message, label, send = sendTelegramNotification) {
+  const delivery = await send(message);
+  if (!delivery?.ok) {
+    throw new Error(`${label} Telegram delivery failed: ${delivery?.error || 'unknown'}`);
+  }
+  return delivery;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Dead-man's switch (2026-06-03). The whole monitor — synthetic defense, KV
 // health, daily/weekly reports — is worthless if heys-maintenance silently
@@ -974,16 +1000,9 @@ async function buildOpsHealthBlock(client) {
   } else {
     await resolveOpsIncident(client, 'telegram_webhook_auto_fix');
   }
-  const tgBad = tgChecks.filter((r) => r.status === 'ok' && (r.pending > 0 || r.webhook || r.last_error));
-  const tgUnknown = tgChecks.filter((r) => r.status !== 'ok');
-  if (tgBad.length > 0) {
-    hasProblem = true;
-    lines.push(`🚨 Telegram: ${tgBad.map((r) => `${r.label} pending=${r.pending} webhook=${r.webhook ? 'on' : 'off'}`).join(', ')}`);
-  } else if (tgUnknown.length > 0) {
-    lines.push(`ℹ️ Telegram queue: ${tgChecks.filter((r) => r.status === 'ok').map((r) => `${r.label}=0`).join(', ') || 'none checked'}; unknown ${tgUnknown.map((r) => r.label).join(', ')}`);
-  } else {
-    lines.push('✅ Telegram queues 0, webhooks off');
-  }
+  const telegramSummary = summarizeTelegramChecks(tgChecks);
+  if (telegramSummary.hasProblem) hasProblem = true;
+  lines.push(telegramSummary.line);
 
   const commit = process.env.HEYS_DEPLOY_COMMIT || 'unknown';
   lines.push(`deploy ${_mdEscape(commit)}`);
@@ -1258,8 +1277,8 @@ async function dailyReport(client, once) {
     defenseBlock,
   ].filter(Boolean);
 
-  await sendTelegramNotification(parts.join('\n\n'));
-  return { sent: true };
+  const delivery = await deliverRequiredTelegram(parts.join('\n\n'), 'daily report');
+  return { sent: true, message_id: delivery.messageId || null };
 }
 
 /**
@@ -1734,4 +1753,9 @@ module.exports.handler = async (event, context) => {
   } finally {
     if (client) client.release();
   }
+};
+
+module.exports.__test = {
+  deliverRequiredTelegram,
+  summarizeTelegramChecks,
 };

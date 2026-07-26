@@ -234,7 +234,7 @@ CLI (`yc serverless function version create ... --environment`), т.к. CLI
 
 ### Автоматический мониторинг (24/7)
 
-- **GitHub Actions**: проверка API каждые 15 минут
+- **GitHub Actions**: проверка API каждые 6 часов
 - **Auto-redeploy**: при 502 Bad Gateway → `./deploy-all.sh`
 - **Telegram алерты**: при сбое API → уведомление в канал
 

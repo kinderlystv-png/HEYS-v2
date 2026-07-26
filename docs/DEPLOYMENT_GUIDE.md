@@ -161,7 +161,7 @@ node yandex-cloud-functions/heys-api-rpc/apply_migrations.js
 # .github/workflows/api-health-monitor.yml
 on:
   schedule:
-    - cron: '*/15 * * * *' # Каждые 15 минут
+    - cron: '0 */6 * * *' # Каждые 6 часов
 
 steps:
   - name: Check Health
