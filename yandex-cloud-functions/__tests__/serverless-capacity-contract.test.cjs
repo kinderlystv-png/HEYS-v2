@@ -71,6 +71,10 @@ test('deploy workflow keeps Telegram plaintext out of function env', () => {
   assert.match(createEnvStep, /write_env_var TELEGRAM_CHAT_ID "__IN_LOCKBOX__heys-app-secrets__"/);
   assert.match(notificationSteps, /TELEGRAM_BOT_TOKEN: \$\{\{ secrets\.TELEGRAM_BOT_TOKEN \}\}/);
   assert.match(notificationSteps, /TELEGRAM_CHAT_ID: \$\{\{ secrets\.TELEGRAM_CHAT_ID \}\}/);
+  assert.match(
+    notificationSteps,
+    /if: success\(\) && \(github\.event_name == 'workflow_dispatch' \|\| steps\.deployment-target\.outputs\.mode != 'none'\)/,
+  );
 });
 
 test('scheduled monitoring runs no-retry canary and exact 429\/503 log scan', () => {

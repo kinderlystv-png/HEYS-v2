@@ -361,7 +361,7 @@ jobs:
           echo "✅ Deployment verified successfully"
 
       - name: Notify Telegram on Success
-        if: success()
+        if: success() && (github.event_name == 'workflow_dispatch' || steps.deployment-target.outputs.mode != 'none')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
