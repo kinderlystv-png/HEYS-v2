@@ -62,6 +62,7 @@ test('deploy workflow keeps Telegram plaintext out of function env', () => {
   );
   const notificationSteps = workflow.slice(workflow.indexOf('- name: Notify Telegram on Success'));
 
+  assert.match(workflow, /- "\.github\/workflows\/cloud-functions-deploy\.yml"/);
   assert.doesNotMatch(createEnvStep, /secrets\.TELEGRAM_(?:BOT_TOKEN|CHAT_ID)/);
   assert.match(
     createEnvStep,
