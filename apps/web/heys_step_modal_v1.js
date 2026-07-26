@@ -524,6 +524,7 @@
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
     const [registryVersion, setRegistryVersion] = useState(0);
+    const [registryWaitExpired, setRegistryWaitExpired] = useState(false);
 
     useEffect(() => {
       const handleStepRegistered = () => setRegistryVersion((version) => version + 1);
@@ -586,6 +587,19 @@
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
+    const requestedStepIdsKey = steps.map((step) => (
+      typeof step === 'string' ? step : (step?.id || '')
+    )).join('|');
+
+    useEffect(() => {
+      if (currentConfig || steps.length === 0) {
+        setRegistryWaitExpired(false);
+        return undefined;
+      }
+      setRegistryWaitExpired(false);
+      const timer = setTimeout(() => setRegistryWaitExpired(true), 8000);
+      return () => clearTimeout(timer);
+    }, [currentConfig, registryVersion, requestedStepIdsKey, steps.length]);
 
     useEffect(() => {
       if (!currentConfig || typeof onStepShown !== 'function') return;
@@ -1007,10 +1021,17 @@
           'aria-live': 'polite'
         },
           React.createElement('div', { className: 'mc-step-content mc-step-content--loading' },
-            React.createElement('div', { className: 'yv-loading' }, 'Загружаем следующий шаг…'),
-            missingStepIds.length > 0 && React.createElement('div', {
+            React.createElement('div', { className: 'yv-loading' }, registryWaitExpired
+              ? 'Не удалось загрузить шаг'
+              : 'Загружаем следующий шаг…'),
+            !registryWaitExpired && missingStepIds.length > 0 && React.createElement('div', {
               className: 'mc-loading-hint'
-            }, 'Это может занять несколько секунд.')
+            }, 'Это может занять несколько секунд.'),
+            registryWaitExpired && React.createElement('button', {
+              type: 'button',
+              className: 'mc-btn mc-btn--primary',
+              onClick: handleClose
+            }, 'Закрыть')
           )
         )
       );

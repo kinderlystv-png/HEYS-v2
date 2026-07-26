@@ -348,6 +348,40 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(store.get(key, null).trainings).toEqual([]);
   });
 
+  test('Store.getPersisted bypasses a mutable cached object', () => {
+    const store = loadStorageLayer();
+    const stored = { totalXP: 0, level: 1 };
+
+    expect(store.set('heys_game', stored)).toBe(true);
+    store.get('heys_game', null).totalXP = 25;
+
+    expect(store.get('heys_game', null).totalXP).toBe(25);
+    expect(store.getPersisted('heys_game', null).totalXP).toBe(0);
+  });
+
+  test('Store.set delegates one cloud save and suppresses the interceptor mirror', () => {
+    const originalSetItem = mockStorage.setItem;
+    const interceptorMirror = vi.fn();
+    mockStorage.setItem = vi.fn((key, value) => {
+      originalSetItem(key, value);
+      if (window.HEYS?._suppressStoreCloudSync !== true) interceptorMirror(key, value);
+    });
+    const store = loadStorageLayer();
+    window.HEYS.saveClientKey = vi.fn();
+    interceptorMirror.mockClear();
+
+    const day = { date: '2026-07-26', updatedAt: 1000, meals: [], trainings: [] };
+    expect(store.set('heys_dayv2_2026-07-26', day)).toBe(true);
+
+    expect(interceptorMirror).not.toHaveBeenCalled();
+    expect(window.HEYS.saveClientKey).toHaveBeenCalledTimes(1);
+    expect(window.HEYS.saveClientKey).toHaveBeenCalledWith(
+      CLIENT_ID,
+      `heys_${CLIENT_ID}_dayv2_2026-07-26`,
+      expect.objectContaining(day),
+    );
+  });
+
   test('round-trips a compressed scoped Hunger journal after clearing memory cache', () => {
     const store = loadStorageLayer();
     const key = 'heys_hunger_energy_status_events_v1';

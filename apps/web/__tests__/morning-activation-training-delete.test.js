@@ -123,6 +123,12 @@ describe('morning activation replacement training deletion', () => {
     await Promise.resolve();
 
     expect(dayState.current.trainings[0]).toMatchObject({ type: '', time: '' });
+    expect(dayState.current.deletedTrainings).toEqual([
+      expect.objectContaining({
+        signature: 'fields:strength|тренировка в первой половине дня|morning_activation_replacement|09:00|',
+        index: 0,
+      }),
+    ]);
     expect(dayState.current.morningActivation).toMatchObject({
       status: 'pending',
       replacement: null,

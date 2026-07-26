@@ -1100,7 +1100,12 @@
    * Используется и в MorningCheckin, и в showCheckin.morning()
    */
   function getCheckinSteps(profile, opts) {
-    const { filterCompleted = false, requiredOnly = false, yesterdayVerifyRequired = null } = opts || {};
+    const {
+      filterCompleted = false,
+      requiredOnly = false,
+      yesterdayVerifyRequired = null,
+      dateKey = null
+    } = opts || {};
     const steps = [];
     let hasProfileSteps = false;
 
@@ -1141,7 +1146,7 @@
 
     // 3. 🔄 Загрузочный день (Refeed) — опциональный, после required-блока.
     // Добавляем только когда сам шаг реально будет видимым в StepModal.
-    if (shouldIncludeRefeedStep(profile)) {
+    if (shouldIncludeRefeedStep(profile, dateKey || getTodayKey())) {
       steps.push('refeedDay');
     }
 
@@ -1173,9 +1178,12 @@
     // Регистрационные / opaque / opt-in шаги оставляем как есть — они либо нужны атомарно (registration),
     // либо conditional-gated на уровне push, либо canSkip:true и не требуют detection.
     const todayKey = getTodayKey();
-    const dayDataF = readDayV2ScopedFirst(todayKey, {}) || {};
+    const targetDateKey = dateKey || todayKey;
+    const dayDataF = readDayV2ScopedFirst(targetDateKey, {}) || {};
     const calendarKey = new Date().toISOString().slice(0, 10);
-    const altDayDataF = calendarKey !== todayKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
+    const altDayDataF = targetDateKey === todayKey && calendarKey !== todayKey
+      ? (readDayV2ScopedFirst(calendarKey, {}) || {})
+      : {};
     const day = { ...altDayDataF, ...dayDataF };
 
     const filtered = steps.filter(id => {
@@ -1629,27 +1637,33 @@
       : MORNING_CORE_STEPS.filter((id) => !isMorningStepComplete(id, { dateKey, clientId, day, profile }));
     const steps = stepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
+      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      const persistedStatus = row.status || (completeByData ? 'data_present' : 'missing');
+      const status = completeByData && (persistedStatus === 'planned' || persistedStatus === 'missing')
+        ? 'data_present'
+        : persistedStatus;
       return {
         id,
         label: MORNING_STEP_LABELS[id] || id,
-        status: row.status || (isMorningStepComplete(id, { dateKey, clientId, day, profile }) ? 'data_present' : 'missing'),
+        status,
         savedAt: row.savedAt || null,
         syncedAt: row.syncedAt || null,
         updatedAt: row.updatedAt || null,
         error: row.error || null,
         cloudPending: row.cloudPending === true,
         syncNote: row.syncNote || null,
-        completeByData: isMorningStepComplete(id, { dateKey, clientId, day, profile })
+        completeByData
       };
     });
     const sessionKey = getCheckinSessionKey(clientId, dateKey);
-    let sessionDone = false;
+    let sessionFlagDone = false;
     try {
-      sessionDone = sessionStorage.getItem(sessionKey) === 'true';
+      sessionFlagDone = sessionStorage.getItem(sessionKey) === 'true';
     } catch (_) {
-      sessionDone = false;
+      sessionFlagDone = false;
     }
-    const summary = summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone });
+    const summary = summarizeMorningCheckinStatus({ ledger, steps, corePresence, sessionDone: sessionFlagDone });
+    const sessionDone = sessionFlagDone || summary.state === 'complete';
     return {
       version: 1,
       dateKey,
@@ -1658,6 +1672,7 @@
       state: summary.state,
       label: summary.label,
       sessionDone,
+      sessionFlagDone,
       updatedAt: ledger?.updatedAt || null,
       flowStatus: ledger?.steps?.__flow__?.status || null,
       plannedStepIds,
@@ -1773,13 +1788,27 @@
       ? _nextPlanYesterdayVerifyRequired
       : null;
     if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
-    const freshSteps = getCheckinSteps(profile, {
+    const derivedFreshSteps = getCheckinSteps(profile, {
       filterCompleted: opts.filterCompleted !== false,
       requiredOnly: !!opts.requiredOnly,
-      yesterdayVerifyRequired: cachedYesterdayVerifyRequired
+      yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
+        ? opts.yesterdayVerifyRequired
+        : cachedYesterdayVerifyRequired,
+      dateKey
     });
+    // Explicit reset flows cannot wait for the React day-state write to reach
+    // localStorage before the plan is built. Force their known reset steps so
+    // a stale pre-reset snapshot cannot produce an empty loading modal.
+    const forcedStepIds = Array.isArray(opts.forceStepIds) ? opts.forceStepIds : [];
+    const freshSteps = Array.from(new Set([
+      ...forcedStepIds,
+      ...derivedFreshSteps
+    ]));
     const existingLedger = readMorningProgress(dateKey, clientId);
-    const steps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId });
+    const mergedSteps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId });
+    // Keep explicit reset steps after data-derived filtering too: localStorage
+    // may still contain the pre-reset day for a few frames.
+    const steps = Array.from(new Set([...forcedStepIds, ...mergedSteps]));
     const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
     const fullPlannedStepIds = Array.from(new Set([
       ...(existingLedger?.plannedStepIds || []),
@@ -1800,6 +1829,7 @@
       profile,
       steps,
       flowId: ledger?.flowId || flowId,
+      skipYesterdayVerify: opts.yesterdayVerifyRequired === false,
       isRegistrationCheckin: steps.includes('profile-personal')
     };
   }
@@ -1851,6 +1881,7 @@
   function ensureFinalMorningRequirements(plan) {
     const dateKey = plan?.dateKey || getTodayKey();
     const clientId = plan?.clientId || getCurrentClientId();
+    if (plan?.skipYesterdayVerify) return readMorningProgress(dateKey, clientId);
     if (!isYesterdayVerifyDecisionReady()) {
       throw new Error('checkin_decision_pending:проверка прошлых дней');
     }
@@ -2136,6 +2167,7 @@
         showGreeting: true,
         showTip: true,
         allowSwipe: false,
+        context: { dateKey: plan.dateKey },
         freezeVisibleSteps: true,
         forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
         requireStepAck: true,
@@ -2216,11 +2248,18 @@
    */
   HEYS.showCheckin = {
     // Полный утренний чек-ин
-    morning: (onComplete) => {
+    morning: (dateKey, onComplete, openOptions = {}) => {
       if (HEYS.StepModal) {
+        // Backward compatibility: morning(onComplete).
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
+        const isHistorical = !!actualDateKey && actualDateKey !== getTodayKey();
         const plan = buildMorningCheckinPlan({
           source: 'showCheckin.morning',
-          requiredOnly: false
+          dateKey: actualDateKey || getTodayKey(),
+          requiredOnly: openOptions.requiredOnly ?? isHistorical,
+          yesterdayVerifyRequired: openOptions.yesterdayVerifyRequired ?? (isHistorical ? false : null),
+          forceStepIds: openOptions.forceStepIds
         });
         const steps = plan.steps;
 
@@ -2229,7 +2268,7 @@
           if (plan.isRegistrationCheckin) {
             console.log('[showCheckin.morning] ✅ Registration checkin completed');
           }
-          return completeMorningCheckin(plan, onComplete);
+          return completeMorningCheckin(plan, actualOnComplete);
         };
 
         HEYS.StepModal.show({
@@ -2237,6 +2276,7 @@
           onComplete: wrappedOnComplete,
           closeOnComplete: 'after',
           allowSwipe: false,
+          context: { dateKey: plan.dateKey },
           freezeVisibleSteps: true,
           forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
           requireStepAck: true,

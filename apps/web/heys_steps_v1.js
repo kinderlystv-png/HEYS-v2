@@ -1369,6 +1369,8 @@
 
   function SleepTimeStepComponent({ data, onChange }) {
     const lastSleep = useMemo(() => getLastSleepData(), []);
+    const latestDataRef = useRef(data);
+    latestDataRef.current = data;
 
     const sleepStartH = data.sleepStartH ?? parseInt(lastSleep.sleepStart.split(':')[0], 10);
     const sleepStartM = data.sleepStartM ?? parseInt(lastSleep.sleepStart.split(':')[1], 10);
@@ -1384,72 +1386,56 @@
     const pad2 = (n) => String(n).padStart(2, '0');
 
     // Обновляет данные с форматированными полями для onComplete
-    const updateData = (newData) => {
+    const updateData = (patch) => {
+      const newData = { ...latestDataRef.current, ...patch };
       const startH = newData.sleepStartH ?? sleepStartH;
       const startM = newData.sleepStartM ?? sleepStartM;
       const endH = newData.sleepEndH ?? sleepEndH;
       const endM = newData.sleepEndM ?? sleepEndM;
-      const daySleepMinutes = normalizeDaySleepMinutes(newData.daySleepMinutes ?? data.daySleepMinutes);
-
-      onChange({
+      const daySleepMinutes = normalizeDaySleepMinutes(newData.daySleepMinutes);
+      const nextData = {
         ...newData,
         daySleepMinutes,
         // Форматированные поля для onComplete callback
         sleepStart: `${pad2(startH)}:${pad2(startM)}`,
         sleepEnd: `${pad2(endH)}:${pad2(endM)}`,
         sleepHours: Math.round((calcSleepHours(startH, startM, endH, endM) + daySleepMinutes / 60) * 10) / 10
-      });
+      };
+
+      latestDataRef.current = nextData;
+      onChange(nextData);
     };
 
     // Callbacks для времени засыпания
     const setSleepStartH = (h) => {
       updateData({
-        ...data,
-        sleepStartH: h,
-        sleepStartM: data.sleepStartM ?? sleepStartM,
-        sleepEndH: data.sleepEndH ?? sleepEndH,
-        sleepEndM: data.sleepEndM ?? sleepEndM
+        sleepStartH: h
       });
     };
 
     const setSleepStartM = (m) => {
       updateData({
-        ...data,
-        sleepStartH: data.sleepStartH ?? sleepStartH,
-        sleepStartM: m,
-        sleepEndH: data.sleepEndH ?? sleepEndH,
-        sleepEndM: data.sleepEndM ?? sleepEndM
+        sleepStartM: m
       });
     };
 
     // Единый callback для linkedScroll — засыпание
     const setSleepStartTime = (h, m) => {
       updateData({
-        ...data,
         sleepStartH: h,
-        sleepStartM: m,
-        sleepEndH: data.sleepEndH ?? sleepEndH,
-        sleepEndM: data.sleepEndM ?? sleepEndM
+        sleepStartM: m
       });
     };
 
     // Callbacks для времени пробуждения
     const setSleepEndH = (h) => {
       updateData({
-        ...data,
-        sleepStartH: data.sleepStartH ?? sleepStartH,
-        sleepStartM: data.sleepStartM ?? sleepStartM,
-        sleepEndH: h,
-        sleepEndM: data.sleepEndM ?? sleepEndM
+        sleepEndH: h
       });
     };
 
     const setSleepEndM = (m) => {
       updateData({
-        ...data,
-        sleepStartH: data.sleepStartH ?? sleepStartH,
-        sleepStartM: data.sleepStartM ?? sleepStartM,
-        sleepEndH: data.sleepEndH ?? sleepEndH,
         sleepEndM: m
       });
     };
@@ -1457,9 +1443,6 @@
     // Единый callback для linkedScroll — пробуждение
     const setSleepEndTime = (h, m) => {
       updateData({
-        ...data,
-        sleepStartH: data.sleepStartH ?? sleepStartH,
-        sleepStartM: data.sleepStartM ?? sleepStartM,
         sleepEndH: h,
         sleepEndM: m
       });

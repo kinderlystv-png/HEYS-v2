@@ -27,9 +27,19 @@ function loadStepModal() {
   return window.HEYS.StepModal;
 }
 
-function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired = false, yesterdayReady = true } = {}) {
-  const values = new Map([[DAY_KEY, { date: DATE_KEY, ...day }]]);
-  if (ledger) values.set(PROGRESS_KEY, structuredClone(ledger));
+function loadMorning({
+  day = {},
+  profile = {},
+  ledger = null,
+  yesterdayRequired = false,
+  yesterdayReady = true,
+  dateKey = DATE_KEY,
+  todayKey = DATE_KEY,
+} = {}) {
+  const dayKey = `heys_${CLIENT_ID}_dayv2_${dateKey}`;
+  const progressKey = `heys_${CLIENT_ID}_morning_checkin_progress_v1_${dateKey}`;
+  const values = new Map([[dayKey, { date: dateKey, ...day }]]);
+  if (ledger) values.set(progressKey, structuredClone(ledger));
   localStorage.setItem(`heys_${CLIENT_ID}_profile`, JSON.stringify({
     _sourceClientId: CLIENT_ID,
     profileCompleted: true,
@@ -45,7 +55,7 @@ function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired 
       set: (key, value) => values.set(key, structuredClone(value)),
     },
     utils: { getCurrentClientId: () => CLIENT_ID },
-    dayUtils: { todayISO: () => DATE_KEY },
+    dayUtils: { todayISO: () => todayKey },
     ProfileSteps: { isProfileIncomplete: () => false },
     Steps: {
       shouldShowCycleStep: () => false,
@@ -62,7 +72,7 @@ function loadMorning({ day = {}, profile = {}, ledger = null, yesterdayRequired 
   new Function(SYNC_MERGE_SRC)();
   // eslint-disable-next-line no-new-func
   new Function(MORNING_SRC)();
-  return { HEYS: window.HEYS, utils: window.HEYS.MorningCheckinUtils, values };
+  return { HEYS: window.HEYS, utils: window.HEYS.MorningCheckinUtils, values, dayKey, progressKey };
 }
 
 function completedDay() {
@@ -118,6 +128,26 @@ afterEach(() => {
 });
 
 describe('StepModal forced visibility', () => {
+  it('offers a close action instead of loading forever when a step never registers', () => {
+    vi.useFakeTimers();
+    try {
+      const StepModal = loadStepModal();
+      const onClose = vi.fn();
+      render(React.createElement(StepModal.Component, {
+        steps: ['missing-step'],
+        onClose,
+      }));
+
+      expect(screen.getByText('Загружаем следующий шаг…')).toBeTruthy();
+      act(() => vi.advanceTimersByTime(8000));
+      expect(screen.getByText('Не удалось загрузить шаг')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('re-registers yesterdayVerify when StepModal becomes ready after its retry started', () => {
     window.React = React;
     window.HEYS = {};
@@ -282,6 +312,58 @@ describe('morning progress key migration', () => {
 });
 
 describe('morning check-in journal resume', () => {
+  it('opens a historical reset against the selected date without adding today-only steps', () => {
+    const historicalDate = '2026-07-25';
+    const { HEYS } = loadMorning({
+      dateKey: historicalDate,
+      todayKey: '2026-07-26',
+      day: {
+        weightMorning: 92.7,
+        sleepStart: '03:00',
+        sleepEnd: '09:10',
+        sleepQuality: 7,
+        moodMorning: 7,
+      },
+      profile: { stepsGoal: 9000 },
+      yesterdayRequired: true,
+    });
+    HEYS.StepModal = { show: vi.fn() };
+
+    HEYS.showCheckin.morning(historicalDate, null, {
+      requiredOnly: true,
+      yesterdayVerifyRequired: false,
+      forceStepIds: ['weight', 'sleepTime', 'sleepQuality'],
+    });
+
+    expect(HEYS.StepModal.show).toHaveBeenCalledTimes(1);
+    const options = HEYS.StepModal.show.mock.calls[0][0];
+    expect(options.context).toEqual({ dateKey: historicalDate });
+    expect(options.steps).toEqual(['weight', 'sleepTime', 'sleepQuality']);
+    expect(options.forceVisibleStepIds).toEqual([]);
+  });
+
+  it('reports a completed persisted flow consistently after a new browser session', () => {
+    const ledger = fullIncidentLedger('synced');
+    ledger.steps.yesterdayVerify = { status: 'synced', updatedAt: 3000 };
+    ledger.steps.sleepTime = { status: 'planned', updatedAt: 1000 };
+    ledger.steps.sleepQuality = { status: 'planned', updatedAt: 1000 };
+    ledger.steps.morning_mood = { status: 'planned', updatedAt: 1000 };
+    ledger.steps.cold_exposure = { status: 'synced', updatedAt: 3000 };
+    const { utils } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+
+    const status = utils.getMorningCheckinStatus(DATE_KEY, CLIENT_ID);
+
+    expect(status.state).toBe('complete');
+    expect(status.sessionDone).toBe(true);
+    expect(status.sessionFlagDone).toBe(false);
+    expect(status.counts.planned).toBeUndefined();
+    expect(status.counts.data_present).toBe(3);
+  });
+
   it('repairs a partial persisted journal before resuming the flow', () => {
     const partialLedger = {
       plannedStepIds: ['weight'],

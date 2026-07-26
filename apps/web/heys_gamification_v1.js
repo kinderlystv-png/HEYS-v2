@@ -26,13 +26,24 @@
   };
 
   const setStoredValue = (key, value) => {
+    const missing = {};
+    const previousValue = typeof HEYS.store?.getPersisted === 'function'
+      ? HEYS.store.getPersisted(key, missing)
+      : readStoredValue(key, missing);
+    if (previousValue !== missing) {
+      try {
+        if (JSON.stringify(previousValue) === JSON.stringify(value)) {
+          return false;
+        }
+      } catch (_) { /* fall through — persist values that cannot be compared */ }
+    }
     if (HEYS.store?.set) {
       HEYS.store.set(key, value);
-      return;
+      return true;
     }
     if (U.lsSet) {
       U.lsSet(key, value);
-      return;
+      return true;
     }
     try {
       if (value && typeof value === 'object') {
@@ -40,7 +51,10 @@
       } else {
         localStorage.setItem(key, String(value));
       }
-    } catch (e) { }
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   // ========== КОНФИГУРАЦИЯ ==========

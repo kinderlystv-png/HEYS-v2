@@ -87,6 +87,61 @@
     return out;
   }
 
+  function trainingDeletionSignature(training) {
+    if (!training || typeof training !== 'object') return '';
+    const id = training.id == null ? '' : String(training.id).trim();
+    if (id) return 'id:' + id;
+    const identity = [
+      training.type,
+      training.activityLabel,
+      training.source,
+      training.time,
+      training.hobbySubtype,
+    ].map((value) => String(value == null ? '' : value).trim().toLowerCase());
+    if (identity.some(Boolean)) return 'fields:' + identity.join('|');
+    const zones = Array.isArray(training.z) ? training.z.map((value) => Number(value) || 0) : [];
+    return zones.some((value) => value > 0) ? 'zones:' + zones.join('|') : '';
+  }
+
+  function mergeTrainingTombstones(localList, remoteList) {
+    const byId = new Map();
+    const add = (raw) => {
+      if (!raw || typeof raw !== 'object') return;
+      const deletedAt = Number(raw.deletedAt) || 0;
+      const signature = String(raw.signature || '').trim();
+      if (!deletedAt || !signature) return;
+      const tombstoneId = String(raw.tombstoneId || (signature + ':' + deletedAt));
+      const previous = byId.get(tombstoneId);
+      if (!previous || deletedAt >= (Number(previous.deletedAt) || 0)) {
+        byId.set(tombstoneId, {
+          tombstoneId,
+          signature,
+          deletedAt,
+          index: Number.isInteger(raw.index) ? raw.index : undefined,
+        });
+      }
+    };
+    (Array.isArray(remoteList) ? remoteList : []).forEach(add);
+    (Array.isArray(localList) ? localList : []).forEach(add);
+    return Array.from(byId.values())
+      .sort((left, right) => (Number(right.deletedAt) || 0) - (Number(left.deletedAt) || 0))
+      .slice(0, 50);
+  }
+
+  function matchingTrainingDeletionTs(training, tombstones) {
+    const signature = trainingDeletionSignature(training);
+    if (!signature) return 0;
+    const trainingTs = Number(training && training.updatedAt) || 0;
+    let deletedAt = 0;
+    for (const tombstone of (Array.isArray(tombstones) ? tombstones : [])) {
+      const tombstoneTs = Number(tombstone && tombstone.deletedAt) || 0;
+      if (tombstone && tombstone.signature === signature && tombstoneTs >= trainingTs) {
+        deletedAt = Math.max(deletedAt, tombstoneTs);
+      }
+    }
+    return deletedAt;
+  }
+
   function mergeChronoTombstones(incoming, current) {
     const byKey = new Map();
     const add = (raw) => {
@@ -709,6 +764,7 @@
     // ─── Trainings: position-indexed merge ────────────────────────────────
     const localTrainings = local.trainings || [];
     const remoteTrainings = remote.trainings || [];
+    const mergedDeletedTrainings = mergeTrainingTombstones(local.deletedTrainings, remote.deletedTrainings);
     merged.trainings = [];
     const isMorningActivationTrainingRow = (t) => {
       if (!t || typeof t !== 'object') return false;
@@ -737,8 +793,12 @@
 
     const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
     for (let i = 0; i < maxTrainings; i++) {
-      const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
-      const rt = remoteTrainings[i] || { z: [0, 0, 0, 0] };
+      const rawLt = localTrainings[i] || { z: [0, 0, 0, 0] };
+      const rawRt = remoteTrainings[i] || { z: [0, 0, 0, 0] };
+      const localDeletedAt = matchingTrainingDeletionTs(rawLt, mergedDeletedTrainings);
+      const remoteDeletedAt = matchingTrainingDeletionTs(rawRt, mergedDeletedTrainings);
+      const lt = localDeletedAt ? { z: [0, 0, 0, 0], updatedAt: localDeletedAt } : rawLt;
+      const rt = remoteDeletedAt ? { z: [0, 0, 0, 0], updatedAt: remoteDeletedAt } : rawRt;
       const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
       const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
       const localTrainingTs = lt.updatedAt || local.updatedAt || 0;
@@ -799,6 +859,9 @@
       };
 
       merged.trainings.push(winner);
+    }
+    if (mergedDeletedTrainings.length > 0) {
+      merged.deletedTrainings = mergedDeletedTrainings;
     }
 
     logFn('🔀 [MERGE] Result:', {
@@ -945,8 +1008,13 @@
     stepIds.forEach((id) => {
       merged.steps[id] = mergeMorningProgressRow(incoming.steps?.[id], current.steps?.[id]);
     });
-    const now = Number(options.now) || Date.now();
-    merged.updatedAt = Math.max(incomingTs, currentTs, now);
+    // Merge is idempotent: merely reading the same ledger from cloud must not
+    // manufacture a fresher value and echo it back through hot-sync.
+    const mergedStepTs = Object.values(merged.steps).reduce(
+      (maxTs, row) => Math.max(maxTs, morningProgressRowTimestamp(row)),
+      0
+    );
+    merged.updatedAt = Math.max(incomingTs, currentTs, mergedStepTs);
     return merged;
   }
 
@@ -1211,6 +1279,10 @@
         if (incomingTs > existingTs) mergedDeletedItemIds[id] = incomingTs;
       });
     }
+    const mergedDeletedTrainings = mergeTrainingTombstones(
+      prevDay && prevDay.deletedTrainings,
+      nextDay.deletedTrainings,
+    );
 
     // HMR-safe: при mutationTs=0 (нет источника TS) не выставляем явный day.updatedAt,
     // оставляем nextDay-значение как есть. Иначе на dayChanged-path мы бы получали 0,
@@ -1226,6 +1298,9 @@
     };
     if (mergedDeletedItemIds && Object.keys(mergedDeletedItemIds).length > 0) {
       result.deletedItemIds = mergedDeletedItemIds;
+    }
+    if (mergedDeletedTrainings.length > 0) {
+      result.deletedTrainings = mergedDeletedTrainings;
     }
     return result;
   }
@@ -1263,6 +1338,8 @@
     hasMorningActivationRegression,
     mergeMorningActivationState,
     mergeChronoTombstones,
+    mergeTrainingTombstones,
+    trainingDeletionSignature,
     mergePlanningRecords,
     mergeHungerStatusEvents,
     mergeInsightsFeedback,

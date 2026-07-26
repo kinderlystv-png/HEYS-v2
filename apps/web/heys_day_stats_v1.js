@@ -5,6 +5,18 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  function resetMorningCheckinDay(day, nowTs = Date.now()) {
+    return {
+      ...(day || {}),
+      weightMorning: '',
+      sleepStart: '',
+      sleepEnd: '',
+      sleepHours: '',
+      sleepQuality: '',
+      updatedAt: nowTs
+    };
+  }
+
   /**
    * Render stats block
    * @param {Object} params - Render parameters
@@ -3330,17 +3342,8 @@
               className: 'dev-clear-weight-mini',
               onClick: (e) => {
                 e.stopPropagation();
-                if (!confirm('🗑️ Очистить вес за сегодня?\n\nЭто позволит увидеть Morning Check-in заново.')) return;
-                // Сразу сбрасываем вес и сон, чтобы чек-ин показался снова
-                setDay(prev => ({
-                  ...prev,
-                  weightMorning: '',
-                  sleepStart: '',
-                  sleepEnd: '',
-                  sleepHours: '',
-                  sleepQuality: '',
-                  updatedAt: Date.now()
-                }));
+                if (!confirm('🗑️ Сбросить утренний чек-ин за выбранный день?')) return;
+                setDay(prev => resetMorningCheckinDay(prev));
 
                 // Даем React применить state, затем сохраняем и открываем чек-ин без перезагрузки
                 setTimeout(() => {
@@ -3359,12 +3362,14 @@
                     if (Day && typeof Day.requestFlush === 'function') {
                       Day.requestFlush();
                     }
+                    const targetDateKey = selectedDateKey || dayDateKey || date;
                     if (showCheckin && typeof showCheckin.morning === 'function') {
-                      console.info('[dev-clear-weight] open morning checkin wizard', trace);
-                      showCheckin.morning();
-                    } else if (showCheckin && typeof showCheckin.weight === 'function') {
-                      console.info('[dev-clear-weight] open weight checkin step', trace);
-                      showCheckin.weight();
+                      console.info('[dev-clear-weight] open morning checkin for selected day', { ...trace, targetDateKey });
+                      showCheckin.morning(targetDateKey, null, {
+                        requiredOnly: true,
+                        yesterdayVerifyRequired: false,
+                        forceStepIds: ['weight', 'sleepTime', 'sleepQuality']
+                      });
                     } else {
                       console.warn('[dev-clear-weight] no checkin opener available', trace);
                     }
@@ -3373,7 +3378,7 @@
                   }
                 }, 50);
               },
-              title: 'DEV: Очистить вес для теста Morning Check-in'
+              title: 'Сбросить утренний чек-ин за выбранный день'
             }, '×')
           )
         ),
@@ -3425,7 +3430,8 @@
 
   // Export
   HEYS.dayStats = {
-    render: renderStatsBlock
+    render: renderStatsBlock,
+    _test: { resetMorningCheckinDay }
   };
 
 })(window);

@@ -116,4 +116,45 @@ describe('gamification cloud sync guard', () => {
     expect(mergeSaveKV).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(timerCountBefore);
   });
+
+  it('does not persist an identical game state twice', () => {
+    vi.setSystemTime(new Date('2026-07-26T08:00:00.000Z'));
+    globalThis.HEYS.game.reset();
+    const setItemSpy = vi.spyOn(globalThis.localStorage, 'setItem');
+
+    globalThis.HEYS.game.reset();
+
+    expect(setItemSpy.mock.calls.filter(([key]) => key === 'heys_game')).toHaveLength(0);
+    setItemSpy.mockRestore();
+  });
+
+  it('persists an in-place mutation when the storage cache shares the same object', () => {
+    const originalStore = globalThis.HEYS.store;
+    const persisted = new Map();
+    const cached = new Map();
+    const set = vi.fn((key, value) => {
+      cached.set(key, value);
+      persisted.set(key, JSON.parse(JSON.stringify(value)));
+      return true;
+    });
+    globalThis.HEYS.store = {
+      get: (key, fallback) => cached.has(key) ? cached.get(key) : fallback,
+      getPersisted: (key, fallback) => persisted.has(key)
+        ? JSON.parse(JSON.stringify(persisted.get(key)))
+        : fallback,
+      set
+    };
+
+    try {
+      globalThis.HEYS.game.reset();
+      globalThis.HEYS.game.addXP(10, 'persistence_test');
+      vi.advanceTimersByTime(100);
+
+      expect(set.mock.calls.filter(([key]) => key === 'heys_game').length).toBeGreaterThanOrEqual(2);
+      expect(persisted.get('heys_game').totalXP).toBeGreaterThan(0);
+    } finally {
+      globalThis.HEYS.game.cancelAllPendingFlushes();
+      globalThis.HEYS.store = originalStore;
+    }
+  });
 });

@@ -2054,7 +2054,9 @@
       commentEl,
       initialCollapsed,
       collapsedStorageKey,
-      onCollapsedChange
+      onCollapsedChange,
+      curatorTarget,
+      trainingTargetIndex
     } = props || {};
 
     function readStoredCollapsed() {
@@ -2126,7 +2128,9 @@
       rightGroupEl
     );
     return React.createElement('div', {
-      className: cardClassName + (collapsed ? ' compact-train--wb-collapsed' : '')
+      className: cardClassName + (collapsed ? ' compact-train--wb-collapsed' : ''),
+      'data-curator-target': curatorTarget,
+      'data-training-index': trainingTargetIndex
     },
       React.createElement('div', {
         className: 'compact-train-header compact-train-header--with-fold',
@@ -2469,6 +2473,21 @@
       };
     }
 
+    function getTrainingDeletionSignature(training) {
+      try {
+        const shared = HEYS.sync?.trainingDeletionSignature;
+        if (typeof shared === 'function') return shared(training);
+      } catch (_) { /* noop */ }
+      if (!training || typeof training !== 'object') return '';
+      const id = training.id == null ? '' : String(training.id).trim();
+      if (id) return 'id:' + id;
+      const identity = [training.type, training.activityLabel, training.source, training.time, training.hobbySubtype]
+        .map((value) => String(value == null ? '' : value).trim().toLowerCase());
+      if (identity.some(Boolean)) return 'fields:' + identity.join('|');
+      const zones = Array.isArray(training.z) ? training.z.map((value) => Number(value) || 0) : [];
+      return zones.some((value) => value > 0) ? 'zones:' + zones.join('|') : '';
+    }
+
     function cloneHouseholdActivity(activity) {
       return activity ? { ...activity } : activity;
     }
@@ -2561,6 +2580,8 @@
         errorMessage: 'Не удалось удалить тренировку',
         apply: () => {
           const mutationTs = Date.now();
+          const deletionSignature = getTrainingDeletionSignature(removedTraining);
+          const tombstoneId = mutationTs + ':' + ti + ':' + deletionSignature;
           prepareTrainingMutation(mutationTs);
           if (typeof setDay === 'function') {
             setDay((prevDay) => {
@@ -2570,7 +2591,12 @@
                 ...oldTrainings.slice(ti + 1),
                 emptyTraining
               ].slice(0, 3);
-              const nextDay = { ...prevDay, trainings: newTrainings, updatedAt: mutationTs };
+              const previousTombstones = Array.isArray(prevDay.deletedTrainings) ? prevDay.deletedTrainings : [];
+              const deletedTrainings = deletionSignature
+                ? [{ tombstoneId, signature: deletionSignature, deletedAt: mutationTs, index: ti }, ...previousTombstones]
+                    .slice(0, 50)
+                : previousTombstones;
+              const nextDay = { ...prevDay, trainings: newTrainings, deletedTrainings, updatedAt: mutationTs };
               if (removedMorningActivation) {
                 nextDay.morningActivation = {
                   ...(prevDay.morningActivation || {}),
@@ -2991,7 +3017,12 @@
         // 🤚 Fingers branch — рендерим компактный pill вместо обычной карточки.
         // Click → открывает full-screen overlay через portal (heys_fingers_fullscreen_v1.js).
         if (String(T.type) === 'fingers' && HEYS.Fingers?.renderPreviewPill) {
-          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+          return React.createElement('div', {
+            key: 'training-' + ti,
+            className: 'compact-train-wrap',
+            'data-curator-target': 'training',
+            'data-training-index': String(ti)
+          },
             HEYS.Fingers.renderPreviewPill({
               training: T,
               dateKey: dateKey,
@@ -3001,7 +3032,12 @@
         }
 
         if (String(T.type) === 'mobility' && HEYS.Mobility?.renderPreviewPill) {
-          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+          return React.createElement('div', {
+            key: 'training-' + ti,
+            className: 'compact-train-wrap',
+            'data-curator-target': 'training',
+            'data-training-index': String(ti)
+          },
             HEYS.Mobility.renderPreviewPill({
               training: T,
               dateKey: dateKey,
@@ -3011,7 +3047,12 @@
         }
 
         if (HEYS.Hobby?.DrumsFingerControl?.isDrumsTraining?.(T) && HEYS.Hobby.DrumsFingerControl.renderPreviewPill) {
-          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+          return React.createElement('div', {
+            key: 'training-' + ti,
+            className: 'compact-train-wrap',
+            'data-curator-target': 'training',
+            'data-training-index': String(ti)
+          },
             HEYS.Hobby.DrumsFingerControl.renderPreviewPill({
               training: T,
               dateKey: dateKey,
@@ -3222,6 +3263,8 @@
             commentEl,
             initialCollapsed: !!T.workoutBuilderCollapsed,
             collapsedStorageKey: 'heys_wb_collapsed_' + (dateKey || 'day') + '_' + ti,
+            curatorTarget: 'training',
+            trainingTargetIndex: String(ti),
             onCollapsedChange: (nextCollapsed) => {
               patchTraining(ti, (t0) => ({
                 ...t0,
@@ -3233,7 +3276,9 @@
 
         return React.createElement('div', {
           key: 'tr' + ti,
-          className: cardClass
+          className: cardClass,
+          'data-curator-target': 'training',
+          'data-training-index': String(ti)
         },
           React.createElement('div', {
             className: 'compact-train-header',

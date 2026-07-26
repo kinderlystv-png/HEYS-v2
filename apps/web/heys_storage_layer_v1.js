@@ -503,6 +503,12 @@
       return v;
     };
   })(Store.get);
+  // Fresh persisted read that deliberately bypasses the mutable memory cache.
+  // Useful for no-op guards: callers may mutate an object returned by Store.get
+  // in place, so comparing against that cached reference can hide a real write.
+  Store.getPersisted = function (k, def) {
+    return rawGet(scoped(k), def);
+  };
   /** Replay writes deferred during cloud.switchClient (see cloud._flushDeferredWritesAfterSwitch). */
   const HEYS_SCOPED_LEAD_RE = /^heys_([a-f0-9-]{36})_/i;
   Store.__replayDeferredSwitchWrites = function (rows, newClientId, oldClientId) {
@@ -748,7 +754,17 @@
     const hadPreviousMemory = memory.has(sk);
     const previousMemory = memory.get(sk);
     memory.set(sk, v);
-    const persistedLocally = rawSet(sk, v);
+    // Store.set owns the cloud handoff below. The universal localStorage
+    // interceptor must only persist this write; otherwise critical keys start
+    // an immediate upload there and are queued a second time by saveClientKey.
+    const previousSuppressStoreCloudSync = global.HEYS?._suppressStoreCloudSync;
+    if (global.HEYS) global.HEYS._suppressStoreCloudSync = true;
+    let persistedLocally = false;
+    try {
+      persistedLocally = rawSet(sk, v);
+    } finally {
+      if (global.HEYS) global.HEYS._suppressStoreCloudSync = previousSuppressStoreCloudSync;
+    }
     if (!persistedLocally) {
       if (hadPreviousMemory) memory.set(sk, previousMemory);
       else memory.delete(sk);

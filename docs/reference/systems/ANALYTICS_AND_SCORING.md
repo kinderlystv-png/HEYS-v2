@@ -99,6 +99,11 @@ global risk score.
 - опциональный запуск causal chains;
 - запись `heys_ews_snapshot` для дальнейшего server-side push.
 
+Derived persistence идемпотентен по содержимому: повторный расчёт не пишет
+warning trends, weekly progress или snapshot, если изменились только служебные
+`updatedAt`, `lastUpdateTimestamp` или `computed_at`. Изменение предупреждений,
+score или недельных данных по-прежнему сохраняется и запускает cloud path.
+
 Следовательно, это не чистая функция. Возвращённый результат может быть готов,
 когда weekly progress или cloud sync ещё завершились ошибкой.
 
@@ -175,6 +180,7 @@ global risk score.
 | A11 | Analytics modules входят в разные lazy bundle segments                                   | `rg -n 'heys_relapse_risk                                                                                                     \| heys_status_v1                                                                                                                           \| pi_early_warning     \| heys_predictive_insights \| heys_day_score' scripts/legacy-bundle-config.mjs` | проверено 2026-07-17 |
 | A12 | Predictive what-if дублирует собственный wave multiplier                                 | `rg -n 'function simulateFood                                                                                                 \| waveMultiplier' apps/web/heys_predictive_insights_v1.js`                                                                                                                                                                                          | проверено 2026-07-17 |
 | A13 | Status score/details выбирают одно позднейшее валидное время независимо от порядка meals | `rg -n 'getLatestValidMeal' apps/web/heys_status_v1.js && pnpm vitest run apps/web/__tests__/status-latest-meal-time.test.js`                                                                                                                                                                                                                                                      | проверено 2026-07-18 |
+| A14 | EWS derived caches не переписываются при изменении только служебных timestamp            | `pnpm vitest run apps/web/__tests__/pi_early_warning.test.js --no-coverage`                                                                                                                                                                                                                                                                                                        | проверено 2026-07-26 |
 
 ## Связанные источники
 

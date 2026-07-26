@@ -83,6 +83,11 @@ Sync имеет mutex, debounce/cooldown и отдельные немедлен�
 Локальное начисление считается успешным до подтверждения cloud RPC; failed sync
 возвращает `false` и оставляет local state для повторной попытки.
 
+Базовая запись `heys_game` также дедуплицируется по полному JSON-содержимому:
+повторная инициализация, аудит или загрузка идентичного state не переписывает
+local storage и не создаёт новый sync-сигнал. Любое содержательное изменение
+game state проходит через обычный persistence/sync path.
+
 ## Инварианты
 
 1. Advice без полного контекста не создаёт уверенную рекомендацию.
@@ -93,6 +98,7 @@ Sync имеет mutex, debounce/cooldown и отдельные немедлен�
 6. XP mutation проходит dedup и per-action limit до persistence/sync.
 7. Более богатый или новый cloud game state не перезаписывается обычным local.
 8. Game lazy-unavailable state должен давать UI defaults, а не исключение.
+9. Идентичный `heys_game` не должен повторно записываться в local storage.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -135,6 +141,10 @@ Sync имеет mutex, debounce/cooldown и отдельные немедлен�
 | E10 | Game загружается отдельным lazy chunk и facade поддерживает retry после failure                     | `sed -n '1,95p' apps/web/heys_game_facade_v1.js`                                                                                                                                                        | проверено 2026-07-17 |
 | E11 | Advice/game входят в postboot game lazy segment                                                     | `sed -n '190,230p' scripts/legacy-bundle-config.mjs`                                                                                                                                                    | проверено 2026-07-17 |
 | E12 | Найдены только точечные advice UI/render-loop tests, не полный rules suite                          | `rg --files apps/web/**tests**                         \| rg 'advice.\*test'`                                                                                                                           | проверено 2026-07-17 |
+
+| E13 | Идентичный game state не создаёт повторную local storage запись |
+`pnpm vitest run apps/web/__tests__/gamification-cloud-sync-guard.test.js --no-coverage`
+| проверено 2026-07-26 |
 
 ## Связанные источники
 

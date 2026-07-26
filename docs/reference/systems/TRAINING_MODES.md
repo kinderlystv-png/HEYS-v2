@@ -73,6 +73,11 @@ key, debounce-ит snapshot, не перезаписывает более све
 2. `TrainingStep.saveFingers` или `saveMobility` — domain log внутри training
    записи дня, после чего действует обычный day persistence/sync.
 
+Удаление обычной записи добавляет в день `deletedTrainings` с устойчивой
+сигнатурой и временем удаления. Browser/server merge отбрасывает совпадающую
+старую запись, поэтому stale cloud snapshot не возвращает тренировку; явное
+повторное добавление с более новым `updatedAt` остаётся допустимым.
+
 Эти side effects не образуют общую транзакцию. Fingers сохраняет day log, затем
 best-effort обновляет edge/tissue/progression histories; падение вторичной
 истории не отменяет дневник. Mobility объединяет два последовательных write в

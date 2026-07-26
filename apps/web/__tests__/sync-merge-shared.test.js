@@ -26,6 +26,7 @@ const {
   hasMorningActivationRegression,
   mergeMorningActivationState,
   mergeChronoTombstones,
+  trainingDeletionSignature,
   mergeHungerStatusEvents,
   mergeInsightsFeedback,
   mergeItemsById,
@@ -158,6 +159,50 @@ describe('mergeDayData — lost-update prevention', () => {
     const merged = mergeDayData(local, remote, { forceKeepAll: true });
     expect(merged.trainings[0].activityLabel).toBe('fresh training edit');
     expect(merged.trainings[0].updatedAt).toBe(3500);
+  });
+
+  test('explicit training tombstone prevents a stale cloud training from returning', () => {
+    const staleTraining = {
+      z: [0, 45, 0, 0],
+      type: 'hobby',
+      activityLabel: 'Активное хобби',
+      time: '10:40',
+      updatedAt: 1500,
+    };
+    const signature = trainingDeletionSignature(staleTraining);
+    const local = makeDay(3000, [], {
+      trainings: [{ z: [0, 0, 0, 0], updatedAt: 3000 }],
+      deletedTrainings: [{ tombstoneId: 'delete-1', signature, deletedAt: 3000, index: 0 }],
+    });
+    const remote = makeDay(2500, [], { trainings: [staleTraining] });
+
+    const merged = mergeDayData(local, remote, { forceKeepAll: true });
+
+    expect(merged.trainings[0].z).toEqual([0, 0, 0, 0]);
+    expect(merged.trainings[0].type).toBeUndefined();
+    expect(merged.deletedTrainings).toEqual([
+      expect.objectContaining({ tombstoneId: 'delete-1', signature, deletedAt: 3000 }),
+    ]);
+  });
+
+  test('a genuinely re-added matching training newer than its tombstone survives', () => {
+    const restoredTraining = {
+      z: [0, 45, 0, 0],
+      type: 'hobby',
+      activityLabel: 'Активное хобби',
+      time: '10:40',
+      updatedAt: 4000,
+    };
+    const signature = trainingDeletionSignature(restoredTraining);
+    const local = makeDay(4000, [], {
+      trainings: [restoredTraining],
+      deletedTrainings: [{ tombstoneId: 'delete-1', signature, deletedAt: 3000, index: 0 }],
+    });
+    const remote = makeDay(3000, [], { trainings: [{ z: [0, 0, 0, 0], updatedAt: 3000 }] });
+
+    const merged = mergeDayData(local, remote, { forceKeepAll: true });
+
+    expect(merged.trainings[0]).toMatchObject({ type: 'hobby', time: '10:40', updatedAt: 4000 });
   });
 
   test('deletion detection — local newer & meal absent → treated as deleted (default mode)', () => {
@@ -655,7 +700,31 @@ describe('mergeMorningCheckinProgress', () => {
     expect(merged.steps.weight.status).toBe('synced');
     expect(merged.steps.sleepTime.status).toBe('saved_local');
     expect(merged.steps.supplements.status).toBe('skipped');
-    expect(merged.updatedAt).toBe(5000);
+    expect(merged.updatedAt).toBe(4100);
+  });
+
+  test('is idempotent for an unchanged ledger and does not refresh updatedAt', () => {
+    const ledger = {
+      version: 1,
+      clientId: 'client-1',
+      dateKey: '2026-07-17',
+      flowId: 'flow-1',
+      plannedStepIds: ['weight'],
+      steps: {
+        weight: { status: 'synced', attempt: 1, syncedAt: 3000, updatedAt: 3000 },
+        __flow__: { status: 'synced', attempt: 1, syncedAt: 3100, updatedAt: 3100 },
+      },
+      updatedAt: 3100,
+    };
+
+    const merged = mergeMorningCheckinProgress(
+      structuredClone(ledger),
+      structuredClone(ledger),
+      { now: 999999 },
+    );
+
+    expect(merged).toEqual(ledger);
+    expect(merged.updatedAt).toBe(3100);
   });
 
   test('allows an explicit newer replan to replace an older terminal row', () => {
