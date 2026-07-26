@@ -78,10 +78,17 @@
                 if (!setDay) return;
                 setDay(prevDay => {
                   const shouldSetDeficit = (!prevDay.weightMorning || prevDay.weightMorning === '') && newWeight && (!prevDay.deficitPct && prevDay.deficitPct !== 0);
+                  const mutationAt = Math.max(Date.now(), (Number(prevDay.weightUpdatedAt) || 0) + 1);
+                  const deficitMutationAt = shouldSetDeficit
+                    ? Math.max(mutationAt, (Number(prevDay.deficitUpdatedAt) || 0) + 1)
+                    : 0;
                   return {
                     ...prevDay,
                     weightMorning: newWeight,
-                    deficitPct: shouldSetDeficit ? (Number(prof.deficitPctTarget) || 0) : prevDay.deficitPct
+                    weightUpdatedAt: mutationAt,
+                    deficitPct: shouldSetDeficit ? (Number(prof.deficitPctTarget) || 0) : prevDay.deficitPct,
+                    ...(shouldSetDeficit ? { deficitUpdatedAt: deficitMutationAt } : {}),
+                    updatedAt: Math.max(mutationAt, deficitMutationAt)
                   };
                 });
               }
@@ -95,7 +102,18 @@
             React.createElement('td', null, React.createElement('input', {
               type: 'number',
               value: day?.steps || 0,
-              onChange: e => setDay && setDay(prev => ({ ...prev, steps: +e.target.value || 0, updatedAt: Date.now() }))
+              onChange: e => {
+                if (!setDay) return;
+                setDay(prev => {
+                  const mutationAt = Math.max(Date.now(), (Number(prev.stepsUpdatedAt) || 0) + 1);
+                  return {
+                    ...prev,
+                    steps: +e.target.value || 0,
+                    stepsUpdatedAt: mutationAt,
+                    updatedAt: mutationAt
+                  };
+                });
+              }
             })),
             React.createElement('td', null, 'шагов')
           ),
@@ -113,7 +131,13 @@
             React.createElement('td', null, React.createElement('input', {
               type: 'number',
               value: day?.householdMin || 0,
-              onChange: e => setDay && setDay(prev => ({ ...prev, householdMin: +e.target.value || 0, updatedAt: Date.now() }))
+              onChange: e => {
+                const householdMin = +e.target.value || 0;
+                setDay && setDay(prev => {
+                  const mutationAt = Math.max(Date.now(), (Number(prev.householdUpdatedAt) || 0) + 1);
+                  return { ...prev, householdMin, householdUpdatedAt: mutationAt, updatedAt: mutationAt };
+                });
+              }
             })),
             React.createElement('td', null, 'мин')
           ),
@@ -170,7 +194,13 @@
             React.createElement('td', null, React.createElement('input', {
               type: 'number',
               value: day?.deficitPct || 0,
-              onChange: e => setDay && setDay(prev => ({ ...prev, deficitPct: Number(e.target.value) || 0, updatedAt: Date.now() })),
+              onChange: e => {
+                const deficitPct = Number(e.target.value) || 0;
+                setDay && setDay(prev => {
+                  const mutationAt = Math.max(Date.now(), (Number(prev.deficitUpdatedAt) || 0) + 1);
+                  return { ...prev, deficitPct, deficitUpdatedAt: mutationAt, updatedAt: mutationAt };
+                });
+              },
               style: { width: '60px', textAlign: 'center', fontWeight: 600 }
             })),
             React.createElement('td', null, 'Целевой дефицит')

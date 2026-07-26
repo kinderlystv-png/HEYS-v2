@@ -153,7 +153,10 @@
                     // Мгновенное обновление UI через setDay
                     if (weightData && (weightData.weightKg !== undefined || weightData.weightG !== undefined)) {
                         const newWeight = (weightData.weightKg || 70) + (weightData.weightG || 0) / 10;
-                        setDay(prev => ({ ...prev, weightMorning: newWeight, updatedAt: Date.now() }));
+                        setDay(prev => {
+                            const mutationAt = Math.max(Date.now(), (Number(prev.weightUpdatedAt) || 0) + 1);
+                            return { ...prev, weightMorning: newWeight, weightUpdatedAt: mutationAt, updatedAt: mutationAt };
+                        });
                     }
                 });
             }
@@ -179,7 +182,10 @@
                     // stepData = { deficit: { deficit: -15, dateKey: '...' } }
                     const deficitValue = stepData?.deficit?.deficit;
                     if (deficitValue !== undefined) {
-                        setDay(prev => ({ ...prev, deficitPct: deficitValue, updatedAt: Date.now() }));
+                        setDay(prev => {
+                            const mutationAt = Math.max(Date.now(), (Number(prev.deficitUpdatedAt) || 0) + 1);
+                            return { ...prev, deficitPct: deficitValue, deficitUpdatedAt: mutationAt, updatedAt: mutationAt };
+                        });
                     }
                 });
             }
@@ -392,13 +398,14 @@
             const prevWater = liveDay.waterMl || 0;
             const newWater = prevWater + ml;
             const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
-            const newUpdatedAt = Date.now();
+            const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
             const blockUntil = newUpdatedAt + 3000;
             const nextDaySnapshot = {
                 ...liveDay,
                 date,
                 waterMl: newWater,
                 lastWaterTime: newUpdatedAt,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             };
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
@@ -412,6 +419,7 @@
                 ...prev,
                 waterMl: newWater,
                 lastWaterTime: newUpdatedAt,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             }));
 
@@ -505,7 +513,7 @@
         function removeWater(ml) {
             const liveDay = getLatestDaySnapshot();
             const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
-            const newUpdatedAt = Date.now();
+            const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
 
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
                 HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -515,6 +523,7 @@
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             });
 
@@ -537,7 +546,7 @@
                 }
             }
 
-            setDay(prev => ({ ...prev, waterMl: newWater, updatedAt: newUpdatedAt }));
+            setDay(prev => ({ ...prev, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt }));
 
             scheduleDayFlush();
 
@@ -581,6 +590,7 @@
                             // Legacy fields для backward compatibility
                             householdMin: savedDay.householdMin || 0,
                             householdTime: savedDay.householdTime || '',
+                            householdUpdatedAt: savedDay.householdUpdatedAt || prev.householdUpdatedAt,
                             updatedAt: Date.now()
                         }));
                     }

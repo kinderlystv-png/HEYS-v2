@@ -26,6 +26,57 @@
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this), function () {
   'use strict';
 
+  // Independent user-edit domains inside dayv2. Root day.updatedAt is also
+  // advanced by background reconcile/autosave writes, so it cannot decide
+  // whether a clear/decrease/toggle is newer than the value on another device.
+  const DAY_USER_MUTATION_GROUPS = [
+    { timestamp: 'stepsUpdatedAt', fields: ['steps'] },
+    { timestamp: 'waterUpdatedAt', fields: ['waterMl', 'lastWaterTime'] },
+    { timestamp: 'weightUpdatedAt', fields: ['weightMorning'] },
+    { timestamp: 'householdUpdatedAt', fields: ['householdActivities', 'householdMin', 'householdTime'] },
+    { timestamp: 'cycleUpdatedAt', fields: ['cycleDay', 'cycleStatus', 'cycleAnsweredAt'] },
+    { timestamp: 'sleepNoteUpdatedAt', fields: ['sleepNote'] },
+    { timestamp: 'dayCommentUpdatedAt', fields: ['dayComment'] },
+    { timestamp: 'dayScoreUpdatedAt', fields: ['dayScore', 'dayScoreManual'] },
+    { timestamp: 'supplementsPlannedUpdatedAt', fields: ['supplementsPlanned'] },
+    { timestamp: 'supplementsTakenUpdatedAt', fields: ['supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta'] },
+    { timestamp: 'deficitUpdatedAt', fields: ['deficitPct'] },
+    { timestamp: 'dayStatusUpdatedAt', fields: ['isFastingDay', 'isIncomplete'] },
+  ];
+
+  function copyOwnFields(target, source, fields) {
+    for (const field of fields) {
+      if (Object.prototype.hasOwnProperty.call(source, field)) target[field] = source[field];
+      else delete target[field];
+    }
+  }
+
+  function applyExplicitMutationGroups(merged, local, remote) {
+    for (const group of DAY_USER_MUTATION_GROUPS) {
+      const localTs = Number(local[group.timestamp]) || 0;
+      const remoteTs = Number(remote[group.timestamp]) || 0;
+      if (localTs === 0 && remoteTs === 0) continue;
+      if (localTs !== remoteTs) {
+        copyOwnFields(merged, localTs > remoteTs ? local : remote, group.fields);
+      }
+      merged[group.timestamp] = Math.max(localTs, remoteTs);
+    }
+    return merged;
+  }
+
+  function guardExplicitMutationGroups(prevDay, nextDay) {
+    const result = { ...nextDay };
+    for (const group of DAY_USER_MUTATION_GROUPS) {
+      const prevTs = Number(prevDay[group.timestamp]) || 0;
+      const nextTs = Number(nextDay[group.timestamp]) || 0;
+      if (prevTs > 0 && nextTs <= prevTs) {
+        copyOwnFields(result, prevDay, group.fields);
+        result[group.timestamp] = prevTs;
+      }
+    }
+    return result;
+  }
+
   // ─── mergeItemsById ──────────────────────────────────────────────────────
   function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true, deletedItemIdsMap = null) {
     // Tombstone filter: item.updatedAt <= tombstone.ts → item is considered deleted.
@@ -588,8 +639,26 @@
       _mergedAt: Date.now(),
     };
 
-    // Numeric fields: steps/water → max; householdMin → freshest
-    merged.steps = Math.max(local.steps || 0, remote.steps || 0);
+    // Steps are manually editable in both directions. New clients stamp the
+    // explicit edit so a later decrease can win, while unrelated day writes
+    // cannot resurrect an older count. If neither side has the stamp, retain
+    // the legacy monotonic-max behaviour for existing stored days.
+    const localStepsTs = Number(local.stepsUpdatedAt) || 0;
+    const remoteStepsTs = Number(remote.stepsUpdatedAt) || 0;
+    if (localStepsTs > 0 || remoteStepsTs > 0) {
+      if (localStepsTs === remoteStepsTs) {
+        merged.steps = Math.max(Number(local.steps) || 0, Number(remote.steps) || 0);
+      } else {
+        merged.steps = localStepsTs > remoteStepsTs
+          ? (Number(local.steps) || 0)
+          : (Number(remote.steps) || 0);
+      }
+      merged.stepsUpdatedAt = Math.max(localStepsTs, remoteStepsTs);
+    } else {
+      merged.steps = Math.max(Number(local.steps) || 0, Number(remote.steps) || 0);
+    }
+
+    // Legacy fallback for days written before per-action timestamps existed.
     merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
 
     if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
@@ -644,6 +713,11 @@
     } else {
       merged.cycleDay = local.cycleDay || remote.cycleDay || null;
     }
+
+    // Explicit action timestamps override the legacy field-specific fallbacks
+    // above. Exact property copying is intentional: 0, '', false, [] and a
+    // missing property are all valid outcomes of a newer user action.
+    applyExplicitMutationGroups(merged, local, remote);
 
     // ─── Meals: merge by id with deletion detection ────────────────────────
     const localMeals = local.meals || [];
@@ -1297,12 +1371,12 @@
     const resolvedDayTs = dayChanged && mutationTs > 0
       ? Math.max(Number(nextDay.updatedAt) || 0, mutationTs)
       : nextDay.updatedAt;
-    const result = {
+    const result = guardExplicitMutationGroups(prevDay, {
       ...nextDay,
       meals,
       trainings,
       updatedAt: resolvedDayTs,
-    };
+    });
     if (mergedDeletedItemIds && Object.keys(mergedDeletedItemIds).length > 0) {
       result.deletedItemIds = mergedDeletedItemIds;
     }

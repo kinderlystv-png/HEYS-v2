@@ -6992,9 +6992,11 @@
           }
 
           if (!dayData.date) dayData.date = dateKey;
+          const mutationAt = Math.max(Date.now(), (Number(dayData.waterUpdatedAt) || 0) + 1);
           dayData.waterMl = (dayData.waterMl || 0) + ml;
-          dayData.lastWaterTime = Date.now();
-          dayData.updatedAt = Date.now();
+          dayData.lastWaterTime = mutationAt;
+          dayData.waterUpdatedAt = mutationAt;
+          dayData.updatedAt = mutationAt;
 
           // Пишем через приоритетный API (чтобы не терять namespacing и sync hooks)
           if (typeof U.lsSet === 'function') {

@@ -159,7 +159,15 @@
                 // heavy setDay() runs in a separate task after browser paints.
                 const finalSteps = latestStepsRef.current || 0;
                 setTimeout(() => {
-                    setDay(prev => ({ ...prev, steps: finalSteps, updatedAt: Date.now() }));
+                    setDay(prev => {
+                        const mutationAt = Math.max(Date.now(), (Number(prev.stepsUpdatedAt) || 0) + 1);
+                        return {
+                            ...prev,
+                            steps: finalSteps,
+                            stepsUpdatedAt: mutationAt,
+                            updatedAt: mutationAt
+                        };
+                    });
                     if (finalSteps !== lastDispatchedStepsRef.current) {
                         lastDispatchedStepsRef.current = finalSteps;
                         // 📝 Event log (plan Wave 5.3, F-EL Batch B): day-edit steps

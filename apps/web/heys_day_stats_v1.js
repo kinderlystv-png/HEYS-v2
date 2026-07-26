@@ -288,7 +288,7 @@
       ? DayRealDataActions.applyDayStatusAction
       : (targetDay, actionId, options = {}) => {
         const nextDay = { ...(targetDay || {}) };
-        const nowTs = options.nowTs || Date.now();
+        const nowTs = Math.max(options.nowTs || Date.now(), (Number(targetDay?.dayStatusUpdatedAt) || 0) + 1);
         if (actionId === 'confirm_real_data') {
           nextDay.isFastingDay = true;
           nextDay.isIncomplete = false;
@@ -299,6 +299,7 @@
           nextDay.isIncomplete = false;
           clearEstimatedDayFields(nextDay);
         }
+        nextDay.dayStatusUpdatedAt = nowTs;
         nextDay.updatedAt = nowTs;
         return nextDay;
       };

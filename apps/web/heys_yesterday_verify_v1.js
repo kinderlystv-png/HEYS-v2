@@ -1496,7 +1496,8 @@
         clearEstimatedDayFields(dayData);
         Object.assign(dayData, estimatedPatch);
         markYesterdayVerified(dayData, 'estimated_fill', nowTs);
-        dayData.updatedAt = nowTs;
+        dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
+        dayData.updatedAt = dayData.dayStatusUpdatedAt;
         writeDayDataScoped(dateKey, dayData);
         affectedKeys.push(`heys_dayv2_${dateKey}`);
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -1519,7 +1520,8 @@
             dayData.isFastingDay = true;
             dayData.isIncomplete = false;
             clearEstimatedDayFields(dayData);
-            dayData.updatedAt = nowTs;
+            dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
+            dayData.updatedAt = dayData.dayStatusUpdatedAt;
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'confirm_real_data', nowTs);
@@ -1546,7 +1548,8 @@
             dayData.meals = [];
             dayData.isIncomplete = false;
             clearEstimatedDayFields(dayData);
-            dayData.updatedAt = nowTs;
+            dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
+            dayData.updatedAt = dayData.dayStatusUpdatedAt;
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'clear_day', nowTs);
@@ -1570,7 +1573,8 @@
           ? applyDayStatusAction(dayData, 'fill_later', { nowTs })
           : (() => {
             dayData.isIncomplete = true;
-            dayData.updatedAt = nowTs;
+            dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
+            dayData.updatedAt = dayData.dayStatusUpdatedAt;
             return dayData;
           })();
         markYesterdayVerified(nextDayData, 'fill_later', nowTs);

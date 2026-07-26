@@ -349,12 +349,21 @@
             const value = pendingSleepQuality === 0 ? 0 : parseInt(sleepQualityValues[pendingSleepQuality]);
             setDay(prevDay => {
                 let newSleepNote = prevDay.sleepNote || '';
-                if (pendingSleepNote.trim()) {
+                const hasNote = !!pendingSleepNote.trim();
+                if (hasNote) {
                     const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                     const entry = `[${time}] ${pendingSleepNote.trim()}`;
                     newSleepNote = newSleepNote ? newSleepNote + '\n' + entry : entry;
                 }
-                return { ...prevDay, sleepQuality: value, sleepNote: newSleepNote, updatedAt: Date.now() };
+                const mutationAt = Date.now();
+                const noteMutationAt = Math.max(mutationAt, (Number(prevDay.sleepNoteUpdatedAt) || 0) + 1);
+                return {
+                    ...prevDay,
+                    sleepQuality: value,
+                    sleepNote: newSleepNote,
+                    ...(hasNote ? { sleepNoteUpdatedAt: noteMutationAt } : {}),
+                    updatedAt: Math.max(mutationAt, hasNote ? noteMutationAt : 0)
+                };
             });
             setPendingSleepNote('');
             setShowSleepQualityPicker(false);
@@ -379,12 +388,23 @@
                 const autoScore = calculateDayAverages(prevDay.meals, prevDay.trainings, prevDay).dayScore;
                 const isManual = value !== 0 && value !== autoScore;
                 let newDayComment = prevDay.dayComment || '';
-                if (pendingDayComment.trim()) {
+                const hasComment = !!pendingDayComment.trim();
+                if (hasComment) {
                     const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                     const entry = `[${time}] ${pendingDayComment.trim()}`;
                     newDayComment = newDayComment ? newDayComment + '\n' + entry : entry;
                 }
-                return { ...prevDay, dayScore: value, dayScoreManual: isManual, dayComment: newDayComment, updatedAt: Date.now() };
+                const scoreMutationAt = Math.max(Date.now(), (Number(prevDay.dayScoreUpdatedAt) || 0) + 1);
+                const commentMutationAt = Math.max(scoreMutationAt, (Number(prevDay.dayCommentUpdatedAt) || 0) + 1);
+                return {
+                    ...prevDay,
+                    dayScore: value,
+                    dayScoreManual: isManual,
+                    dayScoreUpdatedAt: scoreMutationAt,
+                    dayComment: newDayComment,
+                    ...(hasComment ? { dayCommentUpdatedAt: commentMutationAt } : {}),
+                    updatedAt: Math.max(scoreMutationAt, hasComment ? commentMutationAt : 0)
+                };
             });
             setPendingDayComment('');
             setShowDayScorePicker(false);

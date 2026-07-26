@@ -52,15 +52,24 @@
           if (stepData) {
             const timeData = stepData.sleepTime || {};
             const qualityData = stepData.sleepQuality || {};
-            setDay(prev => ({
-              ...prev,
-              sleepStart: timeData.sleepStart ?? prev.sleepStart,
-              sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
-              sleepHours: timeData.sleepHours ?? prev.sleepHours,
-              sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
-              sleepNote: qualityData.sleepNote || prev.sleepNote,
-              updatedAt: Date.now()
-            }));
+            setDay(prev => {
+              const nextSleepNote = qualityData.sleepNote || prev.sleepNote;
+              const noteChanged = nextSleepNote !== prev.sleepNote;
+              const mutationAt = Date.now();
+              const noteMutationAt = noteChanged
+                ? Math.max(mutationAt, (Number(prev.sleepNoteUpdatedAt) || 0) + 1)
+                : 0;
+              return {
+                ...prev,
+                sleepStart: timeData.sleepStart ?? prev.sleepStart,
+                sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
+                sleepHours: timeData.sleepHours ?? prev.sleepHours,
+                sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
+                sleepNote: nextSleepNote,
+                ...(noteChanged ? { sleepNoteUpdatedAt: noteMutationAt } : {}),
+                updatedAt: Math.max(mutationAt, noteMutationAt)
+              };
+            });
           }
         });
       }
@@ -218,7 +227,13 @@
                 placeholder: 'Заметка...',
                 value: day.sleepNote || '',
                 rows: day.sleepNote && day.sleepNote.includes('\n') ? Math.min(day.sleepNote.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({ ...prev, sleepNote: e.target.value, updatedAt: Date.now() }))
+                onChange: e => {
+                  const sleepNote = e.target.value;
+                  setDay(prev => {
+                    const mutationAt = Math.max(Date.now(), (Number(prev.sleepNoteUpdatedAt) || 0) + 1);
+                    return { ...prev, sleepNote, sleepNoteUpdatedAt: mutationAt, updatedAt: mutationAt };
+                  });
+                }
               })
             );
           })(),
@@ -297,7 +312,14 @@
                       // Сброс на авто
                       setDay(prev => {
                         const averages = calculateDayAverages(prev.meals, prev.trainings, prev);
-                        return { ...prev, dayScore: averages.dayScore, dayScoreManual: false };
+                        const mutationAt = Math.max(Date.now(), (Number(prev.dayScoreUpdatedAt) || 0) + 1);
+                        return {
+                          ...prev,
+                          dayScore: averages.dayScore,
+                          dayScoreManual: false,
+                          dayScoreUpdatedAt: mutationAt,
+                          updatedAt: mutationAt
+                        };
                       });
                     }
                   }, '✏️ сбросить')
@@ -336,7 +358,13 @@
                 placeholder: 'Заметка...',
                 value: day.dayComment || '',
                 rows: day.dayComment && day.dayComment.includes('\n') ? Math.min(day.dayComment.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({ ...prev, dayComment: e.target.value, updatedAt: Date.now() }))
+                onChange: e => {
+                  const dayComment = e.target.value;
+                  setDay(prev => {
+                    const mutationAt = Math.max(Date.now(), (Number(prev.dayCommentUpdatedAt) || 0) + 1);
+                    return { ...prev, dayComment, dayCommentUpdatedAt: mutationAt, updatedAt: mutationAt };
+                  });
+                }
               })
             );
           })()

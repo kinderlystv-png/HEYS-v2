@@ -15,7 +15,10 @@
         const saveCycleDay = React.useCallback((newDay) => {
             const validDay = newDay === null ? null : Math.min(Math.max(1, parseInt(newDay) || 1), 7);
 
-            setDay(prev => ({ ...prev, cycleDay: validDay, updatedAt: Date.now() }));
+            setDay(prev => {
+                const mutationAt = Math.max(Date.now(), (Number(prev.cycleUpdatedAt) || 0) + 1);
+                return { ...prev, cycleDay: validDay, cycleUpdatedAt: mutationAt, updatedAt: mutationAt };
+            });
             setCycleEditMode(false);
 
             if (validDay && HEYS.Cycle?.setCycleDaysAuto && lsGet && lsSet) {
@@ -24,7 +27,10 @@
         }, [setDay, date, lsGet, lsSet]);
 
         const clearCycleDay = React.useCallback(() => {
-            setDay(prev => ({ ...prev, cycleDay: null, updatedAt: Date.now() }));
+            setDay(prev => {
+                const mutationAt = Math.max(Date.now(), (Number(prev.cycleUpdatedAt) || 0) + 1);
+                return { ...prev, cycleDay: null, cycleUpdatedAt: mutationAt, updatedAt: mutationAt };
+            });
             setCycleEditMode(false);
 
             if (HEYS.Cycle?.clearCycleDays && lsGet && lsSet) {

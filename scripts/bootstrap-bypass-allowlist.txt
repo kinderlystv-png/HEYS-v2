@@ -91,9 +91,9 @@ apps/web/heys_core_v12.js:4385
 apps/web/heys_core_v12.js:5630
 apps/web/heys_core_v12.js:5741
 apps/web/heys_cycle_v1.js:44
-apps/web/heys_day_core_bundle_v1.js:2205
-apps/web/heys_day_core_bundle_v1.js:3946
-apps/web/heys_day_core_bundle_v1.js:4565
+apps/web/heys_day_core_bundle_v1.js:2220
+apps/web/heys_day_core_bundle_v1.js:3961
+apps/web/heys_day_core_bundle_v1.js:4571
 apps/web/heys_day_core_bundle_v1.js:489
 apps/web/heys_day_core_bundle_v1.js:53
 apps/web/heys_day_orphan_alert.js:142
@@ -214,12 +214,12 @@ apps/web/heys_curator_actions_banner_v1.js:378
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 # [bootstrap] Observability device id and bounded offline queue exist before Store loads.
 apps/web/heys_client_log_trace_v1.js:77
-apps/web/heys_client_log_trace_v1.js:147
+apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4772
-apps/web/heys_widgets_ui_v1.js:7005
+apps/web/heys_widgets_ui_v1.js:7007
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36

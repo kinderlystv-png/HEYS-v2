@@ -186,6 +186,19 @@ in-flight batch: старый payload не уходит как окончате�
 не откатывает LS, а появившаяся во время запроса свежая pending-запись остаётся
 для следующего upload.
 
+Явные пользовательские изменения независимых полей дня записывают отдельные
+timestamps групп: `stepsUpdatedAt`, `waterUpdatedAt`, `weightUpdatedAt`,
+`householdUpdatedAt`, `cycleUpdatedAt`, `sleepNoteUpdatedAt`,
+`dayCommentUpdatedAt`, `dayScoreUpdatedAt`, `supplementsPlannedUpdatedAt`,
+`supplementsTakenUpdatedAt`, `deficitUpdatedAt` и `dayStatusUpdatedAt`. Общий
+browser/server merge выбирает всю группу полей по её timestamp, поэтому
+уменьшение, ноль, пустая строка, снятая отметка и `true → false` не проигрывают
+старому значению с более свежим корневым `day.updatedAt`. Центральный stamper
+также не даёт фоновой записи без более нового группового timestamp перезаписать
+уже подтверждённое действие. Для двух legacy-снимков без группового timestamp
+сохраняется прежнее field-specific merge-поведение; в частности, для шагов —
+`max(steps)`.
+
 Удаление тренировки хранится в самом `dayv2` как `deletedTrainings`: общий
 browser/server merge применяет этот tombstone до позиционного объединения
 `trainings[]`, чтобы старая cloud-копия не могла воскресить удалённую запись.

@@ -1156,8 +1156,10 @@
       const todayKey = new Date().toISOString().slice(0, 10);
       const dayData = readDayDataScoped(todayKey, {});
       if (!dayData.weightMorning && updatedProfile.weight) {
+        const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
         dayData.weightMorning = updatedProfile.weight;
-        dayData.updatedAt = Date.now();
+        dayData.weightUpdatedAt = mutationAt;
+        dayData.updatedAt = mutationAt;
         writeDayDataScoped(todayKey, dayData);
         console.log('[ProfileSteps] Weight synced to day data:', updatedProfile.weight, 'kg for', todayKey);
       }
@@ -1323,8 +1325,10 @@
     const dayData = readDayDataScoped(todayKey, {});
 
     if (!dayData.weightMorning) {
+      const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
       dayData.weightMorning = weight;
-      dayData.updatedAt = Date.now();
+      dayData.weightUpdatedAt = mutationAt;
+      dayData.updatedAt = mutationAt;
       writeDayDataScoped(todayKey, dayData);
       console.log('[syncWeightToDay] Weight synced to day:', weight, 'kg for', todayKey);
     } else {

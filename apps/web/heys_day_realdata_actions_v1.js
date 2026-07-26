@@ -26,7 +26,7 @@
   }
 
   function applyDayStatusAction(dayData, actionId, options = {}) {
-    const nowTs = options.nowTs || Date.now();
+    const nowTs = Math.max(options.nowTs || Date.now(), (Number(dayData?.dayStatusUpdatedAt) || 0) + 1);
     const nextDay = (dayData && typeof dayData === 'object')
       ? { ...dayData }
       : {};
@@ -44,6 +44,7 @@
       nextDay.isIncomplete = true;
     }
 
+    nextDay.dayStatusUpdatedAt = nowTs;
     nextDay.updatedAt = nowTs;
     return nextDay;
   }

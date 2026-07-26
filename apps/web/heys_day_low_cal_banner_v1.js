@@ -72,7 +72,9 @@
     const key = 'heys_dayv2_' + date;
     const day = U.lsGet(key, null) || {};
     mutator(day);
-    day.updatedAt = Date.now();
+    const mutationAt = Math.max(Date.now(), (Number(day.dayStatusUpdatedAt) || 0) + 1);
+    day.dayStatusUpdatedAt = mutationAt;
+    day.updatedAt = mutationAt;
     U.lsSet(key, day);
     invalidatePendingCache();
     // Сбрасываем кэш активных дней — иначе sparkline/график продолжит показывать

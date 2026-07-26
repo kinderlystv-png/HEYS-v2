@@ -348,13 +348,15 @@
       try {
         // Читаем store-first с правильным ключом
         let dayData = readDayData(targetDate, lsGet) || {};
+        const mutationAt = Math.max(Date.now(), (Number(dayData.cycleUpdatedAt) || 0) + 1);
 
         // Обновляем cycleDay
         const updated = {
           ...dayData,
           date: targetDate,
           cycleDay: d,
-          updatedAt: Date.now()
+          cycleUpdatedAt: mutationAt,
+          updatedAt: mutationAt
         };
 
         // Пишем store-first с правильным ключом
@@ -417,7 +419,8 @@
         const targetData = readDayData(targetDate, lsGet);
 
         if (targetData && targetData.cycleDay) {
-          const updated = { ...targetData, cycleDay: null, updatedAt: Date.now() };
+          const mutationAt = Math.max(Date.now(), (Number(targetData.cycleUpdatedAt) || 0) + 1);
+          const updated = { ...targetData, cycleDay: null, cycleUpdatedAt: mutationAt, updatedAt: mutationAt };
           writeDayData(targetDate, updated, lsSet);
           clearedDates.push(targetDate);
           // console.log('[Cycle] Cleared cycleDay for ' + targetDate);

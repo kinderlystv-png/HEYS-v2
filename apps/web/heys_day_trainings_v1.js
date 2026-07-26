@@ -2937,12 +2937,14 @@
               const oldActivities = prevDay.householdActivities || [];
               const newActivities = oldActivities.filter((_, i) => i !== idx);
               const totalMin = newActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+              const mutationAt = Math.max(Date.now(), (Number(prevDay.householdUpdatedAt) || 0) + 1);
               return {
                 ...prevDay,
                 householdActivities: newActivities,
                 householdMin: totalMin,
                 householdTime: newActivities[0]?.time || '',
-                updatedAt: Date.now()
+                householdUpdatedAt: mutationAt,
+                updatedAt: mutationAt
               };
             });
           }
@@ -2962,12 +2964,14 @@
           setDay((prevDay) => {
             const restoredActivities = (context.activities || []).map(cloneHouseholdActivity);
             const totalMin = restoredActivities.reduce((sum, activity) => sum + (+activity?.minutes || 0), 0);
+            const mutationAt = Math.max(Date.now(), (Number(prevDay.householdUpdatedAt) || 0) + 1);
             return {
               ...prevDay,
               householdActivities: restoredActivities,
               householdMin: totalMin,
               householdTime: restoredActivities[0]?.time || '',
-              updatedAt: Date.now()
+              householdUpdatedAt: mutationAt,
+              updatedAt: mutationAt
             };
           });
         },

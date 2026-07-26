@@ -484,7 +484,8 @@
     try {
       const field = options.field || null;
       const extraFieldsByField = {
-        supplementsTaken: ['supplementsTakenAt'],
+        supplementsTaken: ['supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt'],
+        supplementsPlanned: ['supplementsPlannedUpdatedAt'],
       };
       const fields = field ? [field].concat(extraFieldsByField[field] || []) : [];
       if (fields.length && HEYS.dayMutationGuard?.mergeProtectedFields) {
@@ -1019,7 +1020,9 @@
       }
     }
 
-    dayData.updatedAt = Date.now(); // fix: ensure stale-guard passes in heys_day_effects
+    const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsTakenUpdatedAt) || 0) + 1);
+    dayData.supplementsTakenUpdatedAt = mutationAt;
+    dayData.updatedAt = mutationAt; // fix: ensure stale-guard passes in heys_day_effects
     saveDaySafe(dateKey, dayData, {
       type: 'supplements',
       field: 'supplementsTaken',
@@ -1171,7 +1174,9 @@
 
     dayData.date = dayData.date || dateKey;
     dayData.supplementsPlanned = normalizedSupplements;
-    dayData.updatedAt = Date.now();
+    const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsPlannedUpdatedAt) || 0) + 1);
+    dayData.supplementsPlannedUpdatedAt = mutationAt;
+    dayData.updatedAt = mutationAt;
 
     saveDaySafe(dateKey, dayData, {
       type: 'supplements',
@@ -1290,7 +1295,9 @@
 
     dayData.supplementsTaken = takenList;
     dayData.supplementsTakenAt = new Date().toISOString();
-    dayData.updatedAt = Date.now();
+    const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsTakenUpdatedAt) || 0) + 1);
+    dayData.supplementsTakenUpdatedAt = mutationAt;
+    dayData.updatedAt = mutationAt;
 
     saveDaySafe(dateKey, dayData, {
       type: 'supplements',
@@ -1313,7 +1320,9 @@
 
     dayData.supplementsTaken = [...planned];
     dayData.supplementsTakenAt = new Date().toISOString();
-    dayData.updatedAt = Date.now();
+    const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsTakenUpdatedAt) || 0) + 1);
+    dayData.supplementsTakenUpdatedAt = mutationAt;
+    dayData.updatedAt = mutationAt;
 
     saveDaySafe(dateKey, dayData, {
       type: 'supplements',

@@ -982,7 +982,17 @@
     dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
     const mutationTs = Date.now();
+    const householdBefore = JSON.stringify([
+      dayData.householdActivities || [],
+      dayData.householdMin || 0,
+      dayData.householdTime || '',
+    ]);
     let changed = removeMorningActivationArtifacts(dayData);
+    const householdChanged = householdBefore !== JSON.stringify([
+      dayData.householdActivities || [],
+      dayData.householdMin || 0,
+      dayData.householdTime || '',
+    ]);
 
     if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
       const minutesByZone = state.intensity === 'high'
@@ -1023,7 +1033,10 @@
 
     if (!changed) return;
 
-    dayData.updatedAt = mutationTs;
+    if (householdChanged) {
+      dayData.householdUpdatedAt = Math.max(mutationTs, (Number(dayData.householdUpdatedAt) || 0) + 1);
+    }
+    dayData.updatedAt = Math.max(mutationTs, Number(dayData.householdUpdatedAt) || 0);
     saveDayData(dateKey, dayData);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -1182,9 +1195,11 @@
         const dateKey = getTodayKey();
         const dayData = getFreshDayData(dateKey);
         const weight = (weightKg || 70) + (weightG || 0) / 10;
+        const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
         dayData.date = dateKey;
         dayData.weightMorning = weight;
-        dayData.updatedAt = Date.now();
+        dayData.weightUpdatedAt = mutationAt;
+        dayData.updatedAt = mutationAt;
         saveDayData(dateKey, dayData);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -1283,9 +1298,11 @@
       const dateKey = (context && context.dateKey) || getTodayKey();
       const dayData = getFreshDayData(dateKey);
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
+      const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
       dayData.date = dateKey;
       dayData.weightMorning = weight;
-      dayData.updatedAt = Date.now();
+      dayData.weightUpdatedAt = mutationAt;
+      dayData.updatedAt = mutationAt;
       const saved = saveDayData(dateKey, dayData);
       if (!saved) {
         throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');
@@ -1868,6 +1885,7 @@
         dayData.sleepNote = dayData.sleepNote
           ? dayData.sleepNote + '\n' + noteWithTime
           : noteWithTime;
+        dayData.sleepNoteUpdatedAt = Math.max(Date.now(), (Number(dayData.sleepNoteUpdatedAt) || 0) + 1);
       }
 
       dayData.date = dateKey;
@@ -2174,9 +2192,11 @@
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
       const day = getFreshDayData(dateKey);
+      const mutationAt = Math.max(Date.now(), (Number(day.deficitUpdatedAt) || 0) + 1);
       day.date = dateKey;
       day.deficitPct = data.deficit;
-      day.updatedAt = Date.now();
+      day.deficitUpdatedAt = mutationAt;
+      day.updatedAt = mutationAt;
       saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
@@ -2614,7 +2634,8 @@
       // Обновляем legacy поля для совместимости
       day.householdMin = day.householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
       day.householdTime = day.householdActivities[0]?.time || '';
-      day.updatedAt = Date.now();
+      day.householdUpdatedAt = Math.max(Date.now(), (Number(day.householdUpdatedAt) || 0) + 1);
+      day.updatedAt = day.householdUpdatedAt;
       saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
@@ -2679,7 +2700,8 @@
       day.date = dateKey;
       day.householdMin = data.minutes;
       day.householdTime = data.householdTime || '';
-      day.updatedAt = Date.now();
+      day.householdUpdatedAt = Math.max(Date.now(), (Number(day.householdUpdatedAt) || 0) + 1);
+      day.updatedAt = day.householdUpdatedAt;
       saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
@@ -2933,7 +2955,8 @@
           day.cycleDay = cycleDay;
           day.cycleStatus = null;
           day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
-          day.updatedAt = Date.now();
+          day.cycleUpdatedAt = Math.max(Date.now(), (Number(day.cycleUpdatedAt) || 0) + 1);
+          day.updatedAt = day.cycleUpdatedAt;
           saveDayData(dateKey, day);
         }
         if (HEYS.Cycle && HEYS.Cycle.setCycleDaysAuto) {
@@ -2941,7 +2964,8 @@
           day.date = dateKey;
           day.cycleStatus = null;
           day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
-          day.updatedAt = Date.now();
+          day.cycleUpdatedAt = Math.max(Date.now(), (Number(day.cycleUpdatedAt) || 0) + 1);
+          day.updatedAt = day.cycleUpdatedAt;
           saveDayData(dateKey, day);
         }
       } else if (cycleDay == null) {
@@ -2955,7 +2979,8 @@
           day.cycleDay = null;
           day.cycleStatus = 'none';
           day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
-          day.updatedAt = Date.now();
+          day.cycleUpdatedAt = Math.max(Date.now(), (Number(day.cycleUpdatedAt) || 0) + 1);
+          day.updatedAt = day.cycleUpdatedAt;
           saveDayData(dateKey, day);
         }
         if (HEYS.Cycle && HEYS.Cycle.clearCycleDays) {
@@ -2964,7 +2989,8 @@
           day.cycleDay = null;
           day.cycleStatus = data._skipped ? 'skipped' : 'none';
           day.cycleAnsweredAt = data.cycleAnsweredAt || Date.now();
-          day.updatedAt = Date.now();
+          day.cycleUpdatedAt = Math.max(Date.now(), (Number(day.cycleUpdatedAt) || 0) + 1);
+          day.updatedAt = day.cycleUpdatedAt;
           saveDayData(dateKey, day);
         }
       }
@@ -4559,9 +4585,11 @@
       }
 
       const dayData = getFreshDayData(dateKey);
+      const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsPlannedUpdatedAt) || 0) + 1);
       dayData.date = dateKey;
       dayData.supplementsPlanned = selected;
-      dayData.updatedAt = Date.now();
+      dayData.supplementsPlannedUpdatedAt = mutationAt;
+      dayData.updatedAt = mutationAt;
       saveDayData(dateKey, dayData);
 
       if (typeof window !== 'undefined') {

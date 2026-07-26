@@ -16,6 +16,8 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STEPS_UI_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_steps_ui.js'), 'utf8');
+const DAY_MAIN_BLOCK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_main_block_v1.js'), 'utf8');
 // apps/web is "type":"module", so .js can't be CommonJS-required.
 // We load the .cjs copy that Cloud Function uses — guarantees same code path.
 const require = createRequire(import.meta.url);
@@ -142,11 +144,84 @@ describe('mergeDayData — lost-update prevention', () => {
     expect(merged.steps).toBe(8000);
   });
 
+  test('scalar fields — a newer explicit steps edit may lower the count', () => {
+    const local = makeDay(2000, [], { steps: 5000, stepsUpdatedAt: 2000 });
+    const remote = makeDay(3000, [], { steps: 8000, stepsUpdatedAt: 1500 });
+    const merged = mergeDayData(local, remote);
+    expect(merged.steps).toBe(5000);
+    expect(merged.stepsUpdatedAt).toBe(2000);
+  });
+
+  test('scalar fields — an unversioned stale client cannot override stamped steps', () => {
+    const local = makeDay(4000, [], { steps: 9000 });
+    const remote = makeDay(3000, [], { steps: 5000, stepsUpdatedAt: 3000 });
+    const merged = mergeDayData(local, remote);
+    expect(merged.steps).toBe(5000);
+    expect(merged.stepsUpdatedAt).toBe(3000);
+  });
+
   test('scalar fields — waterMl takes max', () => {
     const local = makeDay(2000, [], { waterMl: 500 });
     const remote = makeDay(1500, [], { waterMl: 1200 });
     const merged = mergeDayData(local, remote);
     expect(merged.waterMl).toBe(1200);
+  });
+
+  test.each([
+    ['water decrease', 'waterUpdatedAt', { waterMl: 250, lastWaterTime: 2100 }, { waterMl: 1500, lastWaterTime: 1500 }],
+    ['weight clear', 'weightUpdatedAt', { weightMorning: '' }, { weightMorning: 81.4 }],
+    ['household zero', 'householdUpdatedAt', { householdActivities: [], householdMin: 0, householdTime: '' }, { householdActivities: [{ minutes: 45, time: '12:00' }], householdMin: 45, householdTime: '12:00' }],
+    ['cycle clear', 'cycleUpdatedAt', { cycleDay: null, cycleStatus: 'none', cycleAnsweredAt: 2100 }, { cycleDay: 4, cycleStatus: null, cycleAnsweredAt: 1500 }],
+    ['sleep note clear', 'sleepNoteUpdatedAt', { sleepNote: '' }, { sleepNote: 'old note' }],
+    ['day comment clear', 'dayCommentUpdatedAt', { dayComment: '' }, { dayComment: 'old comment' }],
+    ['manual score reset', 'dayScoreUpdatedAt', { dayScore: 6, dayScoreManual: false }, { dayScore: 9, dayScoreManual: true }],
+    ['planned supplements clear', 'supplementsPlannedUpdatedAt', { supplementsPlanned: [] }, { supplementsPlanned: ['d3'] }],
+    ['taken supplement unchecked', 'supplementsTakenUpdatedAt', { supplementsTaken: [], supplementsTakenAt: {}, supplementsTakenMeta: {} }, { supplementsTaken: ['d3'], supplementsTakenAt: { d3: '09:00' }, supplementsTakenMeta: { d3: { dose: 1 } } }],
+    ['deficit zero', 'deficitUpdatedAt', { deficitPct: 0 }, { deficitPct: -15 }],
+    ['day flags true to false', 'dayStatusUpdatedAt', { isFastingDay: false, isIncomplete: false }, { isFastingDay: true, isIncomplete: true }],
+  ])('newer explicit %s wins even when the other day.updatedAt is fresher', (_label, timestamp, freshFields, staleFields) => {
+    const explicit = makeDay(2100, [], { ...freshFields, [timestamp]: 2100 });
+    const staleBackground = makeDay(9000, [], { ...staleFields, [timestamp]: 1500 });
+    const merged = mergeDayData(explicit, staleBackground, { forceKeepAll: true });
+
+    expect(merged).toEqual(expect.objectContaining(freshFields));
+    expect(merged[timestamp]).toBe(2100);
+  });
+
+  test.each([
+    ['waterUpdatedAt', { waterMl: 0 }],
+    ['weightUpdatedAt', { weightMorning: '' }],
+    ['householdUpdatedAt', { householdActivities: [], householdMin: 0, householdTime: '' }],
+    ['cycleUpdatedAt', { cycleDay: null }],
+    ['sleepNoteUpdatedAt', { sleepNote: '' }],
+    ['dayCommentUpdatedAt', { dayComment: '' }],
+    ['dayScoreUpdatedAt', { dayScore: 5, dayScoreManual: false }],
+    ['supplementsPlannedUpdatedAt', { supplementsPlanned: [] }],
+    ['supplementsTakenUpdatedAt', { supplementsTaken: [] }],
+    ['deficitUpdatedAt', { deficitPct: 0 }],
+    ['dayStatusUpdatedAt', { isFastingDay: false, isIncomplete: false }],
+  ])('old client without %s cannot override a stamped clear/decrease', (timestamp, protectedFields) => {
+    const stamped = makeDay(3000, [], { ...protectedFields, [timestamp]: 3000 });
+    const unversioned = makeDay(8000, [], {
+      waterMl: 2000,
+      weightMorning: 90,
+      householdActivities: [{ minutes: 30 }],
+      householdMin: 30,
+      cycleDay: 3,
+      sleepNote: 'stale',
+      dayComment: 'stale',
+      dayScore: 10,
+      dayScoreManual: true,
+      supplementsPlanned: ['d3'],
+      supplementsTaken: ['d3'],
+      deficitPct: -20,
+      isFastingDay: true,
+      isIncomplete: true,
+    });
+    const merged = mergeDayData(stamped, unversioned, { forceKeepAll: true });
+
+    expect(merged).toEqual(expect.objectContaining(protectedFields));
+    expect(merged[timestamp]).toBe(3000);
   });
 
   test('training.updatedAt granularity — fresher training wins even when day timestamp is older', () => {
@@ -407,6 +482,13 @@ describe('mergeDayData — lost-update prevention', () => {
 
     expect(mergeMorningActivationState(reopened, cleared)).toEqual(reopened);
     expect(hasMorningActivationRegression(reopened, cleared)).toBe(false);
+  });
+});
+
+describe('steps mutation source contract', () => {
+  test('all day step editors stamp the field-level mutation time', () => {
+    expect(STEPS_UI_SRC).toContain('stepsUpdatedAt: mutationAt');
+    expect(DAY_MAIN_BLOCK_SRC).toContain('stepsUpdatedAt: mutationAt');
   });
 });
 
@@ -1106,6 +1188,69 @@ describe('stampDayv2ChangedEntities', () => {
     expect(result.updatedAt).toBe(3000);
     expect(result.meals[0].items[0].updatedAt).toBe(2000);
     expect(result.waterMl).toBe(1500);
+  });
+
+  test('stale day writer cannot replace explicitly stamped steps', () => {
+    const prev = { ...dayWithItem(3000, 2000, 2000, 100), steps: 5000, stepsUpdatedAt: 3000 };
+    const next = { ...dayWithItem(4000, 2000, 2000, 100), steps: 9000 };
+    const result = stampDayv2ChangedEntities(prev, next);
+    expect(result.steps).toBe(5000);
+    expect(result.stepsUpdatedAt).toBe(3000);
+  });
+
+  test('newer explicitly stamped steps pass through the mutation guard', () => {
+    const prev = { ...dayWithItem(3000, 2000, 2000, 100), steps: 9000, stepsUpdatedAt: 3000 };
+    const next = { ...dayWithItem(4000, 2000, 2000, 100), steps: 5000, stepsUpdatedAt: 4000 };
+    const result = stampDayv2ChangedEntities(prev, next);
+    expect(result.steps).toBe(5000);
+    expect(result.stepsUpdatedAt).toBe(4000);
+  });
+
+  test.each([
+    ['waterUpdatedAt', { waterMl: 0, lastWaterTime: 3000 }, { waterMl: 1800, lastWaterTime: 1000 }],
+    ['weightUpdatedAt', { weightMorning: '' }, { weightMorning: 90 }],
+    ['householdUpdatedAt', { householdActivities: [], householdMin: 0, householdTime: '' }, { householdActivities: [{ minutes: 50 }], householdMin: 50, householdTime: '10:00' }],
+    ['cycleUpdatedAt', { cycleDay: null, cycleStatus: 'none' }, { cycleDay: 5, cycleStatus: null }],
+    ['sleepNoteUpdatedAt', { sleepNote: '' }, { sleepNote: 'stale' }],
+    ['dayCommentUpdatedAt', { dayComment: '' }, { dayComment: 'stale' }],
+    ['dayScoreUpdatedAt', { dayScore: 6, dayScoreManual: false }, { dayScore: 9, dayScoreManual: true }],
+    ['supplementsPlannedUpdatedAt', { supplementsPlanned: [] }, { supplementsPlanned: ['d3'] }],
+    ['supplementsTakenUpdatedAt', { supplementsTaken: [], supplementsTakenAt: {}, supplementsTakenMeta: {} }, { supplementsTaken: ['d3'], supplementsTakenAt: { d3: '10:00' }, supplementsTakenMeta: { d3: { dose: 1 } } }],
+    ['deficitUpdatedAt', { deficitPct: 0 }, { deficitPct: -20 }],
+    ['dayStatusUpdatedAt', { isFastingDay: false, isIncomplete: false }, { isFastingDay: true, isIncomplete: true }],
+  ])('stale background write with fresher day.updatedAt cannot replace %s group', (timestamp, protectedFields, staleFields) => {
+    const prev = { ...dayWithItem(3000, 2000, 2000, 100), ...protectedFields, [timestamp]: 3000 };
+    const next = { ...dayWithItem(9000, 2000, 2000, 100), ...staleFields };
+    const result = stampDayv2ChangedEntities(prev, next);
+
+    expect(result).toEqual(expect.objectContaining(protectedFields));
+    expect(result[timestamp]).toBe(3000);
+  });
+
+  test('a newer explicit false/zero/empty mutation passes through every protected group', () => {
+    const prev = {
+      ...dayWithItem(3000, 2000, 2000, 100),
+      waterMl: 1000, waterUpdatedAt: 3000,
+      weightMorning: 80, weightUpdatedAt: 3000,
+      sleepNote: 'note', sleepNoteUpdatedAt: 3000,
+      dayComment: 'comment', dayCommentUpdatedAt: 3000,
+      dayScore: 9, dayScoreManual: true, dayScoreUpdatedAt: 3000,
+      deficitPct: -15, deficitUpdatedAt: 3000,
+      isFastingDay: true, isIncomplete: true, dayStatusUpdatedAt: 3000,
+    };
+    const next = {
+      ...dayWithItem(4000, 2000, 2000, 100),
+      waterMl: 0, waterUpdatedAt: 4000,
+      weightMorning: '', weightUpdatedAt: 4000,
+      sleepNote: '', sleepNoteUpdatedAt: 4000,
+      dayComment: '', dayCommentUpdatedAt: 4000,
+      dayScore: 5, dayScoreManual: false, dayScoreUpdatedAt: 4000,
+      deficitPct: 0, deficitUpdatedAt: 4000,
+      isFastingDay: false, isIncomplete: false, dayStatusUpdatedAt: 4000,
+    };
+    const result = stampDayv2ChangedEntities(prev, next);
+
+    expect(result).toEqual(expect.objectContaining(next));
   });
 
   test('resolveDayMutationTs: nextTs=0, prevTs=0 → returns 0 (HMR-safe)', () => {
