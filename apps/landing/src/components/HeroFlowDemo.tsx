@@ -95,7 +95,7 @@ export default function HeroFlowDemo() {
 
   return (
     <div
-      className="relative mx-auto aspect-[25/54] w-full max-w-[230px] lg:max-w-[345px]"
+      className="relative mx-auto aspect-[25/54] w-full max-w-[230px] lg:max-w-[300px]"
       aria-busy={isBusy}
     >
       <div className="absolute inset-0 overflow-hidden rounded-[30px] border-[4px] border-[#111827] bg-white shadow-2xl shadow-[#1e3a8a]/20 lg:rounded-[38px] lg:border-[6px]">

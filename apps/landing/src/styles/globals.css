@@ -236,9 +236,9 @@ body {
   .hero-mobile-fit {
     --hero-mobile-header-y: clamp(10px, 1.4dvh, 14px);
     --hero-mobile-content-y: clamp(6px, 1dvh, 10px);
-    --hero-mobile-content-shift-y: clamp(8px, 1.6dvh, 14px);
+    --hero-mobile-content-shift-y: -28px;
     --hero-mobile-gap: clamp(14px, 2.2dvh, 20px);
-    --hero-mobile-phone-w: clamp(166px, 47vw, 196px);
+    --hero-mobile-phone-w: clamp(184px, 52vw, 208px);
     --hero-mobile-title-size: clamp(24px, 6.8vw, 27px);
     --hero-mobile-title-mb: clamp(12px, 1.9dvh, 16px);
     --hero-mobile-subtitle-size: clamp(13px, 3.65vw, 14px);
@@ -269,7 +269,7 @@ body {
   }
 
   .hero-mobile-phone {
-    width: min(50vw, var(--hero-mobile-phone-w));
+    width: min(54vw, var(--hero-mobile-phone-w));
   }
 
   .hero-mobile-title {

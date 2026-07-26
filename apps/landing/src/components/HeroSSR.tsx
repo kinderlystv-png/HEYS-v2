@@ -225,7 +225,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
               }`}
               style={{ transitionDelay: '600ms' }}
             >
-              <div className="hero-mobile-phone relative w-[48%] max-w-[180px] sm:w-[44%] lg:w-full lg:max-w-[400px]">
+              <div className="hero-mobile-phone relative w-[48%] max-w-[210px] sm:w-[44%] lg:w-full lg:max-w-[400px]">
                 <HeroFlowDemo />
               </div>
             </div>
