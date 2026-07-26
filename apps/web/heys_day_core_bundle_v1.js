@@ -1998,6 +1998,20 @@
             prevDay.sleepQuality === newDay.sleepQuality;
     }
 
+    // Full semantic fingerprint for the rare periodic reconcile path. Unlike the
+    // lightweight hydrated-content comparator, this includes deletion tombstones
+    // and every other day field while ignoring only recursive sync timestamps.
+    function buildDayReconcileKey(day) {
+        if (!day || typeof day !== 'object') return '';
+        try {
+            const stripStamps = HEYS.sync && HEYS.sync.stripDayMutationStamps;
+            const comparable = typeof stripStamps === 'function' ? stripStamps(day) : day;
+            return JSON.stringify(comparable);
+        } catch (_) {
+            return '';
+        }
+    }
+
     function isSameDayStorageMergeContent(prevDay, newDay) {
         if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
         const pm = prevDay.meals || [];
@@ -2153,6 +2167,7 @@
         getDaysCacheStats,
         preloadMonthDays,
         isSameDayHydratedContent,
+        buildDayReconcileKey,
         isSameDayStorageMergeContent,
         // Subjective (check-in) anti-clobber
         SUBJECTIVE_DAY_FIELDS,
@@ -4310,9 +4325,9 @@
         // unreliable) and, if they differ, apply via a DIRECT setDay (urgent update,
         // commits even under the storm). Converges the screen to LS within one tick.
         React.useEffect(() => {
-            // Closure guard (resets per date): the exact LS items-state we last applied.
-            // Belt-and-suspenders against any residual flap — apply each distinct storage
-            // state at most once so the reconciler can never become a write loop.
+            // Closure guard (resets per date): the exact semantic state last reconciled.
+            // Includes trainings/tombstones and ignores recursive updatedAt stamps so a
+            // repair write cannot schedule the same repair again three seconds later.
             let lastReconciledKey = '';
             // ⚡ PERF A1 (2026-06-13): fast-path — если сырая LS-строка дня не менялась
             // с прошлого тика, пропускаем parse (50–150 КБ) и deep compare целиком.
@@ -4402,6 +4417,11 @@
                     }
                     if (resolved.status === 'noop') return;
                     dayToApply = resolved.value;
+                    const reconcileKey = (HEYS.dayUtils && typeof HEYS.dayUtils.buildDayReconcileKey === 'function')
+                        ? HEYS.dayUtils.buildDayReconcileKey(dayToApply)
+                        : '';
+                    if (reconcileKey && reconcileKey === lastReconciledKey) return;
+                    if (reconcileKey) lastReconciledKey = reconcileKey;
                     if (resolved.status === 'merged') {
                         try {
                             lsSet(lsRead.key, dayToApply);
@@ -4413,20 +4433,6 @@
                         }
                         recordDayDecision('RECONCILE_MERGED_EXTERNAL', 'interval', 'entity-level merge repaired LS before apply');
                     }
-                    // Already reconciled this exact LS items-state? Don't re-apply (loop guard).
-                    const lsKey = (dayToApply.meals || []).map(m =>
-                        (m && m.items || []).map(i => (i && i.id) + ':' + (i && i.grams)).join(',')
-                    ).join('|')
-                        + '#w' + (dayToApply.waterMl || 0)
-                        + '#s' + (dayToApply.steps || 0)
-                        + '#wt' + (dayToApply.weightMorning || 0)
-                        + '#sq' + (dayToApply.sleepQuality || 0)
-                        + '#ss' + (dayToApply.sleepStart || '')
-                        + '#se' + (dayToApply.sleepEnd || '')
-                        + '#mm' + (dayToApply.moodMorning || 0)
-                        + '#wm' + (dayToApply.wellbeingMorning || 0);
-                    if (lsKey === lastReconciledKey) return;
-                    lastReconciledKey = lsKey;
                     // The shared resolver has already applied entity-level timestamps. It writes
                     // a repaired LS candidate only for a real merge; incoming/noop results avoid
                     // timestamp churn and converge without another storage write on the next tick.
@@ -4950,6 +4956,7 @@
             const existingTrainings = day.trainings || [];
             const newTrainings = [...existingTrainings];
             const idx = editingTrainingIndex;
+            const mutationTs = Date.now();
 
             while (newTrainings.length <= idx) {
                 newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '', mood: 5, wellbeing: 5, stress: 5, comment: '' });
@@ -4963,10 +4970,11 @@
                 mood: pendingTrainingQuality || 5,
                 wellbeing: pendingTrainingFeelAfter || 5,
                 stress: 5,
-                comment: pendingTrainingComment
+                comment: pendingTrainingComment,
+                updatedAt: mutationTs
             };
 
-            setDay(prev => ({ ...prev, trainings: newTrainings, updatedAt: Date.now() }));
+            setDay(prev => ({ ...prev, trainings: newTrainings, updatedAt: mutationTs }));
             setShowTrainingPicker(false);
             setTrainingPickerStep(1);
             setEditingTrainingIndex(null);
@@ -5178,7 +5186,10 @@
                     // Мгновенное обновление UI через setDay
                     if (weightData && (weightData.weightKg !== undefined || weightData.weightG !== undefined)) {
                         const newWeight = (weightData.weightKg || 70) + (weightData.weightG || 0) / 10;
-                        setDay(prev => ({ ...prev, weightMorning: newWeight, updatedAt: Date.now() }));
+                        setDay(prev => {
+                            const mutationAt = Math.max(Date.now(), (Number(prev.weightUpdatedAt) || 0) + 1);
+                            return { ...prev, weightMorning: newWeight, weightUpdatedAt: mutationAt, updatedAt: mutationAt };
+                        });
                     }
                 });
             }
@@ -5204,7 +5215,10 @@
                     // stepData = { deficit: { deficit: -15, dateKey: '...' } }
                     const deficitValue = stepData?.deficit?.deficit;
                     if (deficitValue !== undefined) {
-                        setDay(prev => ({ ...prev, deficitPct: deficitValue, updatedAt: Date.now() }));
+                        setDay(prev => {
+                            const mutationAt = Math.max(Date.now(), (Number(prev.deficitUpdatedAt) || 0) + 1);
+                            return { ...prev, deficitPct: deficitValue, deficitUpdatedAt: mutationAt, updatedAt: mutationAt };
+                        });
                     }
                 });
             }
@@ -5417,13 +5431,14 @@
             const prevWater = liveDay.waterMl || 0;
             const newWater = prevWater + ml;
             const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
-            const newUpdatedAt = Date.now();
+            const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
             const blockUntil = newUpdatedAt + 3000;
             const nextDaySnapshot = {
                 ...liveDay,
                 date,
                 waterMl: newWater,
                 lastWaterTime: newUpdatedAt,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             };
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
@@ -5437,6 +5452,7 @@
                 ...prev,
                 waterMl: newWater,
                 lastWaterTime: newUpdatedAt,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             }));
 
@@ -5530,7 +5546,7 @@
         function removeWater(ml) {
             const liveDay = getLatestDaySnapshot();
             const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
-            const newUpdatedAt = Date.now();
+            const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
 
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
                 HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -5540,6 +5556,7 @@
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             });
 
@@ -5562,7 +5579,7 @@
                 }
             }
 
-            setDay(prev => ({ ...prev, waterMl: newWater, updatedAt: newUpdatedAt }));
+            setDay(prev => ({ ...prev, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt }));
 
             scheduleDayFlush();
 
@@ -5606,6 +5623,7 @@
                             // Legacy fields для backward compatibility
                             householdMin: savedDay.householdMin || 0,
                             householdTime: savedDay.householdTime || '',
+                            householdUpdatedAt: savedDay.householdUpdatedAt || prev.householdUpdatedAt,
                             updatedAt: Date.now()
                         }));
                     }
