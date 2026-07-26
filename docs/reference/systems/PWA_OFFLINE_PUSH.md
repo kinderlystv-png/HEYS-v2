@@ -48,9 +48,12 @@ iPhone бесполезный runtime-запрос не выполняется: 
    runtime/local/session очередь, затем отправляется на сервер по entry id.
    Pending entry id скрывается из повторного ответа до успешного ack, поэтому
    отказ browser storage или временная ошибка RPC не открывает модалку по кругу.
-   Перед показом meal-actions сверяются с актуальным синхронизированным днём:
-   уже удалённые клиентом приёмы и продукты не показываются и безопасно
-   подтверждаются как устаревшие записи журнала.
+   Перед показом meal-actions сверяются с синхронизированным днём: уже удалённые
+   клиентом приёмы и продукты скрываются только при явном `deletedMealIds` /
+   `deletedItemIds` tombstone. Простое отсутствие записи в ещё старой локальной
+   копии не считается удалением и не вызывает auto-ack. Возврат вкладки/PWA в
+   foreground и повторный PIN-вход перечитывают changelog и открывают найденные
+   правки сразу, не ожидая 30-минутное live-окно.
 
 ## Cache routing
 
@@ -275,3 +278,4 @@ SW update state machine публикует структурированные с
 | W20 | Full Vitest разделён на два обязательных shard; migration gate выполняется один раз | `rg -n -e "matrix:" -e "--shard=" -e "if: matrix.shard == 1" .github/workflows/deploy-yandex.yml`                                                                  | проверено 2026-07-24 |
 | W21 | Bundle-only HEAD проверяется по source SHA; artifact manifest — внутри deploy job   | `pnpm exec vitest run apps/web/__tests__/push-agent.test.js`                                                                                                       | проверено 2026-07-24 |
 | W22 | Visual guard держит skeleton до paint и даёт ручной recovery без reload-цикла       | `pnpm exec vitest run apps/web/__tests__/blank-screen-guard.test.js`                                                                                               | проверено 2026-07-24 |
+| W23 | Повторный PIN-вход/foreground сразу перечитывает правки; auto-ack требует tombstone | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                                | проверено 2026-07-26 |

@@ -302,6 +302,22 @@ describe('CuratorActionsBanner review modal', () => {
     });
   });
 
+  it('does not auto-ack a curator meal while the local day is still stale', async () => {
+    const lunch = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T09:05:00.000Z', [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'lunch', meal_label: 'Обед', items: [{ item_id: 'soup', name: 'Суп' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.utils.lsGet.mockReturnValue({
+      meals: [{ id: 'breakfast', items: [{ id: 'oats', name: 'Овсянка' }] }],
+    });
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([lunch]));
+
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+    expect(window.HEYS.YandexAPI.ackCuratorChangelog).not.toHaveBeenCalled();
+  });
+
   it('hides products that the client removed from a curator-added meal', () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
       {
@@ -310,7 +326,10 @@ describe('CuratorActionsBanner review modal', () => {
       },
     ]);
     const banner = loadBanner();
-    window.HEYS.utils.lsGet.mockReturnValue({ meals: [{ id: 'lunch', items: [{ id: 'soup', name: 'Суп' }] }] });
+    window.HEYS.utils.lsGet.mockReturnValue({
+      meals: [{ id: 'lunch', items: [{ id: 'soup', name: 'Суп' }] }],
+      deletedItemIds: { bread: Date.now() },
+    });
 
     const [reconciled] = banner._test.reconcileEntriesWithCurrentDays([entry]);
 
@@ -328,6 +347,26 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+  });
+
+  it('re-fetches and opens live changes immediately when an existing PIN session returns', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T10:00:00.000Z');
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince
+      .mockResolvedValueOnce(response([]))
+      .mockResolvedValueOnce(response([entry], '2026-07-05T10:00:00.000Z'));
+
+    await banner.checkAndShow();
+    expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
+
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushMicrotasks();
+
+    expect(window.HEYS.YandexAPI.getMyCuratorChangelogSince).toHaveBeenCalledTimes(2);
     expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
   });
 

@@ -503,13 +503,24 @@
     const day = readCurrentDayForAction(entry, action);
     if (!day || !Array.isArray(day.meals)) return action;
     const meal = day.meals.find(candidate => candidate && candidate.id === action.meal_id);
-    if (!meal) return null;
+    if (!meal) {
+      const deletedAt = Number(day.deletedMealIds?.[action.meal_id]);
+      // Absence alone is not proof of deletion: the changelog can arrive a few
+      // milliseconds before the freshly merged day reaches local storage.
+      return Number.isFinite(deletedAt) && deletedAt > 0 ? null : action;
+    }
 
     const currentItems = Array.isArray(meal.items) ? meal.items : [];
+    const deletedItemIds = day.deletedItemIds && typeof day.deletedItemIds === 'object'
+      ? day.deletedItemIds
+      : {};
     if (action.type === 'meal_item_changed') {
       if (!action.item_id) return action;
       const currentItem = currentItems.find(item => item && item.id === action.item_id);
-      if (!currentItem) return null;
+      if (!currentItem) {
+        const deletedAt = Number(deletedItemIds[action.item_id]);
+        return Number.isFinite(deletedAt) && deletedAt > 0 ? null : action;
+      }
       if (action.to_grams != null && Number(currentItem.grams) !== Number(action.to_grams)) return null;
       if (action.to_name && currentItem.name !== action.to_name) return null;
       return action;
@@ -517,7 +528,11 @@
 
     const sourceItems = Array.isArray(action.items) ? action.items : [];
     const currentItemIds = new Set(currentItems.map(item => item && item.id).filter(Boolean));
-    const items = sourceItems.filter(item => !item?.item_id || currentItemIds.has(item.item_id));
+    const items = sourceItems.filter(item => {
+      if (!item?.item_id || currentItemIds.has(item.item_id)) return true;
+      const deletedAt = Number(deletedItemIds[item.item_id]);
+      return !(Number.isFinite(deletedAt) && deletedAt > 0);
+    });
     if (sourceItems.length > 0 && items.length === 0) return null;
     return {
       ...action,
@@ -1164,8 +1179,19 @@
       if (isPhaseA) return;
       setTimeout(checkAndShow, 800);
     });
+    window.addEventListener('heys:client-changed', (e) => {
+      const source = e?.detail?.source;
+      if (source !== 'pin-login' && source !== 'pin-auth' && source !== 'pin-session-restored') return;
+      _forceOpenOnce = true;
+      setTimeout(checkAndShow, 0);
+    });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && _reviewEntries.length > 0) attemptOpenReview();
+      if (document.hidden || !getPinSessionContextKey()) return;
+      // Returning to an existing PIN session is a new client entry from the
+      // user's perspective. Re-fetch and show pending changes immediately.
+      if (_reviewEntries.length > 0) attemptOpenReview({ force: true });
+      _forceOpenOnce = true;
+      checkAndShow();
     });
     if (HEYS.cloud && HEYS.cloud._syncLastCompleted) {
       setTimeout(checkAndShow, 800);
