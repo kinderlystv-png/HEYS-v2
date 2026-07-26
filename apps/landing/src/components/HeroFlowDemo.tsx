@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 type PlaybackPhase = 'probing' | 'poster' | 'buffering' | 'playing' | 'paused';
 
 const AUTOPLAY_PROBE_MS = 3500;
+const AUTOPLAY_REVEAL_DELAY_MS = 1200;
 
 export default function HeroFlowDemo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -23,11 +24,13 @@ export default function HeroFlowDemo() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let settled = false;
     let probeTimer = 0;
+    let autoplayTimer = 0;
 
     const showPoster = () => {
       if (settled) return;
       settled = true;
       window.clearTimeout(probeTimer);
+      window.clearTimeout(autoplayTimer);
       video.pause();
       updatePhase('poster');
     };
@@ -36,16 +39,21 @@ export default function HeroFlowDemo() {
       if (settled) return;
       settled = true;
       window.clearTimeout(probeTimer);
-      void video.play().then(
-        () => updatePhase('playing'),
-        () => updatePhase('poster'),
-      );
+      video.currentTime = 0;
+      autoplayTimer = window.setTimeout(() => {
+        video.currentTime = 0;
+        void video.play().then(
+          () => updatePhase('playing'),
+          () => updatePhase('poster'),
+        );
+      }, AUTOPLAY_REVEAL_DELAY_MS);
     };
 
     const handleMotionPreference = () => {
       if (!reducedMotion.matches) return;
       settled = true;
       window.clearTimeout(probeTimer);
+      window.clearTimeout(autoplayTimer);
       video.pause();
       updatePhase('poster');
     };
@@ -65,6 +73,7 @@ export default function HeroFlowDemo() {
     return () => {
       settled = true;
       window.clearTimeout(probeTimer);
+      window.clearTimeout(autoplayTimer);
       video.removeEventListener('canplay', startAutoplay);
       reducedMotion.removeEventListener('change', handleMotionPreference);
     };
