@@ -3784,6 +3784,8 @@
     }
 
     function renderDailyWaveOverview({ React, insulinWaveData }) {
+        if (insulinWaveData?.isOvernightEstimate) return null;
+
         const rawHistory = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
         const waves = rawHistory
             .map((wave, index) => {

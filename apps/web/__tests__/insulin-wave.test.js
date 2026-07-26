@@ -11,6 +11,7 @@ const testReact = {
   useState: (initial) => [initial, () => undefined],
   useEffect: () => undefined,
   useMemo: (factory) => factory(),
+  memo: (component) => component,
   createElement(type, props, ...children) {
     if (typeof type === 'function') return type({ ...(props || {}), children });
     return { type, props: { ...(props || {}), children } };
@@ -37,6 +38,7 @@ const productionOrder = [
   'heys_insulin_wave_v1.js',
   'heys_day_insulin_wave_ui_v1.js',
   'heys_day_insulin_wave_data_v1.js',
+  'day/_meals.js',
 ];
 
 const resolveItem = (item) => item.product || item;
@@ -486,6 +488,38 @@ describe('Postprandial response model v5', () => {
     expect(result.currentResponse.startMin).toBe(23 * 60 + 55);
     expect(result.rangeStatus).not.toBe('scheduled');
     expect(result.statusLabel).not.toBe('Приём ещё впереди');
+  });
+
+  it('keeps an overnight estimate out of an empty current-day wave chart', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 26, 10, 0));
+    let result;
+    try {
+      const HEYSRef = {
+        ...globalThis.HEYS,
+        dayUtils: { todayISO: () => '2026-07-26' },
+      };
+      result = HEYSRef.dayInsulinWaveData.computeInsulinWaveData({
+        React: testReact,
+        day: { date: '2026-07-26', meals: [] },
+        currentMinute: Math.floor(Date.now() / 60000),
+        getProductFromItem: resolveItem,
+        getProfile: () => ({}),
+        lsGet: (key) => key === 'heys_dayv2_2026-07-25'
+          ? { date: '2026-07-25', meals: [makeMeal('21:30', fullProduct)] }
+          : null,
+        HEYS: HEYSRef,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(result.isOvernightEstimate).toBe(true);
+    expect(result.waveHistory).toHaveLength(1);
+    expect(globalThis.HEYS.dayMealsChartUI.renderDailyWaveOverview({
+      React: testReact,
+      insulinWaveData: result,
+    })).toBeNull();
   });
 
   it('applies activity only when it is close to the meal', () => {
