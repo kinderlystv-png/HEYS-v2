@@ -3,12 +3,11 @@
 > **Статус:** production v1 опубликован 2026-07-27; source v2 подготовлен
 > локально и ещё не опубликован. **Охват:** landing handoff, consent,
 > session/RPC boundary, encrypted storage, client/curator UI, decision gate,
-> retention, DSAR и production smoke. **Не подтверждено/Не охвачено:**
-> последующий legal source bump до `1.7/1.7/1.5` ещё не виден в live app,
-> который на момент проверки обслуживает trial-сборку `2026.07.27.2016.d234cbee`
-> с `1.6/1.6/1.5`. Отдельное изменение РКН для этого flow не требуется:
-> опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
-> сопровождение и специальные данные о здоровье.
+> retention, DSAR и production smoke. Live app на момент preflight обслуживает
+> build `2026.07.28.0031.df3d1e8f` с consent `1.7/1.7/1.5`. **Не подтверждено/Не
+> охвачено:** production rollout и smoke именно для v2. Отдельное изменение РКН
+> для этого flow не требуется: опубликованная запись № 26-22-005319 уже
+> охватывает заявки/триалы, сопровождение и специальные данные о здоровье.
 
 ## Поток
 
@@ -138,13 +137,12 @@ chronology без содержимого анкеты, PIN, токенов, во
 
 - Основная migration и re-consent forward-fix применены; RPC и maintenance
   активны, web/landing trial-сборка опубликована.
-- Production smoke подтвердил существующую PIN-сессию, consent `1.6/1.6/1.5`,
+- Первичный production smoke подтвердил существующую PIN-сессию, consent,
   autosave/resume, curator ownership/IDOR, approval/activation и revoke/purge;
   три синтетических клиента удалены.
-- Текущий `main` содержит следующий legal source bump `1.7/1.7/1.5`, но live
-  `build-meta.json`, app bundle и landing privacy page на момент проверки всё
-  ещё показывают согласованный trial-релиз `1.6/1.6/1.5`. Публикация этого
-  следующего legal-релиза не относится к trial-intake rollout.
+- Live `build-meta.json`, consent bundle и versioned docs подтверждают
+  актуальные версии `1.7/1.7/1.5`. Этот legal-релиз уже является baseline и не
+  входит в trial-intake v2 scope.
 - Data-change gate пройден: intake не меняет опубликованные цели, категории
   субъектов/данных, получателей, способы обработки или трансграничную передачу.
 
@@ -162,7 +160,7 @@ chronology без содержимого анкеты, PIN, токенов, во
 | TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15 | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27          |
 | TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                              | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27          |
 | TI10 | Production rollout и полный synthetic smoke завершены; fixtures удалены                                                         | release-task evidence, build `2026.07.27.2016.d234cbee`                            | проверено 2026-07-27          |
-| TI11 | Live trial-релиз использует `1.6/1.6/1.5`, а текущий source уже содержит `1.7/1.7/1.5`                                          | live build/landing read-only check + legal configs                                 | проверено 2026-07-27          |
+| TI11 | Live app и versioned docs используют consent `1.7/1.7/1.5`                                                                      | live build/consent bundle/docs read-only check                                     | проверено 2026-07-28          |
 | TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                        | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27 |
 | TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                            | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27 |
 | TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                        | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27 |
