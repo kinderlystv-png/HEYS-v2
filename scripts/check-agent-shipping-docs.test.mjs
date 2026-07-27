@@ -38,12 +38,14 @@ test('reports a missing local runbook link with a concrete invariant', () => {
 });
 
 test('reports when the commit-only operation loses --no-push', () => {
-  const state = withFile(loadRepositoryState(), RUNBOOK, (text) =>
-    text.replace(
-      '`pnpm ship "<conventional message>" --no-push` | No |',
-      '`pnpm ship "<conventional message>"` | No |',
-    ),
-  );
+  const state = withFile(loadRepositoryState(), RUNBOOK, (text) => {
+    const changed = text.replace(
+      '`pnpm ship "<conventional message>" --no-push`',
+      '`pnpm ship "<conventional message>"`',
+    );
+    assert.notEqual(changed, text, 'test fixture must remove --no-push');
+    return changed;
+  });
 
   const failures = invariantFailures(state, 'commit-only-no-push');
   assert.ok(failures.some((failure) => failure.file === RUNBOOK));
