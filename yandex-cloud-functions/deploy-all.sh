@@ -1,7 +1,7 @@
 #!/bin/bash
 # 🚀 Centralized Deployment Script for Yandex Cloud Functions
 # Reads secrets from .env file and deploys all functions with consistent configuration
-# Usage: ./deploy-all.sh [function-name] [--group api|automations|all] [--dry-run] [--skip-checks] [--skip-health] [--ci]
+# Usage: ./deploy-all.sh [function-name ...] [--group api|automations|all] [--dry-run] [--skip-checks] [--skip-health] [--ci]
 # v2.1 — adds CI mode for safe predeploy validation in GitHub Actions
 
 set -e  # Exit on error
@@ -29,7 +29,7 @@ API_ZONE_REQUESTS_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.s
 OVERLOAD_RETRY_AFTER_SECONDS="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.overloadRetryAfterSeconds")"
 
 # Parse flags
-TARGET_FUNC=""
+TARGET_FUNCTIONS=()
 DEPLOY_GROUP="all"
 SKIP_CHECKS=false
 SKIP_HEALTH=false
@@ -57,7 +57,7 @@ while [ $# -gt 0 ]; do
             DEPLOY_GROUP="${arg#--group=}"
             ;;
         -*) echo -e "${RED}Unknown flag: $arg${NC}"; exit 1 ;;
-        *) TARGET_FUNC="$arg" ;;
+        *) TARGET_FUNCTIONS+=("$arg") ;;
     esac
     shift
 done
@@ -67,8 +67,8 @@ case "$DEPLOY_GROUP" in
     *) echo -e "${RED}Unknown group: $DEPLOY_GROUP (expected api, automations, all)${NC}"; exit 1 ;;
 esac
 
-if [ -n "$TARGET_FUNC" ] && [ "$DEPLOY_GROUP" != "all" ]; then
-    echo -e "${RED}Use either a single function name or --group, not both.${NC}"
+if [ ${#TARGET_FUNCTIONS[@]} -gt 0 ] && [ "$DEPLOY_GROUP" != "all" ]; then
+    echo -e "${RED}Use either function names or --group, not both.${NC}"
     exit 1
 fi
 
@@ -139,8 +139,8 @@ while IFS= read -r func_name; do
 done < <(node "$INVENTORY_SCRIPT" --list --group automations --auto-only)
 
 selected_functions() {
-    if [ -n "$TARGET_FUNC" ]; then
-        echo "$TARGET_FUNC"
+    if [ ${#TARGET_FUNCTIONS[@]} -gt 0 ]; then
+        printf '%s\n' "${TARGET_FUNCTIONS[@]}"
         return
     fi
 
@@ -155,6 +155,15 @@ selected_functions() {
             printf '%s\n' "${API_FUNCTIONS[@]}" "${AUTOMATION_FUNCTIONS[@]}"
             ;;
     esac
+}
+
+deployment_label() {
+    if [ ${#TARGET_FUNCTIONS[@]} -gt 0 ]; then
+        local IFS=,
+        echo "${TARGET_FUNCTIONS[*]}"
+        return
+    fi
+    echo "$DEPLOY_GROUP"
 }
 
 current_git_commit() {
@@ -220,17 +229,17 @@ assert_env_flags_no_plaintext_secrets() {
     while IFS= read -r item; do
         key="${item%%=*}"
         value="${item#*=}"
-        if [[ "$key" =~ (TOKEN|SECRET|PASSWORD|PRIVATE_KEY)$ || "$key" =~ (TOKEN|SECRET|PASSWORD|PRIVATE_KEY)_ ]]; then
-            case "$key" in
-                *_SHA256|LOCKBOX_*_SECRET_ID|HEYS_DEPLOY_COMMIT|HEYS_DEPLOYED_AT|HEYS_DEPLOY_GROUP)
-                    continue
-                    ;;
-            esac
-            if [[ "$value" == __IN_LOCKBOX__* ]]; then
+        case "$key" in
+            *_SHA256|LOCKBOX_*_SECRET_ID|HEYS_DEPLOY_COMMIT|HEYS_DEPLOYED_AT|HEYS_DEPLOY_GROUP)
                 continue
-            fi
-            violations+=("$key")
-        fi
+                ;;
+            *_TOKEN|*_TOKEN_*|*_SECRET|*_SECRET_*|*_PASSWORD|*_PASSWORD_*|\
+            *_PRIVATE_KEY|*_PRIVATE_KEY_*|*_API_KEY|*_ACCESS_KEY_ID|YC_SPEECHKIT_KEY)
+                if [[ "$value" != __IN_LOCKBOX__* ]]; then
+                    violations+=("$key")
+                fi
+                ;;
+        esac
     done < <(printf '%s\n' "$flags" | tr ' ' '\n' | grep -E '^[-_A-Za-z0-9]+=' || true)
 
     if [ ${#violations[@]} -gt 0 ]; then
@@ -378,22 +387,16 @@ build_env_flags() {
     fi
 
     # Backup-функции (heys-client-daily-backup, heys-snapshot-demo) + photo-cleanup:
-    # S3 + TG (env fallback пока .env активен — initSecrets overlay'ит Lockbox значениями)
+    # S3 credentials приходят только из Lockbox; Telegram — из App Lockbox.
     if [[ "$func_name" =~ (backup|snapshot-demo|photo-cleanup) ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
-        local k
-        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
-            _add "$k"
-        done
     fi
 
-    # SpeechKit transcription worker: DB + App Lockbox, optional SpeechKit env
-    # fallback for pilot controls/pricing. Auth key may arrive from Lockbox app
-    # secret via initSecrets(), or from explicit env.
+    # SpeechKit credentials приходят только из App Lockbox. В env остаются
+    # только non-secret runtime controls/pricing.
     if [[ "$func_name" == "heys-cron-speechkit-transcribe" ]]; then
         local k
-        for k in SPEECHKIT_API_KEY YC_SPEECHKIT_KEY SPEECHKIT_IAM_TOKEN YC_IAM_TOKEN \
-                 SPEECHKIT_FOLDER_ID YC_FOLDER_ID SPEECHKIT_MODEL \
+        for k in SPEECHKIT_FOLDER_ID YC_FOLDER_ID SPEECHKIT_MODEL \
                  SPEECHKIT_PILOT_MONTHLY_CAP_RUB SPEECHKIT_ASYNC_PRICE_PER_15S_RUB \
                  SPEECHKIT_WORKER_LIMIT SPEECHKIT_START_MAX_ATTEMPTS \
                  SPEECHKIT_PROCESSING_LEASE_SECONDS SPEECHKIT_OPERATION_TIMEOUT_MINUTES \
@@ -402,34 +405,15 @@ build_env_flags() {
         done
     fi
 
-    # heys-api-rpc: TG для real-time profile pollution alerts (2026-06-01 wave 2).
-    # initSecrets через shared/secrets.js уже читает TELEGRAM_* из Lockbox; здесь
-    # явный env-fallback на случай если Lockbox lag-нет на cold start.
-    if [[ "$func_name" == "heys-api-rpc" ]]; then
-        local k
-        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
-            _add "$k"
-        done
-    fi
-
-    # Photos функция: S3 credentials для signed URL генерации
+    # Photos функция: S3 credentials только из Lockbox.
     if [[ "$func_name" == "heys-api-photos" ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
-        local k
-        for k in S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
-            _add "$k"
-        done
     fi
 
     # heys-snapshot-demo: override S3_BUCKET (default bucket "heys-backups"
     # содержит client-daily; для demo нужен отдельный публичный bucket)
     if [[ "$func_name" == "heys-snapshot-demo" ]]; then
         env_flags+=" --environment S3_BUCKET=heys-public-snapshot"
-    fi
-
-    # SMS API key (heys-api-sms)
-    if [[ "$func_name" == "heys-api-sms" ]]; then
-        _add SMS_API_KEY
     fi
 
     # JWT_SECRET — для rpc, auth, push, messages, photos (curator-JWT identity resolution)
@@ -444,20 +428,9 @@ build_env_flags() {
         env_flags+=" --environment SESSION_SECRET=__IN_LOCKBOX__heys-app-secrets__"
     fi
 
-    # Payments: YUKASSA_* + INTERNAL_CRON_TOKEN (poll-фолбэк P0.4)
-    if [[ "$func_name" == "heys-api-payments" ]]; then
-        local k
-        for k in YUKASSA_SHOP_ID YUKASSA_SECRET_KEY YUKASSA_WEBHOOK_SECRET INTERNAL_CRON_TOKEN; do
-            _add "$k"
-        done
-    fi
-
-    # Cron drip-уведомлений (Phase 1, P0.7)
+    # Cron drip-уведомлений (Phase 1, P0.7): token из Lockbox, APP_URL non-secret.
     if [[ "$func_name" == "heys-cron-trial-drip" ]]; then
-        local k
-        for k in INTERNAL_CRON_TOKEN APP_URL; do
-            _add "$k"
-        done
+        _add APP_URL
     fi
 
     # Telegram bots: existing client PIN/notification bot + HEYS Start quiz bot.
@@ -473,15 +446,14 @@ build_env_flags() {
     fi
 
     # Web Push (VAPID) — api-push, cron-reminders, api-messages.
-    # ВАЖНО: _add_required (не _add). yc CLI заменяет ВЕСЬ env на каждый deploy,
-    # _add молча пропускает пустые vars → wipe'нет VAPID из cloud function →
-    # push notifications перестают доставляться (FATAL: VAPID keys not configured).
-    # validate_function_env выше гарантирует что переменные не пусты.
+    # Public key/subject — required non-secret config. Private key — только
+    # placeholder: initSecrets() заменит его значением из App Lockbox.
     if [[ "$func_name" =~ (push|reminders|messages) ]]; then
         local k
-        for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+        for k in VAPID_PUBLIC_KEY VAPID_SUBJECT; do
             _add_required "$k"
         done
+        env_flags+=" --environment VAPID_PRIVATE_KEY=__IN_LOCKBOX__heys-app-secrets__"
     fi
 
     # SEC-023 hot-fix 2026-06-14: heys-api-rest в STRICT-mode для write-context.
@@ -504,18 +476,37 @@ build_env_flags() {
     echo "$env_flags"
 }
 
-# Deploy a single function
-deploy_function() {
-    local func_name=$1
-    local config=$(get_function_config "$func_name")
-    
-    if [ -z "$config" ]; then
-        echo -e "${RED}❌ Unknown function: $func_name${NC}"
-        return 1
-    fi
-    
-    read -r runtime entrypoint memory timeout <<< "$config"
+PREVALIDATED_ENV_FLAGS=()
+SKIPPED_FUNCTIONS=()
+DEPLOYED_FUNCTIONS=()
+CURRENT_DEPLOY_TARGET=""
 
+write_deploy_status() {
+    local phase="${1:-unknown}"
+    local current_target="${2:-}"
+    local partial_rollout="${3:-false}"
+    local deployed_csv=""
+    local deployment_mode=""
+    local IFS=,
+
+    deployed_csv="${DEPLOYED_FUNCTIONS[*]}"
+    deployment_mode="$(deployment_label)"
+
+    if [ -z "${HEYS_DEPLOY_STATUS_FILE:-}" ]; then
+        return 0
+    fi
+
+    {
+        printf 'phase=%s\n' "$phase"
+        printf 'current_target=%s\n' "$current_target"
+        printf 'deployed_functions=%s\n' "$deployed_csv"
+        printf 'partial_rollout=%s\n' "$partial_rollout"
+        printf 'deployment_mode=%s\n' "$deployment_mode"
+    } > "$HEYS_DEPLOY_STATUS_FILE"
+}
+
+validate_function_source_state() {
+    local func_name=$1
     # Guard: prevent deploy-before-commit drift.
     # Incident 2026-06-08: SEC-005 CSP added to 5 cloud functions, deployed to
     # YC via this script BEFORE source was committed. YC was 30+ min ahead of git
@@ -539,17 +530,32 @@ deploy_function() {
                 echo -e "      git add $REL_FUNC_DIR && pnpm ship \"chore(cloudfn): <what>\""
                 echo -e "${YELLOW}   Or override (emergency hotpatch only — git stays behind):${NC}"
                 echo -e "      ./deploy-all.sh $func_name --force-dirty"
-                return 1
+                exit 1
             fi
         fi
     fi
+}
 
-    # Validate required secrets for this function
-    validate_function_env "$func_name"
+preflight_function() {
+    local func_name=$1
+    local config=""
+    local env_flags=""
+
+    config="$(get_function_config "$func_name")"
+    if [ -z "$config" ]; then
+        echo -e "${RED}❌ Unknown function: $func_name${NC}"
+        exit 1
+    fi
+    if [ ! -f "$SCRIPT_DIR/$func_name/package.json" ]; then
+        echo -e "${RED}❌ Missing package.json for $func_name${NC}"
+        exit 1
+    fi
 
     if [[ "$func_name" == "heys-api-payments" ]] && ! payments_env_ready; then
-        if [ "$CI_MODE" = true ] && [ -z "$TARGET_FUNC" ]; then
-            echo -e "${YELLOW}⏭️  Skipping $func_name in CI — YUKASSA secrets are not configured${NC}"
+        if [ "$CI_MODE" = true ] && [ ${#TARGET_FUNCTIONS[@]} -eq 0 ]; then
+            SKIPPED_FUNCTIONS+=("$func_name")
+            PREVALIDATED_ENV_FLAGS+=("")
+            echo -e "${YELLOW}⏭️  Preflight skip $func_name — YUKASSA secrets are not configured${NC}"
             return 0
         fi
 
@@ -557,12 +563,53 @@ deploy_function() {
         exit 1
     fi
 
-    # Build environment flags before touching per-function files so --dry-run is read-only.
-    env_flags=$(build_env_flags "$func_name")
+    validate_function_source_state "$func_name"
+
+    # Validate required secrets for this function
+    validate_function_env "$func_name"
+
+    env_flags="$(build_env_flags "$func_name")"
     env_flags+=" --environment HEYS_DEPLOY_COMMIT=$(function_source_commit "$func_name")"
     env_flags+=" --environment HEYS_DEPLOYED_AT=$(current_deployed_at)"
-    env_flags+=" --environment HEYS_DEPLOY_GROUP=${TARGET_FUNC:-$DEPLOY_GROUP}"
+    env_flags+=" --environment HEYS_DEPLOY_GROUP=$(deployment_label)"
     assert_env_flags_no_plaintext_secrets "$func_name" "$env_flags"
+    PREVALIDATED_ENV_FLAGS+=("$env_flags")
+    echo -e "${GREEN}✅ Preflight $func_name${NC}"
+}
+
+is_function_skipped() {
+    local func_name=$1
+    local skipped
+    for skipped in "${SKIPPED_FUNCTIONS[@]}"; do
+        if [ "$skipped" = "$func_name" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+validated_env_flags_for() {
+    local func_name=$1
+    local i
+    for ((i = 0; i < ${#PREDEPLOY_TARGETS[@]}; i++)); do
+        if [ "${PREDEPLOY_TARGETS[$i]}" = "$func_name" ]; then
+            printf '%s' "${PREVALIDATED_ENV_FLAGS[$i]}"
+            return 0
+        fi
+    done
+    echo -e "${RED}❌ Missing prevalidated env flags for $func_name${NC}" >&2
+    return 1
+}
+
+# Deploy a single prevalidated function
+deploy_function() {
+    local func_name=$1
+    local config=""
+    local env_flags=""
+
+    config="$(get_function_config "$func_name")"
+    read -r runtime entrypoint memory timeout <<< "$config"
+    env_flags="$(validated_env_flags_for "$func_name")"
 
     # Service account для чтения Lockbox. Прикрепляется ко ВСЕМ функциям кроме
     # heys-api-health (она ничего не читает из Lockbox).
@@ -678,6 +725,10 @@ deploy_function() {
     ZIP_SIZE=$(du -k "$DEPLOY_ZIP" | awk '{print $1}')
     echo -e "${BLUE}ℹ️  Packaged $func_name → ${ZIP_SIZE}KB${NC}"
 
+    # From this point a cloud mutation may happen. Keep partial_rollout=true
+    # until the complete status is written, even if no version has succeeded yet.
+    write_deploy_status "deploying" "$func_name" "true"
+
     # First deploy for optional functions (notably heys-api-payments) needs the
     # function shell to exist before `version create` can attach code to it.
     if ! yc serverless function get --name "$func_name" >/dev/null 2>&1; then
@@ -686,8 +737,9 @@ deploy_function() {
         echo -e "${GREEN}✅ Function shell created: $func_name${NC}"
     fi
 
-    # Deploy function
-    eval yc serverless function version create \
+    # Deploy function. Capture the remote failure explicitly so the status file
+    # still identifies the failed target and all versions already published.
+    if ! eval yc serverless function version create \
         --function-name "$func_name" \
         --runtime "$runtime" \
         --entrypoint "$entrypoint" \
@@ -696,27 +748,28 @@ deploy_function() {
         $sa_flag \
         $concurrency_flag \
         --source-path "$DEPLOY_ZIP" \
-        $env_flags
-    YC_EXIT=$?
-    rm -f "$DEPLOY_ZIP"
-    # Restore original exit code so downstream check works.
-    (exit $YC_EXIT)
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ $func_name deployed successfully${NC}"
-        if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
-            yc serverless function set-scaling-policy \
-                --name "$func_name" \
-                --tag '$latest' \
-                --zone-instances-limit "$API_ZONE_INSTANCES_LIMIT" \
-                --zone-requests-limit "$API_ZONE_REQUESTS_LIMIT"
-            echo -e "${GREEN}✅ $func_name scaling policy: instances=$API_ZONE_INSTANCES_LIMIT requests=$API_ZONE_REQUESTS_LIMIT per zone${NC}"
-        fi
-    else
+        $env_flags; then
+        rm -f "$DEPLOY_ZIP"
         echo -e "${RED}❌ Failed to deploy $func_name${NC}"
         exit 1
     fi
-    
+
+    rm -f "$DEPLOY_ZIP"
+    DEPLOYED_FUNCTIONS+=("$func_name")
+    write_deploy_status "deploying" "$func_name" "true"
+    echo -e "${GREEN}✅ $func_name deployed successfully${NC}"
+
+    if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
+        CURRENT_DEPLOY_TARGET="$func_name:scaling-policy"
+        write_deploy_status "post-deploy" "$CURRENT_DEPLOY_TARGET" "true"
+        yc serverless function set-scaling-policy \
+            --name "$func_name" \
+            --tag '$latest' \
+            --zone-instances-limit "$API_ZONE_INSTANCES_LIMIT" \
+            --zone-requests-limit "$API_ZONE_REQUESTS_LIMIT"
+        echo -e "${GREEN}✅ $func_name scaling policy: instances=$API_ZONE_INSTANCES_LIMIT requests=$API_ZONE_REQUESTS_LIMIT per zone${NC}"
+    fi
+
     cd "$SCRIPT_DIR"
 }
 
@@ -780,6 +833,7 @@ while IFS= read -r func_name; do
     [ -n "$func_name" ] && PREDEPLOY_TARGETS+=("$func_name")
 done < <(selected_functions)
 
+write_deploy_status "tests" "" "false"
 echo -e "${BLUE}🧪 Running mandatory pre-deploy function gate...${NC}"
 "$TEST_SCRIPT" "${PREDEPLOY_TARGETS[@]}"
 
@@ -804,27 +858,54 @@ if [ "$CAPACITY_REQUIRED" = true ]; then
     fi
 fi
 
+echo -e "${BLUE}🔎 Preflighting all deployment targets before the first mutation...${NC}"
+for func_name in "${PREDEPLOY_TARGETS[@]}"; do
+    CURRENT_DEPLOY_TARGET="$func_name"
+    write_deploy_status "preflight" "$CURRENT_DEPLOY_TARGET" "false"
+    preflight_function "$func_name"
+done
+CURRENT_DEPLOY_TARGET=""
+write_deploy_status "preflight-complete" "" "false"
+
 # Main execution
 SHOULD_UPDATE_GATEWAY=false
-if [ -n "$TARGET_FUNC" ]; then
-    # Deploy single function
-    deploy_function "$TARGET_FUNC"
-    if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
+IS_GROUP_DEPLOY=false
+if [ ${#TARGET_FUNCTIONS[@]} -eq 0 ]; then
+    IS_GROUP_DEPLOY=true
+fi
+
+echo -e "${YELLOW}🚀 Deploy selection: $(deployment_label)${NC}"
+for func_name in "${PREDEPLOY_TARGETS[@]}"; do
+    if is_function_skipped "$func_name"; then
+        continue
+    fi
+
+    CURRENT_DEPLOY_TARGET="$func_name"
+    if [ ${#DEPLOYED_FUNCTIONS[@]} -gt 0 ] && [ "$DRY_RUN" != true ]; then
+        write_deploy_status "deploying" "$CURRENT_DEPLOY_TARGET" "true"
+    else
+        write_deploy_status "deploying" "$CURRENT_DEPLOY_TARGET" "false"
+    fi
+
+    deploy_function "$func_name"
+
+    if [ "$func_name" = "heys-api-auth" ]; then
         SHOULD_UPDATE_GATEWAY=true
     fi
-    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
+    if [ "$IS_GROUP_DEPLOY" != true ] && [ "$func_name" = "heys-cron-speechkit-transcribe" ] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
+        CURRENT_DEPLOY_TARGET="speechkit-trigger"
+        write_deploy_status "post-deploy" "$CURRENT_DEPLOY_TARGET" "true"
         ensure_speechkit_trigger
     fi
+done
+CURRENT_DEPLOY_TARGET=""
+if [ "$DRY_RUN" = true ]; then
+    write_deploy_status "dry-run-complete" "" "false"
 else
-    echo -e "${YELLOW}🚀 Deploy group: $DEPLOY_GROUP${NC}"
-    while IFS= read -r func_name; do
-        [ -z "$func_name" ] && continue
-        deploy_function "$func_name"
-    done < <(selected_functions)
-    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
-        ensure_speechkit_trigger
-    fi
-    
+    write_deploy_status "deploy-complete" "" "true"
+fi
+
+if [ "$IS_GROUP_DEPLOY" = true ]; then
     echo ""
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     if [ "$DRY_RUN" = true ]; then
@@ -832,27 +913,36 @@ else
     else
         echo -e "${GREEN}✅ Deploy group completed successfully: $DEPLOY_GROUP${NC}"
     fi
-	    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-	    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]]; then
-	        SHOULD_UPDATE_GATEWAY=true
-	    fi
-	    if [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$SKIP_HEALTH" != true ]; then
-	        echo ""
-	        echo -e "${BLUE}🧪 Running automation canaries...${NC}"
-	        if node "$SCRIPT_DIR/check-heys-ops-status.cjs" --canary --strict; then
-	            echo -e "${GREEN}✅ Automation canaries PASSED${NC}"
-	            record_deploy_receipt "ok" "true"
-	        else
-	            echo -e "${RED}❌ Automation canaries FAILED${NC}"
-	            record_deploy_receipt "failed" "false"
-	            exit 1
-	        fi
-	    elif [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
-	        record_deploy_receipt "ok" "null"
-	    fi
-	fi
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]]; then
+        SHOULD_UPDATE_GATEWAY=true
+    fi
+    if [[ "$DEPLOY_GROUP" == "api" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$CI_MODE" != true ]; then
+        CURRENT_DEPLOY_TARGET="speechkit-trigger"
+        write_deploy_status "post-deploy" "$CURRENT_DEPLOY_TARGET" "true"
+        ensure_speechkit_trigger
+    fi
+    if [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ] && [ "$SKIP_HEALTH" != true ]; then
+        echo ""
+        echo -e "${BLUE}🧪 Running automation canaries...${NC}"
+        CURRENT_DEPLOY_TARGET="automation-canaries"
+        write_deploy_status "post-deploy" "$CURRENT_DEPLOY_TARGET" "true"
+        if node "$SCRIPT_DIR/check-heys-ops-status.cjs" --canary --strict; then
+            echo -e "${GREEN}✅ Automation canaries PASSED${NC}"
+            record_deploy_receipt "ok" "true"
+        else
+            echo -e "${RED}❌ Automation canaries FAILED${NC}"
+            record_deploy_receipt "failed" "false"
+            exit 1
+        fi
+    elif [[ "$DEPLOY_GROUP" == "automations" || "$DEPLOY_GROUP" == "all" ]] && [ "$DRY_RUN" != true ]; then
+        record_deploy_receipt "ok" "null"
+    fi
+fi
 
 if [ "$SHOULD_UPDATE_GATEWAY" = true ] && [ "$DRY_RUN" != true ]; then
+    CURRENT_DEPLOY_TARGET="api-gateway"
+    write_deploy_status "post-deploy" "$CURRENT_DEPLOY_TARGET" "true"
     update_api_gateway
 fi
 
@@ -862,6 +952,8 @@ if [ "$DRY_RUN" = true ]; then
 elif [ "$SKIP_HEALTH" = true ]; then
     echo -e "${YELLOW}⏭️  Skipping health check (--skip-health)${NC}"
 else
+    CURRENT_DEPLOY_TARGET="post-deploy-health"
+    write_deploy_status "verification" "$CURRENT_DEPLOY_TARGET" "true"
     echo ""
     echo -e "${BLUE}⏳ Waiting 10s for function warmup...${NC}"
     sleep 10
@@ -888,3 +980,6 @@ else
         echo -e "${YELLOW}⚠️  health-check.sh not found — skipping post-deploy verification${NC}"
     fi
 fi
+
+CURRENT_DEPLOY_TARGET=""
+write_deploy_status "complete" "" "false"

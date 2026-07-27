@@ -54,3 +54,24 @@ test('health workflow keeps four daily runs and uses fail-closed sender', async 
   const alertStep = workflow.slice(workflow.indexOf('- name: Send Telegram Alert on Failure'));
   assert.doesNotMatch(alertStep.split('- name: Summary')[0], /continue-on-error:/);
 });
+
+test('cloud function deploy is serialized and reports fail-closed rollout details', async () => {
+  const workflow = await readFile(
+    new URL('../../../.github/workflows/cloud-functions-deploy.yml', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(workflow, /concurrency:\s+group: cloud-functions-production\s+cancel-in-progress: false/);
+  assert.equal((workflow.match(/node scripts\/ci\/send-telegram-alert\.mjs/g) || []).length, 2);
+  assert.doesNotMatch(workflow, /api\.telegram\.org/);
+  assert.doesNotMatch(workflow, /secrets\.VAPID_PRIVATE_KEY/);
+  assert.match(workflow, /id: deployment-outcome/);
+  assert.match(workflow, /Failed target: `\$\{\{ steps\.deployment-outcome\.outputs\.failed_target \}\}`/);
+  assert.match(workflow, /Already deployed: `\$\{\{ steps\.deployment-outcome\.outputs\.deployed_functions \}\}`/);
+  assert.match(workflow, /Partial rollout: `\$\{\{ steps\.deployment-outcome\.outputs\.partial_rollout \}\}`/);
+  assert.match(
+    workflow,
+    /if \[ "\$failed_target" != "none" \] && \[ "\$deployed_functions" != "none" \]; then\s+partial_rollout="true"/,
+  );
+  assert.doesNotMatch(workflow, /deploy manually/i);
+});

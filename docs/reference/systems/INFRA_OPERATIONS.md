@@ -1,10 +1,10 @@
 # Инфраструктура и эксплуатация
 
-> **Статус:** repository contracts и YC functions/triggers проверены 2026-07-25
-> **Охват:** frontend delivery, Cloud Functions deploy, gateway, secrets,
-> database access, monitoring и release evidence **Не подтверждено:**
-> DNS/VM/CDN, сертификаты, GitHub secrets, последние workflow runs и публикация
-> изменений этой итерации
+> **Статус:** repository deploy contracts проверены 2026-07-27; YC
+> functions/triggers проверены 2026-07-25 **Охват:** frontend delivery, Cloud
+> Functions deploy, gateway, secrets, database access, monitoring и release
+> evidence **Не подтверждено:** DNS/VM/CDN, сертификаты, GitHub secrets,
+> последние workflow runs и публикация изменений этой итерации
 
 ## Карта production-доставки
 
@@ -18,6 +18,7 @@ push main
   │    → build-meta verification
   └─ cloud-functions-deploy.yml (только подходящие backend paths)
        → deploy-all.sh
+       → preflight всех выбранных функций
        → Cloud Function versions
        → optional API Gateway update
        → health/canary/deploy receipt
@@ -71,23 +72,29 @@ automations. Восемнадцать участвуют в auto-deploy; уда�
 до deploy.
 
 `deploy-all.sh` — общий deploy entrypoint. Он читает из каталога группы
-`api`/`automations`/`all`, поддерживает одну функцию, валидирует `.env`,
-создаёт/обновляет versions и умеет обновлять gateway. `test-functions.sh` читает
-тот же полный список, отдельного ручного inventory больше нет.
+`api`/`automations`/`all`, поддерживает одну или несколько явно выбранных
+функций, валидирует `.env`, создаёт/обновляет versions и умеет обновлять
+gateway. `test-functions.sh` читает тот же полный список, отдельного ручного
+inventory больше нет.
 
 Deploy script передаёт идентификаторы Lockbox и placeholders/hashes, а guard
-отказывается публиковать raw token/password/private key в function environment.
-После прохода он выполняет health/canary согласно выбранному режиму и пишет
-deploy receipt best effort. Наличие новой function version не гарантирует, что
-gateway уже указывает на нужную функцию: gateway spec обновляется отдельным
-шагом/условием.
+отказывается публиковать raw token/password/private key/API credential в
+function environment. До первой cloud mutation скрипт preflight'ит весь
+выбранный набор: source/package, required config и итоговые env flags. Во время
+rollout он пишет в runner-local status-файл только фазу, текущую функцию и уже
+опубликованные имена; это позволяет отличить preflight failure от partial
+rollout без попадания секретов в telemetry. После прохода он выполняет
+health/canary согласно выбранному режиму и пишет deploy receipt best effort.
+Наличие новой function version не гарантирует, что gateway уже указывает на
+нужную функцию: gateway spec обновляется отдельным шагом/условием.
 
 GitHub workflow следит за `yandex-cloud-functions/heys-*/**`, shared/runtime
 tooling и gateway spec. Оба шага — predeploy tests и фактический deploy — отдают
 список изменённых файлов одному classifier. Конкретный каталог выбирает одну
 функцию, общий файл выбирает все 18 auto-deploy targets, неизвестная или явно
 отключённая функция завершает workflow ошибкой. Gateway-only изменение не
-превращается в полный deploy.
+превращается в полный deploy. Все production backend runs сериализованы одной
+concurrency group без отмены уже начавшегося rollout.
 
 Перед публикацией backend workflow fail-closed проверяет ledger production
 миграций: при любой pending managed migration deploy не начинается. После
@@ -104,7 +111,9 @@ release-flow сохраняет существующий explicit ensure для 
 
 Runtime code загружает DB/App/S3 secrets из Lockbox через общую модель overlay.
 Локальный `.env`/GitHub secrets нужны deploy tooling, но raw production secrets
-не должны становиться постоянными function env values.
+не должны становиться постоянными function env values. VAPID private key
+передаётся только как App Lockbox placeholder; S3, Telegram, SpeechKit,
+YooKassa, SMS и internal cron credentials не получают raw env fallback.
 
 Production CORS и mobile return-host allowlists содержат только домены HEYS на
 Yandex Cloud (`heyslab.ru`, `app.heyslab.ru`, статический origin) и явно
@@ -136,7 +145,10 @@ partial либо failed backup завершают шаг ошибкой; в ув
 Для scheduled/push failure Telegram — обязательная часть внешнего monitor:
 GitHub Secrets хранят отдельную out-of-band копию support token/chat id, а
 `scripts/ci/send-telegram-alert.mjs` fail-closed проверяет наличие secrets,
-HTTP-ответ и `ok: true` Telegram API. Manual run намеренно не отправляет alert.
+HTTP-ответ и `ok: true` Telegram API. Тот же sender используется deploy workflow
+для success/failure; failure alert содержит SHA, mode, phase, failed target,
+список уже опубликованных функций и `partial_rollout`. Manual health run
+намеренно не отправляет alert.
 
 На момент live-проверки в YC активны все 17 ожидаемых HEYS timer triggers и все
 9 опубликованных automation functions. Десять старых heartbeat и backup были
@@ -161,11 +173,13 @@ versioned seed migration и отдельно разрешённого production
    неявный commit агентом.
 10. Backend deploy останавливается при отставшем migration ledger или отсутствии
     production Gateway-маршрутов desired-state messenger API.
-11. Ручной scoped web deploy и CI проверяют bundle/hash-контракт через
+11. Все выбранные backend targets проходят общий preflight до первой cloud
+    mutation; параллельные production rollout сериализованы.
+12. Ручной scoped web deploy и CI проверяют bundle/hash-контракт через
     `scripts/web-deploy-scope.mjs`. Перед ручной публикацией показывается полный
     выбранный scope; после подтверждения любое новое source-изменение прерывает
     upload. Решение о допустимости совместного scope остаётся за пользователем.
-12. `scripts/deploy-frontend.sh` — compatibility entrypoint к
+13. `scripts/deploy-frontend.sh` — compatibility entrypoint к
     `scripts/deploy-web-scoped.sh`, а не отдельный build/upload flow. Не legacy-
     изменения (CSS/assets/config) fail-closed направляются в canonical full CI
     deploy. `scripts/deploy-prod-local.sh` также запускает scoped flow по
@@ -190,19 +204,19 @@ versioned seed migration и отдельно разрешённого production
 
 ## Facts Table
 
-| ID  | Утверждение                                                                                               | Проверка                                                                                                                                                                                                                                                          | Статус                                               |
-| --- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| I1  | Frontend workflow сериализует main deploy и использует production build-meta baseline                     | `sed -n '1,105p' .github/workflows/deploy-yandex.yml`                                                                                                                                                                                                             | проверено 2026-07-17                                 |
-| I2  | Workflow загружает PWA/demo/landing в три bucket                                                          | `rg -n 'YC*BUCKET*                                                                                                                        \| aws s3 (sync                                         \| cp)' .github/workflows/deploy-yandex.yml`                    | проверено 2026-07-17                                 |
-| I3  | Явный inventory полностью покрывает 19 source functions; deploy/test scripts читают его                   | `node yandex-cloud-functions/function-inventory.cjs --verify && node --test yandex-cloud-functions/__tests__/function-inventory.test.cjs`                                                                                                                         | проверено 2026-07-18; 10 inventory tests             |
-| I4  | Deploy guard запрещает plaintext secret env                                                               | `sed -n '200,230p' yandex-cloud-functions/deploy-all.sh`                                                                                                                                                                                                          | проверено 2026-07-17                                 |
-| I5  | Gateway update и ops canary являются отдельными deploy steps                                              | `rg -n 'api-gateway update                                                                                                                \| check-heys-ops-status                                \| record_deploy_receipt' yandex-cloud-functions/deploy-all.sh` | проверено 2026-07-17                                 |
-| I6  | Backend workflow охватывает API и automation paths и использует один fail-closed classifier в test/deploy | `sed -n '1,225p' .github/workflows/cloud-functions-deploy.yml`                                                                                                                                                                                                    | исправлено и проверено 2026-07-18                    |
-| I7  | Health workflow запускается по schedule 4 раза в сутки и имеет независимый strict DB dead-man             | `sed -n '1,235p' .github/workflows/api-health-monitor.yml`                                                                                                                                                                                                        | исправлено и проверено 2026-07-26                    |
-| I8  | Production psql wrapper использует Lockbox и verify-full TLS                                              | `sed -n '1,35p' scripts/db/psql.sh`                                                                                                                                                                                                                               | проверено 2026-07-17                                 |
-| I9  | Старый backend README заявляет только семь функций и 24/7 monitor                                         | `sed -n '1,75p' yandex-cloud-functions/README.md`                                                                                                                                                                                                                 | проверено 2026-07-17; помечено устаревшим            |
-| I10 | Infra README содержит snapshot date и истёкшую относительно аудита дату SSL                               | `sed -n '1,35p' infra/README.md`                                                                                                                                                                                                                                  | проверено 2026-07-17; live certificate не проверен   |
-| I11 | Production соответствует 9 automation functions и 17 ожидаемым active triggers                            | `yc serverless function list --format json`; `yc serverless trigger list --format json`; `evaluateTrigger`                                                                                                                                                        | live read-only проверка 2026-07-18; расхождений нет  |
-| I12 | Dead-man fail-closed видит шесть новых heartbeat как missing до deploy, backup и прежние строки свежие    | `node yandex-cloud-functions/check-heys-ops-status.cjs --dead-man --strict --json`                                                                                                                                                                                | ожидаемый exit 1; production не изменялся 2026-07-18 |
-| I13 | Seed migration создаёт все шесть heartbeat с порогами, не обновляя существующий `last_ok_at`              | `sed -n '1,35p' database/2026-07-18_automation_worker_heartbeats.sql`                                                                                                                                                                                             | проверено 2026-07-18; migration не применялась       |
-| I14 | GitHub health alert fail-closed проверяет secrets, HTTP и Telegram `ok`                                   | `node --test scripts/ci/__tests__/send-telegram-alert.test.mjs`                                                                                                                                                                                                   | source проверен 2026-07-26                           |
+| ID  | Утверждение                                                                                            | Проверка                                                                                                                                                                                                                                                          | Статус                                               |
+| --- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| I1  | Frontend workflow сериализует main deploy и использует production build-meta baseline                  | `sed -n '1,105p' .github/workflows/deploy-yandex.yml`                                                                                                                                                                                                             | проверено 2026-07-17                                 |
+| I2  | Workflow загружает PWA/demo/landing в три bucket                                                       | `rg -n 'YC*BUCKET*                                                                                                                        \| aws s3 (sync                                         \| cp)' .github/workflows/deploy-yandex.yml`                    | проверено 2026-07-17                                 |
+| I3  | Явный inventory полностью покрывает 19 source functions; deploy/test scripts читают его                | `node yandex-cloud-functions/function-inventory.cjs --verify && node --test yandex-cloud-functions/__tests__/function-inventory.test.cjs`                                                                                                                         | проверено 2026-07-27; 11 inventory tests             |
+| I4  | Deploy guard запрещает plaintext secret env, а весь target set preflight'ится до mutation              | `node --test yandex-cloud-functions/__tests__/serverless-capacity-contract.test.cjs`                                                                                                                                                                              | проверено 2026-07-27                                 |
+| I5  | Gateway update и ops canary являются отдельными deploy steps                                           | `rg -n 'api-gateway update                                                                                                                \| check-heys-ops-status                                \| record_deploy_receipt' yandex-cloud-functions/deploy-all.sh` | проверено 2026-07-17                                 |
+| I6  | Backend workflow охватывает API/automation, сериализует rollout и репортит partial deployment          | `node --test yandex-cloud-functions/__tests__/function-inventory.test.cjs scripts/ci/__tests__/send-telegram-alert.test.mjs`                                                                                                                                      | source исправлен и проверен 2026-07-27; не deployed  |
+| I7  | Health workflow запускается по schedule 4 раза в сутки и имеет независимый strict DB dead-man          | `sed -n '1,235p' .github/workflows/api-health-monitor.yml`                                                                                                                                                                                                        | исправлено и проверено 2026-07-26                    |
+| I8  | Production psql wrapper использует Lockbox и verify-full TLS                                           | `sed -n '1,35p' scripts/db/psql.sh`                                                                                                                                                                                                                               | проверено 2026-07-17                                 |
+| I9  | Старый backend README заявляет только семь функций и 24/7 monitor                                      | `sed -n '1,75p' yandex-cloud-functions/README.md`                                                                                                                                                                                                                 | проверено 2026-07-17; помечено устаревшим            |
+| I10 | Infra README содержит snapshot date и истёкшую относительно аудита дату SSL                            | `sed -n '1,35p' infra/README.md`                                                                                                                                                                                                                                  | проверено 2026-07-17; live certificate не проверен   |
+| I11 | Production соответствует 9 automation functions и 17 ожидаемым active triggers                         | `yc serverless function list --format json`; `yc serverless trigger list --format json`; `evaluateTrigger`                                                                                                                                                        | live read-only проверка 2026-07-18; расхождений нет  |
+| I12 | Dead-man fail-closed видит шесть новых heartbeat как missing до deploy, backup и прежние строки свежие | `node yandex-cloud-functions/check-heys-ops-status.cjs --dead-man --strict --json`                                                                                                                                                                                | ожидаемый exit 1; production не изменялся 2026-07-18 |
+| I13 | Seed migration создаёт все шесть heartbeat с порогами, не обновляя существующий `last_ok_at`           | `sed -n '1,35p' database/2026-07-18_automation_worker_heartbeats.sql`                                                                                                                                                                                             | проверено 2026-07-18; migration не применялась       |
+| I14 | GitHub health alert fail-closed проверяет secrets, HTTP и Telegram `ok`                                | `node --test scripts/ci/__tests__/send-telegram-alert.test.mjs`                                                                                                                                                                                                   | source проверен 2026-07-26                           |

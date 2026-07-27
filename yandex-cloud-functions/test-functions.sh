@@ -42,6 +42,7 @@ export VAPID_SUBJECT="${VAPID_SUBJECT:-mailto:contract-test@heyslab.ru}"
 
 node --test "$SCRIPT_DIR/shared/__tests__/kv-payload-contracts.test.cjs"
 node --test "$SCRIPT_DIR/shared/__tests__/serverless-capacity-guard.test.cjs"
+node --test "$SCRIPT_DIR/__tests__/function-inventory.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-policy.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-contract.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-operations.test.cjs"

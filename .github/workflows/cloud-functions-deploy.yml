@@ -22,6 +22,10 @@ on:
         type: string
         default: "all"
 
+concurrency:
+  group: cloud-functions-production
+  cancel-in-progress: false
+
 jobs:
   predeploy-tests:
     name: Pre-deploy function tests (Node.js 22)
@@ -129,12 +133,8 @@ jobs:
           PG_SSL: ${{ secrets.PG_SSL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-          SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
-          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
-          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
         run: |
           write_env_var() {
             local key="$1"
@@ -154,12 +154,8 @@ jobs:
           write_env_var SESSION_SECRET "$SESSION_SECRET"
           write_env_var TELEGRAM_BOT_TOKEN "__IN_LOCKBOX__heys-app-secrets__"
           write_env_var TELEGRAM_CHAT_ID "__IN_LOCKBOX__heys-app-secrets__"
-          write_env_var SMS_API_KEY "$SMS_API_KEY"
           write_env_var VAPID_PUBLIC_KEY "$VAPID_PUBLIC_KEY"
-          write_env_var VAPID_PRIVATE_KEY "$VAPID_PRIVATE_KEY"
           write_env_var VAPID_SUBJECT "$VAPID_SUBJECT"
-          write_env_var S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"
-          write_env_var S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
           write_env_var YC_FOLDER_ID "${{ secrets.YC_FOLDER_ID }}"
 
       - name: Verify production database migrations are current
@@ -195,8 +191,11 @@ jobs:
             >> "$GITHUB_OUTPUT"
 
       - name: Deploy functions
+        id: deploy-functions
         shell: bash
         working-directory: yandex-cloud-functions
+        env:
+          HEYS_DEPLOY_STATUS_FILE: ${{ runner.temp }}/heys-cloud-deploy-status
         run: |
           chmod +x deploy-all.sh
           MANUAL_FUNCTION="${{ inputs.function_name }}"
@@ -209,9 +208,7 @@ jobs:
           elif [ "${{ steps.deployment-target.outputs.mode }}" = "selective" ]; then
             IFS=',' read -r -a FUNCTIONS <<< "${{ steps.deployment-target.outputs.functions }}"
             echo "🎯 Selective deploy: ${FUNCTIONS[*]}"
-            for func_name in "${FUNCTIONS[@]}"; do
-              ./deploy-all.sh "$func_name" --ci --skip-health
-            done
+            ./deploy-all.sh "${FUNCTIONS[@]}" --ci --skip-health
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "🚀 Deploying all functions (manual all)"
             ./deploy-all.sh --ci --skip-health
@@ -223,6 +220,7 @@ jobs:
           fi
 
       - name: Update API Gateway
+        id: update-gateway
         if: steps.deployment-target.outputs.gateway_spec_changed == 'true' || (github.event_name == 'workflow_dispatch' && (inputs.function_name == '' || inputs.function_name == 'all'))
         shell: bash
         working-directory: yandex-cloud-functions
@@ -232,6 +230,7 @@ jobs:
             --spec=api-gateway-spec.yaml
 
       - name: Verify deployment
+        id: verify-deployment
         run: |
           retry_http_check() {
             local name="$1"
@@ -360,39 +359,95 @@ jobs:
 
           echo "✅ Deployment verified successfully"
 
+      - name: Collect deployment outcome
+        id: deployment-outcome
+        if: always()
+        shell: bash
+        env:
+          STATUS_FILE: ${{ runner.temp }}/heys-cloud-deploy-status
+          JOB_STATUS: ${{ job.status }}
+          DEPLOY_OUTCOME: ${{ steps.deploy-functions.outcome }}
+          GATEWAY_OUTCOME: ${{ steps.update-gateway.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify-deployment.outcome }}
+          RESOLVED_MODE: ${{ steps.deployment-target.outputs.mode }}
+          MANUAL_FUNCTION: ${{ inputs.function_name }}
+        run: |
+          read_status() {
+            local key="$1"
+            if [ ! -f "$STATUS_FILE" ]; then
+              return 0
+            fi
+            awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$STATUS_FILE"
+          }
+
+          phase="$(read_status phase)"
+          current_target="$(read_status current_target)"
+          deployed_functions="$(read_status deployed_functions)"
+          partial_rollout="$(read_status partial_rollout)"
+          deployment_mode="$(read_status deployment_mode)"
+
+          phase="${phase:-not-started}"
+          deployed_functions="${deployed_functions:-none}"
+          partial_rollout="${partial_rollout:-false}"
+          if [ -z "$deployment_mode" ]; then
+            deployment_mode="${RESOLVED_MODE:-${MANUAL_FUNCTION:-unknown}}"
+          fi
+
+          failed_target="none"
+          if [ "$DEPLOY_OUTCOME" = "failure" ]; then
+            failed_target="${current_target:-$phase}"
+          elif [ "$GATEWAY_OUTCOME" = "failure" ]; then
+            failed_target="api-gateway"
+          elif [ "$VERIFY_OUTCOME" = "failure" ]; then
+            failed_target="deployment-verification"
+          elif [ "$JOB_STATUS" = "failure" ]; then
+            failed_target="pre-deploy-job-step"
+          fi
+
+          if [ "$failed_target" != "none" ] && [ "$deployed_functions" != "none" ]; then
+            partial_rollout="true"
+          fi
+
+          {
+            echo "phase=$phase"
+            echo "deployment_mode=$deployment_mode"
+            echo "failed_target=$failed_target"
+            echo "deployed_functions=$deployed_functions"
+            echo "partial_rollout=$partial_rollout"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Notify Telegram on Success
         if: success() && (github.event_name == 'workflow_dispatch' || steps.deployment-target.outputs.mode != 'none')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 100)
-          MESSAGE="✅ *Cloud Functions Deployed*%0A%0A"
-          MESSAGE="${MESSAGE}📦 Commit: \`${COMMIT_MSG}\`%0A"
-          MESSAGE="${MESSAGE}👤 Author: ${{ github.actor }}%0A"
-          MESSAGE="${MESSAGE}🕐 Time: $(date -u +'%H:%M UTC')%0A"
-          MESSAGE="${MESSAGE}🔗 [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          TELEGRAM_MESSAGE: |
+            ✅ *Cloud Functions Deployed*
 
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=Markdown" \
-            -d "disable_web_page_preview=true"
+            📦 SHA: `${{ github.sha }}`
+            👤 Author: `${{ github.actor }}`
+            🎯 Mode: `${{ steps.deployment-outcome.outputs.deployment_mode }}`
+            🔗 [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        run: |
+          node scripts/ci/send-telegram-alert.mjs
 
       - name: Notify Telegram on Failure
         if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          MESSAGE="🚨 *Cloud Functions Deployment Failed*%0A%0A"
-          MESSAGE="${MESSAGE}❌ Auto-deployment failed%0A"
-          MESSAGE="${MESSAGE}👤 Author: ${{ github.actor }}%0A"
-          MESSAGE="${MESSAGE}🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})%0A%0A"
-          MESSAGE="${MESSAGE}📝 Action: Check logs and deploy manually"
+          TELEGRAM_MESSAGE: |
+            🚨 *Cloud Functions Deployment Failed*
 
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=Markdown" \
-            -d "disable_web_page_preview=true"
+            📦 SHA: `${{ github.sha }}`
+            👤 Author: `${{ github.actor }}`
+            🎯 Mode: `${{ steps.deployment-outcome.outputs.deployment_mode }}`
+            🧭 Phase: `${{ steps.deployment-outcome.outputs.phase }}`
+            ❌ Failed target: `${{ steps.deployment-outcome.outputs.failed_target }}`
+            ✅ Already deployed: `${{ steps.deployment-outcome.outputs.deployed_functions }}`
+            ⚠️ Partial rollout: `${{ steps.deployment-outcome.outputs.partial_rollout }}`
+            🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            📝 Action: inspect the failed step and deployment state before retrying.
+        run: |
+          node scripts/ci/send-telegram-alert.mjs

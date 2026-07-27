@@ -41,14 +41,48 @@ test('deploy gate syncs the guard and refuses rpc/rest deploy below capacity pol
   assert.match(source, /--zone-requests-limit/);
 });
 
-test('deploy passes database, JWT and session secrets through Lockbox placeholders only', () => {
+test('deploy passes managed runtime secrets through Lockbox only', () => {
   const source = read('deploy-all.sh');
   assert.match(source, /PG_PASSWORD=__IN_LOCKBOX__heys-database__/);
   assert.match(source, /JWT_SECRET=__IN_LOCKBOX__heys-app-secrets__/);
   assert.match(source, /SESSION_SECRET=__IN_LOCKBOX__heys-app-secrets__/);
+  assert.match(source, /VAPID_PRIVATE_KEY=__IN_LOCKBOX__heys-app-secrets__/);
   assert.doesNotMatch(source, /for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD PG_SSL/);
   assert.doesNotMatch(source, /_add_required JWT_SECRET/);
   assert.doesNotMatch(source, /_add_required SESSION_SECRET/);
+  assert.doesNotMatch(source, /for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT/);
+  assert.doesNotMatch(source, /for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY/);
+  assert.doesNotMatch(source, /for k in S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY/);
+  assert.doesNotMatch(source, /for k in YUKASSA_SHOP_ID YUKASSA_SECRET_KEY/);
+  assert.doesNotMatch(source, /_add SMS_API_KEY/);
+});
+
+test('deploy preflights every selected target before the first cloud mutation', () => {
+  const source = read('deploy-all.sh');
+  const preflightLoop = source.indexOf('preflight_function "$func_name"');
+  const deployLoop = source.indexOf('deploy_function "$func_name"');
+  const deployFunction = source.slice(
+    source.indexOf('# Deploy a single prevalidated function'),
+    source.indexOf('update_api_gateway()'),
+  );
+
+  assert.notEqual(preflightLoop, -1);
+  assert.notEqual(deployLoop, -1);
+  assert.ok(preflightLoop < deployLoop);
+  assert.ok(
+    deployFunction.indexOf('validated_env_flags_for "$func_name"')
+      < deployFunction.indexOf('yc serverless function version create'),
+  );
+  assert.ok(
+    deployFunction.indexOf('write_deploy_status "deploying" "$func_name" "true"')
+      < deployFunction.indexOf('yc serverless function version create'),
+  );
+  assert.match(source, /PREVALIDATED_ENV_FLAGS/);
+  assert.match(source, /write_deploy_status "deploying" "\$CURRENT_DEPLOY_TARGET" "true"/);
+  assert.match(source, /write_deploy_status "post-deploy" "\$CURRENT_DEPLOY_TARGET" "true"/);
+  assert.match(source, /write_deploy_status "verification" "\$CURRENT_DEPLOY_TARGET" "true"/);
+  assert.match(source, /deployed_functions=%s/);
+  assert.match(source, /partial_rollout=%s/);
 });
 
 test('deploy workflow keeps Telegram plaintext out of function env', () => {
@@ -64,6 +98,8 @@ test('deploy workflow keeps Telegram plaintext out of function env', () => {
 
   assert.match(workflow, /- "\.github\/workflows\/cloud-functions-deploy\.yml"/);
   assert.doesNotMatch(createEnvStep, /secrets\.TELEGRAM_(?:BOT_TOKEN|CHAT_ID)/);
+  assert.doesNotMatch(createEnvStep, /secrets\.VAPID_PRIVATE_KEY/);
+  assert.doesNotMatch(createEnvStep, /write_env_var VAPID_PRIVATE_KEY/);
   assert.match(
     createEnvStep,
     /write_env_var TELEGRAM_BOT_TOKEN "__IN_LOCKBOX__heys-app-secrets__"/,

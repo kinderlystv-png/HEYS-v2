@@ -97,7 +97,7 @@ test('deploy workflow routes API and automation changes through the shared class
 
 test('health workflow schedules an independent strict dead-man check', () => {
   const workflow = readFileSync(path.resolve(ROOT, '../.github/workflows/api-health-monitor.yml'), 'utf8');
-  assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
+  assert.match(workflow, /cron: "0 \*\/6 \* \* \*"/);
   assert.match(workflow, /if: always\(\)[\s\S]*--dead-man --strict --json/);
   assert.match(workflow, /PGPASSWORD: \$\{\{ secrets\.PG_PASSWORD \}\}/);
   assert.match(workflow, /PGSSLROOTCERT: \$\{\{ github\.workspace \}\}\/yandex-cloud-functions\/certs\/root\.crt/);
