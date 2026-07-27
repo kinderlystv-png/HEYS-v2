@@ -13,7 +13,8 @@ Compact agent reference. Detailed architecture in
 инварианта или подтверждённого риска; после правки запускай
 `pnpm docs:reference:check`.
 
-Tone, communication length, adjacent observations — см. user-level AGENTS.md.
+Tone, implementation scope, shared workspace, verification budget, prompt rules
+и adjacent observations — см. user-level AGENTS.md.
 
 ---
 
@@ -25,43 +26,6 @@ Tone, communication length, adjacent observations — см. user-level AGENTS.md
 - В ответ на «что предлагаешь» — одно предложение «предлагаю X, потому что Y» +
   вопрос «делать?». Не вываливать варианты с заголовками и таблицей сравнения.
 
-## Coding guardrails
-
-- Не делай молчаливых предположений: если задача допускает несколько трактовок,
-  явно назови их; если без ответа высок риск, сначала спроси.
-- Перед реализацией оцени реальную цель задачи и пиши минимальный качественный
-  код, который закрывает её без потери надёжности, поддержки, безопасности и
-  пользовательского качества. Качественное решение не равно сложное решение.
-- Не добавляй speculative flexibility, новые абстракции, универсальные
-  механизмы, конфиги, слои, future-proofing, расширяемость "на потом" или
-  крупные рефакторы, если текущий scope этого не требует.
-- Предпочтение по умолчанию: локальная правка → переиспользование существующего
-  паттерна → небольшая новая функция → новая архитектура.
-- Для микрозадач не пиши отдельный план: просто сделай минимальную качественную
-  правку и проверь её соразмерно риску.
-- Для нетривиальных задач перед кодом коротко зафиксируй: что должно измениться;
-  какой минимальный качественный результат закрывает задачу; почему выбранное
-  решение достаточно простое; какой более сложный вариант отклонён как
-  избыточный; чем будет проверен результат.
-- Новая архитектура допустима только если простое решение создаёт явную
-  хрупкость, дублирование, нарушение существующих контрактов, проблемы
-  безопасности или заметный риск будущих ошибок.
-- Правки должны быть хирургическими: меняй только строки, которые прямо нужны
-  для задачи; не форматируй и не рефакторь соседний код по пути.
-- Чисти только последствия своей правки: новые unused
-  imports/variables/functions убирай, старый unrelated dead code не трогай без
-  отдельной команды.
-- Для нетривиальных задач заранее формулируй проверяемый критерий успеха: "что
-  должно измениться" + "какой тест/команда/ручной сценарий это доказывает".
-- Проверки выбирай по риску. Для микроправок текста/CSS, удаления только что
-  добавленного UI-слоя или отката своей последней правки не запускай полный
-  `lint`/`tsc`/test/build цикл по привычке; достаточно точечного `rg`,
-  `git diff` по затронутому файлу и визуального smoke. Полные проверки нужны,
-  когда меняются типы, контракты, бизнес-логика, сборка, роутинг, данные,
-  безопасность или несколько связанных файлов.
-- Если всё же запускаешь тяжёлую проверку для маленькой правки, сначала коротко
-  объясни пользователю, какой конкретный риск она закрывает.
-
 ## Shared policy with Claude
 
 - Общие safety/architecture правила должны совпадать с [`CLAUDE.md`](CLAUDE.md):
@@ -71,36 +35,16 @@ Tone, communication length, adjacent observations — см. user-level AGENTS.md
   commit/staging под commit/push/PR/publication выполняются только по отдельной
   прямой команде пользователя. `CLAUDE.md` может описывать `pnpm ship` как
   shipping-механику, но не как разрешение ship'ить без команды. Если в правилах
-  найден конфликт, сначала синхронизируй общий safety-инвариант, а затем оставь
-  явное agent-specific исключение.
+  найден конфликт и оба policy-файла входят в текущий scope, сначала
+  синхронизируй общий safety-инвариант, затем оставь явное agent-specific
+  исключение. Иначе не расширяй задачу молча: зафиксируй конфликт пользователю.
 
 ## RuStore mobile release — проверенный flow
 
-- Канонический успешный релиз: `apps/mobile` → HEYS `1.0.2(12)`. Версия
-  опубликована в RuStore 2026-07-10 18:55 на 100% аудитории и доступна по адресу
-  `https://rustore.ru/catalog/app/com.heys.mobile`.
-- Собирать только через изолированный wrapper:
-  `cd apps/mobile && npm run build:rustore -- --local --non-interactive --output /tmp/HEYS-rustore.apk`.
-  Не запускать прямой `eas build` из монорепы: он может отправить весь
-  Git-корень.
-- После сборки обязательно выполнить
-  `npm run verify:release-apk -- /tmp/HEYS-rustore.apk`. Gate проверяет package,
-  version, production API, `heys://`, release-подпись, отсутствие private URL и
-  `SYSTEM_ALERT_WINDOW`.
-- `SYSTEM_ALERT_WINDOW` HEYS не использует. Если RuStore просит его обоснование,
-  ничего не придумывать: добавить permission в `blockedPermissions`, пересобрать
-  APK и убедиться, что разрешение отсутствует в итоговом manifest.
-- Использовать EAS remote release-keystore и продолжать подписывать им все новые
-  версии. Старые отклонённые `1.0.0/1.0.1` были debug-signed, но первая
-  опубликованная release-версия `1.0.2(12)` принята с новым сертификатом.
-- Комментарий и тестовый доступ для модератора брать из
-  `apps/mobile/release/RUSTORE_REVIEW_NOTES.md`; загружать именно APK, прошедший
-  локальный artifact gate. Сборка не означает разрешение на загрузку/публикацию.
-- Mobile auth UI invariant: пользователь видит только фирменный синий HEYS-вход
-  внутри controlled WebView. Отдельный React Native login (`app/auth/login.tsx`)
-  удалён как дублирующий и не должен возвращаться. Guest, expired session,
-  logout и deep link `login` направляются в `/web`; сохранённая native session
-  по-прежнему может использовать безопасный session exchange.
+Перед RuStore build/release полностью прочитай общий обязательный runbook:
+[apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md](apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md).
+Он владеет изолированной сборкой, artifact gate, подписью, permissions,
+модерацией и auth UI invariant. Сборка не разрешает загрузку или публикацию.
 
 ## Полнота модулей: релиз без MVP
 
@@ -171,56 +115,26 @@ readiness-математику, валидатор-фреймворк, онбо�
 форма общего видна на двух доменах (правило двух/трёх). Размещение: общее —
 `apps/web/_kernel/` (или packages), домен — `apps/web/<domain>/`.
 
-## Coder role
+## Web/UI local QA and coder handoff
 
-- Если пользователь даёт агенту роль кодера / исполнителя, агент работает как
-  разработчик по согласованному плану реализации: вносит код, проверяет шаги и
-  не пытается делать commit, staging под commit, production build, legacy-sync,
-  push, PR или публикацию без отдельной прямой команды пользователя.
-- После web/UI правок кодер обязан довести локальную проверку до видимого
-  состояния: проверить source, пересобрать legacy-бандлы для локального QA через
-  `pnpm bundle:legacy:auto --files=<свои source-файлы>` и запустить/поддержать
-  `pnpm dev:local`, чтобы пользователь видел свежий runtime на `localhost:3001`.
-  Если пользователь прямо сказал не собирать/не запускать — следовать его
-  ограничению.
-- Для локального QA не запускать full `pnpm bundle:legacy` по умолчанию: он
-  пересобирает несвязанные бандлы, меняет hash-артефакты вне scope и повышает
-  риск затереть in-flight generated-файлы других агентов. Full rebuild допустим
-  только по явной команде пользователя («полная пересборка», «пересобери всё»)
-  или в отдельном integration/release проходе.
-- `bundle:legacy:auto --files=<свои>` означает «пересобери бандлы, затронутые
-  моими source-файлами», а не «вырежи чужой код». Сборка читает текущее
-  состояние диска всех файлов в этих бандлах: если чужая параллельная
-  source-правка лежит в том же бандле, она корректно попадает в runtime. Чего
-  `--files` избегает — пересборки несвязанных бандлов.
-- При параллельной работе правильный порядок: зафиксировать `git status --short`
-  до сборки, не откатывать чужие файлы, собрать scoped-бандлы через `--files`,
-  проверить hash/manifest и снова показать статус/риски ревьюеру.
-- Чужие правки не трогать: не делать `stash`, `checkout`, `restore`, `reset`,
-  удаление generated-файлов или ручное разрешение конфликтов в чужом scope без
-  прямой команды пользователя. Если чужой dirty/generated файл мешает твоему
-  действию, остановись на своём scope, зафиксируй риск в ответе и следуй stderr
-  hook'а только в пределах явно выбранных файлов.
-- Preview generated-артефакты (`apps/web/public` bundles, manifests,
-  `index.html` hash sync), собранные только для локальной проверки, не должны
-  незаметно становиться «нормальным грязным фоном». Если не делаешь commit, явно
-  перечисли их в финале как локальный QA-output. Перед переключением на
-  несвязанную задачу можно убрать только свои preview-generated файлы; если файл
-  мог быть создан/обновлён другим агентом или нужен пользователю для текущего
-  просмотра, не откатывай молча — оставь явное предупреждение.
-- Кодер не коммитит generated/release artifacts (`apps/web/public` bundles,
-  `bundle-manifest.json`, `index.html` hash sync, `whats-new` release files) на
-  agent-ветке. Если дана отдельная команда commit, коммит source-only; финальные
-  generated artifacts собирает явно разрешённый integration flow
-  (`pnpm agents:integrate --confirm-integration`, делает merge/build/release
-  commits, но не push) или отдельный явно разрешённый
-  release/integration-проход.
-- Перед финальным ответом после web/UI правок кодер делает короткое ревью
-  собственного scope: какие source-файлы изменены, какие generated-файлы
-  обновлены локальной сборкой, какие проверки прошли, есть ли риск от
-  параллельных изменений. Если scoped-бандл включил чужие изменения из того же
-  bundle scope, явно сказать «бандл собран из текущего состояния затронутого
-  bundle scope».
+- После web/UI source-правок проверь source, выполни
+  `pnpm bundle:legacy:auto --files=<свои source-файлы>` и обеспечь свежий
+  `pnpm dev:local` на `localhost:3001`, если пользователь прямо не запретил
+  сборку/запуск.
+- Full `pnpm bundle:legacy` не используй для preview: он разрешён только по
+  прямой команде на полную пересборку или в integration/release проходе.
+- `--files=<свои>` выбирает затронутые бандлы, но собирает их из текущего
+  состояния всех входящих source-файлов. Поэтому чужая правка того же bundle
+  scope может корректно попасть в runtime; несвязанные бандлы не трогаются.
+- До и после сборки проверь status, hash/manifest и соблюдай глобальный shared
+  workspace invariant. Если чужой dirty/generated scope блокирует действие,
+  остановись и следуй stderr hook'а только в пределах своих файлов.
+- Preview bundles/manifests/index hash перечисляй в финале как локальный
+  QA-output. Убирать можно только явно свои preview-generated файлы; чужой или
+  неясный output не откатывай.
+- Перед финалом перечисли свои source/generated файлы, проверки и риск
+  параллельных изменений. Если bundle включил чужой source того же scope, скажи:
+  «бандл собран из текущего состояния затронутого bundle scope».
 - Для нетривиальных/multi-step web/UI задач агент создаёт «Протокол реализации»
   для ревьюера: короткий список крупных шагов, статусов и фактов проверки. После
   каждого крупного шага агент добавляет summary сделанного, риски/открытые
@@ -231,30 +145,35 @@ readiness-математику, валидатор-фреймворк, онбо�
 
 ## Execution autonomy
 
-- Делай шаги сам в текущей сессии: SQL миграции через
-  `bash scripts/db/psql.sh -f ...`, cloud functions через
-  `cd yandex-cloud-functions && ./deploy-all.sh <name>`. Сетевые таймауты, IAM,
-  checksum-warnings — твои проблемы, не задачи пользователю.
+<!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
+<!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
+<!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
+<!-- POLICY {"id":"agent-branch-source-only","branches":["codex/*"],"generated":false,"releaseArtifacts":false} -->
+<!-- POLICY {"id":"integration-never-push","command":"pnpm agents:integrate","commits":true,"push":false} -->
+
+- Если migration/deploy прямо входят в поручение или уже явно разрешены, делай
+  их сам в текущей сессии: SQL миграции через `bash scripts/db/psql.sh -f ...`,
+  cloud functions через `cd yandex-cloud-functions && ./deploy-all.sh <name>`.
+  Сетевые таймауты, IAM, checksum-warnings — твои проблемы, не задачи
+  пользователю.
 - Если пользователь поручил рабочий сквозной результат и уже явно разрешил
   необходимые migration/deploy-действия, не завершай задачу на частично
   работающем frontend или локальном preview. Сразу доведи всю цепочку до
   фактической проверки в целевой среде; остановка допустима только при реальном
   внешнем блокере, который нельзя устранить в текущей сессии.
-- **Запрещено без прямой команды пользователя:** staging под commit,
-  `git commit`, production build (`pnpm build`), `legacy-sync`, `git push`,
-  `pnpm push:*`, `pnpm ship`, создание PR и любые действия, которые публикуют
-  изменения наружу. Локальная scoped legacy-сборка для QA после web/UI правок
-  (`pnpm bundle:legacy:auto --files=<свои source-файлы>`) разрешена и ожидается,
-  потому что `index.html` грузит hash-bundles и иначе пользователь видит старый
-  runtime. Эта сборка не является разрешением stage/commit/push и не должна
-  stash/revert чужие правки. Full `pnpm bundle:legacy` без явной команды не
-  запускать.
-- **Approval задачи ≠ approval commit/bundle/push.** Команда «сделай» означает
-  внести правки, проверить source, выполнить локальный QA bundle для
-  user-visible web/UI и запустить/проверить dev server, но не коммитить и не
-  пушить. Для commit нужна отдельная явная команда («закоммить», «commit»), для
-  production build/release artifacts — отдельная команда («build», «release»),
-  для push — отдельная команда («пуш», «push», «запушь», «выкатывай»).
+- В дополнение к глобальному permission gate HEYS требует отдельной прямой
+  команды на staging/commit, standalone/full legacy build, `pnpm push:*`,
+  `pnpm ship`, integration/release artifacts, push и PR. Команда «сделай»
+  разрешает source-правки, точечные проверки и локальный preview flow выше, но
+  не эти действия. Разрешённый commit включает обязательные hook side effects
+  только для staged scope, но не отдельный full/integration flow.
+- Перед любым разрешённым staging/commit/production build/integration/push/PR
+  полностью прочитай общий обязательный runbook:
+  [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
+  Commit-only всегда выполняй через `pnpm ship "..." --no-push`; обычный
+  `pnpm ship "..."` допустим только при прямом commit+push grant. Runbook не
+  является разрешением на действие.
 - **Git/deploy fact-check before answering.** На вопросы «ушло в push?»,
   «закоммичено?», «выложено?», «попало в main?» агент не отвечает по памяти
   своих действий. Сначала делает минимальную проверку факта:
@@ -268,12 +187,14 @@ readiness-математику, валидатор-фреймворк, онбо�
   `main` без ухода в отдельную ветку. Агент перед commit показывает/проверяет
   scope и stage'ит только согласованные файлы; `git add -A` допустим только если
   пользователь явно принимает весь dirty scope.
-- Для commit+bundle+whats-new используй текущий `pnpm ship` только когда команда
-  пользователя действительно включает commit/shipping. `pnpm push:agent` —
-  fallback для уже сделанных commits или когда pre-push hook прямо рекомендует
-  non-interactive agent flow.
-- Просить пользователя — только: 2FA / hardware key, чужой доступ, destructive
-  вне согласованного плана, push на remote.
+- На `codex/*`/agent-ветке коммить source-only. Generated/release artifacts
+  создаёт только явно разрешённый collector/integration flow; он не разрешает и
+  не выполняет push. Hooks fail closed: следуй stderr, не используй
+  `--no-verify` или `HUSKY=0` без отдельной прямой команды пользователя.
+- Проси пользователя только когда нужен выбор, существенно меняющий scope или
+  необратимый результат, 2FA/hardware key, чужой доступ, destructive вне
+  согласованного плана либо ещё не разрешённый push. Техническое исполнение не
+  перекладывай на пользователя.
 
 ## Local dev
 
@@ -413,69 +334,6 @@ readiness-математику, валидатор-фреймворк, онбо�
 
 See [apps/web/ARCHITECTURE.md](apps/web/ARCHITECTURE.md) for full details on
 each.
-
----
-
-## Pre-commit / pre-push hooks
-
-Активные хуки:
-
-- commit-msg: commitlint;
-- pre-commit: `lint-staged`, `check-agent-staging`, `legacy-sync`
-  (integration-mode: scoped rebundle + auto-stage; agent-mode: report-only),
-  lazy chunk/pricing/sync-mirror guards, allowlist auto-fix;
-- pre-push: `prepare-release:check`, localStorage guards,
-  `lint-unscoped-client-writes`, `lint-raw-session-clear`, bundle-size guard,
-  React.startTransition warn-only guard, legacy-bundle verify, web tests cache;
-- manual only: `lint-shared-cache-writes` (`pnpm lint:shared-cache`) не является
-  активным Husky hook.
-
-**Когда хук срабатывает — следуй его stderr.** Сообщение содержит точные
-инструкции (что добавить, какой формат, какие файлы). Никогда `--no-verify` без
-явного разрешения пользователя.
-
-Если пользователь прямо просит commit+push/push на HEYS, не делай заведомо
-падающий пробный `git push` перед подготовкой релиза. До первого push сразу
-выбери штатный shipping flow:
-
-- если scope ещё staged/не закоммичен и подходит один shipping-коммит —
-  `pnpm ship`;
-- если осмысленные коммиты уже сделаны вручную или их несколько —
-  `pnpm push:agent -- --confirm-push ...` с текстом по
-  [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md).
-
-Заранее закрой известные pre-push gates, а не узнавай о них через failed push:
-`prepare-release:check` / What's New, `verify:legacy-bundles`,
-localStorage/session guards, bundle-size guard и web tests cache. Если
-`push:agent` выбран, он сам запускает нужный pre-push/preflight путь; отдельный
-ручной `git push` до него не нужен.
-
-`legacy-sync` не должен auto-stash/restore чужой dirty scope. Если dirty
-generated-файл мешает integration rebuild, hook останавливается и показывает
-safe options; агент не прячет и не откатывает чужие файлы без прямой команды.
-Если unstaged legacy source может попасть в тот же generated output, hook тоже
-останавливается: нельзя коммитить бандл, собранный из кода, которого нет в
-commit scope.
-
-Quick hint: `feat|fix|perf` коммиты всегда требуют entry в
-`apps/web/public/whats-new.json` (top of `releases[]`,
-`buildHash = git log -1 --format=%h` +
-`chore(release): bump whats-new build hash to <HASH>`).
-
-Если commits уже сделаны без `pnpm ship` или pre-push hook прямо рекомендует
-non-interactive agent flow, используй `pnpm push:agent`. Сначала сформулируй
-короткий текст по [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md),
-затем:
-
-```bash
-pnpm push:agent -- --confirm-push --title="..." --item-title="..." --item-description="..."
-```
-
-Для проверки без commit/push добавь `--dry-run --no-push`. Если нужна готовая
-команда-шаблон, запусти `pnpm push:agent -- --print-command`. `push:agent` сам
-запускает `pnpm push:preflight` перед `git push`; отдельно `push:preflight`
-нужен только для диагностики. `push:safe` deprecated и не является безопасным
-обходом hooks; `HUSKY=0` не использовать как обычный push-flow.
 
 ---
 

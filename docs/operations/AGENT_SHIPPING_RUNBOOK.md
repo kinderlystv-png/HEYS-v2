@@ -1,0 +1,236 @@
+# HEYS agent commit and shipping runbook
+
+On-demand operational reference for Codex and Claude. Before any permitted
+staging, commit, production/release build, integration, push or PR, read this
+file completely and re-check the referenced scripts. This runbook describes
+mechanics; it never grants permission.
+
+<!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
+<!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
+<!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
+<!-- POLICY {"id":"agent-branch-source-only","branches":["codex/*","claude/*"],"generated":false,"releaseArtifacts":false} -->
+<!-- POLICY {"id":"integration-never-push","command":"pnpm agents:integrate","commits":true,"push":false} -->
+
+## 1. Permission gate
+
+- A normal task approval (`сделай`, `исправь`) allows source edits,
+  proportionate verification and the scoped local preview flow. It does not
+  allow staging for commit, commit, production/release build, integration, push,
+  PR or publication.
+- `commit` means commit-only. It does not include push. Use a non-pushing flow.
+- `commit and push`, `push`, `ship` or an equivalent direct instruction grants
+  only the named publication action and intended scope.
+- A session-wide instruction such as `push в конце` is a push grant for the
+  stated session/end point; do not silently broaden it to other scopes.
+- Permission to commit includes the mandatory pre-commit hook side effects for
+  that staged scope. It does not authorize a standalone/full legacy rebuild,
+  collector integration or unrelated generated/release artifacts.
+- Build, integration and release-artifact generation require their own direct
+  grant when they are not an unavoidable hook side effect of an already
+  permitted commit.
+
+## 2. Choose the operation before staging
+
+| User grant                               | Canonical operation                                                                                             | Push? |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----- |
+| No commit grant                          | Source edit + scoped local preview only                                                                         | No    |
+| Commit-only, one intended staged group   | `pnpm ship "<conventional message>" --no-push`                                                                  | No    |
+| Commit + push, one intended staged group | `pnpm ship "<conventional message>"`                                                                            | Yes   |
+| Push already-created commit(s)           | `pnpm push:agent -- --confirm-push ...` when its release/preflight flow is needed; otherwise follow hook stderr | Yes   |
+| Explicit collector integration           | `pnpm agents:integrate --confirm-integration ...` from a clean intended collector worktree                      | No    |
+
+`pnpm ship` rejects an empty staged set, expects `main` by default, and refuses
+a non-`main` branch unless `--allow-non-main` is intentional. Without
+`--no-push` it pushes the current branch and watches the deploy on `main`.
+`--no-watch` still pushes. `--no-lock` bypasses shipping serialization and is
+emergency-only. The script intentionally does not support `--no-verify`.
+
+`pnpm ship --dry-run` is not a permission-free planning command: it still
+requires an explicitly staged scope and may clean stale Git lock files and
+create/remove the ship lock. Use it only after staging itself is authorized.
+
+## 3. Intended staging and dirty workspace
+
+Before any staging or branch mutation:
+
+1. Run `git status --short --branch`, inspect `git diff` and
+   `git diff --cached`, and identify the exact intended files.
+2. Group files into logical commits. Prefer `git add -- <paths>`. Use
+   `git add -A` only when the user or collector explicitly accepts every dirty
+   file as one intended scope.
+3. Do not stash, checkout, restore, reset, delete generated files or resolve
+   conflicts in another agent's or uncertain scope. If scopes overlap, stop and
+   report the conflict.
+4. Before a reset relative to upstream, run `git log --oneline @{u}..HEAD` and
+   establish ownership of every unpushed commit. Never erase another session's
+   commits.
+5. Re-check status after hooks because allowed auto-fix hooks can modify and
+   stage additional files. Review the final commit diff before reporting it.
+
+Unstaged files may remain beside a staged commit, but they are not permission to
+capture them. A clean tree is mandatory for `agents:integrate` because that
+collector mutates history, performs a full build pass and can roll back a failed
+merge to its starting HEAD.
+
+## 4. Scoped legacy bundles and generated artifacts
+
+For a local web/UI preview use:
+
+```bash
+pnpm bundle:legacy:auto --files=<comma-separated-source-files>
+```
+
+This selects affected bundles but rebuilds them from the current on-disk state
+of every source in that bundle scope. It does not stage outputs. If another
+agent edits the same bundle scope, their source can therefore appear in the
+preview output; report that fact and do not claim exclusive ownership.
+
+Do not run full `pnpm bundle:legacy` for preview. A full-trigger file passed via
+`--files` is report-only and tells the agent that a full integration/release
+pass is required. Full rebuild is reserved for an explicit full-build grant or
+the collector flow.
+
+Preview bundles, manifests and `index.html` hash updates remain local QA output.
+List them in the final response. Remove only output known to be yours and no
+longer needed; do not revert uncertain or shared generated state.
+
+Agent branches/worktrees are source-only. Their commits must not contain managed
+web bundles, manifests, `index.html` hash sync or What's New release files. An
+explicitly permitted collector/integration flow owns final generated and release
+artifacts. Integration creates commits but never grants or performs push.
+
+## 5. Hooks and fail-closed behavior
+
+Current hook sources: [commit-msg](../../.husky/commit-msg),
+[pre-commit](../../.husky/pre-commit) and [pre-push](../../.husky/pre-push).
+
+- `commit-msg`: Commitlint.
+- `pre-commit`: `lint-staged`; agent staging/source-only guard; legacy sync
+  (`agent-check` is report-only, `integration` rebuilds and stages generated
+  scope); lazy-chunk, pricing and CommonJS mirror guards; allowlist auto-fixes.
+- `pre-push`: delegates to `push:preflight` for the outgoing committed range.
+  The current fast gates are source/generated scope, Gitleaks, the migration
+  test when migration contracts changed, direct-localStorage,
+  unscoped-client-write and raw-session-clear guards, plus relevant Vitest.
+  Clean legacy-bundle verification and the full web suite belong to deploy CI.
+  React start-transition counting is optional diagnostics, not a blocking hook.
+- `pnpm lint:shared-cache` is a manual-only check, not an active Husky hook.
+
+Hooks fail closed. Follow their stderr and fix only the reported owned scope. Do
+not auto-stash or rewrite another agent's dirty files to make a hook pass.
+Legacy integration stops when a dirty generated baseline or unstaged legacy
+source could contaminate the same output; move to an isolated/clean collector
+flow instead of bypassing the gate.
+
+Never use `--no-verify` or `HUSKY=0` as a normal flow. `pnpm ship` cannot pass
+`--no-verify`. For direct Git commands, bypassing hooks requires a separate,
+explicit user instruction for that exact operation and a report of the skipped
+gates. `pnpm push:safe` is deprecated and does not provide a safe bypass.
+
+## 6. Codex shipping flow
+
+- Codex may commit on `main` when the user directly authorizes the intended
+  scope. Selectively stage it, then use the operation table above.
+- On a `codex/*` agent branch, make source-only commits. Do not add generated or
+  release artifacts; an explicitly authorized collector rebuilds them later.
+- `pnpm push:agent -- --confirm-push ...` is a fallback for already-created or
+  grouped commits, not the default way to create a source commit. It can create
+  a What's New follow-up commit when that feature is enabled, always runs
+  `push:preflight`, pushes `HEAD:<target branch>` with bounded retries, and on
+  `main` watches and verifies deployment.
+- Answer “committed/pushed/deployed?” from current evidence, not memory: inspect
+  status and log; fetch the remote before making a remote-state claim.
+
+## 7. Claude shipping and worktree flow
+
+- Preserve a session-wide push grant exactly as stated. A grant to push at the
+  end does not authorize intermediate pushes; use `ship --no-push` for those
+  commits, then one final permitted push.
+- Before leaving a stale `claude/*` branch or switching to `main`, inspect
+  status, staged diff, upstream divergence and worktree ownership. Never start
+  with a blind checkout/reset in a dirty shared root.
+- Read-only parallel audits can share the root. For two or more independent
+  write-capable tasks that need branch integration, create isolated worktrees:
+
+```bash
+pnpm agent:worktree <task>
+```
+
+The helper fetches `origin`, creates `.claude/worktrees/<task>` on
+`claude/<task>` from `origin/main`, configures the worktree and runs a real
+`pnpm install`. It does not clean up the worktree later.
+
+After explicitly authorized source-only commits, run collector integration only
+from a clean, intended collector worktree and provide the required branch and
+release-text arguments:
+
+```bash
+pnpm agents:integrate --confirm-integration \
+  --branches=claude/a,claude/b \
+  --title="..." \
+  --items='[{"type":"fix","title":"...","description":"..."}]'
+```
+
+`--branches=auto` requires `--yes` for a mutating run. The collector merges with
+`--no-ff`, runs web `predev`, full `bundle:legacy`, verifies and commits
+generated artifacts, and conditionally creates release metadata. It does not
+verify that the current branch is `main`/`develop`, push, or remove worktrees
+and branches; the caller must confirm the collector branch. Remove only
+confirmed integrated worktrees; use `git worktree list`,
+`git worktree remove <path>` and `git worktree prune` deliberately.
+
+## 8. Release metadata, diagnostics and fallbacks
+
+What's New is controlled by
+[heys_release_features_v1.js](../../apps/web/heys_release_features_v1.js). When
+disabled, `ship`, `push:agent` and `agents:integrate` do not create release
+metadata. When enabled, they may create a separate `chore(release)` commit; use
+[WHATS_NEW_COPY.md](../../apps/web/WHATS_NEW_COPY.md) for user-facing text.
+Visible UI/behavior changes use `feat`/`fix`/`perf` and become user-facing
+entries; internal build, security, docs, test and refactor changes use their
+matching conventional type and remain technical. If a user would not notice the
+change without reading the diff, do not classify it as user-facing.
+
+`pnpm push:ready` is the older interactive What's New-only fallback. When the
+feature is enabled it previews/checks release text, stages only release metadata
+and can create a release follow-up commit; it never pushes. When the feature is
+disabled it exits without staging or committing.
+
+Useful non-shipping diagnostics:
+
+```bash
+pnpm push:agent -- --status
+pnpm push:agent -- --print-command
+pnpm push:preflight
+pnpm push:preflight -- --diagnostics
+```
+
+`push:preflight` does not commit or push, but it can run relevant tests and warm
+their cache. `push:agent --dry-run --no-push` can also run preflight and is not
+a pure no-op. `push:agent --no-push` is not a commit-only replacement: release
+preparation can still mutate and commit metadata before push is skipped.
+
+If a command fails, follow the current stderr instead of copying an old command
+from chat history. Before final reporting, show the final intended diff/status,
+separate source from generated/release artifacts, and state explicitly whether
+commit, push and deployment each did or did not happen.
+
+After changing this runbook, the package shipping commands, their entrypoints or
+active Husky hooks, run `pnpm docs:shipping:check`. The checker is read-only and
+must stay outside pre-commit and CI unless a separate performance/necessity
+review justifies adding it there.
+
+## Confirmed implementation references
+
+- [`package.json`](../../package.json)
+- [`scripts/check-agent-shipping-docs.mjs`](../../scripts/check-agent-shipping-docs.mjs)
+- [`scripts/ship.mjs`](../../scripts/ship.mjs)
+- [`scripts/push-agent.mjs`](../../scripts/push-agent.mjs)
+- [`scripts/push-preflight.mjs`](../../scripts/push-preflight.mjs)
+- [`scripts/release-prepare-and-commit.mjs`](../../scripts/release-prepare-and-commit.mjs)
+- [`scripts/auto-sync-legacy-bundles.mjs`](../../scripts/auto-sync-legacy-bundles.mjs)
+- [`scripts/check-agent-staging.mjs`](../../scripts/check-agent-staging.mjs)
+- [`scripts/agent-worktree.mjs`](../../scripts/agent-worktree.mjs)
+- [`scripts/integrate-agents.mjs`](../../scripts/integrate-agents.mjs)
+- [`scripts/push-safe.mjs`](../../scripts/push-safe.mjs)
