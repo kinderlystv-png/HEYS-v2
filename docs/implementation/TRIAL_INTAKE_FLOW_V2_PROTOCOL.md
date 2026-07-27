@@ -184,10 +184,11 @@ node scripts/web-deploy-scope.mjs plan --files=apps/web/heys_trial_intake_v1.js,
 printf '%s\n' yandex-cloud-functions/heys-api-rpc/index.js | node yandex-cloud-functions/function-inventory.cjs --resolve
 ```
 
-Preflight выполняется на локальном согласованном commit; push удерживается до
-завершения разрешённых DB/RPC/web gates. До commit точный десятифайловый
-allowlist может оставаться единственным dirty scope в отдельном worktree, но
-migration/deploy из него запрещены.
+Preflight выполняется на локальном согласованном commit; push в `main`
+удерживается до завершения разрешённых DB/RPC gates, затем сам запускает
+канонический web deploy. До commit точный десятифайловый allowlist может
+оставаться единственным dirty scope в отдельном worktree, но migration/deploy из
+него запрещены.
 
 STOP при любом лишнем source/generated-файле, непредусмотренном bundle/function,
 ошибке теста или изменении snapshot после подтверждения scope.
@@ -247,18 +248,19 @@ Web classifier должен вернуть только затронутые `bo
 трёх v2 source-файлов. Лендинг остаётся короткой формой и в v2 source не
 меняется; smoke подтверждает, что на нём нет health-полей и ссылка после
 контакта ведёт в универсальный `/?intake=1`. Отдельный landing deploy не
-выполняется. Web публикуется только scoped uploader из чистого согласованного
-commit после отдельной команды пользователя. До успешного web gate пауза
-кураторских решений сохраняется.
+выполняется. Scoped dry-run подтверждает точный web scope, а production web
+публикуется fast-forward push согласованного release commit в `main` через
+канонический GitHub workflow. До успешного web gate пауза кураторских решений
+сохраняется.
 
 ```bash
 bash scripts/deploy-web-scoped.sh \
   --files=apps/web/heys_trial_intake_v1.js,apps/web/heys_trial_queue_v1.js,apps/web/heys_yandex_api_v1.js \
   --dry-run
-# только после отдельной прямой команды:
-bash scripts/deploy-web-scoped.sh \
-  --files=apps/web/heys_trial_intake_v1.js,apps/web/heys_trial_queue_v1.js,apps/web/heys_yandex_api_v1.js \
-  --confirm-deploy
+# после DB/RPC gates и отдельной прямой команды:
+git fetch origin
+git merge-base --is-ancestor origin/main HEAD
+git push origin HEAD:main
 ```
 
 Clean-checkout интеграция от `HEAD` с наложением только трёх v2 web source
