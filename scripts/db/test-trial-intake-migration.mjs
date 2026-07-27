@@ -8,6 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const migrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow.sql');
+const reconsentFixPath = path.join(
+  repoRoot,
+  'database/2026-07-27_trial_intake_reconsent_fix.sql',
+);
 const binCandidates = [
   process.env.POSTGRES_BIN,
   '/usr/local/opt/postgresql@15/bin',
@@ -255,27 +259,58 @@ VALUES
   ('20000000-0000-4000-8000-000000000001', 'Client A', '79990000001', '+79990000001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
   ('20000000-0000-4000-8000-000000000002', 'Client B', '79990000002', '+79990000002', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   ('20000000-0000-4000-8000-000000000003', 'Client C', '79990000003', '+79990000003', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
-  ('20000000-0000-4000-8000-000000000004', 'Client D', '79990000004', '+79990000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  ('20000000-0000-4000-8000-000000000004', 'Client D', '79990000004', '+79990000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  ('20000000-0000-4000-8000-000000000005', 'Client E', '79990000005', '+79990000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 
 INSERT INTO public.consents (client_id, consent_type, document_version, signature_method)
 VALUES
   ('20000000-0000-4000-8000-000000000001', 'health_data', '1.5', 'checkbox'),
   ('20000000-0000-4000-8000-000000000002', 'health_data', '1.5', 'checkbox'),
-  ('20000000-0000-4000-8000-000000000004', 'health_data', '1.5', 'checkbox');
+  ('20000000-0000-4000-8000-000000000004', 'health_data', '1.5', 'checkbox'),
+  ('20000000-0000-4000-8000-000000000005', 'health_data', '1.4', 'checkbox');
 
 INSERT INTO public.client_sessions (token_hash, client_id, expires_at)
 VALUES
   (digest('token-a', 'sha256'), '20000000-0000-4000-8000-000000000001', now() + interval '1 hour'),
   (digest('token-b', 'sha256'), '20000000-0000-4000-8000-000000000002', now() + interval '1 hour'),
   (digest('token-c', 'sha256'), '20000000-0000-4000-8000-000000000003', now() + interval '1 hour'),
-  (digest('expired-token', 'sha256'), '20000000-0000-4000-8000-000000000004', now() - interval '1 minute');
+  (digest('expired-token', 'sha256'), '20000000-0000-4000-8000-000000000004', now() - interval '1 minute'),
+  (digest('token-e', 'sha256'), '20000000-0000-4000-8000-000000000005', now() + interval '1 hour');
 
 INSERT INTO public.trial_intakes (client_id, curator_id, status, invited_at)
 VALUES
   ('20000000-0000-4000-8000-000000000001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'invited', now()),
   ('20000000-0000-4000-8000-000000000002', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'invited', now()),
   ('20000000-0000-4000-8000-000000000003', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'invited', now()),
-  ('20000000-0000-4000-8000-000000000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'invited', now());
+  ('20000000-0000-4000-8000-000000000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'invited', now()),
+  ('20000000-0000-4000-8000-000000000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'invited', now());
+
+DO $test$
+BEGIN
+  PERFORM set_config('app.consents_writer', 'authorized', true);
+  UPDATE public.consents
+  SET granted = false, is_active = false, revoked_at = now()
+  WHERE client_id = '20000000-0000-4000-8000-000000000005'
+    AND consent_type = 'health_data'
+    AND document_version = '1.4';
+  INSERT INTO public.consents (
+    client_id, consent_type, document_version, signature_method, granted, is_active
+  ) VALUES (
+    '20000000-0000-4000-8000-000000000005', 'health_data', '1.5', 'checkbox', true, true
+  );
+END
+$test$;
+
+DO $test$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '20000000-0000-4000-8000-000000000005'
+  ) THEN
+    RAISE EXCEPTION 'health re-consent rotation purged intake';
+  END IF;
+END
+$test$;
 
 DO $test$
 DECLARE
@@ -374,7 +409,15 @@ BEGIN
   END IF;
   UPDATE public.consents SET granted = false, is_active = false, revoked_at = now()
   WHERE client_id = '20000000-0000-4000-8000-000000000004' AND consent_type = 'health_data';
-  IF EXISTS (SELECT 1 FROM public.trial_intakes WHERE client_id = '20000000-0000-4000-8000-000000000004') THEN
+END
+$test$;
+
+DO $test$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '20000000-0000-4000-8000-000000000004'
+  ) THEN
     RAISE EXCEPTION 'health consent revoke did not purge intake';
   END IF;
 END
@@ -415,17 +458,22 @@ BEGIN
     RAISE EXCEPTION 'non-health KV was deleted by health revoke';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM public.trial_intakes
-    WHERE client_id = '20000000-0000-4000-8000-000000000001'
-  ) THEN
-    RAISE EXCEPTION 'trial intake survived health revoke';
-  END IF;
-  IF EXISTS (
     SELECT 1 FROM public.client_sessions
     WHERE client_id = '20000000-0000-4000-8000-000000000001'
       AND revoked_at IS NULL
   ) THEN
     RAISE EXCEPTION 'sessions survived required-consent revoke';
+  END IF;
+END
+$test$;
+
+DO $test$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '20000000-0000-4000-8000-000000000001'
+  ) THEN
+    RAISE EXCEPTION 'trial intake survived health revoke';
   END IF;
 END
 $test$;
@@ -448,6 +496,7 @@ try {
   const psqlArgs = ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socketDir, '-p', String(port), '-U', 'postgres', '-d', 'postgres'];
   run('psql', psqlArgs, setupSql);
   run('psql', psqlArgs, readFileSync(migrationPath, 'utf8'));
+  run('psql', psqlArgs, readFileSync(reconsentFixPath, 'utf8'));
   const output = run('psql', psqlArgs, assertionsSql);
   process.stdout.write(output);
 } finally {

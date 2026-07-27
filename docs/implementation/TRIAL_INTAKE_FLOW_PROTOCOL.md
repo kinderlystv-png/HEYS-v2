@@ -66,6 +66,14 @@ health-согласие, safety-флаги, отказ и активация т�
    аутентифицированный контекст подтверждает session-bound RPC. Убран лишний
    enum `checkbox_after_auth`, который на localhost приводил к откату записи и
    повторному открытию consent gate.
+9. **Production forward-fix:** smoke выявил, что ротация старого health consent
+   ошибочно запускала purge intake на промежуточном `UPDATE`. Отложенный триггер
+   теперь проверяет итог транзакции: version bump сохраняет приглашение, полный
+   отзыв без активного health consent по-прежнему удаляет анкету.
+10. **PgBouncer encryption gate:** RPC чтения/записи анкеты, curator review и
+    DSAR выполняют `SET LOCAL heys.encryption_key` и сам SQL-вызов в одной
+    транзакции. Trial-экран сообщает `BlankScreenGuard` о первом видимом кадре,
+    поэтому защитный overlay не перекрывает уже отрисованную анкету.
 
 ## Facts Table
 

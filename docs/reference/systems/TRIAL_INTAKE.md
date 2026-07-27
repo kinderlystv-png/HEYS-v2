@@ -41,6 +41,14 @@ health-KV и intake, затем завершает сессии. Старые п
 read/check методы) исключены из gateway и у роли `heys_rpc` отозвано право
 исполнения.
 
+Ротация устаревшей версии `health_data` на новую активную версию не считается
+отзывом: purge-триггер отложен до конца транзакции и удаляет intake только если
+активного health consent больше не осталось.
+
+Так как production PostgreSQL доступен через transaction-pooling PgBouncer, ключ
+расшифровки и вызов encrypted trial RPC устанавливаются одной транзакцией через
+`SET LOCAL`; отдельный session-level `SET` для этих методов запрещён.
+
 ## Статусы и решение
 
 `not_invited → invited → in_progress → completed`. Куратор вручную переводит

@@ -257,6 +257,21 @@
     const saveTimerRef = React.useRef(null);
     const saveQueueRef = React.useRef(Promise.resolve());
     const answersRef = React.useRef(answers);
+    const screenRef = React.useRef(null);
+
+    React.useEffect(() => {
+      HEYS.BlankScreenGuard?.reportVisibleFrame?.({
+        element: screenRef.current,
+        screen: 'trial-intake',
+        reason: 'trial_intake_screen_painted',
+      });
+    }, []);
+
+    const shellProps = {
+      ref: screenRef,
+      'data-heys-visible-frame': 'trial-intake',
+      style: shellStyle,
+    };
 
     React.useEffect(() => { answersRef.current = answers; }, [answers]);
 
@@ -345,14 +360,14 @@
       }
     };
 
-    if (loading) return React.createElement('div', { style: shellStyle }, React.createElement('div', { style: cardStyle }, 'Загружаем анкету…'));
-    if (error && !hydrated) return React.createElement('div', { style: shellStyle }, React.createElement('div', { style: cardStyle },
+    if (loading) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle }, 'Загружаем анкету…'));
+    if (error && !hydrated) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
       React.createElement('h1', { style: { marginTop: 0 } }, 'Не удалось открыть анкету'),
       React.createElement('p', null, error),
       React.createElement('button', { type: 'button', onClick: () => global.location.reload(), style: { ...inputStyle, background: '#1d70b7', color: '#fff', border: 0, fontWeight: 700 } }, 'Повторить')
     ));
 
-    if (status === 'not_invited') return React.createElement('div', { style: shellStyle }, React.createElement('div', { style: cardStyle },
+    if (status === 'not_invited') return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
       React.createElement('h1', { style: { marginTop: 0, fontSize: 26 } }, 'Приглашение не найдено'),
       React.createElement('p', { style: { color: '#657168', lineHeight: 1.55 } }, 'Попросите куратора повторно отправить приглашение.'),
       React.createElement('button', { type: 'button', onClick: leaveIntake, style: { ...inputStyle, cursor: 'pointer' } }, 'Вернуться в приложение')
@@ -360,7 +375,7 @@
 
     if (STATUS_COPY[status]) {
       const copy = STATUS_COPY[status];
-      return React.createElement('div', { style: shellStyle }, React.createElement('div', { style: cardStyle },
+      return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: { width: 48, height: 48, borderRadius: 16, background: '#eaf4ed', color: '#27633a', display: 'grid', placeItems: 'center', fontSize: 22, marginBottom: 18 } }, '✓'),
         React.createElement('h1', { style: { margin: '0 0 10px', fontSize: 28 } }, copy.title),
         React.createElement('p', { style: { margin: '0 0 24px', color: '#657168', lineHeight: 1.6 } }, copy.text),
@@ -368,7 +383,7 @@
       ));
     }
 
-    return React.createElement('div', { style: shellStyle }, React.createElement('main', { style: cardStyle },
+    return React.createElement('div', shellProps, React.createElement('main', { style: cardStyle },
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', marginBottom: 20 } },
         React.createElement('div', null,
           React.createElement('div', { style: { fontSize: 12, color: '#657168', marginBottom: 4 } }, `Шаг ${step + 1} из ${STEPS.length}`),

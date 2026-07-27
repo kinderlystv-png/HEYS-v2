@@ -184,6 +184,14 @@ describe('protected trial intake contract', () => {
     expect(intakeSource).not.toContain('ym(');
   });
 
+  it('keeps encrypted trial RPC calls in the same PgBouncer transaction as SET LOCAL', () => {
+    expect(rpcSource).toContain('TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS');
+    expect(rpcSource).toContain("'save_trial_intake_by_session'");
+    expect(rpcSource).toContain("'admin_get_trial_intake'");
+    expect(rpcSource).toContain("SELECT set_config('heys.encryption_key', $1, true)");
+    expect(rpcSource).toContain('transactionScopedEncryptionTxStarted');
+  });
+
   it('registers client and curator functions in the RPC boundary', () => {
     for (const fn of [
       'get_trial_intake_by_session',

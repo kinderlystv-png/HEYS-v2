@@ -961,6 +961,17 @@ const COOKIE_SESSION_TOKEN_FUNCTIONS = new Set([
   'delete_my_account',
 ]);
 
+// PgBouncer runs in transaction-pooling mode, so a standalone session-level
+// SET may reach a different PostgreSQL backend than the encrypted RPC call.
+// Keep these calls and their key in one transaction via SET LOCAL.
+const TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS = new Set([
+  'get_trial_intake_by_session',
+  'save_trial_intake_by_session',
+  'admin_get_trial_intake',
+  'admin_review_trial_intake',
+  'export_my_data_by_session',
+]);
+
 function acceptsCookieSessionToken(fnName) {
   return typeof fnName === 'string' &&
     (fnName.endsWith('_by_session') || COOKIE_SESSION_TOKEN_FUNCTIONS.has(fnName));
@@ -2539,11 +2550,12 @@ async function handleRpcRequest(event, context) {
   let query;
   let paramKeys = [];
   let values = [];
+  let transactionScopedEncryptionTxStarted = false;
 
   try {
     // 🔐 P2: Устанавливаем ключ шифрования для health_data (если настроен)
     const encryptionKey = process.env.HEYS_ENCRYPTION_KEY;
-    if (encryptionKey) {
+    if (encryptionKey && !TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS.has(fnName)) {
       const normalizedKey = normalizeEncryptionKey(encryptionKey);
       if (normalizedKey) {
         // SET не поддерживает параметры, используем format с экранированием
@@ -4793,6 +4805,20 @@ async function handleRpcRequest(event, context) {
       debugLog('[RPC] get_curator_clients SQL', query);
     }
 
+    if (TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS.has(fnName)) {
+      const normalizedKey = normalizeEncryptionKey(process.env.HEYS_ENCRYPTION_KEY);
+      if (!normalizedKey) {
+        const configError = new Error('Encryption configuration unavailable');
+        configError.code = 'HEYS_ENCRYPTION_CONFIG';
+        throw configError;
+      }
+      if (!(params && params.__protectedWriteTxStarted)) {
+        await client.query('BEGIN');
+        transactionScopedEncryptionTxStarted = true;
+      }
+      await client.query("SELECT set_config('heys.encryption_key', $1, true)", [normalizedKey]);
+    }
+
     const result = await client.query(query, values);
 
     if (fnName === 'get_curator_clients') {
@@ -4802,6 +4828,9 @@ async function handleRpcRequest(event, context) {
     if (params && params.__protectedWriteTxStarted) {
       await client.query('COMMIT');
       delete params.__protectedWriteTxStarted;
+    } else if (transactionScopedEncryptionTxStarted) {
+      await client.query('COMMIT');
+      transactionScopedEncryptionTxStarted = false;
     }
 
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
@@ -4874,6 +4903,9 @@ async function handleRpcRequest(event, context) {
     if (params && params.__protectedWriteTxStarted) {
       try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
       delete params.__protectedWriteTxStarted;
+    } else if (transactionScopedEncryptionTxStarted) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+      transactionScopedEncryptionTxStarted = false;
     }
     // Детальное логирование для admin функций и критичных функций.
     // log_* — debug/audit функции, которые сами логируют события клиента.
