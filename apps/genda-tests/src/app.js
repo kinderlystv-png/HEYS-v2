@@ -137,6 +137,7 @@ function renderQuestion() {
   const selected = session.answers[question.id] || null;
   const answeredCount = Object.keys(session.answers).filter((id) => session.questions.some((q) => q.id === id)).length;
   const gradableCount = session.questions.filter((item) => item.status === 'ready').length;
+  const hasExamProgress = !isLearn && (answeredCount > 0 || session.index > 0);
 
   root.innerHTML = `
     <section class="test-layout">
@@ -168,7 +169,10 @@ function renderQuestion() {
           ? '<button class="button button-primary" type="button" data-finish>Завершить</button>'
           : `<button class="button button-primary" type="button" data-next ${session.index === session.questions.length - 1 ? 'disabled' : ''}>Далее</button>`}
       </nav>
-      ${!isLearn && session.index !== session.questions.length - 1 ? '<button class="finish-link text-button" type="button" data-finish>Завершить контрольную</button>' : ''}
+      ${!isLearn ? `<div class="exam-links">
+        ${session.index !== session.questions.length - 1 ? '<button class="finish-link text-button" type="button" data-finish>Завершить контрольную</button>' : ''}
+        ${hasExamProgress ? '<button class="restart-link text-button" type="button" data-restart-exam aria-label="Удалить ответы и начать контрольную заново">Начать заново</button>' : ''}
+      </div>` : ''}
     </section>`;
 
   bindQuestionEvents(question);
@@ -249,6 +253,7 @@ function bindQuestionEvents(question) {
   root.querySelector('[data-previous]')?.addEventListener('click', () => move(-1));
   root.querySelector('[data-next]')?.addEventListener('click', () => move(1));
   root.querySelectorAll('[data-finish]').forEach((button) => button.addEventListener('click', finishExam));
+  root.querySelector('[data-restart-exam]')?.addEventListener('click', restartExam);
   root.querySelectorAll('[data-jump]').forEach((button) => button.addEventListener('click', () => {
     session.index = Number(button.dataset.jump);
     saveSession();
@@ -283,6 +288,14 @@ function finishExam() {
   focusMain();
 }
 
+function restartExam() {
+  if (!window.confirm('Удалить сохранённые ответы и начать эту контрольную заново?')) return;
+  const { testNumber, mode, key } = session;
+  clearProgress(localStorage, key);
+  startSession(testNumber, mode);
+  focusMain();
+}
+
 function renderResults() {
   const result = calculateResult(session.questions, session.answers);
   const review = result.details.filter((detail) => detail.state !== 'correct');
@@ -310,12 +323,7 @@ function renderResults() {
     </section>`;
 
   root.querySelector('[data-home]').addEventListener('click', renderStart);
-  root.querySelector('[data-restart]').addEventListener('click', () => {
-    if (!window.confirm('Удалить сохранённые ответы и начать этот тест заново?')) return;
-    clearProgress(localStorage, session.key);
-    startSession(session.testNumber, session.mode);
-    focusMain();
-  });
+  root.querySelector('[data-restart]').addEventListener('click', restartExam);
 }
 
 function scoreCard(value, label, className) {
