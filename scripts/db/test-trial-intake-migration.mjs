@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const migrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow.sql');
+const consentProofPath = path.join(repoRoot, 'database/2026-07-27_consent_proof_v2.sql');
 const reconsentFixPath = path.join(
   repoRoot,
   'database/2026-07-27_trial_intake_reconsent_fix.sql',
@@ -66,6 +67,7 @@ CREATE TABLE public.clients (
   birth_year INTEGER,
   trial_started_at TIMESTAMPTZ,
   trial_ends_at TIMESTAMPTZ,
+  consent_outdated_since TIMESTAMPTZ,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -76,6 +78,20 @@ CREATE TABLE public.consents (
   document_version TEXT NOT NULL,
   signature_method TEXT NOT NULL DEFAULT 'checkbox'
     CHECK (signature_method IN ('checkbox', 'sms_code', 'one_time_code', 'messenger_code', 'button')),
+  granted BOOLEAN NOT NULL DEFAULT true,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  revoked_at TIMESTAMPTZ
+);
+
+CREATE TABLE public.curator_consents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  curator_id UUID NOT NULL,
+  consent_type TEXT NOT NULL,
+  document_version TEXT NOT NULL,
+  signature_method TEXT NOT NULL DEFAULT 'checkbox',
   granted BOOLEAN NOT NULL DEFAULT true,
   is_active BOOLEAN NOT NULL DEFAULT true,
   ip_address INET,
@@ -220,7 +236,7 @@ INSERT INTO public.leads (
   consent_privacy_version, consent_user_agent, consent_accepted_at
 ) VALUES (
   '10000000-0000-4000-8000-000000000001', 'Lead A', '+7 999 111-22-33',
-  'telegram', 'new', 1990, '127.0.0.1', '1.6', 'integration-test', now()
+  'telegram', 'new', 1990, '127.0.0.1', '1.7', 'integration-test', now()
 );
 
 DO $test$
@@ -245,7 +261,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'conversion forged user/health consent';
   END IF;
-  IF (SELECT document_version FROM public.consents WHERE client_id = v_client_id AND consent_type = 'personal_data') <> '1.6' THEN
+  IF (SELECT document_version FROM public.consents WHERE client_id = v_client_id AND consent_type = 'personal_data') <> '1.7' THEN
     RAISE EXCEPTION 'landing privacy version was not preserved';
   END IF;
   IF (SELECT status FROM public.trial_intakes WHERE client_id = v_client_id) <> 'invited' THEN
@@ -260,14 +276,71 @@ VALUES
   ('20000000-0000-4000-8000-000000000002', 'Client B', '79990000002', '+79990000002', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   ('20000000-0000-4000-8000-000000000003', 'Client C', '79990000003', '+79990000003', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
   ('20000000-0000-4000-8000-000000000004', 'Client D', '79990000004', '+79990000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
-  ('20000000-0000-4000-8000-000000000005', 'Client E', '79990000005', '+79990000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  ('20000000-0000-4000-8000-000000000005', 'Client E', '79990000005', '+79990000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  ('20000000-0000-4000-8000-000000000006', 'Client F', '79990000006', '+79990000006', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+
+DO $test$
+DECLARE
+  v_result JSONB;
+BEGIN
+  v_result := public.log_consents(
+    '20000000-0000-4000-8000-000000000006',
+    '[
+      {"type":"user_agreement","version":"1.7","granted":true},
+      {"type":"personal_data","version":"1.7","granted":true},
+      {"type":"health_data","version":"1.5","granted":true}
+    ]'::jsonb,
+    '127.0.0.1',
+    'integration-test'
+  );
+  IF NOT COALESCE((v_result->>'success')::boolean, false) THEN
+    RAISE EXCEPTION 'current consent set was rejected: %', v_result;
+  END IF;
+
+  v_result := public.check_required_consents_v2(
+    '20000000-0000-4000-8000-000000000006',
+    '{"user_agreement":"1.6","personal_data":"1.6","health_data":"1.5"}'::jsonb
+  );
+  IF NOT COALESCE((v_result->>'valid')::boolean, false) THEN
+    RAISE EXCEPTION 'server registry did not protect an older device from version skew: %', v_result;
+  END IF;
+
+  v_result := public.log_consents(
+    '20000000-0000-4000-8000-000000000006',
+    '[{"type":"user_agreement","version":"1.6","granted":true}]'::jsonb,
+    '127.0.0.1',
+    'integration-test'
+  );
+  IF v_result->>'error' <> 'consent_version_not_allowed' THEN
+    RAISE EXCEPTION 'retired/future version was not rejected: %', v_result;
+  END IF;
+  IF (
+    SELECT document_version
+    FROM public.consents
+    WHERE client_id = '20000000-0000-4000-8000-000000000006'
+      AND consent_type = 'user_agreement'
+      AND granted = true
+      AND revoked_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  ) <> '1.7' THEN
+    RAISE EXCEPTION 'rejected version mutated the active consent';
+  END IF;
+END
+$test$;
 
 INSERT INTO public.consents (client_id, consent_type, document_version, signature_method)
 VALUES
   ('20000000-0000-4000-8000-000000000001', 'health_data', '1.5', 'checkbox'),
   ('20000000-0000-4000-8000-000000000002', 'health_data', '1.5', 'checkbox'),
-  ('20000000-0000-4000-8000-000000000004', 'health_data', '1.5', 'checkbox'),
-  ('20000000-0000-4000-8000-000000000005', 'health_data', '1.4', 'checkbox');
+  ('20000000-0000-4000-8000-000000000004', 'health_data', '1.5', 'checkbox');
+
+-- Симулируем запись, существовавшую до установки proof-trigger. Новые записи
+-- 1.4 после migration обязаны блокироваться server allowlist.
+SET session_replication_role = replica;
+INSERT INTO public.consents (client_id, consent_type, document_version, signature_method)
+VALUES ('20000000-0000-4000-8000-000000000005', 'health_data', '1.4', 'checkbox');
+SET session_replication_role = origin;
 
 INSERT INTO public.client_sessions (token_hash, client_id, expires_at)
 VALUES
@@ -496,6 +569,7 @@ try {
   const psqlArgs = ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socketDir, '-p', String(port), '-U', 'postgres', '-d', 'postgres'];
   run('psql', psqlArgs, setupSql);
   run('psql', psqlArgs, readFileSync(migrationPath, 'utf8'));
+  run('psql', psqlArgs, readFileSync(consentProofPath, 'utf8'));
   run('psql', psqlArgs, readFileSync(reconsentFixPath, 'utf8'));
   const output = run('psql', psqlArgs, assertionsSql);
   process.stdout.write(output);

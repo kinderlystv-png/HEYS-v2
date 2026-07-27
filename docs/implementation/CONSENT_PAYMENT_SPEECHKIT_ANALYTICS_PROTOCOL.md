@@ -72,33 +72,36 @@ health-data, аналитика, отзыв и последствия отказ
 
 | Contract                             | Версия | SHA-256                                                            |
 | ------------------------------------ | -----: | ------------------------------------------------------------------ |
-| user_agreement / payment_oferta      |    1.7 | `8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74` |
-| personal_data                        |    1.7 | `e31fd13099952da2458bee27c76e8d2bcf632d6b34d14220bd68ca1dc1955c5c` |
+| user_agreement / payment_oferta      |    1.7 | `ba9011a7a4f9f283dbf11217ca36657c774d5b0eb98371e2b9c38e443deefb00` |
+| personal_data                        |    1.7 | `30e0821966128f06d34d356b0fc1d87a7851c5d9f5d6df1b653bc3fc0b3e1317` |
 | health_data immutable snapshot       |    1.5 | `a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256` |
-| refund                               |    1.1 | `c428dae96970fe161a3b3094a1be20a9d8211699e3a357b858bec38efde1315c` |
-| cookie_policy                        |    1.1 | `5193bf1e681fcc4df5e31b1b8efbab91cda44614a3a34277b899525fdbbba699` |
-| speech_transcription                 |    1.1 | `75f42b06d3b616e1a9c76f4cb5c4b9bb02bb4e0737c44735394816b484f1df1f` |
-| marketing                            |    1.3 | `99cf6dc012948a19423e750ea8039afb11f56b44ccf35e319f123f47539cc81d` |
-| push_notifications                   |    1.0 | `a4b2f8dc1a43eec77a5bb7cdacfb55771f7c84cfe9517a7325adea99b4e1e292` |
-| curator_access                       |    1.0 | `75cd5fadf7db8e3d065e799ab27525e7db293538c60a465660cbc010f0da5a11` |
-| health_data 2.0 candidate (inactive) |    2.0 | `44086e492df447ca989c39fa06c4a39acaa58772424c5b4ad079458a7aaa2e8d` |
+| refund                               |    1.1 | `efed493603bfc88024ffb82ad6bf0e70b9f1c2a9d24cbd1ef518bbf70111ce70` |
+| cookie_policy                        |    1.1 | `be1dd07df10d6fed174943c2db16ea3500069007988e87eb0d383f2ff4c164f5` |
+| speech_transcription                 |    1.1 | `c95880e472cfe6237e0b99581f2e745cf775440a376f89ce96e39186e2d5edb8` |
+| marketing                            |    1.3 | `8627a1daa46e20250ec9aeb4baa9a8d6053094cbb90a3d2f8466ffba02eefd43` |
+| push_notifications                   |    1.0 | `a179b6e2e499d0bdd48538dd743168460bd143fc3b098a07ba816fdf9a7fd0de` |
+| curator_access                       |    1.0 | `a3bca78a3bb0b86ce4993f9bd979694dcbe90a62cef417a544cf0daeb59feb91` |
+| health_data 2.0 candidate (inactive) |    2.0 | `2ce834202b70f9b9413994e1301a868111dac1303ebf451e0a83349b5c61e39c` |
 
 ## 7. Проверки
 
-| Проверка                               | Результат       |
-| -------------------------------------- | --------------- |
-| `consent-release-contract.test.js`     | 5/5             |
-| `AnalyticsConsentGate.test.tsx`        | 3/3             |
-| messenger contract                     | 8/8             |
-| `pnpm payments:webhook-test`           | PASS, 3/3       |
-| `pnpm privacy:marketing`               | PASS            |
-| `pnpm docs:reference:check`            | PASS, 153 links |
-| `pnpm pdn:monthly-audit`               | PASS, 69 checks |
-| landing TypeScript `--noEmit`          | PASS            |
-| `git diff --check` / diff secret scan  | PASS / CLEAN    |
-| consent-proof contract + leads handler | PASS, 12/12     |
-| consent/web/trial gates                | PASS, 25/25     |
-| messenger hash/time gate               | PASS, 8/8       |
+| Проверка                                | Результат       |
+| --------------------------------------- | --------------- |
+| `consent-release-contract.test.js`      | 5/5             |
+| `AnalyticsConsentGate.test.tsx`         | 3/3             |
+| messenger contract                      | 8/8             |
+| `pnpm payments:webhook-test`            | PASS, 3/3       |
+| `pnpm privacy:marketing`                | PASS            |
+| `pnpm docs:reference:check`             | PASS, 153 links |
+| `pnpm pdn:monthly-audit`                | PASS, 69 checks |
+| landing TypeScript `--noEmit`           | PASS            |
+| `git diff --check` / diff secret scan   | PASS / CLEAN    |
+| consent-proof contract + leads handler  | PASS, 12/12     |
+| consent/web/trial gates                 | PASS, 25/25     |
+| messenger hash/time gate                | PASS, 8/8       |
+| source → migration → runtime bundle     | PASS            |
+| managed migration/deploy gates          | PASS, 13/13     |
+| PostgreSQL 15 consent/trial integration | PASS            |
 
 Legacy bundle, production build, browser smoke, deploy, commit и push не
 выполнялись по прямому ограничению handoff.
@@ -112,7 +115,12 @@ Legacy bundle, production build, browser smoke, deploy, commit и push не
 2. **STOP — publication.** Source не опубликован: DB/backend/landing/web
    потребуют согласованного integration flow, deploy и production smoke по
    отдельной команде.
-3. **External sign-off.** Юрист РФ должен письменно утвердить health ПЭП-модель,
+3. **STOP — migration first.** `2026-07-27_consent_proof_v2` теперь является
+   migration № 9 в managed ledger. Frontend и backend deploy fail-closed, пока
+   она pending; server allowlist не даст локальной или будущей сборке записать
+   неопубликованную/устаревшую версию. Runtime bundle отдельно сверяется с
+   manifest до upload.
+4. **External sign-off.** Юрист РФ должен письменно утвердить health ПЭП-модель,
    обязательный состав health 2.0, retention/backups, Telegram cross-border
    disclosure и договорную модель возвратов. До массовой автоматизированной
    рекламной рассылки отдельно подтвердить допустимый способ отправки по части 2
@@ -126,6 +134,8 @@ Legacy bundle, production build, browser smoke, deploy, commit и push не
 - payment frontend/backend exact version and payment metadata hash;
 - SpeechKit backend exact-version/health gate and messenger disclosure;
 - landing analytics consent gate, banner, legal pages and indexes;
+- managed consent migration, frontend/backend migration gates and runtime bundle
+  verification;
 - targeted tests, legal manifest, monthly audit sync and this protocol.
 
 Foreign preview-generated bundles from shared checkout остались нетронутыми.
