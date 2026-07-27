@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import React from 'react';
 import { act, cleanup, render, screen } from '@testing-library/react';
+import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/script', () => ({
