@@ -30,6 +30,17 @@ PII-free summary.
 | Replay does not duplicate active lead or curator handoff  | Covered by `HEYS Start contact replay reuses linked week_request lead without duplicate curator handoff`.                                        |
 | Production path works                                     | Live smoke 2026-06-17: `lead_rows=1`, `active_leads=1`, `lead_events=1`, `linked_week_requests=1`; event metadata had no phone/name/raw chat id. |
 
+## R0 revalidation
+
+Date: 2026-07-26
+
+| Step                       | Status | Evidence                                                                                                                                                                                                                                                                        |
+| -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production contact/handoff | Done   | Controlled synthetic contact created one active lead and one `lead` event; live curator handoff was delivered and visually contained no phone, name, or raw Telegram ID.                                                                                                        |
+| Replay/privacy             | Done   | Replay kept active lead count at `1`; funnel metadata flags for `phone`, `name`, and `chat_id` were all `false`.                                                                                                                                                                |
+| Claim action               | Done   | Live smoke revealed that the callback handler existed but `sendStartLeadHandoff()` omitted its inline button. Added `✅ Взял в работу` with `lead_taken_<uuid>`, covered by the CRM test, and deployed `heys-bot-client` with `--force-dirty` under explicit deploy permission. |
+| Checks                     | Done   | `node --check` PASS; CRM/callback profile 23/23 PASS; post-deploy health PASS.                                                                                                                                                                                                  |
+
 ## Notes
 
 - Do not put phone, name, raw Telegram `chat_id`, IP, or user-agent in Telegram

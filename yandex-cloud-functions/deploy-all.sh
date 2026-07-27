@@ -491,6 +491,7 @@ build_env_flags() {
     # (SEC-004 monitoring — там 3 события session_phase_b за 12h = реальные клиенты).
     if [[ "$func_name" == "heys-api-rest" ]]; then
         env_flags+=" --environment HEYS_WRITE_CONTEXT_STRICT=1"
+        _add HEYS_REST_READ_STRICT
     fi
 
     # Server-side overload shed: reserve one slot per instance for recovery and

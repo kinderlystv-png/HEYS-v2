@@ -312,13 +312,10 @@ function checkIspdnGapList() {
 function checkRknDraft() {
   requireIncludes(
     FILES.rknHeys,
-    ['26-22-005319', 'updateform', 'данные о состоянии здоровья', 'Yandex Cloud', 'Трансграничная передача персональных данных не осуществляется'],
+    ['26-22-005319', 'updateform', 'данные о состоянии здоровья', 'Yandex Cloud', 'Трансграничная передача персональных данных не осуществляется', 'приказом № 131', 'СТАТУС 2026-07-26', 'публичная запись 26-22-005319 проверена'],
     'RKN draft matches HEYS data model anchors',
   );
-  notePending(
-    'RKN submitted-record comparison',
-    'requires publication/check of registry record 26-22-005319; number/key/screenshots stay outside repo',
-  );
+  ok('RKN submitted-record comparison', 'public record 26-22-005319 verified 2026-07-26; number/key/screenshots stay outside repo');
 }
 
 function checkLegalVersions() {
@@ -405,8 +402,8 @@ function checkAnalyticsBoundary() {
 function checkPlanAndDecisionLog() {
   requireIncludes(
     FILES.plan22,
-    ['1.9.6', 'heys-pdn-monthly-audit.md', 'публикация и сверка записи `26-22-005319`'],
-    'marketing plan keeps 1.9.6 external blocker visible',
+    ['1.9.6', 'heys-pdn-monthly-audit.md', 'первая сверка РКН выполнена 2026-07-26'],
+    'marketing plan keeps current 1.9.6 evidence visible',
   );
   requireIncludes(
     FILES.roadmap25,

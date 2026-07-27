@@ -50,12 +50,13 @@ describe('TASK-003 hardening: StepModal saves completed steps on Next', () => {
       source.indexOf('} else if (deltaX > 0', source.indexOf('if (deltaX < 0 && currentStepIndex < totalSteps - 1)'))
     );
     const dotsBranch = source.slice(
-      source.indexOf('if (i > currentStepIndex) handleNext();'),
+      source.indexOf('if (i > currentStepIndex) {'),
       source.indexOf("else goToStep(i, 'right');") + "else goToStep(i, 'right');".length
     );
 
     expect(swipeBranch).toContain('handleNext();');
     expect(swipeBranch).not.toContain('goToStep(currentStepIndex + 1');
-    expect(dotsBranch).toContain('if (i > currentStepIndex) handleNext();');
+    expect(dotsBranch).toContain('if (allowProgressForwardNav) handleNext();');
+    expect(source).toContain('disabled: !allowProgressForwardNav && i > currentStepIndex');
   });
 });

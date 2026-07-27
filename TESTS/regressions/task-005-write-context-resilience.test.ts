@@ -178,6 +178,10 @@ const deployAllSource = fs.readFileSync(
   path.resolve(__dirname, '../../yandex-cloud-functions/deploy-all.sh'),
   'utf8',
 );
+const functionInventorySource = fs.readFileSync(
+  path.resolve(__dirname, '../../yandex-cloud-functions/function-inventory.cjs'),
+  'utf8',
+);
 const cloudFunctionsHealthCheckSource = fs.readFileSync(
   path.resolve(__dirname, '../../yandex-cloud-functions/health-check.sh'),
   'utf8',
@@ -185,13 +189,6 @@ const cloudFunctionsHealthCheckSource = fs.readFileSync(
 const indexSessionDetectionScript = indexHtmlSource.match(
   /<!-- Шаг 1: Детекция сессии[\s\S]*?<script>([\s\S]*?)<\/script>/,
 )?.[1] || '';
-
-function base64UrlEncode(value: string): string {
-  return Buffer.from(value, 'utf8').toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-}
 
 function createMockLocalStorage(initial: Record<string, string> = {}) {
   const store = new Map(Object.entries(initial));
@@ -227,7 +224,7 @@ describe('TASK-005: write-context upload resilience', () => {
   });
 
   it('bounds issue_write_context RPC calls with an explicit timeout', () => {
-    expect(source).toContain('const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 5000');
+    expect(source).toContain('const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 15000');
     expect(source).toMatch(/raceWithTimeout\(\s*api\.rpc\('issue_write_context_by_curator'/s);
     expect(source).toMatch(/raceWithTimeout\(\s*api\.rpc\('issue_write_context_by_session'/s);
     expect(source).toContain('write_context_issue_timeout');
@@ -235,9 +232,9 @@ describe('TASK-005: write-context upload resilience', () => {
 
   it('does not let required-context uploads silently proceed without context', () => {
     expect(source).toContain('ensureWriteContextForUpload');
-    expect(source).toContain('!contextState.itemsHaveContext');
+    expect(source).toContain('contextState.required && !contextState.contextId');
+    expect(source).toContain("recordWriteContextUnavailable('upload_blocked_no_context'");
     expect(source).toContain("return { success: false, error: 'write_context_unavailable' }");
-    expect(source).toContain("global.dispatchEvent(new CustomEvent('heys:sync-error'");
   });
 
   it('expires the UI session when write-context issue reports an invalid PIN session', () => {
@@ -256,41 +253,39 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(source).toMatch(/const isCurator = !cloud\.isPinAuthClient\?\.\(\)/);
   });
 
-  it('allows curator JWT-only sessions to enqueue client KV saves', () => {
-    expect(source).toContain('function hasCuratorJwtAuth()');
-    expect(source).toContain("global.localStorage?.getItem?.('heys_curator_session')");
-    expect(source).toMatch(/const isCuratorJwtAuth = hasCuratorJwtAuth\(\);[\s\S]*if \(!user && !isPinAuth && !isCuratorJwtAuth\)/);
+  it('allows HttpOnly curator-cookie sessions to enqueue client KV saves', () => {
+    expect(source).toMatch(/const hasCuratorHint = \(\(\) => \{[\s\S]*heys_curator_cookie_session_hint/);
+    expect(source).toMatch(/if \(!user && !hasCuratorHint && !devToken\) \{/);
+    expect(source).toMatch(/api\.verifyCuratorToken\(devToken \|\| undefined\)/);
   });
 
-  it('sends curator JWT when issuing curator write-context', () => {
+  it('routes curator write-context through the cookie-compatible curator RPC', () => {
     expect(yandexApiSource).toMatch(/CURATOR_ONLY_FUNCTIONS[\s\S]*'issue_write_context_by_curator'/);
+    expect(yandexApiSource).toMatch(/function buildCuratorRequestHeaders\(baseHeaders = \{\}\)[\s\S]*shouldTryCookieCuratorRequest\(\)/);
   });
 
   it('preserves auth verify expiry for curator JWT session restore', () => {
     expect(yandexApiSource).toContain('expires_at: data.expires_at');
   });
 
-  it('restores the app auth context from a bare curator JWT session', () => {
-    expect(appAuthInitSource).toContain("readGlobalValue('heys_curator_session'");
-    expect(appAuthInitSource).toContain('api.verifyCuratorToken(curatorJwt)');
-    expect(appAuthInitSource).toContain("writeRawLocalStorage('heys_supabase_auth_token'");
-    expect(appAuthInitSource).toContain('setRestoredCuratorUser(restoredUser)');
-    expect(appAuthInitSource).toContain("removeGlobalValue('heys_curator_session')");
+  it('purges legacy curator JWT markers and keeps only a cookie probe hint', () => {
+    expect(appAuthInitSource).toMatch(/const hadLegacyCuratorMarker =[\s\S]*heys_curator_session[\s\S]*heys_supabase_auth_token/);
+    expect(appAuthInitSource).toMatch(/removeGlobalValue\('heys_curator_session'\);[\s\S]*removeGlobalValue\('heys_supabase_auth_token'\);/);
+    expect(appAuthInitSource).toContain("localStorage.setItem('heys_curator_cookie_session_hint', '1')");
+    expect(indexSessionDetectionScript).toContain('var hadLegacyCuratorMarker');
+    expect(indexSessionDetectionScript).not.toContain('restoreCompatCuratorAuth');
   });
 
   it('keeps restored curator sessions visible to the sync auth runtime', () => {
     expect(source).toContain('cloud.setAuthUser = function (nextUser)');
     expect(source).toMatch(/cloud\.setAuthUser = function \(nextUser\)[\s\S]*user = nextUser;[\s\S]*_rpcOnlyMode = true;[\s\S]*_pinAuthClientId = null;/);
     expect(appAuthInitSource).toMatch(/const setRestoredCuratorUser = \(restoredUser\) => \{[\s\S]*setCloudUser\(restoredUser\);[\s\S]*cloudRef\?\.setAuthUser\?\.\(restoredUser\);/);
-    expect(appAuthInitSource).toContain('setRestoredCuratorUser(storedUser)');
-    expect(appAuthInitSource).toContain('setRestoredCuratorUser(restoredUser)');
     expect(appAuthInitSource).toContain('setRestoredCuratorUser(user)');
   });
 
-  it('prevents AppAuthInit PIN recovery from overriding a bare curator JWT session', () => {
-    expect(appAuthInitSource).toMatch(/const hasCuratorJwtSession = !!curatorJwt && curatorJwt\.length > 10;/);
-    expect(appAuthInitSource).toMatch(/if \(pinAuthClient && hasCuratorJwtSession\) \{[\s\S]*removeGlobalValue\('heys_pin_auth_client'\);/);
-    expect(appAuthInitSource).toMatch(/if \(!pinAuthClient && !storedUser && !hasCuratorJwtSession\) \{/);
+  it('does not let PIN recovery override a cookie-only curator session', () => {
+    expect(appAuthInitSource).toContain("const shouldProbeCookieCuratorSession = !hasPinSession");
+    expect(source).toMatch(/const hasCuratorSession = !!global\.localStorage\.getItem\('heys_curator_cookie_session_hint'\)[\s\S]*if \(pinAuthClient && !hasCuratorSession\)/);
   });
 
   it('recovers a cookie-only PIN session when local PIN markers are missing', () => {
@@ -306,40 +301,24 @@ describe('TASK-005: write-context upload resilience', () => {
 
   it('falls back to HttpOnly curator cookie restore when local curator markers are missing', () => {
     expect(yandexApiSource).toMatch(/async function verifyCuratorToken\(token\)[\s\S]*credentials: 'include'[\s\S]*body: JSON\.stringify\(token \? \{ token \} : \{\}\)/);
-    expect(appAuthInitSource).toMatch(/const shouldProbeCookieCuratorSession = !storedUser[\s\S]*typeof HEYS\.YandexAPI\?\.verifyCuratorToken === 'function'/);
+    expect(appAuthInitSource).toMatch(/const shouldProbeCookieCuratorSession = !hasPinSession[\s\S]*hasCookieSessionHint\('curator'\)[\s\S]*typeof HEYS\.YandexAPI\?\.verifyCuratorToken === 'function'/);
     expect(appAuthInitSource).toMatch(/const clearInvalidCookiePinSession = \(\) => \{[\s\S]*removeGlobalValue\('heys_pin_auth_client'\);[\s\S]*clientLogout/);
     expect(appAuthInitSource).toMatch(/restoreCookiePinSession\(\)[\s\S]*const cleanup = isPinRestoreAuthError\(err\)[\s\S]*clearInvalidCookiePinSession\(\)[\s\S]*return cleanup\.then\(\(\) => restoreCookieCuratorSession\(\)\)/);
     expect(appAuthInitSource).toMatch(/const restoreCookieCuratorSession = \(\) => \{[\s\S]*HEYS\.YandexAPI\.verifyCuratorToken\(\)[\s\S]*const user = data\.user[\s\S]*setRestoredCuratorUser\(user\)[\s\S]*initLocalData\(\{ skipClientRestore: false, skipPinAuthRestore: true \}\)/);
   });
 
-  it('restores the sync auth context from a bare curator JWT session', () => {
-    expect(source).toContain('restoreCuratorJwtSessionFromStorage');
-    expect(source).toContain("localStorage.getItem('heys_curator_session')");
-    expect(source).toContain('api.verifyCuratorToken(token)');
-    expect(source).toContain("setFn('heys_supabase_auth_token'");
-    expect(source).toContain('user = restoredJwt.user');
-  });
-
-  it('lets ensureValidToken rebuild compatible auth from a bare curator JWT', () => {
-    expect(source).toContain('function buildCuratorAuthFromJwt');
-    expect(source).toContain("global.localStorage?.getItem('heys_curator_session')");
-    expect(source).toContain("setFn(AUTH_KEY, JSON.stringify(restoredFromJwt))");
-    expect(source).toContain("setFn('heys_curator_session', storedToken.access_token)");
+  it('lets ensureValidToken rebuild runtime auth from the HttpOnly curator cookie', () => {
+    expect(source).toMatch(/const hasCuratorHint = \(\(\) => \{[\s\S]*heys_curator_cookie_session_hint/);
+    expect(source).toMatch(/api\.verifyCuratorToken\(devToken \|\| undefined\)[\s\S]*user = data\.user;[\s\S]*status = CONNECTION_STATUS\.ONLINE;/);
   });
 
   it('clears both curator auth keys on confirmed auth failure', () => {
     expect(source).toMatch(/localStorage\.removeItem\('heys_supabase_auth_token'\);[\s\S]*localStorage\.removeItem\('heys_curator_session'\);/);
   });
 
-  it('keeps switchClient on curator path when only bare curator JWT exists', () => {
-    expect(source).toMatch(/const curatorSession = global\.localStorage\.getItem\('heys_curator_session'\);[\s\S]*hasCuratorSession = !!\(curatorSession && curatorSession\.length > 10\)/);
-    expect(source).toContain('parsed = buildCuratorAuthFromJwt(curatorSession, null)');
-  });
-
-  it('prevents early PIN restore from overriding a bare curator JWT session', () => {
-    expect(source).toMatch(/const pinAuthClient = global\.localStorage\.getItem\('heys_pin_auth_client'\);[\s\S]*const curatorSession = global\.localStorage\.getItem\('heys_curator_session'\);/);
-    expect(source).toMatch(/if \(curatorSession && curatorSession\.length > 10\) \{[\s\S]*hasCuratorSession = true;/);
-    expect(source).toMatch(/else if \(pinAuthClient && hasCuratorSession\) \{[\s\S]*global\.localStorage\.removeItem\('heys_pin_auth_client'\);/);
+  it('keeps switchClient and early restore on the curator path with a cookie hint', () => {
+    expect(source).toMatch(/const hasCuratorSession = !!global\.localStorage\.getItem\('heys_curator_cookie_session_hint'\)[\s\S]*if \(pinAuthClient && !hasCuratorSession\)/);
+    expect(source).toMatch(/cloud\.setAuthUser = function \(nextUser\)[\s\S]*_pinAuthClientId = null;/);
   });
 
   it('protects curator JWT from storage cleanup and legacy namespacing', () => {
@@ -400,13 +379,11 @@ describe('TASK-005: write-context upload resilience', () => {
   it('keeps API Gateway spec changes wired into deployment verification', () => {
     expect(cloudFunctionsDeployWorkflowSource).toContain('yandex-cloud-functions/api-gateway-spec.yaml');
     expect(cloudFunctionsDeployWorkflowSource).not.toContain('yandex-cloud-functions/api-gateway-spec-v2.yaml');
-    expect(cloudFunctionsDeployWorkflowSource).toContain('mode=gateway-only');
+    expect(functionInventorySource).toContain("mode: 'gateway-only'");
     expect(cloudFunctionsDeployWorkflowSource).toContain('Gateway spec only — skipping function deploy');
     expect(cloudFunctionsDeployWorkflowSource).toMatch(/yc serverless api-gateway update[\s\S]*--id=d5d7939njvjp27ofsok0[\s\S]*--spec=api-gateway-spec\.yaml/);
-    expect(cloudFunctionsDeployWorkflowSource).toContain('check_client_logout_preflight');
-    expect(cloudFunctionsDeployWorkflowSource).toContain('https://api.heyslab.ru/auth/client-logout');
-    expect(cloudFunctionsDeployWorkflowSource).toContain('check_curator_logout_preflight');
-    expect(cloudFunctionsDeployWorkflowSource).toContain('https://api.heyslab.ru/auth/curator-logout');
+    expect(cloudFunctionsDeployWorkflowSource).toContain('function-inventory.cjs --resolve --github-output');
+    expect(cloudFunctionsDeployWorkflowSource).toContain('yandex-cloud-functions/test-functions.sh');
   });
 
   it('keeps manual auth deploy path updating API Gateway routes', () => {
@@ -418,7 +395,8 @@ describe('TASK-005: write-context upload resilience', () => {
 
   it('keeps cookie-auth cloud functions covered by CI/manual all deploys', () => {
     for (const functionName of ['heys-api-push', 'heys-api-messages', 'heys-api-photos']) {
-      expect(cloudFunctionsDeployWorkflowSource).toContain(`- "${functionName}"`);
+      expect(functionInventorySource).toContain(`name: '${functionName}'`);
+      expect(functionInventorySource).toMatch(new RegExp(`name: '${functionName}'[^\n]+autoDeploy: true`));
     }
     for (const envName of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT']) {
       expect(cloudFunctionsDeployWorkflowSource).toContain(`${envName}: \${{ secrets.${envName} }}`);
@@ -428,7 +406,8 @@ describe('TASK-005: write-context upload resilience', () => {
       expect(cloudFunctionsDeployWorkflowSource).toContain(`${envName}: \${{ secrets.${envName} }}`);
       expect(cloudFunctionsDeployWorkflowSource).toContain(`write_env_var ${envName} "$${envName}"`);
     }
-    expect(deployAllSource).toMatch(/for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments heys-api-push heys-api-messages heys-api-photos; do/);
+    expect(deployAllSource).toContain('done < <(selected_functions)');
+    expect(deployAllSource).toContain('"$TEST_SCRIPT" "${PREDEPLOY_TARGETS[@]}"');
 
     const pushFunctionId = 'd4e2d7p20llki46ctf2b';
     const messageFunctionId = 'd4ep21a89307vs93b0ns';
@@ -495,8 +474,8 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(photosFunctionSource).toContain("return parseCookieToken(cookieHeader, 'heys_curator_jwt')");
     expect(photosFunctionSource).toMatch(/const bearerLooksLikeJwt = bearer\.split\('\.'\)\.length === 3 && bearer\.includes\('\.'\);[\s\S]*const curatorJwt = \(bearerLooksLikeJwt \? bearer : ''\) \|\| cookieCuratorJwt;/);
     expect(messengerApiSource).toMatch(/function looksLikeCuratorToken\(\) \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*token\.split\('\.'\)\.length === 3/);
-    expect(messengerSource).toMatch(/function isCuratorMode\(\) \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*localStorage\.getItem\('heys_curator_session'\)/);
-    expect(userTabSource).toMatch(/function HEYS_PushSettingsCard\(\) \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*localStorage\.getItem\('heys_curator_session'\)/);
+    expect(messengerSource).toMatch(/function isCuratorMode\(\) \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)/);
+    expect(userTabSource).toMatch(/function HEYS_PushSettingsCard\(\) \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*heys_curator_cookie_session_hint/);
     expect(messagesFunctionSource).toContain('function parseCuratorCookie(cookieHeader)');
     expect(messagesFunctionSource).toContain("return parseCookieToken(cookieHeader, 'heys_curator_jwt')");
     expect(messagesFunctionSource).toMatch(/const bearerLooksLikeJwt = bearer\.split\('\.'\)\.length === 3 && bearer\.includes\('\.'\);[\s\S]*const curatorJwt = \(bearerLooksLikeJwt \? bearer : ''\) \|\| cookieCuratorJwt;/);
@@ -540,23 +519,23 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(trialQueueSource).toMatch(/const rpcParams = \{[\s\S]*p_source: source[\s\S]*\};[\s\S]*if \(sessionToken\) rpcParams\.p_session_token = sessionToken;[\s\S]*api\.rpc\('request_trial', rpcParams\)/);
     expect(trialQueueSource).toMatch(/api\.rpc\('get_trial_queue_status', rpcParams\)/);
     expect(trialQueueSource).toMatch(/api\.rpc\('cancel_trial_queue', rpcParams\)/);
-    expect(trialQueueSource).toMatch(/const hasCuratorAuthContext = \(\) => \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*localStorage\.getItem\('heys_curator_session'\)/);
+    expect(trialQueueSource).toMatch(/const hasCuratorAuthContext = \(\) => \{[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*localStorage\.getItem\('heys_curator_cookie_session_hint'\)/);
     expect(trialQueueSource).not.toMatch(/const curatorSession = localStorage\.getItem\('heys_curator_session'\);[\s\S]{0,80}if \(!curatorSession\)/);
     expect(addProductStepSource).not.toContain('Нет авторизации для обновления порций');
     expect(addProductStepSource).toMatch(/if \(!isCuratorMode && sessionToken\) \{[\s\S]*rpcParams\.p_session_token = sessionToken;/);
     expect(consentsSource).toMatch(/deleteMyAccount\(sessionToken \|\| null\)/);
-    expect(cloudSharedSource).toMatch(/const rpcParams = \{[\s\S]*p_name: product\.name,[\s\S]*p_product_data: product[\s\S]*\};[\s\S]*if \(sessionToken\) rpcParams\.p_session_token = sessionToken;[\s\S]*YandexAPI\.rpc\('create_pending_product_by_session', rpcParams\)/);
+    expect(cloudSharedSource).toMatch(/const rpcParams = \{[\s\S]*p_name: product\.name,[\s\S]*p_product_data: \{[\s\S]*\.\.\.product[\s\S]*\};[\s\S]*if \(sessionToken\) rpcParams\.p_session_token = sessionToken;[\s\S]*YandexAPI\.rpc\('create_pending_product_by_session', rpcParams\)/);
     expect(source).toMatch(/const host = global\.location && global\.location\.hostname \|\| '';[\s\S]*const hasCookieSession = !!cloud\.isPinAuthClient\?\.\(\) \|\|[\s\S]*host !== 'localhost' && host !== '127\.0\.0\.1'[\s\S]*if \(sessionToken\) rpcParams\.p_session_token = sessionToken;[\s\S]*YandexAPI\.rpc\('create_pending_product_by_session', rpcParams\)/);
     expect(eventLogSource).toMatch(/const rpcParams = \{[\s\S]*p_events: batch[\s\S]*\};[\s\S]*if \(sessionToken\) rpcParams\.p_session_token = sessionToken;[\s\S]*YandexAPI\.rpc\('log_client_event_by_session', rpcParams\)/);
     expect(gamificationSource).toContain('function hasCookieSessionCarrier()');
     expect(gamificationSource).toContain('function withOptionalSessionToken(params, sessionToken)');
     expect(gamificationSource).toMatch(/const canUseCurator = isCuratorSession && clientId;/);
     expect(gamificationSource).toMatch(/if \(isCuratorSession && clientId && \(result\.error\?\.code === 401 \|\| result\.error\?\.code === 403\)\)/);
-    expect(gamificationSource).toMatch(/const hasSession = HEYS\.cloud\?\.getSessionToken\?\.\(\) \|\|[\s\S]*localStorage\.getItem\('heys_session_token'\) \|\|[\s\S]*HEYS\.cloud\?\.isPinAuthClient\?\.\(\) \|\|[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true \|\|[\s\S]*localStorage\.getItem\('heys_curator_session'\);/);
+    expect(gamificationSource).toMatch(/const hasSession = Boolean\([\s\S]*HEYS\.auth\?\.getSessionToken\?\.\(\)[\s\S]*localStorage\.getItem\('heys_session_token'\)[\s\S]*hasCookieSessionCarrier\(\)/);
     expect(gamificationSource).not.toContain('const canUseCurator = isCuratorSession && curatorToken && clientId');
     expect(leaderboardSource).toContain('function _withSessionToken(params)');
-    expect(curatorActionsBannerSource).toMatch(/function hasPinSessionContext\(\) \{[\s\S]*HEYS\.cloud\?\.isPinAuthClient\?\.\(\) === true[\s\S]*HEYS\.auth\?\.getSessionToken\?\.\(\)[\s\S]*localStorage\.getItem\('heys_session_token'\)[\s\S]*localStorage\.getItem\('heys_pin_auth_client'\)/);
-    expect(curatorActionsBannerSource).toContain('if (!hasPinSessionContext()) return;');
+    expect(curatorActionsBannerSource).toMatch(/function getPinSessionContextKey\(\) \{[\s\S]*HEYS\.cloud\?\.isPinAuthClient\?\.\(\) === true[\s\S]*HEYS\.auth\?\.getSessionToken\?\.\(\)[\s\S]*readLocalStorageValue\('heys_session_token'\)[\s\S]*readLocalStorageValue\('heys_pin_auth_client'\)/);
+    expect(curatorActionsBannerSource).toContain('if (!contextKey)');
     expect(curatorActionsBannerSource).not.toContain("_hasPinSession = !!localStorage.getItem('heys_session_token')");
     expect(piEarlyWarningSource).toContain('function hasWeeklyCookieSessionCarrier()');
     expect(piEarlyWarningSource).toMatch(/function hasWeeklyCookieSessionCarrier\(\) \{[\s\S]*HEYS\.cloud\?\.isPinAuthClient\?\.\(\)[\s\S]*HEYS\.auth\?\.isCuratorSession\?\.\(\) === true[\s\S]*return false;[\s\S]*HEYS\.cloud\?\.getUser\?\.\(\)[\s\S]*return false;/);
@@ -623,13 +602,14 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(writeClientKvValueMigrationSource).toContain('GRANT EXECUTE ON FUNCTION public.write_client_kv_value(uuid, text, jsonb) TO heys_rpc');
   });
 
-  it('detects returning users from the bare curator JWT marker too', () => {
-    expect(dayAdviceSource).toContain("localStorage.getItem('heys_curator_session')");
+  it('detects returning users from the non-secret curator cookie hint', () => {
+    expect(dayAdviceSource).toContain("localStorage.getItem('heys_curator_cookie_session_hint')");
   });
 
-  it('keeps destructive curator KV deletes on curator auth when only bare JWT exists', () => {
+  it('keeps destructive curator KV deletes on verified curator runtime auth', () => {
     expect(yandexApiSource).toContain('function decodeJwtPayload(token)');
-    expect(yandexApiSource).toMatch(/const curatorSession = localStorage\.getItem\('heys_curator_session'\);[\s\S]*return payload\?\.sub \|\| payload\?\.user_id \|\| null;/);
+    expect(yandexApiSource).toMatch(/function getCuratorUserId\(\) \{[\s\S]*global\.HEYS\?\.cloud\?\.getUser\?\.\(\)[\s\S]*decodeJwtPayload\(getCuratorToken\(\)\)/);
+    expect(yandexApiSource).toMatch(/async function deleteKV\(clientId, key\)[\s\S]*const curatorUserId = getCuratorUserId\(\);[\s\S]*deleteKVviaREST\(curatorUserId, clientId, key\)/);
   });
 
   it('clears bare curator JWT during full app logout and static PIN login', () => {
@@ -650,39 +630,26 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(indexHtmlSource).toMatch(/hlgHideOverlay[\s\S]*hasUser: !!preAuth\.user[\s\S]*window\.__heysPreAuth = null;/);
   });
 
-  it('restores compatible curator auth in index.html before legacy bundles run', () => {
-    expect(indexHtmlSource).toContain('function restoreCompatCuratorAuth(token)');
-    expect(indexHtmlSource).toContain("localStorage.getItem('heys_curator_session')");
-    expect(indexHtmlSource).toContain("localStorage.setItem('heys_supabase_auth_token', JSON.stringify(tokenData))");
-    expect(indexHtmlSource).toContain("localStorage.removeItem('heys_pin_auth_client')");
-    expect(indexHtmlSource).toContain("localStorage.removeItem('heys_session_token')");
-    expect(indexHtmlSource).toContain('payload.sub || payload.user_id');
+  it('purges browser-readable curator auth in index.html before legacy bundles run', () => {
+    expect(indexHtmlSource).toContain('var hadLegacyCuratorMarker');
+    expect(indexHtmlSource).toContain("localStorage.removeItem('heys_curator_session')");
+    expect(indexHtmlSource).toContain("localStorage.removeItem('heys_supabase_auth_token')");
+    expect(indexHtmlSource).toContain("localStorage.setItem('heys_curator_cookie_session_hint', '1')");
+    expect(indexHtmlSource).not.toContain('function restoreCompatCuratorAuth(token)');
   });
 
-  it('executes index.html curator JWT boot restore before legacy bundles run', () => {
-    expect(indexSessionDetectionScript).toContain('restoreCompatCuratorAuth');
-    const payload = base64UrlEncode(JSON.stringify({
-      sub: 'curator-boot-1',
-      email: 'curator@example.test',
-      role: 'curator',
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    }));
-    const token = `header.${payload}.signature`;
+  it('executes index.html curator credential purge before legacy bundles run', () => {
+    expect(indexSessionDetectionScript).toContain('hadLegacyCuratorMarker');
     const storage = createMockLocalStorage({
-      heys_curator_session: token,
-      heys_pin_auth_client: 'stale-client',
-      heys_session_token: 'stale-session',
+      heys_curator_session: 'legacy.jwt.token',
+      heys_supabase_auth_token: '{"access_token":"legacy"}',
     });
     const win: Record<string, any> = {};
-    const atobMock = (value: string) => Buffer.from(value, 'base64').toString('binary');
+    new Function('window', 'localStorage', indexSessionDetectionScript)(win, storage);
 
-    new Function('window', 'localStorage', 'atob', indexSessionDetectionScript)(win, storage, atobMock);
-
-    const compat = JSON.parse(storage.getItem('heys_supabase_auth_token') || '{}');
-    expect(compat.access_token).toBe(token);
-    expect(compat.user?.id).toBe('curator-boot-1');
-    expect(storage.getItem('heys_pin_auth_client')).toBeNull();
-    expect(storage.getItem('heys_session_token')).toBeNull();
+    expect(storage.getItem('heys_curator_session')).toBeNull();
+    expect(storage.getItem('heys_supabase_auth_token')).toBeNull();
+    expect(storage.getItem('heys_curator_cookie_session_hint')).toBe('1');
     expect(win.__heysHasSession).toBe(true);
   });
 

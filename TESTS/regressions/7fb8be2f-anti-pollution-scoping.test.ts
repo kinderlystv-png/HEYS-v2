@@ -34,8 +34,12 @@ describe('Regression 7fb8be2f: anti-pollution scoping (ews/lipolysis/meal-gaps)'
         // Direct `localStorage.setItem(GAP_HISTORY_KEY,` без _cid prefix → bug
         const directWrites = src.match(/localStorage\.setItem\s*\(\s*GAP_HISTORY_KEY\s*,/g);
         expect(directWrites, 'нашёл direct unscoped setItem(GAP_HISTORY_KEY) — pollution risk').toBeNull();
-        // Должен быть scoped pattern
-        expect(src).toMatch(/SCOPED_KEY|scopedKey|_cid|currentClientId.*GAP_HISTORY/);
+        // v5 может полностью удалить legacy history persistence; это ещё
+        // безопаснее scoped-варианта.
+        expect(
+            /SCOPED_KEY|scopedKey|_cid|currentClientId.*GAP_HISTORY/.test(src)
+            || (!src.includes('GAP_HISTORY') && !src.includes('localStorage.setItem')),
+        ).toBe(true);
     });
 
     it('heys_iw_lipolysis.js — writes scoped LIPOLYSIS keys', () => {
@@ -44,7 +48,16 @@ describe('Regression 7fb8be2f: anti-pollution scoping (ews/lipolysis/meal-gaps)'
         const directHistory = src.match(/localStorage\.setItem\s*\(\s*LIPOLYSIS_HISTORY_KEY\s*,/g);
         expect(directRecord, 'direct setItem(LIPOLYSIS_RECORD_KEY) — pollution risk').toBeNull();
         expect(directHistory, 'direct setItem(LIPOLYSIS_HISTORY_KEY) — pollution risk').toBeNull();
-        expect(src).toMatch(/_scopedLipoKey|scoped.*LIPOLYSIS/);
+        // Deprecated compatibility surface допустим только когда он fail-neutral
+        // и вообще не пишет lipolysis state.
+        expect(
+            /_scopedLipoKey|scoped.*LIPOLYSIS/.test(src)
+            || (
+                src.includes('deprecated: true')
+                && src.includes('updateLipolysisRecord: () => false')
+                && !src.includes('localStorage.setItem')
+            ),
+        ).toBe(true);
     });
 
     it('insights/pi_early_warning.js — writes scoped ews keys', () => {

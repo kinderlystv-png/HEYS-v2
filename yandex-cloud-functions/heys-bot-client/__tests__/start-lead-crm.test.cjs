@@ -675,6 +675,12 @@ test('HEYS Start contact creates CRM lead and sends PII-free curator handoff', a
   assert.match(handoff.text, /lead_id: 22222222-2222-2222-2222-222222222222/);
   assert.match(handoff.text, /ПДн не отправлены в Telegram/);
   assert.doesNotMatch(handoff.text, /79991112233|\+7|Ivan|Private|phone|email|name/i);
+  assert.deepEqual(handoff.reply_markup, {
+    inline_keyboard: [[{
+      text: '✅ Взял в работу',
+      callback_data: 'lead_taken_22222222-2222-2222-2222-222222222222',
+    }]],
+  });
 });
 
 test('HEYS Start contact without week_request does not create CRM lead', async (t) => {

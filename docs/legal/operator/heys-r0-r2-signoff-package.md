@@ -11,20 +11,23 @@
 
 ## R0 — заявки и бесплатные триалы
 
-| Проверка                    | Источник                                                                                                       | Статус | Что остается вне репо / в live                              |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------- |
-| РКН updateform              | [rkn-notification-heys.md](rkn-notification-heys.md), `маркетинг/31`                                           | 🟡     | принято порталом 2026-06-17; дождаться публикации в реестре |
-| Реестр данных               | [heys-data-register.md](heys-data-register.md)                                                                 | 🟡     | сверить с опубликованной записью 26-22-005319               |
-| ИСПДн gap-list              | [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md)                                                               | 🟡     | финально определить уровень/модель угроз                    |
-| Access matrix + break-glass | [heys-access-matrix.md](heys-access-matrix.md), [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md) | ✅     | drill перед R2                                              |
-| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                 | 🟡     | импортировать во внешний календарь                          |
-| Monthly audit preflight     | `pnpm pdn:monthly-audit`                                                                                       | 🟡     | первая фактическая запись после РКН/запуска                 |
-| Telegram lead notification  | `pnpm privacy:marketing`, `yandex-cloud-functions/heys-bot-client/CRM_SMOKE.md`                                | 🟡     | deploy + live smoke без ПДн                                 |
-| Security strict readiness   | `pnpm security:strict-readiness`, `pnpm security:l6-watchdogs`                                                 | 🟡     | deploy/reobserve `6Б.3/6Б.4`                                |
+Live evidence текущего прохода:
+[heys-r0-live-evidence-2026-07-26.md](heys-r0-live-evidence-2026-07-26.md).
 
-R0 нельзя переводить в зеленый только текстом: РКН-подача уже принята порталом,
-но нужны публикация/сверка записи, live-smoke и security observation там, где
-они явно отмечены.
+| Проверка                    | Источник                                                                                                         | Статус        | Что остается вне репо / в live                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------- |
+| РКН updateform              | [rkn-notification-heys.md](rkn-notification-heys.md), `маркетинг/31`                                             | ✅            | запись проверена 2026-07-26; HEYS-цели и health-data опубликованы |
+| Реестр данных               | [heys-data-register.md](heys-data-register.md)                                                                   | ✅            | сверено с опубликованной записью 26-22-005319                     |
+| ИСПДн level/threat model    | [heys-ispdn-threat-model-r0.md](heys-ispdn-threat-model-r0.md), [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md) | ✅ R0 / 🟡 R2 | рабочие тип 3 / УЗ-4 приняты; внешний sign-off до R2              |
+| Access matrix + break-glass | [heys-access-matrix.md](heys-access-matrix.md), [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md)   | ✅            | drill перед R2                                                    |
+| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                   | 🟡            | импортировать во внешний календарь                                |
+| Monthly audit preflight     | `pnpm pdn:monthly-audit`                                                                                         | 🟡            | первая фактическая запись после РКН/запуска                       |
+| Telegram lead notification  | live DB/handoff/replay, PII-free metadata, 23/23 tests, claim-кнопка в production                                | ✅            | штатный poll heartbeat                                            |
+| Security strict readiness   | production strict read/write, two-client IDOR, SEC-004/024 `ready=true`                                          | ✅            | штатное observation                                               |
+
+Техническая часть R0 закрыта 2026-07-26. Общий R0 остаётся 🟡 только до
+подтверждения импорта календаря обязательств; smoke 5–10 знакомых — следующий
+продуктовый контроль перед закрепом и массовым CTA.
 
 ## R1 — первая оплата
 

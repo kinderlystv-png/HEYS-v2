@@ -9,7 +9,8 @@
 (контент-батч).
 Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
 Контроль: Обзор / Конкуренты / TG-штаб / План 22; Позиция: Позиционирование /
-Голос; Промо: TG-стратегия / Куратор / TG-посты).
+Голос; Промо: TG-стратегия / Куратор / TG-посты; Лендинг: мобильный аудит 40;
+Релиз: единый контур и копируемые промпты 41).
 
 При сломанной структуре источников падает с ненулевым кодом — pre-commit
 хук тогда блокирует коммит рассинхронизированного дашборда.
@@ -570,12 +571,32 @@ def table_col_widths(head):
         return [14, 27, 18, 41]
     if normalized == ['неделя', 'тема серии', 'цель серии', 'пример мягкого cta']:
         return [8, 20, 42, 30]
+    if normalized == ['контекст', 'оценка', 'что работает', 'что мешает', 'что изменить', 'аудит-приоритет']:
+        return [13, 7, 20, 21, 31, 8]
+    if normalized == ['секция', 'роль в продаже', 'сильная сторона', 'проблема', 'рекомендация']:
+        return [12, 17, 21, 22, 28]
+    if normalized == ['момент', 'что чувствует посетитель', 'влияние на желание', 'что нужно']:
+        return [15, 25, 13, 47]
+    if normalized == ['поле', 'сейчас', 'рекомендация', 'причина']:
+        return [14, 18, 34, 34]
+    if normalized == ['контекст', 'что нужно понять первым', 'как лендинг справляется', 'риск', 'изменение']:
+        return [15, 20, 21, 20, 24]
+    if normalized == ['проверяемый факт', 'источник', 'команда / проверка', 'результат']:
+        return [26, 18, 32, 24]
+    if normalized == ['когда', 'что делаем', 'что должно получиться', 'что пока не делаем']:
+        return [15, 29, 29, 27]
+    if normalized == ['очередь', 'задача', 'результат', 'зависимость']:
+        return [9, 27, 41, 23]
+    if normalized == ['вопрос', 'было похоже на противоречие', 'единое решение']:
+        return [17, 31, 52]
+    if normalized == ['утверждение', 'источник', 'команда проверки', 'результат на 2026-07-26']:
+        return [28, 16, 34, 22]
 
     n = len(head)
     presets = {
         2: [30, 70],
         3: [20, 55, 25],
-        4: [16, 50, 24, 10],
+        4: [18, 34, 28, 20],
         5: [14, 38, 22, 18, 8],
         6: [12, 34, 18, 12, 17, 7],
         7: [5, 36, 21, 6, 18, 6, 8],
@@ -665,6 +686,27 @@ def render_plan_markdown(text):
             i += 1
             continue
 
+        if stripped.startswith('```'):
+            flush_para()
+            close_list()
+            language = stripped[3:].strip()
+            code_lines = []
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith('```'):
+                code_lines.append(lines[i])
+                i += 1
+            if i < len(lines):
+                i += 1
+            language_class = f' class="language-{esc(language)}"' if language else ''
+            code_html = html.escape('\n'.join(code_lines))
+            out.append(
+                '<div class="prompt-block">'
+                '<button class="copy-prompt" type="button">Копировать</button>'
+                f'<pre><code{language_class}>{code_html}</code></pre>'
+                '</div>'
+            )
+            continue
+
         if stripped.startswith('|'):
             flush_para()
             close_list()
@@ -732,6 +774,10 @@ def render_plan_markdown(text):
 plan_full_html = render_plan_markdown(plan_text)
 
 source_tabs = [
+    ('release-navigator', 'Релизный контур', '41 · Единый релизный контур и очередь промптов',
+     ROOT / '41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md', 'release'),
+    ('landing-audit', 'Аудит лендинга', '40 · Мобильный UX/CRO-аудит лендинга',
+     ROOT / '40_Аудит_лендинга_mobile_2026-07-26.md', 'landing'),
     ('doc03', 'Позиционирование', '03 · Каналы и позиционирование',
      ROOT / '03_Каналы_и_продакт-плейсмент.md', 'position'),
     ('doc14', 'TG-стратегия', '14 · Telegram-стратегия и плейбук',
@@ -760,12 +806,50 @@ def source_buttons(group):
 
 source_tab_buttons_position = source_buttons('position')
 source_tab_buttons_telegram = source_buttons('telegram')
+source_tab_buttons_landing = source_buttons('landing')
+source_tab_buttons_release = source_buttons('release')
 source_tab_panes = ''
 for pane_id, _, title, path, _ in source_tabs:
     rel_path = path.relative_to(ROOT.parent)
+    extra = ''
+    if pane_id == 'landing-audit':
+        extra = (
+            '<div class="audit-overview">'
+            '<div class="audit-score"><span>Итоговая оценка</span><b>6,2 / 10</b>'
+            '<small>сильная ясность продукта; резерв — proof, длина и форма</small></div>'
+            '<div class="audit-kpis">'
+            '<div><b>21,3</b><span>мобильного экрана</span></div>'
+            '<div><b>79%</b><span>страницы до trial</span></div>'
+            '<div><b>24</b><span>проверенных скриншота</span></div>'
+            '</div>'
+            '<a class="audit-shot-link" href="../output/playwright/landing-mobile/'
+            'exact-390x844/landing-full-390x844.png" target="_blank" '
+            'rel="noopener noreferrer" title="Открыть полный скриншот">'
+            '<img class="audit-shot" src="../output/playwright/landing-mobile/'
+            'exact-390x844/landing-full-390x844.png" '
+            'alt="Полный мобильный скриншот лендинга HEYS" loading="lazy">'
+            '<span>Открыть полный скриншот ↗</span></a>'
+            '</div>'
+        )
+    elif pane_id == 'release-navigator':
+        extra = (
+            '<div class="release-overview">'
+            '<div class="release-now"><span>Сейчас</span><b>Личная проверка → P0 лендинга</b>'
+            '<small>Telegram запущен и R0 закрыт; сначала фиксируем baseline, затем внедряем аудит</small></div>'
+            '<div class="release-flow">'
+            '<div><b>1</b><span>Лично: квиз + заявка</span></div>'
+            '<div><b>2</b><span>Внедрить P0 аудита</span></div>'
+            '<div><b>3</b><span>Product-smoke 5–10 людей</span></div>'
+            '<div><b>4</b><span>Публичный S1 → R1 до оплаты</span></div>'
+            '</div>'
+            '<p>Ниже — актуальный маршрут: Промпт 01 — личный чек-лист основателя, Промпт 02 — следующая задача Codex. '
+            'Выполненные Telegram/R0 перенесены в архив.</p>'
+            '</div>'
+        )
     source_tab_panes += (
         f'<div class="pane" id="{esc(pane_id)}">'
         f'<p class="sub"><b>Полный источник:</b> <code>{esc(rel_path)}</code>.</p>'
+        f'{extra}'
         f'<section><h2>{esc(title)} — полный текст</h2>'
         f'<div class="card plan-source">{render_plan_markdown(path.read_text(encoding="utf-8"))}</div>'
         f'</section></div>'
@@ -1008,6 +1092,8 @@ h2 {{ font-size:11px; text-transform:uppercase; letter-spacing:.12em;
 .tab-group.control {{ background:#4f8cff12; border-color:#4f8cff33; }}
 .tab-group.position {{ background:#2dd4a710; border-color:#2dd4a733; }}
 .tab-group.telegram {{ background:#f5b14c12; border-color:#f5b14c3d; }}
+.tab-group.landing {{ background:#a78bfa12; border-color:#a78bfa44; }}
+.tab-group.release {{ background:#2dd4a712; border-color:#2dd4a744; }}
 .tab-group.plan {{ background:#f0647c10; border-color:#f0647c33; }}
 .tab {{ background:none; border:none; color:var(--dim); font:600 13px inherit;
   padding:7px 11px; cursor:pointer; border:1px solid transparent; border-radius:7px; }}
@@ -1148,6 +1234,31 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
   background:#ffffff14; border:1px solid #ffffff1c; border-radius:4px; padding:1px 4px;
   font-size:.92em; color:#dbe7ff; overflow-wrap:anywhere; word-break:break-word; }}
 .plan-source a {{ color:var(--acc); text-decoration:none; border-bottom:1px dashed #4f8cff88; }}
+.audit-overview {{ display:grid; grid-template-columns:minmax(220px,.75fr) minmax(250px,1fr) minmax(170px,.52fr);
+  gap:12px; align-items:stretch; margin:14px 0 18px; }}
+.audit-score,.audit-kpis,.audit-shot-link {{ min-width:0; border:1px solid #a78bfa44;
+  border-radius:14px; background:linear-gradient(145deg,#171b38,#11172d); }}
+.audit-score {{ display:flex; flex-direction:column; justify-content:center; padding:18px; }}
+.audit-score span,.audit-score small,.audit-kpis span {{ color:var(--dim); }}
+.audit-score b {{ margin:3px 0 5px; color:#c4b5fd; font-size:clamp(30px,4vw,46px); line-height:1; }}
+.audit-kpis {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:14px; }}
+.audit-kpis div {{ display:flex; flex-direction:column; justify-content:center; padding:6px 10px;
+  border-right:1px solid var(--line); }}
+.audit-kpis div:last-child {{ border-right:0; }}
+.audit-kpis b {{ color:var(--txt); font-size:22px; }}
+.audit-kpis span {{ font-size:11px; line-height:1.3; }}
+.audit-shot-link {{ position:relative; display:block; min-height:150px; overflow:hidden;
+  color:var(--txt); text-decoration:none; }}
+.audit-shot {{ display:block; width:100%; height:150px; object-fit:cover; object-position:top;
+  opacity:.68; transition:opacity .15s ease,transform .15s ease; }}
+.audit-shot-link span {{ position:absolute; left:12px; bottom:10px; padding:5px 8px;
+  border-radius:7px; background:#0b1020dd; font-size:11px; font-weight:700; }}
+.audit-shot-link:hover .audit-shot {{ opacity:.9; transform:scale(1.02); }}
+@media (max-width:760px) {{
+  .audit-overview {{ grid-template-columns:1fr; }}
+  .audit-kpis {{ grid-template-columns:repeat(3,minmax(0,1fr)); }}
+  .release-flow {{ grid-template-columns:1fr 1fr; }}
+}}
 .plan-source ul,.plan-source ol {{ margin:8px 0 14px; padding-left:22px; }}
 .plan-source li {{ line-height:1.55; }}
 .plan-md-hr {{ border:0; border-top:1px solid var(--line); margin:18px 0; }}
@@ -1174,6 +1285,30 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .plan-md-table tr.task-codex-blocked td {{ color:var(--warn); }}
 .plan-md-table tr.task-user-blocked td {{ color:var(--hold); }}
 .plan-md-table tr.task-user td {{ color:var(--txt); }}
+.release-overview {{ display:grid; gap:12px; margin:0 0 18px; }}
+.release-now {{ display:flex; flex-direction:column; gap:4px; padding:16px;
+  border:1px solid #2dd4a755; border-radius:14px;
+  background:linear-gradient(135deg,#2dd4a718,#4f8cff12); }}
+.release-now span {{ color:var(--ok); font-size:11px; text-transform:uppercase;
+  letter-spacing:.12em; }}
+.release-now b {{ font-size:clamp(18px,2.4vw,26px); }}
+.release-now small,.release-overview p {{ color:var(--dim); }}
+.release-flow {{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }}
+.release-flow div {{ display:flex; align-items:center; gap:8px; min-width:0;
+  padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--card); }}
+.release-flow b {{ display:grid; place-items:center; flex:0 0 25px; height:25px;
+  border-radius:50%; background:#2dd4a722; color:var(--ok); }}
+.release-flow span {{ font-size:11.5px; }}
+.prompt-block {{ position:relative; margin:12px 0 18px; padding-top:38px;
+  border:1px solid #4f8cff55; border-radius:12px; background:#080d1c; overflow:hidden; }}
+.prompt-block pre {{ margin:0; padding:14px; max-height:520px; overflow:auto;
+  white-space:pre-wrap; word-break:break-word; color:#dfe7ff; font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }}
+.plan-source .prompt-block code {{ display:block; padding:0; border:0; border-radius:0;
+  background:none; color:inherit; font:inherit; white-space:inherit; }}
+.copy-prompt {{ position:absolute; right:8px; top:7px; padding:6px 10px;
+  border:1px solid #4f8cff66; border-radius:7px; background:#4f8cff22;
+  color:var(--txt); font:600 11px inherit; cursor:pointer; }}
+.copy-prompt:hover {{ background:#4f8cff3a; }}
 ul {{ padding-left:18px; }} li {{ margin-bottom:4px; font-size:12.5px; }}
 footer {{ margin-top:26px; color:var(--dim); font-size:11px;
   border-top:1px solid var(--line); padding-top:10px; }}
@@ -1188,6 +1323,8 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
       {tab_button('tg', 'TG-штаб')}
       {tab_button('plan22', 'План 22')}
     </div>
+    <div class="tab-group release" data-label="Релиз">{source_tab_buttons_release}</div>
+    <div class="tab-group landing" data-label="Лендинг">{source_tab_buttons_landing}</div>
     <div class="tab-group position" data-label="Позиция">{source_tab_buttons_position}</div>
     <div class="tab-group telegram" data-label="Промо">{source_tab_buttons_telegram}</div>
   </div>
@@ -1267,34 +1404,19 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 </div>
 
 <div class="pane" id="tg">
-<p class="sub">{esc(tg_role)}</p>
-<section><h2>TG-посты: контент-батч №1 — {len(posts)} постов готово (24)</h2>
+<p class="sub"><b>TG-штаб: план запуска.</b> Здесь только порядок действий, календарь и контрольные ограничения. Рубрики, продвижение и обзоры похожих каналов — во вкладке «TG-стратегия».</p>
+<section><h2>Первые 14 дней канала (14)</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>{tg_start14_table}</table></div></section>
+<section><h2>План публикаций на запуск — {len(posts)} постов готово (24)</h2>
 <div class="cols2">
 <div class="card" style="padding:4px 8px"><table>{post_calendar}</table>
 <p class="label" style="padding:6px">⚠ {esc(post_prereq)}</p></div>
 <div class="card"><ul class="task-list">
 {''.join(f'<li><span class="chip wait">{esc(pid)}</span> {esc(t.strip())}</li>' for pid, t in posts)}
 </ul></div></div></section>
-	<div class="cols2">
-	<div><h2>TG-штаб: рубрики и промо-контур (14/24)</h2>
-	<div class="card" style="padding:4px 8px"><table>{tg_rubric_rows}</table></div>
-	<section><h2>Продвижение</h2><div class="card"><ul>{tg_promo_list}</ul></div></section></div>
-	<div class="grid" style="align-content:start">{tg_block_cards}</div>
-	</div>
-	<section><h2>Первые 14 дней канала (14)</h2>
-	<div class="card scrollx" style="padding:4px 8px"><table>{tg_start14_table}</table></div></section>
-	<section class="tg-contour"><h2>Единый контур Telegram-канала HEYS (14 §13)</h2>
-	<div class="card tg-contour-formula"><h2>Итоговая формула</h2><p class="sm">{esc(tg_contour_formula)}</p></div>
-	<div class="card">{tg_contour_sources_table}</div>
-	<div class="tg-contour-grid">
-	<div class="card">{tg_contour_layers_table}</div>
-	<div class="card">{tg_contour_cycle_table}</div>
-	</div></section>
-	<section><h2>Библиотека рекламных примеров (14 §11)</h2>
-	<div class="tg-examples">{tg_ad_cards}</div></section>
-	<section><h2>Библиотека Telegram-каналов (14 §12)</h2>
-	<div class="tg-examples">{tg_channel_cards}</div></section>
-	</div>
+<section><h2>Контроль запуска</h2>
+<div class="grid cards3">{tg_block_cards}</div></section>
+</div>
 
 {source_tab_panes}
 
@@ -1305,7 +1427,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения ·
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения · 40_Аудит_лендинга · 41_Релизный_контур ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
 <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 
@@ -1316,14 +1438,21 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 }})();
 </script>
 <script>
+function activatePane(paneId, updateHash) {{
+  var targetTab = document.querySelector('.tab[data-pane="' + paneId + '"]');
+  var targetPane = document.getElementById(paneId);
+  if (!targetTab || !targetPane) return false;
+  document.querySelectorAll('.tab').forEach(function (x) {{ x.classList.remove('active'); }});
+  document.querySelectorAll('.pane').forEach(function (x) {{ x.classList.remove('active'); }});
+  targetTab.classList.add('active');
+  targetPane.classList.add('active');
+  if (updateHash) history.replaceState(null, '', '#' + paneId);
+  return true;
+}}
 document.querySelectorAll('.tab').forEach(function (t) {{
-  t.addEventListener('click', function () {{
-    document.querySelectorAll('.tab').forEach(function (x) {{ x.classList.remove('active'); }});
-    document.querySelectorAll('.pane').forEach(function (x) {{ x.classList.remove('active'); }});
-    t.classList.add('active');
-    document.getElementById(t.dataset.pane).classList.add('active');
-  }});
+  t.addEventListener('click', function () {{ activatePane(t.dataset.pane, true); }});
 }});
+if (location.hash) activatePane(location.hash.slice(1), false);
 document.querySelectorAll('.row-toggle').forEach(function (btn) {{
   btn.addEventListener('click', function () {{
     var row = btn.closest('tr');
@@ -1332,6 +1461,31 @@ document.querySelectorAll('.row-toggle').forEach(function (btn) {{
     btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
   }});
 }});
+document.querySelectorAll('.copy-prompt').forEach(function (btn) {{
+  btn.addEventListener('click', function () {{
+    var code = btn.parentElement.querySelector('code');
+    var value = code ? code.textContent : '';
+    var done = function () {{
+      btn.textContent = 'Скопировано ✓';
+      window.setTimeout(function () {{ btn.textContent = 'Копировать'; }}, 1600);
+    }};
+    if (navigator.clipboard && window.isSecureContext) {{
+      navigator.clipboard.writeText(value).then(done).catch(function () {{ fallbackCopy(value, done); }});
+    }} else {{
+      fallbackCopy(value, done);
+    }}
+  }});
+}});
+function fallbackCopy(value, done) {{
+  var area = document.createElement('textarea');
+  area.value = value;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  try {{ document.execCommand('copy'); done(); }} finally {{ document.body.removeChild(area); }}
+}}
 </script>
 </body></html>'''
 
@@ -1356,6 +1510,10 @@ for cond, msg in [
      'дашборд: не все полные source-вкладки попали в HTML'),
     ('Review-layer: смена категории и УТП' in html_out,
      'дашборд: полный 14_Telegram_плейбук не содержит review-layer УТП'),
+    ('TG-штаб: план запуска.' in html_out,
+     'дашборд: TG-штаб не сфокусирован на плане запуска'),
+    ('Библиотека Telegram-каналов' in html_out and 'Библиотека рекламных примеров' in html_out,
+     'дашборд: обзоры похожих каналов не попали в TG-стратегию'),
     ('внимательная внешняя опора' in html_out.lower(),
      'дашборд: единая эмоциональная концепция не попала в HTML'),
     (len(tariffs) >= 3, 'Сводка: тарифная сетка < 3 строк (B12:F15)'),

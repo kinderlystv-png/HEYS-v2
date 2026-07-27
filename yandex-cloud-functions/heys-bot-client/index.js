@@ -836,6 +836,12 @@ async function sendStartLeadHandoff(lead) {
         chat_id: chatId,
         text: lines.join('\n'),
         disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [[{
+            text: '✅ Взял в работу',
+            callback_data: `lead_taken_${lead.id}`,
+          }]],
+        },
       }),
     });
     const result = await response.json().catch(() => ({}));

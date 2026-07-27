@@ -70,7 +70,7 @@ describe('TASK-003 follow-up: scoped day save for check-in day fields', () => {
     expect(saveDayStart).toBeGreaterThanOrEqual(0);
     const saveDayEnd = stepsSource.indexOf('const MORNING_ACTIVATION_COPY_HISTORY_KEY', saveDayStart);
     const saveDayBlock = stepsSource.slice(saveDayStart, saveDayEnd);
-    const scopedBranch = saveDayBlock.slice(saveDayBlock.indexOf('if (scopedKey)'), saveDayBlock.indexOf('return;', saveDayBlock.indexOf('if (scopedKey)')) + 'return;'.length);
+    const scopedBranch = saveDayBlock.slice(saveDayBlock.indexOf('if (scopedKey)'), saveDayBlock.indexOf('return true;', saveDayBlock.indexOf('if (scopedKey)')) + 'return true;'.length);
 
     expect(saveDayBlock).toContain('notifyDateUpdated(dateKey)');
     expect(scopedBranch).toContain('notifyDayCache();');
@@ -80,6 +80,6 @@ describe('TASK-003 follow-up: scoped day save for check-in day fields', () => {
     const block = refeedSource.slice(refeedSource.indexOf("registerStep('refeedDay'"));
     expect(refeedSource).toContain('const getDayStorageKey = (dateKey)');
     expect(block).toContain('readDayValue(dateKey');
-    expect(block).toContain('writeDayValue(dateKey, day)');
+    expect(block).toContain("writeDayValue(dateKey, day, ['isRefeedDay', 'refeedReason'])");
   });
 });
