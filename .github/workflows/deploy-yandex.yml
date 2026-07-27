@@ -918,5 +918,45 @@ jobs:
           echo "::error::Fast deploy left server with hash $DEPLOYED outside HEAD history"
           exit 1
 
+  legal-drift-canary:
+    name: Verify live legal drift
+    needs: [detect, deploy-artifact, verify-deploy]
+    if: |
+      always() && needs.detect.result == 'success' &&
+      ((needs.detect.outputs.release_only != 'true' && needs.deploy-artifact.result == 'success') ||
+       (needs.detect.outputs.release_only == 'true' && needs.verify-deploy.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Run read-only production canary
+        env:
+          PGPASSWORD: ${{ secrets.PG_PASSWORD }}
+          PGSSLROOTCERT: ${{ github.workspace }}/yandex-cloud-functions/certs/root.crt
+        run: node scripts/check-live-legal-drift.mjs
+
+      - name: Notify Telegram on legal drift
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE: |
+            🚨 *Legal Drift Detected After Deploy*
+
+            📦 SHA: `${{ github.sha }}`
+            Live CDN, landing, production registry or migration ledger are inconsistent.
+            🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            No production data was changed by this check.
+        run: node scripts/ci/send-telegram-alert.mjs
+
   # Cloud Functions деплоятся отдельным workflow: .github/workflows/cloud-functions-deploy.yml
   # Это предотвращает параллельный двойной деплой при push в main.

@@ -1,0 +1,62 @@
+name: Legal Drift Canary
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      test_failure_alert:
+        description: "After a green canary, fail one CI step to verify Telegram delivery"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: legal-drift-canary
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: Compare live legal surfaces with production registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Run read-only legal drift canary
+        env:
+          PGPASSWORD: ${{ secrets.PG_PASSWORD }}
+          PGSSLROOTCERT: ${{ github.workspace }}/yandex-cloud-functions/certs/root.crt
+        run: node scripts/check-live-legal-drift.mjs
+
+      - name: Trigger safe failure-alert delivery test
+        if: github.event_name == 'workflow_dispatch' && inputs.test_failure_alert
+        run: |
+          echo "::error::Intentional legal canary failure-alert delivery test"
+          exit 1
+
+      - name: Send Telegram alert on failure
+        if: failure() && (github.event_name == 'schedule' || inputs.test_failure_alert)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE: |
+            🚨 *HEYS Legal Drift Canary Failed*
+
+            Live CDN, landing, production registry or migration ledger are inconsistent.
+            🧪 Manual delivery test: ${{ inputs.test_failure_alert || false }}
+            🕐 Run: ${{ github.run_id }}
+            🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            No production data was changed by this check.
+        run: node scripts/ci/send-telegram-alert.mjs
