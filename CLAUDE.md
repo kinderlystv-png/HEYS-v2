@@ -56,11 +56,19 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
 - Проверки выбирай по риску. Для микроправок текста/CSS, удаления только что
   добавленного UI-слоя или отката своей последней правки не запускай полный
   `lint`/`tsc`/test/build цикл по привычке; достаточно точечного `rg`,
-  `git diff` по затронутому файлу и визуального smoke. Полные проверки нужны,
-  когда меняются типы, контракты, бизнес-логика, сборка, роутинг, данные,
-  безопасность или несколько связанных файлов.
+  `git diff` и проверки локального экрана. Полный прогон нужен, только если риск
+  в типах, контрактах, бизнес-логике, сборке, роутинге, данных или безопасности
+  нельзя надёжно закрыть точечно; число файлов само по себе не является
+  причиной.
 - Если всё же запускаешь тяжёлую проверку для маленькой правки, сначала коротко
   объясни пользователю, какой конкретный риск она закрывает.
+
+## RuStore mobile release — общий обязательный flow
+
+Перед RuStore build/release полностью прочитай
+[apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md](apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md).
+Он владеет изолированной сборкой, artifact gate, подписью, permissions,
+модерацией и auth UI invariant. Сборка не разрешает загрузку или публикацию.
 
 ## Полнота модулей: релиз без MVP
 
@@ -133,15 +141,31 @@ readiness-математику, валидатор-фреймворк, онбо�
 
 ## Execution autonomy
 
-- Делай шаги сам в текущей сессии: SQL миграции через
-  `bash scripts/db/psql.sh -f ...`, cloud functions через
-  `cd yandex-cloud-functions && ./deploy-all.sh <name>`. Сетевые таймауты, IAM,
-  checksum-warnings — твои проблемы, не задачи пользователю. Commit/shipping
-  остаётся отдельным явным действием, см. ниже.
-- **`git push` — только по явной команде** («пуш», «push», «запушь»,
-  «выкатывай»). Approval задачи ≠ approval commit/shipping/push. После явно
-  разрешённого commit: «закоммитил, пушить?». HARD invariant — push виден другим
-  клиентам.
+<!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
+<!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
+<!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
+<!-- POLICY {"id":"agent-branch-source-only","branches":["claude/*"],"generated":false,"releaseArtifacts":false} -->
+<!-- POLICY {"id":"integration-never-push","command":"pnpm agents:integrate","commits":true,"push":false} -->
+
+- Если migration/deploy прямо входят в поручение или уже явно разрешены, делай
+  их сам в текущей сессии: SQL миграции через `bash scripts/db/psql.sh -f ...`,
+  cloud functions через `cd yandex-cloud-functions && ./deploy-all.sh <name>`.
+  Сетевые таймауты, IAM, checksum-warnings — твои проблемы, не задачи
+  пользователю.
+- **Только по отдельной прямой команде:** staging под commit, `git commit`,
+  production build (`pnpm build`), standalone/full legacy build, `pnpm ship`,
+  `pnpm push:*`, integration/release artifacts, `git push`, PR и внешняя
+  публикация. Approval задачи ≠ approval commit/shipping/push. Разрешённый
+  commit включает обязательные hook side effects только для staged scope.
+- Commit-only выполняй через `pnpm ship "..." --no-push`; обычный `pnpm ship`
+  допустим только когда та же команда пользователя явно включает push. После
+  commit-only спроси «пушить?». HARD invariant — push виден другим клиентам.
+- Перед любым разрешённым staging/commit/production build/integration/push/PR
+  полностью прочитай общий обязательный runbook:
+  [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
+  Он описывает команды, hooks, dirty scope и worktrees, но сам не даёт
+  разрешения.
 - **Session-wide push grant.** Если пользователь сказал «пуш в конце» / «соберу
   пушем потом» / «копи всё, пушнём одним заходом» в начале сессии — это grant на
   ВСЮ сессию, не повторяй вопрос «пушить?» после каждого коммита. Один финальный
@@ -149,8 +173,10 @@ readiness-математику, валидатор-фреймворк, онбо�
   первого коммита («ок, копим, пушу в конце») чтобы было видно что я понял
   правило. Incident 2026-06-08: 6× «пушить?» в течение часа, при том что был
   ранний grant «давай пуш уже в конце».
-- Просить пользователя — только: 2FA / hardware key, чужой доступ, destructive
-  вне согласованного плана, push на remote.
+- Проси пользователя только когда нужен выбор, существенно меняющий scope или
+  необратимый результат, 2FA/hardware key, чужой доступ, destructive вне
+  согласованного плана либо ещё не разрешённый push. Техническое исполнение не
+  перекладывай на пользователя.
 
 ## Local dev
 
@@ -175,28 +201,20 @@ readiness-математику, валидатор-фреймворк, онбо�
    видит сразу.
 3. **Сделай ревью диффа** (`/code-review` или вдумчивое самокритичное чтение)
    перед докладом — verify ≠ review, нужны оба.
-4. **Если пользователь прямо попросил commit/shipping — коммить через
-   `pnpm ship`**. `legacy-sync` пересоберёт и вшьёт бандл в твой коммит,
-   скоупнуто по правкам. Без явной команды commit/shipping оставь
-   preview-generated файлы перечисленными в финале как локальный QA-output.
+4. **Если пользователь прямо попросил commit/shipping**, перечитай обязательный
+   shipping-runbook из `Execution autonomy` и следуй выбранному permission flow.
+   Без явной команды оставь preview-generated файлы перечисленными в финале как
+   локальный QA-output.
 
-**Своё vs чужое — решено архитектурно.** `--files=<твои>` означает «пересобери
-бандлы, которые задеты твоими файлами», а не «вырежи чужой код из бандла».
-Пересборка читает **текущее состояние диска** всех модулей этих бандлов — если
-чужая параллельная правка лежит в том же бандле, она корректно попадёт в runtime
-(так и надо: бандл обязан соответствовать коду на диске). Чего `--files`
-избегает — это пересборки **несвязанных** бандлов, которых никто не трогал: full
-`bundle:legacy` плодит им новые хеши на неизменном контенте → коллизии и затирка
-чужих in-flight bundle-артефактов. То есть превью чужие source-правки **не
-теряет** и **не перетирает**; в коммит чужое берёт только «сборщик» осознанным
-`git add` (см. «Commit/shipping flow»).
+`--files=<твои>` выбирает затронутые бандлы, но собирает их из текущего
+состояния всех source-файлов этого bundle scope. Если туда попал чужой
+параллельный source, явно сообщи это; несвязанные бандлы не трогай и не запускай
+full `pnpm bundle:legacy` ради preview.
 
-**Не оставляй превью-артефакты болтаться.** Если пересобрал бандл для проверки,
-но не коммитишь сразу — помни, что dirty hybrid-файл (бандл/manifest/index.html)
-не из коммита **останавливает `legacy-sync` другим агентам**. Либо доведи до
-своего `ship`, либо отдельным явным действием убери только свои
-preview-generated файлы перед переключением на другое. Чужие/неясные
-generated-файлы не трогай.
+Preview bundles/manifests/index hash перечисляй как локальный QA-output. Убирать
+можно только явно свои и больше не нужные preview-файлы; чужой или неясный
+generated scope не stash/revert/delete. Если он блокирует действие, остановись и
+сообщи о пересечении.
 
 ---
 
@@ -333,188 +351,23 @@ each.
 
 ---
 
-## Pre-commit / pre-push hooks
+## Commit / shipping gate
 
-Активные хуки:
-
-- commit-msg: commitlint;
-- pre-commit: `lint-staged`, `check-agent-staging` (source-only guard в
-  agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode,
-  report-only в agent-mode), lazy chunk/pricing/sync-mirror guards, allowlist
-  auto-fix;
-- pre-push: `prepare-release:check` (whats-new), localStorage guards,
-  `lint-unscoped-client-writes`, `lint-raw-session-clear`, bundle-size guard,
-  React.startTransition warn-only guard, legacy-bundle verify, web tests cache;
-- manual only: `lint-shared-cache-writes` (`pnpm lint:shared-cache`) не является
-  активным Husky hook.
-
-## Commit/shipping flow: `pnpm ship` на `main`
-
-**Только по явной команде commit/shipping:** одиночный shipping-flow —
-`git add <intended files>` → `pnpm ship` на `main`. `ship` не stage'ит
-dirty-файлы сам: explicit staging — сигнал, что агент осознанно выбрал commit
-scope. Если сессия открылась на старой `claude/*`-ветке от прошлой задачи —
-`git checkout main` первым делом (ship сам предупредит, если запустить не с
-main, и подскажет команду).
-
-**Чужие dirty-файлы в общем дереве — не commit scope по умолчанию.** Перед
-staging всегда смотри `git status`, группируй файлы по смыслу и stage'и только
-intended files. `git add -A` допустим только если пользователь/сборщик осознанно
-принимает весь dirty scope как одну логическую группу.
-
-Чужой WIP не трогать вручную: не делать `stash`, `checkout`, `restore`, `reset`,
-удаление generated-файлов или конфликт-правки в чужом scope без прямой команды
-пользователя. Если чужой dirty/generated файл мешает shipping, остановись,
-покажи scope/риск и следуй stderr hook'а только в пределах явно выбранных
-файлов.
-
-```bash
-# Solo / точечная правка — стейдж конкретных файлов:
-git add apps/web/fingers/heys_fingers_grid_v1.js TESTS/heys_fingers_grid.test.js
-pnpm ship "feat(fingers): добавить grid hint"   # UI-правка
-
-# Сборщик: выбрать intended scope, нарезать на логические коммиты по смыслу.
-# Каждый коммит — своя группа файлов, push один раз в конце:
-git add apps/web/fingers/*           && pnpm ship "feat(fingers): grid hint" --no-push
-git add apps/web/heys_core_v12.js    && pnpm ship "fix(sync): drop stale dayv2" --no-push
-git add scripts/                     && pnpm ship "chore(scripts): refactor logging" --no-push
-git push    # по явной команде «пуш»
-
-# Если вся dirty осознанно принята как одна логическая группа:
-git add -A && pnpm ship "feat(...): ..."
-
-# План без коммита:
-git add <files> && pnpm ship "..." --dry-run
-```
-
-Что делает [scripts/ship.mjs](scripts/ship.mjs):
-
-1. **Проверяет staged** — если ничего не застейджено, но в worktree есть dirty
-   файлы, отказывается работать и показывает что было бы захвачено. Это
-   страховка от пустого/случайного коммита: агент должен сначала явно выбрать
-   нужную группу (`git add <intended files>` или осознанный `git add -A`).
-2. Коммитит staged. Pre-commit в `integration`-режиме пересобирает **только
-   бандлы, затронутые staged-правкой** (через `bundle:legacy:auto`) и сначала
-   падает, если unstaged legacy source мог бы попасть в тот же generated output.
-3. Генерит whats-new entry и коммитит её отдельным `chore(release):` — kind
-   зависит от типа основного коммита (см. таблицу ниже).
-4. Push и (если ты на `main`) — `gh run watch` для деплоя.
-
-### Тип коммита определяет whats-new
-
-| Правка                                                            | Type                            | Whats-new                                             |
-| ----------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
-| Видна пользователю в UI: новая кнопка/экран/текст, поведение фичи | `feat`/`fix`/`perf`             | user-facing entry показывается в модалке «Что нового» |
-| Сборка, скрипты, CI, tooling, dev-инструменты                     | `chore(scripts)`/`chore(build)` | technical entry — НЕ показывается пользователю        |
-| Security-аудит, миграции БД, RLS, гранты, capability-токены       | `chore(security)`               | technical entry                                       |
-| Документация, methodology, doc-комменты                           | `docs(...)`                     | technical entry                                       |
-| Тесты, фикстуры                                                   | `test(...)` или `chore(tests)`  | technical entry                                       |
-| Рефакторинг без видимых изменений поведения                       | `refactor(...)`                 | technical entry                                       |
-
-Правило: **«если пользователь не заметит правку без диффа — это не
-`feat`/`fix`/`perf`»**. Technical-entry создаётся всё равно (deploy-gate требует
-entry per build hash), но в user-facing модалке whats-new её не видно. Никакого
-спама пользователю про внутренние работы.
-
-### Никогда руками
-
-- **`pnpm bundle:legacy`** (полный rebuild) — задевает чужие бандлы и плодит
-  hash-коллизии. Pre-commit `legacy-sync` сам пересоберёт ровно нужные. Для
-  локального превью без коммита —
-  `pnpm bundle:legacy:auto --files=<твои файлы>`. Scoped preview rebuild нужен,
-  чтобы localhost сразу увидел твою web/UI-правку; он не является разрешением
-  stage/commit/push и не должен stash/revert чужие правки.
-- **`git push`** — только по явной команде («пуш», «push», «выкатывай»).
-- **`--no-verify`** — только по явному разрешению. Когда пользователь явно
-  разрешил для текущей операции («да на no-verify», «давай через no-verify»,
-  «можно --no-verify») — выполняй, **не переспрашивай повторно**. Правило
-  защищает от молчаливого обхода хуков, а не требует многократного подтверждения
-  одной и той же операции.
-- **`pnpm agent:worktree`** «на всякий случай». См. ниже.
-
-### Dirty scope в shared root checkout
-
-В корневом checkout'е могут лежать чужие правки. Сборщик может взять их в commit
-только как осознанный intended scope, а не случайным `git add -A`. Перед
-`git add`:
-
-- **`git status`** — посмотри что в дереве целиком. Сгруппируй файлы по смыслу
-  (фича / фикс / scripts / тесты) и сделай по коммиту на группу. Связанные
-  правки разных агентов можно класть в один логический коммит, если это
-  намеренное решение сборщика.
-- **Хочешь всё одним заходом** — `git add -A && pnpm ship "..."` только если
-  весь dirty scope принят как один логический commit.
-- **Нужно изолировать только часть** — стейдж конкретной группы:
-  `git add <path1> <path2>` или pathspec `git commit -- <path1> <path2> ...`.
-- **Не чисти чужое для удобства** — чужие source/generated/WIP файлы не
-  stash/revert/delete. Если нужен clean baseline, согласуй это как отдельное
-  действие или работай в своём worktree.
-- **Hook `legacy-sync`** падает, если в дереве dirty hybrid-файл
-  (`apps/web/index.html`, бандл, manifest), которого нет в текущем коммите —
-  чтобы коммит с правкой кода не разошёлся со своим бандлом и не прятал чужой
-  WIP. Hook больше не делает auto-stash: если это твой preview-output, убери или
-  пересобери свой scope отдельным явным действием; если scope чужой/неясный —
-  остановись и используй worktree/integration-pass. Он также падает, если
-  unstaged legacy source может попасть в тот же generated output: бандл не
-  должен коммититься с кодом, которого нет в source scope. Следуй stderr.
-- **Перед `git reset --hard|--mixed origin/main`** (или любой `reset` с
-  расхождением между HEAD и upstream) — **обязательно** проверь
-  `git log --oneline @{u}..HEAD`. Если что-то выведено — это **локальные не
-  запушенные коммиты другой сессии**, которые ресет сотрёт. Не ресетить молча:
-  это reflog-recoverable, но параллельный агент об этом не узнает и потеряет
-  работу. Альтернатива: `git fetch` + `git rebase origin/main` (сохраняет
-  локальные коммиты поверх свежего main), либо разобраться по reflog чьи это
-  коммиты и согласовать. Инцидент 2026-06-08: чужой
-  `git reset --mixed origin/main` снёс 2 моих unpushed коммита (восстановилось
-  через worktree- dirty + reflog, но могло легко потеряться).
-
-### Worktree — для реальной параллельной работы
-
-Если одновременно работают 2+ агента над независимыми задачами, используй
-worktree + `pnpm agents:integrate`: это защищает от случайного staging чужого
-WIP и от dirty generated-конфликтов. Общий root checkout допустим для одиночной
-сессии или для роли сборщика, который осознанно принимает общий dirty scope.
-`pnpm agents:integrate` — commit-producing collector flow: он мержит ветки,
-собирает generated/release artifacts и делает integration commits, но не push.
-Mutating запуск требует `--confirm-integration`; запускать только из главной
-сессии после явной команды на integration/shipping. Если правка должна жить
-отдельно от main (эксперимент, долгий рискованный рефактор под отдельный
-review), worktree тоже правильный вариант:
-
-```bash
-pnpm agent:worktree <task>            # .claude/worktrees/<task> на claude/<task>
-# каждый агент работает в своём worktree, source-only коммиты
-pnpm agents:integrate --confirm-integration --branches=claude/a,claude/b ...
-git worktree remove .claude/worktrees/<task>   # ОБЯЗАТЕЛЬНО после интеграции
-```
-
-**Stale-worktree'и накапливаются и ломают соло-агентам коммиты** (триггерят
-«shared root checkout» guard в pre-commit). Перед заведением нового worktree
-проверь `git worktree list` — если там 3+ старых, сначала `git worktree prune` и
-`git worktree remove` ненужные.
-
-### Legacy push-инструменты (избегай)
-
-`pnpm push:agent` / `pnpm push:ready` — fallback multi-step flows. Дефолт =
-`ship`. Эти команды трогай только когда ship не подходит (например коммиты уже
-сделаны без ship'a). `push:agent` сам запускает `pnpm push:preflight` перед
-`git push`; отдельный `push:preflight` нужен только для диагностики локальных
-guards. `pnpm push:safe` deprecated: `HUSKY=0` не является нормальным push-flow.
-
-Если пользователь прямо просит commit+push/push, не делай заведомо падающий
-пробный `git push` перед подготовкой релиза. До первого push сразу выбери
-штатный shipping flow: `pnpm ship` для одного staged shipping-коммита или
-`pnpm push:agent -- --confirm-push ...` для уже сделанных/сгруппированных
-коммитов. Заранее учитывай gates, которые всё равно сработают на pre-push:
-`prepare-release:check` / What's New, `verify:legacy-bundles`,
-localStorage/session guards, bundle-size guard и web tests cache.
-
-**Dev-цикл «увидеть свою правку без коммита»**: `pnpm dev:web` грузит хеш-бандлы
-из `public/` как статику (без HMR). Чтобы увидеть свою правку —
-`pnpm bundle:legacy:auto --files=<твои>` и reload. После `ship`'a этот ручной
-rebuild не нужен.
-
-**Когда хук срабатывает — следуй его stderr.** В тексте — точные инструкции.
+- Перед разрешённым commit/shipping полностью прочитай общий runbook, указанный
+  в `Execution autonomy`; длинная hook/worktree механика хранится только там.
+- До staging проверь branch, status, staged/unstaged diff и ownership. Stage'и
+  только intended scope; `git add -A` допустим лишь при явном принятии всего
+  dirty scope. Перед checkout/reset также проверь локальные unpushed commits.
+- Чужой или неясный WIP не stash/checkout/restore/reset/delete и не исправляй
+  конфликт в нём. При пересечении остановись и сообщи scope/риск.
+- Commit-only всегда сохраняет `--no-push`; push требует отдельного или ранее
+  явно данного session-wide grant. Integration создаёт commits, но не push.
+- На `claude/*` worktree коммить source-only; generated/release artifacts
+  принадлежат явно разрешённому collector flow. Read-only параллельный аудит не
+  требует worktree; независимые write-capable задачи изолируй по runbook.
+- Hooks fail closed: следуй текущему stderr. Не используй `--no-verify` или
+  `HUSKY=0` без отдельной прямой команды пользователя; `pnpm ship` намеренно не
+  поддерживает `--no-verify`.
 
 ---
 
