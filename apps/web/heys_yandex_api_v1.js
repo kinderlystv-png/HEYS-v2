@@ -515,9 +515,17 @@
     'admin_get_queue_stats',
     'admin_update_queue_settings',
 
+    // === TRIAL CANDIDATE INTAKE ===
+    'admin_invite_trial_intake',
+    'admin_mark_trial_intake_invite_sent',
+    'admin_prepare_trial_candidate_from_lead',
+    'admin_get_trial_intake_summaries',
+    'admin_get_trial_intake',
+    'admin_review_trial_intake_v2',
+    'admin_reopen_trial_candidate',
+
     // === LEADS MANAGEMENT (v3.0) ===
     'admin_get_leads',
-    'admin_convert_lead',
     'admin_update_lead_status',       // 🆕 v3.0: Отклонение лидов
 
     // === PIN MANAGEMENT (Phase 1 hotfix — bcrypt в БД) ===

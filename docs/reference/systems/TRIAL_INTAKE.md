@@ -1,11 +1,14 @@
 # Отбор кандидатов на пробную неделю
 
-> **Статус:** source-контракт реализован 2026-07-27. **Охват:** landing handoff,
-> consent, session/RPC boundary, encrypted storage, client/curator UI, decision
-> gate, retention и DSAR. **Не подтверждено/Не охвачено:** применение миграции,
-> deploy RPC/web/landing/maintenance и production runtime. Отдельное изменение
-> РКН для этого flow не требуется: опубликованная запись № 26-22-005319 уже
-> охватывает заявки/триалы, сопровождение и специальные данные о здоровье.
+> **Статус:** production v1 опубликован 2026-07-27; source v2 подготовлен
+> локально и ещё не опубликован. **Охват:** landing handoff, consent,
+> session/RPC boundary, encrypted storage, client/curator UI, decision gate,
+> retention, DSAR и production smoke. **Не подтверждено/Не охвачено:**
+> последующий legal source bump до `1.7/1.7/1.5` ещё не виден в live app,
+> который на момент проверки обслуживает trial-сборку `2026.07.27.2016.d234cbee`
+> с `1.6/1.6/1.5`. Отдельное изменение РКН для этого flow не требуется:
+> опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
+> сопровождение и специальные данные о здоровье.
 
 ## Поток
 
@@ -51,7 +54,7 @@ read/check методы) исключены из gateway и у роли `heys_rp
 `?intake=1` после прохождения consent gate является эксклюзивным: обычный app
 shell и его onboarding-overlays не конкурируют с анкетой за фокус.
 
-## Статусы и решение
+## Production v1: статусы и решение
 
 `not_invited → invited → in_progress → completed`. Куратор вручную переводит
 завершённую анкету в `needs_clarification`, `approved` или `rejected`. Отказ
@@ -61,18 +64,56 @@ shell и его onboarding-overlays не конкурируют с анкето�
 нейтральный текст. Флаги безопасности подсвечиваются куратору, но не запускают
 диагноз или автоматический отказ.
 
+### Source v2 — подготовлен локально, не опубликован
+
+Добавочная migration `2026-07-27_trial_intake_flow_v2.sql` вводит
+`invite_prepared → invite_sent`, клиент-видимый зашифрованный запрос уточнений,
+обязательные явные safety-ответы схемы `1.1` и `approved_waiting_slot`.
+Неактивные приглашения/черновики/уточнения получают 30-дневный TTL; повторная
+заявка после 30 дней переиспользует существующего client, очищает прежний intake
+и отзывает старые сессии. Production продолжает работать по v1, пока v2
+migration/RPC/web не будут отдельно разрешены и опубликованы.
+
+Финальный pre-release hardening v2 закрывает конкурентные и аварийные сценарии:
+`admin_prepare_trial_candidate_from_lead` атомарно выполняет convert→invite
+prepared и проверяет владельца lead; прямой convert и legacy review отозваны у
+runtime-ролей. Client autosave и curator review используют optimistic token
+`updated_at`, поэтому старая вкладка не перезаписывает свежий черновик,
+уточнение или решение.
+
+Черновой autosave ответа на уточнение сохраняет статус `needs_clarification`,
+поэтому вопрос и отмеченные разделы остаются видимыми до финальной отправки.
+После purge чувствительная intake-запись удаляется, а запись очереди становится
+техническим `canceled`-маркером `trial_intake_purged`: это не даёт активировать
+очищенного кандидата через legacy-путь. Закрытое окно подготовленного
+приглашения восстанавливается из карточки с перевыпуском PIN и отзывом старых
+сессий.
+
+Настоящий отзыв health consent также оставляет
+`canceled/trial_intake_health_revoked`; оба tombstone блокируют legacy
+activation. Переходы
+prepare/sent/read/save/review/activation/reopen/revoke/purge образуют audit
+chronology без содержимого анкеты, PIN, токенов, вопроса клиенту или внутренней
+заметки. Кураторский экран загружает intake summaries fail-closed, показывает
+владельца следующего шага и не даёт активировать `approved_waiting_slot`, пока
+свободных мест нет.
+
+Полный UX/logic-контракт и stop conditions:
+`docs/implementation/TRIAL_INTAKE_FLOW_V2_PROTOCOL.md`.
+
 ## Точки входа
 
-| Область                                 | Источник                                           |
-| --------------------------------------- | -------------------------------------------------- |
-| Схема, RPC, retention и activation gate | `database/2026-07-27_trial_intake_flow.sql`        |
-| Клиентская анкета                       | `apps/web/heys_trial_intake_v1.js`                 |
-| Кураторский разбор и приглашение        | `apps/web/heys_trial_queue_v1.js`                  |
-| Gate после авторизации и согласий       | `apps/web/heys_app_gate_flow_v1.js`                |
-| RPC allowlist/type hints                | `yandex-cloud-functions/heys-api-rpc/index.js`     |
-| Health consent 1.5                      | `apps/web/public/docs/v1.5/health-data-consent.md` |
-| Daily retention invocation              | `yandex-cloud-functions/heys-maintenance/index.js` |
-| Data/RKN gate                           | `docs/legal/operator/heys-data-change-gate.md`     |
+| Область                                 | Источник                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Схема, RPC, retention и activation gate | `database/2026-07-27_trial_intake_flow.sql`, `database/2026-07-27_trial_intake_flow_v2.sql` |
+| Клиентская анкета                       | `apps/web/heys_trial_intake_v1.js`                                                          |
+| Кураторский разбор и приглашение        | `apps/web/heys_trial_queue_v1.js`                                                           |
+| Web auth/RPC dispatch                   | `apps/web/heys_yandex_api_v1.js`                                                            |
+| Gate после авторизации и согласий       | `apps/web/heys_app_gate_flow_v1.js`                                                         |
+| RPC allowlist/type hints                | `yandex-cloud-functions/heys-api-rpc/index.js`                                              |
+| Health consent 1.5                      | `apps/web/public/docs/v1.5/health-data-consent.md`                                          |
+| Daily retention invocation              | `yandex-cloud-functions/heys-maintenance/index.js`                                          |
+| Data/RKN gate                           | `docs/legal/operator/heys-data-change-gate.md`                                              |
 
 ## Инварианты
 
@@ -87,26 +128,41 @@ shell и его onboarding-overlays не конкурируют с анкето�
 8. `signature_method` хранит фактическое действие `checkbox`; доказательство,
    что оно совершено после входа, обеспечивают session-bound RPC, client id,
    время, серверные IP и User-Agent.
+9. `invite_prepared` не разрешает заполнение; клиент начинает только после
+   явного `invite_sent` (legacy `invited` поддерживается на переходный период).
+10. Stale client/curator write отклоняется до изменения encrypted payload.
+11. Intake-managed кандидата нельзя удалить старым queue RPC; purge/revoke
+    обязаны оставить activation-blocking tombstone.
 
-## Не подтверждено/Не охвачено
+## Production v1: подтверждённое состояние и граница v2
 
-- Миграция и изменённые функции не применялись к production БД.
-- RPC, web и landing не публиковались; production smoke не выполнялся.
-- Daily maintenance source вызывает `purge_expired_trial_intakes()`, но
-  изменённая функция не публиковалась и production-вызов не подтверждён.
+- Основная migration и re-consent forward-fix применены; RPC и maintenance
+  активны, web/landing trial-сборка опубликована.
+- Production smoke подтвердил существующую PIN-сессию, consent `1.6/1.6/1.5`,
+  autosave/resume, curator ownership/IDOR, approval/activation и revoke/purge;
+  три синтетических клиента удалены.
+- Текущий `main` содержит следующий legal source bump `1.7/1.7/1.5`, но live
+  `build-meta.json`, app bundle и landing privacy page на момент проверки всё
+  ещё показывают согласованный trial-релиз `1.6/1.6/1.5`. Публикация этого
+  следующего legal-релиза не относится к trial-intake rollout.
 - Data-change gate пройден: intake не меняет опубликованные цели, категории
   субъектов/данных, получателей, способы обработки или трансграничную передачу.
 
 ## Facts Table
 
-| ID  | Утверждение                                                                                                                     | Проверка                                                                           | Статус               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------- |
-| TI1 | Landing не собирает health-данные и не передаёт health consent                                                                  | `trial-intake-flow.test.js`: landing contract                                      | проверено 2026-07-27 |
-| TI2 | Intake URL универсален и не содержит client id, телефона или токена                                                             | `trial-intake-flow.test.js`: invite URL contract                                   | проверено 2026-07-27 |
-| TI3 | Клиентские RPC требуют живую сессию и отдельный health consent 1.5                                                              | `trial-intake-flow.test.js`: session/consent contract                              | проверено 2026-07-27 |
-| TI4 | Ответы и служебная заметка сохраняются только в encrypted columns                                                               | `trial-intake-flow.test.js`: encrypted storage contract                            | проверено 2026-07-27 |
-| TI5 | Новую пробную неделю нельзя активировать до ручного `approved`                                                                  | `trial-intake-flow.test.js`: activation gate contract                              | проверено 2026-07-27 |
-| TI6 | Версии health consent синхронизированы между web, landing и public docs                                                         | `pnpm pdn:monthly-audit`                                                           | проверено 2026-07-27 |
-| TI7 | Существующий daily maintenance вызывает 30-дневную очистку intake                                                               | `trial-intake-flow.test.js`: retention invocation contract                         | проверено 2026-07-27 |
-| TI8 | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15 | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27 |
-| TI9 | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                              | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27 |
+| ID   | Утверждение                                                                                                                     | Проверка                                                                           | Статус                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------- |
+| TI1  | Landing не собирает health-данные и не передаёт health consent                                                                  | `trial-intake-flow.test.js`: landing contract                                      | проверено 2026-07-27          |
+| TI2  | Intake URL универсален и не содержит client id, телефона или токена                                                             | `trial-intake-flow.test.js`: invite URL contract                                   | проверено 2026-07-27          |
+| TI3  | Клиентские RPC требуют живую сессию и отдельный health consent 1.5                                                              | `trial-intake-flow.test.js`: session/consent contract                              | проверено 2026-07-27          |
+| TI4  | Ответы и служебная заметка сохраняются только в encrypted columns                                                               | `trial-intake-flow.test.js`: encrypted storage contract                            | проверено 2026-07-27          |
+| TI5  | Новую пробную неделю нельзя активировать до ручного `approved`                                                                  | `trial-intake-flow.test.js`: activation gate contract                              | проверено 2026-07-27          |
+| TI6  | Версии health consent синхронизированы между web, landing и public docs                                                         | `pnpm pdn:monthly-audit`                                                           | проверено 2026-07-27          |
+| TI7  | Существующий daily maintenance вызывает 30-дневную очистку intake                                                               | `trial-intake-flow.test.js`: retention invocation contract                         | проверено 2026-07-27          |
+| TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15 | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27          |
+| TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                              | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27          |
+| TI10 | Production rollout и полный synthetic smoke завершены; fixtures удалены                                                         | release-task evidence, build `2026.07.27.2016.d234cbee`                            | проверено 2026-07-27          |
+| TI11 | Live trial-релиз использует `1.6/1.6/1.5`, а текущий source уже содержит `1.7/1.7/1.5`                                          | live build/landing read-only check + legal configs                                 | проверено 2026-07-27          |
+| TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                        | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27 |
+| TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                            | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27 |
+| TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                        | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27 |

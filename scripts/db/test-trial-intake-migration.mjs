@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const migrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow.sql');
+const v2MigrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow_v2.sql');
 const consentProofPath = path.join(repoRoot, 'database/2026-07-27_consent_proof_v2.sql');
 const reconsentFixPath = path.join(
   repoRoot,
@@ -108,10 +109,15 @@ CREATE TABLE public.client_sessions (
 );
 
 CREATE TABLE public.trial_queue (
-  client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL UNIQUE REFERENCES public.clients(id) ON DELETE CASCADE,
+  curator_id UUID,
   status TEXT NOT NULL,
   queued_at TIMESTAMPTZ,
+  offer_sent_at TIMESTAMPTZ,
+  offer_expires_at TIMESTAMPTZ,
   assigned_at TIMESTAMPTZ,
+  canceled_at TIMESTAMPTZ,
+  source TEXT,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -120,6 +126,14 @@ CREATE TABLE public.trial_queue_events (
   event_type TEXT NOT NULL,
   meta JSONB
 );
+
+CREATE TABLE public.curator_trial_limits (
+  curator_id UUID PRIMARY KEY,
+  max_active_trials INTEGER NOT NULL DEFAULT 3,
+  is_accepting_trials BOOLEAN DEFAULT true
+);
+INSERT INTO public.curator_trial_limits(curator_id, max_active_trials)
+VALUES ('00000000-0000-0000-0000-000000000000', 3);
 
 CREATE TABLE public.leads (
   id UUID PRIMARY KEY,
@@ -148,7 +162,17 @@ CREATE TABLE public.subscriptions (
   client_id UUID PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
   trial_started_at TIMESTAMPTZ,
   trial_ends_at TIMESTAMPTZ,
-  trial_approved_at TIMESTAMPTZ
+  trial_approved_at TIMESTAMPTZ,
+  active_until TIMESTAMPTZ,
+  canceled_at TIMESTAMPTZ
+);
+
+CREATE TABLE public.test_data_access_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID,
+  action TEXT NOT NULL,
+  is_health BOOLEAN NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE public.client_kv_store (
@@ -181,7 +205,41 @@ CREATE OR REPLACE FUNCTION public.log_data_access(
   p_user_agent TEXT DEFAULT NULL,
   p_metadata JSONB DEFAULT '{}'::jsonb
 )
-RETURNS UUID LANGUAGE sql AS $func$ SELECT gen_random_uuid() $func$;
+RETURNS UUID LANGUAGE plpgsql AS $func$
+DECLARE v_id UUID;
+BEGIN
+  INSERT INTO public.test_data_access_log(client_id, action, is_health, metadata)
+  VALUES (p_client_id, p_action, p_is_health, COALESCE(p_metadata, '{}'::jsonb))
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END
+$func$;
+
+CREATE OR REPLACE FUNCTION public.get_effective_subscription_status(p_client_id UUID)
+RETURNS TEXT LANGUAGE sql STABLE AS $func$
+  SELECT CASE
+    WHEN s.active_until > now() AND s.canceled_at IS NULL THEN 'active'
+    WHEN COALESCE(s.trial_started_at, c.trial_started_at) > now() THEN 'trial_pending'
+    WHEN COALESCE(s.trial_ends_at, c.trial_ends_at) > now() THEN 'trial'
+    ELSE COALESCE(c.subscription_status, 'none')
+  END
+  FROM public.clients c
+  LEFT JOIN public.subscriptions s ON s.client_id = c.id
+  WHERE c.id = p_client_id
+$func$;
+
+CREATE OR REPLACE FUNCTION public.get_public_trial_capacity()
+RETURNS JSONB LANGUAGE sql STABLE AS $func$
+  SELECT jsonb_build_object(
+    'available_slots', GREATEST(0,
+      (SELECT max_active_trials FROM public.curator_trial_limits
+       WHERE curator_id = '00000000-0000-0000-0000-000000000000')
+      - (SELECT COUNT(*) FROM public.subscriptions
+         WHERE trial_started_at IS NOT NULL AND trial_ends_at > now()
+           AND canceled_at IS NULL)
+    )
+  )
+$func$;
 
 CREATE OR REPLACE FUNCTION public.record_funnel_event(
   p_event_type TEXT,
@@ -554,6 +612,552 @@ $test$;
 SELECT 'trial intake migration integration OK' AS result;
 `;
 
+const v2AssertionsSql = String.raw`
+\set ON_ERROR_STOP on
+
+INSERT INTO public.clients (
+  id, name, phone, phone_normalized, curator_id, subscription_status
+) VALUES
+  ('30000000-0000-4000-8000-000000000001', 'V2 Client A', '79992220001', '+79992220001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'none'),
+  ('30000000-0000-4000-8000-000000000002', 'V2 Client B', '79992220002', '+79992220002', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'none'),
+  ('30000000-0000-4000-8000-000000000003', 'V2 Client C', '79992220003', '+79992220003', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'none'),
+  ('30000000-0000-4000-8000-000000000004', 'V2 Client D', '79992220004', '+79992220004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'none');
+
+INSERT INTO public.consents (
+  client_id, consent_type, document_version, signature_method
+) VALUES
+  ('30000000-0000-4000-8000-000000000001', 'health_data', '1.5', 'checkbox'),
+  ('30000000-0000-4000-8000-000000000002', 'health_data', '1.5', 'checkbox'),
+  ('30000000-0000-4000-8000-000000000004', 'health_data', '1.5', 'checkbox');
+
+INSERT INTO public.client_sessions (token_hash, client_id, expires_at)
+VALUES
+  (digest('token-v2-a', 'sha256'), '30000000-0000-4000-8000-000000000001', now() + interval '1 hour'),
+  (digest('token-v2-b', 'sha256'), '30000000-0000-4000-8000-000000000002', now() + interval '1 hour'),
+  (digest('token-v2-c', 'sha256'), '30000000-0000-4000-8000-000000000003', now() + interval '1 hour');
+
+INSERT INTO public.trial_intakes (
+  client_id, curator_id, schema_version, status, invite_prepared_at, invited_at
+) VALUES
+  ('30000000-0000-4000-8000-000000000001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '1.1', 'invite_prepared', now(), now()),
+  ('30000000-0000-4000-8000-000000000002', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '1.1', 'invite_prepared', now() - interval '31 days', now() - interval '31 days'),
+  ('30000000-0000-4000-8000-000000000003', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '1.1', 'rejected', now() - interval '40 days', now() - interval '40 days'),
+  ('30000000-0000-4000-8000-000000000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '1.1', 'needs_clarification', now() - interval '40 days', now() - interval '40 days');
+
+INSERT INTO public.trial_queue (client_id, status, queued_at, source)
+VALUES (
+  '30000000-0000-4000-8000-000000000002', 'pending',
+  now() - interval '31 days', 'trial_intake_invite'
+);
+
+UPDATE public.trial_intakes
+SET reviewed_at = now() - interval '31 days',
+    retention_delete_at = now() + interval '1 day',
+    answers_encrypted = public.encrypt_health_data('{"legacy":true}'::jsonb)
+WHERE client_id = '30000000-0000-4000-8000-000000000003';
+
+UPDATE public.trial_intakes
+SET reviewed_at = now() - interval '31 days',
+    updated_at = now(),
+    last_client_activity_at = now(),
+    clarification_request_encrypted = public.encrypt_health_data('{"text":"Свежий вопрос"}'::jsonb)
+WHERE client_id = '30000000-0000-4000-8000-000000000004';
+
+DO $test$
+DECLARE
+  v_answers JSONB := '{
+    "goals":{"primary_goal":"Режим","success_definition":"Стабильность"},
+    "experience":{"previous_experience":"self"},
+    "lifestyle":{"schedule":"Работа","sleep":"8 часов"},
+    "collaboration":{"daily_tracking":"yes","feedback_style":"concise"},
+    "health":{
+      "chronic_conditions_status":"no",
+      "medications_status":"no",
+      "injuries_operations_status":"no",
+      "allergies_status":"no",
+      "doctor_restrictions_status":"no"
+    },
+    "safety":{
+      "acute_symptoms":"no",
+      "recent_surgery":"no",
+      "active_ed_concern":"no",
+      "medical_supervision":"no"
+    },
+    "meta":{"schema_version":"1.1"}
+  }'::jsonb;
+  v_checklist JSONB := '{
+    "within_scope":true,
+    "understands_boundaries":true,
+    "ready_to_track":true,
+    "realistic_expectations":true,
+    "safe_format":true,
+    "slot_available":false
+  }'::jsonb;
+  v_result JSONB;
+  v_revision TIMESTAMPTZ;
+  v_sent_at TIMESTAMPTZ;
+BEGIN
+  IF public.save_trial_intake_by_session(
+    'token-v2-a',
+    jsonb_set(v_answers, '{safety,medical_supervision}', 'null'::jsonb),
+    5::smallint,
+    true
+  )->>'error' <> 'required_answers_missing' THEN
+    RAISE EXCEPTION 'v1.1 completion accepted an unanswered safety question';
+  END IF;
+  IF public.save_trial_intake_by_session(
+    'token-v2-a', v_answers, 0::smallint, false
+  )->>'error' <> 'intake_locked' THEN
+    RAISE EXCEPTION 'client started intake before invite was sent';
+  END IF;
+
+  v_result := public.admin_mark_trial_intake_invite_sent(
+    '30000000-0000-4000-8000-000000000001',
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  );
+  IF v_result->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign curator marked invite sent: %', v_result;
+  END IF;
+
+  v_result := public.admin_mark_trial_intake_invite_sent(
+    '30000000-0000-4000-8000-000000000001',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'status' <> 'invite_sent' THEN
+    RAISE EXCEPTION 'invite sent transition failed: %', v_result;
+  END IF;
+  v_sent_at := (v_result->>'sent_at')::timestamptz;
+  PERFORM pg_sleep(0.01);
+  v_result := public.admin_mark_trial_intake_invite_sent(
+    '30000000-0000-4000-8000-000000000001',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF (v_result->>'sent_at')::timestamptz IS DISTINCT FROM v_sent_at THEN
+    RAISE EXCEPTION 'invite sent retry returned a false new timestamp: %', v_result;
+  END IF;
+  v_revision := (public.get_trial_intake_by_session('token-v2-a')
+    #>> '{intake,updated_at}')::timestamptz;
+
+  v_result := public.save_trial_intake_by_session(
+    'token-v2-a', v_answers, 1::smallint, false, v_revision
+  );
+  IF NOT COALESCE((v_result->>'success')::boolean, false) THEN
+    RAISE EXCEPTION 'revision-aware draft save failed: %', v_result;
+  END IF;
+  UPDATE public.trial_intakes
+  SET updated_at = clock_timestamp() + interval '1 second'
+  WHERE client_id = '30000000-0000-4000-8000-000000000001';
+  v_result := public.save_trial_intake_by_session(
+    'token-v2-a', jsonb_set(v_answers, '{goals,primary_goal}', '"Устаревшая цель"'::jsonb),
+    1::smallint, false, v_revision
+  );
+  IF v_result->>'error' <> 'stale_draft' THEN
+    RAISE EXCEPTION 'stale draft overwrote newer answers: %', v_result;
+  END IF;
+  IF public.get_trial_intake_by_session('token-v2-a')
+       #>> '{intake,answers,goals,primary_goal}' <> 'Режим' THEN
+    RAISE EXCEPTION 'stale draft changed stored answers';
+  END IF;
+
+  v_result := public.save_trial_intake_by_session('token-v2-a', v_answers, 5::smallint, true);
+  IF v_result->>'status' <> 'completed' THEN
+    RAISE EXCEPTION 'v1.1 completion failed: %', v_result;
+  END IF;
+
+  v_result := public.admin_review_trial_intake_v2(
+    '30000000-0000-4000-8000-000000000001',
+    'approved_waiting_slot',
+    NULL,
+    'Чужое решение',
+    NULL,
+    NULL,
+    v_checklist,
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  );
+  IF v_result->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign curator reviewed intake: %', v_result;
+  END IF;
+
+  v_result := public.admin_review_trial_intake_v2(
+    '30000000-0000-4000-8000-000000000001',
+    'rejected',
+    NULL,
+    'Причина есть только во внутренней заметке',
+    NULL,
+    NULL,
+    v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'rejection_reason_required' THEN
+    RAISE EXCEPTION 'rejection without reason code was accepted: %', v_result;
+  END IF;
+
+  v_result := public.admin_review_trial_intake_v2(
+    '30000000-0000-4000-8000-000000000001',
+    'needs_clarification',
+    NULL,
+    'Проверить ограничения',
+    'Уточните рекомендации врача.',
+    ARRAY['health', 'safety'],
+    NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (public.get_trial_intake_by_session('token-v2-a') #>> '{intake,updated_at}')::timestamptz
+  );
+  IF v_result->>'status' <> 'needs_clarification' THEN
+    RAISE EXCEPTION 'clarification decision failed: %', v_result;
+  END IF;
+  IF public.get_trial_intake_by_session('token-v2-a')
+       #>> '{intake,clarification_request}' <> 'Уточните рекомендации врача.' THEN
+    RAISE EXCEPTION 'client-visible clarification was not returned';
+  END IF;
+  IF public.admin_get_trial_intake(
+    '30000000-0000-4000-8000-000000000001',
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  )->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'v2 foreign curator read succeeded';
+  END IF;
+
+  UPDATE public.trial_intakes
+  SET updated_at = clock_timestamp() + interval '2 seconds'
+  WHERE client_id = '30000000-0000-4000-8000-000000000001';
+
+  v_result := public.admin_review_trial_intake_v2(
+    '30000000-0000-4000-8000-000000000001',
+    'needs_clarification', NULL, 'Старая вкладка', 'Другой вопрос',
+    ARRAY['goals'], NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_revision
+  );
+  IF v_result->>'error' <> 'stale_intake' THEN
+    RAISE EXCEPTION 'stale curator review overwrote current request: %', v_result;
+  END IF;
+
+  v_result := public.save_trial_intake_by_session(
+    'token-v2-a', v_answers, 4::smallint, false
+  );
+  IF v_result->>'status' <> 'needs_clarification'
+     OR public.get_trial_intake_by_session('token-v2-a')
+       #>> '{intake,clarification_request}' <> 'Уточните рекомендации врача.' THEN
+    RAISE EXCEPTION 'clarification disappeared during draft autosave: %', v_result;
+  END IF;
+
+  PERFORM public.save_trial_intake_by_session('token-v2-a', v_answers, 5::smallint, true);
+  IF public.get_trial_intake_by_session('token-v2-a')
+       #>> '{intake,clarification_request}' IS NOT NULL THEN
+    RAISE EXCEPTION 'clarification survived client resubmission';
+  END IF;
+
+  v_result := public.admin_review_trial_intake_v2(
+    '30000000-0000-4000-8000-000000000001',
+    'approved_waiting_slot',
+    NULL,
+    'Подходит, ждём место',
+    NULL,
+    NULL,
+    v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (public.get_trial_intake_by_session('token-v2-a') #>> '{intake,updated_at}')::timestamptz
+  );
+  IF v_result->>'status' <> 'approved_waiting_slot' THEN
+    RAISE EXCEPTION 'waiting-slot approval failed: %', v_result;
+  END IF;
+  v_result := public.admin_invite_trial_intake(
+    '30000000-0000-4000-8000-000000000001',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'invite_not_allowed' THEN
+    RAISE EXCEPTION 'terminal decision was reopened by invite retry: %', v_result;
+  END IF;
+  v_result := public.admin_remove_from_queue(
+    '30000000-0000-4000-8000-000000000001', 'admin_removed',
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  );
+  IF v_result->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign curator removed intake queue row: %', v_result;
+  END IF;
+  v_result := public.admin_remove_from_queue(
+    '30000000-0000-4000-8000-000000000001', 'admin_removed',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'intake_managed' THEN
+    RAISE EXCEPTION 'legacy queue removal orphaned intake: %', v_result;
+  END IF;
+  UPDATE public.curator_trial_limits
+  SET max_active_trials = 0
+  WHERE curator_id = '00000000-0000-0000-0000-000000000000';
+  v_result := public.admin_activate_trial(
+    '30000000-0000-4000-8000-000000000001', current_date + 2, 7,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'no_available_slot' THEN
+    RAISE EXCEPTION 'waiting candidate activated with no capacity: %', v_result;
+  END IF;
+  UPDATE public.curator_trial_limits
+  SET max_active_trials = 3
+  WHERE curator_id = '00000000-0000-0000-0000-000000000000';
+  IF public.admin_activate_trial(
+    '30000000-0000-4000-8000-000000000001',
+    current_date + 2,
+    7,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  )->>'status' <> 'trial_pending' THEN
+    RAISE EXCEPTION 'waiting-slot activation failed';
+  END IF;
+  v_result := public.admin_activate_trial(
+    '30000000-0000-4000-8000-000000000001', current_date + 5, 14,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'already_active' <> 'true'
+     OR (SELECT trial_started_at::date FROM public.clients
+         WHERE id = '30000000-0000-4000-8000-000000000001') <> current_date + 2 THEN
+    RAISE EXCEPTION 'repeated future activation changed the first schedule: %', v_result;
+  END IF;
+END
+$test$;
+
+INSERT INTO public.leads (
+  id, name, phone, messenger, status, birth_year,
+  consent_privacy_version, consent_accepted_at, curator_id
+) VALUES (
+  '30000000-0000-4000-8000-000000000098',
+  'V2 New Candidate', '+7 999 222-00-98', 'telegram', 'new', 1993,
+  '1.7', now(), 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+);
+
+DO $test$
+DECLARE
+  v_result JSONB;
+BEGIN
+  v_result := public.admin_prepare_trial_candidate_from_lead(
+    '30000000-0000-4000-8000-000000000098',
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  );
+  IF v_result->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign curator converted lead: %', v_result;
+  END IF;
+
+  v_result := public.admin_prepare_trial_candidate_from_lead(
+    '30000000-0000-4000-8000-000000000098',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF NOT COALESCE((v_result->>'success')::boolean, false)
+     OR v_result->>'intake_status' <> 'invite_prepared' THEN
+    RAISE EXCEPTION 'atomic convert/prepare failed: %', v_result;
+  END IF;
+  IF (
+    SELECT status FROM public.trial_intakes
+    WHERE client_id = (v_result->>'client_id')::uuid
+  ) <> 'invite_prepared' THEN
+    RAISE EXCEPTION 'converted candidate was not left recoverable';
+  END IF;
+
+  v_result := public.admin_prepare_trial_candidate_from_lead(
+    '30000000-0000-4000-8000-000000000098',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'lead_already_converted' THEN
+    RAISE EXCEPTION 'double conversion was not idempotently blocked: %', v_result;
+  END IF;
+END
+$test$;
+
+INSERT INTO public.leads (
+  id, name, phone, messenger, status, birth_year,
+  consent_privacy_version, consent_accepted_at, curator_id
+) VALUES (
+  '30000000-0000-4000-8000-000000000099',
+  'V2 Repeat',
+  '+7 999 222-00-03',
+  'telegram',
+  'new',
+  1991,
+  '1.7',
+  now(),
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+);
+
+DO $test$
+DECLARE
+  v_result JSONB;
+BEGIN
+  v_result := public.admin_reopen_trial_candidate(
+    '30000000-0000-4000-8000-000000000099',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign lead reopen was accepted: %', v_result;
+  END IF;
+
+  UPDATE public.leads
+  SET curator_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  WHERE id = '30000000-0000-4000-8000-000000000099';
+  INSERT INTO public.subscriptions (client_id, active_until)
+  VALUES ('30000000-0000-4000-8000-000000000003', now() + interval '10 days')
+  ON CONFLICT (client_id) DO UPDATE SET active_until = EXCLUDED.active_until;
+
+  v_result := public.admin_reopen_trial_candidate(
+    '30000000-0000-4000-8000-000000000099',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'phone_already_has_active' THEN
+    RAISE EXCEPTION 'active client was reopened: %', v_result;
+  END IF;
+
+  UPDATE public.subscriptions
+  SET active_until = NULL
+  WHERE client_id = '30000000-0000-4000-8000-000000000003';
+  UPDATE public.trial_intakes
+  SET reviewed_at = now() - interval '10 days'
+  WHERE client_id = '30000000-0000-4000-8000-000000000003';
+
+  v_result := public.admin_reopen_trial_candidate(
+    '30000000-0000-4000-8000-000000000099',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'reapply_cooldown' THEN
+    RAISE EXCEPTION 'reapplication cooldown was bypassed: %', v_result;
+  END IF;
+
+  UPDATE public.trial_intakes
+  SET reviewed_at = now() - interval '40 days'
+  WHERE client_id = '30000000-0000-4000-8000-000000000003';
+
+  v_result := public.admin_reopen_trial_candidate(
+    '30000000-0000-4000-8000-000000000099',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF NOT COALESCE((v_result->>'success')::boolean, false)
+     OR v_result->>'intake_status' <> 'invite_prepared' THEN
+    RAISE EXCEPTION 'reapplication failed: %', v_result;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '30000000-0000-4000-8000-000000000003'
+      AND answers_encrypted IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'reapplication retained old encrypted answers';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.client_sessions
+    WHERE client_id = '30000000-0000-4000-8000-000000000003'
+      AND revoked_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'reapplication retained an active old session';
+  END IF;
+END
+$test$;
+
+DO $test$
+BEGIN
+  IF public.purge_expired_trial_intakes() <> 1 THEN
+    RAISE EXCEPTION 'abandoned intake was not purged';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '30000000-0000-4000-8000-000000000002'
+  ) THEN
+    RAISE EXCEPTION 'abandoned invite survived 30-day cleanup';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '30000000-0000-4000-8000-000000000004'
+      AND status = 'needs_clarification'
+  ) THEN
+    RAISE EXCEPTION 'fresh clarification was purged using stale client activity';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.trial_queue
+    WHERE client_id = '30000000-0000-4000-8000-000000000002'
+      AND status = 'canceled'
+      AND source = 'trial_intake_purged'
+  ) THEN
+    RAISE EXCEPTION 'purged intake did not leave a canceled queue marker';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.client_sessions
+    WHERE client_id = '30000000-0000-4000-8000-000000000002'
+      AND revoked_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'purged intake retained an active PIN session';
+  END IF;
+  IF public.admin_activate_trial(
+    '30000000-0000-4000-8000-000000000002',
+    current_date,
+    7,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  )->>'error' <> 'intake_not_approved' THEN
+    RAISE EXCEPTION 'purged intake was activated through the legacy path';
+  END IF;
+  IF has_function_privilege(
+    'heys_rpc',
+    'public.admin_review_trial_intake(uuid,text,text,text,uuid)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'heys_admin',
+    'public.admin_review_trial_intake(uuid,text,text,text,uuid)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'legacy review RPC remains executable';
+  END IF;
+  IF has_function_privilege(
+    'heys_rpc', 'public.admin_convert_lead(uuid,uuid)', 'EXECUTE'
+  ) OR has_function_privilege(
+    'heys_admin', 'public.admin_convert_lead(uuid,uuid)', 'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'direct non-atomic lead conversion remains executable';
+  END IF;
+  IF NOT has_function_privilege(
+    'heys_rpc', 'public.admin_remove_from_queue(uuid,text,uuid)', 'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'hardened legacy queue removal is unavailable to gateway role';
+  END IF;
+  IF (
+    SELECT COUNT(DISTINCT action) FROM public.test_data_access_log
+    WHERE action IN ('prepare_trial_invite', 'mark_trial_invite_sent',
+                     'activate_trial_intake', 'purge_trial_intake')
+  ) <> 4 THEN
+    RAISE EXCEPTION 'transition audit chronology is incomplete';
+  END IF;
+END
+$test$;
+
+UPDATE public.consents
+SET granted = false, is_active = false, revoked_at = now()
+WHERE client_id = '30000000-0000-4000-8000-000000000004'
+  AND consent_type = 'health_data';
+
+DO $test$
+DECLARE
+  v_result JSONB;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.trial_intakes
+    WHERE client_id = '30000000-0000-4000-8000-000000000004'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM public.trial_queue
+    WHERE client_id = '30000000-0000-4000-8000-000000000004'
+      AND status = 'canceled' AND source = 'trial_intake_health_revoked'
+  ) THEN
+    RAISE EXCEPTION 'health revoke did not leave a blocking tombstone';
+  END IF;
+  v_result := public.admin_activate_trial(
+    '30000000-0000-4000-8000-000000000004', current_date, 7,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_result->>'error' <> 'intake_not_approved' THEN
+    RAISE EXCEPTION 'health-revoked candidate used legacy activation: %', v_result;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.test_data_access_log
+    WHERE metadata::text ~* '(Уточните|Режим|token-v2|7999)'
+  ) THEN
+    RAISE EXCEPTION 'audit metadata leaked intake or identity data';
+  END IF;
+END
+$test$;
+
+SELECT 'trial intake v2 migration integration OK' AS result;
+`;
+
 let started = false;
 try {
   run('initdb', ['-D', dataDir, '-A', 'trust', '-U', 'postgres', '--no-locale', '--encoding=UTF8']);
@@ -573,6 +1177,9 @@ try {
   run('psql', psqlArgs, readFileSync(reconsentFixPath, 'utf8'));
   const output = run('psql', psqlArgs, assertionsSql);
   process.stdout.write(output);
+  run('psql', psqlArgs, readFileSync(v2MigrationPath, 'utf8'));
+  const v2Output = run('psql', psqlArgs, v2AssertionsSql);
+  process.stdout.write(v2Output);
 } finally {
   if (started) {
     try { run('pg_ctl', ['-D', dataDir, '-m', 'fast', '-w', 'stop']); } catch (error) {
