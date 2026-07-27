@@ -12,14 +12,14 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   const versions = {
-    user_agreement:     '1.6',
-    personal_data:      '1.6',
+    user_agreement:     '1.7',
+    personal_data:      '1.7',
     health_data:        '1.5',
-    marketing:          '1.2',
-    payment_oferta:     '1.3',
+    marketing:          '1.3',
+    payment_oferta:     '1.7',
     push_notifications: '1.0',
     curator_access:     '1.0',
-    speech_transcription: '1.0',
+    speech_transcription: '1.1',
     _updatedAt:         '2026-07-27'
   };
 

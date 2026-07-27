@@ -2412,7 +2412,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const handleTranscriptionConsentChoice = async (granted) => {
       if (!HEYS.MessengerAPI?.setTranscriptionConsent) {
         setTranscriptionPromptOpen(false);
-        const next = { granted: false, decided: true, version: '1.0' };
+        const next = { granted: false, decided: true, version: '1.1' };
         transcriptionConsentRef.current = next;
         setTranscriptionConsent(next);
         setError('Не удалось сохранить согласие на расшифровку.');
@@ -2431,7 +2431,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         decided: !!res.decided,
         created_at: res.created_at || null,
         revoked_at: res.revoked_at || null,
-        version: res.version || '1.0',
+        version: res.version || '1.1',
       };
       transcriptionConsentRef.current = next;
       setTranscriptionConsent(next);
@@ -2462,7 +2462,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         decided: !!res.decided,
         created_at: res.created_at || null,
         revoked_at: res.revoked_at || null,
-        version: res.version || '1.0',
+        version: res.version || '1.1',
       };
       transcriptionConsentRef.current = next;
       setTranscriptionConsent(next);
@@ -2829,7 +2829,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               React.createElement(
                 'div',
                 { className: 'messenger-consent-text' },
-                'Для автоматической расшифровки аудио будет передано в Yandex SpeechKit. Голосовое отправится в любом случае.',
+                'Передадим выбранное аудио в Yandex SpeechKit и сохраним полученный текст в чате. В записи могут быть сведения о здоровье. Голосовое отправится и без расшифровки.',
+              ),
+              React.createElement(
+                'a',
+                {
+                  className: 'messenger-consent-link',
+                  href: '/docs/speech-transcription-consent.md',
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                },
+                'Прочитать полное согласие',
               ),
               React.createElement(
                 'div',

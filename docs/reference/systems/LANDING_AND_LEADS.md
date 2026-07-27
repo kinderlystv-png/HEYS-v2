@@ -52,9 +52,9 @@ Email, источник знакомства, промокод и сведени
 
 - обязательное согласие только на обработку заявки с версией privacy-policy,
   временем, способом и user agent;
-- optional marketing consent, отсутствие которого передаётся как `null`.
+- optional marketing consent 1.3, отсутствие которого передаётся как `null`.
 
-С 2026-07-27 форма фиксирует `privacy_version=1.6`: публичная политика содержит
+С 2026-07-27 форма фиксирует `privacy_version=1.7`: публичная политика содержит
 запись РКН 26-22-005319, данные заявки/триала и отдельную маркетинговую цель.
 Пользовательское соглашение и health consent на лендинге не принимаются. Их
 клиент подписывает отдельно после PIN-входа; health consent обновлён до 1.5 для
@@ -84,9 +84,12 @@ Backend не считает браузерную проверку достато
 8. проверяет переданный `birth_year`, но пока допускает его отсутствие;
 9. ограничивает число попыток с IP и журналирует их.
 
-Согласие записывается вместе с версией политики, временем, методом и user agent.
-Год рождения хранится вместо полной даты рождения. Marketing timestamp остаётся
-`null`, если отдельного согласия нет.
+Backend принимает только privacy 1.7 с методом `checkbox` и только отдельный
+marketing contract 1.3. Браузер не назначает время и hash: forward-only миграция
+`2026-07-27_consent_proof_v2.sql` связывает версии с серверным allowlist,
+подставляет SHA-256 и `NOW()` в `BEFORE INSERT`. Год рождения хранится вместо
+полной даты рождения. Marketing version/hash/time остаются `null`, если
+отдельного согласия нет.
 
 ## Дедупликация и побочные эффекты
 
@@ -132,6 +135,11 @@ trial queue и защищённый `admin_convert_lead`.
 9. Lead callback принимает private actor только при совпадении с настроенным
    chat; group chat требует явный `TELEGRAM_CURATOR_USER_IDS`.
 10. Telegram message edit не должен предшествовать подтверждённой DB mutation.
+11. Время принятия и SHA-256 consent proof назначаются сервером, а не браузером.
+12. При conversion переносится только exact privacy/marketing proof; старые лиды
+    без hash не backfill-ятся и не создают доказательство задним числом.
+13. Telegram contact handoff не изображает consent proof: его lead хранит
+    proof-поля `NULL`, а обязательные согласия собираются после входа.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -157,17 +165,17 @@ trial queue и защищённый `admin_convert_lead`.
 
 ## Facts Table
 
-| ID  | Утверждение                                                                            | Проверка                                                                                                                                                                                                                                                                                                                                                      | Статус                    |
-| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| L1  | Обе landing-формы отправляют заявки в `/leads`, но payload различается                 | `rg -n 'api.heyslab.ru/leads                                                                   \| birth_year                                                                                               \| intent:               \| marketing_accepted_at' apps/landing/src/components/TrialForm.tsx apps/landing/src/components/modals/PurchaseModal.tsx` | проверено 2026-07-17      |
-| L2  | Gateway направляет `POST/OPTIONS /leads` в `heys-api-leads`                            | `sed -n '157,173p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                                                                                                                                                                                                                              | проверено 2026-07-17      |
-| L3  | Backend имеет origin/body/honeypot/consent/age checks                                  | `sed -n '240,420p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                                                                                                                                                                            | проверено 2026-07-17      |
-| L4  | Rate limit и оба механизма dedup находятся до side effects                             | `sed -n '430,575p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                                                                                                                                                                            | проверено 2026-07-17      |
-| L5  | Telegram payload минимизирован и содержит `lead_taken_` callback                       | `sed -n '85,133p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                                                                                                                                                                             | проверено 2026-07-17      |
-| L6  | `lead_taken_` создаётся leads API и обрабатывается curator poll path                   | `rg -n --glob '!docs/**' --glob '!apps/web/public/**' --glob '!node*modules/\*\*' 'lead_taken* \| handleCuratorLeadCallback' yandex-cloud-functions/heys-api-leads yandex-cloud-functions/heys-bot-client`                                                                                                                                                    | исправлено 2026-07-18     |
-| L7  | Новый lead пишет funnel event, затем вызывает Метрику и Telegram                       | `sed -n '575,610p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                                                                                                                                                                            | проверено 2026-07-17      |
-| L8  | Curator UI конвертирует лид через `admin_convert_lead`                                 | `sed -n '1370,1400p' apps/web/heys_trial_queue_v1.js`                                                                                                                                                                                                                                                                                                         | проверено 2026-07-17      |
-| L9  | RPC contract требует UUID лида и curator identity                                      | `sed -n '4331,4345p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                                                                                                                            | проверено 2026-07-17      |
-| L10 | Phone gate покрывает границы, форматирование, ранний 400, canonical INSERT и dedup     | `node --test yandex-cloud-functions/heys-api-leads/__tests__/phone-validation.test.cjs`                                                                                                                                                                                                                                                                       | 6/6 пройдено 2026-07-18   |
-| L11 | Lead callback проверяет auth/UUID, атомарный claim, direct answer/edit и offset commit | `node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                                                                                                                                                                   | 9/9 пройдено 2026-07-18   |
-| L12 | Landing использует privacy 1.6, web — health 1.5; versioned snapshots существуют       | `pnpm pdn:monthly-audit`                                                                                                                                                                                                                                                                                                                                      | проверить после изменения |
+| ID  | Утверждение                                                                            | Проверка                                                                                                                                                                                                   | Статус                    |
+| --- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| L1  | Обе landing-формы отправляют заявки в `/leads`, но payload различается                 | `rg -n 'api.heyslab.ru/leads\|birth_year\|intent:\|marketing_consent' apps/landing/src/components/TrialForm.tsx apps/landing/src/components/modals/PurchaseModal.tsx`                                      | проверено 2026-07-27      |
+| L2  | Gateway направляет `POST/OPTIONS /leads` в `heys-api-leads`                            | `sed -n '157,173p' yandex-cloud-functions/api-gateway-spec.yaml`                                                                                                                                           | проверено 2026-07-17      |
+| L3  | Backend имеет origin/body/honeypot/consent/age checks                                  | `sed -n '240,420p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                         | проверено 2026-07-17      |
+| L4  | Rate limit и оба механизма dedup находятся до side effects                             | `sed -n '430,575p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                         | проверено 2026-07-17      |
+| L5  | Telegram payload минимизирован и содержит `lead_taken_` callback                       | `sed -n '85,133p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                          | проверено 2026-07-17      |
+| L6  | `lead_taken_` создаётся leads API и обрабатывается curator poll path                   | `rg -n --glob '!docs/**' --glob '!apps/web/public/**' --glob '!node*modules/\*\*' 'lead_taken* \| handleCuratorLeadCallback' yandex-cloud-functions/heys-api-leads yandex-cloud-functions/heys-bot-client` | исправлено 2026-07-18     |
+| L7  | Новый lead пишет funnel event, затем вызывает Метрику и Telegram                       | `sed -n '575,610p' yandex-cloud-functions/heys-api-leads/index.js`                                                                                                                                         | проверено 2026-07-17      |
+| L8  | Curator UI конвертирует лид через `admin_convert_lead`                                 | `sed -n '1370,1400p' apps/web/heys_trial_queue_v1.js`                                                                                                                                                      | проверено 2026-07-17      |
+| L9  | RPC contract требует UUID лида и curator identity                                      | `sed -n '4331,4345p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                         | проверено 2026-07-17      |
+| L10 | Phone и consent gates покрывают границы, arbitrary version, marketing 1.3 и INSERT     | `node --test yandex-cloud-functions/heys-api-leads/__tests__/phone-validation.test.cjs`                                                                                                                    | проверить после изменения |
+| L11 | Lead callback проверяет auth/UUID, атомарный claim, direct answer/edit и offset commit | `node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                | 9/9 пройдено 2026-07-18   |
+| L12 | Landing использует privacy 1.7/marketing 1.3, web — health 1.5; snapshots существуют   | `node --test apps/web/__tests__/consent-proof-v2.test.js`                                                                                                                                                  | проверить после изменения |

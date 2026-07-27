@@ -1,6 +1,6 @@
 // Главная страница — единственный лендинг (вариант A)
 // Порядок секций:
-// Hero → Как устроено → Demo → Pain → HowItWorks → Comparison → Navigator → Trust → Lifestyle → Objections → Formats → Pricing → Trial → FAQ → Footer
+// Hero → Как устроено → Pain → HowItWorks → Comparison → Navigator → Trust → Lifestyle → Objections → Formats → Pricing → Trial → FAQ → Footer
 
 import { Metadata } from 'next'
 
@@ -8,7 +8,6 @@ import HeroSSR from '@/components/HeroSSR'
 import {
   ComparisonSection,
   CuratorSection,
-  DemoSection,
   HowItWorksSection,
   LifestyleSection,
   NavigatorSection,
@@ -40,31 +39,30 @@ export default function Home() {
       {/* 2. Как устроено — куратор ведёт контекст, связь, виджеты */}
       <CuratorSection />
 
-      {/* 3. Демо-зеркало — живой HEYS в iframe (try.heyslab.ru), старт с виджетов */}
-      <DemoSection />
+      {/* DemoSection временно не подключаем: демонстрации в hero достаточно. */}
 
-      {/* 4. Боль (02) — «Знакомо?» 5 болевых точек */}
+      {/* 3. Боль (02) — «Знакомо?» 5 болевых точек */}
       <PainSection />
 
-      {/* 5. Ваш первый месяц (03) — timeline: ДЕНЬ 1 → ДНИ 2-7 → НЕДЕЛЯ 2 → МЕСЯЦ+ */}
+      {/* 4. Ваш первый месяц (03) — timeline: ДЕНЬ 1 → ДНИ 2-7 → НЕДЕЛЯ 2 → МЕСЯЦ+ */}
       <HowItWorksSection />
 
-      {/* 6. Сравнение (04) — 6-строчная таблица vs обычных приложений */}
+      {/* 5. Сравнение (04) — 6-строчная таблица vs обычных приложений */}
       <ComparisonSection />
 
-      {/* 7. Под капотом (05) — RiskRadar, причины, мягкая коррекция, окно после еды */}
+      {/* 6. Под капотом (05) — RiskRadar, причины, мягкая коррекция, окно после еды */}
       <NavigatorSection />
 
-      {/* 8. Доверие (06) — опыт куратора, стандарт, честный первый набор */}
+      {/* 7. Доверие (06) — опыт куратора, стандарт, честный первый набор */}
       <TrustSection />
 
-      {/* 9. Lifestyle-бонус — не ядро оффера */}
+      {/* 8. Lifestyle-бонус — не ядро оффера */}
       <LifestyleSection />
 
-      {/* 10. Возражения (07) — частые вопросы в аккордеоне */}
+      {/* 9. Возражения (07) — частые вопросы в аккордеоне */}
       <ObjectionsSection />
 
-      {/* 11-14. Форматы (08) → Прайсинг (09) → Триал (10) → FAQ (11) → Футер */}
+      {/* 10-13. Форматы (08) → Прайсинг (09) → Триал (10) → FAQ (11) → Футер */}
       <VariantLandingSectionsSSR content={content} variant="A" />
     </main>
   )

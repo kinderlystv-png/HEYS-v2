@@ -16,6 +16,8 @@ const DEDUPLICATION_WINDOW_MINUTES = 30;
 // Rate-limit: максимум N submit'ов с одного IP за W минут (P0.13)
 const RATE_LIMIT_MAX_PER_WINDOW = 5;
 const RATE_LIMIT_WINDOW_MINUTES = 15;
+const PRIVACY_CONSENT_VERSION = '1.7';
+const MARKETING_CONSENT_VERSION = '1.3';
 
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -308,7 +310,7 @@ module.exports.handler = async function (event, context) {
       website, // 🍯 honeypot (P0.13) — должно быть пустым
       consent, // 152-ФЗ ст. 9: согласие на обработку ПДн
       birth_year, // 152-ФЗ ст.9.5: 18+ gate (compliance overhaul 2026-05-20)
-      marketing_accepted_at, // 152-ФЗ ст.15: опциональное маркетинговое согласие
+      marketing_consent, // отдельное добровольное согласие; время/hash назначает БД
     } = body;
 
     // 🍯 Honeypot (P0.13): боты обычно заполняют все поля. Если website непустой —
@@ -373,12 +375,46 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    const consentAcceptedAt = consent.accepted_at ? new Date(consent.accepted_at) : new Date();
+    if (
+      consent.privacy_version !== PRIVACY_CONSENT_VERSION ||
+      consent.method !== 'checkbox'
+    ) {
+      console.warn('[Leads] REJECTED unsupported privacy consent version/method');
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Consent version not allowed',
+          message: 'Обновите страницу и подтвердите актуальную версию согласия',
+        }),
+      };
+    }
+
     const consentUserAgent = consent.user_agent
       ? String(consent.user_agent).slice(0, 500)
       : event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
-    const consentPrivacyVersion = String(consent.privacy_version).slice(0, 32);
-    const consentMethod = String(consent.method).slice(0, 32);
+    const consentPrivacyVersion = PRIVACY_CONSENT_VERSION;
+    const consentMethod = 'checkbox';
+
+    const hasMarketingConsent = marketing_consent != null;
+    if (
+      hasMarketingConsent &&
+      (typeof marketing_consent !== 'object' ||
+        marketing_consent.granted !== true ||
+        marketing_consent.version !== MARKETING_CONSENT_VERSION)
+    ) {
+      console.warn('[Leads] REJECTED unsupported marketing consent payload');
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Marketing consent version not allowed',
+          message: 'Обновите страницу и повторите выбор маркетингового согласия',
+        }),
+      };
+    }
 
     // 152-ФЗ ст.9.5 серверная валидация 18+ (UI уже проверил, но не доверяем).
     // Старые сборки landing могут не присылать birth_year — допускаем для backwards-compat,
@@ -412,8 +448,8 @@ module.exports.handler = async function (event, context) {
       console.warn('[Leads] WARN birth_year missing (legacy landing build)');
     }
 
-    const consentMarketingAt = marketing_accepted_at ? new Date(marketing_accepted_at) : null;
-    const safeYmClientId = consentAcceptedAt ? cleanOptionalText(ym_client_id, 64) : null;
+    const consentMarketingVersion = hasMarketingConsent ? MARKETING_CONSENT_VERSION : null;
+    const safeYmClientId = cleanOptionalText(ym_client_id, 64);
     const safePromoCode = cleanOptionalText(promo_code, 64);
     const safeHowHeard = cleanOptionalText(how_heard, 64);
     const safeQuizSegment = cleanOptionalText(quiz_segment, 64);
@@ -504,16 +540,16 @@ module.exports.handler = async function (event, context) {
               utm_source, utm_medium, utm_campaign, utm_term, utm_content,
               promo_code, how_heard, ym_client_id, quiz_segment, readiness, ab_variant,
               referrer, landing_page, ip_address,
-              consent_privacy_version, consent_accepted_at, consent_method, consent_user_agent,
-              birth_year, consent_marketing_accepted_at
+              consent_privacy_version, consent_method, consent_user_agent,
+              birth_year, consent_marketing_version
             )
             VALUES (
               $1, $2, $3, $4,
               $5, $6, $7, $8, $9,
               $10, $11, $12, $13, $14, $15,
               $16, $17, $18,
-              $19, $20, $21, $22,
-              $23, $24
+              $19, $20, $21,
+              $22, $23
             )
             RETURNING id
           `,
@@ -537,11 +573,10 @@ module.exports.handler = async function (event, context) {
               landing_page,
               clientIp,
               consentPrivacyVersion,
-              consentAcceptedAt,
               consentMethod,
               consentUserAgent,
               birthYearNum,
-              consentMarketingAt,
+              consentMarketingVersion,
             ],
           );
 
@@ -630,4 +665,8 @@ module.exports.handler = async function (event, context) {
   }
 };
 
-module.exports.__test = { normalizePhone };
+module.exports.__test = {
+  normalizePhone,
+  PRIVACY_CONSENT_VERSION,
+  MARKETING_CONSENT_VERSION,
+};

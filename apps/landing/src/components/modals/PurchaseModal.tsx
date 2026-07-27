@@ -104,7 +104,6 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                         user_agreement_version: LEGAL_DOCS.userAgreement.version,
                         method: 'checkbox',
                         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-                        accepted_at: new Date().toISOString(),
                     },
                 })
             })

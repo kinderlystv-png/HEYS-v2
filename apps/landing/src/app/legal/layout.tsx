@@ -59,6 +59,14 @@ export default function LegalLayout({
             <a href="/legal/cookie-policy" className="hover:text-gray-700 transition-colors">
               Cookies
             </a>
+            {' · '}
+            <a href="/legal/speech-transcription-consent" className="hover:text-gray-700 transition-colors">
+              SpeechKit
+            </a>
+            {' · '}
+            <a href="/legal/marketing-consent" className="hover:text-gray-700 transition-colors">
+              Маркетинговые материалы
+            </a>
           </p>
         </div>
       </footer>

@@ -620,10 +620,10 @@
         }
 
         // payment_oferta = акцепт публичной оферты (user-agreement) при оплате.
-        // Версия должна совпадать с актуальной версией документа в Consents.
+        // Версия должна совпадать с CURRENT_VERSIONS.payment_oferta и backend-gate.
         const consentData = [{
           type: 'payment_oferta',
-          version: window.HEYS?.Consents?.VERSIONS?.user_agreement || '1.5',
+          version: window.HEYS?.Consents?.VERSIONS?.payment_oferta || '1.7',
           granted: true,
           signature_method: 'checkbox'
         }];

@@ -61,6 +61,50 @@ test('generic push payload never includes message content', () => {
   assert.equal(curatorPush.body, 'Открыть диалог');
 });
 
+test('speech transcription accepts only the exact current consent version', () => {
+  assert.equal(runtime.TRANSCRIPTION_CONSENT_VERSION, '1.1');
+  assert.equal(runtime.HEALTH_DATA_CONSENT_VERSION, '1.5');
+  assert.equal(runtime.isCurrentTranscriptionConsentRow({
+    document_version: '1.1',
+    document_sha256: runtime.TRANSCRIPTION_CONSENT_SHA256,
+    accepted_at: '2026-07-27T10:00:00.000Z',
+    granted: true,
+    is_active: true,
+    revoked_at: null,
+  }, true), true);
+  assert.equal(runtime.isCurrentTranscriptionConsentRow({
+    document_version: '1.0',
+    document_sha256: runtime.TRANSCRIPTION_CONSENT_SHA256,
+    accepted_at: '2026-07-27T10:00:00.000Z',
+    granted: true,
+    is_active: true,
+    revoked_at: null,
+  }, true), false);
+  assert.equal(runtime.isCurrentTranscriptionConsentRow({
+    document_version: '1.1',
+    document_sha256: runtime.TRANSCRIPTION_CONSENT_SHA256,
+    accepted_at: '2026-07-27T10:00:00.000Z',
+    granted: true,
+    is_active: false,
+    revoked_at: null,
+  }, true), false);
+  assert.equal(runtime.isCurrentTranscriptionConsentRow({
+    document_version: '1.1',
+    document_sha256: runtime.TRANSCRIPTION_CONSENT_SHA256,
+    accepted_at: '2026-07-27T10:00:00.000Z',
+    granted: false,
+    revoked_at: new Date().toISOString(),
+  }), false);
+  assert.equal(runtime.isCurrentTranscriptionConsentRow({
+    document_version: '1.1',
+    document_sha256: '0'.repeat(64),
+    accepted_at: '2026-07-27T10:00:00.000Z',
+    granted: true,
+    is_active: true,
+    revoked_at: null,
+  }, true), false);
+});
+
 test('send fingerprint is stable across JSON key order and excludes dynamic transcript enrichment', () => {
   const first = runtime.buildSendRequestFingerprint({
     body: 'voice',

@@ -3,7 +3,11 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'heys_cookie_info_seen'
+import {
+  ANALYTICS_CONSENT_EVENT,
+  ANALYTICS_CONSENT_KEY,
+  type AnalyticsConsentValue,
+} from '@/components/AnalyticsConsentGate'
 
 export default function CookieInfoBanner() {
   const pathname = usePathname()
@@ -15,7 +19,8 @@ export default function CookieInfoBanner() {
       return
     }
     try {
-      if (window.localStorage.getItem(STORAGE_KEY) !== '1') {
+      const decision = window.localStorage.getItem(ANALYTICS_CONSENT_KEY)
+      if (decision !== 'granted' && decision !== 'denied') {
         setVisible(true)
       }
     } catch {
@@ -23,9 +28,10 @@ export default function CookieInfoBanner() {
     }
   }, [pathname])
 
-  const dismiss = () => {
+  const decide = (value: AnalyticsConsentValue) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, '1')
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, value)
+      window.dispatchEvent(new CustomEvent(ANALYTICS_CONSENT_EVENT, { detail: value }))
     } catch {
       // ignore
     }
@@ -42,8 +48,9 @@ export default function CookieInfoBanner() {
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.18)] sm:flex-row sm:items-center sm:gap-4 sm:p-5">
         <p className="flex-1 text-sm leading-6 text-gray-700">
-          Мы используем технические и аналитические cookies для работы сайта и
-          статистики посещений. Подробнее — в{' '}
+          Необходимые данные браузера обеспечивают работу сайта. Яндекс.Метрика
+          для статистики загрузится только с вашего разрешения; отказ не влияет
+          на заявку и работу сайта. Подробнее — в{' '}
           <a
             href="/legal/cookie-policy"
             className="text-orange-600 underline hover:text-orange-700"
@@ -52,13 +59,22 @@ export default function CookieInfoBanner() {
           </a>
           .
         </p>
-        <button
-          type="button"
-          onClick={dismiss}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-orange-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-700 active:bg-orange-800"
-        >
-          Понятно
-        </button>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={() => decide('denied')}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-50"
+          >
+            Отклонить
+          </button>
+          <button
+            type="button"
+            onClick={() => decide('granted')}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-600 bg-white px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50"
+          >
+            Разрешить
+          </button>
+        </div>
       </div>
     </div>
   )

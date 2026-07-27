@@ -64,9 +64,8 @@ function leadEvent(phone) {
       messenger: 'telegram',
       birth_year: 1990,
       consent: {
-        privacy_version: '2026-07-01',
+        privacy_version: '1.7',
         method: 'checkbox',
-        accepted_at: '2026-07-18T10:00:00.000Z',
       },
     }),
   };
@@ -136,6 +135,45 @@ test('invalid phone returns a clear 400 before rate-limit and DB side effects', 
 
   assert.equal(getPoolCalls(), 0);
   assert.equal(queries.length, 0);
+});
+
+test('rejects an arbitrary privacy consent version before DB side effects', async (t) => {
+  quietConsole(t);
+  const { handler, queries, getPoolCalls } = loadSubject();
+  const event = leadEvent('+7 (999) 111-22-33');
+  const payload = JSON.parse(event.body);
+  payload.consent.privacy_version = '999.0';
+  event.body = JSON.stringify(payload);
+
+  const response = await handler(event);
+  assert.equal(response.statusCode, 400);
+  assert.equal(JSON.parse(response.body).error, 'Consent version not allowed');
+  assert.equal(getPoolCalls(), 0);
+  assert.equal(queries.length, 0);
+});
+
+test('accepts only marketing consent 1.3 and passes no client timestamp', async (t) => {
+  quietConsole(t);
+  const { handler, queries } = loadSubject(async (sql) => {
+    if (/SELECT COUNT\(\*\)/.test(sql)) return { rows: [{ cnt: 0 }] };
+    if (/SELECT id, created_at/.test(sql)) return { rows: [] };
+    if (/INSERT INTO leads/.test(sql)) return { rows: [{ id: LEAD_ID }] };
+    if (/record_funnel_event/.test(sql)) return { rows: [{ event: null }] };
+    return { rows: [] };
+  });
+  const event = leadEvent('+7 (999) 111-22-33');
+  const payload = JSON.parse(event.body);
+  payload.marketing_consent = { granted: true, version: '1.3' };
+  payload.marketing_accepted_at = '2000-01-01T00:00:00.000Z';
+  event.body = JSON.stringify(payload);
+
+  const response = await handler(event);
+  const insert = queries.find((query) => /INSERT INTO leads/.test(query.sql));
+  assert.equal(response.statusCode, 200);
+  assert.match(insert.sql, /consent_marketing_version/);
+  assert.doesNotMatch(insert.sql, /consent_marketing_accepted_at/);
+  assert.equal(insert.params.at(-1), '1.3');
+  assert.equal(insert.params.includes('2000-01-01T00:00:00.000Z'), false);
 });
 
 test('formatted phone is normalized before duplicate lookup and INSERT', async (t) => {

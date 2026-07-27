@@ -1004,7 +1004,6 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
   const client = await pool.connect();
   const normalizedPhone = normalizePhone(phone);
   const chatHash = hashTelegramChatId(chatId);
-  const privacyVersion = process.env.PRIVACY_POLICY_VERSION || '1.5';
 
   try {
     await client.query('BEGIN');
@@ -1046,16 +1045,13 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
            name, phone, messenger,
            utm_source, utm_medium, utm_campaign,
            quiz_segment, readiness, how_heard,
-           landing_page, consent_privacy_version, consent_accepted_at,
-           consent_method, notes
+           landing_page, notes
          )
          VALUES (
            $1, $2, 'telegram',
            $3, 'bot', $4,
            $5, $6, 'telegram_bot',
-           'https://t.me/heys_start_bot', $7, NOW(),
-           'telegram_contact',
-           $8
+           'https://t.me/heys_start_bot', $7
          )
          RETURNING id`,
         [
@@ -1065,7 +1061,6 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
           state.campaign || 'heys_start',
           state.segment || null,
           metadata.readiness || null,
-          privacyVersion,
           [
             'HEYS Start handoff',
             `segment=${state.segment || 'unknown'}`,

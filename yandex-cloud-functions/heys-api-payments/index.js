@@ -201,7 +201,17 @@ function getYukassaAuthHeader() {
 }
 
 function buildYukassaPaymentPayload(input) {
-  const { planInfo, plan, paymentId, clientId, returnUrl, clientEmail, clientPhone } = input;
+  const {
+    planInfo,
+    plan,
+    paymentId,
+    clientId,
+    returnUrl,
+    clientEmail,
+    clientPhone,
+    ofertaVersion,
+    ofertaSha256,
+  } = input;
 
   return {
     amount: {
@@ -239,6 +249,8 @@ function buildYukassaPaymentPayload(input) {
       client_id: clientId,
       plan: plan,
       internal_payment_id: paymentId,
+      ...(ofertaVersion ? { oferta_version: ofertaVersion } : {}),
+      ...(ofertaSha256 ? { oferta_sha256: ofertaSha256 } : {}),
     },
   };
 }
@@ -286,7 +298,9 @@ async function createPayment(body, clientId) {
   // ⚠️ СИНХРОН: эта константа, CURRENT_VERSIONS.payment_oferta (heys_consents_v1.js)
   // и payment_oferta в heys_legal_versions_v1.js должны быть РАВНЫ, и функция
   // деплоится В ОДНОМ релизе с фронтендом — иначе все оплаты BLOCKED.
-  const PAYMENT_OFERTA_VERSION = '1.3'; // бамп 1.2→1.3 (2026-06-10): цены Self/Pro/Pro+ изменились
+  const PAYMENT_OFERTA_VERSION = '1.7'; // акцепт Пользовательского соглашения 1.7
+  const PAYMENT_OFERTA_SHA256 =
+    '8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74';
 
   // 1. Создаём запись платежа в БД (pending) через connection pool
   // + получаем телефон клиента для чека 54-ФЗ
@@ -308,9 +322,11 @@ async function createPayment(body, clientId) {
             AND granted = true
             AND is_active = true
             AND document_version = $2
+            AND document_sha256 = $3
+            AND accepted_at IS NOT NULL
             AND revoked_at IS NULL
        ) AS has_consent`,
-      [clientId, PAYMENT_OFERTA_VERSION],
+      [clientId, PAYMENT_OFERTA_VERSION, PAYMENT_OFERTA_SHA256],
     );
 
     if (!consentRes.rows[0]?.has_consent) {
@@ -350,6 +366,7 @@ async function createPayment(body, clientId) {
         JSON.stringify({
           idempotence_key: idempotenceKey,
           oferta_version_accepted: PAYMENT_OFERTA_VERSION,
+          oferta_sha256_accepted: PAYMENT_OFERTA_SHA256,
         }),
       ],
     );
@@ -373,6 +390,8 @@ async function createPayment(body, clientId) {
       returnUrl,
       clientEmail,
       clientPhone,
+      ofertaVersion: PAYMENT_OFERTA_VERSION,
+      ofertaSha256: PAYMENT_OFERTA_SHA256,
     });
 
     console.log(`[PAYMENTS] Calling YuKassa API for payment ${paymentId}`);

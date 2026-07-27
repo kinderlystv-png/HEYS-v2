@@ -55,7 +55,7 @@ describe('protected trial intake contract', () => {
   it('keeps the landing payload minimal and consent-specific', () => {
     const payload = landingSource.slice(
       landingSource.indexOf('body: JSON.stringify({'),
-      landingSource.indexOf('marketing_accepted_at:') + 180,
+      landingSource.indexOf('marketing_consent:') + 220,
     );
 
     expect(payload).toContain('name: name.trim()');
@@ -64,6 +64,8 @@ describe('protected trial intake contract', () => {
     expect(payload).toContain('birth_year');
     expect(payload).toContain('...utmParams');
     expect(payload).toContain('privacy_version');
+    expect(payload).toContain('marketing_consent:');
+    expect(payload).not.toContain('accepted_at: new Date');
     expect(payload).not.toContain('user_agreement_version');
     expect(payload).not.toContain('health_data');
     expect(payload).not.toContain('email:');

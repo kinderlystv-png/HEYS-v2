@@ -11,12 +11,12 @@ export interface LegalDocMeta {
 
 export const LEGAL_DOCS = {
   userAgreement: {
-    version: '1.6',
-    effectiveDate: '10 июня 2026 г.',
-    lastUpdated: '10 июня 2026 г.',
+    version: '1.7',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
   },
   privacyPolicy: {
-    version: '1.6',
+    version: '1.7',
     effectiveDate: '27 июля 2026 г.',
     lastUpdated: '27 июля 2026 г.',
   },
@@ -26,14 +26,24 @@ export const LEGAL_DOCS = {
     lastUpdated: '27 июля 2026 г.',
   },
   refund: {
-    version: '1.0',
-    effectiveDate: '28 апреля 2026 г.',
-    lastUpdated: '28 апреля 2026 г.',
+    version: '1.1',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
   },
   cookiePolicy: {
-    version: '1.0',
-    effectiveDate: '14 мая 2026 г.',
-    lastUpdated: '14 мая 2026 г.',
+    version: '1.1',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
+  },
+  speechTranscriptionConsent: {
+    version: '1.1',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
+  },
+  marketingConsent: {
+    version: '1.3',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
   },
 } as const satisfies Record<string, LegalDocMeta>
 

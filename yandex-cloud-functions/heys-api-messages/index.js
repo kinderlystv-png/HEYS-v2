@@ -240,7 +240,10 @@ const VALID_TRANSCRIPT_STATUSES = new Set([
   'consent_required',
 ]);
 const TRANSCRIPTION_CONSENT_TYPE = 'speech_transcription';
-const TRANSCRIPTION_CONSENT_VERSION = '1.0';
+const TRANSCRIPTION_CONSENT_VERSION = '1.1';
+const TRANSCRIPTION_CONSENT_SHA256 = '75f42b06d3b616e1a9c76f4cb5c4b9bb02bb4e0737c44735394816b484f1df1f';
+const HEALTH_DATA_CONSENT_VERSION = '1.5';
+const HEALTH_DATA_CONSENT_SHA256 = 'a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256';
 const TRANSCRIPTION_PROVIDER = 'yandex_speechkit';
 const SUPPORTED_TRANSCRIPTION_MIME = new Set(['audio/ogg', 'audio/wav', 'audio/x-wav']);
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
@@ -269,6 +272,20 @@ function trace(event, details = {}) {
   } catch (_) {
     console.log('[messages.trace]', event);
   }
+}
+
+function isCurrentTranscriptionConsentRow(row, isClient = false) {
+  if (!row || row.document_version !== TRANSCRIPTION_CONSENT_VERSION) return false;
+  if (row.document_sha256 !== TRANSCRIPTION_CONSENT_SHA256 || !row.accepted_at) return false;
+  if (row.revoked_at || row.granted !== true) return false;
+  return !isClient || row.is_active === true;
+}
+
+function hasCurrentTranscriptionProof(row) {
+  return !!row &&
+    row.document_version === TRANSCRIPTION_CONSENT_VERSION &&
+    row.document_sha256 === TRANSCRIPTION_CONSENT_SHA256 &&
+    !!row.accepted_at;
 }
 
 function compactAttachment(att) {
@@ -504,14 +521,37 @@ async function hasSpeechTranscriptionConsent(identity) {
   try {
     if (identity.kind === 'client') {
       const r = await conn.query(
-        `SELECT 1 FROM consents
-         WHERE client_id = $1
-           AND consent_type = $2
-           AND granted = true
-           AND revoked_at IS NULL
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+        `SELECT 1
+           WHERE EXISTS (
+             SELECT 1 FROM consents
+              WHERE client_id = $1
+                AND consent_type = $2
+                AND document_version = $3
+                AND document_sha256 = $4
+                AND accepted_at IS NOT NULL
+                AND granted = true
+                AND is_active = true
+                AND revoked_at IS NULL
+           )
+             AND EXISTS (
+             SELECT 1 FROM consents
+              WHERE client_id = $1
+                AND consent_type = 'health_data'
+                AND document_version = $5
+                AND document_sha256 = $6
+                AND accepted_at IS NOT NULL
+                AND granted = true
+                AND is_active = true
+                AND revoked_at IS NULL
+           )`,
+        [
+          identity.id,
+          TRANSCRIPTION_CONSENT_TYPE,
+          TRANSCRIPTION_CONSENT_VERSION,
+          TRANSCRIPTION_CONSENT_SHA256,
+          HEALTH_DATA_CONSENT_VERSION,
+          HEALTH_DATA_CONSENT_SHA256,
+        ],
       );
       return r.rows.length > 0;
     }
@@ -519,11 +559,14 @@ async function hasSpeechTranscriptionConsent(identity) {
       `SELECT 1 FROM curator_consents
        WHERE curator_id = $1
          AND consent_type = $2
+         AND document_version = $3
+         AND document_sha256 = $4
+         AND accepted_at IS NOT NULL
          AND granted = true
          AND revoked_at IS NULL
        ORDER BY created_at DESC
        LIMIT 1`,
-      [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+      [identity.id, TRANSCRIPTION_CONSENT_TYPE, TRANSCRIPTION_CONSENT_VERSION, TRANSCRIPTION_CONSENT_SHA256],
     );
     return r.rows.length > 0;
   } finally {
@@ -753,27 +796,43 @@ async function getTranscriptionConsent(identity) {
   try {
     if (identity.kind === 'client') {
       const r = await conn.query(
-        `SELECT granted, document_version, created_at, revoked_at
-           FROM consents
-          WHERE client_id = $1
-            AND consent_type = $2
-          ORDER BY created_at DESC
+        `SELECT c.granted, c.is_active, c.document_version, c.document_sha256,
+                c.accepted_at, c.created_at, c.revoked_at,
+                EXISTS (
+                  SELECT 1 FROM consents h
+                   WHERE h.client_id = $1
+                     AND h.consent_type = 'health_data'
+                     AND h.document_version = $3
+                     AND h.document_sha256 = $4
+                     AND h.accepted_at IS NOT NULL
+                     AND h.granted = true
+                     AND h.is_active = true
+                     AND h.revoked_at IS NULL
+                ) AS health_granted
+           FROM consents c
+          WHERE c.client_id = $1
+            AND c.consent_type = $2
+          ORDER BY c.created_at DESC
           LIMIT 1`,
-        [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+        [identity.id, TRANSCRIPTION_CONSENT_TYPE, HEALTH_DATA_CONSENT_VERSION, HEALTH_DATA_CONSENT_SHA256],
       );
       const row = r.rows[0] || null;
+      const current = hasCurrentTranscriptionProof(row);
       return {
         success: true,
         consent_type: TRANSCRIPTION_CONSENT_TYPE,
-        version: row?.document_version || TRANSCRIPTION_CONSENT_VERSION,
-        granted: !!(row?.granted && !row?.revoked_at),
-        decided: !!row,
+        version: TRANSCRIPTION_CONSENT_VERSION,
+        accepted_version: row?.document_version || null,
+        document_sha256: row?.document_sha256 || null,
+        accepted_at: row?.accepted_at || null,
+        granted: isCurrentTranscriptionConsentRow(row, true) && row?.health_granted === true,
+        decided: !!current,
         created_at: row?.created_at || null,
         revoked_at: row?.revoked_at || null,
       };
     }
     const r = await conn.query(
-      `SELECT granted, document_version, created_at, revoked_at
+      `SELECT granted, document_version, document_sha256, accepted_at, created_at, revoked_at
          FROM curator_consents
         WHERE curator_id = $1
           AND consent_type = $2
@@ -782,12 +841,16 @@ async function getTranscriptionConsent(identity) {
       [identity.id, TRANSCRIPTION_CONSENT_TYPE],
     );
     const row = r.rows[0] || null;
+    const current = hasCurrentTranscriptionProof(row);
     return {
       success: true,
       consent_type: TRANSCRIPTION_CONSENT_TYPE,
-      version: row?.document_version || TRANSCRIPTION_CONSENT_VERSION,
-      granted: !!(row?.granted && !row?.revoked_at),
-      decided: !!row,
+      version: TRANSCRIPTION_CONSENT_VERSION,
+      accepted_version: row?.document_version || null,
+      document_sha256: row?.document_sha256 || null,
+      accepted_at: row?.accepted_at || null,
+      granted: isCurrentTranscriptionConsentRow(row),
+      decided: !!current,
       created_at: row?.created_at || null,
       revoked_at: row?.revoked_at || null,
     };
@@ -837,10 +900,10 @@ async function setTranscriptionConsent(identity, granted, event) {
     await conn.query(
       `INSERT INTO curator_consents (
          curator_id, consent_type, document_version, granted,
-         ip_address, user_agent, consent_method, signature_method, created_at
+         ip_address, user_agent, consent_method, signature_method
        )
        VALUES ($1, $2, $3, $4, NULLIF($5::text, '')::inet,
-               $6, 'checkbox', 'checkbox', NOW())`,
+               $6, 'checkbox', 'checkbox')`,
       [identity.id, TRANSCRIPTION_CONSENT_TYPE, TRANSCRIPTION_CONSENT_VERSION, !!granted, ip, userAgent],
     );
     await conn.query('COMMIT');
@@ -1538,6 +1601,11 @@ module.exports._test = {
   normalizeMime,
   estimateSpeechKitCost,
   stripClientTranscriptFields,
+  isCurrentTranscriptionConsentRow,
+  TRANSCRIPTION_CONSENT_VERSION,
+  TRANSCRIPTION_CONSENT_SHA256,
+  HEALTH_DATA_CONSENT_VERSION,
+  HEALTH_DATA_CONSENT_SHA256,
   MAX_AUDIO_DURATION_MS,
   MAX_TRANSCRIPT_TEXT_LENGTH,
   VALID_TRANSCRIPT_STATUSES,

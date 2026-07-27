@@ -33,6 +33,13 @@ R0 закрыт 2026-07-26. Публичные privacy 1.6 и health consent 1.4
 запись РКН уже охватывает заявки/триалы и специальные данные о здоровье.
 Отдельная повторная подача не является production-блокером.
 
+Consent-proof P0 source-пакет подготовлен 2026-07-27, но не применён:
+`database/2026-07-27_consent_proof_v2.sql` вводит exact server allowlist,
+server-owned SHA-256/accepted_at и отдельный marketing 1.3 proof без
+исторического backfill. До migration/API/web rollout этот контроль не является
+production evidence. Health 2.0 остаётся inactive candidate; его включение —
+отдельный STOP-gate до письменного российского legal sign-off по ПЭП/OTP.
+
 ## R1 — первая оплата
 
 | Проверка                        | Источник                                                                      | Статус | Что остается вне репо / в live                             |

@@ -31,8 +31,8 @@ const FILES = {
   privacyPolicy: 'apps/web/public/docs/privacy-policy.md',
   healthConsent: 'apps/web/public/docs/health-data-consent.md',
   userAgreement: 'apps/web/public/docs/user-agreement.md',
-  userAgreementV16: 'apps/web/public/docs/v1.6/user-agreement.md',
-  privacyV16: 'apps/web/public/docs/v1.6/privacy-policy.md',
+  userAgreementV17: 'apps/web/public/docs/v1.7/user-agreement.md',
+  privacyV17: 'apps/web/public/docs/v1.7/privacy-policy.md',
   healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
   healthV15: 'apps/web/public/docs/v1.5/health-data-consent.md',
   consentForms: 'apps/web/public/docs/consent-forms.md',
@@ -394,8 +394,8 @@ function checkLegalVersions() {
   }
 
   for (const [currentKey, snapshotKey, label] of [
-    ['userAgreement', 'userAgreementV16', 'user_agreement 1.6'],
-    ['privacyPolicy', 'privacyV16', 'personal_data 1.6'],
+    ['userAgreement', 'userAgreementV17', 'user_agreement 1.7'],
+    ['privacyPolicy', 'privacyV17', 'personal_data 1.7'],
     ['healthConsent', 'healthV15', 'health_data 1.5'],
   ]) {
     if (normalizeLegalSnapshot(FILES[currentKey]) === normalizeLegalSnapshot(FILES[snapshotKey])) {
@@ -410,7 +410,7 @@ function checkConsentFormsContract() {
   requireIncludes(
     FILES.consentForms,
     [
-      '| Общие персональные данные       | 1.6    |',
+      '| Общие персональные данные       | 1.7    |',
       '| Данные о здоровье               | 1.5    |',
       '/docs/v1.5/health-data-consent.md',
       '`health_data` 1.4 и ниже',

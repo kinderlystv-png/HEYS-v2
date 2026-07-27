@@ -1,0 +1,75 @@
+{
+  "updatedAt": "2026-07-27",
+  "documents": {
+    "user_agreement": {
+      "version": "1.7",
+      "canonicalPath": "docs/legal/user-agreement.md",
+      "snapshotPath": "apps/web/public/docs/v1.7/user-agreement.md",
+      "sha256": "8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74"
+    },
+    "personal_data": {
+      "version": "1.7",
+      "canonicalPath": "docs/legal/privacy-policy.md",
+      "snapshotPath": "apps/web/public/docs/v1.7/privacy-policy.md",
+      "sha256": "e31fd13099952da2458bee27c76e8d2bcf632d6b34d14220bd68ca1dc1955c5c"
+    },
+    "health_data": {
+      "version": "1.5",
+      "canonicalPath": "apps/web/public/docs/v1.5/health-data-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.5/health-data-consent.md",
+      "sha256": "a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256"
+    },
+    "payment_oferta": {
+      "version": "1.7",
+      "canonicalPath": "docs/legal/user-agreement.md",
+      "snapshotPath": "apps/web/public/docs/v1.7/user-agreement.md",
+      "sha256": "8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74"
+    },
+    "refund": {
+      "version": "1.1",
+      "canonicalPath": "docs/legal/refund.md",
+      "snapshotPath": "apps/web/public/docs/v1.1/refund.md",
+      "sha256": "c428dae96970fe161a3b3094a1be20a9d8211699e3a357b858bec38efde1315c"
+    },
+    "cookie_policy": {
+      "version": "1.1",
+      "canonicalPath": "docs/legal/cookie-policy.md",
+      "snapshotPath": "apps/web/public/docs/v1.1/cookie-policy.md",
+      "sha256": "5193bf1e681fcc4df5e31b1b8efbab91cda44614a3a34277b899525fdbbba699"
+    },
+    "speech_transcription": {
+      "version": "1.1",
+      "canonicalPath": "docs/legal/speech-transcription-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.1/speech-transcription-consent.md",
+      "sha256": "75f42b06d3b616e1a9c76f4cb5c4b9bb02bb4e0737c44735394816b484f1df1f"
+    },
+    "marketing": {
+      "version": "1.3",
+      "canonicalPath": "docs/legal/marketing-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.3/marketing-consent.md",
+      "sha256": "99cf6dc012948a19423e750ea8039afb11f56b44ccf35e319f123f47539cc81d"
+    },
+    "push_notifications": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/push-notifications-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/push-notifications-consent.md",
+      "sha256": "a4b2f8dc1a43eec77a5bb7cdacfb55771f7c84cfe9517a7325adea99b4e1e292"
+    },
+    "curator_access": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/curator-access-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/curator-access-consent.md",
+      "sha256": "75cd5fadf7db8e3d065e799ab27525e7db293538c60a465660cbc010f0da5a11"
+    }
+  },
+  "candidates": {
+    "health_data_2_0": {
+      "version": "2.0",
+      "active": false,
+      "canonicalPath": "docs/legal/candidates/health-data-consent-v2.0.md",
+      "redlinePath": "docs/legal/candidates/health-data-consent-v2.0-redline.md",
+      "sha256": "44086e492df447ca989c39fa06c4a39acaa58772424c5b4ad079458a7aaa2e8d",
+      "activationGate": "Written Russian-lawyer sign-off on mandatory consent fields and PEP/OTP model"
+    }
+  }
+}

@@ -44,6 +44,20 @@ export default function AgreementsPage() {
             description: 'Какие файлы cookie использует сайт, какая аналитика подключена и как ими управлять.',
             icon: '🍪',
         },
+        {
+            title: 'Согласие на расшифровку голосовых',
+            href: '/legal/speech-transcription-consent',
+            version: LEGAL_DOCS.speechTranscriptionConsent.version,
+            description: 'Что передаётся в Yandex SpeechKit, как хранится текст и почему функция добровольна.',
+            icon: '🎙️',
+        },
+        {
+            title: 'Согласие на информационные и рекламные материалы',
+            href: '/legal/marketing-consent',
+            version: LEGAL_DOCS.marketingConsent.version,
+            description: 'Добровольные каналы, содержание сообщений и порядок отписки.',
+            icon: '✉️',
+        },
     ];
 
     return (

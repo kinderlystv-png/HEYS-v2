@@ -162,11 +162,12 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             privacy_version: LEGAL_DOCS.privacyPolicy.version,
             method: 'checkbox',
             user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-            accepted_at: new Date().toISOString(),
           },
           // Опциональное согласие на маркетинговые материалы (152-ФЗ ст.15).
-          // Если null — рассылку слать нельзя. Сервер пишет в leads.consent_marketing_accepted_at.
-          marketing_accepted_at: marketingAccepted ? new Date().toISOString() : null,
+          // Если null — рассылку слать нельзя. Version/hash/time принадлежат серверу.
+          marketing_consent: marketingAccepted
+            ? { granted: true, version: LEGAL_DOCS.marketingConsent.version }
+            : null,
         }),
       });
 
@@ -393,7 +394,17 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span className="text-gray-500 text-xs leading-5">
-            Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
+            Хочу получать полезные материалы, новости и акции по выбранным контактам. Это не влияет
+            на заявку; отказаться можно в любой момент.{' '}
+            <a
+              href="/legal/marketing-consent"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline hover:text-blue-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Полные условия
+            </a>
           </span>
         </label>
       </details>
