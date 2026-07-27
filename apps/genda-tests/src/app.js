@@ -226,7 +226,10 @@ function learningDetails(question) {
   return `<section class="answer-details" aria-label="Разбор ответа">
     <div class="confidence"><strong>Уверенность: ${question.probabilityPercent}%</strong><span>${tier}</span></div>
     <p class="audit-status"><strong>${statusLabel(question.finalStatus)}</strong> · качество текста: ${escapeHtml(question.textQuality)}</p>
-    <p>${escapeHtml(question.rationale)}</p>
+    <div class="plain-explanation">
+      <strong>Простыми словами</strong>
+      <p>${escapeHtml(question.rationale)}</p>
+    </div>
     ${question.ambiguityNote ? `<p class="ambiguity"><strong>Важно:</strong> ${escapeHtml(question.ambiguityNote)}</p>` : ''}
     ${sourcesMarkup(question.sources)}
   </section>`;
