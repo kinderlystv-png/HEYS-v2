@@ -378,7 +378,7 @@ function validateVisiblePolicyContracts(state, failures) {
   const runbook = stripPolicyMarkers(getText(state, FILES.runbook));
   const commitOnlyRow = runbook
     .split('\n')
-    .find((line) => line.includes('| Commit-only, one intended staged group |'));
+    .find((line) => /^\|\s*Commit-only, one intended staged group\s*\|/.test(line));
   if (
     !commitOnlyRow ||
     !commitOnlyRow.includes('pnpm ship') ||
