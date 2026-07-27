@@ -98,7 +98,12 @@ export default function AgreementsPage() {
                 {OPERATOR.fullName}<br />
                 ИНН: {OPERATOR.inn}<br />
                 ОГРНИП: {OPERATOR.ogrnip}<br />
-                Адрес: {OPERATOR.address}
+                Адрес: {OPERATOR.address}<br />
+                Запись в реестре операторов ПДн:{' '}
+                <a href={OPERATOR.rknRegistryUrl} target="_blank" rel="noopener noreferrer">
+                    № {OPERATOR.rknRegistrationNumber}
+                </a><br />
+                Последнее изменение: {OPERATOR.rknOrder}
             </p>
 
             <h2>Контакты</h2>

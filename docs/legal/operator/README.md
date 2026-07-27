@@ -23,35 +23,36 @@
 
 ## Состав документов и готовность
 
-| Файл                                                                       | Раздел / роль                                                          | Статус | Следующий блокер                                                          |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------- |
-| [pdn-compliance-operating-model.md](pdn-compliance-operating-model.md)     | Каноническая операционная модель ПДн                                   | 🟡     | закрыть внешние R0/R2 блокеры по карте готовности                         |
-| [heys-data-register.md](heys-data-register.md)                             | Реестр данных HEYS: поля, цели, места хранения, доступы, сроки, защита | ✅     | применять data-change gate при новых полях/целях/получателях              |
-| [heys-data-change-gate.md](heys-data-change-gate.md)                       | Предрелизная проверка новых ПДн/целей/получателей/сервисов             | ✅     | применять на каждом релизе с ПДн                                          |
-| [rkn-notification-heys.md](rkn-notification-heys.md)                       | Контент блоков HEYS для формы изменений в запись 26-22-005319          | ✅     | опубликовано; дальше применять data-change gate                           |
-| [rkn-notification-kinderly.md](rkn-notification-kinderly.md)               | Архивный черновик Kinderly                                             | ⏸     | не добавлять в HEYS-запись; оформлять отдельно на супругу при запуске     |
-| [heys-access-matrix.md](heys-access-matrix.md)                             | Кто видит какие данные и что нельзя делать                             | ✅     | пересматривать при новых ролях/интеграциях                                |
-| [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md)                           | Рабочая карта gaps по ИСПДн до R0/R2                                   | 🟡     | R0-модель принята; live-security/Telegram pending, внешний sign-off до R2 |
-| [heys-ispdn-threat-model-r0.md](heys-ispdn-threat-model-r0.md)             | Рабочая модель угроз R0 и решение тип 3 / УЗ-4                         | ✅ R0  | внешний security/legal sign-off до R2                                     |
-| [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md)             | 24/72-часовой сценарий инцидента ПДн                                   | 🟡     | провести drill до paid-scale                                              |
-| [heys-pdn-incident-drill-template.md](heys-pdn-incident-drill-template.md) | Repo-safe шаблон incident drill                                        | ✅     | фактический drill-result хранить вне репо                                 |
-| [heys-pdn-monthly-audit.md](heys-pdn-monthly-audit.md)                     | Ежемесячная сверка код/БД/лендинг/документы/РКН                        | 🟡     | импортировать `.ics` и сделать первую запись                              |
-| [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                             | Импортируемый календарь ПДн-обязательств                               | ✅     | импортировать в личный календарь владельца                                |
-| [legal-signoff-template.md](legal-signoff-template.md)                     | Шаблон внешнего legal sign-off                                         | 🟡     | выбрать проверяющего и получить sign-off перед R2/R3                      |
-| [heys-r0-r2-signoff-package.md](heys-r0-r2-signoff-package.md)             | Навигационный пакет R0/R1/R2 gates для проверки                        | 🟡     | закрывать внешние действия по строкам пакета                              |
-| [heys-dsar-request-log-template.md](heys-dsar-request-log-template.md)     | Repo-safe шаблон журнала DSAR                                          | ✅     | фактический журнал вести вне репо                                         |
-| [heys-privacy-intake-runbook.md](heys-privacy-intake-runbook.md)           | Канал приема privacy/DSAR запросов и будущий alias checklist           | ✅     | создать alias только после внешнего mailbox smoke                         |
-| [heys-retention-job-runbook.md](heys-retention-job-runbook.md)             | Dry-run-first runbook retention job для audit/debug tables             | 🟡     | пройти dry-run/sign-off перед paid-scale                                  |
-| [internal-policy-pdn.md](internal-policy-pdn.md)                           | Положение об обработке ПДн ИП Поплавского А. С.                        | 🟡     | распечатать, подписать, хранить вне репо                                  |
-| [archived-versions-policy.md](archived-versions-policy.md)                 | Политика архивных legal-снимков                                        | ✅     | применять при новых версиях документов                                    |
+| Файл                                                                                                     | Раздел / роль                                                          | Статус | Следующий блокер                                                      |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------ | --------------------------------------------------------------------- |
+| [pdn-compliance-operating-model.md](pdn-compliance-operating-model.md)                                   | Каноническая операционная модель ПДн                                   | 🟡     | закрыть внешние R0/R2 блокеры по карте готовности                     |
+| [heys-data-register.md](heys-data-register.md)                                                           | Реестр данных HEYS: поля, цели, места хранения, доступы, сроки, защита | ✅     | применять data-change gate при новых полях/целях/получателях          |
+| [heys-data-change-gate.md](heys-data-change-gate.md)                                                     | Предрелизная проверка новых ПДн/целей/получателей/сервисов             | ✅     | применять на каждом релизе с ПДн                                      |
+| [rkn-notification-heys.md](rkn-notification-heys.md)                                                     | Контент блоков HEYS для формы изменений в запись 26-22-005319          | ✅     | опубликовано; дальше применять data-change gate                       |
+| [heys-rkn-publication-consents-update-2026-07-27.md](heys-rkn-publication-consents-update-2026-07-27.md) | Протокол публикации РКН и обновления пользовательских документов       | ✅     | privacy 1.6 / health 1.4; re-consent через штатный gate               |
+| [rkn-notification-kinderly.md](rkn-notification-kinderly.md)                                             | Архивный черновик Kinderly                                             | ⏸     | не добавлять в HEYS-запись; оформлять отдельно на супругу при запуске |
+| [heys-access-matrix.md](heys-access-matrix.md)                                                           | Кто видит какие данные и что нельзя делать                             | ✅     | пересматривать при новых ролях/интеграциях                            |
+| [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md)                                                         | Рабочая карта gaps по ИСПДн до R0/R2                                   | ✅ R0  | live-security/Telegram закрыты; внешний sign-off до R2                |
+| [heys-ispdn-threat-model-r0.md](heys-ispdn-threat-model-r0.md)                                           | Рабочая модель угроз R0 и решение тип 3 / УЗ-4                         | ✅ R0  | внешний security/legal sign-off до R2                                 |
+| [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md)                                           | 24/72-часовой сценарий инцидента ПДн                                   | 🟡     | провести drill до paid-scale                                          |
+| [heys-pdn-incident-drill-template.md](heys-pdn-incident-drill-template.md)                               | Repo-safe шаблон incident drill                                        | ✅     | фактический drill-result хранить вне репо                             |
+| [heys-pdn-monthly-audit.md](heys-pdn-monthly-audit.md)                                                   | Ежемесячная сверка код/БД/лендинг/документы/РКН                        | 🟡     | импортировать `.ics` и сделать первую запись                          |
+| [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                           | Импортируемый календарь ПДн-обязательств                               | ✅     | импортировать в личный календарь владельца                            |
+| [legal-signoff-template.md](legal-signoff-template.md)                                                   | Шаблон внешнего legal sign-off                                         | 🟡     | выбрать проверяющего и получить sign-off перед R2/R3                  |
+| [heys-r0-r2-signoff-package.md](heys-r0-r2-signoff-package.md)                                           | Навигационный пакет R0/R1/R2 gates для проверки                        | ✅ R0  | R1/R2 закрывать по строкам пакета                                     |
+| [heys-dsar-request-log-template.md](heys-dsar-request-log-template.md)                                   | Repo-safe шаблон журнала DSAR                                          | ✅     | фактический журнал вести вне репо                                     |
+| [heys-privacy-intake-runbook.md](heys-privacy-intake-runbook.md)                                         | Канал приема privacy/DSAR запросов и будущий alias checklist           | ✅     | создать alias только после внешнего mailbox smoke                     |
+| [heys-retention-job-runbook.md](heys-retention-job-runbook.md)                                           | Dry-run-first runbook retention job для audit/debug tables             | 🟡     | пройти dry-run/sign-off перед paid-scale                              |
+| [internal-policy-pdn.md](internal-policy-pdn.md)                                                         | Положение об обработке ПДн ИП Поплавского А. С.                        | 🟡     | распечатать, подписать, хранить вне репо                              |
+| [archived-versions-policy.md](archived-versions-policy.md)                                               | Политика архивных legal-снимков                                        | ✅     | применять при новых версиях документов                                |
 
 ## Статус задач `22` 1.7–1.9
 
-| Задача                      | Статус | Что закрыто                                                                                                                | Что осталось                                                      |
-| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 1.7 РКН: внесение изменений | ✅     | приказ № 131 от 24.07.2026; HEYS-цели и здоровье опубликованы в записи                                                     | применять data-change gate при изменениях                         |
-| 1.8 ИСПДн                   | 🟡     | базовый техконтур, access matrix, read-audit, break-glass и gap-list описаны                                               | уровень защищённости, модель угроз, Telegram/payment smoke        |
-| 1.9 Governance              | 🟡     | РКН и реестр данных сверены; calendar/incident owner назначены; `.ics` и sign-off package готовы; consent/proof smoke PASS | импорт календаря, первая monthly запись, drill, external sign-off |
+| Задача                      | Статус           | Что закрыто                                                                                  | Что осталось                                               |
+| --------------------------- | ---------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1.7 РКН: внесение изменений | ✅               | приказ № 131 от 24.07.2026; HEYS-цели и здоровье опубликованы в записи                       | применять data-change gate при изменениях                  |
+| 1.8 ИСПДн                   | ✅ R0 / 🟡 R1–R2 | рабочие тип 3 / УЗ-4, strict read/write, IDOR и Telegram PII-free smoke подтверждены         | payment live-smoke перед R1; внешний sign-off модели до R2 |
+| 1.9 Governance              | ✅ R0 / 🟡 R2–R3 | РКН/реестр/согласия сверены; data-change gate, календарь, playbook и sign-off package готовы | первая monthly запись, drill и external sign-off до R2/R3  |
 
 ## Юридическая основа
 
@@ -65,13 +66,11 @@
 
 ## Что делать дальше
 
-1. Синхронизировать privacy-policy с опубликованной записью **26-22-005319**, не
-   публикуя номер/ключ самого уведомления.
-2. Довести 1.8 до ✅: определить уровень защищённости ИСПДн/модель угроз по
-   [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md) и закрыть smoke Telegram
-   lead notification без ПДн.
-3. Довести 1.9 до ✅: импортировать `.ics` во внешний календарь, сделать первую
-   monthly запись, провести incident drill; внешний sign-off — перед R2/R3.
+1. После публикации privacy 1.6 и health consent 1.4 контролировать штатный
+   re-consent и доказательства версии/IP/User-Agent/signature method.
+2. Перед R1 пройти live-smoke платежного контура и повторно проверить metadata.
+3. До R2 сделать первую monthly запись, провести incident drill и получить
+   внешний sign-off.
 4. Kinderly не менять: при возобновлении оформлять отдельного оператора на
    супругу и заново сверить фактический поток данных.
 5. Распечатать положение, подписать, хранить вместе с уставными документами ИП.

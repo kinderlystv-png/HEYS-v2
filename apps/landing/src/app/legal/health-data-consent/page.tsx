@@ -27,6 +27,11 @@ export default function HealthDataConsentPage() {
                 ИНН: {OPERATOR.inn}<br />
                 ОГРНИП: {OPERATOR.ogrnip}<br />
                 Адрес: {OPERATOR.address}<br />
+                Реестр операторов персональных данных Роскомнадзора: запись №{' '}
+                <a href="https://pd.rkn.gov.ru/operators-registry/operators-list/">
+                    {OPERATOR.rknRegistrationNumber}
+                </a>{' '}
+                ({OPERATOR.rknOrder})<br />
                 Email: {SUPPORT_CONTACTS.privacyEmail}
             </p>
 

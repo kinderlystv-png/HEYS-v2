@@ -13,14 +13,14 @@
 
   const versions = {
     user_agreement:     '1.6',
-    personal_data:      '1.5',
-    health_data:        '1.3',
+    personal_data:      '1.6',
+    health_data:        '1.4',
     marketing:          '1.2',
     payment_oferta:     '1.3',
     push_notifications: '1.0',
     curator_access:     '1.0',
     speech_transcription: '1.0',
-    _updatedAt:         '2026-06-18'
+    _updatedAt:         '2026-07-27'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,

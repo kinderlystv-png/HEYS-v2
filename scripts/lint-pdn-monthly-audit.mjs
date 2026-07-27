@@ -32,8 +32,9 @@ const FILES = {
   healthConsent: 'apps/web/public/docs/health-data-consent.md',
   userAgreement: 'apps/web/public/docs/user-agreement.md',
   userAgreementV16: 'apps/web/public/docs/v1.6/user-agreement.md',
-  privacyV15: 'apps/web/public/docs/v1.5/privacy-policy.md',
-  healthV13: 'apps/web/public/docs/v1.3/health-data-consent.md',
+  privacyV16: 'apps/web/public/docs/v1.6/privacy-policy.md',
+  healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
+  consentForms: 'apps/web/public/docs/consent-forms.md',
   marketingPrivacyGuard: 'scripts/lint-marketing-privacy-metadata.mjs',
   paymentsGatewayGuard: 'scripts/prepare-payments-gateway.mjs',
   packageJson: 'package.json',
@@ -363,6 +364,20 @@ function checkLegalVersions() {
   }
 }
 
+function checkConsentFormsContract() {
+  requireIncludes(
+    FILES.consentForms,
+    [
+      '| Общие персональные данные | 1.6 |',
+      '| Данные о здоровье | 1.4 |',
+      'Маркетинговый пункт не влияет на заявку, триал или доступ к HEYS.',
+      'SMS-подтверждение сейчас выключено',
+      '№ 26-22-005319',
+    ],
+    'public consent forms match current versions and signature flow',
+  );
+}
+
 function checkMarketingPrivacyGuards() {
   const pkg = JSON.parse(read(FILES.packageJson));
   if (pkg.scripts?.['privacy:marketing'] === 'node scripts/lint-marketing-privacy-metadata.mjs') {
@@ -449,6 +464,7 @@ try {
   checkIspdnGapList();
   checkRknDraft();
   checkLegalVersions();
+  checkConsentFormsContract();
   checkMarketingPrivacyGuards();
   checkAnalyticsBoundary();
   checkPlanAndDecisionLog();

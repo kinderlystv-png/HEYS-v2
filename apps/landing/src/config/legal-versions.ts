@@ -16,14 +16,14 @@ export const LEGAL_DOCS = {
     lastUpdated: '10 июня 2026 г.',
   },
   privacyPolicy: {
-    version: '1.5',
-    effectiveDate: '20 мая 2026 г.',
-    lastUpdated: '20 мая 2026 г.',
+    version: '1.6',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
   },
   healthDataConsent: {
-    version: '1.3',
-    effectiveDate: '20 мая 2026 г.',
-    lastUpdated: '20 мая 2026 г.',
+    version: '1.4',
+    effectiveDate: '27 июля 2026 г.',
+    lastUpdated: '27 июля 2026 г.',
   },
   refund: {
     version: '1.0',
@@ -49,4 +49,7 @@ export const OPERATOR = {
   inn: '263517141102',
   ogrnip: '320265100094118',
   address: '355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56',
+  rknRegistrationNumber: '26-22-005319',
+  rknOrder: 'приказ № 131 от 24 июля 2026 г.',
+  rknRegistryUrl: 'https://pd.rkn.gov.ru/operators-registry/operators-list/',
 } as const

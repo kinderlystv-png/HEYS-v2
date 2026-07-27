@@ -12,8 +12,8 @@ const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 const LEGAL_VERSIONS = {
   required: ['user_agreement', 'personal_data', 'health_data'],
   user_agreement: '1.6',
-  personal_data: '1.5',
-  health_data: '1.3',
+  personal_data: '1.6',
+  health_data: '1.4',
 };
 
 afterEach(() => {
@@ -34,8 +34,8 @@ describe('offline consent validation cache', () => {
       clientId: CLIENT_ID,
       requiredVersions: {
         user_agreement: '1.6',
-        personal_data: '1.5',
-        health_data: '1.3',
+        personal_data: '1.6',
+        health_data: '1.4',
       },
       validatedAt: Date.now(),
     }));
@@ -91,8 +91,8 @@ describe('offline consent validation cache', () => {
       clientId: CLIENT_ID,
       requiredVersions: {
         user_agreement: '1.6',
-        personal_data: '1.5',
-        health_data: '1.3',
+        personal_data: '1.6',
+        health_data: '1.4',
       },
       validatedAt: Date.now(),
     }));

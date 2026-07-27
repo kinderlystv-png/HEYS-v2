@@ -34,6 +34,11 @@ export default function PrivacyPolicyPage() {
         ИНН: {OPERATOR.inn}<br />
         ОГРНИП: {OPERATOR.ogrnip}<br />
         Адрес: {OPERATOR.address}<br />
+        Реестр операторов персональных данных Роскомнадзора: запись №{' '}
+        <a href="https://pd.rkn.gov.ru/operators-registry/operators-list/">
+          {OPERATOR.rknRegistrationNumber}
+        </a>{' '}
+        ({OPERATOR.rknOrder})<br />
         Email: {SUPPORT_CONTACTS.privacyEmail}
       </p>
 
@@ -62,8 +67,13 @@ export default function PrivacyPolicyPage() {
         <tbody>
           <tr>
             <td><strong>Идентификация</strong></td>
-            <td>Имя, номер телефона</td>
+            <td>Имя, номер телефона, email или выбранный мессенджер</td>
             <td>Создание аккаунта, связь</td>
+          </tr>
+          <tr>
+            <td><strong>Заявка на пробный период</strong></td>
+            <td>Год рождения, источник заявки, промокод и технические параметры перехода</td>
+            <td>Проверка ограничения 18+, квалификация заявки и связь с вами</td>
           </tr>
           <tr>
             <td><strong>Профиль</strong></td>
@@ -127,6 +137,10 @@ export default function PrivacyPolicyPage() {
         <li><strong>Улучшения сервиса</strong> — анализ использования, исправление ошибок</li>
         <li><strong>Безопасности</strong> — предотвращение мошенничества</li>
         <li><strong>Юридических обязательств</strong> — бухгалтерия, налоговая отчётность</li>
+        <li>
+          <strong>Маркетинговых коммуникаций</strong> — только при наличии отдельного,
+          добровольного согласия, которое можно отозвать независимо от использования Сервиса
+        </li>
       </ol>
 
       <hr />

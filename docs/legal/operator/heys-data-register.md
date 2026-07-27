@@ -1,9 +1,9 @@
 # HEYS · Реестр данных ПДн
 
-Статус: R0 working register. Состав данных и часть защитных мер сверены с
-кодом/миграциями 2026-06-14; РКН updateform по HEYS подан 2026-06-17, а
-публичная запись сверена 2026-07-26. R0 не закрыт из-за оставшихся
-ИСПДн/security/live-smoke и операционных проверок. Не хранить в этом файле
+Статус: R0 register ✅. Состав данных сверялся с кодом/миграциями; РКН
+updateform по HEYS подан 2026-06-17, публичная запись сверена 2026-07-26, а
+privacy 1.6 и health consent 1.4 синхронизированы 2026-07-27. R0 закрыт;
+дальнейшие изменения проходят через data-change gate. Не хранить в этом файле
 реальные ПДн клиентов, номера уведомлений, ключи ЕСИА или секреты.
 
 ## Правило ведения
@@ -14,13 +14,13 @@
 
 ## Карта готовности реестра
 
-| Группа                    | Статус | Что уже закрыто                                                                                        | Что осталось                                             |
-| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| Идентификаторы и контакты | ✅     | `client_id`, phone/email/messenger, `birth_year` внесены                                               | сверять новые CRM/бот-поля через gate                    |
-| Маркетинг и аналитика     | 🟡     | лиды, UTM, promo, `ym_client_id`, funnel events описаны                                                | Telegram lead notification smoke                         |
-| Health/profile/day data   | ✅     | профиль, дневник, сон, активность, самочувствие, цикл внесены; РКН-запись и consent сверены 2026-07-26 | поддерживать через data-change gate                      |
-| Согласия и права субъекта | ✅     | consent proof, DSAR/RPC и smoke без health consent подтверждены 2026-06-14                             | сверять при bump версий документов                       |
-| Платежи                   | 🟡     | payload/webhook tests запрещают contacts/health-values в payment metadata                              | повторная live-проверка после `heys-api-payments` deploy |
+| Группа                    | Статус | Что уже закрыто                                                                                         | Что осталось                                             |
+| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Идентификаторы и контакты | ✅     | `client_id`, phone/email/messenger, `birth_year` внесены                                                | сверять новые CRM/бот-поля через gate                    |
+| Маркетинг и аналитика     | ✅ R0  | лиды, UTM, promo, `ym_client_id`, funnel events описаны; Telegram PII-free smoke подтверждён 2026-07-26 | payment metadata live-smoke перед R1                     |
+| Health/profile/day data   | ✅     | профиль, дневник, сон, активность, самочувствие, цикл внесены; РКН-запись и consent сверены 2026-07-26  | поддерживать через data-change gate                      |
+| Согласия и права субъекта | ✅     | consent proof, DSAR/RPC и smoke без health consent подтверждены 2026-06-14                              | сверять при bump версий документов                       |
+| Платежи                   | 🟡     | payload/webhook tests запрещают contacts/health-values в payment metadata                               | повторная live-проверка после `heys-api-payments` deploy |
 
 ## Реестр
 
@@ -42,13 +42,13 @@
 | Права субъекта          | DSAR export, отзыв согласия, удаление аккаунта, restriction                      | ПДн/операционный журнал                        | исполнение запросов субъекта      | RPC `export_my_data_by_session`, `delete_my_account`, `purge_health_data`, DSAR tracker | оператор, пользователь                          | законная обязанность          | по регламенту запроса                | session-safe RPC, audit/access logs                                                                                                                                                                                    |
 | Платежи                 | payment id, сумма, тариф, чек                                                    | ПДн/финансовые данные                          | оплата, бухгалтерия               | payments/ЮKassa/БД                                                                      | оператор, платежный провайдер                   | договор/закон                 | по налоговым срокам                  | R1 gate до включения; health-data в metadata запрещены                                                                                                                                                                 |
 
-## Открытые gaps R0
+## Закрытие R0 и остаточные контроли R1–R2
 
 | Gap                                                       | Статус | Доказательство / что осталось                                                                                      |
 | --------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------ |
 | Фактические ключи хранения `cycle`, `readiness`, `stress` | ✅     | `heys_profile`, `heys_dayv2_*`, `leads.readiness`                                                                  |
 | Health-values не попадают в funnel metadata               | ✅     | `funnel_metadata_strip_pii()` убирает phone/email/IP/user-agent; health-data не передаются в metadata по контракту |
 | Debug event log фильтрует health-values                   | ✅     | `kcal100`, `weightMorning`, `moodMorning`, `sleepHours`, `waterMl` → `<filtered>`                                  |
-| Telegram lead notification содержит только `lead_id`      | 🟡     | проверить на фактическом webhook/боте                                                                              |
+| Telegram lead notification содержит только `lead_id`      | ✅     | live DB/handoff/replay и визуальный PII-free smoke подтверждены 2026-07-26                                         |
 | Payment metadata не содержит contact/health-values        | ✅     | `pnpm privacy:marketing` + `pnpm payments:webhook-test`; повторить live после deploy                               |
 | Реестр совпадает с privacy, health consent, `31` и РКН    | ✅     | опубликованная запись 26-22-005319 сверена 2026-07-26; дальше поддерживать через monthly audit                     |

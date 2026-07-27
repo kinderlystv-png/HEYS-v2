@@ -1,9 +1,8 @@
 # HEYS · R0/R1/R2 sign-off package
 
-Статус: internal package index / external actions pending. Файл не заменяет
-юриста, сверку опубликованной РКН-записи, ЮKassa smoke или incident drill. Его
-задача — собрать в одном месте, что именно уже готово в репо и что проверять
-перед R0, R1 и R2.
+Статус: R0 closed / R1–R3 external actions pending. Файл не заменяет юриста,
+ЮKassa smoke или incident drill. Его задача — собрать в одном месте, что именно
+уже готово в репо и что проверять перед R0, R1 и R2.
 
 Не хранить здесь номера/ключи РКН-уведомлений, скрины ЕСИА, ПДн клиентов,
 секреты YooKassa/Lockbox или юридические комментарии с привилегией. Полные
@@ -20,14 +19,14 @@ Live evidence текущего прохода:
 | Реестр данных               | [heys-data-register.md](heys-data-register.md)                                                                   | ✅            | сверено с опубликованной записью 26-22-005319                     |
 | ИСПДн level/threat model    | [heys-ispdn-threat-model-r0.md](heys-ispdn-threat-model-r0.md), [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md) | ✅ R0 / 🟡 R2 | рабочие тип 3 / УЗ-4 приняты; внешний sign-off до R2              |
 | Access matrix + break-glass | [heys-access-matrix.md](heys-access-matrix.md), [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md)   | ✅            | drill перед R2                                                    |
-| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                   | 🟡            | импортировать во внешний календарь                                |
+| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                   | 📅            | плановое напоминание, не R0 gate                                  |
 | Monthly audit preflight     | `pnpm pdn:monthly-audit`                                                                                         | 🟡            | первая фактическая запись после РКН/запуска                       |
 | Telegram lead notification  | live DB/handoff/replay, PII-free metadata, 23/23 tests, claim-кнопка в production                                | ✅            | штатный poll heartbeat                                            |
 | Security strict readiness   | production strict read/write, two-client IDOR, SEC-004/024 `ready=true`                                          | ✅            | штатное observation                                               |
 
-Техническая часть R0 закрыта 2026-07-26. Общий R0 остаётся 🟡 только до
-подтверждения импорта календаря обязательств; smoke 5–10 знакомых — следующий
-продуктовый контроль перед закрепом и массовым CTA.
+R0 закрыт 2026-07-26. Публичные privacy 1.6 и health consent 1.4
+синхронизированы 2026-07-27; smoke 5–10 знакомых — следующий продуктовый
+контроль перед закрепом и массовым CTA, а не ПДн/security blocker.
 
 ## R1 — первая оплата
 
