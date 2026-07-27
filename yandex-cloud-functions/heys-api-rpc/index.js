@@ -968,7 +968,7 @@ const TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS = new Set([
   'get_trial_intake_by_session',
   'save_trial_intake_by_session',
   'admin_get_trial_intake',
-  'admin_review_trial_intake',
+  'admin_review_trial_intake_v2',
   'export_my_data_by_session',
 ]);
 
@@ -1010,13 +1010,15 @@ const CURATOR_ONLY_FUNCTIONS = [
 
   // === TRIAL CANDIDATE INTAKE ===
   'admin_invite_trial_intake',
+  'admin_mark_trial_intake_invite_sent',
+  'admin_prepare_trial_candidate_from_lead',
   'admin_get_trial_intake_summaries',
   'admin_get_trial_intake',
-  'admin_review_trial_intake',
+  'admin_review_trial_intake_v2',
 
   // === LEADS MANAGEMENT (v3.0) ===
   'admin_get_leads',                  // Список лидов с лендинга
-  'admin_convert_lead',               // Конвертация лида в клиента
+  'admin_reopen_trial_candidate',      // Повторная заявка после cooldown
   'admin_update_lead_status',         // Обновление статуса лида (отклонение и т.д.)
   'admin_set_client_pin',             // 🆕 Установка PIN с bcrypt (Phase 1 hotfix, замена reset_client_pin)
   'admin_regenerate_pin',             // 🆕 Перевыпуск PIN+pin_token (P0.7)
@@ -1070,7 +1072,7 @@ const CURATOR_AUDIT_HEALTH = new Set([
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
   'admin_get_trial_intake',
-  'admin_review_trial_intake',
+  'admin_review_trial_intake_v2',
 ]);
 
 // Маппинг параметров (если нужно)
@@ -1094,6 +1096,7 @@ function getCorsHeaders(origin) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
     // 🔒 Security headers
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
     'X-Content-Type-Options': 'nosniff',
@@ -4635,6 +4638,14 @@ async function handleRpcRequest(event, context) {
         'p_client_id': '::uuid',
         'p_curator_id': '::uuid'
       },
+      'admin_mark_trial_intake_invite_sent': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_prepare_trial_candidate_from_lead': {
+        'p_lead_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
       'admin_get_trial_intake_summaries': {
         'p_curator_id': '::uuid'
       },
@@ -4642,11 +4653,15 @@ async function handleRpcRequest(event, context) {
         'p_client_id': '::uuid',
         'p_curator_id': '::uuid'
       },
-      'admin_review_trial_intake': {
+      'admin_review_trial_intake_v2': {
         'p_client_id': '::uuid',
         'p_action': '::text',
         'p_reason_code': '::text',
         'p_internal_note': '::text',
+        'p_client_message': '::text',
+        'p_clarification_sections': '::text[]',
+        'p_decision_checklist': '::jsonb',
+        'p_expected_updated_at': '::timestamptz',
         'p_curator_id': '::uuid'
       },
       'get_trial_intake_by_session': {
@@ -4656,7 +4671,8 @@ async function handleRpcRequest(event, context) {
         'p_session_token': '::text',
         'p_answers': '::jsonb',
         'p_current_step': '::smallint',
-        'p_complete': '::boolean'
+        'p_complete': '::boolean',
+        'p_expected_updated_at': '::timestamptz'
       },
       // 🆕 v3.0: Leads management
       'admin_get_leads': {
@@ -4664,6 +4680,10 @@ async function handleRpcRequest(event, context) {
         'p_curator_id': '::uuid'
       },
       'admin_convert_lead': {
+        'p_lead_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_reopen_trial_candidate': {
         'p_lead_id': '::uuid',
         'p_curator_id': '::uuid'
       },

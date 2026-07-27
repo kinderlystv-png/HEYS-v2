@@ -83,6 +83,13 @@
       "path": "database/2026-07-27_consent_proof_v2.sql",
       "description": "Bind consent versions to server-owned document hashes and acceptance time",
       "destructive": false
+    },
+    {
+      "id": "2026-07-27_trial_intake_flow_v2",
+      "order": 10,
+      "path": "database/2026-07-27_trial_intake_flow_v2.sql",
+      "description": "Add explicit trial invite delivery, clarification, safety and reapplication lifecycle",
+      "destructive": false
     }
   ]
 }
