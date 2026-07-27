@@ -9,6 +9,7 @@ const tabsSource = fs.readFileSync(path.join(webRoot, 'heys_app_tabs_v1.js'), 'u
 const shellSource = fs.readFileSync(path.join(webRoot, 'heys_app_shell_v1.js'), 'utf8');
 const hungerSource = fs.readFileSync(path.join(webRoot, 'heys_hunger_energy_status_ui_v1.js'), 'utf8');
 const stepModalSource = fs.readFileSync(path.join(webRoot, 'heys_step_modal_v1.js'), 'utf8');
+const consentsSource = fs.readFileSync(path.join(webRoot, 'heys_consents_v1.js'), 'utf8');
 
 function visible(element) {
   element.getBoundingClientRect = () => ({ width: 390, height: 600, top: 0, left: 0, right: 390, bottom: 600 });
@@ -81,6 +82,12 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(hungerSource).toContain("reason: 'hunger_prompt_painted'");
     expect(stepModalSource).toContain("screen: 'step-modal'");
     expect(stepModalSource).toContain("reason: 'step_modal_painted'");
+  });
+
+  it('accepts the blocking consent gate as a visible first frame', () => {
+    expect(consentsSource).toContain("'data-heys-visible-frame': 'consent'");
+    expect(consentsSource).toContain("screen: 'consent'");
+    expect(consentsSource).toContain("reason: 'consent_screen_painted'");
   });
 
   it('keeps the skeleton until a visible frame is confirmed after paint', () => {

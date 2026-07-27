@@ -82,6 +82,7 @@ describe('consent gate flow', () => {
       expect(gate).toBeTruthy();
       expect(gate.type).toBe(window.HEYS.Consents.ConsentScreen);
       expect(gate.type).not.toBe(window.HEYS.Consents.ConsentOutdatedBanner);
+      expect(gate.props.outdatedTypes).toEqual([{ type: 'user_agreement' }]);
       expect(elements.length).toBe(1);
     } finally {
       window.HEYS = previousHEYS;

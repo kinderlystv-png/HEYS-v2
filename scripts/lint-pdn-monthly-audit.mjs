@@ -34,6 +34,7 @@ const FILES = {
   userAgreementV16: 'apps/web/public/docs/v1.6/user-agreement.md',
   privacyV16: 'apps/web/public/docs/v1.6/privacy-policy.md',
   healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
+  healthV15: 'apps/web/public/docs/v1.5/health-data-consent.md',
   consentForms: 'apps/web/public/docs/consent-forms.md',
   marketingPrivacyGuard: 'scripts/lint-marketing-privacy-metadata.mjs',
   paymentsGatewayGuard: 'scripts/prepare-payments-gateway.mjs',
@@ -49,6 +50,13 @@ function abs(rel) {
 
 function read(rel) {
   return fs.readFileSync(abs(rel), 'utf8');
+}
+
+function normalizeLegalSnapshot(rel) {
+  return read(rel)
+    .replace(/<br\s*\/?\s*>/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function exists(rel) {
@@ -247,9 +255,26 @@ function checkDsarSelfServicePath() {
   );
   requireIncludes(
     FILES.rpcFunction,
-    ["'export_my_data_by_session'", "'delete_my_account'", "'purge_health_data'"],
-    'DSAR/account lifecycle RPCs are allowlisted',
+    ["'export_my_data_by_session'", "'delete_my_account'", "'revoke_consent_by_session'"],
+    'DSAR/account lifecycle session RPCs are allowlisted',
   );
+  const rpcSource = read(FILES.rpcFunction);
+  const allowedRpcSource = rpcSource.slice(
+    rpcSource.indexOf('const ALLOWED_FUNCTIONS = ['),
+    rpcSource.indexOf('const COOKIE_SESSION_TOKEN_FUNCTIONS'),
+  );
+  const unsafeConsentRpcs = [
+    'log_consents',
+    'check_required_consents',
+    'revoke_consent',
+    'get_client_consents',
+    'purge_health_data',
+  ].filter(name => allowedRpcSource.includes(`'${name}'`));
+  if (unsafeConsentRpcs.length === 0) {
+    ok('direct client-id consent RPCs are not publicly allowlisted');
+  } else {
+    fail('direct client-id consent RPCs are not publicly allowlisted', unsafeConsentRpcs.join(', '));
+  }
   requireIncludes(
     FILES.userTab,
     ['handleDownloadData', 'Скачать мои данные', 'DSAR, 152-ФЗ ст.14'],
@@ -317,6 +342,11 @@ function checkRknDraft() {
     'RKN draft matches HEYS data model anchors',
   );
   ok('RKN submitted-record comparison', 'public record 26-22-005319 verified 2026-07-26; number/key/screenshots stay outside repo');
+  requireIncludes(
+    FILES.rknHeys,
+    ['ПОВТОРНАЯ ПОДАЧА НЕ ТРЕБУЕТСЯ', 'цели заявок/триалов', 'специальную категорию данных о здоровье'],
+    'trial intake is covered by the submitted RKN record',
+  );
 }
 
 function checkLegalVersions() {
@@ -362,6 +392,18 @@ function checkLegalVersions() {
   } else {
     ok('legal version sync: payment_oferta', actualConsents.payment_oferta);
   }
+
+  for (const [currentKey, snapshotKey, label] of [
+    ['userAgreement', 'userAgreementV16', 'user_agreement 1.6'],
+    ['privacyPolicy', 'privacyV16', 'personal_data 1.6'],
+    ['healthConsent', 'healthV15', 'health_data 1.5'],
+  ]) {
+    if (normalizeLegalSnapshot(FILES[currentKey]) === normalizeLegalSnapshot(FILES[snapshotKey])) {
+      ok(`versioned snapshot matches current: ${label}`);
+    } else {
+      fail(`versioned snapshot matches current: ${label}`);
+    }
+  }
 }
 
 function checkConsentFormsContract() {
@@ -369,7 +411,9 @@ function checkConsentFormsContract() {
     FILES.consentForms,
     [
       '| Общие персональные данные       | 1.6    |',
-      '| Данные о здоровье               | 1.4    |',
+      '| Данные о здоровье               | 1.5    |',
+      '/docs/v1.5/health-data-consent.md',
+      '`health_data` 1.4 и ниже',
       'Маркетинговый пункт не влияет на заявку, триал или доступ к HEYS.',
       'SMS-подтверждение сейчас выключено',
       '№ 26-22-005319',

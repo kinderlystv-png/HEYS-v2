@@ -2819,7 +2819,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try {
                 let res;
                 if (consentType === 'health_data') {
-                    res = await Consents.api.revokeHealthDataAndPurge(window.HEYS.currentClientId || '');
+                    res = await Consents.api.revokeHealthDataAndPurge();
                 } else {
                     res = await Consents.api.revokeConsentBySession(consentType);
                 }
@@ -3077,12 +3077,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }, []);
 
         const handleRevokeHealth = async function () {
-            const clientId = (window.HEYS && window.HEYS.currentClientId) ||
-                localStorage.getItem('heys_client_current') || '';
-            if (!clientId) {
-                setMessage('Не удалось определить аккаунт. Войдите заново.');
-                return;
-            }
             const confirmed = window.confirm(
                 'Отозвать согласие на обработку данных о здоровье?\n\n' +
                 'После отзыва будут удалены:\n' +
@@ -3095,7 +3089,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setRevokeBusy(true);
             setMessage('');
             try {
-                const res = await Consents.revokeHealthDataAndPurge(clientId);
+                const res = await Consents.api.revokeHealthDataAndPurge();
                 if (res.success) {
                     setMessage('✅ Согласие отозвано, данные о здоровье удалены' +
                         (res.deleted_keys ? ' (записей: ' + res.deleted_keys + ')' : '') +

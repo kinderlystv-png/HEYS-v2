@@ -26,7 +26,7 @@ TrialForm / PurchaseModal
   → Telegram notification without name/phone
   → curator trial queue
   → admin_convert_lead
-  → client + one-time PIN/access data
+  → client without trial + protected intake invite
 ```
 
 ## Владельцы ответственности
@@ -45,17 +45,20 @@ TrialForm / PurchaseModal
 
 ## Два входа с лендинга
 
-`TrialForm` собирает имя, телефон, optional email, мессенджер, год рождения,
-источник знакомства, promo/UTM/referrer, A/B variant и два независимых согласия:
+`TrialForm` собирает только имя, телефон, мессенджер и год рождения; UTM,
+referrer и A/B variant добавляются как техническая атрибуция без видимых полей.
+Email, источник знакомства, промокод и сведения о здоровье отложены. На первом
+слое есть:
 
-- обязательное согласие на обработку ПДн с версиями документов, временем,
-  способом и user agent;
+- обязательное согласие только на обработку заявки с версией privacy-policy,
+  временем, способом и user agent;
 - optional marketing consent, отсутствие которого передаётся как `null`.
 
 С 2026-07-27 форма фиксирует `privacy_version=1.6`: публичная политика содержит
 запись РКН 26-22-005319, данные заявки/триала и отдельную маркетинговую цель.
-Изменение версии запускает штатную проверку устаревших согласий; health consent
-обновлён отдельно до 1.4 и не объединяется с общим согласием.
+Пользовательское соглашение и health consent на лендинге не принимаются. Их
+клиент подписывает отдельно после PIN-входа; health consent обновлён до 1.5 для
+предтриальной анкеты.
 
 Форма также требует 18+ до отправки. Yandex client id запрашивается только после
 обязательного согласия.
@@ -124,8 +127,8 @@ trial queue и защищённый `admin_convert_lead`.
 6. ПДн лида не отправляются в Telegram-уведомлении.
 7. Curator identity для `admin_convert_lead` берётся из защищённого RPC/JWT
    flow, а не считается доверенной из публичной формы.
-8. Версии документов в payload должны исходить из landing legal config, а не из
-   вручную набранной строки в компоненте.
+8. Версия privacy-policy в payload должна исходить из landing legal config, а не
+   из вручную набранной строки в компоненте.
 9. Lead callback принимает private actor только при совпадении с настроенным
    chat; group chat требует явный `TELEGRAM_CURATOR_USER_IDS`.
 10. Telegram message edit не должен предшествовать подтверждённой DB mutation.
@@ -167,4 +170,4 @@ trial queue и защищённый `admin_convert_lead`.
 | L9  | RPC contract требует UUID лида и curator identity                                      | `sed -n '4331,4345p' yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                                                                                                                            | проверено 2026-07-17      |
 | L10 | Phone gate покрывает границы, форматирование, ранний 400, canonical INSERT и dedup     | `node --test yandex-cloud-functions/heys-api-leads/__tests__/phone-validation.test.cjs`                                                                                                                                                                                                                                                                       | 6/6 пройдено 2026-07-18   |
 | L11 | Lead callback проверяет auth/UUID, атомарный claim, direct answer/edit и offset commit | `node --test yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                                                                                                                                                                   | 9/9 пройдено 2026-07-18   |
-| L12 | Landing и web используют privacy 1.6 / health 1.4, versioned snapshots существуют      | `pnpm pdn:monthly-audit`                                                                                                                                                                                                                                                                                                                                      | 61/61 пройдено 2026-07-27 |
+| L12 | Landing использует privacy 1.6, web — health 1.5; versioned snapshots существуют       | `pnpm pdn:monthly-audit`                                                                                                                                                                                                                                                                                                                                      | проверить после изменения |

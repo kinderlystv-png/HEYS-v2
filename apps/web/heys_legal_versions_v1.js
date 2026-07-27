@@ -14,7 +14,7 @@
   const versions = {
     user_agreement:     '1.6',
     personal_data:      '1.6',
-    health_data:        '1.4',
+    health_data:        '1.5',
     marketing:          '1.2',
     payment_oferta:     '1.3',
     push_notifications: '1.0',

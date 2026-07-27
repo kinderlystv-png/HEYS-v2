@@ -915,16 +915,16 @@ const ALLOWED_FUNCTIONS = [
   'get_leaderboard_weekly_by_session',
 
   // === CONSENTS ===
-  'log_consents',                     // Логирование согласий с ПЭП
   'log_consents_by_session',          // 🔐 Session-safe: client_id из сессии (IDOR protection)
-  'check_required_consents',          // Проверка обязательных согласий (legacy)
   'check_required_consents_by_session', // 🔐 v2 version-aware: re-consent при bump версии (compliance overhaul 2026-05-20)
   'check_payment_consent_by_session', // 🔐 Session-safe: проверка payment_oferta перед оплатой
-  'revoke_consent',                   // Отзыв согласия (legacy)
   'revoke_consent_by_session',        // 🔐 Session-safe revoke + kill sessions при health/personal (2026-05-20)
-  'get_client_consents',              // Получение всех согласий клиента
   'get_my_consents_by_session',       // 🔐 Self-view: список своих согласий для UI "Мои согласия" (2026-05-20)
   'get_consent_proof_by_session',     // 🔐 Self-view: proof-of-consent для скачивания PDF/JSON (2026-05-20)
+
+  // === TRIAL CANDIDATE INTAKE ===
+  'get_trial_intake_by_session',      // 🔐 Session-bound encrypted intake read
+  'save_trial_intake_by_session',     // 🔐 Session-bound encrypted autosave/submit
 
   // === DSAR / СУБЪЕКТНЫЕ ПРАВА (152-ФЗ ст.14 / GDPR Art.15-18, 2026-05-20) ===
   'export_my_data_by_session',        // 🔐 DSAR: выгрузка всех своих данных JSON-ом
@@ -933,7 +933,6 @@ const ALLOWED_FUNCTIONS = [
   'revoke_curator_access_by_session', // 🔐 Right to object: убрать куратора без удаления аккаунта
 
   // === ACCOUNT LIFECYCLE (152-ФЗ ст. 21 — права субъекта ПДн) ===
-  'purge_health_data',                // Удаление health-данных из KV после отзыва health_data согласия
   'delete_my_account',                // Полное удаление аккаунта клиента (session-проверка внутри)
 
   // ❌ УБРАНО (SECURITY RISK — были доступны публично!):
@@ -998,6 +997,12 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_get_queue_stats',            // Статистика очереди
   'admin_update_queue_settings',      // Изменить настройки (is_accepting и т.д.)
 
+  // === TRIAL CANDIDATE INTAKE ===
+  'admin_invite_trial_intake',
+  'admin_get_trial_intake_summaries',
+  'admin_get_trial_intake',
+  'admin_review_trial_intake',
+
   // === LEADS MANAGEMENT (v3.0) ===
   'admin_get_leads',                  // Список лидов с лендинга
   'admin_convert_lead',               // Конвертация лида в клиента
@@ -1040,6 +1045,7 @@ const CURATOR_AUDIT_SKIP = new Set([
   'admin_get_ops_status',
   'admin_refresh_ops_status',
   'admin_update_queue_settings',
+  'admin_get_trial_intake_summaries',
   'create_client_with_pin',          // новый клиент — нет existing target
   'delete_gamification_events_by_curator',  // bulk delete по event_ids, не client
 ]);
@@ -1052,6 +1058,8 @@ const CURATOR_AUDIT_HEALTH = new Set([
   'merge_save_client_kv_by_curator',
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
+  'admin_get_trial_intake',
+  'admin_review_trial_intake',
 ]);
 
 // Маппинг параметров (если нужно)
@@ -2486,13 +2494,11 @@ async function handleRpcRequest(event, context) {
     debugLog('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
   }
 
-  // 🔐 Для log_consents: IP-адрес берём с сервера (надёжнее, чем от клиента)
-  if (fnName === 'log_consents') {
-    params.p_ip = clientIp || params.p_ip || null;
-    if (!params.p_user_agent) {
-      params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
-    }
-    debugLog('[RPC Handler] Added server-side p_ip to log_consents');
+  // 🔐 Для consent RPC доказательство IP/UA берём только из HTTP-запроса.
+  if (fnName === 'log_consents_by_session') {
+    params.p_ip = clientIp || null;
+    params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+    debugLog('[RPC Handler] Added server-side p_ip and p_user_agent to consent log');
   }
 
   // 🛡️ Write context issue: IP/UA с сервера для аудита (Phase A1).
@@ -4606,12 +4612,39 @@ async function handleRpcRequest(event, context) {
 	      'admin_refresh_ops_status': {
 	        'p_curator_id': '::uuid'
 	      },
-	      'admin_update_queue_settings': {
+      'admin_update_queue_settings': {
         'p_is_accepting': '::boolean',
         'p_max_active': '::int',
         'p_offer_window_minutes': '::int',
         'p_trial_days': '::int',
         'p_curator_id': '::uuid'
+      },
+      'admin_invite_trial_intake': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_get_trial_intake_summaries': {
+        'p_curator_id': '::uuid'
+      },
+      'admin_get_trial_intake': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_review_trial_intake': {
+        'p_client_id': '::uuid',
+        'p_action': '::text',
+        'p_reason_code': '::text',
+        'p_internal_note': '::text',
+        'p_curator_id': '::uuid'
+      },
+      'get_trial_intake_by_session': {
+        'p_session_token': '::text'
+      },
+      'save_trial_intake_by_session': {
+        'p_session_token': '::text',
+        'p_answers': '::jsonb',
+        'p_current_step': '::smallint',
+        'p_complete': '::boolean'
       },
       // 🆕 v3.0: Leads management
       'admin_get_leads': {

@@ -551,7 +551,9 @@
     const url = `${CONFIG.API_URL}${CONFIG.ENDPOINTS.RPC}?fn=${encodeURIComponent(fnName)}`;
 
     try {
-      log(`RPC: ${fnName}`, params);
+      // Не выводим значения RPC-параметров даже в debug: среди них бывают
+      // session token, PIN, health intake и внутренние заметки куратора.
+      log(`RPC: ${fnName}`, { paramKeys: Object.keys(params), valuesRedacted: true });
 
       // 🔐 Для curator-only функций добавляем JWT токен
       const headers = {
@@ -2579,7 +2581,9 @@
    */
   async function logConsents(clientId, consents, userAgent = null) {
     try {
-      log(`logConsents: clientId=${clientId}`, consents);
+      log('logConsents', {
+        consentTypes: (Array.isArray(consents) ? consents : []).map((item) => item?.type).filter(Boolean)
+      });
 
       // ВАЖНО: pg драйвер требует JSONB как строку, не объект!
       const result = await rpc('log_consents', {
@@ -2605,7 +2609,9 @@
    */
   async function logConsentsBySession(consents, userAgent = null) {
     try {
-      log('logConsentsBySession (session-safe)', consents);
+      log('logConsentsBySession (session-safe)', {
+        consentTypes: (Array.isArray(consents) ? consents : []).map((item) => item?.type).filter(Boolean)
+      });
 
       const sessionRpc = buildSessionRpcParams({
         p_consents: JSON.stringify(consents),
@@ -3155,13 +3161,9 @@
     curatorLogout,
 
     // �📝 Consents
-    logConsents,
     logConsentsBySession,
-    checkRequiredConsents,
     checkRequiredConsentsBySession,
-    revokeConsent,
     revokeConsentBySession,
-    purgeHealthData,
     deleteMyAccount,
     // 🆕 Compliance overhaul 2026-05-20
     getMyConsentsBySession,

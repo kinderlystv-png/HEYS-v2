@@ -16,17 +16,6 @@ type Messenger = 'telegram' | 'whatsapp' | 'max';
 
 const YM_ID = process.env.NEXT_PUBLIC_YM_ID || '';
 
-const HOW_HEARD_OPTIONS = [
-  { value: '', label: 'Не выбрано' },
-  { value: 'telegram', label: 'Telegram' },
-  { value: 'friend', label: 'От знакомых' },
-  { value: 'search', label: 'Поиск' },
-  { value: 'vk', label: 'VK' },
-  { value: 'yandex', label: 'Реклама в Яндексе' },
-  { value: 'curator', label: 'От куратора' },
-  { value: 'other', label: 'Другое' },
-];
-
 // UTM параметры
 interface UTMParams {
   utm_source?: string;
@@ -43,18 +32,15 @@ interface TrialFormProps {
 export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [name, setName] = useState('');
   const [phoneDigits, setPhoneDigits] = useState(''); // только 10 цифр без ведущей 7
-  const [email, setEmail] = useState('');
   const [messenger, setMessenger] = useState<Messenger>('telegram');
   const [formState, setFormState] = useState<FormState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [utmParams, setUtmParams] = useState<UTMParams>({});
-  const [howHeard, setHowHeard] = useState('');
-  const [promoCode, setPromoCode] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
   // Age gate: store only birth year for data minimization.
   const [birthYear, setBirthYear] = useState('');
-  // Опциональный consent на маркетинговые материалы (отдельно от обязательной
-  // privacy/user-agreement галки). Без этого нельзя слать рассылку.
+  // Опциональный consent на маркетинговые материалы (отдельно от обязательного
+  // согласия на обработку заявки). Без него нельзя отправлять рассылку.
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   // 🍯 Honeypot (P0.13): скрытое поле, которое настоящие пользователи не видят.
   // Боты часто заполняют все поля автоматически — если website непустой, отбраковываем.
@@ -120,13 +106,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false;
     }
 
-    // Email опционален, но если введён — должен быть валиден
-    const emailTrim = email.trim();
-    if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-      setErrorMessage('Проверьте формат email');
-      return false;
-    }
-
     if (!consentAccepted) {
       setErrorMessage('Необходимо принять политику конфиденциальности');
       return false;
@@ -167,11 +146,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         body: JSON.stringify({
           name: name.trim(),
           phone: '7' + phoneDigits,
-          email: email.trim() || undefined,
           messenger,
           website, // honeypot — должен быть пустым
-          how_heard: howHeard || undefined,
-          promo_code: promoCode.trim() || undefined,
           ab_variant: DEFAULT_VARIANT,
           ym_client_id: ymClientId,
           // Age gate: keep only the year, not the full birth date.
@@ -184,7 +160,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           // Согласие на обработку ПДн (152-ФЗ ст. 9).
           consent: {
             privacy_version: LEGAL_DOCS.privacyPolicy.version,
-            user_agreement_version: LEGAL_DOCS.userAgreement.version,
             method: 'checkbox',
             user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
             accepted_at: new Date().toISOString(),
@@ -227,6 +202,10 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
               ? ' WhatsApp'
               : ' MAX'}
         </p>
+        <p className="text-gray-500 text-sm mb-4">
+          Если формат подойдёт, куратор создаст доступ и пришлёт ссылку на защищённую анкету.
+          Заявка и заполнение анкеты не гарантируют начало пробной недели.
+        </p>
         <p className="text-gray-500 text-sm">
           Если не получили сообщение — проверьте папку «Запросы» или напишите нам:{' '}
           {SUPPORT_CONTACTS.telegramHandle}
@@ -238,6 +217,9 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-2xl">
       <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Заявка на участие</h3>
+      <p className="-mt-3 mb-6 text-center text-sm leading-6 text-gray-500">
+        Сначала куратор свяжется с вами. Сведения о здоровье на этом этапе не нужны.
+      </p>
 
       {/* Имя */}
       <div className="mb-4">
@@ -273,23 +255,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             disabled={formState === 'loading'}
           />
         </div>
-      </div>
-
-      {/* Email (опционально) — для чека ЮKassa и резервной связи (P0.12) */}
-      <div className="mb-4">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-          Email <span className="text-gray-400 font-normal">(необязательно — для чека)</span>
-        </label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-          disabled={formState === 'loading'}
-        />
       </div>
 
       {/* 🍯 Honeypot (P0.13): скрыто от людей, видно ботам.
@@ -370,43 +335,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         </p>
       </div>
 
-      {/* Атрибуция источника — необязательно, без свободного текста */}
-      <div className="mb-4">
-        <label htmlFor="how_heard" className="block text-sm font-medium text-gray-700 mb-2">
-          Откуда вы узнали о HEYS?{' '}
-          <span className="text-gray-400 font-normal">(необязательно)</span>
-        </label>
-        <select
-          id="how_heard"
-          value={howHeard}
-          onChange={(e) => setHowHeard(e.target.value)}
-          disabled={formState === 'loading'}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-        >
-          {HOW_HEARD_OPTIONS.map((option) => (
-            <option key={option.value || 'empty'} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="promo_code" className="block text-sm font-medium text-gray-700 mb-2">
-          Промокод или код приглашения{' '}
-          <span className="text-gray-400 font-normal">(если есть)</span>
-        </label>
-        <input
-          id="promo_code"
-          type="text"
-          value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value.slice(0, 64))}
-          disabled={formState === 'loading'}
-          autoComplete="off"
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-        />
-      </div>
-
       {/* Год рождения — 18+ gate */}
       <div className="mb-4">
         <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
@@ -446,33 +374,29 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             onClick={(e) => e.stopPropagation()}
           >
             политикой конфиденциальности
-          </a>{' '}
-          и принимаю{' '}
-          <a
-            href="/legal/user-agreement"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            условия использования
           </a>
+          . Согласие относится только к заявке и обратной связи по ней.
         </span>
       </label>
 
       {/* Маркетинговое согласие — опционально (152-ФЗ ст.15) */}
-      <label className="mb-5 flex items-start gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={marketingAccepted}
-          onChange={(e) => setMarketingAccepted(e.target.checked)}
-          disabled={formState === 'loading'}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-gray-500 text-xs leading-5">
-          Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
-        </span>
-      </label>
+      <details className="mb-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <summary className="cursor-pointer text-xs font-medium text-gray-600">
+          Необязательно: полезные материалы и акции
+        </summary>
+        <label className="mt-3 flex items-start gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={marketingAccepted}
+            onChange={(e) => setMarketingAccepted(e.target.checked)}
+            disabled={formState === 'loading'}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-gray-500 text-xs leading-5">
+            Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
+          </span>
+        </label>
+      </details>
 
       {/* Ошибка */}
       {errorMessage && (

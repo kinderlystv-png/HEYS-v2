@@ -70,11 +70,11 @@ apps/web/heys_cascade_card_v1.js:3575
 apps/web/heys_app_backup_import_v1.js:286
 apps/web/heys_app_backup_import_v1.js:296
 apps/web/heys_cloud_storage_utils_v1.js:108
-apps/web/heys_consents_v1.js:351
-apps/web/heys_consents_v1.js:487
-apps/web/heys_consents_v1.js:534
-apps/web/heys_consents_v1.js:590
-apps/web/heys_consents_v1.js:993
+apps/web/heys_consents_v1.js:339
+apps/web/heys_consents_v1.js:491
+apps/web/heys_consents_v1.js:538
+apps/web/heys_consents_v1.js:594
+apps/web/heys_consents_v1.js:1019
 apps/web/heys_push_v1.js:12
 apps/web/heys_demo_mode_v1.js:109
 apps/web/heys_demo_mode_v1.js:111
@@ -194,8 +194,8 @@ apps/web/heys_storage_layer_v1.js:200
 apps/web/heys_storage_photos_v1.js:435
 apps/web/heys_storage_photos_v1.js:575
 apps/web/heys_subscription_v1.js:80
-apps/web/heys_subscriptions_v1.js:698
-apps/web/heys_subscriptions_v1.js:1435
+apps/web/heys_subscriptions_v1.js:695
+apps/web/heys_subscriptions_v1.js:1432
 apps/web/heys_training_step_v1.js:29
 apps/web/heys_trial_queue_v1.js:57
 apps/web/heys_ui_onboarding_v1.js:1133

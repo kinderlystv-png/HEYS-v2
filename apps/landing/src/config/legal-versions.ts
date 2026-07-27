@@ -21,7 +21,7 @@ export const LEGAL_DOCS = {
     lastUpdated: '27 июля 2026 г.',
   },
   healthDataConsent: {
-    version: '1.4',
+    version: '1.5',
     effectiveDate: '27 июля 2026 г.',
     lastUpdated: '27 июля 2026 г.',
   },

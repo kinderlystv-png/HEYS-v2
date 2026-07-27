@@ -150,6 +150,7 @@ export const LEGACY_BUNDLES = {
         'heys_auth_v1.js',
         'heys_subscription_v1.js',
         'heys_trial_queue_v1.js',
+        'heys_trial_intake_v1.js',
         'heys_paywall_v1.js',
         'heys_login_screen_v1.js',
         'heys_ui_onboarding_v1.js',

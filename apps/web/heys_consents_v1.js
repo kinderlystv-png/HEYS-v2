@@ -25,7 +25,7 @@
   const CURRENT_VERSIONS = {
     user_agreement: '1.6',  // 2026-06-10: документ уже 1.6 (новые цены Self/Pro/Pro+); реестр догоняет — иначе loader падает на version mismatch
     personal_data: '1.6',  // 2026-07-27: опубликованы реквизиты записи РКН и уточнены заявка/маркетинг
-    health_data: '1.4',  // 2026-07-27: опубликованы реквизиты записи РКН для HEYS health-data
+    health_data: '1.5',  // 2026-07-27: + защищённая предтриальная анкета и медицинские ограничения
     marketing: '1.2',
     payment_oferta: '1.3',  // Акцепт оферты при оплате (ст. 438 ГК РФ). Бамп 1.2→1.3 (2026-06-10): изменены цены (Self/Pro/Pro+) → текст оферты изменился. СИНХРОННО: heys_legal_versions_v1.js + PAYMENT_OFERTA_VERSION в heys-api-payments (+ редеплой функции вместе с фронтендом)
     speech_transcription: '1.0'
@@ -67,26 +67,31 @@
     checkboxes: {
       user_agreement: {
         label: 'Принимаю условия Пользовательского соглашения (Оферты)',
+        summary: 'Определяет доступ к HEYS, условия тарифа и оплаты, правила отмены и то, что сервис не является медицинской услугой.',
         link: '/legal/user-agreement',
         required: true
       },
       personal_data: {
         label: 'Даю согласие на обработку моих персональных данных в соответствии с Политикой конфиденциальности',
+        summary: 'Храним имя, контакт, профиль и данные заявки в России. Доступ получают HEYS, назначенный куратор и указанные в Политике обработчики; данные не продаём.',
         link: '/legal/privacy-policy',
         required: true
       },
       health_data: {
-        label: 'Даю явное согласие на обработку данных о здоровье (питание, вес, активность) в целях предоставления услуг Сервиса',
+        label: 'Даю явное согласие на обработку данных о здоровье и ограничениях в целях безопасного сопровождения',
+        summary: 'Используем сведения о здоровье, ограничениях, питании, сне и активности для анкеты, дневника и ручной работы куратора; согласие можно отозвать.',
         link: '/legal/health-data-consent',  // Отдельный документ по 152-ФЗ ст.10
         required: true
       },
       marketing: {
         label: 'Согласен получать информационные и рекламные материалы сервиса',
+        summary: 'Можем присылать материалы, новости и акции. Это необязательно: можно отказаться в любой момент без потери доступа к HEYS.',
         link: null,
         required: false
       },
       notifications: {
         label: 'Напоминания и важные события (статус триала, новые сообщения куратора)',
+        summary: 'Только статус триала, важные события и сообщения куратора. Уведомления можно отключить; рекламное согласие оформляется отдельно.',
         link: null,
         required: false
       },
@@ -192,13 +197,14 @@
      */
     async logConsents(clientId, consents) {
       try {
-        // Используем YandexAPI
-        if (HEYS.YandexAPI) {
-          const result = await HEYS.YandexAPI.logConsents(clientId, consents, navigator.userAgent);
+        // clientId намеренно не отправляется: сервер определяет владельца
+        // согласия только по активной PIN/cookie-сессии.
+        if (HEYS.YandexAPI?.logConsentsBySession) {
+          const result = await HEYS.YandexAPI.logConsentsBySession(consents, navigator.userAgent);
           if (result.error) throw new Error(result.error?.message || result.error);
           console.log('[Consents] ✅ Logged:', result);
-          // Нормализуем результат — YandexAPI возвращает { data: { log_consents: { success, logged_count } }, error: null }
-          return { success: result.data?.log_consents?.success ?? !result.error, data: result.data };
+          const payload = result.data?.log_consents_by_session || result.data;
+          return { success: payload?.success ?? !result.error, data: result.data };
         }
 
         console.warn('[Consents] YandexAPI not available');
@@ -214,12 +220,11 @@
      */
     async checkRequired(clientId) {
       try {
-        // Используем YandexAPI
-        if (HEYS.YandexAPI) {
-          const result = await HEYS.YandexAPI.checkRequiredConsents(clientId);
+        // Legacy hook сохраняет сигнатуру, но проверка всегда session-bound.
+        if (HEYS.YandexAPI?.checkRequiredConsentsBySession) {
+          const result = await HEYS.YandexAPI.checkRequiredConsentsBySession(getCurrentLegalVersions());
           if (result.error) throw new Error(result.error?.message || result.error);
-          // Нормализуем результат — YandexAPI возвращает { data: { check_required_consents: { valid, missing } }, error: null }
-          const data = result.data?.check_required_consents || result.data;
+          const data = result.data?.check_required_consents_by_session || result.data;
           return {
             valid: data?.valid ?? false,
             missing: data?.missing || REQUIRED_CONSENTS
@@ -237,21 +242,7 @@
      * Отзыв согласия
      */
     async revoke(clientId, consentType) {
-      try {
-        // Используем YandexAPI
-        if (HEYS.YandexAPI) {
-          const result = await HEYS.YandexAPI.revokeConsent(clientId, consentType);
-          if (result.error) throw new Error(result.error?.message || result.error);
-          console.log('[Consents] ✅ Revoked:', consentType);
-          // Нормализуем результат
-          return { success: result.data?.revoke_consent?.success ?? !result.error };
-        }
-
-        return { success: false, error: 'No API client' };
-      } catch (err) {
-        console.error('[Consents] ❌ Error revoking:', err);
-        return { success: false, error: err.message };
-      }
+      return consentsAPI.revokeConsentBySession(consentType);
     },
 
     /**
@@ -259,17 +250,14 @@
      * (152-ФЗ ст. 21). revoke_consent сам по себе только помечает consents
      * как revoked — фактическое удаление делает purge_health_data.
      */
-    async revokeHealthDataAndPurge(clientId) {
+    async revokeHealthDataAndPurge() {
       try {
-        if (!HEYS.YandexAPI) return { success: false, error: 'No API client' };
+        // Сервер отзывает согласие, удаляет health-KV/intake и завершает сессии
+        // одной транзакцией. Отдельного client_id или второго purge-RPC нет.
+        const result = await consentsAPI.revokeConsentBySession('health_data');
+        if (!result?.success) throw new Error(result?.error || 'Не удалось отозвать согласие');
 
-        const revokeRes = await HEYS.YandexAPI.revokeConsent(clientId, 'health_data');
-        if (revokeRes.error) throw new Error(revokeRes.error?.message || revokeRes.error);
-
-        const purgeRes = await HEYS.YandexAPI.purgeHealthData(clientId);
-        if (purgeRes.error) throw new Error(purgeRes.error?.message || purgeRes.error);
-
-        const deletedKeys = purgeRes.data?.purge_health_data?.deleted_keys ?? 0;
+        const deletedKeys = result.deleted_keys ?? 0;
         console.log('[Consents] ✅ Health-data revoked + purged:', deletedKeys, 'keys');
         return { success: true, deleted_keys: deletedKeys };
       } catch (err) {
@@ -360,11 +348,12 @@
    * Экран согласий (полноэкранный, блокирующий)
    * @param {string} clientId - ID клиента
    * @param {string} phone - Телефон клиента (для SMS верификации)
+   * @param {Array<string|object>} outdatedTypes - Документы, обновлённые для re-consent
    * @param {function} onComplete - Вызывается при успешном принятии согласий
    * @param {function} onCancel - Вызывается при отказе (выход без принятия)
    * @param {function} onError - Вызывается при ошибке
    */
-  function ConsentScreen({ clientId, phone, onComplete, onCancel, onError }) {
+  function ConsentScreen({ clientId, phone, outdatedTypes = [], onComplete, onCancel, onError }) {
     // Шаги: 'consents' → 'verify_code' → done
     // ВАЖНО: если SMS выключен — verify_code никогда не используется!
     const [step, setStep] = useState('consents');
@@ -380,6 +369,21 @@
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
+    const screenRef = useRef(null);
+    const outdatedTypeSet = new Set(
+      (Array.isArray(outdatedTypes) ? outdatedTypes : [])
+        .map(item => item?.type || item)
+        .filter(Boolean)
+    );
+    const hasOutdatedDocuments = outdatedTypeSet.size > 0;
+
+    useEffect(() => {
+      HEYS.BlankScreenGuard?.reportVisibleFrame?.({
+        element: screenRef.current,
+        screen: 'consent',
+        reason: 'consent_screen_painted'
+      });
+    }, []);
 
     // SMS verification state
     const [code, setCode] = useState('');
@@ -605,6 +609,8 @@
     }, [clientId, consents, allRequiredAccepted, notificationsOptIn, onComplete, onError]);
 
     return React.createElement('div', {
+      ref: screenRef,
+      'data-heys-visible-frame': 'consent',
       className: 'fixed inset-0 z-50 flex flex-col',
       style: { backgroundColor: '#ffffff' }
     },
@@ -622,7 +628,9 @@
           style: { color: '#71717a' }
         }, step === 'verify_code'
           ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
-          : 'Для продолжения необходимо принять условия')
+          : hasOutdatedDocuments
+            ? 'Проверьте содержание документов и подтвердите актуальные условия'
+            : 'Коротко объяснили каждый пункт. Для продолжения примите обязательные условия')
       ),
 
       // Content - разные шаги
@@ -880,6 +888,7 @@
       border: '1px solid #e5e7eb',
       backgroundColor: '#ffffff'
     };
+    const disclosure = config.summary;
 
     return React.createElement('label', {
       className: 'flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all',
@@ -909,6 +918,23 @@
           className: 'ml-2 text-xs',
           style: { color: '#ef4444' }
         }, '*'),
+
+        disclosure && React.createElement('div', {
+          className: 'mt-2 rounded-lg px-3 py-2',
+          style: {
+            backgroundColor: '#f4f8fb',
+            border: '1px solid #d9e5ed'
+          }
+        },
+          React.createElement('span', {
+            className: 'block text-xs font-semibold',
+            style: { color: '#2f5f8f', letterSpacing: '0.01em' }
+          }, 'Коротко и честно'),
+          React.createElement('span', {
+            className: 'block text-xs mt-1',
+            style: { color: '#52525b', lineHeight: 1.45 }
+          }, disclosure)
+        ),
 
         // Link to full text
         config.link && React.createElement('button', {
@@ -1676,6 +1702,7 @@
       React.createElement(ConsentScreen, {
         clientId,
         phone: null,  // re-consent flow без SMS verify
+        outdatedTypes,
         onComplete: onComplete,
         onCancel: onDismiss,
         onError: () => { /* swallow */ }

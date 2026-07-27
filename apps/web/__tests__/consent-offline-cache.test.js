@@ -13,7 +13,7 @@ const LEGAL_VERSIONS = {
   required: ['user_agreement', 'personal_data', 'health_data'],
   user_agreement: '1.6',
   personal_data: '1.6',
-  health_data: '1.4',
+  health_data: '1.5',
 };
 
 afterEach(() => {
@@ -35,7 +35,7 @@ describe('offline consent validation cache', () => {
       requiredVersions: {
         user_agreement: '1.6',
         personal_data: '1.6',
-        health_data: '1.4',
+        health_data: '1.5',
       },
       validatedAt: Date.now(),
     }));
@@ -92,7 +92,7 @@ describe('offline consent validation cache', () => {
       requiredVersions: {
         user_agreement: '1.6',
         personal_data: '1.6',
-        health_data: '1.4',
+        health_data: '1.5',
       },
       validatedAt: Date.now(),
     }));

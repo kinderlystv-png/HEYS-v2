@@ -15,6 +15,8 @@ Retention job нужен до paid-scale/R2 для таблиц и объект�
 - `data_access_audit_log`: 3 years.
 - `photo_cleanup_log`: controlled by `heys-cron-photo-cleanup` + `DRY_RUN=0`.
 - `backup_run_log`: keep operational evidence for backup-chain review.
+- rejected `trial_intakes`: encrypted answers and internal review note are
+  deleted 30 days after the decision by the existing daily maintenance trigger.
 
 ## Safety rules
 

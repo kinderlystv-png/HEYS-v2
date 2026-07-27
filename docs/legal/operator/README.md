@@ -28,7 +28,7 @@
 | [pdn-compliance-operating-model.md](pdn-compliance-operating-model.md)                                   | Каноническая операционная модель ПДн                                   | 🟡     | закрыть внешние R0/R2 блокеры по карте готовности                     |
 | [heys-data-register.md](heys-data-register.md)                                                           | Реестр данных HEYS: поля, цели, места хранения, доступы, сроки, защита | ✅     | применять data-change gate при новых полях/целях/получателях          |
 | [heys-data-change-gate.md](heys-data-change-gate.md)                                                     | Предрелизная проверка новых ПДн/целей/получателей/сервисов             | ✅     | применять на каждом релизе с ПДн                                      |
-| [rkn-notification-heys.md](rkn-notification-heys.md)                                                     | Контент блоков HEYS для формы изменений в запись 26-22-005319          | ✅     | опубликовано; дальше применять data-change gate                       |
+| [rkn-notification-heys.md](rkn-notification-heys.md)                                                     | Контент блоков HEYS для формы изменений в запись 26-22-005319          | ⛔     | intake-изменение подготовлено; подать до production-релиза            |
 | [heys-rkn-publication-consents-update-2026-07-27.md](heys-rkn-publication-consents-update-2026-07-27.md) | Протокол публикации РКН и обновления пользовательских документов       | ✅     | privacy 1.6 / health 1.4; re-consent через штатный gate               |
 | [rkn-notification-kinderly.md](rkn-notification-kinderly.md)                                             | Архивный черновик Kinderly                                             | ⏸     | не добавлять в HEYS-запись; оформлять отдельно на супругу при запуске |
 | [heys-access-matrix.md](heys-access-matrix.md)                                                           | Кто видит какие данные и что нельзя делать                             | ✅     | пересматривать при новых ролях/интеграциях                            |
@@ -67,7 +67,9 @@
 ## Что делать дальше
 
 1. После публикации privacy 1.6 и health consent 1.4 контролировать штатный
-   re-consent и доказательства версии/IP/User-Agent/signature method.
+   re-consent и доказательства версии/IP/User-Agent/signature method. Для нового
+   intake отдельно подать подготовленное изменение и только затем публиковать
+   health consent 1.5/flow в production.
 2. Перед R1 пройти live-smoke платежного контура и повторно проверить metadata.
 3. До R2 сделать первую monthly запись, провести incident drill и получить
    внешний sign-off.

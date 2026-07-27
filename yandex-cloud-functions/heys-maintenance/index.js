@@ -427,6 +427,22 @@ async function cleanupProfileSnapshots(client) {
 }
 
 /**
+ * Delete rejected trial intake payloads after their explicit 30-day TTL.
+ * The database function owns the eligibility predicate and returns a count;
+ * missing migration is reported without breaking the rest of daily cleanup.
+ */
+async function cleanupExpiredTrialIntakes(client) {
+  try {
+    const res = await client.query(
+      'SELECT public.purge_expired_trial_intakes()::int AS rows'
+    );
+    return { rows: Number(res.rows[0]?.rows || 0) };
+  } catch (e) {
+    return { rows: 0, error: e.message };
+  }
+}
+
+/**
  * Synthetic defense check (2026-06-01 wave 4, layer A) — каждый день
  * проверяем что наши защитные механизмы ЖИВЫ (DB CHECK trigger, validate
  * functions, snapshot table). Если кто-то случайно дропнул триггер или
@@ -1536,6 +1552,9 @@ module.exports.handler = async (event, context) => {
       // profile_snapshots TTL (30 дней)
       results.profile_snapshots_cleanup = await cleanupProfileSnapshots(client);
       console.log(`[Maintenance] ProfileSnapshots TTL: deleted ${results.profile_snapshots_cleanup.rows} rows (${(Number(results.profile_snapshots_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
+
+      results.trial_intakes_cleanup = await cleanupExpiredTrialIntakes(client);
+      console.log(`[Maintenance] Trial intake TTL: deleted ${results.trial_intakes_cleanup.rows} rows`);
 
       // 🧪 Synthetic defense check (2026-06-01 wave 4, A) — гарантия что
       // защитные триггеры/функции не дропнуты случайной миграцией.

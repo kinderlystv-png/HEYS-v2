@@ -2809,6 +2809,7 @@
             return React.createElement(HEYS.Consents.ConsentScreen, {
                 clientId: clientId,
                 phone: clientPhone,
+                outdatedTypes: outdatedTypes,
                 onComplete: () => {
                     console.log('[CONSENTS] ✅ Согласия приняты');
                     setNeedsConsent(false);
@@ -2885,6 +2886,17 @@
                     // Открываем re-consent блокирующий экран по требованию пользователя
                     setMustBlockReconsent && setMustBlockReconsent(true);
                 },
+            });
+        }
+
+        // Protected trial intake opens only after authenticated session and all
+        // required consents. The URL is a universal route marker: it contains
+        // no client id, phone, health data or bearer token.
+        if (baseEligible && !shouldBlockForConsents
+            && HEYS.TrialIntake?.shouldOpen?.()
+            && HEYS.TrialIntake?.ClientScreen) {
+            return React.createElement(HEYS.TrialIntake.ClientScreen, {
+                key: 'trial-intake',
             });
         }
 

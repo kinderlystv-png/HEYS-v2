@@ -228,7 +228,8 @@ export default function UserAgreementPage() {
       <p>
         8.3. <strong>Логирование:</strong> Согласия и акцепт фиксируются в логах Сервиса с указанием:
         user_id, даты и времени, версии документа, способа подписи (например,{' '}
-        <code>checkbox_after_auth</code> / <code>pin_confirm</code> / <code>sms_code</code>), IP-адреса и user-agent.
+        <code>checkbox</code> / <code>pin_confirm</code> / <code>sms_code</code>), IP-адреса и user-agent.
+        Для <code>checkbox</code> факт предварительной аутентификации подтверждается клиентской сессией.
       </p>
 
       <p>

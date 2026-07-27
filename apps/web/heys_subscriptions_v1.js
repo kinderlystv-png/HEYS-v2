@@ -614,9 +614,9 @@
       try {
         const Consents = window.HEYS?.Consents;
         const YandexAPI = window.HEYS?.YandexAPI;
-        if (!YandexAPI?.logConsents) {
-          devWarn('[Subscriptions] YandexAPI.logConsents недоступен, пропускаем');
-          return true;
+        if (!YandexAPI?.logConsentsBySession) {
+          devWarn('[Subscriptions] session-safe consent API недоступен');
+          return false;
         }
 
         // payment_oferta = акцепт публичной оферты (user-agreement) при оплате.
@@ -628,10 +628,7 @@
           signature_method: 'checkbox'
         }];
 
-        // Предпочитаем session-safe вариант (IDOR protection)
-        const result = YandexAPI.logConsentsBySession
-          ? await YandexAPI.logConsentsBySession(consentData, navigator.userAgent)
-          : await YandexAPI.logConsents(clientId, consentData, navigator.userAgent);
+        const result = await YandexAPI.logConsentsBySession(consentData, navigator.userAgent);
         if (result.error) {
           console.error('[HEYS.subscriptions] ❌ Ошибка логирования payment_oferta:', result.error);
           return false;
