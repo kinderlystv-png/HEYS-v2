@@ -47,7 +47,9 @@ read/check методы) исключены из gateway и у роли `heys_rp
 
 Так как production PostgreSQL доступен через transaction-pooling PgBouncer, ключ
 расшифровки и вызов encrypted trial RPC устанавливаются одной транзакцией через
-`SET LOCAL`; отдельный session-level `SET` для этих методов запрещён.
+`SET LOCAL`; отдельный session-level `SET` для этих методов запрещён. Маршрут
+`?intake=1` после прохождения consent gate является эксклюзивным: обычный app
+shell и его onboarding-overlays не конкурируют с анкетой за фокус.
 
 ## Статусы и решение
 

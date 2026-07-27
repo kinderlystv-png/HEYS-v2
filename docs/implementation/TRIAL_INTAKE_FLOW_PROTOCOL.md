@@ -73,7 +73,9 @@ health-согласие, safety-флаги, отказ и активация т�
 10. **PgBouncer encryption gate:** RPC чтения/записи анкеты, curator review и
     DSAR выполняют `SET LOCAL heys.encryption_key` и сам SQL-вызов в одной
     транзакции. Trial-экран сообщает `BlankScreenGuard` о первом видимом кадре,
-    поэтому защитный overlay не перекрывает уже отрисованную анкету.
+    поэтому защитный overlay не перекрывает уже отрисованную анкету. Пока этот
+    route активен, app shell, профильный onboarding и остальные overlays не
+    рендерятся поверх анкеты.
 
 ## Facts Table
 

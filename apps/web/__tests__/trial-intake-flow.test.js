@@ -14,6 +14,7 @@ const rpcSource = fs.readFileSync(path.join(repoDir, 'yandex-cloud-functions/hey
 const maintenanceSource = fs.readFileSync(path.join(repoDir, 'yandex-cloud-functions/heys-maintenance/index.js'), 'utf8');
 const landingSource = fs.readFileSync(path.join(repoDir, 'apps/landing/src/components/TrialForm.tsx'), 'utf8');
 const consentsSource = fs.readFileSync(path.join(webDir, 'heys_consents_v1.js'), 'utf8');
+const appOverlaysSource = fs.readFileSync(path.join(webDir, 'heys_app_overlays_v1.js'), 'utf8');
 const allowedRpcSource = rpcSource.slice(
   rpcSource.indexOf('const ALLOWED_FUNCTIONS = ['),
   rpcSource.indexOf('const COOKIE_SESSION_TOKEN_FUNCTIONS'),
@@ -182,6 +183,12 @@ describe('protected trial intake contract', () => {
     expect(intakeSource).not.toContain('localStorage');
     expect(intakeSource).not.toContain('sessionStorage');
     expect(intakeSource).not.toContain('ym(');
+  });
+
+  it('renders the route-level intake without competing app overlays', () => {
+    expect(appOverlaysSource).toContain("consentGate?.key === 'trial-intake'");
+    expect(appOverlaysSource).toContain('if (isTrialIntakeBlocking)');
+    expect(appOverlaysSource).toContain('return consentGate;');
   });
 
   it('keeps encrypted trial RPC calls in the same PgBouncer transaction as SET LOCAL', () => {
