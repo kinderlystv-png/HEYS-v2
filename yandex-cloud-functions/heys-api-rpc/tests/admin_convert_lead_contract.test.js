@@ -33,14 +33,16 @@ function createMockPool() {
         if (sql.includes('log_data_access')) {
           return { rows: [{ log_data_access: null }] };
         }
-        if (sql.includes('admin_convert_lead')) {
+        if (sql.includes('admin_prepare_trial_candidate_from_lead')) {
           return {
             rows: [{
-              admin_convert_lead: {
+              admin_prepare_trial_candidate_from_lead: {
                 success: true,
                 client_id: 'client-1',
                 pin: '4016',
                 pin_token: '11111111-1111-4111-8111-111111111111',
+                intake_status: 'invite_prepared',
+                intake_url: 'https://app.heyslab.ru/?intake=1',
               },
             }],
           };
@@ -132,7 +134,7 @@ async function run() {
   const res = await handler({
     httpMethod: 'POST',
     path: '/rpc',
-    queryStringParameters: { fn: 'admin_convert_lead' },
+    queryStringParameters: { fn: 'admin_prepare_trial_candidate_from_lead' },
     headers: {
       origin: 'https://app.heyslab.ru',
       Authorization: `Bearer ${token}`,
@@ -141,8 +143,8 @@ async function run() {
   });
 
   assert.strictEqual(res.statusCode, 200);
-  const convertQuery = mockPool.queries.find((q) => q.sql.includes('admin_convert_lead'));
-  assert.ok(convertQuery, 'admin_convert_lead SQL should run');
+  const convertQuery = mockPool.queries.find((q) => q.sql.includes('admin_prepare_trial_candidate_from_lead'));
+  assert.ok(convertQuery, 'admin_prepare_trial_candidate_from_lead SQL should run');
   assert.match(convertQuery.sql, /p_lead_id => \$1::uuid/);
   assert.match(convertQuery.sql, /p_curator_id => \$2::uuid/);
   assert.doesNotMatch(convertQuery.sql, /p_pin/);
@@ -150,7 +152,7 @@ async function run() {
     '22222222-2222-4222-8222-222222222222',
     curatorId,
   ]);
-  assert.strictEqual(JSON.parse(res.body).admin_convert_lead.pin, '4016');
+  assert.strictEqual(JSON.parse(res.body).admin_prepare_trial_candidate_from_lead.pin, '4016');
 
   const clearRes = await handler({
     httpMethod: 'POST',
@@ -261,7 +263,7 @@ async function run() {
   const legacyRes = await handler({
     httpMethod: 'POST',
     path: '/rpc',
-    queryStringParameters: { fn: 'admin_convert_lead' },
+    queryStringParameters: { fn: 'admin_prepare_trial_candidate_from_lead' },
     headers: {
       origin: 'https://app.heyslab.ru',
       Authorization: `Bearer ${legacyToken}`,
@@ -271,12 +273,28 @@ async function run() {
 
   assert.strictEqual(legacyRes.statusCode, 200);
   const legacyQuery = mockPool.queries
-    .filter((q) => q.sql.includes('admin_convert_lead'))
+    .filter((q) => q.sql.includes('admin_prepare_trial_candidate_from_lead'))
     .at(-1);
   assert.deepStrictEqual(legacyQuery.values, [
     '88888888-8888-4888-8888-888888888888',
     legacyCuratorId,
   ]);
+
+  const queryCountBeforeRetired = mockPool.queries.length;
+  const retiredRes = await handler({
+    httpMethod: 'POST',
+    path: '/rpc',
+    queryStringParameters: { fn: 'admin_convert_lead' },
+    headers: {
+      origin: 'https://app.heyslab.ru',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ p_lead_id: '99999999-9999-4999-8999-999999999998' }),
+  });
+
+  assert.strictEqual(retiredRes.statusCode, 403);
+  assert.match(String(retiredRes.body), /not allowed/);
+  assert.strictEqual(mockPool.queries.length, queryCountBeforeRetired, 'retired direct convert must fail before SQL');
 
   const invalidToken = createJwt({
     email: 'bad-curator@example.test',
@@ -287,7 +305,7 @@ async function run() {
   const invalidRes = await handler({
     httpMethod: 'POST',
     path: '/rpc',
-    queryStringParameters: { fn: 'admin_convert_lead' },
+    queryStringParameters: { fn: 'admin_prepare_trial_candidate_from_lead' },
     headers: {
       origin: 'https://app.heyslab.ru',
       Authorization: `Bearer ${invalidToken}`,
