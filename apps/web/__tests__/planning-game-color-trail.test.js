@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const source = fs.readFileSync(path.resolve(__dirname, '../heys_planning_game_color_trail_v1.js'), 'utf8');
@@ -13,6 +13,11 @@ const originalCanvasContext = HTMLCanvasElement.prototype.getContext;
 const originalPointerCapture = HTMLCanvasElement.prototype.setPointerCapture;
 const originalPointerRelease = HTMLCanvasElement.prototype.releasePointerCapture;
 const originalPointerHasCapture = HTMLCanvasElement.prototype.hasPointerCapture;
+const originalClipboard = navigator.clipboard;
+
+function restoreClipboard() {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: originalClipboard });
+}
 
 function loadModule(withReact = false) {
     window.HEYS = {};
@@ -64,6 +69,34 @@ function addRing(world, actorId, left, top, right, bottom, trailSide = false) {
     return trailCells;
 }
 
+function territoryComponentSizes(world, actorId) {
+    const visited = new Uint8Array(world.owner.length);
+    const sizes = [];
+    for (let start = 0; start < world.owner.length; start += 1) {
+        if (visited[start] || world.owner[start] !== actorId) continue;
+        const queue = [start];
+        visited[start] = 1;
+        let size = 0;
+        for (let head = 0; head < queue.length; head += 1) {
+            const cell = queue[head];
+            const x = cell % 64;
+            const y = Math.floor(cell / 64);
+            size += 1;
+            for (let oy = -1; oy <= 1; oy += 1) {
+                for (let ox = -1; ox <= 1; ox += 1) {
+                    const nextX = x + ox;
+                    const nextY = y + oy;
+                    if ((ox === 0 && oy === 0) || nextX < 0 || nextX >= 64 || nextY < 0 || nextY >= 96) continue;
+                    const next = index(nextX, nextY);
+                    if (!visited[next] && world.owner[next] === actorId) { visited[next] = 1; queue.push(next); }
+                }
+            }
+        }
+        sizes.push(size);
+    }
+    return sizes.sort((a, b) => b - a);
+}
+
 function snapshot(world) {
     return {
         owner: Array.from(world.owner),
@@ -87,6 +120,7 @@ describe('Color Trail pure engine', () => {
         HTMLCanvasElement.prototype.setPointerCapture = originalPointerCapture;
         HTMLCanvasElement.prototype.releasePointerCapture = originalPointerRelease;
         HTMLCanvasElement.prototype.hasPointerCapture = originalPointerHasCapture;
+        restoreClipboard();
     });
 
     it('registers the frozen runtime API without starting browser work', () => {
@@ -113,6 +147,9 @@ describe('Color Trail pure engine', () => {
         expect(first.visited).toBeInstanceOf(Uint8Array);
         expect(first.newTrailMask).toBeInstanceOf(Uint8Array);
         expect(first.queue).toBeInstanceOf(Int32Array);
+        expect(first.resetReasons).toBeInstanceOf(Uint8Array);
+        expect(first.resetBy).toBeInstanceOf(Uint8Array);
+        expect(first.debugEvents[0]).toMatchObject({ type: 'round_start', seed: 73 });
         expect(first.owner).toHaveLength(6144);
         expect(first.actors).toHaveLength(4);
         expect(first.actors.slice(1)).toHaveLength(3);
@@ -130,7 +167,7 @@ describe('Color Trail pure engine', () => {
         expect([1, 2, 3, 4].map((id) => first.owner.filter((value) => value === id).length)).toEqual([25, 25, 25, 25]);
     });
 
-    it('uses swept cells to create a continuous trail and cannot jump across a foreign trail', () => {
+    it('uses swept cells and makes a foreign-trail cut pending until the attacker closes at home', () => {
         const { api } = loadModule();
         const world = emptyWorld(api);
         const player = world.actorById[1];
@@ -150,16 +187,33 @@ describe('Color Trail pure engine', () => {
         attacker.direction = 0;
         attacker.desiredDirection = 0;
         attacker.speed = 30;
-        attackWorld.actorById[2].active = false;
-        attackWorld.actorById[2].respawnUntil = Number.POSITIVE_INFINITY;
+        attackWorld.actorById[2].active = true;
+        attackWorld.actorById[2].respawnUntil = 0;
+        attackWorld.actorById[2].speed = 0;
+        attackWorld.owner[index(7, 7)] = 2;
+        attackWorld.territoryCounts[2] = 1;
         attackWorld.trail[index(13, 20)] = 2;
         attackWorld.actorById[2].excursion[0] = index(13, 20);
         attackWorld.actorById[2].excursionLength = 1;
         api.stepWorld(attackWorld, { directionX: 1, directionY: 0 }, 0.2);
 
-        expect(attackWorld.lastReset[2]).toBe(1);
+        expect(attackWorld.lastReset[2]).toBe(0);
+        expect(attackWorld.actorById[2].active).toBe(true);
+        expect(attackWorld.actorById[1].pendingCutMask & (1 << 2)).toBeTruthy();
         expect(attackWorld.actorById[1].active).toBe(true);
         expect(attackWorld.actorById[1].x).toBeGreaterThan(15);
+
+        attackWorld.trail.fill(0);
+        attackWorld.actorById[1].excursionLength = 0;
+        attackWorld.trail[index(13, 20)] = 2;
+        const closingTrail = addRing(attackWorld, 1, 20, 20, 24, 24, true);
+        setExcursion(attackWorld, 1, closingTrail);
+        expect(api.closeTrail(attackWorld, 1).valid).toBe(true);
+        expect(attackWorld.actorById[2].active).toBe(false);
+        expect(attackWorld.owner[index(7, 7)]).toBe(0);
+        expect(attackWorld.debugEvents).toContainEqual(expect.objectContaining({
+            type: 'reset', actorId: 2, reason: 'cut_closed', byActorId: 1,
+        }));
     });
 
     it('rejects a short non-enclosing return and captures only a newly enclosed component', () => {
@@ -216,7 +270,47 @@ describe('Color Trail pure engine', () => {
         expect(world.owner[index(22, 22)]).toBe(1);
     });
 
-    it('resets the vulnerable trail owner while the attacker keeps moving, and self-crossing resets itself', () => {
+    it('removes the rival territory island detached from its last home anchor', () => {
+        const { api } = loadModule();
+        const world = emptyWorld(api);
+        const rival = world.actorById[2];
+        rival.active = true;
+        rival.respawnUntil = 0;
+        rival.x = 14.5;
+        rival.y = 22.5;
+        rival.territoryAnchorCell = index(14, 22);
+        for (let y = 21; y <= 23; y += 1) {
+            for (let x = 10; x <= 30; x += 1) world.owner[index(x, y)] = 2;
+        }
+        const cuttingLoop = addRing(world, 1, 18, 19, 22, 25, true);
+        setExcursion(world, 1, cuttingLoop);
+
+        expect(api.closeTrail(world, 1).valid).toBe(true);
+        expect(world.owner[index(14, 22)]).toBe(2);
+        expect(world.owner[index(26, 22)]).toBe(0);
+        expect(territoryComponentSizes(world, 2)).toHaveLength(1);
+        expect(world.debugEvents).toContainEqual(expect.objectContaining({
+            type: 'trail_closed',
+            actorId: 1,
+            detachedTerritoryRemoved: expect.arrayContaining([expect.any(Number)]),
+        }));
+        const closure = world.debugEvents.findLast((event) => event.type === 'trail_closed');
+        expect(closure.detachedTerritoryRemoved[2]).toBeGreaterThan(0);
+    });
+
+    it('keeps every territory as at most one connected component during a full seeded round', () => {
+        const { api } = loadModule();
+        const world = api.createWorld({ seed: 1 });
+        for (let tick = 0; tick < 2700; tick += 1) {
+            const angle = tick / 180;
+            api.stepWorld(world, { directionX: Math.cos(angle), directionY: Math.sin(angle) }, 1 / 30);
+        }
+        for (let actorId = 1; actorId <= 4; actorId += 1) {
+            expect(territoryComponentSizes(world, actorId).length).toBeLessThanOrEqual(1);
+        }
+    });
+
+    it('does not defeat a cut rival that returns home first and allows crossing your own trail', () => {
         const { api } = loadModule();
         const world = emptyWorld(api);
         const attacker = world.actorById[2];
@@ -226,13 +320,24 @@ describe('Color Trail pure engine', () => {
         attacker.direction = 0;
         attacker.desiredDirection = 0;
         attacker.speed = 30;
+        world.owner[index(7, 7)] = 1;
+        world.territoryCounts[1] = 1;
         world.trail[index(13, 20)] = 1;
         world.actorById[1].excursion[0] = index(13, 20);
         world.actorById[1].excursionLength = 1;
         api.stepWorld(world, null, 0.05);
         api.stepWorld(world, null, 0.2);
-        expect(world.lastReset[1]).toBe(1);
+        expect(world.lastReset[1]).toBe(0);
         expect(attacker.active).toBe(true);
+        expect(world.owner[index(7, 7)]).toBe(1);
+        expect(attacker.pendingCutMask & (1 << 1)).toBeTruthy();
+
+        world.owner[index(12, 20)] = 1;
+        const safeTrail = [index(11, 20)];
+        world.trail.fill(0);
+        setExcursion(world, 1, safeTrail);
+        expect(api.closeTrail(world, 1).valid).toBe(false);
+        expect(attacker.pendingCutMask & (1 << 1)).toBeFalsy();
 
         const selfWorld = emptyWorld(api);
         const player = selfWorld.actorById[1];
@@ -245,11 +350,12 @@ describe('Color Trail pure engine', () => {
         player.excursion[0] = index(13, 20);
         player.excursionLength = 1;
         api.stepWorld(selfWorld, { directionX: 1, directionY: 0 }, 0.2);
-        expect(selfWorld.lastReset[1]).toBe(1);
-        expect(player.active).toBe(false);
+        expect(selfWorld.lastReset[1]).toBe(0);
+        expect(player.active).toBe(true);
+        expect(selfWorld.debugEvents.some((event) => event.type === 'reset')).toBe(false);
     });
 
-    it('resets both actors on simultaneous head-to-head and is independent of actors array order', () => {
+    it('lets heads pass through without a hidden reset and is independent of actors array order', () => {
         const { api } = loadModule();
         const headWorld = emptyWorld(api);
         const first = headWorld.actorById[1];
@@ -266,7 +372,9 @@ describe('Color Trail pure engine', () => {
         second.desiredDirection = Math.PI;
         second.speed = 20;
         api.stepWorld(headWorld, { directionX: 1, directionY: 0 }, 0.05);
-        expect(Array.from(headWorld.lastReset.slice(1, 3))).toEqual([1, 1]);
+        expect(Array.from(headWorld.lastReset.slice(1, 3))).toEqual([0, 0]);
+        expect(first.active).toBe(true);
+        expect(second.active).toBe(true);
 
         const normal = api.createWorld({ seed: 181 });
         const reversed = api.createWorld({ seed: 181 });
@@ -306,36 +414,42 @@ describe('Color Trail pure engine', () => {
         expect(world.owner.every((ownerId) => ownerId >= 0 && ownerId <= 4)).toBe(true);
     });
 
-    it('keeps territory after reset, recreates a core when none remains and clamps percent to 0–100', () => {
+    it('turns defeated territory neutral and respawns the same snake with a new core elsewhere', () => {
         const { api } = loadModule();
         const world = emptyWorld(api);
         world.owner[index(7, 7)] = 1;
-        world.trail[index(12, 12)] = 1;
+        world.territoryCounts[1] = 1;
         const actor = world.actorById[1];
+        const attacker = world.actorById[2];
+        attacker.active = true;
+        attacker.respawnUntil = 0;
+        attacker.pendingCutMask = 1 << 1;
+        const closingTrail = addRing(world, 2, 20, 20, 24, 24, true);
+        setExcursion(world, 2, closingTrail);
         actor.excursion[0] = index(12, 12);
         actor.excursionLength = 1;
-        actor.x = 11.2;
-        actor.y = 12.2;
-        actor.direction = 0;
-        actor.desiredDirection = 0;
-        actor.speed = 30;
-        api.stepWorld(world, { directionX: 1, directionY: 0 }, 0.1);
-        expect(world.owner[index(7, 7)]).toBe(1);
+        world.trail[index(12, 12)] = 1;
+        const deathX = actor.x;
+        const deathY = actor.y;
+        expect(api.closeTrail(world, 2).valid).toBe(true);
+        expect(world.owner[index(7, 7)]).toBe(0);
+        expect(world.territoryCounts[1]).toBe(0);
+        expect(actor.active).toBe(false);
         expect(api.getTerritoryPercent(world, 1)).toBeGreaterThanOrEqual(0);
         expect(api.getTerritoryPercent(world, 1)).toBeLessThanOrEqual(100);
 
-        world.owner.fill(0);
-        actor.active = false;
-        actor.respawnUntil = world.time;
-        api.stepWorld(world, null, 1 / 30);
+        api.stepWorld(world, null, 0.8);
         expect(world.owner.some((value) => value === 1)).toBe(true);
         expect(actor.active).toBe(true);
+        expect((actor.x - deathX) ** 2 + (actor.y - deathY) ** 2).toBeGreaterThanOrEqual(100);
+        expect(world.actors.filter((candidate) => candidate.active)).toHaveLength(2);
     });
 });
 
 describe('Color Trail component lifecycle', () => {
     let rafCallbacks;
     let observerDisconnect;
+    let snakeBezierCurveTo;
 
     beforeEach(() => {
         rafCallbacks = new Map();
@@ -347,20 +461,32 @@ describe('Color Trail component lifecycle', () => {
         }));
         vi.stubGlobal('cancelAnimationFrame', vi.fn((id) => rafCallbacks.delete(id)));
         observerDisconnect = vi.fn();
+        snakeBezierCurveTo = vi.fn();
         window.ResizeObserver = class ResizeObserver {
             observe() {}
             disconnect() { observerDisconnect(); }
         };
         HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
-            createImageData: () => ({ data: new Uint8ClampedArray(64 * 96 * 4) }),
+            createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+            getImageData: (x, y, width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
             putImageData: vi.fn(),
             clearRect: vi.fn(),
             drawImage: vi.fn(),
             fillRect: vi.fn(),
             beginPath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            quadraticCurveTo: vi.fn(),
+            bezierCurveTo: snakeBezierCurveTo,
+            rect: vi.fn(),
             arc: vi.fn(),
+            ellipse: vi.fn(),
             fill: vi.fn(),
             stroke: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            translate: vi.fn(),
+            rotate: vi.fn(),
         }));
         HTMLCanvasElement.prototype.setPointerCapture = vi.fn();
         HTMLCanvasElement.prototype.releasePointerCapture = vi.fn();
@@ -378,6 +504,7 @@ describe('Color Trail component lifecycle', () => {
         HTMLCanvasElement.prototype.setPointerCapture = originalPointerCapture;
         HTMLCanvasElement.prototype.releasePointerCapture = originalPointerRelease;
         HTMLCanvasElement.prototype.hasPointerCapture = originalPointerHasCapture;
+        restoreClipboard();
     });
 
     it('does not run before Start, pauses visibly, keeps pointer course and scopes keyboard to canvas', () => {
@@ -397,6 +524,59 @@ describe('Color Trail component lifecycle', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Пауза' }));
         expect(screen.getByRole('button', { name: 'Продолжить' })).toBeTruthy();
         expect(cancelAnimationFrame).toHaveBeenCalled();
+    });
+
+    it('uses a smooth cached territory layer and snake-shaped heads without changing the engine', () => {
+        const { Component } = loadModule(true);
+        render(React.createElement(Component, { onExit: vi.fn(), reducedMotion: true, seed: 15 }));
+
+        expect(source).toContain('TERRITORY_RENDER_SCALE = 6');
+        expect(source).toContain('context.imageSmoothingEnabled = true');
+        expect(source).toContain("smoothedContext.filter = 'blur('");
+        expect(source).toContain('smoothedContext.getImageData');
+        expect(source).toContain('context.quadraticCurveTo');
+        expect(source).toContain('context.bezierCurveTo');
+        expect(source).toContain('context.ellipse');
+        expect(source).toContain("context.lineCap = 'round'");
+        expect(source).toContain('actor.id * TAU / ACTOR_COUNT');
+        expect(source).toContain('const wag = reducedMotion ? 0 : Math.sin(wagPhase)');
+        expect(source).toContain('drawSnake(context, actor, scaleX, scaleY, world.time, reducedMotion)');
+    });
+
+    it('renders phased tail wagging and removes the bend for reduced motion', () => {
+        const { Component } = loadModule(true);
+        const animated = render(React.createElement(Component, { onExit: vi.fn(), reducedMotion: false, seed: 15 }));
+        expect(snakeBezierCurveTo).toHaveBeenCalledTimes(4);
+        const animatedTail = snakeBezierCurveTo.mock.calls[0].slice();
+
+        animated.unmount();
+        snakeBezierCurveTo.mockClear();
+        render(React.createElement(Component, { onExit: vi.fn(), reducedMotion: true, seed: 15 }));
+        expect(snakeBezierCurveTo).toHaveBeenCalledTimes(4);
+        const reducedTail = snakeBezierCurveTo.mock.calls[0];
+
+        expect(animatedTail.slice(4)).toEqual(reducedTail.slice(4));
+        expect(animatedTail.slice(0, 4)).not.toEqual(reducedTail.slice(0, 4));
+    });
+
+    it('copies a self-contained in-memory physics log without storage or network', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+        const { Component } = loadModule(true);
+        render(React.createElement(Component, { onExit: vi.fn(), reducedMotion: true, seed: 91 }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Скопировать лог' }));
+        await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+        const report = JSON.parse(writeText.mock.calls[0][0]);
+        expect(report).toMatchObject({
+            format: 'heys-color-trail-debug-v1',
+            phase: 'ready',
+            algorithm: { actorCount: 4, cutRule: 'open_trail_cut_then_valid_home_closure_while_victim_exposed' },
+            finalState: { seed: 91 },
+        });
+        expect(report.events[0]).toMatchObject({ type: 'round_start', seed: 91 });
+        expect(report.finalState.ownerRuns.length).toBeGreaterThan(0);
+        expect(screen.getByRole('button', { name: 'Лог скопирован' })).toBeTruthy();
     });
 
     it('pauses on hidden without auto-resume and cleans RAF, visibility listener and observer on unmount', () => {

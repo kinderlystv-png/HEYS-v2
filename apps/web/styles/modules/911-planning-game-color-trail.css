@@ -58,7 +58,8 @@
 
 .planning-color-trail__pause,
 .planning-color-trail__primary,
-.planning-color-trail__quiet {
+.planning-color-trail__quiet,
+.planning-color-trail__copy {
     min-height: 44px;
     border-radius: 13px;
     font: inherit;
@@ -161,9 +162,31 @@
     text-align: center;
 }
 
+.planning-color-trail__diagnostics {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.planning-color-trail__copy {
+    padding: 8px 14px;
+    border: 1px solid rgba(67, 69, 135, 0.18);
+    background: rgba(255, 255, 255, 0.68);
+    color: var(--color-trail-brand);
+    font-size: 13px;
+}
+
+.planning-color-trail__diagnostics span {
+    color: var(--color-trail-muted);
+    font-size: 12px;
+}
+
 .planning-color-trail__pause:focus-visible,
 .planning-color-trail__primary:focus-visible,
-.planning-color-trail__quiet:focus-visible {
+.planning-color-trail__quiet:focus-visible,
+.planning-color-trail__copy:focus-visible {
     outline: 3px solid rgba(82, 160, 216, 0.55);
     outline-offset: 2px;
 }
@@ -208,7 +231,8 @@
 }
 
 [data-theme="dark"] .planning-color-trail__hud span,
-[data-theme="dark"] .planning-color-trail__pause {
+[data-theme="dark"] .planning-color-trail__pause,
+[data-theme="dark"] .planning-color-trail__copy {
     border-color: rgba(192, 198, 235, 0.2);
     background: rgba(40, 44, 70, 0.8);
     color: #dfe2ff;
@@ -237,7 +261,8 @@
     }
 
     .planning-color-trail__hud span,
-    .planning-color-trail__pause {
+    .planning-color-trail__pause,
+    .planning-color-trail__copy {
         border-color: rgba(192, 198, 235, 0.2);
         background: rgba(40, 44, 70, 0.8);
         color: #dfe2ff;
