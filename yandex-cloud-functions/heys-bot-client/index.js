@@ -1477,6 +1477,8 @@ async function runStartBotPoll(payload = {}) {
         }, START_BOT);
       } catch (e) {
         console.warn('[HEYS Start] poll offset commit failed:', e.message);
+        getUpdatesOk = false;
+        break;
       }
     }
   }
@@ -1542,6 +1544,8 @@ async function runCuratorBotPoll(payload = {}) {
         }, 'curator');
       } catch (e) {
         console.warn('[Curator Bot] poll offset commit failed:', e.message);
+        getUpdatesOk = false;
+        break;
       }
     }
   }
@@ -1614,6 +1618,8 @@ async function runClientBotPoll(payload = {}) {
         }, 'client');
       } catch (e) {
         console.warn('[BOT] client poll offset commit failed:', e.message);
+        getUpdatesOk = false;
+        break;
       }
     }
   }

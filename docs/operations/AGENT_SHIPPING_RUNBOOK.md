@@ -9,6 +9,7 @@ mechanics; it never grants permission.
 <!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
 <!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
 <!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
+<!-- POLICY {"id":"codex-main-only","workBranch":"main","pushTarget":"origin/main","createBranches":false} -->
 <!-- POLICY {"id":"agent-branch-source-only","branches":["codex/*","claude/*"],"generated":false,"releaseArtifacts":false} -->
 <!-- POLICY {"id":"integration-never-push","command":"pnpm agents:integrate","commits":true,"push":false} -->
 
@@ -130,10 +131,17 @@ gates. `pnpm push:safe` is deprecated and does not provide a safe bypass.
 
 ## 6. Codex shipping flow
 
+- Codex works only in the root `main` checkout. Codex agents must not create or
+  switch to `codex/*` branches or use an agent branch as an intermediate step.
+  If `main` is occupied by a temporary worktree, coordinate ownership and free
+  it safely; do not create another branch to work around the conflict.
 - Codex may commit on `main` when the user directly authorizes the intended
-  scope. Selectively stage it, then use the operation table above.
-- On a `codex/*` agent branch, make source-only commits. Do not add generated or
-  release artifacts; an explicitly authorized collector rebuilds them later.
+  scope. Selectively stage it, then use the operation table above. A permitted
+  push targets only `origin/main`.
+- Existing `codex/*` refs are legacy/integration inputs: audit them read-only,
+  move confirmed current changes into `main`, then remove the refs only after
+  merge verification and explicit destructive scope. The source-only branch
+  guard remains a fail-safe for old refs, not permission for new Codex commits.
 - `pnpm push:agent -- --confirm-push ...` is a fallback for already-created or
   grouped commits, not the default way to create a source commit. It can create
   a What's New follow-up commit when that feature is enabled, always runs
