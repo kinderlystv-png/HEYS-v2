@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -55,6 +56,68 @@ test('deploy passes managed runtime secrets through Lockbox only', () => {
   assert.doesNotMatch(source, /for k in S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY/);
   assert.doesNotMatch(source, /for k in YUKASSA_SHOP_ID YUKASSA_SECRET_KEY/);
   assert.doesNotMatch(source, /_add SMS_API_KEY/);
+});
+
+test('payments deploy uses a dedicated Lockbox and validates readiness without leaking values', () => {
+  const source = read('deploy-all.sh');
+  const validator = path.join(ROOT, 'check-payments-secret-payload.cjs');
+  const fixture = JSON.stringify({
+    entries: [
+      { key: 'YUKASSA_SHOP_ID', text_value: 'shop-secret-value' },
+      { key: 'YUKASSA_SECRET_KEY', text_value: 'api-secret-value' },
+    ],
+  });
+  const result = spawnSync(process.execPath, [validator], { input: fixture, encoding: 'utf8' });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Payments Lockbox readiness verified/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /shop-secret-value|api-secret-value/);
+  assert.match(source, /payments_lockbox_ready/);
+  assert.match(source, /LOCKBOX_PAYMENTS_SECRET_ID/);
+  assert.match(source, /yc lockbox payload get/);
+  assert.doesNotMatch(source, /YUKASSA_WEBHOOK_SECRET are required/);
+});
+
+test('payments Lockbox readiness reports key names only when credentials are missing', () => {
+  const validator = path.join(ROOT, 'check-payments-secret-payload.cjs');
+  const fixture = JSON.stringify({
+    entries: [{ key: 'YUKASSA_SHOP_ID', text_value: 'shop-secret-value' }],
+  });
+  const result = spawnSync(process.execPath, [validator], { input: fixture, encoding: 'utf8' });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /YUKASSA_SECRET_KEY/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /shop-secret-value/);
+});
+
+test('payments Lockbox readiness rejects empty credential values', () => {
+  const validator = path.join(ROOT, 'check-payments-secret-payload.cjs');
+  const fixture = JSON.stringify({
+    entries: [
+      { key: 'YUKASSA_SHOP_ID', text_value: '   ' },
+      { key: 'YUKASSA_SECRET_KEY', text_value: '' },
+    ],
+  });
+  const result = spawnSync(process.execPath, [validator], { input: fixture, encoding: 'utf8' });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /YUKASSA_SHOP_ID/);
+  assert.match(result.stderr, /YUKASSA_SECRET_KEY/);
+});
+
+test('payments runtime loads dedicated credentials and accepts standard webhook without HMAC', () => {
+  const source = read('heys-api-payments/index.js');
+
+  assert.match(source, /require\('\.\/shared\/lockbox-client'\)/);
+  assert.match(source, /async function initPaymentSecrets\(\)/);
+  assert.match(source, /await initPaymentSecrets\(\)/);
+  assert.match(source, /LOCKBOX_PAYMENTS_SECRET_ID/);
+  assert.match(source, /paymentCredentials = Object\.freeze/);
+  assert.doesNotMatch(source, /process\.env\[key\] = secrets\[key\]/);
+  assert.doesNotMatch(source, /process\.env\.YUKASSA_(?:SHOP_ID|SECRET_KEY)/);
+  assert.doesNotMatch(source, /YUKASSA_WEBHOOK_SECRET/);
+  assert.doesNotMatch(source, /verifyWebhookSignature/);
+  assert.doesNotMatch(source, /x-webhook-signature/i);
 });
 
 test('deploy preflights every selected target before the first cloud mutation', () => {

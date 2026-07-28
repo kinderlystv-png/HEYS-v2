@@ -44,11 +44,6 @@ export default function ComparisonSection() {
                         <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
                             Трекер и разбор специалиста — в одном формате
                         </h2>
-                        <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-[17px] font-normal leading-relaxed text-gray-500">
-                            В HEYS остаётся дневник и цифры, но вам не нужно вносить всё
-                            вручную. Есть экспертный разбор, но контекст недели не ждёт
-                            только одной встречи.
-                        </p>
                     </div>
 
                     <div

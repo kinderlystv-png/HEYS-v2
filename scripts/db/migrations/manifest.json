@@ -90,6 +90,13 @@
       "path": "database/2026-07-27_trial_intake_flow_v2.sql",
       "description": "Add explicit trial invite delivery, clarification, safety and reapplication lifecycle",
       "destructive": false
+    },
+    {
+      "id": "2026-07-28_activate_user_agreement_v1_8",
+      "order": 11,
+      "path": "database/2026-07-28_activate_user_agreement_v1_8.sql",
+      "description": "Activate user agreement and payment oferta v1.8 without rewriting consent proof history",
+      "destructive": false
     }
   ]
 }

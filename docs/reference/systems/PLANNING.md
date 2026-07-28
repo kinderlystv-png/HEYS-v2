@@ -1,16 +1,17 @@
-# Планировщик: задачи, календарь, chrono, чек-листы, цели и книги
+# Планировщик: задачи, календарь, chrono, чек-листы, цели, книги и игры
 
-> **Статус:** core-контракты проверены 2026-07-25<br> **Охват:** web store,
+> **Статус:** core-контракты проверены 2026-07-28<br> **Охват:** web store,
 > локальное/облачное хранение, merge/delete, cloud pull, основные UI-границы и
 > тесты<br> **Не охвачено:** детальная UX-логика каждого экрана, все поля каждой
 > сущности, визуальный Gantt layout и planning-agent OpenAPI<br>
 
 ## Назначение и граница
 
-Планировщик объединяет шесть пользовательских поверхностей: задачи, цели,
-календарь/Gantt, хронометраж, чек-листы и библиотеку книжных саммари. UI
-разделён на модули; владельцем изменяемых client-side данных и операций является
-`HEYS.Planning.Store`, а статичного редакционного каталога — `HEYS.Reading`.
+Планировщик объединяет семь пользовательских поверхностей: задачи, цели,
+календарь/Gantt, хронометраж, чек-листы, библиотеку книжных саммари и каталог
+игр. UI разделён на модули; владельцем изменяемых client-side данных и операций
+является `HEYS.Planning.Store`, а статичного редакционного каталога —
+`HEYS.Reading`.
 
 ```text
 PlanningTab
@@ -18,6 +19,7 @@ PlanningTab
   ├─ Goals / goal map
   ├─ Calendar / Gantt
   ├─ Reading / fullscreen reader
+  ├─ Games / catalog + fullscreen lazy modules
   ├─ Chrono
   └─ Checklists
         ↓
@@ -30,21 +32,25 @@ Phase A / refreshPlanningFromCloud → merge + tombstones + anti-wipe guards
 
 ## Владельцы ответственности
 
-| Область                                             | Владелец                                                                   |
-| --------------------------------------------------- | -------------------------------------------------------------------------- |
-| Ключи, CRUD, нормализация, merge, tombstones, hooks | `apps/web/heys_planning_store_v1.js`                                       |
-| Координатор вкладки и sub-navigation                | `apps/web/heys_planning_v1.js`                                             |
-| Задачи и матрица                                    | `apps/web/heys_planning_tasks_v1.js`                                       |
-| Calendar/schedule                                   | `apps/web/heys_planning_schedule_v1.js`                                    |
-| Chrono UI и timer lifecycle                         | `apps/web/heys_planning_chrono_v1.js`                                      |
-| Checklists                                          | `apps/web/heys_planning_checklists_v1.js`                                  |
-| Goal map                                            | `apps/web/heys_planning_goal_map_v1.js`                                    |
-| Reading registry/schema                             | `apps/web/heys_reading_catalog_v1.js`                                      |
-| Reading books and manifest                          | `apps/web/reading/books/*`, `scripts/legacy-bundle-config.mjs`             |
-| Reading library/reader UI                           | `apps/web/heys_planning_reading_v1.js`                                     |
-| Gantt rendering/layout/touch                        | семейство `apps/web/heys_planning_gantt_*`                                 |
-| Облачная очередь и Phase A                          | `apps/web/heys_storage_supabase_v1.js`                                     |
-| Контекст от приложения/агента                       | `planning_context_ingest` в `yandex-cloud-functions/heys-api-rpc/index.js` |
+| Область                                             | Владелец                                                                                              |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Ключи, CRUD, нормализация, merge, tombstones, hooks | `apps/web/heys_planning_store_v1.js`                                                                  |
+| Координатор вкладки и sub-navigation                | `apps/web/heys_planning_v1.js`                                                                        |
+| Задачи и матрица                                    | `apps/web/heys_planning_tasks_v1.js`                                                                  |
+| Calendar/schedule                                   | `apps/web/heys_planning_schedule_v1.js`                                                               |
+| Chrono UI и timer lifecycle                         | `apps/web/heys_planning_chrono_v1.js`                                                                 |
+| Checklists                                          | `apps/web/heys_planning_checklists_v1.js`                                                             |
+| Goal map                                            | `apps/web/heys_planning_goal_map_v1.js`                                                               |
+| Reading registry/schema                             | `apps/web/heys_reading_catalog_v1.js`                                                                 |
+| Reading books and manifest                          | `apps/web/reading/books/*`, `scripts/legacy-bundle-config.mjs`                                        |
+| Reading library/reader UI                           | `apps/web/heys_planning_reading_v1.js`                                                                |
+| Games catalog/fullscreen shell/lazy-loader          | `apps/web/heys_planning_v1.js`, `styles/modules/908-planning-games.css`                               |
+| Word Builder game                                   | `apps/web/heys_planning_game_word_builder_v1.js`, `styles/modules/909-planning-game-word-builder.css` |
+| Robot Route game                                    | `apps/web/heys_planning_game_robot_route_v1.js`, `styles/modules/910-planning-game-robot-route.css`   |
+| Color Trail game                                    | `apps/web/heys_planning_game_color_trail_v1.js`, `styles/modules/911-planning-game-color-trail.css`   |
+| Gantt rendering/layout/touch                        | семейство `apps/web/heys_planning_gantt_*`                                                            |
+| Облачная очередь и Phase A                          | `apps/web/heys_storage_supabase_v1.js`                                                                |
+| Контекст от приложения/агента                       | `planning_context_ingest` в `yandex-cloud-functions/heys-api-rpc/index.js`                            |
 
 ## Данные и источник истины
 
@@ -95,6 +101,16 @@ query-параметр `reading=<book-id>`. Позиция и процент ч�
 `voice: 'review'` и 180 слов оценки, включая открытый review-абзац в разделе
 `critique`. Валидатор отклоняет нейтральный конспект или критику, спрятанную
 только в аккордеоне.
+
+Игры также не входят в Planning Store и не создают пользовательские данные.
+Первый слой содержит только каталог из трёх карточек. После явного открытия
+общий shell параллельно запрашивает отдельные JS и CSS выбранной игры, проверяет
+контракт `HEYS.PlanningGames.modules[gameId] = { Component, api }` и только
+затем монтирует компонент. У каждого ресурса независимый cache/status: повтор
+после ошибки не перезагружает уже готовый файл. Закрытие shell инвалидирует
+текущую loading-session, а игровой компонент обязан убрать свои timers,
+listeners, observer и animation frame. Модули не используют сеть, storage,
+аналитику или фоновые циклы вне открытой игры.
 
 Канонические логические ключи объявлены в `Planning.Constants.KEYS`. Основные
 группы: projects, tasks, slots, links, chrono activities/entries/snapshots,
@@ -187,6 +203,13 @@ pending local mutation, tombstones и anti-wipe проверки могут со
     быстрый слой и критические открытые выводы не зависят от профиля.
 14. Персональный Reading overlay не входит в публичный каталог и показывается
     только при совпадении текущего `clientId` с client-scoped данными.
+15. JS и CSS конкретной игры не входят в eager/postboot bundle и не
+    запрашиваются до открытия её карточки.
+16. Игровой модуль считается готовым только при `api.version === 1`, наличии
+    `Component` и всех методов API, объявленных каталогом.
+17. Закрытая или сменившаяся loading-session не может смонтировать поздно
+    загрузившийся игровой компонент.
+18. Игровые API остаются pure; runtime не пишет storage и не обращается к сети.
 
 ## Ошибки и защитные механизмы
 
@@ -198,6 +221,10 @@ pending local mutation, tombstones и anti-wipe проверки могут со
   ключи local-only, pending или расходятся с последним cloud observation.
 - Merge rescue может повторно поставить выживший local результат в очередь, если
   ключ уже не pending.
+- Ошибка JS или CSS игры остаётся внутри fullscreen shell и даёт повторить
+  только упавший ресурс; готовый соседний ресурс не дублируется.
+- Неверно зарегистрированный игровой API трактуется как ошибка script-ресурса,
+  поэтому retry может получить исправленный модуль.
 
 ## Подтверждённые риски и границы гарантий
 
@@ -212,6 +239,9 @@ pending local mutation, tombstones и anti-wipe проверки могут со
   путей.
 - Наличие `planning_context_agent_ingest` расширяет trust boundary: его bearer
   secret и allowed client ids нельзя смешивать с обычной PIN-session моделью.
+- `Color Trail` использует Canvas и один `requestAnimationFrame` только в
+  состоянии `running`; корректность cleanup и паузы при `document.hidden`
+  зависит от lifecycle компонента и требует отдельного runtime-smoke.
 
 ## Ключевые тесты
 
@@ -226,6 +256,14 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 - `apps/web/__tests__/planning-home-subtab.test.js` — навигационный контракт.
 - `apps/web/__tests__/planning-task-matrix.test.js` — группировка матрицы и
   контракт календарных слотов задачи на выбранные даты.
+- `apps/web/__tests__/planning-games-ui.test.js` — каталог, lazy-load, resource
+  retry/cache, API gate, dialog и focus lifecycle.
+- `apps/web/__tests__/planning-game-word-builder.test.js` — контент,
+  seeded-сессия, выбор слогов, подсказка и cleanup.
+- `apps/web/__tests__/planning-game-robot-route.test.js` — уровни, BFS,
+  выполнение программы, управление и cleanup.
+- `apps/web/__tests__/planning-game-color-trail.test.js` — deterministic core,
+  коллизии, flood-fill/замыкание, территория и Canvas lifecycle.
 - `apps/web/__tests__/reading-authoring-contract.test.js` — manifest, профили
   объёма, быстрый слой, применимость, источники, review и ритм раскрытий.
 - `apps/web/__tests__/planning-*-ui.test.js` и render tests — ключевые
@@ -233,19 +271,22 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 
 ## Facts Table
 
-| ID  | Утверждение                                                                                     | Проверка                                                                                                                                                     | Статус               |
-| --- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| P1  | Ключи и storage classes объявлены в planning store                                              | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                                                          | проверено 2026-07-17 |
-| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`                                | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                                                       | проверено 2026-07-17 |
-| P3  | Cloud refresh получает batch и применяет tombstones до основных данных                          | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                                                     | проверено 2026-07-17 |
-| P4  | Pending local mutation блокирует cloud overwrite                                                | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                                                             | проверено 2026-07-17 |
-| P5  | Active chrono timer local-only, completed entry cloud-synced                                    | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                                                      | проверено 2026-07-17 |
-| P6  | Planning keys включены в Phase A                                                                | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                                                        | проверено 2026-07-17 |
-| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                                               | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                                                        | проверено 2026-07-17 |
-| P8  | Application и agent ingest входят в RPC handler                                                 | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js`                                     | проверено 2026-07-17 |
-| P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором                 | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                                                     | проверено 2026-07-18 |
-| P10 | Published Reading требует быстрый пересказ и отдельную проверку применимости                    | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                   | проверено 2026-07-25 |
-| P11 | Длинные разделы Reading идут от открытого тезиса к вторичному `details`                         | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                   | проверено 2026-07-25 |
-| P12 | Объём Reading проверяется по обязательному `depthProfile`                                       | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                             | проверено 2026-07-25 |
-| P13 | Смысловые `highlights` дословны, ограничены по плотности и питают «Главное»                     | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check` | проверено 2026-07-25 |
-| P14 | Профиль Полтавского содержит только содержательные вопросы и загружается через client-scoped KV | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check` | проверено 2026-07-25 |
+| ID  | Утверждение                                                                                          | Проверка                                                                                                                                                                                             | Статус               |
+| --- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| P1  | Ключи и storage classes объявлены в planning store                                                   | `sed -n '1,75p' apps/web/heys_planning_store_v1.js`                                                                                                                                                  | проверено 2026-07-17 |
+| P2  | Mergeable arrays объединяются по id, snapshots возвращают `null`                                     | `sed -n '820,920p' apps/web/heys_planning_store_v1.js`                                                                                                                                               | проверено 2026-07-17 |
+| P3  | Cloud refresh получает batch и применяет tombstones до основных данных                               | `sed -n '2390,2520p' apps/web/heys_planning_store_v1.js`                                                                                                                                             | проверено 2026-07-17 |
+| P4  | Pending local mutation блокирует cloud overwrite                                                     | `rg -n "getSyncStatus(item.k) === 'pending'" apps/web/heys_planning_store_v1.js`                                                                                                                     | проверено 2026-07-17 |
+| P5  | Active chrono timer local-only, completed entry cloud-synced                                         | `sed -n '70,110p' apps/web/__tests__/planning-sync-persistence.test.js`                                                                                                                              | проверено 2026-07-17 |
+| P6  | Planning keys включены в Phase A                                                                     | `rg -n 'heys_planning_projects' apps/web/heys_storage_supabase_v1.js`                                                                                                                                | проверено 2026-07-17 |
+| P7  | Основной UI экспортируется как `HEYS.PlanningTab`                                                    | `rg -n 'HEYS.PlanningTab = PlanningTab' apps/web/heys_planning_v1.js`                                                                                                                                | проверено 2026-07-17 |
+| P8  | Application и agent ingest входят в RPC handler                                                      | `rg -n -e "'planning_context_ingest'" -e "'planning_context_agent_ingest'" yandex-cloud-functions/heys-api-rpc/index.js`                                                                             | проверено 2026-07-17 |
+| P9  | Task/project delete сохраняет command до коллекций и восстанавливается повтором                      | `pnpm exec vitest run apps/web/__tests__/planning-atomic-commands.test.js --no-coverage`                                                                                                             | проверено 2026-07-18 |
+| P10 | Published Reading требует быстрый пересказ и отдельную проверку применимости                         | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                                                           | проверено 2026-07-25 |
+| P11 | Длинные разделы Reading идут от открытого тезиса к вторичному `details`                              | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage`                                                                                                           | проверено 2026-07-25 |
+| P12 | Объём Reading проверяется по обязательному `depthProfile`                                            | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                                                                     | проверено 2026-07-25 |
+| P13 | Смысловые `highlights` дословны, ограничены по плотности и питают «Главное»                          | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                         | проверено 2026-07-25 |
+| P14 | Профиль Полтавского содержит только содержательные вопросы и загружается через client-scoped KV      | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                         | проверено 2026-07-25 |
+| P15 | `games` входит в навигационный контракт; каталог из трёх карточек открывает fullscreen dialog        | `pnpm exec vitest run apps/web/__tests__/planning-games-ui.test.js apps/web/__tests__/planning-home-subtab.test.js --no-coverage`                                                                    | проверено 2026-07-28 |
+| P16 | Игровые JS/CSS загружаются только после клика, независимо кешируются и проверяются по API v1         | `pnpm exec vitest run apps/web/__tests__/planning-games-ui.test.js --no-coverage`                                                                                                                    | проверено 2026-07-28 |
+| P17 | Три игровые механики детерминированы, ограничены памятью открытой сессии и очищают runtime resources | `pnpm exec vitest run apps/web/__tests__/planning-game-word-builder.test.js apps/web/__tests__/planning-game-robot-route.test.js apps/web/__tests__/planning-game-color-trail.test.js --no-coverage` | проверено 2026-07-28 |

@@ -22,7 +22,7 @@ export default function PurchaseButton({ planName, planPrice, featured = false, 
                 <button
                     onClick={() => setIsModalOpen(true)}
                     className={`flex min-h-[46px] w-full items-center justify-center rounded-xl border px-4 py-3 text-center text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${premium
-                        ? 'bg-white/10 text-white hover:bg-white/20 border-white/10'
+                        ? 'border-[#434587] bg-[#434587] text-white shadow-[0_10px_22px_rgba(67,69,135,0.16)] hover:bg-[#37396F]'
                         : featured
                             ? 'bg-[#1D70B7] text-white hover:bg-[#185F9D] border-[#1D70B7] shadow-[0_10px_22px_rgba(29,112,183,0.18)]'
                             : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-100'
@@ -45,11 +45,11 @@ export default function PurchaseButton({ planName, planPrice, featured = false, 
         <>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className={`mt-3 flex min-h-[46px] w-full items-center justify-center rounded-xl border px-4 py-3 text-center text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${premium
-                    ? 'bg-transparent text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-600'
+                className={`mt-3 flex min-h-[44px] w-full items-center justify-center px-3 text-center text-[13px] font-medium leading-snug transition-colors sm:text-sm ${premium
+                    ? 'text-[#434587] hover:text-[#37396F]'
                     : featured
-                        ? 'bg-transparent text-[#1D70B7] border-[#DCECF8] hover:bg-[#F8FBFF]'
-                        : 'bg-transparent text-gray-600 border-gray-200 hover:bg-gray-50'
+                        ? 'text-[#1D70B7] hover:text-[#185F9D]'
+                        : 'text-gray-500 hover:text-gray-800'
                     }`}
             >
                 {ctaText}

@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 const root = path.resolve(import.meta.dirname, '../../..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const migration = read('database/2026-07-27_consent_proof_v2.sql');
+const legalActivationMigration = read('database/2026-07-28_activate_user_agreement_v1_8.sql');
+const registryMigrations = `${migration}\n${legalActivationMigration}`;
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 const migrationManifest = JSON.parse(read('scripts/db/migrations/manifest.json'));
 
@@ -23,8 +25,16 @@ test('server allowlist rejects arbitrary versions before any consent mutation', 
 
 test('consent proof migration is managed and every registry hash matches the immutable manifest', () => {
   const managed = migrationManifest.migrations.find((item) => item.id === '2026-07-27_consent_proof_v2');
+  const legalActivation = migrationManifest.migrations.find(
+    (item) => item.id === '2026-07-28_activate_user_agreement_v1_8',
+  );
   assert.equal(managed?.path, 'database/2026-07-27_consent_proof_v2.sql');
   assert.equal(managed?.destructive, false);
+  assert.equal(
+    legalActivation?.path,
+    'database/2026-07-28_activate_user_agreement_v1_8.sql',
+  );
+  assert.equal(legalActivation?.destructive, false);
 
   for (const type of [
     'user_agreement',
@@ -38,7 +48,7 @@ test('consent proof migration is managed and every registry hash matches the imm
   ]) {
     const document = manifest.documents[type];
     assert.match(
-      migration,
+      registryMigrations,
       new RegExp(`\\('${type}', '${document.version}', '${document.sha256}', '${document.snapshotPath}', 'active'`),
     );
   }
@@ -47,6 +57,13 @@ test('consent proof migration is managed and every registry hash matches the imm
     migration,
     new RegExp(`\\('health_data', '${candidate.version}', '${candidate.sha256}', '${candidate.canonicalPath}', 'candidate'`),
   );
+});
+
+test('legal 1.8 activation is forward-only and retires older active agreement versions', () => {
+  assert.match(legalActivationMigration, /'user_agreement',[\s\S]*'1\.8'/);
+  assert.match(legalActivationMigration, /'payment_oferta',[\s\S]*'1\.8'/);
+  assert.match(legalActivationMigration, /document_version <> '1\.8'/);
+  assert.match(legalActivationMigration, /SET status = 'retired'/);
 });
 
 test('document hash and accepted_at are server-owned with no historical backfill', () => {

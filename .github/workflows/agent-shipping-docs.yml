@@ -24,6 +24,29 @@ on:
       - "scripts/release-features.mjs"
       - "scripts/push-safe.mjs"
       - "scripts/lint-shared-cache-writes.mjs"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/agent-shipping-docs.yml"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "package.json"
+      - "docs/operations/AGENT_SHIPPING_RUNBOOK.md"
+      - ".husky/**"
+      - "scripts/check-agent-shipping-docs.mjs"
+      - "scripts/check-agent-shipping-docs.test.mjs"
+      - "scripts/ship.mjs"
+      - "scripts/push-agent.mjs"
+      - "scripts/push-preflight.mjs"
+      - "scripts/integrate-agents.mjs"
+      - "scripts/check-agent-staging.mjs"
+      - "scripts/agent-worktree.mjs"
+      - "scripts/auto-sync-legacy-bundles.mjs"
+      - "scripts/release-prepare-and-commit.mjs"
+      - "scripts/prepare-release.mjs"
+      - "scripts/release-features.mjs"
+      - "scripts/push-safe.mjs"
+      - "scripts/lint-shared-cache-writes.mjs"
   workflow_dispatch:
 
 permissions:

@@ -14,15 +14,23 @@ explicitly approved.
 
 ## Required secrets
 
-`../deploy-all.sh heys-api-payments` fails closed unless these values are
-present in `../.env`:
+`../deploy-all.sh heys-api-payments` fails closed unless
+`LOCKBOX_PAYMENTS_SECRET_ID` points to a dedicated Lockbox secret containing:
 
 ```bash
 YUKASSA_SHOP_ID=...
 YUKASSA_SECRET_KEY=...
-YUKASSA_WEBHOOK_SECRET=...
-INTERNAL_CRON_TOKEN=...
 ```
+
+The secret must be separate from `heys-app-secrets`. Grant
+`lockbox.payloadViewer` on this secret only to `heys-ci-deployer` for preflight
+and `heys-function-invoker` for runtime. Store the secret id as the non-secret
+GitHub Actions repository variable `LOCKBOX_PAYMENTS_SECRET_ID`; do not create
+plaintext YooKassa GitHub secrets or function env values. At runtime the
+function keeps the fetched pair in a private in-memory object, not
+`process.env`.
+
+`INTERNAL_CRON_TOKEN` continues to load from `heys-app-secrets`.
 
 Optional Metrica Measurement Protocol variables:
 
@@ -115,8 +123,9 @@ Events:
 - `payment.canceled`
 - `refund.succeeded`
 
-The function checks YuKassa source IPs and, when `YUKASSA_WEBHOOK_SECRET` is
-set, also checks the HMAC signature header.
+The function checks YooKassa source IPs. Standard YooKassa notifications do not
+carry the custom HMAC header previously expected by the implementation, so no
+`YUKASSA_WEBHOOK_SECRET` is configured or required.
 
 ## Smoke checklist
 

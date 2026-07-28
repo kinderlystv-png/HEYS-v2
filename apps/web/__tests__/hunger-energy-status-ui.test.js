@@ -228,6 +228,260 @@ describe('Hunger Energy Status UI adapter', () => {
     expect(food).toMatchObject({ family: 'food', status: 'waiting_for_meal', dueAt: null });
   });
 
+  it('does not request a follow-up when the current hunger level is zero', () => {
+    const plan = Storage.buildOutcomePlan(
+      { suggestedAction: 'observe', recheckAfterMin: 45 },
+      '2026-07-04T12:00:00Z',
+      {},
+      { hungerLevel: 0, nowTs: Date.now() }
+    );
+
+    expect(plan).toMatchObject({ status: 'not_requested' });
+    expect(plan.dueAt).toBeUndefined();
+  });
+
+  it('does not create an already overdue follow-up for a historical assessment', () => {
+    const plan = Storage.buildOutcomePlan(
+      { suggestedAction: 'hydratePause', recheckAfterMin: 20 },
+      '2026-07-04T11:30:00Z',
+      {},
+      { hungerLevel: 5, nowTs: Date.now() }
+    );
+
+    expect(plan).toMatchObject({ status: 'not_requested' });
+    expect(Storage.findDueOutcomeFollowUp()).toBeNull();
+  });
+
+  it('keeps a current zero authoritative when a five is recorded for an earlier time', () => {
+    Storage.addEvent({
+      id: 'current-zero',
+      recordedAt: '2026-07-04T12:00:00Z',
+      hungerLevel: 0,
+      outcomePlan: { status: 'not_requested' }
+    });
+
+    const hasNewerAssessment = Storage.hasNewerHungerAssessment('2026-07-04T11:30:00Z');
+    const historicalPlan = Storage.buildOutcomePlan(
+      { suggestedAction: 'hydratePause', recheckAfterMin: 20 },
+      '2026-07-04T11:30:00Z',
+      {},
+      { hungerLevel: 5, hasNewerAssessment, nowTs: Date.now() }
+    );
+    Storage.supersedeOpenOutcomeFollowUps('2026-07-04T11:30:00Z');
+    Storage.addEvent({
+      id: 'backfilled-five',
+      recordedAt: '2026-07-04T11:30:00Z',
+      hungerLevel: 5,
+      outcomePlan: historicalPlan
+    });
+
+    expect(hasNewerAssessment).toBe(true);
+    expect(Storage.readEvents().find((row) => row.id === 'current-zero')?.outcomePlan.status)
+      .toBe('not_requested');
+    expect(Storage.readEvents().find((row) => row.id === 'backfilled-five')?.outcomePlan.status)
+      .toBe('not_requested');
+    expect(Storage.findDueOutcomeFollowUp()).toBeNull();
+  });
+
+  it('does not supersede a newer open follow-up from a backdated assessment', () => {
+    Storage.addEvent({
+      id: 'newer-assessment',
+      recordedAt: '2026-07-04T12:00:00Z',
+      hungerLevel: 4,
+      outcomePlan: Storage.buildOutcomePlan(
+        { suggestedAction: 'delayWithCheck', recheckAfterMin: 25 },
+        '2026-07-04T12:00:00Z'
+      )
+    });
+
+    Storage.supersedeOpenOutcomeFollowUps('2026-07-04T11:30:00Z');
+
+    expect(Storage.readEvents()[0].outcomePlan).toMatchObject({
+      status: 'pending',
+      dueAt: '2026-07-04T12:25:00.000Z'
+    });
+  });
+
+  it('repairs legacy open plans that conflict with a newer zero assessment', () => {
+    Storage.addEvent({
+      id: 'legacy-five',
+      recordedAt: '2026-07-04T11:00:00Z',
+      hungerLevel: 5,
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T11:30:00Z',
+        expiresAt: '2026-07-04T23:00:00Z'
+      }
+    });
+    Storage.addEvent({
+      id: 'legacy-zero',
+      recordedAt: '2026-07-04T11:45:00Z',
+      hungerLevel: 0,
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T11:55:00Z',
+        expiresAt: '2026-07-04T23:45:00Z'
+      }
+    });
+
+    Storage.reconcileOutcomeFollowUps();
+
+    expect(Storage.readEvents().find((row) => row.id === 'legacy-five')?.outcomePlan.status)
+      .toBe('superseded');
+    expect(Storage.readEvents().find((row) => row.id === 'legacy-zero')?.outcomePlan)
+      .toMatchObject({ status: 'not_requested', dueAt: null });
+    expect(Storage.findDueOutcomeFollowUp()).toBeNull();
+  });
+
+  it('does not activate a historical food follow-up after its outcome window already passed', () => {
+    global.HEYS.dayUtils = {
+      loadDay: () => ({
+        date: '2026-07-04',
+        meals: [{ id: 'meal-past', time: '11:10', items: [{ name: 'Обед' }] }]
+      })
+    };
+    Storage.addEvent({
+      id: 'historical-food',
+      date: '2026-07-04',
+      recordedAt: '2026-07-04T11:00:00',
+      createdAt: '2026-07-04T12:00:00Z',
+      hungerLevel: 6,
+      outcomePlan: Storage.buildOutcomePlan(
+        { suggestedAction: 'riskBrakeMeal' },
+        '2026-07-04T11:00:00'
+      )
+    });
+
+    Storage.reconcileOutcomeFollowUps();
+
+    expect(Storage.readEvents()[0].outcomePlan).toMatchObject({
+      status: 'not_requested',
+      dueAt: null
+    });
+  });
+
+  it('builds a clear anchor for delay and food outcome questions', () => {
+    expect(Adapter.getOutcomeFollowUpAnchor({
+      hungerLevel: 5,
+      recordedAt: '2026-07-04T11:30:00',
+      outcomePlan: { family: 'delay', requestedAfterMin: 20 }
+    })).toBe('Оценка 5/10 в 11:30 · пауза 20 мин');
+    expect(Adapter.getOutcomeFollowUpAnchor({
+      hungerLevel: 6,
+      recordedAt: '2026-07-04T11:30:00',
+      outcomePlan: { family: 'food', mealAt: '2026-07-04T11:40:00' }
+    })).toBe('Оценка 6/10 в 11:30 · еда в 11:40');
+  });
+
+  it('invalidates an open outcome plan when hunger is edited to zero', () => {
+    const plan = Storage.reconcileEditedOutcomePlan({
+      hungerLevel: 5,
+      recordedAt: '2026-07-04T11:30:00Z',
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T12:30:00Z'
+      }
+    }, {
+      hungerLevel: 0,
+      recordedAt: '2026-07-04T11:30:00Z',
+      editedAt: '2026-07-04T12:00:00Z'
+    });
+
+    expect(plan).toMatchObject({ status: 'not_requested', dueAt: null, shownAt: null });
+  });
+
+  it('invalidates the old due time when an assessment timestamp is edited', () => {
+    const plan = Storage.reconcileEditedOutcomePlan({
+      hungerLevel: 5,
+      recordedAt: '2026-07-04T11:30:00Z',
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T12:30:00Z'
+      }
+    }, {
+      hungerLevel: 5,
+      recordedAt: '2026-07-04T11:00:00Z',
+      editedAt: '2026-07-04T12:00:00Z'
+    });
+
+    expect(plan).toMatchObject({
+      status: 'superseded',
+      dueAt: null,
+      supersededAt: '2026-07-04T12:00:00Z'
+    });
+  });
+
+  it('preserves an answered outcome when its assessment is edited', () => {
+    const answered = {
+      family: 'delay',
+      status: 'answered',
+      userReported: 'hunger_passed',
+      userReportedAt: '2026-07-04T11:55:00Z'
+    };
+    const plan = Storage.reconcileEditedOutcomePlan({
+      hungerLevel: 5,
+      recordedAt: '2026-07-04T11:30:00Z',
+      outcomePlan: answered
+    }, {
+      hungerLevel: 0,
+      recordedAt: '2026-07-04T11:00:00Z',
+      editedAt: '2026-07-04T12:00:00Z'
+    });
+
+    expect(plan).toEqual(answered);
+  });
+
+  it('keeps a due follow-up pending while another modal is active', () => {
+    Storage.addEvent({
+      id: 'blocked-due',
+      recordedAt: '2026-07-04T11:00:00Z',
+      hungerLevel: 5,
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T11:30:00Z',
+        expiresAt: '2026-07-04T23:00:00Z'
+      }
+    });
+    const open = vi.fn(() => true);
+
+    Storage.runDueOutcomeFollowUp({ hasBlockingModal: () => true, show: open });
+
+    expect(open).not.toHaveBeenCalled();
+    expect(Storage.readEvents()[0].outcomePlan.status).toBe('pending');
+    expect(vi.getTimerCount()).toBe(1);
+    vi.clearAllTimers();
+  });
+
+  it('shows a blocked follow-up once after the blocking modal closes', () => {
+    Storage.addEvent({
+      id: 'retry-due',
+      recordedAt: '2026-07-04T11:00:00Z',
+      hungerLevel: 5,
+      outcomePlan: {
+        family: 'delay',
+        status: 'pending',
+        dueAt: '2026-07-04T11:30:00Z',
+        expiresAt: '2026-07-04T23:00:00Z'
+      }
+    });
+    let blocked = true;
+    const open = vi.fn(() => true);
+    const runtime = { hasBlockingModal: () => blocked, show: open };
+
+    Storage.runDueOutcomeFollowUp(runtime);
+    blocked = false;
+    vi.advanceTimersByTime(30000);
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(Storage.readEvents()[0].outcomePlan.status).toBe('shown');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('starts a food follow-up only after a recorded meal', () => {
     Storage.addEvent({
       id: 'food-advice',

@@ -31,7 +31,7 @@ const FILES = {
   privacyPolicy: 'apps/web/public/docs/privacy-policy.md',
   healthConsent: 'apps/web/public/docs/health-data-consent.md',
   userAgreement: 'apps/web/public/docs/user-agreement.md',
-  userAgreementV17: 'apps/web/public/docs/v1.7/user-agreement.md',
+  userAgreementV18: 'apps/web/public/docs/v1.8/user-agreement.md',
   privacyV17: 'apps/web/public/docs/v1.7/privacy-policy.md',
   healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
   healthV15: 'apps/web/public/docs/v1.5/health-data-consent.md',
@@ -394,7 +394,7 @@ function checkLegalVersions() {
   }
 
   for (const [currentKey, snapshotKey, label] of [
-    ['userAgreement', 'userAgreementV17', 'user_agreement 1.7'],
+    ['userAgreement', 'userAgreementV18', 'user_agreement 1.8'],
     ['privacyPolicy', 'privacyV17', 'personal_data 1.7'],
     ['healthConsent', 'healthV15', 'health_data 1.5'],
   ]) {

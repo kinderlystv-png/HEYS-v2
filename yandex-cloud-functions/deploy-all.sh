@@ -21,6 +21,7 @@ TEST_SCRIPT="$SCRIPT_DIR/test-functions.sh"
 CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
 CAPACITY_POLICY="$SCRIPT_DIR/serverless-capacity-policy.cjs"
 CAPACITY_CHECK="$SCRIPT_DIR/check-serverless-capacity.cjs"
+PAYMENTS_SECRET_CHECK="$SCRIPT_DIR/check-payments-secret-payload.cjs"
 
 API_INSTANCE_CONCURRENCY="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceConcurrency")"
 API_INSTANCE_ADMISSION_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceAdmissionLimit")"
@@ -116,10 +117,18 @@ done
 echo -e "${GREEN}✅ All required variables loaded${NC}"
 echo -e "${BLUE}🔐 PG_PASSWORD: configured${NC}"
 
-payments_env_ready() {
-    [ -n "$YUKASSA_SHOP_ID" ] &&
-        [ -n "$YUKASSA_SECRET_KEY" ] &&
-        [ -n "$YUKASSA_WEBHOOK_SECRET" ]
+payments_lockbox_ready() {
+    if [ -z "${LOCKBOX_PAYMENTS_SECRET_ID:-}" ]; then
+        echo -e "${RED}❌ ERROR: LOCKBOX_PAYMENTS_SECRET_ID is required for heys-api-payments${NC}" >&2
+        return 1
+    fi
+    if [ ! -f "$PAYMENTS_SECRET_CHECK" ]; then
+        echo -e "${RED}❌ ERROR: payments secret validator is missing: $PAYMENTS_SECRET_CHECK${NC}" >&2
+        return 1
+    fi
+
+    yc lockbox payload get --id "$LOCKBOX_PAYMENTS_SECRET_ID" --format=json 2>/dev/null \
+        | node "$PAYMENTS_SECRET_CHECK"
 }
 
 INVENTORY_SCRIPT="$SCRIPT_DIR/function-inventory.cjs"
@@ -386,6 +395,12 @@ build_env_flags() {
         env_flags+=" --environment LOCKBOX_APP_SECRET_ID=$LOCKBOX_APP_ID"
     fi
 
+    # YooKassa credentials live in a dedicated Lockbox secret. This limits CI
+    # and runtime access to the payment pair instead of the whole app secret.
+    if [[ "$func_name" == "heys-api-payments" ]]; then
+        env_flags+=" --environment LOCKBOX_PAYMENTS_SECRET_ID=$LOCKBOX_PAYMENTS_SECRET_ID"
+    fi
+
     # Backup-функции (heys-client-daily-backup, heys-snapshot-demo) + photo-cleanup:
     # S3 credentials приходят только из Lockbox; Telegram — из App Lockbox.
     if [[ "$func_name" =~ (backup|snapshot-demo|photo-cleanup) ]]; then
@@ -551,15 +566,15 @@ preflight_function() {
         exit 1
     fi
 
-    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_env_ready; then
+    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_lockbox_ready; then
         if [ "$CI_MODE" = true ] && [ ${#TARGET_FUNCTIONS[@]} -eq 0 ]; then
             SKIPPED_FUNCTIONS+=("$func_name")
             PREVALIDATED_ENV_FLAGS+=("")
-            echo -e "${YELLOW}⏭️  Preflight skip $func_name — YUKASSA secrets are not configured${NC}"
+            echo -e "${YELLOW}⏭️  Preflight skip $func_name — dedicated payments Lockbox is not ready${NC}"
             return 0
         fi
 
-        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID, YUKASSA_SECRET_KEY and YUKASSA_WEBHOOK_SECRET are required for $func_name${NC}"
+        echo -e "${RED}❌ ERROR: dedicated payments Lockbox is not ready for $func_name${NC}"
         exit 1
     fi
 

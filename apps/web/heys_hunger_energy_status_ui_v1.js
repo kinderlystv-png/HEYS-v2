@@ -1042,21 +1042,38 @@
     return Number.isFinite(time) ? new Date(time).toISOString() : null;
   }
 
-  function buildOutcomePlan(decision, recordedAt, basePlan = {}) {
+  function hasNewerHungerAssessment(recordedAt, rows = readEvents()) {
+    const recordedTs = Date.parse(recordedAt || '');
+    if (!Number.isFinite(recordedTs)) return false;
+    return safeArray(rows).some((row) => {
+      if (!Number.isFinite(Number(row?.hungerLevel))) return false;
+      const rowTs = Date.parse(row?.recordedAt || row?.createdAt || '');
+      return Number.isFinite(rowTs) && rowTs > recordedTs;
+    });
+  }
+
+  function buildOutcomePlan(decision, recordedAt, basePlan = {}, options = {}) {
     const action = decision?.suggestedAction;
-    if (!action || action === 'fastCarbSafety') return { ...basePlan, status: 'not_requested' };
+    const hungerLevel = options.hungerLevel == null ? null : Number(options.hungerLevel);
+    if (!action || action === 'fastCarbSafety' || hungerLevel === HUNGER_MIN_LEVEL || options.hasNewerAssessment) {
+      return { ...basePlan, status: 'not_requested' };
+    }
     const family = DELAY_ACTIONS.includes(action) ? 'delay' : FOOD_ACTIONS.includes(action) ? 'food' : null;
     if (!family) return { ...basePlan, status: 'not_requested' };
     const recordedTs = Date.parse(recordedAt || '') || Date.now();
     const expiresAt = toIso(recordedTs + OUTCOME_FOLLOWUP_EXPIRE_HOURS * 60 * 60000);
     if (family === 'delay') {
       const afterMin = Math.max(15, Number(decision?.recheckAfterMin) || 30);
+      const dueTs = recordedTs + afterMin * 60000;
+      if (Number.isFinite(Number(options.nowTs)) && dueTs <= Number(options.nowTs)) {
+        return { ...basePlan, status: 'not_requested' };
+      }
       return {
         ...basePlan,
         family,
         status: 'pending',
         requestedAfterMin: afterMin,
-        dueAt: toIso(recordedTs + afterMin * 60000),
+        dueAt: toIso(dueTs),
         expiresAt,
         mealAt: null,
         userReported: null,
@@ -1079,6 +1096,28 @@
       shownAt: null,
       snoozeCount: 0,
       dismissedAt: null
+    };
+  }
+
+  function reconcileEditedOutcomePlan(row, options = {}) {
+    const plan = row?.outcomePlan;
+    if (!plan || plan.userReported || plan.status === 'answered') return plan;
+    if (!['waiting_for_meal', 'pending', 'shown'].includes(plan.status)) return plan;
+    const previousLevel = Number(row?.hungerLevel ?? row?.input?.hungerLevel);
+    const nextLevel = Number(options.hungerLevel);
+    const levelChanged = Number.isFinite(nextLevel) && (!Number.isFinite(previousLevel) || nextLevel !== previousLevel);
+    const previousRecordedAt = row?.recordedAt || row?.createdAt || null;
+    const timeChanged = !!options.recordedAt && options.recordedAt !== previousRecordedAt;
+    if (!levelChanged && !timeChanged) return plan;
+    if (nextLevel === HUNGER_MIN_LEVEL) {
+      return { ...plan, status: 'not_requested', dueAt: null, shownAt: null };
+    }
+    return {
+      ...plan,
+      status: 'superseded',
+      dueAt: null,
+      shownAt: null,
+      supersededAt: options.editedAt || nowIso()
     };
   }
 
@@ -1143,9 +1182,22 @@
 
   function reconcileOutcomeFollowUps() {
     const now = Date.now();
-    readEvents().forEach((row) => {
+    const rows = readEvents();
+    rows.forEach((row) => {
       const plan = row?.outcomePlan || {};
       if (plan.userReported || ['answered', 'expired', 'not_requested', 'superseded', 'dismissed_after_snoozes'].includes(plan.status)) return;
+      if (row?.hungerLevel != null && Number(row.hungerLevel) === HUNGER_MIN_LEVEL) {
+        updateEvent(row.id, {
+          outcomePlan: { ...plan, status: 'not_requested', dueAt: null, shownAt: null }
+        });
+        return;
+      }
+      if (hasNewerHungerAssessment(row?.recordedAt || row?.createdAt, rows)) {
+        updateEvent(row.id, {
+          outcomePlan: { ...plan, status: 'superseded', shownAt: null, supersededAt: nowIso() }
+        });
+        return;
+      }
       const expiresAt = Date.parse(plan.expiresAt || '');
       if (Number.isFinite(expiresAt) && expiresAt < now) {
         updateEvent(row.id, { outcomePlan: { ...plan, status: 'expired' } });
@@ -1153,7 +1205,17 @@
       }
       if (plan.family === 'food' && plan.status === 'waiting_for_meal') {
         const match = findFirstMealAfterEvent(row);
-        if (match) applyMealToOutcomeEvent(row.id, match.time);
+        if (match) {
+          const dueTs = match.time + OUTCOME_FOLLOWUP_AFTER_MEAL_MIN * 60000;
+          const createdTs = Date.parse(row?.createdAt || '');
+          if (Number.isFinite(createdTs) && createdTs >= dueTs) {
+            updateEvent(row.id, {
+              outcomePlan: { ...plan, status: 'not_requested', dueAt: null, shownAt: null }
+            });
+          } else {
+            applyMealToOutcomeEvent(row.id, match.time);
+          }
+        }
         return;
       }
       const shownAt = Date.parse(plan.shownAt || '');
@@ -1165,12 +1227,15 @@
 
   function findDueOutcomeFollowUp() {
     const now = Date.now();
-    return readEvents()
+    const rows = readEvents();
+    return rows
       .filter((row) => {
         const plan = row?.outcomePlan || {};
         const dueAt = Date.parse(plan.dueAt || '');
         const expiresAt = Date.parse(plan.expiresAt || '');
-        return plan.status === 'pending' && !plan.userReported && Number.isFinite(dueAt) && dueAt <= now &&
+        return !(row?.hungerLevel != null && Number(row.hungerLevel) === HUNGER_MIN_LEVEL) &&
+          !hasNewerHungerAssessment(row?.recordedAt || row?.createdAt, rows) &&
+          plan.status === 'pending' && !plan.userReported && Number.isFinite(dueAt) && dueAt <= now &&
           (!Number.isFinite(expiresAt) || expiresAt >= now);
       })
       .sort((a, b) => Date.parse(a.outcomePlan.dueAt) - Date.parse(b.outcomePlan.dueAt))[0] || null;
@@ -1188,9 +1253,16 @@
     outcomeFollowUpTimer = setTimeout(runDueOutcomeFollowUp, delay);
   }
 
-  function runDueOutcomeFollowUp() {
-    if (global.document?.body?.classList?.contains('hunger-energy-modal-open')) {
-      outcomeFollowUpTimer = setTimeout(runDueOutcomeFollowUp, 30000);
+  function runDueOutcomeFollowUp(runtime = {}) {
+    const isBlocked = typeof runtime.hasBlockingModal === 'function'
+      ? runtime.hasBlockingModal()
+      : hasBlockingModal();
+    const scheduleRetry = () => {
+      if (outcomeFollowUpTimer) clearTimeout(outcomeFollowUpTimer);
+      outcomeFollowUpTimer = setTimeout(() => runDueOutcomeFollowUp(runtime), 30000);
+    };
+    if (isBlocked || global.document?.body?.classList?.contains('hunger-energy-modal-open')) {
+      scheduleRetry();
       return null;
     }
     const due = findDueOutcomeFollowUp();
@@ -1198,15 +1270,20 @@
       planNextOutcomeFollowUp();
       return null;
     }
+    const open = typeof runtime.show === 'function' ? runtime.show : show;
+    const opened = open({
+      source: 'hunger-outcome-follow-up',
+      date: due.date || todayKey(),
+      hungerOutcomeFollowUp: due
+    });
+    if (!opened) {
+      scheduleRetry();
+      return null;
+    }
     const shownAt = nowIso();
     const updated = updateEvent(due.id, (row) => ({
       outcomePlan: { ...(row.outcomePlan || {}), status: 'shown', shownAt }
     })) || due;
-    show({
-      source: 'hunger-outcome-follow-up',
-      date: updated.date || todayKey(),
-      hungerOutcomeFollowUp: updated
-    });
     return updated;
   }
 
@@ -1229,9 +1306,12 @@
 
   function supersedeOpenOutcomeFollowUps(nextRecordedAt) {
     const nextAt = toIso(nextRecordedAt) || nowIso();
+    const nextTs = Date.parse(nextRecordedAt || '');
     readEvents().forEach((row) => {
       const plan = row?.outcomePlan || {};
       if (!['pending', 'shown', 'waiting_for_meal'].includes(plan.status) || plan.userReported) return;
+      const rowTs = Date.parse(row?.recordedAt || row?.createdAt || '');
+      if (Number.isFinite(nextTs) && Number.isFinite(rowTs) && rowTs > nextTs) return;
       updateEvent(row.id, {
         outcomePlan: { ...plan, status: 'superseded', supersededAt: nextAt }
       });
@@ -4007,10 +4087,30 @@
     );
   }
 
+  function getOutcomeFollowUpAnchor(followUp) {
+    const plan = followUp?.outcomePlan || {};
+    const level = followUp?.hungerLevel == null ? null : Number(followUp.hungerLevel);
+    const assessmentTime = formatShortTime(followUp?.recordedAt || followUp?.createdAt || '');
+    const assessment = Number.isFinite(level) && assessmentTime
+      ? 'Оценка ' + Math.round(level) + '/10 в ' + assessmentTime
+      : Number.isFinite(level)
+        ? 'Оценка ' + Math.round(level) + '/10'
+        : assessmentTime
+          ? 'Оценка в ' + assessmentTime
+          : '';
+    if (plan.family === 'food') {
+      const mealTime = formatShortTime(plan.mealAt || '');
+      return [assessment, mealTime ? 'еда в ' + mealTime : 'после еды'].filter(Boolean).join(' · ');
+    }
+    const pauseMin = Math.max(0, Number(plan.requestedAfterMin || followUp?.decisionSnapshot?.recheckAfterMin) || 0);
+    return [assessment, pauseMin ? 'пауза ' + pauseMin + ' мин' : 'после паузы'].filter(Boolean).join(' · ');
+  }
+
   function HungerOutcomePrompt({ followUp, onOutcome, onSnooze }) {
     const plan = followUp?.outcomePlan || {};
     if (!followUp?.id || !plan.family) return null;
     const isFood = plan.family === 'food';
+    const anchor = getOutcomeFollowUpAnchor(followUp);
     const options = isFood
       ? [
           { id: 'hunger_lower', label: 'Голод снизился' },
@@ -4026,6 +4126,7 @@
     return h('div', { className: 'hes-outcome-followup' },
       h('div', { className: 'hes-outcome-followup__intro' },
         h('strong', null, isFood ? 'Как изменилось состояние после еды?' : 'Что произошло после паузы?'),
+        anchor && h('span', { className: 'hes-outcome-followup__anchor' }, anchor),
         h('span', null, 'Ответ поможет точнее подбирать следующие рекомендации.')
       ),
       h('div', { className: 'hes-outcome-followup__choices' },
@@ -5115,6 +5216,11 @@
           from: previousRecordedAt,
           to: nextRecordedAt
         } : []).slice(-8);
+        const nextOutcomePlan = reconcileEditedOutcomePlan(row, {
+          hungerLevel: level,
+          recordedAt: nextRecordedAt || row.recordedAt,
+          editedAt
+        });
         return {
           recordedAt: nextRecordedAt || row.recordedAt,
           date: nextRecordedAt ? localDateKeyFromTs(nextT) : row.date,
@@ -5126,6 +5232,7 @@
             hungerLevel: level
           },
           editHistory: nextHistory,
+          outcomePlan: nextOutcomePlan,
           editedAt,
           updatedAt: editedAt
         };
@@ -5445,6 +5552,8 @@
     function fixHunger() {
       if (hasRequiredInputs) return;
       const finalInput = makeFinalInput();
+      const previousRows = readEvents();
+      const hasNewerAssessment = hasNewerHungerAssessment(finalInput.now, previousRows);
       const decision = HEYS.HungerEnergyStatus.assessHungerEvent(finalInput, context);
       const drivers = getDisplayDrivers(decision, finalInput, context);
       const log = buildDecisionLog({
@@ -5454,9 +5563,12 @@
         decision,
         drivers
       });
-      const outcomePlan = buildOutcomePlan(decision, finalInput.now, log.outcome);
+      const outcomePlan = buildOutcomePlan(decision, finalInput.now, log.outcome, {
+        hungerLevel: finalInput.hungerLevel,
+        hasNewerAssessment,
+        nowTs: Date.now()
+      });
       log.outcome = outcomePlan;
-      const previousRows = readEvents();
       supersedeOpenOutcomeFollowUps(finalInput.now);
       const eventRow = addEvent({
         eventType: 'hunger_fixed',
@@ -5948,6 +6060,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 .hes-outcome-followup__intro{display:grid;gap:5px}
 .hes-outcome-followup__intro strong{font-size:18px;line-height:1.2;color:#172033}
 .hes-outcome-followup__intro span{font-size:12px;font-weight:750;line-height:1.35;color:#64748b}
+.hes-outcome-followup__intro .hes-outcome-followup__anchor{color:#434587;font-weight:850}
 .hes-outcome-followup__choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .hes-outcome-followup__choices button{min-height:52px;border:1px solid rgba(67,69,135,.14);border-radius:13px;background:#f8fbff;color:#334155;font-size:13px;font-weight:850;padding:8px;cursor:pointer}
 .hes-outcome-followup__choices button:last-child:nth-child(odd){grid-column:1/-1}
@@ -6175,6 +6288,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
 [data-theme="dark"] .hes-outcome-followup{background:#1f2937;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-outcome-followup__intro strong{color:#f8fafc}
 [data-theme="dark"] .hes-outcome-followup__intro span,[data-theme="dark"] .hes-outcome-followup__later{color:#cbd5e1}
+[data-theme="dark"] .hes-outcome-followup__intro .hes-outcome-followup__anchor{color:#c7d2fe}
 [data-theme="dark"] .hes-outcome-followup__choices button{background:#111827;color:#e5e7eb;border-color:rgba(226,236,242,.14)}
 [data-theme="dark"] .hes-low-meal__title{color:#f8fafc}
 [data-theme="dark"] .hes-low-meal__text{color:#cbd5e1}
@@ -6360,9 +6474,14 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     addEvent,
     updateEvent,
     buildHistorySignals,
+    hasNewerHungerAssessment,
     buildOutcomePlan,
+    reconcileEditedOutcomePlan,
+    reconcileOutcomeFollowUps,
+    supersedeOpenOutcomeFollowUps,
     linkMealToWaitingOutcome,
     findDueOutcomeFollowUp,
+    runDueOutcomeFollowUp,
     recordOutcomeFollowUp,
     snoozeOutcomeFollowUp,
     buildCalibrationReport: () => HEYS.HungerEnergyCalibration?.evaluate?.(readEvents()) || null
@@ -6383,6 +6502,7 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     getLowHungerRitualProfile,
     getLowHungerSavedSummary,
     getLowHungerUpcomingCue,
+    getOutcomeFollowUpAnchor,
     getStressCalorieChoice,
     buildStressCalorieLink,
     buildLowHungerCuratorCard,

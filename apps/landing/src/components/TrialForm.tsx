@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_VARIANT } from '@/config/landing-variants';
 import { LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
@@ -13,6 +13,8 @@ declare global {
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 type Messenger = 'telegram' | 'whatsapp' | 'max';
+type FieldName = 'name' | 'phone' | 'birthYear' | 'consent';
+type FieldErrors = Partial<Record<FieldName, string>>;
 
 const YM_ID = process.env.NEXT_PUBLIC_YM_ID || '';
 
@@ -34,7 +36,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [phoneDigits, setPhoneDigits] = useState(''); // только 10 цифр без ведущей 7
   const [messenger, setMessenger] = useState<Messenger>('telegram');
   const [formState, setFormState] = useState<FormState>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [submitError, setSubmitError] = useState('');
   const [utmParams, setUtmParams] = useState<UTMParams>({});
   const [consentAccepted, setConsentAccepted] = useState(false);
   // Age gate: store only birth year for data minimization.
@@ -45,6 +48,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   // 🍯 Honeypot (P0.13): скрытое поле, которое настоящие пользователи не видят.
   // Боты часто заполняют все поля автоматически — если website непустой, отбраковываем.
   const [website, setWebsite] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Парсим UTM из URL при загрузке
   useEffect(() => {
@@ -74,6 +78,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
     // Берём только цифры из введённого значения, ограничиваем 10
     const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
     setPhoneDigits(digits);
+    setFieldErrors((current) => ({ ...current, phone: undefined }));
+  };
+
+  const clearFieldError = (field: FieldName) => {
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
   };
 
   const getYandexClientId = () => {
@@ -96,30 +105,41 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   };
 
   const validateForm = (): boolean => {
+    const errors: FieldErrors = {};
+
     if (!name.trim()) {
-      setErrorMessage('Пожалуйста, введите ваше имя');
-      return false;
+      errors.name = 'Укажите, как к вам обращаться.';
     }
 
     if (phoneDigits.length !== 10) {
-      setErrorMessage('Введите корректный номер телефона');
-      return false;
-    }
-
-    if (!consentAccepted) {
-      setErrorMessage('Необходимо принять политику конфиденциальности');
-      return false;
+      errors.phone = 'Введите 10 цифр после +7.';
     }
 
     // 18+ gate.
     const currentYear = new Date().getFullYear();
     const yearNum = parseInt(birthYear, 10);
     if (!Number.isInteger(yearNum) || yearNum < 1900 || yearNum > currentYear) {
-      setErrorMessage('Укажите корректный год рождения');
-      return false;
+      errors.birthYear = 'Укажите год рождения четырьмя цифрами.';
+    } else if (currentYear - yearNum < 18) {
+      errors.birthYear = 'Сервис доступен только лицам старше 18 лет.';
     }
-    if (currentYear - yearNum < 18) {
-      setErrorMessage('Сервис доступен только лицам старше 18 лет.');
+
+    if (!consentAccepted) {
+      errors.consent = 'Подтвердите согласие на обработку данных заявки.';
+    }
+
+    setFieldErrors(errors);
+    const firstInvalidField = (Object.keys(errors) as FieldName[])[0];
+    if (firstInvalidField) {
+      const fieldIds: Record<FieldName, string> = {
+        name: 'name',
+        phone: 'phone',
+        birthYear: 'birth_year',
+        consent: 'privacy-consent',
+      };
+      window.requestAnimationFrame(() => {
+        formRef.current?.querySelector<HTMLElement>(`#${fieldIds[firstInvalidField]}`)?.focus();
+      });
       return false;
     }
 
@@ -128,7 +148,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
+    setSubmitError('');
 
     if (!validateForm()) return;
 
@@ -181,7 +201,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       setFormState('success');
     } catch (error) {
       setFormState('error');
-      setErrorMessage(
+      setSubmitError(
         error instanceof Error
           ? error.message
           : 'Произошла ошибка. Попробуйте ещё раз или напишите нам напрямую.',
@@ -192,22 +212,37 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   // Успешная отправка
   if (formState === 'success') {
     return (
-      <div className="bg-white rounded-3xl p-8 shadow-2xl text-center">
-        <div className="text-5xl mb-4">🎉</div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Заявка отправлена!</h3>
-        <p className="text-gray-600 mb-4">
-          Куратор свяжется с вами через выбранный канал:
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-[#DEEDDB] text-xl font-bold text-[#31553B]">
+          ✓
+        </div>
+        <h3 className="mb-2 text-2xl font-bold text-gray-900">Заявка получена</h3>
+        <p className="mb-6 text-sm leading-6 text-gray-600">
+          Дальше куратор свяжется с вами через выбранный канал:
           {messenger === 'telegram'
             ? ' Telegram'
             : messenger === 'whatsapp'
               ? ' WhatsApp'
               : ' MAX'}
         </p>
-        <p className="text-gray-500 text-sm mb-4">
-          Если формат подойдёт, куратор создаст доступ и пришлёт ссылку на защищённую анкету.
+        <ol className="mb-6 space-y-3 text-sm leading-5 text-slate-700">
+          {[
+            'Куратор изучит короткую заявку.',
+            'Свяжется с вами и уточнит, подходит ли формат.',
+            'Если формат подходит, пришлёт ссылку на защищённую анкету.',
+          ].map((step, index) => (
+            <li key={step} className="flex items-start gap-3">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#E2ECF2] text-xs font-bold text-[#434587]">
+                {index + 1}
+              </span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="mb-3 text-xs leading-5 text-gray-500">
           Заявка и заполнение анкеты не гарантируют начало пробной недели.
         </p>
-        <p className="text-gray-500 text-sm">
+        <p className="text-xs leading-5 text-gray-500">
           Если не получили сообщение — проверьте папку «Запросы» или напишите нам:{' '}
           {SUPPORT_CONTACTS.telegramHandle}
         </p>
@@ -216,11 +251,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-2xl">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Заявка на участие</h3>
-      <p className="-mt-3 mb-6 text-center text-sm leading-6 text-gray-500">
-        Сначала куратор свяжется с вами. Сведения о здоровье на этом этапе не нужны.
-      </p>
+    <form ref={formRef} onSubmit={handleSubmit} aria-label="Заявка на неделю Pro" noValidate>
 
       {/* Имя */}
       <div className="mb-4">
@@ -231,11 +262,18 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           type="text"
           id="name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearFieldError('name');
+          }}
           placeholder="Как к вам обращаться?"
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          autoComplete="name"
+          aria-invalid={Boolean(fieldErrors.name)}
+          aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+          className={`w-full rounded-xl border bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-[#52A0D8]/30 ${fieldErrors.name ? 'border-red-400' : 'border-gray-300'}`}
           disabled={formState === 'loading'}
         />
+        {fieldErrors.name ? <p id="name-error" className="mt-1.5 text-xs text-red-700" role="alert">{fieldErrors.name}</p> : null}
       </div>
 
       {/* Телефон */}
@@ -243,7 +281,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
           Номер телефона
         </label>
-        <div className="flex items-center w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500/30 transition-all">
+        <div className={`flex w-full items-center rounded-xl border bg-gray-50 px-4 py-3 transition-all focus-within:ring-2 focus-within:ring-[#52A0D8]/30 ${fieldErrors.phone ? 'border-red-400' : 'border-gray-300'}`}>
           <span className="text-gray-900 select-none whitespace-nowrap mr-0.5">+7 (</span>
           <input
             type="tel"
@@ -252,17 +290,21 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             onChange={handlePhoneChange}
             placeholder="___) ___-__-__"
             inputMode="numeric"
+            autoComplete="tel"
+            aria-invalid={Boolean(fieldErrors.phone)}
+            aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
             className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400 min-w-0"
             disabled={formState === 'loading'}
           />
         </div>
+        {fieldErrors.phone ? <p id="phone-error" className="mt-1.5 text-xs text-red-700" role="alert">{fieldErrors.phone}</p> : null}
       </div>
 
       {/* 🍯 Honeypot (P0.13): скрыто от людей, видно ботам.
           Если бот заполнит — на сервере отбрасываем тихо. */}
       <div
+        hidden
         aria-hidden="true"
-        className="absolute -left-[9999px] -top-[9999px] w-px h-px overflow-hidden"
       >
         <label htmlFor="website-bot-check">Website (do not fill)</label>
         <input
@@ -347,22 +389,38 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           min={1900}
           max={new Date().getFullYear()}
           value={birthYear}
-          onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          onChange={(e) => {
+            setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4));
+            clearFieldError('birthYear');
+          }}
           disabled={formState === 'loading'}
           placeholder="Например, 1990"
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-          required
+          inputMode="numeric"
+          autoComplete="bday-year"
+          aria-invalid={Boolean(fieldErrors.birthYear)}
+          aria-describedby={fieldErrors.birthYear ? 'birth-year-error' : 'birth-year-help'}
+          className={`w-full rounded-xl border px-4 py-3 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#52A0D8]/40 ${fieldErrors.birthYear ? 'border-red-400' : 'border-gray-200'}`}
         />
-        <p className="text-gray-500 text-xs mt-1">Сервис доступен только лицам старше 18 лет.</p>
+        {fieldErrors.birthYear ? (
+          <p id="birth-year-error" className="mt-1.5 text-xs text-red-700" role="alert">{fieldErrors.birthYear}</p>
+        ) : (
+          <p id="birth-year-help" className="mt-1 text-xs text-gray-500">Сервис доступен только лицам старше 18 лет.</p>
+        )}
       </div>
 
       {/* Согласие */}
       <label className="mb-3 flex items-start gap-3 cursor-pointer select-none">
         <input
+          id="privacy-consent"
           type="checkbox"
           checked={consentAccepted}
-          onChange={(e) => setConsentAccepted(e.target.checked)}
+          onChange={(e) => {
+            setConsentAccepted(e.target.checked);
+            clearFieldError('consent');
+          }}
           disabled={formState === 'loading'}
+          aria-invalid={Boolean(fieldErrors.consent)}
+          aria-describedby={fieldErrors.consent ? 'privacy-consent-error' : undefined}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span className="text-gray-500 text-xs leading-5">
@@ -379,6 +437,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           . Согласие относится только к заявке и обратной связи по ней.
         </span>
       </label>
+      {fieldErrors.consent ? <p id="privacy-consent-error" className="-mt-1 mb-3 pl-7 text-xs text-red-700" role="alert">{fieldErrors.consent}</p> : null}
 
       {/* Маркетинговое согласие — опционально (152-ФЗ ст.15) */}
       <details className="mb-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
@@ -410,9 +469,9 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       </details>
 
       {/* Ошибка */}
-      {errorMessage && (
+      {submitError && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-          {errorMessage}
+          {submitError}
         </div>
       )}
 

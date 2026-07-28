@@ -7,12 +7,12 @@
  *   GET  /payments/status   — Проверить статус платежа
  *
  * Env variables:
- *   YUKASSA_SHOP_ID     — ID магазина ЮKassa
- *   YUKASSA_SECRET_KEY  — Секретный ключ ЮKassa
+ *   LOCKBOX_PAYMENTS_SECRET_ID — dedicated Lockbox with YooKassa credentials
  *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD — PostgreSQL
  */
 
 const { getPool } = require('./shared/db-pool');
+const { getSecret } = require('./shared/lockbox-client');
 const { initSecrets } = require('./shared/secrets');
 const {
   extractBearerToken,
@@ -28,6 +28,35 @@ const crypto = require('crypto');
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const YUKASSA_API_URL = 'https://api.yookassa.ru/v3/payments';
+const REQUIRED_PAYMENT_SECRET_KEYS = ['YUKASSA_SHOP_ID', 'YUKASSA_SECRET_KEY'];
+let paymentSecretsPromise = null;
+let paymentCredentials = null;
+
+async function initPaymentSecrets() {
+  if (paymentSecretsPromise) return paymentSecretsPromise;
+
+  paymentSecretsPromise = (async () => {
+    const secretId = process.env.LOCKBOX_PAYMENTS_SECRET_ID;
+    if (!secretId) throw new Error('LOCKBOX_PAYMENTS_SECRET_ID not configured');
+
+    const secrets = await getSecret(secretId);
+    const missing = REQUIRED_PAYMENT_SECRET_KEYS.filter((key) => {
+      const value = secrets?.[key];
+      return typeof value !== 'string' || value.trim().length === 0;
+    });
+    if (missing.length > 0) {
+      throw new Error(`Payments Lockbox is missing required keys: ${missing.join(', ')}`);
+    }
+
+    paymentCredentials = Object.freeze({
+      shopId: secrets.YUKASSA_SHOP_ID,
+      secretKey: secrets.YUKASSA_SECRET_KEY,
+    });
+    return { loaded: REQUIRED_PAYMENT_SECRET_KEYS.length };
+  })();
+
+  return paymentSecretsPromise;
+}
 
 // ЮKassa notification IP ranges (https://yookassa.ru/developers/using-api/webhooks)
 // All webhook POSTs must originate from these CIDRs. IPv4 only — ЮKassa не шлёт с IPv6.
@@ -68,7 +97,7 @@ function isYukassaIp(rawIp) {
 const PLANS = {
   base: { price: 490, name: 'Self', description: 'HEYS Self подписка на 1 месяц' },
   pro: { price: 7990, name: 'Pro', description: 'HEYS Pro подписка на 1 месяц' },
-  proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' },
+  proplus: { price: 19990, name: 'Pro Спорт', description: 'HEYS Pro Спорт — сопровождение на 1 месяц' },
 };
 
 // PostgreSQL — используем shared/db-pool (getPool() ниже), он сам грузит CA cert.
@@ -190,8 +219,8 @@ async function sendMetricaEvent(client, funnelEvent, pageUrl) {
 
 // ЮKassa Basic Auth header
 function getYukassaAuthHeader() {
-  const shopId = process.env.YUKASSA_SHOP_ID;
-  const secretKey = process.env.YUKASSA_SECRET_KEY;
+  const shopId = paymentCredentials?.shopId;
+  const secretKey = paymentCredentials?.secretKey;
 
   if (!shopId || !secretKey) {
     throw new Error('YUKASSA_SHOP_ID or YUKASSA_SECRET_KEY not configured');
@@ -477,43 +506,6 @@ async function createPayment(body, clientId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Проверка HMAC-подписи webhook'а ЮKassa.
- * Опциональная — если YUKASSA_WEBHOOK_SECRET не задан в env, пропускаем
- * (только IP-allowlist). Это позволяет постепенно мигрировать на HMAC после
- * настройки секрета в кабинете ЮKassa.
- *
- * @param {string} rawBody — raw HTTP body запроса
- * @param {object} headers — event.headers
- * @returns {{ok: true} | {ok: false, reason: string}}
- */
-function verifyWebhookSignature(rawBody, headers) {
-  const secret = process.env.YUKASSA_WEBHOOK_SECRET;
-  if (!secret) {
-    return { ok: true, reason: 'no-secret-configured' };
-  }
-
-  const signature =
-    headers?.['x-webhook-signature'] ||
-    headers?.['X-Webhook-Signature'] ||
-    headers?.['authorization']?.replace(/^Bearer\s+/i, '') ||
-    headers?.['Authorization']?.replace(/^Bearer\s+/i, '') ||
-    null;
-
-  if (!signature || typeof signature !== 'string') {
-    return { ok: false, reason: 'no-signature' };
-  }
-
-  const computed = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
-
-  // Используем timingSafeEqual для защиты от timing-атак
-  const sigBuf = Buffer.from(signature, 'hex');
-  const expBuf = Buffer.from(computed, 'hex');
-  if (sigBuf.length !== expBuf.length) return { ok: false, reason: 'sig-length-mismatch' };
-  const valid = crypto.timingSafeEqual(sigBuf, expBuf);
-  return valid ? { ok: true } : { ok: false, reason: 'sig-mismatch' };
-}
-
-/**
  * Идемпотентная обработка одного события ЮKassa (webhook или poll-результат).
  * Используется и в handleWebhook, и в cron-poll (P0.4).
  *
@@ -715,10 +707,10 @@ async function applyPaymentStatus(client, ctx) {
 /**
  * Проверка internal-cron-token. Используется для poll-фолбэка (P0.4),
  * когда наш внутренний скрипт получает свежий статус из ЮKassa и хочет
- * передать его в общий webhook-pipeline без IP-allowlist и HMAC.
+ * передать его в общий webhook-pipeline без IP-allowlist.
  *
  * Токен хранится в env INTERNAL_CRON_TOKEN. Если задан — заголовок
- * X-Internal-Cron-Token должен совпадать. Это альтернатива IP/HMAC проверкам.
+ * X-Internal-Cron-Token должен совпадать. Это альтернатива IP-проверке.
  */
 function isInternalCronCall(headers) {
   const expected = process.env.INTERNAL_CRON_TOKEN;
@@ -748,18 +740,8 @@ async function handleWebhook(body, event) {
       return jsonResponse(403, { error: 'Forbidden' });
     }
 
-    // 🔐 HMAC-проверка подписи (если YUKASSA_WEBHOOK_SECRET настроен)
-    const rawBody = typeof event?.body === 'string' ? event.body : JSON.stringify(body || {});
-    const sigCheck = verifyWebhookSignature(rawBody, headers);
-    if (!sigCheck.ok) {
-      console.warn(`[WEBHOOK] HMAC signature check failed: ${sigCheck.reason}`);
-      return jsonResponse(403, { error: 'Invalid signature', reason: sigCheck.reason });
-    }
-    if (sigCheck.reason === 'no-secret-configured') {
-      console.warn('[WEBHOOK] YUKASSA_WEBHOOK_SECRET not set — relying on IP allowlist only');
-    }
   } else {
-    console.log('[WEBHOOK] Internal cron call accepted (IP/HMAC checks skipped)');
+    console.log('[WEBHOOK] Internal cron call accepted (IP check skipped)');
   }
 
   // sourceIp для аудита — для cron берём фиксированный маркер
@@ -1056,6 +1038,7 @@ async function authenticateClientRequest(event, requestedClientId) {
 
 module.exports.handler = async function (event, context) {
   await initSecrets();
+  await initPaymentSecrets();
   // Set CORS headers based on request origin
   const requestOrigin = event.headers?.['origin'] || event.headers?.['Origin'] || '';
   _currentCorsHeaders = getCorsHeaders(requestOrigin);

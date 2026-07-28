@@ -115,11 +115,13 @@ Legacy bundle, production build, browser smoke, deploy, commit и push не
 2. **STOP — publication.** Source не опубликован: DB/backend/landing/web
    потребуют согласованного integration flow, deploy и production smoke по
    отдельной команде.
-3. **STOP — migration first.** `2026-07-27_consent_proof_v2` теперь является
-   migration № 9 в managed ledger. Frontend и backend deploy fail-closed, пока
-   она pending; server allowlist не даст локальной или будущей сборке записать
-   неопубликованную/устаревшую версию. Runtime bundle отдельно сверяется с
-   manifest до upload.
+3. **STOP — migration first.** `2026-07-27_consent_proof_v2` зафиксирована как
+   применённая migration № 9 и не переписывается. Переход user agreement и
+   payment oferta на `1.8` выполняет отдельная forward-only migration № 11
+   `2026-07-28_activate_user_agreement_v1_8`; frontend и backend deploy
+   fail-closed, пока она pending. Server allowlist не даст сборке записать
+   неопубликованную версию, а runtime bundle отдельно сверяется с manifest до
+   upload.
 4. **External sign-off.** Юрист РФ должен письменно утвердить health ПЭП-модель,
    обязательный состав health 2.0, retention/backups, Telegram cross-border
    disclosure и договорную модель возвратов. До массовой автоматизированной

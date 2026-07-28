@@ -1,10 +1,10 @@
 # Подписка, trial, paywall и платежи
 
-> **Статус:** client access core проверен 2026-07-18; payment code-path —
-> 2026-07-17<br> **Охват:** статусы, кэш, write gate, trial UI, payment
-> create/status/webhook/refund, auth и идемпотентность<br> **Не подтверждено:**
-> фактический deployment payment routes, production env, webhook secret и
-> состояние таблиц/миграций
+> **Статус:** client access core проверен 2026-07-18; тарифный контракт обновлён
+> 2026-07-28; payment code-path — 2026-07-17<br> **Охват:** статусы, кэш, write
+> gate, trial UI, payment create/status/webhook/refund, auth и
+> идемпотентность<br> **Не подтверждено:** фактический deployment payment
+> routes, production env, webhook secret и состояние таблиц/миграций
 
 ## Назначение и границы
 
@@ -97,6 +97,12 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 `activateTrialTimer()` также помечен deprecated в коде после перехода к
 выбранной куратором дате; новый flow не должен строиться на этих legacy API.
 
+Пробная неделя относится только к Pro. Pro Спорт использует сохранённый
+внутренний plan-id `proplus`, но публично называется «Pro Спорт», стоит 19 990
+₽/мес и подключается только после личного согласования. В paywall прямой платёж
+этого плана не открывается: пользователь направляется в существующий ручной
+контур, а платёж создаётся только после подтверждения места.
+
 Отдельный `refreshProfileSubscription()` обновляет профиль после auth, но не
 пишет subscription-only объект поверх ещё не загруженного полного профиля. При
 неполном local profile обновляется только отдельный status cache, а профиль
@@ -115,8 +121,9 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 
 ### Webhook / polling
 
-1. Внешний webhook проверяет IP allowlist; HMAC проверяется только если secret
-   настроен.
+1. Внешний webhook проверяет IP allowlist. Отдельная custom HMAC-ветка
+   `YUKASSA_WEBHOOK_SECRET` удалена: YooKassa не предоставляет этот секрет в
+   используемом контуре.
 2. Event вставляется в `payment_events` с unique constraint. Duplicate завершает
    обработку без повторных mutation.
 3. Payment row и client subscription обновляются в одной DB transaction.
@@ -144,6 +151,8 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 9. Payment UI нельзя считать активным только потому, что backend-код существует.
 10. Неизвестный или ещё загружаемый статус блокирует запись, но не отображается
     пользователю как подтверждённое окончание триала.
+11. Внутренний id `proplus` — техническая совместимость, а не публичное название
+    тарифа; пользователь видит «Pro Спорт».
 
 ## Подтверждённые слабые места и пробелы
 
@@ -152,8 +161,12 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 - Payment routes присутствуют только в `api-gateway-spec-v2.yaml`, где есть TODO
   о замене function id; в основном `api-gateway-spec.yaml` их нет. Deployment
   wiring по репозиторию не подтверждён.
-- HMAC webhook fail-open при отсутствии `YUKASSA_WEBHOOK_SECRET` и полагается
-  только на IP allowlist. Фактическое env-состояние не проверено.
+- `YUKASSA_SHOP_ID` и `YUKASSA_SECRET_KEY` должны загружаться из отдельного
+  Lockbox secret, заданного через `LOCKBOX_PAYMENTS_SECRET_ID`. CI preflight
+  читает payload только этого секрета и проверяет наличие двух непустых ключей,
+  не выводя значения.
+- До внешней настройки secret, IAM-доступа и repository variable первый deploy
+  `heys-api-payments` остаётся заблокирован.
 - Комментарии вокруг auto-start trial противоречат более новому curator-date
   flow; deprecated functions нельзя использовать как описание продукта.
 
@@ -178,7 +191,7 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 | B4  | Parameterized, consumer и boot-order contract проходят                                    | `pnpm vitest run apps/web/__tests__/subscription-curator-guard.test.js --no-coverage`                                                                                                                                                                               | 24/24 пройдено 2026-07-18 |
 | B5  | Payment UI feature flag default false                                                     | `rg -n -e 'paymentsEnabled = false' -e 'HEYS.config.paymentsEnabled' apps/web/heys_subscriptions_v1.js`                                                                                                                                                             | проверено 2026-07-17      |
 | B6  | Create/status используют client auth, refund curator auth, webhook отдельный path         | `sed -n '1080,1120p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                             | проверено 2026-07-17      |
-| B7  | Webhook использует IP gate и optional HMAC                                                | `sed -n '720,750p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                               | проверено 2026-07-17      |
+| B7  | Webhook использует IP allowlist; custom HMAC-secret отсутствует                           | `rg -n 'isYukassaIp\|YUKASSA_WEBHOOK_SECRET' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                     | проверено 2026-07-28      |
 | B8  | Event dedupe предшествует transactional subscription mutation                             | `sed -n '498,690p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                               | проверено 2026-07-17      |
 | B9  | Основной gateway spec не содержит payment routes, v2 содержит TODO routes                 | `rg -n 'payments' yandex-cloud-functions/api-gateway-spec.yaml yandex-cloud-functions/api-gateway-spec-v2.yaml`                                                                                                                                                     | проверено 2026-07-17      |
 | B10 | Metadata получает `canWrite` из того же helper                                            | `sed -n '375,430p' apps/web/heys_subscription_v1.js`                                                                                                                                                                                                                | исправлено 2026-07-18     |

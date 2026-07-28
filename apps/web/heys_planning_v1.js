@@ -20,6 +20,7 @@
         { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
         { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
         { id: 'reading', label: 'Книги', shortLabel: 'Книги', icon: 'К' },
+        { id: 'games', label: 'Игры', shortLabel: 'Игры', icon: '🎮' },
     ];
     const SUBNAV_RENDER_ITEMS = SUBNAV_ITEMS;
     const DEFAULT_HOME_SCREEN = 'calendar';
@@ -62,6 +63,384 @@
                     'Planning modules ещё загружаются. Обнови экран, если состояние зависло.',
                 ),
             ),
+        );
+    }
+
+    const PlanningGames = HEYS.PlanningGames = HEYS.PlanningGames || {};
+    PlanningGames.modules = PlanningGames.modules || {};
+
+    const PLANNING_GAMES = Object.freeze([
+        Object.freeze({
+            id: 'word-builder',
+            title: 'Собери слово',
+            category: 'Чтение',
+            number: '01',
+            description: 'Сложи слово из слогов',
+            script: 'heys_planning_game_word_builder_v1.js',
+            style: 'styles/modules/909-planning-game-word-builder.css',
+            apiMethods: ['validateContent', 'createSession', 'evaluateSelection'],
+        }),
+        Object.freeze({
+            id: 'robot-route',
+            title: 'Маршрут робота',
+            category: 'Логика',
+            number: '02',
+            description: 'Составь путь до цели',
+            script: 'heys_planning_game_robot_route_v1.js',
+            style: 'styles/modules/910-planning-game-robot-route.css',
+            apiMethods: ['validateLevels', 'createSession', 'bfsShortestPath', 'executeProgram'],
+        }),
+        Object.freeze({
+            id: 'color-trail',
+            title: 'Цветной след',
+            category: 'Аркада',
+            number: '03',
+            description: 'Замыкай контуры и расширяй территорию',
+            script: 'heys_planning_game_color_trail_v1.js',
+            style: 'styles/modules/911-planning-game-color-trail.css',
+            apiMethods: ['createWorld', 'stepWorld', 'closeTrail', 'getTerritoryPercent', 'validateWorld'],
+        }),
+    ]);
+
+    const gameResourceCache = new Map();
+
+    function buildPlanningGameResourceUrl(file) {
+        const version = HEYS?.version;
+        const suffix = version ? '?v=' + encodeURIComponent(String(version)) : '';
+        try {
+            return new URL(file + suffix, document.baseURI).href;
+        } catch (_) {
+            return file + suffix;
+        }
+    }
+
+    function getPlanningGameNonce() {
+        const source = document.querySelector('script[nonce]');
+        return source?.nonce || source?.getAttribute?.('nonce') || '';
+    }
+
+    function loadPlanningGameResource(game, type) {
+        const file = type === 'script' ? game.script : game.style;
+        const key = game.id + ':' + type;
+        const cached = gameResourceCache.get(key);
+
+        if (cached?.status === 'ready' || cached?.status === 'loading') {
+            return cached.promise;
+        }
+
+        cached?.node?.remove?.();
+        const attempt = (cached?.attempt || 0) + 1;
+        const url = buildPlanningGameResourceUrl(file);
+        const node = type === 'script'
+            ? document.createElement('script')
+            : document.createElement('link');
+        const entry = { status: 'loading', attempt, node, url, promise: null, error: null };
+
+        node.dataset.heysGameResourceType = type;
+        node.dataset.heysGameId = game.id;
+        node.dataset.heysGameUrl = url;
+        node.dataset.heysGameAttempt = String(attempt);
+
+        if (type === 'script') {
+            node.src = url;
+            node.async = true;
+        } else {
+            node.rel = 'stylesheet';
+            node.href = url;
+        }
+
+        const nonce = getPlanningGameNonce();
+        if (nonce) node.setAttribute('nonce', nonce);
+
+        entry.promise = new Promise((resolve, reject) => {
+            node.onload = () => {
+                entry.status = 'ready';
+                entry.error = null;
+                resolve(node);
+            };
+            node.onerror = () => {
+                const error = new Error('Не удалось загрузить ' + type + ' для игры ' + game.id);
+                entry.status = 'error';
+                entry.error = error;
+                reject(error);
+            };
+        });
+
+        gameResourceCache.set(key, entry);
+        document.head.appendChild(node);
+        return entry.promise;
+    }
+
+    function assertPlanningGameModule(game) {
+        const module = PlanningGames.modules?.[game.id];
+        const api = module?.api;
+        const isValid = typeof module?.Component === 'function'
+            && api?.version === 1
+            && game.apiMethods.every((name) => typeof api[name] === 'function');
+
+        if (isValid) return module;
+
+        const scriptEntry = gameResourceCache.get(game.id + ':script');
+        if (scriptEntry) {
+            scriptEntry.status = 'error';
+            scriptEntry.error = new Error('Игровой модуль зарегистрирован с неверным контрактом');
+            scriptEntry.node?.remove?.();
+        }
+        throw scriptEntry?.error || new Error('Игровой модуль недоступен');
+    }
+
+    function loadPlanningGame(game) {
+        return Promise.all([
+            loadPlanningGameResource(game, 'style'),
+            loadPlanningGameResource(game, 'script'),
+        ]).then(() => assertPlanningGameModule(game));
+    }
+
+    PlanningGames.catalog = PLANNING_GAMES;
+    PlanningGames.loader = {
+        loadGame: loadPlanningGame,
+        getResourceState(gameId, type) {
+            const entry = gameResourceCache.get(gameId + ':' + type);
+            return entry ? {
+                status: entry.status,
+                attempt: entry.attempt,
+                url: entry.url,
+                error: entry.error,
+            } : { status: 'idle', attempt: 0, url: '', error: null };
+        },
+    };
+
+    function GameBackIcon() {
+        return h('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' },
+            h('path', {
+                d: 'M15 18l-6-6 6-6',
+                stroke: 'currentColor',
+                strokeWidth: 2,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+            }),
+        );
+    }
+
+    function GameArrowIcon() {
+        return h('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' },
+            h('path', {
+                d: 'M5 12h14m-5-5 5 5-5 5',
+                stroke: 'currentColor',
+                strokeWidth: 2,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+            }),
+        );
+    }
+
+    function GameCardArt({ gameId }) {
+        if (gameId === 'word-builder') {
+            return h('span', { className: 'planning-game-card__art planning-game-card__art--word', 'aria-hidden': 'true' },
+                h('span', null, 'СО'), h('span', null, 'ВА'),
+            );
+        }
+        if (gameId === 'robot-route') {
+            return h('span', { className: 'planning-game-card__art planning-game-card__art--robot', 'aria-hidden': 'true' },
+                h('span', { className: 'planning-game-card__robot-face' }, '•‿•'),
+                h('span', { className: 'planning-game-card__robot-path' }),
+            );
+        }
+        return h('span', { className: 'planning-game-card__art planning-game-card__art--trail', 'aria-hidden': 'true' },
+            h('span'), h('span'), h('span'),
+        );
+    }
+
+    function GamePreloader({ game }) {
+        const label = 'Загружается игра «' + game.title + '»';
+        return h('div', {
+            className: 'planning-game-loader planning-game-loader--' + game.id,
+            role: 'status',
+            'aria-live': 'polite',
+            'aria-label': label,
+        },
+            h('div', { className: 'planning-game-loader__art', 'aria-hidden': 'true' },
+                game.id === 'word-builder' && h(React.Fragment, null,
+                    h('span', null, 'СО'), h('span', null, 'ВА'),
+                ),
+                game.id === 'robot-route' && h(React.Fragment, null,
+                    h('span'), h('span'), h('span'), h('span'), h('i'),
+                ),
+                game.id === 'color-trail' && h(React.Fragment, null,
+                    h('span'), h('span'), h('span'), h('span'),
+                ),
+            ),
+            h('p', null, 'Загрузка…'),
+        );
+    }
+
+    function GameReader({ game, onRequestClose, returnFocusRef }) {
+        const rootRef = useRef(null);
+        const closeRef = useRef(null);
+        const loadTokenRef = useRef(0);
+        const [retryKey, setRetryKey] = useState(0);
+        const [loadState, setLoadState] = useState({ phase: 'loading', module: null, error: null });
+
+        useEffect(() => {
+            if (typeof document === 'undefined' || !rootRef.current) return undefined;
+
+            const body = document.body;
+            const root = rootRef.current;
+            const siblings = Array.from(body.children).filter((node) => node !== root);
+            const previous = siblings.map((node) => ({
+                node,
+                inert: node.inert,
+                ariaHidden: node.getAttribute('aria-hidden'),
+            }));
+
+            previous.forEach(({ node }) => {
+                node.inert = true;
+                node.setAttribute('aria-hidden', 'true');
+            });
+            body.classList.add('planning-game-reader-open');
+            closeRef.current?.focus();
+
+            const handleKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    onRequestClose();
+                    return;
+                }
+
+                if (event.key === 'Tab') {
+                    const focusable = Array.from(root.querySelectorAll(
+                        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), '
+                        + 'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                    )).filter((node) => node.getAttribute('aria-hidden') !== 'true');
+                    const first = focusable[0] || closeRef.current;
+                    const last = focusable[focusable.length - 1] || first;
+
+                    if (event.shiftKey && document.activeElement === first) {
+                        event.preventDefault();
+                        last?.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault();
+                        first?.focus();
+                    }
+                }
+            };
+
+            document.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.removeEventListener('keydown', handleKeyDown);
+                previous.forEach(({ node, inert, ariaHidden }) => {
+                    node.inert = inert;
+                    if (ariaHidden == null) node.removeAttribute('aria-hidden');
+                    else node.setAttribute('aria-hidden', ariaHidden);
+                });
+                body.classList.remove('planning-game-reader-open');
+                returnFocusRef.current?.focus?.();
+            };
+        }, [onRequestClose, returnFocusRef]);
+
+        useEffect(() => {
+            const token = ++loadTokenRef.current;
+            let active = true;
+            setLoadState({ phase: 'loading', module: null, error: null });
+
+            loadPlanningGame(game).then((module) => {
+                if (!active || token !== loadTokenRef.current) return;
+                setLoadState({ phase: 'ready', module, error: null });
+            }).catch((error) => {
+                if (!active || token !== loadTokenRef.current) return;
+                setLoadState({ phase: 'error', module: null, error });
+            });
+
+            return () => {
+                active = false;
+                loadTokenRef.current += 1;
+            };
+        }, [game, retryKey]);
+
+        const GameComponent = loadState.module?.Component;
+        const reducedMotion = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            : false;
+
+        const reader = h('div', {
+            ref: rootRef,
+            className: 'planning-game-reader',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-labelledby': 'planning-game-reader-title',
+        },
+            h('header', { className: 'planning-game-reader__header' },
+                h('button', {
+                    ref: closeRef,
+                    type: 'button',
+                    className: 'planning-game-reader__back',
+                    onClick: onRequestClose,
+                    'aria-label': 'Вернуться к играм',
+                }, h(GameBackIcon)),
+                h('span', { className: 'planning-game-reader__header-title' }, game.title),
+                h('span', { className: 'planning-game-reader__number', 'aria-hidden': 'true' }, game.number),
+            ),
+            h('main', { className: 'planning-game-reader__stage' },
+                h('h1', { id: 'planning-game-reader-title', className: 'planning-game-reader__title' }, game.title),
+                loadState.phase === 'loading' && h(GamePreloader, { game }),
+                loadState.phase === 'error' && h('div', {
+                    className: 'planning-game-reader__error',
+                    role: 'alert',
+                    'data-game-load-error': game.id,
+                },
+                    h('p', null, 'Не удалось загрузить игру'),
+                    h('button', {
+                        type: 'button',
+                        onClick: () => setRetryKey((value) => value + 1),
+                    }, 'Повторить'),
+                ),
+                loadState.phase === 'ready' && GameComponent && h(GameComponent, {
+                    onExit: onRequestClose,
+                    reducedMotion,
+                }),
+            ),
+        );
+
+        return ReactDOM?.createPortal ? ReactDOM.createPortal(reader, document.body) : reader;
+    }
+
+    function GamesScreen() {
+        const [activeGame, setActiveGame] = useState(null);
+        const returnFocusRef = useRef(null);
+
+        const openGame = (game, event) => {
+            returnFocusRef.current = event.currentTarget;
+            setActiveGame(game);
+        };
+
+        return h('section', { className: 'planning-games-screen', 'aria-labelledby': 'planning-games-title' },
+            h('header', { className: 'planning-games-screen__header' },
+                h('h1', { id: 'planning-games-title' }, 'Игры'),
+            ),
+            h('div', { className: 'planning-games-grid' }, PLANNING_GAMES.map((game) => h('button', {
+                key: game.id,
+                type: 'button',
+                className: 'planning-game-card planning-game-card--' + game.id,
+                onClick: (event) => openGame(game, event),
+                'aria-label': 'Открыть игру «' + game.title + '»',
+            },
+                h('span', { className: 'planning-game-card__number', 'aria-hidden': 'true' }, game.number),
+                h(GameCardArt, { gameId: game.id }),
+                h('span', { className: 'planning-game-card__content' },
+                    h('span', { className: 'planning-game-card__eyebrow' }, game.category),
+                    h('span', { className: 'planning-game-card__title' }, game.title),
+                    h('span', { className: 'planning-game-card__description' }, game.description),
+                ),
+                h('span', { className: 'planning-game-card__action', 'aria-hidden': 'true' },
+                    h('span', null, 'Открыть'),
+                    h(GameArrowIcon),
+                ),
+            ))),
+            activeGame && h(GameReader, {
+                game: activeGame,
+                onRequestClose: () => setActiveGame(null),
+                returnFocusRef,
+            }),
         );
     }
 
@@ -3120,6 +3499,7 @@
             if (activeScreen === 'checklists') return ChecklistsScreen;
             if (activeScreen === 'goals') return GoalSettingScreen;
             if (activeScreen === 'reading') return runtime.ReadingScreen;
+            if (activeScreen === 'games') return GamesScreen;
             return runtime.TasksScreen;
         }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.ReadingScreen, runtime.TasksScreen]);
 

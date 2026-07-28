@@ -659,6 +659,51 @@ describe('mergeHungerStatusEvents', () => {
     expect(mergeHungerStatusEvents(left, right)).toEqual(left);
   });
 
+  test('same id never regresses an answered outcome to a stale pending lifecycle state', () => {
+    const answered = event('same', '2026-07-21T12:00:00Z', '2026-07-21T12:31:00Z', {
+      outcome: 'hunger_passed',
+      outcomeAt: '2026-07-21T12:31:00Z',
+      outcomePlan: {
+        status: 'answered',
+        userReported: 'hunger_passed',
+        userReportedAt: '2026-07-21T12:31:00Z'
+      }
+    });
+    const stalePending = event('same', '2026-07-21T12:00:00Z', '2026-07-21T12:32:00Z', {
+      outcome: 'calculated',
+      outcomePlan: {
+        status: 'pending',
+        userReported: null,
+        snoozeCount: 1,
+        dueAt: '2026-07-21T12:47:00Z'
+      }
+    });
+
+    const left = mergeHungerStatusEvents([answered], [stalePending]);
+    const right = mergeHungerStatusEvents([stalePending], [answered]);
+
+    expect(left).toEqual(right);
+    expect(left[0]).toMatchObject({
+      outcome: 'hunger_passed',
+      outcomePlan: { status: 'answered', userReported: 'hunger_passed' }
+    });
+  });
+
+  test('same id uses mutation time instead of a timezone-less recorded wall clock', () => {
+    const stale = event('same', '2026-07-21T22:31:25', '2026-07-21T19:31:30Z', {
+      outcomePlan: { status: 'shown', shownAt: '2026-07-21T19:31:30Z' }
+    });
+    const fresh = event('same', '2026-07-21T22:31:25', '2026-07-21T19:34:00Z', {
+      outcomePlan: { status: 'superseded', supersededAt: '2026-07-21T19:34:00Z' }
+    });
+
+    const left = mergeHungerStatusEvents([stale], [fresh]);
+    const right = mergeHungerStatusEvents([fresh], [stale]);
+
+    expect(left).toEqual(right);
+    expect(left[0].outcomePlan.status).toBe('superseded');
+  });
+
   test('storage cap removes oldest events and preserves the newest tail', () => {
     const rows = Array.from({ length: 8 }, (_, index) => event(
       'event-' + index,

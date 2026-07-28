@@ -16,7 +16,9 @@ export interface PricingPlan {
 export const PRICING = {
   base: { name: 'Self', price: '490', period: '₽/мес' },
   pro: { name: 'Pro', price: '7 990', period: '₽/мес' },
-  proPlus: { name: 'Pro+', price: '14 990', period: '₽/мес' },
+  // Внутренний ключ proPlus сохранён для совместимости с paywall/payments.
+  // Публичный продукт с 2026-07-28 называется «Pro Спорт».
+  proPlus: { name: 'Pro Спорт', price: '19 990', period: '₽/мес' },
 } as const satisfies Record<string, PricingPlan>
 
 export type PricingPlanId = keyof typeof PRICING

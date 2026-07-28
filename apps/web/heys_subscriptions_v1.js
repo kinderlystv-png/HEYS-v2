@@ -30,7 +30,7 @@
   HEYS.config.prices = HEYS.config.prices || {
     base: 490,
     pro: 7990,
-    proPlus: 14990,
+    proPlus: 19990,
   };
 
   const CONFIG = {
@@ -64,15 +64,15 @@
       },
       proplus: {
         id: 'proplus',
-        name: 'Pro+',
+        name: 'Pro Спорт',
         price: HEYS.config.prices.proPlus,
         currency: 'RUB',
         features: [
           'Всё из Pro',
-          '7/7 без дежурного режима',
-          'Приоритетный SLA',
-          'Mid-week чек-ин',
-          'Онлайн-присутствие на 1 тренировке/нед.'
+          'Программа тренировок на 4 недели',
+          'Общий созвон 45–60 минут/нед.',
+          '1 корректировка в середине недели',
+          'Разбор до 2 упражнений/нед.'
         ]
       }
     },
