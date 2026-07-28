@@ -137,17 +137,17 @@ export default function PainSection() {
                             Если узнали себя — начните с недели Pro.
                         </p>
                         <p className="mt-2 text-[14px] sm:text-[15px] text-[#6b7280] leading-relaxed">
-                            За неделю куратор перенесёт первые приёмы в дневник, посмотрит ваш ритм и покажет, где день начинает сбиваться.
+                            За неделю куратор заполнит первые дни дневника, увидит, где ритм начинает сбиваться, и покажет, с чего начать.
                         </p>
                         <a
                             href="#trial"
-                            className="mt-5 inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-[#1D70B7] px-6 py-3 text-[14px] font-semibold tracking-wide text-white shadow-[0_10px_22px_rgba(29,112,183,0.16)] transition-all hover:bg-[#185F9D] active:scale-95"
+                            className="mt-5 inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#1D70B7] px-6 py-3 text-[14px] font-semibold tracking-wide text-white shadow-[0_10px_22px_rgba(29,112,183,0.16)] transition-all hover:bg-[#185F9D] active:scale-95"
                         >
-                            Оставить заявку на неделю Pro (0 ₽)
+                            Оставить заявку на 7 дней Pro
                             <span aria-hidden="true">→</span>
                         </a>
                         <p className="mt-3 text-[12px] text-[#8b95a1]">
-                            Без карты и автосписаний
+                            0 ₽ · без карты и автосписаний
                         </p>
                     </div>
                 </div>
