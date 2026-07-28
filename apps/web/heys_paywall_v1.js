@@ -357,6 +357,7 @@
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
     const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
+    const paymentsEnabled = HEYS.config?.paymentsEnabled === true;
 
     React.useEffect(() => {
       if (typeof document === 'undefined') return undefined;
@@ -421,7 +422,7 @@
         window.open(HEYS.support.telegramUrl, '_blank', 'noopener,noreferrer');
         return;
       }
-      if (clientId && window.HEYS?.YandexAPI?.createPayment) {
+      if (paymentsEnabled && clientId && window.HEYS?.YandexAPI?.createPayment) {
         // ЮKassa доступна — показываем PaymentScreen с чекбоксом оферты
         setShowPaymentScreen(true);
       } else {
@@ -433,7 +434,7 @@
     };
 
     // Если показываем PaymentScreen — рендерим его вместо плана
-    if (showPaymentScreen) {
+    if (paymentsEnabled && showPaymentScreen) {
       const clientId = getClientId();
       const SubscriptionsModule = window.HEYS?.Subscriptions;
 
@@ -813,6 +814,14 @@
    * Показать paywall модалку
    */
   function showPaywall(reason = 'subscription_required') {
+    if (
+      HEYS.config?.paymentsEnabled !== true &&
+      typeof HEYS.Subscriptions?.openCuratorContactModal === 'function'
+    ) {
+      HEYS.Subscriptions.openCuratorContactModal();
+      return;
+    }
+
     injectStyles();
 
     if (!_paywallContainer) {

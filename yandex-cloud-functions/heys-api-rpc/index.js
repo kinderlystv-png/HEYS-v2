@@ -996,7 +996,6 @@ const CURATOR_ONLY_FUNCTIONS = [
   // === SUBSCRIPTION MANAGEMENT ===
   'admin_extend_subscription',        // Продление подписки клиента
   'admin_cancel_subscription',        // Сброс подписки клиента
-  'admin_extend_trial',               // 🆕 Продление триала (JWT-only v2.0)
 
   // === TRIAL QUEUE ADMIN ===
   'admin_get_trial_queue_list',       // Список очереди с данными клиентов
@@ -4726,11 +4725,6 @@ async function handleRpcRequest(event, context) {
         'p_cursor_duration_ms': '::int',
         'p_limit': '::int',
         'p_include_nonproduction': '::boolean'
-      },
-      'admin_extend_trial': {
-        'p_client_id': '::uuid',
-        'p_days': '::int',
-        'p_curator_id': '::uuid'
       },
       'admin_extend_subscription': {
         'p_curator_id': '::uuid',

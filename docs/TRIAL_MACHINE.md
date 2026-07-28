@@ -253,7 +253,7 @@ await HEYS.TrialQueue.admin.convertLead(leadId, '1234'); // v3.0: create client 
 | `activate_trial_timer_by_session`    | Session | @deprecated v3.0 (куратор выбирает дату)  |
 | `admin_activate_trial`               | Admin   | Активировать триал с выбором даты (v3.0)  |
 | `admin_reject_request`               | Admin   | Отклонить заявку                          |
-| `admin_extend_trial`                 | Admin   | Продлить триал на N дней                  |
+| `admin_extend_subscription`          | Admin   | Продлить доступ клиента с ownership gate  |
 | `admin_get_leads`                    | Admin   | Список лидов с лендинга (v3.0)            |
 | `admin_convert_lead`                 | Admin   | Создать клиента из лида (v3.0)            |
 
@@ -262,8 +262,8 @@ await HEYS.TrialQueue.admin.convertLead(leadId, '1234'); // v3.0: create client 
 ```sql
 -- subscription_can_write(client_id) проверяется на каждую запись в KV:
 -- save_client_kv, upsert_client_kv, batch_upsert_client_kv, delete_client_kv
--- Разрешает: active, trial, trial_pending
--- Блокирует: read_only, none
+-- Разрешает: active, trial
+-- Блокирует: trial_pending, read_only, none
 ```
 
 ---
@@ -282,7 +282,7 @@ database/
 ├── 2025-12-24_subscriptions_and_sessions_yc.sql  # Subscriptions + sessions (YC)
 ├── 2025-12-25_subscription_write_guard.sql   # Write guard (KV protection)
 ├── 2025-01-10_fix_subscription_sync.sql      # Fix clients↔subscriptions sync
-├── 2026-02-04_extend_trials.sql              # admin_extend_trial
+├── 2026-02-04_extend_trials.sql              # legacy admin_extend_trial (runtime retired)
 ├── 2026-02-08_trial_machine_fix.sql          # v2.0: trial_approved_at + timer split
 └── 2026-02-09_trial_machine_v3.sql           # v3.0: curator picks start date + leads
 ```

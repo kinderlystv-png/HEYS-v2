@@ -316,7 +316,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             },
                 isReadOnly && HEYS.Paywall?.ReadOnlyBanner && React.createElement(HEYS.Paywall.ReadOnlyBanner, {
                     compact: false,
-                    onClick: () => HEYS.Paywall?.showPaywall?.('trial_expired')
+                    onClick: () => HEYS.Paywall?.show?.('trial_expired')
                 }),
 
                 // Offline cold-start warning overlay (only for today without local cache)

@@ -3,8 +3,10 @@
 > **Статус:** client access core проверен 2026-07-18; тарифный контракт обновлён
 > 2026-07-28; payment code-path — 2026-07-28<br> **Охват:** статусы, кэш, write
 > gate, trial UI, payment create/status/webhook/refund, auth и
-> идемпотентность<br> **Не подтверждено:** фактический deployment payment
-> routes, production env, webhook secret и состояние таблиц/миграций
+> идемпотентность<br> **Не подтверждено/Не охвачено:** production payment
+> rollout. **Deferred до отдельного post-trial этапа:** deployment
+> `heys-api-payments`, payment routes, отдельный Lockbox и credentials ЮKassa.
+> Их отсутствие не блокирует первые реальные trial.
 
 ## Назначение и границы
 
@@ -30,6 +32,11 @@ Payment UI (feature flag)
   → webhook/poll → payment_events dedupe
   → transaction: payment status + client subscription
 ```
+
+До отдельного разрешения `HEYS.config.paymentsEnabled` остаётся `false`. Все
+точки завершения trial направляют пользователя к куратору; payment UI и
+`createPayment` недостижимы. Продление первых trial выполняется куратором через
+существующий subscription-management flow и не зависит от ЮKassa.
 
 ## Статусы и владелец решения
 
@@ -153,8 +160,11 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
     пользователю как подтверждённое окончание триала.
 11. Внутренний id `proplus` — техническая совместимость, а не публичное название
     тарифа; пользователь видит «Pro Спорт».
+12. Legacy `admin_extend_trial` не входит в browser/backend runtime allowlist;
+    ручное продление выполняется только через ownership-checked
+    `admin_extend_subscription`.
 
-## Подтверждённые слабые места и пробелы
+## Отложенный post-trial payment этап
 
 - `HEYS.config.paymentsEnabled` по умолчанию `false`; UI направляет к куратору.
   Код payment screen/backend не доказывает, что платежи включены пользователям.
@@ -165,8 +175,9 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
   Lockbox secret, заданного через `LOCKBOX_PAYMENTS_SECRET_ID`. CI preflight
   читает payload только этого секрета и проверяет наличие двух непустых ключей,
   не выводя значения.
-- До внешней настройки secret, IAM-доступа и repository variable первый deploy
-  `heys-api-payments` остаётся заблокирован.
+- Настройка secret, IAM-доступа, repository variable и первый deploy
+  `heys-api-payments` выполняются только отдельным этапом после появления первых
+  реальных trial. Это осознанное deferred-state, а не текущий релизный блокер.
 - Комментарии вокруг auto-start trial противоречат более новому curator-date
   flow; deprecated functions нельзя использовать как описание продукта.
 

@@ -18,6 +18,16 @@ const paywallModuleSource = fs.readFileSync(paywallModulePath, 'utf8');
 const dayHandlersSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_day_handlers.js'), 'utf8');
 const mealsSource = fs.readFileSync(path.resolve(__dirname, '../day/_meals.js'), 'utf8');
 const dayTabRenderSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_render_v1.js'), 'utf8');
+const dayPageShellSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_page_shell.js'), 'utf8');
+const yandexApiSource = fs.readFileSync(path.resolve(__dirname, '../heys_yandex_api_v1.js'), 'utf8');
+const rpcGatewaySource = fs.readFileSync(
+  path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+  'utf8',
+);
+const extendSubscriptionSql = fs.readFileSync(
+  path.resolve(__dirname, '../../../database/2026-02-08_fix_extend_and_curator_clients.sql'),
+  'utf8',
+);
 
 function createMockStorage(seed = {}) {
   const store = { ...seed };
@@ -256,6 +266,48 @@ describe('HEYS.Subscription curator guard', () => {
     expect(dayTabRenderSource).not.toContain(
       'heysRef.Subscription?.canWriteStatus?.(subscriptionStatus) !== true',
     );
+  });
+
+  it('keeps legacy payment entry points closed while payments are disabled', () => {
+    const paymentCta = paywallModuleSource.slice(
+      paywallModuleSource.indexOf('const handleCTA = () =>'),
+      paywallModuleSource.indexOf('// Если показываем PaymentScreen'),
+    );
+    const showPaywallSource = paywallModuleSource.slice(
+      paywallModuleSource.indexOf('function showPaywall('),
+      paywallModuleSource.indexOf('function hidePaywall('),
+    );
+
+    expect(paymentCta).toContain('paymentsEnabled && clientId');
+    expect(showPaywallSource).toContain('HEYS.config?.paymentsEnabled !== true');
+    expect(showPaywallSource).toContain('HEYS.Subscriptions.openCuratorContactModal()');
+    expect(dayPageShellSource).toContain("HEYS.Paywall?.show?.('trial_expired')");
+    expect(dayPageShellSource).not.toContain('HEYS.Paywall?.showPaywall?.');
+  });
+
+  it('retires unsafe legacy trial extension and keeps the owned subscription path', () => {
+    const webCuratorFunctions = yandexApiSource.slice(
+      yandexApiSource.indexOf('const CURATOR_ONLY_FUNCTIONS = ['),
+      yandexApiSource.indexOf('/**\n   * RPC вызов'),
+    );
+    const rpcCuratorFunctions = rpcGatewaySource.slice(
+      rpcGatewaySource.indexOf('const CURATOR_ONLY_FUNCTIONS = ['),
+      rpcGatewaySource.indexOf('// === P1-B: Curator audit middleware'),
+    );
+    const rpcTypeHints = rpcGatewaySource.slice(
+      rpcGatewaySource.indexOf("'admin_extend_subscription':"),
+      rpcGatewaySource.indexOf("'admin_cancel_subscription':"),
+    );
+
+    expect(webCuratorFunctions).toContain("'admin_extend_subscription'");
+    expect(rpcCuratorFunctions).toContain("'admin_extend_subscription'");
+    expect(webCuratorFunctions).not.toContain("'admin_extend_trial'");
+    expect(rpcCuratorFunctions).not.toContain("'admin_extend_trial'");
+    expect(rpcTypeHints).not.toContain("'admin_extend_trial':");
+    expect(extendSubscriptionSql).toContain('v_client.curator_id != p_curator_id');
+    expect(extendSubscriptionSql).toContain("'error', 'access_denied'");
+    expect(extendSubscriptionSql).toContain('public.get_effective_subscription_status(p_client_id)');
+    expect(extendSubscriptionSql).toContain('active_until = v_new_end_date');
   });
 
   it('blocks PIN write access when status cache is missing and local status is none', () => {

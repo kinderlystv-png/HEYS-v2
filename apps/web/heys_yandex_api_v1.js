@@ -503,7 +503,6 @@
     // === SUBSCRIPTION MANAGEMENT ===
     'admin_extend_subscription',
     'admin_cancel_subscription',
-    'admin_extend_trial',
 
     // === TRIAL QUEUE ADMIN ===
     'admin_get_trial_queue_list',

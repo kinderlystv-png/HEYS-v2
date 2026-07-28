@@ -1,13 +1,13 @@
 # Отбор кандидатов на пробную неделю
 
-> **Статус:** production v1 опубликован 2026-07-27; source v2 подготовлен
-> локально и ещё не опубликован. **Охват:** landing handoff, consent,
-> session/RPC boundary, encrypted storage, client/curator UI, decision gate,
-> retention, DSAR и production smoke. Live app на момент preflight обслуживает
-> build `2026.07.28.0031.df3d1e8f` с consent `1.7/1.7/1.5`. **Не подтверждено/Не
-> охвачено:** production rollout и smoke именно для v2. Отдельное изменение РКН
-> для этого flow не требуется: опубликованная запись № 26-22-005319 уже
-> охватывает заявки/триалы, сопровождение и специальные данные о здоровье.
+> **Статус:** production v2 опубликован; migration ledger и live-контур
+> проверены 2026-07-28. **Охват:** landing handoff, consent, session/RPC
+> boundary, encrypted storage, client/curator UI, decision gate, retention, DSAR
+> и production smoke. Legal 1.8 активна, live legal drift проходит. **Не
+> подтверждено/Не охвачено:** post-trial payment rollout; он не входит в
+> контракт первого trial. Отдельное изменение РКН для этого flow не требуется:
+> опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
+> сопровождение и специальные данные о здоровье.
 
 ## Поток
 
@@ -53,7 +53,7 @@ read/check методы) исключены из gateway и у роли `heys_rp
 `?intake=1` после прохождения consent gate является эксклюзивным: обычный app
 shell и его onboarding-overlays не конкурируют с анкетой за фокус.
 
-## Production v1: статусы и решение
+## Статусы и решение
 
 `not_invited → invited → in_progress → completed`. Куратор вручную переводит
 завершённую анкету в `needs_clarification`, `approved` или `rejected`. Отказ
@@ -63,15 +63,14 @@ shell и его onboarding-overlays не конкурируют с анкето�
 нейтральный текст. Флаги безопасности подсвечиваются куратору, но не запускают
 диагноз или автоматический отказ.
 
-### Source v2 — подготовлен локально, не опубликован
+### Production v2
 
-Добавочная migration `2026-07-27_trial_intake_flow_v2.sql` вводит
+Migration `2026-07-27_trial_intake_flow_v2.sql` вводит
 `invite_prepared → invite_sent`, клиент-видимый зашифрованный запрос уточнений,
 обязательные явные safety-ответы схемы `1.1` и `approved_waiting_slot`.
 Неактивные приглашения/черновики/уточнения получают 30-дневный TTL; повторная
 заявка после 30 дней переиспользует существующего client, очищает прежний intake
-и отзывает старые сессии. Production продолжает работать по v1, пока v2
-migration/RPC/web не будут отдельно разрешены и опубликованы.
+и отзывает старые сессии.
 
 Финальный pre-release hardening v2 закрывает конкурентные и аварийные сценарии:
 `admin_prepare_trial_candidate_from_lead` атомарно выполняет convert→invite
@@ -133,16 +132,15 @@ chronology без содержимого анкеты, PIN, токенов, во
 11. Intake-managed кандидата нельзя удалить старым queue RPC; purge/revoke
     обязаны оставить activation-blocking tombstone.
 
-## Production v1: подтверждённое состояние и граница v2
+## Подтверждённое production-состояние
 
-- Основная migration и re-consent forward-fix применены; RPC и maintenance
-  активны, web/landing trial-сборка опубликована.
+- Managed migration ledger содержит trial intake v2 и legal 1.8; pending
+  migrations отсутствуют. RPC и maintenance активны, web/landing trial-сборка
+  опубликована.
 - Первичный production smoke подтвердил существующую PIN-сессию, consent,
   autosave/resume, curator ownership/IDOR, approval/activation и revoke/purge;
   три синтетических клиента удалены.
-- Live `build-meta.json`, consent bundle и versioned docs подтверждают
-  актуальные версии `1.7/1.7/1.5`. Этот legal-релиз уже является baseline и не
-  входит в trial-intake v2 scope.
+- Legal 1.8 активна в production; live legal drift проходит.
 - Data-change gate пройден: intake не меняет опубликованные цели, категории
   субъектов/данных, получателей, способы обработки или трансграничную передачу.
 
@@ -159,8 +157,8 @@ chronology без содержимого анкеты, PIN, токенов, во
 | TI7  | Существующий daily maintenance вызывает 30-дневную очистку intake                                                               | `trial-intake-flow.test.js`: retention invocation contract                         | проверено 2026-07-27          |
 | TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15 | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27          |
 | TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                              | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27          |
-| TI10 | Production rollout и полный synthetic smoke завершены; fixtures удалены                                                         | release-task evidence, build `2026.07.27.2016.d234cbee`                            | проверено 2026-07-27          |
-| TI11 | Live app и versioned docs используют consent `1.7/1.7/1.5`                                                                      | live build/consent bundle/docs read-only check                                     | проверено 2026-07-28          |
+| TI10 | Production rollout v2 и полный synthetic smoke завершены; fixtures удалены                                                      | release-task evidence + managed migration ledger                                   | проверено 2026-07-28          |
+| TI11 | Legal 1.8 активна, live legal drift проходит                                                                                    | live legal drift check + legal configs                                             | проверено 2026-07-28          |
 | TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                        | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27 |
 | TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                            | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27 |
 | TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                        | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27 |
