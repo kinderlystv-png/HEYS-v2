@@ -32,13 +32,12 @@ export default function ComparisonSection() {
             id="comparison"
             className="pb-16 md:pb-20 bg-slate-50 border-y border-slate-200 relative"
         >
-
-            <SectionBadgeBar>04 — ОТЛИЧИЕ ОТ ДИЕТ</SectionBadgeBar>
+            <SectionBadgeBar>04 — СРАВНЕНИЕ ФОРМАТОВ</SectionBadgeBar>
             <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <div
-                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-8 md:mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
                         <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
@@ -77,8 +76,7 @@ export default function ComparisonSection() {
                                         Трекер
                                     </p>
                                     <p className="mt-1 text-[15px] leading-relaxed text-gray-600">
-                                        Показывает красные цифры, но рутину дневника и следующий
-                                        шаг приходится держать самому.
+                                        Данные обычно приходится вносить самому. Трекер покажет цифры, но контекст недели и следующий шаг останутся на вас.
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-[#F1DCA8] bg-[#FFF9E8] px-4 py-4">
@@ -102,8 +100,7 @@ export default function ComparisonSection() {
                             </div>
                         </div>
                         <p className="mt-5 px-4 text-sm leading-relaxed text-gray-500">
-                            HEYS не заменяет врача или нутрициолога при медицинских показаниях.
-                            Отличие — в формате ежедневного ведения и единой истории.
+                            При медицинских показаниях HEYS не заменяет врача или нутрициолога.
                         </p>
                     </div>
                 </div>
