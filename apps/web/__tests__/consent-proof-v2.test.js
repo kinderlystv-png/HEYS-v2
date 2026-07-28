@@ -47,6 +47,8 @@ test('consent proof migration is managed and every registry hash matches the imm
     'speech_transcription',
   ]) {
     const document = manifest.documents[type];
+    assert.equal(sha256(document.canonicalPath), document.sha256);
+    assert.equal(sha256(document.snapshotPath), document.sha256);
     assert.match(
       registryMigrations,
       new RegExp(`\\('${type}', '${document.version}', '${document.sha256}', '${document.snapshotPath}', 'active'`),

@@ -7,7 +7,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST_PATH = 'docs/legal/legal-document-manifest.json';
-const MIGRATION_PATH = 'database/2026-07-27_consent_proof_v2.sql';
+const MIGRATION_PATHS = [
+  'database/2026-07-27_consent_proof_v2.sql',
+  'database/2026-07-28_activate_user_agreement_v1_8.sql',
+];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 const digest = (relativePath) => crypto.createHash('sha256').update(read(relativePath)).digest('hex');
@@ -59,7 +62,7 @@ function assertEntry(registry, type, document, status = 'active') {
 
 function verifySourceContract() {
   const manifest = JSON.parse(read(MANIFEST_PATH));
-  const migration = read(MIGRATION_PATH);
+  const migration = MIGRATION_PATHS.map(read).join('\n');
   const registry = parseRegistry(migration);
 
   for (const [type, document] of Object.entries(manifest.documents)) {
