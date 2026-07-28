@@ -289,7 +289,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
               </div>
               {content.hero.microtext ? (
                 <p
-                  className={`hero-mobile-micro text-[12px] text-[#6b7280] transition-all duration-700 ease-out md:text-[13px] ${
+                  className={`hero-mobile-micro whitespace-nowrap text-[12px] text-[#4b5563] transition-all duration-700 ease-out md:text-[13px] ${
                     mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                   }`}
                   style={{ transitionDelay: '1350ms' }}
