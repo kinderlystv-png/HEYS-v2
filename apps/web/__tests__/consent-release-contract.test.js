@@ -7,10 +7,11 @@ import { describe, expect, it } from 'vitest';
 const repo = path.resolve(__dirname, '../../..');
 const read = (relative) => fs.readFileSync(path.join(repo, relative), 'utf8');
 const hash = (relative) => crypto.createHash('sha256').update(read(relative)).digest('hex');
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 
-describe('27 July legal release contract', () => {
+describe('legal release contract', () => {
   it('verifies every canonical document against the version manifest', () => {
-    const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
     for (const item of Object.values(manifest.documents)) {
       expect(read(item.canonicalPath)).toBe(read(item.snapshotPath));
       expect(hash(item.snapshotPath)).toBe(item.sha256);
@@ -18,17 +19,24 @@ describe('27 July legal release contract', () => {
     }
   });
 
-  it('uses payment_oferta 1.7 consistently in frontend and backend', () => {
+  it('uses the manifest payment_oferta version consistently in frontend and backend', () => {
     const consentSource = read('apps/web/heys_consents_v1.js');
     const versionsSource = read('apps/web/heys_legal_versions_v1.js');
     const subscriptionsSource = read('apps/web/heys_subscriptions_v1.js');
     const paymentsSource = read('yandex-cloud-functions/heys-api-payments/index.js');
+    const paymentOferta = manifest.documents.payment_oferta;
+    const versionPattern = new RegExp(
+      `payment_oferta:\\s*'${escapeRegExp(paymentOferta.version)}'`,
+    );
 
-    expect(consentSource).toMatch(/payment_oferta:\s*'1\.7'/);
-    expect(versionsSource).toMatch(/payment_oferta:\s*'1\.7'/);
+    expect(consentSource).toMatch(versionPattern);
+    expect(versionsSource).toMatch(versionPattern);
     expect(subscriptionsSource).toContain('VERSIONS?.payment_oferta');
     expect(subscriptionsSource).not.toContain('VERSIONS?.user_agreement');
-    expect(paymentsSource).toContain("PAYMENT_OFERTA_VERSION = '1.7'");
+    expect(paymentsSource).toContain(
+      `PAYMENT_OFERTA_VERSION = '${paymentOferta.version}'`,
+    );
+    expect(paymentsSource).toContain(`'${paymentOferta.sha256}'`);
     expect(paymentsSource).toMatch(/document_version = \$2/);
     expect(paymentsSource).toMatch(/document_sha256 = \$3/);
     expect(paymentsSource).toContain('accepted_at IS NOT NULL');
@@ -36,15 +44,15 @@ describe('27 July legal release contract', () => {
 
   it('keeps current legal markdown byte-identical to each immutable snapshot', () => {
     for (const [current, snapshot] of [
-      ['apps/web/public/docs/user-agreement.md', 'apps/web/public/docs/v1.7/user-agreement.md'],
-      ['apps/web/public/docs/privacy-policy.md', 'apps/web/public/docs/v1.7/privacy-policy.md'],
-      ['apps/web/public/docs/refund.md', 'apps/web/public/docs/v1.1/refund.md'],
-      ['apps/web/public/docs/cookie-policy.md', 'apps/web/public/docs/v1.1/cookie-policy.md'],
+      ['apps/web/public/docs/user-agreement.md', manifest.documents.user_agreement.snapshotPath],
+      ['apps/web/public/docs/privacy-policy.md', manifest.documents.personal_data.snapshotPath],
+      ['apps/web/public/docs/refund.md', manifest.documents.refund.snapshotPath],
+      ['apps/web/public/docs/cookie-policy.md', manifest.documents.cookie_policy.snapshotPath],
       [
         'apps/web/public/docs/speech-transcription-consent.md',
-        'apps/web/public/docs/v1.1/speech-transcription-consent.md',
+        manifest.documents.speech_transcription.snapshotPath,
       ],
-      ['apps/web/public/docs/marketing-consent.md', 'apps/web/public/docs/v1.3/marketing-consent.md'],
+      ['apps/web/public/docs/marketing-consent.md', manifest.documents.marketing.snapshotPath],
     ]) {
       expect(read(current)).toBe(read(snapshot));
     }

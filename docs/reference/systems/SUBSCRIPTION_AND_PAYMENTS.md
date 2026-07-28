@@ -1,7 +1,7 @@
 # Подписка, trial, paywall и платежи
 
 > **Статус:** client access core проверен 2026-07-18; тарифный контракт обновлён
-> 2026-07-28; payment code-path — 2026-07-17<br> **Охват:** статусы, кэш, write
+> 2026-07-28; payment code-path — 2026-07-28<br> **Охват:** статусы, кэш, write
 > gate, trial UI, payment create/status/webhook/refund, auth и
 > идемпотентность<br> **Не подтверждено:** фактический deployment payment
 > routes, production env, webhook secret и состояние таблиц/миграций
@@ -197,3 +197,4 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 | B10 | Metadata получает `canWrite` из того же helper                                            | `sed -n '375,430p' apps/web/heys_subscription_v1.js`                                                                                                                                                                                                                | исправлено 2026-07-18     |
 | B11 | Девять diary write consumers и day UI fail-closed при отсутствующем модуле/unknown status | `rg -n 'Paywall\?\.canWriteSync                                                                                                                    \| canWriteStatus' apps/web/heys_day_day_handlers.js apps/web/day/\_meals.js apps/web/heys_day_tab_render_v1.js` | исправлено 2026-07-18     |
 | B12 | Legacy `Subscriptions.canEdit` и status metadata делегируют каноническому helper          | `rg -n 'canWriteStatus                                                                                                                             \| can_edit' apps/web/heys_subscriptions_v1.js`                                                                  | исправлено 2026-07-18     |
+| B13 | Payment backend требует ту же активную версию и SHA оферты, что manifest и consent UI     | `pnpm --dir apps/web exec vitest run __tests__/consent-release-contract.test.js --no-coverage`                                                                                                                                                                      | исправлено 2026-07-28     |
