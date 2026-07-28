@@ -8,8 +8,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const webDir = path.resolve(__dirname, '..');
 const repoDir = path.resolve(webDir, '../..');
 const sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow.sql'), 'utf8');
+const v2Sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow_v2.sql'), 'utf8');
 const intakeSource = fs.readFileSync(path.join(webDir, 'heys_trial_intake_v1.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(webDir, 'heys_trial_queue_v1.js'), 'utf8');
+const yandexApiSource = fs.readFileSync(path.join(webDir, 'heys_yandex_api_v1.js'), 'utf8');
 const rpcSource = fs.readFileSync(path.join(repoDir, 'yandex-cloud-functions/heys-api-rpc/index.js'), 'utf8');
 const maintenanceSource = fs.readFileSync(path.join(repoDir, 'yandex-cloud-functions/heys-maintenance/index.js'), 'utf8');
 const landingSource = fs.readFileSync(path.join(repoDir, 'apps/landing/src/components/TrialForm.tsx'), 'utf8');
@@ -19,15 +21,34 @@ const allowedRpcSource = rpcSource.slice(
   rpcSource.indexOf('const ALLOWED_FUNCTIONS = ['),
   rpcSource.indexOf('const COOKIE_SESSION_TOKEN_FUNCTIONS'),
 );
+const curatorRpcSource = rpcSource.slice(
+  rpcSource.indexOf('const CURATOR_ONLY_FUNCTIONS = ['),
+  rpcSource.indexOf('// === P1-B: Curator audit middleware'),
+);
+const curatorWebSource = yandexApiSource.slice(
+  yandexApiSource.indexOf('const CURATOR_ONLY_FUNCTIONS = ['),
+  yandexApiSource.indexOf('/**\n   * RPC вызов'),
+);
 
 const completedAnswers = {
   goals: { primary_goal: 'Наладить регулярное питание', success_definition: 'Стабильный режим' },
   experience: { previous_experience: 'self' },
   lifestyle: { schedule: 'Рабочий день', sleep: 'Около восьми часов' },
   collaboration: { daily_tracking: 'yes', feedback_style: 'concise' },
-  health: { doctor_restrictions: 'Нет' },
-  safety: { acute_symptoms: false },
-  meta: { schema_version: '1.0' },
+  health: {
+    chronic_conditions_status: 'no',
+    medications_status: 'no',
+    injuries_operations_status: 'no',
+    allergies_status: 'no',
+    doctor_restrictions_status: 'no',
+  },
+  safety: {
+    acute_symptoms: 'no',
+    recent_surgery: 'no',
+    active_ed_concern: 'no',
+    medical_supervision: 'no',
+  },
+  meta: { schema_version: '1.1' },
 };
 
 function sqlFunction(name, nextName) {
@@ -207,13 +228,113 @@ describe('protected trial intake contract', () => {
       'save_trial_intake_by_session',
       'admin_get_trial_intake_summaries',
       'admin_get_trial_intake',
-      'admin_review_trial_intake',
+      'admin_review_trial_intake_v2',
+      'admin_mark_trial_intake_invite_sent',
+      'admin_prepare_trial_candidate_from_lead',
+      'admin_reopen_trial_candidate',
     ]) {
       expect(rpcSource).toContain(`'${fn}'`);
+      if (fn.startsWith('admin_')) expect(yandexApiSource).toContain(`'${fn}'`);
     }
-    expect(queueSource).toContain('Пригласить к анкете');
+    expect(queueSource).toContain('Подготовить анкету');
     expect(queueSource).toContain('Готово к разбору');
-    expect(queueSource).toContain("submitIntakeReview('approved')");
+    expect(queueSource).toContain('Зафиксировать решение');
+  });
+
+  it('adds explicit invite, clarification and waiting-slot states without a second auth path', () => {
+    expect(v2Sql).toContain("'invite_prepared', 'invite_sent'");
+    expect(v2Sql).toContain("'approved_waiting_slot'");
+    expect(v2Sql).toContain('clarification_request_encrypted BYTEA');
+    expect(v2Sql).toContain('clarification_sections TEXT[]');
+    expect(v2Sql).toContain('admin_mark_trial_intake_invite_sent');
+    expect(v2Sql).toContain('admin_review_trial_intake_v2');
+    expect(v2Sql).toContain('admin_reopen_trial_candidate');
+    expect(v2Sql).toContain("token_hash = digest(p_session_token, 'sha256')");
+    expect(v2Sql).not.toContain('candidate_sessions');
+    expect(v2Sql).not.toContain('automatic_reject');
+    expect(queueSource).toContain('resumePreparedInvite');
+    expect(queueSource).toContain("['invite_prepared', 'invited', 'invite_sent'].includes(intake.status)");
+    expect(queueSource).toContain('Открыть приглашение');
+  });
+
+  it('requires explicit v1.1 safety answers and conditional health details', () => {
+    expect(v2Sql).toContain("COALESCE(p_answers #>> '{safety,acute_symptoms}', '') = ''");
+    expect(v2Sql).toContain("COALESCE(p_answers #>> '{safety,medical_supervision}', '') = ''");
+    expect(v2Sql).toContain("'conditional_details_missing'");
+    expect(intakeSource).toContain("['no', 'Нет'], ['yes', 'Да'], ['prefer_not'");
+    expect(intakeSource).toContain('ConditionalHealthField');
+    expect(intakeSource).not.toContain('function CheckField');
+  });
+
+  it('separates client clarification from the encrypted internal note', () => {
+    const reviewStart = v2Sql.indexOf('CREATE FUNCTION public.admin_review_trial_intake_v2');
+    const reviewEnd = v2Sql.indexOf('CREATE OR REPLACE FUNCTION public.purge_expired_trial_intakes', reviewStart);
+    const reviewFn = v2Sql.slice(reviewStart, reviewEnd);
+
+    expect(reviewFn).toContain('p_client_message TEXT');
+    expect(reviewFn).toContain('p_clarification_sections TEXT[]');
+    expect(reviewFn).toContain('clarification_request_encrypted');
+    expect(reviewFn).toContain('review_note_encrypted');
+    expect(intakeSource).toContain('clarification_request');
+    expect(intakeSource).toContain('Перейти к нужному разделу');
+    expect(queueSource).toContain('Вопрос клиенту');
+    expect(v2Sql).toContain("WHEN v_status = 'needs_clarification' THEN 'needs_clarification'");
+  });
+
+  it('uses a single curator decision CTA and treats capacity as waiting, not rejection', () => {
+    expect(queueSource).toContain('Зафиксировать решение');
+    expect(queueSource).toContain('Сохранить решение');
+    expect(queueSource).toContain('approved_waiting_slot');
+    expect(queueSource).not.toContain("submitIntakeReview('approved')");
+    const v2ReviewStart = v2Sql.indexOf('CREATE FUNCTION public.admin_review_trial_intake_v2');
+    const v2ReviewEnd = v2Sql.indexOf('CREATE OR REPLACE FUNCTION public.purge_expired_trial_intakes', v2ReviewStart);
+    const v2Review = v2Sql.slice(v2ReviewStart, v2ReviewEnd);
+    expect(v2Review).not.toContain("'no_capacity'");
+    expect(v2Review).toContain('decision_checklist_required');
+  });
+
+  it('purges abandoned drafts after 30 days and reopens rejected candidates explicitly', () => {
+    expect(v2Sql).toContain("'invite_prepared', 'invite_sent', 'invited'");
+    expect(v2Sql).toContain("NOW() - INTERVAL '30 days'");
+    expect(v2Sql).toContain("'reapply_cooldown'");
+    expect(v2Sql).toContain("status = 'invite_prepared'");
+    expect(v2Sql).toContain('answers_encrypted = NULL');
+    expect(v2Sql).toContain('UPDATE public.client_sessions');
+    expect(v2Sql).toContain("source = 'trial_intake_purged'");
+    expect(v2Sql).toContain("'intake_status', 'purged'");
+    expect(v2Sql).toContain('FOR UPDATE;');
+    expect(v2Sql).toContain("'reopen_trial_candidate'");
+  });
+
+  it('fails closed on stale tabs, partial curator data and retired shortcuts', () => {
+    expect(v2Sql).toContain('p_expected_updated_at TIMESTAMPTZ');
+    expect(v2Sql).toContain("'stale_draft'");
+    expect(v2Sql).toContain("'stale_intake'");
+    expect(v2Sql).toContain('admin_prepare_trial_candidate_from_lead');
+    expect(v2Sql).toContain('REVOKE EXECUTE ON FUNCTION public.admin_convert_lead(UUID, UUID) FROM PUBLIC');
+    expect(v2Sql).toContain("source IN ('trial_intake_purged', 'trial_intake_health_revoked')");
+    expect(v2Sql).toContain("'trial_intake_health_revoked'");
+    expect(intakeSource).toContain('p_expected_updated_at: expectedUpdatedAt || null');
+    expect(intakeSource).toContain('Повторить сохранение');
+    expect(queueSource).toContain('setIntakesReady(false)');
+    expect(queueSource).toContain('Действия временно заблокированы');
+    expect(queueSource).toContain('expectedUpdatedAt: intakeDialog.updated_at');
+    expect(queueSource).toContain('allowRemove: false');
+    expect(rpcSource).toContain("'Cache-Control': 'no-store'");
+    expect(curatorRpcSource).toContain("'admin_prepare_trial_candidate_from_lead'");
+    expect(curatorWebSource).toContain("'admin_prepare_trial_candidate_from_lead'");
+    expect(curatorRpcSource).not.toContain("'admin_convert_lead'");
+    expect(curatorWebSource).not.toContain("'admin_convert_lead'");
+  });
+
+  it('shows one owner-aware next action and protects waiting-slot activation', () => {
+    expect(queueSource).toContain('Действие куратора: отправить приглашение');
+    expect(queueSource).toContain('Ожидаем завершение анкеты кандидатом');
+    expect(queueSource).toContain('Действие куратора: разобрать анкету');
+    expect(queueSource).toContain('Ожидаем свободное место');
+    expect(queueSource).toContain("intakeStatus === 'approved_waiting_slot' && freeSlots <= 0");
+    expect(queueSource).toContain('Назначить дату старта');
+    expect(queueSource).toContain('Решение завершено · удаление анкеты через 30 дней');
   });
 
   it('logs PIN-client consent through the session-bound RPC with server-owned IP and UA', async () => {
@@ -304,6 +425,54 @@ describe('protected trial intake contract', () => {
         && params.p_complete === false
       ))).toBe(true);
     }, { timeout: 1800 });
+  });
+
+  it('does not advance after a failed save and offers a clear retry', async () => {
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: {
+            status: 'in_progress', current_step: 0,
+            answers: completedAnswers, updated_at: '2026-07-27T10:00:00.000Z',
+          },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: {
+        success: false, error: 'request_failed',
+      } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    window.scrollTo = vi.fn();
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    await screen.findByText('Шаг 1 из 6');
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
+
+    expect(screen.getByText('Шаг 1 из 6')).toBeTruthy();
+    expect(screen.getByText('Не удалось сохранить изменения. Проверьте интернет и повторите.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeTruthy();
+  });
+
+  it('keeps a prepared invite read-only until the curator marks it sent', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { get_trial_intake_by_session: {
+        success: true,
+        intake: { status: 'invite_prepared', current_step: 0, answers: {}, updated_at: '2026-07-27T10:00:00.000Z' },
+      } },
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    await screen.findByText('Приглашение ещё не отправлено');
+    expect(screen.queryByRole('button', { name: 'Продолжить' })).toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it('completes the questionnaire only through the server RPC', async () => {

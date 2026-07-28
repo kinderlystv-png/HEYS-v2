@@ -11,6 +11,7 @@ on:
       - "yandex-cloud-functions/heys-*/**"
       - "yandex-cloud-functions/shared/**"
       - "yandex-cloud-functions/deploy-all.sh"
+      - "yandex-cloud-functions/check-payments-secret-payload.cjs"
       - "yandex-cloud-functions/test-functions.sh"
       - "yandex-cloud-functions/function-inventory.cjs"
       - "yandex-cloud-functions/api-gateway-spec.yaml"
@@ -135,6 +136,7 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          LOCKBOX_PAYMENTS_SECRET_ID: ${{ vars.LOCKBOX_PAYMENTS_SECRET_ID }}
         run: |
           write_env_var() {
             local key="$1"
@@ -156,6 +158,7 @@ jobs:
           write_env_var TELEGRAM_CHAT_ID "__IN_LOCKBOX__heys-app-secrets__"
           write_env_var VAPID_PUBLIC_KEY "$VAPID_PUBLIC_KEY"
           write_env_var VAPID_SUBJECT "$VAPID_SUBJECT"
+          write_env_var LOCKBOX_PAYMENTS_SECRET_ID "$LOCKBOX_PAYMENTS_SECRET_ID"
           write_env_var YC_FOLDER_ID "${{ secrets.YC_FOLDER_ID }}"
 
       - name: Verify production database migrations are current

@@ -1,0 +1,446 @@
+.planning-robot-route {
+  --robot-ink: #2d315f;
+  --robot-muted: #73789a;
+  --robot-line: rgba(67, 69, 135, 0.16);
+  --robot-primary: #434587;
+  --robot-primary-strong: #36386f;
+  --robot-sky: #e2ecf2;
+  --robot-mint: #deeddb;
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: clamp(12px, 2.4vw, 28px);
+  color: var(--robot-ink);
+  outline: none;
+}
+
+.planning-robot-route:focus-visible {
+  border-radius: 18px;
+  box-shadow: 0 0 0 3px rgba(82, 160, 216, 0.38);
+}
+
+.planning-robot-route__topline,
+.planning-robot-route__program-head,
+.planning-robot-route__edit-actions,
+.planning-robot-route__result-actions {
+  display: flex;
+  align-items: center;
+}
+
+.planning-robot-route__topline {
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.planning-robot-route__eyebrow {
+  margin: 0 0 4px;
+  color: var(--robot-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.planning-robot-route h2,
+.planning-robot-route h3,
+.planning-robot-route p {
+  margin-top: 0;
+}
+
+.planning-robot-route h2 {
+  margin-bottom: 0;
+  font-size: clamp(24px, 4vw, 36px);
+  line-height: 1.12;
+}
+
+.planning-robot-route h3 {
+  margin-bottom: 0;
+  font-size: 17px;
+}
+
+.planning-robot-route__tier {
+  flex: none;
+  padding: 7px 11px;
+  border: 1px solid var(--robot-line);
+  border-radius: 999px;
+  color: var(--robot-primary);
+  background: rgba(226, 236, 242, 0.56);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.planning-robot-route__layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.08fr) minmax(280px, 0.92fr);
+  gap: clamp(20px, 4vw, 42px);
+  align-items: start;
+}
+
+.planning-robot-route__field-wrap,
+.planning-robot-route__panel {
+  min-width: 0;
+}
+
+.planning-robot-route__board {
+  display: grid;
+  grid-template-columns: repeat(var(--robot-grid-size), minmax(0, 1fr));
+  gap: clamp(5px, 1vw, 9px);
+  width: min(100%, 470px);
+  aspect-ratio: 1;
+  padding: clamp(8px, 1.4vw, 14px);
+  border: 1px solid var(--robot-line);
+  border-radius: 24px;
+  background: rgba(226, 236, 242, 0.42);
+  box-shadow: 0 14px 32px rgba(45, 49, 95, 0.08);
+}
+
+.planning-robot-route__cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border: 1px solid rgba(67, 69, 135, 0.12);
+  border-radius: clamp(10px, 2vw, 17px);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.planning-robot-route__cell--obstacle {
+  border-color: rgba(67, 69, 135, 0.2);
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(67, 69, 135, 0.15) 0,
+    rgba(67, 69, 135, 0.15) 7px,
+    rgba(67, 69, 135, 0.08) 7px,
+    rgba(67, 69, 135, 0.08) 14px
+  );
+}
+
+.planning-robot-route__cell--goal {
+  border-color: rgba(82, 160, 216, 0.52);
+  background: rgba(226, 236, 242, 0.92);
+}
+
+.planning-robot-route__goal-mark {
+  color: #1d70b7;
+  font-size: clamp(18px, 3vw, 30px);
+}
+
+.planning-robot-route__robot {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: clamp(30px, 6vw, 52px);
+  aspect-ratio: 1;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  background: var(--robot-primary);
+  box-shadow: 0 5px 12px rgba(45, 49, 95, 0.2);
+  transition: transform 180ms ease;
+}
+
+.planning-robot-route__robot i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.planning-robot-route__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--robot-muted);
+  font-size: 13px;
+}
+
+.planning-robot-route__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.planning-robot-route__legend i {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.planning-robot-route__legend-goal {
+  border: 1px solid rgba(82, 160, 216, 0.52);
+  background: var(--robot-sky);
+}
+
+.planning-robot-route__legend-obstacle {
+  border: 1px solid rgba(67, 69, 135, 0.2);
+  background: rgba(67, 69, 135, 0.14);
+}
+
+.planning-robot-route__panel {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--robot-line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.planning-robot-route__program-head {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.planning-robot-route__program-head span {
+  color: var(--robot-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.planning-robot-route__program {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 7px;
+  min-height: 104px;
+  padding: 12px;
+  border: 1px dashed rgba(67, 69, 135, 0.25);
+  border-radius: 16px;
+  background: rgba(226, 236, 242, 0.36);
+}
+
+.planning-robot-route__program span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--robot-primary);
+  background: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 3px 9px rgba(45, 49, 95, 0.08);
+}
+
+.planning-robot-route__program p {
+  align-self: center;
+  width: 100%;
+  margin-bottom: 0;
+  color: var(--robot-muted);
+  text-align: center;
+}
+
+.planning-robot-route__directions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.planning-robot-route__direction,
+.planning-robot-route__edit-actions button,
+.planning-robot-route__primary,
+.planning-robot-route__secondary {
+  min-height: 48px;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.planning-robot-route__direction {
+  border: 1px solid var(--robot-line);
+  color: var(--robot-primary);
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 25px;
+}
+
+.planning-robot-route__direction--hint {
+  border-color: #52a0d8;
+  background: var(--robot-sky);
+  box-shadow: 0 0 0 3px rgba(82, 160, 216, 0.14);
+}
+
+.planning-robot-route__direction:hover:not(:disabled),
+.planning-robot-route__edit-actions button:hover:not(:disabled),
+.planning-robot-route__primary:hover:not(:disabled),
+.planning-robot-route__secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.planning-robot-route__direction:focus-visible,
+.planning-robot-route__edit-actions button:focus-visible,
+.planning-robot-route__primary:focus-visible,
+.planning-robot-route__secondary:focus-visible {
+  outline: 3px solid rgba(82, 160, 216, 0.34);
+  outline-offset: 2px;
+}
+
+.planning-robot-route__direction:disabled,
+.planning-robot-route__edit-actions button:disabled,
+.planning-robot-route__primary:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.planning-robot-route__hint {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 12px;
+  color: #36572f;
+  background: var(--robot-mint);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.planning-robot-route__message {
+  min-height: 42px;
+  margin: 12px 0;
+  color: var(--robot-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.planning-robot-route__message--success {
+  color: #36572f;
+  font-weight: 700;
+}
+
+.planning-robot-route__edit-actions,
+.planning-robot-route__result-actions {
+  gap: 9px;
+}
+
+.planning-robot-route__edit-actions button,
+.planning-robot-route__secondary {
+  flex: 1;
+  border: 1px solid var(--robot-line);
+  color: var(--robot-primary);
+  background: transparent;
+}
+
+.planning-robot-route__primary {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--robot-primary);
+  color: #fff;
+  background: var(--robot-primary);
+  box-shadow: 0 8px 18px rgba(67, 69, 135, 0.18);
+}
+
+.planning-robot-route__primary:hover:not(:disabled) {
+  background: var(--robot-primary-strong);
+}
+
+.planning-robot-route--result {
+  display: grid;
+  place-items: center;
+  min-height: min(68vh, 620px);
+  text-align: center;
+}
+
+.planning-robot-route--result h2 {
+  margin-bottom: 10px;
+}
+
+.planning-robot-route--result p {
+  max-width: 430px;
+  margin-bottom: 20px;
+  color: var(--robot-muted);
+}
+
+.planning-robot-route__result-mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  border-radius: 22px;
+  color: #1d70b7;
+  background: var(--robot-sky);
+  font-size: 30px;
+}
+
+.planning-robot-route__result-actions {
+  width: min(100%, 430px);
+}
+
+.planning-robot-route__result-actions .planning-robot-route__primary {
+  flex: 1.2;
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .planning-robot-route {
+    padding: 10px 4px 24px;
+  }
+
+  .planning-robot-route__topline {
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .planning-robot-route__layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .planning-robot-route__board {
+    width: min(100%, 430px);
+    margin: 0 auto;
+  }
+
+  .planning-robot-route__panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 390px) {
+  .planning-robot-route__tier {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .planning-robot-route__program {
+    min-height: 94px;
+  }
+
+  .planning-robot-route__edit-actions,
+  .planning-robot-route__result-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+[data-theme='dark'] .planning-robot-route,
+.dark .planning-robot-route {
+  --robot-ink: #f1f2ff;
+  --robot-muted: #aeb2cf;
+  --robot-line: rgba(193, 198, 235, 0.2);
+  --robot-primary: #8588d5;
+  --robot-primary-strong: #979ae1;
+  --robot-sky: rgba(82, 160, 216, 0.2);
+  --robot-mint: rgba(105, 151, 97, 0.24);
+}
+
+[data-theme='dark'] .planning-robot-route__cell,
+[data-theme='dark'] .planning-robot-route__panel,
+[data-theme='dark'] .planning-robot-route__program span,
+[data-theme='dark'] .planning-robot-route__direction,
+.dark .planning-robot-route__cell,
+.dark .planning-robot-route__panel,
+.dark .planning-robot-route__program span,
+.dark .planning-robot-route__direction {
+  background-color: rgba(26, 28, 52, 0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-robot-route *,
+  .planning-robot-route *::before,
+  .planning-robot-route *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

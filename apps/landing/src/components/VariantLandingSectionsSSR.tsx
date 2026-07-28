@@ -180,7 +180,7 @@ function MatrixSection({ content }: { content: VariantContent }) {
                   <th className="text-left px-6 py-4 text-gray-900 font-semibold">Аспект</th>
                   <th className="text-center px-6 py-4 text-gray-900 font-semibold">Self</th>
                   <th className="text-center px-6 py-4 text-gray-900 font-semibold">Pro</th>
-                  <th className="text-center px-6 py-4 text-gray-900 font-semibold">Pro+</th>
+                  <th className="text-center px-6 py-4 text-gray-900 font-semibold">Pro Спорт</th>
                 </tr>
               </thead>
               <tbody>

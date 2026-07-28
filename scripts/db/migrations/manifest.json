@@ -76,6 +76,20 @@
       "path": "scripts/db/migrations/2026-07-26_cross_client_alert_watermark.sql",
       "description": "Seed the durable Telegram delivery watermark for cross-client audit alerts",
       "destructive": false
+    },
+    {
+      "id": "2026-07-27_consent_proof_v2",
+      "order": 9,
+      "path": "database/2026-07-27_consent_proof_v2.sql",
+      "description": "Bind consent versions to server-owned document hashes and acceptance time",
+      "destructive": false
+    },
+    {
+      "id": "2026-07-27_trial_intake_flow_v2",
+      "order": 10,
+      "path": "database/2026-07-27_trial_intake_flow_v2.sql",
+      "description": "Add explicit trial invite delivery, clarification, safety and reapplication lifecycle",
+      "destructive": false
     }
   ]
 }

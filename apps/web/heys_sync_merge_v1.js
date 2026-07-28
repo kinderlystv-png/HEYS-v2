@@ -261,12 +261,27 @@
       const parsed = Date.parse(value);
       return Number.isFinite(parsed) ? parsed : 0;
     };
-    const revisionTs = (row) => Math.max(
-      parseTimestamp(row?.updatedAt),
-      parseTimestamp(row?.outcomeAt),
-      parseTimestamp(row?.recordedAt),
-      parseTimestamp(row?.createdAt)
-    );
+    const revisionTs = (row) => {
+      const mutationTs = Math.max(
+        parseTimestamp(row?.updatedAt),
+        parseTimestamp(row?.outcomeAt),
+        parseTimestamp(row?.outcomePlan?.userReportedAt),
+        parseTimestamp(row?.outcomePlan?.supersededAt),
+        parseTimestamp(row?.outcomePlan?.shownAt),
+        parseTimestamp(row?.outcomePlan?.dismissedAt)
+      );
+      return mutationTs || Math.max(
+        parseTimestamp(row?.recordedAt),
+        parseTimestamp(row?.createdAt)
+      );
+    };
+    const outcomeStateRank = (row) => {
+      const plan = row?.outcomePlan || {};
+      if (plan.userReported || plan.status === 'answered') return 3;
+      if (['expired', 'not_requested', 'superseded', 'dismissed_after_snoozes'].includes(plan.status)) return 2;
+      if (['waiting_for_meal', 'pending', 'shown'].includes(plan.status)) return 1;
+      return 0;
+    };
     const chronologyTs = (row) => (
       parseTimestamp(row?.recordedAt)
       || parseTimestamp(row?.createdAt)
@@ -293,6 +308,9 @@
     const choose = (left, right) => {
       if (!left) return right;
       if (!right) return left;
+      const leftStateRank = outcomeStateRank(left);
+      const rightStateRank = outcomeStateRank(right);
+      if (leftStateRank !== rightStateRank) return rightStateRank > leftStateRank ? right : left;
       const leftTs = revisionTs(left);
       const rightTs = revisionTs(right);
       if (leftTs !== rightTs) return rightTs > leftTs ? right : left;

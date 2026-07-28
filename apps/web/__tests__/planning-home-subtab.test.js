@@ -40,6 +40,7 @@ describe('HEYS Planning home subtab helpers', () => {
         // в DEFAULT (как любой неизвестный экран), что и тестируем заодно.
         expect(window.HEYS.Planning.resolveHomeScreen('tasks')).toBe('tasks');
         expect(window.HEYS.Planning.resolveHomeScreen('goals')).toBe('goals');
+        expect(window.HEYS.Planning.resolveHomeScreen('games')).toBe('games');
         expect(window.HEYS.Planning.resolveHomeScreen('gantt')).toBe('calendar');
         expect(window.HEYS.Planning.resolveHomeScreen('context')).toBe('calendar'); // removed → fallback
         expect(window.HEYS.Planning.resolveHomeScreen('something-else')).toBe('calendar');
@@ -49,8 +50,9 @@ describe('HEYS Planning home subtab helpers', () => {
         expect(window.HEYS.Planning.getInitialHomeScreen('goals')).toBe('goals');
         expect(window.HEYS.Planning.getInitialHomeScreen('checklists')).toBe('checklists');
         expect(window.HEYS.Planning.getInitialHomeScreen('reading')).toBe('reading');
+        expect(window.HEYS.Planning.getInitialHomeScreen('games')).toBe('games');
         expect(window.HEYS.Planning.getInitialHomeScreen('unknown')).toBe('calendar');
-        expect(window.HEYS.Planning.SUBNAV_ITEMS.map((item) => item.id)).toEqual(['tasks', 'goals', 'calendar', 'chrono', 'checklists', 'reading']);
+        expect(window.HEYS.Planning.SUBNAV_ITEMS.map((item) => item.id)).toEqual(['tasks', 'goals', 'calendar', 'chrono', 'checklists', 'reading', 'games']);
     });
 
     it('auto-syncs to home screen only when at DEFAULT fallback, never when already on a real screen', () => {

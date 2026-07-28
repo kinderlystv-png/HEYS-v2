@@ -1,0 +1,271 @@
+.planning-color-trail {
+    --color-trail-ink: #252744;
+    --color-trail-muted: #676a83;
+    --color-trail-brand: #434587;
+    --color-trail-surface: rgba(255, 255, 255, 0.88);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    width: min(100%, 560px);
+    height: 100%;
+    min-height: 0;
+    margin: 0 auto;
+    color: var(--color-trail-ink);
+}
+
+.planning-color-trail__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 2px 0;
+}
+
+.planning-color-trail__header h2 {
+    margin: 1px 0 0;
+    color: var(--color-trail-ink);
+    font-size: clamp(20px, 4.8vw, 28px);
+    line-height: 1.1;
+}
+
+.planning-color-trail__eyebrow {
+    color: var(--color-trail-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.planning-color-trail__hud {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.planning-color-trail__hud span {
+    min-width: 58px;
+    padding: 7px 9px;
+    border: 1px solid rgba(67, 69, 135, 0.14);
+    border-radius: 10px;
+    background: rgba(226, 236, 242, 0.72);
+    color: var(--color-trail-brand);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 750;
+    text-align: center;
+}
+
+.planning-color-trail__pause,
+.planning-color-trail__primary,
+.planning-color-trail__quiet {
+    min-height: 44px;
+    border-radius: 13px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.planning-color-trail__pause {
+    min-width: 70px;
+    padding: 9px 12px;
+    border: 1px solid rgba(67, 69, 135, 0.22);
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--color-trail-brand);
+}
+
+.planning-color-trail__stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(67, 69, 135, 0.12);
+    border-radius: 20px;
+    background: linear-gradient(145deg, #f7fafc, #edf3f7);
+    box-shadow: 0 12px 30px rgba(37, 39, 68, 0.09);
+}
+
+.planning-color-trail__canvas {
+    display: block;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 14px;
+    outline: none;
+    touch-action: none;
+}
+
+.planning-color-trail__canvas:focus-visible {
+    box-shadow: inset 0 0 0 3px #ffffff, 0 0 0 3px var(--color-trail-brand);
+}
+
+.planning-color-trail__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 28px;
+    background: rgba(239, 245, 248, 0.91);
+    color: var(--color-trail-ink);
+    text-align: center;
+}
+
+.planning-color-trail__overlay p {
+    max-width: 330px;
+    margin: 0;
+    font-size: clamp(16px, 3.8vw, 20px);
+    line-height: 1.45;
+}
+
+.planning-color-trail__primary,
+.planning-color-trail__quiet {
+    width: min(100%, 260px);
+    padding: 11px 18px;
+}
+
+.planning-color-trail__primary {
+    border: 1px solid var(--color-trail-brand);
+    background: var(--color-trail-brand);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(67, 69, 135, 0.18);
+}
+
+.planning-color-trail__primary:hover {
+    background: #37396f;
+}
+
+.planning-color-trail__quiet {
+    border: 1px solid rgba(67, 69, 135, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-trail-brand);
+}
+
+.planning-color-trail__result {
+    color: var(--color-trail-brand);
+    font-size: clamp(38px, 11vw, 58px);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.planning-color-trail__notice {
+    min-height: 20px;
+    margin: 0;
+    color: var(--color-trail-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.planning-color-trail__pause:focus-visible,
+.planning-color-trail__primary:focus-visible,
+.planning-color-trail__quiet:focus-visible {
+    outline: 3px solid rgba(82, 160, 216, 0.55);
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .planning-color-trail {
+        gap: 8px;
+        width: 100%;
+    }
+
+    .planning-color-trail__header {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 7px;
+    }
+
+    .planning-color-trail__hud {
+        gap: 4px;
+    }
+
+    .planning-color-trail__hud span {
+        min-width: 53px;
+        padding-inline: 6px;
+        font-size: 12px;
+    }
+
+    .planning-color-trail__pause {
+        grid-column: 1 / -1;
+        justify-self: end;
+        min-height: 40px;
+        margin-top: -2px;
+    }
+
+    .planning-color-trail__stage {
+        border-radius: 16px;
+    }
+}
+
+[data-theme="dark"] .planning-color-trail {
+    --color-trail-ink: #f4f5ff;
+    --color-trail-muted: #b9bdd2;
+    --color-trail-surface: rgba(31, 34, 54, 0.9);
+}
+
+[data-theme="dark"] .planning-color-trail__hud span,
+[data-theme="dark"] .planning-color-trail__pause {
+    border-color: rgba(192, 198, 235, 0.2);
+    background: rgba(40, 44, 70, 0.8);
+    color: #dfe2ff;
+}
+
+[data-theme="dark"] .planning-color-trail__stage {
+    border-color: rgba(226, 236, 242, 0.12);
+    background: #1d2032;
+}
+
+[data-theme="dark"] .planning-color-trail__overlay {
+    background: rgba(29, 32, 50, 0.92);
+}
+
+[data-theme="dark"] .planning-color-trail__quiet {
+    border-color: rgba(226, 236, 242, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e2e5ff;
+}
+
+@media (prefers-color-scheme: dark) {
+    .planning-color-trail {
+        --color-trail-ink: #f4f5ff;
+        --color-trail-muted: #b9bdd2;
+        --color-trail-surface: rgba(31, 34, 54, 0.9);
+    }
+
+    .planning-color-trail__hud span,
+    .planning-color-trail__pause {
+        border-color: rgba(192, 198, 235, 0.2);
+        background: rgba(40, 44, 70, 0.8);
+        color: #dfe2ff;
+    }
+
+    .planning-color-trail__stage {
+        border-color: rgba(226, 236, 242, 0.12);
+        background: #1d2032;
+    }
+
+    .planning-color-trail__overlay {
+        background: rgba(29, 32, 50, 0.92);
+    }
+
+    .planning-color-trail__quiet {
+        border-color: rgba(226, 236, 242, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        color: #e2e5ff;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .planning-color-trail *,
+    .planning-color-trail *::before,
+    .planning-color-trail *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

@@ -1,6 +1,6 @@
 // Главная страница — единственный лендинг (вариант A)
 // Порядок секций:
-// Hero → Как устроено → Pain → HowItWorks → Comparison → Navigator → Trust → Lifestyle → Objections → Formats → Pricing → Trial → FAQ → Footer
+// Hero → Как устроено → Pain → HowItWorks → Comparison → Navigator → Trust → Pricing → Trial → FAQ → Footer
 
 import { Metadata } from 'next'
 
@@ -9,9 +9,7 @@ import {
   ComparisonSection,
   CuratorSection,
   HowItWorksSection,
-  LifestyleSection,
   NavigatorSection,
-  ObjectionsSection,
   PainSection,
   TrustSection,
 } from '@/components/sections'
@@ -56,13 +54,7 @@ export default function Home() {
       {/* 7. Доверие (06) — опыт куратора, стандарт, честный первый набор */}
       <TrustSection />
 
-      {/* 8. Lifestyle-бонус — не ядро оффера */}
-      <LifestyleSection />
-
-      {/* 9. Возражения (07) — частые вопросы в аккордеоне */}
-      <ObjectionsSection />
-
-      {/* 10-13. Форматы (08) → Прайсинг (09) → Триал (10) → FAQ (11) → Футер */}
+      {/* 8-11. Тарифы и форматы → Триал → единый FAQ → Футер */}
       <VariantLandingSectionsSSR content={content} variant="A" />
     </main>
   )

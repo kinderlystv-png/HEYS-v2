@@ -1,7 +1,9 @@
 -- HEYS consent proof hardening (forward-only, no historical backfill)
--- Prepared: 2026-07-27. Apply only through an explicitly approved release flow.
-
-BEGIN;
+-- Prepared: 2026-07-27. Apply only through the managed migration runner in an
+-- explicitly approved release flow.
+-- NO ROLLBACK: accepted_at/document hashes are legal evidence. Reverting the
+-- writer/check contracts after new proofs exist would make that evidence
+-- ambiguous; recovery must be a new forward migration.
 
 CREATE TABLE IF NOT EXISTS public.legal_consent_registry (
   consent_type TEXT NOT NULL,
@@ -21,15 +23,17 @@ COMMENT ON TABLE public.legal_consent_registry IS
 INSERT INTO public.legal_consent_registry (
   consent_type, document_version, document_sha256, document_path, status, effective_at, legal_signoff_ref
 ) VALUES
-  ('user_agreement', '1.7', '8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74', 'apps/web/public/docs/v1.7/user-agreement.md', 'active', '2026-07-27 00:00:00+03', NULL),
-  ('personal_data', '1.7', 'e31fd13099952da2458bee27c76e8d2bcf632d6b34d14220bd68ca1dc1955c5c', 'apps/web/public/docs/v1.7/privacy-policy.md', 'active', '2026-07-27 00:00:00+03', NULL),
+  ('user_agreement', '1.7', 'ba9011a7a4f9f283dbf11217ca36657c774d5b0eb98371e2b9c38e443deefb00', 'apps/web/public/docs/v1.7/user-agreement.md', 'retired', '2026-07-27 00:00:00+03', NULL),
+  ('user_agreement', '1.8', '3a3b8e4dfba75047b6f69feab57c91b4ad846ae88b99e3b2663392e97b8c52e2', 'apps/web/public/docs/v1.8/user-agreement.md', 'active', '2026-07-28 00:00:00+03', NULL),
+  ('personal_data', '1.7', '30e0821966128f06d34d356b0fc1d87a7851c5d9f5d6df1b653bc3fc0b3e1317', 'apps/web/public/docs/v1.7/privacy-policy.md', 'active', '2026-07-27 00:00:00+03', NULL),
   ('health_data', '1.5', 'a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256', 'apps/web/public/docs/v1.5/health-data-consent.md', 'active', '2026-07-27 00:00:00+03', NULL),
-  ('marketing', '1.3', '99cf6dc012948a19423e750ea8039afb11f56b44ccf35e319f123f47539cc81d', 'apps/web/public/docs/v1.3/marketing-consent.md', 'active', '2026-07-27 00:00:00+03', NULL),
-  ('payment_oferta', '1.7', '8712caf2ad433b2618b01ce168efd101786555c4b9697de7c53342b0bff29b74', 'apps/web/public/docs/v1.7/user-agreement.md', 'active', '2026-07-27 00:00:00+03', NULL),
-  ('push_notifications', '1.0', 'a4b2f8dc1a43eec77a5bb7cdacfb55771f7c84cfe9517a7325adea99b4e1e292', 'apps/web/public/docs/v1.0/push-notifications-consent.md', 'active', '2026-05-20 00:00:00+03', NULL),
-  ('curator_access', '1.0', '75cd5fadf7db8e3d065e799ab27525e7db293538c60a465660cbc010f0da5a11', 'apps/web/public/docs/v1.0/curator-access-consent.md', 'active', '2026-05-20 00:00:00+03', NULL),
-  ('speech_transcription', '1.1', '75f42b06d3b616e1a9c76f4cb5c4b9bb02bb4e0737c44735394816b484f1df1f', 'apps/web/public/docs/v1.1/speech-transcription-consent.md', 'active', '2026-07-27 00:00:00+03', NULL),
-  ('health_data', '2.0', '44086e492df447ca989c39fa06c4a39acaa58772424c5b4ad079458a7aaa2e8d', 'docs/legal/candidates/health-data-consent-v2.0.md', 'candidate', NULL, 'REQUIRED_BEFORE_ACTIVATION')
+  ('marketing', '1.3', '8627a1daa46e20250ec9aeb4baa9a8d6053094cbb90a3d2f8466ffba02eefd43', 'apps/web/public/docs/v1.3/marketing-consent.md', 'active', '2026-07-27 00:00:00+03', NULL),
+  ('payment_oferta', '1.7', 'ba9011a7a4f9f283dbf11217ca36657c774d5b0eb98371e2b9c38e443deefb00', 'apps/web/public/docs/v1.7/user-agreement.md', 'retired', '2026-07-27 00:00:00+03', NULL),
+  ('payment_oferta', '1.8', '3a3b8e4dfba75047b6f69feab57c91b4ad846ae88b99e3b2663392e97b8c52e2', 'apps/web/public/docs/v1.8/user-agreement.md', 'active', '2026-07-28 00:00:00+03', NULL),
+  ('push_notifications', '1.0', 'a179b6e2e499d0bdd48538dd743168460bd143fc3b098a07ba816fdf9a7fd0de', 'apps/web/public/docs/v1.0/push-notifications-consent.md', 'active', '2026-05-20 00:00:00+03', NULL),
+  ('curator_access', '1.0', 'a3bca78a3bb0b86ce4993f9bd979694dcbe90a62cef417a544cf0daeb59feb91', 'apps/web/public/docs/v1.0/curator-access-consent.md', 'active', '2026-05-20 00:00:00+03', NULL),
+  ('speech_transcription', '1.1', 'c95880e472cfe6237e0b99581f2e745cf775440a376f89ce96e39186e2d5edb8', 'apps/web/public/docs/v1.1/speech-transcription-consent.md', 'active', '2026-07-27 00:00:00+03', NULL),
+  ('health_data', '2.0', '2ce834202b70f9b9413994e1301a868111dac1303ebf451e0a83349b5c61e39c', 'docs/legal/candidates/health-data-consent-v2.0.md', 'candidate', NULL, 'REQUIRED_BEFORE_ACTIVATION')
 ON CONFLICT (consent_type, document_version) DO UPDATE SET
   document_sha256 = EXCLUDED.document_sha256,
   document_path = EXCLUDED.document_path,
@@ -543,5 +547,3 @@ BEGIN
   );
 END;
 $$;
-
-COMMIT;

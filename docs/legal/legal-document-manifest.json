@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-07-27",
+  "updatedAt": "2026-07-28",
   "documents": {
     "user_agreement": {
-      "version": "1.7",
+      "version": "1.8",
       "canonicalPath": "docs/legal/user-agreement.md",
-      "snapshotPath": "apps/web/public/docs/v1.7/user-agreement.md",
-      "sha256": "ba9011a7a4f9f283dbf11217ca36657c774d5b0eb98371e2b9c38e443deefb00"
+      "snapshotPath": "apps/web/public/docs/v1.8/user-agreement.md",
+      "sha256": "3a3b8e4dfba75047b6f69feab57c91b4ad846ae88b99e3b2663392e97b8c52e2"
     },
     "personal_data": {
       "version": "1.7",
@@ -20,10 +20,10 @@
       "sha256": "a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256"
     },
     "payment_oferta": {
-      "version": "1.7",
+      "version": "1.8",
       "canonicalPath": "docs/legal/user-agreement.md",
-      "snapshotPath": "apps/web/public/docs/v1.7/user-agreement.md",
-      "sha256": "ba9011a7a4f9f283dbf11217ca36657c774d5b0eb98371e2b9c38e443deefb00"
+      "snapshotPath": "apps/web/public/docs/v1.8/user-agreement.md",
+      "sha256": "3a3b8e4dfba75047b6f69feab57c91b4ad846ae88b99e3b2663392e97b8c52e2"
     },
     "refund": {
       "version": "1.1",

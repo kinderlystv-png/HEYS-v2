@@ -33,7 +33,7 @@
   HEYS.config.prices = HEYS.config.prices || {
     base: 490,
     pro: 7990,
-    proPlus: 14990,
+    proPlus: 19990,
   };
 
   const PAYWALL_CONFIG = {
@@ -402,9 +402,9 @@
       },
       {
         id: 'proPlus',
-        name: 'Pro+',
+        name: 'Pro Спорт',
         price: PAYWALL_CONFIG.prices.proPlus,
-        desc: 'Полный режим 7/7 + приоритетный SLA + онлайн на 1 тренировке',
+        desc: 'Питание и тренировки с одним специалистом; подключение после личного согласования',
         popular: false
       }
     ];
@@ -417,6 +417,10 @@
 
     const handleCTA = () => {
       const clientId = getClientId();
+      if (selectedPlan === 'proPlus') {
+        window.open(HEYS.support.telegramUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
       if (clientId && window.HEYS?.YandexAPI?.createPayment) {
         // ЮKassa доступна — показываем PaymentScreen с чекбоксом оферты
         setShowPaymentScreen(true);

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -75,4 +77,16 @@ test('apply SQL uses one transaction, advisory lock and immutable ledger row', (
   assert.match(sql, /pg_advisory_xact_lock/);
   assert.match(sql, /INSERT INTO public\.heys_schema_migrations/);
   assert.match(sql, /COMMIT;$/);
+});
+
+test('frontend and backend deploys both fail closed on pending production migrations', () => {
+  const root = path.resolve(import.meta.dirname, '..', '..');
+  for (const workflowPath of [
+    '.github/workflows/deploy-yandex.yml',
+    '.github/workflows/cloud-functions-deploy.yml',
+  ]) {
+    const workflow = fs.readFileSync(path.join(root, workflowPath), 'utf8');
+    assert.match(workflow, /Verify production database migrations are current/);
+    assert.match(workflow, /node scripts\/db\/migrate\.mjs --status --require-current/);
+  }
 });

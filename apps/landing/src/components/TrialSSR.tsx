@@ -54,8 +54,10 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
           {/* Форма заявки */}
           <div className="mt-8 bg-white/90 rounded-3xl border border-[#E9AF2E] p-6 md:p-8 shadow-[0_22px_60px_rgba(181,111,0,0.16)]">
             <div className="mb-6">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-1">Оставить заявку на неделю Pro</h3>
-              <p className="text-sm text-gray-500">7 дней сопровождения — 0 ₽, без привязки карты</p>
+              <h3 className="mb-1 text-xl font-bold leading-tight text-gray-900 md:text-2xl">Заявка на бесплатную неделю Pro</h3>
+              <p className="text-sm leading-relaxed text-gray-500">
+                Оставьте контакт — куратор свяжется с вами и объяснит следующий шаг. Сведения о здоровье на этом этапе не нужны.
+              </p>
             </div>
             <TrialForm ctaLabel={trial.ctaAvailable} />
             <div className="mt-6 pt-5 border-t border-gray-200 text-center">

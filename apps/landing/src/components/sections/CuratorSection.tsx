@@ -10,19 +10,19 @@ import SectionBadgeBar from '@/components/SectionBadgeBar'
 
 const cards = [
     {
-        icon: '👤',
-        title: 'Фото и сообщения — в дневнике',
-        text: 'Куратор переносит их в HEYS: еду, график, сон, нагрузку и обстоятельства. Без ручного заполнения с вашей стороны.',
+        step: '01',
+        title: 'Вы присылаете',
+        text: 'Фото еды, снимок с весов, короткое сообщение или голосовое.',
     },
     {
-        icon: '💬',
-        title: 'Связь — как вам удобно',
-        text: 'На старте куратор связывается с вами во внешнем канале из заявки. После входа можно перейти во встроенный мессенджер HEYS: всё в одном, контекст рядом с перепиской.',
+        step: '02',
+        title: 'Куратор ведёт дневник',
+        text: 'Заносит в HEYS еду, сон, нагрузку и обстоятельства дня.',
     },
     {
-        icon: '📊',
-        title: 'Результат — в HEYS',
-        text: 'После переноса вы открываете HEYS и видите дневник, динамику и отчёты недели. Виджеты показывают то, что важно сейчас.',
+        step: '03',
+        title: 'Вы видите результат',
+        text: 'Открываете HEYS и видите готовый дневник, динамику и то, как складывается день.',
     },
 ]
 
@@ -64,7 +64,7 @@ export default function CuratorSection() {
                         Дневник не нужно заполнять вручную.
                     </h2>
                     <p className="text-[15px] sm:text-[17px] text-[#6b7280] leading-relaxed">
-                        Можно отправить снимок с весов, пару строк или голосовое. Куратор переносит это в HEYS, смотрит на неделю целиком и показывает, где режим начинает сбиваться.
+                        Куратор уточняет детали и переносит данные в HEYS. Он ежедневно видит изменения в дневнике и помогает скорректировать режим, если тот начинает сбиваться.
                     </p>
                 </div>
 
@@ -78,8 +78,8 @@ export default function CuratorSection() {
                             }`}
                             style={{ transitionDelay: `${250 + i * 100}ms` }}
                         >
-                            <span className="text-2xl sm:text-3xl flex-shrink-0 mt-0.5">
-                                {c.icon}
+                            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[#d8e6f3] bg-[#f4f8fc] text-[11px] font-semibold tracking-[0.08em] text-[#1D70B7]">
+                                {c.step}
                             </span>
                             <div>
                                 <div className="text-[15px] sm:text-[16px] font-semibold text-[#111827] mb-1 leading-snug">
@@ -101,7 +101,7 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '700ms' }}
                 >
                     <div className="text-[11px] uppercase tracking-widest text-gray-400 text-center mb-3">
-                        Пример подхода к разбору
+                        Пример разбора по дневнику
                     </div>
                     <div className="bg-gray-50/60 border border-gray-100 rounded-3xl p-4 sm:p-5 space-y-3">
                         {/* Client bubble (right) */}
@@ -117,7 +117,7 @@ export default function CuratorSection() {
                             </div>
                         </div>
                         <div className="text-[11px] text-gray-400 text-center pt-1">
-                            Иллюстрация метода, не отзыв клиента
+                            Демонстрационный пример
                         </div>
                     </div>
                 </div>
@@ -134,18 +134,6 @@ export default function CuratorSection() {
                         <span className="text-blue-600">
                             Куратор ведёт дневник, а вы заходите в HEYS и по виджетам видите, как складывается день.
                         </span>
-                    </p>
-                </div>
-
-                {/* Format declaration — тихая декларация формата работы */}
-                <div
-                    className={`text-center max-w-xl mx-auto transition-all duration-700 ease-out ${
-                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-                    }`}
-                    style={{ transitionDelay: '925ms' }}
-                >
-                    <p className="text-[13px] sm:text-sm text-gray-500 italic leading-relaxed">
-                        Первый набор ограничен реальной ёмкостью: так куратор сохраняет внимание к дневнику, тренировкам, сну и ритму недели.
                     </p>
                 </div>
             </div>

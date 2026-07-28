@@ -10,7 +10,7 @@
 Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
 Контроль: Обзор / Конкуренты / TG-штаб / План 22; Позиция: Позиционирование /
 Голос; Промо: TG-стратегия / Куратор / TG-посты; Лендинг: мобильный аудит 40;
-Релиз: единый контур и копируемые промпты 41).
+Релиз: единый контур и копируемые промпты 41 / ревью trial-intake 42).
 
 При сломанной структуре источников падает с ненулевым кодом — pre-commit
 хук тогда блокирует коммит рассинхронизированного дашборда.
@@ -461,7 +461,9 @@ def md_inline(text):
 
 def task_tone_from_cells(cells, status_idx=None, owner_idx=None):
     st = cells[status_idx] if status_idx is not None and status_idx < len(cells) else ''
-    marker_text = f'{cells[0] if cells else ""} {st}'
+    marker_text = ' '.join(cells)
+    if '🟢' in marker_text or 'одобрено основателем' in marker_text.lower():
+        return 'decision-approved'
     if task_is_done(cells, status_idx, owner_idx):
         return 'task-done'
     owner = cells[owner_idx].lower() if owner_idx is not None and owner_idx < len(cells) else ''
@@ -583,6 +585,8 @@ def table_col_widths(head):
         return [15, 20, 21, 20, 24]
     if normalized == ['проверяемый факт', 'источник', 'команда / проверка', 'результат']:
         return [26, 18, 32, 24]
+    if normalized == ['блок', 'принято', 'решение', 'почему']:
+        return [10, 16, 42, 32]
     if normalized == ['когда', 'что делаем', 'что должно получиться', 'что пока не делаем']:
         return [15, 29, 29, 27]
     if normalized == ['очередь', 'задача', 'результат', 'зависимость']:
@@ -776,6 +780,8 @@ plan_full_html = render_plan_markdown(plan_text)
 source_tabs = [
     ('release-navigator', 'Релизный контур', '41 · Единый релизный контур и очередь промптов',
      ROOT / '41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md', 'release'),
+    ('trial-intake-audit', 'Заявка → анкета', '42 · Ревью flow заявки и анкеты',
+     ROOT / '42_Ревью_trial_intake_flow_2026-07-27.md', 'release'),
     ('landing-audit', 'Аудит лендинга', '40 · Мобильный UX/CRO-аудит лендинга',
      ROOT / '40_Аудит_лендинга_mobile_2026-07-26.md', 'landing'),
     ('doc03', 'Позиционирование', '03 · Каналы и позиционирование',
@@ -844,6 +850,22 @@ for pane_id, _, title, path, _ in source_tabs:
             '</div>'
             '<p>Ниже — актуальный маршрут: Промпт 01 — личный чек-лист основателя, Промпт 02 — следующая задача Codex. '
             'Выполненные Telegram/R0 перенесены в архив.</p>'
+            '</div>'
+        )
+    elif pane_id == 'trial-intake-audit':
+        extra = (
+            '<div class="release-overview">'
+            '<div class="release-now"><span>Production flow</span>'
+            '<b>Короткая заявка → защищённая анкета → ручное решение</b>'
+            '<small>Рутину автоматизирует HEYS; приглашение, отбор и активация остаются у куратора</small></div>'
+            '<div class="release-flow">'
+            '<div><b>1</b><span>Лендинг: только контакт</span></div>'
+            '<div><b>2</b><span>Куратор: приглашение</span></div>'
+            '<div><b>3</b><span>Клиент: autosave анкеты</span></div>'
+            '<div><b>4</b><span>Куратор: решение и триал</span></div>'
+            '</div>'
+            '<p>Health-ответы не идут через мессенджер: они шифруются в приложении, '
+            'а кабинет обновляет статусы автоматически.</p>'
             '</div>'
         )
     source_tab_panes += (
@@ -1257,7 +1279,6 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 @media (max-width:760px) {{
   .audit-overview {{ grid-template-columns:1fr; }}
   .audit-kpis {{ grid-template-columns:repeat(3,minmax(0,1fr)); }}
-  .release-flow {{ grid-template-columns:1fr 1fr; }}
 }}
 .plan-source ul,.plan-source ol {{ margin:8px 0 14px; padding-left:22px; }}
 .plan-source li {{ line-height:1.55; }}
@@ -1278,6 +1299,8 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .plan-md-table tr.task-done:not(.expanded) .cell-body {{ display:-webkit-box;
   -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
 .plan-md-table tr.task-done.expanded .cell-body {{ display:block; overflow:visible; }}
+.plan-md-table tr.decision-approved td {{ background:#2dd4a70d; }}
+.plan-md-table tr.decision-approved td:nth-child(2) {{ color:var(--ok); font-weight:700; }}
 .row-toggle {{ display:block; margin-top:4px; padding:0; border:0; background:transparent;
   color:var(--acc); font:inherit; font-size:11px; cursor:pointer; }}
 .row-toggle:hover {{ text-decoration:underline; }}
@@ -1299,6 +1322,9 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .release-flow b {{ display:grid; place-items:center; flex:0 0 25px; height:25px;
   border-radius:50%; background:#2dd4a722; color:var(--ok); }}
 .release-flow span {{ font-size:11.5px; }}
+@media (max-width:760px) {{
+  .release-flow {{ grid-template-columns:1fr 1fr; }}
+}}
 .prompt-block {{ position:relative; margin:12px 0 18px; padding-top:38px;
   border:1px solid #4f8cff55; border-radius:12px; background:#080d1c; overflow:hidden; }}
 .prompt-block pre {{ margin:0; padding:14px; max-height:520px; overflow:auto;
@@ -1427,7 +1453,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения · 40_Аудит_лендинга · 41_Релизный_контур ·
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения · 40_Аудит_лендинга · 41_Релизный_контур · 42_Ревью_trial_intake ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
 <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 
@@ -1516,6 +1542,8 @@ for cond, msg in [
      'дашборд: обзоры похожих каналов не попали в TG-стратегию'),
     ('внимательная внешняя опора' in html_out.lower(),
      'дашборд: единая эмоциональная концепция не попала в HTML'),
+    ('Короткая заявка → защищённая анкета → ручное решение' in html_out,
+     'дашборд: summary trial-intake аудита не попал в релизную вкладку'),
     (len(tariffs) >= 3, 'Сводка: тарифная сетка < 3 строк (B12:F15)'),
     (eco['real'] and eco['base'], 'Сводка: пустая экономика (B21/D21)'),
     (len(release_steps[1]) >= 5, '22: релизные ступени S0–S4 не найдены или < 5 строк'),

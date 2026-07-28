@@ -4120,6 +4120,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
                 { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
                 { id: 'reading', label: 'Книги', shortLabel: 'Книги', icon: 'К' },
+                { id: 'games', label: 'Игры', shortLabel: 'Игры', icon: '🎮' },
             ];
             const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
                 ? window.HEYS.Planning.SUBNAV_ITEMS

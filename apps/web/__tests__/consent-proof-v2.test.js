@@ -8,6 +8,7 @@ const root = path.resolve(import.meta.dirname, '../../..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const migration = read('database/2026-07-27_consent_proof_v2.sql');
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
+const migrationManifest = JSON.parse(read('scripts/db/migrations/manifest.json'));
 
 const sha256 = (relative) => createHash('sha256').update(read(relative)).digest('hex');
 
@@ -18,6 +19,34 @@ test('server allowlist rejects arbitrary versions before any consent mutation', 
   assert.match(migration, /status = 'active'/);
   assert.match(migration, /'consent_version_not_allowed'/);
   assert.match(migration, /REVOKE EXECUTE ON FUNCTION public\.log_consents[\s\S]*FROM PUBLIC, heys_rpc/);
+});
+
+test('consent proof migration is managed and every registry hash matches the immutable manifest', () => {
+  const managed = migrationManifest.migrations.find((item) => item.id === '2026-07-27_consent_proof_v2');
+  assert.equal(managed?.path, 'database/2026-07-27_consent_proof_v2.sql');
+  assert.equal(managed?.destructive, false);
+
+  for (const type of [
+    'user_agreement',
+    'personal_data',
+    'health_data',
+    'marketing',
+    'payment_oferta',
+    'push_notifications',
+    'curator_access',
+    'speech_transcription',
+  ]) {
+    const document = manifest.documents[type];
+    assert.match(
+      migration,
+      new RegExp(`\\('${type}', '${document.version}', '${document.sha256}', '${document.snapshotPath}', 'active'`),
+    );
+  }
+  const candidate = manifest.candidates.health_data_2_0;
+  assert.match(
+    migration,
+    new RegExp(`\\('health_data', '${candidate.version}', '${candidate.sha256}', '${candidate.canonicalPath}', 'candidate'`),
+  );
 });
 
 test('document hash and accepted_at are server-owned with no historical backfill', () => {

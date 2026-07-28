@@ -201,7 +201,8 @@
       ['recent_surgery', 'Недавняя операция, травма или госпитализация'],
       ['active_ed_concern', 'Актуальные трудности с пищевым поведением'],
       ['medical_supervision', 'Состояние под наблюдением врача'],
-    ].filter(([key]) => safety[key] === true).map(([, label]) => label);
+    ].filter(([key]) => safety[key] === true || safety[key] === 'yes' || safety[key] === 'prefer_not')
+      .map(([key, label]) => safety[key] === 'prefer_not' ? `${label}: обсудить лично` : label);
     return {
       goal: String(answers.goals?.primary_goal || '').trim() || 'Цель не указана',
       safetyFlags,
@@ -1419,18 +1420,48 @@
       }
     },
 
-    async reviewIntake(clientId, action, reasonCode, internalNote) {
+    async prepareInvite(clientId) {
       const api = HEYS.YandexAPI;
       if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
       try {
-        const res = await api.rpc('admin_review_trial_intake', {
+        const res = await api.rpc('admin_invite_trial_intake', { p_client_id: clientId });
+        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
+        return res.data?.admin_invite_trial_intake || res.data || res;
+      } catch (e) {
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    async markInviteSent(clientId) {
+      const api = HEYS.YandexAPI;
+      if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
+      try {
+        const res = await api.rpc('admin_mark_trial_intake_invite_sent', {
+          p_client_id: clientId,
+        });
+        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
+        return res.data?.admin_mark_trial_intake_invite_sent || res.data || res;
+      } catch (e) {
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    async reviewIntake(clientId, action, reasonCode, internalNote, options = {}) {
+      const api = HEYS.YandexAPI;
+      if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
+      try {
+        const res = await api.rpc('admin_review_trial_intake_v2', {
           p_client_id: clientId,
           p_action: action,
           p_reason_code: reasonCode || null,
           p_internal_note: internalNote || null,
+          p_client_message: options.clientMessage || null,
+          p_clarification_sections: options.clarificationSections || null,
+          p_decision_checklist: options.decisionChecklist || null,
+          p_expected_updated_at: options.expectedUpdatedAt || null,
         });
         if (res.error) return { success: false, error: res.error.code, message: res.error.message };
-        return res.data?.admin_review_trial_intake || res.data || res;
+        return res.data?.admin_review_trial_intake_v2 || res.data || res;
       } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
@@ -1457,16 +1488,30 @@
           params.p_curator_id = curatorId;
         }
 
-        const res = await api.rpc('admin_convert_lead', params);
+        const res = await api.rpc('admin_prepare_trial_candidate_from_lead', params);
 
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
 
-        const fnData = res.data?.admin_convert_lead || res.data || res;
+        const fnData = res.data?.admin_prepare_trial_candidate_from_lead || res.data || res;
         return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] convertLead error:', e);
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    async reopenCandidate(leadId) {
+      const api = HEYS.YandexAPI;
+      if (!api || !hasCuratorAuthContext()) {
+        return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
+      }
+      try {
+        const res = await api.rpc('admin_reopen_trial_candidate', { p_lead_id: leadId });
+        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
+        return res.data?.admin_reopen_trial_candidate || res.data || res;
+      } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
@@ -1658,6 +1703,7 @@
     const [leads, setLeads] = React.useState([]);
     const [allClients, setAllClients] = React.useState([]); // Все клиенты куратора (для отображения trial вне очереди)
     const [intakeByClient, setIntakeByClient] = React.useState({});
+    const [intakesReady, setIntakesReady] = React.useState(false);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [actionLoading, setActionLoading] = React.useState(null);
@@ -1672,6 +1718,18 @@
     const [intakeDialog, setIntakeDialog] = React.useState(null);
     const [reviewReason, setReviewReason] = React.useState('');
     const [reviewNote, setReviewNote] = React.useState('');
+    const [decisionSheetOpen, setDecisionSheetOpen] = React.useState(false);
+    const [reviewAction, setReviewAction] = React.useState('approved');
+    const [clientQuestion, setClientQuestion] = React.useState('');
+    const [clarificationSections, setClarificationSections] = React.useState([]);
+    const [decisionChecklist, setDecisionChecklist] = React.useState({
+      within_scope: null,
+      understands_boundaries: null,
+      ready_to_track: null,
+      realistic_expectations: null,
+      safe_format: null,
+      slot_available: true,
+    });
 
     // Загрузка данных
     const loadData = React.useCallback(async (isSilent = false) => {
@@ -1713,8 +1771,15 @@
           const next = {};
           (intakesRes.data || []).forEach((item) => { if (item?.client_id) next[item.client_id] = item; });
           setIntakeByClient(next);
+          setIntakesReady(true);
+        } else {
+          setIntakesReady(false);
+          setIntakeByClient({});
+          setError('Не удалось загрузить этапы анкет. Действия временно заблокированы — обновите данные.');
         }
       } catch (e) {
+        setIntakesReady(false);
+        setIntakeByClient({});
         setError(e.message);
       } finally {
         if (!isSilent) setLoading(false);
@@ -1825,10 +1890,14 @@
     };
 
     // Открыть диалог активации триала с выбором даты (v3.0)
-    const handleActivateTrial = async (clientId, clientName) => {
+    const handleActivateTrial = async (clientId, clientName, intakeStatus) => {
+      if (intakeStatus === 'approved_waiting_slot' && freeSlots <= 0) {
+        HEYS.Toast?.info?.('Свободных мест пока нет. Активация станет доступна после освобождения места.');
+        return;
+      }
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       setTrialStartDate(today);
-      setTrialDialog({ clientId, clientName });
+      setTrialDialog({ clientId, clientName, intakeStatus });
     };
 
     // Подтвердить активацию триала
@@ -1858,6 +1927,11 @@
           alert(`✅ Триал запланирован! Начнётся ${trialStartDate}, доступ на 7 дней.`);
         }
       } else {
+        if (res?.error === 'no_available_slot') {
+          alert('Свободное место уже занято. Обновите очередь и оставьте кандидата в ожидании.');
+          loadData(true);
+          return;
+        }
         const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось активировать триал';
         alert('Ошибка: ' + errorMessage);
         console.warn('[TrialQueue.admin] activateTrial failed', { response: res, message: errorMessage });
@@ -1902,37 +1976,96 @@
       const res = await adminAPI.convertLead(leadId);
       setActionLoading(null);
 
-      if (res.success) {
+      const showPreparedInvite = (result) => {
         loadData(true);
         setActiveTab('pending');
-        // 🔄 Hot-sync: лид → клиент. Уведомляем глобальный список клиентов.
         window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-          detail: { action: 'leadConverted', clientId: res.client_id }
+          detail: { action: result.reopened ? 'candidateReopened' : 'leadConverted', clientId: result.client_id }
         }));
-        const generatedPin = res.pin;
+        const generatedPin = result.pin;
         if (!generatedPin) {
           alert(`✅ Клиент "${leadName}" создан, но PIN не получен от сервера. Используйте «Перевыпустить PIN» в карточке.`);
         } else {
           setPinResult({
-            clientId: res.client_id,
+            clientId: result.client_id,
             name: leadName,
             phone: leadPhone,
             pin: generatedPin,
             deepLink: null,
-            intakeUrl: res.intake_url || 'https://app.heyslab.ru/?intake=1',
-            pinTokenExpiresAt: res.pin_token_expires_at,
+            intakeUrl: result.intake_url || 'https://app.heyslab.ru/?intake=1',
+            pinTokenExpiresAt: result.pin_token_expires_at,
+            inviteStatus: 'invite_prepared',
           });
         }
+      };
+
+      if (res.success) {
+        showPreparedInvite(res);
       } else if (res.error === 'phone_already_has_active' || res.code === 'PHONE_ALREADY_TRIAL') {
         alert(
           `ℹ️ У клиента с телефоном ${leadPhone} уже есть активная заявка/триал/подписка.\n` +
           `Лид НЕ конвертирован.`
         );
+      } else if (res.error === 'phone_already_exists') {
+        const reopen = confirm(
+          `Клиент с телефоном ${leadPhone} уже существует.\n\n` +
+          'Открыть новую анкету в существующей записи? Это возможно после 30 дней с прошлого отказа; старые ответы будут удалены.'
+        );
+        if (!reopen) return;
+        setActionLoading('lead-' + leadId);
+        const reopenRes = await adminAPI.reopenCandidate(leadId);
+        setActionLoading(null);
+        if (reopenRes.success) {
+          showPreparedInvite(reopenRes);
+        } else if (reopenRes.error === 'reapply_cooldown') {
+          const eligible = reopenRes.eligible_at
+            ? new Date(reopenRes.eligible_at).toLocaleDateString('ru-RU')
+            : 'позже';
+          alert(`Повторную анкету можно открыть ${eligible}.`);
+        } else {
+          alert('Не удалось открыть повторную анкету: ' + (reopenRes.message || reopenRes.error || 'ошибка'));
+        }
       } else if (res.error === 'lead_already_converted') {
         alert(`ℹ️ Этот лид уже был сконвертирован ранее.`);
       } else {
         alert('Ошибка: ' + (res.message || res.error || 'Не удалось создать клиента'));
       }
+    };
+
+    const resumePreparedInvite = async (item, intakeStatus) => {
+      const clientId = item.client_id;
+      if (intakeStatus === 'invite_sent' && !confirm(
+        'Перевыпустить доступ? Старый PIN и открытые клиентские сессии перестанут работать.'
+      )) return;
+      setActionLoading('invite-' + clientId);
+
+      if (intakeStatus === 'invited') {
+        const prepared = await adminAPI.prepareInvite(clientId);
+        if (!prepared.success) {
+          setActionLoading(null);
+          alert('Не удалось подготовить приглашение: ' + (prepared.message || prepared.error || 'ошибка'));
+          return;
+        }
+      }
+
+      const access = await adminAPI.regeneratePin(clientId);
+      setActionLoading(null);
+      if (!access.success || !access.pin) {
+        alert('Не удалось восстановить приглашение: ' + (access.message || access.error || 'ошибка'));
+        return;
+      }
+
+      setPinResult({
+        clientId,
+        name: item.client_name || item.name || 'Клиент',
+        phone: item.client_phone || item.phone_normalized || '',
+        pin: access.pin,
+        deepLink: null,
+        intakeUrl: 'https://app.heyslab.ru/?intake=1',
+        pinTokenExpiresAt: access.pin_token_expires_at,
+        inviteStatus: 'invite_prepared',
+      });
+      loadData(true);
     };
 
     const buildWelcomeForAccess = (access) => buildClientWelcomeMessage({
@@ -1974,41 +2107,99 @@
       }
       setReviewReason(res.intake.decision_reason || '');
       setReviewNote(res.intake.internal_note || '');
+      setClientQuestion(res.intake.clarification_request || '');
+      setClarificationSections(Array.isArray(res.intake.clarification_sections) ? res.intake.clarification_sections : []);
+      setDecisionChecklist({
+        within_scope: null,
+        understands_boundaries: null,
+        ready_to_track: null,
+        realistic_expectations: null,
+        safe_format: null,
+        slot_available: true,
+        ...(res.intake.decision_checklist || {}),
+      });
+      setReviewAction(res.intake.status === 'needs_clarification' ? 'needs_clarification' : 'approved');
+      setDecisionSheetOpen(false);
       setIntakeDialog({ ...res.intake, clientName: item.client_name || item.name || 'Клиент' });
     };
 
-    const submitIntakeReview = async (action) => {
+    const submitIntakeReview = async () => {
       if (!intakeDialog) return;
+      const action = reviewAction;
       if (action === 'rejected' && (!reviewReason || !reviewNote.trim())) {
         alert('Для отказа выберите код причины и добавьте внутреннюю заметку.');
         return;
       }
-      if (action === 'needs_clarification' && !reviewNote.trim()) {
-        alert('Опишите, что нужно уточнить.');
+      if (action === 'needs_clarification' && (!clientQuestion.trim() || clarificationSections.length === 0)) {
+        alert('Напишите вопрос клиенту и отметьте хотя бы один раздел.');
+        return;
+      }
+      if (['approved', 'approved_waiting_slot', 'rejected'].includes(action)
+          && Object.values(decisionChecklist).some((value) => typeof value !== 'boolean')) {
+        alert('Заполните чек-лист решения.');
         return;
       }
       setActionLoading('review-' + intakeDialog.client_id);
       const res = await adminAPI.reviewIntake(
-        intakeDialog.client_id, action, reviewReason, reviewNote.trim()
+        intakeDialog.client_id,
+        action,
+        reviewReason,
+        reviewNote.trim(),
+        {
+          clientMessage: clientQuestion.trim(),
+          clarificationSections,
+          decisionChecklist: ['approved', 'approved_waiting_slot', 'rejected'].includes(action)
+            ? decisionChecklist
+            : null,
+          expectedUpdatedAt: intakeDialog.updated_at,
+        }
       );
       setActionLoading(null);
       if (!res.success) {
+        if (['stale_intake', 'review_not_allowed'].includes(res.error)) {
+          setIntakeDialog(null);
+          loadData(true);
+          alert('Анкета уже изменилась в другой вкладке. Мы загрузили актуальное состояние — откройте её снова.');
+          return;
+        }
         alert('Не удалось сохранить решение: ' + (res.message || res.error || 'ошибка'));
         return;
       }
       setIntakeDialog(null);
       loadData(true);
-      HEYS.Toast?.success?.(action === 'approved' ? 'Кандидат одобрен' : action === 'rejected' ? 'Решение сохранено' : 'Запрошены уточнения');
+      HEYS.Toast?.success?.(
+        action === 'approved'
+          ? 'Кандидат одобрен'
+          : action === 'approved_waiting_slot'
+            ? 'Кандидат ожидает место'
+            : action === 'rejected'
+              ? 'Решение сохранено'
+              : 'Запрошены уточнения'
+      );
     };
 
     const INTAKE_STATUS = {
       not_invited: ['Не приглашён', '#f3f4f6', '#4b5563'],
-      invited: ['Приглашён', '#eaf2ff', '#245b91'],
+      invite_prepared: ['Приглашение подготовлено', '#eef2f7', '#46566b'],
+      invite_sent: ['Приглашение отправлено', '#eaf2ff', '#245b91'],
+      invited: ['Приглашение отправлено', '#eaf2ff', '#245b91'],
       in_progress: ['Заполняет', '#fff7dd', '#805d00'],
       completed: ['Готово к разбору', '#e9f7ed', '#25613a'],
       needs_clarification: ['Нужны уточнения', '#fff0e5', '#934b13'],
       approved: ['Одобрен', '#dcfce7', '#166534'],
+      approved_waiting_slot: ['Одобрен, ждёт место', '#eef0ff', '#434587'],
       rejected: ['Отказ', '#fee2e2', '#991b1b'],
+    };
+    const INTAKE_NEXT = {
+      invite_prepared: 'Действие куратора: отправить приглашение',
+      invited: 'Действие куратора: восстановить и отправить приглашение',
+      invite_sent: 'Ожидаем вход и заполнение кандидатом',
+      in_progress: 'Ожидаем завершение анкеты кандидатом',
+      completed: 'Действие куратора: разобрать анкету',
+      needs_clarification: 'Ожидаем уточнение кандидата',
+      approved: 'Действие куратора: согласовать дату старта',
+      approved_waiting_slot: 'Ожидаем свободное место',
+      rejected: 'Решение завершено · удаление анкеты через 30 дней',
     };
 
     const ANSWER_LABELS = {
@@ -2018,15 +2209,35 @@
       previous_experience: 'Опыт', what_worked: 'Что работало', what_did_not_work: 'Что не подошло',
       schedule: 'Распорядок', sleep: 'Сон', activity: 'Активность', constraints: 'Ограничения',
       daily_tracking: 'Готовность вести дневник', feedback_style: 'Формат обратной связи', expectations_from_curator: 'Ожидания от куратора',
+      chronic_conditions_status: 'Есть ли состояния или диагнозы',
       chronic_conditions: 'Состояния и диагнозы', medications: 'Лекарства и добавки', injuries_operations: 'Травмы и операции',
+      medications_status: 'Есть ли лекарства или добавки',
+      injuries_operations_status: 'Есть ли травмы или операции',
+      allergies_status: 'Есть ли аллергии',
       allergies: 'Аллергии', pregnancy_lactation: 'Беременность / ГВ', eating_disorder_history: 'Опыт РПП', doctor_restrictions: 'Ограничения врача',
+      doctor_restrictions_status: 'Есть ли ограничения врача',
       acute_symptoms: 'Острые симптомы', recent_surgery: 'Недавняя операция / травма', active_ed_concern: 'Актуальный риск РПП',
       medical_supervision: 'Наблюдение врача', details: 'Дополнительный контекст',
+    };
+    const DECISION_CHECKLIST_LABELS = {
+      within_scope: 'Запрос находится в пределах услуг HEYS',
+      understands_boundaries: 'Человек понимает, что HEYS не лечит',
+      ready_to_track: 'Готов вести дневник в течение недели',
+      realistic_expectations: 'Ожидания от результата и куратора реалистичны',
+      safe_format: 'Формат безопасен с учётом ограничений',
+      slot_available: 'Есть место и понятна дата старта',
+    };
+    const CLARIFICATION_SECTION_LABELS = {
+      goals: 'Цели', experience: 'Опыт', lifestyle: 'Ритм жизни',
+      collaboration: 'Совместная работа', health: 'Здоровье', safety: 'Безопасность',
     };
 
     const renderAnswerValue = (value) => {
       if (value === true) return 'Да';
       if (value === false) return 'Нет';
+      if (value === 'yes') return 'Да';
+      if (value === 'no') return 'Нет';
+      if (value === 'prefer_not') return 'Предпочитает обсудить лично';
       return String(value || '—');
     };
 
@@ -2104,6 +2315,16 @@
     // Клиентская фильтрация лидов (вместо RPC — обход бага с пропадающими лидами)
     const newLeads = leads.filter(l => l.status === 'new');
     const rejectedLeads = leads.filter(l => l.status === 'rejected');
+    const decisionStatuses = new Set(['approved', 'approved_waiting_slot', 'rejected']);
+    const questionnaireQueue = grouped.pending.filter(
+      (item) => !decisionStatuses.has(intakeByClient[item.client_id]?.status)
+    );
+    const decisionQueue = [
+      ...grouped.pending.filter((item) => decisionStatuses.has(intakeByClient[item.client_id]?.status)),
+      ...grouped.rejected,
+    ].filter((item, index, items) => (
+      items.findIndex((candidate) => candidate.client_id === item.client_id) === index
+    ));
 
     const getEffectiveSubscriptionStatus = (client) => {
       const statusRaw = client.subscription_status || 'none';
@@ -2127,10 +2348,10 @@
     );
 
     const tabs = [
-      { id: 'new', label: '� С лендинга', count: newLeads.length, hint: 'Заявки с сайта — нужно создать клиента' },
-      { id: 'pending', label: '⏳ Ждут триала', count: grouped.pending.length, hint: 'Клиенты созданы — нужно активировать триал' },
-      { id: 'active', label: '🎯 Активные', count: grouped.assigned.length + trialClients.length, hint: 'Триал идёт (7 дней)' },
-      { id: 'rejected', label: '❌ Отклонённые', count: rejectedLeads.length + grouped.rejected.length, hint: 'Отказано в триале' }
+      { id: 'new', label: 'Новые', count: newLeads.length, hint: 'Короткие заявки с лендинга — сначала свяжитесь с человеком.' },
+      { id: 'pending', label: 'Анкеты', count: questionnaireQueue.length, hint: 'Приглашения, заполнение, уточнения и анкеты к разбору.' },
+      { id: 'rejected', label: 'Решения', count: rejectedLeads.length + decisionQueue.length, hint: 'Одобренные, ожидающие место и отклонённые кандидаты.' },
+      { id: 'active', label: 'Триалы', count: grouped.assigned.length + trialClients.length, hint: 'Текущие и запланированные пробные недели.' }
     ];
 
     const LeadRow = ({ item }) => React.createElement('div', {
@@ -2229,14 +2450,14 @@
             border: 'none',
             background: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id)
               ? '#d1d5db'
-              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              : '#434587',
             color: '#fff',
             cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
             fontSize: 13,
             fontWeight: 600,
             whiteSpace: 'nowrap'
           }
-        }, actionLoading === 'lead-' + item.id ? '⏳' : 'Пригласить к анкете'),
+        }, actionLoading === 'lead-' + item.id ? 'Подготавливаем…' : 'Подготовить анкету'),
         React.createElement('button', {
           onClick: () => handleRejectLead(item),
           disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
@@ -2333,10 +2554,36 @@
                 fontWeight: 700, marginTop: 6, marginLeft: 6,
               }
             }, `Анкета: ${intakeVisual[0]}`)
+            ,
+            intake && React.createElement('div', {
+              style: { marginTop: 7, fontSize: 11, color: '#7b8794', lineHeight: 1.35 }
+            },
+              `Обновлено: ${formatDate(intake.updated_at)}`,
+              Number(intake.inactive_days) > 0 ? ` · без активности ${intake.inactive_days} дн.` : ''
+            ),
+            intake && React.createElement('div', {
+              style: {
+                marginTop: 5, fontSize: 12, lineHeight: 1.35,
+                color: Number(intake.inactive_days) >= 7 ? '#9a4d12' : '#4f5d55',
+                fontWeight: 650,
+              }
+            }, INTAKE_NEXT[intake.status] || 'Проверьте текущий этап')
           )
         ),
         allowActions && React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
-          intake && ['completed', 'needs_clarification', 'approved', 'rejected'].includes(intake.status) && React.createElement('button', {
+          intake && ['invite_prepared', 'invited', 'invite_sent'].includes(intake.status) && React.createElement('button', {
+            onClick: () => resumePreparedInvite(item, intake.status),
+            disabled: actionLoading === 'invite-' + item.client_id,
+            style: {
+              minHeight: 44, padding: '10px 12px', borderRadius: 10, border: 'none',
+              background: actionLoading === 'invite-' + item.client_id ? '#d1d5db' : '#434587',
+              color: '#fff', cursor: actionLoading === 'invite-' + item.client_id ? 'not-allowed' : 'pointer',
+              fontSize: 12, fontWeight: 700,
+            }
+          }, actionLoading === 'invite-' + item.client_id
+            ? 'Восстановление…'
+            : intake.status === 'invite_sent' ? 'Перевыпустить доступ' : 'Открыть приглашение'),
+          intake && ['completed', 'needs_clarification', 'approved', 'approved_waiting_slot', 'rejected'].includes(intake.status) && React.createElement('button', {
             onClick: () => openIntake(item),
             disabled: actionLoading === 'intake-' + item.client_id,
             style: {
@@ -2344,23 +2591,24 @@
               background: '#eff6ff', color: '#1d4f83', cursor: 'pointer', fontSize: 12, fontWeight: 700,
             }
           }, actionLoading === 'intake-' + item.client_id ? 'Загрузка…' : 'Открыть анкету'),
-          (!intake || intake.status === 'approved') && React.createElement('button', {
-            onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name),
+          (intakesReady && (!intake || intake.status === 'approved'
+            || (intake.status === 'approved_waiting_slot' && freeSlots > 0))) && React.createElement('button', {
+            onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name, intake?.status),
             disabled: actionLoading === item.client_id,
             style: {
               padding: '8px 12px',
               borderRadius: 8,
               border: 'none',
-              background: actionLoading === item.client_id
-                ? '#d1d5db'
-                : 'linear-gradient(135deg, #22c55e, #16a34a)',
+              background: actionLoading === item.client_id ? '#d1d5db' : '#434587',
               color: '#fff',
               cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
               fontSize: 12,
               fontWeight: 700
             }
-          }, actionLoading === item.client_id ? '⏳' : '✅ Активировать'),
-          !intake && React.createElement('button', {
+          }, actionLoading === item.client_id
+            ? '⏳'
+            : intake?.status === 'approved_waiting_slot' ? 'Назначить дату старта' : 'Активировать'),
+          intakesReady && !intake && React.createElement('button', {
             onClick: () => handleReject(item.client_id, item.client_name || item.name),
             disabled: actionLoading === item.client_id,
             style: {
@@ -2374,7 +2622,7 @@
               fontWeight: 700
             }
           }, '❌'),
-          allowRemove && React.createElement('button', {
+          allowRemove && !intake && React.createElement('button', {
             onClick: () => handleRemove(item),
             disabled: actionLoading === item.client_id,
             style: {
@@ -2447,7 +2695,7 @@
             padding: '8px 12px',
             borderRadius: 8,
             border: 'none',
-            background: activeTab === tab.id ? 'linear-gradient(135deg, #0ea5e9, #6366f1)' : 'transparent',
+          background: activeTab === tab.id ? '#434587' : 'transparent',
             color: activeTab === tab.id ? '#fff' : '#6b7280',
             cursor: 'pointer',
             fontSize: 12,
@@ -2480,13 +2728,19 @@
         }, '⏳ Загрузка...'),
         !loading && error && React.createElement('div', {
           style: { padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: 10, fontSize: 13 }
-        }, '❌ ' + error),
+        },
+          React.createElement('div', null, '❌ ' + error),
+          React.createElement('button', {
+            type: 'button', onClick: () => loadData(false),
+            style: { marginTop: 10, minHeight: 40, padding: '8px 12px', borderRadius: 8, border: '1px solid #efb4b4', background: '#fff', color: '#8f1d1d', cursor: 'pointer', fontWeight: 700 },
+          }, 'Повторить загрузку')
+        ),
         !loading && !error && activeTab === 'new' && (newLeads.length ? newLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '📭 Нет заявок с лендинга')),
-        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: true })) : React.createElement('div', {
+        !loading && !error && activeTab === 'pending' && (questionnaireQueue.length ? questionnaireQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: false })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-        }, '⏸️ Нет клиентов в очереди на триал')),
+        }, 'Нет анкет, требующих действия')),
         !loading && !error && activeTab === 'active' && ((grouped.assigned.length + trialClients.length) ? [
           ...grouped.assigned.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })),
           ...trialClients.map(client => React.createElement(ClientRow, {
@@ -2503,12 +2757,12 @@
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '💤 Нет активных триалов')),
         !loading && !error && activeTab === 'rejected' && (
-          (rejectedLeads.length || grouped.rejected.length) ? [
+          (rejectedLeads.length || decisionQueue.length) ? [
             ...rejectedLeads.map(item => React.createElement(LeadRow, { key: 'lead-' + item.id, item })),
-            ...grouped.rejected.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true }))
+            ...decisionQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true }))
           ] : React.createElement('div', {
             style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-          }, '✅ Нет отклонённых заявок')
+          }, 'Решений пока нет')
         )
       ),
       React.createElement('div', {
@@ -2560,7 +2814,9 @@
         },
           React.createElement('div', {
             style: { fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--text, #1f2937)' }
-          }, '🎫 Активировать триал'),
+          }, trialDialog.intakeStatus === 'approved_waiting_slot'
+            ? 'Назначить дату старта'
+            : 'Активировать триал'),
           React.createElement('div', {
             style: { fontSize: '14px', color: '#6b7280', marginBottom: '16px' }
           }, `Клиент: ${trialDialog.clientName}`),
@@ -2615,7 +2871,9 @@
                 fontSize: '14px',
                 fontWeight: 600
               }
-            }, '✅ Активировать')
+            }, trialDialog.intakeStatus === 'approved_waiting_slot'
+              ? 'Подтвердить дату'
+              : 'Активировать')
           )
         )
       ),
@@ -2645,7 +2903,7 @@
         },
           React.createElement('div', {
             style: { fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--text, #1f2937)' }
-          }, 'Пригласить к анкете'),
+          }, 'Подготовить приглашение'),
           React.createElement('div', {
             style: { fontSize: '14px', color: '#6b7280', marginBottom: '4px' }
           }, `Имя: ${convertDialog.leadName}`),
@@ -2663,7 +2921,7 @@
               lineHeight: 1.5,
             }
           },
-            'Будет создан клиент без активной пробной недели. PIN и универсальная ссылка на защищённую анкету появятся на следующем экране.'
+            'Сначала свяжитесь с человеком в выбранном мессенджере и убедитесь, что формат понятен. Затем будет создан клиент без активной пробной недели, PIN и универсальная ссылка на защищённую анкету.'
           ),
           React.createElement('div', {
             style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' }
@@ -2686,13 +2944,13 @@
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                background: '#434587',
                 color: '#fff',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 600
               }
-            }, 'Создать и пригласить')
+            }, 'Создать приглашение')
           )
         )
       ),
@@ -2754,15 +3012,40 @@
                 width: '100%',
                 padding: '11px',
                 borderRadius: '8px',
-                border: 'none',
-                background: '#0f172a',
-                color: '#fff',
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+                color: '#334155',
                 cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 700,
+                marginBottom: '8px'
+              }
+            }, 'Скопировать приглашение'),
+            React.createElement('button', {
+              onClick: async () => {
+                const result = await adminAPI.markInviteSent(pinResult.clientId);
+                if (!result.success) {
+                  alert('Не удалось отметить отправку: ' + (result.message || result.error || 'ошибка'));
+                  return;
+                }
+                setPinResult((current) => current ? { ...current, inviteStatus: 'invite_sent' } : current);
+                loadData(true);
+                HEYS.Toast?.success?.('Отправка приглашения отмечена');
+              },
+              disabled: pinResult.inviteStatus === 'invite_sent',
+              style: {
+                width: '100%',
+                padding: '11px',
+                borderRadius: '10px',
+                border: 'none',
+                background: pinResult.inviteStatus === 'invite_sent' ? '#d8dfdc' : '#434587',
+                color: '#fff',
+                cursor: pinResult.inviteStatus === 'invite_sent' ? 'default' : 'pointer',
                 fontSize: '13px',
                 fontWeight: 700,
                 marginBottom: '18px'
               }
-            }, 'Скопировать приглашение')
+            }, pinResult.inviteStatus === 'invite_sent' ? 'Отправка отмечена' : 'Отметить как отправленное')
           ),
 
           React.createElement('div', {
@@ -2950,38 +3233,186 @@
             )
           )
         ),
-        ['completed', 'needs_clarification'].includes(intakeDialog.status) && React.createElement('div', { style: { marginTop: 20, paddingTop: 18, borderTop: '1px solid #e2e8f0', display: 'grid', gap: 12 } },
-          React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
-            'Внутренняя заметка',
-            React.createElement('textarea', {
-              value: reviewNote, onChange: (e) => setReviewNote(e.target.value.slice(0, 2000)),
-              placeholder: 'Обоснование решения или вопросы для уточнения. Клиент эту заметку не увидит.',
-              style: { minHeight: 88, padding: 11, borderRadius: 9, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' }
-            })
-          ),
-          React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
-            'Код причины отказа',
-            React.createElement('select', { value: reviewReason, onChange: (e) => setReviewReason(e.target.value), style: { padding: 10, borderRadius: 9, border: '1px solid #cbd5e1', font: 'inherit' } },
-              React.createElement('option', { value: '' }, 'Не выбран'),
-              React.createElement('option', { value: 'out_of_scope' }, 'Вне границ сопровождения'),
-              React.createElement('option', { value: 'safety' }, 'Риск для безопасности'),
-              React.createElement('option', { value: 'unrealistic_expectations' }, 'Несовместимые ожидания'),
-              React.createElement('option', { value: 'format_mismatch' }, 'Не подходит формат работы'),
-              React.createElement('option', { value: 'no_capacity' }, 'Нет свободного места'),
-              React.createElement('option', { value: 'candidate_withdrew' }, 'Кандидат отказался')
+        ['completed', 'needs_clarification'].includes(intakeDialog.status) && React.createElement('div', {
+          style: { marginTop: 20, paddingTop: 18, borderTop: '1px solid #e2e8f0' }
+        },
+          !decisionSheetOpen
+            ? React.createElement('button', {
+              type: 'button',
+              onClick: () => setDecisionSheetOpen(true),
+              style: {
+                width: '100%', minHeight: 46, padding: '11px 16px',
+                border: 0, borderRadius: 12, background: '#434587',
+                color: '#fff', fontWeight: 700, cursor: 'pointer',
+              }
+            }, 'Зафиксировать решение')
+            : React.createElement('section', {
+              style: {
+                display: 'grid', gap: 14, padding: 16,
+                border: '1px solid #dfe3ec', borderRadius: 14,
+                background: '#fafbfc',
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontSize: 16, fontWeight: 750, color: '#25332a' } }, 'Решение по анкете'),
+                React.createElement('div', { style: { marginTop: 4, fontSize: 13, color: '#64748b', lineHeight: 1.45 } },
+                  'Выберите итог. Система ничего не решает автоматически.')
+              ),
+              React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
+                'Действие',
+                React.createElement('select', {
+                  value: reviewAction,
+                  onChange: (e) => {
+                    const nextAction = e.target.value;
+                    setReviewAction(nextAction);
+                    if (nextAction === 'approved') {
+                      setDecisionChecklist((current) => ({ ...current, slot_available: true }));
+                    } else if (nextAction === 'approved_waiting_slot') {
+                      setDecisionChecklist((current) => ({ ...current, slot_available: false }));
+                    }
+                  },
+                  style: { minHeight: 44, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', font: 'inherit' },
+                },
+                  React.createElement('option', { value: 'approved' }, 'Одобрить и согласовать старт'),
+                  React.createElement('option', { value: 'approved_waiting_slot' }, 'Одобрить, но оставить в ожидании места'),
+                  React.createElement('option', { value: 'needs_clarification' }, 'Запросить уточнения'),
+                  React.createElement('option', { value: 'rejected' }, 'Отказать в текущем формате')
+                )
+              ),
+              ['approved', 'approved_waiting_slot', 'rejected'].includes(reviewAction)
+                ? React.createElement('fieldset', {
+                  style: { display: 'grid', gap: 9, margin: 0, padding: 0, border: 0 }
+                },
+                  React.createElement('legend', { style: { fontSize: 13, fontWeight: 700, marginBottom: 7 } }, 'Чек-лист куратора'),
+                  Object.entries(DECISION_CHECKLIST_LABELS).map(([key, label]) => (
+                    React.createElement('label', {
+                      key,
+                      style: {
+                        display: 'grid', gridTemplateColumns: '1fr minmax(112px, auto)',
+                        alignItems: 'center', gap: 10,
+                        fontSize: 13, lineHeight: 1.4, color: '#334155',
+                      },
+                    },
+                      React.createElement('span', null, label),
+                      React.createElement('select', {
+                        value: decisionChecklist[key] == null
+                          ? ''
+                          : decisionChecklist[key] ? 'yes' : 'no',
+                        disabled: key === 'slot_available' && ['approved', 'approved_waiting_slot'].includes(reviewAction),
+                        onChange: (e) => setDecisionChecklist((current) => ({
+                          ...current,
+                          [key]: e.target.value === '' ? null : e.target.value === 'yes',
+                        })),
+                        style: {
+                          minHeight: 38, padding: '7px 9px', borderRadius: 9,
+                          border: '1px solid #cbd5e1', background: '#fff', font: 'inherit',
+                        },
+                      },
+                        React.createElement('option', { value: '' }, 'Выберите'),
+                        React.createElement('option', { value: 'yes' }, 'Да'),
+                        React.createElement('option', { value: 'no' }, 'Нет')
+                      )
+                    )
+                  ))
+                )
+                : null,
+              reviewAction === 'needs_clarification'
+                ? React.createElement(React.Fragment, null,
+                  React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
+                    'Вопрос клиенту',
+                    React.createElement('textarea', {
+                      value: clientQuestion,
+                      onChange: (e) => setClientQuestion(e.target.value.slice(0, 1200)),
+                      placeholder: 'Например: уточните, пожалуйста, какие ограничения по нагрузке назвал врач.',
+                      style: { minHeight: 88, padding: 11, borderRadius: 10, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' },
+                    })
+                  ),
+                  React.createElement('fieldset', { style: { margin: 0, padding: 0, border: 0 } },
+                    React.createElement('legend', { style: { fontSize: 13, fontWeight: 700, marginBottom: 8 } }, 'К каким разделам вернуться'),
+                    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+                      Object.entries(CLARIFICATION_SECTION_LABELS).map(([key, label]) => (
+                        React.createElement('label', {
+                          key,
+                          style: {
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '7px 9px', borderRadius: 9,
+                            border: '1px solid #d8dee8', background: '#fff',
+                            fontSize: 12, cursor: 'pointer',
+                          }
+                        },
+                          React.createElement('input', {
+                            type: 'checkbox',
+                            checked: clarificationSections.includes(key),
+                            onChange: (e) => setClarificationSections((current) => (
+                              e.target.checked
+                                ? [...new Set([...current, key])]
+                                : current.filter((item) => item !== key)
+                            )),
+                            style: { accentColor: '#434587' },
+                          }),
+                          label
+                        )
+                      ))
+                    )
+                  )
+                )
+                : null,
+              reviewAction === 'rejected'
+                ? React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
+                  'Причина отказа',
+                  React.createElement('select', {
+                    value: reviewReason, onChange: (e) => setReviewReason(e.target.value),
+                    style: { minHeight: 44, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', font: 'inherit' },
+                  },
+                    React.createElement('option', { value: '' }, 'Выберите причину'),
+                    React.createElement('option', { value: 'out_of_scope' }, 'Вне границ сопровождения'),
+                    React.createElement('option', { value: 'safety' }, 'Риск для безопасности'),
+                    React.createElement('option', { value: 'unrealistic_expectations' }, 'Несовместимые ожидания'),
+                    React.createElement('option', { value: 'format_mismatch' }, 'Не подходит формат работы'),
+                    React.createElement('option', { value: 'candidate_withdrew' }, 'Кандидат отказался')
+                  )
+                )
+                : null,
+              React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
+                'Внутренняя заметка',
+                React.createElement('textarea', {
+                  value: reviewNote,
+                  onChange: (e) => setReviewNote(e.target.value.slice(0, 2000)),
+                  placeholder: 'Контекст решения. Клиент эту заметку не увидит.',
+                  style: { minHeight: 76, padding: 11, borderRadius: 10, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' },
+                })
+              ),
+              React.createElement('div', { style: { display: 'flex', gap: 9 } },
+                React.createElement('button', {
+                  type: 'button',
+                  onClick: () => setDecisionSheetOpen(false),
+                  style: {
+                    minHeight: 44, padding: '10px 14px', borderRadius: 10,
+                    border: '1px solid #cbd5e1', background: '#fff',
+                    color: '#475569', cursor: 'pointer', fontWeight: 650,
+                  }
+                }, 'Отмена'),
+                React.createElement('button', {
+                  type: 'button',
+                  onClick: submitIntakeReview,
+                  disabled: actionLoading === 'review-' + intakeDialog.client_id,
+                  style: {
+                    flex: 1, minHeight: 44, padding: '10px 14px',
+                    border: 0, borderRadius: 10, background: '#434587',
+                    color: '#fff', fontWeight: 700, cursor: 'pointer',
+                    opacity: actionLoading === 'review-' + intakeDialog.client_id ? 0.65 : 1,
+                  }
+                }, actionLoading === 'review-' + intakeDialog.client_id ? 'Сохраняем…' : 'Сохранить решение')
+              )
             )
-          ),
-          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
-            React.createElement('button', { type: 'button', onClick: () => submitIntakeReview('approved'), disabled: actionLoading === 'review-' + intakeDialog.client_id, style: { minHeight: 44, padding: '10px 14px', border: 0, borderRadius: 9, background: '#25713c', color: '#fff', fontWeight: 700, cursor: 'pointer' } }, 'Одобрить'),
-            React.createElement('button', { type: 'button', onClick: () => submitIntakeReview('needs_clarification'), disabled: actionLoading === 'review-' + intakeDialog.client_id, style: { minHeight: 44, padding: '10px 14px', border: '1px solid #d9a441', borderRadius: 9, background: '#fff9e8', color: '#76510b', fontWeight: 700, cursor: 'pointer' } }, 'Нужны уточнения'),
-            React.createElement('button', { type: 'button', onClick: () => submitIntakeReview('rejected'), disabled: actionLoading === 'review-' + intakeDialog.client_id, style: { minHeight: 44, padding: '10px 14px', border: '1px solid #efb4b4', borderRadius: 9, background: '#fff4f4', color: '#9b2525', fontWeight: 700, cursor: 'pointer' } }, 'Отказать')
-          )
         ),
-        ['approved', 'rejected'].includes(intakeDialog.status) && React.createElement('button', {
+        ['approved', 'approved_waiting_slot', 'rejected'].includes(intakeDialog.status) && React.createElement('button', {
           type: 'button',
           onClick: () => copyToClipboard(
             intakeDialog.status === 'approved'
               ? 'Здравствуйте. Мы рассмотрели анкету и готовы предложить вам пробную неделю HEYS. Дату начала согласуем отдельным сообщением.'
+              : intakeDialog.status === 'approved_waiting_slot'
+                ? 'Здравствуйте. Мы рассмотрели анкету и готовы предложить пробную неделю HEYS, когда освободится место. Куратор свяжется с вами, чтобы согласовать дату старта.'
               : 'Здравствуйте. Мы рассмотрели анкету. Сейчас не сможем предложить пробную неделю в текущем формате сопровождения. Благодарим за уделённое время.',
             'Нейтральное сообщение скопировано'
           ),
