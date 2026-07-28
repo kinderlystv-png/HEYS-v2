@@ -342,6 +342,82 @@ test('HEYS Start poller processes /start update and commits offset', async (t) =
   assert.equal(queries.some((q) => /UPDATE public\.funnel_events[\s\S]+event_type = 'runtime_lock'/.test(q.sql)), true);
 });
 
+test('HEYS Start poller stops after failed offset commit without redelivering update', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'error', () => {});
+  let nowCalls = 0;
+  t.mock.method(Date, 'now', () => {
+    nowCalls += 1;
+    return nowCalls >= 5 ? 3000 : 0;
+  });
+
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    const body = JSON.parse(init.body);
+    fetchCalls.push({ url: String(url), body });
+    if (String(url).endsWith('/getUpdates') && body.offset) {
+      return {
+        ok: false,
+        status: 500,
+        json: async () => ({ ok: false, description: 'offset commit failed' }),
+      };
+    }
+    if (String(url).endsWith('/getUpdates')) {
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          result: [
+            {
+              update_id: 779,
+              message: {
+                chat: { id: 123456 },
+                text: '/start',
+              },
+            },
+          ],
+        }),
+      };
+    }
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
+  });
+
+  const oldEnv = { ...process.env };
+  t.after(() => {
+    process.env = oldEnv;
+    delete require.cache[MODULE_PATH];
+  });
+
+  process.env.HEYS_START_BOT_TOKEN = 'start-token';
+  process.env.TELEGRAM_CLIENT_BOT_TOKEN = 'client-token';
+  delete process.env.TELEGRAM_BOT_TOKEN;
+
+  const { handler, queries } = loadHandlerWithDb([]);
+  const result = await handler({
+    messages: [
+      {
+        details: {
+          payload: JSON.stringify({ poll: 'heys-start-bot', window_ms: 2500 }),
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.statusCode, 200);
+  const response = JSON.parse(result.body);
+  const getUpdatesCalls = fetchCalls.filter((call) => /getUpdates$/.test(call.url));
+  const sendMessageCalls = fetchCalls.filter((call) => /sendMessage$/.test(call.url));
+  assert.equal(response.processed, 1);
+  assert.equal(response.delivered, 1);
+  assert.equal(response.telegram_ok, false);
+  assert.equal(getUpdatesCalls.length, 2);
+  assert.equal(getUpdatesCalls[1].body.offset, 780);
+  assert.equal(sendMessageCalls.length, 1);
+  assert.equal(queries.some((q) => /INSERT INTO public\.maintenance_heartbeat/.test(q.sql)), false);
+  assert.equal(queries.some((q) => /UPDATE public\.funnel_events[\s\S]+event_type = 'runtime_lock'/.test(q.sql)), true);
+});
+
 test('HEYS Start poller skips getUpdates when another poll holds the lease', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
