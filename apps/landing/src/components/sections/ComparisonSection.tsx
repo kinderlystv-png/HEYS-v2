@@ -52,17 +52,7 @@ export default function ComparisonSection() {
                         style={{ transitionDelay: '200ms' }}
                     >
                         <div className="space-y-5">
-                            <div className="rounded-2xl border border-[#BFE6D2] bg-[#F1FBF6] px-4 py-4 text-center">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16814C]">
-                                    HEYS
-                                </p>
-                                <p className="mt-2 text-[16px] font-semibold leading-snug text-gray-900">
-                                    Дневник ведётся в приложении, а куратор держит контекст
-                                    недели между решениями.
-                                </p>
-                            </div>
-
-                            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-center">
+                            <div className="py-1 text-center">
                                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
                                     Пример
                                 </p>
@@ -71,18 +61,19 @@ export default function ComparisonSection() {
                                 </h3>
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="rounded-2xl border border-[#F3D5DA] bg-[#FFF4F5] px-4 py-4">
-                                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#B45A67]">
+                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <div className="px-4 py-4">
+                                    <p className="text-[13px] font-bold uppercase tracking-widest text-[#B45A67]">
                                         Трекер
                                     </p>
                                     <p className="mt-1 text-[15px] leading-relaxed text-gray-600">
-                                        Показывает красные цифры, но рутину дневника и следующий
-                                        шаг приходится держать самому.
+                                        В трекере дневник заполняете сами: добавляете продукты и
+                                        их количество — и только потом видите цифры. Почему вечер
+                                        сбился и что делать дальше, он не объяснит.
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-[#F1DCA8] bg-[#FFF9E8] px-4 py-4">
-                                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#A87513]">
+                                <div className="border-t border-slate-100 px-4 py-4">
+                                    <p className="text-[13px] font-bold uppercase tracking-widest text-[#A87513]">
                                         Консультация
                                     </p>
                                     <p className="mt-1 text-[15px] leading-relaxed text-gray-600">
@@ -90,13 +81,14 @@ export default function ComparisonSection() {
                                         восстанавливать по памяти.
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-[#BFE6D2] bg-[#F1FBF6] px-4 py-4">
-                                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#16814C]">
+                                <div className="border-t border-[#DCEFE5] bg-[#F7FBF8] px-4 py-4">
+                                    <p className="text-[13px] font-bold uppercase tracking-widest text-[#16814C]">
                                         HEYS
                                     </p>
                                     <p className="mt-1 text-[15px] font-semibold leading-relaxed text-gray-900">
-                                        Куратор видит свежий дневник, сон, нагрузку и ритм недели —
-                                        и помогает выбрать спокойный следующий шаг.
+                                        Вы присылаете фото или короткое сообщение — куратор
+                                        переносит данные в дневник, видит контекст недели и помогает
+                                        выбрать следующий шаг.
                                     </p>
                                 </div>
                             </div>
