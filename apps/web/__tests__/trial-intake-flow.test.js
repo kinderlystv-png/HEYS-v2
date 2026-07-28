@@ -17,6 +17,7 @@ const maintenanceSource = fs.readFileSync(path.join(repoDir, 'yandex-cloud-funct
 const landingSource = fs.readFileSync(path.join(repoDir, 'apps/landing/src/components/TrialForm.tsx'), 'utf8');
 const consentsSource = fs.readFileSync(path.join(webDir, 'heys_consents_v1.js'), 'utf8');
 const appOverlaysSource = fs.readFileSync(path.join(webDir, 'heys_app_overlays_v1.js'), 'utf8');
+const appGateFlowSource = fs.readFileSync(path.join(webDir, 'heys_app_gate_flow_v1.js'), 'utf8');
 const allowedRpcSource = rpcSource.slice(
   rpcSource.indexOf('const ALLOWED_FUNCTIONS = ['),
   rpcSource.indexOf('const COOKIE_SESSION_TOKEN_FUNCTIONS'),
@@ -239,6 +240,25 @@ describe('protected trial intake contract', () => {
     expect(queueSource).toContain('Подготовить анкету');
     expect(queueSource).toContain('Готово к разбору');
     expect(queueSource).toContain('Зафиксировать решение');
+  });
+
+  it('keeps claimed leads actionable only for their assigned curator', () => {
+    window.React = {};
+    window.HEYS = {};
+    // eslint-disable-next-line no-eval
+    (0, eval)(queueSource);
+
+    const leads = [
+      { id: 'new', status: 'new', curator_id: null },
+      { id: 'owned', status: 'contacted', curator_id: 'CURATOR-A' },
+      { id: 'foreign', status: 'contacted', curator_id: 'curator-b' },
+      { id: 'rejected', status: 'rejected', curator_id: 'curator-a' },
+    ];
+    const filterActionableLeads = window.HEYS.TrialQueue.filterActionableLeads;
+
+    expect(filterActionableLeads(leads, 'curator-a').map((lead) => lead.id)).toEqual(['new', 'owned']);
+    expect(filterActionableLeads(leads, null).map((lead) => lead.id)).toEqual(['new']);
+    expect(appGateFlowSource).toContain('curatorId: cloudUser?.id');
   });
 
   it('adds explicit invite, clarification and waiting-slot states without a second auth path', () => {

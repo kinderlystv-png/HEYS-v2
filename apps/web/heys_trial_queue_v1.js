@@ -1693,11 +1693,22 @@
     );
   }
 
+  function filterActionableLeads(leads, curatorId) {
+    const normalizedCuratorId = String(curatorId || '').trim().toLowerCase();
+
+    return (Array.isArray(leads) ? leads : []).filter((lead) => {
+      if (lead?.status === 'new') return true;
+      if (lead?.status !== 'contacted' || !normalizedCuratorId) return false;
+
+      return String(lead.curator_id || '').trim().toLowerCase() === normalizedCuratorId;
+    });
+  }
+
   /**
    * TrialQueueAdmin — UI для управления очередью
-   * @param {Object} props - { onClose }
+   * @param {Object} props - { onClose, curatorId }
    */
-  function TrialQueueAdmin({ onClose }) {
+  function TrialQueueAdmin({ onClose, curatorId }) {
     const [queue, setQueue] = React.useState([]);
     const [stats, setStats] = React.useState(null);
     const [leads, setLeads] = React.useState([]);
@@ -2312,8 +2323,8 @@
     const freeSlots = stats ? Math.max(0, (stats.limits?.max_active_trials || 3) - (grouped.assigned?.length || 0)) : 0;
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
 
-    // Клиентская фильтрация лидов (вместо RPC — обход бага с пропадающими лидами)
-    const newLeads = leads.filter(l => l.status === 'new');
+    // Новые лиды доступны общей очереди, contacted — только назначенному куратору.
+    const actionableLeads = filterActionableLeads(leads, curatorId);
     const rejectedLeads = leads.filter(l => l.status === 'rejected');
     const decisionStatuses = new Set(['approved', 'approved_waiting_slot', 'rejected']);
     const questionnaireQueue = grouped.pending.filter(
@@ -2348,7 +2359,7 @@
     );
 
     const tabs = [
-      { id: 'new', label: 'Новые', count: newLeads.length, hint: 'Короткие заявки с лендинга — сначала свяжитесь с человеком.' },
+      { id: 'new', label: 'Лиды', count: actionableLeads.length, hint: 'Новые и взятые в работу заявки — следующий шаг: подготовить анкету.' },
       { id: 'pending', label: 'Анкеты', count: questionnaireQueue.length, hint: 'Приглашения, заполнение, уточнения и анкеты к разбору.' },
       { id: 'rejected', label: 'Решения', count: rejectedLeads.length + decisionQueue.length, hint: 'Одобренные, ожидающие место и отклонённые кандидаты.' },
       { id: 'active', label: 'Триалы', count: grouped.assigned.length + trialClients.length, hint: 'Текущие и запланированные пробные недели.' }
@@ -2395,7 +2406,22 @@
               lineHeight: 1.3,
               wordBreak: 'break-word'
             }
-          }, item.name || '—'),
+          },
+            item.name || '—',
+            item.status === 'contacted' && React.createElement('span', {
+              style: {
+                display: 'inline-block',
+                marginLeft: 8,
+                padding: '2px 6px',
+                borderRadius: 5,
+                background: '#fef3c7',
+                color: '#92400e',
+                fontSize: 10,
+                fontWeight: 700,
+                verticalAlign: 'middle'
+              }
+            }, 'В работе')
+          ),
           React.createElement('div', {
             style: {
               fontSize: 13,
@@ -2735,9 +2761,9 @@
             style: { marginTop: 10, minHeight: 40, padding: '8px 12px', borderRadius: 8, border: '1px solid #efb4b4', background: '#fff', color: '#8f1d1d', cursor: 'pointer', fontWeight: 700 },
           }, 'Повторить загрузку')
         ),
-        !loading && !error && activeTab === 'new' && (newLeads.length ? newLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
+        !loading && !error && activeTab === 'new' && (actionableLeads.length ? actionableLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-        }, '📭 Нет заявок с лендинга')),
+        }, '📭 Нет заявок, требующих подготовки анкеты')),
         !loading && !error && activeTab === 'pending' && (questionnaireQueue.length ? questionnaireQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: false })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, 'Нет анкет, требующих действия')),
@@ -3465,6 +3491,7 @@
     buildClientWelcomeMessage,
     buildTrialIntakeInviteMessage,
     summarizeIntakeAnswers,
+    filterActionableLeads,
 
     // React
     useTrialQueue,

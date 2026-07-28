@@ -2570,7 +2570,9 @@
                                     ),
 
                                     // === TAB: QUEUE (Очередь на триал) ===
-                                    curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin),
+                                    curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin, {
+                                        curatorId: cloudUser?.id
+                                    }),
 
                                     // === TAB: MODERATION (Заявки на продукты) ===
                                     curatorTab === 'moderation' && React.createElement(ModerationTab, { clients }),
