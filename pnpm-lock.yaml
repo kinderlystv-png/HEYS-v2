@@ -18,7 +18,7 @@ overrides:
   dompurify: 3.4.12
   esbuild: '>=0.28.1'
   eslint>ajv: ^6.12.6
-  eslint>minimatch: ^3.1.4
+  eslint>minimatch: 3.1.4
   express>path-to-regexp: 0.1.13
   fast-uri: '>=3.1.4'
   flatted: '>=3.4.0'
@@ -364,6 +364,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7)(@types/react@18.3.24)(react-dom@18.3.1)(react@18.3.1)
+      '@types/express':
+        specifier: ^4.17.23
+        version: 4.17.23
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.24
@@ -8581,7 +8584,7 @@ packages:
       json-stable-stringify-without-jsonify: 1.0.1
       levn: 0.4.1
       lodash.merge: 4.6.2
-      minimatch: 3.1.5
+      minimatch: 3.1.4(patch_hash=dxp24xikds6r7jtrhgmcx62x6y)
       natural-compare: 1.4.0
       optionator: 0.9.4
       strip-ansi: 6.0.1
@@ -10874,12 +10877,6 @@ packages:
       brace-expansion: 5.0.8
     dev: true
     patched: true
-
-  /minimatch@3.1.5:
-    resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
-    dependencies:
-      brace-expansion: 5.0.8
-    dev: true
 
   /minimatch@5.1.8(patch_hash=ogs33trs4dpbkrskm3w5eudhky):
     resolution: {integrity: sha512-7RN35vit8DeBclkofOVmBY0eDAZZQd1HzmukRdSyz95CRh8FT54eqnbj0krQr3mrHR6sfRyYkyhwBWjoV5uqlQ==}
