@@ -80,9 +80,17 @@ const COMMON_POLICIES = {
   },
 };
 
+const CODEX_MAIN_ONLY_POLICY = {
+  id: 'codex-main-only',
+  workBranch: 'main',
+  pushTarget: 'origin/main',
+  createBranches: false,
+};
+
 const POLICY_EXPECTATIONS = {
   [FILES.agents]: {
     ...COMMON_POLICIES,
+    'codex-main-only': CODEX_MAIN_ONLY_POLICY,
     'agent-branch-source-only': {
       id: 'agent-branch-source-only',
       branches: ['codex/*'],
@@ -101,6 +109,7 @@ const POLICY_EXPECTATIONS = {
   },
   [FILES.runbook]: {
     ...COMMON_POLICIES,
+    'codex-main-only': CODEX_MAIN_ONLY_POLICY,
     'agent-branch-source-only': {
       id: 'agent-branch-source-only',
       branches: ['codex/*', 'claude/*'],

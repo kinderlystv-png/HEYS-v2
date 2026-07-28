@@ -51,6 +51,20 @@ test('reports when the commit-only operation loses --no-push', () => {
   assert.ok(failures.some((failure) => failure.file === RUNBOOK));
 });
 
+test('reports when the Codex main-only policy allows branch creation', () => {
+  const state = withFile(loadRepositoryState(), RUNBOOK, (text) => {
+    const changed = text.replace(
+      '"id":"codex-main-only","workBranch":"main","pushTarget":"origin/main","createBranches":false',
+      '"id":"codex-main-only","workBranch":"main","pushTarget":"origin/main","createBranches":true',
+    );
+    assert.notEqual(changed, text, 'test fixture must allow branch creation');
+    return changed;
+  });
+
+  const failures = invariantFailures(state, 'codex-main-only');
+  assert.ok(failures.some((failure) => failure.file === RUNBOOK));
+});
+
 test('reports an unknown package command mentioned by the runbook', () => {
   const state = withFile(
     loadRepositoryState(),

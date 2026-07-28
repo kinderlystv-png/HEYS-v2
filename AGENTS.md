@@ -149,6 +149,7 @@ readiness-математику, валидатор-фреймворк, онбо�
 <!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
 <!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
 <!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
+<!-- POLICY {"id":"codex-main-only","workBranch":"main","pushTarget":"origin/main","createBranches":false} -->
 <!-- POLICY {"id":"agent-branch-source-only","branches":["codex/*"],"generated":false,"releaseArtifacts":false} -->
 <!-- POLICY {"id":"integration-never-push","command":"pnpm agents:integrate","commits":true,"push":false} -->
 
@@ -182,14 +183,21 @@ readiness-математику, валидатор-фреймворк, онбо�
   про конкретные правки — `rg` / `git log -- <files>` / `git show --name-only`.
   Ответ разделяет: что сделал сам агент, что фактически есть локально, что
   фактически есть на remote.
-- **Main как рабочая ветка:** если пользователь даёт прямую команду commit/push
-  на `main`, агент может коммитить и пушить текущий staged/рабочий scope из
-  `main` без ухода в отдельную ветку. Агент перед commit показывает/проверяет
-  scope и stage'ит только согласованные файлы; `git add -A` допустим только если
-  пользователь явно принимает весь dirty scope.
-- На `codex/*`/agent-ветке коммить source-only. Generated/release artifacts
-  создаёт только явно разрешённый collector/integration flow; он не разрешает и
-  не выполняет push. Hooks fail closed: следуй stderr, не используй
+- **Codex работает только в `main`:** локальные Codex-агенты не создают новые
+  ветки, не переключаются в `codex/*` и не используют отдельную agent-ветку как
+  промежуточный этап. Если checkout оказался не в `main` или `main` занят
+  временным worktree, сначала согласуй ownership, безопасно освободи `main` и
+  продолжай в корневом checkout без stash/потери чужих изменений. При
+  разрешённом push единственная цель — `origin/main`.
+- Прямая команда commit/push разрешает коммитить и пушить согласованный scope из
+  `main`; перед commit агент показывает/проверяет scope и stage'ит только
+  согласованные файлы. `git add -A` допустим только если пользователь явно
+  принимает весь dirty scope.
+- Существующие `codex/*` — только legacy/integration inputs для read-only аудита
+  и переноса уже готовых изменений в `main`, а не рабочие ветки Codex. Старый
+  source-only guard остаётся fail-safe для таких refs, но не разрешает новые
+  коммиты. Generated/release artifacts создаёт только явно разрешённый
+  collector/integration flow. Hooks fail closed: следуй stderr, не используй
   `--no-verify` или `HUSKY=0` без отдельной прямой команды пользователя.
 - Проси пользователя только когда нужен выбор, существенно меняющий scope или
   необратимый результат, 2FA/hardware key, чужой доступ, destructive вне
