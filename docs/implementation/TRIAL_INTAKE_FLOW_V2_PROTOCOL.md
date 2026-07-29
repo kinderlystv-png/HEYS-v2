@@ -329,10 +329,31 @@ metadata проверяется на отсутствие ответов, воп
    fail-closed результат для старого Telegram-лида без versioned privacy proof.
 4. После ошибки состояние осталось неизменным: клиент и `invite_prepared` не
    созданы, дубли лида и уведомления не появились.
+5. Consent-proof fix опубликован в `heys-bot-client` version
+   `d4eeeo4qqsli8h6snbge` из commit `e33214cf4`. Повторный operator smoke
+   подтвердил: перед кнопкой отправки телефона бот показывает прямую ссылку,
+   которая открывает privacy policy 1.7.
+6. После нового действия пользователя бот прислал ровно одно подтверждение.
+   Обезличенная DB-проверка подтвердила свежие version/hash/time и метод
+   `telegram_contact`; hash совпал с active registry. Лид и lead-creation event
+   остались в единственном экземпляре, новый клиент до prepare не создан.
+7. Повторный operator prepare дошёл до production RPC, но вернул HTTP 500
+   `Database error`. Обезличенная проверка после ошибки подтвердила полный
+   rollback: лид остался `contacted`; client, trial intake, queue и queue-event
+   не созданы; второй лид не появился.
+8. Транзакционная диагностика без commit локализовала blocker: владелец SECURITY
+   DEFINER entry point `heys_admin` не имеет `EXECUTE` на вложенный
+   `admin_convert_lead(UUID, UUID)`. Это следствие явного revoke в migration v2,
+   а не ошибка consent proof или входных данных.
+9. Managed forward migration №12 вернула внутренний `EXECUTE` только
+   `heys_admin`; `heys_rpc` и `PUBLIC` остались без доступа. Rollback-only
+   production smoke вернул `success=true` и `invite_prepared`, а повторная
+   обезличенная проверка после закрытия транзакции снова показала один
+   `contacted` lead и ноль client/intake/queue/queue-event.
 
 Скриншоты и точные phone/PIN/lead id в репозиторий не сохраняются. Повторный
-smoke продолжается только после публикации bot consent-proof fix и нового
-осознанного действия пользователя после показа действующей политики.
+smoke продолжается одним повторным operator prepare. Красный статус до
+фактически созданного клиента и `invite_prepared` сохраняется.
 
 ## Facts Table
 

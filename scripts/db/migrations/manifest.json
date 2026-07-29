@@ -97,6 +97,13 @@
       "path": "database/2026-07-28_activate_user_agreement_v1_8.sql",
       "description": "Activate user agreement and payment oferta v1.8 without rewriting consent proof history",
       "destructive": false
+    },
+    {
+      "id": "2026-07-29_trial_prepare_internal_execute",
+      "order": 12,
+      "path": "scripts/db/migrations/2026-07-29_trial_prepare_internal_execute.sql",
+      "description": "Allow the trial prepare owner to call lead conversion without exposing the lower-level RPC",
+      "destructive": false
     }
   ]
 }

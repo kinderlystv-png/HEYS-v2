@@ -90,3 +90,27 @@ test('frontend and backend deploys both fail closed on pending production migrat
     assert.match(workflow, /node scripts\/db\/migrate\.mjs --status --require-current/);
   }
 });
+
+test('trial prepare ACL migration keeps lead conversion internal', () => {
+  const root = path.resolve(import.meta.dirname, '..', '..');
+  const sql = fs.readFileSync(
+    path.join(root, 'scripts/db/migrations/2026-07-29_trial_prepare_internal_execute.sql'),
+    'utf8',
+  );
+  assert.match(
+    sql,
+    /^REVOKE EXECUTE ON FUNCTION public\.admin_convert_lead\(UUID, UUID\) FROM PUBLIC;$/m,
+  );
+  assert.match(
+    sql,
+    /^REVOKE EXECUTE ON FUNCTION public\.admin_convert_lead\(UUID, UUID\) FROM heys_rpc;$/m,
+  );
+  assert.match(
+    sql,
+    /^GRANT EXECUTE ON FUNCTION public\.admin_convert_lead\(UUID, UUID\) TO heys_admin;$/m,
+  );
+  assert.doesNotMatch(
+    sql,
+    /^GRANT EXECUTE ON FUNCTION public\.admin_convert_lead\(UUID, UUID\) TO (PUBLIC|heys_rpc);$/m,
+  );
+});

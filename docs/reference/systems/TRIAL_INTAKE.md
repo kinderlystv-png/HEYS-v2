@@ -3,15 +3,19 @@
 > **Статус:** production v2 опубликован; migration ledger и основной live-контур
 > проверены 2026-07-28. Operator smoke 2026-07-29 подтвердил ownership UI-fix,
 > но остановился fail-closed на `fresh_application_required`: старый
-> Telegram-лид не содержит versioned privacy proof. Production остаётся красным
-> до bot fix, повторного осознанного согласия и smoke до созданного клиента.
-> **Охват:** landing handoff, consent, session/RPC boundary, encrypted storage,
-> client/curator UI, decision gate, retention, DSAR и production smoke. Legal
-> 1.8 активна, live legal drift проходит. **Не подтверждено/Не охвачено:**
-> post-trial payment rollout; он не входит в контракт первого trial. Отдельное
-> изменение РКН для этого flow не требуется: опубликованная запись №
-> 26-22-005319 уже охватывает заявки/триалы, сопровождение и специальные данные
-> о здоровье.
+> Telegram-лид не содержал versioned privacy proof. Bot fix опубликован; smoke
+> подтвердил показ policy 1.7 и registry-backed proof после контакта без дубля
+> лида/handoff. Повторный prepare выявил DB ACL blocker: владелец entry point
+> `heys_admin` не мог вызвать вложенный `admin_convert_lead`. Ошибка откатилась
+> полностью. Forward migration №12 восстановила owner-only вызов и сохранила
+> запрет для gateway/public; rollback-only smoke зелёный. Production остаётся
+> красным до ручного smoke с фактически созданным клиентом. **Охват:** landing
+> handoff, consent, session/RPC boundary, encrypted storage, client/curator UI,
+> decision gate, retention, DSAR и production smoke. Legal 1.8 активна, live
+> legal drift проходит. **Не подтверждено/Не охвачено:** post-trial payment
+> rollout; он не входит в контракт первого trial. Отдельное изменение РКН для
+> этого flow не требуется: опубликованная запись № 26-22-005319 уже охватывает
+> заявки/триалы, сопровождение и специальные данные о здоровье.
 
 ## Поток
 
@@ -189,4 +193,5 @@ UI-fix этот контракт не объявляет закрытым.
 | TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                           | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27                      |
 | TI15 | Intake UI показывает `new` и только закреплённые за текущим куратором `contacted`; без curator id скрывает `contacted` fail-closed | `trial-intake-flow.test.js`, 26/26 + operator smoke                                | проверено production 2026-07-29                    |
 | TI16 | `admin_get_leads` получает `p_curator_id`, но SQL пока не ограничивает им возвращаемые lead rows                                   | `database/2026-03-02_fix_admin_get_leads_name.sql`                                 | подтверждённый риск 2026-07-29; server fix pending |
-| TI17 | Лид без свежего privacy proof не создаёт клиента/`invite_prepared` и не даёт побочных дублей                                       | prepare RPC + operator smoke `fresh_application_required`                          | проверено production 2026-07-29; bot fix pending   |
+| TI17 | Лид без свежего privacy proof не создаёт клиента/`invite_prepared` и не даёт побочных дублей                                       | prepare RPC + operator smoke `fresh_application_required`; повторный bot/DB smoke  | bot proof green 2026-07-29                         |
+| TI18 | SECURITY DEFINER prepare entry point должен иметь внутренний `EXECUTE` на закрытый для gateway `admin_convert_lead`                | migration №12 + production ACL introspection + rollback-only prepare               | ✅ owner=true, gateway/public=false, prepare green |
