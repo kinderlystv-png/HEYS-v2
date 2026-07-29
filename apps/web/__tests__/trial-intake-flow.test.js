@@ -233,6 +233,11 @@ describe('protected trial intake contract', () => {
     expect(v3Sql).toContain("l.status <> 'contacted' OR l.curator_id = p_curator_id");
   });
 
+  it('reloads the browser after candidate login without using the Node global', () => {
+    expect(appGateFlowSource).toContain('window.location.reload()');
+    expect(appGateFlowSource).not.toContain('global.location.reload()');
+  });
+
   it('renders the route-level intake without competing app overlays', () => {
     expect(appOverlaysSource).toContain("consentGate?.key === 'trial-intake'");
     expect(appOverlaysSource).toContain('if (isTrialIntakeBlocking)');

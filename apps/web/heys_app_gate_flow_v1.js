@@ -1927,7 +1927,7 @@
                                     if (HEYS.TrialIntake?.shouldOpen?.() && HEYS.YandexAPI?.candidateLogin) {
                                         const candidateResult = await HEYS.YandexAPI.candidateLogin(phone, pin);
                                         if (candidateResult?.ok) {
-                                            global.location.reload();
+                                            window.location.reload();
                                             return candidateResult;
                                         }
                                     }
