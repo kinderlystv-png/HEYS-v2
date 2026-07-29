@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const loginSource = fs.readFileSync('apps/web/heys_login_screen_v1.js', 'utf8');
-const staticHtml = fs.readFileSync('apps/web/index.html', 'utf8');
+const loginSource = fs.readFileSync('heys_login_screen_v1.js', 'utf8');
+const staticHtml = fs.readFileSync('index.html', 'utf8');
 
 function loadLoginScreen({ search = '', candidateHint = false } = {}) {
   const localStorage = {
