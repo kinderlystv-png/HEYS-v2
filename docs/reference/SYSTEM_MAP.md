@@ -15,14 +15,15 @@
 
 ## Общие библиотеки
 
-| Пакет                                                  | Назначение из package manifest            |
-| ------------------------------------------------------ | ----------------------------------------- |
-| [`@heys/core`](../../packages/core/package.json)       | Центральная бизнес-логика и модели данных |
-| [`@heys/logger`](../../packages/logger/package.json)   | Централизованное логирование              |
-| [`@heys/search`](../../packages/search/package.json)   | Поиск с поддержкой опечаток               |
-| [`@heys/shared`](../../packages/shared/package.json)   | Общие утилиты                             |
-| [`@heys/storage`](../../packages/storage/package.json) | Хранение и синхронизация данных           |
-| [`@heys/ui`](../../packages/ui/package.json)           | Переиспользуемые React-компоненты         |
+| Пакет                                                                          | Назначение из package manifest                       |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| [`@heys/core`](../../packages/core/package.json)                               | Центральная бизнес-логика и модели данных            |
+| [`@heys/logger`](../../packages/logger/package.json)                           | Централизованное логирование                         |
+| [`@heys/search`](../../packages/search/package.json)                           | Поиск с поддержкой опечаток                          |
+| [`@heys/shared`](../../packages/shared/package.json)                           | Общие утилиты                                        |
+| [`@heys/storage`](../../packages/storage/package.json)                         | Хранение и синхронизация данных                      |
+| [`@heys/ui`](../../packages/ui/package.json)                                   | Переиспользуемые React-компоненты                    |
+| [`@heys/assemble-day-engine`](../../packages/assemble-day-engine/package.json) | Node-only причинный simulation harness «Собери день» |
 
 ## Backend и данные
 
@@ -64,6 +65,7 @@ day + profile + products
 | Аналитика, советы и игра                | [`ANALYTICS_AND_SCORING.md`](systems/ANALYTICS_AND_SCORING.md), [`ADVICE_AND_GAMIFICATION.md`](systems/ADVICE_AND_GAMIFICATION.md)                                                   |
 | Куратор и подписка                      | [`CURATOR_WORKSPACE.md`](systems/CURATOR_WORKSPACE.md), [`SUBSCRIPTION_AND_PAYMENTS.md`](systems/SUBSCRIPTION_AND_PAYMENTS.md)                                                       |
 | Планирование и тренировки               | [`PLANNING.md`](systems/PLANNING.md), [`TRAINING_MODES.md`](systems/TRAINING_MODES.md)                                                                                               |
+| Headless-игра «Собери день»             | [`ASSEMBLE_DAY_ENGINE.md`](systems/ASSEMBLE_DAY_ENGINE.md)                                                                                                                           |
 | PWA, mobile, Telegram и landing         | [`PWA_OFFLINE_PUSH.md`](systems/PWA_OFFLINE_PUSH.md), [`MOBILE.md`](systems/MOBILE.md), [`TELEGRAM.md`](systems/TELEGRAM.md), [`LANDING_AND_LEADS.md`](systems/LANDING_AND_LEADS.md) |
 | Operations, jobs, backup и reports      | [`INFRA_OPERATIONS.md`](systems/INFRA_OPERATIONS.md), [`BACKGROUND_JOBS.md`](systems/BACKGROUND_JOBS.md), [`BACKUP_AND_REPORTS.md`](systems/BACKUP_AND_REPORTS.md)                   |
 

@@ -1,0 +1,209 @@
+import { canonicalJson, drawInt, deterministicFloat, stateHash } from './rng.js';
+import { getPlanningAdjustment } from './planning.js';
+import { validateState } from './schema.js';
+import { ReducerError, type ActionOffer, type Condition, type DecisionContext, type Effect, type EventCandidate, type EventInstance, type EventTemplate, type GameState, type Registries, type Requirement, type ScheduledEffect, type StageTrace, type StepOutput } from './types.js';
+
+const STAGES=['validate','advanceEnvironment','applyCosts','applyImmediateEffects','scheduleEffects','resolveCommitments','updateDerivedContext','collectEventCandidates','selectNextEvent','appendCausalJournal'] as const;
+const sourcePriority:Record<EventTemplate['source'],number>={mandatory:0,scheduled_consequence:1,causal:2,external:3,opportunity:4};
+const clamp=(value:number,min=0,max=100)=>Math.min(max,Math.max(min,value));
+const round=(value:number)=>Math.round(value*10000)/10000;
+const clone=<T>(value:T):T=>structuredClone(value);
+interface Change { sourceId:string; mechanism:string; path:string; before:unknown; after:unknown; confidence?:'established'|'plausible_model'|'personal_hypothesis' }
+
+function getRaw(root:unknown,path:string):unknown {let value:unknown=root;for(const key of path.split('.')){if(value===null||typeof value!=='object')return undefined;value=(value as Record<string,unknown>)[key];}return value;}
+export function getPath(state:GameState,path:string,context?:DecisionContext):unknown {return path.startsWith('context.')?getRaw({context},path):getRaw(state,path);}
+function setPath(root:unknown,path:string,next:unknown):void {const keys=path.split('.');let target=root as Record<string,unknown>;for(const key of keys.slice(0,-1)){const child=target[key];if(child===null||typeof child!=='object')throw new Error(`Unknown state path ${path}`);target=child as Record<string,unknown>;}const leaf=keys.at(-1)!;if(!(leaf in target))throw new Error(`Unknown state path ${path}`);target[leaf]=next;}
+function comparable(value:unknown):number|string|undefined {return typeof value==='number'||typeof value==='string'?value:typeof value==='boolean'?String(value):undefined;}
+function compare(actual:unknown,op:string,expected:unknown):boolean {if(op==='eq')return actual===expected;if(typeof actual!=='number'||typeof expected!=='number')return false;return op==='lt'?actual<expected:op==='lte'?actual<=expected:op==='gte'?actual>=expected:actual>expected;}
+export function evaluateCondition(state:GameState,condition:Condition,context=computeDecisionContext(state)):boolean {
+  if(condition.kind==='compare')return compare(getPath(state,condition.path,context),condition.op,condition.value);
+  if(condition.kind==='capability')return state.character.capabilities.includes(condition.id);
+  if(condition.kind==='all')return condition.conditions.every((item)=>evaluateCondition(state,item,context));
+  if(condition.kind==='any')return condition.conditions.some((item)=>evaluateCondition(state,item,context));
+  return !evaluateCondition(state,condition.condition,context);
+}
+function conditionPaths(condition:Condition):string[]{
+  if(condition.kind==='compare')return [condition.path];
+  if(condition.kind==='capability')return ['character.capabilities'];
+  if(condition.kind==='not')return conditionPaths(condition.condition);
+  return [...new Set(condition.conditions.flatMap(conditionPaths))];
+}
+
+function evaluateRequirement(state:GameState,eventId:string,requirement:Requirement,context:DecisionContext):boolean {
+  if(requirement.kind==='range')return compare(getPath(state,requirement.path,context),requirement.op,requirement.value);
+  if(requirement.kind==='clock_window')return state.clock.minuteOfDay>=requirement.fromMin&&state.clock.minuteOfDay<=requirement.toMin;
+  if(requirement.kind==='inventory')return state.economy.foodPortions[requirement.category]>=requirement.minPortions;
+  if(requirement.kind==='capability')return state.character.capabilities.includes(requirement.id);
+  if(requirement.kind==='task_status')return state.work.tasks.some((task)=>task.id===requirement.taskId&&task.status===requirement.status);
+  if(requirement.kind==='commitment_status')return state.commitments.some((item)=>item.id===requirement.commitmentId&&item.status===requirement.status);
+  return eventId===requirement.eventId;
+}
+
+export function computeDecisionContext(state:GameState):DecisionContext {
+  const profile=state.character.profile;
+  const caffeineMask=Math.min(28,state.accumulators.activeCaffeineMg*.08*profile.caffeineSensitivity);
+  const hoursAwake=Math.max(0,(state.clock.minuteOfDay-state.clock.awakeSinceMinute)/60);
+  const sleepiness=clamp(15+2.2*hoursAwake+state.accumulators.sleepDebtMin/7+.15*state.vitals.physicalFatigue-caffeineMask);
+  const timeReadiness=state.clock.minuteOfDay>=1320?70:state.clock.minuteOfDay>=1200?60:state.clock.minuteOfDay>=1080?35:15;
+  const sleepReadiness=clamp(timeReadiness+Math.min(25,state.accumulators.sleepDebtMin/8)-caffeineMask-.2*state.vitals.tension-.15*state.vitals.discomfort+state.vitals.windDown*.25);
+  const active=state.work.tasks.filter((task)=>task.status==='open'||task.status==='renegotiated');
+  const deadlinePressure=clamp(state.work.projectBacklogMin/6+Math.max(0,state.clock.dayIndex-2)*8);
+  const obligations=state.economy.obligations.filter((item)=>item.status==='scheduled'||item.status==='deferred'||item.status==='overdue').reduce((sum,item)=>sum+item.amountRub,0);
+  const expected=state.economy.expectedIncome.filter((item)=>item.status==='expected').reduce((sum,item)=>sum+item.amountRub,0);
+  const cashAfterNextObligationsRub=state.economy.cashRub+expected-obligations;
+  const financialPressure=clamp(cashAfterNextObligationsRub<0?50+Math.min(50,-cashAfterNextObligationsRub/500):20);
+  const familyImbalance=Math.abs(state.accumulators.familyLoadPlayer7d-state.accumulators.familyLoadPartner7d);
+  const focus=clamp(.36*state.vitals.energy+.2*(100-sleepiness)+.18*(100-state.vitals.tension)+.12*(100-state.vitals.hunger)+.14*state.character.skills.professional);
+  return {sleepiness,sleepReadiness,deadlinePressure,financialPressure,familyImbalance,cashAfterNextObligationsRub,focusByTaskId:Object.fromEntries(active.map((task)=>[task.id,focus])),optionPressureByActionId:{}};
+}
+
+const riskLabel=(score:number):ActionOffer['risk']=>score>=35?'very_high':score>=24?'high':score>=12?'moderate':score>=5?'low':'none';
+const effortLevel=(score:number):ActionOffer['effortLevel']=>score>=35?'high':score>=15?'normal':score>0?'light':'none';
+export function getActionOffers(state:GameState,eventId:string,registries:Registries,context=computeDecisionContext(state)):ActionOffer[] {
+  const event=registries.events[eventId];if(!event)throw new ReducerError('invalid_content','validate',eventId,['unknown event']);
+  return event.actionIds.map((actionId)=>{
+    const action=registries.actions[actionId];if(!action)throw new ReducerError('invalid_content','validate',actionId,['unknown action']);
+    const unavailableReasons:string[]=[];let available=true;
+    for(const requirement of action.requirements)if(!evaluateRequirement(state,eventId,requirement,context)){available=false;unavailableReasons.push(`requirement:${requirement.kind}`);}
+    let effectiveTimeMin=action.cost.timeMin,moneyRub=action.cost.moneyRub,effortScore=action.baseEffortScore,riskScore=action.baseRiskScore,optionPressure=action.baseOptionPressure;const consequencePreview:string[]=[];const geometryReasons:ActionOffer['geometryReasons']=[];
+    for(const item of action.cost.inventory??[])if(state.economy.foodPortions[item.category]<item.portions){if(item.fallbackMoneyRub!==undefined){moneyRub+=item.fallbackMoneyRub;consequencePreview.push(`Базовый запас закончился: доступна простая покупка за ${item.fallbackMoneyRub} ₽`);geometryReasons.push({reason:'доступная замена базового запаса',inputPaths:[`economy.foodPortions.${item.category}`]});}else{available=false;unavailableReasons.push(`insufficient_${item.category}`);}}
+    for(const rule of action.geometryRules)if(evaluateCondition(state,rule.when,context)){geometryReasons.push({reason:rule.reason,inputPaths:conditionPaths(rule.when)});if(rule.delta.available===false){available=false;unavailableReasons.push(rule.reason);}effectiveTimeMin+=rule.delta.timeMin??0;moneyRub+=rule.delta.moneyRub??0;effortScore+=rule.delta.effortScore??0;riskScore+=rule.delta.riskScore??0;optionPressure+=rule.delta.optionPressure??0;if(rule.delta.preview)consequencePreview.push(rule.delta.preview);}
+    const baseTime=Math.max(0,Math.round(effectiveTimeMin)),planning=getPlanningAdjustment(state,action,eventId,baseTime),planningSignals=planning.signals;
+    effectiveTimeMin+=planning.delta.timeMin;moneyRub+=planning.delta.moneyRub;effortScore+=planning.delta.effortScore;riskScore+=planning.delta.riskScore;optionPressure+=planning.delta.optionPressure;
+    for(const signal of planningSignals)geometryReasons.push({reason:signal.reason,inputPaths:[signal.kind.includes('weekly_rule')?'weeklyRules':'monthlyPriorities']});
+    if(state.economy.cashRub<moneyRub){available=false;unavailableReasons.push('insufficient_cash');}
+    context.optionPressureByActionId[actionId]=clamp(optionPressure);
+    const normalizedTime=Math.max(0,Math.round(effectiveTimeMin));
+    const normalizedEffort=clamp(effortScore),normalizedRisk=clamp(riskScore);
+    return {actionId,available,unavailableReasons,effectiveTimeMin:normalizedTime,moneyRub:Math.max(0,Math.round(moneyRub)),effort:action.cost.effort,effortScore:normalizedEffort,effortLevel:effortLevel(normalizedEffort),risk:riskLabel(normalizedRisk),riskScore:normalizedRisk,optionPressure:clamp(optionPressure),consequencePreview,geometryReasons,utility:action.qaUtility,stabilizes:action.stabilizes,planningSignals};
+  });
+}
+
+function syncBacklog(state:GameState):void {state.work.projectBacklogMin=state.work.tasks.filter((task)=>task.status==='open'||task.status==='renegotiated').reduce((sum,task)=>sum+task.remainingMin,0);}
+function normalize(state:GameState):void {
+  for(const object of [state.vitals] as Array<Record<string,number>>)for(const key of Object.keys(object))object[key]=round(clamp(object[key]!));
+  for(const key of ['recoveryNeed','familyLoadPlayer7d','familyLoadPartner7d'] as const)state.accumulators[key]=round(clamp(state.accumulators[key]));
+  state.accumulators.sleepDebtMin=round(clamp(state.accumulators.sleepDebtMin,0,480));state.accumulators.activeCaffeineMg=round(clamp(state.accumulators.activeCaffeineMg,0,600));state.accumulators.satietyWindowMin=round(clamp(state.accumulators.satietyWindowMin,0,360));
+  state.work.reputation=round(clamp(state.work.reputation));state.family.friction=round(clamp(state.family.friction));state.family.participationBalance=round(clamp(state.family.participationBalance,-100,100));
+  for(const person of ['partner','child'] as const){state.family[person].closeness=round(clamp(state.family[person].closeness));state.family[person].trust=round(clamp(state.family[person].trust));}
+  state.economy.cashRub=Math.max(0,Math.round(state.economy.cashRub));for(const key of Object.keys(state.economy.foodPortions) as Array<keyof typeof state.economy.foodPortions>)state.economy.foodPortions[key]=Math.max(0,Math.round(state.economy.foodPortions[key]));state.work.helpDebt=Math.max(0,Math.round(state.work.helpDebt));for(const task of state.work.tasks)task.remainingMin=Math.max(0,Math.round(task.remainingMin));syncBacklog(state);
+}
+function normalizePath(state:GameState,path:string):void {
+  const value=getRaw(state,path);if(typeof value!=='number')return;let next=value;
+  if(/^vitals\./.test(path)||/^character\.(skills|habits)\./.test(path)||path==='work.reputation'||/^family\.(friction|(partner|child)\.(closeness|trust))$/.test(path)||/^accumulators\.(recoveryNeed|familyLoadPlayer7d|familyLoadPartner7d)$/.test(path))next=round(clamp(value));
+  else if(path==='family.participationBalance')next=round(clamp(value,-100,100));
+  else if(path==='accumulators.sleepDebtMin')next=round(clamp(value,0,480));
+  else if(path==='accumulators.activeCaffeineMg')next=round(clamp(value,0,600));
+  else if(path==='accumulators.satietyWindowMin')next=round(clamp(value,0,360));
+  else if(path==='economy.cashRub'||/^economy\.foodPortions\./.test(path)||/^economy\.expectedIncome\.\d+\.amountRub$/.test(path)||path==='work.helpDebt'||/^work\.tasks\.\d+\.(remainingMin|requiredSkill|baseRisk|dueDayIndex|dueMinuteOfDay)$/.test(path))next=Math.max(0,Math.round(value));
+  if(next!==value)setPath(state,path,next);
+}
+function pushChange(changes:Change[],sourceId:string,mechanism:string,path:string,before:unknown,after:unknown,confidence:Change['confidence']='plausible_model'):void {const same=before===undefined||after===undefined?before===after:canonicalJson(before)===canonicalJson(after);if(!same)changes.push({sourceId,mechanism,path,before,after,confidence});}
+function mutate(state:GameState,changes:Change[],sourceId:string,mechanism:string,path:string,next:unknown):void {const before=getRaw(state,path),backlogBefore=state.work.projectBacklogMin;setPath(state,path,next);normalizePath(state,path);const taskMatch=/^work\.tasks\.(\d+)\.remainingMin$/.exec(path);if(taskMatch)syncBacklog(state);const after=getRaw(state,path);pushChange(changes,sourceId,mechanism,path,before,after);if(taskMatch){const task=state.work.tasks[Number(taskMatch[1])];if(task)pushChange(changes,sourceId,mechanism,`work.tasks.${task.id}.remainingMin`,before,after);pushChange(changes,sourceId,mechanism,'work.projectBacklogMin',backlogBefore,state.work.projectBacklogMin);}const incomeMatch=/^economy\.expectedIncome\.(\d+)\.(.+)$/.exec(path);if(incomeMatch){const income=state.economy.expectedIncome[Number(incomeMatch[1])];if(income)pushChange(changes,sourceId,mechanism,`economy.expectedIncome.${income.id}.${incomeMatch[2]}`,before,after);}}
+
+function applySleep(state:GameState,changes:Change[],opportunityMin:number,interruptionsMin:number,sourceId:string,reason:string):void {
+  const context=computeDecisionContext(state),latency=clamp(10+Math.max(0,55-context.sleepReadiness)*.6,10,60),actual=Math.max(0,opportunityMin-latency-interruptionsMin),target=opportunityMin<=300?opportunityMin:state.character.profile.sleepNeedMin;
+  mutate(state,changes,sourceId,reason,'accumulators.sleepDebtMin',state.accumulators.sleepDebtMin*.85+Math.max(0,target-actual)-.5*Math.max(0,actual-target));
+  mutate(state,changes,sourceId,reason,'vitals.energy',35+actual/16-.06*state.accumulators.sleepDebtMin-.12*state.vitals.physicalFatigue+(actual>=420?8:0));
+  mutate(state,changes,sourceId,reason,'vitals.tension',state.vitals.tension*.72);mutate(state,changes,sourceId,reason,'vitals.physicalFatigue',state.vitals.physicalFatigue*.65);mutate(state,changes,sourceId,reason,'vitals.mood',state.vitals.mood+(state.character.profile.moodBaseline-state.vitals.mood)*.15);mutate(state,changes,sourceId,reason,'accumulators.activeCaffeineMg',state.accumulators.activeCaffeineMg*2**(-(opportunityMin/60)/(state.character.profile.caffeineHalfLifeMin/60)));mutate(state,changes,sourceId,reason,'vitals.windDown',15);
+}
+
+function advanceBackground(state:GameState,changes:Change[],minutes:number,sourceId:string,mechanism:string):void {
+  if(minutes<=0)return;const beforeClock={dayIndex:state.clock.dayIndex,minuteOfDay:state.clock.minuteOfDay};const hours=minutes/60,satiety=state.accumulators.satietyWindowMin>0?.35:1,hungerRate=(5.5+1.5*Math.min(1,state.accumulators.sleepDebtMin/240)+state.vitals.tension/100)*satiety;
+  mutate(state,changes,sourceId,mechanism,'vitals.hunger',state.vitals.hunger+hungerRate*hours);mutate(state,changes,sourceId,mechanism,'vitals.energy',state.vitals.energy-2.4*hours);mutate(state,changes,sourceId,mechanism,'accumulators.activeCaffeineMg',state.accumulators.activeCaffeineMg*2**(-minutes/state.character.profile.caffeineHalfLifeMin));mutate(state,changes,sourceId,mechanism,'accumulators.satietyWindowMin',Math.max(0,state.accumulators.satietyWindowMin-minutes));
+  const absolute=state.clock.dayIndex*1440+state.clock.minuteOfDay+minutes;state.clock.dayIndex=Math.floor(absolute/1440);state.clock.minuteOfDay=absolute%1440;pushChange(changes,sourceId,mechanism,'clock',beforeClock,{dayIndex:state.clock.dayIndex,minuteOfDay:state.clock.minuteOfDay},'established');
+}
+
+function applyEffect(state:GameState,effect:Effect,sourceId:string,changes:Change[]):void {
+  if(effect.op==='add_state'){const before=getRaw(state,effect.path);if(typeof before!=='number')throw new Error(`Expected numeric path ${effect.path}`);mutate(state,changes,sourceId,effect.reason,effect.path,before+effect.delta);return;}
+  if(effect.op==='set_state'){mutate(state,changes,sourceId,effect.reason,effect.path,clone(effect.value));return;}
+  if(effect.op==='set_min'){const before=getRaw(state,effect.path);if(typeof before!=='number')throw new Error(`Expected numeric path ${effect.path}`);mutate(state,changes,sourceId,effect.reason,effect.path,Math.max(before,effect.value));return;}
+  if(effect.op==='set_max'){const before=getRaw(state,effect.path);if(typeof before!=='number')throw new Error(`Expected numeric path ${effect.path}`);mutate(state,changes,sourceId,effect.reason,effect.path,Math.min(before,effect.value));return;}
+  if(effect.op==='consume_resource'){const before=getRaw(state,effect.path);if(typeof before!=='number')throw new Error(`Expected numeric path ${effect.path}`);mutate(state,changes,sourceId,effect.reason,effect.path,before-effect.amount);return;}
+  if(effect.op==='add_inventory'){mutate(state,changes,sourceId,effect.reason,`economy.foodPortions.${effect.category}`,state.economy.foodPortions[effect.category]+effect.portions);return;}
+  if(effect.op==='advance_time'){advanceBackground(state,changes,effect.minutes,sourceId,effect.reason);return;}
+  if(effect.op==='progress_task'){const task=state.work.tasks.find((item)=>item.id===effect.taskId);if(!task)throw new Error(`Unknown task ${effect.taskId}`);const path=`work.tasks.${state.work.tasks.indexOf(task)}.remainingMin`;mutate(state,changes,sourceId,effect.reason,path,Math.max(0,task.remainingMin-effect.minutes));if(task.remainingMin===0&&task.status!=='done'){const before=task.status;task.status='done';pushChange(changes,sourceId,effect.reason,`work.tasks.${task.id}.status`,before,task.status);}syncBacklog(state);return;}
+  if(effect.op==='create_commitment'){if(!state.commitments.some((item)=>item.id===effect.value.id)){state.commitments.push(clone(effect.value));pushChange(changes,sourceId,effect.reason,`commitments.${effect.value.id}`,undefined,effect.value);}return;}
+  if(effect.op==='resolve_commitment'||effect.op==='break_commitment'){const item=state.commitments.find((entry)=>entry.id===effect.commitmentId);if(!item)throw new Error(`Unknown commitment ${effect.commitmentId}`);const before=item.status;item.status=effect.op==='resolve_commitment'?'resolved':'broken';pushChange(changes,sourceId,effect.reason,`commitments.${item.id}.status`,before,item.status);return;}
+  if(effect.op==='adjust_relationship'){mutate(state,changes,sourceId,effect.reason,`family.${effect.target}.${effect.dimension}`,state.family[effect.target][effect.dimension]+effect.delta);return;}
+  if(effect.op==='adjust_habit'){mutate(state,changes,sourceId,effect.reason,`character.habits.${effect.habitId}`,state.character.habits[effect.habitId]+effect.delta);return;}
+  if(effect.op==='adjust_skill'){mutate(state,changes,sourceId,effect.reason,`character.skills.${effect.skillId}`,state.character.skills[effect.skillId]+effect.delta);return;}
+  if(effect.op==='grant_capability'){if(!state.character.capabilities.includes(effect.capabilityId)){state.character.capabilities.push(effect.capabilityId);state.character.capabilities.sort();pushChange(changes,sourceId,effect.reason,'character.capabilities','missing',effect.capabilityId);}return;}
+  if(effect.op==='add_event_cooldown'){const before=state.eventCooldownUntilDay[effect.eventId];state.eventCooldownUntilDay[effect.eventId]=state.clock.dayIndex+effect.days;pushChange(changes,sourceId,effect.reason,`eventCooldownUntilDay.${effect.eventId}`,before,state.eventCooldownUntilDay[effect.eventId]);return;}
+  if(effect.op==='bounded_roll'){const before=getRaw(state,effect.value.targetPath);if(typeof before!=='number')throw new Error(`Expected numeric roll path ${effect.value.targetPath}`);mutate(state,changes,sourceId,effect.reason,effect.value.targetPath,before+drawInt(state,effect.value.seedKey,effect.value.minDelta,effect.value.maxDelta));return;}
+  if(effect.op==='append_causal_link'){changes.push({sourceId,mechanism:effect.mechanism,path:effect.resultPath,before:undefined,after:'linked',confidence:effect.confidence});return;}
+  if(effect.op==='create_task'){if(!state.work.tasks.some((item)=>item.id===effect.task.id)){const backlogBefore=state.work.projectBacklogMin;state.work.tasks.push(clone(effect.task));syncBacklog(state);pushChange(changes,sourceId,effect.reason,`work.tasks.${effect.task.id}`,undefined,effect.task);pushChange(changes,sourceId,effect.reason,'work.projectBacklogMin',backlogBefore,state.work.projectBacklogMin);}return;}
+  if(effect.op==='set_task'){const task=state.work.tasks.find((item)=>item.id===effect.taskId);if(!task)throw new Error(`Unknown task ${effect.taskId}`);const before=clone(task),backlogBefore=state.work.projectBacklogMin;Object.assign(task,effect.patch);syncBacklog(state);pushChange(changes,sourceId,effect.reason,`work.tasks.${task.id}`,before,task);pushChange(changes,sourceId,effect.reason,'work.projectBacklogMin',backlogBefore,state.work.projectBacklogMin);return;}
+  if(effect.op==='create_income'){if(!state.economy.expectedIncome.some((item)=>item.id===effect.income.id)){state.economy.expectedIncome.push(clone(effect.income));pushChange(changes,sourceId,effect.reason,`economy.expectedIncome.${effect.income.id}`,undefined,effect.income);}return;}
+  if(effect.op==='receive_income'){const income=state.economy.expectedIncome.find((item)=>item.id===effect.incomeId);if(!income)throw new Error(`Unknown income ${effect.incomeId}`);if(income.status==='expected'){const before=income.status;income.status='received';pushChange(changes,sourceId,effect.reason,`economy.expectedIncome.${income.id}.status`,before,income.status);mutate(state,changes,sourceId,effect.reason,'economy.cashRub',state.economy.cashRub+income.amountRub);}return;}
+  if(effect.op==='set_obligation'){const item=state.economy.obligations.find((entry)=>entry.id===effect.obligationId);if(!item)throw new Error(`Unknown obligation ${effect.obligationId}`);const before=clone(item);Object.assign(item,effect.patch);pushChange(changes,sourceId,effect.reason,`economy.obligations.${item.id}`,before,item);return;}
+  if(effect.op==='renegotiate_commitment'){const item=state.commitments.find((entry)=>entry.id===effect.commitmentId);if(!item)throw new Error(`Unknown commitment ${effect.commitmentId}`);const before=clone(item);Object.assign(item,{dueDayIndex:effect.dueDayIndex,dueMinuteOfDay:effect.dueMinuteOfDay,status:'renegotiated',renegotiationsUsed:item.renegotiationsUsed+1});pushChange(changes,sourceId,effect.reason,`commitments.${item.id}`,before,item);return;}
+  if(effect.op==='sleep_transition'){applySleep(state,changes,effect.opportunityMin,effect.interruptionsMin,sourceId,effect.reason);return;}
+  throw new Error(`Unsupported effect ${(effect as Effect).op}`);
+}
+
+function triggerSortValue(effect:ScheduledEffect):number {return effect.trigger.kind==='at_time'?effect.trigger.dayIndex*1440+effect.trigger.minuteOfDay:effect.trigger.kind==='after_steps'?10_000_000+effect.trigger.remainingSteps:20_000_000;}
+function sortQueue(state:GameState):void {state.scheduledEffects.sort((a,b)=>triggerSortValue(a)-triggerSortValue(b)||a.id.localeCompare(b.id));}
+function applyDueScheduled(state:GameState,changes:Change[]):void {
+  for(const item of state.scheduledEffects)if(item.status==='pending'&&item.trigger.kind==='after_steps')item.trigger.remainingSteps-=1;
+  sortQueue(state);for(const item of state.scheduledEffects){if(item.status!=='pending')continue;const due=item.trigger.kind==='at_time'?(item.trigger.dayIndex<state.clock.dayIndex||item.trigger.dayIndex===state.clock.dayIndex&&item.trigger.minuteOfDay<=state.clock.minuteOfDay):item.trigger.kind==='after_steps'?item.trigger.remainingSteps<=0:evaluateCondition(state,item.trigger.condition);if(!due)continue;for(const effect of item.effects)applyEffect(state,effect,item.sourceId,changes);item.status='applied';pushChange(changes,item.sourceId,'отложенный эффект применён',`scheduledEffects.${item.id}.status`,'pending','applied','established');}
+}
+
+function advanceToActionEnd(state:GameState,slot:Registries['slots'][number],duration:number,changes:Change[]):void {
+  const absoluteNow=state.clock.dayIndex*1440+state.clock.minuteOfDay,absoluteAnchor=slot.dayIndex*1440+slot.minuteOfDay;
+  if(slot.sleepBeforeMin)applySleep(state,changes,slot.sleepBeforeMin,slot.interruptionsMin??0,'sleep_transition',`сон перед slot ${slot.slot}`);
+  const idle=Math.max(0,absoluteAnchor-absoluteNow-(slot.sleepBeforeMin??0));advanceBackground(state,changes,idle,'environment','среда продвинута до якоря');
+  if(state.clock.dayIndex<slot.dayIndex||(state.clock.dayIndex===slot.dayIndex&&state.clock.minuteOfDay<slot.minuteOfDay)){state.clock.dayIndex=slot.dayIndex;state.clock.minuteOfDay=slot.minuteOfDay;}
+  if(slot.sleepBeforeMin)state.clock.awakeSinceMinute=Math.max(0,slot.minuteOfDay-idle);
+  advanceBackground(state,changes,duration,'action_time','эффективная длительность действия');applyDueScheduled(state,changes);
+}
+
+function scheduleActionEffects(state:GameState,actionId:string,registries:Registries,changes:Change[]):void {
+  const action=registries.actions[actionId]!;
+  for(const definition of action.scheduledEffects){const id=`${state.rng.seed}:${actionId}:${definition.id}:${state.clock.stepIndex}`;if(state.scheduledEffects.some((item)=>item.id===id))throw new ReducerError('invalid_content','scheduleEffects',id,['duplicate scheduled effect id']);const trigger=definition.trigger.kind==='at_time'?{kind:'at_time' as const,dayIndex:state.clock.dayIndex+definition.trigger.dayOffset,minuteOfDay:definition.trigger.minuteOfDay}:definition.trigger.kind==='after_steps'?{kind:'after_steps' as const,remainingSteps:definition.trigger.steps}:{kind:'condition' as const,condition:clone(definition.trigger.condition)};const item:ScheduledEffect={id,sourceId:actionId,trigger,effects:clone(definition.effects),status:'pending'};state.scheduledEffects.push(item);pushChange(changes,actionId,'отложенный эффект запланирован',`scheduledEffects.${id}`,undefined,item,'established');}
+  sortQueue(state);
+}
+
+function resolveOverdueCommitments(state:GameState,changes:Change[]):void {for(const item of state.commitments){if(item.status!=='open')continue;const due=item.dueDayIndex*1440+(item.dueMinuteOfDay??1439),now=state.clock.dayIndex*1440+state.clock.minuteOfDay;if(due<now){const before=item.status;item.status='broken';pushChange(changes,item.sourceId,'обязательство просрочено',`commitments.${item.id}.status`,before,item.status,'established');if(item.domain==='family'){mutate(state,changes,item.id,'нарушенная договорённость повысила семейное трение','family.friction',state.family.friction+6);mutate(state,changes,item.id,'нарушенная договорённость снизила доверие','family.partner.trust',state.family.partner.trust-4);}}}}
+function budgetAllows(state:GameState,event:EventTemplate,dayIndex:number):boolean {const day=String(dayIndex),ledger=state.eventLedger;return (ledger.occurrences[event.id]??0)<(event.maxOccurrencesPerCampaign??Infinity)&&(state.eventCooldownUntilDay[event.id]??-1)<=dayIndex&&(ledger.dayExternalLoad[day]??0)+event.load.external<=50&&(ledger.dayTotalLoad[day]??0)+event.load.total<=90&&(ledger.dayLargeCount[day]??0)+(event.source==='external'&&event.load.size==='large'?1:0)<=1&&ledger.weekLargeCount+(event.source==='external'&&event.load.size==='large'?1:0)<=4&&!(event.source==='external'&&event.load.size==='large'&&ledger.consecutiveHeavy>=2);}
+
+export function collectEventCandidates(state:GameState,registries:Registries,context=computeDecisionContext(state)):EventCandidate[] {
+  return Object.values(registries.events).filter((event)=>evaluateCondition(state,event.trigger,context)).filter((event)=>budgetAllows(state,event,event.hardWindow?.fromDayIndex??state.clock.dayIndex)).map((event)=>({templateId:event.id,source:event.source,urgency:event.urgency,selectionWeight:event.selectionWeight,triggerReasons:[`trigger:${event.trigger.kind}`],practicallyAvailableActionIds:getActionOffers(state,event.id,registries,context).filter((offer)=>offer.available).map((offer)=>offer.actionId)})).filter((candidate)=>candidate.practicallyAvailableActionIds.length>0);
+}
+function orderCandidates(state:GameState,candidates:EventCandidate[],registries:Registries):EventCandidate[] {
+  const sorted=[...candidates].sort((a,b)=>sourcePriority[a.source]-sourcePriority[b.source]||((registries.events[a.templateId]?.hardWindow?.toDayIndex??99)*1440+(registries.events[a.templateId]?.hardWindow?.toMinuteOfDay??1439))-((registries.events[b.templateId]?.hardWindow?.toDayIndex??99)*1440+(registries.events[b.templateId]?.hardWindow?.toMinuteOfDay??1439))||b.urgency-a.urgency||a.templateId.localeCompare(b.templateId));
+  if(sorted.length<2)return sorted;const first=sorted[0]!,firstEvent=registries.events[first.templateId]!;const tied=sorted.filter((candidate)=>{const event=registries.events[candidate.templateId]!;return sourcePriority[candidate.source]===sourcePriority[first.source]&&(event.hardWindow?.toDayIndex??99)===(firstEvent.hardWindow?.toDayIndex??99)&&(event.hardWindow?.toMinuteOfDay??1439)===(firstEvent.hardWindow?.toMinuteOfDay??1439)&&candidate.urgency===first.urgency;});if(tied.length<2)return sorted;
+  const ids=tied.map((item)=>item.templateId).sort(),key=`event-select:${state.clock.dayIndex}:${state.clock.stepIndex}:${first.source}:${ids.join(',')}`,total=tied.reduce((sum,item)=>sum+item.selectionWeight,0);let roll=deterministicFloat(state.rng.seed,key,state.rng.occurrences[key]??0)*total,chosen=tied[0]!;for(const item of tied.sort((a,b)=>a.templateId.localeCompare(b.templateId))){roll-=item.selectionWeight;if(roll<0){chosen=item;break;}}state.rng.occurrences[key]=(state.rng.occurrences[key]??0)+1;return [chosen,...sorted.filter((item)=>item!==chosen)];
+}
+function registerEvent(state:GameState,event:EventTemplate,dayIndex:number,changes:Change[]):void {const day=String(dayIndex),ledger=state.eventLedger,before=clone(ledger);ledger.occurrences[event.id]=(ledger.occurrences[event.id]??0)+1;ledger.dayExternalLoad[day]=(ledger.dayExternalLoad[day]??0)+event.load.external;ledger.dayTotalLoad[day]=(ledger.dayTotalLoad[day]??0)+event.load.total;const large=event.source==='external'&&event.load.size==='large'?1:0;ledger.dayLargeCount[day]=(ledger.dayLargeCount[day]??0)+large;ledger.weekLargeCount+=large;ledger.consecutiveHeavy=event.tags.includes('heavy')?ledger.consecutiveHeavy+1:0;if(event.cooldownDays)state.eventCooldownUntilDay[event.id]=dayIndex+event.cooldownDays;pushChange(changes,event.id,'событие прошло budget и cooldown gates','eventLedger',before,ledger,'established');const context=computeDecisionContext(state);for(const path of conditionPaths(event.trigger))pushChange(changes,event.id,`ситуацию открыл фактор ${path}`,`eventTrigger.${event.id}.${path}`,getPath(state,path,context),'matched','established');}
+function materialize(event:EventTemplate,state:GameState,candidate:EventCandidate,rngKey?:string):EventInstance {return {id:`event:${state.rng.seed}:${state.clock.stepIndex}:${event.id}`,templateId:event.id,dayIndex:event.hardWindow?.fromDayIndex??state.clock.dayIndex,stepIndex:state.clock.stepIndex,source:event.source,actionIds:[...event.actionIds],openedBy:{triggerReasons:candidate.triggerReasons,selectionRule:'source>hardWindow>urgency>weighted-id',...(rngKey?{rngKey}:{})}};}
+export function isHeavyState(state:GameState,context=computeDecisionContext(state)):boolean {return state.vitals.energy<25||state.vitals.tension>80||state.vitals.hunger>85||state.accumulators.sleepDebtMin>300||context.financialPressure>85;}
+function isPracticallySelectable(state:GameState,template:EventTemplate,registries:Registries):boolean {const context=computeDecisionContext(state),offers=getActionOffers(state,template.id,registries,context),available=offers.filter((offer)=>offer.available);if(!available.length)return false;return !isHeavyState(state,context)||available.some((offer)=>offer.stabilizes.length>0);}
+
+function appendJournal(state:GameState,changes:Change[],startIndex:number):void {for(const change of changes){const before=comparable(change.before)??(change.before===undefined?undefined:canonicalJson(change.before)),after=comparable(change.after)??(change.after===undefined?undefined:canonicalJson(change.after));if(before===after)continue;state.causalJournal.push({id:`journal:${state.rng.seed}:${state.clock.stepIndex}:${state.causalJournal.length}`,dayIndex:state.clock.dayIndex,stepIndex:state.clock.stepIndex,sourceId:change.sourceId,mechanism:change.mechanism,resultPath:change.path,...(before===undefined?{}:{before}),...(after===undefined?{}:{after}),confidence:change.confidence??'plausible_model'});}void startIndex;}
+
+function reduceCore(input:{state:GameState;openEvent:EventInstance;actionId:string},registries:Registries,trace:boolean,mutateOwnedState:boolean):StepOutput {
+  let currentStage:string=STAGES[0],state:GameState;
+  try{if(!mutateOwnedState)validateState(input.state);state=mutateOwnedState?input.state:clone(input.state);}catch(error){throw new ReducerError('invalid_state',STAGES[0],undefined,[error instanceof Error?error.message:String(error)]);}
+  let changes:Change[]=[];const startJournal=state.causalJournal.length,stages:StageTrace[]=[];const mark=(stage:string)=>stages.push({stage,hash:trace?stateHash(state):''});
+  try{
+    const slot=registries.slots[state.scenarioCursor],event=registries.events[input.openEvent.templateId];if(!slot||!event)throw new ReducerError('stale_event',STAGES[0],input.openEvent.templateId,['no matching scenario slot or event']);
+    if(input.openEvent.templateId!==state.activeEventId||!evaluateCondition(state,event.trigger)||input.openEvent.dayIndex!==slot.dayIndex||input.openEvent.stepIndex!==state.clock.stepIndex||!input.openEvent.actionIds.includes(input.actionId)||!event.actionIds.includes(input.actionId))throw new ReducerError('stale_event',STAGES[0],input.openEvent.templateId,['active event/trigger/day/step/action mismatch']);
+    const preActionState=clone(state),preContext=computeDecisionContext(preActionState),appliedAction=getActionOffers(preActionState,event.id,registries,preContext).find((offer)=>offer.actionId===input.actionId);if(!appliedAction?.available)throw new ReducerError('unavailable_action',STAGES[0],input.actionId,appliedAction?.unavailableReasons??['offer not found']);for(const geometry of appliedAction.geometryReasons)for(const path of geometry.inputPaths)pushChange(changes,input.actionId,`геометрия решения: ${geometry.reason}`,`decisionGeometry.${input.actionId}.${path}`,getPath(preActionState,path,preContext),geometry.reason,'established');mark(STAGES[0]);
+
+    currentStage=STAGES[1];advanceToActionEnd(state,slot,appliedAction.effectiveTimeMin,changes);mark(STAGES[1]);
+    currentStage=STAGES[2];const cashBefore=state.economy.cashRub;if(cashBefore<appliedAction.moneyRub)throw new ReducerError('invariant_violation',STAGES[2],input.actionId,['cash changed after validation']);mutate(state,changes,input.actionId,'денежная цена действия','economy.cashRub',cashBefore-appliedAction.moneyRub);for(const item of registries.actions[input.actionId]!.cost.inventory??[]){const path=`economy.foodPortions.${item.category}`,before=state.economy.foodPortions[item.category];if(before>=item.portions)mutate(state,changes,input.actionId,'расход порции',path,before-item.portions);else if(item.fallbackMoneyRub===undefined)throw new ReducerError('invariant_violation',STAGES[2],input.actionId,[`inventory ${item.category} changed after validation`]);}mutate(state,changes,input.actionId,'цена усилия','vitals.energy',state.vitals.energy-appliedAction.effortScore*.02);mutate(state,changes,input.actionId,'цена усилия','vitals.hunger',state.vitals.hunger+appliedAction.effortScore*.05);mark(STAGES[2]);
+    currentStage=STAGES[3];const action=registries.actions[input.actionId]!,conditional=action.conditionalEffects.filter((item)=>evaluateCondition(preActionState,item.when,preContext)).flatMap((item)=>item.effects),all=[...action.immediateEffects,...conditional],deterministic=all.filter((effect)=>effect.op!=='bounded_roll'),rolls=all.filter((effect)=>effect.op==='bounded_roll');for(const effect of [...deterministic,...rolls])applyEffect(state,effect,action.id,changes);mark(STAGES[3]);
+    currentStage=STAGES[4];scheduleActionEffects(state,action.id,registries,changes);mark(STAGES[4]);
+    currentStage=STAGES[5];resolveOverdueCommitments(state,changes);mark(STAGES[5]);
+    currentStage=STAGES[6];syncBacklog(state);computeDecisionContext(state);mark(STAGES[6]);
+    currentStage=STAGES[7];const cursorBefore=state.scenarioCursor,stepBefore=state.clock.stepIndex,activeBefore=state.activeEventId;state.scenarioCursor+=1;state.clock.stepIndex+=1;state.activeEventId=null;pushChange(changes,'reducer','scenario cursor advanced','scenarioCursor',cursorBefore,state.scenarioCursor,'established');pushChange(changes,'reducer','step index advanced','clock.stepIndex',stepBefore,state.clock.stepIndex,'established');pushChange(changes,'reducer','текущая ситуация завершена','activeEventId',activeBefore,null,'established');const candidates=state.scenarioCursor<registries.slots.length?collectEventCandidates(state,registries):[];mark(STAGES[7]);
+    currentStage=STAGES[8];let nextEvent:EventInstance|null=null;if(state.scenarioCursor<registries.slots.length){if(!candidates.length)throw new ReducerError('terminal_lock',STAGES[8],undefined,['no event candidates']);const ordered=orderCandidates(state,candidates,registries);let selected=false;for(const candidate of ordered){const template=registries.events[candidate.templateId]!,dayIndex=template.hardWindow?.fromDayIndex??state.clock.dayIndex;if(!budgetAllows(state,template,dayIndex))continue;if(mutateOwnedState&&!template.onOpenEffects.length){if(!isPracticallySelectable(state,template,registries))continue;registerEvent(state,template,dayIndex,changes);state.activeEventId=template.id;pushChange(changes,template.id,'следующая ситуация выбрана','activeEventId',null,template.id,'established');nextEvent=materialize(template,state,candidate);selected=true;break;}const candidateState=clone(state),candidateChanges=[...changes];registerEvent(candidateState,template,dayIndex,candidateChanges);for(const effect of template.onOpenEffects)applyEffect(candidateState,effect,template.id,candidateChanges);if(!isPracticallySelectable(candidateState,template,registries))continue;candidateState.activeEventId=template.id;pushChange(candidateChanges,template.id,'следующая ситуация выбрана','activeEventId',null,template.id,'established');state=candidateState;changes=candidateChanges;nextEvent=materialize(template,state,candidate);selected=true;break;}if(!selected)throw new ReducerError('terminal_lock',STAGES[8],undefined,['all materialized candidates failed practical/anti-spiral gates']);}else{applySleep(state,changes,480,0,'campaign_finalize','воскресный сон и завершение недели');const before={dayIndex:state.clock.dayIndex,minuteOfDay:state.clock.minuteOfDay};state.clock.dayIndex=7;state.clock.minuteOfDay=420;state.activeEventId=null;pushChange(changes,'campaign_finalize','кампания завершена после воскресного сна','clock',before,{dayIndex:7,minuteOfDay:420},'established');}mark(STAGES[8]);
+    currentStage=STAGES[9];appendJournal(state,changes,startJournal);normalize(state);if(!mutateOwnedState)validateState(state);const hash=mutateOwnedState?'':stateHash(state);mark(STAGES[9]);return {state,appliedAction,nextEvent,journalEntries:state.causalJournal.slice(startJournal),stateHash:hash,stages};
+  }catch(error){if(error instanceof ReducerError)throw error;throw new ReducerError(currentStage==='validate'?'invalid_content':'invariant_violation',currentStage,input.actionId,[error instanceof Error?error.message:String(error)]);}
+}
+
+export function reduceStep(input:{state:GameState;openEvent:EventInstance;actionId:string},registries:Registries,trace=false):StepOutput {return reduceCore(input,registries,trace,false);}
+/** Internal fast path. The caller owns the mutable state; candidate selection remains transactional. Not exported by the package API. */
+export function reduceTrustedCampaignStep(input:{state:GameState;openEvent:EventInstance;actionId:string},registries:Registries):StepOutput {return reduceCore(input,registries,false,true);}
+export function initialEvent(state:GameState,registries:Registries):EventInstance {const slot=registries.slots[state.scenarioCursor]!,event=registries.events[state.activeEventId||slot.eventId]!;return {id:`event:${state.rng.seed}:${state.clock.stepIndex}:${event.id}`,templateId:event.id,dayIndex:slot.dayIndex,stepIndex:state.clock.stepIndex,source:event.source,actionIds:[...event.actionIds],openedBy:{triggerReasons:['state:activeEventId'],selectionRule:'persisted-event-anchor'}};}

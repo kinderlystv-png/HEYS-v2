@@ -1,0 +1,19 @@
+{
+  "name": "@heys/assemble-day-engine",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "qa:merge": "tsx src/cli/merge-causal-qa.ts",
+    "qa:report": "tsx src/cli/run-causal-qa.ts",
+    "test": "vitest run",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.6"
+  }
+}
