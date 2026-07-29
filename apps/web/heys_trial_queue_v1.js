@@ -2315,18 +2315,17 @@
     // Отклонить заявку (v2.0)
     const handleReject = async (item) => {
       const clientId = item.client_id;
-      const queueId = item.queue_id || item.id;
       const clientName = item.client_name || item.name;
       const reason = prompt(`Отклонить заявку "${clientName}"?\nУкажите причину (опционально):`, '');
       if (reason === null) return; // Отмена
 
-      if (!queueId) {
-        alert('Ошибка: не найдена запись очереди');
+      if (!clientId) {
+        alert('Ошибка: не найден клиент заявки');
         return;
       }
 
       setActionLoading(clientId);
-      const res = await adminAPI.rejectApplication(queueId, reason || 'rejected_by_curator');
+      const res = await adminAPI.removeFromQueue(clientId, reason || 'rejected_by_curator');
       setActionLoading(null);
 
       if (res.success) {

@@ -75,9 +75,9 @@ describe('protected trial intake contract', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  it('rejects a legacy queue item by queue id using the production RPC contract', async () => {
+  it('removes a legacy queue item through the current production queue RPC', async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: { admin_reject_request: { success: true } },
+      data: { admin_remove_from_queue: { success: true } },
     });
     window.HEYS = {
       YandexAPI: { rpc },
@@ -86,14 +86,14 @@ describe('protected trial intake contract', () => {
     window.React = React;
     window.eval(queueSource);
 
-    await expect(window.HEYS.TrialQueue.admin.rejectApplication('queue-1', 'stale_test')).resolves.toEqual({
+    await expect(window.HEYS.TrialQueue.admin.removeFromQueue('client-1', 'stale_test')).resolves.toEqual({
       success: true,
     });
-    expect(rpc).toHaveBeenCalledWith('admin_reject_request', {
-      p_queue_id: 'queue-1',
+    expect(rpc).toHaveBeenCalledWith('admin_remove_from_queue', {
+      p_client_id: 'client-1',
       p_reason: 'stale_test',
     });
-    expect(rpcSource).toContain("'admin_reject_request': {\n        'p_queue_id': '::uuid',\n        'p_reason': '::text'");
+    expect(queueSource).toContain("adminAPI.removeFromQueue(clientId, reason || 'rejected_by_curator')");
   });
 
   it('keeps the landing payload minimal and consent-specific', () => {
