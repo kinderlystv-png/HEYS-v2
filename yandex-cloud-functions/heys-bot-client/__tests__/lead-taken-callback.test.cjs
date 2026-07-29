@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const MODULE_PATH = path.resolve(__dirname, '../index.js');
 const LEAD_ID = '22222222-2222-2222-2222-222222222222';
+const CURATOR_ID = '11111111-1111-4111-8111-111111111111';
 const CONTACTED_AT = '2026-07-18T09:30:00.000Z';
 
 function loadModuleWithDb(respond = async () => ({ rows: [] }), options = {}) {
@@ -14,6 +15,9 @@ function loadModuleWithDb(respond = async () => ({ rows: [] }), options = {}) {
     async query(sql, params = []) {
       const text = String(sql);
       queries.push({ sql: text, params });
+      if (/FROM public\.curators/.test(text)) {
+        return { rows: options.curatorRows ?? [{ id: CURATOR_ID }] };
+      }
       if (/INSERT INTO public\.funnel_events[\s\S]+'runtime_lock'/.test(text)) {
         return { rows: [{ id: '99999999-9999-9999-9999-999999999999' }] };
       }
@@ -82,7 +86,7 @@ test('authorized lead callback claims once, answers and edits the source message
   });
   const { subject, queries } = loadModuleWithDb(async (sql) => {
     if (/UPDATE public\.leads/.test(sql)) {
-      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT }] };
+      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
     }
     throw new Error(`unexpected query: ${sql}`);
   });
@@ -91,6 +95,9 @@ test('authorized lead callback claims once, answers and edits the source message
 
   assert.equal(result.outcome, 'claimed');
   assert.equal(queries.filter((query) => /UPDATE public\.leads/.test(query.sql)).length, 1);
+  const claimQuery = queries.find((query) => /UPDATE public\.leads/.test(query.sql));
+  assert.match(claimQuery.sql, /curator_id = \$2::uuid/);
+  assert.deepEqual(claimQuery.params, [LEAD_ID, CURATOR_ID]);
   assert.equal(fetchCalls.filter((call) => /answerCallbackQuery$/.test(call.url)).length, 1);
   assert.equal(fetchCalls.filter((call) => /editMessageText$/.test(call.url)).length, 1);
   const answer = fetchCalls.find((call) => /answerCallbackQuery$/.test(call.url));
@@ -115,7 +122,7 @@ test('curator auth sees chat configuration overlaid by Lockbox init', async (t) 
   const { subject } = loadModuleWithDb(
     async (sql) => {
       if (/UPDATE public\.leads/.test(sql)) {
-        return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT }] };
+        return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
       }
       throw new Error(`unexpected query: ${sql}`);
     },
@@ -143,7 +150,7 @@ test('repeated lead callback is idempotent, answers and does not edit again', as
   const { subject, queries } = loadModuleWithDb(async (sql) => {
     if (/UPDATE public\.leads/.test(sql)) return { rows: [] };
     if (/SELECT id, status, contacted_at/.test(sql)) {
-      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT }] };
+      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
     }
     return { rows: [] };
   });
@@ -167,12 +174,12 @@ test('parallel callbacks produce one mutation and two acknowledged outcomes', as
     if (/UPDATE public\.leads/.test(sql)) {
       if (status === 'new') {
         status = 'contacted';
-        return { rows: [{ id: LEAD_ID, status, contacted_at: CONTACTED_AT }] };
+        return { rows: [{ id: LEAD_ID, status, contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
       }
       return { rows: [] };
     }
     if (/SELECT id, status, contacted_at/.test(sql)) {
-      return { rows: [{ id: LEAD_ID, status, contacted_at: CONTACTED_AT }] };
+      return { rows: [{ id: LEAD_ID, status, contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
     }
     return { rows: [] };
   });
@@ -200,6 +207,52 @@ test('malformed callback is acknowledged without DB mutation or message edit', a
 
   assert.equal(result.outcome, 'malformed');
   assert.equal(queries.length, 0);
+  assert.equal(fetchCalls.filter((call) => /answerCallbackQuery$/.test(call.url)).length, 1);
+  assert.equal(fetchCalls.some((call) => /editMessageText$/.test(call.url)), false);
+});
+
+test('unmapped authorized Telegram actor fails closed before touching the lead', async (t) => {
+  const fetchCalls = [];
+  setupTest(t, async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return telegramOk();
+  });
+  const { subject, queries } = loadModuleWithDb(async () => {
+    throw new Error('lead query must not run');
+  }, { curatorRows: [] });
+
+  const result = await subject.handleCuratorLeadCallback(curatorQuery());
+
+  assert.equal(result.outcome, 'curator_unmapped');
+  assert.equal(queries.filter((query) => /public\.leads/.test(query.sql)).length, 0);
+  assert.equal(fetchCalls.filter((call) => /answerCallbackQuery$/.test(call.url)).length, 1);
+  assert.equal(fetchCalls.some((call) => /editMessageText$/.test(call.url)), false);
+});
+
+test('contacted lead owned by another curator cannot be reclaimed or edited', async (t) => {
+  const fetchCalls = [];
+  setupTest(t, async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return telegramOk();
+  });
+  const { subject } = loadModuleWithDb(async (sql) => {
+    if (/UPDATE public\.leads/.test(sql)) return { rows: [] };
+    if (/SELECT id, status, contacted_at, curator_id/.test(sql)) {
+      return {
+        rows: [{
+          id: LEAD_ID,
+          status: 'contacted',
+          contacted_at: CONTACTED_AT,
+          curator_id: '33333333-3333-4333-8333-333333333333',
+        }],
+      };
+    }
+    return { rows: [] };
+  });
+
+  const result = await subject.handleCuratorLeadCallback(curatorQuery());
+
+  assert.equal(result.outcome, 'already_claimed_by_other');
   assert.equal(fetchCalls.filter((call) => /answerCallbackQuery$/.test(call.url)).length, 1);
   assert.equal(fetchCalls.some((call) => /editMessageText$/.test(call.url)), false);
 });
@@ -279,7 +332,7 @@ test('existing HEYS Start poll also receives curator callback and commits its of
   process.env.TELEGRAM_CLIENT_BOT_TOKEN = 'client-token';
   const { handler } = loadModuleWithDb(async (sql) => {
     if (/UPDATE public\.leads/.test(sql)) {
-      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT }] };
+      return { rows: [{ id: LEAD_ID, status: 'contacted', contacted_at: CONTACTED_AT, curator_id: CURATOR_ID }] };
     }
     return { rows: [] };
   });

@@ -881,32 +881,53 @@ function getCuratorActorLabel(from) {
   return firstName ? escapeHtml(firstName) : 'куратор';
 }
 
-async function claimLeadForCurator(leadId) {
+async function claimLeadForCurator(leadId, telegramUserId) {
   const client = await getPool().connect();
   try {
+    const actorId = String(telegramUserId || '').trim();
+    if (!/^-?\d+$/.test(actorId)) return { outcome: 'curator_unmapped' };
+
+    const curatorResult = await client.query(
+      `SELECT id
+         FROM public.curators
+        WHERE telegram_user_id = $1::bigint
+          AND is_active IS TRUE
+        LIMIT 2`,
+      [actorId],
+    );
+    if (curatorResult.rows?.length !== 1) return { outcome: 'curator_unmapped' };
+    const curatorId = curatorResult.rows[0].id;
+
     const updated = await client.query(
       `UPDATE public.leads
           SET status = 'contacted',
+              curator_id = $2::uuid,
               contacted_at = COALESCE(contacted_at, NOW()),
               updated_at = NOW()
         WHERE id = $1::uuid
           AND status = 'new'
-      RETURNING id, status, contacted_at`,
-      [leadId],
+          AND (curator_id IS NULL OR curator_id = $2::uuid)
+      RETURNING id, status, contacted_at, curator_id`,
+      [leadId, curatorId],
     );
     if (updated.rows?.[0]) {
       return { outcome: 'claimed', ...updated.rows[0] };
     }
 
     const existing = await client.query(
-      `SELECT id, status, contacted_at
+      `SELECT id, status, contacted_at, curator_id
          FROM public.leads
         WHERE id = $1::uuid`,
       [leadId],
     );
     const lead = existing.rows?.[0];
     if (!lead) return { outcome: 'not_found' };
-    if (lead.status === 'contacted') return { outcome: 'already_claimed', ...lead };
+    if (lead.status === 'contacted' && lead.curator_id === curatorId) {
+      return { outcome: 'already_claimed', ...lead };
+    }
+    if (lead.status === 'contacted' || (lead.curator_id && lead.curator_id !== curatorId)) {
+      return { outcome: 'already_claimed_by_other', ...lead };
+    }
     return { outcome: 'status_conflict', ...lead };
   } finally {
     client.release();
@@ -949,7 +970,7 @@ async function handleCuratorLeadCallback(query) {
   }
 
   try {
-    const claim = await claimLeadForCurator(match[1]);
+    const claim = await claimLeadForCurator(match[1], query?.from?.id);
     if (claim.outcome === 'claimed') {
       await acknowledge('Лид взят в работу.');
       try {
@@ -961,6 +982,14 @@ async function handleCuratorLeadCallback(query) {
     }
     if (claim.outcome === 'already_claimed') {
       await acknowledge('Лид уже взят в работу.');
+      return claim;
+    }
+    if (claim.outcome === 'already_claimed_by_other') {
+      await acknowledge('Лид уже взят другим куратором.', true);
+      return claim;
+    }
+    if (claim.outcome === 'curator_unmapped') {
+      await acknowledge('Telegram-аккаунт не привязан к профилю куратора.', true);
       return claim;
     }
     if (claim.outcome === 'not_found') {
