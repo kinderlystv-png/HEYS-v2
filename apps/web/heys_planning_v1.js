@@ -100,6 +100,16 @@
             style: 'styles/modules/911-planning-game-color-trail.css',
             apiMethods: ['createWorld', 'stepWorld', 'closeTrail', 'getTerritoryPercent', 'validateWorld'],
         }),
+        Object.freeze({
+            id: 'assemble-day',
+            title: 'Собери день',
+            category: 'Стратегия',
+            number: '04',
+            description: 'Проживи неделю решений и последствий',
+            script: 'heys_planning_game_assemble_day_v1.js',
+            style: 'styles/modules/912-planning-game-assemble-day.css',
+            apiMethods: ['createSession', 'getCampaignView', 'confirmAction', 'loadCheckpoint', 'saveCheckpoint'],
+        }),
     ]);
 
     const gameResourceCache = new Map();
@@ -246,6 +256,14 @@
                 h('span', { className: 'planning-game-card__robot-path' }),
             );
         }
+        if (gameId === 'assemble-day') {
+            return h('span', { className: 'planning-game-card__art planning-game-card__art--assemble-day', 'aria-hidden': 'true' },
+                h('span', { className: 'planning-game-card__day-sun' }),
+                h('span', { className: 'planning-game-card__day-line planning-game-card__day-line--one' }),
+                h('span', { className: 'planning-game-card__day-line planning-game-card__day-line--two' }),
+                h('span', { className: 'planning-game-card__day-person' }),
+            );
+        }
         return h('span', { className: 'planning-game-card__art planning-game-card__art--trail', 'aria-hidden': 'true' },
             h('span'), h('span'), h('span'),
         );
@@ -268,6 +286,9 @@
                 ),
                 game.id === 'color-trail' && h(React.Fragment, null,
                     h('span'), h('span'), h('span'), h('span'),
+                ),
+                game.id === 'assemble-day' && h(React.Fragment, null,
+                    h('span'), h('span'), h('span'),
                 ),
             ),
             h('p', null, 'Загрузка…'),

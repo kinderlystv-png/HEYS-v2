@@ -10,6 +10,12 @@ const source = fs.readFileSync(path.resolve(__dirname, '../heys_planning_v1.js')
 const mainDeferredCss = fs.readFileSync(path.resolve(__dirname, '../styles/main-deferred.css'), 'utf8');
 const shellCss = fs.readFileSync(path.resolve(__dirname, '../styles/modules/908-planning-games.css'), 'utf8');
 const legacyBundleConfig = fs.readFileSync(path.resolve(__dirname, '../../../scripts/legacy-bundle-config.mjs'), 'utf8');
+const assembleDaySource = fs.readFileSync(path.resolve(__dirname, '../heys_planning_game_assemble_day_v1.js'), 'utf8');
+const publicDir = path.resolve(__dirname, '../public');
+const eagerLegacySource = fs.readdirSync(publicDir)
+    .filter((file) => /\.bundle\.[^.]+\.js$/.test(file))
+    .map((file) => fs.readFileSync(path.join(publicDir, file), 'utf8'))
+    .join('\n');
 const originalHEYS = window.HEYS;
 const originalReact = window.React;
 const originalReactDOM = window.ReactDOM;
@@ -108,22 +114,25 @@ describe('planning games catalog and lazy fullscreen shell', () => {
         });
     });
 
-    it('shows three catalog cards with the approved metadata and requests nothing before click', () => {
+    it('shows four catalog cards with the approved metadata and requests nothing before click', () => {
         renderGames();
 
         expect(screen.getByRole('heading', { name: 'Игры', level: 1 })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Открыть игру «Собери слово»' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Открыть игру «Маршрут робота»' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Открыть игру «Цветной след»' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Открыть игру «Собери день»' })).toBeTruthy();
         expect(screen.getByText('Сложи слово из слогов')).toBeTruthy();
         expect(screen.getByText('Составь путь до цели')).toBeTruthy();
         expect(screen.getByText('Замыкай контуры и расширяй территорию')).toBeTruthy();
+        expect(screen.getByText('Проживи неделю решений и последствий')).toBeTruthy();
         expect(capturedResources).toHaveLength(0);
+        expect(window.HEYS.PlanningGames.modules['assemble-day']).toBeUndefined();
     });
 
     it('keeps game engines and their styles out of eager legacy bundles', () => {
         expect(mainDeferredCss).toContain("908-planning-games.css");
-        ['909-planning-game-word-builder.css', '910-planning-game-robot-route.css', '911-planning-game-color-trail.css']
+        ['909-planning-game-word-builder.css', '910-planning-game-robot-route.css', '911-planning-game-color-trail.css', '912-planning-game-assemble-day.css']
             .forEach((file) => {
                 expect(mainDeferredCss).not.toContain(file);
                 expect(shellCss).not.toContain(file);
@@ -132,9 +141,39 @@ describe('planning games catalog and lazy fullscreen shell', () => {
             'heys_planning_game_word_builder_v1.js',
             'heys_planning_game_robot_route_v1.js',
             'heys_planning_game_color_trail_v1.js',
+            'heys_planning_game_assemble_day_v1.js',
         ].forEach((file) => {
             expect(legacyBundleConfig).not.toContain(file);
         });
+        ['week-01-project-deadline', 'mon_breakfast'].forEach((marker) => {
+            expect(assembleDaySource).toContain(marker);
+            expect(eagerLegacySource).not.toContain(marker);
+        });
+    });
+
+    it('requests the complete Assemble Day module only after its catalog card is opened', async () => {
+        renderGames();
+
+        expect(resourceNodes('assemble-day', 'script')).toHaveLength(0);
+        expect(resourceNodes('assemble-day', 'style')).toHaveLength(0);
+        expect(window.HEYS.PlanningGames.modules['assemble-day']).toBeUndefined();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Открыть игру «Собери день»' }));
+
+        const script = await waitFor(() => {
+            expect(resourceNodes('assemble-day', 'script')).toHaveLength(1);
+            return resourceNodes('assemble-day', 'script')[0];
+        });
+        const style = resourceNodes('assemble-day', 'style')[0];
+        expect(script.getAttribute('src')).toContain('heys_planning_game_assemble_day_v1.js');
+        expect(style.getAttribute('href')).toContain('912-planning-game-assemble-day.css');
+        expect(capturedResources).toHaveLength(2);
+
+        registerMockModule('assemble-day');
+        fireEvent.load(script);
+        expect(screen.queryByRole('button', { name: 'Игровое действие' })).toBeNull();
+        fireEvent.load(style);
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Игровое действие' })).toBeTruthy());
     });
 
     it('loads JS and CSS in parallel and mounts only after both resources are ready', async () => {

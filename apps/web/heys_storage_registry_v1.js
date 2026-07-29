@@ -282,6 +282,12 @@
     cloudSync: 'never', pruneStrategy: 'manual',
     description: 'Gantt v2 UI prefs (zoom, toggles, collapsed groups, view position, schema flag).',
   });
+  register('planning_assemble_day_campaign', {
+    pattern: /^heys_[a-f0-9-]{36}_planning_assemble_day_campaign_v1$/,
+    scope: 'per-client', maxSize: 512 * KB, maxAge: 0,
+    cloudSync: 'mirror', pruneStrategy: 'manual', schemaVersion: '1',
+    description: 'Confirmed Assemble Day campaign checkpoint; separate from HEYS gamification state.',
+  });
   register('fingers_active_session', {
     pattern: /^(heys_finger_active_session|heys_[a-f0-9-]{36}_finger_active_session|fingers\.resume\.snoozedUntil)$/,
     scope: 'global', maxSize: 16 * KB, maxAge: 1 * DAY_MS,

@@ -69,6 +69,11 @@
   --game-card-soft: #f3d7d7;
 }
 
+.planning-game-card--assemble-day {
+  --game-card-bg: linear-gradient(150deg, #3f4f76 0%, #434587 48%, #7c6f9e 100%);
+  --game-card-soft: #f2e9db;
+}
+
 .planning-game-card__number {
   justify-self: end;
   color: rgba(255, 255, 255, 0.7);
@@ -197,6 +202,57 @@
   right: 25px;
   width: 10px;
   background: #deeddb;
+}
+
+.planning-game-card__art--assemble-day {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.planning-game-card__day-sun {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  width: 30px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #f2e9db;
+  box-shadow: 0 0 0 8px rgba(242, 233, 219, 0.12);
+}
+
+.planning-game-card__day-line {
+  position: absolute;
+  left: 22px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.planning-game-card__day-line--one { right: 70px; bottom: 32px; }
+.planning-game-card__day-line--two { right: 32px; bottom: 18px; }
+
+.planning-game-card__day-person {
+  position: absolute;
+  bottom: 31px;
+  left: 50%;
+  width: 28px;
+  height: 42px;
+  border-radius: 16px 16px 9px 9px;
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateX(-50%);
+}
+
+.planning-game-card__day-person::before {
+  position: absolute;
+  top: -20px;
+  left: 5px;
+  width: 18px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: inherit;
+  content: '';
 }
 
 .planning-game-card__content {
@@ -415,6 +471,24 @@ body.planning-game-reader-open {
 .planning-game-loader--color-trail .planning-game-loader__art {
   border-radius: 28px;
 }
+
+.planning-game-loader--assemble-day .planning-game-loader__art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+}
+
+.planning-game-loader--assemble-day .planning-game-loader__art span {
+  width: 24px;
+  border-radius: 12px 12px 5px 5px;
+  background: #dfe4ef;
+  animation: planning-game-tile 900ms ease-in-out infinite alternate;
+}
+
+.planning-game-loader--assemble-day .planning-game-loader__art span:nth-child(1) { height: 48px; }
+.planning-game-loader--assemble-day .planning-game-loader__art span:nth-child(2) { height: 78px; animation-delay: 120ms; }
+.planning-game-loader--assemble-day .planning-game-loader__art span:nth-child(3) { height: 62px; animation-delay: 240ms; }
 
 .planning-game-loader--color-trail .planning-game-loader__art span {
   position: absolute;
