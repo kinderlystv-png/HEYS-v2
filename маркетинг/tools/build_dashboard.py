@@ -9,7 +9,8 @@
 (контент-батч).
 Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
 Контроль: Обзор / Конкуренты / TG-штаб / План 22; Позиция: Позиционирование /
-Голос; Промо: TG-стратегия / Куратор / TG-посты; Лендинг: мобильный аудит 40;
+Голос; Промо: TG-стратегия / Куратор / TG-посты; Лендинг: приоритетный
+Future-аудит 45 / мобильный аудит 40 / архитектура тарифного выбора 44;
 Релиз: единый контур и копируемые промпты 41 / ревью trial-intake 42).
 
 При сломанной структуре источников падает с ненулевым кодом — pre-commit
@@ -782,8 +783,12 @@ source_tabs = [
      ROOT / '41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md', 'release'),
     ('trial-intake-audit', 'Заявка → анкета', '42 · Ревью flow заявки и анкеты',
      ROOT / '42_Ревью_trial_intake_flow_2026-07-27.md', 'release'),
-    ('landing-audit', 'Аудит лендинга', '40 · Мобильный UX/CRO-аудит лендинга',
+    ('future-reference', 'Future · эталон', '45 · Future — приоритетный аудит лендинга',
+     ROOT / '45_Future_референс_лендинга_2026-07-29.md', 'landing'),
+    ('landing-audit', 'Аудит HEYS', '40 · Мобильный UX/CRO-аудит лендинга',
      ROOT / '40_Аудит_лендинга_mobile_2026-07-26.md', 'landing'),
+    ('pricing-review', 'Тарифы', '44 · Ревью архитектуры тарифного выбора',
+     ROOT / '44_Ревью_архитектуры_тарифного_выбора_2026-07-29.md', 'landing'),
     ('doc03', 'Позиционирование', '03 · Каналы и позиционирование',
      ROOT / '03_Каналы_и_продакт-плейсмент.md', 'position'),
     ('doc14', 'TG-стратегия', '14 · Telegram-стратегия и плейбук',
@@ -821,12 +826,12 @@ for pane_id, _, title, path, _ in source_tabs:
     if pane_id == 'landing-audit':
         extra = (
             '<div class="audit-overview">'
-            '<div class="audit-score"><span>Итоговая оценка</span><b>6,2 / 10</b>'
-            '<small>сильная ясность продукта; резерв — proof, длина и форма</small></div>'
+            '<div class="audit-score"><span>Статус ревизии</span><b>Hero–07 приняты</b>'
+            '<small>FAQ визуально проверен; остались source-текст и финальные решения</small></div>'
             '<div class="audit-kpis">'
             '<div><b>21,3</b><span>мобильного экрана</span></div>'
             '<div><b>79%</b><span>страницы до trial</span></div>'
-            '<div><b>24</b><span>проверенных скриншота</span></div>'
+            '<div><b>12</b><span>FAQ в текущем source</span></div>'
             '</div>'
             '<a class="audit-shot-link" href="../output/playwright/landing-mobile/'
             'exact-390x844/landing-full-390x844.png" target="_blank" '
@@ -837,20 +842,36 @@ for pane_id, _, title, path, _ in source_tabs:
             '<span>Открыть полный скриншот ↗</span></a>'
             '</div>'
         )
+    elif pane_id == 'future-reference':
+        extra = (
+            '<div class="release-overview">'
+            '<div class="release-now"><span>Следующий landing-pass</span>'
+            '<b>Контроль A → отдельный Landing B-Future</b>'
+            '<small>Future — завершённый аудит и направление, а не готовый победитель</small></div>'
+            '<div class="release-flow">'
+            '<div><b>A</b><span>Текущий принятый baseline</span></div>'
+            '<div><b>B</b><span>Narrative + proof по 45</span></div>'
+            '<div><b>=</b><span>Pricing, form, consent, legal</span></div>'
+            '<div><b>→</b><span>FAQ → brief → измеримость</span></div>'
+            '</div>'
+            '<p>Сначала завершается текстовая ревизия FAQ. Публичный split включается только '
+            'после assignment, событий, Metrica/consent и smoke обеих версий.</p>'
+            '</div>'
+        )
     elif pane_id == 'release-navigator':
         extra = (
             '<div class="release-overview">'
-            '<div class="release-now"><span>Сейчас</span><b>Trial-intake v3 · production зелёный</b>'
-            '<small>Анкета заполняется до аккаунта; client и очередь создаются только после ручного approval</small></div>'
+            '<div class="release-now"><span>Сейчас</span><b>Завершить FAQ → собрать Landing B-Future</b>'
+            '<small>Trial-intake v3 зелёный; форма заморожена до отдельной consent/analytics/security-сверки</small></div>'
             '<div class="release-flow">'
-            '<div><b>1</b><span>Invite + intake + approval ✅</span></div>'
-            '<div><b>2</b><span>Внедрить P0 аудита</span></div>'
-            '<div><b>3</b><span>Product-smoke 5–10 людей</span></div>'
-            '<div><b>4</b><span>Публичный S1 → R1 до оплаты</span></div>'
+            '<div><b>1</b><span>FAQ source + решения</span></div>'
+            '<div><b>2</b><span>Локальный B-brief + preview</span></div>'
+            '<div><b>3</b><span>Instrumentation + smoke A/B</span></div>'
+            '<div><b>4</b><span>Эксперимент или A baseline</span></div>'
             '</div>'
             '<p>Предрелизный blocker trial-intake закрыт: приглашение, consent 1.5, autosave/resume, '
             'ручные решения и финальное создание одного клиента с одной queue-row проверены в production. '
-            'Следом: P0 лендинга и продуктовый smoke.</p>'
+            'Future-вариант не становится новым gate S1: при неготовом B текущий A остаётся baseline.</p>'
             '</div>'
         )
     elif pane_id == 'trial-intake-audit':
