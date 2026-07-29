@@ -16428,177 +16428,53 @@
    * @param {Object} productData - Данные продукта из заявки
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
-  function getPendingSharedRequest(productData) {
-    const request = productData?._pendingRequest || productData?._sharedChange || null;
-    if (!request || typeof request !== 'object') return null;
-    const type = request.type || request.request_type;
-    if (!type) return null;
-    return {
-      ...request,
-      type,
-      target_product_id: request.target_product_id || request.targetProductId || productData?.variant_of || productData?.shared_origin_id || null
-    };
-  }
-
-  function compactSharedProductPatch(productData, options = {}) {
-    const barcodes = normalizeSharedProductBarcodes(productData);
-    const patch = {
-      name: productData.name || undefined,
-      brand: normalizeSharedProductBrand(productData.brand) || undefined,
-      brand_fingerprint: normalizeSharedProductBrandFingerprint(productData.brand_fingerprint || productData.brandFingerprint) || undefined,
-      name_norm: productData.name
-        ? (HEYS.models?.normalizeProductName?.(productData.name) || String(productData.name).toLowerCase().trim())
-        : undefined,
-      simple100: productData.simple100,
-      complex100: productData.complex100,
-      protein100: productData.protein100,
-      badfat100: productData.badFat100 ?? productData.badfat100,
-      goodfat100: productData.goodFat100 ?? productData.goodfat100,
-      trans100: productData.trans100,
-      fiber100: productData.fiber100,
-      gi: productData.gi,
-      harm: productData.harm ?? productData.harmScore,
-      category: productData.category,
-      portions: Array.isArray(productData.portions) ? productData.portions : productData.portions,
-      description: productData.description,
-      barcode: barcodes[0] || null,
-      barcodes,
-      sodium100: productData.sodium100,
-      omega3_100: productData.omega3_100,
-      omega6_100: productData.omega6_100,
-      nova_group: productData.nova_group ?? productData.novaGroup,
-      additives: productData.additives,
-      nutrient_density: productData.nutrient_density ?? productData.nutrientDensity,
-      is_organic: productData.is_organic ?? productData.isOrganic,
-      is_whole_grain: productData.is_whole_grain ?? productData.isWholeGrain,
-      is_fermented: productData.is_fermented ?? productData.isFermented,
-      is_raw: productData.is_raw ?? productData.isRaw,
-      vitamin_a: productData.vitamin_a ?? productData.vitaminA,
-      vitamin_c: productData.vitamin_c ?? productData.vitaminC,
-      vitamin_d: productData.vitamin_d ?? productData.vitaminD,
-      vitamin_e: productData.vitamin_e ?? productData.vitaminE,
-      vitamin_k: productData.vitamin_k ?? productData.vitaminK,
-      vitamin_b1: productData.vitamin_b1 ?? productData.vitaminB1,
-      vitamin_b2: productData.vitamin_b2 ?? productData.vitaminB2,
-      vitamin_b3: productData.vitamin_b3 ?? productData.vitaminB3,
-      vitamin_b6: productData.vitamin_b6 ?? productData.vitaminB6,
-      vitamin_b9: productData.vitamin_b9 ?? productData.vitaminB9,
-      vitamin_b12: productData.vitamin_b12 ?? productData.vitaminB12,
-      calcium: productData.calcium,
-      iron: productData.iron,
-      magnesium: productData.magnesium,
-      phosphorus: productData.phosphorus,
-      potassium: productData.potassium,
-      zinc: productData.zinc,
-      selenium: productData.selenium,
-      iodine: productData.iodine
-    };
-    if (options.barcodesOnly) {
-      return { barcode: patch.barcode, barcodes: patch.barcodes };
-    }
-    Object.keys(patch).forEach((key) => {
-      if (patch[key] === undefined) delete patch[key];
-    });
-    return patch;
-  }
-
-  async function applyPendingSharedProductChange(productData, request) {
-    const targetId = request?.target_product_id;
-    if (!targetId) {
-      return { data: null, error: 'missing_target_product_id', status: 'error' };
-    }
-
-    if (request.type === 'variant_create') {
-      const publishResult = await cloud.publishToShared({
-        ...productData,
-        variant_of: targetId
-      });
-      if (publishResult.error && publishResult.status !== 'exists') return publishResult;
-      const sharedId = publishResult.data?.id;
-      if (sharedId) {
-        const { error } = await YandexAPI.rest('shared_products', {
-          method: 'PATCH',
-          filters: { 'eq.id': sharedId },
-          data: { variant_of: targetId },
-          select: 'id,brand,brand_fingerprint,variant_of'
-        });
-        if (error) return { data: null, error, status: 'error' };
-      }
-      _sharedProductsCacheTime = 0;
-      return { data: publishResult.data, error: null, status: 'approved', variant: true, existing: publishResult.status === 'exists' };
-    }
-
-    const patch = compactSharedProductPatch(productData, { barcodesOnly: request.type === 'barcode_update' });
-    const { data, error } = await YandexAPI.rest('shared_products', {
-      method: 'PATCH',
-      filters: { 'eq.id': targetId },
-      data: patch,
-      select: 'id,name,brand,brand_fingerprint,barcode,barcodes'
+  async function moderatePendingSharedProduct(pendingId, action, rejectReason = '') {
+    const { data, error } = await YandexAPI.rpc('moderate_pending_shared_product_by_curator', {
+      p_pending_id: pendingId,
+      p_action: action,
+      p_reject_reason: rejectReason
     });
     if (error) return { data: null, error, status: 'error' };
 
-    if (request.type === 'barcode_update') {
-      HEYS.cloud?.updateCachedSharedProduct?.(targetId, patch);
-    } else {
-      _sharedProductsCacheTime = 0;
+    const result = data?.moderate_pending_shared_product_by_curator || data;
+    if (!result) return { data: null, error: 'Empty response', status: 'error' };
+    if (result.status === 'race') {
+      return {
+        data: null,
+        error: { message: 'already_moderated' },
+        status: 'race',
+        message: 'Заявка уже обработана другим куратором'
+      };
     }
-    return { data: Array.isArray(data) ? data[0] : data, error: null, status: 'approved' };
+    if (result.success !== true) {
+      return {
+        data: null,
+        error: result.error || result.message || 'moderation_failed',
+        status: result.status || 'error',
+        message: result.message
+      };
+    }
+
+    if (action === 'approve') _sharedProductsCacheTime = 0;
+    return {
+      data: result.product_id ? { id: result.product_id } : result,
+      error: null,
+      status: result.status,
+      existing: result.existing === true,
+      variant: result.variant === true
+    };
   }
 
-  cloud.approvePendingProduct = async function (pendingId, productData) {
+  cloud.approvePendingProduct = async function (pendingId, _productData) {
     if (!user) {
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
 
     try {
-      const sharedRequest = getPendingSharedRequest(productData);
-      const publishResult = sharedRequest
-        ? await applyPendingSharedProductChange(productData, sharedRequest)
-        : await cloud.publishToShared(productData);
-
-      if (publishResult.error && publishResult.status !== 'exists') {
-        return publishResult;
-      }
-
-      // 2. Обновляем статус заявки
-      // 🛡 Race-prevention: фильтр status='pending' гарантирует что approve не сработает
-      // повторно если другой куратор уже обработал эту заявку.
-      const { data: updateData, error: updateError } = await YandexAPI.rest('shared_products_pending', {
-        method: 'PATCH',
-        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
-        data: {
-          status: 'approved',
-          moderated_at: new Date().toISOString(),
-          moderated_by: user.id
-        },
-        select: '*'
-      });
-
-      if (updateError) {
-        err('[SHARED PRODUCTS] Approve update error:', updateError);
-        return { data: null, error: updateError, status: 'error' };
-      }
-
-      // 0 строк обновлено → заявка уже была approved/rejected другим куратором
-      const updatedRows = Array.isArray(updateData) ? updateData.length : (updateData ? 1 : 0);
-      if (updatedRows === 0) {
-        log('[SHARED PRODUCTS] Approve race: pending already moderated:', pendingId);
-        return {
-          data: null,
-          error: { message: 'already_moderated' },
-          status: 'race',
-          message: 'Заявка уже обработана другим куратором'
-        };
-      }
-
+      const publishResult = await moderatePendingSharedProduct(pendingId, 'approve');
+      if (publishResult.error) return publishResult;
       log('[SHARED PRODUCTS] Approved pending:', pendingId);
-      return {
-        data: publishResult.data,
-        error: null,
-        status: 'approved',
-        existing: publishResult.status === 'exists' || publishResult.existing === true,
-        variant: publishResult.variant === true
-      };
+      return publishResult;
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
@@ -16617,10 +16493,6 @@
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
-    const curatorId = user?.id;
-    if (!curatorId) {
-      return { success: false, error: 'Not authenticated as curator' };
-    }
     const ids = (pendings || []).map(p => p?.id).filter(Boolean);
     if (ids.length === 0) {
       return { success: true, approved: 0, existing: 0, already_moderated: 0, failed: 0, errors: [], total: 0 };
@@ -16628,7 +16500,6 @@
 
     try {
       const { data, error } = await YandexAPI.rpc('approve_pending_products_bulk', {
-        p_curator_id: curatorId,
         p_pending_ids: ids,
       });
       if (error) {
@@ -16637,8 +16508,8 @@
       }
       // Инвалидируем shared cache — могут быть новые published products.
       _sharedProductsCacheTime = 0;
-      // Возвращаем серверный summary as-is.
-      return data || { success: false, error: 'Empty response' };
+      const result = data?.approve_pending_products_bulk || data;
+      return result || { success: false, error: 'Empty response' };
     } catch (e) {
       err('[SHARED PRODUCTS] Bulk approve unexpected error:', e);
       return { success: false, error: e.message };
@@ -16657,40 +16528,10 @@
     }
 
     try {
-      // 🛡 Race-prevention: фильтр status='pending' гарантирует что reject не сработает
-      // повторно если другой куратор уже обработал эту заявку.
-      const { data, error } = await YandexAPI.rest('shared_products_pending', {
-        method: 'PATCH',
-        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
-        data: {
-          status: 'rejected',
-          reject_reason: reason,
-          moderated_at: new Date().toISOString(),
-          moderated_by: user.id
-        },
-        select: '*',
-        limit: 1
-      });
-
-      if (error) {
-        err('[SHARED PRODUCTS] Reject error:', error);
-        return { data: null, error };
-      }
-
-      // 0 строк обновлено → уже была обработана
-      const updatedRows = Array.isArray(data) ? data.length : (data ? 1 : 0);
-      if (updatedRows === 0) {
-        log('[SHARED PRODUCTS] Reject race: pending already moderated:', pendingId);
-        return {
-          data: null,
-          error: { message: 'already_moderated' },
-          status: 'race',
-          message: 'Заявка уже обработана другим куратором'
-        };
-      }
-
+      const result = await moderatePendingSharedProduct(pendingId, 'reject', reason);
+      if (result.error) return result;
       log('[SHARED PRODUCTS] Rejected pending:', pendingId);
-      return { data, error: null };
+      return result;
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };

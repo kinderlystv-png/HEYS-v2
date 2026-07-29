@@ -894,16 +894,12 @@ const ALLOWED_FUNCTIONS = [
   'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
   'create_pending_shared_product_change_by_session', // 🔐 PIN-клиент: правка общей базы через модерацию
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
-  'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
   'add_shared_product_barcode_by_session', // 🔐 Client-safe append-only barcode attach to shared product
-  'add_shared_product_barcode_by_curator', // 🔐 Curator append-only barcode attach to shared product
-  'approve_pending_products_bulk',     // 🚀 P3: массовое одобрение pending'ов куратором (1 RPC вместо N×2)
   'backfill_shared_harm',              // 🔧 2026-05-30: безопасный backfill harm-score (заменил REST upsert с NOT NULL-violation)
   // 'sync_shared_products_by_session', // 🪦 REMOVED 2026-05-24 (plan F17): не вызывается из apps/,
   //                                     attack surface (replace heys_products через UPSERT без tombstone).
   //                                     DROP миграция: database/2026-05-24_drop_sync_shared_products_by_session.sql
   'update_shared_product_portions',    // 🔐 Обновление порций продукта (direct UPDATE, не INSERT)
-  'update_shared_product_portions_by_curator', // 🔐 Обновление порций куратором (JWT auth)
 
   // === DEBUG / OBSERVABILITY ===
   'log_client_event_by_session',       // 📝 Append-only event log для debug (plan Wave 5 F-EL2,F-EL3)
@@ -1055,6 +1051,13 @@ const CURATOR_ONLY_FUNCTIONS = [
   'batch_upsert_client_kv_by_curator',
   'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
   'issue_write_context_by_curator',       // 🛡️ Write context — выдача capability token (Phase A1)
+
+  // === SHARED PRODUCT MODERATION ===
+  'moderate_pending_shared_product_by_curator', // Atomic approve/reject, ownership checked in SQL
+  'approve_pending_products_bulk',              // JWT-only; p_curator_id is overwritten from JWT
+  'publish_shared_product_by_curator',          // Direct shared catalog publish; JWT actor only
+  'add_shared_product_barcode_by_curator',      // Shared barcode mutation; JWT actor only
+  'update_shared_product_portions_by_curator',  // Shared portions mutation; JWT actor only
 ];
 
 // === P1-B: Curator audit middleware (2026-05-22) =============================
@@ -4526,6 +4529,16 @@ async function handleRpcRequest(event, context) {
         'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
       },
+      'moderate_pending_shared_product_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_pending_id': '::uuid',
+        'p_action': '::text',
+        'p_reject_reason': '::text'
+      },
+      'approve_pending_products_bulk': {
+        'p_curator_id': '::uuid',
+        'p_pending_ids': '::uuid[]'
+      },
       'add_shared_product_barcode_by_session': {
         'p_session_token': '::text',
         'p_product_id': '::uuid',
@@ -5045,6 +5058,19 @@ async function handleRpcRequest(event, context) {
       error.code === 'ECONNRESET' ||
       error.code === 'EPIPE';
     try { client.release(isConnectionError); } catch (e) { /* ignore */ }
+
+    // SQL ownership checks use insufficient_privilege so HTTP callers get a
+    // real authorization response instead of a generic database failure.
+    if (error.code === '42501') {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Forbidden',
+          code: 'FORBIDDEN'
+        })
+      };
+    }
 
     // 🔐 P0001 = RAISE EXCEPTION (бизнес-ошибка, НЕ сбой БД)
     // Возвращаем 200 с error-объектом, чтобы фронтенд парсил корректно

@@ -552,6 +552,13 @@
     'batch_upsert_client_kv_by_curator',
     'merge_save_client_kv_by_curator', // 🔀 Server-side merge для dayv2/norms/profile (curator path)
     'issue_write_context_by_curator',  // 🛡️ Write context for curator KV uploads
+
+    // === SHARED PRODUCT MODERATION ===
+    'moderate_pending_shared_product_by_curator', // Atomic approve/reject; curator id comes from JWT
+    'approve_pending_products_bulk',              // Bulk approval; curator id comes from JWT
+    'publish_shared_product_by_curator',          // Direct shared catalog publish
+    'add_shared_product_barcode_by_curator',      // Append barcode to shared product
+    'update_shared_product_portions_by_curator',  // Update shared product portions
   ];
 
   /**
