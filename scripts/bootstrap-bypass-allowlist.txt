@@ -264,7 +264,7 @@ apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371
 apps/web/heys_yandex_api_v1.js:253
-apps/web/heys_yandex_api_v1.js:826
+apps/web/heys_yandex_api_v1.js:819
 
 # Reader preferences use direct storage only as a client-scoped fallback and
 # sync explicitly; reading progress remains device-local UI state.
