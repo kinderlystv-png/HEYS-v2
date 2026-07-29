@@ -17,6 +17,8 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
         <div className="space-y-4">
             {items.map((item, i) => {
                 const isOpen = openIndex === i
+                const buttonId = `faq-button-${i}`
+                const panelId = `faq-panel-${i}`
 
                 return (
                     <div
@@ -27,8 +29,12 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
                             }`}
                     >
                         <button
+                            id={buttonId}
+                            type="button"
                             onClick={() => toggle(i)}
-                            className="flex w-full cursor-pointer items-center justify-between gap-6 px-6 py-5 text-left focus:outline-none"
+                            aria-expanded={isOpen}
+                            aria-controls={panelId}
+                            className="flex w-full cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         >
                             <span
                                 className={`text-base md:text-lg font-semibold transition-colors duration-300 ${isOpen ? 'text-blue-700' : 'text-gray-900'
@@ -37,6 +43,7 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
                                 {item.q}
                             </span>
                             <span
+                                aria-hidden="true"
                                 className={`flex-shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : 'text-gray-400'
                                     }`}
                             >
@@ -44,7 +51,11 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
                             </span>
                         </button>
                         <div
-                            className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                            id={panelId}
+                            role="region"
+                            aria-labelledby={buttonId}
+                            aria-hidden={!isOpen}
+                            className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
                                 }`}
                         >
                             <div className="overflow-hidden">

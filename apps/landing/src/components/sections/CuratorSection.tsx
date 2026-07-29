@@ -113,7 +113,7 @@ export default function CuratorSection() {
                         {/* Curator bubble (left) */}
                         <div className="flex justify-start">
                             <div className="bg-white text-[#111827] text-[14px] sm:text-[15px] rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[92%] sm:max-w-[85%] leading-snug shadow-sm border border-gray-100">
-                                Да, вижу: вечер снова сбился. По дневнику три дня не хватало белка, а ужин уходил поздно. Завтра начнём с простого: добавим полноценный обед и посмотрим вечер.
+                                Да, вижу: вечер снова сбился. По дневнику три дня не хватало белка, а ужин уходил поздно. Завтра начнём с простого: добавим полноценный обед и посмотрим, станет ли вечер спокойнее.
                             </div>
                         </div>
                         <div className="text-[11px] text-gray-400 text-center pt-1">
@@ -130,9 +130,9 @@ export default function CuratorSection() {
                     style={{ transitionDelay: '850ms' }}
                 >
                     <p className="text-[17px] sm:text-[19px] font-medium text-gray-900 leading-snug text-balance">
-                        Вам не нужно открывать приложение после каждого приёма пищи.<br />
+                        Вам не нужно открывать HEYS после каждого приёма пищи.{' '}
                         <span className="text-blue-600">
-                            Куратор ведёт дневник, а вы заходите в HEYS и по виджетам видите, как складывается день.
+                            Куратор ведёт дневник, а вы заходите посмотреть готовую картину дня.
                         </span>
                     </p>
                 </div>
