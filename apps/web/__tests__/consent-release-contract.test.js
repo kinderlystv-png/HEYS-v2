@@ -33,9 +33,7 @@ describe('legal release contract', () => {
     expect(versionsSource).toMatch(versionPattern);
     expect(subscriptionsSource).toContain('VERSIONS?.payment_oferta');
     expect(subscriptionsSource).not.toContain('VERSIONS?.user_agreement');
-    expect(paymentsSource).toContain(
-      `PAYMENT_OFERTA_VERSION = '${paymentOferta.version}'`,
-    );
+    expect(paymentsSource).toContain(`PAYMENT_OFERTA_VERSION = '${paymentOferta.version}'`);
     expect(paymentsSource).toContain(`'${paymentOferta.sha256}'`);
     expect(paymentsSource).toMatch(/document_version = \$2/);
     expect(paymentsSource).toMatch(/document_sha256 = \$3/);
@@ -59,6 +57,9 @@ describe('legal release contract', () => {
   });
 
   it('preserves hashes of previously published immutable snapshots', () => {
+    expect(hash('apps/web/public/docs/v1.8/user-agreement.md')).toBe(
+      'd7f3a02f916d84476080b53f311db869ed526b73eabe75d128ca848481c209a4',
+    );
     expect(hash('apps/web/public/docs/v1.6/user-agreement.md')).toBe(
       'dfb02761287ff38f41cd11debae0dd71b861e820420e4512a421bc1f4486a7d9',
     );

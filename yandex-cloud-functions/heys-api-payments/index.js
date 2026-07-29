@@ -327,9 +327,9 @@ async function createPayment(body, clientId) {
   // ⚠️ СИНХРОН: эта константа, CURRENT_VERSIONS.payment_oferta (heys_consents_v1.js)
   // и payment_oferta в heys_legal_versions_v1.js должны быть РАВНЫ, и функция
   // деплоится В ОДНОМ релизе с фронтендом — иначе все оплаты BLOCKED.
-  const PAYMENT_OFERTA_VERSION = '1.8'; // акцепт Пользовательского соглашения 1.8
+  const PAYMENT_OFERTA_VERSION = '1.9'; // акцепт Пользовательского соглашения 1.9
   const PAYMENT_OFERTA_SHA256 =
-    'd7f3a02f916d84476080b53f311db869ed526b73eabe75d128ca848481c209a4';
+    'b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc';
 
   // 1. Создаём запись платежа в БД (pending) через connection pool
   // + получаем телефон клиента для чека 54-ФЗ

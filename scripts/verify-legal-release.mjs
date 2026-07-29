@@ -10,10 +10,12 @@ const MANIFEST_PATH = 'docs/legal/legal-document-manifest.json';
 const MIGRATION_PATHS = [
   'database/2026-07-27_consent_proof_v2.sql',
   'database/2026-07-28_activate_user_agreement_v1_8.sql',
+  'database/2026-07-29_activate_user_agreement_v1_9.sql',
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-const digest = (relativePath) => crypto.createHash('sha256').update(read(relativePath)).digest('hex');
+const digest = (relativePath) =>
+  crypto.createHash('sha256').update(read(relativePath)).digest('hex');
 
 function fail(message) {
   throw new Error(message);
@@ -50,9 +52,12 @@ function parseRegistry(sql) {
 function assertEntry(registry, type, document, status = 'active') {
   const entry = registry.get(`${type}:${document.version}`);
   if (!entry) fail(`Registry is missing ${type}:${document.version}`);
-  if (entry.status !== status) fail(`${type}:${document.version} status=${entry.status}, expected ${status}`);
+  if (entry.status !== status)
+    fail(`${type}:${document.version} status=${entry.status}, expected ${status}`);
   if (entry.sha256 !== document.sha256) {
-    fail(`${type}:${document.version} registry hash ${entry.sha256} != manifest ${document.sha256}`);
+    fail(
+      `${type}:${document.version} registry hash ${entry.sha256} != manifest ${document.sha256}`,
+    );
   }
   const expectedPath = document.snapshotPath || document.canonicalPath;
   if (entry.path !== expectedPath) {
@@ -88,11 +93,16 @@ function verifySourceContract() {
   }
 
   const healthCandidate = manifest.candidates.health_data_2_0;
-  assertEntry(registry, 'health_data', {
-    version: healthCandidate.version,
-    sha256: healthCandidate.sha256,
-    snapshotPath: healthCandidate.canonicalPath,
-  }, 'candidate');
+  assertEntry(
+    registry,
+    'health_data',
+    {
+      version: healthCandidate.version,
+      sha256: healthCandidate.sha256,
+      snapshotPath: healthCandidate.canonicalPath,
+    },
+    'candidate',
+  );
 
   const webLegal = read('apps/web/heys_legal_versions_v1.js');
   const consentFallback = read('apps/web/heys_consents_v1.js');
@@ -109,8 +119,10 @@ function verifySourceContract() {
   };
 
   for (const [type, version] of Object.entries(required)) {
-    if (extractPlainVersion(webLegal, type) !== version) fail(`web legal ${type} is not ${version}`);
-    if (extractPlainVersion(consentFallback, type) !== version) fail(`consent fallback ${type} is not ${version}`);
+    if (extractPlainVersion(webLegal, type) !== version)
+      fail(`web legal ${type} is not ${version}`);
+    if (extractPlainVersion(consentFallback, type) !== version)
+      fail(`consent fallback ${type} is not ${version}`);
     if (extractLandingVersion(landing, landingKeys[type]) !== version) {
       fail(`landing ${type} is not ${version}`);
     }
@@ -118,8 +130,10 @@ function verifySourceContract() {
 
   for (const type of ['marketing', 'payment_oferta', 'speech_transcription']) {
     const version = manifest.documents[type].version;
-    if (extractPlainVersion(webLegal, type) !== version) fail(`web legal ${type} is not ${version}`);
-    if (extractPlainVersion(consentFallback, type) !== version) fail(`consent fallback ${type} is not ${version}`);
+    if (extractPlainVersion(webLegal, type) !== version)
+      fail(`web legal ${type} is not ${version}`);
+    if (extractPlainVersion(consentFallback, type) !== version)
+      fail(`consent fallback ${type} is not ${version}`);
   }
 
   return required;
@@ -127,7 +141,9 @@ function verifySourceContract() {
 
 function verifyBundle(distPath, required) {
   const absoluteDist = path.resolve(ROOT, distPath);
-  const bundleManifest = JSON.parse(fs.readFileSync(path.join(absoluteDist, 'bundle-manifest.json'), 'utf8'));
+  const bundleManifest = JSON.parse(
+    fs.readFileSync(path.join(absoluteDist, 'bundle-manifest.json'), 'utf8'),
+  );
   const targets = [
     ['boot-core', 'versions'],
     ['postboot-1-game-lazy', 'CURRENT_VERSIONS'],
@@ -151,7 +167,11 @@ function main() {
   const distArg = process.argv.find((arg) => arg.startsWith('--dist='));
   const required = verifySourceContract();
   if (distArg) verifyBundle(distArg.slice('--dist='.length), required);
-  console.log(`Legal release contract OK: ${Object.entries(required).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  console.log(
+    `Legal release contract OK: ${Object.entries(required)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(', ')}`,
+  );
 }
 
 try {

@@ -4,16 +4,16 @@
 // пользователей: координируется отдельно с docs/legal/ и apps/web/public/docs/.
 
 export interface LegalDocMeta {
-  version: string
-  effectiveDate: string // ISO-like human-readable: '20 мая 2026 г.'
-  lastUpdated: string
+  version: string;
+  effectiveDate: string; // ISO-like human-readable: '20 мая 2026 г.'
+  lastUpdated: string;
 }
 
 export const LEGAL_DOCS = {
   userAgreement: {
-    version: '1.8',
-    effectiveDate: '28 июля 2026 г.',
-    lastUpdated: '28 июля 2026 г.',
+    version: '1.9',
+    effectiveDate: '29 июля 2026 г.',
+    lastUpdated: '29 июля 2026 г.',
   },
   privacyPolicy: {
     version: '1.7',
@@ -45,14 +45,14 @@ export const LEGAL_DOCS = {
     effectiveDate: '27 июля 2026 г.',
     lastUpdated: '27 июля 2026 г.',
   },
-} as const satisfies Record<string, LegalDocMeta>
+} as const satisfies Record<string, LegalDocMeta>;
 
 export const SUPPORT_CONTACTS = {
   generalEmail: 'poplanton@mail.ru',
   privacyEmail: 'poplanton@mail.ru',
   telegramHandle: '@heyslab_support_bot',
   telegramUrl: 'https://t.me/heyslab_support_bot',
-} as const
+} as const;
 
 export const OPERATOR = {
   fullName: 'ИП Поплавский Антон Сергеевич',
@@ -62,4 +62,4 @@ export const OPERATOR = {
   rknRegistrationNumber: '26-22-005319',
   rknOrder: 'приказ № 131 от 24 июля 2026 г.',
   rknRegistryUrl: 'https://pd.rkn.gov.ru/operators-registry/operators-list/',
-} as const
+} as const;

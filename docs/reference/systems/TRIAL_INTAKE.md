@@ -14,10 +14,11 @@
 > gateway/public; rollback-only smoke зелёный. Production остаётся красным до
 > ручного smoke с фактически созданным клиентом. **Охват:** landing handoff,
 > consent, session/RPC boundary, encrypted storage, client/curator UI, decision
-> gate, retention, DSAR и production smoke. Legal 1.8 активна, live legal drift
-> проходит. **Не подтверждено/Не охвачено:** post-trial payment rollout; он не
-> входит в контракт первого trial. Отдельное изменение РКН для этого flow не
-> требуется: опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
+> gate, retention, DSAR и production smoke. Legal 1.8 активна в production;
+> source 1.9 и forward migration подготовлены локально, rollout не выполнялся.
+> **Не подтверждено/Не охвачено:** post-trial payment rollout; он не входит в
+> контракт первого trial. Отдельное изменение РКН для этого flow не требуется:
+> опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
 > сопровождение и специальные данные о здоровье.
 
 ## Поток
@@ -186,6 +187,8 @@ Prepare RPC отдельно проверяет свежесть заявки: �
   autosave/resume, curator ownership/IDOR, approval/activation и revoke/purge;
   три синтетических клиента удалены.
 - Legal 1.8 активна в production; live legal drift проходит.
+- Source legal 1.9 и migration №14 подготовлены 2026-07-29; они не применены и
+  не меняют приведённое выше production-состояние.
 - Data-change gate пройден: intake не меняет опубликованные цели, категории
   субъектов/данных, получателей, способы обработки или трансграничную передачу.
 - Operator smoke 2026-07-29 подтвердил исправленный ownership filter, затем
@@ -206,7 +209,7 @@ Prepare RPC отдельно проверяет свежесть заявки: �
 | TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15    | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27                               |
 | TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                                 | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27                               |
 | TI10 | Production rollout v2 и полный synthetic smoke завершены; fixtures удалены                                                         | release-task evidence + managed migration ledger                                   | проверено 2026-07-28                               |
-| TI11 | Legal 1.8 активна, live legal drift проходит                                                                                       | live legal drift check + legal configs                                             | проверено 2026-07-28                               |
+| TI11 | Production legal 1.8 активна; source 1.9 и re-consent migration подготовлены, но не опубликованы                                   | live legal drift check + legal configs + migration №14                             | source обновлён 2026-07-29; rollout не выполнялся  |
 | TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                           | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27                      |
 | TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                               | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27                      |
 | TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                           | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27                      |

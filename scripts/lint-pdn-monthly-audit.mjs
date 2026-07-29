@@ -32,6 +32,7 @@ const FILES = {
   healthConsent: 'apps/web/public/docs/health-data-consent.md',
   userAgreement: 'apps/web/public/docs/user-agreement.md',
   userAgreementV18: 'apps/web/public/docs/v1.8/user-agreement.md',
+  userAgreementV19: 'apps/web/public/docs/v1.9/user-agreement.md',
   privacyV17: 'apps/web/public/docs/v1.7/privacy-policy.md',
   healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
   healthV15: 'apps/web/public/docs/v1.5/health-data-consent.md',
@@ -230,11 +231,7 @@ function checkIncidentDrillTemplate() {
 function checkDsarSelfServicePath() {
   requireIncludes(
     FILES.dsarProcedure,
-    [
-      'export_my_data_by_session',
-      'log_data_access',
-      'operator fallback',
-    ],
+    ['export_my_data_by_session', 'log_data_access', 'operator fallback'],
     'DSAR procedure reflects self-service export path',
   );
   const dsarProcedure = read(FILES.dsarProcedure).replace(/\s+/g, ' ');
@@ -269,11 +266,14 @@ function checkDsarSelfServicePath() {
     'revoke_consent',
     'get_client_consents',
     'purge_health_data',
-  ].filter(name => allowedRpcSource.includes(`'${name}'`));
+  ].filter((name) => allowedRpcSource.includes(`'${name}'`));
   if (unsafeConsentRpcs.length === 0) {
     ok('direct client-id consent RPCs are not publicly allowlisted');
   } else {
-    fail('direct client-id consent RPCs are not publicly allowlisted', unsafeConsentRpcs.join(', '));
+    fail(
+      'direct client-id consent RPCs are not publicly allowlisted',
+      unsafeConsentRpcs.join(', '),
+    );
   }
   requireIncludes(
     FILES.userTab,
@@ -338,13 +338,29 @@ function checkIspdnGapList() {
 function checkRknDraft() {
   requireIncludes(
     FILES.rknHeys,
-    ['26-22-005319', 'updateform', 'данные о состоянии здоровья', 'Yandex Cloud', 'Трансграничная передача персональных данных не осуществляется', 'приказом № 131', 'СТАТУС 2026-07-26', 'публичная запись 26-22-005319 проверена'],
+    [
+      '26-22-005319',
+      'updateform',
+      'данные о состоянии здоровья',
+      'Yandex Cloud',
+      'Трансграничная передача персональных данных не осуществляется',
+      'приказом № 131',
+      'СТАТУС 2026-07-26',
+      'публичная запись 26-22-005319 проверена',
+    ],
     'RKN draft matches HEYS data model anchors',
   );
-  ok('RKN submitted-record comparison', 'public record 26-22-005319 verified 2026-07-26; number/key/screenshots stay outside repo');
+  ok(
+    'RKN submitted-record comparison',
+    'public record 26-22-005319 verified 2026-07-26; number/key/screenshots stay outside repo',
+  );
   requireIncludes(
     FILES.rknHeys,
-    ['ПОВТОРНАЯ ПОДАЧА НЕ ТРЕБУЕТСЯ', 'цели заявок/триалов', 'специальную категорию данных о здоровье'],
+    [
+      'ПОВТОРНАЯ ПОДАЧА НЕ ТРЕБУЕТСЯ',
+      'цели заявок/триалов',
+      'специальную категорию данных о здоровье',
+    ],
     'trial intake is covered by the submitted RKN record',
   );
 }
@@ -394,7 +410,7 @@ function checkLegalVersions() {
   }
 
   for (const [currentKey, snapshotKey, label] of [
-    ['userAgreement', 'userAgreementV18', 'user_agreement 1.8'],
+    ['userAgreement', 'userAgreementV19', 'user_agreement 1.9'],
     ['privacyPolicy', 'privacyV17', 'personal_data 1.7'],
     ['healthConsent', 'healthV15', 'health_data 1.5'],
   ]) {
@@ -403,6 +419,12 @@ function checkLegalVersions() {
     } else {
       fail(`versioned snapshot matches current: ${label}`);
     }
+  }
+
+  if (read(FILES.userAgreementV18).includes('**Версия:** 1.8')) {
+    ok('immutable archive preserved: user_agreement 1.8');
+  } else {
+    fail('immutable archive preserved: user_agreement 1.8');
   }
 }
 
@@ -466,7 +488,14 @@ function checkPlanAndDecisionLog() {
   );
   requireIncludes(
     FILES.roadmap25,
-    ['R0: заявки и триалы', '`6Б.3/6Б.4`', 'импорт `.ics`', 'payment metadata live smoke', 'retention dry-run', 'ERID-001'],
+    [
+      'R0: заявки и триалы',
+      '`6Б.3/6Б.4`',
+      'импорт `.ics`',
+      'payment metadata live smoke',
+      'retention dry-run',
+      'ERID-001',
+    ],
     'roadmap 25 release gate mirrors R0/R1/R2 blockers from 22/32',
   );
   requireIncludes(
@@ -491,7 +520,9 @@ function printResult() {
     console.error(`pdn monthly audit preflight failed: ${failures.length} failure(s)`);
     process.exit(1);
   }
-  console.log(`pdn monthly audit preflight OK (${checks.length} checks, ${pending.length} pending external item)`);
+  console.log(
+    `pdn monthly audit preflight OK (${checks.length} checks, ${pending.length} pending external item)`,
+  );
 }
 
 try {
