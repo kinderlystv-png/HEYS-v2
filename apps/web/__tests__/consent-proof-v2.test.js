@@ -9,7 +9,10 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const migration = read('database/2026-07-27_consent_proof_v2.sql');
 const legalActivationMigration = read('database/2026-07-28_activate_user_agreement_v1_8.sql');
 const legalActivationMigrationV19 = read('database/2026-07-29_activate_user_agreement_v1_9.sql');
-const registryMigrations = `${migration}\n${legalActivationMigration}\n${legalActivationMigrationV19}`;
+const legalHashCorrectionMigration = read(
+  'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
+);
+const registryMigrations = `${migration}\n${legalActivationMigration}\n${legalActivationMigrationV19}\n${legalHashCorrectionMigration}`;
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 const migrationManifest = JSON.parse(read('scripts/db/migrations/manifest.json'));
 
@@ -42,12 +45,20 @@ test('consent proof migration is managed and every registry hash matches the imm
   const legalActivationV19 = migrationManifest.migrations.find(
     (item) => item.id === '2026-07-29_activate_user_agreement_v1_9',
   );
+  const legalHashCorrection = migrationManifest.migrations.find(
+    (item) => item.id === '2026-07-30_update_user_agreement_v1_9_document_hash',
+  );
   assert.equal(managed?.path, 'database/2026-07-27_consent_proof_v2.sql');
   assert.equal(managed?.destructive, false);
   assert.equal(legalActivation?.path, 'database/2026-07-28_activate_user_agreement_v1_8.sql');
   assert.equal(legalActivation?.destructive, false);
   assert.equal(legalActivationV19?.path, 'database/2026-07-29_activate_user_agreement_v1_9.sql');
   assert.equal(legalActivationV19?.destructive, false);
+  assert.equal(
+    legalHashCorrection?.path,
+    'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
+  );
+  assert.equal(legalHashCorrection?.destructive, false);
 
   for (const type of [
     'user_agreement',

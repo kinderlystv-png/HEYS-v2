@@ -139,6 +139,13 @@
       "path": "scripts/db/migrations/2026-07-29_atomic_shared_product_moderation_sanitize.sql",
       "description": "Filter browser-local metadata before mapping atomic product updates into typed shared product columns",
       "destructive": false
+    },
+    {
+      "id": "2026-07-30_update_user_agreement_v1_9_document_hash",
+      "order": 18,
+      "path": "database/2026-07-30_update_user_agreement_v1_9_document_hash.sql",
+      "description": "Align active user agreement and payment oferta v1.9 registry entries with the released document hash",
+      "destructive": false
     }
   ]
 }

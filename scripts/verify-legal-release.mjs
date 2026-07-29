@@ -11,6 +11,7 @@ const MIGRATION_PATHS = [
   'database/2026-07-27_consent_proof_v2.sql',
   'database/2026-07-28_activate_user_agreement_v1_8.sql',
   'database/2026-07-29_activate_user_agreement_v1_9.sql',
+  'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');

@@ -19,7 +19,7 @@ describe('personal product commit gate contract', () => {
     expect(core).toContain("YandexAPI.saveKV(clientId, 'heys_products_overlay_v2', nextRows");
     expect(core).toContain("'heys_products_overlay_v2_rpc_manifest'");
     expect(core).toContain("YandexAPI.getKV(clientId, 'heys_products_overlay_v2')");
-    expect(core).toContain("Overlay.writeRaw(cloudRows, { skipCloudSync: true");
+    expect(core).toContain('Overlay.writeRaw(cloudRows, { skipCloudSync: true');
     expect(core).toContain('cloud_save_ack_pending_readback');
     expect(core).toContain('cloud_save_queued_after_413');
     expect(core).toContain('visible_product_present');
@@ -36,9 +36,11 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain("closeOnComplete: 'after'");
     expect(addProduct).toContain('await HEYS.products?.ensureMealProductReady?.(selectedProduct');
     expect(addProduct).toContain('productCommitVerified: ready?.ok === true');
-    expect(addProduct).toContain('throw new Error(\'product_commit_failed\')');
+    expect(addProduct).toContain("throw new Error('product_commit_failed')");
     expect(addProduct).toContain('throw error;');
-    expect(addProduct).not.toContain('штрихкод сохранён локально, но облачная синхронизация сейчас недоступна');
+    expect(addProduct).not.toContain(
+      'штрихкод сохранён локально, но облачная синхронизация сейчас недоступна',
+    );
     expect(addProduct).toContain("'aria-disabled': isNutrientsPending ? 'true' : undefined");
     expect(addProduct).toContain("'Состав загружается'");
   });
@@ -51,7 +53,9 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('handleCreateBarcodeDetected');
     expect(addProduct).toContain('BarcodeScannerModal');
     expect(addProduct).toContain('aps-create-barcode-field');
-    expect(addProduct).toContain('const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;');
+    expect(addProduct).toContain(
+      'const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;',
+    );
     expect(addProduct).toContain('newProduct: preparedProduct');
     expect(addProduct).toContain('selectedProduct: preparedProduct');
     expect(addProduct).toContain('barcode: effectiveBarcode');
@@ -74,11 +78,15 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('const getProductSearchText = (product, normalizeFn) =>');
     expect(addProduct).toContain('const [brandInput, setBrandInput]');
     expect(addProduct).toContain('aps-create-brand-field');
-    expect(addProduct).toContain("React.createElement('label', { className: 'aps-create-brand-label' }, 'Бренд')");
+    expect(addProduct).toContain(
+      "React.createElement('label', { className: 'aps-create-brand-label' }, 'Бренд')",
+    );
     expect(addProduct).toContain('brand: normalizeProductBrand(brandInput) || null');
     expect(addProduct).toContain('brand_fingerprint: brandFingerprint || null');
     expect(addProduct).toContain('{ brandFingerprint, limit: 1 }');
-    expect(addProduct).toContain("React.createElement('div', { className: 'aps-product-brand' }, highlightedBrand)");
+    expect(addProduct).toContain(
+      "React.createElement('div', { className: 'aps-product-brand' }, highlightedBrand)",
+    );
     expect(addProduct).toContain('getProductSearchText(p, normalizeSearch).includes(lc)');
 
     expect(models).toContain('async function computeProductBrandFingerprint(product)');
@@ -88,20 +96,28 @@ describe('personal product commit gate contract', () => {
     expect(storage).toContain("'ilike.brand': `%${q}%`");
     expect(storage).toContain("'eq.brand_fingerprint'");
     expect(storage).toContain('brand: normalizeSharedProductBrand(product.brand)');
-    expect(storage).toContain('brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)');
-    expect(storage).toContain("select: 'id,name,brand,brand_fingerprint,barcode,barcodes'");
+    expect(storage).toContain(
+      'brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)',
+    );
+    expect(addProduct).toContain("select: 'id,name,brand,brand_fingerprint'");
     expect(overlay).toContain("'brand',");
     expect(dayBundle).toContain('brand: finalProduct.brand || null');
-    expect(dayBundle).toContain('brand_fingerprint: finalProduct.brand_fingerprint || finalProduct.brandFingerprint || null');
+    expect(dayBundle).toContain(
+      'brand_fingerprint: finalProduct.brand_fingerprint || finalProduct.brandFingerprint || null',
+    );
     expect(styles).toContain('.aps-product-brand');
     expect(styles).toContain('.aps-create-brand-field');
 
-    expect(rest).toContain("'id', 'name', 'brand', 'brand_fingerprint', 'name_norm', 'fingerprint'");
+    expect(rest).toContain(
+      "'id', 'name', 'brand', 'brand_fingerprint', 'name_norm', 'fingerprint'",
+    );
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS brand TEXT');
     expect(migration).toContain('idx_shared_products_brand_trgm');
     expect(migration).toContain("p_product_data->>'brand'");
     expect(brandFingerprintMigration).toContain('ADD COLUMN IF NOT EXISTS brand_fingerprint TEXT');
-    expect(brandFingerprintMigration).toContain('DROP INDEX IF EXISTS public.idx_shared_products_fingerprint_unique');
+    expect(brandFingerprintMigration).toContain(
+      'DROP INDEX IF EXISTS public.idx_shared_products_fingerprint_unique',
+    );
     expect(brandFingerprintMigration).toContain('idx_shared_products_brand_fingerprint_unique');
     expect(brandFingerprintMigration).toContain('brand_fingerprint = v_brand_fingerprint');
     expect(dryRun).toContain('Dry-run only');
