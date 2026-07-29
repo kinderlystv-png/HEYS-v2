@@ -37,7 +37,7 @@ yc serverless function invoke heys-bot-client \
 pnpm ops:heys:status --strict
 ```
 
-Expected: 23 tests pass; health reports Start and curator tokens; spoof webhook
+Expected: 28 tests pass; health reports Start and curator tokens; spoof webhook
 without Telegram secret returns HTTP 403; manual invoke contains both
 `heys-start-bot` and `heys-curator-bot`; trigger is ACTIVE; Telegram pending
 queues are zero and webhooks are off.
@@ -48,7 +48,9 @@ queues are zero and webhooks are off.
 2. Send `/start src_smoke`.
 3. Complete the quiz.
 4. Choose `Записаться на неделю`.
-5. Share contact from the same test Telegram account.
+5. Confirm that the bot shows `https://heyslab.ru/legal/privacy-policy` before
+   the contact button.
+6. Share contact from the same test Telegram account.
 
 Expected user-facing result:
 
@@ -87,7 +89,10 @@ Use `scripts/db/psql.sh` and substitute the `lead_id` from the curator handoff.
 ```sql
 SELECT id, phone IS NOT NULL AS has_phone, messenger, utm_source,
        utm_medium, utm_campaign, quiz_segment, readiness, how_heard,
-       consent_method, consent_privacy_version, status, contacted_at
+       consent_method, consent_privacy_version,
+       consent_privacy_sha256 IS NOT NULL AS has_privacy_hash,
+       consent_accepted_at IS NOT NULL AS has_consent_timestamp,
+       status, contacted_at
   FROM public.leads
  WHERE id = '<lead_id>';
 ```
@@ -104,6 +109,8 @@ Expected:
 - `readiness` is `this_week` or `next_week`;
 - `how_heard = telegram_bot`;
 - `consent_method = telegram_contact`;
+- `consent_privacy_version = 1.7`;
+- `has_privacy_hash = true` and `has_consent_timestamp = true`;
 - after the curator click, `status = contacted` and `contacted_at IS NOT NULL`.
 
 ```sql

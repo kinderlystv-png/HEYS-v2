@@ -1,10 +1,11 @@
 # Telegram Mini App и боты
 
-> **Статус:** source-контракты проверены 2026-07-28 **Охват:** curator Mini App
-> frontend, client bot, HEYS Start bot, webhook и polling delivery, lead handoff
-> **Не подтверждено:** curator webhook state; Mini App backend отсутствует в
-> найденном gateway/source-контуре. `heys-bot-client` source-fix `74b1474c`
-> опубликован 2026-07-28 в active version `d4eebq4t8dar9olee310`.
+> **Статус:** source-контракты перепроверены 2026-07-29 **Охват:** curator Mini
+> App frontend, client bot, HEYS Start bot, webhook и polling delivery, lead
+> handoff **Не подтверждено:** curator webhook state; Mini App backend
+> отсутствует в найденном gateway/source-контуре. Claim/ownership fix
+> опубликован; новый consent-proof fix для старого Telegram-лида пока готов
+> только локально.
 
 ## Главное разделение
 
@@ -57,6 +58,14 @@ events; после выбора заявки бот просит Telegram contac
 связывает его с `week_request`, пишет lead funnel event и отправляет куратору
 минимизированный handoff без телефона, имени и raw chat id.
 
+Versioned privacy proof разрешён только после сообщения с прямой ссылкой на
+действующую policy и последующей отправки контакта пользователем. Для нового
+лида version/method проходят через insert trigger; для уже связанного активного
+лида bot source берёт active `personal_data` version/hash из серверного
+`legal_consent_registry` и обновляет proof в той же транзакции. Если active
+registry row не найден или лид уже не в допустимом статусе, транзакция
+откатывается и заявка не объявляется сохранённой.
+
 Start bot также имеет webhook path, но source поддерживает отдельный long poll с
 `message` и `callback_query`, прямой доставкой ответов и commit offset.
 
@@ -105,6 +114,8 @@ Cross-client API guards не ждут Telegram: блокировка сохра�
     не получило delivery success.
 12. Ошибка offset commit останавливает соответствующий poll loop и помечает
     invocation неуспешным; следующий batch в том же запуске не читается.
+13. HEYS Start не заявляет versioned privacy consent до показа ссылки на
+    действующую policy и нового действия пользователя.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -139,7 +150,8 @@ Cross-client API guards не ждут Telegram: блокировка сохра�
 | T6  | Client имеет отдельный poll, а Start timer под одним lease опрашивает Start и curator tokens; отказ offset commit останавливает loop | `rg -n 'runStartBotPoll                                                                                                                                               \| runCuratorBotPoll         \| runClientBotPoll                                                           \| poll offset commit failed' yandex-cloud-functions/heys-bot-client/index.js` | проверено 2026-07-28                                   |
 | T7  | Webhook paths требуют отдельные secret checks                                                                                        | `rg -n 'verifyWebhookSecret                                                                                                                                          \| HEYS_START_WEBHOOK_SECRET \| TELEGRAM_WEBHOOK_SECRET' yandex-cloud-functions/heys-bot-client/index.js`                                                                                  | перепроверено 2026-07-18                               |
 | T8  | Start contact создаёт lead и минимизированный handoff                                                                                | `rg -n 'createStartLeadFromContact                                                                                                                                   \| sendStartLeadHandoff      \| record_funnel_event' yandex-cloud-functions/heys-bot-client/index.js`                                                                                      | перепроверено 2026-07-18                               |
-| T9  | Bot tests покрывают webhook/polling/CRM, curator callback и fail-closed offset contract                                              | `node --test yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                                                                                            | 24/24 пройдено 2026-07-28                              |
+| T9  | Bot tests покрывают webhook/polling/CRM, curator callback, consent proof и fail-closed offset contract                               | `node --test yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs yandex-cloud-functions/heys-bot-client/__tests__/lead-taken-callback.test.cjs`                                                                                                                                                                                            | 28/28 пройдено 2026-07-29                              |
 | T10 | Ops checker ожидает оба минутных polling trigger                                                                                     | `sed -n '20,28p' yandex-cloud-functions/check-heys-ops-status.cjs`                                                                                                                                                                                                                                                                                              | проверено 2026-07-17                                   |
 | T11 | Operational alerts fail-closed, а cross-client события повторяются по DB watermark                                                   | `node --test scripts/ci/__tests__/send-telegram-alert.test.mjs yandex-cloud-functions/heys-maintenance/__tests__/telegram-delivery.test.cjs yandex-cloud-functions/heys-cron-security-alerts/__tests__/telegram-delivery.test.cjs`                                                                                                                              | source проверен 2026-07-26                             |
 | T12 | Fail-closed offset fix опубликован в active production version                                                                       | `yc serverless function version list --function-name heys-bot-client`; `pnpm ops:heys:canary --strict`; фильтр логов по version id                                                                                                                                                                                                                              | deploy `d4eebq4t8dar9olee310`, canary green 2026-07-28 |
+| T13 | Повторная отправка контакта после показа policy записывает proof в существующий active lead без второго handoff                      | `start-lead-crm.test.cjs`: policy prompt + replay consent update                                                                                                                                                                                                                                                                                                | проверено локально 2026-07-29; deploy pending          |

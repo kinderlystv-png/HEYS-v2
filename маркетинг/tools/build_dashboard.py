@@ -840,16 +840,17 @@ for pane_id, _, title, path, _ in source_tabs:
     elif pane_id == 'release-navigator':
         extra = (
             '<div class="release-overview">'
-            '<div class="release-now"><span>Сейчас</span><b>Личная проверка → P0 лендинга</b>'
-            '<small>Telegram запущен и R0 закрыт; сначала фиксируем baseline, затем внедряем аудит</small></div>'
+            '<div class="release-now"><span>Сейчас</span><b>Bot consent proof · production красный</b>'
+            '<small>Ownership UI зелёный; приглашение fail-closed до нового подтверждённого privacy consent</small></div>'
             '<div class="release-flow">'
-            '<div><b>1</b><span>Лично: квиз + заявка</span></div>'
+            '<div><b>1</b><span>Deploy bot fix + consent</span></div>'
             '<div><b>2</b><span>Внедрить P0 аудита</span></div>'
             '<div><b>3</b><span>Product-smoke 5–10 людей</span></div>'
             '<div><b>4</b><span>Публичный S1 → R1 до оплаты</span></div>'
             '</div>'
-            '<p>Ниже — актуальный маршрут: Промпт 01 — личный чек-лист основателя, Промпт 02 — следующая задача Codex. '
-            'Выполненные Telegram/R0 перенесены в архив.</p>'
+            '<p>Ниже — актуальный маршрут: заявка, claim и ownership UI пройдены. '
+            'Старый Telegram-лид без versioned proof не создал клиента — это зафиксированный fail-closed blocker. '
+            'Следом: bot deploy, новое согласие и flow до клиента.</p>'
             '</div>'
         )
     elif pane_id == 'trial-intake-audit':

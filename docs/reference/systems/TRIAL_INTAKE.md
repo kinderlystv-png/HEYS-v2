@@ -1,13 +1,17 @@
 # Отбор кандидатов на пробную неделю
 
-> **Статус:** production v2 опубликован; migration ledger и live-контур
-> проверены 2026-07-28. **Охват:** landing handoff, consent, session/RPC
-> boundary, encrypted storage, client/curator UI, decision gate, retention, DSAR
-> и production smoke. Legal 1.8 активна, live legal drift проходит. **Не
-> подтверждено/Не охвачено:** post-trial payment rollout; он не входит в
-> контракт первого trial. Отдельное изменение РКН для этого flow не требуется:
-> опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
-> сопровождение и специальные данные о здоровье.
+> **Статус:** production v2 опубликован; migration ledger и основной live-контур
+> проверены 2026-07-28. Operator smoke 2026-07-29 подтвердил ownership UI-fix,
+> но остановился fail-closed на `fresh_application_required`: старый
+> Telegram-лид не содержит versioned privacy proof. Production остаётся красным
+> до bot fix, повторного осознанного согласия и smoke до созданного клиента.
+> **Охват:** landing handoff, consent, session/RPC boundary, encrypted storage,
+> client/curator UI, decision gate, retention, DSAR и production smoke. Legal
+> 1.8 активна, live legal drift проходит. **Не подтверждено/Не охвачено:**
+> post-trial payment rollout; он не входит в контракт первого trial. Отдельное
+> изменение РКН для этого flow не требуется: опубликованная запись №
+> 26-22-005319 уже охватывает заявки/триалы, сопровождение и специальные данные
+> о здоровье.
 
 ## Поток
 
@@ -96,6 +100,24 @@ chronology без содержимого анкеты, PIN, токенов, во
 владельца следующего шага и не даёт активировать `approved_waiting_slot`, пока
 свободных мест нет.
 
+Operator UI обязан сохранять тот же ownership-контракт до вызова RPC: новые лиды
+остаются в общей очереди, а `contacted` виден только назначенному куратору. Без
+достоверного `curatorId` UI скрывает все `contacted` fail-closed. Этот контракт
+подтверждён production smoke 2026-07-29.
+
+Prepare RPC отдельно проверяет свежесть заявки: отсутствие `consent_accepted_at`
+возвращает `fresh_application_required` до создания клиента и `invite_prepared`.
+Личная проверка 2026-07-29 подтвердила эту границу и отсутствие побочных дублей.
+Для Telegram-пути proof можно записывать только после явного показа действующей
+политики и нового действия пользователя.
+
+Отдельный подтверждённый риск остаётся на серверной границе:
+`admin_get_leads(p_status, p_curator_id)` принимает curator id, но действующая
+SQL-реализация не использует его в `WHERE`. UI не показывает чужой `contacted`,
+однако RPC-ответ всё ещё может содержать лишние lead rows. Server-side ownership
+filter требует отдельной миграции и проверки до multi-curator rollout; текущий
+UI-fix этот контракт не объявляет закрытым.
+
 Полный UX/logic-контракт и stop conditions:
 `docs/implementation/TRIAL_INTAKE_FLOW_V2_PROTOCOL.md`.
 
@@ -143,22 +165,28 @@ chronology без содержимого анкеты, PIN, токенов, во
 - Legal 1.8 активна в production; live legal drift проходит.
 - Data-change gate пройден: intake не меняет опубликованные цели, категории
   субъектов/данных, получателей, способы обработки или трансграничную передачу.
+- Operator smoke 2026-07-29 подтвердил исправленный ownership filter, затем
+  штатно остановил старый Telegram-лид с `fresh_application_required`. Клиент,
+  `invite_prepared` и повторное уведомление не созданы.
 
 ## Facts Table
 
-| ID   | Утверждение                                                                                                                     | Проверка                                                                           | Статус                        |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------- |
-| TI1  | Landing не собирает health-данные и не передаёт health consent                                                                  | `trial-intake-flow.test.js`: landing contract                                      | проверено 2026-07-27          |
-| TI2  | Intake URL универсален и не содержит client id, телефона или токена                                                             | `trial-intake-flow.test.js`: invite URL contract                                   | проверено 2026-07-27          |
-| TI3  | Клиентские RPC требуют живую сессию и отдельный health consent 1.5                                                              | `trial-intake-flow.test.js`: session/consent contract                              | проверено 2026-07-27          |
-| TI4  | Ответы и служебная заметка сохраняются только в encrypted columns                                                               | `trial-intake-flow.test.js`: encrypted storage contract                            | проверено 2026-07-27          |
-| TI5  | Новую пробную неделю нельзя активировать до ручного `approved`                                                                  | `trial-intake-flow.test.js`: activation gate contract                              | проверено 2026-07-27          |
-| TI6  | Версии health consent синхронизированы между web, landing и public docs                                                         | `pnpm pdn:monthly-audit`                                                           | проверено 2026-07-27          |
-| TI7  | Существующий daily maintenance вызывает 30-дневную очистку intake                                                               | `trial-intake-flow.test.js`: retention invocation contract                         | проверено 2026-07-27          |
-| TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15 | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27          |
-| TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                              | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27          |
-| TI10 | Production rollout v2 и полный synthetic smoke завершены; fixtures удалены                                                      | release-task evidence + managed migration ledger                                   | проверено 2026-07-28          |
-| TI11 | Legal 1.8 активна, live legal drift проходит                                                                                    | live legal drift check + legal configs                                             | проверено 2026-07-28          |
-| TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                        | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27 |
-| TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                            | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27 |
-| TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                        | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27 |
+| ID   | Утверждение                                                                                                                        | Проверка                                                                           | Статус                                             |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------- |
+| TI1  | Landing не собирает health-данные и не передаёт health consent                                                                     | `trial-intake-flow.test.js`: landing contract                                      | проверено 2026-07-27                               |
+| TI2  | Intake URL универсален и не содержит client id, телефона или токена                                                                | `trial-intake-flow.test.js`: invite URL contract                                   | проверено 2026-07-27                               |
+| TI3  | Клиентские RPC требуют живую сессию и отдельный health consent 1.5                                                                 | `trial-intake-flow.test.js`: session/consent contract                              | проверено 2026-07-27                               |
+| TI4  | Ответы и служебная заметка сохраняются только в encrypted columns                                                                  | `trial-intake-flow.test.js`: encrypted storage contract                            | проверено 2026-07-27                               |
+| TI5  | Новую пробную неделю нельзя активировать до ручного `approved`                                                                     | `trial-intake-flow.test.js`: activation gate contract                              | проверено 2026-07-27                               |
+| TI6  | Версии health consent синхронизированы между web, landing и public docs                                                            | `pnpm pdn:monthly-audit`                                                           | проверено 2026-07-27                               |
+| TI7  | Существующий daily maintenance вызывает 30-дневную очистку intake                                                                  | `trial-intake-flow.test.js`: retention invocation contract                         | проверено 2026-07-27                               |
+| TI8  | Реальная migration компилируется и исполняет session/consent/ownership/encryption/decision/purge/DSAR контракты в PostgreSQL 15    | `pnpm test:db:trial-intake`                                                        | проверено 2026-07-27                               |
+| TI9  | Прямые consent/purge RPC по `client_id` недоступны публичному gateway и `heys_rpc`                                                 | `trial-intake-flow.test.js`, `pnpm test:db:trial-intake`, `pnpm pdn:monthly-audit` | проверено 2026-07-27                               |
+| TI10 | Production rollout v2 и полный synthetic smoke завершены; fixtures удалены                                                         | release-task evidence + managed migration ledger                                   | проверено 2026-07-28                               |
+| TI11 | Legal 1.8 активна, live legal drift проходит                                                                                       | live legal drift check + legal configs                                             | проверено 2026-07-28                               |
+| TI12 | Stale autosave/review, pending purge и health revoke не обходят более свежее состояние или approval gate                           | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-27                      |
+| TI13 | Convert→prepared атомарен; прямые convert/legacy review RPC недоступны runtime-ролям                                               | PostgreSQL integration privilege/ownership matrix                                  | проверено локально 2026-07-27                      |
+| TI14 | Кураторский UI fail-closed при отсутствии summaries и показывает одно следующее действие                                           | static/UI contracts, 25/25                                                         | проверено локально 2026-07-27                      |
+| TI15 | Intake UI показывает `new` и только закреплённые за текущим куратором `contacted`; без curator id скрывает `contacted` fail-closed | `trial-intake-flow.test.js`, 26/26 + operator smoke                                | проверено production 2026-07-29                    |
+| TI16 | `admin_get_leads` получает `p_curator_id`, но SQL пока не ограничивает им возвращаемые lead rows                                   | `database/2026-03-02_fix_admin_get_leads_name.sql`                                 | подтверждённый риск 2026-07-29; server fix pending |
+| TI17 | Лид без свежего privacy proof не создаёт клиента/`invite_prepared` и не даёт побочных дублей                                       | prepare RPC + operator smoke `fresh_application_required`                          | проверено production 2026-07-29; bot fix pending   |

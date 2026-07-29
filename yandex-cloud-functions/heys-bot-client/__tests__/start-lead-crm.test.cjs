@@ -664,6 +664,53 @@ test('HEYS Start callback acknowledges button press and returns next question', 
   assert.equal(queries.length, 0);
 });
 
+test('HEYS Start asks for contact only after showing the active privacy policy', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'error', () => {});
+
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: true }) };
+  });
+
+  const oldEnv = { ...process.env };
+  t.after(() => {
+    process.env = oldEnv;
+    delete require.cache[MODULE_PATH];
+  });
+
+  process.env.HEYS_START_WEBHOOK_SECRET = 'test-secret';
+  process.env.HEYS_START_BOT_TOKEN = 'start-token';
+
+  const { handler, queries } = loadHandlerWithDb([]);
+  const result = await handler(
+    startWebhookEvent({
+      callback_query: {
+        id: 'callback-contact-consent',
+        data: 'qr|this_week|morning,stress,daily,diets,routine,less_breakdowns|organic',
+        message: {
+          message_id: 42,
+          chat: { id: 123456 },
+        },
+      },
+    }),
+  );
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(JSON.parse(result.body), { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 2);
+  assert.match(fetchCalls[0].url, /answerCallbackQuery$/);
+  assert.match(fetchCalls[1].url, /sendMessage$/);
+  assert.match(fetchCalls[1].body.text, /https:\/\/heyslab\.ru\/legal\/privacy-policy/);
+  assert.deepEqual(fetchCalls[1].body.reply_markup.keyboard, [[{
+    text: 'Отправить телефон',
+    request_contact: true,
+  }]]);
+  assert.equal(queries.some((q) => /INSERT INTO public\.leads/.test(q.sql)), false);
+});
+
 test('HEYS Start contact creates CRM lead and sends PII-free curator handoff', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
@@ -729,8 +776,11 @@ test('HEYS Start contact creates CRM lead and sends PII-free curator handoff', a
 
   const insertLead = queries.find((q) => /INSERT INTO public\.leads/.test(q.sql));
   assert.ok(insertLead, 'lead insert query should run');
+  assert.match(insertLead.sql, /consent_privacy_version, consent_method/);
+  assert.match(insertLead.sql, /\$8, 'telegram_contact'/);
   assert.equal(insertLead.params[0], 'Ivan Private');
   assert.equal(insertLead.params[1], '+79991112233');
+  assert.equal(insertLead.params[7], '1.7');
 
   const recordLead = queries.find(
     (q) => /record_funnel_event/.test(q.sql) && q.params[0] === 'lead',
@@ -804,7 +854,7 @@ test('HEYS Start contact without week_request does not create CRM lead', async (
   assert.equal(queries.some((q) => /record_funnel_event/.test(q.sql)), false);
 });
 
-test('HEYS Start contact replay reuses linked week_request lead without duplicate curator handoff', async (t) => {
+test('HEYS Start contact replay reuses active phone lead without duplicate curator handoff', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
@@ -832,7 +882,7 @@ test('HEYS Start contact replay reuses linked week_request lead without duplicat
       rows: [
         {
           id: '11111111-1111-1111-1111-111111111111',
-          lead_id: '22222222-2222-2222-2222-222222222222',
+          lead_id: null,
           source: 'telegram',
           campaign: 'heys_start',
           segment: 'evening',
@@ -844,6 +894,14 @@ test('HEYS Start contact replay reuses linked week_request lead without duplicat
           },
         },
       ],
+    },
+    {
+      match: /FROM public\.leads[\s\S]+WHERE phone = \$1/,
+      rows: [{ id: '22222222-2222-2222-2222-222222222222' }],
+    },
+    {
+      match: /UPDATE public\.leads AS lead[\s\S]+legal_consent_registry/,
+      rows: [{ id: '22222222-2222-2222-2222-222222222222' }],
     },
   ]);
 
@@ -863,11 +921,76 @@ test('HEYS Start contact replay reuses linked week_request lead without duplicat
   assert.equal(fetchCalls[0].body.chat_id, 123456);
   assert.match(fetchCalls[0].body.text, /Спасибо\. Заявка сохранена/);
   assert.equal(queries.some((q) => /INSERT INTO public\.leads/.test(q.sql)), false);
-  assert.equal(queries.some((q) => /FROM public\.leads[\s\S]+WHERE phone = \$1/.test(q.sql)), false);
+  assert.equal(queries.some((q) => /FROM public\.leads[\s\S]+WHERE phone = \$1/.test(q.sql)), true);
+  const consentUpdate = queries.find(
+    (q) => /UPDATE public\.leads AS lead[\s\S]+legal_consent_registry/.test(q.sql),
+  );
+  assert.ok(consentUpdate, 'replayed contact should record fresh privacy proof');
+  assert.deepEqual(consentUpdate.params, [
+    '22222222-2222-2222-2222-222222222222',
+    '1.7',
+  ]);
   assert.equal(
     queries.some((q) => /record_funnel_event/.test(q.sql) && q.params[0] === 'lead'),
     true,
   );
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(fetchCalls.length, 1, 'curator handoff should not be sent again on replay');
+});
+
+test('HEYS Start fails closed when privacy proof cannot be recorded for an existing lead', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'error', () => {});
+  const fetchCalls = [];
+  t.mock.method(global, 'fetch', async (url, init) => {
+    fetchCalls.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, json: async () => ({ ok: true, result: { message_id: 42 } }) };
+  });
+
+  const oldEnv = { ...process.env };
+  t.after(() => {
+    process.env = oldEnv;
+    delete require.cache[MODULE_PATH];
+  });
+
+  process.env.HEYS_START_WEBHOOK_SECRET = 'test-secret';
+  process.env.HEYS_START_BOT_TOKEN = 'start-token';
+  process.env.TELEGRAM_CLIENT_BOT_TOKEN = 'client-token';
+  process.env.TELEGRAM_BOT_TOKEN = 'curator-token';
+  process.env.TELEGRAM_CHAT_ID = '777';
+
+  const { handler, queries } = loadHandlerWithDb([
+    {
+      match: /FROM public\.funnel_events[\s\S]+event_type = 'week_request'/,
+      rows: [{
+        id: '11111111-1111-1111-1111-111111111111',
+        lead_id: '22222222-2222-2222-2222-222222222222',
+        source: 'telegram',
+        campaign: 'heys_start',
+        segment: 'evening',
+        metadata: { readiness: 'this_week' },
+      }],
+    },
+  ]);
+
+  const result = await handler(
+    startWebhookEvent({
+      message: {
+        chat: { id: 123456 },
+        from: { first_name: 'Ivan' },
+        contact: { phone_number: '+7 (999) 111-22-33', first_name: 'Ivan' },
+      },
+    }),
+  );
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(JSON.parse(result.body), { ok: true, delivered: true });
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0].body.text, /Не удалось сохранить заявку/);
+  assert.equal(queries.some((q) => /\bROLLBACK\b/.test(q.sql)), true);
+  assert.equal(
+    queries.some((q) => /record_funnel_event/.test(q.sql) && q.params[0] === 'lead'),
+    false,
+  );
 });

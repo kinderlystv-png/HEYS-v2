@@ -1,7 +1,10 @@
 # Протокол реализации trial-intake v2
 
-> **Статус:** source реализован локально 2026-07-27. Migration, commit, push и
-> production deploy не выполнялись.
+> **Статус:** trial-intake v2 опубликован и проверен 2026-07-28. Operator smoke
+> 2026-07-29 подтвердил исправленный ownership-фильтр: назначенный `contacted`
+> виден куратору, чужой не отображается. Переход к приглашению остаётся красным:
+> текущий Telegram-лид fail-closed отклонён с `fresh_application_required`,
+> потому что для него не записано подтверждение действующей privacy policy.
 
 ## Цель и UI-гейт
 
@@ -67,6 +70,14 @@ PIN-сессия. Решение принимает куратор; safety-от�
 - Загрузка intake summaries обязательна для кураторского экрана. При её сбое
   legacy CTA скрыты до успешного retry; у intake-карточек нет старого удаления
   из очереди.
+- В lead intake новые заявки остаются в общей очереди, а `contacted` виден
+  только куратору из `lead.curator_id`. Если текущий `curatorId` недоступен, UI
+  скрывает все `contacted` fail-closed. Production smoke 2026-07-29 подтвердил
+  назначенный лид в UI и отсутствие чужих `contacted`.
+- `admin_prepare_trial_candidate_from_lead` не создаёт клиента и
+  `invite_prepared`, если у лида нет свежего доказательства privacy consent.
+  Ручной smoke подтвердил `fresh_application_required`; после ошибки не создано
+  ни клиента, ни приглашения, ни повторного уведомления.
 - Карточка показывает владельца следующего шага, возраст состояния и один
   главный CTA. `approved_waiting_slot` не предлагает старт при нуле мест.
 - Повторная активация `trial_pending` идемпотентна: первая дата старта не
@@ -125,7 +136,7 @@ safety-вопрос. Для health-полей сначала задаётся т
 
 Проверки:
 
-- `pnpm vitest run apps/web/__tests__/trial-intake-flow.test.js` — 25/25.
+- `pnpm exec vitest run apps/web/__tests__/trial-intake-flow.test.js` — 26/26.
 - `pnpm test:db:trial-intake` — base и v2 migration integration пройдены.
 
 ## Integration-review и изоляция release scope
@@ -308,25 +319,42 @@ synthetic `client_id`/`lead_id`, с row locks, проверкой synthetic mark
 `data_access_audit_log` не удаляется: synthetic chronology остаётся evidence, но
 metadata проверяется на отсутствие ответов, вопроса, заметки, PIN и токена.
 
+## Личная production-проверка 2026-07-29
+
+1. Закреплённый `contacted`-лид появился у назначенного куратора; чужих
+   `contacted` в его списке нет.
+2. `Подготовить анкету` открыл подтверждение с ожидаемым описанием создания
+   клиента, PIN и универсальной ссылки на защищённую анкету.
+3. `Создать приглашение` завершился `fresh_application_required`. Это ожидаемый
+   fail-closed результат для старого Telegram-лида без versioned privacy proof.
+4. После ошибки состояние осталось неизменным: клиент и `invite_prepared` не
+   созданы, дубли лида и уведомления не появились.
+
+Скриншоты и точные phone/PIN/lead id в репозиторий не сохраняются. Повторный
+smoke продолжается только после публикации bot consent-proof fix и нового
+осознанного действия пользователя после показа действующей политики.
+
 ## Facts Table
 
-| Утверждение                                                                    | Источник                                                        | Проверка                                                                   | Результат                  |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------- |
-| Managed manifest валиден; v2 зарегистрирован как order 10                      | clean `origin/main` checkout + `migrate.mjs`                    | `--check`: 10 managed / 323 baseline / 333 SQL                             | подтверждено локально      |
-| Consent order 9 уже является production/remote baseline                        | production ledger + `origin/main`                               | `--status`: 9 applied / 1 pending; manifest diff добавляет только order 10 | подтверждено               |
-| Новые статусы добавлены без удаления legacy `invited`                          | v2 migration                                                    | DB integration + status constraint                                         | подтверждено               |
-| `invite_prepared` восстанавливаем, `invite_sent` требует явного действия       | curator UI + invite RPC                                         | UI contract + DB transition                                                | подтверждено               |
-| Вопрос клиенту и заметка куратора хранятся раздельно и зашифрованно            | v2 migration                                                    | clarification round-trip + draft-save                                      | подтверждено               |
-| Клиентский доступ остаётся session-bound                                       | `get/save_trial_intake_by_session`                              | ownership/session integration                                              | подтверждено               |
-| Все safety-ответы `1.1` обязательны                                            | validator v2                                                    | negative completion fixture                                                | подтверждено               |
-| Capacity не является причиной отказа v2                                        | review RPC v2                                                   | static contract + waiting activation                                       | подтверждено               |
-| Повторная заявка блокирует lead, проверяет ownership/cooldown и очищает данные | reopen RPC                                                      | PostgreSQL negative/positive integration                                   | подтверждено               |
-| Purge сохраняет свежий clarification и блокирует legacy activation             | purge + activation RPC                                          | PostgreSQL integration                                                     | подтверждено               |
-| Stale client/curator writes не перезаписывают новое состояние                  | save/review RPC + UI                                            | PostgreSQL + static/UI contracts                                           | подтверждено локально      |
-| Health revoke оставляет tombstone и блокирует legacy activation                | deferred revoke trigger + activation                            | PostgreSQL integration                                                     | подтверждено локально      |
-| Convert→prepared атомарен и проверяет ownership lead                           | wrapper RPC + grants                                            | PostgreSQL integration                                                     | подтверждено локально      |
-| Переходы пишут audit chronology без содержимого анкеты                         | SQL transition audit                                            | PostgreSQL metadata assertions                                             | подтверждено локально      |
-| Web source классифицируется только в `boot-app`/`boot-core`                    | deploy scope planner                                            | exact three-file plan                                                      | подтверждено локально      |
-| Чистый web bundle не включает parallel sync diff                               | disposable checkout от `origin/main` + exact three-file overlay | `boot-app 6e50b5b76067`, `boot-core 453e7c73cea1`                          | подтверждено локально      |
-| Trial-suite не зависит от параллельного landing success-copy                   | static test boundary                                            | 25/25 на минимальном landing payload contract                              | подтверждено локально      |
-| RPC manual deploy из shared dirty checkout не изолирован                       | `deploy-all.sh` sync copy                                       | source audit                                                               | STOP; нужен clean checkout |
+| Утверждение                                                                    | Источник                                                        | Проверка                                                                   | Результат                          |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
+| Managed manifest валиден; v2 зарегистрирован как order 10                      | clean `origin/main` checkout + `migrate.mjs`                    | `--check`: 10 managed / 323 baseline / 333 SQL                             | подтверждено локально              |
+| Consent order 9 уже является production/remote baseline                        | production ledger + `origin/main`                               | `--status`: 9 applied / 1 pending; manifest diff добавляет только order 10 | подтверждено                       |
+| Новые статусы добавлены без удаления legacy `invited`                          | v2 migration                                                    | DB integration + status constraint                                         | подтверждено                       |
+| `invite_prepared` восстанавливаем, `invite_sent` требует явного действия       | curator UI + invite RPC                                         | UI contract + DB transition                                                | подтверждено                       |
+| Вопрос клиенту и заметка куратора хранятся раздельно и зашифрованно            | v2 migration                                                    | clarification round-trip + draft-save                                      | подтверждено                       |
+| Клиентский доступ остаётся session-bound                                       | `get/save_trial_intake_by_session`                              | ownership/session integration                                              | подтверждено                       |
+| Все safety-ответы `1.1` обязательны                                            | validator v2                                                    | negative completion fixture                                                | подтверждено                       |
+| Capacity не является причиной отказа v2                                        | review RPC v2                                                   | static contract + waiting activation                                       | подтверждено                       |
+| Повторная заявка блокирует lead, проверяет ownership/cooldown и очищает данные | reopen RPC                                                      | PostgreSQL negative/positive integration                                   | подтверждено                       |
+| Purge сохраняет свежий clarification и блокирует legacy activation             | purge + activation RPC                                          | PostgreSQL integration                                                     | подтверждено                       |
+| Stale client/curator writes не перезаписывают новое состояние                  | save/review RPC + UI                                            | PostgreSQL + static/UI contracts                                           | подтверждено локально              |
+| Health revoke оставляет tombstone и блокирует legacy activation                | deferred revoke trigger + activation                            | PostgreSQL integration                                                     | подтверждено локально              |
+| Convert→prepared атомарен и проверяет ownership lead                           | wrapper RPC + grants                                            | PostgreSQL integration                                                     | подтверждено локально              |
+| Переходы пишут audit chronology без содержимого анкеты                         | SQL transition audit                                            | PostgreSQL metadata assertions                                             | подтверждено локально              |
+| Web source классифицируется только в `boot-app`/`boot-core`                    | deploy scope planner                                            | exact three-file plan                                                      | подтверждено локально              |
+| Чистый web bundle не включает parallel sync diff                               | disposable checkout от `origin/main` + exact three-file overlay | `boot-app 6e50b5b76067`, `boot-core 453e7c73cea1`                          | подтверждено локально              |
+| Trial-suite не зависит от параллельного landing success-copy                   | static test boundary                                            | 26/26 на минимальном landing payload contract                              | подтверждено локально              |
+| Claimed lead видит только назначенный куратор; без curator id UI закрыт        | curator gate + queue filter                                     | `trial-intake-flow.test.js`, 26/26 + production operator smoke             | подтверждено production 2026-07-29 |
+| Старый лид без versioned privacy proof не создаёт клиента или приглашение      | prepare RPC + production UI                                     | `fresh_application_required`, состояние до/после                           | подтверждено production 2026-07-29 |
+| RPC manual deploy из shared dirty checkout не изолирован                       | `deploy-all.sh` sync copy                                       | source audit                                                               | STOP; нужен clean checkout         |

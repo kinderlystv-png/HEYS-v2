@@ -42,6 +42,8 @@ const DEFAULT_CALLBACK_ACK_TIMEOUT_MS = 700;
 const DEFAULT_START_BOT_POLL_WINDOW_MS = 55000;
 const POLL_LEASE_SAFETY_MS = 15000;
 const BOT_GET_UPDATES_MAX_TIMEOUT_SEC = 3;
+const START_LEAD_PRIVACY_VERSION = '1.7';
+const START_LEAD_PRIVACY_URL = 'https://heyslab.ru/legal/privacy-policy';
 
 function isLockboxPlaceholder(value) {
   return typeof value === 'string' && /^__IN_LOCKBOX__/.test(value);
@@ -1055,6 +1057,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
     const metadata = state.metadata || {};
     const stateLeadId = state.lead_id || null;
     let leadId = stateLeadId;
+    let leadCreated = false;
     if (!leadId) {
       const existingRes = await client.query(
         `SELECT id
@@ -1074,13 +1077,15 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
            name, phone, messenger,
            utm_source, utm_medium, utm_campaign,
            quiz_segment, readiness, how_heard,
-           landing_page, notes
+           landing_page, notes,
+           consent_privacy_version, consent_method
          )
          VALUES (
            $1, $2, 'telegram',
            $3, 'bot', $4,
            $5, $6, 'telegram_bot',
-           'https://t.me/heys_start_bot', $7
+           'https://t.me/heys_start_bot', $7,
+           $8, 'telegram_contact'
          )
          RETURNING id`,
         [
@@ -1098,9 +1103,33 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
             `barrier=${metadata.barrier || 'unknown'}`,
             `goal=${metadata.goal || 'unknown'}`,
           ].join('; '),
+          START_LEAD_PRIVACY_VERSION,
         ],
       );
       leadId = insertRes.rows?.[0]?.id;
+      leadCreated = true;
+    }
+
+    if (!leadCreated) {
+      const consentRes = await client.query(
+        `UPDATE public.leads AS lead
+            SET consent_privacy_version = registry.document_version,
+                consent_privacy_sha256 = registry.document_sha256,
+                consent_accepted_at = NOW(),
+                consent_method = 'telegram_contact',
+                updated_at = NOW()
+           FROM public.legal_consent_registry AS registry
+          WHERE lead.id = $1
+            AND lead.status IN ('new', 'contacted', 'trial_started')
+            AND registry.consent_type = 'personal_data'
+            AND registry.document_version = $2
+            AND registry.status = 'active'
+          RETURNING lead.id`,
+        [leadId, START_LEAD_PRIVACY_VERSION],
+      );
+      if (!consentRes.rows?.[0]?.id) {
+        throw new Error('lead_privacy_consent_not_recorded');
+      }
     }
 
     await client.query(
@@ -1149,10 +1178,10 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
       barrier: metadata.barrier || null,
       goal: metadata.goal || null,
     };
-    if (stateLeadId) {
-      console.log('[HEYS Start] curator handoff skipped: week_request already linked to lead');
-    } else {
+    if (leadCreated) {
       queueStartLeadHandoff(lead);
+    } else {
+      console.log('[HEYS Start] curator handoff skipped: active lead reused');
     }
     return { success: true, lead };
   } catch (e) {
@@ -1323,7 +1352,7 @@ async function handleStartBotCallback(query) {
       chat_id: chatId,
       text:
         'Принято. Чтобы куратор мог связаться с вами по заявке, отправьте номер телефона.\n\n' +
-        'Нажимая кнопку или отправляя номер, вы соглашаетесь на обработку контактных данных для связи по бесплатной неделе HEYS.',
+        `Нажимая кнопку или отправляя номер, вы соглашаетесь на обработку контактных данных для связи по бесплатной неделе HEYS. Политика конфиденциальности: ${START_LEAD_PRIVACY_URL}`,
       reply_markup: {
         keyboard: [[{ text: 'Отправить телефон', request_contact: true }]],
         resize_keyboard: true,
