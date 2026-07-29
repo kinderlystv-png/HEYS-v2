@@ -1,12 +1,47 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
+const https = require('node:https');
 const Module = require('node:module');
 const path = require('node:path');
+const { Readable } = require('node:stream');
 
 const MODULE_PATH = path.resolve(__dirname, '../index.js');
 const LEAD_ID = '22222222-2222-2222-2222-222222222222';
 const CURATOR_ID = '11111111-1111-4111-8111-111111111111';
 const CONTACTED_AT = '2026-07-18T09:30:00.000Z';
+
+function bridgeHttpsRequestToFetch(options, onResponse) {
+  const request = new EventEmitter();
+  const chunks = [];
+  let destroyed = false;
+
+  request.write = (chunk) => chunks.push(Buffer.from(chunk));
+  request.destroy = (error) => {
+    if (destroyed) return;
+    destroyed = true;
+    if (error) process.nextTick(() => request.emit('error', error));
+  };
+  request.end = async () => {
+    if (destroyed) return;
+    try {
+      const response = await global.fetch(`https://${options.hostname}${options.path}`, {
+        method: options.method,
+        headers: options.headers,
+        body: chunks.length > 0 ? Buffer.concat(chunks).toString('utf8') : undefined,
+      });
+      if (destroyed) return;
+      const responseBody = await response.json();
+      const stream = Readable.from([Buffer.from(JSON.stringify(responseBody))]);
+      stream.statusCode = response.status ?? (response.ok ? 200 : 500);
+      onResponse(stream);
+    } catch (error) {
+      request.emit('error', error);
+    }
+  };
+
+  return request;
+}
 
 function loadModuleWithDb(respond = async () => ({ rows: [] }), options = {}) {
   delete require.cache[MODULE_PATH];
@@ -68,6 +103,7 @@ function setupTest(t, fetchImpl) {
   t.mock.method(console, 'warn', () => {});
   t.mock.method(console, 'error', () => {});
   t.mock.method(global, 'fetch', fetchImpl);
+  t.mock.method(https, 'request', bridgeHttpsRequestToFetch);
   const oldEnv = { ...process.env };
   t.after(() => {
     process.env = oldEnv;
