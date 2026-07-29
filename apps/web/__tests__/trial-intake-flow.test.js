@@ -75,6 +75,27 @@ describe('protected trial intake contract', () => {
     window.history.replaceState({}, '', '/');
   });
 
+  it('rejects a legacy queue item by queue id using the production RPC contract', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { admin_reject_request: { success: true } },
+    });
+    window.HEYS = {
+      YandexAPI: { rpc },
+      auth: { isCuratorSession: () => true },
+    };
+    window.React = React;
+    window.eval(queueSource);
+
+    await expect(window.HEYS.TrialQueue.admin.rejectApplication('queue-1', 'stale_test')).resolves.toEqual({
+      success: true,
+    });
+    expect(rpc).toHaveBeenCalledWith('admin_reject_request', {
+      p_queue_id: 'queue-1',
+      p_reason: 'stale_test',
+    });
+    expect(rpcSource).toContain("'admin_reject_request': {\n        'p_queue_id': '::uuid',\n        'p_reason': '::text'");
+  });
+
   it('keeps the landing payload minimal and consent-specific', () => {
     const payload = landingSource.slice(
       landingSource.indexOf('body: JSON.stringify({'),

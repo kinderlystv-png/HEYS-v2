@@ -1277,11 +1277,11 @@
 
     /**
      * Отклонить заявку на триал
-     * @param {string} clientId - UUID клиента
+     * @param {string} queueId - UUID записи очереди
      * @param {string} reason - причина отклонения
      * @returns {Promise<{success: boolean, status?: string, error?: string}>}
      */
-    async rejectApplication(clientId, reason = '') {
+    async rejectApplication(queueId, reason = '') {
       const api = HEYS.YandexAPI;
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
@@ -1293,7 +1293,7 @@
 
       try {
         const res = await api.rpc('admin_reject_request', {
-          p_client_id: clientId,
+          p_queue_id: queueId,
           p_reason: reason
           // p_curator_id injected by cloud function from JWT
         });
@@ -2313,12 +2313,20 @@
     const intakeSummary = intakeDialog ? summarizeIntakeAnswers(intakeDialog.answers) : null;
 
     // Отклонить заявку (v2.0)
-    const handleReject = async (clientId, clientName) => {
+    const handleReject = async (item) => {
+      const clientId = item.client_id;
+      const queueId = item.queue_id || item.id;
+      const clientName = item.client_name || item.name;
       const reason = prompt(`Отклонить заявку "${clientName}"?\nУкажите причину (опционально):`, '');
       if (reason === null) return; // Отмена
 
+      if (!queueId) {
+        alert('Ошибка: не найдена запись очереди');
+        return;
+      }
+
       setActionLoading(clientId);
-      const res = await adminAPI.rejectApplication(clientId, reason || 'rejected_by_curator');
+      const res = await adminAPI.rejectApplication(queueId, reason || 'rejected_by_curator');
       setActionLoading(null);
 
       if (res.success) {
@@ -2698,7 +2706,7 @@
             ? '⏳'
             : intake?.status === 'approved_waiting_slot' ? 'Назначить дату старта' : 'Активировать'),
           intakesReady && !intake && React.createElement('button', {
-            onClick: () => handleReject(item.client_id, item.client_name || item.name),
+            onClick: () => handleReject(item),
             disabled: actionLoading === item.client_id,
             style: {
               padding: '8px 10px',

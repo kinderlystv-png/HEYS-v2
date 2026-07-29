@@ -4650,8 +4650,8 @@ async function handleRpcRequest(event, context) {
         'p_curator_id': '::uuid'
       },
       'admin_reject_request': {
-        'p_client_id': '::uuid',
-        'p_rejection_reason': '::text',
+        'p_queue_id': '::uuid',
+        'p_reason': '::text',
         'p_curator_id': '::uuid'
       },
 	      'admin_get_queue_stats': {
