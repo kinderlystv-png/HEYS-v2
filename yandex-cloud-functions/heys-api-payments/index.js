@@ -329,7 +329,7 @@ async function createPayment(body, clientId) {
   // деплоится В ОДНОМ релизе с фронтендом — иначе все оплаты BLOCKED.
   const PAYMENT_OFERTA_VERSION = '1.9'; // акцепт Пользовательского соглашения 1.9
   const PAYMENT_OFERTA_SHA256 =
-    'b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc';
+    'd3b992efe78793774a3e609e7ca7d65a1f5f70510529264d5c2d8b52b2a45802';
 
   // 1. Создаём запись платежа в БД (pending) через connection pool
   // + получаем телефон клиента для чека 54-ФЗ

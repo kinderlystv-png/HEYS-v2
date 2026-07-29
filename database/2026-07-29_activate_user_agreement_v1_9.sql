@@ -14,8 +14,8 @@ INSERT INTO public.legal_consent_registry (
   effective_at,
   legal_signoff_ref
 ) VALUES
-  ('user_agreement', '1.9', 'b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc', 'apps/web/public/docs/v1.9/user-agreement.md', 'active', '2026-07-29 00:00:00+03', NULL),
-  ('payment_oferta', '1.9', 'b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc', 'apps/web/public/docs/v1.9/user-agreement.md', 'active', '2026-07-29 00:00:00+03', NULL)
+  ('user_agreement', '1.9', 'd3b992efe78793774a3e609e7ca7d65a1f5f70510529264d5c2d8b52b2a45802', 'apps/web/public/docs/v1.9/user-agreement.md', 'active', '2026-07-29 00:00:00+03', NULL),
+  ('payment_oferta', '1.9', 'd3b992efe78793774a3e609e7ca7d65a1f5f70510529264d5c2d8b52b2a45802', 'apps/web/public/docs/v1.9/user-agreement.md', 'active', '2026-07-29 00:00:00+03', NULL)
 ON CONFLICT (consent_type, document_version) DO UPDATE SET
   document_sha256 = EXCLUDED.document_sha256,
   document_path = EXCLUDED.document_path,

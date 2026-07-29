@@ -5,7 +5,7 @@
       "version": "1.9",
       "canonicalPath": "docs/legal/user-agreement.md",
       "snapshotPath": "apps/web/public/docs/v1.9/user-agreement.md",
-      "sha256": "b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc"
+      "sha256": "d3b992efe78793774a3e609e7ca7d65a1f5f70510529264d5c2d8b52b2a45802"
     },
     "personal_data": {
       "version": "1.7",
@@ -23,7 +23,7 @@
       "version": "1.9",
       "canonicalPath": "docs/legal/user-agreement.md",
       "snapshotPath": "apps/web/public/docs/v1.9/user-agreement.md",
-      "sha256": "b4168eb64d94cdab5ae8a717f2391ed8b3c9c65f5e1937a306ad017c471ba8bc"
+      "sha256": "d3b992efe78793774a3e609e7ca7d65a1f5f70510529264d5c2d8b52b2a45802"
     },
     "refund": {
       "version": "1.1",
