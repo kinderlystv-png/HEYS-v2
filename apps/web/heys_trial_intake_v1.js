@@ -62,18 +62,32 @@
   }
 
   const api = {
+    isCandidate() {
+      return HEYS.YandexAPI?.hasCandidateSessionHint?.() === true;
+    },
     async get() {
       if (!HEYS.YandexAPI?.rpc) return { success: false, error: 'api_not_ready' };
-      return unwrapRpc(await HEYS.YandexAPI.rpc('get_trial_intake_by_session', {}), 'get_trial_intake_by_session');
+      const fn = this.isCandidate()
+        ? 'get_trial_candidate_intake_by_candidate_session'
+        : 'get_trial_intake_by_session';
+      return unwrapRpc(await HEYS.YandexAPI.rpc(fn, {}), fn);
     },
     async save(answers, currentStep, complete, expectedUpdatedAt) {
       if (!HEYS.YandexAPI?.rpc) return { success: false, error: 'api_not_ready' };
-      return unwrapRpc(await HEYS.YandexAPI.rpc('save_trial_intake_by_session', {
+      const fn = this.isCandidate()
+        ? 'save_trial_candidate_intake_by_candidate_session'
+        : 'save_trial_intake_by_session';
+      return unwrapRpc(await HEYS.YandexAPI.rpc(fn, {
         p_answers: answers,
         p_current_step: currentStep,
         p_complete: !!complete,
         p_expected_updated_at: expectedUpdatedAt || null,
-      }), 'save_trial_intake_by_session');
+      }), fn);
+    },
+    async acceptHealthConsent() {
+      if (!this.isCandidate()) return { success: true };
+      const fn = 'accept_trial_candidate_health_consent_by_candidate_session';
+      return unwrapRpc(await HEYS.YandexAPI.rpc(fn, { p_document_version: '1.5' }), fn);
     },
   };
 
@@ -368,6 +382,7 @@
     const [saveErrorCode, setSaveErrorCode] = React.useState('');
     const [hasEdited, setHasEdited] = React.useState(false);
     const [hydrated, setHydrated] = React.useState(false);
+    const [healthConsentAccepted, setHealthConsentAccepted] = React.useState(!api.isCandidate());
     const saveTimerRef = React.useRef(null);
     const saveQueueRef = React.useRef(Promise.resolve());
     const answersRef = React.useRef(answers);
@@ -393,6 +408,13 @@
     const enqueueSave = React.useCallback((nextAnswers, nextStep, complete) => {
       const run = async () => {
         try {
+          if (api.isCandidate() && !healthConsentAccepted) {
+            return { success: false, error: 'health_consent_required' };
+          }
+          if (api.isCandidate()) {
+            const consent = await api.acceptHealthConsent();
+            if (!consent?.success) return consent;
+          }
           const result = await api.save(
             nextAnswers, nextStep, complete, serverUpdatedAtRef.current
           );
@@ -407,7 +429,7 @@
       const queued = saveQueueRef.current.then(run, run);
       saveQueueRef.current = queued.catch(() => undefined);
       return queued;
-    }, []);
+    }, [healthConsentAccepted]);
 
     React.useEffect(() => {
       let active = true;
@@ -678,6 +700,19 @@
           color: '#526159', fontSize: 13, lineHeight: 1.5, marginBottom: 20,
         }
       }, 'Ответы сохраняются автоматически. Их увидит только ваш куратор. Заполнение анкеты не гарантирует пробную неделю.') : null,
+      step === 0 && api.isCandidate() ? React.createElement('label', {
+        style: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 22, color: '#334039', fontSize: 14, lineHeight: 1.5 }
+      },
+        React.createElement('input', {
+          type: 'checkbox', checked: healthConsentAccepted,
+          onChange: (event) => { setHealthConsentAccepted(event.target.checked); setError(''); },
+          style: { width: 20, height: 20, marginTop: 1, flex: '0 0 auto' }
+        }),
+        React.createElement('span', null,
+          'Я согласен на обработку данных о здоровье для рассмотрения анкеты. ',
+          React.createElement('a', { href: '/docs/health-data-consent.md', target: '_blank', rel: 'noopener noreferrer' }, 'Текст согласия')
+        )
+      ) : null,
       React.createElement('h1', { style: { fontSize: 28, lineHeight: 1.2, margin: '0 0 8px' } }, current.title),
       React.createElement('p', { style: { color: '#657168', lineHeight: 1.55, margin: '0 0 26px' } }, current.subtitle),
       React.createElement('div', { style: { display: 'grid', gap: 20 } }, current.render(
@@ -704,8 +739,8 @@
           style: { ...inputStyle, width: 'auto', minWidth: 108, cursor: 'pointer', fontWeight: 650 },
         }, 'Назад') : null,
         React.createElement('button', {
-          type: 'button', onClick: next, disabled: saveState === 'saving',
-          style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' ? 0.65 : 1 },
+          type: 'button', onClick: next, disabled: saveState === 'saving' || (step === 0 && api.isCandidate() && !healthConsentAccepted),
+          style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' || (step === 0 && api.isCandidate() && !healthConsentAccepted) ? 0.65 : 1 },
         }, step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')
       )
     ));

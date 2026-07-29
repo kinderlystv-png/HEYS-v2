@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const migrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow.sql');
 const v2MigrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow_v2.sql');
+const v3MigrationPath = path.join(repoRoot, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql');
 const consentProofPath = path.join(repoRoot, 'database/2026-07-27_consent_proof_v2.sql');
 const reconsentFixPath = path.join(
   repoRoot,
@@ -155,6 +156,7 @@ CREATE TABLE public.leads (
   utm_campaign TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   contacted_at TIMESTAMPTZ,
+  notes TEXT,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -1158,6 +1160,98 @@ $test$;
 SELECT 'trial intake v2 migration integration OK' AS result;
 `;
 
+const v3AssertionsSql = String.raw`
+\set ON_ERROR_STOP on
+
+INSERT INTO public.leads (
+  id, name, phone, messenger, status, birth_year, ip_address,
+  consent_privacy_version, consent_user_agent, consent_accepted_at
+) VALUES (
+  '10000000-0000-4000-8000-000000000013', 'Candidate V3', '+7 999 111-33-13',
+  'telegram', 'new', 1990, '127.0.0.1', '1.7', 'integration-test', now()
+);
+
+DO $test$
+DECLARE
+  v_prepare JSONB; v_candidate_id UUID; v_login JSONB; v_token TEXT;
+  v_save JSONB; v_review JSONB; v_updated TIMESTAMPTZ;
+  v_answers JSONB := '{
+    "goals":{"primary_goal":"Режим","success_definition":"Стабильность"},
+    "experience":{"previous_experience":"self"},
+    "lifestyle":{"schedule":"Работа","sleep":"8 часов"},
+    "collaboration":{"daily_tracking":"yes","feedback_style":"concise"},
+    "health":{"chronic_conditions_status":"no","medications_status":"no","injuries_operations_status":"no","allergies_status":"no","doctor_restrictions_status":"no"},
+    "safety":{"acute_symptoms":"no","recent_surgery":"no","active_ed_concern":"no","medical_supervision":"no"},
+    "meta":{"schema_version":"1.1"}
+  }'::jsonb;
+BEGIN
+  v_prepare := public.admin_prepare_trial_candidate_from_lead(
+    '10000000-0000-4000-8000-000000000013',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF NOT COALESCE((v_prepare->>'success')::boolean, false) THEN
+    RAISE EXCEPTION 'v3 prepare failed: %', v_prepare;
+  END IF;
+  v_candidate_id := (v_prepare->>'candidate_id')::uuid;
+  IF (SELECT count(*) FROM public.clients WHERE phone LIKE '%3313') <> 0
+     OR EXISTS (SELECT 1 FROM public.trial_queue q JOIN public.clients c ON c.id = q.client_id WHERE c.phone LIKE '%3313') THEN
+    RAISE EXCEPTION 'prepare created client or queue before review';
+  END IF;
+  IF public.admin_prepare_trial_candidate_from_lead(
+    '10000000-0000-4000-8000-000000000013',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  )->>'error' <> 'candidate_already_exists' THEN
+    RAISE EXCEPTION 'duplicate prepare was not rejected';
+  END IF;
+  v_prepare := public.admin_regenerate_trial_candidate_pin(
+    v_candidate_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_prepare->>'pin' IS NULL THEN RAISE EXCEPTION 'candidate PIN regeneration failed'; END IF;
+  PERFORM public.admin_mark_trial_candidate_invite_sent(v_candidate_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  v_login := public.verify_trial_candidate_pin('+7 999 111-33-13', v_prepare->>'pin');
+  v_token := v_login->>'candidate_session_token';
+  IF v_token IS NULL THEN RAISE EXCEPTION 'candidate login failed: %', v_login; END IF;
+  IF public.accept_trial_candidate_health_consent_by_candidate_session(
+    v_token, '1.5', '127.0.0.1', 'integration-test'
+  )->>'success' <> 'true' THEN RAISE EXCEPTION 'candidate consent failed'; END IF;
+  v_save := public.save_trial_candidate_intake_by_candidate_session(v_token, v_answers, 5::smallint, true, NULL);
+  IF v_save->>'status' <> 'completed' THEN RAISE EXCEPTION 'candidate submit failed: %', v_save; END IF;
+  SELECT updated_at INTO v_updated FROM public.trial_candidates WHERE id = v_candidate_id;
+  v_review := public.admin_review_trial_candidate_v3(
+    v_candidate_id, 'approved_waiting_slot', NULL, 'Нет свободного места', NULL, NULL,
+    '{"within_scope":true,"understands_boundaries":true,"ready_to_track":true,"realistic_expectations":true,"safe_format":true,"slot_available":false}'::jsonb,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  );
+  IF v_review->>'status' <> 'approved_waiting_slot'
+     OR EXISTS (SELECT 1 FROM public.clients WHERE phone LIKE '%3313') THEN
+    RAISE EXCEPTION 'waiting decision created a client: %', v_review;
+  END IF;
+  SELECT updated_at INTO v_updated FROM public.trial_candidates WHERE id = v_candidate_id;
+  v_review := public.admin_review_trial_candidate_v3(
+    v_candidate_id, 'approved', NULL, 'Проверено', NULL, NULL,
+    '{"within_scope":true,"understands_boundaries":true,"ready_to_track":true,"realistic_expectations":true,"safe_format":true,"slot_available":true}'::jsonb,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  );
+  IF v_review->>'status' <> 'promoted' OR v_review->>'client_id' IS NULL OR v_review->>'pin' IS NULL THEN
+    RAISE EXCEPTION 'approval did not create client: %', v_review;
+  END IF;
+  IF (SELECT count(*) FROM public.clients WHERE id = (v_review->>'client_id')::uuid) <> 1
+     OR (SELECT count(*) FROM public.trial_queue WHERE client_id = (v_review->>'client_id')::uuid) <> 1 THEN
+    RAISE EXCEPTION 'approval did not create exactly one client and queue row';
+  END IF;
+  IF public.admin_review_trial_candidate_v3(
+    v_candidate_id, 'approved', NULL, 'Повтор', NULL, NULL,
+    '{"within_scope":true,"understands_boundaries":true,"ready_to_track":true,"realistic_expectations":true,"safe_format":true,"slot_available":true}'::jsonb,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'error' <> 'review_not_allowed' THEN
+    RAISE EXCEPTION 'duplicate approval was not rejected';
+  END IF;
+END
+$test$;
+
+SELECT 'trial intake v3 preclient integration OK' AS result;
+`;
+
 let started = false;
 try {
   run('initdb', ['-D', dataDir, '-A', 'trust', '-U', 'postgres', '--no-locale', '--encoding=UTF8']);
@@ -1179,7 +1273,10 @@ try {
   process.stdout.write(output);
   run('psql', psqlArgs, readFileSync(v2MigrationPath, 'utf8'));
   const v2Output = run('psql', psqlArgs, v2AssertionsSql);
+  run('psql', psqlArgs, readFileSync(v3MigrationPath, 'utf8'));
+  const v3Output = run('psql', psqlArgs, v3AssertionsSql);
   process.stdout.write(v2Output);
+  process.stdout.write(v3Output);
 } finally {
   if (started) {
     try { run('pg_ctl', ['-D', dataDir, '-m', 'fast', '-w', 'stop']); } catch (error) {

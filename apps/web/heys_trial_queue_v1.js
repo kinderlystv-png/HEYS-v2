@@ -1399,22 +1399,32 @@
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
       try {
-        const res = await api.rpc('admin_get_trial_intake_summaries', {});
-        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
-        const data = res.data?.admin_get_trial_intake_summaries || res.data || res;
-        return { success: data.success !== false, data: Array.isArray(data.items) ? data.items : [] };
+        const [candidateRes, legacyRes] = await Promise.all([
+          api.rpc('admin_get_trial_candidate_summaries', {}),
+          api.rpc('admin_get_trial_intake_summaries', {}),
+        ]);
+        if (candidateRes.error) return { success: false, error: candidateRes.error.code, message: candidateRes.error.message };
+        const candidates = candidateRes.data?.admin_get_trial_candidate_summaries || candidateRes.data || candidateRes;
+        const legacy = legacyRes.error ? { items: [] } : (legacyRes.data?.admin_get_trial_intake_summaries || legacyRes.data || legacyRes);
+        const candidateItems = Array.isArray(candidates.items) ? candidates.items.map((item) => ({
+          ...item, client_id: item.candidate_id, subject_type: 'candidate',
+        })) : [];
+        const legacyItems = Array.isArray(legacy.items) ? legacy.items.map((item) => ({ ...item, subject_type: 'client' })) : [];
+        return { success: true, data: [...candidateItems, ...legacyItems] };
       } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
 
-    async getIntake(clientId) {
+    async getIntake(clientId, subjectType = 'client') {
       const api = HEYS.YandexAPI;
       if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
       try {
-        const res = await api.rpc('admin_get_trial_intake', { p_client_id: clientId });
+        const candidate = subjectType === 'candidate';
+        const fn = candidate ? 'admin_get_trial_candidate' : 'admin_get_trial_intake';
+        const res = await api.rpc(fn, candidate ? { p_candidate_id: clientId } : { p_client_id: clientId });
         if (res.error) return { success: false, error: res.error.code, message: res.error.message };
-        return res.data?.admin_get_trial_intake || res.data || res;
+        return res.data?.[fn] || res.data || res;
       } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
@@ -1432,15 +1442,28 @@
       }
     },
 
-    async markInviteSent(clientId) {
+    async markInviteSent(clientId, subjectType = 'client') {
       const api = HEYS.YandexAPI;
       if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
       try {
-        const res = await api.rpc('admin_mark_trial_intake_invite_sent', {
-          p_client_id: clientId,
-        });
+        const candidate = subjectType === 'candidate';
+        const fn = candidate ? 'admin_mark_trial_candidate_invite_sent' : 'admin_mark_trial_intake_invite_sent';
+        const res = await api.rpc(fn, candidate ? { p_candidate_id: clientId } : { p_client_id: clientId });
         if (res.error) return { success: false, error: res.error.code, message: res.error.message };
-        return res.data?.admin_mark_trial_intake_invite_sent || res.data || res;
+        return res.data?.[fn] || res.data || res;
+      } catch (e) {
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    async regenerateCandidatePin(candidateId) {
+      const api = HEYS.YandexAPI;
+      if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
+      try {
+        const fn = 'admin_regenerate_trial_candidate_pin';
+        const res = await api.rpc(fn, { p_candidate_id: candidateId });
+        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
+        return res.data?.[fn] || res.data || res;
       } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
@@ -1450,8 +1473,10 @@
       const api = HEYS.YandexAPI;
       if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
       try {
-        const res = await api.rpc('admin_review_trial_intake_v2', {
-          p_client_id: clientId,
+        const candidate = options.subjectType === 'candidate';
+        const fn = candidate ? 'admin_review_trial_candidate_v3' : 'admin_review_trial_intake_v2';
+        const res = await api.rpc(fn, {
+          [candidate ? 'p_candidate_id' : 'p_client_id']: clientId,
           p_action: action,
           p_reason_code: reasonCode || null,
           p_internal_note: internalNote || null,
@@ -1461,7 +1486,7 @@
           p_expected_updated_at: options.expectedUpdatedAt || null,
         });
         if (res.error) return { success: false, error: res.error.code, message: res.error.message };
-        return res.data?.admin_review_trial_intake_v2 || res.data || res;
+        return res.data?.[fn] || res.data || res;
       } catch (e) {
         return { success: false, error: 'request_failed', message: e.message };
       }
@@ -1991,14 +2016,15 @@
         loadData(true);
         setActiveTab('pending');
         window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-          detail: { action: result.reopened ? 'candidateReopened' : 'leadConverted', clientId: result.client_id }
+          detail: { action: 'candidatePrepared', candidateId: result.candidate_id }
         }));
         const generatedPin = result.pin;
         if (!generatedPin) {
-          alert(`✅ Клиент "${leadName}" создан, но PIN не получен от сервера. Используйте «Перевыпустить PIN» в карточке.`);
+          alert(`Приглашение для "${leadName}" подготовлено, но PIN не получен от сервера. Повторите подготовку.`);
         } else {
           setPinResult({
-            clientId: result.client_id,
+            clientId: result.candidate_id,
+            subjectType: 'candidate',
             name: leadName,
             phone: leadPhone,
             pin: generatedPin,
@@ -2049,6 +2075,25 @@
         'Перевыпустить доступ? Старый PIN и открытые клиентские сессии перестанут работать.'
       )) return;
       setActionLoading('invite-' + clientId);
+
+      if (item.subject_type === 'candidate') {
+        const access = await adminAPI.regenerateCandidatePin(clientId);
+        setActionLoading(null);
+        if (!access.success || !access.pin) {
+          alert('Не удалось восстановить приглашение: ' + (access.message || access.error || 'ошибка'));
+          return;
+        }
+        setPinResult({
+          clientId, subjectType: 'candidate',
+          name: item.client_name || item.name || 'Кандидат',
+          phone: item.client_phone || item.phone_normalized || '',
+          pin: access.pin, deepLink: null,
+          intakeUrl: access.intake_url || 'https://app.heyslab.ru/?intake=1',
+          inviteStatus: 'invite_prepared',
+        });
+        loadData(true);
+        return;
+      }
 
       if (intakeStatus === 'invited') {
         const prepared = await adminAPI.prepareInvite(clientId);
@@ -2110,7 +2155,7 @@
     const openIntake = async (item) => {
       const clientId = item.client_id;
       setActionLoading('intake-' + clientId);
-      const res = await adminAPI.getIntake(clientId);
+      const res = await adminAPI.getIntake(clientId, item.subject_type);
       setActionLoading(null);
       if (!res.success || !res.intake) {
         alert('Не удалось открыть анкету: ' + (res.message || res.error || 'ошибка загрузки'));
@@ -2131,7 +2176,12 @@
       });
       setReviewAction(res.intake.status === 'needs_clarification' ? 'needs_clarification' : 'approved');
       setDecisionSheetOpen(false);
-      setIntakeDialog({ ...res.intake, clientName: item.client_name || item.name || 'Клиент' });
+      setIntakeDialog({
+        ...res.intake,
+        subject_type: item.subject_type || 'client',
+        clientName: item.client_name || item.name || 'Кандидат',
+        clientPhone: item.client_phone || item.phone_normalized || '',
+      });
     };
 
     const submitIntakeReview = async () => {
@@ -2163,6 +2213,7 @@
             ? decisionChecklist
             : null,
           expectedUpdatedAt: intakeDialog.updated_at,
+          subjectType: intakeDialog.subject_type,
         }
       );
       setActionLoading(null);
@@ -2175,6 +2226,13 @@
         }
         alert('Не удалось сохранить решение: ' + (res.message || res.error || 'ошибка'));
         return;
+      }
+      if (res.status === 'promoted' && res.pin) {
+        setPinResult({
+          clientId: res.client_id, subjectType: 'client',
+          name: intakeDialog.clientName || 'Клиент', phone: intakeDialog.clientPhone || '', pin: res.pin,
+          deepLink: null, intakeUrl: null, inviteStatus: 'client_created',
+        });
       }
       setIntakeDialog(null);
       loadData(true);
@@ -2324,13 +2382,18 @@
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
 
     // Новые лиды доступны общей очереди, contacted — только назначенному куратору.
-    const actionableLeads = filterActionableLeads(leads, curatorId);
+    const candidateItems = Object.values(intakeByClient).filter((item) => item.subject_type === 'candidate');
+    const candidateLeadIds = new Set(candidateItems.map((item) => item.lead_id).filter(Boolean));
+    const actionableLeads = filterActionableLeads(leads, curatorId)
+      .filter((lead) => !candidateLeadIds.has(lead.id));
     const rejectedLeads = leads.filter(l => l.status === 'rejected');
     const decisionStatuses = new Set(['approved', 'approved_waiting_slot', 'rejected']);
-    const questionnaireQueue = grouped.pending.filter(
-      (item) => !decisionStatuses.has(intakeByClient[item.client_id]?.status)
-    );
+    const questionnaireQueue = [
+      ...candidateItems.filter((item) => !decisionStatuses.has(item.status) && item.status !== 'promoted'),
+      ...grouped.pending.filter((item) => !decisionStatuses.has(intakeByClient[item.client_id]?.status)),
+    ];
     const decisionQueue = [
+      ...candidateItems.filter((item) => decisionStatuses.has(item.status)),
       ...grouped.pending.filter((item) => decisionStatuses.has(intakeByClient[item.client_id]?.status)),
       ...grouped.rejected,
     ].filter((item, index, items) => (
@@ -2483,7 +2546,7 @@
             fontWeight: 600,
             whiteSpace: 'nowrap'
           }
-        }, actionLoading === 'lead-' + item.id ? 'Подготавливаем…' : 'Подготовить анкету'),
+        }, actionLoading === 'lead-' + item.id ? 'Создаём…' : 'Создать приглашение'),
         React.createElement('button', {
           onClick: () => handleRejectLead(item),
           disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
@@ -3049,7 +3112,7 @@
             }, 'Скопировать приглашение'),
             React.createElement('button', {
               onClick: async () => {
-                const result = await adminAPI.markInviteSent(pinResult.clientId);
+                const result = await adminAPI.markInviteSent(pinResult.clientId, pinResult.subjectType);
                 if (!result.success) {
                   alert('Не удалось отметить отправку: ' + (result.message || result.error || 'ошибка'));
                   return;

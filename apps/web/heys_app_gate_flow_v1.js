@@ -1924,6 +1924,13 @@
                                 autoCuratorLogin: window.__hlgTempCuratorAutoLogin === true,
                                 curatorAutologinConfig: window.__hlgTempCuratorAutologinConfig || null,
                                 onClientLogin: async ({ phone, pin }) => {
+                                    if (HEYS.TrialIntake?.shouldOpen?.() && HEYS.YandexAPI?.candidateLogin) {
+                                        const candidateResult = await HEYS.YandexAPI.candidateLogin(phone, pin);
+                                        if (candidateResult?.ok) {
+                                            global.location.reload();
+                                            return candidateResult;
+                                        }
+                                    }
                                     const auth = HEYS && HEYS.auth;
                                     const fn = auth && auth.loginClient;
                                     const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
@@ -2894,7 +2901,8 @@
         // Protected trial intake opens only after authenticated session and all
         // required consents. The URL is a universal route marker: it contains
         // no client id, phone, health data or bearer token.
-        if (baseEligible && !shouldBlockForConsents
+        if (((baseEligible && !shouldBlockForConsents)
+            || (!clientId && HEYS.YandexAPI?.hasCandidateSessionHint?.()))
             && HEYS.TrialIntake?.shouldOpen?.()
             && HEYS.TrialIntake?.ClientScreen) {
             return React.createElement(HEYS.TrialIntake.ClientScreen, {

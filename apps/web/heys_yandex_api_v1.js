@@ -96,6 +96,7 @@
     : null;
   const PIN_COOKIE_SESSION_HINT_KEY = 'heys_pin_cookie_session_hint';
   const CURATOR_COOKIE_SESSION_HINT_KEY = 'heys_curator_cookie_session_hint';
+  const CANDIDATE_COOKIE_SESSION_HINT_KEY = 'heys_candidate_cookie_session_hint';
 
   const REQUEST_PRIORITY = Object.freeze({ critical: 0, normal: 1, background: 2 });
   let _requestInFlight = 0;
@@ -521,6 +522,11 @@
     'admin_get_trial_intake_summaries',
     'admin_get_trial_intake',
     'admin_review_trial_intake_v2',
+    'admin_mark_trial_candidate_invite_sent',
+    'admin_regenerate_trial_candidate_pin',
+    'admin_get_trial_candidate_summaries',
+    'admin_get_trial_candidate',
+    'admin_review_trial_candidate_v3',
     'admin_reopen_trial_candidate',
 
     // === LEADS MANAGEMENT (v3.0) ===
@@ -802,6 +808,20 @@
       _isOnline = false;
       return false;
     }
+  }
+
+  async function candidateLogin(phone, pin) {
+    const result = await rpc('verify_trial_candidate_pin', { p_phone: phone, p_pin: pin });
+    const data = result?.data?.verify_trial_candidate_pin || result?.data || result || {};
+    if (result?.error || data.success !== true) {
+      return { ok: false, error: data.error || result?.error?.code || 'invalid_credentials' };
+    }
+    try { localStorage.setItem(CANDIDATE_COOKIE_SESSION_HINT_KEY, '1'); } catch (_) { }
+    return { ok: true, candidate: true };
+  }
+
+  function hasCandidateSessionHint() {
+    try { return localStorage.getItem(CANDIDATE_COOKIE_SESSION_HINT_KEY) === '1'; } catch (_) { return false; }
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -3148,6 +3168,8 @@
     setDevCuratorToken,
     setCookieSessionHint,
     hasCookieSessionHint,
+    candidateLogin,
+    hasCandidateSessionHint,
 
     // 👥 Clients
     getClients,

@@ -442,6 +442,17 @@ async function cleanupExpiredTrialIntakes(client) {
   }
 }
 
+async function cleanupExpiredTrialCandidates(client) {
+  try {
+    const res = await client.query(
+      'SELECT public.purge_expired_trial_candidates()::int AS rows'
+    );
+    return { rows: Number(res.rows[0]?.rows || 0) };
+  } catch (e) {
+    return { rows: 0, error: e.message };
+  }
+}
+
 /**
  * Synthetic defense check (2026-06-01 wave 4, layer A) — каждый день
  * проверяем что наши защитные механизмы ЖИВЫ (DB CHECK trigger, validate
@@ -1555,6 +1566,9 @@ module.exports.handler = async (event, context) => {
 
       results.trial_intakes_cleanup = await cleanupExpiredTrialIntakes(client);
       console.log(`[Maintenance] Trial intake TTL: deleted ${results.trial_intakes_cleanup.rows} rows`);
+
+      results.trial_candidates_cleanup = await cleanupExpiredTrialCandidates(client);
+      console.log(`[Maintenance] Trial candidate TTL: deleted ${results.trial_candidates_cleanup.rows} rows`);
 
       // 🧪 Synthetic defense check (2026-06-01 wave 4, A) — гарантия что
       // защитные триггеры/функции не дропнуты случайной миграцией.

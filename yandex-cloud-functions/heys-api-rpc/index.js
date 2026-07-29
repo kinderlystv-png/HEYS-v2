@@ -925,6 +925,10 @@ const ALLOWED_FUNCTIONS = [
   // === TRIAL CANDIDATE INTAKE ===
   'get_trial_intake_by_session',      // 🔐 Session-bound encrypted intake read
   'save_trial_intake_by_session',     // 🔐 Session-bound encrypted autosave/submit
+  'verify_trial_candidate_pin',
+  'accept_trial_candidate_health_consent_by_candidate_session',
+  'get_trial_candidate_intake_by_candidate_session',
+  'save_trial_candidate_intake_by_candidate_session',
 
   // === DSAR / СУБЪЕКТНЫЕ ПРАВА (152-ФЗ ст.14 / GDPR Art.15-18, 2026-05-20) ===
   'export_my_data_by_session',        // 🔐 DSAR: выгрузка всех своих данных JSON-ом
@@ -969,6 +973,10 @@ const TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS = new Set([
   'save_trial_intake_by_session',
   'admin_get_trial_intake',
   'admin_review_trial_intake_v2',
+  'get_trial_candidate_intake_by_candidate_session',
+  'save_trial_candidate_intake_by_candidate_session',
+  'admin_get_trial_candidate',
+  'admin_review_trial_candidate_v3',
   'export_my_data_by_session',
 ]);
 
@@ -979,6 +987,10 @@ function acceptsCookieSessionToken(fnName) {
 
 function hasAnySessionTokenParam(params) {
   return !!(params?.p_session_token || params?.sessionToken || params?.input?.sessionToken);
+}
+
+function acceptsCandidateSessionToken(fnName) {
+  return typeof fnName === 'string' && fnName.endsWith('_by_candidate_session');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1012,8 +1024,13 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_mark_trial_intake_invite_sent',
   'admin_prepare_trial_candidate_from_lead',
   'admin_get_trial_intake_summaries',
+  'admin_get_trial_candidate_summaries',
   'admin_get_trial_intake',
   'admin_review_trial_intake_v2',
+  'admin_get_trial_candidate',
+  'admin_review_trial_candidate_v3',
+  'admin_mark_trial_candidate_invite_sent',
+  'admin_regenerate_trial_candidate_pin',
 
   // === LEADS MANAGEMENT (v3.0) ===
   'admin_get_leads',                  // Список лидов с лендинга
@@ -1825,6 +1842,7 @@ async function handleRpcRequest(event, context) {
   // app.heyslab.ru (frontend) and api.heyslab.ru (this Function).
   const cookieHeader = event.headers?.cookie || event.headers?.Cookie || '';
   let cookieSessionToken = null;
+  let candidateSessionToken = null;
   if (cookieHeader && typeof cookieHeader === 'string') {
     for (const part of cookieHeader.split(';')) {
       const eqIdx = part.indexOf('=');
@@ -1836,7 +1854,12 @@ async function handleRpcRequest(event, context) {
         } catch (_e) {
           cookieSessionToken = part.slice(eqIdx + 1).trim();
         }
-        break;
+      } else if (name === 'heys_candidate_session_token') {
+        try {
+          candidateSessionToken = decodeURIComponent(part.slice(eqIdx + 1).trim());
+        } catch (_e) {
+          candidateSessionToken = part.slice(eqIdx + 1).trim();
+        }
       }
     }
   }
@@ -1847,6 +1870,9 @@ async function handleRpcRequest(event, context) {
   // в cookie оставался токен от прошлой сессии.
   if (cookieSessionToken && !hasAnySessionTokenParam(params) && acceptsCookieSessionToken(fnName)) {
     params.p_session_token = cookieSessionToken;
+  }
+  if (candidateSessionToken && !params.p_candidate_session_token && acceptsCandidateSessionToken(fnName)) {
+    params.p_candidate_session_token = candidateSessionToken;
   }
 
   // Cookie-only PIN sessions rely on the gateway forwarding the HttpOnly
@@ -1864,6 +1890,17 @@ async function handleRpcRequest(event, context) {
         reason: 'missing_session_token',
       }),
     };
+  }
+  if (acceptsCandidateSessionToken(fnName) && !params.p_candidate_session_token) {
+    return {
+      statusCode: 401,
+      headers: corsHeaders,
+      body: JSON.stringify({ success: false, error: 'invalid_candidate_session' }),
+    };
+  }
+  if (fnName === 'accept_trial_candidate_health_consent_by_candidate_session') {
+    params.p_ip = clientIp || null;
+    params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
   }
 
   // API-first ingest endpoint (custom handler, not direct SQL function wrapper)
@@ -4663,6 +4700,52 @@ async function handleRpcRequest(event, context) {
         'p_expected_updated_at': '::timestamptz',
         'p_curator_id': '::uuid'
       },
+      'admin_mark_trial_candidate_invite_sent': {
+        'p_candidate_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_regenerate_trial_candidate_pin': {
+        'p_candidate_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_get_trial_candidate_summaries': {
+        'p_curator_id': '::uuid'
+      },
+      'admin_get_trial_candidate': {
+        'p_candidate_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_review_trial_candidate_v3': {
+        'p_candidate_id': '::uuid',
+        'p_action': '::text',
+        'p_reason_code': '::text',
+        'p_internal_note': '::text',
+        'p_client_message': '::text',
+        'p_clarification_sections': '::text[]',
+        'p_decision_checklist': '::jsonb',
+        'p_expected_updated_at': '::timestamptz',
+        'p_curator_id': '::uuid'
+      },
+      'verify_trial_candidate_pin': {
+        'p_phone': '::text',
+        'p_pin': '::text'
+      },
+      'accept_trial_candidate_health_consent_by_candidate_session': {
+        'p_candidate_session_token': '::text',
+        'p_document_version': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
+      'get_trial_candidate_intake_by_candidate_session': {
+        'p_candidate_session_token': '::text'
+      },
+      'save_trial_candidate_intake_by_candidate_session': {
+        'p_candidate_session_token': '::text',
+        'p_answers': '::jsonb',
+        'p_current_step': '::smallint',
+        'p_complete': '::boolean',
+        'p_expected_updated_at': '::timestamptz'
+      },
       'get_trial_intake_by_session': {
         'p_session_token': '::text'
       },
@@ -4897,6 +4980,14 @@ async function handleRpcRequest(event, context) {
       const tok = encodeURIComponent(inner.session_token);
       finalHeaders['Set-Cookie'] =
         `heys_session_token=${tok}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`;
+    } else if (fnName === 'verify_trial_candidate_pin'
+        && inner && typeof inner === 'object'
+        && inner.success === true
+        && typeof inner.candidate_session_token === 'string') {
+      const tok = encodeURIComponent(inner.candidate_session_token);
+      finalHeaders['Set-Cookie'] =
+        `heys_candidate_session_token=${tok}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`;
+      inner.candidate_session_token = undefined;
     } else if (fnName === 'revoke_session') {
       const clearCookies = [
         'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',

@@ -9,6 +9,7 @@ const webDir = path.resolve(__dirname, '..');
 const repoDir = path.resolve(webDir, '../..');
 const sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow.sql'), 'utf8');
 const v2Sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow_v2.sql'), 'utf8');
+const v3Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql'), 'utf8');
 const intakeSource = fs.readFileSync(path.join(webDir, 'heys_trial_intake_v1.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(webDir, 'heys_trial_queue_v1.js'), 'utf8');
 const yandexApiSource = fs.readFileSync(path.join(webDir, 'heys_yandex_api_v1.js'), 'utf8');
@@ -201,12 +202,35 @@ describe('protected trial intake contract', () => {
   });
 
   it('autosaves only to the session RPC and keeps answers out of browser storage', () => {
-    expect(intakeSource).toContain("rpc('save_trial_intake_by_session'");
+    expect(intakeSource).toContain("'save_trial_intake_by_session'");
+    expect(intakeSource).toContain("'save_trial_candidate_intake_by_candidate_session'");
     expect(intakeSource).toContain('setTimeout(async () =>');
     expect(intakeSource).toContain('p_complete: !!complete');
     expect(intakeSource).not.toContain('localStorage');
     expect(intakeSource).not.toContain('sessionStorage');
     expect(intakeSource).not.toContain('ym(');
+  });
+
+  it('keeps candidates accountless until an explicit curator approval', () => {
+    const prepareStart = v3Sql.indexOf('CREATE OR REPLACE FUNCTION public.admin_prepare_trial_candidate_from_lead');
+    const prepareEnd = v3Sql.indexOf('CREATE OR REPLACE FUNCTION public.admin_mark_trial_candidate_invite_sent', prepareStart);
+    const prepare = v3Sql.slice(prepareStart, prepareEnd);
+    const reviewStart = v3Sql.indexOf('CREATE OR REPLACE FUNCTION public.admin_review_trial_candidate_v3');
+    const reviewEnd = v3Sql.indexOf('-- Server-side ownership filter', reviewStart);
+    const review = v3Sql.slice(reviewStart, reviewEnd);
+
+    expect(prepare).toContain('INSERT INTO public.trial_candidates');
+    expect(prepare).not.toContain('INSERT INTO public.clients');
+    expect(prepare).not.toContain('INSERT INTO public.client_sessions');
+    expect(prepare).not.toContain('INSERT INTO public.trial_queue');
+    expect(review).toContain("IF p_action = 'approved' THEN");
+    expect(review).toContain('public.admin_convert_lead');
+    expect(review).toContain("status = 'promoted'");
+    expect(v3Sql).toContain("status = 'active'");
+    expect(intakeSource).toContain("p_document_version: '1.5'");
+    expect(intakeSource).not.toContain("p_document_version: '2.0'");
+    expect(v3Sql).toContain('admin_get_trial_candidate_summaries');
+    expect(v3Sql).toContain("l.status <> 'contacted' OR l.curator_id = p_curator_id");
   });
 
   it('renders the route-level intake without competing app overlays', () => {
@@ -233,11 +257,20 @@ describe('protected trial intake contract', () => {
       'admin_mark_trial_intake_invite_sent',
       'admin_prepare_trial_candidate_from_lead',
       'admin_reopen_trial_candidate',
+      'verify_trial_candidate_pin',
+      'get_trial_candidate_intake_by_candidate_session',
+      'save_trial_candidate_intake_by_candidate_session',
+      'admin_get_trial_candidate_summaries',
+      'admin_get_trial_candidate',
+      'admin_review_trial_candidate_v3',
+      'admin_regenerate_trial_candidate_pin',
     ]) {
       expect(rpcSource).toContain(`'${fn}'`);
       if (fn.startsWith('admin_')) expect(yandexApiSource).toContain(`'${fn}'`);
     }
-    expect(queueSource).toContain('Подготовить анкету');
+    expect(queueSource).toContain('Создать приглашение');
+    expect(queueSource).toContain("item.subject_type === 'candidate'");
+    expect(queueSource).toContain('candidateLeadIds');
     expect(queueSource).toContain('Готово к разбору');
     expect(queueSource).toContain('Зафиксировать решение');
   });

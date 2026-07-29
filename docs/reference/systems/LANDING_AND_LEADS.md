@@ -11,8 +11,9 @@
 Лендинг собирает заявку и атрибуцию, но не создаёт пользователя HEYS. Серверный
 контур лидов повторно валидирует критические поля, сохраняет заявку в
 PostgreSQL, фиксирует funnel event и уведомляет операционный Telegram-чат.
-Создание клиента происходит позже и отдельно — из curator trial queue через
-`admin_convert_lead`.
+Создание клиента происходит только после заполнения анкеты и ручного одобрения
+куратором. Подготовка приглашения создаёт временного `trial_candidate`, а
+`admin_convert_lead` вызывается сервером при финальном `approved`.
 
 ```text
 TrialForm / PurchaseModal
@@ -25,8 +26,9 @@ TrialForm / PurchaseModal
   → Yandex Metrica Measurement Protocol (best effort)
   → Telegram notification without name/phone
   → curator trial queue
-  → admin_convert_lead
-  → client without trial + protected intake invite
+  → trial_candidate + protected intake invite
+  → completed questionnaire + curator approval
+  → admin_convert_lead → client without active trial
 ```
 
 ## Владельцы ответственности
@@ -116,8 +118,10 @@ Telegram получает только `lead_id`, выбранный мессе�
 chat и actor, затем атомарно переводит только `new → contacted`. Повторное или
 конкурентное нажатие не создаёт вторую mutation. Bot API напрямую подтверждает
 каждую ветку; исходное сообщение получает отметку actor/time только после
-успешного update. Дальнейшая конвертация по-прежнему выполняется через curator
-trial queue и защищённый `admin_convert_lead`.
+успешного update. Подготовка анкеты создаёт только candidate intake. Защищённый
+`admin_convert_lead` вызывается внутри review RPC после решения `approved`. SQL
+фильтрует `contacted`: закреплённый лид возвращается только своему куратору, а
+незакреплённые `new` остаются общей очередью.
 
 ## Инварианты
 
@@ -140,6 +144,8 @@ trial queue и защищённый `admin_convert_lead`.
     без hash не backfill-ятся и не создают доказательство задним числом.
 13. Telegram contact handoff не изображает consent proof: его lead хранит
     proof-поля `NULL`, а обязательные согласия собираются после входа.
+14. Подготовка анкеты не создаёт `clients`; client появляется только после
+    завершённой анкеты и явного решения куратора `approved`.
 
 ## Подтверждённые слабые места и пробелы
 
