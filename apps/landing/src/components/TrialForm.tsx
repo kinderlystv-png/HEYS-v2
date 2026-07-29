@@ -373,9 +373,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             <span>MAX</span>
           </button>
         </div>
-        <p className="text-gray-500 text-xs mt-2 text-center">
-          MAX — мессенджер от VK, работает без ограничений в России
-        </p>
       </div>
 
       {/* Год рождения — 18+ gate */}

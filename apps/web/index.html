@@ -962,7 +962,7 @@
     <link rel="preload" href="boot-core.bundle.779cd4f4a451.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.b177a840f4b3.js" as="script" />
     <link rel="preload" href="boot-day.bundle.12470d6a2f36.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.0a23db44ba73.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.0baeb88a9d07.js" as="script" />
     <link rel="preload" href="boot-init.bundle.4660340a122b.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1730,6 +1730,9 @@
 	                    <div id="hlg-greeting-client" class="heys-auth-title"
 	                        style="font-size:22px;font-weight:650;letter-spacing:0;color:#475569;font-family:system-ui,-apple-system,sans-serif">
 	                        Вход клиента</div>
+	                    <div id="hlg-intake-instruction" class="heys-auth-subtitle"
+	                        style="display:none;max-width:300px;font-size:14px;line-height:1.45">
+	                        Введите номер из заявки и PIN из сообщения куратора.</div>
 	                </div>
 	                <div id="hlg-client-form" class="space-y-6">
                     <!-- Телефон -->
@@ -1803,8 +1806,11 @@
                     </div>
 	                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="button" onclick="hlgClientLogin()" disabled aria-label="Войти"></button>
                 </div>
+	                <div id="hlg-intake-explanation" class="heys-auth-subtitle"
+	                    style="display:none;margin-top:18px;text-align:center;font-size:13px;line-height:1.45">
+	                    Сейчас вы входите только в анкету. Доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.</div>
 		                <div class="heys-auth-footer-row">
-		                    <div class="heys-auth-support-line">Забыли PIN? <button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button">Обратитесь в поддержку.</button></div>
+		                    <div class="heys-auth-support-line"><span id="hlg-support-prefix">Забыли PIN? </span><button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button">Обратитесь в поддержку.</button></div>
 		                </div>
 		            </div>
                     <div id="hlg-client-status" class="heys-auth-status" role="status" aria-live="polite">
@@ -1812,6 +1818,30 @@
                         <span>Проверяем PIN</span>
                     </div>
 		        </div>
+
+		<script>
+		    (function syncTrialIntakeLoginCopy() {
+		        var trialIntakeLogin = false;
+		        try {
+		            trialIntakeLogin = new URLSearchParams(window.location.search || '').get('intake') === '1';
+		        } catch (_) { }
+		        if (!trialIntakeLogin) {
+		            try {
+		                trialIntakeLogin = window.localStorage.getItem('heys_candidate_cookie_session_hint') === '1';
+		            } catch (_) { }
+		        }
+		        if (!trialIntakeLogin) return;
+
+		        var title = document.getElementById('hlg-greeting-client');
+		        var instruction = document.getElementById('hlg-intake-instruction');
+		        var explanation = document.getElementById('hlg-intake-explanation');
+		        var supportPrefix = document.getElementById('hlg-support-prefix');
+		        if (title) title.textContent = 'Вход в анкету';
+		        if (instruction) instruction.style.display = 'block';
+		        if (explanation) explanation.style.display = 'block';
+		        if (supportPrefix) supportPrefix.textContent = 'Не получается войти? ';
+		    })();
+		</script>
 
         <!-- Экран: curator (email + пароль) -->
 	        <div id="hlg-screen-curator" style="display:none">
@@ -4079,7 +4109,7 @@
     <script defer src="boot-core.bundle.779cd4f4a451.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.b177a840f4b3.js"></script>
     <script defer src="boot-day.bundle.12470d6a2f36.js"></script>
-    <script defer src="boot-app.bundle.0a23db44ba73.js"></script>
+    <script defer src="boot-app.bundle.0baeb88a9d07.js"></script>
     <script defer src="boot-init.bundle.4660340a122b.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

@@ -489,7 +489,7 @@ export default function PricingSectionContent() {
               </p>
               <p className="mt-2 text-[12px] leading-relaxed text-[#5C5E8F]">
                 Цена 19 990 ₽/мес действует для текущего пилота. Для следующего набора планируется
-                цена 26 990 ₽/мес после ретроспективы.
+                цена 26 990 ₽/мес.
               </p>
             </section>
             <section className="py-4">

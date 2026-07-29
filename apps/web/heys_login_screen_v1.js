@@ -1,6 +1,43 @@
 // heys_login_screen_v1.js — Единый экран входа (клиент: телефон+PIN, куратор: email+пароль)
 (function (global) {
   const HEYS = (global.HEYS = global.HEYS || {});
+  const CANDIDATE_SESSION_HINT_KEY = 'heys_candidate_cookie_session_hint';
+
+  const CLIENT_LOGIN_COPY = Object.freeze({
+    title: 'Вход клиента',
+    instruction: '',
+    explanation: '',
+    supportLead: 'Забыли PIN? ',
+  });
+
+  const TRIAL_INTAKE_LOGIN_COPY = Object.freeze({
+    title: 'Вход в анкету',
+    instruction: 'Введите номер из заявки и PIN из сообщения куратора.',
+    explanation: 'Сейчас вы входите только в анкету. Доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.',
+    supportLead: 'Не получается войти? ',
+  });
+
+  function isTrialIntakeLogin() {
+    try {
+      if (new URLSearchParams(global.location && global.location.search || '').get('intake') === '1') return true;
+    } catch (_) { }
+
+    try {
+      if (HEYS.YandexAPI && typeof HEYS.YandexAPI.hasCandidateSessionHint === 'function') {
+        return HEYS.YandexAPI.hasCandidateSessionHint() === true;
+      }
+    } catch (_) { }
+
+    try {
+      return global.localStorage && global.localStorage.getItem(CANDIDATE_SESSION_HINT_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getClientLoginCopy(trialIntakeLogin) {
+    return trialIntakeLogin ? TRIAL_INTAKE_LOGIN_COPY : CLIENT_LOGIN_COPY;
+  }
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -100,6 +137,7 @@
 
     const canClientLogin = clientPhoneValid && clientPinValid && !busy;
     const canCuratorLogin = Boolean(email && password) && !busy;
+    const clientLoginCopy = getClientLoginCopy(isTrialIntakeLogin());
 
     function getCuratorAutologinKey() {
       return (curatorAutologinConfig && curatorAutologinConfig.onceKey) || 'heys_temp_curator_autologin_v1';
@@ -700,7 +738,12 @@
 	              decoding: 'async',
 	            }),
 	          ),
-	          React.createElement('div', { className: 'heys-auth-title' }, 'Вход клиента'),
+	          React.createElement('div', { className: 'heys-auth-title' }, clientLoginCopy.title),
+	          clientLoginCopy.instruction && React.createElement(
+	            'div',
+	            { className: 'heys-auth-subtitle', style: { maxWidth: '300px', fontSize: '14px', lineHeight: '1.45' } },
+	            clientLoginCopy.instruction,
+	          ),
 	        ),
 
         // Форма
@@ -927,13 +970,18 @@
             { type: 'submit', disabled: !canClientLogin, className: 'heys-auth-submit-hidden', tabIndex: -1, 'aria-label': 'Войти' },
           ),
 	        ),
+	        clientLoginCopy.explanation && React.createElement(
+	          'div',
+	          { className: 'heys-auth-subtitle', style: { marginTop: '18px', textAlign: 'center', fontSize: '13px', lineHeight: '1.45' } },
+	          clientLoginCopy.explanation,
+	        ),
 	        React.createElement(
 	          'div',
 	          { className: 'heys-auth-footer-row' },
 	          React.createElement(
 	            'div',
 	            { className: 'heys-auth-support-line' },
-	            'Забыли PIN? ',
+	            clientLoginCopy.supportLead,
 	            React.createElement(
 	              'button',
 	              {
@@ -1031,5 +1079,7 @@
 	    );
   }
 
+  LoginScreen.isTrialIntakeLogin = isTrialIntakeLogin;
+  LoginScreen.getClientLoginCopy = getClientLoginCopy;
   HEYS.LoginScreen = LoginScreen;
 })(typeof window !== 'undefined' ? window : globalThis);

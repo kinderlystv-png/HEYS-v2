@@ -296,7 +296,7 @@ describe('protected trial intake contract', () => {
     }
     expect(queueSource).toContain('Создать приглашение');
     expect(queueSource).toContain("item.subject_type === 'candidate'");
-    expect(queueSource).toContain('candidateLeadIds');
+    expect(queueSource).toContain('filterActionableLeads(leads, curatorId, candidateItems)');
     expect(queueSource).toContain('Готово к разбору');
     expect(queueSource).toContain('Зафиксировать решение');
   });
@@ -313,11 +313,24 @@ describe('protected trial intake contract', () => {
       { id: 'foreign', status: 'contacted', curator_id: 'curator-b' },
       { id: 'rejected', status: 'rejected', curator_id: 'curator-a' },
     ];
+    const intakes = [
+      { subject_type: 'candidate', lead_id: 'new' },
+      { subject_type: 'client', lead_id: 'owned' },
+    ];
     const filterActionableLeads = window.HEYS.TrialQueue.filterActionableLeads;
 
     expect(filterActionableLeads(leads, 'curator-a').map((lead) => lead.id)).toEqual(['new', 'owned']);
     expect(filterActionableLeads(leads, null).map((lead) => lead.id)).toEqual(['new']);
-    expect(appGateFlowSource).toContain('curatorId: cloudUser?.id');
+    expect(filterActionableLeads(leads, 'curator-a', intakes).map((lead) => lead.id)).toEqual(['owned']);
+    const badgeStart = queueSource.indexOf('function NewLeadsBadge');
+    const badgeEnd = queueSource.indexOf('function filterActionableLeads', badgeStart);
+    const badgeSource = queueSource.slice(badgeStart, badgeEnd);
+    expect(badgeSource).toContain("adminAPI.getLeads('all')");
+    expect(badgeSource).toContain('adminAPI.getIntakeSummaries()');
+    expect(badgeSource).toContain("window.addEventListener('heys:clients-updated', handleQueueUpdate)");
+    expect(appGateFlowSource).toMatch(
+      /HEYS\.TrialQueue\.NewLeadsBadge,[\s\S]{0,160}\{ curatorId: cloudUser\?\.id \}/
+    );
   });
 
   it('adds explicit invite, clarification and waiting-slot states without a second auth path', () => {

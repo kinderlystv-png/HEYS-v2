@@ -147,9 +147,10 @@ export default function HeroSSR({ content }: HeroSSRProps) {
           {/* Mobile menu button — минималистичный premium стиль */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="lg:hidden relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors focus:outline-none focus:ring-2 focus:ring-[#111827]/10"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-[#111827]/10 lg:hidden"
             aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
             aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
           >
             <div className="relative w-5 h-4 flex flex-col justify-between">
               <span
@@ -173,7 +174,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
         {/* Mobile menu overlay */}
         <div
-          className={`lg:hidden fixed inset-0 top-[72px] bg-white/95 backdrop-blur-xl z-50 transition-all duration-300 ${
+          id="mobile-navigation"
+          className={`fixed inset-0 top-[85px] z-50 bg-white/95 backdrop-blur-xl transition-all duration-300 lg:hidden ${
             menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
         >
@@ -183,7 +185,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 key={link.id}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className={`text-[#374151] hover:text-[#111827] transition-all text-[18px] tracking-wide font-light transform ${
+                className={`flex min-h-11 items-center px-4 text-[18px] font-light tracking-wide text-[#374151] transition-all hover:text-[#111827] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? `${index * 50 + 100}ms` : '0ms' }}

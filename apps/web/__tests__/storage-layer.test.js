@@ -359,6 +359,15 @@ describe('HEYS.store auth/session key scoping guards', () => {
     expect(store.getPersisted('heys_game', null).totalXP).toBe(0);
   });
 
+  test('Store.getPersisted distinguishes a missing value from corrupt persisted JSON with a sentinel', () => {
+    const store = loadStorageLayer();
+    const missing = Object.freeze({ missing: true });
+
+    expect(store.getPersisted('heys_planning_assemble_day_campaign_v1', missing)).toBe(missing);
+    mockStorage._store[`heys_${CLIENT_ID}_planning_assemble_day_campaign_v1`] = '{broken-json';
+    expect(store.getPersisted('heys_planning_assemble_day_campaign_v1', missing)).toBeNull();
+  });
+
   test('Store.set delegates one cloud save and suppresses the interceptor mirror', () => {
     const originalSetItem = mockStorage.setItem;
     const interceptorMirror = vi.fn();

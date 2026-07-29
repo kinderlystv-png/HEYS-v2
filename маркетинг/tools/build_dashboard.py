@@ -826,12 +826,12 @@ for pane_id, _, title, path, _ in source_tabs:
     if pane_id == 'landing-audit':
         extra = (
             '<div class="audit-overview">'
-            '<div class="audit-score"><span>Статус ревизии</span><b>Hero–07 приняты</b>'
-            '<small>FAQ визуально проверен; остались source-текст и финальные решения</small></div>'
+            '<div class="audit-score"><span>Статус ревизии</span><b>Baseline A зафиксирован</b>'
+            '<small>FAQ 8 · mobile 390×844 пройден · legal decision-gate открыт</small></div>'
             '<div class="audit-kpis">'
             '<div><b>21,3</b><span>мобильного экрана</span></div>'
             '<div><b>79%</b><span>страницы до trial</span></div>'
-            '<div><b>12</b><span>FAQ в текущем source</span></div>'
+            '<div><b>8</b><span>FAQ в текущем source</span></div>'
             '</div>'
             '<a class="audit-shot-link" href="../output/playwright/landing-mobile/'
             'exact-390x844/landing-full-390x844.png" target="_blank" '
@@ -849,25 +849,25 @@ for pane_id, _, title, path, _ in source_tabs:
             '<b>Контроль A → отдельный Landing B-Future</b>'
             '<small>Future — завершённый аудит и направление, а не готовый победитель</small></div>'
             '<div class="release-flow">'
-            '<div><b>A</b><span>Текущий принятый baseline</span></div>'
+            '<div><b>A</b><span>Source/visual baseline зафиксирован</span></div>'
             '<div><b>B</b><span>Narrative + proof по 45</span></div>'
             '<div><b>=</b><span>Pricing, form, consent, legal</span></div>'
-            '<div><b>→</b><span>FAQ → brief → измеримость</span></div>'
+            '<div><b>→</b><span>Legal gate → brief → измеримость</span></div>'
             '</div>'
-            '<p>Сначала завершается текстовая ревизия FAQ. Публичный split включается только '
-            'после assignment, событий, Metrica/consent и smoke обеих версий.</p>'
+            '<p>FAQ и mobile baseline A зафиксированы. Публичный split включается только после '
+            'legal/consent go/no-go, assignment, событий, Metrica/consent и smoke обеих версий.</p>'
             '</div>'
         )
     elif pane_id == 'release-navigator':
         extra = (
             '<div class="release-overview">'
-            '<div class="release-now"><span>Сейчас</span><b>Завершить FAQ → собрать Landing B-Future</b>'
-            '<small>Trial-intake v3 зелёный; форма заморожена до отдельной consent/analytics/security-сверки</small></div>'
+            '<div class="release-now"><span>Сейчас</span><b>Baseline A зафиксирован → legal decision-gate</b>'
+            '<small>Trial-intake v3 зелёный; форма и legal не меняются без отдельного решения</small></div>'
             '<div class="release-flow">'
-            '<div><b>1</b><span>FAQ source + решения</span></div>'
-            '<div><b>2</b><span>Локальный B-brief + preview</span></div>'
-            '<div><b>3</b><span>Instrumentation + smoke A/B</span></div>'
-            '<div><b>4</b><span>Эксперимент или A baseline</span></div>'
+            '<div><b>1</b><span>FAQ + mobile A ✅</span></div>'
+            '<div><b>2</b><span>Legal/consent go/no-go</span></div>'
+            '<div><b>3</b><span>Landing B-Future brief</span></div>'
+            '<div><b>4</b><span>Instrumentation + smoke A/B</span></div>'
             '</div>'
             '<p>Предрелизный blocker trial-intake закрыт: приглашение, consent 1.5, autosave/resume, '
             'ручные решения и финальное создание одного клиента с одной queue-row проверены в production. '
@@ -1475,7 +1475,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения · 40_Аудит_лендинга · 41_Релизный_контур · 42_Ревью_trial_intake ·
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения · 40_Аудит_лендинга · 41_Релизный_контур · 42_Ревью_trial_intake · 44_Тарифы · 45_Future ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
 <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 

@@ -2143,9 +2143,13 @@
                                                     color: curatorTab === 'queue' ? '#0f172a' : 'rgba(255,255,255,0.8)'
                                                 }
                                             },
-                                            // P0.11: бейдж "+N" если есть новые лиды
+                                            // P0.11: бейдж "+N" если есть лиды, требующие действия куратора
                                             HEYS.TrialQueue?.NewLeadsBadge
-                                                ? React.createElement(HEYS.TrialQueue.NewLeadsBadge, null, '📋 Очередь')
+                                                ? React.createElement(
+                                                    HEYS.TrialQueue.NewLeadsBadge,
+                                                    { curatorId: cloudUser?.id },
+                                                    '📋 Очередь'
+                                                )
                                                 : '📋 Очередь'
                                         ),
                                         React.createElement(

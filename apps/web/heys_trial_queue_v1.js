@@ -1659,33 +1659,40 @@
   // ========================================
 
   /**
-   * NewLeadsBadge — компонент-индикатор количества новых заявок (P0.11).
-   * Каждые 60 секунд дёргает adminAPI.getLeads('new') и рисует красный бейдж
-   * рядом с label, если count > 0. Скрывает себя если запрос упал/нет лидов.
-   *
-   * Использование:
-   *   React.createElement(HEYS.TrialQueue.NewLeadsBadge, { children: '📋 Очередь' })
+   * NewLeadsBadge — индикатор заявок, требующих действия куратора.
+   * Считает тот же набор, что вкладка «Лиды»: новые заявки общей очереди и
+   * закреплённые за текущим куратором contacted-лиды без подготовленной анкеты.
    */
-  function NewLeadsBadge({ children, pollIntervalMs = 60000 }) {
+  function NewLeadsBadge({ children, curatorId, pollIntervalMs = 60000 }) {
     const [count, setCount] = React.useState(0);
 
     React.useEffect(() => {
       let alive = true;
       const tick = async () => {
         try {
-          const res = await adminAPI.getLeads('new');
+          const [leadsRes, intakesRes] = await Promise.all([
+            adminAPI.getLeads('all'),
+            adminAPI.getIntakeSummaries(),
+          ]);
           if (!alive) return;
-          if (res.success && Array.isArray(res.data)) {
-            setCount(res.data.length);
+          if (leadsRes.success && Array.isArray(leadsRes.data) && intakesRes.success) {
+            setCount(filterActionableLeads(leadsRes.data, curatorId, intakesRes.data).length);
           }
         } catch (e) {
           console.warn('[NewLeadsBadge] poll failed:', e.message);
         }
       };
+
+      const handleQueueUpdate = () => { tick(); };
       tick();
       const id = setInterval(tick, pollIntervalMs);
-      return () => { alive = false; clearInterval(id); };
-    }, [pollIntervalMs]);
+      window.addEventListener('heys:clients-updated', handleQueueUpdate);
+      return () => {
+        alive = false;
+        clearInterval(id);
+        window.removeEventListener('heys:clients-updated', handleQueueUpdate);
+      };
+    }, [curatorId, pollIntervalMs]);
 
     if (!count || count <= 0) {
       return children;
@@ -1718,10 +1725,17 @@
     );
   }
 
-  function filterActionableLeads(leads, curatorId) {
+  function filterActionableLeads(leads, curatorId, intakeItems = []) {
     const normalizedCuratorId = String(curatorId || '').trim().toLowerCase();
+    const preparedLeadIds = new Set(
+      (Array.isArray(intakeItems) ? intakeItems : [])
+        .filter((item) => item?.subject_type === 'candidate')
+        .map((item) => item?.lead_id)
+        .filter(Boolean)
+    );
 
     return (Array.isArray(leads) ? leads : []).filter((lead) => {
+      if (preparedLeadIds.has(lead?.id)) return false;
       if (lead?.status === 'new') return true;
       if (lead?.status !== 'contacted' || !normalizedCuratorId) return false;
 
@@ -2390,9 +2404,7 @@
 
     // Новые лиды доступны общей очереди, contacted — только назначенному куратору.
     const candidateItems = Object.values(intakeByClient).filter((item) => item.subject_type === 'candidate');
-    const candidateLeadIds = new Set(candidateItems.map((item) => item.lead_id).filter(Boolean));
-    const actionableLeads = filterActionableLeads(leads, curatorId)
-      .filter((lead) => !candidateLeadIds.has(lead.id));
+    const actionableLeads = filterActionableLeads(leads, curatorId, candidateItems);
     const rejectedLeads = leads.filter(l => l.status === 'rejected');
     const decisionStatuses = new Set(['approved', 'approved_waiting_slot', 'rejected']);
     const questionnaireQueue = [
