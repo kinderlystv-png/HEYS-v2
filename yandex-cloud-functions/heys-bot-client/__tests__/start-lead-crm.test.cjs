@@ -1,10 +1,49 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const { EventEmitter } = require('node:events');
+const https = require('node:https');
 const Module = require('node:module');
 const path = require('node:path');
+const { Readable } = require('node:stream');
 
 const MODULE_PATH = path.resolve(__dirname, '../index.js');
+
+function bridgeHttpsRequestToFetch(options, onResponse) {
+  const request = new EventEmitter();
+  const chunks = [];
+  let destroyed = false;
+
+  request.write = (chunk) => chunks.push(Buffer.from(chunk));
+  request.destroy = (error) => {
+    if (destroyed) return;
+    destroyed = true;
+    if (error) process.nextTick(() => request.emit('error', error));
+  };
+  request.end = async () => {
+    if (destroyed) return;
+    try {
+      const response = await global.fetch(`https://${options.hostname}${options.path}`, {
+        method: options.method,
+        headers: options.headers,
+        body: chunks.length > 0 ? Buffer.concat(chunks).toString('utf8') : undefined,
+      });
+      if (destroyed) return;
+      const responseBody = await response.json();
+      const stream = Readable.from([Buffer.from(JSON.stringify(responseBody))]);
+      stream.statusCode = response.status ?? (response.ok ? 200 : 500);
+      onResponse(stream);
+    } catch (error) {
+      request.emit('error', error);
+    }
+  };
+
+  return request;
+}
+
+test.beforeEach((t) => {
+  t.mock.method(https, 'request', bridgeHttpsRequestToFetch);
+});
 
 function loadHandlerWithDb(rowsByQuery) {
   delete require.cache[MODULE_PATH];
@@ -40,11 +79,87 @@ function loadHandlerWithDb(rowsByQuery) {
   };
 
   try {
-    return { handler: require(MODULE_PATH).handler, queries };
+    const botModule = require(MODULE_PATH);
+    return { handler: botModule.handler, testApi: botModule.__test, queries };
   } finally {
     Module._load = originalLoad;
   }
 }
+
+test('Telegram API transport uses one TLS-verified request with DNS fallback', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  let primaryCalls = 0;
+  t.mock.method(global, 'fetch', async () => {
+    primaryCalls += 1;
+    const error = new Error('This operation was aborted');
+    error.name = 'AbortError';
+    throw error;
+  });
+
+  const requestCalls = [];
+  const requestBody = [];
+  let selectedAddresses = [];
+  const fakeRequest = (options, onResponse) => {
+    requestCalls.push(options);
+    const request = new EventEmitter();
+    request.write = (chunk) => requestBody.push(String(chunk));
+    request.destroy = (error) => request.emit('error', error);
+    request.end = () => {
+      options.lookup('api.telegram.org', { all: true }, (error, addresses) => {
+        if (error) {
+          request.emit('error', error);
+          return;
+        }
+        selectedAddresses = addresses;
+        const response = Readable.from([
+          JSON.stringify({ ok: true, result: { message_id: 1 } }),
+        ]);
+        response.statusCode = 200;
+        onResponse(response);
+      });
+    };
+    return request;
+  };
+  const fakeLookup = (_hostname, options, callback) => {
+    assert.deepEqual(options, { all: true, verbatim: true });
+    callback(null, [{ address: '149.154.166.110', family: 4 }]);
+  };
+
+  const oldEnv = { ...process.env };
+  t.after(() => {
+    process.env = oldEnv;
+    delete require.cache[MODULE_PATH];
+  });
+
+  const { testApi } = loadHandlerWithDb([]);
+  const payload = JSON.stringify({ chat_id: 123456, text: 'hello' });
+  const response = await testApi.fetchWithTimeout(
+    'https://api.telegram.org/bottest-token/sendMessage',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    },
+    100,
+    fakeRequest,
+    fakeLookup,
+  );
+
+  assert.equal(primaryCalls, 0);
+  assert.equal(requestCalls.length, 1);
+  assert.equal(requestCalls[0].hostname, 'api.telegram.org');
+  assert.equal(requestCalls[0].servername, 'api.telegram.org');
+  assert.equal(requestCalls[0].rejectUnauthorized, true);
+  assert.equal(requestCalls[0].autoSelectFamily, true);
+  assert.equal(requestCalls[0].autoSelectFamilyAttemptTimeout, 250);
+  assert.equal(requestCalls[0].path, '/bottest-token/sendMessage');
+  assert.equal(requestBody.join(''), payload);
+  assert.deepEqual(selectedAddresses, [
+    { address: '149.154.166.110', family: 4 },
+    { address: '149.154.167.220', family: 4 },
+  ]);
+  assert.deepEqual(await response.json(), { ok: true, result: { message_id: 1 } });
+});
 
 function startWebhookEvent(body) {
   return {

@@ -50,6 +50,13 @@ polling до 55 секунд и прямой `sendMessage`. Offset подтве�
 останавливает текущий цикл, возвращает `telegram_ok=false` и не пишет успешный
 heartbeat; это предотвращает повторную доставку в том же invocation.
 
+Telegram Bot API вызывается одним HTTPS request к hostname `api.telegram.org`.
+Custom DNS lookup передаёт Node обычные DNS-addresses и allowlisted fallback
+IPv4, а `autoSelectFamily` переключает connect-address до TLS и записи HTTP
+body. Host, SNI и проверка сертификата остаются привязаны к `api.telegram.org`;
+повторный POST после неоднозначного timeout не выполняется, чтобы `sendMessage`
+не мог задублироваться на уровне приложения.
+
 `POST /bot/send` — отдельный внутренний выход для drip-сообщений; он требует
 internal cron authorization и не является публичным send API.
 
@@ -119,6 +126,8 @@ Cross-client API guards не ждут Telegram: блокировка сохра�
     invocation неуспешным; следующий batch в том же запуске не читается.
 13. HEYS Start не заявляет versioned privacy consent до показа ссылки на
     действующую policy и нового действия пользователя.
+14. DNS fallback меняет только connect-address внутри одного TLS-verified HTTPS
+    request; повторный Bot API POST после timeout/abort запрещён.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -140,6 +149,10 @@ Cross-client API guards не ждут Telegram: блокировка сохра�
   минутного запуска и проверка pending queue = 0.
 - Client, Start и curator callback находятся в одном крупном handler и разделяют
   deployment: ошибка общей инициализации или релиза затрагивает три контура.
+- Allowlisted Telegram fallback IPv4 — аварийная зависимость и может измениться
+  у провайдера. Обычный DNS остаётся первым, fallback используется только как
+  второй connect-address; доступность подтверждается transport-тестом и
+  production live-smoke.
 
 ## Facts Table
 
@@ -158,3 +171,4 @@ Cross-client API guards не ждут Telegram: блокировка сохра�
 | T11 | Operational alerts fail-closed, а cross-client события повторяются по DB watermark                                                   | `node --test scripts/ci/__tests__/send-telegram-alert.test.mjs yandex-cloud-functions/heys-maintenance/__tests__/telegram-delivery.test.cjs yandex-cloud-functions/heys-cron-security-alerts/__tests__/telegram-delivery.test.cjs`                                                                                                                              | source проверен 2026-07-26                                                                        |
 | T12 | Fail-closed offset fix опубликован в active production version                                                                       | `yc serverless function version list --function-name heys-bot-client`; `pnpm ops:heys:canary --strict`; фильтр логов по version id                                                                                                                                                                                                                              | deploy `d4eebq4t8dar9olee310`, canary green 2026-07-28                                            |
 | T13 | Повторная отправка контакта после показа policy записывает proof в существующий active lead без второго handoff                      | `start-lead-crm.test.cjs`: policy prompt + replay consent update; active function + operator/DB smoke                                                                                                                                                                                                                                                           | deploy `d4eeeo4qqsli8h6snbge`; version/hash/time green, 1 lead + 1 lead-creation event 2026-07-29 |
+| T14 | Telegram DNS fallback сохраняет hostname/SNI/cert verify и выполняет ровно один HTTPS request без повторного POST                    | `node --check yandex-cloud-functions/heys-bot-client/index.js`; `node --test yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs`; tokenless HTTPS probe к `api.telegram.org`                                                                                                                                                              | source/test green; production deploy и live-smoke ожидаются 2026-07-29                            |
