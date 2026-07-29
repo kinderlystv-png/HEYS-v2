@@ -1644,6 +1644,7 @@ async function handleRpcRequest(event, context) {
 
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
+  const clientIp = extractClientIp(event.headers);
 
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -2534,7 +2535,6 @@ async function handleRpcRequest(event, context) {
 
   // 🔐 P1: Извлекаем IP клиента для rate-limit
   // Yandex Cloud Functions: X-Forwarded-For содержит реальный IP
-  const clientIp = extractClientIp(event.headers);
   debugLog('[RPC Handler] Client IP:', clientIp ? '***extracted***' : 'null');
 
   // 🔐 P2: Для verify_client_pin_v3 добавляем IP и User-Agent автоматически
