@@ -16,7 +16,7 @@
 
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isGeneratedFile, isReleaseFile } from './legacy-bundle-config.mjs';
 import { getChangedFilesBetween } from './pre-push-vitest-cache.mjs';
 
@@ -26,6 +26,24 @@ const args = new Set(process.argv.slice(2).filter((arg) => arg !== '--'));
 const verbose = args.has('--verbose');
 const REF = getCliOption('--ref') || 'HEAD';
 const BASE_REF = getCliOption('--base') || process.env.HEYS_PUSH_BASE_REF || '';
+
+function isIntegrationPushBranch(branchName) {
+  return (
+    branchName === 'main' ||
+    branchName === 'develop' ||
+    branchName.startsWith('integration/') ||
+    branchName.startsWith('release/')
+  );
+}
+
+function isIntegrationPush({
+  branchName = runCaptured('git', ['branch', '--show-current']).stdout,
+  env = process.env,
+} = {}) {
+  return (
+    env.HEYS_INTEGRATION === '1' || env.HEYS_SHIP === '1' || isIntegrationPushBranch(branchName)
+  );
+}
 
 function getCliOption(name) {
   const prefix = `${name}=`;
@@ -133,8 +151,8 @@ function runScopeGate() {
     return false;
   }
   const forbidden = range.files.filter((file) => isGeneratedFile(file) || isReleaseFile(file));
-  if (process.env.HEYS_INTEGRATION === '1' || process.env.HEYS_SHIP === '1') {
-    writeLine(`   OK: explicit integration mode; ${range.files.length} outgoing file(s)`);
+  if (isIntegrationPush()) {
+    writeLine(`   OK: integration push; ${range.files.length} outgoing file(s)`);
     return true;
   }
   if (forbidden.length === 0) {
@@ -263,4 +281,7 @@ function main() {
   process.exit(1);
 }
 
-main();
+const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
+if (import.meta.url === invokedPath) main();
+
+export { isIntegrationPush, isIntegrationPushBranch };

@@ -120,6 +120,10 @@ function detectStagingMode({
   if (explicit === 'agent' || explicit === 'integration') return explicit;
 
   if (env.HEYS_INTEGRATION === '1' || env.HEYS_SHIP === '1') return 'integration';
+  // main/develop are integration trunks even when the process is started by
+  // Codex. Agent environment markers describe the caller, not the branch
+  // policy, so they must not turn a trunk integration commit into source-only.
+  if (isProtectedTrunk(branchName)) return 'integration';
   if (env.HEYS_AGENT_MODE === '1' || env.CODEX_AGENT_MODE === '1') return 'agent';
   if (repoRoot.includes('/.claude/worktrees/')) return 'agent';
   // Known agent-branch prefixes — hint only; the safe-by-default fallback below

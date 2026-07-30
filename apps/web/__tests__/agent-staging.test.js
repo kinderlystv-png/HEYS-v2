@@ -6,6 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/check-agent-staging.mjs');
 const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
+const PUSH_PREFLIGHT_PATH = path.resolve(__dirname, '../../../scripts/push-preflight.mjs');
+const pushPreflightUrl = pathToFileURL(PUSH_PREFLIGHT_PATH).href;
 
 const {
   assertAgentStaging,
@@ -15,20 +17,32 @@ const {
   getForbiddenAgentStagedFiles,
   isGeneratedOrReleaseFile,
 } = await import(scriptUrl);
+const { isIntegrationPush, isIntegrationPushBranch } = await import(pushPreflightUrl);
 
 describe('agent staging guard', () => {
-  it('detects agent mode from codex branches and claude worktrees', () => {
+  it('detects agent mode from codex branches without overriding trunk policy', () => {
     expect(detectStagingMode({ branchName: 'codex/sync-fix', repoRoot: '/repo', env: {} })).toBe(
       'agent',
     );
     expect(
       detectStagingMode({ branchName: 'main', repoRoot: '/repo/.claude/worktrees/a', env: {} }),
-    ).toBe('agent');
+    ).toBe('integration');
   });
 
-  it('keeps main source-only unless an integration pass is explicit', () => {
-    expect(detectStagingMode({ branchName: 'main', repoRoot: '/repo', env: {} })).toBe('agent');
-    expect(detectStagingMode({ branchName: 'develop', repoRoot: '/repo', env: {} })).toBe('agent');
+  it('treats main and develop as integration branches even under Codex', () => {
+    expect(detectStagingMode({ branchName: 'main', repoRoot: '/repo', env: {} })).toBe(
+      'integration',
+    );
+    expect(detectStagingMode({ branchName: 'develop', repoRoot: '/repo', env: {} })).toBe(
+      'integration',
+    );
+    expect(
+      detectStagingMode({
+        branchName: 'main',
+        repoRoot: '/repo',
+        env: { CODEX_AGENT_MODE: '1' },
+      }),
+    ).toBe('integration');
     expect(
       detectStagingMode({ branchName: 'integration/agent-batch', repoRoot: '/repo', env: {} }),
     ).toBe('integration');
@@ -49,6 +63,19 @@ describe('agent staging guard', () => {
     );
     expect(detectStagingMode({ branchName: 'fix-sync', repoRoot: '/repo', env: {} })).toBe('agent');
     expect(detectStagingMode({ branchName: '', repoRoot: '/repo', env: {} })).toBe('agent');
+  });
+
+  it('keeps generated/release restrictions for agent branches', () => {
+    expect(detectStagingMode({ branchName: 'codex/fix', repoRoot: '/repo', env: {} })).toBe(
+      'agent',
+    );
+    expect(isIntegrationPushBranch('codex/fix')).toBe(false);
+    expect(isIntegrationPush({ branchName: 'codex/fix', env: {} })).toBe(false);
+  });
+
+  it('allows generated/release files for integration pushes from main', () => {
+    expect(isIntegrationPushBranch('main')).toBe(true);
+    expect(isIntegrationPush({ branchName: 'main', env: { CODEX_AGENT_MODE: '1' } })).toBe(true);
   });
 
   it('honors explicit HEYS_STAGING_MODE override on any branch', () => {
