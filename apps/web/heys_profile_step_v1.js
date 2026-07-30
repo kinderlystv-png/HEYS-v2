@@ -73,9 +73,34 @@
     return currentClientId || '';
   }
 
-  function isRegistrationInProgress() {
+  function isRegistrationInProgress(profile) {
     const raw = localStorage.getItem('heys_registration_in_progress');
-    return raw === 'true' || raw === '"true"';
+    const inProgress = raw === 'true' || raw === '"true"';
+    if (!inProgress) return false;
+
+    // Legacy marker browser-global, поэтому может пережить завершение профиля
+    // или switch клиента. Снимать его безопасно только когда последний полный
+    // cloud sync этого же клиента не старее сохранённого профиля: локальная
+    // неподтверждённая запись (updatedAt > sync.ts) остаётся fail-closed.
+    const clientId = getCurrentClientId();
+    const lastSync = HEYS.cloud?._lastClientSync;
+    const profileUpdatedAt = Number(profile?.updatedAt || 0);
+    const syncedAt = Number(lastSync?.ts || 0);
+    const isCloudConfirmedComplete = profile?.profileCompleted === true
+      && !!clientId
+      && lastSync?.clientId === clientId
+      && syncedAt > 0
+      && (profileUpdatedAt === 0 || syncedAt >= profileUpdatedAt);
+
+    if (isCloudConfirmedComplete) {
+      localStorage.removeItem('heys_registration_in_progress');
+      console.info('[ProfileSteps] cleared stale registration marker after authoritative profile sync', {
+        clientId: String(clientId).slice(0, 8),
+      });
+      return false;
+    }
+
+    return true;
   }
 
   function hasActiveWriteAccess() {
@@ -621,7 +646,7 @@
           hasFirstName: !!profile?.firstName,
           hasBirthDate: !!profile?.birthDate
         });
-      } else if (!isRegistrationInProgress()) {
+      } else if (!isRegistrationInProgress(profile)) {
         console.warn('[ProfileSteps] registrationInProgress cleared (profile complete)', {
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
@@ -1679,7 +1704,7 @@
 
     // Локальный profileCompleted становится окончательным только после
     // точечного cloud readback. До него reload обязан продолжить регистрацию.
-    if (isRegistrationInProgress()) return true;
+    if (isRegistrationInProgress(profile)) return true;
 
     // Если есть подтверждённый флаг profileCompleted — используем его.
     if (profile.profileCompleted === true) {

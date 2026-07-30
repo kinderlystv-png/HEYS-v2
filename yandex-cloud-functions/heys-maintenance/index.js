@@ -221,19 +221,17 @@ async function claimOpsIncidentNotification(client, eventKey, minInterval = '1 h
 }
 
 async function checkHeartbeats(client) {
-  // Stale = last_ok_at older than its max_silence. Atomically latch
-  // stale_alerted_at (re-alert at most once / 6h) so a 5-min watcher cadence
-  // doesn't spam, and concurrent runs don't double-send.
+  // Incident state follows every currently stale task. Notification cadence is
+  // a separate atomic latch so a deduped alert cannot look like recovery.
   let stale;
   try {
     const res = await client.query(`
-      UPDATE maintenance_heartbeat
-         SET stale_alerted_at = now()
+      SELECT task,
+             round(extract(epoch FROM now() - last_ok_at) / 3600)::int AS silent_h,
+             max_silence::text AS max_silence
+        FROM maintenance_heartbeat
        WHERE last_ok_at < now() - max_silence
-         AND (stale_alerted_at IS NULL OR stale_alerted_at < now() - interval '6 hours')
-       RETURNING task,
-                 round(extract(epoch FROM now() - last_ok_at) / 3600)::int AS silent_h,
-                 max_silence::text AS max_silence
+       ORDER BY task
     `);
     stale = res.rows;
   } catch (e) {
@@ -245,6 +243,26 @@ async function checkHeartbeats(client) {
     return;
   }
   await recordOpsIncident(client, 'heartbeat_stale', 'critical', 'Maintenance heartbeat stale', { stale });
+
+  let newlyLatched;
+  try {
+    const res = await client.query(`
+      UPDATE maintenance_heartbeat
+         SET stale_alerted_at = now()
+       WHERE last_ok_at < now() - max_silence
+         AND (stale_alerted_at IS NULL OR stale_alerted_at < now() - interval '6 hours')
+       RETURNING task
+    `);
+    newlyLatched = res.rows;
+  } catch (e) {
+    console.warn('[heartbeat] latch failed:', e.message);
+    return;
+  }
+  if (newlyLatched.length === 0) {
+    console.log('[heartbeat] stale tasks remain, notification latch active');
+    return;
+  }
+
   const claim = await claimOpsIncidentNotification(client, 'heartbeat_stale', '1 hour', '6 hours');
   if (!claim.notify) {
     console.log('[ops-incident] heartbeat_stale notification skipped:', claim.reason || 'deduped');
@@ -1789,6 +1807,7 @@ module.exports.handler = async (event, context) => {
 };
 
 module.exports.__test = {
+  checkHeartbeats,
   deliverRequiredTelegram,
   summarizeTelegramChecks,
 };

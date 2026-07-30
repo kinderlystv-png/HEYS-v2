@@ -928,6 +928,74 @@
     return false;
   }
 
+  const REGISTRATION_STEP_IDS = new Set([
+    'profile-personal',
+    'profile-body',
+    'profile-goals',
+    'profile-metabolism'
+  ]);
+
+  function isProfileCompletionConfirmedByFullSync(profile, clientId) {
+    const lastSync = HEYS.cloud?._lastClientSync;
+    const profileUpdatedAt = Number(profile?.updatedAt || 0);
+    const syncedAt = Number(lastSync?.ts || 0);
+    return profile?.profileCompleted === true
+      && !!clientId
+      && lastSync?.clientId === clientId
+      && syncedAt > 0
+      && (profileUpdatedAt === 0 || syncedAt >= profileUpdatedAt);
+  }
+
+  // Регистрационные шаги могут остаться в ledger, если профиль успел
+  // подтвердиться между открытием мастера и следующим запуском приложения.
+  // Не удаляем весь ledger: в нём могут быть независимые дневные шаги.
+  function resolveStaleRegistrationProgress(ledger, clientId) {
+    if (!ledger || !isProfileCompletionConfirmedByFullSync(
+      getFreshMorningProfile(clientId), clientId
+    )) return ledger;
+
+    const staleStepIds = (ledger.plannedStepIds || [])
+      .filter((id) => REGISTRATION_STEP_IDS.has(id))
+      .filter((id) => !isMorningStatusTerminal(ledger.steps?.[id] || {}));
+    if (!staleStepIds.length) return ledger;
+
+    const resolvedAt = Date.now();
+    ledger.steps = ledger.steps || {};
+    staleStepIds.forEach((id) => {
+      ledger.steps[id] = {
+        ...(ledger.steps[id] || {}),
+        status: 'skipped',
+        skippedReason: 'profile_completed_after_full_sync',
+        skippedAt: resolvedAt,
+        cloudPending: false,
+        error: null,
+        updatedAt: resolvedAt
+      };
+    });
+    const unresolvedNonRegistrationSteps = (ledger.plannedStepIds || []).some((id) =>
+      !REGISTRATION_STEP_IDS.has(id) && !isMorningStatusTerminal(ledger.steps?.[id] || {})
+    );
+    if (!unresolvedNonRegistrationSteps && ledger.steps.__flow__) {
+      ledger.steps.__flow__ = {
+        ...ledger.steps.__flow__,
+        status: 'closed',
+        closedAt: resolvedAt,
+        closeReason: 'stale_registration_resolved',
+        cloudPending: false,
+        error: null,
+        updatedAt: resolvedAt
+      };
+    }
+    ledger.updatedAt = Math.max(resolvedAt, (Number(ledger.updatedAt) || 0) + 1);
+    const written = writeMorningProgress(ledger, clientId);
+    console.info('[MorningCheckin] cleared stale registration progress after confirmed profile sync', {
+      clientId: String(clientId).slice(0, 8),
+      staleStepIds,
+      preservedDailyProgress: unresolvedNonRegistrationSteps
+    });
+    return written;
+  }
+
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
     _reopenRequiredOnly = false;
@@ -963,12 +1031,27 @@
     const profile = readProfileForceRawScoped(currentClientId) || readStoredValue('heys_profile', {}) || {};
     const yesterdayVerifyRequired = shouldShowYesterdayVerifyRequired();
     _nextPlanYesterdayVerifyRequired = yesterdayVerifyRequired;
-    const existingProgress = readMorningProgress(todayKey, currentClientId);
-    const remainingProgressSteps = getRemainingMorningSteps({
+    let existingProgress = readMorningProgress(todayKey, currentClientId);
+    existingProgress = resolveStaleRegistrationProgress(existingProgress, currentClientId);
+    let remainingProgressSteps = getRemainingMorningSteps({
       ledger: existingProgress,
       dateKey: todayKey,
       clientId: currentClientId
     });
+
+    // До старта trial завершённый профиль не должен открывать пустой дневной
+    // wizard: его единственные registration-строки уже были закрыты выше.
+    const subscription = HEYS.Subscription;
+    const subscriptionStatus = subscription?.getCachedStatus?.()
+      || subscription?.getLocalStatus?.()
+      || 'none';
+    const canUseDailyFlow = typeof subscription?.canWriteStatus !== 'function'
+      || subscription.canWriteStatus(subscriptionStatus) === true;
+    if (!canUseDailyFlow
+      && isProfileCompletionConfirmedByFullSync(profile, currentClientId)
+      && remainingProgressSteps.length === 0) {
+      return false;
+    }
 
     // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
     // Переводим legacy-флаг в per-client/per-day ключ, чтобы не блокировать других клиентов

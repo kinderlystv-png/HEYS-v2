@@ -17,6 +17,7 @@
     "DISABLED_mobile:clear": "pnpm --filter mobile run start:clear",
     "agent:worktree": "node scripts/agent-worktree.mjs",
     "agents:integrate": "node scripts/integrate-agents.mjs",
+    "agents:policy:check": "node scripts/check-agent-policy-parity.mjs",
     "arch:check": "bash scripts/check-module-architecture.sh",
     "arch:limits:generate": "node scripts/generate-module-limits.js",
     "arch:metrics": "node scripts/arch-metrics.js --all",

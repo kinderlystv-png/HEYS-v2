@@ -222,6 +222,50 @@ describe('first login registration flow', () => {
     expect(window.HEYS.ProfileSteps.isProfileIncomplete(readJson(storage, 'heys_profile'))).toBe(true);
   });
 
+  it('ignores a stale registration marker after the completed profile is confirmed by a newer full sync', () => {
+    const clientId = 'client-confirmed';
+    const profile = {
+      firstName: 'Анна',
+      profileCompleted: true,
+      updatedAt: 1_000,
+    };
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify(clientId),
+      heys_registration_in_progress: 'true',
+      heys_profile: JSON.stringify(profile),
+    });
+    loadProfileSteps(storage, {
+      cloud: {
+        _lastClientSync: { clientId, ts: 2_000 },
+      },
+    });
+
+    expect(window.HEYS.ProfileSteps.isProfileIncomplete(profile)).toBe(false);
+    expect(storage._store.heys_registration_in_progress).toBeUndefined();
+  });
+
+  it('keeps a locally completed profile fail-closed when it is newer than the last full sync', () => {
+    const clientId = 'client-unconfirmed';
+    const profile = {
+      firstName: 'Анна',
+      profileCompleted: true,
+      updatedAt: 2_000,
+    };
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify(clientId),
+      heys_registration_in_progress: 'true',
+      heys_profile: JSON.stringify(profile),
+    });
+    loadProfileSteps(storage, {
+      cloud: {
+        _lastClientSync: { clientId, ts: 1_000 },
+      },
+    });
+
+    expect(window.HEYS.ProfileSteps.isProfileIncomplete(profile)).toBe(true);
+    expect(storage._store.heys_registration_in_progress).toBe('true');
+  });
+
   it('does not treat the personal step as a completed profile when the local progress flag is absent', () => {
     const partialProfile = {
       firstName: 'Ирина',

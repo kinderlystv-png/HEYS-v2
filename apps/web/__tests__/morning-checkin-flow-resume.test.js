@@ -31,6 +31,7 @@ function loadMorning({
   day = {},
   profile = {},
   profileIncomplete = false,
+  fullSync = null,
   subscriptionStatus = null,
   ledger = null,
   yesterdayRequired = false,
@@ -70,6 +71,7 @@ function loadMorning({
       shouldShow: vi.fn(() => yesterdayRequired),
     },
   };
+  if (fullSync) window.HEYS.cloud = { _lastClientSync: fullSync };
   if (subscriptionStatus) {
     window.HEYS.Subscription = {
       getCachedStatus: () => subscriptionStatus,
@@ -321,6 +323,41 @@ describe('morning progress key migration', () => {
 });
 
 describe('morning check-in journal resume', () => {
+  it('closes stale registration-only progress after a confirmed full profile sync', () => {
+    const ledger = {
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: 'registration-flow',
+      plannedStepIds: ['profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism'],
+      steps: {
+        'profile-personal': { status: 'planned', updatedAt: 1000 },
+        'profile-body': { status: 'planned', updatedAt: 1000 },
+        'profile-goals': { status: 'planned', updatedAt: 1000 },
+        'profile-metabolism': { status: 'planned', updatedAt: 1000 },
+        __flow__: { status: 'open', updatedAt: 1000 },
+      },
+      updatedAt: 1000,
+    };
+    const { HEYS, utils, values } = loadMorning({
+      ledger,
+      fullSync: { clientId: CLIENT_ID, ts: 2_000 },
+      subscriptionStatus: 'trial_pending',
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(false);
+    const written = values.get(PROGRESS_KEY);
+    expect(utils.getRemainingMorningSteps({ ledger: written, dateKey: DATE_KEY, clientId: CLIENT_ID })).toEqual([]);
+    expect(written.steps['profile-personal']).toMatchObject({
+      status: 'skipped',
+      skippedReason: 'profile_completed_after_full_sync',
+    });
+    expect(written.steps.__flow__).toMatchObject({
+      status: 'closed',
+      closeReason: 'stale_registration_resolved',
+    });
+  });
+
   it('keeps a pre-trial registration profile-only and does not create a daily journal', () => {
     const { utils, values } = loadMorning({
       profileIncomplete: true,

@@ -13,6 +13,32 @@ Compact agent reference. Detailed architecture in
 инварианта или подтверждённого риска; после правки запускай
 `pnpm docs:reference:check`.
 
+## Актуальность контекстной документации
+
+- Если задача относится к области, для которой уже есть roadmap, release plan,
+  runbook, инструкция, досье, checklist, prompt или другой канонический `.md` /
+  генерируемый документ, агент до действий находит и читает его релевантную
+  часть, а перед завершением сверяет с фактическим результатом задачи.
+- Если в ходе работы подтверждено, что описание, статус, шаг, команда, риск,
+  критерий готовности или встроенный в документ prompt устарели либо неверны,
+  агент обязан актуализировать этот источник в том же scope и в той же задаче.
+  Не оставлять заведомо ложную документацию ради минимального diff.
+- После выполненной работы сразу фиксировать в каноническом плане/checklist: что
+  реально сделано, какой проверкой подтверждено, текущий статус и какие риски
+  или шаги остались. Планируемое не отмечать выполненным без evidence.
+- Историю сохранять: исправлять текущую истину и статусы, но не стирать важные
+  прошлые решения и инциденты. При изменении решения добавлять дату/контекст или
+  короткую запись в предусмотренный журнал; не переписывать историю задним
+  числом и не добавлять неподтверждённые факты.
+- Если документ генерируется из другого источника (например, dashboard из
+  release plan), править source of truth и затем пересобирать/проверять
+  производный артефакт штатной командой. Не редактировать generated-копию как
+  единственный источник изменения.
+- Обязанность ограничена затронутым контекстом: не проводить попутный аудит всей
+  документации. Если актуализация требует отдельного продуктового решения,
+  доступа или выходит за разрешённый scope, явно зафиксировать расхождение и
+  запросить решение вместо молчаливого сохранения устаревшего текста.
+
 Tone, communication length, adjacent observations — см. user-level CLAUDE.md.
 
 ---
@@ -22,8 +48,27 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
 - **Всегда отвечать по-русски** — вне зависимости от языка вопроса, инструкций
   или содержимого файлов. Ответы пользователю, брифы и отчёты — только на
   русском.
+- Всегда оценивай задачи пользователя критически и объективно: проверяй
+  предпосылки, явно называй риски/противоречия и предлагай лучший рабочий путь,
+  даже если он отличается от исходной формулировки задачи.
 - В ответ на «что предлагаешь» — одно предложение «предлагаю X, потому что Y» +
   вопрос «делать?». Не вываливать варианты с заголовками и таблицей сравнения.
+
+## Shared policy with Codex
+
+- Общие safety/architecture правила должны совпадать с [`AGENTS.md`](AGENTS.md):
+  scoped legacy-сборка, защита чужих dirty/generated зон, product UI/sync
+  invariants, copy/marketing guardrails, local-dev verify и hook discipline.
+- После изменения общих правил запусти `pnpm agents:policy:check`; проверка
+  должна пройти до завершения задачи.
+- Различаться могут только agent-specific execution mechanics. Общий invariant:
+  commit/staging под commit/push/PR/publication выполняются только по отдельной
+  прямой команде пользователя. `AGENTS.md` может описывать работу Codex только в
+  `main`, а `CLAUDE.md` — Claude-worktrees; эти различия не дают разрешения на
+  shipping. Если в правилах найден конфликт и оба policy-файла входят в текущий
+  scope, сначала синхронизируй общий safety-инвариант, затем оставь явное
+  agent-specific исключение. Иначе не расширяй задачу молча: зафиксируй конфликт
+  пользователю.
 
 ## Coding guardrails
 
@@ -63,9 +108,9 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
 - Если всё же запускаешь тяжёлую проверку для маленькой правки, сначала коротко
   объясни пользователю, какой конкретный риск она закрывает.
 
-## RuStore mobile release — общий обязательный flow
+## RuStore mobile release — проверенный flow
 
-Перед RuStore build/release полностью прочитай
+Перед RuStore build/release полностью прочитай общий обязательный runbook:
 [apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md](apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md).
 Он владеет изолированной сборкой, artifact gate, подписью, permissions,
 модерацией и auth UI invariant. Сборка не разрешает загрузку или публикацию.
@@ -153,6 +198,11 @@ readiness-математику, валидатор-фреймворк, онбо�
   cloud functions через `cd yandex-cloud-functions && ./deploy-all.sh <name>`.
   Сетевые таймауты, IAM, checksum-warnings — твои проблемы, не задачи
   пользователю.
+- Если пользователь поручил рабочий сквозной результат и уже явно разрешил
+  необходимые migration/deploy-действия, не завершай задачу на частично
+  работающем frontend или локальном preview. Сразу доведи всю цепочку до
+  фактической проверки в целевой среде; остановка допустима только при реальном
+  внешнем блокере, который нельзя устранить в текущей сессии.
 - **Только по отдельной прямой команде:** staging под commit, `git commit`,
   production build (`pnpm build`), standalone/full legacy build, `pnpm ship`,
   `pnpm push:*`, integration/release artifacts, `git push`, PR и внешняя
@@ -166,6 +216,14 @@ readiness-математику, валидатор-фреймворк, онбо�
   [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
   Он описывает команды, hooks, dirty scope и worktrees, но сам не даёт
   разрешения.
+- **Git/deploy fact-check before answering.** На вопросы «ушло в push?»,
+  «закоммичено?», «выложено?», «попало в main?» агент не отвечает по памяти
+  своих действий. Сначала делает минимальную проверку факта:
+  `git status --short --branch`, `git log --oneline --decorate --max-count=5`,
+  при вопросе про remote — `git fetch origin` и повторный status, при вопросе
+  про конкретные правки — `rg` / `git log -- <files>` / `git show --name-only`.
+  Ответ разделяет: что сделал сам агент, что фактически есть локально, что
+  фактически есть на remote.
 - **Session-wide push grant.** Если пользователь сказал «пуш в конце» / «соберу
   пушем потом» / «копи всё, пушнём одним заходом» в начале сессии — это grant на
   ВСЮ сессию, не повторяй вопрос «пушить?» после каждого коммита. Один финальный
@@ -182,6 +240,10 @@ readiness-математику, валидатор-фреймворк, онбо�
 
 - **`pnpm dev:local`** — full stack (API:4001 + web:3001). Default for any
   full-stack work.
+- После web/UI изменений агент запускает `pnpm dev:local`, если он ещё не
+  запущен; если порт занят уже рабочим dev-server, использует существующий
+  сервер и сообщает URL. Не оставлять нужную пользователю проверку на «запусти
+  сам».
 - `pnpm dev:web` / `pnpm dev:api` — isolated, only if API is already up
   separately. Web-only will fail sync with `ERR_CONNECTION_REFUSED:4001`.
 
@@ -211,10 +273,23 @@ readiness-математику, валидатор-фреймворк, онбо�
 параллельный source, явно сообщи это; несвязанные бандлы не трогай и не запускай
 full `pnpm bundle:legacy` ради preview.
 
+До и после сборки проверь status и hash/manifest затронутого bundle scope. Перед
+финалом перечисли свои source/generated файлы, проверки и риск параллельных
+изменений. Если bundle включил чужой source того же scope, скажи: «бандл собран
+из текущего состояния затронутого bundle scope».
+
 Preview bundles/manifests/index hash перечисляй как локальный QA-output. Убирать
 можно только явно свои и больше не нужные preview-файлы; чужой или неясный
 generated scope не stash/revert/delete. Если он блокирует действие, остановись и
 сообщи о пересечении.
+
+- Для нетривиальных/multi-step web/UI задач агент создаёт «Протокол реализации»
+  для ревьюера: короткий список крупных шагов, статусов и фактов проверки. После
+  каждого крупного шага агент добавляет summary сделанного, риски/открытые
+  вопросы и что именно ревьюеру смотреть. Для микроправок отдельный протокол не
+  нужен.
+- То же summary по крупным шагам агент дублирует в чат пользователю, чтобы
+  ревьюер и пользователь видели один и тот же контекст.
 
 ---
 
@@ -275,7 +350,7 @@ generated scope не stash/revert/delete. Если он блокирует де�
 **Конкурентные решения.** Лендинг и клиент-видимые функции приложения сверяются
 с [`маркетинг/30_Конкурентные_решения.md`](маркетинг/30_Конкурентные_решения.md)
 (выведена из аудита рынка `маркетинг/29`). При любой правке лендинга или
-клиент-видимых фич: сверяйся с этим документом, но живые статусы задач обновляй
+клиент-видимых фич сверяйся с этим документом, но живые статусы задач обновляй
 только в `маркетинг/22`; дашборд (`маркетинг/00_Дашборд.html`, вкладка
 «Конкуренты») пересоберётся авто-хуком. Новые заимствования у конкурентов —
 только через резолюцию в журнале `маркетинг/15` (§2), не напрямую в код.
@@ -323,28 +398,23 @@ generated scope не stash/revert/delete. Если он блокирует де�
    `database/2026-05-28_fix_pin_path_user_id.sql`).
 9. **Любой scan по localStorage обязан фильтровать foreign-scoped keys.**
    Pattern-based LS поиск (`key.includes('_dayv2_')`,
-   `Object.keys(localStorage)`) возвращает данные **всех клиентов** что
-   когда-либо логинились в этой сессии (особенно incognito multi-tab, где все
-   tabs делят LS). Если код потом отдаёт эти данные React state как
-   «meals/profile/etc for current client» или пишет их под `currentClientId` —
-   это cross-client pollution. Pattern для фильтра:
+   `Object.keys(localStorage)`) возвращает данные всех клиентов, которые
+   когда-либо логинились в этой сессии. Если код отдаёт эти данные React state
+   как «meals/profile/etc for current client» или пишет их под
+   `currentClientId`, это cross-client pollution. Pattern фильтра:
    `/^heys_([0-9a-f-]{36})_/i.exec(key)?.[1] === currentScope` (current =
    `HEYS.currentClientId.toLowerCase()`). Unscoped legacy keys принимаются.
    Incident 2026-06-02 #13: `loadMealsRaw` cross-key fallback в
-   [apps/web/heys_day_utils.js:600](apps/web/heys_day_utils.js#L600) — годами
-   тёк меж клиентами кураторов.
+   [apps/web/heys_day_utils.js](apps/web/heys_day_utils.js) тёк меж клиентами
+   кураторов.
 10. **Server резолвит canonical client_id из `context_id`, игнорирует
-    browser-supplied.** Phase A+B (2026-06-02): сервер выдаёт capability token
-    `context_id` через `issue_write_context_by_curator/_by_session` RPC,
-    привязанный к (curator_id, client_id) или (session_id, client_id) в момент
-    issue. Каждый KV write несёт `p_context_id` — сервер валидирует через
-    `validate_write_context()` и при mismatch переписывает
-    `resolvedClientId ← context.client_id` (rerouting вместо pollution). REST
-    POST `/rest/client_kv_store` тоже принимает `row.context_id` (первая
-    capability-based auth для этого endpoint'a). `cloud._writeContextReady`
-    awaitable promise закрывает boot race (saveClientViaRPC ждёт до 3 сек). См.
-    `write_contexts` table + plan
-    `/Users/poplavskijanton/.claude/plans/cosmic-tickling-lynx.md`.
+    browser-supplied.** Сервер выдаёт capability token `context_id` через
+    `issue_write_context_by_curator/_by_session` RPC, привязанный к (curator_id,
+    client_id) или (session_id, client_id). Каждый KV write несёт
+    `p_context_id`; сервер валидирует через `validate_write_context()` и при
+    mismatch переписывает `resolvedClientId ← context.client_id` вместо
+    pollution. REST POST `/rest/client_kv_store` принимает `row.context_id`;
+    `cloud._writeContextReady` закрывает boot race.
 
 See [apps/web/ARCHITECTURE.md](apps/web/ARCHITECTURE.md) for full details on
 each.
