@@ -1,6 +1,6 @@
-# Технический addendum v0.31
+# Технический addendum v0.35
 
-Статус: обязательное исполнимое уточнение v0.31. Продуктовые решения
+Статус: обязательное исполнимое уточнение v0.35. Продуктовые решения
 D12/D14/D15/D16 и пороги D60 не изменяются; решения D61–D68 добавляют системный
 игровой цикл.
 
@@ -62,7 +62,7 @@ scenario-specific ветвление в reducer запрещено.
 
 ## 5. Геометрия действия и политики
 
-`ActionDefinitionV1` получает декларативные `geometryRules`: условие и дельты
+`ActionDefinitionV2` получает декларативные `geometryRules`: условие и дельты
 `available`, `timeMin`, `moneyRub`, `effortScore`, `riskScore`,
 `optionPressure`, `preview`. Rules оцениваются по состоянию без action-ID веток.
 `ActionOfferV1` возвращает итоговые scores вместе с качественными `effortLevel`
@@ -88,6 +88,71 @@ Inventory-cost может содержать `fallbackMoneyRub`: если баз
 
 Utilities tie-break by action ID. `random_valid` uses seed key
 `policy:random_valid:<slot>`.
+
+## 5.1. Planning capacity
+
+- недельный planning step принимает ровно два rule slots из трёх;
+- фокусы распределяют три единицы внимания `2+1`;
+- `ActionDefinitionV2.priorityAlignment` явно перечисляет поддерживаемые и
+  конфликтующие области;
+- event tags определяют рабочее, семейное и вечернее окна;
+- derived capacity не хранится в state, поэтому schema остаётся v2;
+- изменение planning geometry версионировано как scenario v4, calibration v0.4;
+- производные `CampaignBrief`, `StepSummary`, `PeriodBoundary` и `PeriodSummary`
+  добавлены в technical contract v0.33 без изменения state schema, scenario и
+  calibration.
+
+## 5.2. Campaign brief и period projections
+
+- `CampaignBrief` вычисляется из same-seed initial state и registries;
+- `getPeriodBoundaries` принимает только соседний reducer transition и сверяет
+  authored slots, а не только clock;
+- последний slot недели возвращает `[day, week]` в этом порядке;
+- `getPeriodSummary` не мутирует state, RNG или journal и не сериализуется в
+  checkpoint;
+- пользовательская проекция не содержит raw state paths и внутренних значений
+  `0–100`; exact evidence остаётся в diagnostic trace;
+- week summary зеркально содержит brief, rules, commitments, qualitative
+  pressure, четыре axes и `openThreads`; month summary не создаётся.
+
+## 5.3. Development projection
+
+- `CharacterDevelopmentItem.direction` принимает только `strengthened`,
+  `weakened` или `changed`;
+- projection включает поле лишь при наличии исполнимого downstream и
+  counterfactual regression;
+- v0.34 допускает `professional → focus/offer geometry`,
+  `cooking → cook geometry + sat echo` и
+  `work.reciprocal_support → work echo events`;
+- остальные persisted skills/habits/capabilities остаются causal history и
+  diagnostic evidence, но не user-facing development;
+- projection replay-derived и не расширяет `GameStateV2` или checkpoint v2.
+
+## 5.4. Content, evidence и presentation projection
+
+- `src/content/presentation.ts` владеет authored copy базовых событий,
+  контекстными подписями действий, human unavailable messages и runtime
+  rule-evidence records;
+- `ActionDefinitionV2`, conditional/scheduled effects и `GeometryRule` обязаны
+  ссылаться на известный `ruleEvidenceId`; schema fail-closed отклоняет
+  отсутствующий ID или placeholder event copy;
+- `ActionOfferV1` возвращает human consequences, unavailable messages,
+  offer-changing geometry factors и evidence
+  `{confidence, sourceLabel, transferLimit}`; raw input paths остаются журналом
+  и trace;
+- technical trace сохраняет полные state/offers/reducer stages, а human history
+  не показывает raw IDs, paths или deltas;
+- `SyntheticObservation` вычисляется только из fixed-character campaign state и
+  явно не является персональным наблюдением HEYS;
+- `getCharacterPresentation(state)` возвращает закрытые pose/expression/load/
+  dayPhase, три qualitative indicators, не более двух human reasons и ARIA-
+  summary; пороги принадлежат engine presentation и переиспользуются campaign-
+  projection;
+- `CharacterPresentation` replay-derived, не мутирует state и не расширяет
+  `GameStateV2`, checkpoint v2, reducer, RNG или persistence; first-touch не
+  создаёт отдельного visual state;
+- presentation additions не меняют `GameStateV2`, scenario v4, calibration v0.4,
+  RNG, reducer order или D60/D66 gates.
 
 ## 6. QA denominators
 

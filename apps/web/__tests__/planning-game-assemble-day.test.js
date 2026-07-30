@@ -13,13 +13,13 @@ const clientId = '12345678-aaaa-bbbb-cccc-1234567890ab';
 const originalHEYS = window.HEYS;
 const originalReact = window.React;
 const originalClipboard = window.navigator.clipboard;
-const defaultPlan = { weeklyRuleIds: ['protect_sleep', 'family_anchor', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
+const defaultPlan = { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
 
-function memoryStore(initial = null) {
+function memoryStore(initial = undefined) {
   let value = initial;
   return {
-    get: vi.fn((_key, fallback) => value ?? fallback),
-    getPersisted: vi.fn((_key, fallback) => value ?? fallback),
+    get: vi.fn((_key, fallback) => value === undefined ? fallback : value),
+    getPersisted: vi.fn((_key, fallback) => value === undefined ? fallback : value),
     set: vi.fn((_key, next) => { value = next; return true; }),
     value: () => value,
   };
@@ -77,10 +77,10 @@ describe('Planning Assemble Day', () => {
     expect(view.offers.find((offer) => offer.actionId === 'drink_coffee_100').consequenceSummary).toContain('Позже: отложенный спад после кофе');
 
     const cooked = module.api.confirmAction(session, 'cook_meal_batch');
-    expect(cooked.lastSummary).toMatchObject({
+    expect(cooked.lastStepSummary).toMatchObject({
       actionLabel: 'Приготовить завтрак',
-      mainChange: 'Главное изменение: домашний запас еды.',
-      causalLink: 'Начало недели → Приготовить завтрак → созданы готовые порции → домашний запас еды.',
+      mainChange: 'Главное изменение: домашний запас еды вырос.',
+      causalLink: 'Начало недели → Приготовить завтрак → созданы готовые порции → домашний запас еды вырос.',
     });
     expect(cooked.state.clock.awakeSinceMinute).toBe(session.state.clock.awakeSinceMinute);
     expect(cooked.state.causalJournal.some((entry) => entry.resultPath === 'decisionGeometry.cook_meal_batch.context.deadlinePressure')).toBe(true);
@@ -91,8 +91,8 @@ describe('Planning Assemble Day', () => {
     expect(JSON.stringify(session.state)).toBe(before);
     expect(next.state.clock.stepIndex).toBe(1);
     expect(next.state.causalJournal.length).toBeGreaterThan(0);
-    expect(next.lastSummary.causalLink).toContain('→');
-    expect(Object.keys(module.api.eventCopy)).toHaveLength(38);
+    expect(next.lastStepSummary.causalLink).toContain('→');
+    expect(Object.keys(module.api.eventCopy)).toHaveLength(42);
     expect(source).not.toMatch(/node:(?:fs|path|url|child_process)/);
   });
 
@@ -101,9 +101,9 @@ describe('Planning Assemble Day', () => {
     const session = module.api.createSession('causal-summary');
     const next = module.api.confirmAction(session, 'drink_coffee_100');
 
-    expect(next.lastSummary.mainChange).toBe('Главное изменение: запас сил.');
-    expect(next.lastSummary.causalLink).toBe('Начало недели → Выпить кофе → краткий стимул → запас сил.');
-    expect(next.lastSummary.causalLink).not.toContain('денежная цена действия');
+    expect(next.lastStepSummary.mainChange).toBe('Главное изменение: запас сил вырос.');
+    expect(next.lastStepSummary.causalLink).toBe('Начало недели → Выпить кофе → краткий стимул → запас сил вырос.');
+    expect(next.lastStepSummary.causalLink).not.toContain('денежная цена действия');
   });
 
   it('persists only a confirmed reducer step and resumes it after reload', () => {
@@ -117,19 +117,29 @@ describe('Planning Assemble Day', () => {
     expect(saved.status).toBe('saved');
     expect(store.set).toHaveBeenCalledTimes(1);
     expect(store.set.mock.calls[0][0]).toBe('heys_planning_assemble_day_campaign_v1');
+    expect(store.value().envelopeVersion).toBe(2);
     expect(store.value().revision).toBe(1);
-    expect(store.value().state.clock.stepIndex).toBe(1);
+    expect(store.value().gameSeed).toBe('checkpoint');
+    expect(store.value()).not.toHaveProperty('state');
+    expect(store.value()).not.toHaveProperty('lastSummary');
+    expect(store.value()).not.toHaveProperty('clientId');
+    expect(store.value()).not.toHaveProperty('campaignId');
     expect(store.value().diagnostics.decisions).toHaveLength(1);
     expect(JSON.stringify(store.value())).not.toContain('selectedActionId');
+    expect(JSON.stringify(store.value())).not.toContain(clientId);
+    expect(saved.sizeBytes).toBe(module.api.checkpointSizeBytes(clientId, saved.envelope));
+    expect(saved.sizeBytes).toBeLessThan(module.api.checkpointBudgetBytes);
 
     const reloaded = module.api.loadCheckpoint(store, clientId);
     expect(reloaded.status).toBe('ready');
     expect(reloaded.session.state.clock.stepIndex).toBe(1);
+    expect(reloaded.session.state).toEqual(confirmed.state);
+    expect(reloaded.session.lastSummary).toEqual(confirmed.lastSummary);
     expect(reloaded.session.diagnostics.decisions).toHaveLength(1);
     expect(module.api.getCampaignView(reloaded.session).progress.current).toBe(2);
   });
 
-  it('shows known consequences before the irreversible tap, then inserts a separate result beat', () => {
+  it('shows known consequences before the irreversible tap, then inserts a separate result beat', async () => {
     const { module, store } = loadModule();
     const planned = module.api.confirmPlanning(module.api.createSession('ui-choice'), defaultPlan);
     expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
@@ -143,35 +153,124 @@ describe('Planning Assemble Day', () => {
     const confirm = screen.getByRole('button', { name: 'Подтвердить решение' });
 
     expect(document.querySelectorAll('.assemble-day-option__known')).toHaveLength(4);
+    expect(document.querySelectorAll('.assemble-day-option__evidence')).toHaveLength(4);
     expect(confirm.disabled).toBe(true);
     expect(store.set).not.toHaveBeenCalled();
 
+    readyBreakfast.focus();
+    fireEvent.keyDown(readyBreakfast, { key: 'ArrowDown' });
+    await waitFor(() => expect(document.activeElement).toBe(cookBreakfast));
+    expect(readyBreakfast.getAttribute('aria-checked')).toBe('false');
+    fireEvent.keyDown(cookBreakfast, { key: 'Enter' });
+    expect(cookBreakfast.getAttribute('aria-checked')).toBe('true');
     fireEvent.click(readyBreakfast);
+    expect(cookBreakfast.getAttribute('aria-checked')).toBe('true');
 
-    expect(readyBreakfast.getAttribute('aria-checked')).toBe('true');
-    expect(readyBreakfast.disabled).toBe(false);
-    expect(cookBreakfast.disabled).toBe(true);
-    expect(quickSnack.disabled).toBe(true);
-    expect(coffee.disabled).toBe(true);
+    cleanup();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+    const restoredReadyBreakfast = screen.getByRole('radio', { name: /Съесть заранее приготовленный завтрак/ });
+    const restoredCookBreakfast = screen.getByRole('radio', { name: /Приготовить завтрак/ });
+    const restoredQuickSnack = screen.getByRole('radio', { name: /Быстро перекусить/ });
+    const restoredCoffee = screen.getByRole('radio', { name: /Выпить кофе/ });
+    const restoredConfirm = screen.getByRole('button', { name: 'Подтвердить решение' });
+
+    fireEvent.click(restoredReadyBreakfast);
+
+    expect(restoredReadyBreakfast.getAttribute('aria-checked')).toBe('true');
+    expect(restoredReadyBreakfast.disabled).toBe(false);
+    expect(restoredCookBreakfast.getAttribute('aria-disabled')).toBe('true');
+    expect(restoredQuickSnack.getAttribute('aria-disabled')).toBe('true');
+    expect(restoredCoffee.getAttribute('aria-disabled')).toBe('true');
     expect(document.querySelectorAll('.assemble-day-option__known')).toHaveLength(4);
     expect(screen.getByText('Вариант зафиксирован. Проверьте последствия и подтвердите решение.')).toBeTruthy();
     expect(screen.getAllByText('Закрыто после первого выбора')).toHaveLength(3);
-    expect(confirm.disabled).toBe(false);
+    expect(restoredConfirm.disabled).toBe(false);
     expect(store.set).not.toHaveBeenCalled();
 
-    fireEvent.click(quickSnack);
-    expect(readyBreakfast.getAttribute('aria-checked')).toBe('true');
-    expect(quickSnack.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(restoredQuickSnack);
+    expect(restoredReadyBreakfast.getAttribute('aria-checked')).toBe('true');
+    expect(restoredQuickSnack.getAttribute('aria-checked')).toBe('false');
 
-    fireEvent.click(confirm);
+    fireEvent.click(restoredConfirm);
     expect(store.set).toHaveBeenCalledTimes(1);
-    expect(store.value().state.clock.stepIndex).toBe(1);
     expect(store.value().diagnostics.decisions).toHaveLength(2);
-    expect(screen.getByRole('heading', { name: 'Съесть заранее приготовленный завтрак' })).toBeTruthy();
+    expect(module.api.loadCheckpoint(store, clientId).session.state.clock.stepIndex).toBe(1);
+    const resultHeading = screen.getByRole('heading', { name: 'Съесть заранее приготовленный завтрак' });
+    expect(resultHeading).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(resultHeading));
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Дорога к первому делу' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByRole('heading', { name: 'Дорога к первому делу' })).toBeTruthy();
+  });
+
+  it('renders the engine-owned Pocket Retro scene and restores it only from confirmed state', () => {
+    const { module, store } = loadModule();
+    const planned = module.api.confirmPlanning(module.api.createSession('character-scene'), defaultPlan);
+    expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
+    store.set.mockClear();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+
+    const beforeScene = document.querySelector('.assemble-day-character__scene');
+    const beforeKey = beforeScene.getAttribute('data-frame-key');
+    const beforeProjection = module.api.getCharacterPresentation(planned.state);
+    expect(beforeKey).toBe(Object.values(beforeProjection.frame).join(':'));
+    expect(beforeScene.querySelectorAll('rect,path,line,polyline,circle,ellipse').length).toBeLessThanOrEqual(80);
+    expect(beforeScene.querySelector('image')).toBeNull();
+    expect(document.querySelector('canvas')).toBeNull();
+    expect(document.querySelectorAll('.assemble-day-status strong')).toHaveLength(3);
+    expect(Array.from(document.querySelectorAll('.assemble-day-status strong')).map((node) => node.textContent)).toEqual(beforeProjection.indicators.map((item) => item.value));
+    expect(document.querySelector('#assemble-day-character-summary').textContent).toBe(beforeProjection.ariaSummary);
+
+    fireEvent.click(screen.getByText('Состояние персонажа'));
+    expect(screen.getAllByText(beforeProjection.summary)).toHaveLength(2);
+    fireEvent.click(screen.getByRole('radio', { name: /Съесть заранее приготовленный завтрак/ }));
+    expect(document.querySelector('.assemble-day-character__scene').getAttribute('data-frame-key')).toBe(beforeKey);
+    expect(store.set).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить решение' }));
+    expect(store.set).toHaveBeenCalledTimes(1);
+    const confirmed = module.api.loadCheckpoint(store, clientId);
+    expect(confirmed.status).toBe('ready');
+    const confirmedProjection = module.api.getCharacterPresentation(confirmed.session.state);
+    expect(document.querySelector('.assemble-day-character__scene').getAttribute('data-frame-key')).toBe(Object.values(confirmedProjection.frame).join(':'));
+
+    cleanup();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+    expect(document.querySelector('.assemble-day-character__scene').getAttribute('data-frame-key')).toBe(Object.values(confirmedProjection.frame).join(':'));
+    expect(document.querySelector('#assemble-day-character-summary').textContent).toBe(confirmedProjection.ariaSummary);
+    expect(entry).not.toMatch(/state\.vitals\.(?:energy|mood|tension)\s*[<>]=?\s*(?:38|67)/);
+    expect(entry).not.toMatch(/\.png|setInterval/);
+  });
+
+  it('shows exactly one replay-derived day summary before the next authored day', () => {
+    const { module, store } = loadModule();
+    let session = module.api.confirmPlanning(module.api.createSession('day-summary-flow'), defaultPlan);
+    for (let index = 0; index < 6; index += 1) {
+      const view = module.api.getCampaignView(session);
+      session = module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
+    }
+    expect(session.periodSummaries.map((item) => item.id)).toEqual(['day:0']);
+    expect(module.api.saveCheckpoint(store, clientId, session).status).toBe('saved');
+    const journalLength = session.state.causalJournal.length;
+    const saveCount = store.set.mock.calls.length;
+
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+    expect(screen.getByText('Результат решения')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(screen.getByRole('heading', { name: 'День завершён: Понедельник' })).toBeTruthy();
+    expect(document.querySelectorAll('.assemble-day-summary')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Перейти к следующему дню' }));
+    expect(screen.getByRole('heading', { name: 'Ночная нагрузка' })).toBeTruthy();
+    expect(store.set).toHaveBeenCalledTimes(saveCount);
+
+    cleanup();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+    expect(screen.getByText('Результат решения')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(screen.getByRole('heading', { name: 'День завершён: Понедельник' })).toBeTruthy();
+    expect(module.api.loadCheckpoint(store, clientId).session.state.causalJournal).toHaveLength(journalLength);
+    expect(store.set).toHaveBeenCalledTimes(saveCount);
   });
 
   it('never silently resets an incompatible snapshot or overwrites newer progress', () => {
@@ -198,11 +297,12 @@ describe('Planning Assemble Day', () => {
   it('confirms an atomic plan without advancing scenario time and resumes its separate revision', () => {
     const { module, store } = loadModule();
     const session = module.api.createSession('planning-checkpoint');
-    const plan = { weeklyRuleIds: ['protect_sleep', 'family_anchor', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
+    const plan = { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
     const view = module.api.getPlanningCampaignView(session, plan);
 
     expect(view.valid).toBe(true);
-    expect(view.conflicts.map((item) => item.id)).toEqual(expect.arrayContaining(['work_family_window', 'work_sleep_window']));
+    expect(view.conflicts.map((item) => item.id)).toContain('work_sleep_window');
+    expect(view.capacity.weekly).toEqual({ totalSlots: 2, allocatedSlots: 2, remainingSlots: 0 });
     expect(view.financialHorizon.cashAfterNextObligationsRub).toBe(59000);
     expect(store.set).not.toHaveBeenCalled();
 
@@ -214,7 +314,7 @@ describe('Planning Assemble Day', () => {
     expect(confirmed.diagnostics.decisions).toEqual([{ kind: 'planning', revision: 1, stepIndex: 0, plan }]);
     expect(module.api.saveCheckpoint(store, clientId, confirmed).status).toBe('saved');
     expect(store.value().revision).toBe(1);
-    expect(store.value().state.clock.stepIndex).toBe(0);
+    expect(store.value()).not.toHaveProperty('state');
 
     const reloaded = module.api.loadCheckpoint(store, clientId);
     expect(reloaded.status).toBe('ready');
@@ -229,7 +329,7 @@ describe('Planning Assemble Day', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText } });
     const { module, store } = loadModule();
-    const rawSeed = `assemble-day:${clientId}:2026-07-29`;
+    const rawSeed = 'privacy-safe-trace';
     const session = module.api.createSession(rawSeed);
     const confirmed = module.api.confirmAction(session, 'cook_meal_batch');
     expect(module.api.saveCheckpoint(store, clientId, confirmed).status).toBe('saved');
@@ -247,6 +347,7 @@ describe('Planning Assemble Day', () => {
     expect(text).not.toContain(clientId);
     expect(text).not.toContain(rawSeed);
     expect(text).not.toContain(confirmed.state.campaignId);
+    expect(text).not.toMatch(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i);
     expect(text).not.toMatch(/dayv2|diary|heys_game/i);
 
     render(React.createElement(module.Component, { onExit: vi.fn() }));
@@ -257,17 +358,39 @@ describe('Planning Assemble Day', () => {
     expect(screen.getByText(/Технический лог скопирован/)).toBeTruthy();
   });
 
-  it('marks old checkpoints as partial and keeps the compact ledger below the storage limit', () => {
+  it('creates an opaque browser seed and rejects UUID-bearing seeds before state creation', () => {
+    const { module } = loadModule();
+    const session = module.api.createSession();
+    const serialized = JSON.stringify({ state: session.state, ledger: session.diagnostics });
+
+    expect(session.state.rng.seed).toMatch(/^ad1_[0-9a-f]{32}$/);
+    expect(serialized).not.toContain(clientId);
+    expect(serialized).not.toMatch(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i);
+    expect(() => module.api.createSession(`unsafe:${clientId}`)).toThrow(/opaque|UUID/i);
+  });
+
+  it('keeps a full-week checkpoint bounded and rebuilds state, summary and trace from replay', () => {
     const first = loadModule();
     let session = first.module.api.createSession('diagnostic-size');
     while (!first.module.api.getCampaignView(session).complete) {
       const view = first.module.api.getCampaignView(session);
       session = first.module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
     }
-    expect(first.module.api.saveCheckpoint(first.store, clientId, session).status).toBe('saved');
-    const storageBytes = ('heys_planning_assemble_day_campaign_v1'.length + JSON.stringify(first.store.value()).length) * 2;
-    expect(storageBytes).toBeLessThan(512 * 1024);
+    const saved = first.module.api.saveCheckpoint(first.store, clientId, session);
+    expect(saved.status).toBe('saved');
+    expect(saved.sizeBytes).toBe(first.module.api.checkpointSizeBytes(clientId, first.store.value()));
+    expect(saved.sizeBytes).toBeLessThan(first.module.api.checkpointBudgetBytes);
+    expect(512 * 1024 - saved.sizeBytes).toBeGreaterThan(480 * 1024);
+    expect(first.store.value()).not.toHaveProperty('state');
+    expect(first.store.value()).not.toHaveProperty('lastSummary');
     expect(session.diagnostics.decisions).toHaveLength(38);
+
+    const reloaded = first.module.api.loadCheckpoint(first.store, clientId);
+    expect(reloaded.status).toBe('ready');
+    expect(reloaded.session.state).toEqual(session.state);
+    expect(reloaded.session.lastStepSummary).toEqual(session.lastStepSummary);
+    expect(reloaded.session.periodSummaries).toEqual(session.periodSummaries);
+    expect(reloaded.session.diagnostics).toEqual(session.diagnostics);
 
     const fullTraceText = first.module.api.serializeDiagnosticTrace(session);
     const fullTrace = JSON.parse(fullTraceText);
@@ -280,9 +403,12 @@ describe('Planning Assemble Day', () => {
 
     render(React.createElement(first.module.Component, { onExit: vi.fn() }));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
-    expect(screen.getByRole('heading', { name: 'Итог складывается из четырёх линий' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'День завершён: Воскресенье' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Посмотреть итог недели' }));
+    expect(screen.getByRole('heading', { name: 'Контрольная точка недели' })).toBeTruthy();
     expect(screen.getByText('Проект')).toBeTruthy();
     expect(screen.getByText('Договорённости')).toBeTruthy();
+    expect(screen.getByText('Что осталось открытым')).toBeTruthy();
     expect(screen.queryByText(/общий балл:/i)).toBeNull();
     const savedCount = first.store.set.mock.calls.length;
     const completedSeed = session.state.rng.seed;
@@ -293,32 +419,113 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Защитить рабочие блоки/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить к приоритетам' }));
     fireEvent.click(screen.getByRole('button', { name: 'Подтвердить план' }));
-    expect(first.store.value().state.rng.seed).toBe(completedSeed);
+    expect(first.module.api.loadCheckpoint(first.store, clientId).session.state.rng.seed).toBe(completedSeed);
     expect(first.store.value().comparisonBaseline?.finalStateHash).toBeTruthy();
     cleanup();
-
-    const legacyEnvelope = structuredClone(first.store.value());
-    delete legacyEnvelope.diagnostics;
-    const legacyStore = memoryStore(legacyEnvelope);
-    const loaded = first.module.api.loadCheckpoint(legacyStore, clientId);
-    expect(loaded.status).toBe('ready');
-    expect(loaded.session.diagnostics).toEqual({ version: 1, history: 'legacy_partial', decisions: [] });
-    expect(first.module.api.createDiagnosticTrace(loaded.session).replayIntegrity.status).toBe('partial');
   }, 20_000);
 
-  it('renders progressive planning, exposes conflicts and saves only on final confirmation', () => {
+  it('loads only replay-safe legacy checkpoints and upgrades them after the next confirmed step', () => {
+    const { module, store } = loadModule();
+    const confirmed = module.api.confirmAction(module.api.createSession('legacy-safe'), 'eat_ready_meal');
+    const saved = module.api.saveCheckpoint(store, clientId, confirmed);
+    expect(saved.status).toBe('saved');
+    const legacyEnvelope = {
+      envelopeVersion: 1,
+      clientId,
+      campaignId: confirmed.state.campaignId,
+      savedAt: new Date().toISOString(),
+      revision: confirmed.revision,
+      stateHash: saved.envelope.stateHash,
+      contract: structuredClone(saved.envelope.contract),
+      state: structuredClone(confirmed.state),
+      lastSummary: structuredClone(confirmed.lastSummary),
+      diagnostics: structuredClone(confirmed.diagnostics),
+    };
+    const legacyStore = memoryStore(legacyEnvelope);
+    const loaded = module.api.loadCheckpoint(legacyStore, clientId);
+    expect(loaded.status).toBe('ready');
+    expect(loaded.session.state).toEqual(confirmed.state);
+    expect(legacyStore.set).not.toHaveBeenCalled();
+
+    const nextView = module.api.getCampaignView(loaded.session);
+    const next = module.api.confirmAction(loaded.session, nextView.offers.find((offer) => offer.available).actionId);
+    expect(module.api.saveCheckpoint(legacyStore, clientId, next).status).toBe('saved');
+    expect(legacyStore.value().envelopeVersion).toBe(2);
+    expect(JSON.stringify(legacyStore.value())).not.toContain(clientId);
+
+    const partialEnvelope = structuredClone(legacyEnvelope);
+    delete partialEnvelope.diagnostics;
+    const partialStore = memoryStore(partialEnvelope);
+    expect(module.api.loadCheckpoint(partialStore, clientId)).toMatchObject({ status: 'incompatible', message: expect.stringContaining('полной истории') });
+    expect(partialStore.set).not.toHaveBeenCalled();
+
+    const privacyEnvelope = structuredClone(legacyEnvelope);
+    privacyEnvelope.state.rng.seed = `legacy:${clientId}`;
+    privacyEnvelope.state.campaignId = `week01:legacy:${clientId}`;
+    privacyEnvelope.campaignId = privacyEnvelope.state.campaignId;
+    const privacyStore = memoryStore(privacyEnvelope);
+    expect(module.api.loadCheckpoint(privacyStore, clientId)).toMatchObject({ status: 'privacy' });
+    expect(privacyStore.set).not.toHaveBeenCalled();
+    expect(privacyStore.value()).toEqual(privacyEnvelope);
+  });
+
+  it('fails closed for missing, corrupt, foreign, malformed-ledger and oversized persisted checkpoints', () => {
+    const { module } = loadModule();
+    expect(module.api.loadCheckpoint(memoryStore(), clientId)).toEqual({ status: 'empty' });
+    const malformedStore = memoryStore(null);
+    expect(module.api.loadCheckpoint(malformedStore, clientId)).toMatchObject({ status: 'corrupt' });
+    expect(malformedStore.set).not.toHaveBeenCalled();
+
+    const validStore = memoryStore();
+    const confirmed = module.api.confirmAction(module.api.createSession('scope-safe'), 'eat_ready_meal');
+    expect(module.api.saveCheckpoint(validStore, clientId, confirmed).status).toBe('saved');
+    const foreignStore = memoryStore(structuredClone(validStore.value()));
+    expect(module.api.loadCheckpoint(foreignStore, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')).toMatchObject({ status: 'foreign' });
+    const corruptEnvelope = structuredClone(validStore.value());
+    corruptEnvelope.stateHash = '0000000000000000';
+    const corruptStore = memoryStore(corruptEnvelope);
+    expect(module.api.loadCheckpoint(corruptStore, clientId)).toMatchObject({ status: 'corrupt' });
+    expect(corruptStore.set).not.toHaveBeenCalled();
+
+    const skippedRevisionEnvelope = structuredClone(validStore.value());
+    skippedRevisionEnvelope.diagnostics.decisions[0].revision = 2;
+    skippedRevisionEnvelope.revision = 2;
+    const skippedRevisionStore = memoryStore(skippedRevisionEnvelope);
+    expect(module.api.loadCheckpoint(skippedRevisionStore, clientId)).toMatchObject({ status: 'corrupt' });
+    expect(skippedRevisionStore.set).not.toHaveBeenCalled();
+
+    const oversizedPersistedEnvelope = structuredClone(validStore.value());
+    oversizedPersistedEnvelope.padding = 'x'.repeat(70_000);
+    const oversizedPersistedStore = memoryStore(oversizedPersistedEnvelope);
+    expect(module.api.loadCheckpoint(oversizedPersistedStore, clientId)).toMatchObject({ status: 'incompatible', message: expect.stringContaining('размер') });
+    expect(oversizedPersistedStore.set).not.toHaveBeenCalled();
+
+    const oversized = module.api.createSession('oversized-checkpoint');
+    oversized.comparisonBaseline = {
+      outcome: module.api.createDiagnosticTrace(oversized).derivedOutcome,
+      finalStateHash: 'baseline',
+      padding: 'x'.repeat(70_000),
+    };
+    const oversizedStore = memoryStore();
+    expect(module.api.saveCheckpoint(oversizedStore, clientId, oversized)).toMatchObject({ status: 'failed', message: expect.stringContaining('размер') });
+    expect(oversizedStore.set).not.toHaveBeenCalled();
+  });
+
+  it('renders progressive planning, exposes conflicts and saves only on final confirmation', async () => {
     const { module, store } = loadModule();
     render(React.createElement(module.Component, { onExit: vi.fn() }));
 
     expect(screen.getByRole('heading', { name: 'Координатор проектов' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Сдать проект и не потерять опоры недели' })).toBeTruthy();
+    expect(screen.getByText(/420 мин работы нужно завершить/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Неделя' }));
     expect(screen.getByRole('heading', { name: 'Какие границы сохранить' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Продолжить к приоритетам' }).disabled).toBe(true);
-    fireEvent.click(screen.getByRole('checkbox', { name: /Закончить день вовремя/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Сохранить семейный вечер/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Сохранить семейные вечера/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Защитить рабочие блоки/ }));
+    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: /Закончить день вовремя/ }).disabled).toBe(true);
     expect(screen.getByText('Работа и семья претендуют на одно окно')).toBeTruthy();
-    expect(screen.getByText('Срок проекта давит на границу сна')).toBeTruthy();
     expect(store.set).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить к приоритетам' }));
@@ -327,7 +534,12 @@ describe('Planning Assemble Day', () => {
     expect(screen.getByText(/59.*000 ₽/)).toBeTruthy();
     expect(screen.getAllByText('Срок проекта').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ожидаемое поступление').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('radio', { name: 'Семья' })[0]);
+    const mainWork = screen.getAllByRole('radio', { name: 'Работа' })[0];
+    mainWork.focus();
+    fireEvent.keyDown(mainWork, { key: 'ArrowRight' });
+    const mainFamily = screen.getAllByRole('radio', { name: 'Семья' })[0];
+    await waitFor(() => expect(document.activeElement).toBe(mainFamily));
+    expect(mainFamily.getAttribute('aria-checked')).toBe('true');
     expect(screen.getByText('Главный и поддерживающий фокус должны отличаться.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Подтвердить план' }).disabled).toBe(true);
     fireEvent.click(screen.getAllByRole('radio', { name: 'Работа' })[0]);
@@ -336,7 +548,8 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Подтвердить план' }));
     expect(store.set).toHaveBeenCalledTimes(1);
     expect(store.value().revision).toBe(1);
-    expect(store.value().state.clock.stepIndex).toBe(0);
+    expect(store.value()).not.toHaveProperty('state');
+    expect(module.api.loadCheckpoint(store, clientId).session.state.clock.stepIndex).toBe(0);
     expect(screen.getByText(/План принят/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Перейти к дню' }));
@@ -344,9 +557,13 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(firstChoice);
     expect(document.querySelector('.assemble-day-option__signals')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Жизнь' }));
+    expect(screen.getByText('Игровое наблюдение')).toBeTruthy();
+    expect(screen.getByText(/не использует данные дневника HEYS/)).toBeTruthy();
     expect(screen.getByText(/История решений/)).toBeTruthy();
     fireEvent.click(screen.getByText(/История решений/));
     expect(screen.getByText('Контракт недели')).toBeTruthy();
+    expect(screen.queryByText('Точные изменения')).toBeNull();
+    expect(screen.getByText(/Недельный контракт кампании/)).toBeTruthy();
     expect(screen.getByText('Диагностика кампании')).toBeTruthy();
   });
 
@@ -354,5 +571,6 @@ describe('Planning Assemble Day', () => {
     expect(entry).not.toMatch(/heys_game(?:\W|$)/);
     expect(entry).not.toMatch(/dayv2|diary|дневник/i);
     expect(entry).not.toMatch(/localStorage|sessionStorage/);
+    expect(entry).not.toMatch(/const EVENT_COPY|const EVENT_ACTION_COPY/);
   });
 });

@@ -365,4 +365,43 @@ describe('HEYS.Subscription curator guard', () => {
     expect(subscription.getCachedStatus()).toBe('trial');
     expect(JSON.parse(storage._store.heys_subscription_status).status).toBe('trial');
   });
+
+  it('keeps scheduled start details and never starts a trial from the PIN session', async () => {
+    const clientId = '52e2575a-65b5-4998-ad7d-c83171f8087c';
+    const storage = createMockStorage({
+      heys_pin_auth_client: clientId,
+      heys_client_current: JSON.stringify(clientId),
+    });
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        get_subscription_status_by_session: {
+          status: 'trial_pending',
+          trial_started_at: '2026-08-03T00:00:00.000Z',
+          trial_ends_at: '2026-08-10T00:00:00.000Z',
+        },
+      },
+      error: null,
+    });
+    window.HEYS = { currentClientId: clientId, YandexAPI: { rpc } };
+
+    const subscription = loadSubscription();
+    const details = await subscription.getStatusDetails(true);
+    const activation = await subscription.activateTrialTimer();
+
+    expect(details).toMatchObject({
+      status: 'trial_pending',
+      trial_started_at: '2026-08-03T00:00:00.000Z',
+      trial_ends_at: '2026-08-10T00:00:00.000Z',
+    });
+    expect(subscription.canWriteStatus(details)).toBe(false);
+    expect(activation).toEqual({ success: false, message: 'curator_activation_required' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalledWith('activate_trial_timer_by_session', expect.anything());
+  });
 });

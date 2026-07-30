@@ -172,4 +172,57 @@ describe('consent gate flow', () => {
       window.React = previousReact;
     }
   });
+
+  it.each([
+    ['none', null, 'Куратор ещё не назначил дату начала пробной недели.'],
+    ['trial_pending', '2026-08-03T00:00:00.000Z', 'Пробная неделя начнётся 3 августа.'],
+  ])('blocks the main app before trial for %s', (status, trialStartedAt, expectedText) => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+    const textNodes = [];
+
+    window.HEYS = {
+      cloud: { isPinAuthClient: () => true },
+      utils: { lsGet: () => ({ profileCompleted: true }) },
+      ProfileSteps: { isProfileIncomplete: () => false },
+      Consents: {},
+    };
+    window.React = {
+      createElement: (type, props, ...children) => {
+        for (const child of children.flat(Infinity)) {
+          if (typeof child === 'string') textNodes.push(child);
+        }
+        return { type, props: props || {}, children };
+      },
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const gate = window.HEYS.AppGateFlow.buildConsentGate({
+        gate: null,
+        desktopGate: null,
+        cloudUser: null,
+        clientId: 'client-1',
+        needsConsent: false,
+        checkingConsent: false,
+        setNeedsConsent: () => {},
+        setShowMorningCheckin: () => {},
+        subscriptionState: {
+          status,
+          details: { status, trial_started_at: trialStartedAt },
+          isLoading: false,
+        },
+      });
+
+      expect(gate).toBeTruthy();
+      expect(gate.props.key).toBe('subscription-waiting');
+      expect(textNodes.join(' ')).toContain('Аккаунт готов');
+      expect(textNodes.join(' ')).toContain(expectedText);
+      expect(textNodes.join(' ')).toContain('Проверить доступ');
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
+  });
 });

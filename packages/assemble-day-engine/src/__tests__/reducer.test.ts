@@ -23,7 +23,7 @@ describe('atomic ten-stage reducer', () => {
     const duplicate = createInitialState('golden');
     const second = reduceStep({ state: duplicate, openEvent: eventAt(duplicate), actionId: 'eat_ready_meal' }, registries, true);
     expect(first.stages.map((item) => item.stage)).toEqual(STAGES);
-    expect(first.stateHash).toBe('a2062aea3fd118fc');
+    expect(first.stateHash).toBe('2b0c1c54cb553d84');
     expect(first.stateHash).toBe(second.stateHash);
     expect(first.stages.map((item) => item.hash)).toEqual(second.stages.map((item) => item.hash));
     expect(first.nextEvent?.templateId).toBe('mon_commute');
@@ -41,6 +41,9 @@ describe('atomic ten-stage reducer', () => {
     expect(caught).toMatchObject({ code: 'unavailable_action', stage: 'validate', entityId: 'eat_ready_meal' });
     expect(stateHash(input)).toBe(before);
     expect(input.rng.occurrences).toEqual({});
+    const offer = getActionOffers(input, 'mon_breakfast', registries).find((item) => item.actionId === 'eat_ready_meal')!;
+    expect(offer.unavailableMessages).toEqual(['Нет заранее приготовленной порции.']);
+    expect(offer.unavailableMessages.join(' ')).not.toMatch(/insufficient_|requirement:/);
   });
 
   it('prices breakfast cooking only in a compressed morning and journals the input factor', () => {
@@ -48,6 +51,8 @@ describe('atomic ten-stage reducer', () => {
     const compressedOffer = getActionOffers(compressed, 'mon_breakfast', registries).find((offer) => offer.actionId === 'cook_meal_batch')!;
     expect(compressedOffer).toMatchObject({ effectiveTimeMin: 70, effortScore: 37, effortLevel: 'high', riskScore: 12, risk: 'moderate', optionPressure: 20 });
     expect(compressedOffer.consequencePreview).toEqual(['Сжатое утро: готовка потребует ещё 10 минут, больше усилия и повысит напряжение']);
+    expect(compressedOffer.geometryReasons[0]?.evidence).toMatchObject({ id: 're_multifactor_task_geometry', confidence: 'plausible_model' });
+    expect(compressedOffer.consequences.conditional).toContain('Срочный рабочий хвост и ограниченное утреннее окно повышают напряжение от готовки');
     const awakeSinceMinute = compressed.clock.awakeSinceMinute;
     const output = reduceStep({ state: compressed, openEvent: eventAt(compressed), actionId: 'cook_meal_batch' }, registries);
     expect(output.state.clock.awakeSinceMinute).toBe(awakeSinceMinute);
@@ -69,7 +74,7 @@ describe('atomic ten-stage reducer', () => {
     expect(weekendOffer.consequencePreview).toEqual([]);
   });
 
-  it('turns repeated cooking into a visible capability that changes later offer geometry', () => {
+  it('turns repeated cooking into a skill threshold that changes later offer geometry', () => {
     const state = createInitialState('development-cooking');
     const first = reduceStep({ state, openEvent: eventAt(state), actionId: 'cook_meal_batch' }, registries);
     expect(first.state.character.skills.cooking).toBe(37);

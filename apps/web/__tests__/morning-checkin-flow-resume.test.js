@@ -30,6 +30,8 @@ function loadStepModal() {
 function loadMorning({
   day = {},
   profile = {},
+  profileIncomplete = false,
+  subscriptionStatus = null,
   ledger = null,
   yesterdayRequired = false,
   yesterdayReady = true,
@@ -56,7 +58,7 @@ function loadMorning({
     },
     utils: { getCurrentClientId: () => CLIENT_ID },
     dayUtils: { todayISO: () => todayKey },
-    ProfileSteps: { isProfileIncomplete: () => false },
+    ProfileSteps: { isProfileIncomplete: () => profileIncomplete },
     Steps: {
       shouldShowCycleStep: () => false,
       shouldShowMeasurements: () => false,
@@ -68,6 +70,13 @@ function loadMorning({
       shouldShow: vi.fn(() => yesterdayRequired),
     },
   };
+  if (subscriptionStatus) {
+    window.HEYS.Subscription = {
+      getCachedStatus: () => subscriptionStatus,
+      getLocalStatus: () => subscriptionStatus,
+      canWriteStatus: (status) => ['trial', 'active'].includes(status),
+    };
+  }
   // eslint-disable-next-line no-new-func
   new Function(SYNC_MERGE_SRC)();
   // eslint-disable-next-line no-new-func
@@ -312,6 +321,24 @@ describe('morning progress key migration', () => {
 });
 
 describe('morning check-in journal resume', () => {
+  it('keeps a pre-trial registration profile-only and does not create a daily journal', () => {
+    const { utils, values } = loadMorning({
+      profileIncomplete: true,
+      subscriptionStatus: 'trial_pending',
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+
+    expect(plan.steps).toEqual([
+      'profile-personal',
+      'profile-body',
+      'profile-goals',
+      'profile-metabolism',
+    ]);
+    expect(plan.isProfileOnlyRegistration).toBe(true);
+    expect(values.has(PROGRESS_KEY)).toBe(false);
+  });
+
   it('opens a historical reset against the selected date without adding today-only steps', () => {
     const historicalDate = '2026-07-25';
     const { HEYS } = loadMorning({

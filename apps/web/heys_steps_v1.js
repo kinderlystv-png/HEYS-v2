@@ -4192,15 +4192,20 @@
     const dateKey = context?.dateKey || getTodayKey();
     const dayData = readDayData(dateKey, {});
     const initialState = normalizeMorningActivationState(dateKey, dayData);
+    const [phase, setPhase] = useState('decision');
+    const [intensityRec, setIntensityRec] = useState(null);
     const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
     const firstMealTimeLabel = firstMealTimeValue || '—';
     const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
     const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
     const laterClickedRef = useRef(false);
+    const terminalActionRef = useRef(false);
 
-    const saveMissed = () => {
+    const saveMissed = (reasonId) => {
+      if (terminalActionRef.current) return;
+      terminalActionRef.current = true;
       const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
-      persistMorningActivationState(dateKey, {
+      const savedDay = persistMorningActivationState(dateKey, {
         status: 'missed',
         intensity: null,
         postState: null,
@@ -4208,27 +4213,30 @@
         firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null,
-        skipReasonPending: true,
-        skipReasonId: null,
-        skipReasonCapturedAt: null
+        skipReasonPending: false,
+        skipReasonId: reasonId,
+        skipReasonCapturedAt: Date.now()
       }, 'morning-activation-followup');
       syncMorningActivationActivity(dateKey, {
         ...nextState,
         status: 'missed',
         intensity: null
       });
+      markMorningActivationSkipReasonAnswered(dateKey);
+      const flowId = traceMorningActivation('skip_reason_picked', {
+        dateKey,
+        reasonId,
+        status: savedDay?.morningActivation?.status || null,
+        skipReasonPending: savedDay?.morningActivation?.skipReasonPending === true
+      });
+      verifyMorningActivationSkipReasonWrite(dateKey, savedDay, flowId);
       notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-missed');
       context?.onNext?.();
-      try {
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('heys:ma-skip-reason-check', { detail: { dateKey } }));
-        }, 160);
-      } catch (_) {
-        // ignore
-      }
     };
 
-    const saveDone = () => {
+    const saveDone = (intensity) => {
+      if (terminalActionRef.current) return;
+      terminalActionRef.current = true;
       try {
         if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
           HEYS.Day.requestFlush({ force: true });
@@ -4238,7 +4246,6 @@
       }
       const freshDayData = getFreshDayData(dateKey);
       const nextState = normalizeMorningActivationState(dateKey, freshDayData);
-      const intensity = getMorningActivationIntensityRecommendation(freshDayData)?.intensity || initialState.intensity || 'medium';
       const preparedState = {
         ...nextState,
         status: 'done',
@@ -4270,6 +4277,13 @@
       context?.onNext?.();
     };
 
+    const saveReplacement = () => {
+      if (terminalActionRef.current) return;
+      terminalActionRef.current = true;
+      saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
+      context?.onNext?.();
+    };
+
     const saveLater = () => {
       if (laterClickedRef.current) return;
       laterClickedRef.current = true;
@@ -4296,6 +4310,7 @@
       fontSize: '13px',
       fontWeight: '600',
       padding: '11px 12px',
+      minHeight: '44px',
       cursor: 'pointer'
     };
 
@@ -4330,44 +4345,112 @@
           layoutClass: 'ma-habit-cal--modal'
         })
         : null,
-      React.createElement('div', {
-        style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-      },
-        React.createElement('button', {
-          style: {
-            ...actionBtnStyle,
-            border: '1px solid rgba(16,185,129,0.35)',
-            background: 'rgba(16,185,129,0.12)',
-            color: '#047857'
+      phase === 'decision'
+        ? React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+        },
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(16,185,129,0.35)',
+              background: 'rgba(16,185,129,0.12)',
+              color: '#047857'
+            },
+            onClick: () => {
+              setIntensityRec(getMorningActivationIntensityRecommendation(getFreshDayData(dateKey)));
+              setPhase('intensity');
+            }
+          }, 'Сделал зарядку'),
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(244,63,94,0.35)',
+              background: 'rgba(244,63,94,0.10)',
+              color: '#be123c'
+            },
+            onClick: () => setPhase('reason')
+          }, 'Зарядки не было'),
+          React.createElement('button', {
+            style: actionBtnStyle,
+            onClick: saveLater
+          }, 'Сделаю позже')
+        )
+        : phase === 'intensity'
+          ? React.createElement('div', {
+            style: { display: 'flex', flexDirection: 'column', gap: '8px' }
           },
-          onClick: saveDone
-        }, 'Сделал зарядку'),
-        React.createElement('button', {
-          style: {
-            ...actionBtnStyle,
-            border: '1px solid rgba(29,112,183,0.35)',
-            background: 'rgba(29,112,183,0.10)',
-            color: '#1D70B7'
+            React.createElement('div', {
+              style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
+            }, 'Какая была интенсивность?'),
+            intensityRec && React.createElement('div', {
+              style: {
+                fontSize: '11px',
+                color: '#334155',
+                lineHeight: '1.45',
+                marginBottom: '4px',
+                padding: '8px 10px',
+                borderRadius: '10px',
+                border: '1px solid rgba(67,69,135,0.25)',
+                background: 'rgba(67,69,135,0.06)'
+              }
+            }, intensityRec.hint),
+            Object.entries(MORNING_ACTIVATION_INTENSITY_PRESETS).map(([id, preset]) => React.createElement('button', {
+              key: id,
+              type: 'button',
+              style: {
+                ...actionBtnStyle,
+                border: intensityRec?.intensity === id
+                  ? '1px solid rgba(67,69,135,0.55)'
+                  : actionBtnStyle.border,
+                background: intensityRec?.intensity === id
+                  ? 'rgba(67,69,135,0.08)'
+                  : actionBtnStyle.background
+              },
+              onClick: () => saveDone(id)
+            }, React.createElement(React.Fragment, null,
+              preset.label,
+              intensityRec?.intensity === id && React.createElement('span', {
+                style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#434587', marginTop: '2px' }
+              }, 'Рекомендация на сегодня')
+            ))),
+            React.createElement('button', {
+              type: 'button',
+              style: { ...actionBtnStyle, background: '#f8fafc' },
+              onClick: () => setPhase('decision')
+            }, 'Назад')
+          )
+          : React.createElement('div', {
+            style: { display: 'flex', flexDirection: 'column', gap: '8px' }
           },
-          onClick: () => {
-            saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
-            context?.onNext?.();
-          }
-        }, 'Вместо зарядки: тренировка в первой половине дня'),
-        React.createElement('button', {
-          style: {
-            ...actionBtnStyle,
-            border: '1px solid rgba(244,63,94,0.35)',
-            background: 'rgba(244,63,94,0.10)',
-            color: '#be123c'
-          },
-          onClick: saveMissed
-        }, 'Не планирую сегодня'),
-        React.createElement('button', {
-          style: actionBtnStyle,
-          onClick: saveLater
-        }, 'Сделаю позже')
-      )
+            React.createElement('div', {
+              style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
+            }, 'Почему сегодня без зарядки?'),
+            React.createElement('div', {
+              style: { fontSize: '12px', color: '#64748b', lineHeight: '1.45', marginBottom: '4px' }
+            }, 'Выбери наиболее подходящую причину.'),
+            React.createElement('button', {
+              type: 'button',
+              style: {
+                ...actionBtnStyle,
+                textAlign: 'left',
+                border: '1px solid rgba(29,112,183,0.35)',
+                background: 'rgba(29,112,183,0.10)',
+                color: '#1D70B7'
+              },
+              onClick: saveReplacement
+            }, 'Вместо зарядки была тренировка в первой половине дня'),
+            MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
+              key: opt.id,
+              type: 'button',
+              style: { ...actionBtnStyle, textAlign: 'left' },
+              onClick: () => saveMissed(opt.id)
+            }, opt.label)),
+            React.createElement('button', {
+              type: 'button',
+              style: { ...actionBtnStyle, background: '#f8fafc' },
+              onClick: () => setPhase('decision')
+            }, 'Назад')
+          )
     );
   }
 

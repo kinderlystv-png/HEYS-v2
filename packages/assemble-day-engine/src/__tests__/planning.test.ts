@@ -6,7 +6,7 @@ import { stateHash } from '../rng.js';
 import type { PlanningPlan } from '../types.js';
 
 const plan: PlanningPlan = {
-  weeklyRuleIds: ['protect_sleep', 'family_anchor', 'work_blocks'],
+  weeklyRuleIds: ['protect_sleep', 'work_blocks'],
   mainGoal: 'work',
   supportingGoal: 'family',
 };
@@ -18,7 +18,7 @@ describe('planning reducer contract', () => {
     const output = reducePlanningStep({ state: input, plan });
 
     expect(input).toEqual(before);
-    expect(output.state.weeklyRules.map((item) => item.id)).toEqual(['protect_sleep', 'family_anchor', 'work_blocks']);
+    expect(output.state.weeklyRules.map((item) => item.id)).toEqual(['protect_sleep', 'work_blocks']);
     expect(output.state.monthlyPriorities).toEqual([
       { domain: 'work', level: 2 },
       { domain: 'family', level: 1 },
@@ -38,7 +38,8 @@ describe('planning reducer contract', () => {
   it('fails closed for incomplete, duplicate, unknown, equal and no-op plans', () => {
     const input = createInitialState('planning-invalid');
     const before = stateHash(input);
-    expect(() => reducePlanningStep({ state: input, plan: { ...plan, weeklyRuleIds: ['protect_sleep'] } })).toThrow(/weekly_minimum/);
+    expect(() => reducePlanningStep({ state: input, plan: { ...plan, weeklyRuleIds: ['protect_sleep'] } })).toThrow(/weekly_capacity/);
+    expect(() => reducePlanningStep({ state: input, plan: { ...plan, weeklyRuleIds: ['protect_sleep', 'family_anchor', 'work_blocks'] } })).toThrow(/weekly_capacity/);
     expect(() => reducePlanningStep({ state: input, plan: { ...plan, weeklyRuleIds: ['protect_sleep', 'protect_sleep'] } })).toThrow(/weekly_duplicate/);
     expect(() => reducePlanningStep({ state: input, plan: { ...plan, weeklyRuleIds: ['protect_sleep', 'unknown'] as PlanningPlan['weeklyRuleIds'] } })).toThrow(/weekly_unknown/);
     expect(() => reducePlanningStep({ state: input, plan: { ...plan, supportingGoal: 'work' } })).toThrow(/goals_equal/);
@@ -54,7 +55,11 @@ describe('planning reducer contract', () => {
     const view = getPlanningView(input, plan, context);
 
     expect(view.valid).toBe(true);
-    expect(view.conflicts.map((item) => item.id)).toEqual(expect.arrayContaining(['work_family_window', 'work_sleep_window']));
+    expect(view.conflicts.map((item) => item.id)).toContain('work_sleep_window');
+    expect(view.capacity).toEqual({
+      weekly: { totalSlots: 2, allocatedSlots: 2, remainingSlots: 0 },
+      attention: { totalUnits: 3, allocatedUnits: 3, unallocatedUnits: 0, mainUnits: 2, supportingUnits: 1 },
+    });
     expect(view.pressures).toHaveLength(4);
     expect(view.financialHorizon).toEqual({
       cashRub: 32000,
@@ -75,14 +80,14 @@ describe('planning reducer contract', () => {
     const afterOffers = getActionOffers(planned, event.templateId, registries);
     expect(afterOffers.map((offer) => [offer.actionId, offer.effectiveTimeMin, offer.effortScore, offer.optionPressure])).not.toEqual(beforeOffers.map((offer) => [offer.actionId, offer.effectiveTimeMin, offer.effortScore, offer.optionPressure]));
     expect(afterOffers.some((offer) => offer.planningSignals.length > 0)).toBe(true);
-    expect(afterOffers.some((offer) => offer.geometryReasons.some((item) => item.inputPaths.includes('weeklyRules') || item.inputPaths.includes('monthlyPriorities')))).toBe(true);
+    expect(afterOffers.some((offer) => offer.geometryReasons.some((item) => item.inputPaths.some((path) => path.startsWith('planningCapacity.'))))).toBe(true);
     const first = reduceStep({ state: planned, openEvent: initialEvent(planned, registries), actionId: 'cook_meal_batch' }, registries);
     const duplicatePlanned = reducePlanningStep({ state: createInitialState('planning-offers'), plan }).state;
     const duplicate = reduceStep({ state: duplicatePlanned, openEvent: initialEvent(duplicatePlanned, registries), actionId: 'cook_meal_batch' }, registries);
     expect(first.stateHash).toBe(duplicate.stateHash);
     expect(first.state.clock.stepIndex).toBe(1);
     expect(first.state.scenarioCursor).toBe(1);
-    expect(first.journalEntries.some((entry) => entry.resultPath.includes('weeklyRules') || entry.resultPath.includes('monthlyPriorities'))).toBe(true);
+    expect(first.journalEntries.some((entry) => entry.resultPath.includes('planningCapacity.'))).toBe(true);
   });
 
   it('locks the weekly contract after the first confirmed action', () => {
@@ -92,7 +97,7 @@ describe('planning reducer contract', () => {
   });
 
   it('marks a real weekly conflict on a relevant evening work action', () => {
-    const state = reducePlanningStep({ state: createInitialState('planning-conflict'), plan }).state;
+    const state = reducePlanningStep({ state: createInitialState('planning-conflict'), plan: { ...plan, weeklyRuleIds: ['protect_sleep', 'family_anchor'] } }).state;
     state.scenarioCursor = 11;
     state.clock.stepIndex = 11;
     state.clock.dayIndex = registries.slots[11]!.dayIndex;
@@ -102,5 +107,49 @@ describe('planning reducer contract', () => {
     expect(lateWork?.planningSignals).toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: 'conflicts_weekly_rule', sourceId: 'protect_sleep' }),
     ]));
+  });
+
+  it('funds work support from a selected focus and charges a competing focus in the same state', () => {
+    const baseline = createInitialState('planning-counterfactual');
+    const workPlan = reducePlanningStep({ state: baseline, plan }).state;
+    const recoveryPlan = reducePlanningStep({
+      state: createInitialState('planning-counterfactual'),
+      plan: { weeklyRuleIds: ['protect_sleep', 'family_anchor'], mainGoal: 'recovery', supportingGoal: 'family' },
+    }).state;
+    const workOffer = getActionOffers(workPlan, 'mon_scope_expansion', registries).find((offer) => offer.actionId === 'accept_scope')!;
+    const recoveryOffer = getActionOffers(recoveryPlan, 'mon_scope_expansion', registries).find((offer) => offer.actionId === 'accept_scope')!;
+
+    expect(workOffer.planningSignals).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'supports_main_goal', sourceId: 'work', inputPath: 'planningCapacity.attention.work' }),
+      expect.objectContaining({ kind: 'supports_weekly_rule', sourceId: 'work_blocks', inputPath: 'planningCapacity.ruleSlots.work_blocks' }),
+    ]));
+    expect(recoveryOffer.planningSignals).toContainEqual(expect.objectContaining({ kind: 'conflicts_unfunded_goal', sourceId: 'recovery' }));
+    expect(workOffer.effortScore).toBeLessThan(recoveryOffer.effortScore);
+    expect(workOffer.optionPressure).toBeLessThan(recoveryOffer.optionPressure);
+  });
+
+  it('does not infer recovery support from generic state domains', () => {
+    const state = reducePlanningStep({
+      state: createInitialState('planning-explicit-alignment'),
+      plan: { weeklyRuleIds: ['protect_sleep', 'family_anchor'], mainGoal: 'recovery', supportingGoal: 'family' },
+    }).state;
+    const coffee = getActionOffers(state, 'mon_breakfast', registries).find((offer) => offer.actionId === 'drink_coffee_100')!;
+    expect(coffee.planningSignals.some((signal) => signal.kind.startsWith('supports_'))).toBe(false);
+    expect(coffee.planningSignals).toContainEqual(expect.objectContaining({ kind: 'conflicts_unfunded_goal', sourceId: 'recovery' }));
+  });
+
+  it('applies family support only in a tagged family window and journals the concrete capacity input', () => {
+    const state = reducePlanningStep({
+      state: createInitialState('planning-family-window'),
+      plan: { weeklyRuleIds: ['family_anchor', 'protect_sleep'], mainGoal: 'family', supportingGoal: 'recovery' },
+    }).state;
+    const night = getActionOffers(state, 'tue_night_wakeup', registries).find((offer) => offer.actionId === 'take_family_load')!;
+    const anchor = getActionOffers(state, 'mon_family_dinner', registries).find((offer) => offer.actionId === 'protect_commitment')!;
+    expect(night.planningSignals).not.toContainEqual(expect.objectContaining({ kind: 'supports_weekly_rule', sourceId: 'family_anchor' }));
+    expect(anchor.planningSignals).toContainEqual(expect.objectContaining({ kind: 'supports_weekly_rule', sourceId: 'family_anchor' }));
+    state.scenarioCursor = 5;
+    state.activeEventId = 'mon_family_dinner';
+    const stepped = reduceStep({ state, openEvent: initialEvent(state, registries), actionId: 'protect_commitment' }, registries);
+    expect(stepped.journalEntries.some((entry) => entry.resultPath.includes('planningCapacity.ruleSlots.family_anchor'))).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import { canonicalJson, drawInt, deterministicFloat, stateHash } from './rng.js';
 import { getPlanningAdjustment } from './planning.js';
+import { getRuleEvidence, unavailableMessage } from './content/presentation.js';
 import { validateState } from './schema.js';
 import { ReducerError, type ActionOffer, type Condition, type DecisionContext, type Effect, type EventCandidate, type EventInstance, type EventTemplate, type GameState, type Registries, type Requirement, type ScheduledEffect, type StageTrace, type StepOutput } from './types.js';
 
@@ -66,16 +67,23 @@ export function getActionOffers(state:GameState,eventId:string,registries:Regist
     const unavailableReasons:string[]=[];let available=true;
     for(const requirement of action.requirements)if(!evaluateRequirement(state,eventId,requirement,context)){available=false;unavailableReasons.push(`requirement:${requirement.kind}`);}
     let effectiveTimeMin=action.cost.timeMin,moneyRub=action.cost.moneyRub,effortScore=action.baseEffortScore,riskScore=action.baseRiskScore,optionPressure=action.baseOptionPressure;const consequencePreview:string[]=[];const geometryReasons:ActionOffer['geometryReasons']=[];
-    for(const item of action.cost.inventory??[])if(state.economy.foodPortions[item.category]<item.portions){if(item.fallbackMoneyRub!==undefined){moneyRub+=item.fallbackMoneyRub;consequencePreview.push(`Базовый запас закончился: доступна простая покупка за ${item.fallbackMoneyRub} ₽`);geometryReasons.push({reason:'доступная замена базового запаса',inputPaths:[`economy.foodPortions.${item.category}`]});}else{available=false;unavailableReasons.push(`insufficient_${item.category}`);}}
-    for(const rule of action.geometryRules)if(evaluateCondition(state,rule.when,context)){geometryReasons.push({reason:rule.reason,inputPaths:conditionPaths(rule.when)});if(rule.delta.available===false){available=false;unavailableReasons.push(rule.reason);}effectiveTimeMin+=rule.delta.timeMin??0;moneyRub+=rule.delta.moneyRub??0;effortScore+=rule.delta.effortScore??0;riskScore+=rule.delta.riskScore??0;optionPressure+=rule.delta.optionPressure??0;if(rule.delta.preview)consequencePreview.push(rule.delta.preview);}
-    const baseTime=Math.max(0,Math.round(effectiveTimeMin)),planning=getPlanningAdjustment(state,action,eventId,baseTime),planningSignals=planning.signals;
+    for(const item of action.cost.inventory??[])if(state.economy.foodPortions[item.category]<item.portions){if(item.fallbackMoneyRub!==undefined){moneyRub+=item.fallbackMoneyRub;consequencePreview.push(`Базовый запас закончился: доступна простая покупка за ${item.fallbackMoneyRub} ₽`);geometryReasons.push({reason:'доступная замена базового запаса',inputPaths:[`economy.foodPortions.${item.category}`],evidence:getRuleEvidence('re_financial_pressure_choice')});}else{available=false;unavailableReasons.push(`insufficient_${item.category}`);}}
+    for(const rule of action.geometryRules)if(evaluateCondition(state,rule.when,context)){geometryReasons.push({reason:rule.reason,inputPaths:conditionPaths(rule.when),evidence:getRuleEvidence(rule.ruleEvidenceId)});if(rule.delta.available===false){available=false;unavailableReasons.push(rule.reason);}effectiveTimeMin+=rule.delta.timeMin??0;moneyRub+=rule.delta.moneyRub??0;effortScore+=rule.delta.effortScore??0;riskScore+=rule.delta.riskScore??0;optionPressure+=rule.delta.optionPressure??0;if(rule.delta.preview)consequencePreview.push(rule.delta.preview);}
+    const baseTime=Math.max(0,Math.round(effectiveTimeMin)),planning=getPlanningAdjustment(state,action,eventId,baseTime,event.tags),planningSignals=planning.signals;
     effectiveTimeMin+=planning.delta.timeMin;moneyRub+=planning.delta.moneyRub;effortScore+=planning.delta.effortScore;riskScore+=planning.delta.riskScore;optionPressure+=planning.delta.optionPressure;
-    for(const signal of planningSignals)geometryReasons.push({reason:signal.reason,inputPaths:[signal.kind.includes('weekly_rule')?'weeklyRules':'monthlyPriorities']});
+    for(const signal of planningSignals)geometryReasons.push({reason:signal.reason,inputPaths:[signal.inputPath],evidence:getRuleEvidence('re_planning_capacity_tradeoff')});
     if(state.economy.cashRub<moneyRub){available=false;unavailableReasons.push('insufficient_cash');}
     context.optionPressureByActionId[actionId]=clamp(optionPressure);
     const normalizedTime=Math.max(0,Math.round(effectiveTimeMin));
     const normalizedEffort=clamp(effortScore),normalizedRisk=clamp(riskScore);
-    return {actionId,available,unavailableReasons,effectiveTimeMin:normalizedTime,moneyRub:Math.max(0,Math.round(moneyRub)),effort:action.cost.effort,effortScore:normalizedEffort,effortLevel:effortLevel(normalizedEffort),risk:riskLabel(normalizedRisk),riskScore:normalizedRisk,optionPressure:clamp(optionPressure),consequencePreview,geometryReasons,utility:action.qaUtility,stabilizes:action.stabilizes,planningSignals};
+    const conditional=action.conditionalEffects.filter((item)=>evaluateCondition(state,item.when,context));
+    const effectReason=(effect:Effect):string=>'reason' in effect&&typeof effect.reason==='string'?effect.reason:'';
+    const immediate=[...new Set(action.immediateEffects.map(effectReason).filter(Boolean))].slice(0,2);
+    const delayed=[...new Set(action.scheduledEffects.flatMap((item)=>item.effects.map(effectReason)).filter(Boolean))].slice(0,1);
+    const conditionalCopy=[...new Set(conditional.map((item)=>item.explanation))];
+    const reasonCodes=[...new Set(unavailableReasons)];
+    const messages=[...new Set(reasonCodes.map(unavailableMessage))].filter((message)=>message!=='Не хватает нужного домашнего запаса.'||!reasonCodes.some((code)=>code.startsWith('insufficient_')));
+    return {actionId,available,unavailableReasons:reasonCodes,unavailableMessages:messages,effectiveTimeMin:normalizedTime,moneyRub:Math.max(0,Math.round(moneyRub)),effort:action.cost.effort,effortScore:normalizedEffort,effortLevel:effortLevel(normalizedEffort),risk:riskLabel(normalizedRisk),riskScore:normalizedRisk,optionPressure:clamp(optionPressure),consequencePreview,consequences:{immediate,delayed,conditional:conditionalCopy},geometryReasons, evidence:getRuleEvidence(action.ruleEvidenceId),utility:action.qaUtility,stabilizes:action.stabilizes,planningSignals};
   });
 }
 

@@ -7,7 +7,7 @@
   // === Константы ===
   const STATUS = {
     NONE: 'none',                 // Нет подписки
-    TRIAL_PENDING: 'trial_pending', // Куратор одобрил, ждём первый логин (таймер не запущен)
+    TRIAL_PENDING: 'trial_pending', // Куратор назначил будущую дату старта
     TRIAL: 'trial',               // Триал активен (7 дней)
     ACTIVE: 'active',             // Оплаченная подписка
     READ_ONLY: 'read_only',       // Триал/подписка истекла
@@ -28,6 +28,25 @@
       return normalizeStatus(value.get_subscription_status_by_session);
     }
     return '';
+  }
+
+  function normalizeDetails(value) {
+    let payload = value;
+    if (payload?.data) payload = payload.data;
+    if (payload?.get_subscription_status_by_session) {
+      payload = payload.get_subscription_status_by_session;
+    }
+    if (Array.isArray(payload)) payload = payload[0] || null;
+    const status = normalizeStatus(payload) || STATUS.NONE;
+    if (!payload || typeof payload !== 'object') return { status };
+    return {
+      status,
+      trial_approved_at: payload.trial_approved_at || null,
+      trial_started_at: payload.trial_started_at || null,
+      trial_ends_at: payload.trial_ends_at || null,
+      active_until: payload.active_until || null,
+      days_left: payload.days_left ?? null,
+    };
   }
 
   function canWriteStatus(value) {
@@ -159,6 +178,7 @@
 
   // === Кэширование статуса ===
   let _cachedStatus = null;
+  let _cachedDetails = null;
   let _cachedAt = 0;
 
   function getCachedStatus() {
@@ -175,17 +195,26 @@
     return null;
   }
 
-  function setCachedStatus(status) {
+  function getCachedDetails() {
+    const status = getCachedStatus();
+    if (!status) return null;
+    return _cachedDetails?.status === status ? { ..._cachedDetails } : { status };
+  }
+
+  function setCachedStatus(status, details = null) {
     const prev = _cachedStatus;
+    const prevDetails = _cachedDetails;
     _cachedStatus = status;
+    _cachedDetails = details ? { ...details, status } : { status };
     _cachedAt = Date.now();
     // Не пишем в storage если статус не изменился — иначе обновление ts
     // каждые 5 минут триггерит бесполезный cloud sync
-    if (prev !== status) {
+    const detailsChanged = JSON.stringify(prevDetails || null) !== JSON.stringify(_cachedDetails);
+    if (prev !== status || detailsChanged) {
       writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
       try {
         window.dispatchEvent(new CustomEvent('heys:subscription-changed', {
-          detail: { status, previousStatus: prev || null }
+          detail: { ..._cachedDetails, status, previousStatus: prev || null }
         }));
       } catch (_) { }
     }
@@ -193,6 +222,7 @@
 
   function clearCache() {
     _cachedStatus = null;
+    _cachedDetails = null;
     _cachedAt = 0;
     _inflightPromise = null; // сбрасываем in-flight при очистке кэша
     removeCacheValue(CACHE_KEY);
@@ -263,8 +293,9 @@
           throw new Error(res.error.message);
         }
 
-        const status = unwrapStatusPayload(res.data || STATUS.NONE);
-        setCachedStatus(status);
+        const details = normalizeDetails(res.data || STATUS.NONE);
+        const status = details.status;
+        setCachedStatus(status, details);
 
         // 🎫 v3.0: trial_pending = куратор одобрил, но дата старта в будущем
         // Таймер НЕ запускается автоматически — куратор выбирает дату при активации
@@ -285,6 +316,11 @@
     return _inflightPromise;
   }
 
+  async function getStatusDetails(forceRefresh = false) {
+    const status = await getStatus(forceRefresh);
+    return getCachedDetails() || { status };
+  }
+
   let _passiveRefreshTimer = null;
   function schedulePassiveRefresh(reason) {
     if (typeof window === 'undefined') return;
@@ -300,57 +336,18 @@
   }
 
   /**
-   * @deprecated v5.0 — Триал теперь активирует куратор через admin_activate_trial.
-   * Таймер стартует автоматически при первом логине через activateTrialTimer().
-   * Оставлено для обратной совместимости.
+   * @deprecated Триал активирует куратор через admin_activate_trial.
+   * Оставлено только как fail-closed compatibility API.
    */
   async function startTrial(days = TRIAL_DAYS) {
     console.warn('[Subscription] ⚠️ startTrial() deprecated — триал запускает куратор');
     return getCachedStatus() || STATUS.NONE;
   }
 
-  /**
-   * @deprecated v3.0 — Таймер управляется куратором через admin_activate_trial(start_date).
-   * Оставлено для обратной совместимости — может пригодиться для ручного запуска.
-   * Идемпотентна: если таймер уже запущен — ничего не делает.
-   * @returns {Promise<{success: boolean, message: string, trial_ends_at: string}>}
-   */
+  /** @deprecated Клиент не может запускать триал: дату назначает только куратор. */
   async function activateTrialTimer() {
-    const sessionToken = HEYS.auth?.getSessionToken?.();
-
-    const api = HEYS.YandexAPI;
-    if (!api) {
-      console.error('[Subscription] activateTrialTimer: API не готов');
-      return { success: false, message: 'api_not_ready' };
-    }
-
-    try {
-      const rpcParams = {};
-      if (sessionToken) rpcParams.p_session_token = sessionToken;
-      const res = await api.rpc('activate_trial_timer_by_session', rpcParams);
-
-      if (res.error) {
-        if (res.error.message?.includes('invalid_session') || res.error.message?.includes('invalid_or_expired_session')) {
-          console.warn('[Subscription] Сессия невалидна');
-          clearCache();
-          return { success: false, message: 'invalid_session' };
-        }
-        throw new Error(res.error.message);
-      }
-
-      const result = res.data?.activate_trial_timer_by_session?.[0] || res.data?.[0] || res.data || {};
-
-      if (result.success && result.message === 'trial_timer_started') {
-        console.info('[HEYS.subscription] ✅ Trial timer started, ends:', result.trial_ends_at);
-        // Обновляем кэш на trial
-        setCachedStatus(STATUS.TRIAL);
-      }
-
-      return result;
-    } catch (e) {
-      console.error('[Subscription] activateTrialTimer error:', e);
-      return { success: false, message: e.message };
-    }
+    console.warn('[Subscription] activateTrialTimer() blocked — триал запускает куратор');
+    return { success: false, message: 'curator_activation_required' };
   }
 
   // === Хелперы для UI ===
@@ -386,8 +383,8 @@
     switch (normalized) {
       case STATUS.TRIAL_PENDING:
         return {
-          label: 'Триал одобрен',
-          shortLabel: 'Одобрен',
+          label: 'Триал запланирован',
+          shortLabel: 'Запланирован',
           color: '#3b82f6', // blue
           emoji: '✅',
           canWrite: accessAllowed,
@@ -455,6 +452,7 @@
     const { useState, useEffect, useCallback, useMemo } = React;
 
     const [status, setStatus] = useState(() => getCachedStatus() || STATUS.NONE);
+    const [details, setDetails] = useState(() => getCachedDetails() || { status: getCachedStatus() || STATUS.NONE });
     const [isLoading, setIsLoading] = useState(true);
 
     const refresh = useCallback(async (force = true) => {
@@ -462,6 +460,7 @@
       try {
         const newStatus = await getStatus(force);
         setStatus(newStatus);
+        setDetails(getCachedDetails() || { status: newStatus });
         return newStatus;
       } finally {
         setIsLoading(false);
@@ -479,10 +478,22 @@
       refresh(false);
     }, [refresh]);
 
+    useEffect(() => {
+      const handleChange = (event) => {
+        const next = normalizeDetails(event?.detail || STATUS.NONE);
+        setStatus(next.status);
+        setDetails(next);
+        setIsLoading(false);
+      };
+      window.addEventListener('heys:subscription-changed', handleChange);
+      return () => window.removeEventListener('heys:subscription-changed', handleChange);
+    }, []);
+
     const meta = useMemo(() => getStatusMeta(status), [status]);
 
     return {
       status,
+      details,
       isLoading,
       isNone: status === STATUS.NONE,
       isTrialPending: status === STATUS.TRIAL_PENDING,
@@ -503,15 +514,18 @@
 
     // API
     getStatus,
+    getStatusDetails,
     refresh: () => getStatus(true),
-    startTrial,            // @deprecated v5.0 — используй activateTrialTimer
-    activateTrialTimer,    // v5.0: стартует 7-дневный таймер при первом логине
+    startTrial,            // @deprecated — триал запускает куратор
+    activateTrialTimer,    // @deprecated — fail-closed compatibility stub
     clearCache,
     getCachedStatus,       // Для синхронной проверки в Paywall
+    getCachedDetails,
     getLocalStatus: getLocalSubscriptionStatus,
 
     // Helpers
     normalizeStatus,
+    normalizeDetails,
     canWriteStatus,
     canWrite,
     shouldShowPaywall,

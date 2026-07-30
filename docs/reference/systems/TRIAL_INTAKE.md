@@ -38,6 +38,10 @@
   → позже существующий admin_activate_trial
 ```
 
+Approval заканчивается созданием аккаунта и PIN. Он не выбирает дату и не
+расходует пробную неделю: `admin_activate_trial` вызывается отдельно из
+кураторского управления подпиской.
+
 ## Данные и доступ
 
 В v3 новые заявки хранятся в `trial_candidates`, а ответы — в
@@ -238,3 +242,4 @@ Prepare RPC отдельно проверяет свежесть заявки: �
 | TI20 | Верхняя «Очередь» показывает тот же actionable-счётчик, что внутренний таб «Лиды»: `new` + свой `contacted` без candidate intake   | `trial-intake-flow.test.js`, 29/29 + operator smoke                                | local UI green 2026-07-30 01:16 MSK; prod pending  |
 | TI21 | Новый review UI имеет только одобрение с созданием клиента и отказ; личное уточнение не является отдельным статусом                | `trial-intake-flow.test.js`, `admin_review_trial_candidate_v4`                     | подготовлено локально 2026-07-30; rollout pending  |
 | TI22 | `daily_tracking=unsure` проходит server validation/save/read, а коррекция хранит original/effective/history без перезаписи         | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-30; rollout pending     |
+| TI23 | Approval создаёт аккаунт/PIN без trial; дату старта куратор задаёт отдельно в управлении подпиской                                 | `trial-intake-flow.test.js`, `trial-prestart-access-contract.test.js`              | проверено локально 2026-07-30; rollout pending     |

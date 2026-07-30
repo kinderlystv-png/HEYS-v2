@@ -65,6 +65,7 @@
         const trialStartsAt = client.trial_started_at ? new Date(client.trial_started_at).getTime() : null;
 
         if (activeUntil && activeUntil > now) return 'active';
+        if (statusRaw === 'trial_pending') return 'trial_pending';
         if (trialStartsAt && trialStartsAt > now) return 'trial_pending';
         if (trialEndsAt && trialEndsAt > now) return 'trial';
 
@@ -97,6 +98,14 @@
             return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: 'Нет подписки', urgent: false };
         }
 
+        if (status === 'trial_pending') {
+            const startDate = client.trial_started_at ? new Date(client.trial_started_at) : null;
+            const startText = startDate && !Number.isNaN(startDate.getTime())
+                ? startDate.toLocaleDateString('ru-RU')
+                : '?';
+            return { emoji: '🕐', color: '#3b82f6', bg: '#dbeafe', text: `Начнётся ${startText}`, urgent: false };
+        }
+
         if (daysLeft !== null && daysLeft < 0) {
             return { emoji: '🔴', color: '#dc2626', bg: '#fee2e2', text: `Просрочена ${Math.abs(daysLeft)} дн.`, urgent: true };
         }
@@ -111,12 +120,6 @@
 
         if (status === 'trial') {
             return { emoji: '⏳', color: '#6366f1', bg: '#e0e7ff', text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
-        }
-
-        if (status === 'trial_pending') {
-            const startDate = client.trial_ends_at ? new Date(new Date(client.trial_ends_at).getTime() - 7 * 24 * 60 * 60 * 1000) : null;
-            const startText = startDate ? startDate.toLocaleDateString('ru-RU') : '?';
-            return { emoji: '🕐', color: '#3b82f6', bg: '#dbeafe', text: `Ожидает с ${startText}`, urgent: false };
         }
 
         if (status === 'active') {
@@ -220,6 +223,7 @@
                         : `✅ Триал запланирован на ${trialDate}`
                     );
                     client.subscription_status = res.status || (isToday ? 'trial' : 'trial_pending');
+                    client.trial_started_at = res.trial_started_at || null;
                     client.trial_ends_at = res.trial_ends_at;
                     onUpdate?.();
                     closeModal();
@@ -420,6 +424,7 @@
                     HEYS.Toast?.success?.('🚫 Подписка сброшена');
                     client.subscription_status = 'none';
                     client.active_until = null;
+                    client.trial_started_at = null;
                     client.trial_ends_at = null;
                     onUpdate?.();
                     closeModal();
@@ -618,14 +623,14 @@
                 )
             ),
             h('div', { style: { display: 'grid', gap: 8 } },
-                (status === 'none' || status === 'read_only' || status === 'trial_pending') && h('button', {
+                (status === 'none' || status === 'read_only') && h('button', {
                     onClick: () => {
                         console.info('[HEYS.subs] 🎫 Открытие trial view', { clientId: client.id, status });
                         setTrialDate(new Date().toISOString().split('T')[0]);
                         setView('trial');
                     },
                     style: { ...btnBase, background: '#ecfdf5', color: '#059669', border: '1px solid #bbf7d0' }
-                }, status === 'trial_pending' ? '⚡ Запустить триал сейчас' : '🎫 Активировать триал'),
+                }, '🎫 Активировать триал'),
                 h('button', {
                     onClick: () => {
                         console.info('[HEYS.subs] ➕ Открытие extend view', { clientId: client.id, status });
@@ -2681,6 +2686,7 @@
             setMustBlockReconsent,
             setNeedsAgeGate,
             setConsentCheckError,
+            subscriptionState = { status: 'none', details: null, isLoading: true },
         } = props;
 
         const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
@@ -2710,9 +2716,10 @@
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
         }
 
-        const renderGateMessage = ({ title, text, tone = 'loading', actions = [] }) => {
+        const renderGateMessage = ({ key = null, title, text, tone = 'loading', icon = null, actions = [] }) => {
             const isError = tone === 'error';
             return React.createElement('div', {
+                key,
                 className: 'heys-consent-status-gate',
                 style: {
                     minHeight: '100vh',
@@ -2751,7 +2758,7 @@
                         fontSize: '22px',
                         marginBottom: '16px',
                     },
-                }, isError ? '!' : '...'),
+                }, icon || (isError ? '!' : '...')),
                 React.createElement('h1', {
                     style: {
                         margin: '0 0 10px',
@@ -2852,9 +2859,13 @@
                                 console.warn('[CONSENTS] ⚠️ Профиль неполный, но MorningCheckin не загружен');
                             }
                         } else {
-                            // Если профиль заполнен — запускаем onboarding tour
-                            console.log('[CONSENTS] 🎓 Triggering onboarding tour after consents');
-                            window.HEYS?._tour?.tryStart?.();
+                            const status = HEYS.Subscription?.getCachedStatus?.()
+                                || HEYS.Subscription?.getLocalStatus?.()
+                                || 'none';
+                            if (HEYS.Subscription?.canWriteStatus?.(status) === true) {
+                                console.log('[CONSENTS] 🎓 Triggering onboarding tour after consents');
+                                window.HEYS?._tour?.tryStart?.();
+                            }
                         }
                     }, 500);
                 },
@@ -2912,6 +2923,48 @@
             return React.createElement(HEYS.TrialIntake.ClientScreen, {
                 key: 'trial-intake',
             });
+        }
+
+        const hasValidConsents = baseEligible && !shouldBlockForConsents && !consentCheckError;
+        if (hasValidConsents && isPinSessionActive) {
+            const profile = HEYS.utils?.lsGet ? HEYS.utils.lsGet('heys_profile', {}) : {};
+            const profileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete
+                ? HEYS.ProfileSteps.isProfileIncomplete(profile)
+                : profile?.profileCompleted !== true;
+
+            // Профиль остаётся доступен до триала. Как только он подтверждён в
+            // облаке, основной интерфейс заменяется отдельным экраном ожидания.
+            if (!profileIncomplete && subscriptionState.isLoading) {
+                return renderGateMessage({
+                    key: 'subscription-loading',
+                    title: 'Проверяем доступ',
+                    text: 'Профиль сохранён. Уточняем дату начала пробной недели.',
+                    icon: '⏳',
+                });
+            }
+
+            const status = subscriptionState.status || 'none';
+            if (!profileIncomplete && (status === 'none' || status === 'trial_pending')) {
+                const startRaw = subscriptionState.details?.trial_started_at;
+                const startDate = startRaw ? new Date(startRaw) : null;
+                const hasValidStartDate = startDate && !Number.isNaN(startDate.getTime());
+                const startText = hasValidStartDate
+                    ? startDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+                    : null;
+                return renderGateMessage({
+                    key: 'subscription-waiting',
+                    title: 'Аккаунт готов',
+                    text: status === 'trial_pending' && startText
+                        ? `Пробная неделя начнётся ${startText}. В этот день откроются чек-ин и дневник.`
+                        : 'Куратор ещё не назначил дату начала пробной недели. Мы сообщим, когда доступ откроется.',
+                    icon: '✓',
+                    actions: [{
+                        key: 'refresh-subscription',
+                        label: 'Проверить доступ',
+                        onClick: () => HEYS.Subscription?.getStatusDetails?.(true),
+                    }],
+                });
+            }
         }
 
         return null;

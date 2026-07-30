@@ -15,14 +15,16 @@ const userTabSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_tab_
 const legacyUserSource = fs.readFileSync(path.resolve(__dirname, '../heys_user_v12.js'), 'utf8');
 
 describe('first login onboarding guardrails', () => {
-  it('waits for required local saves and keeps check-in cloud sync in the background', () => {
+  it('confirms the profile key directly and keeps unrelated check-in sync in the background', () => {
     expect(stepModalSource).toContain('await result');
     expect(stepModalSource).toContain('await saveStepConfig');
     expect(stepModalSource).toContain('await completionResult');
     expect(stepModalSource).toContain('Сохраняю...');
     expect(profileStepSource).toContain('return syncCurrentClientName(fullName,');
-    expect(profileStepSource).toContain('profile_sync_timeout');
-    expect(profileStepSource).toContain('return HEYS.cloud.flushPendingQueue(10000)');
+    expect(profileStepSource).toContain("HEYS.cloud.waitForSync('heys_profile', 10000)");
+    expect(profileStepSource).toContain("api.getKV(clientId, 'heys_profile')");
+    expect(profileStepSource).toContain("api.saveKV(clientId, 'heys_profile', expectedProfile)");
+    expect(profileStepSource).not.toContain('profile_sync_timeout');
     expect(morningCheckinSource).toContain("traceMorningCheckin('step_sync_background'");
     expect(morningCheckinSource).toContain("status: 'saved_local'");
     expect(morningCheckinSource).not.toContain('checkin_sync_timeout');
@@ -33,6 +35,8 @@ describe('first login onboarding guardrails', () => {
     expect(profileStepSource).not.toContain('heys_morning_checkin_done');
     expect(morningCheckinSource).toContain('Завершите первый вход');
     expect(morningCheckinSource).toContain('обязательный чек-ин');
+    expect(morningCheckinSource).toContain('isProfileOnlyRegistration');
+    expect(morningCheckinSource).toContain('if (!canUseDailyFlow) return steps');
   });
 
   it('keeps registration blocked until required consents are valid', () => {

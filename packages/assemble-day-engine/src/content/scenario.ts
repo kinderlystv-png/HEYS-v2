@@ -1,5 +1,6 @@
 import { CONTRACT, type EventSource, type EventTemplate, type GameState, type Registries, type ScenarioSlot } from '../types.js';
 import { actions } from './actions.js';
+import { EVENT_COPY } from './presentation.js';
 
 type SlotSeed=[number,number,string,EventSource,string[]];
 const raw:SlotSeed[]=[
@@ -51,16 +52,17 @@ export const slots:ScenarioSlot[]=raw.map(([day,minute,eventId],index)=>{
 slots[7]={...slots[7]!,sleepBeforeMin:210,interruptionsMin:10};
 
 const heavyIds=new Set(['tue_night_wakeup','tue_pickup_conflict','wed_school_call','thu_family_evening','fri_final_issue','fri_submit','sat_school_event']);
+const familyWindowIds=new Set(['mon_family_dinner','tue_pickup_conflict','thu_family_evening','fri_family_plan','sat_school_event','sun_family_time']);
 export const events:Record<string,EventTemplate>=Object.fromEntries(raw.map(([day,minute,id,source,actionIds],index)=>{
   const heavy=heavyIds.has(id),large=source==='external',dayIndex=day-1;
   const event:EventTemplate={
     schemaVersion:1,id,version:1,source,
-    copy:{title:id.replaceAll('_',' '),situation:`Контрольная развилка ${index+1}`,...(source==='causal'?{causeHint:'Событие следует из предыдущего состояния и решений'}:{})},
+    copy:{...EVENT_COPY[id]!,...(source==='causal'&&!EVENT_COPY[id]?.causeHint?{causeHint:'Ситуация учитывает накопленное состояние и предыдущие решения.'}:{})},
     trigger:{kind:'compare',path:'scenarioCursor',op:'eq',value:index},
     hardWindow:{fromDayIndex:dayIndex,fromMinuteOfDay:minute,toDayIndex:dayIndex,toMinuteOfDay:Math.min(1439,minute+120)},
     urgency:heavy?3:source==='mandatory'?2:1,selectionWeight:1,cooldownDays:source==='external'?2:0,maxOccurrencesPerCampaign:1,
     load:{external:source==='external'?35:0,total:source==='external'?40:source==='causal'?12:0,size:large?'large':heavy?'medium':'small'},
-    onOpenEffects:source==='external'?[{op:'add_state',path:'vitals.tension',delta:5,reason:'внешняя задержка'}]:[],actionIds,tags:[source,...(heavy?['heavy']:[])],
+    onOpenEffects:source==='external'?[{op:'add_state',path:'vitals.tension',delta:5,reason:'внешняя задержка'}]:[],actionIds,tags:[source,...(heavy?['heavy']:[]),...(day<=5&&minute>=540&&minute<1080?['planned_work_window']:[]),...(familyWindowIds.has(id)?['family_anchor_window']:[]),...(minute>=1080?['sleep_boundary_window']:[])],
   };
   return [id,event];
 }));

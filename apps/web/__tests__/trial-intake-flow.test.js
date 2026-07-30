@@ -261,8 +261,9 @@ describe('protected trial intake contract', () => {
   });
 
   it('renders the route-level intake without competing app overlays', () => {
-    expect(appOverlaysSource).toContain("consentGate?.key === 'trial-intake'");
-    expect(appOverlaysSource).toContain('if (isTrialIntakeBlocking)');
+    expect(appOverlaysSource).toContain("['trial-intake', 'subscription-loading', 'subscription-waiting']");
+    expect(appOverlaysSource).toContain('.includes(consentGate?.key)');
+    expect(appOverlaysSource).toContain('if (isRouteLevelGate)');
     expect(appOverlaysSource).toContain('return consentGate;');
   });
 
@@ -420,13 +421,14 @@ describe('protected trial intake contract', () => {
     expect(curatorWebSource).not.toContain("'admin_convert_lead'");
   });
 
-  it('shows one owner-aware next action and protects waiting-slot activation', () => {
+  it('shows one owner-aware next action and keeps trial activation out of intake review', () => {
     expect(queueSource).toContain('Действие куратора: отправить приглашение');
     expect(queueSource).toContain('Ожидаем завершение анкеты кандидатом');
     expect(queueSource).toContain('Действие куратора: разобрать анкету');
     expect(queueSource).toContain('Ожидаем свободное место');
-    expect(queueSource).toContain("intakeStatus === 'approved_waiting_slot' && freeSlots <= 0");
-    expect(queueSource).toContain('Назначить дату старта');
+    expect(queueSource).not.toContain("intakeStatus === 'approved_waiting_slot' && freeSlots <= 0");
+    expect(queueSource).not.toContain('Назначить дату старта');
+    expect(queueSource).not.toContain('trialActivationDialog');
     expect(queueSource).toContain('Решение завершено · удаление анкеты через 30 дней');
   });
 

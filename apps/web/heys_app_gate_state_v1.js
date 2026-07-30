@@ -49,11 +49,51 @@
         // reads HEYS.MessengerAPI.getInboxCache() synchronously — без этого тика
         // badges не появятся пока что-то ещё не триггернёт rerender.
         const [, _setMessengerInboxTick] = React.useState(0);
+        const [subscriptionState, setSubscriptionState] = React.useState(() => {
+            const details = HEYS.Subscription?.getCachedDetails?.();
+            return {
+                status: details?.status || HEYS.Subscription?.getCachedStatus?.() || 'none',
+                details: details || null,
+                isLoading: !details,
+            };
+        });
         React.useEffect(() => {
             const onUpdate = () => _setMessengerInboxTick((t) => t + 1);
             window.addEventListener('heys:messenger-inbox-updated', onUpdate);
             return () => window.removeEventListener('heys:messenger-inbox-updated', onUpdate);
         }, []);
+
+        React.useEffect(() => {
+            let cancelled = false;
+            const applyDetails = (value) => {
+                if (cancelled) return;
+                const details = HEYS.Subscription?.normalizeDetails?.(value) || value || { status: 'none' };
+                setSubscriptionState({
+                    status: details.status || 'none',
+                    details,
+                    isLoading: false,
+                });
+            };
+            const onChanged = (event) => applyDetails(event?.detail);
+            const onProfileConfirmed = () => setSubscriptionState((current) => ({ ...current }));
+            window.addEventListener('heys:subscription-changed', onChanged);
+            window.addEventListener('heys:profile-sync-confirmed', onProfileConfirmed);
+
+            if (!clientId || !HEYS.Subscription?.getStatusDetails) {
+                applyDetails({ status: HEYS.Subscription?.getLocalStatus?.() || 'none' });
+            } else {
+                setSubscriptionState((current) => ({ ...current, isLoading: true }));
+                HEYS.Subscription.getStatusDetails(true).then(applyDetails).catch(() => {
+                    applyDetails({ status: HEYS.Subscription?.getLocalStatus?.() || 'none' });
+                });
+            }
+
+            return () => {
+                cancelled = true;
+                window.removeEventListener('heys:subscription-changed', onChanged);
+                window.removeEventListener('heys:profile-sync-confirmed', onProfileConfirmed);
+            };
+        }, [clientId]);
 
         const gate = AppGateFlow.buildGate ? AppGateFlow.buildGate({
             clientId,
@@ -130,6 +170,7 @@
             setMustBlockReconsent: complianceState?.setMustBlockReconsent,
             setNeedsAgeGate: complianceState?.setNeedsAgeGate,
             setConsentCheckError: complianceState?.setConsentCheckError,
+            subscriptionState,
         }) : null;
 
         return {

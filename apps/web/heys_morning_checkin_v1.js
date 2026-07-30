@@ -1108,16 +1108,29 @@
     } = opts || {};
     const steps = [];
     let hasProfileSteps = false;
+    const subscription = HEYS.Subscription;
+    const hasSubscriptionGate = typeof subscription?.canWriteStatus === 'function';
+    const subscriptionStatus = subscription?.getCachedStatus?.()
+      || subscription?.getLocalStatus?.()
+      || 'none';
+    const canUseDailyFlow = !hasSubscriptionGate
+      || subscription.canWriteStatus(subscriptionStatus) === true;
 
     // 1. Проверяем профиль для новых пользователей
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
-        // 🎉 Шаг приветствия после регистрации — визуальный разделитель
-        steps.push('welcome');
         hasProfileSteps = true;
+        // До назначения/старта триала регистрация заканчивается профилем.
+        // Чекин и welcome с переходом в дневник откроются только после доступа.
+        if (!canUseDailyFlow) return steps;
+        steps.push('welcome');
       }
     }
+
+    // Защита второго слоя: даже если UI-gate ещё не успел отрисоваться,
+    // клиент без активного доступа не получает ни одного шага чекина.
+    if (!canUseDailyFlow) return steps;
 
     // 2.0. 📊 Верификация пропущенных дней — РАЗБОР ПЕРВЫМ
     // Семантика: сначала закрываем «вчера/позавчера», потом фиксируем «сегодня».
@@ -1815,7 +1828,10 @@
       ...freshSteps
     ]));
     const flowId = createMorningFlowId(dateKey);
-    const ledger = ensureMorningProgress({
+    const isRegistrationCheckin = steps.includes('profile-personal');
+    const isProfileOnlyRegistration = isRegistrationCheckin
+      && steps.every((stepId) => stepId.startsWith('profile-'));
+    const ledger = isProfileOnlyRegistration ? null : ensureMorningProgress({
       dateKey,
       clientId,
       flowId,
@@ -1830,12 +1846,14 @@
       steps,
       flowId: ledger?.flowId || flowId,
       skipYesterdayVerify: opts.yesterdayVerifyRequired === false,
-      isRegistrationCheckin: steps.includes('profile-personal')
+      isRegistrationCheckin,
+      isProfileOnlyRegistration
     };
   }
 
   function createMorningStepAck(plan) {
     return async ({ stepId, saveResult, skipped }) => {
+      if (plan.isProfileOnlyRegistration) return true;
       const affectedKeys = getAffectedKeysForMorningStep(stepId, plan.dateKey, saveResult);
       const isSkipped = !!(skipped || saveResult?.skipped);
       traceMorningCheckin(isSkipped ? 'step_skip_ack_start' : 'step_ack_start', {
@@ -2089,6 +2107,10 @@
 
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
+        if (plan.isProfileOnlyRegistration) {
+          if (typeof onComplete === 'function') onComplete();
+          return true;
+        }
         return completeMorningCheckin(plan, onComplete);
       };
 

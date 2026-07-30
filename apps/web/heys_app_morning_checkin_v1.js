@@ -250,6 +250,51 @@
             return () => window.removeEventListener('heys:consents-state-changed', handleConsentsStateChanged);
         }, []);
 
+        React.useEffect(() => {
+            const handleSubscriptionChanged = (event) => {
+                const status = event?.detail?.status
+                    || HEYS.Subscription?.getCachedStatus?.()
+                    || HEYS.Subscription?.getLocalStatus?.()
+                    || 'none';
+                const canWrite = typeof HEYS.Subscription?.canWriteStatus === 'function'
+                    ? HEYS.Subscription.canWriteStatus(status)
+                    : status === 'trial' || status === 'active';
+                const activeClientId = clientIdRef.current || clientId || HEYS.utils?.getCurrentClientId?.() || '';
+
+                if (!canWrite) {
+                    const profile = readProfileForceRawScopedInline(activeClientId)
+                        || HEYS.MorningCheckinUtils?.readProfileForceRawScoped?.(activeClientId)
+                        || HEYS.utils?.lsGet?.('heys_profile', {})
+                        || {};
+                    const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true;
+                    if (!isProfileIncomplete) {
+                        setShowMorningCheckin(false);
+                    }
+                    return;
+                }
+
+                if (HEYS._consentsValid !== true) {
+                    console.info('[MorningCheckin] ℹ️ trial active — ждём обязательные согласия');
+                    return;
+                }
+                if (!activeClientId || fullSyncReadyClientRef.current !== activeClientId) {
+                    console.info('[MorningCheckin] ℹ️ trial active — ждём полный sync перед чек-ином');
+                    return;
+                }
+
+                setTimeout(() => {
+                    evaluateMorningCheckinWhenReady(setShowMorningCheckin, {
+                        source: 'subscription-activated',
+                        clientId: activeClientId,
+                        isInitializing,
+                    });
+                }, 0);
+            };
+
+            window.addEventListener('heys:subscription-changed', handleSubscriptionChanged);
+            return () => window.removeEventListener('heys:subscription-changed', handleSubscriptionChanged);
+        }, []);
+
         return { showMorningCheckin, setShowMorningCheckin };
     };
 

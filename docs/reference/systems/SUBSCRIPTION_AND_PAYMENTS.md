@@ -1,12 +1,12 @@
 # Подписка, trial, paywall и платежи
 
-> **Статус:** client access core проверен 2026-07-18; тарифный контракт обновлён
-> 2026-07-28; payment code-path — 2026-07-28<br> **Охват:** статусы, кэш, write
-> gate, trial UI, payment create/status/webhook/refund, auth и
-> идемпотентность<br> **Не подтверждено/Не охвачено:** production payment
-> rollout. **Deferred до отдельного post-trial этапа:** deployment
-> `heys-api-payments`, payment routes, отдельный Lockbox и credentials ЮKassa.
-> Их отсутствие не блокирует первые реальные trial.
+> **Статус:** client access core проверен 2026-07-18; pre-trial profile-only
+> contract обновлён локально 2026-07-30; payment code-path — 2026-07-28<br>
+> **Охват:** статусы, кэш, write gate, trial UI, payment
+> create/status/webhook/refund, auth и идемпотентность<br> **Не подтверждено/Не
+> охвачено:** production payment rollout. **Deferred до отдельного post-trial
+> этапа:** deployment `heys-api-payments`, payment routes, отдельный Lockbox и
+> credentials ЮKassa. Их отсутствие не блокирует первые реальные trial.
 
 ## Назначение и границы
 
@@ -23,6 +23,7 @@ payment endpoints обязаны независимо проверять session
 PIN/curator session
   → get_subscription_status_by_session или локальный curator profile
   → HEYS.Subscription cache
+  → none/trial_pending: согласия + профиль, затем экран ожидания
   → HEYS.Paywall.canWriteSync / gateWrite
   → write разрешён только для trial | active
 
@@ -40,13 +41,13 @@ Payment UI (feature flag)
 
 ## Статусы и владелец решения
 
-| Статус          | Запись данных | Смысл                            |
-| --------------- | ------------- | -------------------------------- |
-| `none`          | нет           | подписка/доступ отсутствуют      |
-| `trial_pending` | нет           | trial одобрен, но ещё не активен |
-| `trial`         | да            | пробный доступ активен           |
-| `active`        | да            | оплаченный доступ активен        |
-| `read_only`     | нет           | trial/подписка завершились       |
+| Статус          | Запись данных  | Смысл                             |
+| --------------- | -------------- | --------------------------------- |
+| `none`          | только профиль | аккаунт готов, дата не назначена  |
+| `trial_pending` | только профиль | trial запланирован, но не активен |
+| `trial`         | да             | пробный доступ активен            |
+| `active`        | да             | оплаченный доступ активен         |
+| `read_only`     | нет            | trial/подписка завершились        |
 
 Каноническое client-side решение находится в
 `HEYS.Subscription.canWriteStatus(value)`: helper нормализует поддержанные формы
@@ -89,6 +90,9 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
    Paywall не превращается в разрешение. Day UI считает запись закрытой, пока
    `canWriteStatus()` явно не вернул `true`.
 7. Auth/client/focus/visibility события инициируют пассивное обновление.
+8. После обязательных согласий клиент без активного trial заполняет только
+   профиль. После подтверждённого cloud readback route-level gate не допускает
+   его в чекин, дневник и основной интерфейс.
 
 Ошибки API, неизвестный status и отсутствие `HEYS.Subscription` не открывают
 доступ. `useWriteAccess()` начинается с `canWrite: false` и меняет решение
@@ -102,7 +106,11 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 Текущий контракт различает `trial_pending` и активный `trial`. Legacy
 `startTrial()` оставлен только для совместимости и не запускает trial.
 `activateTrialTimer()` также помечен deprecated в коде после перехода к
-выбранной куратором дате; новый flow не должен строиться на этих legacy API.
+выбранной куратором дате и возвращает `curator_activation_required` без RPC.
+Клиентские RPC `start_trial_by_session` и `activate_trial_timer_by_session`
+удалены из gateway allowlist, а migration №20 отзывает их `EXECUTE` у
+`heys_rpc`. Одобрение анкеты создаёт аккаунт и PIN, но не запускает trial: дату
+куратор выбирает отдельно в существующем управлении подпиской.
 
 Пробная неделя относится только к Pro. Pro Спорт использует сохранённый
 внутренний plan-id `proplus`, но публично называется «Pro Спорт», стоит 19 990
@@ -147,22 +155,29 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 ## Инварианты
 
 1. `trial_pending` не разрешает запись; только `trial` и `active`.
-2. Browser-supplied `clientId` не является authority для payment/status.
-3. Cache ускоряет gate, но server status остаётся владельцем доступа.
-4. Subscription-only refresh не должен затирать полный profile.
-5. Payment event применяется максимум один раз.
-6. Активация payment и изменение client subscription должны быть одной
+2. Переход `trial_pending → trial` после полного sync сразу повторно оценивает
+   обязательный чек-ин без reload.
+3. Browser-supplied `clientId` не является authority для payment/status.
+4. Cache ускоряет gate, но server status остаётся владельцем доступа.
+5. Subscription-only refresh не должен затирать полный profile.
+6. Payment event применяется максимум один раз.
+7. Активация payment и изменение client subscription должны быть одной
    транзакцией.
-7. Payment metadata не должна содержать контактные или health данные.
-8. Версия `payment_oferta` должна совпадать между consent UI и backend.
-9. Payment UI нельзя считать активным только потому, что backend-код существует.
-10. Неизвестный или ещё загружаемый статус блокирует запись, но не отображается
+8. Payment metadata не должна содержать контактные или health данные.
+9. Версия `payment_oferta` должна совпадать между consent UI и backend.
+10. Payment UI нельзя считать активным только потому, что backend-код
+    существует.
+11. Неизвестный или ещё загружаемый статус блокирует запись, но не отображается
     пользователю как подтверждённое окончание триала.
-11. Внутренний id `proplus` — техническая совместимость, а не публичное название
+12. Внутренний id `proplus` — техническая совместимость, а не публичное название
     тарифа; пользователь видит «Pro Спорт».
-12. Legacy `admin_extend_trial` не входит в browser/backend runtime allowlist;
+13. Legacy `admin_extend_trial` не входит в browser/backend runtime allowlist;
     ручное продление выполняется только через ownership-checked
     `admin_extend_subscription`.
+14. `heys_profile` можно сохранить до trial, но `heys_dayv2_*` и другие
+    дневниковые ключи сервер принимает только при `trial|active`.
+15. Подтверждение первого профиля использует readback именно `heys_profile` и не
+    зависит от состояния посторонних ключей общей sync-очереди.
 
 ## Отложенный post-trial payment этап
 
@@ -184,7 +199,10 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 ## Ключевые тесты
 
 - `apps/web/__tests__/subscription-curator-guard.test.js` — curator/PIN status,
-  единый access helper, sync/async/meta, malformed payload и boot-order.
+  единый access helper, scheduled details, запрет PIN self-start и boot-order.
+- `apps/web/__tests__/trial-prestart-access-contract.test.js` и
+  `scripts/db/test-trial-intake-migration.mjs` — profile-only pre-trial gate,
+  отозванные self-start privileges и доступ active trial.
 - `yandex-cloud-functions/heys-api-payments/__tests__/auth-helpers-cookie-session.test.cjs`
   — cookie/session auth.
 - `yandex-cloud-functions/heys-api-payments/__tests__/payment-status-webhook.test.cjs`
@@ -194,18 +212,20 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 
 ## Facts Table
 
-| ID  | Утверждение                                                                               | Проверка                                                                                                                                                                                                                                                            | Статус                    |
-| --- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| B1  | `canWriteStatus` — единый pure helper и разрешает только trial/active                     | `rg -n -e 'function canWriteStatus' -e 'return status === STATUS.TRIAL' apps/web/heys_subscription_v1.js`                                                                                                                                                           | проверено 2026-07-18      |
-| B2  | Cache key имеет TTL и Phase A загружает status                                            | `rg -n -e 'CACHE_KEY' -e 'CACHE_TTL_MS' apps/web/heys_subscription_v1.js && rg -n 'heys_subscription_status' apps/web/heys_storage_supabase_v1.js`                                                                                                                  | проверено 2026-07-17      |
-| B3  | Paywall async/sync и начальный hook state fail-closed                                     | `sed -n '875,985p' apps/web/heys_paywall_v1.js`                                                                                                                                                                                                                     | исправлено 2026-07-18     |
-| B4  | Parameterized, consumer и boot-order contract проходят                                    | `pnpm vitest run apps/web/__tests__/subscription-curator-guard.test.js --no-coverage`                                                                                                                                                                               | 24/24 пройдено 2026-07-18 |
-| B5  | Payment UI feature flag default false                                                     | `rg -n -e 'paymentsEnabled = false' -e 'HEYS.config.paymentsEnabled' apps/web/heys_subscriptions_v1.js`                                                                                                                                                             | проверено 2026-07-17      |
-| B6  | Create/status используют client auth, refund curator auth, webhook отдельный path         | `sed -n '1080,1120p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                             | проверено 2026-07-17      |
-| B7  | Webhook использует IP allowlist; custom HMAC-secret отсутствует                           | `rg -n 'isYukassaIp\|YUKASSA_WEBHOOK_SECRET' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                     | проверено 2026-07-28      |
-| B8  | Event dedupe предшествует transactional subscription mutation                             | `sed -n '498,690p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                               | проверено 2026-07-17      |
-| B9  | Основной gateway spec не содержит payment routes, v2 содержит TODO routes                 | `rg -n 'payments' yandex-cloud-functions/api-gateway-spec.yaml yandex-cloud-functions/api-gateway-spec-v2.yaml`                                                                                                                                                     | проверено 2026-07-17      |
-| B10 | Metadata получает `canWrite` из того же helper                                            | `sed -n '375,430p' apps/web/heys_subscription_v1.js`                                                                                                                                                                                                                | исправлено 2026-07-18     |
-| B11 | Девять diary write consumers и day UI fail-closed при отсутствующем модуле/unknown status | `rg -n 'Paywall\?\.canWriteSync                                                                                                                    \| canWriteStatus' apps/web/heys_day_day_handlers.js apps/web/day/\_meals.js apps/web/heys_day_tab_render_v1.js` | исправлено 2026-07-18     |
-| B12 | Legacy `Subscriptions.canEdit` и status metadata делегируют каноническому helper          | `rg -n 'canWriteStatus                                                                                                                             \| can_edit' apps/web/heys_subscriptions_v1.js`                                                                  | исправлено 2026-07-18     |
-| B13 | Payment backend требует ту же активную версию и SHA оферты, что manifest и consent UI     | `pnpm --dir apps/web exec vitest run __tests__/consent-release-contract.test.js --no-coverage`                                                                                                                                                                      | исправлено 2026-07-28     |
+| ID  | Утверждение                                                                               | Проверка                                                                                                                                                                                                                                                            | Статус                        |
+| --- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| B1  | `canWriteStatus` — единый pure helper и разрешает только trial/active                     | `rg -n -e 'function canWriteStatus' -e 'return status === STATUS.TRIAL' apps/web/heys_subscription_v1.js`                                                                                                                                                           | проверено 2026-07-18          |
+| B2  | Cache key имеет TTL и Phase A загружает status                                            | `rg -n -e 'CACHE_KEY' -e 'CACHE_TTL_MS' apps/web/heys_subscription_v1.js && rg -n 'heys_subscription_status' apps/web/heys_storage_supabase_v1.js`                                                                                                                  | проверено 2026-07-17          |
+| B3  | Paywall async/sync и начальный hook state fail-closed                                     | `sed -n '875,985p' apps/web/heys_paywall_v1.js`                                                                                                                                                                                                                     | исправлено 2026-07-18         |
+| B4  | Parameterized, consumer и boot-order contract проходят                                    | `pnpm exec vitest run apps/web/__tests__/subscription-curator-guard.test.js`                                                                                                                                                                                        | 27/27 пройдено 2026-07-30     |
+| B5  | Payment UI feature flag default false                                                     | `rg -n -e 'paymentsEnabled = false' -e 'HEYS.config.paymentsEnabled' apps/web/heys_subscriptions_v1.js`                                                                                                                                                             | проверено 2026-07-17          |
+| B6  | Create/status используют client auth, refund curator auth, webhook отдельный path         | `sed -n '1080,1120p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                             | проверено 2026-07-17          |
+| B7  | Webhook использует IP allowlist; custom HMAC-secret отсутствует                           | `rg -n 'isYukassaIp\|YUKASSA_WEBHOOK_SECRET' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                     | проверено 2026-07-28          |
+| B8  | Event dedupe предшествует transactional subscription mutation                             | `sed -n '498,690p' yandex-cloud-functions/heys-api-payments/index.js`                                                                                                                                                                                               | проверено 2026-07-17          |
+| B9  | Основной gateway spec не содержит payment routes, v2 содержит TODO routes                 | `rg -n 'payments' yandex-cloud-functions/api-gateway-spec.yaml yandex-cloud-functions/api-gateway-spec-v2.yaml`                                                                                                                                                     | проверено 2026-07-17          |
+| B10 | Metadata получает `canWrite` из того же helper                                            | `sed -n '375,430p' apps/web/heys_subscription_v1.js`                                                                                                                                                                                                                | исправлено 2026-07-18         |
+| B11 | Девять diary write consumers и day UI fail-closed при отсутствующем модуле/unknown status | `rg -n 'Paywall\?\.canWriteSync                                                                                                                    \| canWriteStatus' apps/web/heys_day_day_handlers.js apps/web/day/\_meals.js apps/web/heys_day_tab_render_v1.js` | исправлено 2026-07-18         |
+| B12 | Legacy `Subscriptions.canEdit` и status metadata делегируют каноническому helper          | `rg -n 'canWriteStatus                                                                                                                             \| can_edit' apps/web/heys_subscriptions_v1.js`                                                                  | исправлено 2026-07-18         |
+| B13 | Payment backend требует ту же активную версию и SHA оферты, что manifest и consent UI     | `pnpm --dir apps/web exec vitest run __tests__/consent-release-contract.test.js --no-coverage`                                                                                                                                                                      | исправлено 2026-07-28         |
+| B14 | До trial доступны согласия и профиль, но не чекин/dayv2/main UI                           | `pnpm exec vitest run apps/web/__tests__/consent-gate-flow.test.js apps/web/__tests__/morning-checkin-flow-resume.test.js apps/web/__tests__/trial-prestart-access-contract.test.js`                                                                                | проверено локально 2026-07-30 |
+| B15 | PIN self-start закрыт в gateway и DB privilege                                            | `pnpm test:db:trial-intake`                                                                                                                                                                                                                                         | проверено локально 2026-07-30 |

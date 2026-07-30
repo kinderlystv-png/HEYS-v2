@@ -28,6 +28,9 @@ function loadProfileSteps(storage, overrides = {}) {
   const steps = {};
   const rpc = vi.fn().mockResolvedValue({ success: true });
   const flushPendingQueue = vi.fn().mockResolvedValue(true);
+  const waitForSync = vi.fn().mockResolvedValue('synced');
+  const getKV = vi.fn().mockImplementation(async () => ({ data: readJson(storage, 'heys_profile') }));
+  const saveKV = vi.fn().mockResolvedValue({ success: true });
   const notifyClientsUpdated = vi.fn();
 
   Object.defineProperty(window, 'localStorage', {
@@ -46,9 +49,9 @@ function loadProfileSteps(storage, overrides = {}) {
 
   window.HEYS = {
     store: { invalidate: vi.fn() },
-    cloud: { flushPendingQueue },
+    cloud: { flushPendingQueue, waitForSync },
     auth: { getSessionToken: vi.fn(() => 'session-token') },
-    YandexAPI: { rpc },
+    YandexAPI: { rpc, getKV, saveKV },
     AppClientManagement: { notifyClientsUpdated },
     StepModal: {
       WheelPicker: function WheelPicker() {},
@@ -65,7 +68,7 @@ function loadProfileSteps(storage, overrides = {}) {
   // eslint-disable-next-line no-eval
   (0, eval)(profileStepSource);
 
-  return { steps, rpc, flushPendingQueue, notifyClientsUpdated };
+  return { steps, rpc, flushPendingQueue, waitForSync, getKV, saveKV, notifyClientsUpdated };
 }
 
 describe('first login registration flow', () => {
@@ -92,7 +95,7 @@ describe('first login registration flow', () => {
       heys_pending_client_name: JSON.stringify('Анна Петрова'),
       heys_profile: JSON.stringify({}),
     });
-    const { steps, rpc, flushPendingQueue, notifyClientsUpdated } = loadProfileSteps(storage);
+    const { steps, rpc, flushPendingQueue, waitForSync, getKV, notifyClientsUpdated } = loadProfileSteps(storage);
 
     const initial = steps['profile-personal'].getInitialData();
     expect(initial.firstName).toBe('Анна');
@@ -144,6 +147,8 @@ describe('first login registration flow', () => {
 
     expect(completed).toBe(true);
     expect(flushPendingQueue).toHaveBeenCalledWith(10000);
+    expect(waitForSync).toHaveBeenCalledWith('heys_profile', 10000);
+    expect(getKV).toHaveBeenCalledWith(clientId, 'heys_profile');
     expect(readJson(storage, 'heys_profile')).toMatchObject({
       firstName: 'Анна',
       lastName: 'Петрова',
@@ -152,5 +157,68 @@ describe('first login registration flow', () => {
       profileCompleted: true,
     });
     expect(notifyClientsUpdated).toHaveBeenCalledWith([{ id: clientId, name: 'Анна Петрова' }], 'profile-wizard');
+    expect(storage._store.heys_registration_in_progress).toBeUndefined();
+    expect(storage._store['heys_dayv2_2026-06-19']).toBeUndefined();
+  });
+
+  it('finishes when the profile is confirmed even if an unrelated queue item keeps the global flush pending', async () => {
+    const clientId = 'client-2';
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify(clientId),
+      heys_profile: JSON.stringify({}),
+    });
+    const flushPendingQueue = vi.fn().mockResolvedValue(false);
+    const { steps, getKV, saveKV } = loadProfileSteps(storage, {
+      cloud: {
+        flushPendingQueue,
+        waitForSync: vi.fn().mockResolvedValue('synced'),
+      },
+    });
+
+    await expect(steps['profile-metabolism'].save(
+      { sleepHours: 8, insulinWaveHours: 3 },
+      {},
+      {
+        'profile-personal': { firstName: 'Иван', gender: 'Мужской', birthDate: '1990-01-01' },
+        'profile-body': { weight: 80, height: 180, weightGoal: 76 },
+        'profile-goals': { deficitPctTarget: -10 },
+        'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
+      },
+    )).resolves.toBe(true);
+
+    expect(flushPendingQueue).toHaveBeenCalledWith(10000);
+    expect(getKV).toHaveBeenCalledTimes(1);
+    expect(saveKV).not.toHaveBeenCalled();
+  });
+
+  it('keeps registration incomplete and surfaces the exact profile server error', async () => {
+    const clientId = 'client-3';
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify(clientId),
+      heys_profile: JSON.stringify({}),
+    });
+    const getKV = vi.fn().mockResolvedValue({ data: null });
+    const saveKV = vi.fn().mockResolvedValue({ success: false, error: 'subscription_profile_write_denied' });
+    const { steps } = loadProfileSteps(storage, {
+      cloud: {
+        flushPendingQueue: vi.fn().mockResolvedValue(false),
+        waitForSync: vi.fn().mockResolvedValue('pending'),
+      },
+      YandexAPI: { rpc: vi.fn(), getKV, saveKV },
+    });
+
+    await expect(steps['profile-metabolism'].save(
+      { sleepHours: 8, insulinWaveHours: 3 },
+      {},
+      {
+        'profile-personal': { firstName: 'Пётр', gender: 'Мужской', birthDate: '1991-02-02' },
+        'profile-body': { weight: 82, height: 181, weightGoal: 78 },
+        'profile-goals': { deficitPctTarget: -10 },
+        'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
+      },
+    )).rejects.toThrow('subscription_profile_write_denied');
+
+    expect(storage._store.heys_registration_in_progress).toBe('true');
+    expect(window.HEYS.ProfileSteps.isProfileIncomplete(readJson(storage, 'heys_profile'))).toBe(true);
   });
 });

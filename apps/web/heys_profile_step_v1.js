@@ -73,6 +73,64 @@
     return currentClientId || '';
   }
 
+  function isRegistrationInProgress() {
+    const raw = localStorage.getItem('heys_registration_in_progress');
+    return raw === 'true' || raw === '"true"';
+  }
+
+  function hasActiveWriteAccess() {
+    const subscription = HEYS.Subscription;
+    if (!subscription?.canWriteStatus) return false;
+    const status = subscription.getCachedStatus?.() || subscription.getLocalStatus?.() || 'none';
+    return subscription.canWriteStatus(status) === true;
+  }
+
+  function isConfirmedProfile(remoteProfile, expectedProfile) {
+    if (!remoteProfile || !expectedProfile) return false;
+    return remoteProfile.profileCompleted === true
+      && Number(remoteProfile.updatedAt || 0) === Number(expectedProfile.updatedAt || 0);
+  }
+
+  async function confirmProfileCloudSave(expectedProfile) {
+    const clientId = getCurrentClientId();
+    const api = HEYS.YandexAPI;
+    if (!clientId || !api?.getKV) throw new Error('profile_sync_unavailable');
+
+    // Запускаем общую очередь, но не используем её полное опустошение как
+    // подтверждение: посторонний заблокированный ключ не относится к профилю.
+    if (HEYS.cloud?.flushPendingQueue) {
+      Promise.resolve(HEYS.cloud.flushPendingQueue(10000)).catch((error) => {
+        console.warn('[HEYS.profileSteps] Background queue flush failed:', error?.message || error);
+      });
+    }
+
+    let syncStatus = 'unknown';
+    if (HEYS.cloud?.waitForSync) {
+      syncStatus = await HEYS.cloud.waitForSync('heys_profile', 10000);
+    }
+
+    let readback = await api.getKV(clientId, 'heys_profile');
+    if (readback?.error) throw new Error(String(readback.error?.message || readback.error));
+    if (!isConfirmedProfile(readback?.data, expectedProfile)) {
+      // Точечный идемпотентный retry даёт реальную серверную ошибку и не
+      // создаёт второй профиль: client_kv_store обновляет тот же ключ.
+      if (!api.saveKV) throw new Error(`profile_sync_unconfirmed:${syncStatus}`);
+      const saved = await api.saveKV(clientId, 'heys_profile', expectedProfile);
+      if (!saved?.success) throw new Error(String(saved?.error?.message || saved?.error || 'profile_save_failed'));
+      readback = await api.getKV(clientId, 'heys_profile');
+      if (readback?.error) throw new Error(String(readback.error?.message || readback.error));
+      if (!isConfirmedProfile(readback?.data, expectedProfile)) {
+        throw new Error('profile_sync_unconfirmed');
+      }
+    }
+
+    localStorage.removeItem('heys_registration_in_progress');
+    window.dispatchEvent(new CustomEvent('heys:profile-sync-confirmed', {
+      detail: { clientId, updatedAt: expectedProfile.updatedAt }
+    }));
+    return true;
+  }
+
   function readDayDataScoped(dateKey, fallback = {}) {
     const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
     if (typeof reader === 'function') return reader(dateKey, fallback);
@@ -557,14 +615,13 @@
         isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
 
       if (isProbablyIncomplete) {
-        lsSet('heys_registration_in_progress', 'true');
+        localStorage.setItem('heys_registration_in_progress', 'true');
         console.warn('[ProfileSteps] registrationInProgress set (profile incomplete)', {
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
           hasBirthDate: !!profile?.birthDate
         });
-      } else {
-        localStorage.removeItem('heys_registration_in_progress');
+      } else if (!isRegistrationInProgress()) {
         console.warn('[ProfileSteps] registrationInProgress cleared (profile complete)', {
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
@@ -1124,6 +1181,7 @@
         updatedAt: Date.now()
       };
 
+      localStorage.setItem('heys_registration_in_progress', 'true');
       lsSet('heys_profile', updatedProfile);
 
       // ⚠️ v1.16 FIX: Инвалидируем кэш HEYS.store.memory
@@ -1155,7 +1213,7 @@
       // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
       const todayKey = new Date().toISOString().slice(0, 10);
       const dayData = readDayDataScoped(todayKey, {});
-      if (!dayData.weightMorning && updatedProfile.weight) {
+      if (hasActiveWriteAccess() && !dayData.weightMorning && updatedProfile.weight) {
         const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
         dayData.weightMorning = updatedProfile.weight;
         dayData.weightUpdatedAt = mutationAt;
@@ -1169,24 +1227,7 @@
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
       console.log('[ProfileSteps] Norms calculated:', norms);
 
-      // 🔐 v1.17: Явный flush в облако — гарантирует что profileCompleted попадёт в cloud
-      // Без этого при signOut → re-login профиль терялся (localStorage очищается, cloud пуст)
-      try {
-        if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-          return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
-            console.info('[HEYS.profileSteps] ☁️ Cloud flush after registration:', flushed ? 'OK' : 'timeout');
-            if (!flushed) throw new Error('profile_sync_timeout');
-            return true;
-          }).catch((e) => {
-            console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
-            throw e;
-          });
-        }
-        return Promise.reject(new Error('profile_sync_unavailable'));
-      } catch (e) {
-        console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
-        return Promise.reject(e);
-      }
+      return confirmProfileCloudSave(updatedProfile);
     }
   });
 
@@ -1251,6 +1292,7 @@
       updatedAt: Date.now()
     };
 
+    localStorage.setItem('heys_registration_in_progress', 'true');
     lsSet('heys_profile', updatedProfile);
 
     // Диспатчим событие для обновления UI профиля
@@ -1288,23 +1330,7 @@
     console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
     console.log('[saveProfileFromStepData] Norms calculated:', norms);
 
-    // 🔐 v1.17: Явный flush в облако (дублирует логику из step-4 save)
-    try {
-      if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-        return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
-          console.info('[HEYS.profileSteps] ☁️ Cloud flush after saveProfileFromStepData:', flushed ? 'OK' : 'timeout');
-          if (!flushed) throw new Error('profile_sync_timeout');
-          return true;
-        }).catch((e) => {
-          console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
-          throw e;
-        });
-      }
-      return Promise.reject(new Error('profile_sync_unavailable'));
-    } catch (e) {
-      console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
-      return Promise.reject(e);
-    }
+    return confirmProfileCloudSave(updatedProfile);
   }
 
   /**
@@ -1313,6 +1339,10 @@
    * чтобы чек-ин НЕ спрашивал вес повторно
    */
   function syncWeightToDay(allStepsData) {
+    if (!hasActiveWriteAccess()) {
+      console.info('[syncWeightToDay] Trial is not active, keeping weight in profile only');
+      return false;
+    }
     const step2 = allStepsData['profile-body'] || {};
     const weight = step2.weight;
 
@@ -1647,9 +1677,12 @@
       }
     }
 
-    // Если есть флаг profileCompleted — используем его (надёжный способ)
+    // Локальный profileCompleted становится окончательным только после
+    // точечного cloud readback. До него reload обязан продолжить регистрацию.
+    if (isRegistrationInProgress()) return true;
+
+    // Если есть подтверждённый флаг profileCompleted — используем его.
     if (profile.profileCompleted === true) {
-      localStorage.removeItem('heys_registration_in_progress');
       return false;
     }
 
@@ -1699,7 +1732,6 @@
             });
           } catch (_) { }
         }
-        localStorage.removeItem('heys_registration_in_progress');
         return false;
       }
     } catch (_) { }
@@ -1776,50 +1808,6 @@
         }
       }
     } catch (_) { }
-
-    // 🛡️ Если регистрация была прервана (перезагрузка страницы) — продолжить регистрацию
-    const registrationInProgress = localStorage.getItem('heys_registration_in_progress') === 'true';
-    if (registrationInProgress) {
-      try {
-        const currentClientId = (window.HEYS?.currentClientId || '').toString();
-        const scopedKey = currentClientId ? `heys_${currentClientId}_profile` : null;
-        let rawScoped = scopedKey ? localStorage.getItem(scopedKey) : null;
-
-        if (rawScoped === 'null' || rawScoped === 'undefined') {
-          try {
-            localStorage.removeItem(scopedKey);
-          } catch (_) { }
-          rawScoped = null;
-        }
-
-        // 🔧 FIX: Если scoped профиль существует и содержит данные — сбросить флаг регистрации
-        if (rawScoped) {
-          // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON. Голый
-          // JSON.parse на сжатой строке падает в catch и оставляет scopedProfile
-          // undefined → registration-флаг застревает навсегда.
-          const decompressFn = window.HEYS?.store?.decompress;
-          let scopedProfile;
-          try {
-            scopedProfile = decompressFn ? decompressFn(rawScoped) : JSON.parse(rawScoped);
-          } catch (e) {
-            // parse error — продолжаем с null
-          }
-          const hasRealData = scopedProfile && (
-            scopedProfile.profileCompleted === true ||
-            scopedProfile.firstName ||
-            scopedProfile.birthDate ||
-            (scopedProfile.weight && scopedProfile.weight !== 70) ||
-            (scopedProfile.height && scopedProfile.height !== 175) ||
-            (scopedProfile.age && scopedProfile.age !== 30)
-          );
-          if (hasRealData) {
-            localStorage.removeItem('heys_registration_in_progress');
-            return false;
-          }
-        }
-      } catch (_) { }
-      return true;
-    }
 
     // Fallback: проверяем обязательные поля
     // Профиль считается неполным, если ВСЕ поля имеют дефолтные значения

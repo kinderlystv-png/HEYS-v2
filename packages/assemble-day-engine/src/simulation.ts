@@ -237,7 +237,7 @@ function planForPolicy(policyId: PolicyId): PlanningPlan {
                 supportingGoal: 'work',
               }
             : {
-                weeklyRuleIds: ['protect_sleep', 'family_anchor', 'work_blocks'],
+                weeklyRuleIds: ['protect_sleep', 'work_blocks'],
                 mainGoal: 'work',
                 supportingGoal: 'family',
               };

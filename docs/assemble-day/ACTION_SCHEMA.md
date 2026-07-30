@@ -1,7 +1,7 @@
-# Action schema v1
+# Action schema v2
 
-> Статус: implementation-контракт<br> Набор документов: 0.31<br> Обновлено:
-> 2026-07-29<br> Владелец: причинный движок и контент сценария
+> Статус: implementation-контракт<br> Набор документов: 0.37<br> Обновлено:
+> 2026-07-30<br> Владелец: причинный движок и контент сценария
 
 [← К карте документации](./README.md)
 
@@ -14,18 +14,24 @@
 ## Корневая схема
 
 ```ts
-interface ActionDefinitionV1 {
-  schemaVersion: 1;
+interface ActionDefinitionV2 {
+  schemaVersion: 2;
   id: string;
   version: 1;
   domains: Array<
     'state' | 'food' | 'work' | 'family' | 'finance' | 'movement' | 'social'
   >;
+  priorityAlignment: {
+    supports: Array<'work' | 'family' | 'recovery' | 'social'>;
+    conflicts: Array<'work' | 'family' | 'recovery' | 'social'>;
+  };
   copy: {
     label: string;
     summary: string;
     knownCost: string;
+    contextual?: Record<string, { label: string; summary: string }>;
   };
+  ruleEvidenceId: RuleEvidenceId;
   requirements: RequirementV1[];
   cost: ActionCostV1;
   immediateEffects: EffectV1[];
@@ -41,8 +47,15 @@ interface ActionDefinitionV1 {
 }
 ```
 
+`priorityAlignment` — обязательное authored-решение контента. Движок не выводит
+фокус из широкого `domains`: поэтому кофе или поздняя работа не становятся
+«восстановлением» только из-за домена `state`. Одно действие не может
+одновременно поддерживать и конфликтовать с одной областью.
+
 `copy` сообщает игроку практический смысл. Формулы, внутренние коэффициенты и
-оценка «правильно / неправильно» в текст не входят.
+оценка «правильно / неправильно» в текст не входят. `contextual` позволяет
+одному engine-action иметь точную подпись в конкретном authored event без
+дублирования copy и branching в UI.
 
 ## Требования
 
@@ -108,6 +121,7 @@ interface ConditionalEffectV1 {
   evaluateAt: 'pre_action';
   effects: EffectV1[];
   explanation: string;
+  ruleEvidenceId: RuleEvidenceId;
 }
 ```
 
@@ -177,6 +191,7 @@ interface ScheduledEffectDefinitionV1 {
     | { kind: 'after_steps'; steps: number }
     | { kind: 'condition'; condition: ConditionV1 };
   effects: EffectV1[];
+  ruleEvidenceId: RuleEvidenceId;
 }
 
 interface UncertaintyV1 {
@@ -206,6 +221,7 @@ interface ActionOfferV1 {
   actionId: string;
   available: boolean;
   unavailableReasons: string[];
+  unavailableMessages: string[];
   effectiveTimeMin: number;
   moneyRub: number;
   effort: ActionCostV1['effort'];
@@ -215,7 +231,28 @@ interface ActionOfferV1 {
   riskScore: number;
   optionPressure: number;
   consequencePreview: string[];
-  geometryReasons: Array<{ reason: string; inputPaths: string[] }>;
+  consequences: {
+    immediate: string[];
+    delayed: string[];
+    conditional: string[];
+  };
+  evidence: RuleEvidence;
+  geometryReasons: Array<{
+    reason: string;
+    inputPaths: string[];
+    evidence: RuleEvidence;
+  }>;
+  planningSignals: Array<{
+    kind:
+      | 'supports_weekly_rule'
+      | 'conflicts_weekly_rule'
+      | 'supports_main_goal'
+      | 'supports_supporting_goal'
+      | 'conflicts_unfunded_goal';
+    sourceId: string;
+    reason: string;
+    inputPath: string;
+  }>;
 }
 ```
 
@@ -223,8 +260,10 @@ interface ActionOfferV1 {
 результата. Числовые поля нужны движку и QA; UI показывает `effectiveTimeMin`,
 `moneyRub`, качественные `effortLevel`/`risk` и краткий `consequencePreview`, не
 воспроизводя пороги или условия. `geometryReasons` перечисляет реальные входы
-причинного журнала. `optionPressure` не выбирает действие и не закрывает
-альтернативы.
+причинного журнала. `unavailableMessages` и `consequences` — готовая human-copy
+проекция; UI не переводит raw codes и не читает effect schema. Evidence содержит
+стабильный `ruleEvidenceId`, confidence, source label и transfer limit.
+`optionPressure` не выбирает действие и не закрывает альтернативы.
 
 ## Валидация контента
 
@@ -240,11 +279,13 @@ interface ActionOfferV1 {
    `consequencePreview` до подтверждения.
 8. Контент не содержит HTML, исполняемый код, персональные данные HEYS или
    внешний URL.
+9. `priorityAlignment` задан явно; одинаковая область не входит одновременно в
+   `supports` и `conflicts`.
 
 ## Пример
 
 ```yaml
-schemaVersion: 1
+schemaVersion: 2
 id: order_food_and_finish_work
 version: 1
 domains: [food, work, finance, family]

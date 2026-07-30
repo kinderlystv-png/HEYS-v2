@@ -190,4 +190,65 @@ describe('morning check-in required module readiness', () => {
         expect(setter).toHaveBeenCalledWith(expect.any(Function));
         cleanups.forEach((fn) => fn());
     });
+
+    it('opens the required check-in when a scheduled trial becomes active after full sync', () => {
+        const setter = vi.fn();
+        const cleanups = [];
+        const React = createReactStub(setter, cleanups);
+        window.React = React;
+        window.HEYS.YesterdayVerifyReady = true;
+        window.HEYS.YesterdayVerify = { shouldShow: vi.fn(() => true), stepRegistered: true };
+        window.HEYS.Subscription = {
+            canWriteStatus: (status) => ['trial', 'active'].includes(status),
+        };
+        window.HEYS.shouldShowMorningCheckin.mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+        loadAppMorningCheckin();
+        window.HEYS.AppMorningCheckin.useMorningCheckinSync({
+            React,
+            isInitializing: false,
+            clientId: 'client-1',
+        });
+
+        window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+            detail: { clientId: 'client-1', phase: 'full' },
+        }));
+        vi.advanceTimersByTime(250);
+        setter.mockClear();
+        window.HEYS.shouldShowMorningCheckin.mockClear();
+
+        window.dispatchEvent(new CustomEvent('heys:subscription-changed', {
+            detail: { status: 'trial', previousStatus: 'trial_pending' },
+        }));
+        vi.advanceTimersByTime(1);
+
+        expect(window.HEYS.shouldShowMorningCheckin).toHaveBeenCalledTimes(1);
+        expect(setter).toHaveBeenCalledWith(expect.any(Function));
+        cleanups.forEach((fn) => fn());
+    });
+
+    it('does not close the profile wizard when pre-trial access remains blocked', () => {
+        const setter = vi.fn();
+        const cleanups = [];
+        const React = createReactStub(setter, cleanups);
+        window.React = React;
+        window.HEYS.ProfileSteps.isProfileIncomplete = () => true;
+        window.HEYS.Subscription = {
+            canWriteStatus: (status) => ['trial', 'active'].includes(status),
+        };
+
+        loadAppMorningCheckin();
+        window.HEYS.AppMorningCheckin.useMorningCheckinSync({
+            React,
+            isInitializing: false,
+            clientId: 'client-1',
+        });
+
+        window.dispatchEvent(new CustomEvent('heys:subscription-changed', {
+            detail: { status: 'trial_pending', previousStatus: 'none' },
+        }));
+
+        expect(setter).not.toHaveBeenCalled();
+        cleanups.forEach((fn) => fn());
+    });
 });

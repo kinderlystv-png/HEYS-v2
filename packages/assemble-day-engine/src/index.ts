@@ -7,4 +7,5 @@ export { collectEventCandidates, computeDecisionContext, evaluateCondition, getA
 export * from './policies.js';
 export * from './simulation.js';
 export * from './qa.js';
+export * from './content/presentation.js';
 export { registries, createInitialState } from './content/scenario.js';

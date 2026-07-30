@@ -1,7 +1,7 @@
 # Causal reducer protocol v2
 
-> Статус: implementation-контракт<br> Набор документов: 0.31<br> Обновлено:
-> 2026-07-29<br> Владелец: headless-причинный движок
+> Статус: implementation-контракт<br> Набор документов: 0.35<br> Обновлено:
+> 2026-07-30<br> Владелец: headless-причинный движок
 
 [← К карте документации](./README.md)
 
@@ -33,6 +33,20 @@ type ReduceStepV1 = (
 Функция не читает часы устройства, сеть, localStorage, HEYS state или глобальный
 RNG. Ошибка валидации возвращается до клонирования state и не изменяет счётчики
 RNG.
+
+## Атомарный planning-step
+
+`reducePlanningStep` принимает ровно две разные недельные границы из трёх и
+разные главный/поддерживающий фокусы. Он одним шагом заменяет `weeklyRules` и
+`monthlyPriorities`, добавляет две записи журнала и не меняет `clock`,
+`scenarioCursor`, `activeEventId`, RNG, очередь или event ledger. После первого
+action-step план заблокирован.
+
+`getPlanningView` до подтверждения возвращает два rule slots, распределение трёх
+единиц внимания `2+1`, давление и конфликты. При построении `ActionOffer` движок
+применяет planning geometry только по authored `priorityAlignment` и тегам окна
+события; каждая причина содержит конкретный `planningCapacity.*` input path. UI
+не повторяет эти условия.
 
 ## Порядок расчёта
 
@@ -183,6 +197,19 @@ interface ReducerErrorV1 {
 Кампания завершается после воскресного сна и недельной сводки. Это завершение
 сценария, а не terminal state.
 
+## Производная граница периода
+
+Reducer не пишет отдельное period-событие в state. После успешного шага чистая
+функция сравнивает `before.scenarioCursor` и `after.scenarioCursor` с authored
+slots. Переход к slot с большим `dayIndex` закрывает день, а отсутствие
+следующего slot закрывает сначала воскресенье, затем неделю. Clock не является
+единственным сигналом: следующий event может быть materialized раньше своего
+anchor.
+
+`PeriodSummary` строится после reducer commit из итогового state и существующего
+causal journal. Повторный вызов или checkpoint replay дают тот же объект и не
+добавляют journal entries, revision либо RNG occurrence.
+
 ## Стабильность версий
 
 На результат влияют пять версий:
@@ -210,3 +237,5 @@ interface ReducerErrorV1 {
    результата.
 10. Следующее событие проходит бюджет, cooldown, антиспираль и practical
     availability gate.
+11. Семь day boundaries и один week boundary определяются по slots; повторный
+    расчёт и reload не создают второй summary или reducer-step.

@@ -18,6 +18,10 @@ const correctionsMigrationPath = path.join(
   repoRoot,
   'scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql',
 );
+const prestartAccessMigrationPath = path.join(
+  repoRoot,
+  'scripts/db/migrations/2026-07-30_trial_prestart_access_v1.sql',
+);
 const consentProofPath = path.join(repoRoot, 'database/2026-07-27_consent_proof_v2.sql');
 const reconsentFixPath = path.join(
   repoRoot,
@@ -1584,6 +1588,79 @@ $test$;
 SELECT 'trial candidate answer corrections v1 integration OK' AS result;
 `;
 
+const prestartAccessSupportSql = String.raw`
+CREATE OR REPLACE FUNCTION public.subscription_can_write(p_client_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE AS $func$
+  SELECT COALESCE(public.get_effective_subscription_status(p_client_id) IN ('trial', 'active'), false)
+$func$;
+
+CREATE OR REPLACE FUNCTION public.is_always_writable_key(p_key TEXT)
+RETURNS BOOLEAN LANGUAGE sql STABLE AS $func$
+  SELECT regexp_replace(coalesce(p_key, ''), '^heys_[0-9a-f-]{36}_', 'heys_', 'i')
+    = ANY (ARRAY['heys_profile', 'heys_norms', 'heys_consents', 'heys_onboarding_complete'])
+$func$;
+
+CREATE OR REPLACE FUNCTION public.client_kv_value_can_write(
+  p_client_id UUID,
+  p_key TEXT,
+  p_value JSONB
+)
+RETURNS BOOLEAN LANGUAGE sql STABLE AS $func$
+  SELECT public.subscription_can_write(p_client_id)
+    OR public.is_always_writable_key(p_key)
+    OR regexp_replace(coalesce(p_key, ''), '^heys_[0-9a-f-]{36}_', 'heys_', 'i')
+      ~ '^heys_dayv2_[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+$func$;
+
+CREATE OR REPLACE FUNCTION public.start_trial_by_session(p_session_token TEXT, p_days INTEGER DEFAULT 7)
+RETURNS JSONB LANGUAGE sql AS $func$
+  SELECT jsonb_build_object('success', true)
+$func$;
+
+CREATE OR REPLACE FUNCTION public.activate_trial_timer_by_session(p_session_token TEXT, p_days INTEGER DEFAULT 7)
+RETURNS JSONB LANGUAGE sql AS $func$
+  SELECT jsonb_build_object('success', true)
+$func$;
+
+GRANT EXECUTE ON FUNCTION public.start_trial_by_session(TEXT, INTEGER) TO heys_rpc;
+GRANT EXECUTE ON FUNCTION public.activate_trial_timer_by_session(TEXT, INTEGER) TO heys_rpc;
+`;
+
+const prestartAccessAssertionsSql = String.raw`
+\set ON_ERROR_STOP on
+
+DO $test$
+DECLARE
+  v_none UUID := '20000000-0000-4000-8000-000000000003';
+  v_active UUID := '20000000-0000-4000-8000-000000000004';
+BEGIN
+  IF NOT public.client_kv_value_can_write(v_none, 'heys_profile', '{"profileCompleted":true}'::jsonb) THEN
+    RAISE EXCEPTION 'profile write was blocked before trial';
+  END IF;
+  IF public.client_kv_value_can_write(v_none, 'heys_dayv2_2026-07-30', '{"meals":[]}'::jsonb) THEN
+    RAISE EXCEPTION 'empty day write bypassed pre-trial gate';
+  END IF;
+  IF public.client_kv_value_can_write(v_none, 'heys_dayv2_2026-07-30', '{"meals":[{"id":"meal-1"}]}'::jsonb) THEN
+    RAISE EXCEPTION 'meal write bypassed pre-trial gate';
+  END IF;
+
+  UPDATE public.clients
+  SET subscription_status = 'trial', trial_started_at = now(), trial_ends_at = now() + interval '7 days'
+  WHERE id = v_active;
+  IF NOT public.client_kv_value_can_write(v_active, 'heys_dayv2_2026-07-30', '{"meals":[]}'::jsonb) THEN
+    RAISE EXCEPTION 'active trial could not write day data';
+  END IF;
+
+  IF has_function_privilege('heys_rpc', 'public.start_trial_by_session(text,integer)', 'EXECUTE')
+     OR has_function_privilege('heys_rpc', 'public.activate_trial_timer_by_session(text,integer)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'PIN gateway retained a self-start trial privilege';
+  END IF;
+END
+$test$;
+
+SELECT 'trial prestart access v1 integration OK' AS result;
+`;
+
 let started = false;
 try {
   run('initdb', ['-D', dataDir, '-A', 'trust', '-U', 'postgres', '--no-locale', '--encoding=UTF8']);
@@ -1610,9 +1687,13 @@ try {
   run('psql', psqlArgs, readFileSync(trialPreparePermissionPath, 'utf8'));
   run('psql', psqlArgs, readFileSync(correctionsMigrationPath, 'utf8'));
   const correctionsOutput = run('psql', psqlArgs, correctionsAssertionsSql);
+  run('psql', psqlArgs, prestartAccessSupportSql);
+  run('psql', psqlArgs, readFileSync(prestartAccessMigrationPath, 'utf8'));
+  const prestartAccessOutput = run('psql', psqlArgs, prestartAccessAssertionsSql);
   process.stdout.write(v2Output);
   process.stdout.write(v3Output);
   process.stdout.write(correctionsOutput);
+  process.stdout.write(prestartAccessOutput);
 } finally {
   if (started) {
     try { run('pg_ctl', ['-D', dataDir, '-m', 'fast', '-w', 'stop']); } catch (error) {

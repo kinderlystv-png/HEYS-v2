@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { actions } from '../content/actions.js';
 import { createInitialState, events, registries, slots } from '../content/scenario.js';
+import { RULE_EVIDENCE } from '../content/presentation.js';
 import { validateAction, validateEffect, validateEvent, validateRegistries, validateState } from '../schema.js';
 import type { Effect } from '../types.js';
 
@@ -11,6 +12,10 @@ describe('runtime contracts', () => {
     expect(() => validateState(state)).not.toThrow();
     expect(Object.keys(actions)).toHaveLength(31);
     expect(Object.keys(events)).toHaveLength(42);
+    expect(Object.values(events).every((event) => event.copy.title && event.copy.situation && !event.copy.situation.startsWith('Контрольная развилка'))).toBe(true);
+    expect(Object.values(actions).every((action) => RULE_EVIDENCE[action.ruleEvidenceId])).toBe(true);
+    expect(actions.eat_ready_meal?.copy.contextual?.mon_breakfast?.label).toBe('Съесть заранее приготовленный завтрак');
+    expect(actions.cook_meal_batch?.copy.contextual?.mon_breakfast?.label).toBe('Приготовить завтрак');
     expect(slots.map((slot) => slot.slot)).toEqual(Array.from({ length: 38 }, (_, index) => index + 1));
     expect(state).not.toHaveProperty('derived');
     expect(state).not.toHaveProperty('context');
@@ -42,5 +47,8 @@ describe('runtime contracts', () => {
     const badComparator = structuredClone(actions.work_standard!);
     badComparator.requirements.push({ kind: 'range', path: 'economy.cashRub', op: 'wat' as 'gte', value: 0 });
     expect(() => validateAction(badComparator)).toThrow(/unknown comparator/);
+    const rawPlaceholder = structuredClone(events.mon_breakfast!);
+    rawPlaceholder.copy.situation = 'Контрольная развилка 1';
+    expect(() => validateEvent(rawPlaceholder)).toThrow(/authored title and situation/);
   });
 });

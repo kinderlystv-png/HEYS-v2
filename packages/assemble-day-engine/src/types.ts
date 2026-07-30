@@ -1,9 +1,9 @@
 export const CONTRACT = {
   schemaVersion: 2,
   scenarioId: 'week-01-project-deadline',
-  scenarioVersion: '3',
-  calibrationVersion: '0.3',
-  technicalContractVersion: '0.31',
+  scenarioVersion: '4',
+  calibrationVersion: '0.4',
+  technicalContractVersion: '0.35',
   priceBookVersion: 'week-01-rub-v1',
   rngAlgorithm: 'fnv1a-mulberry32-v1',
   hashAlgorithm: 'canonical-json-fnv1a64-v1',
@@ -12,6 +12,18 @@ export const CONTRACT = {
 export type EntityId = string;
 export type Intensity = 'none' | 'light' | 'normal' | 'high';
 export type Confidence = 'established' | 'plausible_model' | 'personal_hypothesis';
+export type RuleEvidenceId =
+  | 're_action_effect_contract'
+  | 're_sleep_task_effort'
+  | 're_sleep_movement_effort'
+  | 're_movement_affect_response'
+  | 're_caffeine_timing_sleep'
+  | 're_multifactor_task_geometry'
+  | 're_habit_skill_future_geometry'
+  | 're_family_load_support'
+  | 're_financial_pressure_choice'
+  | 're_planning_capacity_tradeoff';
+export interface RuleEvidence { id: RuleEvidenceId; confidence: Confidence; sourceLabel: string; transferLimit: string }
 export type FoodCategory = 'ready_meal' | 'quick_base' | 'cook_stock';
 export type Comparator = 'lt' | 'lte' | 'eq' | 'gte' | 'gt';
 
@@ -63,24 +75,28 @@ export interface ActionCost {
   inventory?: Array<{ category: FoodCategory; portions: number; fallbackMoneyRub?: number }>;
   effort?: { cognitive?: Intensity; physical?: Intensity; social?: Intensity };
 }
-export interface ConditionalEffect { when: Condition; evaluateAt: 'pre_action'; effects: Effect[]; explanation: string }
+export interface ConditionalEffect { when: Condition; evaluateAt: 'pre_action'; effects: Effect[]; explanation: string; ruleEvidenceId: RuleEvidenceId }
 export interface ScheduledEffectDefinition {
   id: string;
   trigger: { kind: 'at_time'; dayOffset: number; minuteOfDay: number } | { kind: 'after_steps'; steps: number } | { kind: 'condition'; condition: Condition };
   effects: Effect[];
+  ruleEvidenceId: RuleEvidenceId;
 }
 export interface GeometryRule {
   when: Condition;
   delta: { available?: boolean; timeMin?: number; moneyRub?: number; effortScore?: number; riskScore?: number; optionPressure?: number; preview?: string };
   reason: string;
+  ruleEvidenceId: RuleEvidenceId;
 }
 export interface UtilityVector { work: number; family: number; recovery: number; money: number; time: number; risk: number }
 export interface ActionDefinition {
-  schemaVersion: 1;
+  schemaVersion: 2;
   id: string;
   version: 1;
   domains: Array<'state' | 'food' | 'work' | 'family' | 'finance' | 'movement' | 'social'>;
-  copy: { label: string; summary: string; knownCost: string };
+  priorityAlignment: { supports: PlanningDomain[]; conflicts: PlanningDomain[] };
+  copy: { label: string; summary: string; knownCost: string; contextual?: Record<string, { label: string; summary: string }> };
+  ruleEvidenceId: RuleEvidenceId;
   requirements: Requirement[];
   cost: ActionCost;
   immediateEffects: Effect[];
@@ -100,6 +116,7 @@ export interface ActionOffer {
   actionId: string;
   available: boolean;
   unavailableReasons: string[];
+  unavailableMessages: string[];
   effectiveTimeMin: number;
   moneyRub: number;
   effort: ActionCost['effort'];
@@ -109,7 +126,9 @@ export interface ActionOffer {
   riskScore: number;
   optionPressure: number;
   consequencePreview: string[];
-  geometryReasons: Array<{ reason: string; inputPaths: string[] }>;
+  consequences: { immediate: string[]; delayed: string[]; conditional: string[] };
+  geometryReasons: Array<{ reason: string; inputPaths: string[]; evidence: RuleEvidence }>;
+  evidence: RuleEvidence;
   utility: UtilityVector;
   stabilizes: string[];
   planningSignals: PlanningSignal[];
@@ -169,9 +188,10 @@ export type PlanningDomain = MonthlyPriority['domain'];
 export type WeeklyRulePresetId = 'protect_sleep' | 'family_anchor' | 'work_blocks';
 export interface PlanningPlan { weeklyRuleIds: WeeklyRulePresetId[]; mainGoal: PlanningDomain; supportingGoal: PlanningDomain }
 export interface PlanningSignal {
-  kind: 'supports_weekly_rule' | 'conflicts_weekly_rule' | 'supports_main_goal' | 'supports_supporting_goal';
+  kind: 'supports_weekly_rule' | 'conflicts_weekly_rule' | 'supports_main_goal' | 'supports_supporting_goal' | 'conflicts_unfunded_goal';
   sourceId: WeeklyRulePresetId | PlanningDomain;
   reason: string;
+  inputPath: string;
 }
 export interface PlanningAdjustment {
   delta: { timeMin: number; moneyRub: number; effortScore: number; riskScore: number; optionPressure: number };
@@ -181,8 +201,12 @@ export interface PlanningAdjustment {
 export interface PlanningView {
   valid: boolean;
   issues: Array<{ code: string; message: string }>;
-  weeklyRules: Array<{ id: WeeklyRulePresetId; title: string; summary: string; selected: boolean }>;
+  weeklyRules: Array<{ id: WeeklyRulePresetId; title: string; summary: string; selected: boolean; source: string; tradeoff: string }>;
   monthlyGoals: Array<{ id: PlanningDomain; title: string }>;
+  capacity: {
+    weekly: { totalSlots: number; allocatedSlots: number; remainingSlots: number };
+    attention: { totalUnits: number; allocatedUnits: number; unallocatedUnits: number; mainUnits: number; supportingUnits: number };
+  };
   pressures: Array<{ domain: PlanningDomain; title: string; level: 'низкое' | 'умеренное' | 'высокое'; reason: string }>;
   conflicts: Array<{ id: string; severity: 'important' | 'critical'; title: string; reason: string; inputPaths: string[] }>;
   financialHorizon: { cashRub: number; expectedIncomeRub: number; obligationsRub: number; cashAfterNextObligationsRub: number };
@@ -235,6 +259,66 @@ export interface PlanningStepOutput { state: GameState; journalEntries: CausalEn
 export type PolicyId = 'maximize_work' | 'protect_family' | 'protect_recovery' | 'save_money' | 'buy_time' | 'balanced' | 'random_valid';
 export type OutcomeDirection = 'kept' | 'traded' | 'strained';
 export interface CampaignOutcomeAxis { id: 'work' | 'family' | 'finance' | 'recovery'; title: string; direction: OutcomeDirection; summary: string; evidencePaths: string[] }
-export interface CharacterDevelopmentItem { id: string; title: string; direction: 'gained' | 'improved' | 'weakened'; summary: string; evidencePaths: string[] }
+export interface CharacterDevelopmentItem { id: string; title: string; direction: 'strengthened' | 'weakened' | 'changed'; summary: string; evidencePaths: string[] }
+export type CharacterPresentationLevel = 'low' | 'moderate' | 'high';
+export type CharacterPresentationTone = 'calm' | 'neutral' | 'warning';
+export interface CharacterPresentationIndicator {
+  id: 'energy' | 'mood' | 'tension';
+  label: string;
+  value: string;
+  level: CharacterPresentationLevel;
+  tone: CharacterPresentationTone;
+}
+export interface CharacterPresentationReason { id: 'sleep_debt' | 'caffeine' | 'hunger' | 'recovery_need' | 'family_load'; label: string; summary: string }
+export interface CharacterPresentation {
+  frame: {
+    pose: 'steady' | 'depleted' | 'recovering';
+    expression: 'subdued' | 'neutral' | 'bright';
+    load: 'calm' | 'pressured';
+    dayPhase: 'morning' | 'day' | 'evening' | 'night';
+  };
+  indicators: [CharacterPresentationIndicator, CharacterPresentationIndicator, CharacterPresentationIndicator];
+  reasons: CharacterPresentationReason[];
+  summary: string;
+  ariaSummary: string;
+}
+export interface SyntheticObservation { label: 'Игровое наблюдение'; title: string; summary: string; disclaimer: string }
 export interface CampaignOutcome { axes: CampaignOutcomeAxis[]; development: CharacterDevelopmentItem[]; openThreads: string[] }
+export interface CampaignBriefItem { id: string; title: string; summary: string }
+export interface CampaignBrief {
+  mission: { title: string; summary: string };
+  stakes: CampaignBriefItem[];
+  choiceSpace: string;
+}
+export interface StepSummary {
+  dayIndex: number;
+  eventTitle: string;
+  actionLabel: string;
+  mainChange: string;
+  causalLink: string;
+  carryover: string;
+}
+export interface PeriodBoundary {
+  id: string;
+  kind: 'day' | 'week';
+  completedDayIndex: number;
+  nextDayIndex: number | null;
+  afterStepIndex: number;
+}
+export interface PeriodRuleResult { id: WeeklyRulePresetId; title: string; direction: OutcomeDirection; summary: string }
+export interface PeriodSummary {
+  id: string;
+  kind: 'day' | 'week';
+  completedDayIndex: number;
+  title: string;
+  headline: string;
+  causalLink: string;
+  carryover: string;
+  brief?: CampaignBrief;
+  rules?: PeriodRuleResult[];
+  commitments?: { resolved: number; broken: number; open: number; summary: string };
+  pressure?: string;
+  axes?: CampaignOutcomeAxis[];
+  openThreads?: string[];
+}
 export interface CampaignResult { seed: string; policyId: PolicyId; finalStateHash: string; visitedSlots: number[]; visitedEvents: string[]; chosenActions: string[]; ordinaryForks: number; ordinaryTwoChoiceForks: number; hardForks: number; hardSingleChoiceForks: number; heavyStates: number; heavyWithStabilizer: number; heavyWithMultipleStabilizers: number; heavyWithoutStabilizerEvents: string[]; heavyWithoutMultipleStabilizerEvents: string[]; terminalLocks: number; maxExternalLoad: number; maxTotalLoad: number; maxLargePerDay: number; weekLargeCount: number; boundarySteps: number; boundaryPaths: string[]; totalSteps: number; auditedTransitions: number; unexplainedLongTermChanges: number; unexplainedPaths: string[]; personalizationInputsDetected: number; transitions: Array<{ inputKey: string; outputHash: string }>; outcomes: { money: number; work: number; family: number; recovery: number; sleep: number } }

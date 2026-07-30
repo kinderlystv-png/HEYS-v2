@@ -153,6 +153,13 @@
       "path": "scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql",
       "description": "Keep candidate answers immutable while recording curator-confirmed corrections and two-outcome review decisions",
       "destructive": false
+    },
+    {
+      "id": "2026-07-30_trial_prestart_access_v1",
+      "order": 20,
+      "path": "scripts/db/migrations/2026-07-30_trial_prestart_access_v1.sql",
+      "description": "Keep pre-trial PIN access profile-only and revoke legacy client-side trial activation",
+      "destructive": false
     }
   ]
 }

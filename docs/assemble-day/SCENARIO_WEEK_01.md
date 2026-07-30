@@ -1,7 +1,7 @@
 # Scenario week 01: неделя до сдачи проекта
 
-> Статус: implementation-контракт сценария<br> Набор документов: 0.31<br>
-> Обновлено: 2026-07-29<br> Владелец: контент первого вертикального среза
+> Статус: implementation-контракт сценария<br> Набор документов: 0.34<br>
+> Обновлено: 2026-07-30<br> Владелец: контент первого вертикального среза
 
 [← К карте документации](./README.md)
 
@@ -9,9 +9,9 @@
 
 ```yaml
 scenarioId: week-01-project-deadline
-scenarioVersion: '3'
+scenarioVersion: '4'
 schemaVersion: 2
-calibrationVersion: '0.3'
+calibrationVersion: '0.4'
 priceBookVersion: week-01-rub-v1
 days: 7
 decisionSlots: 38
@@ -20,6 +20,10 @@ decisionSlots: 38
 Сценарий использует один фиксированный профиль и не читает данные HEYS.
 [`08_VERTICAL_SLICE.md`](./08_VERTICAL_SLICE.md) владеет продуктовым смыслом
 недели, а этот файл задаёт реализационный manifest.
+
+Scenario v4 добавляет content-owned теги `planned_work_window`,
+`family_anchor_window` и `sleep_boundary_window`. Они определяют применимость
+недельных правил; UI и reducer не распознают окна по event ID.
 
 ## Цели и жёсткие якоря
 

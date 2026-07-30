@@ -1,5 +1,6 @@
 import { canonicalJson, stateHash } from './rng.js';
 import { validateState } from './schema.js';
+import { WEEKLY_RULE_PRESETS } from './content/planning.js';
 import {
   ReducerError,
   type ActionDefinition,
@@ -11,16 +12,12 @@ import {
   type PlanningSignal,
   type PlanningStepOutput,
   type PlanningView,
-  type WeeklyRule,
   type WeeklyRulePresetId,
 } from './types.js';
 
-const RULE_PRESETS: ReadonlyArray<{ id: WeeklyRulePresetId; kind: WeeklyRule['kind']; title: string; summary: string }> = [
-  { id: 'protect_sleep', kind: 'protected_window', title: 'Закончить день вовремя', summary: 'Сохранить окно для спокойного завершения дня.' },
-  { id: 'family_anchor', kind: 'protected_window', title: 'Сохранить семейный вечер', summary: 'Не отдавать это время новым задачам.' },
-  { id: 'work_blocks', kind: 'work_boundary', title: 'Защитить рабочие блоки', summary: 'Оставить время на проект до срока.' },
-];
-const RULE_IDS = new Set<WeeklyRulePresetId>(RULE_PRESETS.map((item) => item.id));
+const WEEKLY_RULE_SLOTS = 2;
+const ATTENTION_CAPACITY_UNITS = 3;
+const RULE_IDS = new Set<WeeklyRulePresetId>(WEEKLY_RULE_PRESETS.map((item) => item.id));
 const DOMAINS: ReadonlyArray<{ id: PlanningDomain; title: string }> = [
   { id: 'work', title: 'Работа' },
   { id: 'family', title: 'Семья' },
@@ -28,13 +25,12 @@ const DOMAINS: ReadonlyArray<{ id: PlanningDomain; title: string }> = [
   { id: 'social', title: 'Друзья и увлечения' },
 ];
 const DOMAIN_IDS = new Set<PlanningDomain>(DOMAINS.map((item) => item.id));
-const FAMILY_EVENT_IDS = new Set(['mon_family_dinner', 'tue_pickup_conflict', 'thu_family_evening', 'fri_family_plan', 'sat_school_event', 'sun_family_time']);
 const clone = <T>(value: T): T => structuredClone(value);
 
 function validatePlan(plan: PlanningPlan): PlanningView['issues'] {
   const issues: PlanningView['issues'] = [];
   const ids = Array.isArray(plan?.weeklyRuleIds) ? plan.weeklyRuleIds : [];
-  if (ids.length < 2) issues.push({ code: 'weekly_minimum', message: 'Выберите минимум два правила недели.' });
+  if (ids.length !== WEEKLY_RULE_SLOTS) issues.push({ code: 'weekly_capacity', message: 'Выберите ровно две границы: третья не помещается в ёмкость недели.' });
   if (new Set(ids).size !== ids.length) issues.push({ code: 'weekly_duplicate', message: 'Одно правило недели выбрано несколько раз.' });
   if (ids.some((id) => !RULE_IDS.has(id))) issues.push({ code: 'weekly_unknown', message: 'В плане есть неизвестное правило недели.' });
   if (!DOMAIN_IDS.has(plan?.mainGoal)) issues.push({ code: 'main_unknown', message: 'Выберите главный фокус месяца.' });
@@ -88,8 +84,18 @@ export function getPlanningView(state: GameState, plan: PlanningPlan, context: D
   return {
     valid: issues.length === 0,
     issues,
-    weeklyRules: RULE_PRESETS.map((item) => ({ ...item, selected: selected.has(item.id) })),
+    weeklyRules: WEEKLY_RULE_PRESETS.map((item) => ({ ...item, selected: selected.has(item.id) })),
     monthlyGoals: DOMAINS.map((item) => ({ ...item })),
+    capacity: {
+      weekly: { totalSlots: WEEKLY_RULE_SLOTS, allocatedSlots: selected.size, remainingSlots: Math.max(0, WEEKLY_RULE_SLOTS - selected.size) },
+      attention: {
+        totalUnits: ATTENTION_CAPACITY_UNITS,
+        allocatedUnits: plan.mainGoal === plan.supportingGoal ? 2 : ATTENTION_CAPACITY_UNITS,
+        unallocatedUnits: plan.mainGoal === plan.supportingGoal ? 1 : 0,
+        mainUnits: 2,
+        supportingUnits: plan.mainGoal === plan.supportingGoal ? 0 : 1,
+      },
+    },
     pressures: [
       { domain: 'work', title: 'Работа', level: pressureLevel(context.deadlinePressure), reason: `${state.work.projectBacklogMin} мин открытой работы.` },
       { domain: 'family', title: 'Семья', level: pressureLevel(Math.max(context.familyImbalance, hardCommitments.length ? 52 : 0)), reason: hardCommitments.length ? `Жёстких договорённостей: ${hardCommitments.length}.` : 'Жёстких договорённостей нет.' },
@@ -114,7 +120,7 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
   if (input.state.clock.stepIndex > 0) issues.push({ code: 'planning_locked', message: 'Контракт недели фиксируется до первого решения кампании.' });
   if (issues.length) throw new ReducerError('invalid_content', 'planning', 'planning_plan', issues.map((item) => `${item.code}:${item.message}`));
   const state = clone(input.state);
-  const weeklyRules = RULE_PRESETS
+  const weeklyRules = WEEKLY_RULE_PRESETS
     .filter((item) => input.plan.weeklyRuleIds.includes(item.id))
     .map((item) => ({ id: item.id, kind: item.kind, enabled: true, sourceId: 'planning_plan' }));
   const monthlyPriorities = DOMAINS.map((item) => ({ domain: item.id, level: item.id === input.plan.mainGoal ? 2 as const : item.id === input.plan.supportingGoal ? 1 as const : 0 as const }));
@@ -133,58 +139,60 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
   return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
 }
 
-function actionPlanningDomains(action: ActionDefinition): PlanningDomain[] {
-  const domains = new Set<PlanningDomain>();
-  if (action.domains.includes('work')) domains.add('work');
-  if (action.domains.includes('family')) domains.add('family');
-  if (action.domains.includes('social')) domains.add('social');
-  if (action.domains.some((item) => item === 'state' || item === 'food' || item === 'movement')) domains.add('recovery');
-  return [...domains];
-}
-
-export function getPlanningAdjustment(state: GameState, action: ActionDefinition, eventId: string, effectiveTimeMin: number): PlanningAdjustment {
+export function getPlanningAdjustment(state: GameState, action: ActionDefinition, _eventId: string, effectiveTimeMin: number, eventTags: string[] = []): PlanningAdjustment {
   if (!state.causalJournal.some((entry) => entry.sourceId === 'planning_plan')) return { delta: { timeMin: 0, moneyRub: 0, effortScore: 0, riskScore: 0, optionPressure: 0 }, signals: [], inputPaths: [] };
   const signals: PlanningSignal[] = [];
   const delta = { timeMin: 0, moneyRub: 0, effortScore: 0, riskScore: 0, optionPressure: 0 };
   const inputPaths = new Set<string>();
-  const domains = actionPlanningDomains(action);
   const priorities = new Map(state.monthlyPriorities.map((item) => [item.domain, item.level]));
-  for (const domain of domains) {
-    const level = priorities.get(domain);
-    if (level === 2) {
-      signals.push({ kind: 'supports_main_goal', sourceId: domain, reason: 'Подготовка под главный фокус уменьшила цену этого решения.' });
-      delta.effortScore -= 4; delta.optionPressure -= 5; inputPaths.add('monthlyPriorities');
-    } else if (level === 1) {
-      signals.push({ kind: 'supports_supporting_goal', sourceId: domain, reason: 'Поддерживающий фокус немного уменьшил цену этого решения.' });
-      delta.effortScore -= 2; delta.optionPressure -= 2; inputPaths.add('monthlyPriorities');
-    }
+  const highestPriority = action.priorityAlignment.supports.reduce<0 | 1 | 2>((highest, domain) => Math.max(highest, priorities.get(domain) ?? 0) as 0 | 1 | 2, 0);
+  const priorityDomain = action.priorityAlignment.supports.find((domain) => priorities.get(domain) === highestPriority);
+  if (highestPriority === 2 && priorityDomain) {
+    signals.push({ kind: 'supports_main_goal', sourceId: priorityDomain, reason: 'Две из трёх единиц внимания заранее отданы главному фокусу.', inputPath: `planningCapacity.attention.${priorityDomain}` });
+    delta.effortScore -= 4; delta.optionPressure -= 5; inputPaths.add('monthlyPriorities');
+  } else if (highestPriority === 1 && priorityDomain) {
+    signals.push({ kind: 'supports_supporting_goal', sourceId: priorityDomain, reason: 'Одна из трёх единиц внимания заранее отдана поддерживающему фокусу.', inputPath: `planningCapacity.attention.${priorityDomain}` });
+    delta.effortScore -= 2; delta.optionPressure -= 2; inputPaths.add('monthlyPriorities');
+  }
+  const conflictingPriority = action.priorityAlignment.conflicts.find((domain) => (priorities.get(domain) ?? 0) > 0);
+  if (conflictingPriority) {
+    signals.push({ kind: 'conflicts_unfunded_goal', sourceId: conflictingPriority, reason: 'Действие забирает внимание у выбранного фокуса и повышает цену компромисса.', inputPath: `planningCapacity.attention.${conflictingPriority}` });
+    delta.riskScore += priorities.get(conflictingPriority) === 2 ? 6 : 3;
+    delta.optionPressure += priorities.get(conflictingPriority) === 2 ? 8 : 4;
+    inputPaths.add('monthlyPriorities');
   }
   const enabled = new Set(state.weeklyRules.filter((item) => item.enabled).map((item) => item.id));
   const workAction = action.domains.includes('work');
-  if (enabled.has('work_blocks') && workAction && state.clock.minuteOfDay < 1080) {
-    signals.push({ kind: 'supports_weekly_rule', sourceId: 'work_blocks', reason: 'Защищённый рабочий блок уменьшил время и усилие.' });
-    delta.timeMin -= 10; delta.effortScore -= 4; inputPaths.add('weeklyRules');
+  const inWorkWindow = eventTags.includes('planned_work_window');
+  if (enabled.has('work_blocks') && workAction && inWorkWindow) {
+    signals.push({ kind: 'supports_weekly_rule', sourceId: 'work_blocks', reason: 'Действие попало в заранее защищённое рабочее окно.', inputPath: 'planningCapacity.ruleSlots.work_blocks' });
+    delta.effortScore -= 4; delta.optionPressure -= 3; inputPaths.add('weeklyRules');
   }
-  if (enabled.has('family_anchor') && action.domains.includes('family')) {
-    signals.push({ kind: 'supports_weekly_rule', sourceId: 'family_anchor', reason: 'Семейное окно было сохранено заранее.' });
-    delta.timeMin -= 5; delta.effortScore -= 3; inputPaths.add('weeklyRules');
+  if (enabled.has('work_blocks') && !workAction && inWorkWindow) {
+    signals.push({ kind: 'conflicts_weekly_rule', sourceId: 'work_blocks', reason: 'Действие занимает заранее защищённое рабочее окно.', inputPath: 'planningCapacity.ruleSlots.work_blocks' });
+    delta.riskScore += 4; delta.optionPressure += 10; inputPaths.add('weeklyRules');
   }
-  const isEveningRecovery = state.clock.minuteOfDay >= 1080 || action.id === 'wind_down_early';
+  const inFamilyWindow = eventTags.includes('family_anchor_window');
+  if (enabled.has('family_anchor') && action.domains.includes('family') && inFamilyWindow) {
+    signals.push({ kind: 'supports_weekly_rule', sourceId: 'family_anchor', reason: 'Действие использует заранее сохранённое семейное окно.', inputPath: 'planningCapacity.ruleSlots.family_anchor' });
+    delta.effortScore -= 3; delta.optionPressure -= 3; inputPaths.add('weeklyRules');
+  }
+  const isEveningRecovery = eventTags.includes('sleep_boundary_window');
   if (enabled.has('protect_sleep') && isEveningRecovery && action.domains.some((item) => item === 'state' || item === 'movement') && !workAction) {
-    signals.push({ kind: 'supports_weekly_rule', sourceId: 'protect_sleep', reason: 'Вечерняя граница уменьшила цену восстановления.' });
+    signals.push({ kind: 'supports_weekly_rule', sourceId: 'protect_sleep', reason: 'Действие использует заранее защищённое вечернее окно.', inputPath: 'planningCapacity.ruleSlots.protect_sleep' });
     delta.effortScore -= 3; delta.optionPressure -= 4; inputPaths.add('weeklyRules');
   }
   if (enabled.has('protect_sleep') && (action.id === 'work_late' || workAction && state.clock.minuteOfDay + effectiveTimeMin > 1200)) {
-    signals.push({ kind: 'conflicts_weekly_rule', sourceId: 'protect_sleep', reason: 'Действие заходит в защищённое вечернее окно.' });
+    signals.push({ kind: 'conflicts_weekly_rule', sourceId: 'protect_sleep', reason: 'Действие заходит в защищённое вечернее окно.', inputPath: 'planningCapacity.ruleSlots.protect_sleep' });
     delta.timeMin += 10; delta.riskScore += 12; delta.optionPressure += 16; inputPaths.add('weeklyRules');
   }
-  if (enabled.has('family_anchor') && workAction && FAMILY_EVENT_IDS.has(eventId)) {
-    signals.push({ kind: 'conflicts_weekly_rule', sourceId: 'family_anchor', reason: 'Работа пересекается с защищённой семейной договорённостью.' });
+  if (enabled.has('family_anchor') && workAction && inFamilyWindow) {
+    signals.push({ kind: 'conflicts_weekly_rule', sourceId: 'family_anchor', reason: 'Работа пересекается с защищённой семейной договорённостью.', inputPath: 'planningCapacity.ruleSlots.family_anchor' });
     delta.riskScore += 10; delta.optionPressure += 15; inputPaths.add('weeklyRules');
   }
   return { delta, signals, inputPaths: [...inputPaths] };
 }
 
-export function getPlanningSignals(state: GameState, action: ActionDefinition, eventId: string, effectiveTimeMin: number): PlanningSignal[] {
-  return getPlanningAdjustment(state, action, eventId, effectiveTimeMin).signals;
+export function getPlanningSignals(state: GameState, action: ActionDefinition, eventId: string, effectiveTimeMin: number, eventTags: string[] = []): PlanningSignal[] {
+  return getPlanningAdjustment(state, action, eventId, effectiveTimeMin, eventTags).signals;
 }

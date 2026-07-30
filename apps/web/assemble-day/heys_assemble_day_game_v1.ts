@@ -1,10 +1,11 @@
 import { createInitialState, registries } from '../../../packages/assemble-day-engine/src/content/scenario.ts';
-import { compareCampaignOutcomes, getCampaignOutcome, getCharacterDevelopment } from '../../../packages/assemble-day-engine/src/campaign.ts';
+import { getCharacterPresentation, getRuleEvidence } from '../../../packages/assemble-day-engine/src/content/presentation.ts';
+import { compareCampaignOutcomes, getCampaignBrief, getCampaignOutcome, getCharacterDevelopment, getPeriodBoundaries, getPeriodSummary, getStepSummary, getSyntheticObservation } from '../../../packages/assemble-day-engine/src/campaign.ts';
 import { getPlanningView, reducePlanningStep } from '../../../packages/assemble-day-engine/src/planning.ts';
 import { computeDecisionContext, getActionOffers, initialEvent, reduceStep } from '../../../packages/assemble-day-engine/src/reducer.ts';
-import { stateHash } from '../../../packages/assemble-day-engine/src/rng.ts';
+import { fnv1a64, stateHash } from '../../../packages/assemble-day-engine/src/rng.ts';
 import { validateState } from '../../../packages/assemble-day-engine/src/schema.ts';
-import { CONTRACT, type ActionOffer, type CampaignOutcome, type CausalEntry, type GameState, type PlanningDomain, type PlanningPlan, type StepOutput, type WeeklyRulePresetId } from '../../../packages/assemble-day-engine/src/types.ts';
+import { CONTRACT, type ActionOffer, type CampaignOutcome, type CausalEntry, type CharacterPresentation, type GameState, type PeriodBoundary, type PeriodSummary, type PlanningDomain, type PlanningPlan, type StepSummary, type WeeklyRulePresetId } from '../../../packages/assemble-day-engine/src/types.ts';
 
 declare global {
   interface Window {
@@ -14,16 +15,9 @@ declare global {
 }
 
 const STORAGE_KEY = 'heys_planning_assemble_day_campaign_v1';
-const ENVELOPE_VERSION = 1;
-
-type DaySummary = {
-  dayIndex: number;
-  eventTitle: string;
-  actionLabel: string;
-  mainChange: string;
-  causalLink: string;
-  carryover: string;
-};
+const ENVELOPE_VERSION = 2;
+const CHECKPOINT_BUDGET_BYTES = 128 * 1024;
+const UUID_RE = /\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/i;
 
 type DiagnosticOffer = ActionOffer & {
   label: string;
@@ -53,13 +47,26 @@ type DiagnosticLedger = {
 
 type CampaignSession = {
   state: GameState;
-  lastSummary: DaySummary | null;
+  lastStepSummary: StepSummary | null;
+  periodSummaries: PeriodSummary[];
   revision: number;
   diagnostics: DiagnosticLedger;
-  comparisonBaseline?: { outcome: CampaignOutcome; finalStateHash: string; decisions: Array<{ eventId: string; actionId: string }> };
+  comparisonBaseline?: { outcome: CampaignOutcome; finalStateHash: string };
 };
 
 type CampaignEnvelope = {
+  envelopeVersion: 2;
+  scopeTag: string;
+  gameSeed: string;
+  savedAt: string;
+  revision: number;
+  stateHash: string;
+  contract: typeof CONTRACT;
+  diagnostics: DiagnosticLedger;
+  comparisonBaseline?: CampaignSession['comparisonBaseline'];
+};
+
+type LegacyCampaignEnvelope = {
   envelopeVersion: 1;
   clientId: string;
   campaignId: string;
@@ -68,7 +75,7 @@ type CampaignEnvelope = {
   stateHash: string;
   contract: typeof CONTRACT;
   state: GameState;
-  lastSummary: DaySummary | null;
+  lastSummary: StepSummary | null;
   diagnostics?: DiagnosticLedger;
   comparisonBaseline?: CampaignSession['comparisonBaseline'];
 };
@@ -76,10 +83,10 @@ type CampaignEnvelope = {
 type LoadResult =
   | { status: 'empty' }
   | { status: 'ready'; session: CampaignSession }
-  | { status: 'unavailable' | 'foreign' | 'incompatible' | 'corrupt'; message: string };
+  | { status: 'unavailable' | 'foreign' | 'incompatible' | 'corrupt' | 'privacy'; message: string };
 
 type SaveResult =
-  | { status: 'saved'; envelope: CampaignEnvelope }
+  | { status: 'saved'; envelope: CampaignEnvelope; sizeBytes: number; budgetBytes: number }
   | { status: 'unavailable' | 'conflict' | 'failed'; message: string };
 
 const DAY_NAMES = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
@@ -88,60 +95,6 @@ const STORAGE_CONTRACT_KEYS = [
   'schemaVersion', 'scenarioId', 'scenarioVersion', 'calibrationVersion',
   'technicalContractVersion', 'priceBookVersion', 'rngAlgorithm', 'hashAlgorithm',
 ] as const;
-
-const EVENT_COPY: Record<string, { title: string; situation: string }> = {
-  mon_breakfast: { title: 'Начало недели', situation: 'Утро уже началось, а завтрак и первый рабочий блок конкурируют за время.' },
-  mon_commute: { title: 'Дорога к первому делу', situation: 'До начала работы нужно выбрать между временем в пути и расходами.' },
-  mon_scope_expansion: { title: 'Проект стал больше', situation: 'В задачу добавили новые требования, но срок остался прежним.' },
-  mon_lunch_window: { title: 'Окно на обед', situation: 'Работа идёт плотнее плана, а пауза быстро сокращается.' },
-  mon_project_block: { title: 'Основной рабочий блок', situation: 'Можно ускориться, вложиться в качество или разделить нагрузку.' },
-  mon_family_dinner: { title: 'Вечерняя договорённость', situation: 'Семейный ужин начинается в то же время, когда работа требует продолжения.' },
-  tue_night_wakeup: { title: 'Ночная нагрузка', situation: 'Ночью ребёнку понадобилась помощь, и утро началось раньше обычного.' },
-  tue_recovery_breakfast: { title: 'Утро после короткого сна', situation: 'Нужно восстановить силы и не потерять темп перед рабочим днём.' },
-  tue_review_prep: { title: 'Подготовка к просмотру', situation: 'До проверки проекта осталось немного времени, а часть работы не закрыта.' },
-  tue_review_result: { title: 'Результат проверки', situation: 'Проверка выявила вопросы, которые нужно разобрать без потери всего дня.' },
-  tue_pickup_conflict: { title: 'Кто заберёт ребёнка', situation: 'Семейная задача совпала с рабочим обязательством.' },
-  tue_evening_pressure: { title: 'Насыщенный вечер', situation: 'После плотного дня остаются быт, восстановление и незакрытая работа.' },
-  wed_commute_delay: { title: 'Задержка в дороге', situation: 'Внешняя задержка сдвинула начало дня и усилила давление на расписание.' },
-  wed_long_meeting: { title: 'Встреча затянулась', situation: 'Длинная встреча заняла время, запланированное на работу и паузу.' },
-  wed_late_lunch: { title: 'Поздний обед', situation: 'Перерыв снова сдвинулся, а до следующей задачи осталось мало времени.' },
-  wed_school_call: { title: 'Звонок из школы', situation: 'Нужно быстро решить семейный вопрос в середине рабочего дня.' },
-  wed_work_recovery: { title: 'Вернуться в рабочий ритм', situation: 'После неожиданного перерыва нужно заново собрать оставшуюся часть дня.' },
-  wed_evening_stabilize: { title: 'Стабилизировать вечер', situation: 'День был напряжённым; следующий выбор повлияет на сон и завтрашний запас сил.' },
-  thu_hybrid_start: { title: 'Гибкое начало дня', situation: 'Свободное окно можно направить на работу, движение или бытовой запас.' },
-  thu_colleague_help_debt: { title: 'Ответить на помощь', situation: 'Коллега помог раньше, и теперь нужно решить, когда вернуть поддержку.' },
-  thu_extra_project: { title: 'Дополнительный проект', situation: 'Появилась новая возможность, но она увеличит нагрузку текущей недели.' },
-  thu_movement_plan: { title: 'Запланированное движение', situation: 'В календаре есть тренировка, а рабочие задачи ещё не завершены.' },
-  thu_family_evening: { title: 'Семейный вечер', situation: 'Время с близкими снова пересекается с рабочим давлением.' },
-  fri_deadline_plan: { title: 'План на день сдачи', situation: 'До отправки проекта нужно распределить внимание между скоростью и устойчивостью.' },
-  fri_final_issue: { title: 'Последняя проблема', situation: 'Перед сдачей обнаружена ошибка, которую нельзя просто игнорировать.' },
-  fri_lunch: { title: 'Пауза перед финишем', situation: 'До отправки осталось несколько часов, и решение о паузе повлияет на концентрацию.' },
-  fri_submit: { title: 'Отправка проекта', situation: 'Наступил момент сдачи: важно выбрать реалистичный способ завершить работу.' },
-  fri_after_submit: { title: 'После отправки', situation: 'Главная задача закрыта, и освободившееся время можно распределить по-разному.' },
-  fri_family_plan: { title: 'Планы на вечер', situation: 'После рабочей недели нужно подтвердить или пересобрать семейную договорённость.' },
-  sat_school_event: { title: 'Школьное событие', situation: 'Важное семейное событие требует времени и точного решения по дороге.' },
-  sat_household_stock: { title: 'Домашние запасы', situation: 'Продукты заканчиваются, и выбор сейчас повлияет на следующие дни.' },
-  sat_meal_prep: { title: 'Запас еды', situation: 'Есть окно, чтобы подготовить еду заранее, перекусить или восстановиться.' },
-  sat_social_invite: { title: 'Встреча с друзьями', situation: 'Появилось приглашение, которое нужно совместить с уже данными обещаниями.' },
-  sat_evening_close: { title: 'Завершение субботы', situation: 'Вечер можно использовать для восстановления, движения или работы.' },
-  sun_recovery_start: { title: 'Спокойное начало дня', situation: 'Последний день недели начинается с выбора темпа и способа восстановиться.' },
-  sun_family_time: { title: 'Время с семьёй', situation: 'Совместное время нужно распределить так, чтобы нагрузка не легла на одного.' },
-  sun_week_preparation: { title: 'Подготовка новой недели', situation: 'Можно заранее уменьшить бытовую или рабочую нагрузку следующих дней.' },
-  sun_early_finish: { title: 'Закрыть неделю', situation: 'Последнее решение определит, с каким запасом сил начнётся понедельник.' },
-};
-
-const EVENT_ACTION_COPY: Record<string, Record<string, { label: string; summary: string }>> = {
-  mon_breakfast: {
-    eat_ready_meal: {
-      label: 'Съесть заранее приготовленный завтрак',
-      summary: 'Разогреть готовую порцию: утром готовить не нужно.',
-    },
-    cook_meal_batch: {
-      label: 'Приготовить завтрак',
-      summary: 'Приготовить еду сейчас и оставить две готовые порции на следующие приёмы.',
-    },
-  },
-};
 
 const PATH_LABELS: Array<[RegExp, string]> = [
   [/^vitals\.energy$/, 'запас сил'],
@@ -166,18 +119,12 @@ function contractMatches(candidate: unknown): candidate is typeof CONTRACT {
 
 function eventCopy(eventId: string) {
   const authored = registries.events[eventId]?.copy;
-  return EVENT_COPY[eventId] || (authored ? { title: authored.title, situation: authored.situation } : { title: 'Развилка дня', situation: 'Появилось решение, которое повлияет на оставшуюся часть дня.' });
+  return authored ? { title: authored.title, situation: authored.situation } : { title: 'Развилка дня', situation: 'Появилось решение, которое повлияет на оставшуюся часть дня.' };
 }
 
 function formatTime(minutes: number) {
   const safe = Math.max(0, Math.min(1439, Math.round(minutes)));
   return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
-}
-
-function qualitative(value: number, inverse = false) {
-  const level = value >= 67 ? 'высокое' : value >= 38 ? 'умеренное' : 'низкое';
-  if (!inverse) return level;
-  return level === 'высокое' ? 'низкое' : level === 'низкое' ? 'высокое' : 'умеренное';
 }
 
 function riskLabel(risk: ActionOffer['risk']) {
@@ -188,13 +135,21 @@ function effortLabel(effort: ActionOffer['effortLevel']) {
   return ({ none: 'без усилия', light: 'лёгкое усилие', normal: 'умеренное усилие', high: 'высокое усилие' } as const)[effort];
 }
 
+function outcomeDirectionLabel(direction: 'kept' | 'traded' | 'strained') {
+  return ({ kept: 'Сохранено', traded: 'Компромисс', strained: 'Под напряжением' } as const)[direction];
+}
+
+function confidenceLabel(confidence: ActionOffer['evidence']['confidence']) {
+  return ({ established: 'подтверждённое правило кампании', plausible_model: 'правдоподобная игровая модель', personal_hypothesis: 'непроверенная гипотеза' } as const)[confidence];
+}
+
 function actionLabel(actionId: string) {
   return registries.actions[actionId]?.copy.label || actionId;
 }
 
 function actionCopy(eventId: string, actionId: string) {
   const action = registries.actions[actionId];
-  return EVENT_ACTION_COPY[eventId]?.[actionId] || {
+  return action?.copy.contextual?.[eventId] || {
     label: action?.copy.label || actionId,
     summary: action?.copy.summary || '',
   };
@@ -209,26 +164,12 @@ function presentOffer(eventId: string, offer: ActionOffer): DiagnosticOffer {
     knownCost: registries.actions[offer.actionId]?.copy.knownCost || '',
     effortLabel: effortLabel(offer.effortLevel),
     riskLabel: riskLabel(offer.risk),
-    consequenceSummary: consequenceSummary(offer.actionId),
+    consequenceSummary: [
+      offer.consequences.immediate.length ? `Сразу: ${offer.consequences.immediate.join('; ')}` : '',
+      offer.consequences.delayed.length ? `Позже: ${offer.consequences.delayed.join('; ')}` : '',
+      offer.consequences.conditional.length ? `В этом контексте: ${offer.consequences.conditional.join('; ')}` : '',
+    ].filter(Boolean).join('. '),
   };
-}
-
-function effectReason(effect: any) {
-  if (typeof effect?.reason === 'string') return effect.reason;
-  if (effect?.op === 'append_causal_link' && typeof effect.mechanism === 'string') return effect.mechanism;
-  return '';
-}
-
-function consequenceSummary(actionId: string) {
-  const action = registries.actions[actionId];
-  if (!action) return '';
-  const immediate = [...new Set(action.immediateEffects.map(effectReason).filter(Boolean))].slice(0, 2);
-  const delayed = [...new Set(action.scheduledEffects.flatMap((item) => item.effects.map(effectReason)).filter(Boolean))].slice(0, 1);
-  const parts = [
-    immediate.length ? `Сразу: ${immediate.join('; ')}` : '',
-    delayed.length ? `Позже: ${delayed.join('; ')}` : '',
-  ].filter(Boolean);
-  return parts.join('. ');
 }
 
 function pathLabel(path: string) {
@@ -246,37 +187,46 @@ function mechanismLabel(mechanism: string) {
   } as Record<string, string>)[mechanism] || mechanism;
 }
 
-function summarizeStep(before: GameState, output: StepOutput): DaySummary {
-  const entries = meaningfulEntries(output.journalEntries);
-  const actionEntries = entries.filter((entry) => entry.sourceId === output.appliedAction.actionId);
-  const immediateMechanisms = new Set(
-    registries.actions[output.appliedAction.actionId]?.immediateEffects.map(effectReason).filter(Boolean) || [],
-  );
-  const immediateEntries = actionEntries.filter((entry) => immediateMechanisms.has(entry.mechanism));
-  const primary = immediateEntries.find((entry) => !/^accumulators\./.test(entry.resultPath))
-    || immediateEntries[0]
-    || actionEntries.find((entry) => !/^(цена усилия|расход |денежная цена действия)/.test(entry.mechanism))
-    || actionEntries[0]
-    || entries[0]
-    || output.journalEntries[0];
-  const carried = entries.find((entry) => /commitments|weeklyRules|monthlyPriorities|scheduledEffects|work\.tasks|economy\.obligations|accumulators/.test(entry.resultPath));
-  const eventId = before.activeEventId || registries.slots[before.scenarioCursor]?.eventId || '';
-  const copy = eventCopy(eventId);
-  const chosenCopy = actionCopy(eventId, output.appliedAction.actionId);
-  return {
-    dayIndex: before.clock.dayIndex,
-    eventTitle: copy.title,
-    actionLabel: output.appliedAction ? chosenCopy.label : 'Решение принято',
-    mainChange: primary ? `Главное изменение: ${pathLabel(primary.resultPath)}.` : 'Решение принято без немедленной заметной перемены.',
-    causalLink: primary ? `${copy.title} → ${chosenCopy.label} → ${mechanismLabel(primary.mechanism)} → ${pathLabel(primary.resultPath)}.` : `${copy.title} → решение учтено в следующем шаге.`,
-    carryover: carried ? `Дальше повлияет: ${pathLabel(carried.resultPath)}.` : 'Дальше повлияют оставшиеся время и ресурсы.',
-  };
+function containsUuid(value: unknown) {
+  try {
+    return UUID_RE.test(typeof value === 'string' ? value : JSON.stringify(value));
+  } catch {
+    return true;
+  }
 }
 
-function createSession(seed = `campaign-${Date.now()}`, comparisonBaseline?: CampaignSession['comparisonBaseline']): CampaignSession {
+function createOpaqueGameSeed() {
+  const bytes = new Uint8Array(16);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+    return `ad1_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  }
+  const entropy = `${Date.now()}:${window.performance?.now?.() || 0}:${Math.random()}`;
+  return `ad1_${fnv1a64(entropy)}${fnv1a64(`${entropy}:fallback`)}`;
+}
+
+function assertGameSeed(seed: unknown): asserts seed is string {
+  if (typeof seed !== 'string' || !seed || seed.length > 128 || containsUuid(seed)) throw new Error('game seed must be opaque and UUID-free');
+}
+
+function scopeTagFor(clientId: string) {
+  return `scope1_${fnv1a64(`assemble-day:${clientId.trim().toLowerCase()}`)}`;
+}
+
+function comparisonBaselineFrom(value: unknown): CampaignSession['comparisonBaseline'] | undefined {
+  if (value === undefined) return undefined;
+  const baseline = value as CampaignSession['comparisonBaseline'];
+  if (!baseline || typeof baseline !== 'object' || !baseline.outcome || typeof baseline.outcome !== 'object' || typeof baseline.finalStateHash !== 'string') {
+    throw new Error('invalid comparison baseline');
+  }
+  return { outcome: structuredClone(baseline.outcome), finalStateHash: baseline.finalStateHash };
+}
+
+function createSession(seed = createOpaqueGameSeed(), comparisonBaseline?: CampaignSession['comparisonBaseline']): CampaignSession {
+  assertGameSeed(seed);
   const state = createInitialState(seed);
   validateState(state);
-  return { state, lastSummary: null, revision: 0, diagnostics: { version: 1, history: 'complete', decisions: [] }, ...(comparisonBaseline ? { comparisonBaseline } : {}) };
+  return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: 'complete', decisions: [] }, ...(comparisonBaseline ? { comparisonBaseline } : {}) };
 }
 
 function diagnosticStateSnapshot(state: GameState): Omit<GameState, 'causalJournal'> {
@@ -298,7 +248,8 @@ function diagnosticsFrom(value: unknown, revision: number): DiagnosticLedger {
     throw new Error('invalid diagnostic ledger');
   }
   const decisions = structuredClone(ledger.decisions);
-  if (decisions.some((decision, index) => index > 0 && decision.revision <= decisions[index - 1]!.revision)) throw new Error('diagnostic revision order');
+  if (decisions.some((decision) => decision.revision <= 0 || decision.stepIndex < 0)) throw new Error('invalid diagnostic position');
+  if (decisions.some((decision, index) => decision.revision !== index + 1)) throw new Error('diagnostic revision sequence');
   if (decisions.length ? decisions.at(-1)!.revision !== revision : ledger.history === 'complete' && revision !== 0) throw new Error('diagnostic revision mismatch');
   return { version: 1, history: ledger.history, decisions };
 }
@@ -354,56 +305,145 @@ function confirmAction(session: CampaignSession, actionId: string): CampaignSess
   const output = reduceStep({ state: session.state, openEvent, actionId }, registries);
   const revision = session.revision + 1;
   const decision: DiagnosticDecision = { kind: 'action', revision, stepIndex: session.state.clock.stepIndex, eventId: openEvent.templateId, actionId };
-  return { ...session, state: output.state, lastSummary: summarizeStep(session.state, output), revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  const copy = eventCopy(openEvent.templateId);
+  const chosenCopy = actionCopy(openEvent.templateId, actionId);
+  const lastStepSummary = getStepSummary({ before: session.state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
+  const periodSummaries = getPeriodBoundaries(session.state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
+  return { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
 }
 
 function confirmPlanning(session: CampaignSession, plan: PlanningPlan): CampaignSession {
   const output = reducePlanningStep({ state: session.state, plan });
   const revision = session.revision + 1;
   const decision: DiagnosticDecision = { kind: 'planning', revision, stepIndex: session.state.clock.stepIndex, plan: structuredClone(plan) };
-  return { ...session, state: output.state, lastSummary: session.lastSummary, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  return { ...session, state: output.state, lastStepSummary: session.lastStepSummary, periodSummaries: session.periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+}
+
+function replayDecisions(seed: string, diagnostics: DiagnosticLedger, comparisonBaseline?: CampaignSession['comparisonBaseline']): CampaignSession {
+  assertGameSeed(seed);
+  if (diagnostics.history !== 'complete') throw new Error('complete decision history required');
+  let state = createInitialState(seed);
+  let lastStepSummary: StepSummary | null = null;
+  let periodSummaries: PeriodSummary[] = [];
+  for (const decision of diagnostics.decisions) {
+    if (decision.kind === 'action') {
+      const slot = registries.slots[state.scenarioCursor];
+      if (!slot || state.activeEventId !== decision.eventId || state.clock.stepIndex !== decision.stepIndex) throw new Error(`action replay mismatch at revision ${decision.revision}`);
+      const openEvent = initialEvent(state, registries);
+      const output = reduceStep({ state, openEvent, actionId: decision.actionId }, registries);
+      const copy = eventCopy(decision.eventId);
+      const chosenCopy = actionCopy(decision.eventId, decision.actionId);
+      lastStepSummary = getStepSummary({ before: state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
+      periodSummaries = getPeriodBoundaries(state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
+      state = output.state;
+    } else {
+      if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
+      state = reducePlanningStep({ state, plan: decision.plan }).state;
+    }
+  }
+  validateState(state);
+  return {
+    state,
+    lastStepSummary,
+    periodSummaries,
+    revision: diagnostics.decisions.at(-1)?.revision || 0,
+    diagnostics: structuredClone(diagnostics),
+    ...(comparisonBaseline ? { comparisonBaseline } : {}),
+  };
+}
+
+function physicalStorageKey(clientId: string) {
+  return `heys_${clientId}_${STORAGE_KEY.replace(/^heys_/, '')}`;
+}
+
+function checkpointSizeBytes(clientId: string, envelope: CampaignEnvelope) {
+  return (physicalStorageKey(clientId).length + JSON.stringify(envelope).length) * 2;
+}
+
+function hasRawClientIdentifier(value: unknown, clientId: string) {
+  if (containsUuid(value)) return true;
+  try {
+    return Boolean(clientId) && JSON.stringify(value).toLowerCase().includes(clientId.toLowerCase());
+  } catch {
+    return true;
+  }
 }
 
 function makeEnvelope(session: CampaignSession, clientId: string): CampaignEnvelope {
+  assertGameSeed(session.state.rng.seed);
+  const diagnostics = diagnosticsFrom(session.diagnostics, session.revision);
+  if (diagnostics.history !== 'complete' || hasRawClientIdentifier({ state: session.state, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
+    throw new Error('checkpoint contains a personal identifier or incomplete history');
+  }
+  const replayed = replayDecisions(session.state.rng.seed, diagnostics, session.comparisonBaseline);
+  if (stateHash(replayed.state) !== stateHash(session.state)
+    || JSON.stringify(replayed.lastStepSummary) !== JSON.stringify(session.lastStepSummary)
+    || JSON.stringify(replayed.periodSummaries) !== JSON.stringify(session.periodSummaries)) {
+    throw new Error('checkpoint decision ledger does not reproduce the session');
+  }
   return {
     envelopeVersion: ENVELOPE_VERSION,
-    clientId,
-    campaignId: session.state.campaignId,
+    scopeTag: scopeTagFor(clientId),
+    gameSeed: session.state.rng.seed,
     savedAt: new Date().toISOString(),
     revision: session.revision,
     stateHash: stateHash(session.state),
     contract: { ...CONTRACT },
-    state: session.state,
-    lastSummary: session.lastSummary,
-    diagnostics: session.diagnostics,
+    diagnostics,
     comparisonBaseline: session.comparisonBaseline,
   };
 }
 
-function loadCheckpoint(store: any, clientId: string, fresh = false): LoadResult {
-  if (!store?.get || !clientId) return { status: 'unavailable', message: 'Профиль HEYS недоступен. Вернитесь в HEYS и откройте игру снова.' };
+function loadLegacyCheckpoint(envelope: LegacyCampaignEnvelope, clientId: string): LoadResult {
+  if (!contractMatches(envelope.contract)) return { status: 'incompatible', message: 'Сохранение создано другой версией игры. Начните новую кампанию явно или вернитесь в HEYS.' };
+  if (envelope.clientId !== clientId) return { status: 'foreign', message: 'Сохранение принадлежит другому профилю HEYS и не будет открыто.' };
+  if (hasRawClientIdentifier({ state: envelope.state, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+    return { status: 'privacy', message: 'Старое сохранение содержит идентификатор профиля внутри кампании. Оно оставлено без изменений: начните новую кампанию явно или вернитесь в HEYS.' };
+  }
+  try {
+    validateState(envelope.state);
+    if (!Number.isInteger(envelope.revision) || envelope.revision < 0 || envelope.campaignId !== envelope.state.campaignId || stateHash(envelope.state) !== envelope.stateHash) throw new Error('legacy checkpoint mismatch');
+    const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
+    if (diagnostics.history !== 'complete') return { status: 'incompatible', message: 'В старом сохранении нет полной истории решений для безопасного восстановления. Оно оставлено без изменений.' };
+    const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
+    const session = replayDecisions(envelope.state.rng.seed, diagnostics, comparisonBaseline);
+    if (stateHash(session.state) !== envelope.stateHash) throw new Error('legacy replay mismatch');
+    return { status: 'ready', session };
+  } catch {
+    return { status: 'corrupt', message: 'Сохранение не прошло проверку целостности. Оно оставлено без изменений.' };
+  }
+}
+
+function loadCheckpoint(store: any, clientId: string, _fresh = false): LoadResult {
+  if (!store?.getPersisted || !clientId) return { status: 'unavailable', message: 'Профиль HEYS недоступен. Вернитесь в HEYS и откройте игру снова.' };
+  const missing = Object.freeze({ missingCheckpoint: true });
   let value: unknown;
   try {
-    value = fresh && typeof store.getPersisted === 'function'
-      ? store.getPersisted(STORAGE_KEY, null)
-      : store.get(STORAGE_KEY, null);
+    value = store.getPersisted(STORAGE_KEY, missing);
   } catch {
     return { status: 'corrupt', message: 'Сохранение не удалось прочитать. Оно оставлено без изменений.' };
   }
-  if (value == null) return { status: 'empty' };
-  if (!value || typeof value !== 'object') return { status: 'corrupt', message: 'Формат сохранения повреждён. Оно оставлено без изменений.' };
-  const envelope = value as CampaignEnvelope;
-  if (envelope.envelopeVersion !== ENVELOPE_VERSION || !contractMatches(envelope.contract)) {
+  if (value === missing) return { status: 'empty' };
+  if (value == null || typeof value !== 'object') return { status: 'corrupt', message: 'Формат сохранения повреждён. Оно оставлено без изменений.' };
+  const version = (value as { envelopeVersion?: unknown }).envelopeVersion;
+  if (version === 1) return loadLegacyCheckpoint(value as LegacyCampaignEnvelope, clientId);
+  if (version !== ENVELOPE_VERSION) {
     return { status: 'incompatible', message: 'Сохранение создано другой версией игры. Начните новую кампанию явно или вернитесь в HEYS.' };
   }
-  if (envelope.clientId !== clientId) return { status: 'foreign', message: 'Сохранение принадлежит другому профилю HEYS и не будет открыто.' };
+  const envelope = value as CampaignEnvelope;
+  if (!contractMatches(envelope.contract)) return { status: 'incompatible', message: 'Сохранение создано другой версией игры. Начните новую кампанию явно или вернитесь в HEYS.' };
+  if (envelope.scopeTag !== scopeTagFor(clientId)) return { status: 'foreign', message: 'Сохранение принадлежит другому профилю HEYS и не будет открыто.' };
+  if (checkpointSizeBytes(clientId, envelope) > CHECKPOINT_BUDGET_BYTES) return { status: 'incompatible', message: 'Сохранение превышает безопасный размер этой версии игры. Оно оставлено без изменений.' };
+  if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+    return { status: 'privacy', message: 'Сохранение содержит идентификатор профиля внутри кампании. Оно оставлено без изменений.' };
+  }
   try {
-    validateState(envelope.state);
-    if (stateHash(envelope.state) !== envelope.stateHash || !Number.isInteger(envelope.revision) || envelope.revision < envelope.state.clock.stepIndex || envelope.campaignId !== envelope.state.campaignId) {
-      throw new Error('checkpoint mismatch');
-    }
     const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
-    return { status: 'ready', session: { state: envelope.state, lastSummary: envelope.lastSummary || null, revision: envelope.revision, diagnostics, ...(envelope.comparisonBaseline ? { comparisonBaseline: envelope.comparisonBaseline } : {}) } };
+    if (diagnostics.history !== 'complete' || !Number.isInteger(envelope.revision) || envelope.revision < 0 || typeof envelope.stateHash !== 'string') throw new Error('checkpoint shape mismatch');
+    const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
+    const session = replayDecisions(envelope.gameSeed, diagnostics, comparisonBaseline);
+    if (session.revision !== envelope.revision || stateHash(session.state) !== envelope.stateHash) throw new Error('checkpoint replay mismatch');
+    return { status: 'ready', session };
   } catch {
     return { status: 'corrupt', message: 'Сохранение не прошло проверку целостности. Оно оставлено без изменений.' };
   }
@@ -493,10 +533,13 @@ function createDiagnosticTrace(session: CampaignSession) {
       'selected action and reducer stage hashes',
       'causal journal delta, scheduled effects, RNG and event ledger',
       'planning input, planning view and atomic planning output',
+      'engine-owned campaign brief, directional step result and idempotent period summaries',
       'persisted causal echo event, character development and multidimensional campaign outcome',
     ],
     catalog: structuredClone(registries),
     currentState: structuredClone(session.state),
+    campaignBrief: getCampaignBrief(session.state, registries),
+    currentPeriodSummaries: structuredClone(session.periodSummaries),
     derivedOutcome: getCampaignOutcome(session.state),
     comparisonBaseline: session.comparisonBaseline || null,
     recordedDecisions: structuredClone(session.diagnostics.decisions),
@@ -530,7 +573,7 @@ async function copyDiagnosticTrace(session: CampaignSession) {
 }
 
 function saveCheckpoint(store: any, clientId: string, session: CampaignSession, forceNewCampaign = false): SaveResult {
-  if (!store?.get || !store?.set || !clientId) return { status: 'unavailable', message: 'Не удалось связать прогресс с текущим профилем HEYS.' };
+  if (!store?.getPersisted || !store?.set || !clientId) return { status: 'unavailable', message: 'Не удалось связать прогресс с текущим профилем HEYS.' };
   const current = loadCheckpoint(store, clientId, true);
   if (!forceNewCampaign && current.status === 'ready') {
     if (current.session.state.campaignId !== session.state.campaignId) return { status: 'conflict', message: 'В профиле уже есть другая кампания. Прогресс не перезаписан.' };
@@ -539,24 +582,78 @@ function saveCheckpoint(store: any, clientId: string, session: CampaignSession, 
   } else if (!forceNewCampaign && current.status !== 'empty' && current.status !== 'ready') {
     return { status: 'conflict', message: current.message };
   }
-  const envelope = makeEnvelope(session, clientId);
   try {
+    const envelope = makeEnvelope(session, clientId);
+    const sizeBytes = checkpointSizeBytes(clientId, envelope);
+    if (sizeBytes > CHECKPOINT_BUDGET_BYTES) {
+      return { status: 'failed', message: 'Шаг принят, но компактное сохранение превысило безопасный размер. Существующий прогресс оставлен без изменений.' };
+    }
     const written = store.set(STORAGE_KEY, envelope);
     if (written === false) return { status: 'failed', message: 'Шаг принят, но сохранить его не удалось. Не закрывайте игру и повторите действие.' };
-    return { status: 'saved', envelope };
+    return { status: 'saved', envelope, sizeBytes, budgetBytes: CHECKPOINT_BUDGET_BYTES };
   } catch {
     return { status: 'failed', message: 'Шаг принят, но сохранить его не удалось. Не закрывайте игру и повторите действие.' };
   }
 }
 
-function Silhouette() {
-  return h('span', { className: 'assemble-day-character__silhouette', 'aria-hidden': 'true' },
-    h('span', { className: 'assemble-day-character__head' }),
-    h('span', { className: 'assemble-day-character__body' }),
-  );
-}
-
 const h = (...args: any[]) => window.React.createElement(...args);
+
+function CharacterScene({ presentation }: { presentation: CharacterPresentation }) {
+  const { pose, expression, load, dayPhase } = presentation.frame;
+  const recovering = pose === 'recovering';
+  const headY = recovering ? 22 : pose === 'depleted' ? 21 : 18;
+  const bodyY = recovering ? 28 : pose === 'depleted' ? 28 : 25;
+  const mouth = expression === 'bright' ? `M27 ${headY + 5}h1v1h2v-1h1` : expression === 'subdued' ? `M27 ${headY + 6}h1v-1h2v1h1` : `M27 ${headY + 6}h4`;
+  const frameKey = `${pose}:${expression}:${load}:${dayPhase}`;
+  return h('svg', {
+    className: `assemble-day-character__scene is-${dayPhase} is-${load}`,
+    viewBox: '0 0 56 48',
+    'aria-hidden': 'true',
+    focusable: 'false',
+    shapeRendering: 'crispEdges',
+    'data-frame-key': frameKey,
+    'data-pose': pose,
+    'data-expression': expression,
+    'data-load': load,
+  },
+  h('rect', { className: 'scene-bg', x: 0, y: 0, width: 56, height: 48, rx: 2 }),
+  h('rect', { className: 'scene-floor', x: 1, y: 38, width: 54, height: 9 }),
+  h('rect', { className: 'scene-window', x: 35, y: 5, width: 16, height: 13 }),
+  h('path', { className: 'scene-mid', d: 'M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z' }),
+  h('path', { className: 'scene-ink', d: 'M35 5h16v2H35zm0 4h16v1H35z' }),
+  h('rect', { className: 'scene-ink', x: 5, y: 25, width: 14, height: 2 }),
+  h('rect', { className: 'scene-ink', x: 7, y: 27, width: 2, height: 11 }),
+  h('rect', { className: 'scene-ink', x: 16, y: 27, width: 2, height: 11 }),
+  h('rect', { className: 'scene-mid', x: 10, y: 21, width: 4, height: 4 }),
+  h('path', { className: 'scene-ink', d: 'M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z' }),
+  h('rect', { className: 'scene-ink', x: 41, y: 25, width: 11, height: 13 }),
+  h('rect', { className: 'scene-bg', x: 43, y: 27, width: 7, height: 3 }),
+  h('rect', { className: 'scene-bg', x: 43, y: 32, width: 1, height: 4 }),
+  h('rect', { className: 'scene-bg', x: 46, y: 31, width: 1, height: 5 }),
+  h('rect', { className: 'scene-bg', x: 49, y: 32, width: 1, height: 4 }),
+  h('path', { className: 'scene-ink', d: 'M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z' }),
+  dayPhase === 'night' && h('path', { className: 'scene-highlight', d: 'M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z' }),
+  load === 'pressured' && h('g', { className: 'scene-pressure', 'data-pressure-marks': 'true' },
+    h('path', { d: 'M22 14h1v-3h1v4h-2z' }),
+    h('path', { d: 'M26 13h1V9h1v5h-2z' }),
+    h('path', { d: 'M32 14h1v-3h1v4h-2z' }),
+  ),
+  recovering && h('g', { className: 'scene-stool' },
+    h('rect', { className: 'scene-ink', x: 24, y: 36, width: 10, height: 2 }),
+    h('rect', { className: 'scene-ink', x: 25, y: 38, width: 2, height: 5 }),
+    h('rect', { className: 'scene-ink', x: 31, y: 38, width: 2, height: 5 }),
+  ),
+  h('g', { className: `scene-character pose-${pose}` },
+    h('rect', { className: 'scene-skin', x: 25, y: headY, width: 8, height: 8 }),
+    h('path', { className: 'scene-ink', d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
+    h('rect', { className: 'scene-ink', x: 27, y: headY + 3, width: 1, height: 1 }),
+    h('rect', { className: 'scene-ink', x: 31, y: headY + 3, width: 1, height: 1 }),
+    h('path', { className: 'scene-ink scene-mouth', d: mouth }),
+    h('rect', { className: 'scene-mid', x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
+    h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
+    h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` }),
+  ));
+}
 
 function StatusPill({ label, value, tone }: { label: string; value: string; tone: string }) {
   return h('div', { className: `assemble-day-status assemble-day-status--${tone}` },
@@ -565,18 +662,36 @@ function StatusPill({ label, value, tone }: { label: string; value: string; tone
 }
 
 function CharacterCard({ state }: { state: GameState }) {
-  return h('section', { className: 'assemble-day-card assemble-day-character', 'aria-label': 'Персонаж и текущее состояние' },
-    h(Silhouette),
+  const presentation = getCharacterPresentation(state);
+  return h('section', { className: 'assemble-day-card assemble-day-character', 'aria-labelledby': 'assemble-day-character-title', 'aria-describedby': 'assemble-day-character-summary' },
+    h(CharacterScene, { presentation }),
     h('div', { className: 'assemble-day-character__copy' },
       h('span', { className: 'assemble-day-eyebrow' }, 'Фиксированный персонаж'),
-      h('h2', null, 'Координатор проектов'),
+      h('h2', { id: 'assemble-day-character-title' }, 'Координатор проектов'),
       h('p', null, 'Партнёр и ребёнок 8 лет · неделя до сдачи проекта'),
     ),
+    h('p', { id: 'assemble-day-character-summary', className: 'assemble-day-sr-only', 'aria-live': 'polite' }, presentation.ariaSummary),
     h('div', { className: 'assemble-day-statuses' },
-      h(StatusPill, { label: 'Энергия', value: qualitative(state.vitals.energy), tone: state.vitals.energy < 38 ? 'warning' : 'calm' }),
-      h(StatusPill, { label: 'Настроение', value: qualitative(state.vitals.mood), tone: 'neutral' }),
-      h(StatusPill, { label: 'Напряжение', value: qualitative(state.vitals.tension), tone: state.vitals.tension >= 67 ? 'warning' : 'neutral' }),
+      ...presentation.indicators.map((item) => h(StatusPill, { key: item.id, label: item.label, value: item.value, tone: item.tone })),
     ),
+    h('details', { className: 'assemble-day-character__details' },
+      h('summary', null, 'Состояние персонажа'),
+      h('p', null, presentation.summary),
+      presentation.reasons.length
+        ? h('ul', { className: 'assemble-day-list' }, ...presentation.reasons.map((reason) => h('li', { key: reason.id }, h('strong', null, reason.label), h('span', null, reason.summary))))
+        : h('p', null, 'Сейчас нет дополнительного фактора, который нужно вынести в первый слой.'),
+    ),
+  );
+}
+
+function CampaignBriefCard({ state, compact = false }: { state: GameState; compact?: boolean }) {
+  const brief = getCampaignBrief(state, registries);
+  return h('section', { className: `assemble-day-card assemble-day-brief${compact ? ' is-compact' : ''}`, 'aria-labelledby': compact ? undefined : 'assemble-day-brief-title' },
+    h('span', { className: 'assemble-day-eyebrow' }, 'Задача кампании'),
+    h('h2', { id: compact ? undefined : 'assemble-day-brief-title' }, brief.mission.title),
+    h('p', null, brief.mission.summary),
+    h('div', { className: 'assemble-day-brief__stakes' }, ...brief.stakes.map((item) => h('div', { key: item.id }, h('strong', null, item.title), h('span', null, item.summary)))),
+    h('p', { className: 'assemble-day-brief__space' }, brief.choiceSpace),
   );
 }
 
@@ -595,10 +710,13 @@ function DayContextStrip({ state }: { state: GameState }) {
 }
 
 function ResultBeat({ summary, saveMessage, saveTone, onContinue, onRetry }: any) {
+  const React = window.React;
+  const headingRef = React.useRef(null);
+  React.useEffect(() => { headingRef.current?.focus(); }, []);
   const blocked = saveTone === 'error';
-  return h('section', { className: 'assemble-day-card assemble-day-result', 'aria-labelledby': 'assemble-day-result-title' },
+  return h('section', { className: 'assemble-day-card assemble-day-result', 'aria-labelledby': 'assemble-day-result-title', 'aria-live': 'polite', 'aria-atomic': 'true' },
     h('span', { className: 'assemble-day-eyebrow' }, 'Результат решения'),
-    h('h2', { id: 'assemble-day-result-title', tabIndex: -1 }, summary.actionLabel),
+    h('h2', { id: 'assemble-day-result-title', tabIndex: -1, ref: headingRef }, summary.actionLabel),
     h('p', null, summary.mainChange),
     h('p', { className: 'assemble-day-summary__causal' }, summary.causalLink),
     h('p', { className: 'assemble-day-summary__carry' }, summary.carryover),
@@ -609,12 +727,27 @@ function ResultBeat({ summary, saveMessage, saveTone, onContinue, onRetry }: any
   );
 }
 
-function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage, saveTone, resultRevision, onContinueResult, onRetrySave, onOpenPlan, onReplaySameSeed, onStartNew }: any) {
+function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage, saveTone, resultRevision, onContinueResult, onRetrySave, periodSummary, onContinuePeriod, onOpenPlan, onReplaySameSeed, onStartNew }: any) {
+  const React = window.React;
   const view = getCampaignView(session);
-  if (resultRevision === session.revision && session.lastSummary) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
+  const availableIds = view.offers.filter((offer: ActionOffer) => offer.available).map((offer: ActionOffer) => offer.actionId);
+  const [focusedActionId, setFocusedActionId] = React.useState(() => selectedActionId || availableIds[0] || '');
+  React.useEffect(() => {
+    setFocusedActionId(selectedActionId || availableIds[0] || '');
+  }, [session.state.activeEventId, selectedActionId]);
+  const moveOptionFocus = (currentId: string, delta: number) => {
+    if (selectedActionId || !availableIds.length) return;
+    const current = Math.max(0, availableIds.indexOf(currentId));
+    const nextId = availableIds[(current + delta + availableIds.length) % availableIds.length]!;
+    setFocusedActionId(nextId);
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-action-id="${nextId}"]`)?.focus());
+  };
+  if (resultRevision === session.revision && session.lastStepSummary) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
+  if (periodSummary?.kind === 'day') return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod }));
+  if (periodSummary?.kind === 'week') return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
   if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
   const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === 'planning_plan');
-  if (!planConfirmed) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h('section', { className: 'assemble-day-card assemble-day-contract-start' }, h('span', { className: 'assemble-day-eyebrow' }, 'Контракт недели'), h('h2', null, 'Сначала выберите, что будете защищать'), h('p', null, 'Два или три правила и приоритеты изменят время, усилие и давление в следующих развилках.'), h('button', { type: 'button', className: 'assemble-day-primary', onClick: onOpenPlan }, 'Выбрать правила недели')));
+  if (!planConfirmed) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(CampaignBriefCard, { state: session.state }), h('section', { className: 'assemble-day-card assemble-day-contract-start' }, h('span', { className: 'assemble-day-eyebrow' }, 'Контракт недели'), h('h2', null, 'Сначала выберите, что будете защищать'), h('p', null, 'Две недельные границы и два разных фокуса изменят усилие, риск и давление в следующих развилках.'), h('button', { type: 'button', className: 'assemble-day-primary', onClick: onOpenPlan }, 'Выбрать правила недели')));
   const choiceLocked = Boolean(selectedActionId);
   return h('div', { className: 'assemble-day-screen assemble-day-screen--day' },
     h(CharacterCard, { state: session.state }),
@@ -633,22 +766,33 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
         role: 'status',
       }, choiceLocked
         ? 'Вариант зафиксирован. Проверьте последствия и подтвердите решение.'
-        : 'Первое нажатие фиксирует вариант. Сначала сравните время, деньги и риск — изменить решение после нажатия нельзя.'),
+        : 'Первое нажатие, Пробел или Enter фиксирует вариант. Стрелки только перемещают фокус: сначала сравните время, деньги и риск.'),
       h('div', { className: 'assemble-day-options', role: 'radiogroup', 'aria-label': 'Варианты решения' },
         ...view.offers.map((offer: any) => {
           const selected = selectedActionId === offer.actionId;
           const lockedByAnother = choiceLocked && !selected;
-          return h('button', {
-            key: offer.actionId,
-            type: 'button',
-            role: 'radio',
-            'aria-checked': selected,
-            disabled: !offer.available || lockedByAnother,
+          const titleId = `assemble-day-option-${offer.actionId}-title`;
+          const descriptionId = `assemble-day-option-${offer.actionId}-description`;
+          const inactive = !offer.available || lockedByAnother;
+          const reasons = [...new Set((offer.geometryReasons || []).map((item: any) => item.reason))];
+          const evidence = [...new Map([offer.evidence, ...(offer.geometryReasons || []).map((item: any) => item.evidence)].filter(Boolean).map((item: any) => [item.id, item])).values()];
+          return h('div', { key: offer.actionId, className: 'assemble-day-option-wrap', role: 'none' },
+          h('button', {
+            type: 'button', role: 'radio', 'aria-checked': selected, 'aria-disabled': inactive || undefined,
+            'aria-labelledby': titleId, 'aria-describedby': descriptionId,
+            tabIndex: inactive ? -1 : (selected || (!choiceLocked && focusedActionId === offer.actionId) ? 0 : -1),
             className: `assemble-day-option${selected ? ' is-selected' : ''}${lockedByAnother ? ' is-locked' : ''}`,
-            onClick: () => onSelect(offer.actionId),
+            onClick: () => { if (!inactive) onSelect(offer.actionId); },
+            onKeyDown: (event: KeyboardEvent) => {
+              if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); moveOptionFocus(offer.actionId, 1); }
+              if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); moveOptionFocus(offer.actionId, -1); }
+              if ((event.key === 'Enter' || event.key === ' ') && !inactive) { event.preventDefault(); onSelect(offer.actionId); }
+            },
             'data-action-id': offer.actionId,
           },
-          h('span', { className: 'assemble-day-option__title' }, offer.label),
+          h('span', { id: titleId, className: 'assemble-day-option__title' }, offer.label),
+          selected && h('span', { className: 'assemble-day-option__selected', 'aria-hidden': 'true' }, 'Выбрано'),
+          h('span', { id: descriptionId, className: 'assemble-day-option__body' },
           offer.summary.trim().toLocaleLowerCase('ru-RU') !== offer.label.trim().toLocaleLowerCase('ru-RU')
             && h('span', { className: 'assemble-day-option__summary' }, offer.summary),
           h('span', { className: 'assemble-day-option__meta' },
@@ -659,11 +803,16 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
           ),
           (offer.consequencePreview?.[0] || offer.consequenceSummary)
             && h('span', { className: 'assemble-day-option__known' }, [offer.consequenceSummary, ...offer.consequencePreview].filter(Boolean).join('. ')),
-          selected && offer.planningSignals?.length > 0
-            && h('span', { className: 'assemble-day-option__signals' }, ...offer.planningSignals.map((signal: any) => h('span', { key: `${signal.kind}:${signal.sourceId}`, className: signal.kind === 'conflicts_weekly_rule' ? 'is-conflict' : 'is-support' }, signal.reason))),
+          reasons.length > 0 && h('span', { className: 'assemble-day-option__factors' }, `Учтено: ${reasons.join('; ')}.`),
+          offer.planningSignals?.length > 0
+            && h('span', { className: 'assemble-day-option__signals' }, ...offer.planningSignals.map((signal: any) => h('span', { key: `${signal.kind}:${signal.sourceId}`, className: signal.kind.startsWith('conflicts_') ? 'is-conflict' : 'is-support' }, `${signal.kind.startsWith('conflicts_') ? 'Конфликт' : 'Поддерживает'}: ${signal.reason}`))),
           lockedByAnother && h('span', { className: 'assemble-day-option__locked' }, 'Закрыто после первого выбора'),
-          !offer.available && h('span', { className: 'assemble-day-option__unavailable' }, offer.unavailableReasons[0] || 'Сейчас недоступно'),
-          );
+          !offer.available && h('span', { className: 'assemble-day-option__unavailable' }, offer.unavailableMessages[0] || 'Сейчас недоступно'),
+          )),
+          h('details', { className: 'assemble-day-option__evidence' },
+            h('summary', null, 'Почему игра так оценивает вариант'),
+            h('ul', { className: 'assemble-day-list' }, ...evidence.map((item: any) => h('li', { key: item.id }, h('strong', null, item.sourceLabel), h('span', null, confidenceLabel(item.confidence)), h('small', null, item.transferLimit)))),
+          ));
         }),
       ),
       saveMessage && h('p', { className: `assemble-day-alert assemble-day-alert--${saveTone || 'error'}`, role: 'status' }, saveMessage),
@@ -675,13 +824,14 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
   );
 }
 
-function DaySummaryCard({ summary }: { summary: DaySummary }) {
+function DaySummaryCard({ summary, onContinue }: { summary: PeriodSummary; onContinue: () => void }) {
   return h('section', { className: 'assemble-day-card assemble-day-summary' },
-    h('span', { className: 'assemble-day-eyebrow' }, 'Краткий итог последнего шага'),
-    h('h2', null, summary.actionLabel),
-    h('p', null, summary.mainChange),
+    h('span', { className: 'assemble-day-eyebrow' }, 'Итог дня'),
+    h('h2', null, summary.title),
+    h('p', null, summary.headline),
     h('p', { className: 'assemble-day-summary__causal' }, summary.causalLink),
     h('p', { className: 'assemble-day-summary__carry' }, summary.carryover),
+    h('button', { type: 'button', className: 'assemble-day-primary', onClick: onContinue }, summary.completedDayIndex < 6 ? 'Перейти к следующему дню' : 'Посмотреть итог недели'),
   );
 }
 
@@ -692,16 +842,23 @@ function WeekScreen({ session, plan, onToggleRule, onContinue }: { session: Camp
   const dayProgress = DAY_NAMES.map((name, index) => ({ name, status: index < currentDay ? 'Готово' : index === currentDay ? 'Сейчас' : 'Впереди' }));
   const commitments = session.state.commitments.filter((item) => item.status === 'open').slice(0, 3);
   return h('div', { className: 'assemble-day-screen' },
+    !locked && h(CampaignBriefCard, { state: session.state, compact: true }),
     h('section', { className: 'assemble-day-card assemble-day-plan-card' },
       h('span', { className: 'assemble-day-eyebrow' }, 'План недели'),
       h('h2', null, 'Какие границы сохранить'),
-      h('p', null, locked ? 'Контракт уже влияет на развилки этой недели. Изменить его задним числом нельзя.' : 'Выберите минимум два правила. Цена пересечений показана до подтверждения плана.'),
+      h('p', null, locked ? 'Контракт уже влияет на развилки этой недели. Изменить его задним числом нельзя.' : 'Ёмкости хватает на две границы из трёх. Цена каждого отказа показана до подтверждения плана.'),
+      h('div', { className: 'assemble-day-capacity', role: 'status', 'aria-live': 'polite' },
+        h('div', null, h('span', null, 'Защищённые окна'), h('strong', null, `${planning.capacity.weekly.allocatedSlots}/${planning.capacity.weekly.totalSlots}`)),
+        h('p', null, planning.capacity.weekly.remainingSlots
+          ? `Осталось мест: ${planning.capacity.weekly.remainingSlots}.`
+          : 'Ёмкость заполнена. Чтобы выбрать другую границу, сначала освободите одно место.'),
+      ),
       h('div', { className: 'assemble-day-rule-grid', role: 'group', 'aria-label': 'Правила недели' },
         ...planning.weeklyRules.map((rule) => h('button', {
-          key: rule.id, type: 'button', role: 'checkbox', 'aria-checked': rule.selected, disabled: locked,
+          key: rule.id, type: 'button', role: 'checkbox', 'aria-checked': rule.selected, disabled: locked || (!rule.selected && planning.capacity.weekly.remainingSlots === 0),
           className: `assemble-day-rule${rule.selected ? ' is-selected' : ''}`,
           onClick: () => onToggleRule(rule.id),
-        }, h('strong', null, rule.title), h('span', null, rule.summary))),
+        }, h('strong', null, rule.title), rule.selected && h('span', { className: 'assemble-day-rule__selected', 'aria-hidden': 'true' }, 'Выбрано'), h('span', null, rule.summary), h('small', null, `Источник: ${rule.source}`), h('small', null, `Цена: ${rule.tradeoff}`))),
       ),
       h('div', { className: 'assemble-day-pressure-grid', 'aria-label': 'Давление недели' },
         ...planning.pressures.map((item) => h('div', { key: item.title, className: `assemble-day-pressure is-${item.level}` }, h('span', null, item.title), h('strong', null, item.level), h('small', null, item.reason))),
@@ -712,7 +869,7 @@ function WeekScreen({ session, plan, onToggleRule, onContinue }: { session: Camp
           : h('p', null, 'Явных конфликтов выбранных правил сейчас нет.'),
       ),
       planning.issues.find((item) => item.code.startsWith('weekly_')) && h('p', { className: 'assemble-day-alert', role: 'status' }, planning.issues.find((item) => item.code.startsWith('weekly_'))?.message),
-      h('button', { type: 'button', className: 'assemble-day-primary', disabled: plan.weeklyRuleIds.length < 2, onClick: onContinue }, 'Продолжить к приоритетам'),
+      h('button', { type: 'button', className: 'assemble-day-primary', disabled: plan.weeklyRuleIds.length !== planning.capacity.weekly.totalSlots, onClick: onContinue }, 'Продолжить к приоритетам'),
     ),
     h('details', { className: 'assemble-day-card assemble-day-details' },
       h('summary', null, 'Показать неделю и договорённости'),
@@ -724,9 +881,24 @@ function WeekScreen({ session, plan, onToggleRule, onContinue }: { session: Camp
 }
 
 function GoalGroup({ label, value, goals, onChange, disabled = false }: { label: string; value: PlanningDomain; goals: Array<{ id: PlanningDomain; title: string }>; onChange: (id: PlanningDomain) => void; disabled?: boolean }) {
-  return h('fieldset', { className: 'assemble-day-goals' },
+  return h('fieldset', { className: 'assemble-day-goals', role: 'radiogroup', 'aria-label': label },
     h('legend', null, label),
-    ...goals.map((goal) => h('button', { key: goal.id, type: 'button', role: 'radio', 'aria-checked': value === goal.id, disabled, className: value === goal.id ? 'is-selected' : '', onClick: () => onChange(goal.id) }, goal.title)),
+    ...goals.map((goal, index) => {
+      const selected = value === goal.id;
+      return h('button', {
+        key: goal.id, type: 'button', role: 'radio', 'aria-checked': selected, disabled, tabIndex: selected ? 0 : -1,
+        className: selected ? 'is-selected' : '', onClick: () => onChange(goal.id), 'data-goal-id': goal.id,
+        onKeyDown: (event: KeyboardEvent) => {
+          if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+          event.preventDefault();
+          const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+          const next = goals[(index + delta + goals.length) % goals.length]!;
+          onChange(next.id);
+          const group = (event.currentTarget as HTMLElement).closest('[role="radiogroup"]');
+          window.requestAnimationFrame(() => group?.querySelector<HTMLElement>(`[data-goal-id="${next.id}"]`)?.focus());
+        },
+      }, h('span', null, goal.title), selected && h('small', { 'aria-hidden': 'true' }, 'Выбрано'));
+    }),
   );
 }
 
@@ -737,17 +909,21 @@ function MoneyValue({ label, value, warning = false }: { label: string; value: n
 function MonthScreen({ session, plan, onGoalChange, onConfirm, onGoWeek, onGoDay, planMessage, planTone }: any) {
   const planning = getPlanningCampaignView(session, plan);
   const confirmed = planningMatchesState(session.state, plan);
-  const weeklyReady = plan.weeklyRuleIds.length >= 2;
+  const weeklyReady = plan.weeklyRuleIds.length === planning.capacity.weekly.totalSlots;
   const locked = session.state.clock.stepIndex > 0;
   return h('div', { className: 'assemble-day-screen' },
     h('section', { className: 'assemble-day-card assemble-day-plan-card' },
-      h('span', { className: 'assemble-day-eyebrow' }, 'План месяца'),
+      h('span', { className: 'assemble-day-eyebrow' }, 'Горизонт планирования'),
       h('h2', null, 'Что защищать в первую очередь'),
-      h('p', null, 'Главный фокус получает приоритет, поддерживающий помогает не потерять вторую важную область.'),
+      h('p', null, 'Три единицы внимания делятся заранее: две получает главный фокус, одну — поддерживающий. Остальные области остаются без подготовленного резерва.'),
       !weeklyReady && h('div', { className: 'assemble-day-conflict is-critical', role: 'alert' }, h('strong', null, 'Сначала выберите правила недели'), h('span', null, 'Для цельного плана нужны минимум две недельные границы.'), h('button', { type: 'button', className: 'assemble-day-secondary', onClick: onGoWeek }, 'Вернуться к неделе')),
       h('div', { className: 'assemble-day-goal-grid' },
         h(GoalGroup, { label: 'Главный фокус', value: plan.mainGoal, goals: planning.monthlyGoals, disabled: locked, onChange: (id: PlanningDomain) => onGoalChange('mainGoal', id) }),
         h(GoalGroup, { label: 'Поддерживающий фокус', value: plan.supportingGoal, goals: planning.monthlyGoals, disabled: locked, onChange: (id: PlanningDomain) => onGoalChange('supportingGoal', id) }),
+      ),
+      h('div', { className: 'assemble-day-capacity assemble-day-capacity--attention', role: 'status', 'aria-live': 'polite' },
+        h('div', null, h('span', null, 'Внимание распределено'), h('strong', null, `${planning.capacity.attention.allocatedUnits}/${planning.capacity.attention.totalUnits}`)),
+        h('p', null, `${planning.capacity.attention.mainUnits} — главный фокус, ${planning.capacity.attention.supportingUnits} — поддерживающий. Смена фокуса меняет, какие решения получают подготовку и какие вступают с ним в конфликт.`),
       ),
       planning.issues.find((item) => item.code === 'goals_equal') && h('p', { className: 'assemble-day-alert', role: 'alert' }, planning.issues.find((item) => item.code === 'goals_equal')?.message),
       h('section', { className: 'assemble-day-horizon', 'aria-label': 'Финансовый горизонт' },
@@ -782,18 +958,24 @@ function MonthScreen({ session, plan, onGoalChange, onConfirm, onGoWeek, onGoDay
 }
 
 function journalGroups(session: CampaignSession) {
+  const development = getCharacterDevelopment(session.state);
   return session.diagnostics.decisions.slice().reverse().map((decision) => {
     const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === 'action' ? decision.stepIndex + 1 : decision.stepIndex) && (decision.kind === 'planning' ? entry.sourceId === 'planning_plan' : entry.sourceId !== 'planning_plan'));
     const title = decision.kind === 'planning' ? 'Контракт недели' : `${eventCopy(decision.eventId).title} → ${actionCopy(decision.eventId, decision.actionId).label}`;
     const primary = entries.find((entry) => !/decisionGeometry|activeEventId/.test(entry.resultPath)) || entries[0];
     const carry = entries.find((entry) => /scheduledEffects|commitments|character|family|work|weeklyRules|monthlyPriorities/.test(entry.resultPath));
-    return { id:`decision:${decision.revision}`, title, primary, carry, entries };
+    const carriedDevelopment = carry && development.find((item) => item.evidencePaths.includes(carry.resultPath));
+    const evidence = decision.kind === 'planning'
+      ? getRuleEvidence('re_planning_capacity_tradeoff')
+      : getRuleEvidence(registries.actions[decision.actionId]!.ruleEvidenceId);
+    return { id:`decision:${decision.revision}`, title, primary, carry, carrySummary:carriedDevelopment?.summary, evidence, entries };
   }).filter((group) => group.entries.length);
 }
 
 function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }: { session: CampaignSession; onCopyTrace: () => void; traceMessage: string; traceTone: string; traceBusy: boolean }) {
   const outcome = getCampaignOutcome(session.state);
   const development = getCharacterDevelopment(session.state);
+  const observation = getSyntheticObservation(session.state);
   const groups = journalGroups(session);
   const traceComplete = session.diagnostics.history === 'complete';
   return h('div', { className: 'assemble-day-screen' },
@@ -801,12 +983,18 @@ function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }
       h('span', { className: 'assemble-day-eyebrow' }, 'Жизнь персонажа'),
       h('h2', null, 'Что уже изменилось'),
       h('div', { className: 'assemble-day-life-grid' },
-        ...outcome.axes.map((axis) => h('div', { key: axis.id, className:`is-${axis.direction}` }, h('strong', null, axis.title), h('span', null, axis.summary))),
+        ...outcome.axes.map((axis) => h('div', { key: axis.id, className:`is-${axis.direction}` }, h('strong', null, axis.title), h('small', null, outcomeDirectionLabel(axis.direction)), h('span', null, axis.summary))),
       ),
+    ),
+    h('section', { className: 'assemble-day-card assemble-day-observation', 'aria-label': 'Игровое наблюдение' },
+      h('span', { className: 'assemble-day-eyebrow' }, observation.label),
+      h('h2', null, observation.title),
+      h('p', null, observation.summary),
+      h('small', null, observation.disclaimer),
     ),
     h('section', { className: 'assemble-day-card assemble-day-development' },
       h('span', { className: 'assemble-day-eyebrow' }, 'Развитие без общего уровня'),
-      h('h2', null, development.length ? 'Решения оставили навыки и привычки' : 'Изменения появятся после повторённых решений'),
+      h('h2', null, development.length ? 'Решения изменили будущие возможности' : 'Изменения появятся после повторённых решений'),
       development.length ? h('ul', { className: 'assemble-day-list' }, ...development.slice(0, 4).map((item) => h('li', { key: item.id }, h('strong', null, item.title), h('span', null, item.summary)))) : h('p', null, 'Игра показывает только реальные изменения персонажа, без очков опыта.'),
       development.length > 4 && h('details', null, h('summary', null, 'Показать все изменения'), h('ul', { className: 'assemble-day-list' }, ...development.slice(4).map((item) => h('li', { key: item.id }, h('strong', null, item.title), h('span', null, item.summary))))),
     ),
@@ -815,11 +1003,9 @@ function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }
       groups.length ? h('ol', null, ...groups.map((group) => h('li', { key: group.id, className:'assemble-day-journal-group' },
         h('strong', null, group.title),
         group.primary && h('span', null, `${mechanismLabel(group.primary.mechanism)} → ${pathLabel(group.primary.resultPath)}`),
-        group.carry && h('small', null, `Перенос: ${pathLabel(group.carry.resultPath)}`),
-        h('details', null,
-          h('summary', null, 'Точные изменения'),
-          h('ul', null, ...group.entries.map((entry) => h('li', { key:entry.id }, `${entry.resultPath}: ${String(entry.before ?? '—')} → ${String(entry.after ?? '—')}`))),
-        ),
+        group.carry && h('small', null, group.carrySummary || `Перенос: ${pathLabel(group.carry.resultPath)}`),
+        h('small', null, `${group.evidence.sourceLabel} · ${confidenceLabel(group.evidence.confidence)}.`),
+        h('small', null, group.evidence.transferLimit),
       ))) : h('p', null, 'История появится после первого подтверждённого решения.'),
     ),
     h('details', { className: 'assemble-day-card assemble-day-details assemble-day-diagnostic' },
@@ -836,14 +1022,30 @@ function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }
   );
 }
 
-function CompletionSummary({ session, onReplaySameSeed, onStartNew }: { session: CampaignSession; onReplaySameSeed: () => void; onStartNew: () => void }) {
+function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }: { session: CampaignSession; summary?: PeriodSummary; onReplaySameSeed: () => void; onStartNew: () => void }) {
   const outcome = getCampaignOutcome(session.state);
+  const week = summary?.kind === 'week' ? summary : session.periodSummaries.find((item) => item.kind === 'week');
+  const brief = week?.brief || getCampaignBrief(session.state, registries);
   const comparison = session.comparisonBaseline ? compareCampaignOutcomes(session.comparisonBaseline.outcome, outcome) : [];
   return h('section', { className: 'assemble-day-card assemble-day-complete' },
     h('span', { className: 'assemble-day-eyebrow' }, 'Неделя завершена'),
-    h('h2', null, 'Итог складывается из четырёх линий'),
-    h('p', null, 'Здесь нет общего балла: видно, что удалось сохранить, чем пришлось поступиться и что осталось открытым.'),
-    h('div', { className:'assemble-day-outcome-grid' }, ...outcome.axes.map((axis)=>h('article',{key:axis.id,className:`is-${axis.direction}`},h('strong',null,axis.title),h('span',null,axis.summary)))),
+    h('h2', null, week?.title || 'Контрольная точка недели'),
+    h('p', null, week?.headline || 'Итог складывается из четырёх независимых линий без общего балла.'),
+    h('section', { className: 'assemble-day-complete__brief' }, h('strong', null, brief.mission.title), h('span', null, brief.mission.summary)),
+    week?.rules?.length && h('section', { className: 'assemble-day-complete__rules', 'aria-label': 'Что стало с правилами недели' },
+      h('h3', null, 'Выбранные границы'),
+      ...week.rules.map((rule) => h('article', { key: rule.id, className: `is-${rule.direction}` }, h('strong', null, rule.title), h('small', null, outcomeDirectionLabel(rule.direction)), h('span', null, rule.summary))),
+    ),
+    week?.commitments && h('p', { className: 'assemble-day-summary__causal' }, week.commitments.summary),
+    week?.pressure && h('p', { className: 'assemble-day-summary__carry' }, week.pressure),
+    h('h3', null, 'Четыре линии итога'),
+    h('div', { className:'assemble-day-outcome-grid' }, ...(week?.axes || outcome.axes).map((axis)=>h('article',{key:axis.id,className:`is-${axis.direction}`},h('strong',null,axis.title),h('small',null,outcomeDirectionLabel(axis.direction)),h('span',null,axis.summary)))),
+    h('section', { className: 'assemble-day-complete__threads', 'aria-label': 'Открытые нити' },
+      h('h3', null, 'Что осталось открытым'),
+      (week?.openThreads || outcome.openThreads).length
+        ? h('ul', { className: 'assemble-day-list' }, ...(week?.openThreads || outcome.openThreads).map((item, index) => h('li', { key: `${index}:${item}` }, item)))
+        : h('p', null, 'Обязательные нити недели закрыты.'),
+    ),
     comparison.length>0 && h('section',{className:'assemble-day-comparison'},h('h3',null,'Сравнение с прошлым прохождением'),...comparison.map((item)=>h('p',{key:item.id},h('strong',null,item.title),` · ${item.changed?'результат изменился':'результат сохранился'} · ${item.summary}`))),
     h('button',{type:'button',className:'assemble-day-primary',onClick:onReplaySameSeed},'Пройти этот сценарий иначе'),
     h('button',{type:'button',className:'assemble-day-secondary',onClick:onStartNew},'Начать с новым сценарием'),
@@ -867,7 +1069,7 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
   const store = window.HEYS?.store;
   const initialLoad = React.useMemo(() => loadCheckpoint(store, clientId), [store, clientId]);
   const [loadIssue, setLoadIssue] = React.useState(initialLoad.status === 'ready' || initialLoad.status === 'empty' ? null : initialLoad);
-  const [session, setSession] = React.useState(() => initialLoad.status === 'ready' ? initialLoad.session : createSession(`assemble-day:${clientId || 'unknown'}:${new Date().toISOString().slice(0, 10)}`));
+  const [session, setSession] = React.useState(() => initialLoad.status === 'ready' ? initialLoad.session : createSession());
   const [activeScreen, setActiveScreen] = React.useState('day');
   const [selectedActionId, setSelectedActionId] = React.useState('');
   const [saveMessage, setSaveMessage] = React.useState('');
@@ -879,10 +1081,11 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
   const [traceMessage, setTraceMessage] = React.useState('');
   const [traceTone, setTraceTone] = React.useState('');
   const [traceBusy, setTraceBusy] = React.useState(false);
-  const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === 'ready' && initialLoad.session.lastSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === 'action' ? initialLoad.session.revision : null);
+  const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === 'ready' && initialLoad.session.lastStepSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === 'action' ? initialLoad.session.revision : null);
+  const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState<number | null>(null);
 
   const startNew = () => {
-    const next = createSession(`assemble-day:${clientId || 'unknown'}:${Date.now()}`);
+    const next = createSession();
     setSession(next);
     setPlanningDraft(planningDraftFromState(next.state));
     setLoadIssue(null);
@@ -896,12 +1099,13 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     setTraceTone('');
     setTraceBusy(false);
     setResultRevision(null);
+    setPeriodSummaryIndex(null);
   };
 
   const replaySameSeed = () => {
-    const baseline = { outcome: getCampaignOutcome(session.state), finalStateHash: stateHash(session.state), decisions: session.diagnostics.decisions.filter((item): item is Extract<DiagnosticDecision, { kind: 'action' }> => item.kind === 'action').map((item) => ({ eventId: item.eventId, actionId: item.actionId })) };
+    const baseline = { outcome: getCampaignOutcome(session.state), finalStateHash: stateHash(session.state) };
     const next = createSession(session.state.rng.seed, baseline);
-    setSession(next); setPlanningDraft(planningDraftFromState(next.state)); setForceNewCampaign(true); setSelectedActionId(''); setResultRevision(null); setSaveMessage(''); setSaveTone(''); setPlanMessage(''); setPlanTone(''); setActiveScreen('week');
+    setSession(next); setPlanningDraft(planningDraftFromState(next.state)); setForceNewCampaign(true); setSelectedActionId(''); setResultRevision(null); setPeriodSummaryIndex(null); setSaveMessage(''); setSaveTone(''); setPlanMessage(''); setPlanTone(''); setActiveScreen('week');
   };
 
   const confirm = () => {
@@ -911,7 +1115,8 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
       const result = saveCheckpoint(store, clientId, nextSession, forceNewCampaign);
       setSession(nextSession);
       setSelectedActionId('');
-      setForceNewCampaign(false);
+      setPeriodSummaryIndex(null);
+      if (result.status === 'saved') setForceNewCampaign(false);
       setSaveMessage(result.status === 'saved' ? 'Шаг сохранён в профиле HEYS.' : result.message);
       setSaveTone(result.status === 'saved' ? 'success' : 'error');
       setResultRevision(nextSession.revision);
@@ -970,11 +1175,26 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
   if (loadIssue) return h('div', { className: 'assemble-day-app' }, h(RecoveryPanel, { result: loadIssue, onNew: startNew, onExit }));
 
   const screens: Record<string, any> = {
-    day: h(DayScreen, { session, selectedActionId, onSelect: (id: string) => { setSelectedActionId((current: string) => current || id); setSaveMessage(''); setSaveTone(''); }, onConfirm: confirm, saveMessage, saveTone, resultRevision, onContinueResult: () => { setResultRevision(null); setSaveMessage(''); setSaveTone(''); }, onRetrySave: retrySave, onOpenPlan: () => setActiveScreen('week'), onReplaySameSeed: replaySameSeed, onStartNew: startNew }),
+    day: h(DayScreen, {
+      session,
+      selectedActionId,
+      onSelect: (id: string) => { setSelectedActionId((current: string) => current || id); setSaveMessage(''); setSaveTone(''); },
+      onConfirm: confirm,
+      saveMessage,
+      saveTone,
+      resultRevision,
+      onContinueResult: () => { setResultRevision(null); setPeriodSummaryIndex(session.periodSummaries.length ? 0 : null); setSaveMessage(''); setSaveTone(''); },
+      onRetrySave: retrySave,
+      periodSummary: periodSummaryIndex === null ? null : session.periodSummaries[periodSummaryIndex],
+      onContinuePeriod: () => setPeriodSummaryIndex((current: number | null) => current !== null && current + 1 < session.periodSummaries.length ? current + 1 : null),
+      onOpenPlan: () => setActiveScreen('week'),
+      onReplaySameSeed: replaySameSeed,
+      onStartNew: startNew,
+    }),
     week: h(WeekScreen, {
       session,
       plan: planningDraft,
-      onToggleRule: (id: WeeklyRulePresetId) => { setPlanningDraft((current: PlanningPlan) => ({ ...current, weeklyRuleIds: current.weeklyRuleIds.includes(id) ? current.weeklyRuleIds.filter((item) => item !== id) : [...current.weeklyRuleIds, id] })); setPlanMessage(''); setPlanTone(''); },
+      onToggleRule: (id: WeeklyRulePresetId) => { setPlanningDraft((current: PlanningPlan) => ({ ...current, weeklyRuleIds: current.weeklyRuleIds.includes(id) ? current.weeklyRuleIds.filter((item) => item !== id) : current.weeklyRuleIds.length < 2 ? [...current.weeklyRuleIds, id] : current.weeklyRuleIds })); setPlanMessage(''); setPlanTone(''); },
       onContinue: () => setActiveScreen('month'),
     }),
     month: h(MonthScreen, {
@@ -1010,15 +1230,22 @@ HEYS.PlanningGames.modules['assemble-day'] = {
   api: {
     version: 1,
     storageKey: STORAGE_KEY,
+    envelopeVersion: ENVELOPE_VERSION,
+    checkpointBudgetBytes: CHECKPOINT_BUDGET_BYTES,
     contract: CONTRACT,
-    eventCopy: EVENT_COPY,
+    eventCopy: Object.fromEntries(Object.entries(registries.events).map(([id, event]) => [id, event.copy])),
     createSession,
+    getCampaignBrief: (state: GameState) => getCampaignBrief(state, registries),
+    getCharacterPresentation,
     getCampaignView,
     confirmAction,
     getPlanningCampaignView,
     confirmPlanning,
+    getPeriodBoundaries: (before: GameState, after: GameState) => getPeriodBoundaries(before, after, registries),
+    getPeriodSummary: (state: GameState, boundary: PeriodBoundary) => getPeriodSummary(state, boundary, registries),
     loadCheckpoint,
     saveCheckpoint,
+    checkpointSizeBytes,
     createDiagnosticTrace,
     serializeDiagnosticTrace,
     copyDiagnosticTrace,

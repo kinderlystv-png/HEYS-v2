@@ -1842,9 +1842,6 @@
     const [error, setError] = React.useState(null);
     const [actionLoading, setActionLoading] = React.useState(null);
     const [activeTab, setActiveTab] = React.useState('new');
-    // Диалог активации триала (v3.0: с выбором даты)
-    const [trialDialog, setTrialDialog] = React.useState(null); // { clientId, clientName }
-    const [trialStartDate, setTrialStartDate] = React.useState('');
     // Диалог конвертации лида (v4.0 — P0.6: PIN генерируется на стороне БД)
     const [convertDialog, setConvertDialog] = React.useState(null); // { leadId, leadName, leadPhone }
     // Диалог "PIN сгенерирован" с deep-link (P0.7)
@@ -2021,55 +2018,6 @@
           }
         }
       });
-    };
-
-    // Открыть диалог активации триала с выбором даты (v3.0)
-    const handleActivateTrial = async (clientId, clientName, intakeStatus) => {
-      if (intakeStatus === 'approved_waiting_slot' && freeSlots <= 0) {
-        HEYS.Toast?.info?.('Свободных мест пока нет. Активация станет доступна после освобождения места.');
-        return;
-      }
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      setTrialStartDate(today);
-      setTrialDialog({ clientId, clientName, intakeStatus });
-    };
-
-    // Подтвердить активацию триала
-    const confirmActivateTrial = async () => {
-      if (!trialDialog) return;
-      const { clientId, clientName } = trialDialog;
-
-      setActionLoading(clientId);
-      setTrialDialog(null);
-
-      const res = await adminAPI.activateTrial(clientId, trialStartDate || undefined);
-      setActionLoading(null);
-
-      if (res.success) {
-        loadData(true);
-        setActiveTab('active'); // Переключаем на вкладку "Активные" сразу после активации
-
-        // Сигнализируем о том, что нужно обновить глобальный список клиентов
-        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-          detail: { action: 'trialActivated', clientId }
-        }));
-
-        const isToday = !trialStartDate || trialStartDate === new Date().toISOString().split('T')[0];
-        if (isToday) {
-          alert('✅ Триал активирован! Клиент получил доступ на 7 дней.');
-        } else {
-          alert(`✅ Триал запланирован! Начнётся ${trialStartDate}, доступ на 7 дней.`);
-        }
-      } else {
-        if (res?.error === 'no_available_slot') {
-          alert('Свободное место уже занято. Обновите очередь и оставьте кандидата в ожидании.');
-          loadData(true);
-          return;
-        }
-        const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось активировать триал';
-        alert('Ошибка: ' + errorMessage);
-        console.warn('[TrialQueue.admin] activateTrial failed', { response: res, message: errorMessage });
-      }
     };
 
     // Конвертировать лид в клиента (v4.0 — P0.6: PIN автогенерируется в БД)
@@ -2564,8 +2512,6 @@
       return `${hours}ч ${mins % 60}м`;
     };
 
-    // Свободные слоты
-    const freeSlots = stats ? Math.max(0, (stats.limits?.max_active_trials || 3) - (grouped.assigned?.length || 0)) : 0;
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
 
     // Новые лиды доступны общей очереди, contacted — только назначенному куратору.
@@ -2593,6 +2539,7 @@
       const trialStartsAt = client.trial_started_at ? new Date(client.trial_started_at).getTime() : null;
 
       if (activeUntil && activeUntil > now) return 'active';
+      if (statusRaw === 'trial_pending') return 'trial_pending';
       if (trialStartsAt && trialStartsAt > now) return 'trial_pending';
       if (trialEndsAt && trialEndsAt > now) return 'trial';
 
@@ -2865,23 +2812,6 @@
               background: '#eff6ff', color: '#1d4f83', cursor: 'pointer', fontSize: 12, fontWeight: 700,
             }
           }, actionLoading === 'intake-' + item.client_id ? 'Загрузка…' : 'Открыть анкету'),
-          (intakesReady && (!intake || intake.status === 'approved'
-            || (intake.status === 'approved_waiting_slot' && freeSlots > 0))) && React.createElement('button', {
-            onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name, intake?.status),
-            disabled: actionLoading === item.client_id,
-            style: {
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: 'none',
-              background: actionLoading === item.client_id ? '#d1d5db' : '#434587',
-              color: '#fff',
-              cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: 12,
-              fontWeight: 700
-            }
-          }, actionLoading === item.client_id
-            ? '⏳'
-            : intake?.status === 'approved_waiting_slot' ? 'Назначить дату старта' : 'Активировать'),
           intakesReady && !intake && React.createElement('button', {
             onClick: () => handleReject(item),
             disabled: actionLoading === item.client_id,
@@ -3061,95 +2991,6 @@
             fontWeight: 600
           }
         }, loading ? '⏳' : '🔄 Обновить')
-      ),
-
-      // ========== ДИАЛОГ: Активация триала (v3.0 — с выбором даты) ==========
-      trialDialog && React.createElement('div', {
-        style: {
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000
-        },
-        onClick: (e) => { if (e.target === e.currentTarget) setTrialDialog(null); }
-      },
-        React.createElement('div', {
-          style: {
-            background: 'var(--card, #fff)',
-            borderRadius: '16px',
-            padding: '24px',
-            width: '340px',
-            maxWidth: '90vw',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-          }
-        },
-          React.createElement('div', {
-            style: { fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--text, #1f2937)' }
-          }, trialDialog.intakeStatus === 'approved_waiting_slot'
-            ? 'Назначить дату старта'
-            : 'Активировать триал'),
-          React.createElement('div', {
-            style: { fontSize: '14px', color: '#6b7280', marginBottom: '16px' }
-          }, `Клиент: ${trialDialog.clientName}`),
-          React.createElement('label', {
-            style: { display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--text, #374151)', marginBottom: '6px' }
-          }, 'Дата начала триала:'),
-          React.createElement('input', {
-            type: 'date',
-            value: trialStartDate,
-            onChange: (e) => setTrialStartDate(e.target.value),
-            min: new Date().toISOString().split('T')[0],
-            style: {
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '1px solid #d1d5db',
-              fontSize: '14px',
-              marginBottom: '8px',
-              boxSizing: 'border-box'
-            }
-          }),
-          React.createElement('div', {
-            style: { fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }
-          }, trialStartDate === new Date().toISOString().split('T')[0]
-            ? '⚡ Триал начнётся сразу (7 дней)'
-            : `📅 Триал начнётся ${trialStartDate}, доступ на 7 дней`
-          ),
-          React.createElement('div', {
-            style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' }
-          },
-            React.createElement('button', {
-              onClick: () => setTrialDialog(null),
-              style: {
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: '1px solid #d1d5db',
-                background: 'var(--card, #fff)',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: 'var(--text, #374151)'
-              }
-            }, 'Отмена'),
-            React.createElement('button', {
-              onClick: confirmActivateTrial,
-              style: {
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 600
-              }
-            }, trialDialog.intakeStatus === 'approved_waiting_slot'
-              ? 'Подтвердить дату'
-              : 'Активировать')
-          )
-        )
       ),
 
       // ========== ДИАЛОГ: Конвертация лида (v3.0) ==========

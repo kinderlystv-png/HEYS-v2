@@ -1,6 +1,6 @@
 # 05 — Состояния и причинный движок
 
-> Статус: рабочая спецификация<br> Версия модуля: 0.32<br> Обновлено:
+> Статус: рабочая спецификация<br> Версия модуля: 0.35<br> Обновлено:
 > 2026-07-30<br> Владелец концепции: команда HEYS
 
 **Назначение:** задаёт главный двусторонний causal loop: состояние меняет
@@ -355,11 +355,14 @@
   куратор гарантируют улучшение.
 
 Эти источники задают границы правдоподобия. Версионированный
-[`rule-evidence registry v0.1`](./09_CALIBRATION_QA.md#rule-evidence-registry-v01)
+[`rule-evidence registry v0.2`](./09_CALIBRATION_QA.md#rule-evidence-registry-v02)
 связывает содержательные механизмы с типом основания `D45`, источником,
 популяцией, границей переноса, допустимым пользовательским утверждением и
 экспертным статусом. Реестр не доказывает точные игровые коэффициенты;
-runtime-binding стабильных ID остаётся задачей Sprint 5 production-мегаплана.
+Стабильные `ruleEvidenceId` связаны с actions, conditional/scheduled effects и
+geometry rules. `ActionOffer` переносит источник, confidence и границу переноса
+в presentation-слой; точные входные paths остаются только causal journal и
+diagnostic trace.
 
 ---
 
@@ -691,3 +694,48 @@ explanation:
 - Человеческий журнал группирует фактические reducer-изменения по решениям.
   Полный state/offers/stages/journal trace остаётся отдельным диагностическим
   экспортом и проверяет replay hash.
+
+#### 10.1. Ограниченная ёмкость планирования v0.32
+
+- недельный контракт содержит ровно два rule slots из трёх authored границ;
+- главный и поддерживающий фокусы делят три единицы внимания как `2+1`;
+- ёмкость производна от правил, фокусов и scenario tags и не сериализуется
+  отдельным счётчиком в `GameStateV2`;
+- действие явно объявляет `priorityAlignment.supports/conflicts`; движок не
+  выводит стратегический смысл из широких action domains;
+- правило помогает только в tagged окне, а конкурирующий выбор в том же окне
+  получает реальную цену risk/option pressure;
+- planning geometry пишет конкретный `planningCapacity.*` путь в причинный
+  журнал. Planning-step по-прежнему не двигает clock/cursor/RNG/queue/ledger.
+
+#### 10.2. Производные границы и итоги периода v0.33
+
+- `getCampaignBrief(state, registries)` восстанавливает исходную миссию и ставки
+  из same-seed initial state, поэтому пройденная неделя не переписывает brief;
+- `getPeriodBoundaries(before, after, registries)` принимает только соседний
+  reducer-transition и сверяет `scenarioCursor` с authored slots; clock не
+  используется как единственный признак;
+- последний slot дня создаёт один `day` boundary, последний slot недели —
+  упорядоченную пару `day`, затем `week`;
+- `getPeriodSummary` является чистой идемпотентной проекцией state/journal:
+  отдельные summaries не сериализуются и не дублируют causal history;
+- `getStepSummary` выбирает action-owned результат, добавляет направление
+  изменения и не выдаёт raw paths или шкалы как пользовательский текст;
+- недельная сводка использует фактические rules, commitments, context, четыре
+  outcome axes и `openThreads`. Полный evidence остаётся в technical trace.
+
+#### 10.3. Development projection v0.34
+
+- persisted `skills`, `habits` и `capabilities` остаются полной историей
+  симуляции, но `getCharacterDevelopment` не показывает их автоматически;
+- профессиональный навык входит в `focusByTaskId` и через него меняет geometry
+  рабочих offers; навык готовки меняет geometry `cook_meal_batch` и выбор
+  `sat_meal_prep_familiar`; `work.reciprocal_support` выбирает взаимные рабочие
+  echo events;
+- каждая из трёх линий имеет counterfactual regression; остальные записанные
+  поля исключены из development до появления реального downstream;
+- user projection сообщает практический будущий эффект без raw delta/path, а
+  technical trace сохраняет точный вход и journal evidence;
+- направление относительно паттерна ограничено нейтральными
+  `strengthened / weakened / changed`; общий уровень и универсальный bonus
+  отсутствуют.

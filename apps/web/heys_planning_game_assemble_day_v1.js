@@ -9,9 +9,9 @@
   var CONTRACT = {
     schemaVersion: 2,
     scenarioId: "week-01-project-deadline",
-    scenarioVersion: "3",
-    calibrationVersion: "0.3",
-    technicalContractVersion: "0.31",
+    scenarioVersion: "4",
+    calibrationVersion: "0.4",
+    technicalContractVersion: "0.35",
     priceBookVersion: "week-01-rub-v1",
     rngAlgorithm: "fnv1a-mulberry32-v1",
     hashAlgorithm: "canonical-json-fnv1a64-v1"
@@ -27,22 +27,202 @@
     }
   };
 
+  // ../../packages/assemble-day-engine/src/content/presentation.ts
+  var EVENT_COPY = {
+    mon_breakfast: { title: "\u041D\u0430\u0447\u0430\u043B\u043E \u043D\u0435\u0434\u0435\u043B\u0438", situation: "\u0423\u0442\u0440\u043E \u0443\u0436\u0435 \u043D\u0430\u0447\u0430\u043B\u043E\u0441\u044C, \u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u043A \u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A \u043A\u043E\u043D\u043A\u0443\u0440\u0438\u0440\u0443\u044E\u0442 \u0437\u0430 \u0432\u0440\u0435\u043C\u044F." },
+    mon_commute: { title: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043A \u043F\u0435\u0440\u0432\u043E\u043C\u0443 \u0434\u0435\u043B\u0443", situation: "\u0414\u043E \u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043C\u0435\u0436\u0434\u0443 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u0432 \u043F\u0443\u0442\u0438 \u0438 \u0440\u0430\u0441\u0445\u043E\u0434\u0430\u043C\u0438." },
+    mon_scope_expansion: { title: "\u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0430\u043B \u0431\u043E\u043B\u044C\u0448\u0435", situation: "\u0412 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043E\u0431\u0430\u0432\u0438\u043B\u0438 \u043D\u043E\u0432\u044B\u0435 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u044F, \u043D\u043E \u0441\u0440\u043E\u043A \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u043F\u0440\u0435\u0436\u043D\u0438\u043C." },
+    mon_lunch_window: { title: "\u041E\u043A\u043D\u043E \u043D\u0430 \u043E\u0431\u0435\u0434", situation: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0438\u0434\u0451\u0442 \u043F\u043B\u043E\u0442\u043D\u0435\u0435 \u043F\u043B\u0430\u043D\u0430, \u0430 \u043F\u0430\u0443\u0437\u0430 \u0431\u044B\u0441\u0442\u0440\u043E \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F." },
+    mon_project_block: { title: "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A", situation: "\u041C\u043E\u0436\u043D\u043E \u0443\u0441\u043A\u043E\u0440\u0438\u0442\u044C\u0441\u044F, \u0432\u043B\u043E\u0436\u0438\u0442\u044C\u0441\u044F \u0432 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443." },
+    mon_family_dinner: { title: "\u0412\u0435\u0447\u0435\u0440\u043D\u044F\u044F \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C", situation: "\u0421\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0443\u0436\u0438\u043D \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0432 \u0442\u043E \u0436\u0435 \u0432\u0440\u0435\u043C\u044F, \u043A\u043E\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0435\u043D\u0438\u044F." },
+    tue_night_wakeup: { title: "\u041D\u043E\u0447\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430", situation: "\u041D\u043E\u0447\u044C\u044E \u0440\u0435\u0431\u0451\u043D\u043A\u0443 \u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u043B\u0430\u0441\u044C \u043F\u043E\u043C\u043E\u0449\u044C, \u0438 \u0443\u0442\u0440\u043E \u043D\u0430\u0447\u0430\u043B\u043E\u0441\u044C \u0440\u0430\u043D\u044C\u0448\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E." },
+    tue_recovery_breakfast: { title: "\u0423\u0442\u0440\u043E \u043F\u043E\u0441\u043B\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0433\u043E \u0441\u043D\u0430", situation: "\u041D\u0443\u0436\u043D\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0438\u043B\u044B \u0438 \u043D\u0435 \u043F\u043E\u0442\u0435\u0440\u044F\u0442\u044C \u0442\u0435\u043C\u043F \u043F\u0435\u0440\u0435\u0434 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u0434\u043D\u0451\u043C." },
+    tue_review_prep: { title: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043A \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0443", situation: "\u0414\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438, \u0430 \u0447\u0430\u0441\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u0430." },
+    tue_review_result: { title: "\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", situation: "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0432\u044B\u044F\u0432\u0438\u043B\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u0431\u0435\u0437 \u043F\u043E\u0442\u0435\u0440\u0438 \u0432\u0441\u0435\u0433\u043E \u0434\u043D\u044F." },
+    tue_pickup_conflict: { title: "\u041A\u0442\u043E \u0437\u0430\u0431\u0435\u0440\u0451\u0442 \u0440\u0435\u0431\u0451\u043D\u043A\u0430", situation: "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430 \u0441\u043E\u0432\u043F\u0430\u043B\u0430 \u0441 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E\u043C." },
+    tue_evening_pressure: { title: "\u041D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440", situation: "\u041F\u043E\u0441\u043B\u0435 \u043F\u043B\u043E\u0442\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u0431\u044B\u0442, \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430." },
+    wed_commute_delay: { title: "\u0417\u0430\u0434\u0435\u0440\u0436\u043A\u0430 \u0432 \u0434\u043E\u0440\u043E\u0433\u0435", situation: "\u0412\u043D\u0435\u0448\u043D\u044F\u044F \u0437\u0430\u0434\u0435\u0440\u0436\u043A\u0430 \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0430 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F \u0438 \u0443\u0441\u0438\u043B\u0438\u043B\u0430 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043D\u0430 \u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0435." },
+    wed_long_meeting: { title: "\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0437\u0430\u0442\u044F\u043D\u0443\u043B\u0430\u0441\u044C", situation: "\u0414\u043B\u0438\u043D\u043D\u0430\u044F \u0432\u0441\u0442\u0440\u0435\u0447\u0430 \u0437\u0430\u043D\u044F\u043B\u0430 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443 \u0438 \u043F\u0430\u0443\u0437\u0443." },
+    wed_late_lunch: { title: "\u041F\u043E\u0437\u0434\u043D\u0438\u0439 \u043E\u0431\u0435\u0434", situation: "\u041F\u0435\u0440\u0435\u0440\u044B\u0432 \u0441\u043D\u043E\u0432\u0430 \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0441\u044F, \u0430 \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u0437\u0430\u0434\u0430\u0447\u0438 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043C\u0430\u043B\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438." },
+    wed_school_call: { title: "\u0417\u0432\u043E\u043D\u043E\u043A \u0438\u0437 \u0448\u043A\u043E\u043B\u044B", situation: "\u041D\u0443\u0436\u043D\u043E \u0431\u044B\u0441\u0442\u0440\u043E \u0440\u0435\u0448\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \u0432 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u0434\u043D\u044F." },
+    wed_work_recovery: { title: "\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0432 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0440\u0438\u0442\u043C", situation: "\u041F\u043E\u0441\u043B\u0435 \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u0440\u044B\u0432\u0430 \u043D\u0443\u0436\u043D\u043E \u0437\u0430\u043D\u043E\u0432\u043E \u0441\u043E\u0431\u0440\u0430\u0442\u044C \u043E\u0441\u0442\u0430\u0432\u0448\u0443\u044E\u0441\u044F \u0447\u0430\u0441\u0442\u044C \u0434\u043D\u044F." },
+    wed_evening_stabilize: { title: "\u0421\u0442\u0430\u0431\u0438\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0435\u0447\u0435\u0440", situation: "\u0414\u0435\u043D\u044C \u0431\u044B\u043B \u043D\u0430\u043F\u0440\u044F\u0436\u0451\u043D\u043D\u044B\u043C; \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0432\u044B\u0431\u043E\u0440 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0441\u043E\u043D \u0438 \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u0438\u0439 \u0437\u0430\u043F\u0430\u0441 \u0441\u0438\u043B." },
+    thu_hybrid_start: { title: "\u0413\u0438\u0431\u043A\u043E\u0435 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F", situation: "\u0421\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u043E \u043D\u0430\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0431\u044B\u0442\u043E\u0432\u043E\u0439 \u0437\u0430\u043F\u0430\u0441." },
+    thu_colleague_help_debt: { title: "\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C \u043D\u0430 \u043F\u043E\u043C\u043E\u0449\u044C", situation: "\u041A\u043E\u043B\u043B\u0435\u0433\u0430 \u043F\u043E\u043C\u043E\u0433 \u0440\u0430\u043D\u044C\u0448\u0435, \u0438 \u0442\u0435\u043F\u0435\u0440\u044C \u043D\u0443\u0436\u043D\u043E \u0440\u0435\u0448\u0438\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443." },
+    thu_extra_project: { title: "\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u0430\u0441\u044C \u043D\u043E\u0432\u0430\u044F \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044C, \u043D\u043E \u043E\u043D\u0430 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438." },
+    thu_movement_plan: { title: "\u0417\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435", situation: "\u0412 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0435 \u0435\u0441\u0442\u044C \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430, \u0430 \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u0435\u0449\u0451 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u044B." },
+    thu_family_evening: { title: "\u0421\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440", situation: "\u0412\u0440\u0435\u043C\u044F \u0441 \u0431\u043B\u0438\u0437\u043A\u0438\u043C\u0438 \u0441\u043D\u043E\u0432\u0430 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442\u0441\u044F \u0441 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435\u043C." },
+    fri_deadline_plan: { title: "\u041F\u043B\u0430\u043D \u043D\u0430 \u0434\u0435\u043D\u044C \u0441\u0434\u0430\u0447\u0438", situation: "\u0414\u043E \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043C\u0435\u0436\u0434\u0443 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E \u0438 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u043E\u0441\u0442\u044C\u044E." },
+    fri_final_issue: { title: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430", situation: "\u041F\u0435\u0440\u0435\u0434 \u0441\u0434\u0430\u0447\u0435\u0439 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0430 \u043E\u0448\u0438\u0431\u043A\u0430, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0441\u0442\u043E \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C." },
+    fri_lunch: { title: "\u041F\u0430\u0443\u0437\u0430 \u043F\u0435\u0440\u0435\u0434 \u0444\u0438\u043D\u0438\u0448\u0435\u043C", situation: "\u0414\u043E \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0430\u0441\u043E\u0432, \u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043E \u043F\u0430\u0443\u0437\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u043A\u043E\u043D\u0446\u0435\u043D\u0442\u0440\u0430\u0446\u0438\u044E." },
+    fri_submit: { title: "\u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430", situation: "\u041D\u0430\u0441\u0442\u0443\u043F\u0438\u043B \u043C\u043E\u043C\u0435\u043D\u0442 \u0441\u0434\u0430\u0447\u0438: \u0432\u0430\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0440\u0435\u0430\u043B\u0438\u0441\u0442\u0438\u0447\u043D\u044B\u0439 \u0441\u043F\u043E\u0441\u043E\u0431 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443." },
+    fri_after_submit: { title: "\u041F\u043E\u0441\u043B\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438", situation: "\u0413\u043B\u0430\u0432\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430, \u0438 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0432\u0448\u0435\u0435\u0441\u044F \u0432\u0440\u0435\u043C\u044F \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043F\u043E-\u0440\u0430\u0437\u043D\u043E\u043C\u0443." },
+    fri_family_plan: { title: "\u041F\u043B\u0430\u043D\u044B \u043D\u0430 \u0432\u0435\u0447\u0435\u0440", situation: "\u041F\u043E\u0441\u043B\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u043D\u0443\u0436\u043D\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \u0438\u043B\u0438 \u043F\u0435\u0440\u0435\u0441\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C." },
+    sat_school_event: { title: "\u0428\u043A\u043E\u043B\u044C\u043D\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435", situation: "\u0412\u0430\u0436\u043D\u043E\u0435 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0438 \u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435." },
+    sat_household_stock: { title: "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u043F\u0430\u0441\u044B", situation: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u044B \u0437\u0430\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u044E\u0442\u0441\u044F, \u0438 \u0432\u044B\u0431\u043E\u0440 \u0441\u0435\u0439\u0447\u0430\u0441 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0434\u043D\u0438." },
+    sat_meal_prep: { title: "\u0417\u0430\u043F\u0430\u0441 \u0435\u0434\u044B", situation: "\u0415\u0441\u0442\u044C \u043E\u043A\u043D\u043E, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0435\u0434\u0443 \u0437\u0430\u0440\u0430\u043D\u0435\u0435, \u043F\u0435\u0440\u0435\u043A\u0443\u0441\u0438\u0442\u044C \u0438\u043B\u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C\u0441\u044F." },
+    sat_social_invite: { title: "\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0441 \u0434\u0440\u0443\u0437\u044C\u044F\u043C\u0438", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u043E\u0441\u044C \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u043D\u0443\u0436\u043D\u043E \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u0442\u044C \u0441 \u0443\u0436\u0435 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F\u043C\u0438." },
+    sat_evening_close: { title: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u0441\u0443\u0431\u0431\u043E\u0442\u044B", situation: "\u0412\u0435\u0447\u0435\u0440 \u043C\u043E\u0436\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0434\u043B\u044F \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u0440\u0430\u0431\u043E\u0442\u044B." },
+    sun_recovery_start: { title: "\u0421\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0435 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F", situation: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043D\u0435\u0434\u0435\u043B\u0438 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0441 \u0432\u044B\u0431\u043E\u0440\u0430 \u0442\u0435\u043C\u043F\u0430 \u0438 \u0441\u043F\u043E\u0441\u043E\u0431\u0430 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C\u0441\u044F." },
+    sun_family_time: { title: "\u0412\u0440\u0435\u043C\u044F \u0441 \u0441\u0435\u043C\u044C\u0451\u0439", situation: "\u0421\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0442\u0430\u043A, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043D\u0435 \u043B\u0435\u0433\u043B\u0430 \u043D\u0430 \u043E\u0434\u043D\u043E\u0433\u043E." },
+    sun_week_preparation: { title: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043D\u043E\u0432\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438", situation: "\u041C\u043E\u0436\u043D\u043E \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u0442\u044C \u0431\u044B\u0442\u043E\u0432\u0443\u044E \u0438\u043B\u0438 \u0440\u0430\u0431\u043E\u0447\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0434\u043D\u0435\u0439." },
+    sun_early_finish: { title: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u043D\u0435\u0434\u0435\u043B\u044E", situation: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442, \u0441 \u043A\u0430\u043A\u0438\u043C \u0437\u0430\u043F\u0430\u0441\u043E\u043C \u0441\u0438\u043B \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A." }
+  };
+  var ACTION_CONTEXT_COPY = {
+    eat_ready_meal: {
+      mon_breakfast: { label: "\u0421\u044A\u0435\u0441\u0442\u044C \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0437\u0430\u0432\u0442\u0440\u0430\u043A", summary: "\u0420\u0430\u0437\u043E\u0433\u0440\u0435\u0442\u044C \u0433\u043E\u0442\u043E\u0432\u0443\u044E \u043F\u043E\u0440\u0446\u0438\u044E: \u0443\u0442\u0440\u043E\u043C \u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u043D\u0435 \u043D\u0443\u0436\u043D\u043E." }
+    },
+    cook_meal_batch: {
+      mon_breakfast: { label: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0437\u0430\u0432\u0442\u0440\u0430\u043A", summary: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0435\u0434\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u0438 \u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0434\u0432\u0435 \u0433\u043E\u0442\u043E\u0432\u044B\u0435 \u043F\u043E\u0440\u0446\u0438\u0438 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043F\u0440\u0438\u0451\u043C\u044B." }
+    }
+  };
+  var evidence = (id, confidence, sourceLabel, transferLimit) => ({ id, confidence, sourceLabel, transferLimit });
+  var RULE_EVIDENCE = {
+    re_action_effect_contract: evidence("re_action_effect_contract", "plausible_model", "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438", "\u042D\u0442\u043E \u0438\u0433\u0440\u043E\u0432\u043E\u0439 \u044D\u0444\u0444\u0435\u043A\u0442, \u0430 \u043D\u0435 \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430."),
+    re_sleep_task_effort: evidence("re_sleep_task_effort", "plausible_model", "\u041C\u043E\u0434\u0435\u043B\u044C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438", "\u041D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u043F\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u043E\u0431\u0449\u0443\u044E \u0437\u0430\u043A\u043E\u043D\u043E\u043C\u0435\u0440\u043D\u043E\u0441\u0442\u044C; \u0442\u043E\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043F\u043E\u0440\u043E\u0433\u0438 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u0438\u0433\u0440\u0435."),
+    re_sleep_movement_effort: evidence("re_sleep_movement_effort", "plausible_model", "\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0438 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438", "\u0418\u0433\u0440\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0446\u0435\u043D\u0443 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430, \u043D\u043E \u043D\u0435 \u043E\u0431\u044A\u044F\u0432\u043B\u044F\u0435\u0442 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0439 \u0438\u043B\u0438 \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\u043D\u043E\u0439."),
+    re_movement_affect_response: evidence("re_movement_affect_response", "plausible_model", "\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F", "\u042D\u0444\u0444\u0435\u043A\u0442 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u043A \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u0438 \u043D\u0435 \u0433\u0430\u0440\u0430\u043D\u0442\u0438\u0440\u0443\u0435\u0442 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u0443\u044E \u0440\u0435\u0430\u043A\u0446\u0438\u044E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430."),
+    re_caffeine_timing_sleep: evidence("re_caffeine_timing_sleep", "plausible_model", "\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043A\u043E\u0444\u0435\u0438\u043D\u0430", "\u0420\u0435\u0430\u043B\u044C\u043D\u0430\u044F \u0440\u0435\u0430\u043A\u0446\u0438\u044F \u0440\u0430\u0437\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F; \u0438\u0433\u0440\u0430 \u043D\u0435 \u0437\u0430\u0434\u0430\u0451\u0442 \u0443\u043D\u0438\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u044B\u0439 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0447\u0430\u0441 \u0438\u043B\u0438 \u0434\u043E\u0437\u0443."),
+    re_multifactor_task_geometry: evidence("re_multifactor_task_geometry", "plausible_model", "\u041C\u043D\u043E\u0433\u043E\u0444\u0430\u043A\u0442\u043E\u0440\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u044F", "\u0412\u0435\u0441 \u0438 \u043F\u043E\u0440\u043E\u0433\u0438 \u0444\u0430\u043A\u0442\u043E\u0440\u043E\u0432 \u2014 \u0438\u0433\u0440\u043E\u0432\u0430\u044F \u043A\u0430\u043B\u0438\u0431\u0440\u043E\u0432\u043A\u0430, \u0430 \u043D\u0435 \u043D\u0430\u0443\u0447\u043D\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430."),
+    re_habit_skill_future_geometry: evidence("re_habit_skill_future_geometry", "plausible_model", "\u041F\u0440\u0430\u0432\u0438\u043B\u043E \u0440\u0430\u0437\u0432\u0438\u0442\u0438\u044F \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0430", "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u044D\u0442\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u0438 \u043D\u0435 \u043E\u043F\u0438\u0441\u044B\u0432\u0430\u0435\u0442 \u043B\u0438\u0447\u043D\u0443\u044E \u0447\u0435\u0440\u0442\u0443 \u0438\u0433\u0440\u043E\u043A\u0430."),
+    re_family_load_support: evidence("re_family_load_support", "plausible_model", "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u0439 \u0441\u0435\u043C\u044C\u0438", "\u0421\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u043D\u0435 \u0437\u0430\u0434\u0430\u0451\u0442 \u0443\u043D\u0438\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u0443\u044E \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u043D\u043E\u0440\u043C\u0443 \u0438 \u043D\u0435 \u043E\u0446\u0435\u043D\u0438\u0432\u0430\u0435\u0442 \u0440\u0435\u0430\u043B\u044C\u043D\u044B\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F."),
+    re_financial_pressure_choice: evidence("re_financial_pressure_choice", "plausible_model", "\u042D\u043A\u043E\u043D\u043E\u043C\u0438\u043A\u0430 \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438", "\u042D\u0442\u043E \u0438\u0433\u0440\u043E\u0432\u0430\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E\u0441\u0442\u044C \u0438 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441, \u0430 \u043D\u0435 \u0444\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u0430\u044F \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0438\u044F."),
+    re_planning_capacity_tradeoff: evidence("re_planning_capacity_tradeoff", "plausible_model", "\u041D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438", "\u0414\u0432\u0430 \u043E\u043A\u043D\u0430 \u0438 \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 2+1 \u2014 \u0438\u0433\u0440\u043E\u0432\u044B\u0435 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0435\u043D\u0438\u044F, \u0430 \u043D\u0435 \u043D\u043E\u0440\u043C\u0430 \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F.")
+  };
+  var ACTION_EVIDENCE = {
+    eat_ready_meal: "re_action_effect_contract",
+    eat_quick_base: "re_action_effect_contract",
+    cook_meal_batch: "re_habit_skill_future_geometry",
+    order_food: "re_financial_pressure_choice",
+    drink_coffee_100: "re_caffeine_timing_sleep",
+    walk_short: "re_movement_affect_response",
+    train_light: "re_movement_affect_response",
+    train_planned: "re_movement_affect_response",
+    work_standard: "re_multifactor_task_geometry",
+    work_fast: "re_multifactor_task_geometry",
+    work_careful: "re_multifactor_task_geometry",
+    ask_colleague_help: "re_habit_skill_future_geometry",
+    renegotiate_work: "re_multifactor_task_geometry",
+    work_late: "re_sleep_task_effort",
+    ask_partner_help: "re_family_load_support",
+    take_family_load: "re_family_load_support",
+    protect_commitment: "re_family_load_support",
+    wind_down_early: "re_sleep_task_effort",
+    commute_transit: "re_action_effect_contract",
+    buy_time_taxi: "re_financial_pressure_choice",
+    accept_scope: "re_multifactor_task_geometry",
+    decline_extra_project: "re_multifactor_task_geometry",
+    accept_extra_project: "re_financial_pressure_choice",
+    repay_colleague_help: "re_habit_skill_future_geometry",
+    shop_food: "re_financial_pressure_choice",
+    meet_friends_short: "re_action_effect_contract",
+    decline_social: "re_action_effect_contract",
+    plan_next_week: "re_planning_capacity_tradeoff",
+    buy_time_and_pickup: "re_financial_pressure_choice",
+    postpone_shopping: "re_financial_pressure_choice",
+    attend_school_event_by_taxi: "re_financial_pressure_choice"
+  };
+  function getRuleEvidence(id) {
+    return RULE_EVIDENCE[id];
+  }
+  function unavailableMessage(code) {
+    if (code === "insufficient_cash") return "\u041D\u0435\u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u0434\u0435\u043D\u0435\u0433 \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430.";
+    if (code === "insufficient_ready_meal") return "\u041D\u0435\u0442 \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u043E\u0439 \u043F\u043E\u0440\u0446\u0438\u0438.";
+    if (code === "insufficient_quick_base") return "\u041D\u0435\u0442 \u0431\u044B\u0441\u0442\u0440\u043E\u0433\u043E \u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430.";
+    if (code === "insufficient_cook_stock") return "\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u0434\u043B\u044F \u0433\u043E\u0442\u043E\u0432\u043A\u0438.";
+    if (code.startsWith("requirement:inventory")) return "\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0443\u0436\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430.";
+    if (code.startsWith("requirement:capability")) return "\u042D\u0442\u0430 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044C \u0435\u0449\u0451 \u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u0430.";
+    if (code.startsWith("requirement:")) return "\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043D\u0435 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u0435\u0442 \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u0432\u0430\u0440\u0438\u0430\u043D\u0442.";
+    return "\u042D\u0442\u043E\u0442 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0438\u0437-\u0437\u0430 \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0430.";
+  }
+  function getCharacterPresentationLevel(value) {
+    return value >= 67 ? "high" : value >= 38 ? "moderate" : "low";
+  }
+  function dayPhase(minuteOfDay) {
+    if (minuteOfDay < 300 || minuteOfDay >= 1320) return "night";
+    if (minuteOfDay < 720) return "morning";
+    if (minuteOfDay < 1080) return "day";
+    return "evening";
+  }
+  function indicator(id, value, label, labels, warning) {
+    const level = getCharacterPresentationLevel(value);
+    return { id, label, level, value: labels[level], tone: warning(level) ? "warning" : id === "energy" ? "calm" : "neutral" };
+  }
+  function getCharacterPresentation(state) {
+    const energy = indicator("energy", state.vitals.energy, "\u042D\u043D\u0435\u0440\u0433\u0438\u044F", { low: "\u043D\u0438\u0437\u043A\u0430\u044F", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u0430\u044F", high: "\u0432\u044B\u0441\u043E\u043A\u0430\u044F" }, (level) => level === "low");
+    const mood = indicator("mood", state.vitals.mood, "\u041D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435", { low: "\u043D\u0438\u0437\u043A\u043E\u0435", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435", high: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" }, () => false);
+    const tension = indicator("tension", state.vitals.tension, "\u041D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435", { low: "\u043D\u0438\u0437\u043A\u043E\u0435", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435", high: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" }, (level) => level === "high");
+    const reasons = [];
+    if (state.accumulators.sleepDebtMin >= 180) reasons.push({ id: "sleep_debt", label: "\u0414\u0435\u0444\u0438\u0446\u0438\u0442 \u0441\u043D\u0430", summary: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0441\u043E\u043D \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438." });
+    if (state.vitals.hunger >= 67) reasons.push({ id: "hunger", label: "\u041D\u0443\u0436\u043D\u0430 \u0435\u0434\u0430", summary: "\u0413\u043E\u043B\u043E\u0434 \u0443\u0436\u0435 \u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0437\u0430\u043F\u0430\u0441 \u0441\u0438\u043B \u0438 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F." });
+    if (state.accumulators.recoveryNeed >= 67) reasons.push({ id: "recovery_need", label: "\u041D\u0443\u0436\u043D\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435", summary: "\u041D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u043E\u043A\u043D\u0430 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F." });
+    if (state.accumulators.activeCaffeineMg >= 80) reasons.push({ id: "caffeine", label: "\u041A\u043E\u0444\u0435\u0438\u043D \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442", summary: "\u041A\u043E\u0444\u0435\u0438\u043D \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u0431\u043E\u0434\u0440\u043E\u0441\u0442\u044C \u0438 \u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u044C \u043A\u043E \u0441\u043D\u0443." });
+    if (state.family.friction >= 67) reasons.push({ id: "family_load", label: "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430", summary: "\u041D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u0430\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0435 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435." });
+    const visibleReasons = reasons.slice(0, 2);
+    const summary = `\u042D\u043D\u0435\u0440\u0433\u0438\u044F ${energy.value}, \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 ${mood.value}, \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 ${tension.value}.`;
+    return {
+      frame: {
+        pose: energy.level === "low" ? "depleted" : state.accumulators.recoveryNeed >= 67 || state.vitals.physicalFatigue >= 67 ? "recovering" : "steady",
+        expression: mood.level === "high" ? "bright" : mood.level === "low" ? "subdued" : "neutral",
+        load: tension.level === "high" ? "pressured" : "calm",
+        dayPhase: dayPhase(state.clock.minuteOfDay)
+      },
+      indicators: [energy, mood, tension],
+      reasons: visibleReasons,
+      summary,
+      ariaSummary: visibleReasons[0] ? `${summary} \u0423\u0447\u0442\u0435\u043D\u043E: ${visibleReasons[0].summary}` : summary
+    };
+  }
+
   // ../../packages/assemble-day-engine/src/content/actions.ts
   var U = (work, family, recovery, money, time, risk) => ({ work, family, recovery, money, time, risk });
   var add = (path, delta, reason) => ({ op: "add_state", path, delta, reason });
   var compare = (path, op, value) => ({ kind: "compare", path, op, value });
-  var lowReserve = { when: compare("context.cashAfterNextObligationsRub", "lt", 0), delta: { riskScore: 25, optionPressure: 20, preview: "\u041E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u043D\u043E\u0437\u043D\u044B\u0439 \u0440\u0435\u0437\u0435\u0440\u0432" }, reason: "\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0440\u0435\u0437\u0435\u0440\u0432\u0430" };
-  var tired = { when: compare("accumulators.recoveryNeed", "gte", 65), delta: { timeMin: 15, effortScore: 25, riskScore: 20, optionPressure: 15, preview: "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0438\u0432\u0430\u0435\u0442 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443" }, reason: "\u0432\u044B\u0441\u043E\u043A\u0430\u044F \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438" };
-  var lowFocus = { when: compare("context.focusByTaskId.project_delivery", "lt", 45), delta: { timeMin: 25, effortScore: 15, riskScore: 18, preview: "\u041D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0438\u0441\u043A" }, reason: "\u043D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441" };
-  var highCaffeine = { when: compare("accumulators.activeCaffeineMg", "gte", 140), delta: { riskScore: 20, optionPressure: 15, preview: "\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0444\u0435 \u0443\u0445\u0443\u0434\u0448\u0438\u0442 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u044C \u043A\u043E \u0441\u043D\u0443" }, reason: "\u0430\u043A\u0442\u0438\u0432\u043D\u044B\u0439 \u043A\u043E\u0444\u0435\u0438\u043D" };
-  var partnerFriction = { when: compare("family.friction", "gte", 55), delta: { riskScore: 20, optionPressure: 18, preview: "\u041F\u0440\u043E\u0441\u044C\u0431\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435" }, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435" };
+  var lowReserve = { when: compare("context.cashAfterNextObligationsRub", "lt", 0), delta: { riskScore: 25, optionPressure: 20, preview: "\u041E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u043D\u043E\u0437\u043D\u044B\u0439 \u0440\u0435\u0437\u0435\u0440\u0432" }, reason: "\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0440\u0435\u0437\u0435\u0440\u0432\u0430", ruleEvidenceId: "re_financial_pressure_choice" };
+  var tired = { when: compare("accumulators.recoveryNeed", "gte", 65), delta: { timeMin: 15, effortScore: 25, riskScore: 20, optionPressure: 15, preview: "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0438\u0432\u0430\u0435\u0442 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443" }, reason: "\u0432\u044B\u0441\u043E\u043A\u0430\u044F \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438", ruleEvidenceId: "re_sleep_movement_effort" };
+  var lowFocus = { when: compare("context.focusByTaskId.project_delivery", "lt", 45), delta: { timeMin: 25, effortScore: 15, riskScore: 18, preview: "\u041D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0438\u0441\u043A" }, reason: "\u043D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var highCaffeine = { when: compare("accumulators.activeCaffeineMg", "gte", 140), delta: { riskScore: 20, optionPressure: 15, preview: "\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0444\u0435 \u0443\u0445\u0443\u0434\u0448\u0438\u0442 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u044C \u043A\u043E \u0441\u043D\u0443" }, reason: "\u0430\u043A\u0442\u0438\u0432\u043D\u044B\u0439 \u043A\u043E\u0444\u0435\u0438\u043D", ruleEvidenceId: "re_caffeine_timing_sleep" };
+  var partnerFriction = { when: compare("family.friction", "gte", 55), delta: { riskScore: 20, optionPressure: 18, preview: "\u041F\u0440\u043E\u0441\u044C\u0431\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435" }, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435", ruleEvidenceId: "re_family_load_support" };
   var compressedMondayMorning = { kind: "all", conditions: [compare("clock.dayIndex", "eq", 0), compare("clock.minuteOfDay", "gte", 360), compare("clock.minuteOfDay", "lte", 540), compare("context.deadlinePressure", "gte", 70)] };
-  var compressedMorningCooking = { when: compressedMondayMorning, delta: { timeMin: 10, effortScore: 15, riskScore: 8, optionPressure: 35, preview: "\u0421\u0436\u0430\u0442\u043E\u0435 \u0443\u0442\u0440\u043E: \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0435\u0449\u0451 10 \u043C\u0438\u043D\u0443\u0442, \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0441\u0438\u043B\u0438\u044F \u0438 \u043F\u043E\u0432\u044B\u0441\u0438\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }, reason: "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435" };
-  var compressedMorningTension = { when: compressedMondayMorning, evaluateAt: "pre_action", effects: [add("vitals.tension", 7, "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435")], explanation: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442 \u0438 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0435\u043D\u043D\u043E\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u0435\u0435 \u043E\u043A\u043D\u043E \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 \u043E\u0442 \u0433\u043E\u0442\u043E\u0432\u043A\u0438" };
-  var cookingRoutine = { when: compare("character.skills.cooking", "gte", 37), delta: { timeMin: -10, effortScore: -4, optionPressure: -6, preview: "\u041D\u0430\u0432\u044B\u043A \u0438 \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u0433\u043E\u0442\u043E\u0432\u043A\u0438" }, reason: "\u043E\u0441\u0432\u043E\u0435\u043D\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438" };
-  var batchPrepUnlock = { when: compare("character.skills.cooking", "gte", 37), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "kitchen.batch_prep_familiar", reason: "\u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043D\u0430\u0432\u044B\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438\u0451\u043C\u043E\u0432" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u0430\u044F \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u0431\u044B\u0442\u043E\u0432\u043E\u0439 \u043F\u0440\u043E\u0446\u0435\u0441\u0441" };
-  var reciprocalSupportUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u0432\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" }], explanation: "\u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0451\u043D\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u0432\u0437\u0430\u0438\u043C\u043D\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443" };
-  var repeatedCollaborationUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043E\u0442\u043A\u0440\u044B\u043B\u0430 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043A\u0430\u043D\u0430\u043B \u043F\u043E\u043C\u043E\u0449\u0438" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443" };
+  var compressedMorningCooking = { when: compressedMondayMorning, delta: { timeMin: 10, effortScore: 15, riskScore: 8, optionPressure: 35, preview: "\u0421\u0436\u0430\u0442\u043E\u0435 \u0443\u0442\u0440\u043E: \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0435\u0449\u0451 10 \u043C\u0438\u043D\u0443\u0442, \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0441\u0438\u043B\u0438\u044F \u0438 \u043F\u043E\u0432\u044B\u0441\u0438\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }, reason: "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var compressedMorningTension = { when: compressedMondayMorning, evaluateAt: "pre_action", effects: [add("vitals.tension", 7, "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435")], explanation: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442 \u0438 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0435\u043D\u043D\u043E\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u0435\u0435 \u043E\u043A\u043D\u043E \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 \u043E\u0442 \u0433\u043E\u0442\u043E\u0432\u043A\u0438", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var cookingRoutine = { when: compare("character.skills.cooking", "gte", 37), delta: { timeMin: -10, effortScore: -4, optionPressure: -6, preview: "\u041D\u0430\u0432\u044B\u043A \u0438 \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u0433\u043E\u0442\u043E\u0432\u043A\u0438" }, reason: "\u043E\u0441\u0432\u043E\u0435\u043D\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var batchPrepUnlock = { when: compare("character.skills.cooking", "gte", 37), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "kitchen.batch_prep_familiar", reason: "\u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043D\u0430\u0432\u044B\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438\u0451\u043C\u043E\u0432" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u0430\u044F \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u0431\u044B\u0442\u043E\u0432\u043E\u0439 \u043F\u0440\u043E\u0446\u0435\u0441\u0441", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var reciprocalSupportUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u0432\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" }], explanation: "\u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0451\u043D\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u0432\u0437\u0430\u0438\u043C\u043D\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var repeatedCollaborationUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043E\u0442\u043A\u0440\u044B\u043B\u0430 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043A\u0430\u043D\u0430\u043B \u043F\u043E\u043C\u043E\u0449\u0438" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var priorityAlignmentByAction = {
+    eat_ready_meal: { supports: ["recovery"], conflicts: [] },
+    eat_quick_base: { supports: [], conflicts: [] },
+    cook_meal_batch: { supports: ["recovery", "family"], conflicts: [] },
+    order_food: { supports: [], conflicts: [] },
+    drink_coffee_100: { supports: [], conflicts: ["recovery"] },
+    walk_short: { supports: ["recovery"], conflicts: [] },
+    train_light: { supports: ["recovery"], conflicts: [] },
+    train_planned: { supports: ["recovery"], conflicts: [] },
+    work_standard: { supports: ["work"], conflicts: [] },
+    work_fast: { supports: ["work"], conflicts: ["recovery"] },
+    work_careful: { supports: ["work"], conflicts: [] },
+    ask_colleague_help: { supports: ["work"], conflicts: [] },
+    renegotiate_work: { supports: ["work"], conflicts: [] },
+    work_late: { supports: ["work"], conflicts: ["family", "recovery"] },
+    ask_partner_help: { supports: ["family"], conflicts: [] },
+    take_family_load: { supports: ["family"], conflicts: [] },
+    protect_commitment: { supports: ["family"], conflicts: [] },
+    wind_down_early: { supports: ["recovery"], conflicts: ["work"] },
+    commute_transit: { supports: [], conflicts: [] },
+    buy_time_taxi: { supports: [], conflicts: [] },
+    accept_scope: { supports: ["work"], conflicts: ["recovery"] },
+    decline_extra_project: { supports: ["recovery"], conflicts: ["work"] },
+    accept_extra_project: { supports: ["work"], conflicts: ["family", "recovery"] },
+    repay_colleague_help: { supports: ["social"], conflicts: [] },
+    shop_food: { supports: ["recovery"], conflicts: [] },
+    meet_friends_short: { supports: ["social"], conflicts: ["work"] },
+    decline_social: { supports: [], conflicts: ["social"] },
+    plan_next_week: { supports: [], conflicts: [] },
+    buy_time_and_pickup: { supports: ["family"], conflicts: [] },
+    postpone_shopping: { supports: [], conflicts: ["recovery"] },
+    attend_school_event_by_taxi: { supports: ["family"], conflicts: [] }
+  };
   function action(id, label, timeMin, moneyRub, effort, risk, pressure, utility, effects, extras = {}) {
     const inventory = extras.inventory ?? [];
     const requirements = [
@@ -52,12 +232,16 @@
     const intensity = effort >= 35 ? "high" : effort >= 15 ? "normal" : effort > 0 ? "light" : "none";
     const visibleRisk = risk >= 35 ? "very_high" : risk >= 24 ? "high" : risk >= 12 ? "moderate" : risk >= 5 ? "low" : "none";
     const boundedEffects = effects.some((effect) => effect.op === "add_state" && effect.path === "vitals.tension" && effect.delta < 0) ? [...effects, { op: "set_min", path: "vitals.tension", value: 5, reason: "\u043D\u0438\u0436\u043D\u044F\u044F \u0433\u0440\u0430\u043D\u0438\u0446\u0430 \u043F\u043E\u0441\u043B\u0435 \u0441\u043D\u044F\u0442\u0438\u044F \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u044F" }] : effects;
+    const priorityAlignment = priorityAlignmentByAction[id];
+    if (!priorityAlignment) throw new Error(`Missing priority alignment for ${id}`);
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       id,
       version: 1,
       domains: extras.domains ?? ["state"],
-      copy: { label, summary: label, knownCost: `${timeMin} \u043C\u0438\u043D${moneyRub ? ` \u0438 ${moneyRub} \u20BD` : ""}` },
+      priorityAlignment,
+      copy: { label, summary: label, knownCost: `${timeMin} \u043C\u0438\u043D${moneyRub ? ` \u0438 ${moneyRub} \u20BD` : ""}`, ...ACTION_CONTEXT_COPY[id] ? { contextual: ACTION_CONTEXT_COPY[id] } : {} },
+      ruleEvidenceId: ACTION_EVIDENCE[id],
       requirements,
       cost: { timeMin, moneyRub, ...inventory.length ? { inventory } : {}, effort: { cognitive: intensity } },
       immediateEffects: boundedEffects,
@@ -74,8 +258,8 @@
       stabilizes: extras.stabilizes ?? []
     };
   }
-  var workConditional = { when: { kind: "compare", path: "accumulators.sleepDebtMin", op: "gte", value: 180 }, evaluateAt: "pre_action", effects: [add("vitals.tension", 4, "\u0434\u0435\u0444\u0438\u0446\u0438\u0442 \u0441\u043D\u0430 \u043F\u043E\u0432\u044B\u0441\u0438\u043B \u0446\u0435\u043D\u0443 \u0440\u0430\u0431\u043E\u0442\u044B")], explanation: "\u041F\u043E\u0441\u043B\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0433\u043E \u0441\u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" };
-  var coffeeCrash = { id: "coffee_crash", trigger: { kind: "after_steps", steps: 3 }, effects: [add("vitals.energy", -6, "\u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u0441\u043F\u0430\u0434 \u043F\u043E\u0441\u043B\u0435 \u043A\u043E\u0444\u0435"), add("vitals.tension", 3, "\u043A\u043E\u0444\u0435\u0438\u043D\u043E\u0432\u0430\u044F \u043A\u043E\u043C\u043F\u0435\u043D\u0441\u0430\u0446\u0438\u044F")] };
+  var workConditional = { when: { kind: "compare", path: "accumulators.sleepDebtMin", op: "gte", value: 180 }, evaluateAt: "pre_action", effects: [add("vitals.tension", 4, "\u0434\u0435\u0444\u0438\u0446\u0438\u0442 \u0441\u043D\u0430 \u043F\u043E\u0432\u044B\u0441\u0438\u043B \u0446\u0435\u043D\u0443 \u0440\u0430\u0431\u043E\u0442\u044B")], explanation: "\u041F\u043E\u0441\u043B\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0433\u043E \u0441\u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435", ruleEvidenceId: "re_sleep_task_effort" };
+  var coffeeCrash = { id: "coffee_crash", trigger: { kind: "after_steps", steps: 3 }, effects: [add("vitals.energy", -6, "\u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u0441\u043F\u0430\u0434 \u043F\u043E\u0441\u043B\u0435 \u043A\u043E\u0444\u0435"), add("vitals.tension", 3, "\u043A\u043E\u0444\u0435\u0438\u043D\u043E\u0432\u0430\u044F \u043A\u043E\u043C\u043F\u0435\u043D\u0441\u0430\u0446\u0438\u044F")], ruleEvidenceId: "re_caffeine_timing_sleep" };
   var definitions = [
     action("eat_ready_meal", "\u0421\u044A\u0435\u0441\u0442\u044C \u0433\u043E\u0442\u043E\u0432\u0443\u044E \u043F\u043E\u0440\u0446\u0438\u044E", 20, 0, 5, 2, -18, U(0, 0, 3, 2, 1, 1), [add("vitals.hunger", -42, "\u0441\u044B\u0442\u043D\u0430\u044F \u0435\u0434\u0430"), add("accumulators.satietyWindowMin", 210, "\u043E\u043A\u043D\u043E \u0441\u044B\u0442\u043E\u0441\u0442\u0438")], { inventory: [{ category: "ready_meal", portions: 1 }], domains: ["food", "state"], stabilizes: ["recovery"] }),
     action("eat_quick_base", "\u0411\u044B\u0441\u0442\u0440\u043E \u043F\u0435\u0440\u0435\u043A\u0443\u0441\u0438\u0442\u044C", 10, 0, 4, 3, -10, U(0, 0, 2, 2, 3, 0), [add("vitals.hunger", -28, "\u043F\u0435\u0440\u0435\u043A\u0443\u0441"), add("accumulators.satietyWindowMin", 120, "\u043A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u0441\u044B\u0442\u043E\u0441\u0442\u044C")], { inventory: [{ category: "quick_base", portions: 1, fallbackMoneyRub: 350 }], domains: ["food", "state"], stabilizes: ["recovery"] }),
@@ -89,12 +273,12 @@
     action("work_fast", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0431\u044B\u0441\u0442\u0440\u043E", 60, 0, 38, 28, -20, U(5, 0, -3, 2, 3, -4), [{ op: "progress_task", taskId: "project_delivery", minutes: 82, reason: "\u0431\u044B\u0441\u0442\u0440\u044B\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441" }, add("vitals.energy", -7, "\u0438\u043D\u0442\u0435\u043D\u0441\u0438\u0432\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), add("vitals.tension", 7, "\u0440\u0438\u0441\u043A \u043F\u0435\u0440\u0435\u0434\u0435\u043B\u043A\u0438")], { rules: [lowFocus], conditional: [workConditional], domains: ["work", "state"], stabilizes: ["deadline"] }),
     action("work_careful", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u043E", 90, 0, 30, 8, -14, U(4, 0, -2, 2, -2, 3), [{ op: "progress_task", taskId: "project_delivery", minutes: 70, reason: "\u043D\u0430\u0434\u0451\u0436\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441" }, add("vitals.energy", -4, "\u0441\u043E\u0441\u0440\u0435\u0434\u043E\u0442\u043E\u0447\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), { op: "adjust_skill", skillId: "professional", delta: 2, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438" }, { op: "append_causal_link", mechanism: "\u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B\u0430 \u0440\u0438\u0441\u043A \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430", resultPath: "work.reviewRisk", confidence: "plausible_model" }], { rules: [lowFocus], conditional: [workConditional], domains: ["work", "state"], stabilizes: ["deadline"] }),
     action("ask_colleague_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0443 \u043E \u043F\u043E\u043C\u043E\u0449\u0438", 15, 0, 8, 12, -25, U(4, 0, 0, 2, 5, -1), [{ op: "progress_task", taskId: "project_delivery", minutes: 90, reason: "\u043F\u043E\u043C\u043E\u0449\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0438" }, add("work.helpDebt", 1, "\u0441\u043E\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0434\u043E\u043B\u0433"), add("vitals.tension", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0430 \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439"), { op: "append_causal_link", mechanism: "\u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0441\u043D\u0438\u0436\u0430\u0435\u0442 \u0440\u0438\u0441\u043A \u043F\u0435\u0440\u0435\u0434\u0435\u043B\u043A\u0438", resultPath: "work.reviewRisk", confidence: "plausible_model" }], { conditional: [repeatedCollaborationUnlock], domains: ["work", "social"], stabilizes: ["deadline", "recovery"] }),
-    action("renegotiate_work", "\u041F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443", 25, 0, 12, 16, -22, U(3, 1, 2, 2, 3, -2), [{ op: "set_task", taskId: "project_delivery", patch: { dueDayIndex: 4, status: "renegotiated" }, reason: "\u0441\u0440\u043E\u043A \u0443\u0442\u043E\u0447\u043D\u0451\u043D" }, add("work.reputation", -2, "\u0446\u0435\u043D\u0430 \u043F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u0438\u044F"), add("vitals.tension", -10, "\u043E\u0431\u044A\u0451\u043C \u0438 \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u044B")], { rules: [{ when: compare("work.reputation", "lt", 45), delta: { riskScore: 18, optionPressure: 15, preview: "\u041D\u0438\u0437\u043A\u0430\u044F \u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u044F \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0435\u0440\u0435\u0433\u043E\u0432\u043E\u0440\u044B \u0441\u043B\u043E\u0436\u043D\u0435\u0435" }, reason: "\u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u043E\u043D\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442" }], domains: ["work"], stabilizes: ["deadline", "recovery"] }),
-    action("work_late", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0434\u043E\u043F\u043E\u0437\u0434\u043D\u0430", 90, 0, 45, 25, -20, U(5, -3, -4, 2, 1, -3), [{ op: "progress_task", taskId: "project_delivery", minutes: 105, reason: "\u043F\u043E\u0437\u0434\u043D\u0438\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A" }, add("vitals.tension", 9, "\u043F\u043E\u0437\u0434\u043D\u044F\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("vitals.windDown", -25, "\u0441\u0431\u0438\u0442\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u0434\u043D\u044F"), add("family.friction", 4, "\u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u043F\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043D\u0438\u0435"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: -2, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u0441\u043D\u043E\u0432\u0430 \u0443\u0441\u0442\u0443\u043F\u0438\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u0435" }, { op: "adjust_habit", habitId: "late_work", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0437\u0434\u043D\u0435\u0439 \u0440\u0430\u0431\u043E\u0442\u044B" }], { rules: [tired, { when: compare("family.friction", "gte", 55), delta: { riskScore: 18, optionPressure: 20, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u0434\u0435\u043B\u0430\u044E\u0442 \u043E\u0442\u043C\u0435\u043D\u0443 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u043F\u043B\u0430\u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u044B\u0445 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043F\u043B\u0430\u043D\u043E\u0432" }], domains: ["work", "state"], stabilizes: ["deadline"] }),
-    action("ask_partner_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u043F\u043E\u043C\u043E\u0447\u044C", 10, 0, 6, 14, -18, U(2, -2, 2, 2, 4, -2), [add("accumulators.familyLoadPartner7d", 12, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u0430"), add("accumulators.familyLoadPlayer7d", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0436\u0435\u043D\u0430"), add("family.friction", 6, "\u0446\u0435\u043D\u0430 \u043F\u0440\u043E\u0441\u044C\u0431\u044B")], { rules: [partnerFriction, { when: compare("context.familyImbalance", "gte", 20), delta: { timeMin: 10, riskScore: 16, preview: "\u041F\u0435\u0440\u0435\u043A\u043E\u0441 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0440\u043E\u0441\u044C\u0431\u0443 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435" }, reason: "\u043F\u0435\u0440\u0435\u043A\u043E\u0441 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438" }], domains: ["family", "social"], stabilizes: ["family"] }),
+    action("renegotiate_work", "\u041F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443", 25, 0, 12, 16, -22, U(3, 1, 2, 2, 3, -2), [{ op: "set_task", taskId: "project_delivery", patch: { dueDayIndex: 4, status: "renegotiated" }, reason: "\u0441\u0440\u043E\u043A \u0443\u0442\u043E\u0447\u043D\u0451\u043D" }, add("work.reputation", -2, "\u0446\u0435\u043D\u0430 \u043F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u0438\u044F"), add("vitals.tension", -10, "\u043E\u0431\u044A\u0451\u043C \u0438 \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u044B")], { rules: [{ when: compare("work.reputation", "lt", 45), delta: { riskScore: 18, optionPressure: 15, preview: "\u041D\u0438\u0437\u043A\u0430\u044F \u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u044F \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0435\u0440\u0435\u0433\u043E\u0432\u043E\u0440\u044B \u0441\u043B\u043E\u0436\u043D\u0435\u0435" }, reason: "\u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u043E\u043D\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442", ruleEvidenceId: "re_multifactor_task_geometry" }], domains: ["work"], stabilizes: ["deadline", "recovery"] }),
+    action("work_late", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0434\u043E\u043F\u043E\u0437\u0434\u043D\u0430", 90, 0, 45, 25, -20, U(5, -3, -4, 2, 1, -3), [{ op: "progress_task", taskId: "project_delivery", minutes: 105, reason: "\u043F\u043E\u0437\u0434\u043D\u0438\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A" }, add("vitals.tension", 9, "\u043F\u043E\u0437\u0434\u043D\u044F\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("vitals.windDown", -25, "\u0441\u0431\u0438\u0442\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u0434\u043D\u044F"), add("family.friction", 4, "\u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u043F\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043D\u0438\u0435"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: -2, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u0441\u043D\u043E\u0432\u0430 \u0443\u0441\u0442\u0443\u043F\u0438\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u0435" }, { op: "adjust_habit", habitId: "late_work", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0437\u0434\u043D\u0435\u0439 \u0440\u0430\u0431\u043E\u0442\u044B" }], { rules: [tired, { when: compare("family.friction", "gte", 55), delta: { riskScore: 18, optionPressure: 20, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u0434\u0435\u043B\u0430\u044E\u0442 \u043E\u0442\u043C\u0435\u043D\u0443 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u043F\u043B\u0430\u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u044B\u0445 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043F\u043B\u0430\u043D\u043E\u0432", ruleEvidenceId: "re_family_load_support" }], domains: ["work", "state"], stabilizes: ["deadline"] }),
+    action("ask_partner_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u043F\u043E\u043C\u043E\u0447\u044C", 10, 0, 6, 14, -18, U(2, -2, 2, 2, 4, -2), [add("accumulators.familyLoadPartner7d", 12, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u0430"), add("accumulators.familyLoadPlayer7d", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0436\u0435\u043D\u0430"), add("family.friction", 6, "\u0446\u0435\u043D\u0430 \u043F\u0440\u043E\u0441\u044C\u0431\u044B")], { rules: [partnerFriction, { when: compare("context.familyImbalance", "gte", 20), delta: { timeMin: 10, riskScore: 16, preview: "\u041F\u0435\u0440\u0435\u043A\u043E\u0441 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0440\u043E\u0441\u044C\u0431\u0443 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435" }, reason: "\u043F\u0435\u0440\u0435\u043A\u043E\u0441 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438", ruleEvidenceId: "re_family_load_support" }], domains: ["family", "social"], stabilizes: ["family"] }),
     action("take_family_load", "\u0412\u0437\u044F\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443", 60, 0, 26, 4, -24, U(-2, 5, -1, 1, -2, 2), [add("accumulators.familyLoadPlayer7d", 12, "\u0432\u043A\u043B\u0430\u0434 \u0432 \u0441\u0435\u043C\u044C\u044E"), add("family.participationBalance", 10, "\u0443\u0447\u0430\u0441\u0442\u0438\u0435"), add("family.friction", -10, "\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u043E"), add("vitals.tension", -8, "\u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0441\u0442\u044C \u0441\u043D\u044F\u0442\u0430"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 3, reason: "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0430 \u043D\u0430\u0434\u0451\u0436\u043D\u043E" }, { op: "adjust_relationship", target: "child", dimension: "closeness", delta: 2, reason: "\u0432\u0440\u0435\u043C\u044F \u0443\u0434\u0435\u043B\u0435\u043D\u043E \u0440\u0435\u0431\u0451\u043D\u043A\u0443" }], { domains: ["family"], stabilizes: ["family", "recovery"] }),
-    action("protect_commitment", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435", 75, 0, 28, 5, -25, U(-2, 5, -1, 1, -2, 2), [{ op: "resolve_commitment", commitmentId: "family_week", reason: "\u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E" }, { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 5, reason: "\u043D\u0430\u0434\u0451\u0436\u043D\u043E\u0441\u0442\u044C" }], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 20, optionPressure: 18, preview: "\u0412\u044B\u0441\u043E\u043A\u043E\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F" }, reason: "\u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430" }, { when: compare("family.friction", "gte", 55), delta: { riskScore: 16, optionPressure: 14, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u043E\u0442\u043C\u0435\u043D\u044B" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F" }], domains: ["family"], stabilizes: ["family"] }),
-    action("wind_down_early", "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0440\u0430\u043D\u044C\u0448\u0435", 60, 0, 4, 1, -28, U(-2, 1, 5, 2, -1, 3), [add("vitals.windDown", 38, "\u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435"), add("vitals.tension", -14, "\u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0431\u0443\u0436\u0434\u0435\u043D\u0438\u044F")], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 15, optionPressure: 20, preview: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0445\u0432\u043E\u0441\u0442 \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0434\u043D\u044F" }, reason: "\u0441\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442" }], domains: ["state"], stabilizes: ["recovery"] }),
+    action("protect_commitment", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435", 75, 0, 28, 5, -25, U(-2, 5, -1, 1, -2, 2), [{ op: "resolve_commitment", commitmentId: "family_week", reason: "\u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E" }, { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 5, reason: "\u043D\u0430\u0434\u0451\u0436\u043D\u043E\u0441\u0442\u044C" }], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 20, optionPressure: 18, preview: "\u0412\u044B\u0441\u043E\u043A\u043E\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F" }, reason: "\u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430", ruleEvidenceId: "re_multifactor_task_geometry" }, { when: compare("family.friction", "gte", 55), delta: { riskScore: 16, optionPressure: 14, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u043E\u0442\u043C\u0435\u043D\u044B" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F", ruleEvidenceId: "re_family_load_support" }], domains: ["family"], stabilizes: ["family"] }),
+    action("wind_down_early", "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0440\u0430\u043D\u044C\u0448\u0435", 60, 0, 4, 1, -28, U(-2, 1, 5, 2, -1, 3), [add("vitals.windDown", 38, "\u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435"), add("vitals.tension", -14, "\u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0431\u0443\u0436\u0434\u0435\u043D\u0438\u044F")], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 15, optionPressure: 20, preview: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0445\u0432\u043E\u0441\u0442 \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0434\u043D\u044F" }, reason: "\u0441\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442", ruleEvidenceId: "re_multifactor_task_geometry" }], domains: ["state"], stabilizes: ["recovery"] }),
     action("commute_transit", "\u041F\u043E\u0435\u0445\u0430\u0442\u044C \u043E\u0431\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u043E\u043C", 55, 120, 10, 8, 0, U(0, 0, 0, 3, -1, 0), [add("vitals.tension", -8, "\u0434\u043E\u0440\u043E\u0433\u0430 \u0431\u0435\u0437 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E\u0441\u0442\u0438 \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C")], { domains: ["finance", "state"], stabilizes: ["recovery"] }),
     action("buy_time_taxi", "\u041F\u043E\u0435\u0445\u0430\u0442\u044C \u043D\u0430 \u0442\u0430\u043A\u0441\u0438", 25, 1800, 4, 4, -10, U(1, 1, 1, -4, 5, 1), [add("vitals.energy", 4, "\u0441\u044D\u043A\u043E\u043D\u043E\u043C\u043B\u0435\u043D\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u0432 \u0434\u043E\u0440\u043E\u0433\u0435"), add("vitals.tension", -6, "\u0434\u043E\u0440\u043E\u0433\u0430 \u0441\u0442\u0430\u043B\u0430 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u0435\u0435")], { rules: [lowReserve], domains: ["finance", "state"], stabilizes: ["deadline", "recovery"] }),
     action("accept_scope", "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u0435 \u043E\u0431\u044A\u0451\u043C\u0430", 10, 0, 6, 20, 12, U(4, 0, -2, 2, 1, -3), [add("work.tasks.0.remainingMin", 120, "\u043E\u0431\u044A\u0451\u043C \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u0432\u044B\u0440\u043E\u0441")], { domains: ["work"] }),
@@ -102,9 +286,9 @@
     action("accept_extra_project", "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442", 150, 0, 42, 24, 18, U(4, 0, -3, 4, -3, -3), [{ op: "create_task", task: { id: "extra_project", remainingMin: 150, dueDayIndex: 6, dueMinuteOfDay: 1260, requiredSkill: 55, baseRisk: 30, status: "open" }, reason: "\u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430" }, { op: "create_income", income: { id: "extra_income", amountRub: 3e3, dueDayIndex: 6, status: "expected", source: "extra_work" }, reason: "\u043E\u0436\u0438\u0434\u0430\u0435\u043C\u044B\u0439 \u0434\u043E\u0445\u043E\u0434" }], { rules: [tired], domains: ["work", "finance"], stabilizes: ["financial"] }),
     action("repay_colleague_help", "\u0412\u0435\u0440\u043D\u0443\u0442\u044C \u043F\u043E\u043C\u043E\u0449\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0435", 45, 0, 15, 2, -10, U(-1, 1, 1, 1, -1, 2), [add("work.helpDebt", -1, "\u0434\u043E\u043B\u0433 \u043F\u043E\u043C\u043E\u0449\u0438 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0451\u043D"), { op: "append_causal_link", mechanism: "\u0441\u043E\u0446\u0438\u0430\u043B\u044C\u043D\u043E\u0435 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u043F\u0435\u0440\u0435\u0434 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439 \u0437\u0430\u043A\u0440\u044B\u0442\u043E", resultPath: "work.helpDebt.repaid", confidence: "established" }], { conditional: [reciprocalSupportUnlock], domains: ["work", "social"], stabilizes: ["recovery"] }),
     action("shop_food", "\u041A\u0443\u043F\u0438\u0442\u044C \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u044B", 90, 5500, 20, 4, -18, U(0, 2, 3, -4, -2, 2), [{ op: "add_inventory", category: "quick_base", portions: 4, reason: "\u0437\u0430\u043A\u0443\u043F\u043A\u0430" }, { op: "add_inventory", category: "cook_stock", portions: 6, reason: "\u0437\u0430\u043A\u0443\u043F\u043A\u0430" }], { rules: [lowReserve], domains: ["food", "finance"], stabilizes: ["financial"] }),
-    action("meet_friends_short", "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C\u0441\u044F \u0441 \u0434\u0440\u0443\u0437\u044C\u044F\u043C\u0438", 90, 1200, 12, 4, -15, U(0, 1, 3, -2, -2, 2), [add("vitals.mood", 14, "\u0441\u043E\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430"), add("vitals.tension", -10, "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435")], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 20, riskScore: 18, optionPressure: 16, preview: "\u0420\u0430\u043D\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0442\u0440\u0435\u0447\u0443 \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u0431\u043B\u0438\u0437\u043A\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D" }], domains: ["social"] }),
+    action("meet_friends_short", "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C\u0441\u044F \u0441 \u0434\u0440\u0443\u0437\u044C\u044F\u043C\u0438", 90, 1200, 12, 4, -15, U(0, 1, 3, -2, -2, 2), [add("vitals.mood", 14, "\u0441\u043E\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430"), add("vitals.tension", -10, "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435")], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 20, riskScore: 18, optionPressure: 16, preview: "\u0420\u0430\u043D\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0442\u0440\u0435\u0447\u0443 \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u0431\u043B\u0438\u0437\u043A\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D", ruleEvidenceId: "re_multifactor_task_geometry" }], domains: ["social"] }),
     action("decline_social", "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u043E\u0442 \u0432\u0441\u0442\u0440\u0435\u0447\u0438", 5, 0, 1, 1, -5, U(1, 0, 1, 1, 4, 1), [add("vitals.tension", -8, "\u043E\u0441\u0432\u043E\u0431\u043E\u0436\u0434\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E")], { domains: ["social", "state"], stabilizes: ["recovery"] }),
-    action("plan_next_week", "\u0421\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E", 45, 0, 12, 2, -18, U(2, 2, 2, 2, 0, 3), [{ op: "set_state", path: "weeklyRules", value: [{ id: "protect_sleep", kind: "protected_window", enabled: true, sourceId: "plan_next_week" }, { id: "family_anchor", kind: "protected_window", enabled: true, sourceId: "plan_next_week" }, { id: "work_blocks", kind: "work_boundary", enabled: true, sourceId: "plan_next_week" }], reason: "\u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u044B" }, { op: "adjust_skill", skillId: "planning", delta: 2, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F" }], { domains: ["work", "family", "state"], stabilizes: ["deadline", "family", "recovery"] }),
+    action("plan_next_week", "\u0421\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E", 45, 0, 12, 2, -18, U(2, 2, 2, 2, 0, 3), [{ op: "set_state", path: "weeklyRules", value: [{ id: "protect_sleep", kind: "protected_window", enabled: true, sourceId: "plan_next_week" }, { id: "work_blocks", kind: "work_boundary", enabled: true, sourceId: "plan_next_week" }], reason: "\u0434\u0432\u0430 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u044B\u0445 \u043E\u043A\u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u044B" }, { op: "adjust_skill", skillId: "planning", delta: 2, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F" }], { domains: ["work", "family", "state"], stabilizes: ["deadline", "family", "recovery"] }),
     action("buy_time_and_pickup", "\u041A\u0443\u043F\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u044F \u0438 \u0437\u0430\u0431\u0440\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430", 70, 1800, 18, 4, -25, U(-1, 5, 0, -4, 2, 2), [add("family.participationBalance", 12, "\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E"), add("family.friction", -12, "\u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442 \u0441\u043D\u044F\u0442")], { rules: [lowReserve], domains: ["family", "finance"], stabilizes: ["family"] }),
     action("postpone_shopping", "\u041E\u0442\u043B\u043E\u0436\u0438\u0442\u044C \u043F\u043E\u043A\u0443\u043F\u043A\u0438", 5, 0, 1, 14, 12, U(1, -1, -2, 3, 4, -2), [], { domains: ["food", "finance"] }),
     action("attend_school_event_by_taxi", "\u041F\u043E\u0435\u0445\u0430\u0442\u044C \u043D\u0430 \u0448\u043A\u043E\u043B\u044C\u043D\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u043D\u0430 \u0442\u0430\u043A\u0441\u0438", 45, 1800, 12, 3, -28, U(-1, 5, 0, -4, 3, 2), [add("family.participationBalance", 15, "\u0448\u043A\u043E\u043B\u044C\u043D\u043E\u0435 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E"), { op: "resolve_commitment", commitmentId: "school_event", reason: "\u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u043E" }], { rules: [lowReserve], domains: ["family", "finance"], stabilizes: ["family"] })
@@ -159,6 +343,7 @@
   });
   slots[7] = { ...slots[7], sleepBeforeMin: 210, interruptionsMin: 10 };
   var heavyIds = /* @__PURE__ */ new Set(["tue_night_wakeup", "tue_pickup_conflict", "wed_school_call", "thu_family_evening", "fri_final_issue", "fri_submit", "sat_school_event"]);
+  var familyWindowIds = /* @__PURE__ */ new Set(["mon_family_dinner", "tue_pickup_conflict", "thu_family_evening", "fri_family_plan", "sat_school_event", "sun_family_time"]);
   var events = Object.fromEntries(raw.map(([day, minute, id, source, actionIds], index) => {
     const heavy = heavyIds.has(id), large = source === "external", dayIndex = day - 1;
     const event = {
@@ -166,7 +351,7 @@
       id,
       version: 1,
       source,
-      copy: { title: id.replaceAll("_", " "), situation: `\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0430 ${index + 1}`, ...source === "causal" ? { causeHint: "\u0421\u043E\u0431\u044B\u0442\u0438\u0435 \u0441\u043B\u0435\u0434\u0443\u0435\u0442 \u0438\u0437 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u0433\u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0439" } : {} },
+      copy: { ...EVENT_COPY[id], ...source === "causal" && !EVENT_COPY[id]?.causeHint ? { causeHint: "\u0421\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u0443\u0447\u0438\u0442\u044B\u0432\u0430\u0435\u0442 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F." } : {} },
       trigger: { kind: "compare", path: "scenarioCursor", op: "eq", value: index },
       hardWindow: { fromDayIndex: dayIndex, fromMinuteOfDay: minute, toDayIndex: dayIndex, toMinuteOfDay: Math.min(1439, minute + 120) },
       urgency: heavy ? 3 : source === "mandatory" ? 2 : 1,
@@ -176,7 +361,7 @@
       load: { external: source === "external" ? 35 : 0, total: source === "external" ? 40 : source === "causal" ? 12 : 0, size: large ? "large" : heavy ? "medium" : "small" },
       onOpenEffects: source === "external" ? [{ op: "add_state", path: "vitals.tension", delta: 5, reason: "\u0432\u043D\u0435\u0448\u043D\u044F\u044F \u0437\u0430\u0434\u0435\u0440\u0436\u043A\u0430" }] : [],
       actionIds,
-      tags: [source, ...heavy ? ["heavy"] : []]
+      tags: [source, ...heavy ? ["heavy"] : [], ...day <= 5 && minute >= 540 && minute < 1080 ? ["planned_work_window"] : [], ...familyWindowIds.has(id) ? ["family_anchor_window"] : [], ...minute >= 1080 ? ["sleep_boundary_window"] : []]
     };
     return [id, event];
   }));
@@ -258,6 +443,13 @@
       causalJournal: []
     };
   }
+
+  // ../../packages/assemble-day-engine/src/content/planning.ts
+  var WEEKLY_RULE_PRESETS = [
+    { id: "protect_sleep", kind: "protected_window", title: "\u0417\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0432\u043E\u0432\u0440\u0435\u043C\u044F", summary: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0432\u0435\u0447\u0435\u0440\u043D\u044E\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0434\u043D\u0435.", source: "\u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E", tradeoff: "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0434\u043E\u043B\u044C\u0448\u0435 \u0438 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u0435\u0435." },
+    { id: "family_anchor", kind: "protected_window", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u0432\u0435\u0447\u0435\u0440\u0430", summary: "\u041D\u0435 \u043E\u0442\u0434\u0430\u0432\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u043E\u043A\u043D\u0430 \u043D\u043E\u0432\u044B\u043C \u0437\u0430\u0434\u0430\u0447\u0430\u043C.", source: "\u0434\u0432\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043E\u043A\u043D\u0430", tradeoff: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0432 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u043C \u043E\u043A\u043D\u0435 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u0435\u0442 \u0440\u0438\u0441\u043A \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439." },
+    { id: "work_blocks", kind: "work_boundary", title: "\u0417\u0430\u0449\u0438\u0442\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0431\u043B\u043E\u043A\u0438", summary: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u0432\u0440\u0435\u043C\u044F \u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0434\u043E \u0441\u0440\u043E\u043A\u0430.", source: "\u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u043E\u043A\u043D\u0430 \u0434\u043E 18:00", tradeoff: "\u0414\u0440\u0443\u0433\u0438\u0435 \u0434\u0435\u043B\u0430 \u0432\u043D\u0443\u0442\u0440\u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u043E\u043A\u043D\u0430 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u044E\u0442 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435." }
+  ];
 
   // ../../packages/assemble-day-engine/src/rng.ts
   function fnv1a32(value) {
@@ -476,12 +668,9 @@
   }
 
   // ../../packages/assemble-day-engine/src/planning.ts
-  var RULE_PRESETS = [
-    { id: "protect_sleep", kind: "protected_window", title: "\u0417\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0432\u043E\u0432\u0440\u0435\u043C\u044F", summary: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043E\u043A\u043D\u043E \u0434\u043B\u044F \u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0433\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F \u0434\u043D\u044F." },
-    { id: "family_anchor", kind: "protected_window", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440", summary: "\u041D\u0435 \u043E\u0442\u0434\u0430\u0432\u0430\u0442\u044C \u044D\u0442\u043E \u0432\u0440\u0435\u043C\u044F \u043D\u043E\u0432\u044B\u043C \u0437\u0430\u0434\u0430\u0447\u0430\u043C." },
-    { id: "work_blocks", kind: "work_boundary", title: "\u0417\u0430\u0449\u0438\u0442\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0431\u043B\u043E\u043A\u0438", summary: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u044F \u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0434\u043E \u0441\u0440\u043E\u043A\u0430." }
-  ];
-  var RULE_IDS = new Set(RULE_PRESETS.map((item) => item.id));
+  var WEEKLY_RULE_SLOTS = 2;
+  var ATTENTION_CAPACITY_UNITS = 3;
+  var RULE_IDS = new Set(WEEKLY_RULE_PRESETS.map((item) => item.id));
   var DOMAINS = [
     { id: "work", title: "\u0420\u0430\u0431\u043E\u0442\u0430" },
     { id: "family", title: "\u0421\u0435\u043C\u044C\u044F" },
@@ -489,12 +678,11 @@
     { id: "social", title: "\u0414\u0440\u0443\u0437\u044C\u044F \u0438 \u0443\u0432\u043B\u0435\u0447\u0435\u043D\u0438\u044F" }
   ];
   var DOMAIN_IDS = new Set(DOMAINS.map((item) => item.id));
-  var FAMILY_EVENT_IDS = /* @__PURE__ */ new Set(["mon_family_dinner", "tue_pickup_conflict", "thu_family_evening", "fri_family_plan", "sat_school_event", "sun_family_time"]);
   var clone = (value) => structuredClone(value);
   function validatePlan(plan) {
     const issues = [];
     const ids = Array.isArray(plan?.weeklyRuleIds) ? plan.weeklyRuleIds : [];
-    if (ids.length < 2) issues.push({ code: "weekly_minimum", message: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u0432\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438." });
+    if (ids.length !== WEEKLY_RULE_SLOTS) issues.push({ code: "weekly_capacity", message: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0440\u043E\u0432\u043D\u043E \u0434\u0432\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B: \u0442\u0440\u0435\u0442\u044C\u044F \u043D\u0435 \u043F\u043E\u043C\u0435\u0449\u0430\u0435\u0442\u0441\u044F \u0432 \u0451\u043C\u043A\u043E\u0441\u0442\u044C \u043D\u0435\u0434\u0435\u043B\u0438." });
     if (new Set(ids).size !== ids.length) issues.push({ code: "weekly_duplicate", message: "\u041E\u0434\u043D\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u043D\u0435\u0434\u0435\u043B\u0438 \u0432\u044B\u0431\u0440\u0430\u043D\u043E \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437." });
     if (ids.some((id) => !RULE_IDS.has(id))) issues.push({ code: "weekly_unknown", message: "\u0412 \u043F\u043B\u0430\u043D\u0435 \u0435\u0441\u0442\u044C \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u043D\u0435\u0434\u0435\u043B\u0438." });
     if (!DOMAIN_IDS.has(plan?.mainGoal)) issues.push({ code: "main_unknown", message: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441 \u043C\u0435\u0441\u044F\u0446\u0430." });
@@ -545,8 +733,18 @@
     return {
       valid: issues.length === 0,
       issues,
-      weeklyRules: RULE_PRESETS.map((item) => ({ ...item, selected: selected.has(item.id) })),
+      weeklyRules: WEEKLY_RULE_PRESETS.map((item) => ({ ...item, selected: selected.has(item.id) })),
       monthlyGoals: DOMAINS.map((item) => ({ ...item })),
+      capacity: {
+        weekly: { totalSlots: WEEKLY_RULE_SLOTS, allocatedSlots: selected.size, remainingSlots: Math.max(0, WEEKLY_RULE_SLOTS - selected.size) },
+        attention: {
+          totalUnits: ATTENTION_CAPACITY_UNITS,
+          allocatedUnits: plan.mainGoal === plan.supportingGoal ? 2 : ATTENTION_CAPACITY_UNITS,
+          unallocatedUnits: plan.mainGoal === plan.supportingGoal ? 1 : 0,
+          mainUnits: 2,
+          supportingUnits: plan.mainGoal === plan.supportingGoal ? 0 : 1
+        }
+      },
       pressures: [
         { domain: "work", title: "\u0420\u0430\u0431\u043E\u0442\u0430", level: pressureLevel(context.deadlinePressure), reason: `${state.work.projectBacklogMin} \u043C\u0438\u043D \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B.` },
         { domain: "family", title: "\u0421\u0435\u043C\u044C\u044F", level: pressureLevel(Math.max(context.familyImbalance, hardCommitments.length ? 52 : 0)), reason: hardCommitments.length ? `\u0416\u0451\u0441\u0442\u043A\u0438\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439: ${hardCommitments.length}.` : "\u0416\u0451\u0441\u0442\u043A\u0438\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043D\u0435\u0442." },
@@ -570,7 +768,7 @@
     if (input.state.clock.stepIndex > 0) issues.push({ code: "planning_locked", message: "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438 \u0444\u0438\u043A\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438." });
     if (issues.length) throw new ReducerError("invalid_content", "planning", "planning_plan", issues.map((item) => `${item.code}:${item.message}`));
     const state = clone(input.state);
-    const weeklyRules = RULE_PRESETS.filter((item) => input.plan.weeklyRuleIds.includes(item.id)).map((item) => ({ id: item.id, kind: item.kind, enabled: true, sourceId: "planning_plan" }));
+    const weeklyRules = WEEKLY_RULE_PRESETS.filter((item) => input.plan.weeklyRuleIds.includes(item.id)).map((item) => ({ id: item.id, kind: item.kind, enabled: true, sourceId: "planning_plan" }));
     const monthlyPriorities = DOMAINS.map((item) => ({ domain: item.id, level: item.id === input.plan.mainGoal ? 2 : item.id === input.plan.supportingGoal ? 1 : 0 }));
     if (canonicalJson(state.weeklyRules) === canonicalJson(weeklyRules) && canonicalJson(state.monthlyPriorities) === canonicalJson(monthlyPriorities)) {
       throw new ReducerError("invalid_content", "planning", "planning_plan", ["no_op:plan already confirmed"]);
@@ -586,65 +784,70 @@
     validateState(state);
     return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
   }
-  function actionPlanningDomains(action2) {
-    const domains = /* @__PURE__ */ new Set();
-    if (action2.domains.includes("work")) domains.add("work");
-    if (action2.domains.includes("family")) domains.add("family");
-    if (action2.domains.includes("social")) domains.add("social");
-    if (action2.domains.some((item) => item === "state" || item === "food" || item === "movement")) domains.add("recovery");
-    return [...domains];
-  }
-  function getPlanningAdjustment(state, action2, eventId, effectiveTimeMin) {
+  function getPlanningAdjustment(state, action2, _eventId, effectiveTimeMin, eventTags = []) {
     if (!state.causalJournal.some((entry) => entry.sourceId === "planning_plan")) return { delta: { timeMin: 0, moneyRub: 0, effortScore: 0, riskScore: 0, optionPressure: 0 }, signals: [], inputPaths: [] };
     const signals = [];
     const delta = { timeMin: 0, moneyRub: 0, effortScore: 0, riskScore: 0, optionPressure: 0 };
     const inputPaths = /* @__PURE__ */ new Set();
-    const domains = actionPlanningDomains(action2);
     const priorities = new Map(state.monthlyPriorities.map((item) => [item.domain, item.level]));
-    for (const domain of domains) {
-      const level = priorities.get(domain);
-      if (level === 2) {
-        signals.push({ kind: "supports_main_goal", sourceId: domain, reason: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043F\u043E\u0434 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B\u0430 \u0446\u0435\u043D\u0443 \u044D\u0442\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F." });
-        delta.effortScore -= 4;
-        delta.optionPressure -= 5;
-        inputPaths.add("monthlyPriorities");
-      } else if (level === 1) {
-        signals.push({ kind: "supports_supporting_goal", sourceId: domain, reason: "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0438\u0439 \u0444\u043E\u043A\u0443\u0441 \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B \u0446\u0435\u043D\u0443 \u044D\u0442\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F." });
-        delta.effortScore -= 2;
-        delta.optionPressure -= 2;
-        inputPaths.add("monthlyPriorities");
-      }
+    const highestPriority = action2.priorityAlignment.supports.reduce((highest, domain) => Math.max(highest, priorities.get(domain) ?? 0), 0);
+    const priorityDomain = action2.priorityAlignment.supports.find((domain) => priorities.get(domain) === highestPriority);
+    if (highestPriority === 2 && priorityDomain) {
+      signals.push({ kind: "supports_main_goal", sourceId: priorityDomain, reason: "\u0414\u0432\u0435 \u0438\u0437 \u0442\u0440\u0451\u0445 \u0435\u0434\u0438\u043D\u0438\u0446 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u044F \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u043E\u0442\u0434\u0430\u043D\u044B \u0433\u043B\u0430\u0432\u043D\u043E\u043C\u0443 \u0444\u043E\u043A\u0443\u0441\u0443.", inputPath: `planningCapacity.attention.${priorityDomain}` });
+      delta.effortScore -= 4;
+      delta.optionPressure -= 5;
+      inputPaths.add("monthlyPriorities");
+    } else if (highestPriority === 1 && priorityDomain) {
+      signals.push({ kind: "supports_supporting_goal", sourceId: priorityDomain, reason: "\u041E\u0434\u043D\u0430 \u0438\u0437 \u0442\u0440\u0451\u0445 \u0435\u0434\u0438\u043D\u0438\u0446 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u044F \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u043E\u0442\u0434\u0430\u043D\u0430 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0435\u043C\u0443 \u0444\u043E\u043A\u0443\u0441\u0443.", inputPath: `planningCapacity.attention.${priorityDomain}` });
+      delta.effortScore -= 2;
+      delta.optionPressure -= 2;
+      inputPaths.add("monthlyPriorities");
+    }
+    const conflictingPriority = action2.priorityAlignment.conflicts.find((domain) => (priorities.get(domain) ?? 0) > 0);
+    if (conflictingPriority) {
+      signals.push({ kind: "conflicts_unfunded_goal", sourceId: conflictingPriority, reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0437\u0430\u0431\u0438\u0440\u0430\u0435\u0442 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u0443 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0444\u043E\u043A\u0443\u0441\u0430 \u0438 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430.", inputPath: `planningCapacity.attention.${conflictingPriority}` });
+      delta.riskScore += priorities.get(conflictingPriority) === 2 ? 6 : 3;
+      delta.optionPressure += priorities.get(conflictingPriority) === 2 ? 8 : 4;
+      inputPaths.add("monthlyPriorities");
     }
     const enabled = new Set(state.weeklyRules.filter((item) => item.enabled).map((item) => item.id));
     const workAction = action2.domains.includes("work");
-    if (enabled.has("work_blocks") && workAction && state.clock.minuteOfDay < 1080) {
-      signals.push({ kind: "supports_weekly_rule", sourceId: "work_blocks", reason: "\u0417\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B \u0432\u0440\u0435\u043C\u044F \u0438 \u0443\u0441\u0438\u043B\u0438\u0435." });
-      delta.timeMin -= 10;
+    const inWorkWindow = eventTags.includes("planned_work_window");
+    if (enabled.has("work_blocks") && workAction && inWorkWindow) {
+      signals.push({ kind: "supports_weekly_rule", sourceId: "work_blocks", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043F\u043E\u043F\u0430\u043B\u043E \u0432 \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u043E\u043A\u043D\u043E.", inputPath: "planningCapacity.ruleSlots.work_blocks" });
       delta.effortScore -= 4;
+      delta.optionPressure -= 3;
       inputPaths.add("weeklyRules");
     }
-    if (enabled.has("family_anchor") && action2.domains.includes("family")) {
-      signals.push({ kind: "supports_weekly_rule", sourceId: "family_anchor", reason: "\u0421\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u0431\u044B\u043B\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E \u0437\u0430\u0440\u0430\u043D\u0435\u0435." });
-      delta.timeMin -= 5;
+    if (enabled.has("work_blocks") && !workAction && inWorkWindow) {
+      signals.push({ kind: "conflicts_weekly_rule", sourceId: "work_blocks", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u043E\u043A\u043D\u043E.", inputPath: "planningCapacity.ruleSlots.work_blocks" });
+      delta.riskScore += 4;
+      delta.optionPressure += 10;
+      inputPaths.add("weeklyRules");
+    }
+    const inFamilyWindow = eventTags.includes("family_anchor_window");
+    if (enabled.has("family_anchor") && action2.domains.includes("family") && inFamilyWindow) {
+      signals.push({ kind: "supports_weekly_rule", sourceId: "family_anchor", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u043E\u0435 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043E\u043A\u043D\u043E.", inputPath: "planningCapacity.ruleSlots.family_anchor" });
       delta.effortScore -= 3;
+      delta.optionPressure -= 3;
       inputPaths.add("weeklyRules");
     }
-    const isEveningRecovery = state.clock.minuteOfDay >= 1080 || action2.id === "wind_down_early";
+    const isEveningRecovery = eventTags.includes("sleep_boundary_window");
     if (enabled.has("protect_sleep") && isEveningRecovery && action2.domains.some((item) => item === "state" || item === "movement") && !workAction) {
-      signals.push({ kind: "supports_weekly_rule", sourceId: "protect_sleep", reason: "\u0412\u0435\u0447\u0435\u0440\u043D\u044F\u044F \u0433\u0440\u0430\u043D\u0438\u0446\u0430 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B\u0430 \u0446\u0435\u043D\u0443 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F." });
+      signals.push({ kind: "supports_weekly_rule", sourceId: "protect_sleep", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E.", inputPath: "planningCapacity.ruleSlots.protect_sleep" });
       delta.effortScore -= 3;
       delta.optionPressure -= 4;
       inputPaths.add("weeklyRules");
     }
     if (enabled.has("protect_sleep") && (action2.id === "work_late" || workAction && state.clock.minuteOfDay + effectiveTimeMin > 1200)) {
-      signals.push({ kind: "conflicts_weekly_rule", sourceId: "protect_sleep", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0437\u0430\u0445\u043E\u0434\u0438\u0442 \u0432 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E." });
+      signals.push({ kind: "conflicts_weekly_rule", sourceId: "protect_sleep", reason: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0437\u0430\u0445\u043E\u0434\u0438\u0442 \u0432 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E.", inputPath: "planningCapacity.ruleSlots.protect_sleep" });
       delta.timeMin += 10;
       delta.riskScore += 12;
       delta.optionPressure += 16;
       inputPaths.add("weeklyRules");
     }
-    if (enabled.has("family_anchor") && workAction && FAMILY_EVENT_IDS.has(eventId)) {
-      signals.push({ kind: "conflicts_weekly_rule", sourceId: "family_anchor", reason: "\u0420\u0430\u0431\u043E\u0442\u0430 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442\u0441\u044F \u0441 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0439 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C\u044E." });
+    if (enabled.has("family_anchor") && workAction && inFamilyWindow) {
+      signals.push({ kind: "conflicts_weekly_rule", sourceId: "family_anchor", reason: "\u0420\u0430\u0431\u043E\u0442\u0430 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442\u0441\u044F \u0441 \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0439 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C\u044E.", inputPath: "planningCapacity.ruleSlots.family_anchor" });
       delta.riskScore += 10;
       delta.optionPressure += 15;
       inputPaths.add("weeklyRules");
@@ -749,14 +952,14 @@
         if (item.fallbackMoneyRub !== void 0) {
           moneyRub += item.fallbackMoneyRub;
           consequencePreview.push(`\u0411\u0430\u0437\u043E\u0432\u044B\u0439 \u0437\u0430\u043F\u0430\u0441 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F: \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u0430\u044F \u043F\u043E\u043A\u0443\u043F\u043A\u0430 \u0437\u0430 ${item.fallbackMoneyRub} \u20BD`);
-          geometryReasons.push({ reason: "\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u043D\u0430 \u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430", inputPaths: [`economy.foodPortions.${item.category}`] });
+          geometryReasons.push({ reason: "\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u043D\u0430 \u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430", inputPaths: [`economy.foodPortions.${item.category}`], evidence: getRuleEvidence("re_financial_pressure_choice") });
         } else {
           available = false;
           unavailableReasons.push(`insufficient_${item.category}`);
         }
       }
       for (const rule of action2.geometryRules) if (evaluateCondition(state, rule.when, context)) {
-        geometryReasons.push({ reason: rule.reason, inputPaths: conditionPaths(rule.when) });
+        geometryReasons.push({ reason: rule.reason, inputPaths: conditionPaths(rule.when), evidence: getRuleEvidence(rule.ruleEvidenceId) });
         if (rule.delta.available === false) {
           available = false;
           unavailableReasons.push(rule.reason);
@@ -768,13 +971,13 @@
         optionPressure += rule.delta.optionPressure ?? 0;
         if (rule.delta.preview) consequencePreview.push(rule.delta.preview);
       }
-      const baseTime = Math.max(0, Math.round(effectiveTimeMin)), planning = getPlanningAdjustment(state, action2, eventId, baseTime), planningSignals = planning.signals;
+      const baseTime = Math.max(0, Math.round(effectiveTimeMin)), planning = getPlanningAdjustment(state, action2, eventId, baseTime, event.tags), planningSignals = planning.signals;
       effectiveTimeMin += planning.delta.timeMin;
       moneyRub += planning.delta.moneyRub;
       effortScore += planning.delta.effortScore;
       riskScore += planning.delta.riskScore;
       optionPressure += planning.delta.optionPressure;
-      for (const signal of planningSignals) geometryReasons.push({ reason: signal.reason, inputPaths: [signal.kind.includes("weekly_rule") ? "weeklyRules" : "monthlyPriorities"] });
+      for (const signal of planningSignals) geometryReasons.push({ reason: signal.reason, inputPaths: [signal.inputPath], evidence: getRuleEvidence("re_planning_capacity_tradeoff") });
       if (state.economy.cashRub < moneyRub) {
         available = false;
         unavailableReasons.push("insufficient_cash");
@@ -782,7 +985,14 @@
       context.optionPressureByActionId[actionId] = clamp(optionPressure);
       const normalizedTime = Math.max(0, Math.round(effectiveTimeMin));
       const normalizedEffort = clamp(effortScore), normalizedRisk = clamp(riskScore);
-      return { actionId, available, unavailableReasons, effectiveTimeMin: normalizedTime, moneyRub: Math.max(0, Math.round(moneyRub)), effort: action2.cost.effort, effortScore: normalizedEffort, effortLevel: effortLevel(normalizedEffort), risk: riskLabel(normalizedRisk), riskScore: normalizedRisk, optionPressure: clamp(optionPressure), consequencePreview, geometryReasons, utility: action2.qaUtility, stabilizes: action2.stabilizes, planningSignals };
+      const conditional = action2.conditionalEffects.filter((item) => evaluateCondition(state, item.when, context));
+      const effectReason = (effect) => "reason" in effect && typeof effect.reason === "string" ? effect.reason : "";
+      const immediate = [...new Set(action2.immediateEffects.map(effectReason).filter(Boolean))].slice(0, 2);
+      const delayed = [...new Set(action2.scheduledEffects.flatMap((item) => item.effects.map(effectReason)).filter(Boolean))].slice(0, 1);
+      const conditionalCopy = [...new Set(conditional.map((item) => item.explanation))];
+      const reasonCodes = [...new Set(unavailableReasons)];
+      const messages = [...new Set(reasonCodes.map(unavailableMessage))].filter((message) => message !== "\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0443\u0436\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430." || !reasonCodes.some((code) => code.startsWith("insufficient_")));
+      return { actionId, available, unavailableReasons: reasonCodes, unavailableMessages: messages, effectiveTimeMin: normalizedTime, moneyRub: Math.max(0, Math.round(moneyRub)), effort: action2.cost.effort, effortScore: normalizedEffort, effortLevel: effortLevel(normalizedEffort), risk: riskLabel(normalizedRisk), riskScore: normalizedRisk, optionPressure: clamp(optionPressure), consequencePreview, consequences: { immediate, delayed, conditional: conditionalCopy }, geometryReasons, evidence: getRuleEvidence(action2.ruleEvidenceId), utility: action2.qaUtility, stabilizes: action2.stabilizes, planningSignals };
     });
   }
   function syncBacklog(state) {
@@ -1264,35 +1474,249 @@
   }
 
   // ../../packages/assemble-day-engine/src/campaign.ts
-  function signed(value) {
-    return `${value > 0 ? "+" : ""}${Math.round(value)}`;
+  var DAY_NAMES = ["\u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A", "\u0432\u0442\u043E\u0440\u043D\u0438\u043A", "\u0441\u0440\u0435\u0434\u0443", "\u0447\u0435\u0442\u0432\u0435\u0440\u0433", "\u043F\u044F\u0442\u043D\u0438\u0446\u0443", "\u0441\u0443\u0431\u0431\u043E\u0442\u0443", "\u0432\u043E\u0441\u043A\u0440\u0435\u0441\u0435\u043D\u044C\u0435"];
+  var DAY_TITLES = ["\u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A", "\u0412\u0442\u043E\u0440\u043D\u0438\u043A", "\u0421\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440\u0433", "\u041F\u044F\u0442\u043D\u0438\u0446\u0430", "\u0421\u0443\u0431\u0431\u043E\u0442\u0430", "\u0412\u043E\u0441\u043A\u0440\u0435\u0441\u0435\u043D\u044C\u0435"];
+  var PATH_LABELS = [
+    [/^vitals\.energy$/, "\u0437\u0430\u043F\u0430\u0441 \u0441\u0438\u043B"],
+    [/^vitals\.mood$/, "\u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435"],
+    [/^vitals\.tension$/, "\u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435"],
+    [/^vitals\.hunger$/, "\u0433\u043E\u043B\u043E\u0434"],
+    [/^work\.(tasks|projectBacklogMin)/, "\u043E\u0431\u044A\u0451\u043C \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B"],
+    [/^family\.friction$/, "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435"],
+    [/^family\./, "\u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F"],
+    [/^economy\.foodPortions\./, "\u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0439 \u0437\u0430\u043F\u0430\u0441 \u0435\u0434\u044B"],
+    [/^economy\./, "\u0444\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u044B\u0439 \u0437\u0430\u043F\u0430\u0441"],
+    [/^accumulators\.sleepDebtMin$/, "\u0434\u0435\u0444\u0438\u0446\u0438\u0442 \u0441\u043D\u0430"],
+    [/^accumulators\.satietyWindowMin$/, "\u0437\u0430\u043F\u0430\u0441 \u0441\u044B\u0442\u043E\u0441\u0442\u0438"],
+    [/^accumulators\./, "\u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438"],
+    [/^commitments/, "\u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438"],
+    [/^character\./, "\u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0430"]
+  ];
+  function formatTime(minutes) {
+    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  }
+  function qualitative(value, gender = "masculine") {
+    const level = getCharacterPresentationLevel(value);
+    return {
+      masculine: { high: "\u0432\u044B\u0441\u043E\u043A\u0438\u0439", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u044B\u0439", low: "\u043D\u0438\u0437\u043A\u0438\u0439" },
+      feminine: { high: "\u0432\u044B\u0441\u043E\u043A\u0430\u044F", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u0430\u044F", low: "\u043D\u0438\u0437\u043A\u0430\u044F" },
+      neuter: { high: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435", low: "\u043D\u0438\u0437\u043A\u043E\u0435" }
+    }[gender][level];
+  }
+  function pathLabel(path) {
+    return PATH_LABELS.find(([pattern]) => pattern.test(path))?.[1] || "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F";
+  }
+  function meaningful(entries) {
+    return entries.filter((entry) => !/^(clock|scenarioCursor|eventLedger|rng|eventCooldownUntilDay|decisionGeometry|eventTrigger|activeEventId)/.test(entry.resultPath));
+  }
+  function changeDirection(entry) {
+    if (typeof entry.before === "number" && typeof entry.after === "number") {
+      if (entry.after === entry.before) return "\u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0441\u044F";
+      const label = pathLabel(entry.resultPath);
+      const plural = /отношения|договорённости/.test(label);
+      const feminine = /потребность/.test(label);
+      const neuter = /настроение|напряжение/.test(label);
+      if (plural) return entry.after > entry.before ? "\u0443\u0441\u0438\u043B\u0438\u043B\u0438\u0441\u044C" : "\u043E\u0441\u043B\u0430\u0431\u043B\u0438";
+      if (feminine) return entry.after > entry.before ? "\u0432\u044B\u0440\u043E\u0441\u043B\u0430" : "\u0441\u043D\u0438\u0437\u0438\u043B\u0430\u0441\u044C";
+      if (neuter) return entry.after > entry.before ? "\u0432\u044B\u0440\u043E\u0441\u043B\u043E" : "\u0441\u043D\u0438\u0437\u0438\u043B\u043E\u0441\u044C";
+      return entry.after > entry.before ? "\u0432\u044B\u0440\u043E\u0441" : "\u0441\u043D\u0438\u0437\u0438\u043B\u0441\u044F";
+    }
+    if (entry.after === "done") return "\u0437\u0430\u043A\u0440\u044B\u0442";
+    if (entry.after === "resolved") return "\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u044B";
+    if (entry.after === "broken") return "\u043D\u0430\u0440\u0443\u0448\u0435\u043D\u044B";
+    return "\u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0438\u0441\u044C";
+  }
+  function primaryEntry(entries, registries2) {
+    const useful = meaningful(entries);
+    const actionDriven = registries2 ? useful.filter((entry) => Boolean(registries2.actions[entry.sourceId])) : useful;
+    const score = (entry) => {
+      if (/^commitments|^work\.tasks\..*\.status/.test(entry.resultPath)) return 100;
+      if (/^work\.(tasks|projectBacklogMin)/.test(entry.resultPath)) return 90;
+      if (/^family\./.test(entry.resultPath)) return 80;
+      if (/^character\.|^scheduledEffects/.test(entry.resultPath)) return 70;
+      if (/^economy\./.test(entry.resultPath)) return 60;
+      if (/^vitals\.(energy|mood|tension)/.test(entry.resultPath)) return 50;
+      if (/^accumulators\.sleepDebtMin/.test(entry.resultPath)) return 40;
+      return 0;
+    };
+    return actionDriven.map((entry, index) => ({ entry, index, score: score(entry) })).sort((left, right) => right.score - left.score || left.index - right.index)[0]?.entry || useful[0];
+  }
+  function sourceTitle(entry, registries2) {
+    return registries2.actions[entry.sourceId]?.copy.label || registries2.events[entry.sourceId]?.copy.title || "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u0435\u0440\u0438\u043E\u0434\u0430";
+  }
+  function openThreads(state) {
+    const task = state.work.tasks.find((item) => item.id === "project_delivery");
+    const items = task?.status !== "done" ? [`\u041F\u0440\u043E\u0435\u043A\u0442 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442: ${task?.remainingMin ?? state.work.projectBacklogMin} \u043C\u0438\u043D \u0440\u0430\u0431\u043E\u0442\u044B.`] : [];
+    for (const item of state.commitments.filter((entry) => entry.status === "open" || entry.status === "renegotiated")) {
+      const owner = item.domain === "family" ? "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C" : item.domain === "work" ? "\u0420\u0430\u0431\u043E\u0447\u0430\u044F \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C" : "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C";
+      items.push(`${owner} \u043D\u0430 ${DAY_NAMES[item.dueDayIndex] || `\u0434\u0435\u043D\u044C ${item.dueDayIndex + 1}`} \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439.`);
+    }
+    return items;
+  }
+  function getCampaignBrief(state, registries2) {
+    const initial = createInitialState(state.rng.seed);
+    const task = initial.work.tasks.find((item) => item.id === "project_delivery");
+    const commitments = initial.commitments.filter((item) => item.hard);
+    const income = initial.economy.expectedIncome.filter((item) => item.status === "expected").reduce((sum, item) => sum + item.amountRub, 0);
+    const obligations = initial.economy.obligations.filter((item) => item.status === "scheduled").reduce((sum, item) => sum + item.amountRub, 0);
+    return {
+      mission: {
+        title: "\u0421\u0434\u0430\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442 \u0438 \u043D\u0435 \u043F\u043E\u0442\u0435\u0440\u044F\u0442\u044C \u043E\u043F\u043E\u0440\u044B \u043D\u0435\u0434\u0435\u043B\u0438",
+        summary: `${task.remainingMin} \u043C\u0438\u043D \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0443\u0436\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u043A ${DAY_NAMES[task.dueDayIndex]} ${formatTime(task.dueMinuteOfDay)}.`
+      },
+      stakes: [
+        { id: "commitments", title: "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438", summary: `\u0416\u0451\u0441\u0442\u043A\u0438\u0445 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u0432 \u043D\u0435\u0434\u0435\u043B\u0435: ${commitments.length}.` },
+        { id: "finance", title: "\u0424\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u0430\u044F \u0433\u0440\u0430\u043D\u0438\u0446\u0430", summary: `${initial.economy.cashRub.toLocaleString("ru-RU")} \u20BD \u0441\u0435\u0439\u0447\u0430\u0441, ${income.toLocaleString("ru-RU")} \u20BD \u043E\u0436\u0438\u0434\u0430\u0435\u0442\u0441\u044F \u0438 ${obligations.toLocaleString("ru-RU")} \u20BD \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u043F\u043B\u0430\u0442\u0435\u0436\u0430 \u0432\u043F\u0435\u0440\u0435\u0434\u0438.` },
+        { id: "recovery", title: "\u0417\u0430\u043F\u0430\u0441 \u0441\u0438\u043B", summary: "\u0420\u0430\u0431\u043E\u0442\u0430, \u0441\u0435\u043C\u044C\u044F \u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u043D\u043A\u0443\u0440\u0438\u0440\u0443\u044E\u0442 \u0437\u0430 \u043E\u0434\u043D\u0438 \u0438 \u0442\u0435 \u0436\u0435 \u043E\u043A\u043D\u0430." }
+      ],
+      choiceSpace: `${registries2.slots.length} \u0440\u0430\u0437\u0432\u0438\u043B\u043E\u043A, \u0434\u0432\u0435 \u043D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0438 \u0434\u0432\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u0444\u043E\u043A\u0443\u0441\u0430. \u0415\u0434\u0438\u043D\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0433\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0433\u043E \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0430 \u043D\u0435\u0442.`
+    };
+  }
+  function getStepSummary(input) {
+    const entries = meaningful(input.output.journalEntries);
+    const actionEntries = entries.filter((entry) => entry.sourceId === input.output.appliedAction.actionId);
+    const immediateMechanisms = new Set(input.registries.actions[input.output.appliedAction.actionId]?.immediateEffects.map((effect) => "reason" in effect ? effect.reason : "").filter(Boolean) || []);
+    const immediateEntries = actionEntries.filter((entry) => immediateMechanisms.has(entry.mechanism));
+    const immediateUserEffects = immediateEntries.some((entry) => !entry.resultPath.startsWith("character.")) ? immediateEntries.filter((entry) => !entry.resultPath.startsWith("character.")) : immediateEntries;
+    const primary = primaryEntry(immediateUserEffects, input.registries) || primaryEntry(actionEntries.filter((entry) => !/^(цена усилия|расход |денежная цена действия)/.test(entry.mechanism)), input.registries) || primaryEntry(entries, input.registries);
+    const carried = entries.find((entry) => /commitments|scheduledEffects|work\.tasks|economy\.obligations|accumulators|character\./.test(entry.resultPath));
+    const result = primary ? `${pathLabel(primary.resultPath)} ${changeDirection(primary)}` : "\u0437\u0430\u043C\u0435\u0442\u043D\u043E\u0433\u043E \u043D\u0435\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043D\u0435\u0442";
+    return {
+      dayIndex: input.before.clock.dayIndex,
+      eventTitle: input.eventTitle,
+      actionLabel: input.actionLabel,
+      mainChange: primary ? `\u0413\u043B\u0430\u0432\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435: ${result}.` : "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u043E \u0431\u0435\u0437 \u0437\u0430\u043C\u0435\u0442\u043D\u043E\u0439 \u043D\u0435\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u044B.",
+      causalLink: primary ? `${input.eventTitle} \u2192 ${input.actionLabel} \u2192 ${primary.mechanism} \u2192 ${result}.` : `${input.eventTitle} \u2192 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0443\u0447\u0442\u0435\u043D\u043E \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C \u0448\u0430\u0433\u0435.`,
+      carryover: carried ? `\u0414\u0430\u043B\u044C\u0448\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442: ${pathLabel(carried.resultPath)}.` : "\u0414\u0430\u043B\u044C\u0448\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u044E\u0442 \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0435\u0441\u0443\u0440\u0441\u044B."
+    };
+  }
+  function getPeriodBoundaries(before, after, registries2) {
+    if (after.scenarioCursor !== before.scenarioCursor + 1) return [];
+    const completedSlot = registries2.slots[before.scenarioCursor];
+    if (!completedSlot) return [];
+    const nextSlot = registries2.slots[after.scenarioCursor];
+    const closesDay = !nextSlot || nextSlot.dayIndex > completedSlot.dayIndex;
+    if (!closesDay) return [];
+    const day = {
+      id: `day:${completedSlot.dayIndex}`,
+      kind: "day",
+      completedDayIndex: completedSlot.dayIndex,
+      nextDayIndex: nextSlot?.dayIndex ?? null,
+      afterStepIndex: after.clock.stepIndex
+    };
+    if (nextSlot) return [day];
+    return [day, { id: "week:0", kind: "week", completedDayIndex: completedSlot.dayIndex, nextDayIndex: null, afterStepIndex: after.clock.stepIndex }];
+  }
+  function dayEntries(state, dayIndex, registries2) {
+    const indices = registries2.slots.map((slot, index) => slot.dayIndex === dayIndex ? index + 1 : -1).filter((index) => index > 0);
+    if (!indices.length) return [];
+    const from = Math.min(...indices), to = Math.max(...indices);
+    return state.causalJournal.filter((entry) => entry.stepIndex >= from && entry.stepIndex <= to);
+  }
+  function weeklyRuleResults(state) {
+    const lateWork = state.causalJournal.filter((entry) => entry.sourceId === "work_late" && entry.resultPath === "vitals.energy").length;
+    const brokenFamily = state.commitments.filter((item) => item.domain === "family" && item.status === "broken").length;
+    const task = state.work.tasks.find((item) => item.id === "project_delivery");
+    return state.weeklyRules.filter((item) => item.enabled && WEEKLY_RULE_PRESETS.some((preset) => preset.id === item.id)).map((item) => {
+      const id = item.id;
+      const title = WEEKLY_RULE_PRESETS.find((preset) => preset.id === id)?.title || id;
+      if (id === "protect_sleep") return { id, title, direction: lateWork === 0 ? "kept" : lateWork <= 2 ? "traded" : "strained", summary: lateWork === 0 ? "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u0435 \u0432\u044B\u0442\u0435\u0441\u043D\u0438\u043B\u0430 \u0432\u0435\u0447\u0435\u0440\u043D\u044E\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443." : `\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0432\u044B\u0431\u0440\u0430\u043D\u0430 ${lateWork} \u0440\u0430\u0437: \u0433\u0440\u0430\u043D\u0438\u0446\u0430 \u043F\u043E\u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043B\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430.` };
+      if (id === "family_anchor") return { id, title, direction: brokenFamily === 0 ? "kept" : brokenFamily === 1 ? "traded" : "strained", summary: brokenFamily === 0 ? "\u0416\u0451\u0441\u0442\u043A\u0438\u0435 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438 \u043D\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u044B." : `\u041D\u0430\u0440\u0443\u0448\u0435\u043D\u043E \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439: ${brokenFamily}.` };
+      return { id, title, direction: task?.status === "done" ? "kept" : (task?.remainingMin ?? 999) < 210 ? "traded" : "strained", summary: task?.status === "done" ? "\u041F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u043A\u0440\u044B\u0442 \u0432 \u043F\u0440\u0435\u0434\u0435\u043B\u0430\u0445 \u043D\u0435\u0434\u0435\u043B\u0438." : `\u041F\u0440\u043E\u0435\u043A\u0442 \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442: ${task?.remainingMin ?? state.work.projectBacklogMin} \u043C\u0438\u043D \u0440\u0430\u0431\u043E\u0442\u044B.` };
+    });
+  }
+  function getPeriodSummary(state, boundary, registries2) {
+    if (boundary.kind === "week") {
+      const outcome = getCampaignOutcome(state);
+      const resolved = state.commitments.filter((item) => item.status === "resolved").length;
+      const broken = state.commitments.filter((item) => item.status === "broken").length;
+      const open = state.commitments.filter((item) => item.status === "open" || item.status === "renegotiated").length;
+      const context = computeDecisionContext(state);
+      return {
+        id: boundary.id,
+        kind: "week",
+        completedDayIndex: boundary.completedDayIndex,
+        title: "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0442\u043E\u0447\u043A\u0430 \u043D\u0435\u0434\u0435\u043B\u0438",
+        headline: "\u0418\u0442\u043E\u0433 \u0441\u0432\u0435\u0440\u044F\u0435\u0442 \u0442\u0443 \u0436\u0435 \u043C\u0438\u0441\u0441\u0438\u044E, \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0438 \u0441\u0442\u0430\u0432\u043A\u0438, \u0441 \u043A\u043E\u0442\u043E\u0440\u044B\u043C\u0438 \u043D\u0430\u0447\u0430\u043B\u0430\u0441\u044C \u043D\u0435\u0434\u0435\u043B\u044F.",
+        causalLink: "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043C\u0435\u043D\u044F\u043B\u0438 \u0446\u0435\u043D\u0443 \u0440\u0435\u0448\u0435\u043D\u0438\u0439; \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043B\u0438 \u0438\u0442\u043E\u0433 \u043F\u043E \u0447\u0435\u0442\u044B\u0440\u0451\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u043C \u043B\u0438\u043D\u0438\u044F\u043C.",
+        carryover: outcome.openThreads.length ? `${outcome.openThreads.length} \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044F\u0442 \u0434\u0430\u043B\u044C\u0448\u0435.` : "\u041E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043D\u0438\u0442\u0438 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044B.",
+        brief: getCampaignBrief(state, registries2),
+        rules: weeklyRuleResults(state),
+        commitments: { resolved, broken, open, summary: `\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E: ${resolved}; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043E: ${broken}; \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u043E: ${open}.` },
+        pressure: `\u041A \u0444\u0438\u043D\u0430\u043B\u0443 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 ${qualitative(context.deadlinePressure, "neuter")}, \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 ${qualitative(context.familyImbalance, "neuter")}, \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 ${qualitative(Math.max(context.sleepiness, 100 - state.vitals.energy, state.accumulators.recoveryNeed), "feminine")}.`,
+        axes: outcome.axes,
+        openThreads: outcome.openThreads
+      };
+    }
+    const entries = dayEntries(state, boundary.completedDayIndex, registries2);
+    const primary = primaryEntry(entries, registries2);
+    const threads = openThreads(state);
+    const result = primary ? `${pathLabel(primary.resultPath)} ${changeDirection(primary)}` : "\u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u043E\u0441\u044C \u0431\u0435\u0437 \u043A\u0440\u0443\u043F\u043D\u043E\u0433\u043E \u0441\u0434\u0432\u0438\u0433\u0430";
+    return {
+      id: boundary.id,
+      kind: "day",
+      completedDayIndex: boundary.completedDayIndex,
+      title: `\u0414\u0435\u043D\u044C \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D: ${DAY_TITLES[boundary.completedDayIndex] || boundary.completedDayIndex + 1}`,
+      headline: `${result.charAt(0).toUpperCase()}${result.slice(1)}.`,
+      causalLink: primary ? `${sourceTitle(primary, registries2)} \u2192 ${primary.mechanism} \u2192 ${result}.` : "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u0434\u043D\u044F \u043D\u0435 \u0441\u043E\u0437\u0434\u0430\u043B\u0438 \u043E\u0434\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0438\u043D\u0438\u0440\u0443\u044E\u0449\u0435\u0433\u043E \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F.",
+      carryover: threads[0] ? `\u041D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0434\u0435\u043D\u044C: ${threads[0]}` : "\u041D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044F\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u0440\u0435\u0441\u0443\u0440\u0441\u044B."
+    };
   }
   function getCharacterDevelopment(state) {
     const initial = createInitialState(state.rng.seed), items = [];
-    for (const key of Object.keys(state.character.skills)) {
-      const delta = state.character.skills[key] - initial.character.skills[key];
-      if (delta) items.push({ id: `skill:${key}`, title: { professional: "\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u043D\u0430\u0432\u044B\u043A", planning: "\u041F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435", cooking: "\u0413\u043E\u0442\u043E\u0432\u043A\u0430", physical_fitness: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0444\u043E\u0440\u043C\u0430" }[key], direction: delta > 0 ? "improved" : "weakened", summary: `${signed(delta)} \u0437\u0430 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438`, evidencePaths: [`character.skills.${key}`] });
-    }
-    for (const key of Object.keys(state.character.habits)) {
-      const delta = state.character.habits[key] - initial.character.habits[key];
-      if (delta) items.push({ id: `habit:${key}`, title: { caffeine_compensation: "\u041A\u043E\u043C\u043F\u0435\u043D\u0441\u0430\u0446\u0438\u044F \u043A\u043E\u0444\u0435\u0438\u043D\u043E\u043C", late_work: "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430", delivery: "\u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0435\u0434\u044B", short_walk: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0435 \u043F\u0440\u043E\u0433\u0443\u043B\u043A\u0438", meal_prep: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0435\u0434\u044B" }[key], direction: delta > 0 ? "improved" : "weakened", summary: `\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0438: ${signed(delta)}`, evidencePaths: [`character.habits.${key}`] });
-    }
-    for (const capability of state.character.capabilities.filter((id) => !initial.character.capabilities.includes(id))) items.push({ id: `capability:${capability}`, title: capability === "kitchen.batch_prep_familiar" ? "\u041E\u0441\u0432\u043E\u0435\u043D\u0430 \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438\u0451\u043C\u043E\u0432" : capability === "work.reciprocal_support" ? "\u041E\u0442\u043A\u0440\u044B\u0442\u0430 \u0432\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439" : capability, direction: "gained", summary: "\u041D\u043E\u0432\u0430\u044F \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044C \u043C\u0435\u043D\u044F\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0438.", evidencePaths: ["character.capabilities"] });
+    const professionalDelta = state.character.skills.professional - initial.character.skills.professional;
+    if (professionalDelta) items.push({
+      id: "skill:professional",
+      title: "\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D",
+      direction: professionalDelta > 0 ? "strengthened" : "weakened",
+      summary: professionalDelta > 0 ? "\u041F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u0443\u043A\u0440\u0435\u043F\u0438\u043B\u0430 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D: \u0431\u0443\u0434\u0443\u0449\u0438\u0439 \u0444\u043E\u043A\u0443\u0441 \u043C\u0435\u043D\u044F\u0435\u0442 \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0438\u0441\u043A \u043F\u0440\u043E\u0435\u043A\u0442\u043D\u044B\u0445 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432." : "\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D \u043E\u0441\u043B\u0430\u0431: \u0431\u0443\u0434\u0443\u0449\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u044E\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u044F.",
+      evidencePaths: ["character.skills.professional", "context.focusByTaskId.project_delivery"]
+    });
+    const cookingDelta = state.character.skills.cooking - initial.character.skills.cooking;
+    if (cookingDelta) items.push({
+      id: "skill:cooking",
+      title: "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438",
+      direction: cookingDelta > 0 ? "strengthened" : "weakened",
+      summary: cookingDelta > 0 ? "\u041F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u0430\u044F \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0443\u043A\u0440\u0435\u043F\u0438\u043B\u0430 \u043F\u043E\u0440\u044F\u0434\u043E\u043A: \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0434\u0435\u0448\u0435\u0432\u043B\u0435 \u043F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0438 \u0443\u0441\u0438\u043B\u0438\u044E, \u0430 \u0441\u0443\u0431\u0431\u043E\u0442\u043D\u0435\u0435 \u043E\u043A\u043D\u043E \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F." : "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438 \u043E\u0441\u043B\u0430\u0431: \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0441\u043D\u043E\u0432\u0430 \u0442\u0440\u0435\u0431\u0443\u044E\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0438 \u0443\u0441\u0438\u043B\u0438\u044F.",
+      evidencePaths: ["character.skills.cooking", "decisionGeometry.cook_meal_batch.character.skills.cooking", "eventTrigger.sat_meal_prep_familiar.character.skills.cooking"]
+    });
+    if (!initial.character.capabilities.includes("work.reciprocal_support") && state.character.capabilities.includes("work.reciprocal_support")) items.push({
+      id: "capability:work.reciprocal_support",
+      title: "\u0412\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439",
+      direction: "changed",
+      summary: "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043E\u0442\u043A\u0440\u044B\u043B\u0430 \u0432\u0437\u0430\u0438\u043C\u043D\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443: \u0431\u0443\u0434\u0443\u0449\u0430\u044F \u0441\u0440\u043E\u0447\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442 \u0441 \u043C\u0435\u043D\u044C\u0448\u0438\u043C \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435\u043C.",
+      evidencePaths: ["character.capabilities", "eventTrigger.fri_final_issue_with_support.character.capabilities"]
+    });
     return items;
+  }
+  function getSyntheticObservation(state) {
+    const development = getCharacterDevelopment(state);
+    const strongest = development.find((item) => item.direction === "changed") || development[0];
+    return strongest ? {
+      label: "\u0418\u0433\u0440\u043E\u0432\u043E\u0435 \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435",
+      title: strongest.title,
+      summary: strongest.summary,
+      disclaimer: "\u041D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u043C\u0443 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0443 \u044D\u0442\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u0438 \u043D\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0435 \u0434\u043D\u0435\u0432\u043D\u0438\u043A\u0430 HEYS."
+    } : {
+      label: "\u0418\u0433\u0440\u043E\u0432\u043E\u0435 \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435",
+      title: "\u0423\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D \u0435\u0449\u0451 \u043D\u0435 \u043F\u0440\u043E\u044F\u0432\u0438\u043B\u0441\u044F",
+      summary: "\u041F\u043E\u043A\u0430 \u043D\u0438 \u043E\u0434\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u043E \u0431\u0443\u0434\u0443\u0449\u0438\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0430.",
+      disclaimer: "\u041D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u0432\u044B\u043C\u044B\u0448\u043B\u0435\u043D\u043D\u043E\u043C\u0443 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0443 \u044D\u0442\u043E\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u0438 \u043D\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0435 \u0434\u043D\u0435\u0432\u043D\u0438\u043A\u0430 HEYS."
+    };
   }
   function getCampaignOutcome(state) {
     const initial = createInitialState(state.rng.seed), context = computeDecisionContext(state), task = state.work.tasks.find((item) => item.id === "project_delivery");
     const familyResolved = state.commitments.filter((item) => item.domain === "family" && item.status === "resolved").length;
     const familyBroken = state.commitments.filter((item) => item.domain === "family" && item.status === "broken").length;
     const trustDelta = state.family.partner.trust - initial.family.partner.trust;
+    const energy = qualitative(state.vitals.energy), tension = qualitative(state.vitals.tension, "neuter");
     const axes = [
-      { id: "work", title: "\u041F\u0440\u043E\u0435\u043A\u0442", direction: task?.status === "done" ? "kept" : (task?.remainingMin ?? 999) < initial.work.projectBacklogMin / 2 ? "traded" : "strained", summary: task?.status === "done" ? "\u041F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D." : `\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${task?.remainingMin ?? state.work.projectBacklogMin} \u043C\u0438\u043D \u0440\u0430\u0431\u043E\u0442\u044B.`, evidencePaths: ["work.tasks.project_delivery.status", "work.projectBacklogMin"] },
-      { id: "family", title: "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438", direction: familyBroken === 0 && trustDelta >= 0 ? "kept" : familyBroken <= 1 ? "traded" : "strained", summary: `\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E: ${familyResolved}; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043E: ${familyBroken}; \u0434\u043E\u0432\u0435\u0440\u0438\u0435 ${signed(trustDelta)}.`, evidencePaths: ["commitments", "family.partner.trust", "family.friction"] },
-      { id: "finance", title: "\u0424\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u044B\u0439 \u0437\u0430\u043F\u0430\u0441", direction: context.cashAfterNextObligationsRub >= 0 ? "kept" : state.economy.cashRub > 0 ? "traded" : "strained", summary: `\u0421\u0435\u0439\u0447\u0430\u0441 ${state.economy.cashRub.toLocaleString("ru-RU")} \u20BD; \u043F\u043E\u0441\u043B\u0435 \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0445 \u043F\u043B\u0430\u0442\u0435\u0436\u0435\u0439 ${context.cashAfterNextObligationsRub.toLocaleString("ru-RU")} \u20BD.`, evidencePaths: ["economy.cashRub", "context.cashAfterNextObligationsRub"] },
-      { id: "recovery", title: "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435", direction: state.vitals.energy >= 45 && state.vitals.tension < 60 ? "kept" : state.vitals.energy >= 25 && state.vitals.tension < 80 ? "traded" : "strained", summary: `\u042D\u043D\u0435\u0440\u0433\u0438\u044F ${Math.round(state.vitals.energy)}, \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 ${Math.round(state.vitals.tension)}, \u0434\u043E\u043B\u0433 \u0441\u043D\u0430 ${Math.round(state.accumulators.sleepDebtMin)} \u043C\u0438\u043D.`, evidencePaths: ["vitals.energy", "vitals.tension", "accumulators.sleepDebtMin"] }
+      { id: "work", title: "\u041F\u0440\u043E\u0435\u043A\u0442", direction: task?.status === "done" ? "kept" : (task?.remainingMin ?? 999) < initial.work.projectBacklogMin / 2 ? "traded" : "strained", summary: task?.status === "done" ? "\u041F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D." : `\u041F\u0440\u043E\u0435\u043A\u0442 \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442: ${task?.remainingMin ?? state.work.projectBacklogMin} \u043C\u0438\u043D \u0440\u0430\u0431\u043E\u0442\u044B.`, evidencePaths: ["work.tasks.project_delivery.status", "work.projectBacklogMin"] },
+      { id: "family", title: "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438", direction: familyBroken === 0 && trustDelta >= 0 ? "kept" : familyBroken <= 1 ? "traded" : "strained", summary: familyBroken === 0 ? `\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439: ${familyResolved}; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u044B\u0445 \u043D\u0435\u0442.` : `\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E: ${familyResolved}; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043E: ${familyBroken}.`, evidencePaths: ["commitments", "family.partner.trust", "family.friction"] },
+      { id: "finance", title: "\u0424\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u044B\u0439 \u0437\u0430\u043F\u0430\u0441", direction: context.cashAfterNextObligationsRub >= 0 ? "kept" : state.economy.cashRub > 0 ? "traded" : "strained", summary: context.cashAfterNextObligationsRub >= 0 ? `\u041F\u043E\u0441\u043B\u0435 \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0445 \u043F\u043B\u0430\u0442\u0435\u0436\u0435\u0439 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F ${context.cashAfterNextObligationsRub.toLocaleString("ru-RU")} \u20BD.` : `\u041F\u043E\u0441\u043B\u0435 \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0445 \u043F\u043B\u0430\u0442\u0435\u0436\u0435\u0439 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 ${Math.abs(context.cashAfterNextObligationsRub).toLocaleString("ru-RU")} \u20BD.`, evidencePaths: ["economy.cashRub", "context.cashAfterNextObligationsRub"] },
+      { id: "recovery", title: "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435", direction: state.vitals.energy >= 45 && state.vitals.tension < 60 ? "kept" : state.vitals.energy >= 25 && state.vitals.tension < 80 ? "traded" : "strained", summary: `\u0417\u0430\u043F\u0430\u0441 \u0441\u0438\u043B ${energy}, \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 ${tension}; \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F \u0441\u043D\u0430 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u044B \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0446\u0438\u043A\u043B.`, evidencePaths: ["vitals.energy", "vitals.tension", "accumulators.sleepDebtMin"] }
     ];
-    const openThreads = [...task?.status !== "done" ? [`\u041F\u0440\u043E\u0435\u043A\u0442: \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${task?.remainingMin ?? state.work.projectBacklogMin} \u043C\u0438\u043D.`] : [], ...state.commitments.filter((item) => item.status === "open" || item.status === "renegotiated").map((item) => `\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C ${item.id} \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439.`)];
-    return { axes, development: getCharacterDevelopment(state), openThreads };
+    return { axes, development: getCharacterDevelopment(state), openThreads: openThreads(state) };
   }
   function compareCampaignOutcomes(previous, current) {
     return current.axes.map((axis) => {
@@ -1303,8 +1727,10 @@
 
   // assemble-day/heys_assemble_day_game_v1.ts
   var STORAGE_KEY = "heys_planning_assemble_day_campaign_v1";
-  var ENVELOPE_VERSION = 1;
-  var DAY_NAMES = ["\u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A", "\u0412\u0442\u043E\u0440\u043D\u0438\u043A", "\u0421\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440\u0433", "\u041F\u044F\u0442\u043D\u0438\u0446\u0430", "\u0421\u0443\u0431\u0431\u043E\u0442\u0430", "\u0412\u043E\u0441\u043A\u0440\u0435\u0441\u0435\u043D\u044C\u0435"];
+  var ENVELOPE_VERSION = 2;
+  var CHECKPOINT_BUDGET_BYTES = 128 * 1024;
+  var UUID_RE = /\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/i;
+  var DAY_NAMES2 = ["\u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A", "\u0412\u0442\u043E\u0440\u043D\u0438\u043A", "\u0421\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440\u0433", "\u041F\u044F\u0442\u043D\u0438\u0446\u0430", "\u0421\u0443\u0431\u0431\u043E\u0442\u0430", "\u0412\u043E\u0441\u043A\u0440\u0435\u0441\u0435\u043D\u044C\u0435"];
   var WEEKLY_RULE_IDS = /* @__PURE__ */ new Set(["protect_sleep", "family_anchor", "work_blocks"]);
   var STORAGE_CONTRACT_KEYS = [
     "schemaVersion",
@@ -1316,59 +1742,7 @@
     "rngAlgorithm",
     "hashAlgorithm"
   ];
-  var EVENT_COPY = {
-    mon_breakfast: { title: "\u041D\u0430\u0447\u0430\u043B\u043E \u043D\u0435\u0434\u0435\u043B\u0438", situation: "\u0423\u0442\u0440\u043E \u0443\u0436\u0435 \u043D\u0430\u0447\u0430\u043B\u043E\u0441\u044C, \u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u043A \u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A \u043A\u043E\u043D\u043A\u0443\u0440\u0438\u0440\u0443\u044E\u0442 \u0437\u0430 \u0432\u0440\u0435\u043C\u044F." },
-    mon_commute: { title: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043A \u043F\u0435\u0440\u0432\u043E\u043C\u0443 \u0434\u0435\u043B\u0443", situation: "\u0414\u043E \u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043C\u0435\u0436\u0434\u0443 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u0432 \u043F\u0443\u0442\u0438 \u0438 \u0440\u0430\u0441\u0445\u043E\u0434\u0430\u043C\u0438." },
-    mon_scope_expansion: { title: "\u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0430\u043B \u0431\u043E\u043B\u044C\u0448\u0435", situation: "\u0412 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043E\u0431\u0430\u0432\u0438\u043B\u0438 \u043D\u043E\u0432\u044B\u0435 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u044F, \u043D\u043E \u0441\u0440\u043E\u043A \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u043F\u0440\u0435\u0436\u043D\u0438\u043C." },
-    mon_lunch_window: { title: "\u041E\u043A\u043D\u043E \u043D\u0430 \u043E\u0431\u0435\u0434", situation: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0438\u0434\u0451\u0442 \u043F\u043B\u043E\u0442\u043D\u0435\u0435 \u043F\u043B\u0430\u043D\u0430, \u0430 \u043F\u0430\u0443\u0437\u0430 \u0431\u044B\u0441\u0442\u0440\u043E \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F." },
-    mon_project_block: { title: "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A", situation: "\u041C\u043E\u0436\u043D\u043E \u0443\u0441\u043A\u043E\u0440\u0438\u0442\u044C\u0441\u044F, \u0432\u043B\u043E\u0436\u0438\u0442\u044C\u0441\u044F \u0432 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443." },
-    mon_family_dinner: { title: "\u0412\u0435\u0447\u0435\u0440\u043D\u044F\u044F \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C", situation: "\u0421\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0443\u0436\u0438\u043D \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0432 \u0442\u043E \u0436\u0435 \u0432\u0440\u0435\u043C\u044F, \u043A\u043E\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0435\u043D\u0438\u044F." },
-    tue_night_wakeup: { title: "\u041D\u043E\u0447\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430", situation: "\u041D\u043E\u0447\u044C\u044E \u0440\u0435\u0431\u0451\u043D\u043A\u0443 \u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u043B\u0430\u0441\u044C \u043F\u043E\u043C\u043E\u0449\u044C, \u0438 \u0443\u0442\u0440\u043E \u043D\u0430\u0447\u0430\u043B\u043E\u0441\u044C \u0440\u0430\u043D\u044C\u0448\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E." },
-    tue_recovery_breakfast: { title: "\u0423\u0442\u0440\u043E \u043F\u043E\u0441\u043B\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0433\u043E \u0441\u043D\u0430", situation: "\u041D\u0443\u0436\u043D\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0438\u043B\u044B \u0438 \u043D\u0435 \u043F\u043E\u0442\u0435\u0440\u044F\u0442\u044C \u0442\u0435\u043C\u043F \u043F\u0435\u0440\u0435\u0434 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u0434\u043D\u0451\u043C." },
-    tue_review_prep: { title: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043A \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0443", situation: "\u0414\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438, \u0430 \u0447\u0430\u0441\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u0430." },
-    tue_review_result: { title: "\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", situation: "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0432\u044B\u044F\u0432\u0438\u043B\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u0431\u0435\u0437 \u043F\u043E\u0442\u0435\u0440\u0438 \u0432\u0441\u0435\u0433\u043E \u0434\u043D\u044F." },
-    tue_pickup_conflict: { title: "\u041A\u0442\u043E \u0437\u0430\u0431\u0435\u0440\u0451\u0442 \u0440\u0435\u0431\u0451\u043D\u043A\u0430", situation: "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430 \u0441\u043E\u0432\u043F\u0430\u043B\u0430 \u0441 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E\u043C." },
-    tue_evening_pressure: { title: "\u041D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440", situation: "\u041F\u043E\u0441\u043B\u0435 \u043F\u043B\u043E\u0442\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u0431\u044B\u0442, \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430." },
-    wed_commute_delay: { title: "\u0417\u0430\u0434\u0435\u0440\u0436\u043A\u0430 \u0432 \u0434\u043E\u0440\u043E\u0433\u0435", situation: "\u0412\u043D\u0435\u0448\u043D\u044F\u044F \u0437\u0430\u0434\u0435\u0440\u0436\u043A\u0430 \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0430 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F \u0438 \u0443\u0441\u0438\u043B\u0438\u043B\u0430 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043D\u0430 \u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0435." },
-    wed_long_meeting: { title: "\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0437\u0430\u0442\u044F\u043D\u0443\u043B\u0430\u0441\u044C", situation: "\u0414\u043B\u0438\u043D\u043D\u0430\u044F \u0432\u0441\u0442\u0440\u0435\u0447\u0430 \u0437\u0430\u043D\u044F\u043B\u0430 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443 \u0438 \u043F\u0430\u0443\u0437\u0443." },
-    wed_late_lunch: { title: "\u041F\u043E\u0437\u0434\u043D\u0438\u0439 \u043E\u0431\u0435\u0434", situation: "\u041F\u0435\u0440\u0435\u0440\u044B\u0432 \u0441\u043D\u043E\u0432\u0430 \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0441\u044F, \u0430 \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u0437\u0430\u0434\u0430\u0447\u0438 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043C\u0430\u043B\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438." },
-    wed_school_call: { title: "\u0417\u0432\u043E\u043D\u043E\u043A \u0438\u0437 \u0448\u043A\u043E\u043B\u044B", situation: "\u041D\u0443\u0436\u043D\u043E \u0431\u044B\u0441\u0442\u0440\u043E \u0440\u0435\u0448\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \u0432 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u0434\u043D\u044F." },
-    wed_work_recovery: { title: "\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0432 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0440\u0438\u0442\u043C", situation: "\u041F\u043E\u0441\u043B\u0435 \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u0440\u044B\u0432\u0430 \u043D\u0443\u0436\u043D\u043E \u0437\u0430\u043D\u043E\u0432\u043E \u0441\u043E\u0431\u0440\u0430\u0442\u044C \u043E\u0441\u0442\u0430\u0432\u0448\u0443\u044E\u0441\u044F \u0447\u0430\u0441\u0442\u044C \u0434\u043D\u044F." },
-    wed_evening_stabilize: { title: "\u0421\u0442\u0430\u0431\u0438\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0435\u0447\u0435\u0440", situation: "\u0414\u0435\u043D\u044C \u0431\u044B\u043B \u043D\u0430\u043F\u0440\u044F\u0436\u0451\u043D\u043D\u044B\u043C; \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0432\u044B\u0431\u043E\u0440 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0441\u043E\u043D \u0438 \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u0438\u0439 \u0437\u0430\u043F\u0430\u0441 \u0441\u0438\u043B." },
-    thu_hybrid_start: { title: "\u0413\u0438\u0431\u043A\u043E\u0435 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F", situation: "\u0421\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u043E \u043D\u0430\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0431\u044B\u0442\u043E\u0432\u043E\u0439 \u0437\u0430\u043F\u0430\u0441." },
-    thu_colleague_help_debt: { title: "\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C \u043D\u0430 \u043F\u043E\u043C\u043E\u0449\u044C", situation: "\u041A\u043E\u043B\u043B\u0435\u0433\u0430 \u043F\u043E\u043C\u043E\u0433 \u0440\u0430\u043D\u044C\u0448\u0435, \u0438 \u0442\u0435\u043F\u0435\u0440\u044C \u043D\u0443\u0436\u043D\u043E \u0440\u0435\u0448\u0438\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443." },
-    thu_extra_project: { title: "\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u0430\u0441\u044C \u043D\u043E\u0432\u0430\u044F \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044C, \u043D\u043E \u043E\u043D\u0430 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438." },
-    thu_movement_plan: { title: "\u0417\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435", situation: "\u0412 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0435 \u0435\u0441\u0442\u044C \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430, \u0430 \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u0435\u0449\u0451 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u044B." },
-    thu_family_evening: { title: "\u0421\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440", situation: "\u0412\u0440\u0435\u043C\u044F \u0441 \u0431\u043B\u0438\u0437\u043A\u0438\u043C\u0438 \u0441\u043D\u043E\u0432\u0430 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442\u0441\u044F \u0441 \u0440\u0430\u0431\u043E\u0447\u0438\u043C \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435\u043C." },
-    fri_deadline_plan: { title: "\u041F\u043B\u0430\u043D \u043D\u0430 \u0434\u0435\u043D\u044C \u0441\u0434\u0430\u0447\u0438", situation: "\u0414\u043E \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043C\u0435\u0436\u0434\u0443 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E \u0438 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u043E\u0441\u0442\u044C\u044E." },
-    fri_final_issue: { title: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430", situation: "\u041F\u0435\u0440\u0435\u0434 \u0441\u0434\u0430\u0447\u0435\u0439 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0430 \u043E\u0448\u0438\u0431\u043A\u0430, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0441\u0442\u043E \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C." },
-    fri_lunch: { title: "\u041F\u0430\u0443\u0437\u0430 \u043F\u0435\u0440\u0435\u0434 \u0444\u0438\u043D\u0438\u0448\u0435\u043C", situation: "\u0414\u043E \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0430\u0441\u043E\u0432, \u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043E \u043F\u0430\u0443\u0437\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u043A\u043E\u043D\u0446\u0435\u043D\u0442\u0440\u0430\u0446\u0438\u044E." },
-    fri_submit: { title: "\u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430", situation: "\u041D\u0430\u0441\u0442\u0443\u043F\u0438\u043B \u043C\u043E\u043C\u0435\u043D\u0442 \u0441\u0434\u0430\u0447\u0438: \u0432\u0430\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0440\u0435\u0430\u043B\u0438\u0441\u0442\u0438\u0447\u043D\u044B\u0439 \u0441\u043F\u043E\u0441\u043E\u0431 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443." },
-    fri_after_submit: { title: "\u041F\u043E\u0441\u043B\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438", situation: "\u0413\u043B\u0430\u0432\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430, \u0438 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0432\u0448\u0435\u0435\u0441\u044F \u0432\u0440\u0435\u043C\u044F \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043F\u043E-\u0440\u0430\u0437\u043D\u043E\u043C\u0443." },
-    fri_family_plan: { title: "\u041F\u043B\u0430\u043D\u044B \u043D\u0430 \u0432\u0435\u0447\u0435\u0440", situation: "\u041F\u043E\u0441\u043B\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u043D\u0443\u0436\u043D\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \u0438\u043B\u0438 \u043F\u0435\u0440\u0435\u0441\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u044C." },
-    sat_school_event: { title: "\u0428\u043A\u043E\u043B\u044C\u043D\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435", situation: "\u0412\u0430\u0436\u043D\u043E\u0435 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0438 \u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435." },
-    sat_household_stock: { title: "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u043F\u0430\u0441\u044B", situation: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u044B \u0437\u0430\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u044E\u0442\u0441\u044F, \u0438 \u0432\u044B\u0431\u043E\u0440 \u0441\u0435\u0439\u0447\u0430\u0441 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0434\u043D\u0438." },
-    sat_meal_prep: { title: "\u0417\u0430\u043F\u0430\u0441 \u0435\u0434\u044B", situation: "\u0415\u0441\u0442\u044C \u043E\u043A\u043D\u043E, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0435\u0434\u0443 \u0437\u0430\u0440\u0430\u043D\u0435\u0435, \u043F\u0435\u0440\u0435\u043A\u0443\u0441\u0438\u0442\u044C \u0438\u043B\u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C\u0441\u044F." },
-    sat_social_invite: { title: "\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0441 \u0434\u0440\u0443\u0437\u044C\u044F\u043C\u0438", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u043E\u0441\u044C \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u043D\u0443\u0436\u043D\u043E \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u0442\u044C \u0441 \u0443\u0436\u0435 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F\u043C\u0438." },
-    sat_evening_close: { title: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u0441\u0443\u0431\u0431\u043E\u0442\u044B", situation: "\u0412\u0435\u0447\u0435\u0440 \u043C\u043E\u0436\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0434\u043B\u044F \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u0440\u0430\u0431\u043E\u0442\u044B." },
-    sun_recovery_start: { title: "\u0421\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0435 \u043D\u0430\u0447\u0430\u043B\u043E \u0434\u043D\u044F", situation: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043D\u0435\u0434\u0435\u043B\u0438 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0441 \u0432\u044B\u0431\u043E\u0440\u0430 \u0442\u0435\u043C\u043F\u0430 \u0438 \u0441\u043F\u043E\u0441\u043E\u0431\u0430 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C\u0441\u044F." },
-    sun_family_time: { title: "\u0412\u0440\u0435\u043C\u044F \u0441 \u0441\u0435\u043C\u044C\u0451\u0439", situation: "\u0421\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u043D\u0443\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0442\u0430\u043A, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043D\u0435 \u043B\u0435\u0433\u043B\u0430 \u043D\u0430 \u043E\u0434\u043D\u043E\u0433\u043E." },
-    sun_week_preparation: { title: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043D\u043E\u0432\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438", situation: "\u041C\u043E\u0436\u043D\u043E \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u0442\u044C \u0431\u044B\u0442\u043E\u0432\u0443\u044E \u0438\u043B\u0438 \u0440\u0430\u0431\u043E\u0447\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0434\u043D\u0435\u0439." },
-    sun_early_finish: { title: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u043D\u0435\u0434\u0435\u043B\u044E", situation: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442, \u0441 \u043A\u0430\u043A\u0438\u043C \u0437\u0430\u043F\u0430\u0441\u043E\u043C \u0441\u0438\u043B \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A." }
-  };
-  var EVENT_ACTION_COPY = {
-    mon_breakfast: {
-      eat_ready_meal: {
-        label: "\u0421\u044A\u0435\u0441\u0442\u044C \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0437\u0430\u0432\u0442\u0440\u0430\u043A",
-        summary: "\u0420\u0430\u0437\u043E\u0433\u0440\u0435\u0442\u044C \u0433\u043E\u0442\u043E\u0432\u0443\u044E \u043F\u043E\u0440\u0446\u0438\u044E: \u0443\u0442\u0440\u043E\u043C \u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u043D\u0435 \u043D\u0443\u0436\u043D\u043E."
-      },
-      cook_meal_batch: {
-        label: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0437\u0430\u0432\u0442\u0440\u0430\u043A",
-        summary: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0435\u0434\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u0438 \u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0434\u0432\u0435 \u0433\u043E\u0442\u043E\u0432\u044B\u0435 \u043F\u043E\u0440\u0446\u0438\u0438 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043F\u0440\u0438\u0451\u043C\u044B."
-      }
-    }
-  };
-  var PATH_LABELS = [
+  var PATH_LABELS2 = [
     [/^vitals\.energy$/, "\u0437\u0430\u043F\u0430\u0441 \u0441\u0438\u043B"],
     [/^vitals\.mood$/, "\u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435"],
     [/^vitals\.tension$/, "\u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435"],
@@ -1389,16 +1763,11 @@
   }
   function eventCopy(eventId) {
     const authored = registries.events[eventId]?.copy;
-    return EVENT_COPY[eventId] || (authored ? { title: authored.title, situation: authored.situation } : { title: "\u0420\u0430\u0437\u0432\u0438\u043B\u043A\u0430 \u0434\u043D\u044F", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u043E\u0441\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u0435, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u043E\u0441\u0442\u0430\u0432\u0448\u0443\u044E\u0441\u044F \u0447\u0430\u0441\u0442\u044C \u0434\u043D\u044F." });
+    return authored ? { title: authored.title, situation: authored.situation } : { title: "\u0420\u0430\u0437\u0432\u0438\u043B\u043A\u0430 \u0434\u043D\u044F", situation: "\u041F\u043E\u044F\u0432\u0438\u043B\u043E\u0441\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u0435, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u043E\u0441\u0442\u0430\u0432\u0448\u0443\u044E\u0441\u044F \u0447\u0430\u0441\u0442\u044C \u0434\u043D\u044F." };
   }
-  function formatTime(minutes) {
+  function formatTime2(minutes) {
     const safe = Math.max(0, Math.min(1439, Math.round(minutes)));
     return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
-  }
-  function qualitative(value, inverse = false) {
-    const level = value >= 67 ? "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" : value >= 38 ? "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435" : "\u043D\u0438\u0437\u043A\u043E\u0435";
-    if (!inverse) return level;
-    return level === "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" ? "\u043D\u0438\u0437\u043A\u043E\u0435" : level === "\u043D\u0438\u0437\u043A\u043E\u0435" ? "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" : "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435";
   }
   function riskLabel2(risk) {
     return { none: "\u0431\u0435\u0437 \u0437\u0430\u043C\u0435\u0442\u043D\u043E\u0433\u043E \u0440\u0438\u0441\u043A\u0430", low: "\u043D\u0438\u0437\u043A\u0438\u0439 \u0440\u0438\u0441\u043A", moderate: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u044B\u0439 \u0440\u0438\u0441\u043A", high: "\u0432\u044B\u0441\u043E\u043A\u0438\u0439 \u0440\u0438\u0441\u043A", very_high: "\u043E\u0447\u0435\u043D\u044C \u0432\u044B\u0441\u043E\u043A\u0438\u0439 \u0440\u0438\u0441\u043A" }[risk];
@@ -1406,9 +1775,15 @@
   function effortLabel(effort) {
     return { none: "\u0431\u0435\u0437 \u0443\u0441\u0438\u043B\u0438\u044F", light: "\u043B\u0451\u0433\u043A\u043E\u0435 \u0443\u0441\u0438\u043B\u0438\u0435", normal: "\u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0435 \u0443\u0441\u0438\u043B\u0438\u0435", high: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435 \u0443\u0441\u0438\u043B\u0438\u0435" }[effort];
   }
+  function outcomeDirectionLabel(direction) {
+    return { kept: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E", traded: "\u041A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441", strained: "\u041F\u043E\u0434 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435\u043C" }[direction];
+  }
+  function confidenceLabel(confidence) {
+    return { established: "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438", plausible_model: "\u043F\u0440\u0430\u0432\u0434\u043E\u043F\u043E\u0434\u043E\u0431\u043D\u0430\u044F \u0438\u0433\u0440\u043E\u0432\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C", personal_hypothesis: "\u043D\u0435\u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043D\u0430\u044F \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430" }[confidence];
+  }
   function actionCopy(eventId, actionId) {
     const action2 = registries.actions[actionId];
-    return EVENT_ACTION_COPY[eventId]?.[actionId] || {
+    return action2?.copy.contextual?.[eventId] || {
       label: action2?.copy.label || actionId,
       summary: action2?.copy.summary || ""
     };
@@ -1422,27 +1797,15 @@
       knownCost: registries.actions[offer.actionId]?.copy.knownCost || "",
       effortLabel: effortLabel(offer.effortLevel),
       riskLabel: riskLabel2(offer.risk),
-      consequenceSummary: consequenceSummary(offer.actionId)
+      consequenceSummary: [
+        offer.consequences.immediate.length ? `\u0421\u0440\u0430\u0437\u0443: ${offer.consequences.immediate.join("; ")}` : "",
+        offer.consequences.delayed.length ? `\u041F\u043E\u0437\u0436\u0435: ${offer.consequences.delayed.join("; ")}` : "",
+        offer.consequences.conditional.length ? `\u0412 \u044D\u0442\u043E\u043C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0435: ${offer.consequences.conditional.join("; ")}` : ""
+      ].filter(Boolean).join(". ")
     };
   }
-  function effectReason(effect) {
-    if (typeof effect?.reason === "string") return effect.reason;
-    if (effect?.op === "append_causal_link" && typeof effect.mechanism === "string") return effect.mechanism;
-    return "";
-  }
-  function consequenceSummary(actionId) {
-    const action2 = registries.actions[actionId];
-    if (!action2) return "";
-    const immediate = [...new Set(action2.immediateEffects.map(effectReason).filter(Boolean))].slice(0, 2);
-    const delayed = [...new Set(action2.scheduledEffects.flatMap((item) => item.effects.map(effectReason)).filter(Boolean))].slice(0, 1);
-    const parts = [
-      immediate.length ? `\u0421\u0440\u0430\u0437\u0443: ${immediate.join("; ")}` : "",
-      delayed.length ? `\u041F\u043E\u0437\u0436\u0435: ${delayed.join("; ")}` : ""
-    ].filter(Boolean);
-    return parts.join(". ");
-  }
-  function pathLabel(path) {
-    return PATH_LABELS.find(([pattern]) => pattern.test(path))?.[1] || "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F";
+  function pathLabel2(path) {
+    return PATH_LABELS2.find(([pattern]) => pattern.test(path))?.[1] || "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F";
   }
   function meaningfulEntries(entries) {
     return entries.filter((entry) => !/^(clock|scenarioCursor|eventLedger|rng|eventCooldownUntilDay)/.test(entry.resultPath));
@@ -1453,31 +1816,41 @@
       "\u0446\u0435\u043D\u0430 \u0443\u0441\u0438\u043B\u0438\u044F": "\u0437\u0430\u0442\u0440\u0430\u0442\u044B \u0443\u0441\u0438\u043B\u0438\u044F"
     }[mechanism] || mechanism;
   }
-  function summarizeStep(before, output) {
-    const entries = meaningfulEntries(output.journalEntries);
-    const actionEntries = entries.filter((entry) => entry.sourceId === output.appliedAction.actionId);
-    const immediateMechanisms = new Set(
-      registries.actions[output.appliedAction.actionId]?.immediateEffects.map(effectReason).filter(Boolean) || []
-    );
-    const immediateEntries = actionEntries.filter((entry) => immediateMechanisms.has(entry.mechanism));
-    const primary = immediateEntries.find((entry) => !/^accumulators\./.test(entry.resultPath)) || immediateEntries[0] || actionEntries.find((entry) => !/^(цена усилия|расход |денежная цена действия)/.test(entry.mechanism)) || actionEntries[0] || entries[0] || output.journalEntries[0];
-    const carried = entries.find((entry) => /commitments|weeklyRules|monthlyPriorities|scheduledEffects|work\.tasks|economy\.obligations|accumulators/.test(entry.resultPath));
-    const eventId = before.activeEventId || registries.slots[before.scenarioCursor]?.eventId || "";
-    const copy = eventCopy(eventId);
-    const chosenCopy = actionCopy(eventId, output.appliedAction.actionId);
-    return {
-      dayIndex: before.clock.dayIndex,
-      eventTitle: copy.title,
-      actionLabel: output.appliedAction ? chosenCopy.label : "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u043E",
-      mainChange: primary ? `\u0413\u043B\u0430\u0432\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435: ${pathLabel(primary.resultPath)}.` : "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u043E \u0431\u0435\u0437 \u043D\u0435\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u044B.",
-      causalLink: primary ? `${copy.title} \u2192 ${chosenCopy.label} \u2192 ${mechanismLabel(primary.mechanism)} \u2192 ${pathLabel(primary.resultPath)}.` : `${copy.title} \u2192 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0443\u0447\u0442\u0435\u043D\u043E \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C \u0448\u0430\u0433\u0435.`,
-      carryover: carried ? `\u0414\u0430\u043B\u044C\u0448\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442: ${pathLabel(carried.resultPath)}.` : "\u0414\u0430\u043B\u044C\u0448\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u044E\u0442 \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0435\u0441\u0443\u0440\u0441\u044B."
-    };
+  function containsUuid(value) {
+    try {
+      return UUID_RE.test(typeof value === "string" ? value : JSON.stringify(value));
+    } catch {
+      return true;
+    }
   }
-  function createSession(seed = `campaign-${Date.now()}`, comparisonBaseline) {
+  function createOpaqueGameSeed() {
+    const bytes = new Uint8Array(16);
+    if (window.crypto?.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+      return `ad1_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    }
+    const entropy = `${Date.now()}:${window.performance?.now?.() || 0}:${Math.random()}`;
+    return `ad1_${fnv1a64(entropy)}${fnv1a64(`${entropy}:fallback`)}`;
+  }
+  function assertGameSeed(seed) {
+    if (typeof seed !== "string" || !seed || seed.length > 128 || containsUuid(seed)) throw new Error("game seed must be opaque and UUID-free");
+  }
+  function scopeTagFor(clientId) {
+    return `scope1_${fnv1a64(`assemble-day:${clientId.trim().toLowerCase()}`)}`;
+  }
+  function comparisonBaselineFrom(value) {
+    if (value === void 0) return void 0;
+    const baseline = value;
+    if (!baseline || typeof baseline !== "object" || !baseline.outcome || typeof baseline.outcome !== "object" || typeof baseline.finalStateHash !== "string") {
+      throw new Error("invalid comparison baseline");
+    }
+    return { outcome: structuredClone(baseline.outcome), finalStateHash: baseline.finalStateHash };
+  }
+  function createSession(seed = createOpaqueGameSeed(), comparisonBaseline) {
+    assertGameSeed(seed);
     const state = createInitialState(seed);
     validateState(state);
-    return { state, lastSummary: null, revision: 0, diagnostics: { version: 1, history: "complete", decisions: [] }, ...comparisonBaseline ? { comparisonBaseline } : {} };
+    return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: "complete", decisions: [] }, ...comparisonBaseline ? { comparisonBaseline } : {} };
   }
   function diagnosticStateSnapshot(state) {
     const snapshot = structuredClone(state);
@@ -1491,7 +1864,8 @@
       throw new Error("invalid diagnostic ledger");
     }
     const decisions = structuredClone(ledger.decisions);
-    if (decisions.some((decision, index) => index > 0 && decision.revision <= decisions[index - 1].revision)) throw new Error("diagnostic revision order");
+    if (decisions.some((decision) => decision.revision <= 0 || decision.stepIndex < 0)) throw new Error("invalid diagnostic position");
+    if (decisions.some((decision, index) => decision.revision !== index + 1)) throw new Error("diagnostic revision sequence");
     if (decisions.length ? decisions.at(-1).revision !== revision : ledger.history === "complete" && revision !== 0) throw new Error("diagnostic revision mismatch");
     return { version: 1, history: ledger.history, decisions };
   }
@@ -1528,8 +1902,8 @@
       event: openEvent ? { ...eventCopy(openEvent.templateId), id: openEvent.templateId } : null,
       offers: offers.map((offer) => presentOffer(openEvent?.templateId || "", offer)),
       context: computeDecisionContext(session.state),
-      dayName: DAY_NAMES[session.state.clock.dayIndex] || `\u0414\u0435\u043D\u044C ${session.state.clock.dayIndex + 1}`,
-      timeLabel: formatTime(session.state.clock.minuteOfDay),
+      dayName: DAY_NAMES2[session.state.clock.dayIndex] || `\u0414\u0435\u043D\u044C ${session.state.clock.dayIndex + 1}`,
+      timeLabel: formatTime2(session.state.clock.minuteOfDay),
       progress: { current: Math.min(session.state.scenarioCursor + 1, registries.slots.length), total: registries.slots.length }
     };
   }
@@ -1539,51 +1913,135 @@
     const output = reduceStep({ state: session.state, openEvent, actionId }, registries);
     const revision = session.revision + 1;
     const decision = { kind: "action", revision, stepIndex: session.state.clock.stepIndex, eventId: openEvent.templateId, actionId };
-    return { ...session, state: output.state, lastSummary: summarizeStep(session.state, output), revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+    const copy = eventCopy(openEvent.templateId);
+    const chosenCopy = actionCopy(openEvent.templateId, actionId);
+    const lastStepSummary = getStepSummary({ before: session.state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
+    const periodSummaries = getPeriodBoundaries(session.state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
+    return { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
   }
   function confirmPlanning(session, plan) {
     const output = reducePlanningStep({ state: session.state, plan });
     const revision = session.revision + 1;
     const decision = { kind: "planning", revision, stepIndex: session.state.clock.stepIndex, plan: structuredClone(plan) };
-    return { ...session, state: output.state, lastSummary: session.lastSummary, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+    return { ...session, state: output.state, lastStepSummary: session.lastStepSummary, periodSummaries: session.periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  }
+  function replayDecisions(seed, diagnostics, comparisonBaseline) {
+    assertGameSeed(seed);
+    if (diagnostics.history !== "complete") throw new Error("complete decision history required");
+    let state = createInitialState(seed);
+    let lastStepSummary = null;
+    let periodSummaries = [];
+    for (const decision of diagnostics.decisions) {
+      if (decision.kind === "action") {
+        const slot = registries.slots[state.scenarioCursor];
+        if (!slot || state.activeEventId !== decision.eventId || state.clock.stepIndex !== decision.stepIndex) throw new Error(`action replay mismatch at revision ${decision.revision}`);
+        const openEvent = initialEvent(state, registries);
+        const output = reduceStep({ state, openEvent, actionId: decision.actionId }, registries);
+        const copy = eventCopy(decision.eventId);
+        const chosenCopy = actionCopy(decision.eventId, decision.actionId);
+        lastStepSummary = getStepSummary({ before: state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
+        periodSummaries = getPeriodBoundaries(state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
+        state = output.state;
+      } else {
+        if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
+        state = reducePlanningStep({ state, plan: decision.plan }).state;
+      }
+    }
+    validateState(state);
+    return {
+      state,
+      lastStepSummary,
+      periodSummaries,
+      revision: diagnostics.decisions.at(-1)?.revision || 0,
+      diagnostics: structuredClone(diagnostics),
+      ...comparisonBaseline ? { comparisonBaseline } : {}
+    };
+  }
+  function physicalStorageKey(clientId) {
+    return `heys_${clientId}_${STORAGE_KEY.replace(/^heys_/, "")}`;
+  }
+  function checkpointSizeBytes(clientId, envelope) {
+    return (physicalStorageKey(clientId).length + JSON.stringify(envelope).length) * 2;
+  }
+  function hasRawClientIdentifier(value, clientId) {
+    if (containsUuid(value)) return true;
+    try {
+      return Boolean(clientId) && JSON.stringify(value).toLowerCase().includes(clientId.toLowerCase());
+    } catch {
+      return true;
+    }
   }
   function makeEnvelope(session, clientId) {
+    assertGameSeed(session.state.rng.seed);
+    const diagnostics = diagnosticsFrom(session.diagnostics, session.revision);
+    if (diagnostics.history !== "complete" || hasRawClientIdentifier({ state: session.state, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
+      throw new Error("checkpoint contains a personal identifier or incomplete history");
+    }
+    const replayed = replayDecisions(session.state.rng.seed, diagnostics, session.comparisonBaseline);
+    if (stateHash(replayed.state) !== stateHash(session.state) || JSON.stringify(replayed.lastStepSummary) !== JSON.stringify(session.lastStepSummary) || JSON.stringify(replayed.periodSummaries) !== JSON.stringify(session.periodSummaries)) {
+      throw new Error("checkpoint decision ledger does not reproduce the session");
+    }
     return {
       envelopeVersion: ENVELOPE_VERSION,
-      clientId,
-      campaignId: session.state.campaignId,
+      scopeTag: scopeTagFor(clientId),
+      gameSeed: session.state.rng.seed,
       savedAt: (/* @__PURE__ */ new Date()).toISOString(),
       revision: session.revision,
       stateHash: stateHash(session.state),
       contract: { ...CONTRACT },
-      state: session.state,
-      lastSummary: session.lastSummary,
-      diagnostics: session.diagnostics,
+      diagnostics,
       comparisonBaseline: session.comparisonBaseline
     };
   }
-  function loadCheckpoint(store, clientId, fresh = false) {
-    if (!store?.get || !clientId) return { status: "unavailable", message: "\u041F\u0440\u043E\u0444\u0438\u043B\u044C HEYS \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u0412\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS \u0438 \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0441\u043D\u043E\u0432\u0430." };
+  function loadLegacyCheckpoint(envelope, clientId) {
+    if (!contractMatches(envelope.contract)) return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0435\u0439 \u0438\u0433\u0440\u044B. \u041D\u0430\u0447\u043D\u0438\u0442\u0435 \u043D\u043E\u0432\u0443\u044E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u044F\u0432\u043D\u043E \u0438\u043B\u0438 \u0432\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS." };
+    if (envelope.clientId !== clientId) return { status: "foreign", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 \u0434\u0440\u0443\u0433\u043E\u043C\u0443 \u043F\u0440\u043E\u0444\u0438\u043B\u044E HEYS \u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E." };
+    if (hasRawClientIdentifier({ state: envelope.state, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+      return { status: "privacy", message: "\u0421\u0442\u0430\u0440\u043E\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u0444\u0438\u043B\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439: \u043D\u0430\u0447\u043D\u0438\u0442\u0435 \u043D\u043E\u0432\u0443\u044E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u044F\u0432\u043D\u043E \u0438\u043B\u0438 \u0432\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS." };
+    }
+    try {
+      validateState(envelope.state);
+      if (!Number.isInteger(envelope.revision) || envelope.revision < 0 || envelope.campaignId !== envelope.state.campaignId || stateHash(envelope.state) !== envelope.stateHash) throw new Error("legacy checkpoint mismatch");
+      const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
+      if (diagnostics.history !== "complete") return { status: "incompatible", message: "\u0412 \u0441\u0442\u0430\u0440\u043E\u043C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0438 \u043D\u0435\u0442 \u043F\u043E\u043B\u043D\u043E\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0439 \u0434\u043B\u044F \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0433\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+      const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
+      const session = replayDecisions(envelope.state.rng.seed, diagnostics, comparisonBaseline);
+      if (stateHash(session.state) !== envelope.stateHash) throw new Error("legacy replay mismatch");
+      return { status: "ready", session };
+    } catch {
+      return { status: "corrupt", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0440\u043E\u0448\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 \u0446\u0435\u043B\u043E\u0441\u0442\u043D\u043E\u0441\u0442\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+    }
+  }
+  function loadCheckpoint(store, clientId, _fresh = false) {
+    if (!store?.getPersisted || !clientId) return { status: "unavailable", message: "\u041F\u0440\u043E\u0444\u0438\u043B\u044C HEYS \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u0412\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS \u0438 \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0441\u043D\u043E\u0432\u0430." };
+    const missing = Object.freeze({ missingCheckpoint: true });
     let value;
     try {
-      value = fresh && typeof store.getPersisted === "function" ? store.getPersisted(STORAGE_KEY, null) : store.get(STORAGE_KEY, null);
+      value = store.getPersisted(STORAGE_KEY, missing);
     } catch {
       return { status: "corrupt", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
     }
-    if (value == null) return { status: "empty" };
-    if (!value || typeof value !== "object") return { status: "corrupt", message: "\u0424\u043E\u0440\u043C\u0430\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
-    const envelope = value;
-    if (envelope.envelopeVersion !== ENVELOPE_VERSION || !contractMatches(envelope.contract)) {
+    if (value === missing) return { status: "empty" };
+    if (value == null || typeof value !== "object") return { status: "corrupt", message: "\u0424\u043E\u0440\u043C\u0430\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+    const version = value.envelopeVersion;
+    if (version === 1) return loadLegacyCheckpoint(value, clientId);
+    if (version !== ENVELOPE_VERSION) {
       return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0435\u0439 \u0438\u0433\u0440\u044B. \u041D\u0430\u0447\u043D\u0438\u0442\u0435 \u043D\u043E\u0432\u0443\u044E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u044F\u0432\u043D\u043E \u0438\u043B\u0438 \u0432\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS." };
     }
-    if (envelope.clientId !== clientId) return { status: "foreign", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 \u0434\u0440\u0443\u0433\u043E\u043C\u0443 \u043F\u0440\u043E\u0444\u0438\u043B\u044E HEYS \u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E." };
+    const envelope = value;
+    if (!contractMatches(envelope.contract)) return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0435\u0439 \u0438\u0433\u0440\u044B. \u041D\u0430\u0447\u043D\u0438\u0442\u0435 \u043D\u043E\u0432\u0443\u044E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u044F\u0432\u043D\u043E \u0438\u043B\u0438 \u0432\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS." };
+    if (envelope.scopeTag !== scopeTagFor(clientId)) return { status: "foreign", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 \u0434\u0440\u0443\u0433\u043E\u043C\u0443 \u043F\u0440\u043E\u0444\u0438\u043B\u044E HEYS \u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E." };
+    if (checkpointSizeBytes(clientId, envelope) > CHECKPOINT_BUDGET_BYTES) return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0435\u0432\u044B\u0448\u0430\u0435\u0442 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440 \u044D\u0442\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 \u0438\u0433\u0440\u044B. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+    if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+      return { status: "privacy", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u0444\u0438\u043B\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+    }
     try {
-      validateState(envelope.state);
-      if (stateHash(envelope.state) !== envelope.stateHash || !Number.isInteger(envelope.revision) || envelope.revision < envelope.state.clock.stepIndex || envelope.campaignId !== envelope.state.campaignId) {
-        throw new Error("checkpoint mismatch");
-      }
       const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
-      return { status: "ready", session: { state: envelope.state, lastSummary: envelope.lastSummary || null, revision: envelope.revision, diagnostics, ...envelope.comparisonBaseline ? { comparisonBaseline: envelope.comparisonBaseline } : {} } };
+      if (diagnostics.history !== "complete" || !Number.isInteger(envelope.revision) || envelope.revision < 0 || typeof envelope.stateHash !== "string") throw new Error("checkpoint shape mismatch");
+      const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
+      const session = replayDecisions(envelope.gameSeed, diagnostics, comparisonBaseline);
+      if (session.revision !== envelope.revision || stateHash(session.state) !== envelope.stateHash) throw new Error("checkpoint replay mismatch");
+      return { status: "ready", session };
     } catch {
       return { status: "corrupt", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0440\u043E\u0448\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 \u0446\u0435\u043B\u043E\u0441\u0442\u043D\u043E\u0441\u0442\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
     }
@@ -1685,10 +2143,13 @@
         "selected action and reducer stage hashes",
         "causal journal delta, scheduled effects, RNG and event ledger",
         "planning input, planning view and atomic planning output",
+        "engine-owned campaign brief, directional step result and idempotent period summaries",
         "persisted causal echo event, character development and multidimensional campaign outcome"
       ],
       catalog: structuredClone(registries),
       currentState: structuredClone(session.state),
+      campaignBrief: getCampaignBrief(session.state, registries),
+      currentPeriodSummaries: structuredClone(session.periodSummaries),
       derivedOutcome: getCampaignOutcome(session.state),
       comparisonBaseline: session.comparisonBaseline || null,
       recordedDecisions: structuredClone(session.diagnostics.decisions),
@@ -1719,7 +2180,7 @@
     return text.length;
   }
   function saveCheckpoint(store, clientId, session, forceNewCampaign = false) {
-    if (!store?.get || !store?.set || !clientId) return { status: "unavailable", message: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0432\u044F\u0437\u0430\u0442\u044C \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u0441 \u0442\u0435\u043A\u0443\u0449\u0438\u043C \u043F\u0440\u043E\u0444\u0438\u043B\u0435\u043C HEYS." };
+    if (!store?.getPersisted || !store?.set || !clientId) return { status: "unavailable", message: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0432\u044F\u0437\u0430\u0442\u044C \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u0441 \u0442\u0435\u043A\u0443\u0449\u0438\u043C \u043F\u0440\u043E\u0444\u0438\u043B\u0435\u043C HEYS." };
     const current = loadCheckpoint(store, clientId, true);
     if (!forceNewCampaign && current.status === "ready") {
       if (current.session.state.campaignId !== session.state.campaignId) return { status: "conflict", message: "\u0412 \u043F\u0440\u043E\u0444\u0438\u043B\u0435 \u0443\u0436\u0435 \u0435\u0441\u0442\u044C \u0434\u0440\u0443\u0433\u0430\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044F. \u041F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043D\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u043D." };
@@ -1728,24 +2189,85 @@
     } else if (!forceNewCampaign && current.status !== "empty" && current.status !== "ready") {
       return { status: "conflict", message: current.message };
     }
-    const envelope = makeEnvelope(session, clientId);
     try {
+      const envelope = makeEnvelope(session, clientId);
+      const sizeBytes = checkpointSizeBytes(clientId, envelope);
+      if (sizeBytes > CHECKPOINT_BUDGET_BYTES) {
+        return { status: "failed", message: "\u0428\u0430\u0433 \u043F\u0440\u0438\u043D\u044F\u0442, \u043D\u043E \u043A\u043E\u043C\u043F\u0430\u043A\u0442\u043D\u043E\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0435\u0432\u044B\u0441\u0438\u043B\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440. \u0421\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
+      }
       const written = store.set(STORAGE_KEY, envelope);
       if (written === false) return { status: "failed", message: "\u0428\u0430\u0433 \u043F\u0440\u0438\u043D\u044F\u0442, \u043D\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C. \u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435." };
-      return { status: "saved", envelope };
+      return { status: "saved", envelope, sizeBytes, budgetBytes: CHECKPOINT_BUDGET_BYTES };
     } catch {
       return { status: "failed", message: "\u0428\u0430\u0433 \u043F\u0440\u0438\u043D\u044F\u0442, \u043D\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C. \u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435." };
     }
   }
-  function Silhouette() {
+  var h = (...args) => window.React.createElement(...args);
+  function CharacterScene({ presentation }) {
+    const { pose, expression, load, dayPhase: dayPhase2 } = presentation.frame;
+    const recovering = pose === "recovering";
+    const headY = recovering ? 22 : pose === "depleted" ? 21 : 18;
+    const bodyY = recovering ? 28 : pose === "depleted" ? 28 : 25;
+    const mouth = expression === "bright" ? `M27 ${headY + 5}h1v1h2v-1h1` : expression === "subdued" ? `M27 ${headY + 6}h1v-1h2v1h1` : `M27 ${headY + 6}h4`;
+    const frameKey = `${pose}:${expression}:${load}:${dayPhase2}`;
     return h(
-      "span",
-      { className: "assemble-day-character__silhouette", "aria-hidden": "true" },
-      h("span", { className: "assemble-day-character__head" }),
-      h("span", { className: "assemble-day-character__body" })
+      "svg",
+      {
+        className: `assemble-day-character__scene is-${dayPhase2} is-${load}`,
+        viewBox: "0 0 56 48",
+        "aria-hidden": "true",
+        focusable: "false",
+        shapeRendering: "crispEdges",
+        "data-frame-key": frameKey,
+        "data-pose": pose,
+        "data-expression": expression,
+        "data-load": load
+      },
+      h("rect", { className: "scene-bg", x: 0, y: 0, width: 56, height: 48, rx: 2 }),
+      h("rect", { className: "scene-floor", x: 1, y: 38, width: 54, height: 9 }),
+      h("rect", { className: "scene-window", x: 35, y: 5, width: 16, height: 13 }),
+      h("path", { className: "scene-mid", d: "M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z" }),
+      h("path", { className: "scene-ink", d: "M35 5h16v2H35zm0 4h16v1H35z" }),
+      h("rect", { className: "scene-ink", x: 5, y: 25, width: 14, height: 2 }),
+      h("rect", { className: "scene-ink", x: 7, y: 27, width: 2, height: 11 }),
+      h("rect", { className: "scene-ink", x: 16, y: 27, width: 2, height: 11 }),
+      h("rect", { className: "scene-mid", x: 10, y: 21, width: 4, height: 4 }),
+      h("path", { className: "scene-ink", d: "M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z" }),
+      h("rect", { className: "scene-ink", x: 41, y: 25, width: 11, height: 13 }),
+      h("rect", { className: "scene-bg", x: 43, y: 27, width: 7, height: 3 }),
+      h("rect", { className: "scene-bg", x: 43, y: 32, width: 1, height: 4 }),
+      h("rect", { className: "scene-bg", x: 46, y: 31, width: 1, height: 5 }),
+      h("rect", { className: "scene-bg", x: 49, y: 32, width: 1, height: 4 }),
+      h("path", { className: "scene-ink", d: "M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z" }),
+      dayPhase2 === "night" && h("path", { className: "scene-highlight", d: "M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z" }),
+      load === "pressured" && h(
+        "g",
+        { className: "scene-pressure", "data-pressure-marks": "true" },
+        h("path", { d: "M22 14h1v-3h1v4h-2z" }),
+        h("path", { d: "M26 13h1V9h1v5h-2z" }),
+        h("path", { d: "M32 14h1v-3h1v4h-2z" })
+      ),
+      recovering && h(
+        "g",
+        { className: "scene-stool" },
+        h("rect", { className: "scene-ink", x: 24, y: 36, width: 10, height: 2 }),
+        h("rect", { className: "scene-ink", x: 25, y: 38, width: 2, height: 5 }),
+        h("rect", { className: "scene-ink", x: 31, y: 38, width: 2, height: 5 })
+      ),
+      h(
+        "g",
+        { className: `scene-character pose-${pose}` },
+        h("rect", { className: "scene-skin", x: 25, y: headY, width: 8, height: 8 }),
+        h("path", { className: "scene-ink", d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
+        h("rect", { className: "scene-ink", x: 27, y: headY + 3, width: 1, height: 1 }),
+        h("rect", { className: "scene-ink", x: 31, y: headY + 3, width: 1, height: 1 }),
+        h("path", { className: "scene-ink scene-mouth", d: mouth }),
+        h("rect", { className: "scene-mid", x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
+        h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
+        h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` })
+      )
     );
   }
-  var h = (...args) => window.React.createElement(...args);
   function StatusPill({ label, value, tone }) {
     return h(
       "div",
@@ -1755,24 +2277,43 @@
     );
   }
   function CharacterCard({ state }) {
+    const presentation = getCharacterPresentation(state);
     return h(
       "section",
-      { className: "assemble-day-card assemble-day-character", "aria-label": "\u041F\u0435\u0440\u0441\u043E\u043D\u0430\u0436 \u0438 \u0442\u0435\u043A\u0443\u0449\u0435\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435" },
-      h(Silhouette),
+      { className: "assemble-day-card assemble-day-character", "aria-labelledby": "assemble-day-character-title", "aria-describedby": "assemble-day-character-summary" },
+      h(CharacterScene, { presentation }),
       h(
         "div",
         { className: "assemble-day-character__copy" },
         h("span", { className: "assemble-day-eyebrow" }, "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436"),
-        h("h2", null, "\u041A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432"),
+        h("h2", { id: "assemble-day-character-title" }, "\u041A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432"),
         h("p", null, "\u041F\u0430\u0440\u0442\u043D\u0451\u0440 \u0438 \u0440\u0435\u0431\u0451\u043D\u043E\u043A 8 \u043B\u0435\u0442 \xB7 \u043D\u0435\u0434\u0435\u043B\u044F \u0434\u043E \u0441\u0434\u0430\u0447\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430")
       ),
+      h("p", { id: "assemble-day-character-summary", className: "assemble-day-sr-only", "aria-live": "polite" }, presentation.ariaSummary),
       h(
         "div",
         { className: "assemble-day-statuses" },
-        h(StatusPill, { label: "\u042D\u043D\u0435\u0440\u0433\u0438\u044F", value: qualitative(state.vitals.energy), tone: state.vitals.energy < 38 ? "warning" : "calm" }),
-        h(StatusPill, { label: "\u041D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435", value: qualitative(state.vitals.mood), tone: "neutral" }),
-        h(StatusPill, { label: "\u041D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435", value: qualitative(state.vitals.tension), tone: state.vitals.tension >= 67 ? "warning" : "neutral" })
+        ...presentation.indicators.map((item) => h(StatusPill, { key: item.id, label: item.label, value: item.value, tone: item.tone }))
+      ),
+      h(
+        "details",
+        { className: "assemble-day-character__details" },
+        h("summary", null, "\u0421\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0430"),
+        h("p", null, presentation.summary),
+        presentation.reasons.length ? h("ul", { className: "assemble-day-list" }, ...presentation.reasons.map((reason) => h("li", { key: reason.id }, h("strong", null, reason.label), h("span", null, reason.summary)))) : h("p", null, "\u0421\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0442 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0444\u0430\u043A\u0442\u043E\u0440\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u043D\u0435\u0441\u0442\u0438 \u0432 \u043F\u0435\u0440\u0432\u044B\u0439 \u0441\u043B\u043E\u0439.")
       )
+    );
+  }
+  function CampaignBriefCard({ state, compact = false }) {
+    const brief = getCampaignBrief(state, registries);
+    return h(
+      "section",
+      { className: `assemble-day-card assemble-day-brief${compact ? " is-compact" : ""}`, "aria-labelledby": compact ? void 0 : "assemble-day-brief-title" },
+      h("span", { className: "assemble-day-eyebrow" }, "\u0417\u0430\u0434\u0430\u0447\u0430 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438"),
+      h("h2", { id: compact ? void 0 : "assemble-day-brief-title" }, brief.mission.title),
+      h("p", null, brief.mission.summary),
+      h("div", { className: "assemble-day-brief__stakes" }, ...brief.stakes.map((item) => h("div", { key: item.id }, h("strong", null, item.title), h("span", null, item.summary)))),
+      h("p", { className: "assemble-day-brief__space" }, brief.choiceSpace)
     );
   }
   function DayContextStrip({ state }) {
@@ -1786,19 +2327,24 @@
         "dl",
         null,
         h("div", null, h("dt", null, "\u0414\u0435\u043D\u044C\u0433\u0438"), h("dd", null, `${state.economy.cashRub.toLocaleString("ru-RU")} \u20BD`)),
-        h("div", null, h("dt", null, "\u0411\u043B\u0438\u0436\u0430\u0439\u0448\u0435\u0435 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435"), h("dd", null, nearest ? `${nearest.domain === "family" ? "\u0421\u0435\u043C\u044C\u044F" : "\u0414\u0435\u043B\u043E"} \xB7 ${DAY_NAMES[nearest.dueDayIndex]}` : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0435\u0442")),
-        h("div", null, h("dt", null, "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435 \u043E\u043A\u043D\u043E"), h("dd", null, nextSlot ? `${DAY_NAMES[nextSlot.dayIndex]} \xB7 ${formatTime(nextSlot.minuteOfDay)}` : "\u0418\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438"))
+        h("div", null, h("dt", null, "\u0411\u043B\u0438\u0436\u0430\u0439\u0448\u0435\u0435 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435"), h("dd", null, nearest ? `${nearest.domain === "family" ? "\u0421\u0435\u043C\u044C\u044F" : "\u0414\u0435\u043B\u043E"} \xB7 ${DAY_NAMES2[nearest.dueDayIndex]}` : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0435\u0442")),
+        h("div", null, h("dt", null, "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435 \u043E\u043A\u043D\u043E"), h("dd", null, nextSlot ? `${DAY_NAMES2[nextSlot.dayIndex]} \xB7 ${formatTime2(nextSlot.minuteOfDay)}` : "\u0418\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438"))
       ),
-      h("details", null, h("summary", null, "\u0412\u0441\u044F \u043B\u0438\u043D\u0438\u044F \u0434\u043D\u044F"), h("p", null, open.length ? open.map((item) => `${DAY_NAMES[item.dueDayIndex]} ${formatTime(item.dueMinuteOfDay || 1439)} \xB7 ${item.domain}`).join(" \xB7 ") : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043D\u0435\u0442."))
+      h("details", null, h("summary", null, "\u0412\u0441\u044F \u043B\u0438\u043D\u0438\u044F \u0434\u043D\u044F"), h("p", null, open.length ? open.map((item) => `${DAY_NAMES2[item.dueDayIndex]} ${formatTime2(item.dueMinuteOfDay || 1439)} \xB7 ${item.domain}`).join(" \xB7 ") : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043D\u0435\u0442."))
     );
   }
   function ResultBeat({ summary, saveMessage, saveTone, onContinue, onRetry }) {
+    const React = window.React;
+    const headingRef = React.useRef(null);
+    React.useEffect(() => {
+      headingRef.current?.focus();
+    }, []);
     const blocked = saveTone === "error";
     return h(
       "section",
-      { className: "assemble-day-card assemble-day-result", "aria-labelledby": "assemble-day-result-title" },
+      { className: "assemble-day-card assemble-day-result", "aria-labelledby": "assemble-day-result-title", "aria-live": "polite", "aria-atomic": "true" },
       h("span", { className: "assemble-day-eyebrow" }, "\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F"),
-      h("h2", { id: "assemble-day-result-title", tabIndex: -1 }, summary.actionLabel),
+      h("h2", { id: "assemble-day-result-title", tabIndex: -1, ref: headingRef }, summary.actionLabel),
       h("p", null, summary.mainChange),
       h("p", { className: "assemble-day-summary__causal" }, summary.causalLink),
       h("p", { className: "assemble-day-summary__carry" }, summary.carryover),
@@ -1806,12 +2352,27 @@
       blocked ? h("button", { type: "button", className: "assemble-day-primary", onClick: onRetry }, "\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435") : h("button", { type: "button", className: "assemble-day-primary", onClick: onContinue }, "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C")
     );
   }
-  function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage, saveTone, resultRevision, onContinueResult, onRetrySave, onOpenPlan, onReplaySameSeed, onStartNew }) {
+  function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage, saveTone, resultRevision, onContinueResult, onRetrySave, periodSummary, onContinuePeriod, onOpenPlan, onReplaySameSeed, onStartNew }) {
+    const React = window.React;
     const view = getCampaignView(session);
-    if (resultRevision === session.revision && session.lastSummary) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
+    const availableIds = view.offers.filter((offer) => offer.available).map((offer) => offer.actionId);
+    const [focusedActionId, setFocusedActionId] = React.useState(() => selectedActionId || availableIds[0] || "");
+    React.useEffect(() => {
+      setFocusedActionId(selectedActionId || availableIds[0] || "");
+    }, [session.state.activeEventId, selectedActionId]);
+    const moveOptionFocus = (currentId, delta) => {
+      if (selectedActionId || !availableIds.length) return;
+      const current = Math.max(0, availableIds.indexOf(currentId));
+      const nextId = availableIds[(current + delta + availableIds.length) % availableIds.length];
+      setFocusedActionId(nextId);
+      window.requestAnimationFrame(() => document.querySelector(`[data-action-id="${nextId}"]`)?.focus());
+    };
+    if (resultRevision === session.revision && session.lastStepSummary) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
+    if (periodSummary?.kind === "day") return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod }));
+    if (periodSummary?.kind === "week") return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
     if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
     const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === "planning_plan");
-    if (!planConfirmed) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h("section", { className: "assemble-day-card assemble-day-contract-start" }, h("span", { className: "assemble-day-eyebrow" }, "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438"), h("h2", null, "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435, \u0447\u0442\u043E \u0431\u0443\u0434\u0435\u0442\u0435 \u0437\u0430\u0449\u0438\u0449\u0430\u0442\u044C"), h("p", null, "\u0414\u0432\u0430 \u0438\u043B\u0438 \u0442\u0440\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0438 \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u044B \u0438\u0437\u043C\u0435\u043D\u044F\u0442 \u0432\u0440\u0435\u043C\u044F, \u0443\u0441\u0438\u043B\u0438\u0435 \u0438 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0430\u0445."), h("button", { type: "button", className: "assemble-day-primary", onClick: onOpenPlan }, "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438")));
+    if (!planConfirmed) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(CampaignBriefCard, { state: session.state }), h("section", { className: "assemble-day-card assemble-day-contract-start" }, h("span", { className: "assemble-day-eyebrow" }, "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438"), h("h2", null, "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435, \u0447\u0442\u043E \u0431\u0443\u0434\u0435\u0442\u0435 \u0437\u0430\u0449\u0438\u0449\u0430\u0442\u044C"), h("p", null, "\u0414\u0432\u0435 \u043D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0438 \u0434\u0432\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u0444\u043E\u043A\u0443\u0441\u0430 \u0438\u0437\u043C\u0435\u043D\u044F\u0442 \u0443\u0441\u0438\u043B\u0438\u0435, \u0440\u0438\u0441\u043A \u0438 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0430\u0445."), h("button", { type: "button", className: "assemble-day-primary", onClick: onOpenPlan }, "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438")));
     const choiceLocked = Boolean(selectedActionId);
     return h(
       "div",
@@ -1836,39 +2397,78 @@
         h("p", {
           className: `assemble-day-choice-rule${choiceLocked ? " is-locked" : ""}`,
           role: "status"
-        }, choiceLocked ? "\u0412\u0430\u0440\u0438\u0430\u043D\u0442 \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F \u0438 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435." : "\u041F\u0435\u0440\u0432\u043E\u0435 \u043D\u0430\u0436\u0430\u0442\u0438\u0435 \u0444\u0438\u043A\u0441\u0438\u0440\u0443\u0435\u0442 \u0432\u0430\u0440\u0438\u0430\u043D\u0442. \u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0434\u0435\u043D\u044C\u0433\u0438 \u0438 \u0440\u0438\u0441\u043A \u2014 \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u043E\u0441\u043B\u0435 \u043D\u0430\u0436\u0430\u0442\u0438\u044F \u043D\u0435\u043B\u044C\u0437\u044F."),
+        }, choiceLocked ? "\u0412\u0430\u0440\u0438\u0430\u043D\u0442 \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F \u0438 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435." : "\u041F\u0435\u0440\u0432\u043E\u0435 \u043D\u0430\u0436\u0430\u0442\u0438\u0435, \u041F\u0440\u043E\u0431\u0435\u043B \u0438\u043B\u0438 Enter \u0444\u0438\u043A\u0441\u0438\u0440\u0443\u0435\u0442 \u0432\u0430\u0440\u0438\u0430\u043D\u0442. \u0421\u0442\u0440\u0435\u043B\u043A\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0430\u044E\u0442 \u0444\u043E\u043A\u0443\u0441: \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0434\u0435\u043D\u044C\u0433\u0438 \u0438 \u0440\u0438\u0441\u043A."),
         h(
           "div",
           { className: "assemble-day-options", role: "radiogroup", "aria-label": "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0440\u0435\u0448\u0435\u043D\u0438\u044F" },
           ...view.offers.map((offer) => {
             const selected = selectedActionId === offer.actionId;
             const lockedByAnother = choiceLocked && !selected;
+            const titleId = `assemble-day-option-${offer.actionId}-title`;
+            const descriptionId = `assemble-day-option-${offer.actionId}-description`;
+            const inactive = !offer.available || lockedByAnother;
+            const reasons = [...new Set((offer.geometryReasons || []).map((item) => item.reason))];
+            const evidence2 = [...new Map([offer.evidence, ...(offer.geometryReasons || []).map((item) => item.evidence)].filter(Boolean).map((item) => [item.id, item])).values()];
             return h(
-              "button",
-              {
-                key: offer.actionId,
-                type: "button",
-                role: "radio",
-                "aria-checked": selected,
-                disabled: !offer.available || lockedByAnother,
-                className: `assemble-day-option${selected ? " is-selected" : ""}${lockedByAnother ? " is-locked" : ""}`,
-                onClick: () => onSelect(offer.actionId),
-                "data-action-id": offer.actionId
-              },
-              h("span", { className: "assemble-day-option__title" }, offer.label),
-              offer.summary.trim().toLocaleLowerCase("ru-RU") !== offer.label.trim().toLocaleLowerCase("ru-RU") && h("span", { className: "assemble-day-option__summary" }, offer.summary),
+              "div",
+              { key: offer.actionId, className: "assemble-day-option-wrap", role: "none" },
               h(
-                "span",
-                { className: "assemble-day-option__meta" },
-                h("span", null, `${offer.effectiveTimeMin} \u043C\u0438\u043D`),
-                offer.moneyRub > 0 && h("span", null, `${offer.moneyRub.toLocaleString("ru-RU")} \u20BD`),
-                h("span", null, offer.effortLabel),
-                h("span", null, offer.riskLabel)
+                "button",
+                {
+                  type: "button",
+                  role: "radio",
+                  "aria-checked": selected,
+                  "aria-disabled": inactive || void 0,
+                  "aria-labelledby": titleId,
+                  "aria-describedby": descriptionId,
+                  tabIndex: inactive ? -1 : selected || !choiceLocked && focusedActionId === offer.actionId ? 0 : -1,
+                  className: `assemble-day-option${selected ? " is-selected" : ""}${lockedByAnother ? " is-locked" : ""}`,
+                  onClick: () => {
+                    if (!inactive) onSelect(offer.actionId);
+                  },
+                  onKeyDown: (event) => {
+                    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                      event.preventDefault();
+                      moveOptionFocus(offer.actionId, 1);
+                    }
+                    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                      event.preventDefault();
+                      moveOptionFocus(offer.actionId, -1);
+                    }
+                    if ((event.key === "Enter" || event.key === " ") && !inactive) {
+                      event.preventDefault();
+                      onSelect(offer.actionId);
+                    }
+                  },
+                  "data-action-id": offer.actionId
+                },
+                h("span", { id: titleId, className: "assemble-day-option__title" }, offer.label),
+                selected && h("span", { className: "assemble-day-option__selected", "aria-hidden": "true" }, "\u0412\u044B\u0431\u0440\u0430\u043D\u043E"),
+                h(
+                  "span",
+                  { id: descriptionId, className: "assemble-day-option__body" },
+                  offer.summary.trim().toLocaleLowerCase("ru-RU") !== offer.label.trim().toLocaleLowerCase("ru-RU") && h("span", { className: "assemble-day-option__summary" }, offer.summary),
+                  h(
+                    "span",
+                    { className: "assemble-day-option__meta" },
+                    h("span", null, `${offer.effectiveTimeMin} \u043C\u0438\u043D`),
+                    offer.moneyRub > 0 && h("span", null, `${offer.moneyRub.toLocaleString("ru-RU")} \u20BD`),
+                    h("span", null, offer.effortLabel),
+                    h("span", null, offer.riskLabel)
+                  ),
+                  (offer.consequencePreview?.[0] || offer.consequenceSummary) && h("span", { className: "assemble-day-option__known" }, [offer.consequenceSummary, ...offer.consequencePreview].filter(Boolean).join(". ")),
+                  reasons.length > 0 && h("span", { className: "assemble-day-option__factors" }, `\u0423\u0447\u0442\u0435\u043D\u043E: ${reasons.join("; ")}.`),
+                  offer.planningSignals?.length > 0 && h("span", { className: "assemble-day-option__signals" }, ...offer.planningSignals.map((signal) => h("span", { key: `${signal.kind}:${signal.sourceId}`, className: signal.kind.startsWith("conflicts_") ? "is-conflict" : "is-support" }, `${signal.kind.startsWith("conflicts_") ? "\u041A\u043E\u043D\u0444\u043B\u0438\u043A\u0442" : "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442"}: ${signal.reason}`))),
+                  lockedByAnother && h("span", { className: "assemble-day-option__locked" }, "\u0417\u0430\u043A\u0440\u044B\u0442\u043E \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0432\u044B\u0431\u043E\u0440\u0430"),
+                  !offer.available && h("span", { className: "assemble-day-option__unavailable" }, offer.unavailableMessages[0] || "\u0421\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E")
+                )
               ),
-              (offer.consequencePreview?.[0] || offer.consequenceSummary) && h("span", { className: "assemble-day-option__known" }, [offer.consequenceSummary, ...offer.consequencePreview].filter(Boolean).join(". ")),
-              selected && offer.planningSignals?.length > 0 && h("span", { className: "assemble-day-option__signals" }, ...offer.planningSignals.map((signal) => h("span", { key: `${signal.kind}:${signal.sourceId}`, className: signal.kind === "conflicts_weekly_rule" ? "is-conflict" : "is-support" }, signal.reason))),
-              lockedByAnother && h("span", { className: "assemble-day-option__locked" }, "\u0417\u0430\u043A\u0440\u044B\u0442\u043E \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0432\u044B\u0431\u043E\u0440\u0430"),
-              !offer.available && h("span", { className: "assemble-day-option__unavailable" }, offer.unavailableReasons[0] || "\u0421\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E")
+              h(
+                "details",
+                { className: "assemble-day-option__evidence" },
+                h("summary", null, "\u041F\u043E\u0447\u0435\u043C\u0443 \u0438\u0433\u0440\u0430 \u0442\u0430\u043A \u043E\u0446\u0435\u043D\u0438\u0432\u0430\u0435\u0442 \u0432\u0430\u0440\u0438\u0430\u043D\u0442"),
+                h("ul", { className: "assemble-day-list" }, ...evidence2.map((item) => h("li", { key: item.id }, h("strong", null, item.sourceLabel), h("span", null, confidenceLabel(item.confidence)), h("small", null, item.transferLimit))))
+              )
             );
           })
         ),
@@ -1882,21 +2482,40 @@
       )
     );
   }
+  function DaySummaryCard({ summary, onContinue }) {
+    return h(
+      "section",
+      { className: "assemble-day-card assemble-day-summary" },
+      h("span", { className: "assemble-day-eyebrow" }, "\u0418\u0442\u043E\u0433 \u0434\u043D\u044F"),
+      h("h2", null, summary.title),
+      h("p", null, summary.headline),
+      h("p", { className: "assemble-day-summary__causal" }, summary.causalLink),
+      h("p", { className: "assemble-day-summary__carry" }, summary.carryover),
+      h("button", { type: "button", className: "assemble-day-primary", onClick: onContinue }, summary.completedDayIndex < 6 ? "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0434\u043D\u044E" : "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438")
+    );
+  }
   function WeekScreen({ session, plan, onToggleRule, onContinue }) {
     const planning = getPlanningCampaignView(session, plan);
     const locked = session.state.clock.stepIndex > 0;
     const currentDay = session.state.clock.dayIndex;
-    const dayProgress = DAY_NAMES.map((name, index) => ({ name, status: index < currentDay ? "\u0413\u043E\u0442\u043E\u0432\u043E" : index === currentDay ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "\u0412\u043F\u0435\u0440\u0435\u0434\u0438" }));
+    const dayProgress = DAY_NAMES2.map((name, index) => ({ name, status: index < currentDay ? "\u0413\u043E\u0442\u043E\u0432\u043E" : index === currentDay ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "\u0412\u043F\u0435\u0440\u0435\u0434\u0438" }));
     const commitments = session.state.commitments.filter((item) => item.status === "open").slice(0, 3);
     return h(
       "div",
       { className: "assemble-day-screen" },
+      !locked && h(CampaignBriefCard, { state: session.state, compact: true }),
       h(
         "section",
         { className: "assemble-day-card assemble-day-plan-card" },
         h("span", { className: "assemble-day-eyebrow" }, "\u041F\u043B\u0430\u043D \u043D\u0435\u0434\u0435\u043B\u0438"),
         h("h2", null, "\u041A\u0430\u043A\u0438\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"),
-        h("p", null, locked ? "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0443\u0436\u0435 \u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0438 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438. \u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u0437\u0430\u0434\u043D\u0438\u043C \u0447\u0438\u0441\u043B\u043E\u043C \u043D\u0435\u043B\u044C\u0437\u044F." : "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u0432\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430. \u0426\u0435\u043D\u0430 \u043F\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043D\u0438\u0439 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u0430 \u0434\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u043D\u0430."),
+        h("p", null, locked ? "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0443\u0436\u0435 \u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0438 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438. \u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u0437\u0430\u0434\u043D\u0438\u043C \u0447\u0438\u0441\u043B\u043E\u043C \u043D\u0435\u043B\u044C\u0437\u044F." : "\u0401\u043C\u043A\u043E\u0441\u0442\u0438 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0430 \u0434\u0432\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0438\u0437 \u0442\u0440\u0451\u0445. \u0426\u0435\u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043E\u0442\u043A\u0430\u0437\u0430 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u0430 \u0434\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u043D\u0430."),
+        h(
+          "div",
+          { className: "assemble-day-capacity", role: "status", "aria-live": "polite" },
+          h("div", null, h("span", null, "\u0417\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u044B\u0435 \u043E\u043A\u043D\u0430"), h("strong", null, `${planning.capacity.weekly.allocatedSlots}/${planning.capacity.weekly.totalSlots}`)),
+          h("p", null, planning.capacity.weekly.remainingSlots ? `\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043C\u0435\u0441\u0442: ${planning.capacity.weekly.remainingSlots}.` : "\u0401\u043C\u043A\u043E\u0441\u0442\u044C \u0437\u0430\u043F\u043E\u043B\u043D\u0435\u043D\u0430. \u0427\u0442\u043E\u0431\u044B \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0440\u0443\u0433\u0443\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443, \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0435 \u043E\u0434\u043D\u043E \u043C\u0435\u0441\u0442\u043E.")
+        ),
         h(
           "div",
           { className: "assemble-day-rule-grid", role: "group", "aria-label": "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438" },
@@ -1905,10 +2524,10 @@
             type: "button",
             role: "checkbox",
             "aria-checked": rule.selected,
-            disabled: locked,
+            disabled: locked || !rule.selected && planning.capacity.weekly.remainingSlots === 0,
             className: `assemble-day-rule${rule.selected ? " is-selected" : ""}`,
             onClick: () => onToggleRule(rule.id)
-          }, h("strong", null, rule.title), h("span", null, rule.summary)))
+          }, h("strong", null, rule.title), rule.selected && h("span", { className: "assemble-day-rule__selected", "aria-hidden": "true" }, "\u0412\u044B\u0431\u0440\u0430\u043D\u043E"), h("span", null, rule.summary), h("small", null, `\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A: ${rule.source}`), h("small", null, `\u0426\u0435\u043D\u0430: ${rule.tradeoff}`)))
         ),
         h(
           "div",
@@ -1921,24 +2540,46 @@
           planning.conflicts.length ? planning.conflicts.map((item) => h("div", { key: item.id, className: `assemble-day-conflict is-${item.severity}` }, h("strong", null, item.title), h("span", null, item.reason))) : h("p", null, "\u042F\u0432\u043D\u044B\u0445 \u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442\u043E\u0432 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u0438\u043B \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0442.")
         ),
         planning.issues.find((item) => item.code.startsWith("weekly_")) && h("p", { className: "assemble-day-alert", role: "status" }, planning.issues.find((item) => item.code.startsWith("weekly_"))?.message),
-        h("button", { type: "button", className: "assemble-day-primary", disabled: plan.weeklyRuleIds.length < 2, onClick: onContinue }, "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u043A \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u0430\u043C")
+        h("button", { type: "button", className: "assemble-day-primary", disabled: plan.weeklyRuleIds.length !== planning.capacity.weekly.totalSlots, onClick: onContinue }, "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u043A \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u0430\u043C")
       ),
       h(
         "details",
         { className: "assemble-day-card assemble-day-details" },
         h("summary", null, "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043D\u0435\u0434\u0435\u043B\u044E \u0438 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438"),
-        h("p", null, `\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0442\u043E\u0447\u043A\u0430: ${DAY_NAMES[currentDay] || "\u043D\u0435\u0434\u0435\u043B\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"}.`),
+        h("p", null, `\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0442\u043E\u0447\u043A\u0430: ${DAY_NAMES2[currentDay] || "\u043D\u0435\u0434\u0435\u043B\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"}.`),
         h("div", { className: "assemble-day-week-strip" }, ...dayProgress.map((day) => h("div", { key: day.name, className: `assemble-day-week-day is-${day.status.toLowerCase()}` }, h("strong", null, day.name.slice(0, 2)), h("span", null, day.status)))),
-        commitments.length ? h("ul", { className: "assemble-day-list" }, ...commitments.map((item) => h("li", { key: item.id }, `${item.domain === "family" ? "\u0421\u0435\u043C\u044C\u044F" : "\u0414\u0435\u043B\u043E"} \xB7 \u0434\u043E ${DAY_NAMES[item.dueDayIndex] || `\u0434\u043D\u044F ${item.dueDayIndex + 1}`}`))) : h("p", null, "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0442.")
+        commitments.length ? h("ul", { className: "assemble-day-list" }, ...commitments.map((item) => h("li", { key: item.id }, `${item.domain === "family" ? "\u0421\u0435\u043C\u044C\u044F" : "\u0414\u0435\u043B\u043E"} \xB7 \u0434\u043E ${DAY_NAMES2[item.dueDayIndex] || `\u0434\u043D\u044F ${item.dueDayIndex + 1}`}`))) : h("p", null, "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0442.")
       )
     );
   }
   function GoalGroup({ label, value, goals, onChange, disabled = false }) {
     return h(
       "fieldset",
-      { className: "assemble-day-goals" },
+      { className: "assemble-day-goals", role: "radiogroup", "aria-label": label },
       h("legend", null, label),
-      ...goals.map((goal) => h("button", { key: goal.id, type: "button", role: "radio", "aria-checked": value === goal.id, disabled, className: value === goal.id ? "is-selected" : "", onClick: () => onChange(goal.id) }, goal.title))
+      ...goals.map((goal, index) => {
+        const selected = value === goal.id;
+        return h("button", {
+          key: goal.id,
+          type: "button",
+          role: "radio",
+          "aria-checked": selected,
+          disabled,
+          tabIndex: selected ? 0 : -1,
+          className: selected ? "is-selected" : "",
+          onClick: () => onChange(goal.id),
+          "data-goal-id": goal.id,
+          onKeyDown: (event) => {
+            if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
+            event.preventDefault();
+            const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+            const next = goals[(index + delta + goals.length) % goals.length];
+            onChange(next.id);
+            const group = event.currentTarget.closest('[role="radiogroup"]');
+            window.requestAnimationFrame(() => group?.querySelector(`[data-goal-id="${next.id}"]`)?.focus());
+          }
+        }, h("span", null, goal.title), selected && h("small", { "aria-hidden": "true" }, "\u0412\u044B\u0431\u0440\u0430\u043D\u043E"));
+      })
     );
   }
   function MoneyValue({ label, value, warning = false }) {
@@ -1947,7 +2588,7 @@
   function MonthScreen({ session, plan, onGoalChange, onConfirm, onGoWeek, onGoDay, planMessage, planTone }) {
     const planning = getPlanningCampaignView(session, plan);
     const confirmed = planningMatchesState(session.state, plan);
-    const weeklyReady = plan.weeklyRuleIds.length >= 2;
+    const weeklyReady = plan.weeklyRuleIds.length === planning.capacity.weekly.totalSlots;
     const locked = session.state.clock.stepIndex > 0;
     return h(
       "div",
@@ -1955,15 +2596,21 @@
       h(
         "section",
         { className: "assemble-day-card assemble-day-plan-card" },
-        h("span", { className: "assemble-day-eyebrow" }, "\u041F\u043B\u0430\u043D \u043C\u0435\u0441\u044F\u0446\u0430"),
+        h("span", { className: "assemble-day-eyebrow" }, "\u0413\u043E\u0440\u0438\u0437\u043E\u043D\u0442 \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"),
         h("h2", null, "\u0427\u0442\u043E \u0437\u0430\u0449\u0438\u0449\u0430\u0442\u044C \u0432 \u043F\u0435\u0440\u0432\u0443\u044E \u043E\u0447\u0435\u0440\u0435\u0434\u044C"),
-        h("p", null, "\u0413\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442, \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0438\u0439 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043D\u0435 \u043F\u043E\u0442\u0435\u0440\u044F\u0442\u044C \u0432\u0442\u043E\u0440\u0443\u044E \u0432\u0430\u0436\u043D\u0443\u044E \u043E\u0431\u043B\u0430\u0441\u0442\u044C."),
+        h("p", null, "\u0422\u0440\u0438 \u0435\u0434\u0438\u043D\u0438\u0446\u044B \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u044F \u0434\u0435\u043B\u044F\u0442\u0441\u044F \u0437\u0430\u0440\u0430\u043D\u0435\u0435: \u0434\u0432\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441, \u043E\u0434\u043D\u0443 \u2014 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0438\u0439. \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u0431\u0435\u0437 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0437\u0435\u0440\u0432\u0430."),
         !weeklyReady && h("div", { className: "assemble-day-conflict is-critical", role: "alert" }, h("strong", null, "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438"), h("span", null, "\u0414\u043B\u044F \u0446\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u043F\u043B\u0430\u043D\u0430 \u043D\u0443\u0436\u043D\u044B \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u0432\u0435 \u043D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B."), h("button", { type: "button", className: "assemble-day-secondary", onClick: onGoWeek }, "\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043D\u0435\u0434\u0435\u043B\u0435")),
         h(
           "div",
           { className: "assemble-day-goal-grid" },
           h(GoalGroup, { label: "\u0413\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441", value: plan.mainGoal, goals: planning.monthlyGoals, disabled: locked, onChange: (id) => onGoalChange("mainGoal", id) }),
           h(GoalGroup, { label: "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0438\u0439 \u0444\u043E\u043A\u0443\u0441", value: plan.supportingGoal, goals: planning.monthlyGoals, disabled: locked, onChange: (id) => onGoalChange("supportingGoal", id) })
+        ),
+        h(
+          "div",
+          { className: "assemble-day-capacity assemble-day-capacity--attention", role: "status", "aria-live": "polite" },
+          h("div", null, h("span", null, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043E"), h("strong", null, `${planning.capacity.attention.allocatedUnits}/${planning.capacity.attention.totalUnits}`)),
+          h("p", null, `${planning.capacity.attention.mainUnits} \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u0444\u043E\u043A\u0443\u0441, ${planning.capacity.attention.supportingUnits} \u2014 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0449\u0438\u0439. \u0421\u043C\u0435\u043D\u0430 \u0444\u043E\u043A\u0443\u0441\u0430 \u043C\u0435\u043D\u044F\u0435\u0442, \u043A\u0430\u043A\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0443 \u0438 \u043A\u0430\u043A\u0438\u0435 \u0432\u0441\u0442\u0443\u043F\u0430\u044E\u0442 \u0441 \u043D\u0438\u043C \u0432 \u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442.`)
         ),
         planning.issues.find((item) => item.code === "goals_equal") && h("p", { className: "assemble-day-alert", role: "alert" }, planning.issues.find((item) => item.code === "goals_equal")?.message),
         h(
@@ -1997,23 +2644,27 @@
         h("h3", null, "\u0412\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438"),
         h("ul", { className: "assemble-day-list" }, ...planning.opportunities.map((item) => h("li", { key: item.id }, h("strong", null, item.title), h("span", null, item.reason)))),
         h("h3", null, "\u0412\u0430\u0436\u043D\u044B\u0435 \u0434\u0430\u0442\u044B"),
-        h("ul", { className: "assemble-day-list" }, ...planning.importantDates.map((item) => h("li", { key: item.id }, `${DAY_NAMES[item.dayIndex] || `\u0414\u0435\u043D\u044C ${item.dayIndex + 1}`} \xB7 ${item.title}`))),
+        h("ul", { className: "assemble-day-list" }, ...planning.importantDates.map((item) => h("li", { key: item.id }, `${DAY_NAMES2[item.dayIndex] || `\u0414\u0435\u043D\u044C ${item.dayIndex + 1}`} \xB7 ${item.title}`))),
         h("p", null, "\u042D\u0442\u043E \u043C\u043E\u0434\u0435\u043B\u044C \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438, \u0430 \u043D\u0435 \u043E\u0446\u0435\u043D\u043A\u0430 \u0432\u0430\u0448\u0435\u0439 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438.")
       )
     );
   }
   function journalGroups(session) {
+    const development = getCharacterDevelopment(session.state);
     return session.diagnostics.decisions.slice().reverse().map((decision) => {
       const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === "action" ? decision.stepIndex + 1 : decision.stepIndex) && (decision.kind === "planning" ? entry.sourceId === "planning_plan" : entry.sourceId !== "planning_plan"));
       const title = decision.kind === "planning" ? "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438" : `${eventCopy(decision.eventId).title} \u2192 ${actionCopy(decision.eventId, decision.actionId).label}`;
       const primary = entries.find((entry) => !/decisionGeometry|activeEventId/.test(entry.resultPath)) || entries[0];
       const carry = entries.find((entry) => /scheduledEffects|commitments|character|family|work|weeklyRules|monthlyPriorities/.test(entry.resultPath));
-      return { id: `decision:${decision.revision}`, title, primary, carry, entries };
+      const carriedDevelopment = carry && development.find((item) => item.evidencePaths.includes(carry.resultPath));
+      const evidence2 = decision.kind === "planning" ? getRuleEvidence("re_planning_capacity_tradeoff") : getRuleEvidence(registries.actions[decision.actionId].ruleEvidenceId);
+      return { id: `decision:${decision.revision}`, title, primary, carry, carrySummary: carriedDevelopment?.summary, evidence: evidence2, entries };
     }).filter((group) => group.entries.length);
   }
   function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }) {
     const outcome = getCampaignOutcome(session.state);
     const development = getCharacterDevelopment(session.state);
+    const observation = getSyntheticObservation(session.state);
     const groups = journalGroups(session);
     const traceComplete = session.diagnostics.history === "complete";
     return h(
@@ -2027,14 +2678,22 @@
         h(
           "div",
           { className: "assemble-day-life-grid" },
-          ...outcome.axes.map((axis) => h("div", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("span", null, axis.summary)))
+          ...outcome.axes.map((axis) => h("div", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("small", null, outcomeDirectionLabel(axis.direction)), h("span", null, axis.summary)))
         )
+      ),
+      h(
+        "section",
+        { className: "assemble-day-card assemble-day-observation", "aria-label": "\u0418\u0433\u0440\u043E\u0432\u043E\u0435 \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435" },
+        h("span", { className: "assemble-day-eyebrow" }, observation.label),
+        h("h2", null, observation.title),
+        h("p", null, observation.summary),
+        h("small", null, observation.disclaimer)
       ),
       h(
         "section",
         { className: "assemble-day-card assemble-day-development" },
         h("span", { className: "assemble-day-eyebrow" }, "\u0420\u0430\u0437\u0432\u0438\u0442\u0438\u0435 \u0431\u0435\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0443\u0440\u043E\u0432\u043D\u044F"),
-        h("h2", null, development.length ? "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u043E\u0441\u0442\u0430\u0432\u0438\u043B\u0438 \u043D\u0430\u0432\u044B\u043A\u0438 \u0438 \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0438" : "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u044B\u0445 \u0440\u0435\u0448\u0435\u043D\u0438\u0439"),
+        h("h2", null, development.length ? "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0438 \u0431\u0443\u0434\u0443\u0449\u0438\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438" : "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u044B\u0445 \u0440\u0435\u0448\u0435\u043D\u0438\u0439"),
         development.length ? h("ul", { className: "assemble-day-list" }, ...development.slice(0, 4).map((item) => h("li", { key: item.id }, h("strong", null, item.title), h("span", null, item.summary)))) : h("p", null, "\u0418\u0433\u0440\u0430 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0430\u043B\u044C\u043D\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0430, \u0431\u0435\u0437 \u043E\u0447\u043A\u043E\u0432 \u043E\u043F\u044B\u0442\u0430."),
         development.length > 4 && h("details", null, h("summary", null, "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432\u0441\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F"), h("ul", { className: "assemble-day-list" }, ...development.slice(4).map((item) => h("li", { key: item.id }, h("strong", null, item.title), h("span", null, item.summary)))))
       ),
@@ -2046,14 +2705,10 @@
           "li",
           { key: group.id, className: "assemble-day-journal-group" },
           h("strong", null, group.title),
-          group.primary && h("span", null, `${mechanismLabel(group.primary.mechanism)} \u2192 ${pathLabel(group.primary.resultPath)}`),
-          group.carry && h("small", null, `\u041F\u0435\u0440\u0435\u043D\u043E\u0441: ${pathLabel(group.carry.resultPath)}`),
-          h(
-            "details",
-            null,
-            h("summary", null, "\u0422\u043E\u0447\u043D\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F"),
-            h("ul", null, ...group.entries.map((entry) => h("li", { key: entry.id }, `${entry.resultPath}: ${String(entry.before ?? "\u2014")} \u2192 ${String(entry.after ?? "\u2014")}`)))
-          )
+          group.primary && h("span", null, `${mechanismLabel(group.primary.mechanism)} \u2192 ${pathLabel2(group.primary.resultPath)}`),
+          group.carry && h("small", null, group.carrySummary || `\u041F\u0435\u0440\u0435\u043D\u043E\u0441: ${pathLabel2(group.carry.resultPath)}`),
+          h("small", null, `${group.evidence.sourceLabel} \xB7 ${confidenceLabel(group.evidence.confidence)}.`),
+          h("small", null, group.evidence.transferLimit)
         ))) : h("p", null, "\u0418\u0441\u0442\u043E\u0440\u0438\u044F \u043F\u043E\u044F\u0432\u0438\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F.")
       ),
       h(
@@ -2071,16 +2726,34 @@
       )
     );
   }
-  function CompletionSummary({ session, onReplaySameSeed, onStartNew }) {
+  function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }) {
     const outcome = getCampaignOutcome(session.state);
+    const week = summary?.kind === "week" ? summary : session.periodSummaries.find((item) => item.kind === "week");
+    const brief = week?.brief || getCampaignBrief(session.state, registries);
     const comparison = session.comparisonBaseline ? compareCampaignOutcomes(session.comparisonBaseline.outcome, outcome) : [];
     return h(
       "section",
       { className: "assemble-day-card assemble-day-complete" },
       h("span", { className: "assemble-day-eyebrow" }, "\u041D\u0435\u0434\u0435\u043B\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"),
-      h("h2", null, "\u0418\u0442\u043E\u0433 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0437 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u043B\u0438\u043D\u0438\u0439"),
-      h("p", null, "\u0417\u0434\u0435\u0441\u044C \u043D\u0435\u0442 \u043E\u0431\u0449\u0435\u0433\u043E \u0431\u0430\u043B\u043B\u0430: \u0432\u0438\u0434\u043D\u043E, \u0447\u0442\u043E \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C, \u0447\u0435\u043C \u043F\u0440\u0438\u0448\u043B\u043E\u0441\u044C \u043F\u043E\u0441\u0442\u0443\u043F\u0438\u0442\u044C\u0441\u044F \u0438 \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C."),
-      h("div", { className: "assemble-day-outcome-grid" }, ...outcome.axes.map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("span", null, axis.summary)))),
+      h("h2", null, week?.title || "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0442\u043E\u0447\u043A\u0430 \u043D\u0435\u0434\u0435\u043B\u0438"),
+      h("p", null, week?.headline || "\u0418\u0442\u043E\u0433 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0437 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0445 \u043B\u0438\u043D\u0438\u0439 \u0431\u0435\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0431\u0430\u043B\u043B\u0430."),
+      h("section", { className: "assemble-day-complete__brief" }, h("strong", null, brief.mission.title), h("span", null, brief.mission.summary)),
+      week?.rules?.length && h(
+        "section",
+        { className: "assemble-day-complete__rules", "aria-label": "\u0427\u0442\u043E \u0441\u0442\u0430\u043B\u043E \u0441 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C\u0438 \u043D\u0435\u0434\u0435\u043B\u0438" },
+        h("h3", null, "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B"),
+        ...week.rules.map((rule) => h("article", { key: rule.id, className: `is-${rule.direction}` }, h("strong", null, rule.title), h("small", null, outcomeDirectionLabel(rule.direction)), h("span", null, rule.summary)))
+      ),
+      week?.commitments && h("p", { className: "assemble-day-summary__causal" }, week.commitments.summary),
+      week?.pressure && h("p", { className: "assemble-day-summary__carry" }, week.pressure),
+      h("h3", null, "\u0427\u0435\u0442\u044B\u0440\u0435 \u043B\u0438\u043D\u0438\u0438 \u0438\u0442\u043E\u0433\u0430"),
+      h("div", { className: "assemble-day-outcome-grid" }, ...(week?.axes || outcome.axes).map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("small", null, outcomeDirectionLabel(axis.direction)), h("span", null, axis.summary)))),
+      h(
+        "section",
+        { className: "assemble-day-complete__threads", "aria-label": "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438" },
+        h("h3", null, "\u0427\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C"),
+        (week?.openThreads || outcome.openThreads).length ? h("ul", { className: "assemble-day-list" }, ...(week?.openThreads || outcome.openThreads).map((item, index) => h("li", { key: `${index}:${item}` }, item))) : h("p", null, "\u041E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043D\u0438\u0442\u0438 \u043D\u0435\u0434\u0435\u043B\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044B.")
+      ),
       comparison.length > 0 && h("section", { className: "assemble-day-comparison" }, h("h3", null, "\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0441 \u043F\u0440\u043E\u0448\u043B\u044B\u043C \u043F\u0440\u043E\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435\u043C"), ...comparison.map((item) => h("p", { key: item.id }, h("strong", null, item.title), ` \xB7 ${item.changed ? "\u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0441\u044F" : "\u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0441\u044F"} \xB7 ${item.summary}`))),
       h("button", { type: "button", className: "assemble-day-primary", onClick: onReplaySameSeed }, "\u041F\u0440\u043E\u0439\u0442\u0438 \u044D\u0442\u043E\u0442 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0438\u043D\u0430\u0447\u0435"),
       h("button", { type: "button", className: "assemble-day-secondary", onClick: onStartNew }, "\u041D\u0430\u0447\u0430\u0442\u044C \u0441 \u043D\u043E\u0432\u044B\u043C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u043C"),
@@ -2104,7 +2777,7 @@
     const store = window.HEYS?.store;
     const initialLoad = React.useMemo(() => loadCheckpoint(store, clientId), [store, clientId]);
     const [loadIssue, setLoadIssue] = React.useState(initialLoad.status === "ready" || initialLoad.status === "empty" ? null : initialLoad);
-    const [session, setSession] = React.useState(() => initialLoad.status === "ready" ? initialLoad.session : createSession(`assemble-day:${clientId || "unknown"}:${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}`));
+    const [session, setSession] = React.useState(() => initialLoad.status === "ready" ? initialLoad.session : createSession());
     const [activeScreen, setActiveScreen] = React.useState("day");
     const [selectedActionId, setSelectedActionId] = React.useState("");
     const [saveMessage, setSaveMessage] = React.useState("");
@@ -2116,9 +2789,10 @@
     const [traceMessage, setTraceMessage] = React.useState("");
     const [traceTone, setTraceTone] = React.useState("");
     const [traceBusy, setTraceBusy] = React.useState(false);
-    const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === "ready" && initialLoad.session.lastSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === "action" ? initialLoad.session.revision : null);
+    const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === "ready" && initialLoad.session.lastStepSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === "action" ? initialLoad.session.revision : null);
+    const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState(null);
     const startNew = () => {
-      const next = createSession(`assemble-day:${clientId || "unknown"}:${Date.now()}`);
+      const next = createSession();
       setSession(next);
       setPlanningDraft(planningDraftFromState(next.state));
       setLoadIssue(null);
@@ -2132,15 +2806,17 @@
       setTraceTone("");
       setTraceBusy(false);
       setResultRevision(null);
+      setPeriodSummaryIndex(null);
     };
     const replaySameSeed = () => {
-      const baseline = { outcome: getCampaignOutcome(session.state), finalStateHash: stateHash(session.state), decisions: session.diagnostics.decisions.filter((item) => item.kind === "action").map((item) => ({ eventId: item.eventId, actionId: item.actionId })) };
+      const baseline = { outcome: getCampaignOutcome(session.state), finalStateHash: stateHash(session.state) };
       const next = createSession(session.state.rng.seed, baseline);
       setSession(next);
       setPlanningDraft(planningDraftFromState(next.state));
       setForceNewCampaign(true);
       setSelectedActionId("");
       setResultRevision(null);
+      setPeriodSummaryIndex(null);
       setSaveMessage("");
       setSaveTone("");
       setPlanMessage("");
@@ -2154,7 +2830,8 @@
         const result = saveCheckpoint(store, clientId, nextSession, forceNewCampaign);
         setSession(nextSession);
         setSelectedActionId("");
-        setForceNewCampaign(false);
+        setPeriodSummaryIndex(null);
+        if (result.status === "saved") setForceNewCampaign(false);
         setSaveMessage(result.status === "saved" ? "\u0428\u0430\u0433 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u0432 \u043F\u0440\u043E\u0444\u0438\u043B\u0435 HEYS." : result.message);
         setSaveTone(result.status === "saved" ? "success" : "error");
         setResultRevision(nextSession.revision);
@@ -2208,20 +2885,36 @@
     };
     if (loadIssue) return h("div", { className: "assemble-day-app" }, h(RecoveryPanel, { result: loadIssue, onNew: startNew, onExit }));
     const screens = {
-      day: h(DayScreen, { session, selectedActionId, onSelect: (id) => {
-        setSelectedActionId((current) => current || id);
-        setSaveMessage("");
-        setSaveTone("");
-      }, onConfirm: confirm, saveMessage, saveTone, resultRevision, onContinueResult: () => {
-        setResultRevision(null);
-        setSaveMessage("");
-        setSaveTone("");
-      }, onRetrySave: retrySave, onOpenPlan: () => setActiveScreen("week"), onReplaySameSeed: replaySameSeed, onStartNew: startNew }),
+      day: h(DayScreen, {
+        session,
+        selectedActionId,
+        onSelect: (id) => {
+          setSelectedActionId((current) => current || id);
+          setSaveMessage("");
+          setSaveTone("");
+        },
+        onConfirm: confirm,
+        saveMessage,
+        saveTone,
+        resultRevision,
+        onContinueResult: () => {
+          setResultRevision(null);
+          setPeriodSummaryIndex(session.periodSummaries.length ? 0 : null);
+          setSaveMessage("");
+          setSaveTone("");
+        },
+        onRetrySave: retrySave,
+        periodSummary: periodSummaryIndex === null ? null : session.periodSummaries[periodSummaryIndex],
+        onContinuePeriod: () => setPeriodSummaryIndex((current) => current !== null && current + 1 < session.periodSummaries.length ? current + 1 : null),
+        onOpenPlan: () => setActiveScreen("week"),
+        onReplaySameSeed: replaySameSeed,
+        onStartNew: startNew
+      }),
       week: h(WeekScreen, {
         session,
         plan: planningDraft,
         onToggleRule: (id) => {
-          setPlanningDraft((current) => ({ ...current, weeklyRuleIds: current.weeklyRuleIds.includes(id) ? current.weeklyRuleIds.filter((item) => item !== id) : [...current.weeklyRuleIds, id] }));
+          setPlanningDraft((current) => ({ ...current, weeklyRuleIds: current.weeklyRuleIds.includes(id) ? current.weeklyRuleIds.filter((item) => item !== id) : current.weeklyRuleIds.length < 2 ? [...current.weeklyRuleIds, id] : current.weeklyRuleIds }));
           setPlanMessage("");
           setPlanTone("");
         },
@@ -2272,15 +2965,22 @@
     api: {
       version: 1,
       storageKey: STORAGE_KEY,
+      envelopeVersion: ENVELOPE_VERSION,
+      checkpointBudgetBytes: CHECKPOINT_BUDGET_BYTES,
       contract: CONTRACT,
-      eventCopy: EVENT_COPY,
+      eventCopy: Object.fromEntries(Object.entries(registries.events).map(([id, event]) => [id, event.copy])),
       createSession,
+      getCampaignBrief: (state) => getCampaignBrief(state, registries),
+      getCharacterPresentation,
       getCampaignView,
       confirmAction,
       getPlanningCampaignView,
       confirmPlanning,
+      getPeriodBoundaries: (before, after) => getPeriodBoundaries(before, after, registries),
+      getPeriodSummary: (state, boundary) => getPeriodSummary(state, boundary, registries),
       loadCheckpoint,
       saveCheckpoint,
+      checkpointSizeBytes,
       createDiagnosticTrace,
       serializeDiagnosticTrace,
       copyDiagnosticTrace

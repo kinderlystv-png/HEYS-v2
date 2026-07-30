@@ -1,7 +1,7 @@
 # Game state schema v2
 
-> Статус: implementation-контракт<br> Набор документов: 0.31<br> Обновлено:
-> 2026-07-29<br> Владелец: причинный движок
+> Статус: implementation-контракт<br> Набор документов: 0.35<br> Обновлено:
+> 2026-07-30<br> Владелец: причинный движок
 
 [← К карте документации](./README.md)
 
@@ -31,8 +31,8 @@ interface GameStateV2 {
   schemaVersion: 2;
   campaignId: string;
   scenarioId: 'week-01-project-deadline';
-  scenarioVersion: '3';
-  calibrationVersion: '0.3';
+  scenarioVersion: '4';
+  calibrationVersion: '0.4';
   priceBookVersion: 'week-01-rub-v1';
 
   rng: {
@@ -121,9 +121,10 @@ interface AccumulatorsV1 {
 ```
 
 Допустимые диапазоны и основные стартовые значения принадлежат базовой
-`calibration v0.1`; текущая `calibration v0.2` добавляет только контекстную цену
-утренней готовки. Движок применяет границы после каждого оператора эффекта, а не
-только в конце шага.
+`calibration v0.1`; последующие версии добавляют контекстную цену готовки,
+стратегический цикл и ограниченную planning capacity. Движок применяет границы
+после каждого оператора эффекта, а не только в конце шага. Производная
+`PlanningView.capacity` не сериализуется в `GameStateV2`.
 
 ## Деньги, платежи и запас еды
 
@@ -296,12 +297,13 @@ Reducer пересчитывает контекст из хранимого со
    миграционного правила.
 6. Один и тот же JSON состояния, действие и seed дают один результат при
    одинаковых версиях схемы, сценария, калибровки и набора цен.
-7. Первая схема не содержит `clientId`, дневник HEYS, диагноз, вес, лекарство
+7. `GameStateV2` не содержит `clientId`, дневник HEYS, диагноз, вес, лекарство
    или другой персональный признак.
 
 ## Сериализация и миграции
 
-- Состояние сохраняется как UTF-8 JSON с `schemaVersion`.
+- `GameStateV2` имеет каноническую JSON-форму с `schemaVersion` для hash, replay
+  и обмена между headless-компонентами.
 - Реализация сортирует ключи перед хешированием QA-снимка; порядок ключей
   исходного JSON не влияет на hash.
 - Загрузка выполняет schema validation до вычисления производных.
@@ -309,3 +311,27 @@ Reducer пересчитывает контекст из хранимого со
   использует текущую дату, сеть или случайность.
 - Несовместимая версия закрывает загрузку с явной ошибкой. Движок не пытается
   угадать форму старого состояния.
+
+### Browser checkpoint envelope v2
+
+Client-scoped browser checkpoint не дублирует полный `GameStateV2`. Он хранит
+только opaque UUID-free seed, точный `CONTRACT`, revision, итоговый state hash,
+domain-separated pseudonymous scope tag и компактную последовательность
+подтверждённых action/planning-решений. При reload adapter создаёт initial state
+и повторяет ledger через `reducePlanningStep` / `reduceStep`; только совпавший
+итоговый hash разрешает продолжение.
+
+`lastStepSummary`, `periodSummaries`, `causalJournal` и полный диагностический
+trace восстанавливаются локально replay и не входят в envelope. Brief всегда
+строится из same-seed initial state; day/week boundaries — из переходов authored
+slots. Внутренний hard budget — 128 KiB по формуле
+`(physicalKey.length + JSON.stringify(envelope).length) * 2`; внешний storage
+registry cap 512 KiB остаётся fail-safe и не повышается. Raw `clientId`
+участвует только в выборе client-scoped storage key и вычислении scope tag, но
+не входит в game seed, `campaignId`, RNG, ledger, state или trace.
+
+Envelope v1 мигрирует только если его boundary `clientId` совпадает с текущим
+профилем, game payload UUID-free, ledger полный и воспроизводит сохранённый
+hash. Иначе adapter показывает отдельный
+`privacy`/`incompatible`/`corrupt`/`foreign` результат и не удаляет либо не
+перезаписывает snapshot без явного старта новой кампании.

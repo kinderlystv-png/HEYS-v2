@@ -237,12 +237,13 @@
         }, [syncKeyboardDismiss]);
 
         const shouldShowSlowInternetHint = showSlowInternetHint;
-        const isTrialIntakeBlocking = consentGate?.key === 'trial-intake';
+        const isRouteLevelGate = ['trial-intake', 'subscription-loading', 'subscription-waiting']
+            .includes(consentGate?.key);
 
         // The protected intake is a route-level screen, not a modal over the
         // regular app. Do not let profile onboarding, check-ins, banners or
         // the app shell compete for focus while that route is active.
-        if (isTrialIntakeBlocking) {
+        if (isRouteLevelGate) {
             return consentGate;
         }
 
