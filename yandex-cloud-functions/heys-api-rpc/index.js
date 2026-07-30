@@ -973,6 +973,8 @@ const TRANSACTION_SCOPED_ENCRYPTION_FUNCTIONS = new Set([
   'save_trial_candidate_intake_by_candidate_session',
   'admin_get_trial_candidate',
   'admin_review_trial_candidate_v3',
+  'admin_review_trial_candidate_v4',
+  'admin_add_trial_candidate_answer_correction_v1',
   'export_my_data_by_session',
 ]);
 
@@ -1025,6 +1027,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_review_trial_intake_v2',
   'admin_get_trial_candidate',
   'admin_review_trial_candidate_v3',
+  'admin_review_trial_candidate_v4',
+  'admin_add_trial_candidate_answer_correction_v1',
   'admin_mark_trial_candidate_invite_sent',
   'admin_regenerate_trial_candidate_pin',
 
@@ -4736,6 +4740,28 @@ async function handleRpcRequest(event, context) {
         'p_client_message': '::text',
         'p_clarification_sections': '::text[]',
         'p_decision_checklist': '::jsonb',
+        'p_expected_updated_at': '::timestamptz',
+        'p_curator_id': '::uuid'
+      },
+      'admin_review_trial_candidate_v4': {
+        'p_candidate_id': '::uuid',
+        'p_action': '::text',
+        'p_reason_code': '::text',
+        'p_internal_note': '::text',
+        'p_decision_checklist': '::jsonb',
+        'p_expected_updated_at': '::timestamptz',
+        'p_curator_id': '::uuid'
+      },
+      'admin_add_trial_candidate_answer_correction_v1': {
+        'p_candidate_id': '::uuid',
+        'p_question_id': '::text',
+        'p_new_value': '::jsonb',
+        'p_communication_channel': '::text',
+        'p_comment': '::text',
+        'p_confirmed_from_candidate': '::boolean',
+        'p_safety_confirmed': '::boolean',
+        'p_request_id': '::uuid',
+        'p_reverses_correction_id': '::uuid',
         'p_expected_updated_at': '::timestamptz',
         'p_curator_id': '::uuid'
       },

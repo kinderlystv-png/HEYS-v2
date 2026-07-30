@@ -10,6 +10,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const migrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow.sql');
 const v2MigrationPath = path.join(repoRoot, 'database/2026-07-27_trial_intake_flow_v2.sql');
 const v3MigrationPath = path.join(repoRoot, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql');
+const trialPreparePermissionPath = path.join(
+  repoRoot,
+  'scripts/db/migrations/2026-07-29_trial_prepare_internal_execute.sql',
+);
+const correctionsMigrationPath = path.join(
+  repoRoot,
+  'scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql',
+);
 const consentProofPath = path.join(repoRoot, 'database/2026-07-27_consent_proof_v2.sql');
 const reconsentFixPath = path.join(
   repoRoot,
@@ -1252,6 +1260,330 @@ $test$;
 SELECT 'trial intake v3 preclient integration OK' AS result;
 `;
 
+const correctionsAssertionsSql = String.raw`
+\set ON_ERROR_STOP on
+
+INSERT INTO public.leads (
+  id, name, phone, messenger, status, birth_year, ip_address,
+  consent_privacy_version, consent_user_agent, consent_accepted_at
+) VALUES
+  ('10000000-0000-4000-8000-000000000014', 'Correction Candidate', '+7 999 111-44-14',
+   'telegram', 'new', 1991, '127.0.0.1', '1.7', 'integration-test', now()),
+  ('10000000-0000-4000-8000-000000000015', 'Rejected Candidate', '+7 999 111-44-15',
+   'telegram', 'new', 1992, '127.0.0.1', '1.7', 'integration-test', now()),
+  ('10000000-0000-4000-8000-000000000016', 'Legacy Candidate', '+7 999 111-44-16',
+   'telegram', 'new', 1993, '127.0.0.1', '1.7', 'integration-test', now());
+
+DO $test$
+DECLARE
+  v_prepare JSONB;
+  v_candidate_id UUID;
+  v_login JSONB;
+  v_token TEXT;
+  v_updated TIMESTAMPTZ;
+  v_correction JSONB;
+  v_second_correction JSONB;
+  v_reversal JSONB;
+  v_review JSONB;
+  v_read JSONB;
+  v_client_id UUID;
+  v_export JSONB;
+  v_answers JSONB := '{
+    "goals":{"primary_goal":"Режим","success_definition":"Стабильность"},
+    "experience":{"previous_experience":"self"},
+    "lifestyle":{"schedule":"Работа","sleep":"8 часов"},
+    "collaboration":{"daily_tracking":"unsure","feedback_style":"concise"},
+    "health":{"chronic_conditions_status":"no","medications_status":"no","injuries_operations_status":"no","allergies_status":"no","doctor_restrictions_status":"no"},
+    "safety":{"acute_symptoms":"no","recent_surgery":"no","active_ed_concern":"no","medical_supervision":"no"},
+    "meta":{"schema_version":"1.1"}
+  }'::jsonb;
+  v_checklist JSONB := '{
+    "within_scope":true,"understands_boundaries":true,"ready_to_track":true,
+    "realistic_expectations":true,"safe_format":true
+  }'::jsonb;
+BEGIN
+  IF public.validate_trial_intake_answers_v2(v_answers, true) IS NOT NULL THEN
+    RAISE EXCEPTION 'daily_tracking=unsure was rejected';
+  END IF;
+
+  v_prepare := public.admin_prepare_trial_candidate_from_lead(
+    '10000000-0000-4000-8000-000000000014',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  v_candidate_id := (v_prepare->>'candidate_id')::uuid;
+  PERFORM public.admin_mark_trial_candidate_invite_sent(
+    v_candidate_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  v_login := public.verify_trial_candidate_pin('+7 999 111-44-14', v_prepare->>'pin');
+  v_token := v_login->>'candidate_session_token';
+  PERFORM public.accept_trial_candidate_health_consent_by_candidate_session(
+    v_token, '1.5', '127.0.0.1', 'integration-test'
+  );
+  IF public.save_trial_candidate_intake_by_candidate_session(
+    v_token, v_answers, 5::smallint, true, NULL
+  )->>'status' <> 'completed' THEN
+    RAISE EXCEPTION 'correction candidate submit failed';
+  END IF;
+  SELECT updated_at INTO v_updated FROM public.trial_candidates WHERE id = v_candidate_id;
+
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.daily_tracking', '"yes"'::jsonb,
+    'phone', 'Подтверждено в разговоре', true, false,
+    '40000000-0000-4000-8000-000000000001', NULL,
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', v_updated
+  )->>'error' <> 'forbidden' THEN
+    RAISE EXCEPTION 'foreign curator added a correction';
+  END IF;
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'meta.schema_version', '"2.0"'::jsonb,
+    'phone', 'Недопустимое поле', true, false,
+    '40000000-0000-4000-8000-000000000002', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'error' <> 'unknown_question_id' THEN
+    RAISE EXCEPTION 'question allowlist accepted metadata mutation';
+  END IF;
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'safety.acute_symptoms', '"yes"'::jsonb,
+    'phone', 'Safety требует подтверждения', true, false,
+    '40000000-0000-4000-8000-000000000003', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'error' <> 'safety_confirmation_required' THEN
+    RAISE EXCEPTION 'unsafe correction skipped explicit confirmation';
+  END IF;
+
+  v_correction := public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.daily_tracking', '"yes"'::jsonb,
+    'phone', 'Подтверждено в разговоре', true, false,
+    '40000000-0000-4000-8000-000000000004', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  );
+  IF v_correction->>'revision_no' <> '1' THEN
+    RAISE EXCEPTION 'valid correction failed: %', v_correction;
+  END IF;
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.daily_tracking', '"yes"'::jsonb,
+    'phone', 'Подтверждено в разговоре', true, false,
+    '40000000-0000-4000-8000-000000000004', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'replayed' <> 'true' THEN
+    RAISE EXCEPTION 'idempotent correction retry did not replay';
+  END IF;
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.daily_tracking', '"no"'::jsonb,
+    'phone', 'Другая нагрузка', true, false,
+    '40000000-0000-4000-8000-000000000004', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', (v_correction->>'updated_at')::timestamptz
+  )->>'error' <> 'idempotency_conflict' THEN
+    RAISE EXCEPTION 'request id was reused with a different payload';
+  END IF;
+  v_second_correction := public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.feedback_style', '"direct"'::jsonb,
+    'messenger', 'Уточнён стиль обратной связи', true, false,
+    '40000000-0000-4000-8000-000000000006', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (v_correction->>'updated_at')::timestamptz
+  );
+  v_reversal := public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.feedback_style', '"concise"'::jsonb,
+    'messenger', 'Кандидат вернул исходный вариант', true, false,
+    '40000000-0000-4000-8000-000000000007',
+    (v_second_correction->>'correction_id')::uuid,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (v_second_correction->>'updated_at')::timestamptz
+  );
+  IF v_reversal->>'revision_no' <> '3' THEN
+    RAISE EXCEPTION 'append-only reversal failed: % / %', v_second_correction, v_reversal;
+  END IF;
+  IF public.admin_add_trial_candidate_answer_correction_v1(
+    v_candidate_id, 'collaboration.feedback_style', '"direct"'::jsonb,
+    'messenger', 'Устаревшая вкладка', true, false,
+    '40000000-0000-4000-8000-000000000005', NULL,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'error' <> 'stale_intake' THEN
+    RAISE EXCEPTION 'stale correction overwrote current history';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.trial_candidate_sessions
+    WHERE candidate_id = v_candidate_id AND revoked_at IS NULL
+  ) THEN RAISE EXCEPTION 'candidate session survived curator correction'; END IF;
+
+  v_read := public.admin_get_trial_candidate(
+    v_candidate_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  IF v_read #>> '{intake,original_answers,collaboration,daily_tracking}' <> 'unsure'
+     OR v_read #>> '{intake,answers,collaboration,daily_tracking}' <> 'yes'
+     OR v_read #>> '{intake,answers,collaboration,feedback_style}' <> 'concise'
+     OR jsonb_array_length(v_read #> '{intake,answer_corrections}') <> 3
+     OR v_read #>> '{intake,answer_corrections,0,communication_channel}' <> 'phone' THEN
+    RAISE EXCEPTION 'original/effective/history read contract is wrong: %', v_read;
+  END IF;
+  IF public.decrypt_health_data((
+    SELECT answers_encrypted FROM public.trial_candidates WHERE id = v_candidate_id
+  )) #>> '{collaboration,daily_tracking}' <> 'unsure' THEN
+    RAISE EXCEPTION 'candidate original answer was overwritten';
+  END IF;
+
+  v_review := public.admin_review_trial_candidate_v4(
+    v_candidate_id, 'needs_clarification', NULL, NULL, v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (v_reversal->>'updated_at')::timestamptz
+  );
+  IF v_review->>'error' <> 'invalid_action' THEN
+    RAISE EXCEPTION 'v4 accepted removed clarification action: %', v_review;
+  END IF;
+  v_review := public.admin_review_trial_candidate_v4(
+    v_candidate_id, 'approved', NULL, 'Проверено', v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    (v_reversal->>'updated_at')::timestamptz
+  );
+  IF v_review->>'status' <> 'promoted' THEN RAISE EXCEPTION 'v4 approval failed: %', v_review; END IF;
+  v_client_id := (v_review->>'client_id')::uuid;
+  IF public.decrypt_health_data((
+    SELECT answers_encrypted FROM public.trial_intakes WHERE client_id = v_client_id
+  )) #>> '{collaboration,daily_tracking}' <> 'yes' THEN
+    RAISE EXCEPTION 'promotion did not persist effective answers';
+  END IF;
+  IF (SELECT count(*) FROM public.clients WHERE id = v_client_id) <> 1
+     OR (SELECT count(*) FROM public.trial_queue WHERE client_id = v_client_id) <> 1
+     OR (SELECT count(*) FROM public.trial_candidate_answer_corrections WHERE candidate_id = v_candidate_id) <> 3 THEN
+    RAISE EXCEPTION 'promotion cardinality/history invariant failed';
+  END IF;
+  IF public.admin_review_trial_candidate_v4(
+    v_candidate_id, 'approved', NULL, 'Повтор', v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'already_applied' <> 'true' THEN
+    RAISE EXCEPTION 'repeat approval was not idempotent';
+  END IF;
+
+  INSERT INTO public.client_sessions(token_hash, client_id, expires_at)
+  VALUES (digest('promoted-dsar-token', 'sha256'), v_client_id, now() + interval '1 hour');
+  v_export := public.export_my_data_by_session('promoted-dsar-token');
+  IF v_export #>> '{trial_candidate_history,original_answers,collaboration,daily_tracking}' <> 'unsure'
+     OR v_export #>> '{trial_candidate_history,effective_answers,collaboration,daily_tracking}' <> 'yes'
+     OR jsonb_array_length(v_export #> '{trial_candidate_history,answer_corrections}') <> 3 THEN
+    RAISE EXCEPTION 'DSAR omitted candidate correction history: %', v_export;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.trial_candidate_audit_events
+    WHERE candidate_id = v_candidate_id
+      AND metadata::text ~* '(daily_tracking|Подтверждено|"yes"|"unsure")'
+  ) THEN RAISE EXCEPTION 'audit metadata leaked correction contents'; END IF;
+END
+$test$;
+
+DO $test$
+DECLARE
+  v_prepare JSONB;
+  v_candidate_id UUID;
+  v_login JSONB;
+  v_token TEXT;
+  v_updated TIMESTAMPTZ;
+  v_review JSONB;
+  v_answers JSONB := '{
+    "goals":{"primary_goal":"Режим","success_definition":"Стабильность"},
+    "experience":{"previous_experience":"self"},
+    "lifestyle":{"schedule":"Работа","sleep":"8 часов"},
+    "collaboration":{"daily_tracking":"yes","feedback_style":"concise"},
+    "health":{"chronic_conditions_status":"no","medications_status":"no","injuries_operations_status":"no","allergies_status":"no","doctor_restrictions_status":"no"},
+    "safety":{"acute_symptoms":"no","recent_surgery":"no","active_ed_concern":"no","medical_supervision":"no"},
+    "meta":{"schema_version":"1.1"}
+  }'::jsonb;
+  v_checklist JSONB := '{
+    "within_scope":true,"understands_boundaries":true,"ready_to_track":true,
+    "realistic_expectations":true,"safe_format":true
+  }'::jsonb;
+BEGIN
+  v_prepare := public.admin_prepare_trial_candidate_from_lead(
+    '10000000-0000-4000-8000-000000000015',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  v_candidate_id := (v_prepare->>'candidate_id')::uuid;
+  PERFORM public.admin_mark_trial_candidate_invite_sent(
+    v_candidate_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  v_login := public.verify_trial_candidate_pin('+7 999 111-44-15', v_prepare->>'pin');
+  v_token := v_login->>'candidate_session_token';
+  PERFORM public.accept_trial_candidate_health_consent_by_candidate_session(
+    v_token, '1.5', '127.0.0.1', 'integration-test'
+  );
+  PERFORM public.save_trial_candidate_intake_by_candidate_session(
+    v_token, v_answers, 5::smallint, true, NULL
+  );
+  SELECT updated_at INTO v_updated FROM public.trial_candidates WHERE id = v_candidate_id;
+  v_review := public.admin_review_trial_candidate_v4(
+    v_candidate_id, 'rejected', 'format_mismatch', 'Формат не подходит', v_checklist,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  );
+  IF v_review->>'status' <> 'rejected'
+     OR EXISTS (SELECT 1 FROM public.clients WHERE phone LIKE '%4415') THEN
+    RAISE EXCEPTION 'rejection created a client: %', v_review;
+  END IF;
+END
+$test$;
+
+DO $test$
+DECLARE
+  v_prepare JSONB;
+  v_candidate_id UUID;
+  v_updated TIMESTAMPTZ;
+BEGIN
+  v_prepare := public.admin_prepare_trial_candidate_from_lead(
+    '10000000-0000-4000-8000-000000000016',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  v_candidate_id := (v_prepare->>'candidate_id')::uuid;
+  UPDATE public.trial_candidates
+  SET status = 'approved_waiting_slot', answers_encrypted = public.encrypt_health_data('{
+    "goals":{"primary_goal":"Режим","success_definition":"Стабильность"},
+    "experience":{"previous_experience":"self"},
+    "lifestyle":{"schedule":"Работа","sleep":"8 часов"},
+    "collaboration":{"daily_tracking":"yes","feedback_style":"concise"},
+    "health":{"chronic_conditions_status":"no","medications_status":"no","injuries_operations_status":"no","allergies_status":"no","doctor_restrictions_status":"no"},
+    "safety":{"acute_symptoms":"no","recent_surgery":"no","active_ed_concern":"no","medical_supervision":"no"},
+    "meta":{"schema_version":"1.1"}
+  }'::jsonb), updated_at = clock_timestamp()
+  WHERE id = v_candidate_id RETURNING updated_at INTO v_updated;
+  IF public.admin_review_trial_candidate_v4(
+    v_candidate_id, 'rejected', 'candidate_withdrew', 'Кандидат отказался',
+    '{"within_scope":true,"understands_boundaries":true,"ready_to_track":true,"realistic_expectations":true,"safe_format":true}'::jsonb,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', v_updated
+  )->>'status' <> 'rejected' THEN
+    RAISE EXCEPTION 'legacy waiting status is not compatible with v4 review';
+  END IF;
+END
+$test$;
+
+DO $test$
+BEGIN
+  IF has_table_privilege('heys_rpc', 'public.trial_candidate_answer_corrections', 'SELECT')
+     OR has_table_privilege('heys_rpc', 'public.trial_candidate_answer_corrections', 'INSERT')
+     OR has_table_privilege('heys_rpc', 'public.trial_candidate_answer_corrections', 'UPDATE')
+     OR has_table_privilege('heys_rpc', 'public.trial_candidate_answer_corrections', 'DELETE') THEN
+    RAISE EXCEPTION 'gateway role has direct correction-ledger privileges';
+  END IF;
+  IF has_table_privilege('heys_admin', 'public.trial_candidate_answer_corrections', 'UPDATE')
+     OR has_table_privilege('heys_admin', 'public.trial_candidate_answer_corrections', 'DELETE') THEN
+    RAISE EXCEPTION 'definer role can mutate correction history';
+  END IF;
+  IF has_function_privilege('heys_rpc', 'public.admin_convert_lead(uuid,uuid)', 'EXECUTE')
+     OR NOT has_function_privilege('heys_admin', 'public.admin_convert_lead(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'nested conversion is not owner-only';
+  END IF;
+  IF NOT has_function_privilege(
+    'heys_rpc',
+    'public.admin_add_trial_candidate_answer_correction_v1(uuid,text,jsonb,text,text,boolean,boolean,uuid,uuid,uuid,timestamptz)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'heys_rpc',
+    'public.admin_review_trial_candidate_v4(uuid,text,text,text,jsonb,uuid,timestamptz)',
+    'EXECUTE'
+  ) THEN RAISE EXCEPTION 'new curator RPC is unavailable to gateway'; END IF;
+END
+$test$;
+
+SELECT 'trial candidate answer corrections v1 integration OK' AS result;
+`;
+
 let started = false;
 try {
   run('initdb', ['-D', dataDir, '-A', 'trust', '-U', 'postgres', '--no-locale', '--encoding=UTF8']);
@@ -1275,8 +1607,12 @@ try {
   const v2Output = run('psql', psqlArgs, v2AssertionsSql);
   run('psql', psqlArgs, readFileSync(v3MigrationPath, 'utf8'));
   const v3Output = run('psql', psqlArgs, v3AssertionsSql);
+  run('psql', psqlArgs, readFileSync(trialPreparePermissionPath, 'utf8'));
+  run('psql', psqlArgs, readFileSync(correctionsMigrationPath, 'utf8'));
+  const correctionsOutput = run('psql', psqlArgs, correctionsAssertionsSql);
   process.stdout.write(v2Output);
   process.stdout.write(v3Output);
+  process.stdout.write(correctionsOutput);
 } finally {
   if (started) {
     try { run('pg_ctl', ['-D', dataDir, '-m', 'fast', '-w', 'stop']); } catch (error) {
