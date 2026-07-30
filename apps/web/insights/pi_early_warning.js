@@ -1487,6 +1487,9 @@
                         status: 'degraded',
                         reason: 'cloud_save_timeout',
                         key_group: 'ews_weekly',
+                        key_family: 'ews',
+                        key_id: 'k_ews_weekly',
+                        error_code: 'cloud_save_timeout',
                         durationMs: saveTimeoutMs
                     }, 'warn');
                     console.warn('ews / weekly ☁️ save.cloud.timeout: local cache retained');

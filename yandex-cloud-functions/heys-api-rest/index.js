@@ -1006,7 +1006,7 @@ async function handleRestRequest(event, context) {
             'release_version', 'unseen_count', 'update_version',
             'pending_count', 'missing_days_count', 'action', 'mode',
             'from', 'to', 'online', 'attempt', 'result', 'bundle', 'route', 'tab', 'flow_kind',
-            'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required',
+            'count', 'queue_size', 'key_group', 'key_family', 'key_id', 'error_code', 'problem_stage', 'days_received', 'min_required',
             'visit_kind', 'absence_ms', 'auth_state', 'sync_state'
           ]);
 

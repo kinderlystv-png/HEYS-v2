@@ -115,11 +115,11 @@
   }
   function contextLabel(context) {
     if (!context || typeof context !== 'object') return '';
-    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней', visit_kind: 'тип посещения', absence_ms: 'в фоне, мс', auth_state: 'авторизация', sync_state: 'синхронизация' };
+    var labels = { phase: 'этап', step: 'шаг', screen: 'экран', source: 'источник', reason: 'причина', pending_count: 'в очереди', count: 'записей', queue_size: 'очередь', key_group: 'группа', key_family: 'тип данных', key_id: 'ID ключа', error_code: 'код ошибки', attempt: 'попытка', result: 'результат', mode: 'режим', online: 'онлайн', problem_stage: 'этап проблемы', days_received: 'дней получено', min_required: 'минимум дней', visit_kind: 'тип посещения', absence_ms: 'в фоне, мс', auth_state: 'авторизация', sync_state: 'синхронизация' };
     return Object.keys(context).map(function (key) { return (labels[key] || key) + ': ' + context[key]; }).join(' · ');
   }
 
-  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count', 'days_received', 'min_required', 'visit_kind', 'absence_ms', 'auth_state', 'sync_state'];
+  var SAFE_CONTEXT_KEYS = ['phase', 'step', 'screen', 'source', 'reason', 'pending_count', 'count', 'queue_size', 'key_group', 'key_family', 'key_id', 'error_code', 'attempt', 'result', 'mode', 'online', 'problem_stage', 'release_version', 'unseen_count', 'days_received', 'min_required', 'visit_kind', 'absence_ms', 'auth_state', 'sync_state'];
 
   function safeContext(context) {
     if (!context || typeof context !== 'object') return {};

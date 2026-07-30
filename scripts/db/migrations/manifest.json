@@ -160,6 +160,13 @@
       "path": "scripts/db/migrations/2026-07-30_trial_prestart_access_v1.sql",
       "description": "Keep pre-trial PIN access profile-only and revoke legacy client-side trial activation",
       "destructive": false
+    },
+    {
+      "id": "2026-07-30_client_observability_ignore_preauth_resume",
+      "order": 21,
+      "path": "scripts/db/migrations/2026-07-30_client_observability_ignore_preauth_resume.sql",
+      "description": "Exclude stale pre-auth resume-only telemetry from client visit metrics without hiding real failures",
+      "destructive": false
     }
   ]
 }

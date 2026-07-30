@@ -83,8 +83,11 @@ sync, если приложение открыто.
 Client observability фиксирует один набор событий на реальный цикл, а не на
 каждый ключ: `sync_cycle_started/completed/failed`, `sync_recovered` и
 `write_queued/uploaded/failed`. Контекст содержит только агрегаты (`count`,
-`queue_size`, безопасную `key_group`) и нормализованную причину; storage keys и
-значения дневника в telemetry не уходят.
+`queue_size`), безопасные `key_group`/`key_family`, непрозрачный стабильный
+`key_id` и нормализованный `error_code`; в `event_context` не уходят raw storage
+keys, browser-supplied client ID и значения дневника (identity строки отдельно
+резолвится сервером). Для частично неуспешного batch контекст ошибки строится
+только по элементам, которые сервер не сохранил.
 
 Structured boot-события не отправляются до появления client context, а REST не
 принимает их под anonymous identity. `abandoned` требует явного `boot_started`
@@ -110,10 +113,13 @@ hot/error/повторные `heysSyncCompleted` не объявляют initial
 Для returning session React mount больше не уничтожает последний видимый
 skeleton без замены: boot visual guard держит его отдельным слоем до
 подтверждённого двойным `requestAnimationFrame` paint видимого Day/active-tab
-контента или автоматически открытой hunger/check-in модалки. Таймаут 15 секунд
-показывает ручные действия «Повторить» и «Перезагрузить приложение»; retry
-перезапускает Day sync без автоматического reload. Один boot получает не более
-одного `first_visible_frame`, `blank_screen_guard_triggered` и
+контента или автоматически открытой hunger/check-in модалки. Бюджет 15 секунд
+начинается только при видимой странице и установленном client context,
+приостанавливается в фоне и перезапускается после возврата. Штатный auth gate
+завершает guard без показа ложного восстановления. Реальный таймаут показывает
+ручные действия «Повторить» и «Перезагрузить приложение»; retry перезапускает
+Day sync без автоматического reload. Один boot получает не более одного
+`first_visible_frame`, `blank_screen_guard_triggered` и
 `blank_screen_recovery_failed`; успешный paint после timeout дополнительно
 фиксирует `blank_screen_recovered`.
 
@@ -286,3 +292,4 @@ SW update state machine публикует структурированные с
 | W22 | Visual guard держит skeleton до paint, принимает blocking consent gate как видимый frame и даёт ручной recovery без reload-цикла | `pnpm exec vitest run apps/web/__tests__/blank-screen-guard.test.js && rg -n "data-heys-visible-frame.*consent\|consent_screen_painted" apps/web/heys_consents_v1.js` | проверено 2026-07-27                                      |
 | W23 | Повторный PIN-вход/foreground сразу перечитывает правки; auto-ack требует tombstone                                              | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                                   | проверено 2026-07-26                                      |
 | W24 | Live legal drift canary read-only сверяет gzip bundle, landing, registry и ledger после deploy и по schedule                     | `node --test scripts/ci/__tests__/legal-drift-canary.test.mjs scripts/ci/__tests__/send-telegram-alert.test.mjs`; `node scripts/check-live-legal-drift.mjs`           | source/live проверены 2026-07-28; workflow не опубликован |
+| W25 | Write telemetry различает безопасные key/error-коды, а visual guard считает только видимое post-auth время                       | `npx vitest run apps/web/__tests__/client-session-observability.test.js apps/web/__tests__/blank-screen-guard.test.js`                                                | проверено 2026-07-30                                      |

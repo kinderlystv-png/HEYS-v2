@@ -17,11 +17,12 @@ function visible(element) {
   return element;
 }
 
-function createRuntime() {
+function createRuntime(options = {}) {
   const events = [];
   const timers = [];
   let clock = 0;
   window.HEYS = {
+    currentClientId: options.authenticated === false ? null : 'client-1',
     LogTrace: {
       event: vi.fn((name, context, level) => events.push({ name, context, level })),
     },
@@ -55,12 +56,14 @@ function createRuntime() {
 beforeEach(() => {
   delete window.HEYS;
   delete window.__heysHasSession;
+  delete window.__heysBootStart;
 });
 
 afterEach(() => {
   document.body.innerHTML = '';
   delete window.HEYS;
   delete window.__heysHasSession;
+  delete window.__heysBootStart;
   vi.restoreAllMocks();
 });
 
@@ -117,6 +120,75 @@ describe('iOS/PWA blank-screen visual guard', () => {
 
     runtime.guard.reportVisibleFrame({ element: frame, screen: 'day' });
     expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(1);
+  });
+
+  it('measures the visible-frame budget from guard arm instead of page boot', () => {
+    const runtime = createRuntime();
+    window.__heysBootStart = 1000;
+    runtime.setClock(1_850_000);
+    runtime.guard.arm(runtime.root);
+
+    const frame = visible(document.createElement('div'));
+    frame.dataset.heysVisibleFrame = 'day';
+    runtime.root.appendChild(frame);
+    runtime.setClock(1_855_000);
+    runtime.guard.reportVisibleFrame({ element: frame, screen: 'day' });
+
+    expect(runtime.events.find((event) => event.name === 'first_visible_frame')?.context)
+      .toEqual(expect.objectContaining({ durationMs: 5000 }));
+  });
+
+  it('pauses the timeout while hidden and starts a fresh foreground budget', () => {
+    const runtime = createRuntime();
+    runtime.guard.arm(runtime.root);
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    runtime.setClock(1_800_000);
+    runtime.timers[0]();
+
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    runtime.setClock(1_815_000);
+    runtime.timers.at(-1)();
+
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toEqual([
+      expect.objectContaining({ context: expect.objectContaining({ durationMs: 15000 }) }),
+    ]);
+  });
+
+  it('waits for a real client context before starting recovery timeout', () => {
+    const runtime = createRuntime({ authenticated: false });
+    runtime.guard.arm(runtime.root);
+    runtime.setClock(15000);
+    runtime.guard._test.onTimeout();
+
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
+    expect(document.getElementById('heys-boot-visual-guard')?.textContent).not.toContain('Экран не загрузился');
+
+    window.HEYS.currentClientId = 'client-1';
+    window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: 'client-1' } }));
+    runtime.setClock(30000);
+    runtime.timers.at(-1)();
+
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(1);
+  });
+
+  it('removes the guard when auth resolves to the login gate', () => {
+    const runtime = createRuntime({ authenticated: false });
+    runtime.guard.arm(runtime.root);
+    window.dispatchEvent(new CustomEvent('heys:app-content-ready', {
+      detail: { clientId: null, screen: 'gate' },
+    }));
+    runtime.guard._test.onTimeout();
+    const frame = visible(document.createElement('div'));
+    runtime.root.appendChild(frame);
+    expect(runtime.guard.reportVisibleFrame({ element: frame, screen: 'day' })).toBe(false);
+
+    expect(document.getElementById('heys-boot-visual-guard')).toBeNull();
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
+    expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(0);
   });
 
   it('shows explicit recovery actions and records a detailed timeout deviation', () => {

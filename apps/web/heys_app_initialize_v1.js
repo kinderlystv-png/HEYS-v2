@@ -36,6 +36,8 @@
         let guardTriggered = false;
         let recoveryFailedReported = false;
         let attempt = 0;
+        let timerGeneration = 0;
+        let listenersInstalled = false;
 
         function emit(name, status, level, reason, screen) {
             window.HEYS?.LogTrace?.event?.(name, {
@@ -51,8 +53,17 @@
         }
 
         function clearTimer() {
+            timerGeneration += 1;
             if (timeoutId !== null) cancel(timeoutId);
             timeoutId = null;
+        }
+
+        function hasClientContext() {
+            return Boolean(window.HEYS && window.HEYS.currentClientId);
+        }
+
+        function isPageVisible() {
+            return typeof document === 'undefined' || document.visibilityState !== 'hidden';
         }
 
         function disconnectObserver() {
@@ -93,6 +104,7 @@
             frameReported = true;
             clearTimer();
             disconnectObserver();
+            removeLifecycleListeners();
             if (window.__heysSkelVisible) {
                 window.__heysSkelReplacedAt = now();
                 window.__heysSkelVisible = false;
@@ -160,7 +172,7 @@
         }
 
         function onTimeout() {
-            if (frameReported) return;
+            if (!armed || frameReported || !isPageVisible() || !hasClientContext()) return;
             if (!guardTriggered) {
                 guardTriggered = true;
                 emit('blank_screen_guard_triggered', 'degraded', 'warn', 'first_visible_frame_timeout', 'day');
@@ -172,7 +184,65 @@
 
         function armTimer(delay) {
             clearTimer();
-            timeoutId = schedule(onTimeout, delay);
+            const generation = timerGeneration;
+            timeoutId = schedule(() => {
+                if (generation !== timerGeneration) return;
+                timeoutId = null;
+                onTimeout();
+            }, delay);
+        }
+
+        function restartVisibleBudget() {
+            if (!armed || frameReported || !isPageVisible() || !hasClientContext()) return false;
+            startedAt = now();
+            armTimer(timeoutMs);
+            scanForVisibleFrame('visible_marker_detected');
+            return true;
+        }
+
+        function handleVisibilityChange() {
+            if (!armed || frameReported) return;
+            if (!isPageVisible()) {
+                clearTimer();
+                return;
+            }
+            restartVisibleBudget();
+        }
+
+        function handleClientChanged(event) {
+            if (!armed || frameReported) return;
+            const clientId = event && event.detail && event.detail.clientId;
+            if (!clientId) {
+                clearTimer();
+                return;
+            }
+            restartVisibleBudget();
+        }
+
+        function handleAppContentReady(event) {
+            if (!armed || frameReported) return;
+            const detail = event && event.detail || {};
+            if (detail.screen === 'gate' && !detail.clientId) {
+                destroy();
+                return;
+            }
+            if (detail.clientId) restartVisibleBudget();
+        }
+
+        function installLifecycleListeners() {
+            if (listenersInstalled) return;
+            listenersInstalled = true;
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('heys:client-changed', handleClientChanged);
+            window.addEventListener('heys:app-content-ready', handleAppContentReady);
+        }
+
+        function removeLifecycleListeners() {
+            if (!listenersInstalled) return;
+            listenersInstalled = false;
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('heys:client-changed', handleClientChanged);
+            window.removeEventListener('heys:app-content-ready', handleAppContentReady);
         }
 
         function retryRecovery() {
@@ -190,7 +260,7 @@
             if (armed || frameReported || !element || !window.__heysHasSession) return false;
             armed = true;
             rootElement = element;
-            startedAt = Number(window.__heysBootStart) || now();
+            startedAt = now();
             const sourceSkeleton = element.querySelector('.heys-skeleton');
             overlay = document.createElement('div');
             overlay.id = 'heys-boot-visual-guard';
@@ -205,13 +275,17 @@
                 observer = new window.MutationObserver(() => scanForVisibleFrame('visible_marker_detected'));
                 observer.observe(element, { childList: true, subtree: true, attributes: true });
             }
-            armTimer(timeoutMs);
+            installLifecycleListeners();
+            if (isPageVisible() && hasClientContext()) armTimer(timeoutMs);
             return true;
         }
 
         function destroy() {
+            armed = false;
+            frameReported = true;
             clearTimer();
             disconnectObserver();
+            removeLifecycleListeners();
             removeOverlay();
         }
 

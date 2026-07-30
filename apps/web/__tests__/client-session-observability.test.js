@@ -88,8 +88,14 @@ describe('client session observability', () => {
       source: 'whats_new',
       release_version: '2026.07.24.abc123ef',
       unseen_count: 2,
+      key_family: 'reading_preferences',
+      key_id: 'k_a1b2c3d4',
+      error_code: 'server_error',
       hungerLevel: 9,
       phone: '+79990000000',
+      raw_key: 'heys_secret_key',
+      value: 'secret-value',
+      client_id: 'foreign-client-id',
     });
     context.HEYS.LogTrace.flush();
     await Promise.resolve();
@@ -110,9 +116,15 @@ describe('client session observability', () => {
       source: 'whats_new',
       release_version: '2026.07.24.abc123ef',
       unseen_count: 2,
+      key_family: 'reading_preferences',
+      key_id: 'k_a1b2c3d4',
+      error_code: 'server_error',
     });
     expect(JSON.stringify(event.event_context)).not.toContain('79990000000');
     expect(event.event_context).not.toHaveProperty('hungerLevel');
+    expect(event.event_context).not.toHaveProperty('raw_key');
+    expect(event.event_context).not.toHaveProperty('value');
+    expect(event.event_context).not.toHaveProperty('client_id');
   });
 
   it('keeps structured events in a bounded offline queue until the server accepts them', () => {
@@ -558,12 +570,19 @@ describe('client session observability', () => {
     ['sync_cycle_started', 'sync_cycle_completed', 'sync_cycle_failed', 'sync_recovered', 'write_queued', 'write_uploaded', 'write_failed']
       .forEach((eventName) => expect(storageSource).toContain(`'${eventName}'`));
     expect(storageSource).toContain('observabilityKeyGroup');
+    expect(storageSource).toContain('observabilityWriteContext');
+    expect(storageSource).toContain('observabilityErrorCode');
+    expect(storageSource).toContain("key_id: `k_${observabilityFingerprint(keys.join('|') || 'none')}`");
+    expect(storageSource).toContain('count: failedUploadItems.length, ...failedWriteContext');
     expect(storageSource).toContain("return 'diary'");
-    expect(loggerSource).toContain('key_group: 1');
-    expect(restSource).toContain("'count', 'queue_size', 'key_group', 'problem_stage', 'days_received', 'min_required'");
+    expect(loggerSource).toContain('key_group: 1, key_family: 1, key_id: 1, error_code: 1');
+    expect(restSource).toContain("'count', 'queue_size', 'key_group', 'key_family', 'key_id', 'error_code', 'problem_stage'");
+    expect(diagnosticsSource).toContain("'key_group', 'key_family', 'key_id', 'error_code'");
     expect(ewsSource).toContain("event: 'ews_input_insufficient'");
     expect(ewsSource).toContain("HEYS.LogTrace?.event?.('write_failed'");
     expect(ewsSource).toContain("key_group: 'ews_weekly'");
+    expect(ewsSource).toContain("key_family: 'ews'");
+    expect(ewsSource).toContain("error_code: 'cloud_save_timeout'");
     expect(storageSource).toContain("event: 'initial_sync_fallback_wait'");
   });
 

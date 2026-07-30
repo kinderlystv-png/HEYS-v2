@@ -179,23 +179,31 @@ Gateway возвращает scalar JSON-функции в объекте с и�
 
 Проблемная сессия имеет действие «Скопировать полный лог»: отчёт включает
 идентификаторы запуска/build/device, итог, длительность, счётчики и полный
-timeline структурированных событий с allowlisted context. Дневник, сообщения,
-телефон, IP, токены и raw console в отчёт не попадают. После `boot_ready`
-неструктурированная ошибка зависимости помечает запуск как `degraded`, а не
-`failed`; фатальный статус требует именованного lifecycle-события сбоя.
-Именованные warning-события также заполняют `problem_event`, кроме обычного
-закрытия hunger prompt и краткого ожидания резервного sync batch: сами по себе
-они не ухудшают готовое посещение. Безымянный raw console `warn` остаётся в
-ring-buffer, но не ухудшает итог; raw `error` по-прежнему считается отклонением,
-а безопасный отчёт показывает число скрытых raw-ошибок без их текста.
-Промежуточная неудачная попытка API retry остаётся warning; только исчерпание
-всех попыток считается raw error. Таймаут облачной записи недельного EWS-снимка
-пишется как нефатальный `write_failed` с `key_group=ews_weekly`; локальный
-derived-снимок при этом уже сохранён. Первый фактически видимый кадр отделён от
-`app_shell_ready` и `boot_ready`: Day tab и автоматически открытые
-hunger/check-in модалки подтверждают видимый кадр, таймаут и результат ручного
-восстановления — именованные `blank_screen_*` события только с allowlisted
-phase/reason/screen/attempt/online context.
+timeline структурированных событий с allowlisted context. Для cloud write в нём
+доступны безопасные `key_family`, непрозрачный `key_id` и нормализованный
+`error_code`, поэтому повтор одного проблемного ключа отличим без раскрытия
+самого ключа. Дневник, сообщения, телефон, IP, токены и raw console в отчёт не
+попадают. После `boot_ready` неструктурированная ошибка зависимости помечает
+запуск как `degraded`, а не `failed`; фатальный статус требует именованного
+lifecycle-события сбоя. Именованные warning-события также заполняют
+`problem_event`, кроме обычного закрытия hunger prompt и краткого ожидания
+резервного sync batch: сами по себе они не ухудшают готовое посещение.
+Безымянный raw console `warn` остаётся в ring-buffer, но не ухудшает итог; raw
+`error` по-прежнему считается отклонением, а безопасный отчёт показывает число
+скрытых raw-ошибок без их текста. Промежуточная неудачная попытка API retry
+остаётся warning; только исчерпание всех попыток считается raw error. Таймаут
+облачной записи недельного EWS-снимка пишется как нефатальный `write_failed` с
+`key_group=ews_weekly`; локальный derived-снимок при этом уже сохранён. Первый
+фактически видимый кадр отделён от `app_shell_ready` и `boot_ready`: Day tab и
+автоматически открытые hunger/check-in модалки подтверждают видимый кадр,
+таймаут и результат ручного восстановления — именованные `blank_screen_*`
+события только с allowlisted phase/reason/screen/attempt/online context.
+
+Stale resume-посещение, состоящее только из `visit_started` и `app_foregrounded`
+с `auth_state=pending`, после 90 секунд исключается из метрик: это фоновое
+пробуждение до появления client context, а не брошенный вход. Фильтр узкий —
+любое другое именованное событие, warning или error сохраняет посещение в
+диагностике.
 
 Над фильтрами общей диагностики находится независимое действие дневного
 мегалога. Оно всегда запрашивает все `failed/degraded/abandoned` посещения от
@@ -313,6 +321,7 @@ Curator inbox использует health-check соединения перед 
 | C25 | Web-composer отличает реальный iOS/WebKit от desktop emulation и показывает безопасную диагностику | `apps/web/heys_messenger_v1.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                                                                                                         | проверено 2026-07-25 |
 | C26 | Первый iOS-тап применяет recovery, а touch guard изолирует scroll модального thread                | `apps/web/heys_messenger_v1.js`, `apps/web/styles/modules/1000-messenger.css`, `apps/web/__tests__/messenger-reliability-contract.test.js`                                                                                                                                                                           | проверено 2026-07-25 |
 | C27 | Фото имеет auth-bound API fallback; итоговая ошибка пишет только allowlisted context без вложения  | `apps/web/heys_messenger_v1.js`, `apps/web/heys_messenger_api_v1.js`, `apps/web/heys_client_log_trace_v1.js`, `yandex-cloud-functions/heys-api-photos/index.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`, `yandex-cloud-functions/heys-api-photos/__tests__/attachment-delete-contract.test.cjs` | проверено 2026-07-26 |
+| C28 | Мегалог различает безопасный write-контекст и исключает только чистый pre-auth resume шум          | `apps/web/heys_storage_supabase_v1.js`, `scripts/db/migrations/2026-07-30_client_observability_ignore_preauth_resume.sql`, `apps/web/__tests__/client-observability-signal-quality.test.js`                                                                                                                          | проверено 2026-07-30 |
 
 ## Связанные источники
 

@@ -119,7 +119,7 @@
     from: 1, to: 1, online: 1, attempt: 1, result: 1,
     effective_type: 1, candidate_type: 1, attempt_count: 1, surface: 1,
     bundle: 1, route: 1, tab: 1, flow_kind: 1,
-    count: 1, queue_size: 1, key_group: 1, problem_stage: 1,
+    count: 1, queue_size: 1, key_group: 1, key_family: 1, key_id: 1, error_code: 1, problem_stage: 1,
     days_received: 1, min_required: 1,
     visit_kind: 1, absence_ms: 1, auth_state: 1, sync_state: 1
   };

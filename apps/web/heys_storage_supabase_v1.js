@@ -1234,6 +1234,26 @@
     return 'server';
   }
 
+  function observabilityErrorCode(error) {
+    const text = String(error?.message || error || '').toLowerCase();
+    const status = Number(error?.status || error?.code || 0);
+    if (!navigator.onLine) return 'network_offline';
+    if (/write_context_unavailable/.test(text)) return 'write_context_unavailable';
+    if (/subscription_required/.test(text)) return 'subscription_required';
+    if (/critical_payload_rejected/.test(text)) return 'critical_payload_rejected';
+    if (/not_client_data/.test(text)) return 'not_client_data';
+    if (/no auth token|no session token|auth_missing/.test(text)) return 'auth_missing';
+    if (/expired|invalid token|invalid session/.test(text)) return 'auth_expired';
+    if (/timeout|timed out|abort/.test(text)) return 'timeout';
+    if (status === 413 || /413|payload too large|request entity too large/.test(text)) return 'payload_too_large';
+    if (status === 429 || /rate.?limit|too many requests/.test(text)) return 'rate_limited';
+    if (status === 400 || /invalid request|bad request/.test(text)) return 'invalid_request';
+    if (status >= 500 || /service unavailable|bad gateway|gateway timeout/.test(text)) return 'server_unavailable';
+    if (/offline|network|fetch|connection/.test(text)) return 'network_failure';
+    if (/auth|token|session|401|403/.test(text)) return 'auth_expired';
+    return 'server_error';
+  }
+
   function traceClientSyncEvent(clientId, name, context, level) {
     if (!_pinAuthClientId || _pinAuthClientId !== clientId) return;
     try { global.HEYS?.LogTrace?.event?.(name, Object.assign({ source: 'sync' }, context || {}), level); }
@@ -1250,6 +1270,54 @@
       return 'settings';
     }));
     return groups.size === 1 ? Array.from(groups)[0] : 'mixed';
+  }
+
+  function normalizeObservabilityKey(rawKey) {
+    return String(rawKey || '')
+      .toLowerCase()
+      .replace(/^heys_[0-9a-f-]{36}_/, 'heys_')
+      .replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, '{uuid}')
+      .replace(/\d{4}-\d{2}-\d{2}/g, '{date}')
+      .replace(/\d+/g, '{n}');
+  }
+
+  function observabilityFingerprint(value) {
+    const hashFn = global.HEYS?.contentHash?.fnv1a;
+    if (typeof hashFn === 'function') return hashFn(String(value));
+    let hash = 0x811c9dc5;
+    const text = String(value);
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function observabilityKeyFamily(rawKey) {
+    const key = normalizeObservabilityKey(rawKey);
+    if (key.includes('dayv{n}_')) return 'diary_day';
+    if (key.includes('morning_checkin_progress')) return 'morning_checkin';
+    if (key.includes('planning_')) return 'planning';
+    if (key.includes('products')) return 'products';
+    if (/profile|norms|hr_zones|ratio_zones/.test(key)) return 'profile';
+    if (key.includes('ews_')) return 'ews';
+    if (key.includes('reading_preferences')) return 'reading_preferences';
+    if (key.includes('advice_')) return 'advice';
+    if (/onboarding|tour_/.test(key)) return 'onboarding';
+    if (/game|streak|milestone/.test(key)) return 'gamification';
+    if (/preset|grams_history/.test(key)) return 'meal_preferences';
+    return 'other';
+  }
+
+  function observabilityWriteContext(batch) {
+    const items = Array.isArray(batch) ? batch : [];
+    const keys = Array.from(new Set(items.map((item) => normalizeObservabilityKey(item?.k)).filter(Boolean))).sort();
+    const families = new Set(items.map((item) => observabilityKeyFamily(item?.k)));
+    return {
+      key_group: observabilityKeyGroup(items),
+      key_family: families.size === 1 ? Array.from(families)[0] : 'mixed',
+      key_id: `k_${observabilityFingerprint(keys.join('|') || 'none')}`
+    };
   }
 
   cloud.syncClient = async function (clientId, options = {}) {
@@ -11057,12 +11125,12 @@
     _uploadStartedAt = Date.now();
     const _uploadStartTs = _uploadStartedAt;
     const _observedUploadClientId = filteredBatch[0]?.client_id || null;
-    const _observedUploadGroup = observabilityKeyGroup(filteredBatch);
+    const _observedUploadContext = observabilityWriteContext(filteredBatch);
     const uploadRunId = ++_clientUploadRunId;
     traceClientSyncEvent(_observedUploadClientId, 'write_queued', {
       status: 'queued', count: filteredBatch.length,
       queue_size: filteredBatch.length + clientUpsertQueue.length,
-      key_group: _observedUploadGroup
+      ..._observedUploadContext
     });
     scheduleClientUploadWatchdog('upload-start');
     // One progress ceiling update per upload attempt (not on every pending-change).
@@ -11111,7 +11179,10 @@
       requeueClientInFlightBatch(filteredBatch, 'sync-disabled');
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
-      traceClientSyncEvent(_observedUploadClientId, 'write_failed', { status: 'failed', count: filteredBatch.length, key_group: _observedUploadGroup, reason: 'auth' }, 'error');
+      traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
+        status: 'failed', count: filteredBatch.length, ..._observedUploadContext,
+        reason: 'auth', error_code: 'auth_missing'
+      }, 'error');
       notifySyncCompletedIfDrained();
       return;
     }
@@ -11123,7 +11194,10 @@
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       incrementRetry();
-      traceClientSyncEvent(_observedUploadClientId, 'write_failed', { status: 'failed', count: filteredBatch.length, key_group: _observedUploadGroup, reason: 'network' }, 'warn');
+      traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
+        status: 'failed', count: filteredBatch.length, ..._observedUploadContext,
+        reason: 'network', error_code: 'network_offline'
+      }, 'warn');
       // Запланировать повторную попытку с exponential backoff
       scheduleClientPush();
       notifySyncCompletedIfDrained();
@@ -11185,6 +11259,7 @@
         let totalSaved = 0;
         let anyError = null;
         let isAuthError = false; // 🔧 v58 FIX: отслеживаем auth ошибки
+        const failedUploadItems = [];
         for (const [clientId, items] of Object.entries(byClientId)) {
           const result = await cloud.saveClientViaRPC(clientId, items);
           if (uploadRunId !== _clientUploadRunId) {
@@ -11213,7 +11288,11 @@
               isAuthError = true;
             }
             // Вернуть в очередь
-            items.forEach(item => clientUpsertQueue.push({ ...item, client_id: clientId }));
+            items.forEach(item => {
+              const failedItem = { ...item, client_id: clientId };
+              failedUploadItems.push(failedItem);
+              clientUpsertQueue.push(failedItem);
+            });
           }
         }
 
@@ -11226,10 +11305,11 @@
           }
           addSyncLogEntry(isWriteContextError ? 'upload_deferred' : 'upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           _lastUploadFailAt = Date.now();
+          const failedWriteContext = observabilityWriteContext(failedUploadItems);
           traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
             status: 'failed', durationMs: Date.now() - _uploadStartTs,
-            count: hydratedBatch.length, key_group: _observedUploadGroup,
-            reason: observabilityReason(anyError)
+            count: failedUploadItems.length, ...failedWriteContext,
+            reason: observabilityReason(anyError), error_code: observabilityErrorCode(anyError)
           }, isWriteContextError ? 'warn' : 'error');
           const uploadErrorKind = isWriteContextError ? 'write-context' : (isAuthError ? 'auth' : classifyUploadError(anyError));
           const existingDiag = _lastUploadDiag;
@@ -11293,7 +11373,7 @@
           _lastUploadOkAt = Date.now();
           traceClientSyncEvent(_observedUploadClientId, 'write_uploaded', {
             status: 'uploaded', durationMs: _uploadDurationMs,
-            count: totalSaved, key_group: _observedUploadGroup,
+            count: totalSaved, ..._observedUploadContext,
             queue_size: clientUpsertQueue.length
           });
           clearClientInFlightBatch({ notify: false });
@@ -11382,10 +11462,12 @@
         clearClientInFlightBatch({ notify: false });
         persistClientQueueDurabilityState();
         notifyPendingChange();
+        const failedWriteContext = observabilityWriteContext(failedItems);
+        const failedError = results.find(r => !r.success)?.error;
         traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
           status: 'failed', durationMs: Date.now() - _uploadStartTs,
-          count: failedItems.length, key_group: _observedUploadGroup,
-          reason: observabilityReason(results.find(r => !r.success)?.error)
+          count: failedItems.length, ...failedWriteContext,
+          reason: observabilityReason(failedError), error_code: observabilityErrorCode(failedError)
         }, 'error');
 
         const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
@@ -11409,7 +11491,7 @@
       if (successItems.length > 0) {
         traceClientSyncEvent(_observedUploadClientId, 'write_uploaded', {
           status: 'uploaded', durationMs: Date.now() - _uploadStartTs,
-          count: successItems.length, key_group: _observedUploadGroup,
+          count: successItems.length, ...observabilityWriteContext(successItems),
           queue_size: clientUpsertQueue.length
         });
         const types = {};
@@ -11462,8 +11544,8 @@
       _lastUploadFailAt = Date.now();
       traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
         status: 'failed', durationMs: Date.now() - _uploadStartTs,
-        count: uniqueBatch.length, key_group: _observedUploadGroup,
-        reason: observabilityReason(e)
+        count: uniqueBatch.length, ...observabilityWriteContext(uniqueBatch),
+        reason: observabilityReason(e), error_code: observabilityErrorCode(e)
       }, 'error');
       recordUploadDiag({
         kind: classifyUploadError(e),
