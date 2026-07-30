@@ -65,10 +65,21 @@ fi
 
 DIST="$ROOT/apps/web/dist"
 ENDPOINT="${YC_ENDPOINT:-https://storage.yandexcloud.net}"
-BUNDLES="$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.verifiedBundles.join(" "))' "$(node scripts/web-deploy-scope.mjs verify "--files=$SCOPE_FILES" --dist=apps/web/dist)")"
+PWA_BUCKET="${YC_BUCKET_PWA:-heys-app}"
+DEMO_BUCKET="${YC_BUCKET_DEMO:-try-heyslab-ru}"
+VERIFY_JSON="$(node scripts/web-deploy-scope.mjs verify "--files=$SCOPE_FILES" --dist=apps/web/dist)"
+BUNDLES="$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.verifiedBundles.join(" "))' "$VERIFY_JSON")"
 MUTABLE="$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.mutableFiles.map(f=>f.split("/").pop()).join(" "))' "$PLAN_JSON")"
 
-for bucket in "${YC_BUCKET_PWA:-heys-app}" "${YC_BUCKET_DEMO:-try-heyslab-ru}"; do
+# Fail before the first cloud mutation if index/manifests would reference a
+# bundle that neither this scoped deploy uploads nor both target buckets have.
+node scripts/web-deploy-scope.mjs verify-remote \
+  "--files=$SCOPE_FILES" \
+  --dist=apps/web/dist \
+  "--buckets=$PWA_BUCKET,$DEMO_BUCKET" \
+  "--endpoint=$ENDPOINT"
+
+for bucket in "$PWA_BUCKET" "$DEMO_BUCKET"; do
   for bundle in $BUNDLES; do
     aws s3 cp "$DIST/$bundle.gz" "s3://$bucket/$bundle" --endpoint-url="$ENDPOINT" \
       --cache-control "public, max-age=31536000, immutable" --content-type application/javascript --content-encoding gzip --quiet

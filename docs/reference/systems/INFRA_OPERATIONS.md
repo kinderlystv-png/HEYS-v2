@@ -1,6 +1,6 @@
 # Инфраструктура и эксплуатация
 
-> **Статус:** repository deploy contracts проверены 2026-07-28; YC
+> **Статус:** repository deploy contracts проверены 2026-07-30; YC
 > functions/triggers проверены 2026-07-25 **Охват:** frontend delivery, Cloud
 > Functions deploy, gateway, secrets, database access, monitoring и release
 > evidence **Не подтверждено:** DNS/VM/CDN, сертификаты, GitHub secrets,
@@ -61,6 +61,12 @@ Full path запускает web tests, собирает deploy artifact, заг
 сверяет legal manifest, server registry migration и версии внутри
 `boot-core`/consent bundle. Поэтому frontend с новой legal-версией не может
 пройти deploy поверх отставшей схемы или со старым runtime bundle.
+
+Ручной scoped deploy до первой cloud mutation собирает все hashed bundle-ссылки
+из загружаемых `index.html`, `bundle-manifest.json` и `lazy-manifest.json`.
+Выбранные bundle должны иметь локальный gzip для upload, а каждый невыбранный
+bundle уже существовать одновременно в `heys-app` и `try-heyslab-ru`; любой
+missing/403/network failure останавливает публикацию entry files fail-closed.
 
 Подробные VM/CDN правила остаются в `infra/README.md`, но указанный там срок SSL
 уже прошёл относительно даты этого аудита. Это не доказывает истечение текущего
@@ -198,7 +204,9 @@ versioned seed migration и отдельно разрешённого production
 12. Ручной scoped web deploy и CI проверяют bundle/hash-контракт через
     `scripts/web-deploy-scope.mjs`. Перед ручной публикацией показывается полный
     выбранный scope; после подтверждения любое новое source-изменение прерывает
-    upload. Решение о допустимости совместного scope остаётся за пользователем.
+    upload. До первой записи все hashed bundle-ссылки entry/manifest либо входят
+    в upload set, либо подтверждены в обоих целевых bucket. Решение о
+    допустимости совместного scope остаётся за пользователем.
 13. `scripts/deploy-frontend.sh` — compatibility entrypoint к
     `scripts/deploy-web-scoped.sh`, а не отдельный build/upload flow. Не legacy-
     изменения (CSS/assets/config) fail-closed направляются в canonical full CI

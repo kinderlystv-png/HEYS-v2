@@ -10,6 +10,7 @@ import { LEGACY_BUNDLES, LEGACY_FULL_REBUILD_TRIGGERS } from './legacy-bundle-co
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED = /^(apps\/web\/(?:public\/|dist\/|bundle-manifest\.json$|index\.html$))/;
+const HASHED_BUNDLE = /\b[\w-]+\.bundle\.[0-9a-f]{8,64}\.js\b/gi;
 
 export function normalizeFiles(files) {
   return [...new Set(files.map((file) => String(file).trim().replace(/\\/g, '/')).filter(Boolean))].sort();
@@ -52,13 +53,23 @@ export function planDeployScope(files) {
 
 export function verifyDeployScope(plan, distDir) {
   const manifestPath = path.join(distDir, 'bundle-manifest.json');
+  const lazyManifestPath = path.join(distDir, 'lazy-manifest.json');
   const indexPath = path.join(distDir, 'index.html');
-  if (!fs.existsSync(manifestPath) || !fs.existsSync(indexPath)) {
-    throw new Error('dist must contain bundle-manifest.json and index.html');
+  if (!fs.existsSync(manifestPath) || !fs.existsSync(lazyManifestPath) || !fs.existsSync(indexPath)) {
+    throw new Error('dist must contain bundle-manifest.json, lazy-manifest.json and index.html');
   }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const lazyManifest = JSON.parse(fs.readFileSync(lazyManifestPath, 'utf8'));
   const index = fs.readFileSync(indexPath, 'utf8');
   const verifiedBundles = [];
+  const requiredBundles = [...new Set(
+    [index, JSON.stringify(manifest), JSON.stringify(lazyManifest)]
+      .flatMap((source) => source.match(HASHED_BUNDLE) || []),
+  )].sort();
+
+  for (const file of requiredBundles) {
+    if (!fs.existsSync(path.join(distDir, file))) throw new Error(`dist is missing referenced bundle ${file}`);
+  }
 
   for (const bundle of plan.bundles) {
     const file = manifest[bundle]?.file || manifest[bundle];
@@ -66,6 +77,7 @@ export function verifyDeployScope(plan, distDir) {
       throw new Error(`manifest has no hashed file for ${bundle}`);
     }
     if (!fs.existsSync(path.join(distDir, file))) throw new Error(`dist is missing ${file}`);
+    if (!fs.existsSync(path.join(distDir, `${file}.gz`))) throw new Error(`dist is missing upload artifact ${file}.gz`);
     if (!index.includes(file)) throw new Error(`index.html does not reference ${file}`);
     verifiedBundles.push(file);
   }
@@ -74,7 +86,23 @@ export function verifyDeployScope(plan, distDir) {
     const file = path.basename(source);
     if (!fs.existsSync(path.join(distDir, file))) throw new Error(`dist is missing mutable source ${file}`);
   }
-  return { ...plan, verifiedBundles };
+  return { ...plan, verifiedBundles, requiredBundles };
+}
+
+export function verifyBundleAvailability({ requiredBundles, verifiedBundles, buckets, hasRemoteBundle }) {
+  const uploadSet = new Set(verifiedBundles);
+  const missing = [];
+
+  for (const bucket of buckets) {
+    for (const file of requiredBundles) {
+      if (!uploadSet.has(file) && !hasRemoteBundle(bucket, file)) missing.push(`${bucket}/${file}`);
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`remote buckets are missing referenced bundles: ${missing.join(', ')}`);
+  }
+  return { checkedBuckets: buckets, requiredBundles };
 }
 
 function readStatusFiles() {
@@ -101,6 +129,8 @@ function parseArgs(argv) {
     command,
     files: rawFiles ? rawFiles.split(',') : readStatusFiles(),
     dist: path.resolve(ROOT, option('dist') || 'apps/web/dist'),
+    buckets: normalizeFiles((option('buckets') || '').split(',')),
+    endpoint: option('endpoint') || 'https://storage.yandexcloud.net',
   };
 }
 
@@ -111,7 +141,29 @@ function main() {
     return;
   }
   const plan = planDeployScope(args.files);
-  const result = args.command === 'verify' ? verifyDeployScope(plan, args.dist) : plan;
+  const verified = args.command === 'verify' || args.command === 'verify-remote'
+    ? verifyDeployScope(plan, args.dist)
+    : null;
+  if (args.command === 'verify-remote') {
+    if (args.buckets.length === 0) throw new Error('verify-remote requires --buckets=<bucket,...>');
+    verifyBundleAvailability({
+      requiredBundles: verified.requiredBundles,
+      verifiedBundles: verified.verifiedBundles,
+      buckets: args.buckets,
+      hasRemoteBundle: (bucket, file) => {
+        try {
+          execFileSync('aws', [
+            's3api', 'head-object', '--bucket', bucket, '--key', file,
+            '--endpoint-url', args.endpoint,
+          ], { stdio: 'ignore' });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    });
+  }
+  const result = verified || plan;
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
