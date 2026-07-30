@@ -120,8 +120,9 @@ describe('morning check-in stability', () => {
   });
 
   it('reopens an interrupted morning flow when only optional tail steps remain', () => {
-    expect(MORNING_SRC).toContain('const existingProgress = readMorningProgress(todayKey, currentClientId);');
-    expect(MORNING_SRC).toContain('const remainingProgressSteps = getRemainingMorningSteps({');
+    expect(MORNING_SRC).toContain('let existingProgress = readMorningProgress(todayKey, currentClientId);');
+    expect(MORNING_SRC).toContain('existingProgress = resolveStaleRegistrationProgress(existingProgress, currentClientId);');
+    expect(MORNING_SRC).toContain('let remainingProgressSteps = getRemainingMorningSteps({');
     expect(MORNING_SRC).toContain('Resuming flow with unfinished steps');
   });
 
