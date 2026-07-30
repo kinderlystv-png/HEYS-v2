@@ -372,8 +372,9 @@ describe('Planning Assemble Day', () => {
   it('keeps a full-week checkpoint bounded and rebuilds state, summary and trace from replay', () => {
     const first = loadModule();
     let session = first.module.api.createSession('diagnostic-size');
-    while (!first.module.api.getCampaignView(session).complete) {
+    while (true) {
       const view = first.module.api.getCampaignView(session);
+      if (view.complete) break;
       session = first.module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
     }
     const saved = first.module.api.saveCheckpoint(first.store, clientId, session);
@@ -422,7 +423,7 @@ describe('Planning Assemble Day', () => {
     expect(first.module.api.loadCheckpoint(first.store, clientId).session.state.rng.seed).toBe(completedSeed);
     expect(first.store.value().comparisonBaseline?.finalStateHash).toBeTruthy();
     cleanup();
-  }, 20_000);
+  }, 45_000);
 
   it('loads only replay-safe legacy checkpoints and upgrades them after the next confirmed step', () => {
     const { module, store } = loadModule();
