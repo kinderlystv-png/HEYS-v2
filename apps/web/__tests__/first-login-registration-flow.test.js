@@ -221,4 +221,22 @@ describe('first login registration flow', () => {
     expect(storage._store.heys_registration_in_progress).toBe('true');
     expect(window.HEYS.ProfileSteps.isProfileIncomplete(readJson(storage, 'heys_profile'))).toBe(true);
   });
+
+  it('does not treat the personal step as a completed profile when the local progress flag is absent', () => {
+    const partialProfile = {
+      firstName: 'Ирина',
+      gender: 'Женский',
+      birthDate: '1992-04-03',
+      age: 34,
+      updatedAt: Date.now(),
+    };
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify('client-4'),
+      heys_profile: JSON.stringify(partialProfile),
+    });
+    loadProfileSteps(storage);
+
+    expect(window.HEYS.ProfileSteps.isProfileIncomplete(partialProfile)).toBe(true);
+    expect(storage._store.heys_registration_in_progress).toBe('true');
+  });
 });

@@ -254,12 +254,12 @@ apps/web/heys_planning_chrono_v1.js:3004
 # before Store/Overlay wrappers are fully available.
 apps/web/heys_app_auth_init_v1.js:107
 apps/web/heys_app_auth_init_v1.js:198
-apps/web/heys_app_auth_init_v1.js:314
-apps/web/heys_app_auth_init_v1.js:337
-apps/web/heys_app_auth_init_v1.js:560
-apps/web/heys_app_auth_init_v1.js:561
-apps/web/heys_app_auth_init_v1.js:563
-apps/web/heys_app_auth_init_v1.js:635
+apps/web/heys_app_auth_init_v1.js:299
+apps/web/heys_app_auth_init_v1.js:322
+apps/web/heys_app_auth_init_v1.js:545
+apps/web/heys_app_auth_init_v1.js:546
+apps/web/heys_app_auth_init_v1.js:548
+apps/web/heys_app_auth_init_v1.js:620
 apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371

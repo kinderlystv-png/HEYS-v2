@@ -200,24 +200,9 @@
                     console.info('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
                 }
 
-                // Если у текущего PIN-клиента уже есть свой scoped профиль —
-                // очищаем флаг регистрации. Нескопированные `heys_profile`/`heys_norms`/...
-                // НЕ копируем в scope: они могут принадлежать куратору, который был
-                // в этой же вкладке/инкогнито-сессии раньше (incident 2026-06-02:
-                // имя куратора протекало в PIN-сессию клиента). Cloud sync поднимет
-                // настоящий профиль клиента из облака.
-                try {
-                    const clientId = pinAuthClient;
-                    const scopedProfileKey = `heys_${clientId}_profile`;
-                    const rawProfile = localStorage.getItem(scopedProfileKey);
-                    if (rawProfile) {
-                        const prof = tryParseStoredValue(rawProfile, null);
-                        if (prof?.profileCompleted || prof?.firstName || prof?.birthDate) {
-                            localStorage.removeItem('heys_registration_in_progress');
-                            console.info('[AuthInit] registrationInProgress cleared (scoped profile present)');
-                        }
-                    }
-                } catch (_) { }
+                // PIN restore не подтверждает завершение профиля: scoped profile
+                // появляется уже после первого шага регистрации. Флаг снимает
+                // только точечный cloud readback полного `heys_profile`.
             }
 
             setSyncVer((v) => v + 1);

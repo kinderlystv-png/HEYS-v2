@@ -12,7 +12,7 @@ const moduleSource = fs.readFileSync(modulePath, 'utf8');
 
 it('keeps successful session restoration out of the warning channel', () => {
   expect(moduleSource).toContain("console.info('[AuthInit] restored PIN currentClientId'");
-  expect(moduleSource).toContain("console.info('[AuthInit] registrationInProgress cleared");
+  expect(moduleSource).not.toContain("console.info('[AuthInit] registrationInProgress cleared");
   expect(moduleSource).not.toContain("console.warn('[AuthInit] restored PIN currentClientId'");
 });
 
@@ -25,6 +25,11 @@ function createMockStorage(seed = {}) {
     clear: vi.fn(() => { Object.keys(store).forEach((key) => delete store[key]); }),
     _store: store,
   };
+}
+
+function readJson(storage, key, fallback = null) {
+  const raw = storage._store[key];
+  return raw ? JSON.parse(raw) : fallback;
 }
 
 function loadAppAuthInit() {
@@ -77,6 +82,30 @@ describe('HEYS.AppAuthInit session restore', () => {
     });
     window.HEYS = originalHEYS;
     window.DEV = originalDEV;
+  });
+
+  it('keeps first-login registration active when only the personal profile step exists', () => {
+    Object.defineProperty(window.navigator, 'onLine', {
+      value: false,
+      configurable: true,
+    });
+    storage._store.heys_pin_auth_client = 'client-partial-1';
+    storage._store.heys_registration_in_progress = 'true';
+    storage._store['heys_client-partial-1_profile'] = JSON.stringify({
+      firstName: 'Ирина',
+      birthDate: '1992-04-03',
+    });
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((key, fallback) => readJson(storage, key, fallback)) },
+      cloud: {},
+      setProducts: vi.fn(), setClients: vi.fn(), setClientsSource: vi.fn(),
+      setClientId: vi.fn(), setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(), setCloudUser: vi.fn(), setStatus: vi.fn(), setIsInitializing: vi.fn(),
+    });
+
+    expect(storage._store.heys_registration_in_progress).toBe('true');
   });
 
   it('restores cookie-only curator sessions into the cloud auth runtime', async () => {

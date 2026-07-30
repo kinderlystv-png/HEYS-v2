@@ -1793,8 +1793,12 @@
           }
           // Cleanup legacy — removeItem unscoped после успешной migration.
           try { localStorage.removeItem('heys_profile'); } catch (_) { /* noop */ }
-          localStorage.removeItem('heys_registration_in_progress');
-          return false;
+          if (legacyProfile.profileCompleted === true) {
+            localStorage.removeItem('heys_registration_in_progress');
+            return false;
+          }
+          lsSet('heys_registration_in_progress', true);
+          return true;
         }
 
         if (hasLegacyData && !ownershipOk) {
@@ -1809,20 +1813,11 @@
       }
     } catch (_) { }
 
-    // Fallback: проверяем обязательные поля
-    // Профиль считается неполным, если ВСЕ поля имеют дефолтные значения
-    const isDefaultGender = !profile.gender || profile.gender === 'Мужской';
-    const isDefaultWeight = !profile.weight || profile.weight === 70;
-    const isDefaultHeight = !profile.height || profile.height === 175;
-    const noBirthDate = !profile.birthDate;
-    const isDefaultAge = !profile.age || profile.age === 30;
-
-    // Профиль неполный, только если ВСЕ поля дефолтные И нет даты рождения
-    const isIncomplete = isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
-    if (!isIncomplete) {
-      localStorage.removeItem('heys_registration_in_progress');
-    }
-    return isIncomplete;
+    // Частичный профиль (например, только имя и дата рождения после шага 1)
+    // не должен открывать prestart-gate. Полным считается только подтверждённый
+    // `profileCompleted` либо legacy-профиль, прошедший строгий auto-detect выше.
+    lsSet('heys_registration_in_progress', true);
+    return true;
   }
 
   HEYS.ProfileSteps = {
