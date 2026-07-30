@@ -527,6 +527,8 @@
     'admin_get_trial_candidate_summaries',
     'admin_get_trial_candidate',
     'admin_review_trial_candidate_v3',
+    'admin_review_trial_candidate_v4',
+    'admin_add_trial_candidate_answer_correction_v1',
     'admin_reopen_trial_candidate',
 
     // === LEADS MANAGEMENT (v3.0) ===

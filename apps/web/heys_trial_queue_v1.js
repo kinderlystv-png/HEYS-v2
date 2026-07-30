@@ -187,25 +187,75 @@
       'Телефон для входа — номер из заявки.',
       `PIN: ${pin || '—'}`,
       '',
-      'Ответы сохраняются в приложении и доступны только вам и вашему куратору. Не отправляйте сведения о здоровье в мессенджере.',
+      'Ответы сохраняются в защищённой анкете. Их проверит назначенный куратор. Не отправляйте сведения о здоровье в мессенджере.',
       'После анкеты куратор вручную оценит, подходит ли формат сопровождения. Заполнение анкеты не гарантирует начало пробной недели.',
       '',
       'Если не получится войти, ответьте на это сообщение.',
     ].join('\n');
   }
 
+  const INTAKE_ATTENTION_RULES = [
+    { section: 'health', key: 'chronic_conditions_status', detailKey: 'chronic_conditions', label: 'Состояния или диагнозы', values: ['yes', 'prefer_not'] },
+    { section: 'health', key: 'medications_status', detailKey: 'medications', label: 'Лекарства или добавки', values: ['yes', 'prefer_not'] },
+    { section: 'health', key: 'injuries_operations_status', detailKey: 'injuries_operations', label: 'Ограничения после травмы или операции', values: ['yes', 'prefer_not'] },
+    { section: 'health', key: 'allergies_status', detailKey: 'allergies', label: 'Аллергии или непереносимости', values: ['yes', 'prefer_not'] },
+    { section: 'health', key: 'doctor_restrictions_status', detailKey: 'doctor_restrictions', label: 'Рекомендации или ограничения врача', values: ['yes', 'prefer_not'] },
+    { section: 'health', key: 'pregnancy_lactation', label: 'Беременность или грудное вскармливание', values: ['pregnancy', 'lactation', 'prefer_not'] },
+    { section: 'health', key: 'eating_disorder_history', label: 'Опыт трудностей с пищевым поведением', values: ['past', 'current', 'unsure', 'prefer_not'] },
+    { section: 'safety', key: 'acute_symptoms', label: 'Острые симптомы или резкое ухудшение', values: ['yes', 'prefer_not'] },
+    { section: 'safety', key: 'recent_surgery', label: 'Недавняя операция, травма или госпитализация', values: ['yes', 'prefer_not'] },
+    { section: 'safety', key: 'active_ed_concern', label: 'Трудности с пищевым поведением, требующие помощи специалиста', values: ['yes', 'prefer_not'] },
+    { section: 'safety', key: 'medical_supervision', label: 'Состояние под наблюдением врача', values: ['yes', 'prefer_not'] },
+    { section: 'safety', key: 'details', label: 'Дополнительный контекст безопасности', nonEmpty: true },
+  ];
+
+  function normalizeIntakeAnswer(value) {
+    if (value === true) return 'yes';
+    if (value === false) return 'no';
+    return String(value || '').trim();
+  }
+
+  function createRequestId() {
+    if (global.crypto?.randomUUID) return global.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    if (global.crypto?.getRandomValues) global.crypto.getRandomValues(bytes);
+    else bytes.forEach((_, index) => { bytes[index] = Math.floor(Math.random() * 256); });
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  function getIntakeAnswerAttention(answers, section, key) {
+    const rule = INTAKE_ATTENTION_RULES.find((item) => (
+      item.section === section && (item.key === key || item.detailKey === key)
+    ));
+    if (!rule) return null;
+    const value = normalizeIntakeAnswer(answers?.[section]?.[rule.key]);
+    if (rule.nonEmpty ? !value : !rule.values.includes(value)) return null;
+    const needsClarification = ['prefer_not', 'unsure'].includes(value);
+    return {
+      section,
+      key: rule.key,
+      label: rule.label,
+      value,
+      status: needsClarification ? 'clarification' : 'attention',
+      statusLabel: needsClarification ? 'Нужно уточнить до решения' : 'Требует внимания',
+      anchorId: `trial-intake-answer-${section}-${key}`,
+    };
+  }
+
   function summarizeIntakeAnswers(answers = {}) {
-    const safety = answers.safety || {};
-    const safetyFlags = [
-      ['acute_symptoms', 'Острые симптомы или резкое ухудшение'],
-      ['recent_surgery', 'Недавняя операция, травма или госпитализация'],
-      ['active_ed_concern', 'Актуальные трудности с пищевым поведением'],
-      ['medical_supervision', 'Состояние под наблюдением врача'],
-    ].filter(([key]) => safety[key] === true || safety[key] === 'yes' || safety[key] === 'prefer_not')
-      .map(([key, label]) => safety[key] === 'prefer_not' ? `${label}: обсудить лично` : label);
+    const safetyFactors = INTAKE_ATTENTION_RULES.map((rule) => (
+      getIntakeAnswerAttention(answers, rule.section, rule.key)
+    )).filter(Boolean);
+    const safetyFlags = safetyFactors.map((factor) => (
+      factor.status === 'clarification' ? `${factor.label}: обсудить лично` : factor.label
+    ));
     return {
       goal: String(answers.goals?.primary_goal || '').trim() || 'Цель не указана',
       safetyFlags,
+      safetyFactors,
     };
   }
 
@@ -1474,16 +1524,50 @@
       if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
       try {
         const candidate = options.subjectType === 'candidate';
-        const fn = candidate ? 'admin_review_trial_candidate_v3' : 'admin_review_trial_intake_v2';
+        const fn = candidate ? 'admin_review_trial_candidate_v4' : 'admin_review_trial_intake_v2';
+        const params = candidate
+          ? {
+            p_candidate_id: clientId,
+            p_action: action,
+            p_reason_code: reasonCode || null,
+            p_internal_note: internalNote || null,
+            p_decision_checklist: options.decisionChecklist || null,
+            p_expected_updated_at: options.expectedUpdatedAt || null,
+          }
+          : {
+            p_client_id: clientId,
+            p_action: action,
+            p_reason_code: reasonCode || null,
+            p_internal_note: internalNote || null,
+            p_client_message: options.clientMessage || null,
+            p_clarification_sections: options.clarificationSections || null,
+            p_decision_checklist: options.decisionChecklist || null,
+            p_expected_updated_at: options.expectedUpdatedAt || null,
+          };
+        const res = await api.rpc(fn, params);
+        if (res.error) return { success: false, error: res.error.code, message: res.error.message };
+        return res.data?.[fn] || res.data || res;
+      } catch (e) {
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    async addCandidateAnswerCorrection(candidateId, correction) {
+      const api = HEYS.YandexAPI;
+      if (!api || !hasCuratorAuthContext()) return { success: false, error: 'no_auth' };
+      const fn = 'admin_add_trial_candidate_answer_correction_v1';
+      try {
         const res = await api.rpc(fn, {
-          [candidate ? 'p_candidate_id' : 'p_client_id']: clientId,
-          p_action: action,
-          p_reason_code: reasonCode || null,
-          p_internal_note: internalNote || null,
-          p_client_message: options.clientMessage || null,
-          p_clarification_sections: options.clarificationSections || null,
-          p_decision_checklist: options.decisionChecklist || null,
-          p_expected_updated_at: options.expectedUpdatedAt || null,
+          p_candidate_id: candidateId,
+          p_question_id: correction.questionId,
+          p_new_value: correction.newValue,
+          p_communication_channel: correction.communicationChannel,
+          p_comment: correction.comment,
+          p_confirmed_from_candidate: correction.confirmedFromCandidate,
+          p_safety_confirmed: correction.safetyConfirmed,
+          p_request_id: correction.requestId,
+          p_reverses_correction_id: correction.reversesCorrectionId || null,
+          p_expected_updated_at: correction.expectedUpdatedAt || null,
         });
         if (res.error) return { success: false, error: res.error.code, message: res.error.message };
         return res.data?.[fn] || res.data || res;
@@ -1769,16 +1853,16 @@
     const [reviewReason, setReviewReason] = React.useState('');
     const [reviewNote, setReviewNote] = React.useState('');
     const [decisionSheetOpen, setDecisionSheetOpen] = React.useState(false);
+    const [answersDetailsOpen, setAnswersDetailsOpen] = React.useState(false);
     const [reviewAction, setReviewAction] = React.useState('approved');
-    const [clientQuestion, setClientQuestion] = React.useState('');
-    const [clarificationSections, setClarificationSections] = React.useState([]);
+    const [answerCorrection, setAnswerCorrection] = React.useState(null);
+    const [correctionError, setCorrectionError] = React.useState('');
     const [decisionChecklist, setDecisionChecklist] = React.useState({
       within_scope: null,
       understands_boundaries: null,
       ready_to_track: null,
       realistic_expectations: null,
       safe_format: null,
-      slot_available: true,
     });
 
     // Загрузка данных
@@ -2177,21 +2261,23 @@
       }
       setReviewReason(res.intake.decision_reason || '');
       setReviewNote(res.intake.internal_note || '');
-      setClientQuestion(res.intake.clarification_request || '');
-      setClarificationSections(Array.isArray(res.intake.clarification_sections) ? res.intake.clarification_sections : []);
       setDecisionChecklist({
         within_scope: null,
         understands_boundaries: null,
         ready_to_track: null,
         realistic_expectations: null,
         safe_format: null,
-        slot_available: true,
-        ...(res.intake.decision_checklist || {}),
+        ...Object.fromEntries(Object.entries(res.intake.decision_checklist || {})
+          .filter(([key]) => key !== 'slot_available')),
       });
-      setReviewAction(res.intake.status === 'needs_clarification' ? 'needs_clarification' : 'approved');
+      setReviewAction('approved');
       setDecisionSheetOpen(false);
+      setAnswersDetailsOpen(false);
+      setAnswerCorrection(null);
+      setCorrectionError('');
       setIntakeDialog({
         ...res.intake,
+        client_id: clientId,
         subject_type: item.subject_type || 'client',
         clientName: item.client_name || item.name || 'Кандидат',
         clientPhone: item.client_phone || item.phone_normalized || '',
@@ -2205,12 +2291,11 @@
         alert('Для отказа выберите код причины и добавьте внутреннюю заметку.');
         return;
       }
-      if (action === 'needs_clarification' && (!clientQuestion.trim() || clarificationSections.length === 0)) {
-        alert('Напишите вопрос клиенту и отметьте хотя бы один раздел.');
+      if (!['approved', 'rejected'].includes(action)) {
+        alert('Выберите итоговое решение.');
         return;
       }
-      if (['approved', 'approved_waiting_slot', 'rejected'].includes(action)
-          && Object.values(decisionChecklist).some((value) => typeof value !== 'boolean')) {
+      if (Object.values(decisionChecklist).some((value) => typeof value !== 'boolean')) {
         alert('Заполните чек-лист решения.');
         return;
       }
@@ -2221,11 +2306,7 @@
         reviewReason,
         reviewNote.trim(),
         {
-          clientMessage: clientQuestion.trim(),
-          clarificationSections,
-          decisionChecklist: ['approved', 'approved_waiting_slot', 'rejected'].includes(action)
-            ? decisionChecklist
-            : null,
+          decisionChecklist,
           expectedUpdatedAt: intakeDialog.updated_at,
           subjectType: intakeDialog.subject_type,
         }
@@ -2252,13 +2333,66 @@
       loadData(true);
       HEYS.Toast?.success?.(
         action === 'approved'
-          ? 'Кандидат одобрен'
-          : action === 'approved_waiting_slot'
-            ? 'Кандидат ожидает место'
-            : action === 'rejected'
-              ? 'Решение сохранено'
-              : 'Запрошены уточнения'
+          ? 'Клиент создан'
+          : 'Решение сохранено'
       );
+    };
+
+    const submitAnswerCorrection = async () => {
+      if (!intakeDialog || !answerCorrection) return;
+      const value = String(answerCorrection.value ?? '').trim();
+      if (!value || !answerCorrection.communicationChannel || !answerCorrection.comment.trim()) {
+        setCorrectionError('Укажите уточнённый ответ, канал общения и краткое основание.');
+        return;
+      }
+      if (!answerCorrection.confirmedFromCandidate) {
+        setCorrectionError('Подтвердите, что ответ уточнён со слов кандидата.');
+        return;
+      }
+      if (answerCorrection.isSafety && !answerCorrection.safetyConfirmed) {
+        setCorrectionError('Для ответа о здоровье или безопасности нужно отдельное подтверждение.');
+        return;
+      }
+      const requestId = answerCorrection.requestId || createRequestId();
+      setAnswerCorrection((current) => ({ ...current, requestId }));
+      setCorrectionError('');
+      setActionLoading('correction-' + intakeDialog.client_id);
+      const res = await adminAPI.addCandidateAnswerCorrection(intakeDialog.client_id, {
+        questionId: answerCorrection.questionId,
+        newValue: JSON.stringify(value),
+        communicationChannel: answerCorrection.communicationChannel,
+        comment: answerCorrection.comment.trim(),
+        confirmedFromCandidate: true,
+        safetyConfirmed: answerCorrection.isSafety ? answerCorrection.safetyConfirmed : false,
+        requestId,
+        expectedUpdatedAt: intakeDialog.updated_at,
+      });
+      if (!res.success) {
+        setActionLoading(null);
+        if (['stale_intake', 'stale_correction'].includes(res.error)) {
+          setCorrectionError('Анкета изменилась в другой вкладке. Закройте её и откройте снова.');
+          return;
+        }
+        setCorrectionError('Не удалось сохранить уточнение: ' + (res.message || res.error || 'ошибка'));
+        return;
+      }
+      const fresh = await adminAPI.getIntake(intakeDialog.client_id, intakeDialog.subject_type);
+      setActionLoading(null);
+      if (!fresh.success || !fresh.intake) {
+        setIntakeDialog(null);
+        loadData(true);
+        alert('Уточнение сохранено, но анкету не удалось обновить. Откройте её снова.');
+        return;
+      }
+      setIntakeDialog((current) => ({
+        ...current,
+        ...fresh.intake,
+        client_id: current.client_id,
+        subject_type: current.subject_type,
+      }));
+      setAnswerCorrection(null);
+      setCorrectionError('');
+      HEYS.Toast?.success?.('Уточнение сохранено');
     };
 
     const INTAKE_STATUS = {
@@ -2290,8 +2424,8 @@
       collaboration: 'Формат совместной работы', health: 'Здоровье и ограничения', safety: 'Проверка безопасности',
       primary_goal: 'Главная цель', success_definition: 'Критерий результата', time_expectations: 'Желаемый срок',
       previous_experience: 'Опыт', what_worked: 'Что работало', what_did_not_work: 'Что не подошло',
-      schedule: 'Распорядок', sleep: 'Сон', activity: 'Активность', constraints: 'Ограничения',
-      daily_tracking: 'Готовность вести дневник', feedback_style: 'Формат обратной связи', expectations_from_curator: 'Ожидания от куратора',
+      schedule: 'Распорядок', sleep: 'Сон', activity: 'Активность', constraints: 'Что может мешать присылать данные',
+      daily_tracking: 'Готовность присылать фото или сообщения', feedback_style: 'Формат обратной связи', expectations_from_curator: 'Ожидания от куратора',
       chronic_conditions_status: 'Есть ли состояния или диагнозы',
       chronic_conditions: 'Состояния и диагнозы', medications: 'Лекарства и добавки', injuries_operations: 'Травмы и операции',
       medications_status: 'Есть ли лекарства или добавки',
@@ -2299,32 +2433,64 @@
       allergies_status: 'Есть ли аллергии',
       allergies: 'Аллергии', pregnancy_lactation: 'Беременность / ГВ', eating_disorder_history: 'Опыт РПП', doctor_restrictions: 'Ограничения врача',
       doctor_restrictions_status: 'Есть ли ограничения врача',
-      acute_symptoms: 'Острые симптомы', recent_surgery: 'Недавняя операция / травма', active_ed_concern: 'Актуальный риск РПП',
+      acute_symptoms: 'Острые симптомы', recent_surgery: 'Недавняя операция / травма', active_ed_concern: 'Трудности с пищевым поведением',
       medical_supervision: 'Наблюдение врача', details: 'Дополнительный контекст',
     };
     const DECISION_CHECKLIST_LABELS = {
       within_scope: 'Запрос находится в пределах услуг HEYS',
       understands_boundaries: 'Человек понимает, что HEYS не лечит',
-      ready_to_track: 'Готов вести дневник в течение недели',
+      ready_to_track: 'Готов регулярно присылать данные в течение недели',
       realistic_expectations: 'Ожидания от результата и куратора реалистичны',
-      safe_format: 'Формат безопасен с учётом ограничений',
-      slot_available: 'Есть место и понятна дата старта',
-    };
-    const CLARIFICATION_SECTION_LABELS = {
-      goals: 'Цели', experience: 'Опыт', lifestyle: 'Ритм жизни',
-      collaboration: 'Совместная работа', health: 'Здоровье', safety: 'Безопасность',
+      safe_format: 'Факторы безопасности разобраны; формат сопровождения безопасен с учётом ограничений',
     };
 
-    const renderAnswerValue = (value) => {
+    const ANSWER_VALUE_LABELS = {
+      none: 'Начинает впервые', self: 'Самостоятельно', specialist: 'Со специалистом', both: 'Самостоятельно и со специалистом',
+      mostly: 'Скорее да, но возможны пропуски',
+      concise: 'Коротко и по делу', detailed: 'Подробно с объяснениями', gentle: 'Мягко и постепенно', direct: 'Прямо и требовательно',
+      pregnancy: 'Беременность', lactation: 'Грудное вскармливание', not_applicable: 'Не применимо',
+      past: 'Да, в прошлом', current: 'Да, сейчас', unsure: 'Пока не уверен',
+    };
+    const renderAnswerValue = (value, section, key) => {
       if (value === true) return 'Да';
       if (value === false) return 'Нет';
       if (value === 'yes') return 'Да';
       if (value === 'no') return 'Нет';
       if (value === 'prefer_not') return 'Предпочитает обсудить лично';
-      return String(value || '—');
+      if (value === 'unsure' && section === 'collaboration' && key === 'daily_tracking') return 'Пока не уверен';
+      if (value === 'unsure') return 'Затрудняется ответить';
+      return ANSWER_VALUE_LABELS[value] || String(value || '—');
     };
 
-    const intakeSummary = intakeDialog ? summarizeIntakeAnswers(intakeDialog.answers) : null;
+    const effectiveAnswers = intakeDialog?.answers || {};
+    const originalAnswers = intakeDialog?.original_answers || effectiveAnswers;
+    const intakeSummary = intakeDialog ? summarizeIntakeAnswers(effectiveAnswers) : null;
+    const originalIntakeSummary = intakeDialog ? summarizeIntakeAnswers(originalAnswers) : null;
+    const answerCorrections = Array.isArray(intakeDialog?.answer_corrections)
+      ? intakeDialog.answer_corrections
+      : [];
+    const correctionsByQuestion = answerCorrections.reduce((result, correction) => {
+      const questionId = correction.question_id;
+      if (!questionId) return result;
+      if (!result[questionId]) result[questionId] = [];
+      result[questionId].push(correction);
+      return result;
+    }, {});
+    const historicalSafetyFactors = (originalIntakeSummary?.safetyFactors || []).filter((originalFactor) => (
+      !(intakeSummary?.safetyFactors || []).some((factor) => (
+        factor.section === originalFactor.section && factor.key === originalFactor.key
+      )) && correctionsByQuestion[`${originalFactor.section}.${originalFactor.key}`]?.length
+    ));
+    const revealAttentionAnswers = () => {
+      const firstFactor = intakeSummary?.safetyFactors?.[0] || historicalSafetyFactors[0];
+      if (!firstFactor) return;
+      setAnswersDetailsOpen(true);
+      global.setTimeout(() => {
+        const target = global.document?.getElementById(firstFactor.anchorId);
+        target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        target?.focus?.({ preventScroll: true });
+      }, 0);
+    };
 
     // Отклонить заявку (v2.0)
     const handleReject = async (item) => {
@@ -3306,36 +3472,210 @@
           React.createElement('section', {
             role: 'status',
             style: {
-              border: `1px solid ${intakeSummary?.safetyFlags.length ? '#efc36f' : '#cfe3d3'}`,
+              border: `1px solid ${(intakeSummary?.safetyFactors.length || historicalSafetyFactors.length) ? '#efc36f' : '#cfe3d3'}`,
               borderRadius: 12, padding: 13,
-              background: intakeSummary?.safetyFlags.length ? '#fff8e8' : '#f2faf4',
+              background: (intakeSummary?.safetyFactors.length || historicalSafetyFactors.length) ? '#fff8e8' : '#f2faf4',
             }
           },
             React.createElement('div', { style: { fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 } }, 'Факторы безопасности'),
-            intakeSummary?.safetyFlags.length
-              ? React.createElement('ul', { style: { margin: 0, paddingLeft: 18, color: '#724b05', fontSize: 13, lineHeight: 1.45 } },
-                intakeSummary.safetyFlags.map((flag) => React.createElement('li', { key: flag }, flag)))
-              : React.createElement('div', { style: { fontSize: 14, color: '#27613b' } }, 'Явные флаги не отмечены')
+            intakeSummary?.safetyFactors.length
+              ? React.createElement(React.Fragment, null,
+                React.createElement('div', { style: { marginBottom: 7, color: '#724b05', fontSize: 13, fontWeight: 700 } },
+                  `Ответы, требующие внимания: ${intakeSummary.safetyFactors.length}`),
+                React.createElement('ul', { style: { margin: 0, paddingLeft: 18, color: '#724b05', fontSize: 13, lineHeight: 1.45 } },
+                  intakeSummary.safetyFactors.map((factor) => React.createElement('li', { key: `${factor.section}-${factor.key}`, style: { marginBottom: 4 } },
+                    `${factor.label} · ${factor.statusLabel}`))),
+                historicalSafetyFactors.length ? React.createElement('div', {
+                  style: { marginTop: 8, color: '#724b05', fontSize: 12, lineHeight: 1.45 },
+                }, `Исходные safety-ответы изменены после общения: ${historicalSafetyFactors.length}`) : null,
+                React.createElement('button', {
+                  type: 'button', onClick: revealAttentionAnswers,
+                  style: {
+                    minHeight: 44, marginTop: 9, padding: '8px 11px', borderRadius: 9,
+                    border: '1px solid #d8a84e', background: '#fff', color: '#724b05',
+                    cursor: 'pointer', fontWeight: 700,
+                  },
+                }, 'Показать в ответах')
+              )
+              : historicalSafetyFactors.length
+                ? React.createElement(React.Fragment, null,
+                  React.createElement('div', { style: { color: '#724b05', fontSize: 13, lineHeight: 1.45 } },
+                    `Текущие ответы уточнены. Исходные safety-сигналы сохранены: ${historicalSafetyFactors.length}.`),
+                  React.createElement('button', {
+                    type: 'button', onClick: revealAttentionAnswers,
+                    style: {
+                      minHeight: 44, marginTop: 9, padding: '8px 11px', borderRadius: 9,
+                      border: '1px solid #d8a84e', background: '#fff', color: '#724b05',
+                      cursor: 'pointer', fontWeight: 700,
+                    },
+                  }, 'Показать историю')
+                )
+              : React.createElement('div', { style: { fontSize: 14, color: '#27613b' } }, 'Факторов, требующих отдельного уточнения, не отмечено.')
           )
         ),
-        React.createElement('details', { style: { border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 14px' } },
+        React.createElement('details', {
+          open: answersDetailsOpen,
+          onToggle: (event) => setAnswersDetailsOpen(event.currentTarget.open),
+          style: { border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 14px' }
+        },
           React.createElement('summary', { style: { cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#334155' } }, 'Все ответы анкеты'),
           React.createElement('div', { style: { display: 'grid', gap: 14, marginTop: 14 } },
-            Object.entries(intakeDialog.answers || {}).filter(([section, values]) => section !== 'meta' && values && typeof values === 'object').map(([section, values]) =>
+            Object.entries(effectiveAnswers).filter(([section, values]) => section !== 'meta' && values && typeof values === 'object').map(([section, values]) =>
               React.createElement('section', { key: section, style: { border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 } },
                 React.createElement('h3', { style: { margin: '0 0 10px', fontSize: 15, color: '#27362d' } }, ANSWER_LABELS[section] || section),
                 React.createElement('div', { style: { display: 'grid', gap: 9 } },
-                  Object.entries(values).filter(([, value]) => value !== '' && value != null).map(([key, value]) =>
-                    React.createElement('div', { key, style: { display: 'grid', gap: 3 } },
-                      React.createElement('div', { style: { fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' } }, ANSWER_LABELS[key] || key.replaceAll('_', ' ')),
+                  Object.entries(values).filter(([key, value]) => (
+                    (value !== '' && value != null)
+                    || correctionsByQuestion[`${section}.${key}`]?.length
+                    || (originalAnswers?.[section]?.[key] !== '' && originalAnswers?.[section]?.[key] != null)
+                  )).map(([key, value]) => {
+                    const questionId = `${section}.${key}`;
+                    const correctionHistory = correctionsByQuestion[questionId] || [];
+                    const originalValue = originalAnswers?.[section]?.[key];
+                    const attention = getIntakeAnswerAttention(effectiveAnswers, section, key);
+                    const originalAttention = getIntakeAnswerAttention(originalAnswers, section, key);
+                    const isCorrected = correctionHistory.length > 0;
+                    const fieldMeta = HEYS.TrialIntake?.CURATOR_ANSWER_FIELDS?.[questionId];
+                    const correctionOpen = answerCorrection?.questionId === questionId;
+                    const answerLabel = section === 'experience' && key === 'what_did_not_work' && values.previous_experience === 'none'
+                      ? 'Что кажется самым сложным'
+                      : ANSWER_LABELS[key] || key.replaceAll('_', ' ');
+                    return React.createElement('div', {
+                      key,
+                      id: `trial-intake-answer-${section}-${key}`,
+                      tabIndex: attention ? -1 : undefined,
+                      style: {
+                        display: 'grid', gap: 5, borderRadius: 9, outline: 'none',
+                        ...(attention || (originalAttention && isCorrected)
+                          ? { background: '#fff7e8', border: '1px solid #efc36f', padding: '8px 9px' }
+                          : {}),
+                      },
+                    },
+                      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' } },
+                        React.createElement('div', { style: { fontSize: 11, color: attention ? '#7a4b00' : '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' } }, answerLabel),
+                        attention || (originalAttention && isCorrected) ? React.createElement('span', {
+                          style: {
+                            padding: '3px 7px', borderRadius: 7, background: '#fff0c7',
+                            color: '#7a4b00', fontSize: 11, fontWeight: 750,
+                          }
+                        }, attention?.statusLabel || 'Исходный safety-ответ изменён') : null
+                      ),
                       React.createElement('div', {
                         style: {
                           fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: '#1f2937',
-                          ...(section === 'safety' && value === true ? { background: '#fff7e8', color: '#7a4b00', padding: '7px 9px', borderRadius: 8, fontWeight: 650 } : {}),
+                          ...(attention ? { color: '#7a4b00', fontWeight: 650 } : {}),
                         }
-                      }, renderAnswerValue(value))
-                    )
-                  )
+                      }, renderAnswerValue(value, section, key)),
+                      isCorrected ? React.createElement('div', {
+                        style: { display: 'grid', gap: 5, marginTop: 4, paddingTop: 7, borderTop: '1px solid #ead9b3' },
+                      },
+                        React.createElement('div', { style: { fontSize: 12, color: '#64748b' } },
+                          `Ответ кандидата: ${renderAnswerValue(originalValue, section, key)}`),
+                        React.createElement('details', null,
+                          React.createElement('summary', { style: { cursor: 'pointer', fontSize: 12, color: '#434587', fontWeight: 700 } },
+                            `История уточнений: ${correctionHistory.length}`),
+                          React.createElement('div', { style: { display: 'grid', gap: 8, marginTop: 8 } },
+                            correctionHistory.map((correction) => React.createElement('div', {
+                              key: correction.id || correction.revision_no,
+                              style: { padding: 9, borderRadius: 9, background: '#f8fafc', fontSize: 12, lineHeight: 1.45, color: '#475569' },
+                            },
+                              React.createElement('div', { style: { fontWeight: 700, color: '#334155' } },
+                                `Уточнение ${correction.revision_no || ''} · ${new Date(correction.created_at).toLocaleString('ru-RU')}`),
+                              React.createElement('div', null, `Канал: ${{ messenger: 'Мессенджер', phone: 'Телефон', video_call: 'Видеозвонок', other: 'Другое' }[correction.communication_channel] || correction.communication_channel || '—'}`),
+                              React.createElement('div', null, `Основание: ${correction.comment || '—'}`)
+                            ))
+                          )
+                        )
+                      ) : null,
+                      intakeDialog.subject_type === 'candidate'
+                        && ['completed', 'needs_clarification', 'approved_waiting_slot'].includes(intakeDialog.status)
+                        && fieldMeta
+                        ? React.createElement('button', {
+                          type: 'button',
+                          onClick: () => {
+                            setCorrectionError('');
+                            setAnswerCorrection({
+                              questionId, value: String(value ?? ''), communicationChannel: '', comment: '',
+                              confirmedFromCandidate: false, safetyConfirmed: false,
+                              isSafety: ['health', 'safety'].includes(section), requestId: null,
+                            });
+                          },
+                          style: {
+                            justifySelf: 'start', minHeight: 40, padding: '7px 10px', borderRadius: 9,
+                            border: '1px solid #cbd5e1', background: '#fff', color: '#434587',
+                            cursor: 'pointer', fontWeight: 700, fontSize: 12,
+                          },
+                        }, isCorrected ? 'Добавить уточнение' : 'Уточнить ответ')
+                        : null,
+                      correctionOpen ? React.createElement('section', {
+                        style: { display: 'grid', gap: 10, marginTop: 6, padding: 12, borderRadius: 10, background: '#f5f5fb', border: '1px solid #d9daee' },
+                      },
+                        React.createElement('div', { style: { fontSize: 13, fontWeight: 750, color: '#30325f' } }, 'Уточнение со слов кандидата'),
+                        fieldMeta.type === 'select'
+                          ? React.createElement('select', {
+                            value: answerCorrection.value,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, value: event.target.value, requestId: null })),
+                            style: { minHeight: 44, padding: 10, borderRadius: 9, border: '1px solid #cbd5e1', background: '#fff', font: 'inherit' },
+                          }, fieldMeta.options.map(([optionValue, optionLabel]) => React.createElement('option', { key: optionValue, value: optionValue }, optionLabel)))
+                          : React.createElement('textarea', {
+                            value: answerCorrection.value,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, value: event.target.value.slice(0, 4000), requestId: null })),
+                            style: { minHeight: 76, padding: 10, borderRadius: 9, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' },
+                          }),
+                        React.createElement('label', { style: { display: 'grid', gap: 5, fontSize: 12, fontWeight: 700 } },
+                          'Канал общения',
+                          React.createElement('select', {
+                            value: answerCorrection.communicationChannel,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, communicationChannel: event.target.value, requestId: null })),
+                            style: { minHeight: 42, padding: 9, borderRadius: 9, border: '1px solid #cbd5e1', background: '#fff', font: 'inherit' },
+                          },
+                            React.createElement('option', { value: '' }, 'Выберите'),
+                            React.createElement('option', { value: 'messenger' }, 'Мессенджер'),
+                            React.createElement('option', { value: 'phone' }, 'Телефон'),
+                            React.createElement('option', { value: 'video_call' }, 'Видеозвонок'),
+                            React.createElement('option', { value: 'other' }, 'Другое')
+                          )
+                        ),
+                        React.createElement('label', { style: { display: 'grid', gap: 5, fontSize: 12, fontWeight: 700 } },
+                          'Краткое основание',
+                          React.createElement('textarea', {
+                            value: answerCorrection.comment,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, comment: event.target.value.slice(0, 1000), requestId: null })),
+                            placeholder: 'Что именно уточнил кандидат',
+                            style: { minHeight: 64, padding: 9, borderRadius: 9, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' },
+                          })
+                        ),
+                        React.createElement('label', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.4 } },
+                          React.createElement('input', {
+                            type: 'checkbox', checked: answerCorrection.confirmedFromCandidate,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, confirmedFromCandidate: event.target.checked, requestId: null })),
+                            style: { marginTop: 2, accentColor: '#434587' },
+                          }),
+                          'Ответ уточнён со слов кандидата'
+                        ),
+                        answerCorrection.isSafety ? React.createElement('label', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.4, color: '#724b05' } },
+                          React.createElement('input', {
+                            type: 'checkbox', checked: answerCorrection.safetyConfirmed,
+                            onChange: (event) => setAnswerCorrection((current) => ({ ...current, safetyConfirmed: event.target.checked, requestId: null })),
+                            style: { marginTop: 2, accentColor: '#b7791f' },
+                          }),
+                          'Фактор здоровья или безопасности обсуждён отдельно'
+                        ) : null,
+                        correctionError ? React.createElement('div', { role: 'alert', style: { color: '#b42318', fontSize: 12 } }, correctionError) : null,
+                        React.createElement('div', { style: { display: 'flex', gap: 8 } },
+                          React.createElement('button', {
+                            type: 'button', onClick: () => { setAnswerCorrection(null); setCorrectionError(''); },
+                            style: { minHeight: 42, padding: '8px 11px', borderRadius: 9, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 700 },
+                          }, 'Отмена'),
+                          React.createElement('button', {
+                            type: 'button', onClick: submitAnswerCorrection,
+                            disabled: actionLoading === 'correction-' + intakeDialog.client_id,
+                            style: { flex: 1, minHeight: 42, padding: '8px 11px', borderRadius: 9, border: 0, background: '#434587', color: '#fff', cursor: 'pointer', fontWeight: 700 },
+                          }, actionLoading === 'correction-' + intakeDialog.client_id ? 'Сохраняем…' : 'Сохранить уточнение')
+                        )
+                      ) : null
+                    );
+                  })
                 )
               )
             )
@@ -3370,24 +3710,14 @@
                 'Действие',
                 React.createElement('select', {
                   value: reviewAction,
-                  onChange: (e) => {
-                    const nextAction = e.target.value;
-                    setReviewAction(nextAction);
-                    if (nextAction === 'approved') {
-                      setDecisionChecklist((current) => ({ ...current, slot_available: true }));
-                    } else if (nextAction === 'approved_waiting_slot') {
-                      setDecisionChecklist((current) => ({ ...current, slot_available: false }));
-                    }
-                  },
+                  onChange: (e) => setReviewAction(e.target.value),
                   style: { minHeight: 44, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', font: 'inherit' },
                 },
-                  React.createElement('option', { value: 'approved' }, 'Одобрить и согласовать старт'),
-                  React.createElement('option', { value: 'approved_waiting_slot' }, 'Одобрить, но оставить в ожидании места'),
-                  React.createElement('option', { value: 'needs_clarification' }, 'Запросить уточнения'),
+                  React.createElement('option', { value: 'approved' }, 'Одобрить и создать клиента'),
                   React.createElement('option', { value: 'rejected' }, 'Отказать в текущем формате')
                 )
               ),
-              ['approved', 'approved_waiting_slot', 'rejected'].includes(reviewAction)
+              ['approved', 'rejected'].includes(reviewAction)
                 ? React.createElement('fieldset', {
                   style: { display: 'grid', gap: 9, margin: 0, padding: 0, border: 0 }
                 },
@@ -3406,7 +3736,6 @@
                         value: decisionChecklist[key] == null
                           ? ''
                           : decisionChecklist[key] ? 'yes' : 'no',
-                        disabled: key === 'slot_available' && ['approved', 'approved_waiting_slot'].includes(reviewAction),
                         onChange: (e) => setDecisionChecklist((current) => ({
                           ...current,
                           [key]: e.target.value === '' ? null : e.target.value === 'yes',
@@ -3422,47 +3751,6 @@
                       )
                     )
                   ))
-                )
-                : null,
-              reviewAction === 'needs_clarification'
-                ? React.createElement(React.Fragment, null,
-                  React.createElement('label', { style: { display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 } },
-                    'Вопрос клиенту',
-                    React.createElement('textarea', {
-                      value: clientQuestion,
-                      onChange: (e) => setClientQuestion(e.target.value.slice(0, 1200)),
-                      placeholder: 'Например: уточните, пожалуйста, какие ограничения по нагрузке назвал врач.',
-                      style: { minHeight: 88, padding: 11, borderRadius: 10, border: '1px solid #cbd5e1', resize: 'vertical', font: 'inherit' },
-                    })
-                  ),
-                  React.createElement('fieldset', { style: { margin: 0, padding: 0, border: 0 } },
-                    React.createElement('legend', { style: { fontSize: 13, fontWeight: 700, marginBottom: 8 } }, 'К каким разделам вернуться'),
-                    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
-                      Object.entries(CLARIFICATION_SECTION_LABELS).map(([key, label]) => (
-                        React.createElement('label', {
-                          key,
-                          style: {
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            padding: '7px 9px', borderRadius: 9,
-                            border: '1px solid #d8dee8', background: '#fff',
-                            fontSize: 12, cursor: 'pointer',
-                          }
-                        },
-                          React.createElement('input', {
-                            type: 'checkbox',
-                            checked: clarificationSections.includes(key),
-                            onChange: (e) => setClarificationSections((current) => (
-                              e.target.checked
-                                ? [...new Set([...current, key])]
-                                : current.filter((item) => item !== key)
-                            )),
-                            style: { accentColor: '#434587' },
-                          }),
-                          label
-                        )
-                      ))
-                    )
-                  )
                 )
                 : null,
               reviewAction === 'rejected'
@@ -3572,6 +3860,7 @@
     getCapacityMeta,
     buildClientWelcomeMessage,
     buildTrialIntakeInviteMessage,
+    getIntakeAnswerAttention,
     summarizeIntakeAnswers,
     filterActionableLeads,
 

@@ -10,6 +10,7 @@ const repoDir = path.resolve(webDir, '../..');
 const sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow.sql'), 'utf8');
 const v2Sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow_v2.sql'), 'utf8');
 const v3Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql'), 'utf8');
+const correctionsV1Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql'), 'utf8');
 const intakeSource = fs.readFileSync(path.join(webDir, 'heys_trial_intake_v1.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(webDir, 'heys_trial_queue_v1.js'), 'utf8');
 const yandexApiSource = fs.readFileSync(path.join(webDir, 'heys_yandex_api_v1.js'), 'utf8');
@@ -358,7 +359,7 @@ describe('protected trial intake contract', () => {
     expect(intakeSource).not.toContain('function CheckField');
   });
 
-  it('separates client clarification from the encrypted internal note', () => {
+  it('keeps legacy client clarification encrypted without exposing it in the new curator decision UI', () => {
     const reviewStart = v2Sql.indexOf('CREATE FUNCTION public.admin_review_trial_intake_v2');
     const reviewEnd = v2Sql.indexOf('CREATE OR REPLACE FUNCTION public.purge_expired_trial_intakes', reviewStart);
     const reviewFn = v2Sql.slice(reviewStart, reviewEnd);
@@ -369,7 +370,7 @@ describe('protected trial intake contract', () => {
     expect(reviewFn).toContain('review_note_encrypted');
     expect(intakeSource).toContain('clarification_request');
     expect(intakeSource).toContain('Перейти к нужному разделу');
-    expect(queueSource).toContain('Вопрос клиенту');
+    expect(queueSource).not.toContain('Вопрос клиенту');
     expect(v2Sql).toContain("WHEN v_status = 'needs_clarification' THEN 'needs_clarification'");
   });
 
@@ -519,6 +520,134 @@ describe('protected trial intake contract', () => {
     }, { timeout: 1800 });
   });
 
+  it('hides past-experience questions for a first attempt and clears their values', async () => {
+    const answers = {
+      ...completedAnswers,
+      experience: {
+        previous_experience: 'self',
+        what_worked: 'Планирование',
+        what_did_not_work: 'Сложные правила',
+      },
+    };
+    const rpc = vi.fn(async (fn, params) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 1, answers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: {
+        success: true, status: 'in_progress', current_step: params.p_current_step,
+      } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    const experience = await screen.findByRole('combobox', { name: /Был ли опыт изменения питания/ });
+    expect(screen.getByDisplayValue('Планирование')).toBeTruthy();
+    expect(screen.getByDisplayValue('Сложные правила')).toBeTruthy();
+
+    fireEvent.change(experience, { target: { value: 'none' } });
+    expect(screen.queryByText('Что раньше работало хорошо?')).toBeNull();
+    expect(screen.queryByText('Что не подошло или оказалось трудно поддерживать?')).toBeNull();
+    await waitFor(() => {
+      expect(rpc.mock.calls.some(([fn, params]) => (
+        fn === 'save_trial_intake_by_session'
+        && params.p_answers.experience.previous_experience === 'none'
+        && params.p_answers.experience.what_worked === ''
+        && params.p_answers.experience.what_did_not_work === ''
+      ))).toBe(true);
+    }, { timeout: 1800 });
+  });
+
+  it('shows health details only after yes and keeps personal discussion private', async () => {
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 4, answers: completedAnswers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    const chronicStatus = await screen.findByRole('combobox', { name: /Есть ли хронические состояния/ });
+    expect(screen.queryByText(/Что именно важно учитывать/)).toBeNull();
+
+    fireEvent.change(chronicStatus, { target: { value: 'yes' } });
+    expect(screen.getByText(/Что именно важно учитывать/)).toBeTruthy();
+    fireEvent.change(chronicStatus, { target: { value: 'prefer_not' } });
+    expect(screen.queryByText(/Что именно важно учитывать/)).toBeNull();
+  });
+
+  it('shows a visible final review with safety answers and edit actions', async () => {
+    const answers = {
+      ...completedAnswers,
+      safety: { ...completedAnswers.safety, active_ed_concern: 'prefer_not' },
+    };
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 5, answers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
+    expect(screen.getByText('Проверьте ответы о безопасности')).toBeTruthy();
+    expect(screen.getAllByText('Предпочитаю обсудить с куратором')).toHaveLength(5);
+    const editHealth = screen.getByRole('button', { name: 'Изменить сведения о здоровье' });
+    expect(screen.getByRole('button', { name: 'Изменить ответы о безопасности' })).toBeTruthy();
+    fireEvent.click(editHealth);
+    expect(screen.getByText('Шаг 5 из 6')).toBeTruthy();
+  });
+
+  it('uses the real sharing action, one autosave status and the supported unsure option', () => {
+    expect(intakeSource).not.toMatch(/дневник/i);
+    expect(intakeSource).toContain('фото, текст или голосовые сообщения');
+    expect(intakeSource).toContain('фото или короткие сообщения');
+    expect(intakeSource.match(/Сохраняем…/g)).toHaveLength(1);
+    expect(intakeSource).not.toContain('first_attempt_challenge');
+    expect(intakeSource).toContain("['unsure', 'Пока не уверен']");
+    expect(correctionsV1Sql).toContain("'', 'yes', 'mostly', 'no', 'unsure'");
+    expect(queueSource).toContain("value === 'unsure' && section === 'collaboration' && key === 'daily_tracking'");
+  });
+
+  it('keeps clarification personal and stores curator corrections beside immutable original answers', () => {
+    expect(queueSource).toContain("const fn = candidate ? 'admin_review_trial_candidate_v4'");
+    expect(queueSource).toContain("const fn = 'admin_add_trial_candidate_answer_correction_v1'");
+    expect(queueSource).toContain('Одобрить и создать клиента');
+    expect(queueSource).toContain('Отказать в текущем формате');
+    expect(queueSource).toContain('Ответ кандидата:');
+    expect(queueSource).toContain('Уточнение со слов кандидата');
+    expect(queueSource).toContain('Фактор здоровья или безопасности обсуждён отдельно');
+    expect(queueSource).toContain('client_id: clientId');
+    expect(correctionsV1Sql).toContain("p_action NOT IN ('approved', 'rejected')");
+    expect(correctionsV1Sql).toContain("'original_answers', v_original, 'answer_corrections', v_history");
+    expect(correctionsV1Sql).toContain('answers_encrypted = public.encrypt_health_data(v_effective)');
+    expect(correctionsV1Sql).toContain('UNIQUE (candidate_id, request_id)');
+    for (const source of [curatorRpcSource, curatorWebSource]) {
+      expect(source).toContain("'admin_review_trial_candidate_v4'");
+      expect(source).toContain("'admin_add_trial_candidate_answer_correction_v1'");
+    }
+    expect(rpcSource).toContain("'p_new_value': '::jsonb'");
+  });
+
   it('does not advance after a failed save and offers a clear retry', async () => {
     const rpc = vi.fn(async (fn) => {
       if (fn === 'get_trial_intake_by_session') {
@@ -611,7 +740,30 @@ describe('protected trial intake contract', () => {
       'Острые симптомы или резкое ухудшение',
       'Состояние под наблюдением врача',
     ]);
+    expect(summary.safetyFactors).toEqual([
+      expect.objectContaining({
+        section: 'safety', key: 'acute_symptoms', status: 'attention',
+        statusLabel: 'Требует внимания', anchorId: 'trial-intake-answer-safety-acute_symptoms',
+      }),
+      expect.objectContaining({
+        section: 'safety', key: 'medical_supervision', status: 'attention',
+        statusLabel: 'Требует внимания', anchorId: 'trial-intake-answer-safety-medical_supervision',
+      }),
+    ]);
+    const clarification = window.HEYS.TrialQueue.getIntakeAnswerAttention({
+      safety: { acute_symptoms: 'prefer_not' },
+    }, 'safety', 'acute_symptoms');
+    expect(clarification).toEqual(expect.objectContaining({
+      status: 'clarification', statusLabel: 'Нужно уточнить до решения',
+    }));
+    expect(window.HEYS.TrialQueue.getIntakeAnswerAttention({
+      safety: { acute_symptoms: 'no' },
+    }, 'safety', 'acute_symptoms')).toBeNull();
     expect(queueSource).toContain("React.createElement('details'");
     expect(queueSource).toContain('Все ответы анкеты');
+    expect(queueSource).toContain('Факторов, требующих отдельного уточнения, не отмечено.');
+    expect(queueSource).toContain('Показать в ответах');
+    expect(queueSource).toContain('trial-intake-answer-${section}-${key}');
+    expect(queueSource).not.toContain("section === 'safety' && value === true");
   });
 });

@@ -1,22 +1,23 @@
 # Отбор кандидатов на пробную неделю
 
-> **Статус:** production v2 опубликован; локально подготовлен v3, в котором
-> анкета заполняется до создания client account. v3 ещё не применён и не
-> опубликован, поэтому production-статус остаётся красным до deploy и нового
-> live-smoke. Migration ledger и основной live-контур проверены 2026-07-28.
-> Operator smoke 2026-07-29 подтвердил ownership UI-fix, но остановился
-> fail-closed на `fresh_application_required`: старый Telegram-лид не содержал
-> versioned privacy proof. Bot fix опубликован; smoke подтвердил показ policy
-> 1.7 и registry-backed proof после контакта без дубля лида/handoff. Повторный
-> prepare выявил DB ACL blocker: владелец entry point `heys_admin` не мог
-> вызвать вложенный `admin_convert_lead`. Ошибка откатилась полностью. Forward
-> migration №12 восстановила owner-only вызов и сохранила запрет для
-> gateway/public; rollback-only smoke зелёный. Production остаётся красным до
-> ручного smoke с фактически созданным клиентом. **Охват:** landing handoff,
-> consent, session/RPC boundary, encrypted storage, client/curator UI, decision
-> gate, retention, DSAR и production smoke. Legal 1.8 активна в production;
-> source 1.9 и forward migration подготовлены локально, rollout не выполнялся.
-> **Не подтверждено/Не охвачено:** post-trial payment rollout; он не входит в
+> **Статус:** production v2 опубликован; локально подготовлены v3 и следующий
+> forward-only контракт коррекций ответов, в которых анкета заполняется до
+> создания client account. v3 ещё не применён и не опубликован, поэтому
+> production-статус остаётся красным до deploy и нового live-smoke. Migration
+> ledger и основной live-контур проверены 2026-07-28. Operator smoke 2026-07-29
+> подтвердил ownership UI-fix, но остановился fail-closed на
+> `fresh_application_required`: старый Telegram-лид не содержал versioned
+> privacy proof. Bot fix опубликован; smoke подтвердил показ policy 1.7 и
+> registry-backed proof после контакта без дубля лида/handoff. Повторный prepare
+> выявил DB ACL blocker: владелец entry point `heys_admin` не мог вызвать
+> вложенный `admin_convert_lead`. Ошибка откатилась полностью. Forward migration
+> №12 восстановила owner-only вызов и сохранила запрет для gateway/public;
+> rollback-only smoke зелёный. Production остаётся красным до ручного smoke с
+> фактически созданным клиентом. **Охват:** landing handoff, consent,
+> session/RPC boundary, encrypted storage, client/curator UI, decision gate,
+> retention, DSAR и production smoke. Legal 1.8 активна в production; source 1.9
+> и forward migration подготовлены локально, rollout не выполнялся. **Не
+> подтверждено/Не охвачено:** post-trial payment rollout; он не входит в
 > контракт первого trial. Отдельное изменение РКН для этого flow не требуется:
 > опубликованная запись № 26-22-005319 уже охватывает заявки/триалы,
 > сопровождение и специальные данные о здоровье.
@@ -30,8 +31,9 @@
   → универсальная ссылка /?intake=1 без PII и токена
   → отдельная candidate-сессия + действующий health consent 1.5
   → многошаговая анкета с server autosave
-  → ручной разбор куратором
-  → approved → создание client + перенос анкеты + клиентский PIN
+  → ручной разбор куратором; вопросы обсуждаются лично
+  → при необходимости append-only корректировка рядом с исходным ответом
+  → approved → создание client + перенос эффективной версии анкеты + клиентский PIN
   → отдельное принятие клиентских consent-документов после первого входа
   → позже существующий admin_activate_trial
 ```
@@ -45,6 +47,14 @@
 создаются. Candidate health proof остаётся в отдельном ledger и не становится
 клиентским согласием автоматически. Старые client-backed анкеты продолжают
 обслуживаться прежними RPC.
+
+Локальный forward-only контракт хранит кураторские корректировки в отдельном
+зашифрованном append-only ledger. Исходная анкета кандидата не изменяется;
+кураторский экран получает исходные ответы, эффективную версию и историю с
+автором, временем, каналом общения и основанием. Для полей здоровья и
+безопасности требуется отдельное подтверждение обсуждения. При одобрении в
+клиентскую анкету переносится эффективная версия, а DSAR включает и оригинал, и
+историю корректировок.
 
 `trial_intakes` хранит открыто только workflow metadata: client/curator, версию
 схемы, статус, текущий шаг и даты. Все ответы и внутренняя заметка куратора
@@ -77,15 +87,19 @@ shell и его onboarding-overlays не конкурируют с анкето�
 
 ## Статусы и решение
 
-Для новых кандидатов v3:
-`invite_prepared → invite_sent → in_progress → completed → needs_clarification | approved_waiting_slot | rejected | promoted`.
-Только `approved` вызывает `admin_convert_lead`; повторный review закрыт
-optimistic lock и статусом.
+Для нового UI:
+`invite_prepared → invite_sent → in_progress → completed → rejected | promoted`.
+Вопросы не создают отдельную ветку: куратор связывается с кандидатом лично и при
+необходимости фиксирует подтверждённую корректировку. Только `approved` вызывает
+`admin_convert_lead`; место и дата старта решаются после создания клиента.
+Повторный review закрыт optimistic lock, статусом и идемпотентным результатом.
+Legacy-статусы `needs_clarification` и `approved_waiting_slot` остаются
+читаемыми и могут быть завершены новым RPC.
 
-`not_invited → invited → in_progress → completed`. Куратор вручную переводит
-завершённую анкету в `needs_clarification`, `approved` или `rejected`. Отказ
-требует внутреннюю заметку и один из кодов: `out_of_scope`, `safety`,
-`unrealistic_expectations`, `format_mismatch`, `no_capacity`,
+В legacy v2 действует `not_invited → invited → in_progress → completed`. Куратор
+вручную переводит завершённую анкету в `needs_clarification`, `approved` или
+`rejected`. Отказ требует внутреннюю заметку и один из кодов: `out_of_scope`,
+`safety`, `unrealistic_expectations`, `format_mismatch`, `no_capacity`,
 `candidate_withdrew`. Клиент не видит внутренний код или заметку и получает
 нейтральный текст. Флаги безопасности подсвечиваются куратору, но не запускают
 диагноз или автоматический отказ.
@@ -144,17 +158,17 @@ Prepare RPC отдельно проверяет свежесть заявки: �
 
 ## Точки входа
 
-| Область                                 | Источник                                                                                                                                                      |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Схема, RPC, retention и activation gate | `database/2026-07-27_trial_intake_flow.sql`, `database/2026-07-27_trial_intake_flow_v2.sql`, `scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql` |
-| Клиентская анкета                       | `apps/web/heys_trial_intake_v1.js`                                                                                                                            |
-| Кураторский разбор и приглашение        | `apps/web/heys_trial_queue_v1.js`                                                                                                                             |
-| Web auth/RPC dispatch                   | `apps/web/heys_yandex_api_v1.js`                                                                                                                              |
-| Gate после авторизации и согласий       | `apps/web/heys_app_gate_flow_v1.js`                                                                                                                           |
-| RPC allowlist/type hints                | `yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                |
-| Health consent 1.5                      | `apps/web/public/docs/v1.5/health-data-consent.md`                                                                                                            |
-| Daily retention invocation              | `yandex-cloud-functions/heys-maintenance/index.js`                                                                                                            |
-| Data/RKN gate                           | `docs/legal/operator/heys-data-change-gate.md`                                                                                                                |
+| Область                                 | Источник                                                                                                                                                                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Схема, RPC, retention и activation gate | `database/2026-07-27_trial_intake_flow.sql`, `database/2026-07-27_trial_intake_flow_v2.sql`, `scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql`, `scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql` |
+| Клиентская анкета                       | `apps/web/heys_trial_intake_v1.js`                                                                                                                                                                                                          |
+| Кураторский разбор и приглашение        | `apps/web/heys_trial_queue_v1.js`                                                                                                                                                                                                           |
+| Web auth/RPC dispatch                   | `apps/web/heys_yandex_api_v1.js`                                                                                                                                                                                                            |
+| Gate после авторизации и согласий       | `apps/web/heys_app_gate_flow_v1.js`                                                                                                                                                                                                         |
+| RPC allowlist/type hints                | `yandex-cloud-functions/heys-api-rpc/index.js`                                                                                                                                                                                              |
+| Health consent 1.5                      | `apps/web/public/docs/v1.5/health-data-consent.md`                                                                                                                                                                                          |
+| Daily retention invocation              | `yandex-cloud-functions/heys-maintenance/index.js`                                                                                                                                                                                          |
+| Data/RKN gate                           | `docs/legal/operator/heys-data-change-gate.md`                                                                                                                                                                                              |
 
 ## Инварианты
 
@@ -176,7 +190,10 @@ Prepare RPC отдельно проверяет свежесть заявки: �
 11. Intake-managed кандидата нельзя удалить старым queue RPC; purge/revoke
     обязаны оставить activation-blocking tombstone.
 12. До `approved` у нового кандидата нет строки `clients`, клиентской сессии или
-    записи `trial_queue`; ожидание места, уточнение и отказ аккаунт не создают.
+    записи `trial_queue`; личное уточнение и отказ аккаунт не создают.
+13. Кураторская корректировка не перезаписывает исходную анкету: новая версия
+    добавляется в зашифрованную историю, а safety-поле требует отдельного
+    подтверждения.
 
 ## Подтверждённое production-состояние
 
@@ -219,3 +236,5 @@ Prepare RPC отдельно проверяет свежесть заявки: �
 | TI18 | SECURITY DEFINER prepare entry point должен иметь внутренний `EXECUTE` на закрытый для gateway `admin_convert_lead`                | migration №12 + production ACL introspection + rollback-only prepare               | ✅ owner=true, gateway/public=false, prepare green |
 | TI19 | Prepare, перевыпуск candidate PIN и ожидание места не создают client/queue; approval создаёт ровно по одной строке                 | PostgreSQL v3 integration + 27 UI/contract tests                                   | проверено локально 2026-07-29; production pending  |
 | TI20 | Верхняя «Очередь» показывает тот же actionable-счётчик, что внутренний таб «Лиды»: `new` + свой `contacted` без candidate intake   | `trial-intake-flow.test.js`, 29/29 + operator smoke                                | local UI green 2026-07-30 01:16 MSK; prod pending  |
+| TI21 | Новый review UI имеет только одобрение с созданием клиента и отказ; личное уточнение не является отдельным статусом                | `trial-intake-flow.test.js`, `admin_review_trial_candidate_v4`                     | подготовлено локально 2026-07-30; rollout pending  |
+| TI22 | `daily_tracking=unsure` проходит server validation/save/read, а коррекция хранит original/effective/history без перезаписи         | `pnpm test:db:trial-intake`, `trial-intake-flow.test.js`                           | проверено локально 2026-07-30; rollout pending     |

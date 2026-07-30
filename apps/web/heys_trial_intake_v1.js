@@ -202,6 +202,39 @@
     );
   }
 
+  const CURATOR_ANSWER_FIELDS = Object.freeze({
+    'goals.primary_goal': { type: 'text' },
+    'goals.success_definition': { type: 'text' },
+    'goals.time_expectations': { type: 'text' },
+    'experience.previous_experience': { type: 'select', options: [['none', 'Нет, начинаю впервые'], ['self', 'Да, самостоятельно'], ['specialist', 'Да, со специалистом'], ['both', 'Оба варианта']] },
+    'experience.what_worked': { type: 'text' },
+    'experience.what_did_not_work': { type: 'text' },
+    'lifestyle.schedule': { type: 'text' },
+    'lifestyle.sleep': { type: 'text' },
+    'lifestyle.activity': { type: 'text' },
+    'lifestyle.constraints': { type: 'text' },
+    'collaboration.daily_tracking': { type: 'select', options: [['yes', 'Да'], ['mostly', 'Скорее да, но возможны пропуски'], ['unsure', 'Пока не уверен'], ['no', 'Нет']] },
+    'collaboration.feedback_style': { type: 'select', options: [['concise', 'Коротко и по делу'], ['detailed', 'Подробно с объяснениями'], ['gentle', 'Мягко и постепенно'], ['direct', 'Прямо и требовательно']] },
+    'collaboration.expectations_from_curator': { type: 'text' },
+    'health.chronic_conditions_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.chronic_conditions': { type: 'text' },
+    'health.medications_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.medications': { type: 'text' },
+    'health.injuries_operations_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.injuries_operations': { type: 'text' },
+    'health.allergies_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.allergies': { type: 'text' },
+    'health.pregnancy_lactation': { type: 'select', options: [['no', 'Нет'], ['pregnancy', 'Беременность'], ['lactation', 'Грудное вскармливание'], ['not_applicable', 'Не применимо'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.eating_disorder_history': { type: 'select', options: [['no', 'Нет'], ['past', 'Да, в прошлом'], ['current', 'Да, сейчас'], ['unsure', 'Затрудняюсь ответить'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.doctor_restrictions_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'health.doctor_restrictions': { type: 'text' },
+    'safety.acute_symptoms': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'safety.recent_surgery': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'safety.active_ed_concern': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'safety.medical_supervision': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
+    'safety.details': { type: 'text' },
+  });
+
   const STEPS = [
     {
       id: 'goals', title: 'Цели и ожидания',
@@ -214,7 +247,7 @@
         React.createElement(Field, { key: 'success_definition', label: 'Как вы поймёте, что сопровождение помогает?', required: true, textarea: true,
           placeholder: 'Какие изменения будут для вас значимыми?', value: value.success_definition,
           onChange: (next) => set('success_definition', next) }),
-        React.createElement(Field, { key: 'time_expectations', label: 'Есть ли желаемый срок?', hint: 'Если срока нет, так и напишите.',
+        React.createElement(Field, { key: 'time_expectations', label: 'Есть ли дата или срок, которые важно учитывать?', hint: 'Если срока нет, так и напишите.',
           value: value.time_expectations, onChange: (next) => set('time_expectations', next) }),
       ],
     },
@@ -224,12 +257,22 @@
       required: ['previous_experience'],
       render: (value, set) => [
         React.createElement(SelectField, { key: 'previous_experience', label: 'Был ли опыт изменения питания или образа жизни?', required: true,
-          value: value.previous_experience, onChange: (next) => set('previous_experience', next),
+          value: value.previous_experience, onChange: (next) => {
+            set('previous_experience', next);
+            if (next === 'none') {
+              set('what_worked', '');
+              set('what_did_not_work', '');
+            }
+          },
           options: [['none', 'Нет, начинаю впервые'], ['self', 'Да, самостоятельно'], ['specialist', 'Да, со специалистом'], ['both', 'Оба варианта']] }),
-        React.createElement(Field, { key: 'what_worked', label: 'Что раньше работало хорошо?', textarea: true,
-          value: value.what_worked, onChange: (next) => set('what_worked', next) }),
-        React.createElement(Field, { key: 'what_did_not_work', label: 'Что не подошло или оказалось трудно поддерживать?', textarea: true,
-          value: value.what_did_not_work, onChange: (next) => set('what_did_not_work', next) }),
+        value.previous_experience && value.previous_experience !== 'none'
+          ? React.createElement(Field, { key: 'what_worked', label: 'Что раньше работало хорошо?', textarea: true,
+            value: value.what_worked, onChange: (next) => set('what_worked', next) })
+          : null,
+        value.previous_experience && value.previous_experience !== 'none'
+          ? React.createElement(Field, { key: 'what_did_not_work', label: 'Что не подошло или оказалось трудно поддерживать?', textarea: true,
+            value: value.what_did_not_work, onChange: (next) => set('what_did_not_work', next) })
+          : null,
       ],
     },
     {
@@ -238,25 +281,26 @@
       required: ['schedule', 'sleep'],
       render: (value, set) => [
         React.createElement(Field, { key: 'schedule', label: 'Как обычно устроен ваш день?', required: true, textarea: true,
+          hint: 'Достаточно примерного ритма без адресов и названий мест.',
           placeholder: 'Работа, учёба, дорога, семья, смены', value: value.schedule,
           onChange: (next) => set('schedule', next) }),
-        React.createElement(Field, { key: 'sleep', label: 'Сон и восстановление', required: true,
-          placeholder: 'Сколько обычно спите, легко ли восстанавливаетесь?', value: value.sleep,
+        React.createElement(Field, { key: 'sleep', label: 'Сколько вы обычно спите и как восстанавливаетесь?', required: true,
+          placeholder: 'Например: 7 часов, утром часто чувствую усталость', value: value.sleep,
           onChange: (next) => set('sleep', next) }),
-        React.createElement(Field, { key: 'activity', label: 'Движение и тренировки', textarea: true,
+        React.createElement(Field, { key: 'activity', label: 'Какая у вас сейчас физическая активность?', hint: 'Укажите вид активности и примерную частоту.', textarea: true,
           value: value.activity, onChange: (next) => set('activity', next) }),
-        React.createElement(Field, { key: 'constraints', label: 'Что может мешать регулярно вести дневник?', textarea: true,
+        React.createElement(Field, { key: 'constraints', label: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?', textarea: true,
           value: value.constraints, onChange: (next) => set('constraints', next) }),
       ],
     },
     {
       id: 'collaboration', title: 'Формат совместной работы',
-      subtitle: 'Пробная неделя требует коротких регулярных записей и спокойной обратной связи.',
+      subtitle: 'Для пробной недели достаточно регулярно присылать фото или короткие сообщения и отвечать на уточнения куратора.',
       required: ['daily_tracking', 'feedback_style'],
       render: (value, set) => [
-        React.createElement(SelectField, { key: 'daily_tracking', label: 'Готовы вести дневник каждый день в течение недели?', required: true,
+        React.createElement(SelectField, { key: 'daily_tracking', label: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?', required: true,
           value: value.daily_tracking, onChange: (next) => set('daily_tracking', next),
-          options: [['yes', 'Да'], ['mostly', 'Скорее да, но возможны пропуски'], ['no', 'Нет']] }),
+          options: CURATOR_ANSWER_FIELDS['collaboration.daily_tracking'].options }),
         React.createElement(SelectField, { key: 'feedback_style', label: 'Какая обратная связь вам полезнее?', required: true,
           value: value.feedback_style, onChange: (next) => set('feedback_style', next),
           options: [['concise', 'Коротко и по делу'], ['detailed', 'Подробно с объяснениями'], ['gentle', 'Мягко и постепенно'], ['direct', 'Прямо и требовательно']] }),
@@ -289,14 +333,14 @@
         React.createElement(ConditionalHealthField, {
           key: 'injuries_operations', value, set,
           statusKey: 'injuries_operations_status', detailKey: 'injuries_operations',
-          label: 'Были ли травмы, операции или ограничения по нагрузке?',
+          label: 'Есть ли сейчас ограничения после травмы или операции?',
           detailLabel: 'Опишите ограничения, которые важно учитывать',
         }),
         React.createElement(ConditionalHealthField, {
           key: 'allergies', value, set,
           statusKey: 'allergies_status', detailKey: 'allergies',
           label: 'Есть ли аллергии или непереносимости?',
-          detailLabel: 'Укажите аллергии или непереносимости',
+          detailLabel: 'Что важно исключить из питания?',
         }),
         React.createElement(SelectField, { key: 'pregnancy_lactation', label: 'Беременность или грудное вскармливание',
           value: value.pregnancy_lactation, onChange: (next) => set('pregnancy_lactation', next),
@@ -329,7 +373,8 @@
         React.createElement(SelectField, { key: 'medical_supervision', label: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?', required: true,
           value: value.medical_supervision, onChange: (next) => set('medical_supervision', next),
           options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(Field, { key: 'details', label: 'Что ещё важно знать куратору перед решением?', textarea: true,
+        React.createElement(Field, { key: 'details', label: 'Что ещё важно знать куратору перед решением?',
+          hint: 'Укажите только значимый контекст, без ФИО врачей, названий клиник и документов.', textarea: true,
           value: value.details, onChange: (next) => set('details', next) }),
         React.createElement('div', { key: 'urgent', role: 'note', style: { padding: 14, borderRadius: 12, background: '#fff7e8', color: '#754b00', fontSize: 13, lineHeight: 1.5 } },
           'Если вам нужна срочная медицинская помощь, не ждите ответа куратора — обратитесь в экстренную службу или к врачу.'),
@@ -342,32 +387,78 @@
     collaboration: 'Совместная работа', health: 'Здоровье', safety: 'Безопасность',
   };
 
-  function ReviewSummary({ answers }) {
-    const rows = [
+  const REVIEW_VALUE_LABELS = {
+    none: 'Начинаю впервые', self: 'Самостоятельно', specialist: 'Со специалистом', both: 'Самостоятельно и со специалистом',
+    yes: 'Да', no: 'Нет', mostly: 'Скорее да, но возможны пропуски', prefer_not: 'Предпочитаю обсудить с куратором',
+  };
+
+  function reviewValue(value) {
+    return REVIEW_VALUE_LABELS[value] || String(value || '—');
+  }
+
+  function ReviewSummary({ answers, onEdit }) {
+    const mainRows = [
       ['Цель', answers.goals?.primary_goal],
-      ['Опыт', answers.experience?.previous_experience],
-      ['Ритм', answers.lifestyle?.schedule],
-      ['Дневник', answers.collaboration?.daily_tracking],
+      ['Предыдущий опыт', answers.experience?.previous_experience],
+      ['Готовность присылать данные', answers.collaboration?.daily_tracking],
+    ].filter(([, value]) => String(value || '').trim());
+    const safetyRows = [
+      ['Острые симптомы', answers.safety?.acute_symptoms],
+      ['Недавняя операция, травма или госпитализация', answers.safety?.recent_surgery],
+      ['Трудности с пищевым поведением', answers.safety?.active_ed_concern],
+      ['Наблюдение врача', answers.safety?.medical_supervision],
       ['Ограничения врача', answers.health?.doctor_restrictions_status],
     ].filter(([, value]) => String(value || '').trim());
-    return React.createElement('details', {
+    const needsAttention = safetyRows.some(([, value]) => !['', 'no'].includes(String(value || '')));
+    const renderRows = (rows, attention = false) => React.createElement('div', {
+      style: { display: 'grid', gap: 10 }
+    }, rows.map(([label, value]) => {
+      const rowNeedsAttention = attention && !['', 'no'].includes(String(value || ''));
+      return React.createElement('div', {
+        key: label,
+        style: {
+          display: 'grid', gap: 2,
+          ...(rowNeedsAttention ? { background: '#fff7e8', borderRadius: 9, padding: '8px 10px', color: '#754b00' } : {}),
+        }
+      },
+        React.createElement('span', { style: { fontSize: 11, color: rowNeedsAttention ? '#875700' : '#718078', textTransform: 'uppercase' } }, label),
+        React.createElement('span', { style: { fontSize: 14, lineHeight: 1.45 } }, reviewValue(value))
+      );
+    }));
+
+    return React.createElement('section', {
       style: {
         border: '1px solid #dfe5e1', borderRadius: 14,
-        padding: '12px 14px', background: '#f8faf8',
+        padding: 14, background: '#f8faf8', display: 'grid', gap: 14,
       }
     },
-      React.createElement('summary', {
-        style: { cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#334039' }
-      }, 'Проверить основные ответы перед отправкой'),
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontSize: 16, fontWeight: 750, color: '#334039' } }, 'Проверьте ответы перед отправкой'),
+        React.createElement('div', { style: { marginTop: 4, color: '#657168', fontSize: 13, lineHeight: 1.45 } }, 'Куратор разберёт анкету вручную и при необходимости задаст уточняющие вопросы.')
+      ),
+      renderRows(mainRows),
       React.createElement('div', {
-        style: { display: 'grid', gap: 10, marginTop: 12 }
-      }, rows.map(([label, value]) => React.createElement('div', {
-        key: label, style: { display: 'grid', gap: 2 }
+        role: 'status',
+        style: {
+          border: `1px solid ${needsAttention ? '#efc36f' : '#cfe3d3'}`,
+          borderRadius: 11, padding: 11,
+          background: needsAttention ? '#fffaf0' : '#f2faf4',
+        }
       },
-        React.createElement('span', { style: { fontSize: 11, color: '#718078', textTransform: 'uppercase' } }, label),
-        React.createElement('span', { style: { fontSize: 14, lineHeight: 1.45 } },
-          value === 'yes' ? 'Да' : value === 'no' ? 'Нет' : String(value))
-      )))
+        React.createElement('div', { style: { marginBottom: 8, fontSize: 13, fontWeight: 750, color: needsAttention ? '#754b00' : '#27613b' } },
+          needsAttention ? 'Проверьте ответы о безопасности' : 'Ответы о безопасности заполнены'),
+        renderRows(safetyRows, true)
+      ),
+      React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+        React.createElement('button', {
+          type: 'button', onClick: () => onEdit('health'),
+          style: { minHeight: 44, padding: '9px 12px', borderRadius: 10, border: '1px solid #cfd6d0', background: '#fff', color: '#334039', cursor: 'pointer', fontWeight: 650 },
+        }, 'Изменить сведения о здоровье'),
+        React.createElement('button', {
+          type: 'button', onClick: () => onEdit('safety'),
+          style: { minHeight: 44, padding: '9px 12px', borderRadius: 10, border: '1px solid #cfd6d0', background: '#fff', color: '#334039', cursor: 'pointer', fontWeight: 650 },
+        }, 'Изменить ответы о безопасности')
+      )
     );
   }
 
@@ -656,7 +747,7 @@
           React.createElement('div', { style: { fontSize: 12, color: saveState === 'error' ? '#b42318' : '#657168' } },
             saveState === 'saving' || saveState === 'pending' ? 'Сохраняем…' : saveState === 'saved' ? 'Ответы сохранены' : saveState === 'error' ? 'Ошибка сохранения' : '')
         ),
-        React.createElement('button', { type: 'button', onClick: closeSafely, disabled: saveState === 'saving', style: { border: 0, background: 'transparent', color: '#657168', cursor: saveState === 'saving' ? 'wait' : 'pointer', fontSize: 14 } }, saveState === 'saving' ? 'Сохраняем…' : 'Закрыть')
+        React.createElement('button', { type: 'button', onClick: closeSafely, disabled: saveState === 'saving', style: { border: 0, background: 'transparent', color: '#657168', cursor: saveState === 'saving' ? 'wait' : 'pointer', fontSize: 14 } }, 'Закрыть')
       ),
       React.createElement('div', { style: { height: 5, borderRadius: 8, background: '#e8ece9', overflow: 'hidden', marginBottom: 28 } },
         React.createElement('div', { style: { height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`, background: '#434587', transition: 'width .2s ease' } })
@@ -699,7 +790,7 @@
           padding: 13, borderRadius: 12, background: '#f3f7f4',
           color: '#526159', fontSize: 13, lineHeight: 1.5, marginBottom: 20,
         }
-      }, 'Ответы сохраняются автоматически. Их увидит только ваш куратор. Заполнение анкеты не гарантирует пробную неделю.') : null,
+      }, 'Ответы доступны вам и назначенному куратору в защищённой анкете. Заполнение анкеты не гарантирует пробную неделю.') : null,
       step === 0 && api.isCandidate() ? React.createElement('label', {
         style: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 22, color: '#334039', fontSize: 14, lineHeight: 1.5 }
       },
@@ -720,7 +811,13 @@
         (key, value) => setSectionValue(current.id, key, value)
       )),
       step === STEPS.length - 1 ? React.createElement('div', { style: { marginTop: 20 } },
-        React.createElement(ReviewSummary, { answers })
+        React.createElement(ReviewSummary, {
+          answers,
+          onEdit: (sectionId) => {
+            const target = STEPS.findIndex((item) => item.id === sectionId);
+            if (target >= 0) setStep(target);
+          },
+        })
       ) : null,
       error ? React.createElement('div', { role: 'alert', style: { marginTop: 18, color: '#b42318', background: '#fff1f0', padding: 12, borderRadius: 10, fontSize: 14 } }, error) : null,
       saveState === 'error' ? React.createElement('button', {
@@ -746,5 +843,5 @@
     ));
   }
 
-  HEYS.TrialIntake = { api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS };
+  HEYS.TrialIntake = { api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS };
 })(typeof window !== 'undefined' ? window : globalThis);
