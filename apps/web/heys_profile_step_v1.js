@@ -615,7 +615,7 @@
         isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
 
       if (isProbablyIncomplete) {
-        localStorage.setItem('heys_registration_in_progress', 'true');
+        lsSet('heys_registration_in_progress', true);
         console.warn('[ProfileSteps] registrationInProgress set (profile incomplete)', {
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
@@ -1181,7 +1181,7 @@
         updatedAt: Date.now()
       };
 
-      localStorage.setItem('heys_registration_in_progress', 'true');
+      lsSet('heys_registration_in_progress', true);
       lsSet('heys_profile', updatedProfile);
 
       // ⚠️ v1.16 FIX: Инвалидируем кэш HEYS.store.memory
@@ -1292,7 +1292,7 @@
       updatedAt: Date.now()
     };
 
-    localStorage.setItem('heys_registration_in_progress', 'true');
+    lsSet('heys_registration_in_progress', true);
     lsSet('heys_profile', updatedProfile);
 
     // Диспатчим событие для обновления UI профиля

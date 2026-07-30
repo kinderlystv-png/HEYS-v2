@@ -5,8 +5,6 @@
 -- effective `trial` or `active` status. Legacy self-start RPCs stay installed
 -- for rollback compatibility but are no longer executable by the gateway.
 
-BEGIN;
-
 CREATE OR REPLACE FUNCTION public.client_kv_value_can_write(
   p_client_id uuid,
   p_key text,
@@ -33,5 +31,3 @@ COMMENT ON FUNCTION public.start_trial_by_session(text, integer) IS
   'Deprecated and gateway-revoked: trial activation is curator-only via admin_activate_trial.';
 COMMENT ON FUNCTION public.activate_trial_timer_by_session(text, integer) IS
   'Deprecated and gateway-revoked: trial activation is curator-only via admin_activate_trial.';
-
-COMMIT;
