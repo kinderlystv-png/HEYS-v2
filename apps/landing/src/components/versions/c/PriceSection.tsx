@@ -8,6 +8,7 @@
 // Pro — основной, Self — самостоятельный режим, Pro Спорт — ручной пилот
 // (архитектура `44`, состав `43`).
 
+import PriceObjections from '@/components/versions/c/PriceObjections';
 import { PRICING } from '@/config/pricing';
 
 const PLANS = [
@@ -118,6 +119,9 @@ export default function PriceSection() {
             </article>
           ))}
         </div>
+
+        {/* Возражения снимаем здесь, а не в подвале: решение принимается тут. */}
+        <PriceObjections />
       </div>
     </section>
   );

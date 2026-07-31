@@ -8,6 +8,8 @@
 // Все формулировки перенесены из версии A без новых обещаний: пометка о
 // демонстрационном характере примера сохранена (обезличенный proof-канон).
 
+import WeekArtifact from '@/components/versions/c/WeekArtifact';
+
 const FLOW = [
   {
     step: '01',
@@ -26,21 +28,6 @@ const FLOW = [
   },
 ];
 
-const WEEK_CARD = [
-  {
-    label: 'Что изменилось',
-    text: 'Три ночи подряд сон был короче обычного, два дня пропускался обед, а ужин стал позже.',
-  },
-  {
-    label: 'Что могло повлиять',
-    text: 'Недосып и накопленный голод могут усиливать вечернюю тягу.',
-  },
-  {
-    label: 'Следующий шаг',
-    text: 'Вернуть полноценный обед и упростить вечер — затем посмотреть, станет ли тяга слабее.',
-  },
-];
-
 export default function ReviewedWeekSection() {
   return (
     <section id="reviewed-week" className="bg-slate-50 px-5 py-14 sm:px-8 sm:py-16">
@@ -52,41 +39,26 @@ export default function ReviewedWeekSection() {
           Не один неидеальный день, а изменения за неделю — и один выполнимый шаг дальше.
         </p>
 
-        {/* Механика: три шага в строку, без отдельного экрана под каждый. */}
-        <ol className="mt-7 grid gap-3 sm:grid-cols-3">
+        {/* Механика: компактный список, а не три карточки в колонку — на
+            мобильном карточки съедали половину экрана ради трёх фраз. */}
+        <ol className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {FLOW.map((item) => (
-            <li key={item.step} className="rounded-2xl border border-slate-200 bg-white p-4">
-              <span className="text-xs font-semibold tracking-wide text-blue-700">{item.step}</span>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{item.title}</p>
-              <p className="mt-1 text-[13px] leading-5 text-slate-600">{item.text}</p>
+            <li key={item.step} className="flex gap-3 px-4 py-3">
+              <span className="mt-0.5 text-xs font-semibold text-blue-700">{item.step}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
+                <span className="mt-0.5 block text-[13px] leading-5 text-slate-600">
+                  {item.text}
+                </span>
+              </span>
             </li>
           ))}
         </ol>
 
         {/* Артефакт недели — главный аргумент блока. */}
-        <figure className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <figcaption className="border-b border-slate-100 bg-white px-5 py-3">
-            <p className="text-xs font-semibold tracking-wide text-blue-700">ИТОГ НЕДЕЛИ</p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-900">
-              Вечером снова тянет на еду
-            </p>
-          </figcaption>
-
-          <div className="divide-y divide-slate-100">
-            {WEEK_CARD.map((row) => (
-              <div key={row.label} className="px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  {row.label}
-                </p>
-                <p className="mt-1 text-[15px] leading-6 text-slate-700">{row.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] text-slate-400">
-            Демонстрационный пример
-          </p>
-        </figure>
+        <div className="mt-8">
+          <WeekArtifact />
+        </div>
 
         <p className="mt-6 text-[15px] leading-6 text-slate-600">
           Решение принимает куратор: он смотрит несколько дней целиком и уточняет контекст, а не

@@ -8,6 +8,7 @@
 // Тексты оффера взяты из общего контента варианта A, без новых обещаний.
 
 import TrialForm from '@/components/TrialForm';
+import WeekOutcome from '@/components/versions/c/WeekOutcome';
 import { VARIANTS } from '@/config/landing-variants';
 
 export default function TrialSection() {
@@ -27,7 +28,12 @@ export default function TrialSection() {
 
         <p className="mt-3 text-[13px] leading-5 text-slate-500">{trial.limitation}</p>
 
-        <div className="mt-7 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        {/* Конкретный результат недели — прямо перед полями формы. */}
+        <div className="mt-6">
+          <WeekOutcome />
+        </div>
+
+        <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <TrialForm ctaLabel={trial.ctaAvailable} />
         </div>
       </div>
