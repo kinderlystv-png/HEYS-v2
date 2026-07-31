@@ -7,11 +7,11 @@
 
   // ../../packages/assemble-day-engine/src/types.ts
   var CONTRACT = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     scenarioId: "week-01-project-deadline",
-    scenarioVersion: "4",
+    scenarioVersion: "5",
     calibrationVersion: "0.4",
-    technicalContractVersion: "0.35",
+    technicalContractVersion: "0.36",
     priceBookVersion: "week-01-rub-v1",
     rngAlgorithm: "fnv1a-mulberry32-v1",
     hashAlgorithm: "canonical-json-fnv1a64-v1"
@@ -295,6 +295,109 @@
   ];
   var actions = Object.fromEntries(definitions.map((item) => [item.id, item]));
 
+  // ../../packages/assemble-day-engine/src/periods.ts
+  var DEFAULT_PERIOD_STATE = {
+    version: 1,
+    daysPerWeek: 7,
+    weeksPerMonth: 4,
+    completedDays: 0,
+    completedWeeks: 0,
+    completedMonths: 0,
+    appliedBoundaries: [],
+    plannedWeeks: []
+  };
+  function createPeriodState(overrides = {}) {
+    return { ...DEFAULT_PERIOD_STATE, appliedBoundaries: [], plannedWeeks: [], ...overrides };
+  }
+  function daysPerMonth(periods) {
+    return periods.daysPerWeek * periods.weeksPerMonth;
+  }
+  function dayOfWeekFor(periods, absoluteDay) {
+    return (absoluteDay % periods.daysPerWeek + periods.daysPerWeek) % periods.daysPerWeek;
+  }
+  function weekIndexFor(periods, absoluteDay) {
+    return Math.floor(absoluteDay / periods.daysPerWeek);
+  }
+  function monthIndexFor(periods, absoluteDay) {
+    return Math.floor(absoluteDay / daysPerMonth(periods));
+  }
+  function currentWeekIndex(state) {
+    return weekIndexFor(state.periods, state.clock.dayIndex);
+  }
+  function isLastDayOfWeek(periods, absoluteDay) {
+    return dayOfWeekFor(periods, absoluteDay) === periods.daysPerWeek - 1;
+  }
+  function isLastWeekOfMonth(periods, weekIndex) {
+    return (weekIndex % periods.weeksPerMonth + periods.weeksPerMonth) % periods.weeksPerMonth === periods.weeksPerMonth - 1;
+  }
+  function boundariesForCompletedDay(input) {
+    const { periods, completedDayIndex, nextDayIndex, afterStepIndex } = input;
+    const contentEnds = nextDayIndex === null;
+    const week = weekIndexFor(periods, completedDayIndex);
+    const boundaries = [{
+      id: `day:${completedDayIndex}`,
+      kind: "day",
+      completedDayIndex,
+      nextDayIndex,
+      afterStepIndex,
+      periodIndex: completedDayIndex
+    }];
+    const closesWeek = isLastDayOfWeek(periods, completedDayIndex) || contentEnds;
+    if (!closesWeek) return boundaries;
+    boundaries.push({ id: `week:${week}`, kind: "week", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: week });
+    if (isLastWeekOfMonth(periods, week) && !contentEnds) {
+      boundaries.push({ id: `month:${monthIndexFor(periods, completedDayIndex)}`, kind: "month", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: monthIndexFor(periods, completedDayIndex) });
+    }
+    return boundaries;
+  }
+  function applyPeriodBoundaries(state, boundaries) {
+    const applied = [];
+    for (const boundary of boundaries) {
+      if (state.periods.appliedBoundaries.includes(boundary.id)) continue;
+      state.periods.appliedBoundaries.push(boundary.id);
+      applied.push(boundary);
+      if (boundary.kind === "day") {
+        state.periods.completedDays += 1;
+        continue;
+      }
+      if (boundary.kind === "week") {
+        state.periods.completedWeeks += 1;
+        state.eventLedger.weekLargeCount = 0;
+        compactAppliedBoundaries(state);
+        continue;
+      }
+      state.periods.completedMonths += 1;
+    }
+    return applied;
+  }
+  function compactCausalJournal(state, completedDayIndex) {
+    const before = state.causalJournal.length;
+    state.causalJournal = state.causalJournal.filter((entry) => entry.dayIndex >= completedDayIndex);
+    return before - state.causalJournal.length;
+  }
+  function rollWeekStats(state) {
+    const week = currentWeekIndex(state);
+    if (state.weekStats.weekIndex === week) return;
+    state.weekStats = {
+      weekIndex: week,
+      actionCounts: {},
+      previousWeekIndex: state.weekStats.weekIndex,
+      previousActionCounts: state.weekStats.actionCounts
+    };
+  }
+  function weekActionCount(state, weekIndex, actionId) {
+    if (state.weekStats.weekIndex === weekIndex) return state.weekStats.actionCounts[actionId] ?? 0;
+    if (state.weekStats.previousWeekIndex === weekIndex) return state.weekStats.previousActionCounts[actionId] ?? 0;
+    return 0;
+  }
+  var APPLIED_BOUNDARY_HISTORY = 24;
+  function compactAppliedBoundaries(state) {
+    const before = state.periods.appliedBoundaries.length;
+    if (before <= APPLIED_BOUNDARY_HISTORY) return 0;
+    state.periods.appliedBoundaries = state.periods.appliedBoundaries.slice(before - APPLIED_BOUNDARY_HISTORY);
+    return before - state.periods.appliedBoundaries.length;
+  }
+
   // ../../packages/assemble-day-engine/src/content/scenario.ts
   var raw = [
     [1, 420, "mon_breakfast", "causal", ["eat_ready_meal", "cook_meal_batch", "eat_quick_base", "drink_coffee_100"]],
@@ -344,6 +447,47 @@
   slots[7] = { ...slots[7], sleepBeforeMin: 210, interruptionsMin: 10 };
   var heavyIds = /* @__PURE__ */ new Set(["tue_night_wakeup", "tue_pickup_conflict", "wed_school_call", "thu_family_evening", "fri_final_issue", "fri_submit", "sat_school_event"]);
   var familyWindowIds = /* @__PURE__ */ new Set(["mon_family_dinner", "tue_pickup_conflict", "thu_family_evening", "fri_family_plan", "sat_school_event", "sun_family_time"]);
+  var STATE_DRIVEN_DAYS = /* @__PURE__ */ new Set([1]);
+  var dayAnchors = (day) => raw.filter((item) => item[0] === day).map((item) => item[1]);
+  var domainCondition = {
+    mon_breakfast: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
+    mon_commute: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    mon_scope_expansion: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    mon_lunch_window: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
+    mon_project_block: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    mon_family_dinner: { kind: "compare", path: "family.partner.closeness", op: "gte", value: 1 },
+    tue_night_wakeup: { kind: "compare", path: "family.child.closeness", op: "gte", value: 1 },
+    tue_recovery_breakfast: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
+    tue_review_prep: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    tue_pickup_conflict: { kind: "compare", path: "family.child.closeness", op: "gte", value: 1 },
+    wed_long_meeting: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    wed_late_lunch: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
+    wed_school_call: { kind: "compare", path: "family.child.closeness", op: "gte", value: 1 },
+    wed_work_recovery: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    thu_family_evening: { kind: "compare", path: "family.partner.closeness", op: "gte", value: 1 },
+    fri_deadline_plan: { kind: "compare", path: "work.projectBacklogMin", op: "gte", value: 1 },
+    fri_lunch: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
+    fri_family_plan: { kind: "compare", path: "family.partner.closeness", op: "gte", value: 1 },
+    sat_school_event: { kind: "compare", path: "family.child.closeness", op: "gte", value: 1 },
+    sun_family_time: { kind: "compare", path: "family.partner.closeness", op: "gte", value: 1 }
+  };
+  function situationTrigger(day, minute, id) {
+    const anchors = dayAnchors(day), position = anchors.indexOf(minute);
+    const fromMin = position <= 0 ? 0 : anchors[position - 1];
+    const dayIndex = day - 1;
+    const ownDay = { kind: "all", conditions: [
+      { kind: "compare", path: "clock.dayIndex", op: "eq", value: dayIndex },
+      { kind: "compare", path: "clock.minuteOfDay", op: "gte", value: fromMin }
+    ] };
+    const previousAnchors = dayAnchors(day - 1);
+    const handoverFrom = previousAnchors.length ? previousAnchors[previousAnchors.length - 1] : 0;
+    const window2 = position <= 0 && dayIndex > 0 ? { kind: "any", conditions: [ownDay, { kind: "all", conditions: [
+      { kind: "compare", path: "clock.dayIndex", op: "eq", value: dayIndex - 1 },
+      { kind: "compare", path: "clock.minuteOfDay", op: "gte", value: handoverFrom }
+    ] }] } : ownDay;
+    const domain = domainCondition[id];
+    return domain ? { kind: "all", conditions: [window2, domain] } : window2;
+  }
   var events = Object.fromEntries(raw.map(([day, minute, id, source, actionIds], index) => {
     const heavy = heavyIds.has(id), large = source === "external", dayIndex = day - 1;
     const event = {
@@ -352,8 +496,8 @@
       version: 1,
       source,
       copy: { ...EVENT_COPY[id], ...source === "causal" && !EVENT_COPY[id]?.causeHint ? { causeHint: "\u0421\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u0443\u0447\u0438\u0442\u044B\u0432\u0430\u0435\u0442 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u044F." } : {} },
-      trigger: { kind: "compare", path: "scenarioCursor", op: "eq", value: index },
-      hardWindow: { fromDayIndex: dayIndex, fromMinuteOfDay: minute, toDayIndex: dayIndex, toMinuteOfDay: Math.min(1439, minute + 120) },
+      trigger: STATE_DRIVEN_DAYS.has(day) ? situationTrigger(day, minute, id) : { kind: "compare", path: "scenarioCursor", op: "eq", value: index },
+      ...STATE_DRIVEN_DAYS.has(day) ? {} : { hardWindow: { fromDayIndex: dayIndex, fromMinuteOfDay: minute, toDayIndex: dayIndex, toMinuteOfDay: Math.min(1439, minute + 120) } },
       urgency: heavy ? 3 : source === "mandatory" ? 2 : 1,
       selectionWeight: 1,
       cooldownDays: source === "external" ? 2 : 0,
@@ -366,7 +510,9 @@
     return [id, event];
   }));
   function branchTrigger(cursor, condition) {
-    return { kind: "all", conditions: [{ kind: "compare", path: "scenarioCursor", op: "eq", value: cursor }, condition] };
+    const seed = raw[cursor];
+    const base = STATE_DRIVEN_DAYS.has(seed[0]) ? situationTrigger(seed[0], seed[1], seed[2]) : { kind: "compare", path: "scenarioCursor", op: "eq", value: cursor };
+    return { kind: "all", conditions: [base, condition] };
   }
   function addEcho(fallbackId, echo, when) {
     const cursor = raw.findIndex((item) => item[2] === fallbackId);
@@ -409,7 +555,9 @@
   var registries = { actions, events, slots };
   function createInitialState(seed) {
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
+      periods: createPeriodState(),
+      weekStats: { weekIndex: 0, actionCounts: {}, previousWeekIndex: -1, previousActionCounts: {} },
       campaignId: `week01:${seed}`,
       scenarioId: CONTRACT.scenarioId,
       scenarioVersion: CONTRACT.scenarioVersion,
@@ -613,18 +761,47 @@
       if (!effect.income.id) fail(path, "income id required");
     } else validateSerializable(effect, path);
   }
+  function validatePeriods(state) {
+    const periods = state.periods;
+    if (!periods || typeof periods !== "object") fail("state.periods", "required");
+    if (periods.version !== 1) fail("state.periods.version", "expected 1");
+    for (const key of ["daysPerWeek", "weeksPerMonth"]) {
+      integer(periods[key], `state.periods.${key}`);
+      if (periods[key] < 1) fail(`state.periods.${key}`, "must be positive");
+    }
+    for (const key of ["completedDays", "completedWeeks", "completedMonths"]) {
+      integer(periods[key], `state.periods.${key}`);
+      if (periods[key] < 0) fail(`state.periods.${key}`, "negative");
+    }
+    if (!Array.isArray(periods.appliedBoundaries) || periods.appliedBoundaries.some((id) => typeof id !== "string")) fail("state.periods.appliedBoundaries", "expected string ids");
+    unique(periods.appliedBoundaries, "state.periods.appliedBoundaries");
+    if (!Array.isArray(periods.plannedWeeks) || periods.plannedWeeks.some((index) => !Number.isInteger(index) || index < 0)) fail("state.periods.plannedWeeks", "expected non-negative week indexes");
+    unique(periods.plannedWeeks.map(String), "state.periods.plannedWeeks");
+    const stats = state.weekStats;
+    if (!stats || typeof stats !== "object") fail("state.weekStats", "required");
+    integer(stats.weekIndex, "state.weekStats.weekIndex");
+    integer(stats.previousWeekIndex, "state.weekStats.previousWeekIndex");
+    for (const [key, counts] of [["actionCounts", stats.actionCounts], ["previousActionCounts", stats.previousActionCounts]]) {
+      if (!counts || typeof counts !== "object" || Array.isArray(counts)) fail(`state.weekStats.${key}`, "expected map");
+      for (const [actionId, value] of Object.entries(counts)) {
+        integer(value, `state.weekStats.${key}.${actionId}`);
+        if (value < 0) fail(`state.weekStats.${key}.${actionId}`, "negative");
+      }
+    }
+  }
   function validateState(state) {
     validateSerializable(state, "state");
-    if (state.schemaVersion !== 2 || state.scenarioId !== CONTRACT.scenarioId || state.scenarioVersion !== CONTRACT.scenarioVersion || state.calibrationVersion !== CONTRACT.calibrationVersion || state.priceBookVersion !== CONTRACT.priceBookVersion || state.rng.algorithm !== CONTRACT.rngAlgorithm) fail("state.versions", "contract mismatch");
+    if (state.schemaVersion !== 3 || state.scenarioId !== CONTRACT.scenarioId || state.scenarioVersion !== CONTRACT.scenarioVersion || state.calibrationVersion !== CONTRACT.calibrationVersion || state.priceBookVersion !== CONTRACT.priceBookVersion || state.rng.algorithm !== CONTRACT.rngAlgorithm) fail("state.versions", "contract mismatch");
     if ("derived" in state || "context" in state) fail("state", "derived context must not be serialized");
     if (!state.campaignId || !state.rng.seed) fail("state", "campaignId and rng.seed required");
     if (state.activeEventId !== null && typeof state.activeEventId !== "string") fail("state.activeEventId", "expected event id or null");
     integer(state.scenarioCursor, "state.scenarioCursor");
-    inRange(state.scenarioCursor, 0, 38, "state.scenarioCursor");
+    if (state.scenarioCursor < 0) fail("state.scenarioCursor", "negative");
+    validatePeriods(state);
     integer(state.clock.dayIndex, "state.clock.dayIndex");
     integer(state.clock.minuteOfDay, "state.clock.minuteOfDay");
     integer(state.clock.stepIndex, "state.clock.stepIndex");
-    inRange(state.clock.dayIndex, 0, 7, "state.clock.dayIndex");
+    if (state.clock.dayIndex < 0) fail("state.clock.dayIndex", "negative");
     inRange(state.clock.minuteOfDay, 0, 1439, "state.clock.minuteOfDay");
     Object.entries(state.vitals).forEach(([key, value]) => inRange(value, 0, 100, `state.vitals.${key}`));
     for (const key of ["recoveryNeed", "familyLoadPlayer7d", "familyLoadPartner7d"]) inRange(state.accumulators[key], 0, 100, `state.accumulators.${key}`);
@@ -765,13 +942,16 @@
       throw new ReducerError("invalid_state", "planning", void 0, [error instanceof Error ? error.message : String(error)]);
     }
     const issues = validatePlan(input.plan);
-    if (input.state.clock.stepIndex > 0) issues.push({ code: "planning_locked", message: "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438 \u0444\u0438\u043A\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438." });
+    const weekIndex = currentWeekIndex(input.state);
     if (issues.length) throw new ReducerError("invalid_content", "planning", "planning_plan", issues.map((item) => `${item.code}:${item.message}`));
     const state = clone(input.state);
     const weeklyRules = WEEKLY_RULE_PRESETS.filter((item) => input.plan.weeklyRuleIds.includes(item.id)).map((item) => ({ id: item.id, kind: item.kind, enabled: true, sourceId: "planning_plan" }));
     const monthlyPriorities = DOMAINS.map((item) => ({ domain: item.id, level: item.id === input.plan.mainGoal ? 2 : item.id === input.plan.supportingGoal ? 1 : 0 }));
     if (canonicalJson(state.weeklyRules) === canonicalJson(weeklyRules) && canonicalJson(state.monthlyPriorities) === canonicalJson(monthlyPriorities)) {
       throw new ReducerError("invalid_content", "planning", "planning_plan", ["no_op:plan already confirmed"]);
+    }
+    if (state.periods.plannedWeeks.includes(weekIndex)) {
+      throw new ReducerError("invalid_content", "planning", "planning_plan", ["planning_locked:\u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0443\u0436\u0435 \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D"]);
     }
     const startJournal = state.causalJournal.length;
     const journalBase = { dayIndex: state.clock.dayIndex, stepIndex: state.clock.stepIndex, sourceId: "planning_plan", confidence: "established" };
@@ -781,6 +961,7 @@
     );
     state.weeklyRules = weeklyRules;
     state.monthlyPriorities = monthlyPriorities;
+    state.periods.plannedWeeks = [...state.periods.plannedWeeks, weekIndex].sort((left, right) => left - right);
     validateState(state);
     return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
   }
@@ -1336,8 +1517,8 @@
     const context = computeDecisionContext(state);
     for (const path of conditionPaths(event.trigger)) pushChange(changes, event.id, `\u0441\u0438\u0442\u0443\u0430\u0446\u0438\u044E \u043E\u0442\u043A\u0440\u044B\u043B \u0444\u0430\u043A\u0442\u043E\u0440 ${path}`, `eventTrigger.${event.id}.${path}`, getPath(state, path, context), "matched", "established");
   }
-  function materialize(event, state, candidate, rngKey) {
-    return { id: `event:${state.rng.seed}:${state.clock.stepIndex}:${event.id}`, templateId: event.id, dayIndex: event.hardWindow?.fromDayIndex ?? state.clock.dayIndex, stepIndex: state.clock.stepIndex, source: event.source, actionIds: [...event.actionIds], openedBy: { triggerReasons: candidate.triggerReasons, selectionRule: "source>hardWindow>urgency>weighted-id", ...rngKey ? { rngKey } : {} } };
+  function materialize(event, state, candidate, anchorDayIndex, rngKey) {
+    return { id: `event:${state.rng.seed}:${state.clock.stepIndex}:${event.id}`, templateId: event.id, dayIndex: anchorDayIndex, stepIndex: state.clock.stepIndex, source: event.source, actionIds: [...event.actionIds], openedBy: { triggerReasons: candidate.triggerReasons, selectionRule: "source>hardWindow>urgency>weighted-id", ...rngKey ? { rngKey } : {} } };
   }
   function isHeavyState(state, context = computeDecisionContext(state)) {
     return state.vitals.energy < 25 || state.vitals.tension > 80 || state.vitals.hunger > 85 || state.accumulators.sleepDebtMin > 300 || context.financialPressure > 85;
@@ -1398,6 +1579,8 @@
       mark(STAGES[4]);
       currentStage = STAGES[5];
       resolveOverdueCommitments(state, changes);
+      rollWeekStats(state);
+      state.weekStats.actionCounts[input.actionId] = (state.weekStats.actionCounts[input.actionId] ?? 0) + 1;
       mark(STAGES[5]);
       currentStage = STAGES[6];
       syncBacklog(state);
@@ -1416,6 +1599,7 @@
       currentStage = STAGES[8];
       let nextEvent = null;
       if (state.scenarioCursor < registries2.slots.length) {
+        const anchorDayIndex = registries2.slots[state.scenarioCursor].dayIndex;
         if (!candidates.length) throw new ReducerError("terminal_lock", STAGES[8], void 0, ["no event candidates"]);
         const ordered = orderCandidates(state, candidates, registries2);
         let selected = false;
@@ -1427,7 +1611,7 @@
             registerEvent(state, template, dayIndex, changes);
             state.activeEventId = template.id;
             pushChange(changes, template.id, "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u0441\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u0432\u044B\u0431\u0440\u0430\u043D\u0430", "activeEventId", null, template.id, "established");
-            nextEvent = materialize(template, state, candidate);
+            nextEvent = materialize(template, state, candidate, anchorDayIndex);
             selected = true;
             break;
           }
@@ -1439,27 +1623,41 @@
           pushChange(candidateChanges, template.id, "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u0441\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u0432\u044B\u0431\u0440\u0430\u043D\u0430", "activeEventId", null, template.id, "established");
           state = candidateState;
           changes = candidateChanges;
-          nextEvent = materialize(template, state, candidate);
+          nextEvent = materialize(template, state, candidate, anchorDayIndex);
           selected = true;
           break;
         }
         if (!selected) throw new ReducerError("terminal_lock", STAGES[8], void 0, ["all materialized candidates failed practical/anti-spiral gates"]);
       } else {
-        applySleep(state, changes, 480, 0, "campaign_finalize", "\u0432\u043E\u0441\u043A\u0440\u0435\u0441\u043D\u044B\u0439 \u0441\u043E\u043D \u0438 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u043D\u0435\u0434\u0435\u043B\u0438");
+        applySleep(state, changes, 480, 0, "campaign_finalize", "\u043D\u043E\u0447\u043D\u043E\u0439 \u0441\u043E\u043D \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0430\u0432\u0442\u043E\u0440\u0441\u043A\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0430");
         const before = { dayIndex: state.clock.dayIndex, minuteOfDay: state.clock.minuteOfDay };
-        state.clock.dayIndex = 7;
-        state.clock.minuteOfDay = 420;
+        const lastSlot = registries2.slots[registries2.slots.length - 1], morning = registries2.slots[0]?.minuteOfDay ?? 0;
+        state.clock.dayIndex = lastSlot.dayIndex + 1;
+        state.clock.minuteOfDay = morning;
         state.activeEventId = null;
-        pushChange(changes, "campaign_finalize", "\u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430 \u043F\u043E\u0441\u043B\u0435 \u0432\u043E\u0441\u043A\u0440\u0435\u0441\u043D\u043E\u0433\u043E \u0441\u043D\u0430", "clock", before, { dayIndex: 7, minuteOfDay: 420 }, "established");
+        pushChange(changes, "campaign_finalize", "\u0430\u0432\u0442\u043E\u0440\u0441\u043A\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D: \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0440\u044B\u0442, \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C", "clock", before, { dayIndex: state.clock.dayIndex, minuteOfDay: state.clock.minuteOfDay }, "established");
       }
       mark(STAGES[8]);
       currentStage = STAGES[9];
+      let closedDayIndex = null;
+      {
+        const completedSlot = registries2.slots[cursorBefore], nextSlot = registries2.slots[state.scenarioCursor];
+        if (completedSlot && (!nextSlot || nextSlot.dayIndex > completedSlot.dayIndex)) {
+          const crossed = boundariesForCompletedDay({ periods: state.periods, completedDayIndex: completedSlot.dayIndex, nextDayIndex: nextSlot ? nextSlot.dayIndex : null, afterStepIndex: state.clock.stepIndex });
+          const beforePeriods = clone2(state.periods);
+          const applied = applyPeriodBoundaries(state, crossed);
+          if (applied.length) pushChange(changes, "period_boundary", `\u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432 \u0437\u0430\u043A\u0440\u044B\u0442\u044B: ${applied.map((item) => item.id).join(", ")}`, "periods", beforePeriods, clone2(state.periods), "established");
+          closedDayIndex = applied.find((item) => item.kind === "day")?.completedDayIndex ?? null;
+        }
+      }
       appendJournal(state, changes, startJournal);
+      const produced = state.causalJournal.slice(startJournal);
+      if (closedDayIndex !== null) compactCausalJournal(state, closedDayIndex);
       normalize(state);
       if (!mutateOwnedState) validateState(state);
       const hash = mutateOwnedState ? "" : stateHash(state);
       mark(STAGES[9]);
-      return { state, appliedAction, nextEvent, journalEntries: state.causalJournal.slice(startJournal), stateHash: hash, stages };
+      return { state, appliedAction, nextEvent, journalEntries: produced, stateHash: hash, stages };
     } catch (error) {
       if (error instanceof ReducerError) throw error;
       throw new ReducerError(currentStage === "validate" ? "invalid_content" : "invariant_violation", currentStage, input.actionId, [error instanceof Error ? error.message : String(error)]);
@@ -1469,7 +1667,9 @@
     return reduceCore(input, registries2, trace, false);
   }
   function initialEvent(state, registries2) {
-    const slot = registries2.slots[state.scenarioCursor], event = registries2.events[state.activeEventId || slot.eventId];
+    const slot = registries2.slots[state.scenarioCursor], anchoredId = state.activeEventId || slot.eventId;
+    if (!anchoredId) throw new ReducerError("invalid_content", "validate", void 0, ["anchor has no active situation"]);
+    const event = registries2.events[anchoredId];
     return { id: `event:${state.rng.seed}:${state.clock.stepIndex}:${event.id}`, templateId: event.id, dayIndex: slot.dayIndex, stepIndex: state.clock.stepIndex, source: event.source, actionIds: [...event.actionIds], openedBy: { triggerReasons: ["state:activeEventId"], selectionRule: "persisted-event-anchor" } };
   }
 
@@ -1594,18 +1794,15 @@
     if (after.scenarioCursor !== before.scenarioCursor + 1) return [];
     const completedSlot = registries2.slots[before.scenarioCursor];
     if (!completedSlot) return [];
+    const appliedNow = new Set(after.periods.appliedBoundaries.filter((id) => !before.periods.appliedBoundaries.includes(id)));
+    if (!appliedNow.size) return [];
     const nextSlot = registries2.slots[after.scenarioCursor];
-    const closesDay = !nextSlot || nextSlot.dayIndex > completedSlot.dayIndex;
-    if (!closesDay) return [];
-    const day = {
-      id: `day:${completedSlot.dayIndex}`,
-      kind: "day",
+    return boundariesForCompletedDay({
+      periods: after.periods,
       completedDayIndex: completedSlot.dayIndex,
-      nextDayIndex: nextSlot?.dayIndex ?? null,
+      nextDayIndex: nextSlot ? nextSlot.dayIndex : null,
       afterStepIndex: after.clock.stepIndex
-    };
-    if (nextSlot) return [day];
-    return [day, { id: "week:0", kind: "week", completedDayIndex: completedSlot.dayIndex, nextDayIndex: null, afterStepIndex: after.clock.stepIndex }];
+    }).filter((boundary) => appliedNow.has(boundary.id));
   }
   function dayEntries(state, dayIndex, registries2) {
     const indices = registries2.slots.map((slot, index) => slot.dayIndex === dayIndex ? index + 1 : -1).filter((index) => index > 0);
@@ -1613,8 +1810,8 @@
     const from = Math.min(...indices), to = Math.max(...indices);
     return state.causalJournal.filter((entry) => entry.stepIndex >= from && entry.stepIndex <= to);
   }
-  function weeklyRuleResults(state) {
-    const lateWork = state.causalJournal.filter((entry) => entry.sourceId === "work_late" && entry.resultPath === "vitals.energy").length;
+  function weeklyRuleResults(state, weekIndex = weekIndexFor(state.periods, Math.max(0, state.clock.dayIndex - 1))) {
+    const lateWork = weekActionCount(state, weekIndex, "work_late");
     const brokenFamily = state.commitments.filter((item) => item.domain === "family" && item.status === "broken").length;
     const task = state.work.tasks.find((item) => item.id === "project_delivery");
     return state.weeklyRules.filter((item) => item.enabled && WEEKLY_RULE_PRESETS.some((preset) => preset.id === item.id)).map((item) => {
@@ -1641,7 +1838,7 @@
         causalLink: "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043C\u0435\u043D\u044F\u043B\u0438 \u0446\u0435\u043D\u0443 \u0440\u0435\u0448\u0435\u043D\u0438\u0439; \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043B\u0438 \u0438\u0442\u043E\u0433 \u043F\u043E \u0447\u0435\u0442\u044B\u0440\u0451\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u043C \u043B\u0438\u043D\u0438\u044F\u043C.",
         carryover: outcome.openThreads.length ? `${outcome.openThreads.length} \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044F\u0442 \u0434\u0430\u043B\u044C\u0448\u0435.` : "\u041E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043D\u0438\u0442\u0438 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044B.",
         brief: getCampaignBrief(state, registries2),
-        rules: weeklyRuleResults(state),
+        rules: weeklyRuleResults(state, boundary.periodIndex),
         commitments: { resolved, broken, open, summary: `\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E: ${resolved}; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043E: ${broken}; \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u043E: ${open}.` },
         pressure: `\u041A \u0444\u0438\u043D\u0430\u043B\u0443 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 ${qualitative(context.deadlinePressure, "neuter")}, \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 ${qualitative(context.familyImbalance, "neuter")}, \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u044C \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 ${qualitative(Math.max(context.sleepiness, 100 - state.vitals.energy, state.accumulators.recoveryNeed), "feminine")}.`,
         axes: outcome.axes,
@@ -1727,7 +1924,7 @@
 
   // assemble-day/heys_assemble_day_game_v1.ts
   var STORAGE_KEY = "heys_planning_assemble_day_campaign_v1";
-  var ENVELOPE_VERSION = 2;
+  var ENVELOPE_VERSION = 3;
   var CHECKPOINT_BUDGET_BYTES = 128 * 1024;
   var UUID_RE = /\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/i;
   var DAY_NAMES2 = ["\u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A", "\u0412\u0442\u043E\u0440\u043D\u0438\u043A", "\u0421\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440\u0433", "\u041F\u044F\u0442\u043D\u0438\u0446\u0430", "\u0421\u0443\u0431\u0431\u043E\u0442\u0430", "\u0412\u043E\u0441\u043A\u0440\u0435\u0441\u0435\u043D\u044C\u0435"];
@@ -1850,14 +2047,15 @@
     assertGameSeed(seed);
     const state = createInitialState(seed);
     validateState(state);
-    return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: "complete", decisions: [] }, ...comparisonBaseline ? { comparisonBaseline } : {} };
+    const anchor = { revision: 0, stateHash: stateHash(state), state: structuredClone(state), lastStepSummary: null, periodSummaries: [], lastDecisionKind: null };
+    return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: "complete", decisions: [] }, anchor, ...comparisonBaseline ? { comparisonBaseline } : {} };
   }
   function diagnosticStateSnapshot(state) {
     const snapshot = structuredClone(state);
     delete snapshot.causalJournal;
     return snapshot;
   }
-  function diagnosticsFrom(value, revision) {
+  function diagnosticsFrom(value, revision, anchorRevision = 0) {
     if (value === void 0) return { version: 1, history: revision === 0 ? "complete" : "legacy_partial", decisions: [] };
     const ledger = value;
     if (!ledger || typeof ledger !== "object" || ledger.version !== 1 || !["complete", "legacy_partial"].includes(ledger.history) || !Array.isArray(ledger.decisions) || ledger.decisions.some((decision) => !decision || typeof decision !== "object" || !["action", "planning"].includes(decision.kind) || !Number.isInteger(decision.revision) || !Number.isInteger(decision.stepIndex) || decision.kind === "action" && (typeof decision.eventId !== "string" || typeof decision.actionId !== "string") || decision.kind === "planning" && !decision.plan)) {
@@ -1865,8 +2063,8 @@
     }
     const decisions = structuredClone(ledger.decisions);
     if (decisions.some((decision) => decision.revision <= 0 || decision.stepIndex < 0)) throw new Error("invalid diagnostic position");
-    if (decisions.some((decision, index) => decision.revision !== index + 1)) throw new Error("diagnostic revision sequence");
-    if (decisions.length ? decisions.at(-1).revision !== revision : ledger.history === "complete" && revision !== 0) throw new Error("diagnostic revision mismatch");
+    if (decisions.some((decision, index) => decision.revision !== anchorRevision + index + 1)) throw new Error("diagnostic revision sequence");
+    if (decisions.length ? decisions.at(-1).revision !== revision : ledger.history === "complete" && revision !== anchorRevision) throw new Error("diagnostic revision mismatch");
     return { version: 1, history: ledger.history, decisions };
   }
   function planningDraftFromState(state) {
@@ -1917,7 +2115,8 @@
     const chosenCopy = actionCopy(openEvent.templateId, actionId);
     const lastStepSummary = getStepSummary({ before: session.state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
     const periodSummaries = getPeriodBoundaries(session.state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
-    return { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+    const next = { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+    return periodSummaries.length ? reanchor(next) : next;
   }
   function confirmPlanning(session, plan) {
     const output = reducePlanningStep({ state: session.state, plan });
@@ -1925,12 +2124,23 @@
     const decision = { kind: "planning", revision, stepIndex: session.state.clock.stepIndex, plan: structuredClone(plan) };
     return { ...session, state: output.state, lastStepSummary: session.lastStepSummary, periodSummaries: session.periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
   }
-  function replayDecisions(seed, diagnostics, comparisonBaseline) {
-    assertGameSeed(seed);
+  function reanchor(session) {
+    const anchor = {
+      revision: session.revision,
+      stateHash: stateHash(session.state),
+      state: structuredClone(session.state),
+      lastStepSummary: session.lastStepSummary ? structuredClone(session.lastStepSummary) : null,
+      periodSummaries: structuredClone(session.periodSummaries),
+      lastDecisionKind: session.diagnostics.decisions.at(-1)?.kind ?? session.anchor.lastDecisionKind
+    };
+    return { ...session, anchor, diagnostics: { ...session.diagnostics, decisions: [] } };
+  }
+  function replayDecisions(anchor, diagnostics, comparisonBaseline) {
+    assertGameSeed(anchor.state.rng.seed);
     if (diagnostics.history !== "complete") throw new Error("complete decision history required");
-    let state = createInitialState(seed);
-    let lastStepSummary = null;
-    let periodSummaries = [];
+    let state = structuredClone(anchor.state);
+    let lastStepSummary = anchor.lastStepSummary ? structuredClone(anchor.lastStepSummary) : null;
+    let periodSummaries = structuredClone(anchor.periodSummaries);
     for (const decision of diagnostics.decisions) {
       if (decision.kind === "action") {
         const slot = registries.slots[state.scenarioCursor];
@@ -1952,8 +2162,9 @@
       state,
       lastStepSummary,
       periodSummaries,
-      revision: diagnostics.decisions.at(-1)?.revision || 0,
+      revision: diagnostics.decisions.at(-1)?.revision || anchor.revision,
       diagnostics: structuredClone(diagnostics),
+      anchor: structuredClone(anchor),
       ...comparisonBaseline ? { comparisonBaseline } : {}
     };
   }
@@ -1973,13 +2184,14 @@
   }
   function makeEnvelope(session, clientId) {
     assertGameSeed(session.state.rng.seed);
-    const diagnostics = diagnosticsFrom(session.diagnostics, session.revision);
-    if (diagnostics.history !== "complete" || hasRawClientIdentifier({ state: session.state, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
+    const diagnostics = diagnosticsFrom(session.diagnostics, session.revision, session.anchor.revision);
+    if (diagnostics.history !== "complete" || hasRawClientIdentifier({ anchor: session.anchor, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
       throw new Error("checkpoint contains a personal identifier or incomplete history");
     }
-    const replayed = replayDecisions(session.state.rng.seed, diagnostics, session.comparisonBaseline);
+    if (stateHash(session.anchor.state) !== session.anchor.stateHash) throw new Error("checkpoint anchor hash mismatch");
+    const replayed = replayDecisions(session.anchor, diagnostics, session.comparisonBaseline);
     if (stateHash(replayed.state) !== stateHash(session.state) || JSON.stringify(replayed.lastStepSummary) !== JSON.stringify(session.lastStepSummary) || JSON.stringify(replayed.periodSummaries) !== JSON.stringify(session.periodSummaries)) {
-      throw new Error("checkpoint decision ledger does not reproduce the session");
+      throw new Error("checkpoint tail does not reproduce the session");
     }
     return {
       envelopeVersion: ENVELOPE_VERSION,
@@ -1989,7 +2201,9 @@
       revision: session.revision,
       stateHash: stateHash(session.state),
       contract: { ...CONTRACT },
+      anchor: structuredClone(session.anchor),
       diagnostics,
+      lifetime: { decisions: session.revision },
       comparisonBaseline: session.comparisonBaseline
     };
   }
@@ -2005,12 +2219,33 @@
       const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
       if (diagnostics.history !== "complete") return { status: "incompatible", message: "\u0412 \u0441\u0442\u0430\u0440\u043E\u043C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0438 \u043D\u0435\u0442 \u043F\u043E\u043B\u043D\u043E\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0439 \u0434\u043B\u044F \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0433\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
       const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
-      const session = replayDecisions(envelope.state.rng.seed, diagnostics, comparisonBaseline);
+      const session = replayDecisions(initialAnchor(envelope.state.rng.seed), diagnostics, comparisonBaseline);
       if (stateHash(session.state) !== envelope.stateHash) throw new Error("legacy replay mismatch");
       return { status: "ready", session };
     } catch {
       return { status: "corrupt", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0440\u043E\u0448\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 \u0446\u0435\u043B\u043E\u0441\u0442\u043D\u043E\u0441\u0442\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
     }
+  }
+  function initialAnchor(seed) {
+    const state = createInitialState(seed);
+    return { revision: 0, stateHash: stateHash(state), state, lastStepSummary: null, periodSummaries: [], lastDecisionKind: null };
+  }
+  function anchorFrom(value, gameSeed) {
+    const anchor = value;
+    if (!anchor || typeof anchor !== "object" || !Number.isInteger(anchor.revision) || anchor.revision < 0 || typeof anchor.stateHash !== "string") throw new Error("invalid checkpoint anchor");
+    const state = structuredClone(anchor.state);
+    validateState(state);
+    if (state.rng.seed !== gameSeed) throw new Error("anchor seed mismatch");
+    if (stateHash(state) !== anchor.stateHash) throw new Error("anchor hash mismatch");
+    if (!Array.isArray(anchor.periodSummaries)) throw new Error("invalid anchor summaries");
+    return {
+      revision: anchor.revision,
+      stateHash: anchor.stateHash,
+      state,
+      lastStepSummary: anchor.lastStepSummary ? structuredClone(anchor.lastStepSummary) : null,
+      periodSummaries: structuredClone(anchor.periodSummaries),
+      lastDecisionKind: anchor.lastDecisionKind === "action" || anchor.lastDecisionKind === "planning" ? anchor.lastDecisionKind : null
+    };
   }
   function loadCheckpoint(store, clientId, _fresh = false) {
     if (!store?.getPersisted || !clientId) return { status: "unavailable", message: "\u041F\u0440\u043E\u0444\u0438\u043B\u044C HEYS \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u0412\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS \u0438 \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0441\u043D\u043E\u0432\u0430." };
@@ -2032,14 +2267,15 @@
     if (!contractMatches(envelope.contract)) return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0435\u0439 \u0438\u0433\u0440\u044B. \u041D\u0430\u0447\u043D\u0438\u0442\u0435 \u043D\u043E\u0432\u0443\u044E \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u044F\u0432\u043D\u043E \u0438\u043B\u0438 \u0432\u0435\u0440\u043D\u0438\u0442\u0435\u0441\u044C \u0432 HEYS." };
     if (envelope.scopeTag !== scopeTagFor(clientId)) return { status: "foreign", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 \u0434\u0440\u0443\u0433\u043E\u043C\u0443 \u043F\u0440\u043E\u0444\u0438\u043B\u044E HEYS \u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E." };
     if (checkpointSizeBytes(clientId, envelope) > CHECKPOINT_BUDGET_BYTES) return { status: "incompatible", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u0435\u0432\u044B\u0448\u0430\u0435\u0442 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440 \u044D\u0442\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 \u0438\u0433\u0440\u044B. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
-    if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+    if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, anchor: envelope.anchor, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
       return { status: "privacy", message: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u0444\u0438\u043B\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438. \u041E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439." };
     }
     try {
-      const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
+      const anchor = anchorFrom(envelope.anchor, envelope.gameSeed);
+      const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision, anchor.revision);
       if (diagnostics.history !== "complete" || !Number.isInteger(envelope.revision) || envelope.revision < 0 || typeof envelope.stateHash !== "string") throw new Error("checkpoint shape mismatch");
       const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
-      const session = replayDecisions(envelope.gameSeed, diagnostics, comparisonBaseline);
+      const session = replayDecisions(anchor, diagnostics, comparisonBaseline);
       if (session.revision !== envelope.revision || stateHash(session.state) !== envelope.stateHash) throw new Error("checkpoint replay mismatch");
       return { status: "ready", session };
     } catch {
@@ -2054,8 +2290,8 @@
   }
   function createDiagnosticTrace(session) {
     const steps = [];
-    let replayState = createInitialState(session.state.rng.seed);
-    let replayStatus = session.diagnostics.history === "complete" ? "match" : "partial";
+    let replayState = structuredClone(session.anchor.state);
+    let replayStatus = session.diagnostics.history === "complete" ? session.anchor.revision > 0 ? "partial" : "match" : "partial";
     let replayError = "";
     if (session.diagnostics.history === "complete") {
       try {
@@ -2760,6 +2996,17 @@
       h("small", null, "\u041D\u043E\u0432\u043E\u0435 \u043F\u0440\u043E\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F.")
     );
   }
+  function RestartPanel({ onConfirm, onCancel }) {
+    return h(
+      "section",
+      { className: "assemble-day-card assemble-day-restart-confirm", role: "alertdialog", "aria-label": "\u041D\u0430\u0447\u0430\u0442\u044C \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044E \u0437\u0430\u043D\u043E\u0432\u043E" },
+      h("span", { className: "assemble-day-eyebrow" }, "\u041D\u043E\u0432\u0430\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044F"),
+      h("h2", null, "\u041D\u0430\u0447\u0430\u0442\u044C \u0437\u0430\u043D\u043E\u0432\u043E?"),
+      h("p", null, "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u044F \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043C\u0435\u043D\u0435\u043D\u0430 \u043D\u043E\u0432\u043E\u0439 \u0441 \u0434\u0440\u0443\u0433\u0438\u043C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u043C. \u041F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u044D\u0442\u043E\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F."),
+      h("button", { type: "button", className: "assemble-day-primary", onClick: onConfirm }, "\u041D\u0430\u0447\u0430\u0442\u044C \u0437\u0430\u043D\u043E\u0432\u043E"),
+      h("button", { type: "button", className: "assemble-day-secondary", onClick: onCancel }, "\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438")
+    );
+  }
   function RecoveryPanel({ result, onNew, onExit }) {
     return h(
       "section",
@@ -2789,14 +3036,17 @@
     const [traceMessage, setTraceMessage] = React.useState("");
     const [traceTone, setTraceTone] = React.useState("");
     const [traceBusy, setTraceBusy] = React.useState(false);
-    const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === "ready" && initialLoad.session.lastStepSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === "action" ? initialLoad.session.revision : null);
+    const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === "ready" && initialLoad.session.lastStepSummary && (initialLoad.session.diagnostics.decisions.at(-1)?.kind ?? initialLoad.session.anchor.lastDecisionKind) === "action" ? initialLoad.session.revision : null);
     const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState(null);
+    const [restartOpen, setRestartOpen] = React.useState(false);
     const startNew = () => {
       const next = createSession();
       setSession(next);
       setPlanningDraft(planningDraftFromState(next.state));
       setLoadIssue(null);
       setForceNewCampaign(true);
+      setRestartOpen(false);
+      setActiveScreen("day");
       setSelectedActionId("");
       setSaveMessage("");
       setSaveTone("");
@@ -2943,17 +3193,22 @@
         "div",
         { className: "assemble-day-shell" },
         h(
-          "nav",
-          { className: "assemble-day-tabs", "aria-label": "\u041C\u0430\u0441\u0448\u0442\u0430\u0431 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438" },
-          ...[["day", "\u0414\u0435\u043D\u044C"], ["week", "\u041D\u0435\u0434\u0435\u043B\u044F"], ["month", "\u041C\u0435\u0441\u044F\u0446"], ["life", "\u0416\u0438\u0437\u043D\u044C"]].map(([id, label]) => h("button", {
-            key: id,
-            type: "button",
-            className: activeScreen === id ? "is-active" : "",
-            "aria-current": activeScreen === id ? "page" : void 0,
-            onClick: () => setActiveScreen(id)
-          }, label))
+          "div",
+          { className: "assemble-day-topbar" },
+          h(
+            "nav",
+            { className: "assemble-day-tabs", "aria-label": "\u041C\u0430\u0441\u0448\u0442\u0430\u0431 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438" },
+            ...[["day", "\u0414\u0435\u043D\u044C"], ["week", "\u041D\u0435\u0434\u0435\u043B\u044F"], ["month", "\u041C\u0435\u0441\u044F\u0446"], ["life", "\u0416\u0438\u0437\u043D\u044C"]].map(([id, label]) => h("button", {
+              key: id,
+              type: "button",
+              className: activeScreen === id ? "is-active" : "",
+              "aria-current": activeScreen === id ? "page" : void 0,
+              onClick: () => setActiveScreen(id)
+            }, label))
+          ),
+          h("button", { type: "button", className: "assemble-day-restart", onClick: () => setRestartOpen(true) }, "\u041D\u0430\u0447\u0430\u0442\u044C \u0437\u0430\u043D\u043E\u0432\u043E")
         ),
-        h("main", { className: "assemble-day-content" }, screens[activeScreen])
+        h("main", { className: "assemble-day-content" }, restartOpen ? h(RestartPanel, { onConfirm: startNew, onCancel: () => setRestartOpen(false) }) : screens[activeScreen])
       )
     );
   }
@@ -2981,6 +3236,7 @@
       loadCheckpoint,
       saveCheckpoint,
       checkpointSizeBytes,
+      makeEnvelope,
       createDiagnosticTrace,
       serializeDiagnosticTrace,
       copyDiagnosticTrace

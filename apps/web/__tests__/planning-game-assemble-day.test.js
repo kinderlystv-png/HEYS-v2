@@ -117,7 +117,7 @@ describe('Planning Assemble Day', () => {
     expect(saved.status).toBe('saved');
     expect(store.set).toHaveBeenCalledTimes(1);
     expect(store.set.mock.calls[0][0]).toBe('heys_planning_assemble_day_campaign_v1');
-    expect(store.value().envelopeVersion).toBe(2);
+    expect(store.value().envelopeVersion).toBe(3);
     expect(store.value().revision).toBe(1);
     expect(store.value().gameSeed).toBe('checkpoint');
     expect(store.value()).not.toHaveProperty('state');
@@ -369,22 +369,36 @@ describe('Planning Assemble Day', () => {
     expect(() => module.api.createSession(`unsafe:${clientId}`)).toThrow(/opaque|UUID/i);
   });
 
-  it('keeps a full-week checkpoint bounded and rebuilds state, summary and trace from replay', () => {
+  it('keeps a checkpoint bounded by one period and rebuilds state, summary and trace from the anchor', () => {
     const first = loadModule();
     let session = first.module.api.createSession('diagnostic-size');
+    let earlySizeBytes = 0;
+    let maxTail = 0;
     while (true) {
       const view = first.module.api.getCampaignView(session);
       if (view.complete) break;
       session = first.module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
+      maxTail = Math.max(maxTail, session.diagnostics.decisions.length);
+      if (!earlySizeBytes && session.anchor.revision > 0) {
+        earlySizeBytes = first.module.api.checkpointSizeBytes(clientId, first.module.api.makeEnvelope(session, clientId));
+      }
     }
     const saved = first.module.api.saveCheckpoint(first.store, clientId, session);
     expect(saved.status).toBe('saved');
     expect(saved.sizeBytes).toBe(first.module.api.checkpointSizeBytes(clientId, first.store.value()));
     expect(saved.sizeBytes).toBeLessThan(first.module.api.checkpointBudgetBytes);
-    expect(512 * 1024 - saved.sizeBytes).toBeGreaterThan(480 * 1024);
+    // Стоимость сохранения ограничена одним периодом: снимок и хвост решений не
+    // растут вместе с длиной кампании, поэтому размер к концу недели остаётся
+    // сопоставимым с размером после первой закрытой границы.
+    expect(earlySizeBytes).toBeGreaterThan(0);
+    expect(saved.sizeBytes).toBeLessThan(earlySizeBytes * 1.6);
+    expect(maxTail).toBeLessThanOrEqual(8);
     expect(first.store.value()).not.toHaveProperty('state');
     expect(first.store.value()).not.toHaveProperty('lastSummary');
-    expect(session.diagnostics.decisions).toHaveLength(38);
+    expect(first.store.value().envelopeVersion).toBe(3);
+    expect(first.store.value().lifetime.decisions).toBe(38);
+    expect(session.diagnostics.decisions).toHaveLength(0);
+    expect(session.anchor.revision).toBe(38);
 
     const reloaded = first.module.api.loadCheckpoint(first.store, clientId);
     expect(reloaded.status).toBe('ready');
@@ -395,9 +409,10 @@ describe('Planning Assemble Day', () => {
 
     const fullTraceText = first.module.api.serializeDiagnosticTrace(session);
     const fullTrace = JSON.parse(fullTraceText);
-    expect(fullTrace.replayIntegrity.status).toBe('match');
-    expect(fullTrace.replayIntegrity.replayStateHash).toBe(fullTrace.replayIntegrity.actualStateHash);
-    expect(fullTrace.steps).toHaveLength(38);
+    // Полный лог строится от якоря: детали до него усечены осознанно, поэтому
+    // статус честно называется частичным, а хэш по-прежнему сходится.
+    expect(fullTrace.replayIntegrity.status).toBe('partial');
+    expect(fullTrace.steps).toHaveLength(0);
     expect(fullTrace.steps.every((step) => step.reducerStages.length === 10)).toBe(true);
     expect(fullTraceText).not.toContain(session.state.rng.seed);
     expect(fullTraceText).not.toContain(session.state.campaignId);
@@ -451,7 +466,7 @@ describe('Planning Assemble Day', () => {
     const nextView = module.api.getCampaignView(loaded.session);
     const next = module.api.confirmAction(loaded.session, nextView.offers.find((offer) => offer.available).actionId);
     expect(module.api.saveCheckpoint(legacyStore, clientId, next).status).toBe('saved');
-    expect(legacyStore.value().envelopeVersion).toBe(2);
+    expect(legacyStore.value().envelopeVersion).toBe(3);
     expect(JSON.stringify(legacyStore.value())).not.toContain(clientId);
 
     const partialEnvelope = structuredClone(legacyEnvelope);
@@ -510,6 +525,34 @@ describe('Planning Assemble Day', () => {
     const oversizedStore = memoryStore();
     expect(module.api.saveCheckpoint(oversizedStore, clientId, oversized)).toMatchObject({ status: 'failed', message: expect.stringContaining('размер') });
     expect(oversizedStore.set).not.toHaveBeenCalled();
+  });
+
+  it('restarts the campaign from the menu only after an explicit confirmation', () => {
+    const { module, store } = loadModule();
+    const planned = module.api.confirmPlanning(module.api.createSession('ui-restart'), defaultPlan);
+    expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
+    store.set.mockClear();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+
+    expect(screen.getByRole('radio', { name: /Приготовить завтрак/ })).toBeTruthy();
+
+    // Отмена возвращает к той же кампании и ничего не пишет.
+    fireEvent.click(screen.getByRole('button', { name: 'Начать заново' }));
+    expect(screen.getByRole('alertdialog', { name: 'Начать кампанию заново' })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: /Приготовить завтрак/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуться к кампании' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('radio', { name: /Приготовить завтрак/ })).toBeTruthy();
+    expect(store.set).not.toHaveBeenCalled();
+
+    // Подтверждение открывает новую кампанию с начала, но сохранение не переписывается до первого решения.
+    fireEvent.click(screen.getByRole('button', { name: 'Начать заново' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Начать заново' })[1]);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.queryByRole('radio', { name: /Приготовить завтрак/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Сначала выберите, что будете защищать' })).toBeTruthy();
+    expect(store.set).not.toHaveBeenCalled();
+    expect(module.api.loadCheckpoint(store, clientId).session.state.rng.seed).toBe('ui-restart');
   });
 
   it('renders progressive planning, exposes conflicts and saves only on final confirmation', async () => {
