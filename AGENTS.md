@@ -6,6 +6,15 @@ Compact agent reference. Detailed architecture in
 [apps/web/BUGS_HISTORY.md](apps/web/BUGS_HISTORY.md). Project status / TODO in
 [todo.md](todo.md).
 
+Чтобы понять текущий этап проекта и найти источник правды по зоне (запуск,
+маркетинг, лендинг, Telegram, продукт, legal, релиз, дашборды), начинай с
+[карты документации](docs/README.md). Она не хранит статусы: живые статусы — в
+[todo.md](todo.md), [`маркетинг/22`](маркетинг/22_План_реализации_маркетинга.md)
+и gates
+[`25`](маркетинг/25_Roadmap_Ф0_Ф1.md)/[`32`](маркетинг/32_ПДн_governance_релизный_контур.md).
+Если правка меняет владельца правды или переводит документ в архив — обнови
+карту в той же задаче.
+
 Для входа в незнакомую область сначала используй
 [живой справочник](docs/reference/README.md): найди системное досье, затем перед
 правкой перепроверь затронутый контракт по указанным исходникам и тестам.
@@ -170,8 +179,9 @@ readiness-математику, валидатор-фреймворк, онбо�
   каждого крупного шага агент добавляет summary сделанного, риски/открытые
   вопросы и что именно ревьюеру смотреть. Для микроправок отдельный протокол не
   нужен.
-- То же summary по крупным шагам агент дублирует в чат пользователю, чтобы
-  ревьюер и пользователь видели один и тот же контекст.
+- Полный текст протокола в чат не дублируй. В чат идёт только короткий итог
+  крупного шага (что сделано, риск, что смотреть) со ссылкой на протокол;
+  подробности живут в файле.
 
 ## Execution autonomy
 
@@ -200,12 +210,13 @@ readiness-математику, валидатор-фреймворк, онбо�
   preview flow выше, но не эти действия. Разрешённый commit включает
   обязательные hook side effects только для staged scope, но не отдельный
   full/integration flow.
-- Перед любым разрешённым staging/commit/production build/integration/push/PR
-  полностью прочитай общий обязательный runbook:
+- Перед первым в сессии разрешённым staging/commit/production build/integration/
+  push/PR полностью прочитай общий обязательный runbook:
   [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
-  Commit-only всегда выполняй через `pnpm ship "..." --no-push`; обычный
-  `pnpm ship "..."` допустим только при прямом commit+push grant. Runbook не
-  является разрешением на действие.
+  Дальше в той же сессии перечитывай точечно — только нужный раздел и только
+  если механика менялась или действие другого типа. Commit-only всегда выполняй
+  через `pnpm ship "..." --no-push`; обычный `pnpm ship "..."` допустим только
+  при прямом commit+push grant. Runbook не является разрешением на действие.
 - **Git/deploy fact-check before answering.** На вопросы «ушло в push?»,
   «закоммичено?», «выложено?», «попало в main?» агент не отвечает по памяти
   своих действий. Сначала делает минимальную проверку факта:
@@ -386,3 +397,27 @@ each.
 ## Diagnostics
 
 Каталог + quick reference: [DEBUGGING.md](apps/web/DEBUGGING.md).
+
+---
+
+## Telegram-боты (входящие)
+
+Относится к входящим ботам в `yandex-cloud-functions/` (например
+`heys-bot-client`). Исходящие уведомления вроде
+`scripts/ci/send-telegram-alert.mjs` это правило не затрагивает.
+
+- Не полагайся на webhook как на единственный канал ответа. Production pattern
+  по умолчанию: long polling worker через timer-trigger с почти непрерывным
+  окном (например 55s на 60s timeout) + прямые `sendMessage` / `editMessageText`
+  / `answerCallbackQuery` через Bot API.
+- Webhook допустим как дополнительный или ручной endpoint, но не как single
+  point of failure. Если webhook даёт задержки, `pending_update_count > 0` или
+  `Connection timed out` — сначала `deleteWebhook(drop_pending_updates:false)`,
+  затем `getUpdates`, обработка pending updates и commit offset. Не использовать
+  `drop_pending_updates:true` без явного разрешения пользователя.
+- Ответ пользователю доставляется прямым Bot API с короткими timeout'ами;
+  webhook response body вида `{ method: "sendMessage" }` не считать надёжным на
+  Yandex/API Gateway.
+- Smoke-набор для каждого входящего бота: token/webhook state, active polling
+  trigger, manual poll invoke, pending queue = 0, unit-test на polling offset
+  commit.
