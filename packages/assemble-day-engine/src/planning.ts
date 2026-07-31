@@ -1,6 +1,7 @@
 import { canonicalJson, stateHash } from './rng.js';
 import { validateState } from './schema.js';
 import { WEEKLY_RULE_PRESETS } from './content/planning.js';
+import { currentWeekIndex } from './periods.js';
 import {
   ReducerError,
   type ActionDefinition,
@@ -117,7 +118,7 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
     throw new ReducerError('invalid_state', 'planning', undefined, [error instanceof Error ? error.message : String(error)]);
   }
   const issues = validatePlan(input.plan);
-  if (input.state.clock.stepIndex > 0) issues.push({ code: 'planning_locked', message: 'Контракт недели фиксируется до первого решения кампании.' });
+  const weekIndex = currentWeekIndex(input.state);
   if (issues.length) throw new ReducerError('invalid_content', 'planning', 'planning_plan', issues.map((item) => `${item.code}:${item.message}`));
   const state = clone(input.state);
   const weeklyRules = WEEKLY_RULE_PRESETS
@@ -127,6 +128,11 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
   if (canonicalJson(state.weeklyRules) === canonicalJson(weeklyRules) && canonicalJson(state.monthlyPriorities) === canonicalJson(monthlyPriorities)) {
     throw new ReducerError('invalid_content', 'planning', 'planning_plan', ['no_op:plan already confirmed']);
   }
+  // Контракт недели фиксируется один раз на неделю: следующая неделя получает
+  // собственный planning-шаг, а уже закрытая неделя не переписывается задним числом.
+  if (state.periods.plannedWeeks.includes(weekIndex)) {
+    throw new ReducerError('invalid_content', 'planning', 'planning_plan', ['planning_locked:контракт этой недели уже зафиксирован']);
+  }
   const startJournal = state.causalJournal.length;
   const journalBase = { dayIndex: state.clock.dayIndex, stepIndex: state.clock.stepIndex, sourceId: 'planning_plan', confidence: 'established' as const };
   state.causalJournal.push(
@@ -135,6 +141,7 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
   );
   state.weeklyRules = weeklyRules;
   state.monthlyPriorities = monthlyPriorities;
+  state.periods.plannedWeeks = [...state.periods.plannedWeeks, weekIndex].sort((left, right) => left - right);
   validateState(state);
   return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
 }

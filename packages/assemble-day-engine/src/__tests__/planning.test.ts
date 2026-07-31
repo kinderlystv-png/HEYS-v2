@@ -102,7 +102,7 @@ describe('planning reducer contract', () => {
     state.clock.stepIndex = 11;
     state.clock.dayIndex = registries.slots[11]!.dayIndex;
     state.clock.minuteOfDay = registries.slots[11]!.minuteOfDay;
-    const offers = getActionOffers(state, registries.slots[11]!.eventId, registries);
+    const offers = getActionOffers(state, registries.slots[11]!.eventId!, registries);
     const lateWork = offers.find((offer) => offer.actionId === 'work_late');
     expect(lateWork?.planningSignals).toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: 'conflicts_weekly_rule', sourceId: 'protect_sleep' }),
@@ -148,6 +148,11 @@ describe('planning reducer contract', () => {
     expect(night.planningSignals).not.toContainEqual(expect.objectContaining({ kind: 'supports_weekly_rule', sourceId: 'family_anchor' }));
     expect(anchor.planningSignals).toContainEqual(expect.objectContaining({ kind: 'supports_weekly_rule', sourceId: 'family_anchor' }));
     state.scenarioCursor = 5;
+    state.clock.stepIndex = 5;
+    // Ситуация теперь открывается временем и состоянием, поэтому часы должны
+    // стоять в её окне, а не только курсор на её позиции.
+    state.clock.dayIndex = registries.slots[5]!.dayIndex;
+    state.clock.minuteOfDay = registries.slots[5]!.minuteOfDay;
     state.activeEventId = 'mon_family_dinner';
     const stepped = reduceStep({ state, openEvent: initialEvent(state, registries), actionId: 'protect_commitment' }, registries);
     expect(stepped.journalEntries.some((entry) => entry.resultPath.includes('planningCapacity.ruleSlots.family_anchor'))).toBe(true);

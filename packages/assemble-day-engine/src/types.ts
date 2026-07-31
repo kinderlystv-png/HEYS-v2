@@ -1,9 +1,9 @@
 export const CONTRACT = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   scenarioId: 'week-01-project-deadline',
-  scenarioVersion: '4',
+  scenarioVersion: '5',
   calibrationVersion: '0.4',
-  technicalContractVersion: '0.35',
+  technicalContractVersion: '0.36',
   priceBookVersion: 'week-01-rub-v1',
   rngAlgorithm: 'fnv1a-mulberry32-v1',
   hashAlgorithm: 'canonical-json-fnv1a64-v1',
@@ -170,7 +170,13 @@ export interface EventInstance {
   actionIds: string[];
   openedBy: { triggerReasons: string[]; selectionRule: string; rngKey?: string };
 }
-export interface ScenarioSlot { slot: number; dayIndex: number; minuteOfDay: number; eventId: string; forkKind: 'ordinary' | 'hard'; sleepBeforeMin?: number; interruptionsMin?: number }
+/**
+ * Временной якорь дня: когда открывается развилка и сколько сна ей предшествует.
+ * `eventId` необязателен — он нужен только там, где ситуация задана автором
+ * жёстко (например открытие кампании). Остальные якоря наполняются отбором по
+ * состоянию (`D73`).
+ */
+export interface ScenarioSlot { slot: number; dayIndex: number; minuteOfDay: number; eventId?: string; forkKind: 'ordinary' | 'hard'; sleepBeforeMin?: number; interruptionsMin?: number }
 
 export interface CharacterState {
   profile: { sleepNeedMin: number; chronotype: 'early' | 'neutral' | 'late'; caffeineHalfLifeMin: number; caffeineSensitivity: number; digestionSensitivity: number; moodBaseline: number };
@@ -221,8 +227,41 @@ export interface ScheduledEffect {
 }
 export interface CausalEntry { id: string; dayIndex: number; stepIndex: number; sourceId: string; mechanism: string; resultPath: string; before?: number | string; after?: number | string; confidence: Confidence }
 export interface EventLedger { occurrences: Record<string, number>; dayExternalLoad: Record<string, number>; dayTotalLoad: Record<string, number>; dayLargeCount: Record<string, number>; weekLargeCount: number; consecutiveHeavy: number }
+/**
+ * Календарный контракт кампании (`D72`). Горизонт открыт: у кампании нет
+ * зашитого финала, структуру задают границы периодов. Здесь хранится только то,
+ * что нельзя вывести из часов: конфигурация календаря, счётчики завершённых
+ * периодов, уже применённые границы (идемпотентность) и недели с подтверждённым
+ * планом. Абсолютный день — это `clock.dayIndex`; день недели, номер недели и
+ * месяца выводятся функциями и не сериализуются.
+ */
+export interface PeriodState {
+  version: 1;
+  daysPerWeek: number;
+  weeksPerMonth: number;
+  completedDays: number;
+  completedWeeks: number;
+  completedMonths: number;
+  appliedBoundaries: string[];
+  plannedWeeks: number[];
+}
+
+/**
+ * Недельные счётчики выбранных действий. Журнал причин ограничен одним днём,
+ * поэтому недельные итоги опираются на счётчики, а не на перебор записей.
+ * Два ведра нужны, чтобы итог закрытой недели считался уже после её границы.
+ */
+export interface WeekStats {
+  weekIndex: number;
+  actionCounts: Record<string, number>;
+  previousWeekIndex: number;
+  previousActionCounts: Record<string, number>;
+}
+
 export interface GameState {
-  schemaVersion: 2;
+  schemaVersion: 3;
+  periods: PeriodState;
+  weekStats: WeekStats;
   campaignId: string;
   scenarioId: typeof CONTRACT.scenarioId;
   scenarioVersion: typeof CONTRACT.scenarioVersion;
@@ -300,15 +339,17 @@ export interface StepSummary {
 }
 export interface PeriodBoundary {
   id: string;
-  kind: 'day' | 'week';
+  kind: 'day' | 'week' | 'month';
   completedDayIndex: number;
   nextDayIndex: number | null;
   afterStepIndex: number;
+  /** Номер завершённого периода: день недели не нужен, нужен индекс самого периода. */
+  periodIndex: number;
 }
 export interface PeriodRuleResult { id: WeeklyRulePresetId; title: string; direction: OutcomeDirection; summary: string }
 export interface PeriodSummary {
   id: string;
-  kind: 'day' | 'week';
+  kind: 'day' | 'week' | 'month';
   completedDayIndex: number;
   title: string;
   headline: string;

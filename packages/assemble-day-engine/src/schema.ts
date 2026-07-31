@@ -103,14 +103,33 @@ export function validateEvent(event:EventTemplate):void {
   if(event.source==='causal'&&!event.copy.causeHint)fail(`event.${event.id}.copy.causeHint`,'required for causal event');
 }
 
-export function validateSlot(slot:ScenarioSlot):void {integer(slot.slot,'slot.slot');integer(slot.dayIndex,'slot.dayIndex');integer(slot.minuteOfDay,'slot.minuteOfDay');if(slot.slot<1||slot.slot>38||slot.dayIndex<0||slot.dayIndex>6||slot.minuteOfDay<0||slot.minuteOfDay>1439)fail(`slot.${slot.slot}`,'out of range');}
+export function validateSlot(slot:ScenarioSlot):void {integer(slot.slot,'slot.slot');integer(slot.dayIndex,'slot.dayIndex');integer(slot.minuteOfDay,'slot.minuteOfDay');if(slot.slot<1||slot.dayIndex<0||slot.minuteOfDay<0||slot.minuteOfDay>1439)fail(`slot.${slot.slot}`,'out of range');}
+
+function validatePeriods(state:GameState):void {
+  const periods=state.periods;
+  if(!periods||typeof periods!=='object')fail('state.periods','required');
+  if(periods.version!==1)fail('state.periods.version','expected 1');
+  for(const key of ['daysPerWeek','weeksPerMonth'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<1)fail(`state.periods.${key}`,'must be positive');}
+  for(const key of ['completedDays','completedWeeks','completedMonths'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<0)fail(`state.periods.${key}`,'negative');}
+  if(!Array.isArray(periods.appliedBoundaries)||periods.appliedBoundaries.some((id)=>typeof id!=='string'))fail('state.periods.appliedBoundaries','expected string ids');
+  unique(periods.appliedBoundaries,'state.periods.appliedBoundaries');
+  if(!Array.isArray(periods.plannedWeeks)||periods.plannedWeeks.some((index)=>!Number.isInteger(index)||index<0))fail('state.periods.plannedWeeks','expected non-negative week indexes');
+  unique(periods.plannedWeeks.map(String),'state.periods.plannedWeeks');
+  const stats=state.weekStats;
+  if(!stats||typeof stats!=='object')fail('state.weekStats','required');
+  integer(stats.weekIndex,'state.weekStats.weekIndex');integer(stats.previousWeekIndex,'state.weekStats.previousWeekIndex');
+  for(const [key,counts] of [['actionCounts',stats.actionCounts],['previousActionCounts',stats.previousActionCounts]] as const){
+    if(!counts||typeof counts!=='object'||Array.isArray(counts))fail(`state.weekStats.${key}`,'expected map');
+    for(const [actionId,value] of Object.entries(counts)){integer(value,`state.weekStats.${key}.${actionId}`);if(value<0)fail(`state.weekStats.${key}.${actionId}`,'negative');}
+  }
+}
 
 export function validateState(state:GameState):void {
   validateSerializable(state,'state');
-  if(state.schemaVersion!==2||state.scenarioId!==CONTRACT.scenarioId||state.scenarioVersion!==CONTRACT.scenarioVersion||state.calibrationVersion!==CONTRACT.calibrationVersion||state.priceBookVersion!==CONTRACT.priceBookVersion||state.rng.algorithm!==CONTRACT.rngAlgorithm)fail('state.versions','contract mismatch');
+  if(state.schemaVersion!==3||state.scenarioId!==CONTRACT.scenarioId||state.scenarioVersion!==CONTRACT.scenarioVersion||state.calibrationVersion!==CONTRACT.calibrationVersion||state.priceBookVersion!==CONTRACT.priceBookVersion||state.rng.algorithm!==CONTRACT.rngAlgorithm)fail('state.versions','contract mismatch');
   if('derived'in(state as unknown as Record<string,unknown>)||'context'in(state as unknown as Record<string,unknown>))fail('state','derived context must not be serialized');
-  if(!state.campaignId||!state.rng.seed)fail('state','campaignId and rng.seed required');if(state.activeEventId!==null&&typeof state.activeEventId!=='string')fail('state.activeEventId','expected event id or null');integer(state.scenarioCursor,'state.scenarioCursor');inRange(state.scenarioCursor,0,38,'state.scenarioCursor');
-  integer(state.clock.dayIndex,'state.clock.dayIndex');integer(state.clock.minuteOfDay,'state.clock.minuteOfDay');integer(state.clock.stepIndex,'state.clock.stepIndex');inRange(state.clock.dayIndex,0,7,'state.clock.dayIndex');inRange(state.clock.minuteOfDay,0,1439,'state.clock.minuteOfDay');
+  if(!state.campaignId||!state.rng.seed)fail('state','campaignId and rng.seed required');if(state.activeEventId!==null&&typeof state.activeEventId!=='string')fail('state.activeEventId','expected event id or null');integer(state.scenarioCursor,'state.scenarioCursor');if(state.scenarioCursor<0)fail('state.scenarioCursor','negative');validatePeriods(state);
+  integer(state.clock.dayIndex,'state.clock.dayIndex');integer(state.clock.minuteOfDay,'state.clock.minuteOfDay');integer(state.clock.stepIndex,'state.clock.stepIndex');if(state.clock.dayIndex<0)fail('state.clock.dayIndex','negative');inRange(state.clock.minuteOfDay,0,1439,'state.clock.minuteOfDay');
   Object.entries(state.vitals).forEach(([key,value])=>inRange(value,0,100,`state.vitals.${key}`));for(const key of ['recoveryNeed','familyLoadPlayer7d','familyLoadPartner7d'] as const)inRange(state.accumulators[key],0,100,`state.accumulators.${key}`);
   inRange(state.accumulators.sleepDebtMin,0,480,'state.accumulators.sleepDebtMin');inRange(state.accumulators.activeCaffeineMg,0,600,'state.accumulators.activeCaffeineMg');inRange(state.accumulators.satietyWindowMin,0,360,'state.accumulators.satietyWindowMin');
   Object.entries(state.character.skills).forEach(([key,value])=>inRange(value,0,100,`state.character.skills.${key}`));Object.entries(state.character.habits).forEach(([key,value])=>inRange(value,0,100,`state.character.habits.${key}`));
@@ -123,10 +142,11 @@ export function validateState(state:GameState):void {
 
 export function validateRegistries(registries:Registries,initialState:GameState):void {
   Object.values(registries.actions).forEach(validateAction);Object.values(registries.events).forEach(validateEvent);registries.slots.forEach(validateSlot);
-  if(Object.keys(registries.actions).length!==31)fail('registries.actions','expected 31 authored actions');if(Object.keys(registries.events).length<38)fail('registries.events','expected at least 38 authored events');if(registries.slots.length!==38)fail('registries.slots','expected 38 slots');
+  if(!Object.keys(registries.actions).length)fail('registries.actions','at least one authored action required');if(Object.keys(registries.events).length<registries.slots.length)fail('registries.events','authored events must cover every slot');if(!registries.slots.length)fail('registries.slots','at least one slot required');
   if(initialState.activeEventId!==registries.slots[0]?.eventId)fail('state.activeEventId','initial active event must match first slot');
-  if(registries.slots.some((slot,index)=>slot.slot!==index+1))fail('registries.slots','must be contiguous 1..38');
-  for(const slot of registries.slots){const event=registries.events[slot.eventId];if(!event){fail(`slot.${slot.slot}`,`unknown event ${slot.eventId}`);}if(event.hardWindow&&(event.hardWindow.fromDayIndex!==slot.dayIndex||event.hardWindow.fromMinuteOfDay!==slot.minuteOfDay))fail(`slot.${slot.slot}`,'event hardWindow does not match anchor');}
+  if(registries.slots.some((slot,index)=>slot.slot!==index+1))fail('registries.slots','slot numbers must be contiguous from 1');if(registries.slots.some((slot,index)=>index>0&&slot.dayIndex<registries.slots[index-1]!.dayIndex))fail('registries.slots','slot days must not go backwards');
+  if(!registries.slots[0]?.eventId)fail('registries.slots','the first anchor must name the opening situation');
+  for(const slot of registries.slots){if(!slot.eventId)continue;const event=registries.events[slot.eventId];if(!event){fail(`slot.${slot.slot}`,`unknown event ${slot.eventId}`);}if(event.hardWindow&&(event.hardWindow.fromDayIndex!==slot.dayIndex||event.hardWindow.fromMinuteOfDay!==slot.minuteOfDay))fail(`slot.${slot.slot}`,'event hardWindow does not match anchor');}
   for(const event of Object.values(registries.events))for(const actionId of event.actionIds)if(!registries.actions[actionId])fail(`event.${event.id}`,`unknown action ${actionId}`);
   {
     const taskIds=new Set(initialState.work.tasks.map((item)=>item.id)),commitmentIds=new Set(initialState.commitments.map((item)=>item.id)),incomeIds=new Set(initialState.economy.expectedIncome.map((item)=>item.id)),obligationIds=new Set(initialState.economy.obligations.map((item)=>item.id)),eventIds=new Set(Object.keys(registries.events));
@@ -134,4 +154,18 @@ export function validateRegistries(registries:Registries,initialState:GameState)
     for(const event of Object.values(registries.events))allEffects.push(...event.onOpenEffects);for(const item of initialState.scheduledEffects)allEffects.push(...item.effects);
     for(const effect of allEffects){if((effect.op==='progress_task'||effect.op==='set_task')&&!taskIds.has(effect.taskId))fail('registries.effects',`unknown task ${effect.taskId}`);if((effect.op==='resolve_commitment'||effect.op==='break_commitment'||effect.op==='renegotiate_commitment')&&!commitmentIds.has(effect.commitmentId))fail('registries.effects',`unknown commitment ${effect.commitmentId}`);if(effect.op==='receive_income'&&!incomeIds.has(effect.incomeId))fail('registries.effects',`unknown income ${effect.incomeId}`);if(effect.op==='set_obligation'&&!obligationIds.has(effect.obligationId))fail('registries.effects',`unknown obligation ${effect.obligationId}`);if(effect.op==='add_event_cooldown'&&!eventIds.has(effect.eventId))fail('registries.effects',`unknown event ${effect.eventId}`);if(effect.op==='create_commitment')commitmentIds.add(effect.value.id);if(effect.op==='create_income')incomeIds.add(effect.income.id);}
   }
+}
+
+/**
+ * Инвариант `D73`: ситуация открывается состоянием и временем, а не позицией в
+ * сценарии. Возвращает шаблоны, у которых в триггере остался `scenarioCursor`.
+ */
+export function findCursorBoundEvents(registries:Registries):string[] {
+  const usesCursor=(condition:Condition):boolean=>{
+    if(condition.kind==='compare')return condition.path==='scenarioCursor'||condition.path.startsWith('scenarioCursor.');
+    if(condition.kind==='capability')return false;
+    if(condition.kind==='not')return usesCursor(condition.condition);
+    return condition.conditions.some(usesCursor);
+  };
+  return Object.values(registries.events).filter((event)=>usesCursor(event.trigger)).map((event)=>event.id).sort();
 }
