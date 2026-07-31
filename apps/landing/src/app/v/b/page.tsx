@@ -5,8 +5,11 @@
 
 import { Metadata } from 'next';
 
+import FontSwitcherFab from '@/components/versions/b/FontSwitcherFab';
+import HeroScrollStage from '@/components/versions/b/HeroScrollStage';
 import VersionDraft from '@/components/versions/VersionDraft';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
+import { VARIANTS } from '@/config/landing-variants';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 export const metadata: Metadata = {
@@ -19,6 +22,7 @@ export default function VersionBPage() {
     <main>
       <VersionDraft
         version="B"
+        hero={<HeroScrollStage content={VARIANTS.A} />}
         plan={[
           'Нарратив по образцу Future: сначала человеческий смысл, затем интерфейс как его доказательство',
           'Видимая работа специалиста вместо описания процесса',
@@ -27,6 +31,7 @@ export default function VersionBPage() {
       />
 
       <VersionSwitcherFab current="B" />
+      <FontSwitcherFab />
     </main>
   );
 }

@@ -5,6 +5,8 @@
 // экран. Hero подключён настоящий, чтобы уже на этом этапе было видно, что
 // меню и первый экран одинаково работают во всех версиях.
 
+import { type ReactNode } from 'react';
+
 import HeroSSR from '@/components/HeroSSR';
 import { VARIANTS } from '@/config/landing-variants';
 import { VERSION_META, type LandingVersion } from '@/config/landing-versions';
@@ -13,14 +15,20 @@ interface VersionDraftProps {
   version: LandingVersion;
   /** Что появится в этой версии — короткий план для владельца. */
   plan: string[];
+  /**
+   * Свой первый экран версии. Пока версия его не задала, показывается hero
+   * версии A — чтобы черновик всё равно открывался как страница, а не как
+   * голый список планов.
+   */
+  hero?: ReactNode;
 }
 
-export default function VersionDraft({ version, plan }: VersionDraftProps) {
+export default function VersionDraft({ version, plan, hero }: VersionDraftProps) {
   const meta = VERSION_META[version];
 
   return (
     <>
-      <HeroSSR content={VARIANTS.A} variant="A" />
+      {hero ?? <HeroSSR content={VARIANTS.A} variant="A" />}
 
       <section className="bg-white px-5 py-16 sm:px-8">
         <div className="mx-auto w-full max-w-2xl">
@@ -45,8 +53,9 @@ export default function VersionDraft({ version, plan }: VersionDraftProps) {
           </div>
 
           <p className="mt-6 text-sm text-slate-500">
-            Первый экран и меню уже общие для всех версий: они берутся из тех же компонентов, что и
-            в версии A, поэтому правки меню появляются здесь автоматически.
+            {hero
+              ? 'Первый экран у этой версии собственный, меню общее для всех версий: правки меню появляются здесь автоматически.'
+              : 'Первый экран и меню уже общие для всех версий: они берутся из тех же компонентов, что и в версии A, поэтому правки меню появляются здесь автоматически.'}
           </p>
         </div>
       </section>

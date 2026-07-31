@@ -45,11 +45,23 @@ interface LandingNavProps {
   children: ReactNode;
   /** Высота шапки первого экрана: под ней начинается контент панели. */
   heroHeaderHeight?: number;
+  /**
+   * Сколько экранов занимает первый экран версии. Залипающая шапка появляется
+   * после него, поэтому версия с высоким hero-треком (например B, где первый
+   * экран растянут под прокрутку демо) обязана поднять это число — иначе шапка
+   * выедет прямо поверх сцены.
+   */
+  pastHeroFactor?: number;
 }
 
 const STICKY_HEIGHT = 56;
 
-export default function LandingNav({ links, children, heroHeaderHeight = 85 }: LandingNavProps) {
+export default function LandingNav({
+  links,
+  children,
+  heroHeaderHeight = 85,
+  pastHeroFactor = 0.7,
+}: LandingNavProps) {
   const [open, setOpen] = useState(false);
   const [pastHero, setPastHero] = useState(false);
   const [activeLinkId, setActiveLinkId] = useState<string | null>(null);
@@ -62,6 +74,8 @@ export default function LandingNav({ links, children, heroHeaderHeight = 85 }: L
   // на каждый рендер из-за этого не нужно.
   const linksRef = useRef(links);
   linksRef.current = links;
+  const factorRef = useRef(pastHeroFactor);
+  factorRef.current = pastHeroFactor;
   const anchorsKey = links.map((link) => `${link.id}>${link.href}`).join('|');
 
   // Один слушатель прокрутки на две задачи: показать залипающую шапку после
@@ -74,7 +88,7 @@ export default function LandingNav({ links, children, heroHeaderHeight = 85 }: L
     let raf = 0;
     const measure = () => {
       raf = 0;
-      setPastHero(window.scrollY > window.innerHeight * 0.7);
+      setPastHero(window.scrollY > window.innerHeight * factorRef.current);
       // Активен последний раздел, чья верхняя граница уже прошла шапку.
       let current: string | null = null;
       for (const anchor of anchors) {
