@@ -1377,7 +1377,27 @@
     // ВАЖНО: НЕ показываем welcome если StepModal уже открыт (например, идёт
     // первый чек-ин, согласия или onboarding-tour). Иначе welcome-overlay
     // перекрывает события касания на ползунках/кнопках чек-ина.
+    // Признак «клиент уже видел приветствие» живёт в client-scoped KV и потому
+    // синхронизируется с облаком: иначе на каждом новом устройстве, после
+    // очистки данных сайта или в приватном окне приветствие показывалось бы
+    // заново. Legacy-ключ `heys_first_login_<clientId>` остаётся как fallback
+    // для тех, кто уже закрыл окно до этого изменения.
     const welcomeKey = `heys_first_login_${clientId}`;
+    const isCurrentClient = HEYS.currentClientId === clientId;
+
+    const welcomeAlreadySeen = () => {
+      try {
+        if (isCurrentClient && HEYS.store?.get && HEYS.store.get('heys_first_login', null)) return true;
+      } catch (_) { /* store недоступен — падаем на legacy */ }
+      try { return !!localStorage.getItem(welcomeKey); } catch (_) { return false; }
+    };
+
+    // Показ проверяется через ~100 мс после загрузки скрипта, когда облачные
+    // данные ещё не пришли. Без этого гейта синхронизированный признак не
+    // успевал бы прочитаться и окно всё равно мелькало бы на новом устройстве.
+    // Перемонтаж произойдёт по `heys:profile-updated` / `heys:client-changed`.
+    const initialSyncDone = HEYS.cloud?.isInitialSyncCompleted?.() !== false;
+
     const stepModalOpen = !!(typeof document !== 'undefined' && (
       document.querySelector('[data-step-modal]') ||
       document.querySelector('.step-modal-overlay') ||
@@ -1388,7 +1408,8 @@
     if (
       subscriptionStatus === 'trial' &&
       clientId &&
-      !localStorage.getItem(welcomeKey) &&
+      initialSyncDone &&
+      !welcomeAlreadySeen() &&
       !stepModalOpen
     ) {
       let welcomeHost = document.getElementById('heys-welcome-host');
@@ -1401,6 +1422,12 @@
       welcomeHost._heysRoot = welcomeRoot;
 
       const close = () => {
+        // Пишем в client-scoped KV — оттуда признак уедет в облако и вернётся
+        // на другом устройстве. Legacy-ключ пишем тоже: он покрывает случай,
+        // когда store недоступен или клиент не является текущим.
+        try {
+          if (isCurrentClient && HEYS.store?.set) HEYS.store.set('heys_first_login', 1);
+        } catch (_) { /* ниже всё равно останется legacy-запись */ }
         try { localStorage.setItem(welcomeKey, '1'); } catch {}
         welcomeRoot.render(null);
         // Полностью убираем host из DOM, чтобы пустой div с inset:0 не висел
