@@ -140,6 +140,65 @@ function verifySourceContract() {
   return required;
 }
 
+/**
+ * Страница /legal/user-agreement на лендинге — отдельный JSX-текст, а не рендер
+ * canonical markdown. До 2026-07-31 её вообще ничто не сверяло с immutable
+ * snapshot, поэтому расхождение могло появиться молча.
+ *
+ * Здесь проверяется структурный контракт: одинаковый состав разделов и
+ * одинаковый набор номеров пунктов. Пословную сверку сознательно не включаем:
+ * на 2026-07-31 JSX содержит редакционную перефразировку canonical (11 из 37
+ * пунктов отличаются формулировками при совпадающем смысле), и её выравнивание
+ * — отдельный legal-проход, а не задача проверки.
+ */
+function verifyLandingUserAgreementStructure() {
+  const canonical = read('docs/legal/user-agreement.md');
+  const page = read('apps/landing/src/app/legal/user-agreement/page.tsx');
+
+  const canonicalSections = [...canonical.matchAll(/^##\s+(\d{1,2})\.\s*([^\n]+)/gm)].map(
+    (m) => `${m[1]}. ${m[2].trim()}`,
+  );
+  const pageSections = [...page.matchAll(/<h2>\s*(\d{1,2})\.\s*([^<]+)<\/h2>/g)].map(
+    (m) => `${m[1]}. ${m[2].trim()}`,
+  );
+
+  if (canonicalSections.length === 0 || pageSections.length === 0) {
+    fail('landing user agreement structure check found no sections to compare');
+  }
+  if (canonicalSections.join('|') !== pageSections.join('|')) {
+    const onlyCanonical = canonicalSections.filter((s) => !pageSections.includes(s));
+    const onlyPage = pageSections.filter((s) => !canonicalSections.includes(s));
+    fail(
+      'landing user agreement sections drifted from canonical markdown' +
+        (onlyCanonical.length ? `; only in canonical: ${onlyCanonical.join(', ')}` : '') +
+        (onlyPage.length ? `; only in landing page: ${onlyPage.join(', ')}` : ''),
+    );
+  }
+
+  const clauseNumbers = (source) => {
+    const found = new Set();
+    for (const match of source.matchAll(/(?:^|[>\s(])(\d{1,2}\.\d{1,2})\.\s/g)) {
+      found.add(match[1]);
+    }
+    return found;
+  };
+
+  const canonicalClauses = clauseNumbers(canonical);
+  const pageClauses = clauseNumbers(page);
+  const missingOnPage = [...canonicalClauses].filter((n) => !pageClauses.has(n)).sort();
+  const extraOnPage = [...pageClauses].filter((n) => !canonicalClauses.has(n)).sort();
+
+  if (missingOnPage.length || extraOnPage.length) {
+    fail(
+      'landing user agreement clauses drifted from canonical markdown' +
+        (missingOnPage.length ? `; missing on page: ${missingOnPage.join(', ')}` : '') +
+        (extraOnPage.length ? `; extra on page: ${extraOnPage.join(', ')}` : ''),
+    );
+  }
+
+  return { sections: canonicalSections.length, clauses: canonicalClauses.size };
+}
+
 function verifyBundle(distPath, required) {
   const absoluteDist = path.resolve(ROOT, distPath);
   const bundleManifest = JSON.parse(
@@ -167,11 +226,12 @@ function verifyBundle(distPath, required) {
 function main() {
   const distArg = process.argv.find((arg) => arg.startsWith('--dist='));
   const required = verifySourceContract();
+  const landingStructure = verifyLandingUserAgreementStructure();
   if (distArg) verifyBundle(distArg.slice('--dist='.length), required);
   console.log(
     `Legal release contract OK: ${Object.entries(required)
       .map(([k, v]) => `${k}=${v}`)
-      .join(', ')}`,
+      .join(', ')}; landing user agreement structure: ${landingStructure.sections} sections, ${landingStructure.clauses} clauses`,
   );
 }
 

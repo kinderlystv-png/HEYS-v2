@@ -99,9 +99,13 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                     ...utmParams,
                     referrer: typeof document !== 'undefined' ? document.referrer : undefined,
                     landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+                    // Согласие на обработку ПДн (152-ФЗ ст. 9) — только оно.
+                    // Акцепт Пользовательского соглашения здесь НЕ собирается: по п. 8.2
+                    // оферты подписание ПЭП возможно только после успешной аутентификации,
+                    // поэтому акцепт происходит при входе в приложение
+                    // (user_agreement / payment_oferta).
                     consent: {
                         privacy_version: LEGAL_DOCS.privacyPolicy.version,
-                        user_agreement_version: LEGAL_DOCS.userAgreement.version,
                         method: 'checkbox',
                         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
                     },
@@ -302,11 +306,12 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                                     Даю согласие на обработку персональных данных в соответствии с{' '}
                                     <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
                                         политикой конфиденциальности
-                                    </a>{' '}
-                                    и принимаю{' '}
-                                    <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
-                                        условия использования
                                     </a>
+                                    . Согласие относится только к заявке и обратной связи по ней.{' '}
+                                    <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+                                        Условия использования
+                                    </a>{' '}
+                                    принимаются при входе в приложение.
                                 </span>
                             </label>
                         </form>
