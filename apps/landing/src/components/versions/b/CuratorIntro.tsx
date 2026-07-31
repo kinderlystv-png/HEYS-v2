@@ -17,7 +17,13 @@ export default function CuratorIntro() {
   return (
     <div>
       <div className="grid gap-5 sm:grid-cols-[minmax(0,220px)_1fr] sm:items-start">
-        <MediaSlot ratio="portrait" format="портрет" frame="Куратор в рабочей обстановке" />
+        <MediaSlot
+          ratio="portrait"
+          format="портрет"
+          frame="Куратор в рабочей обстановке"
+          src="/b/curator-placeholder.svg"
+          alt="Место портрета куратора"
+        />
 
         <div>
           <blockquote className="border-l-2 border-slate-300 pl-4 text-[17px] leading-7 text-slate-800">

@@ -58,8 +58,18 @@ export default function VersionB() {
         lead="Фото, голосовое или короткое сообщение — этого достаточно. Запись в дневнике делает куратор."
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <MediaSlot format="видео 3–5 сек" frame="Завтрак снимают на телефон и уходят по делам" />
-          <MediaSlot format="экран приложения" frame="Дневник за день: запись внёс куратор" />
+          <MediaSlot
+            format="видео 3–5 сек"
+            frame="Завтрак снимают на телефон и уходят по делам"
+            src="/b/plate-breakfast.webp"
+            alt="Тарелка завтрака"
+          />
+          <MediaSlot
+            format="экран приложения"
+            frame="Дневник за день: запись внёс куратор"
+            src="/hero-curator-demo-poster.jpg"
+            alt="Экран дневника HEYS"
+          />
         </div>
       </Chapter>
 
@@ -80,8 +90,20 @@ export default function VersionB() {
         lead="Поездка, поздний ужин, тренировка. Куратор не отменяет неделю и не требует идеальности — он учитывает контекст и помогает выбрать следующий шаг."
       >
         <div className="grid grid-cols-3 gap-3">
-          <MediaSlot ratio="square" format="3–5 сек" frame="Еда на ходу, рабочий день" />
-          <MediaSlot ratio="square" format="3–5 сек" frame="Поздний ужин" />
+          <MediaSlot
+            ratio="square"
+            format="3–5 сек"
+            frame="Еда на ходу, рабочий день"
+            src="/b/plate-lunch.webp"
+            alt="Обед в рабочий день"
+          />
+          <MediaSlot
+            ratio="square"
+            format="3–5 сек"
+            frame="Поздний ужин"
+            src="/b/plate-dinner.webp"
+            alt="Поздний ужин"
+          />
           <MediaSlot ratio="square" format="3–5 сек" frame="Прогулка или тренировка" />
         </div>
       </Chapter>
