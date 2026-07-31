@@ -141,10 +141,19 @@ paths when overlay is non-empty.
 [heys_storage_registry_v1.js](heys_storage_registry_v1.js) is the single source
 of truth for `localStorage` policies.
 
-- **Phase 2b enforce mode** behind `storage_audit_enforce` flag (default
-  `false`). Flip to `true` via `HEYS.flags.enable('storage_audit_enforce')`
-  after reviewing pending log. `cloudSync:'merge'` keys (insights_feedback,
-  hidden_products) are NOT enforced — deferred to Phase 5 cloud-merge.
+- **Enforce mode is ON by default** — `storage_audit_enforce` defaults to `true`
+  ([heys_feature_flags_v1.js](heys_feature_flags_v1.js), `DEFAULT_FLAGS`). The
+  boot audit actually prunes/deletes per registry policy instead of only
+  proposing. To roll back locally, use
+  `HEYS.flags.disable('storage_audit_enforce')`; overrides live in the
+  `heys_feature_flags` localStorage key and are merged over the defaults.
+- `cloudSync:'merge'` keys (insights_feedback, hidden_products) are **also
+  enforced** since Phase 5, but through a different path: `_enforceableNow()`
+  returns `false` for them, so instead of a direct prune they go through
+  `_mergeAndPrune()` — cloud-merge first, truncation after
+  ([heys_storage_registry_v1.js](heys_storage_registry_v1.js)). Earlier
+  revisions of this document described them as not enforced; that was true
+  before Phase 5.
 
 ### Public API
 
