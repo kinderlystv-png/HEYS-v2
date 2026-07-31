@@ -6,7 +6,7 @@
 import { Metadata } from 'next';
 
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
-import VersionDraft from '@/components/versions/VersionDraft';
+import VersionC from '@/components/versions/VersionC';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 export const metadata: Metadata = {
@@ -17,15 +17,7 @@ export const metadata: Metadata = {
 export default function VersionCPage() {
   return (
     <main>
-      <VersionDraft
-        version="C"
-        plan={[
-          'Решение за три экрана: обещание, доказательство, цена с действием',
-          'Разобранная неделя как артефакт — главный аргумент вместо прозы',
-          'Второй слой по умолчанию: сравнения, регламент и условия раскрываются по запросу',
-          'Цель: не больше 7 экранов, форма не ниже 35% страницы',
-        ]}
-      />
+      <VersionC />
 
       <VersionSwitcherFab current="C" />
     </main>
