@@ -102,8 +102,15 @@ query-параметр `reading=<book-id>`. Позиция и процент ч�
 `critique`. Валидатор отклоняет нейтральный конспект или критику, спрятанную
 только в аккордеоне.
 
+Раздел «Игры» скрыт по умолчанию: вкладка появляется только в кураторской сессии
+(`HEYS.auth.isCuratorSession`) либо у клиента с явным признаком
+`heys_planning_games_access_v1` (`{ "enabled": true }`) в client-scoped KV.
+Проверка fail-closed: до ответа облака вкладка не показывается, а сохранённый
+экран `games` без доступа возвращается к `calendar`. Признак включается записью
+в `client_kv_store`, как персональный слой книг.
+
 Игры также не входят в Planning Store и не создают пользовательские данные.
-Первый слой содержит только каталог из трёх карточек. После явного открытия
+Первый слой содержит только каталог из четырёх карточек. После явного открытия
 общий shell параллельно запрашивает отдельные JS и CSS выбранной игры, проверяет
 контракт `HEYS.PlanningGames.modules[gameId] = { Component, api }` и только
 затем монтирует компонент. У каждого ресурса независимый cache/status: повтор
@@ -299,6 +306,7 @@ pending local mutation, tombstones и anti-wipe проверки могут со
 | P12 | Объём Reading проверяется по обязательному `depthProfile`                                            | `pnpm exec vitest run apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                                                                     | проверено 2026-07-25 |
 | P13 | Смысловые `highlights` дословны, ограничены по плотности и питают «Главное»                          | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                         | проверено 2026-07-25 |
 | P14 | Профиль Полтавского содержит только содержательные вопросы и загружается через client-scoped KV      | `pnpm exec vitest run apps/web/__tests__/planning-reading.test.js apps/web/__tests__/reading-authoring-contract.test.js --no-coverage && pnpm reading:check`                                         | проверено 2026-07-25 |
-| P15 | `games` входит в навигационный контракт; каталог из трёх карточек открывает fullscreen dialog        | `pnpm exec vitest run apps/web/__tests__/planning-games-ui.test.js apps/web/__tests__/planning-home-subtab.test.js --no-coverage`                                                                    | проверено 2026-07-28 |
+| P15 | `games` входит в навигационный контракт; каталог из четырёх карточек открывает fullscreen dialog     | `pnpm exec vitest run apps/web/__tests__/planning-games-ui.test.js apps/web/__tests__/planning-home-subtab.test.js --no-coverage`                                                                    | проверено 2026-07-28 |
 | P16 | Игровые JS/CSS загружаются только после клика, независимо кешируются и проверяются по API v1         | `pnpm exec vitest run apps/web/__tests__/planning-games-ui.test.js --no-coverage`                                                                                                                    | проверено 2026-07-28 |
 | P17 | Три игровые механики детерминированы, ограничены памятью открытой сессии и очищают runtime resources | `pnpm exec vitest run apps/web/__tests__/planning-game-word-builder.test.js apps/web/__tests__/planning-game-robot-route.test.js apps/web/__tests__/planning-game-color-trail.test.js --no-coverage` | проверено 2026-07-28 |
+| P18 | Вкладка «Игры» скрыта, пока доступ не подтверждён кураторской сессией или client-scoped признаком    | `pnpm exec vitest run apps/web/__tests__/planning-home-subtab.test.js apps/web/__tests__/planning-games-ui.test.js --no-coverage`                                                                    | проверено 2026-07-31 |

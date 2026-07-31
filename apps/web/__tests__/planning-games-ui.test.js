@@ -60,6 +60,8 @@ function renderGames() {
         PlanningChrono: { ChronoScreen: StubScreen },
         PlanningReading: { ReadingScreen: StubScreen, ReadingIcon: StubScreen },
         featureFlags: { isEnabled: () => false },
+        // Раздел «Игры» скрыт по умолчанию; здесь проверяется сам раздел, поэтому доступ открыт.
+        auth: { isCuratorSession: () => true },
     };
     window.React = React;
     window.ReactDOM = { createPortal };

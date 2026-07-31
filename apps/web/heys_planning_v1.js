@@ -22,8 +22,47 @@
         { id: 'reading', label: 'Книги', shortLabel: 'Книги', icon: 'К' },
         { id: 'games', label: 'Игры', shortLabel: 'Игры', icon: '🎮' },
     ];
-    const SUBNAV_RENDER_ITEMS = SUBNAV_ITEMS;
     const DEFAULT_HOME_SCREEN = 'calendar';
+    const GAMES_ACCESS_KEY = 'heys_planning_games_access_v1';
+
+    function isPlanningCuratorSession() {
+        try {
+            const isCuratorSession = HEYS.auth && HEYS.auth.isCuratorSession;
+            return typeof isCuratorSession === 'function' ? !!isCuratorSession() : false;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function getCurrentPlanningClientId() {
+        try {
+            if (HEYS.currentClientId) return String(HEYS.currentClientId);
+            if (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function') return String(HEYS.cloud.getCurrentClientId() || '');
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') return String(HEYS.utils.lsGet('heys_client_current', '') || '');
+            return String(localStorage.getItem('heys_client_current') || '').replace(/^"|"$/g, '');
+        } catch (_) {
+            return '';
+        }
+    }
+
+    // Игры остаются скрытыми, пока доступ не подтверждён: куратор видит их всегда,
+    // клиент — только с явным client-scoped признаком в облаке.
+    function getVisibleSubnavItems(gamesVisible) {
+        return gamesVisible ? SUBNAV_ITEMS : SUBNAV_ITEMS.filter((item) => item.id !== 'games');
+    }
+
+    async function loadPlanningGamesAccess(clientId = getCurrentPlanningClientId()) {
+        if (isPlanningCuratorSession()) return true;
+        const resolvedClientId = String(clientId || '');
+        if (!resolvedClientId || !HEYS.YandexAPI || typeof HEYS.YandexAPI.getKV !== 'function') return false;
+        try {
+            const result = await HEYS.YandexAPI.getKV(resolvedClientId, GAMES_ACCESS_KEY);
+            return result?.data?.enabled === true;
+        } catch (error) {
+            console.warn('[HEYS.planning] Не удалось проверить доступ к играм:', error?.message || error);
+            return false;
+        }
+    }
 
     function resolvePlanningHomeScreen(candidate) {
         return SUBNAV_ITEMS.some((item) => item.id === candidate) ? candidate : DEFAULT_HOME_SCREEN;
@@ -3425,6 +3464,7 @@
         const [activeScreen, setActiveScreen] = useState(() => requestedHomeScreen);
         const [showTaskMatrix, setShowTaskMatrix] = useState(false);
         const [layoutMetrics, setLayoutMetrics] = useState({ mainTabsHeight: 0, subnavHeight: 0 });
+        const [gamesVisible, setGamesVisible] = useState(() => isPlanningCuratorSession());
         const runtime = resolvePlanningRuntime();
         const planState = runtime.usePlanningState ? runtime.usePlanningState() : null;
         const subnavRef = useRef(null);
@@ -3441,6 +3481,18 @@
                 return currentScreen === nextScreen ? currentScreen : nextScreen;
             });
         }, [requestedHomeScreen]);
+
+        useEffect(() => {
+            let cancelled = false;
+            loadPlanningGamesAccess().then((allowed) => {
+                if (!cancelled) setGamesVisible(allowed);
+            });
+            return () => { cancelled = true; };
+        }, []);
+
+        useEffect(() => {
+            if (!gamesVisible && activeScreen === 'games') setActiveScreen(DEFAULT_HOME_SCREEN);
+        }, [gamesVisible, activeScreen]);
 
         useEffect(() => {
             if (typeof document === 'undefined' || !document.body) return undefined;
@@ -3520,9 +3572,9 @@
             if (activeScreen === 'checklists') return ChecklistsScreen;
             if (activeScreen === 'goals') return GoalSettingScreen;
             if (activeScreen === 'reading') return runtime.ReadingScreen;
-            if (activeScreen === 'games') return GamesScreen;
+            if (activeScreen === 'games') return gamesVisible ? GamesScreen : runtime.CalendarScreen;
             return runtime.TasksScreen;
-        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.ReadingScreen, runtime.TasksScreen]);
+        }, [activeScreen, gamesVisible, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.ReadingScreen, runtime.TasksScreen]);
 
         const activeProjects = useMemo(() => (
             Array.isArray(planState?.projects)
@@ -3544,7 +3596,7 @@
 
         const subnavNode = h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
             h('div', { className: 'planning-subnav__inner' },
-                SUBNAV_RENDER_ITEMS.map((item) => {
+                getVisibleSubnavItems(gamesVisible).map((item) => {
                     const isAction = item.action === 'taskMatrix';
                     return h('button', {
                     key: item.id,
@@ -3632,6 +3684,9 @@
     Planning.resolveHomeScreen = resolvePlanningHomeScreen;
     Planning.getInitialHomeScreen = getInitialPlanningHomeScreen;
     Planning.resolveNextHomeScreen = resolveNextPlanningHomeScreen;
+    Planning.getVisibleSubnavItems = getVisibleSubnavItems;
+    Planning.loadGamesAccess = loadPlanningGamesAccess;
+    Planning.GAMES_ACCESS_KEY = GAMES_ACCESS_KEY;
     HEYS.PlanningData = Planning.Store || {};
     console.info('[HEYS.planning] ✅ PlanningTab coordinator registered');
 })();

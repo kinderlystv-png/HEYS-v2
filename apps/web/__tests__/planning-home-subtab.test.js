@@ -55,6 +55,32 @@ describe('HEYS Planning home subtab helpers', () => {
         expect(window.HEYS.Planning.SUBNAV_ITEMS.map((item) => item.id)).toEqual(['tasks', 'goals', 'calendar', 'chrono', 'checklists', 'reading', 'games']);
     });
 
+    it('hides the games subtab until access is confirmed for the client or the curator', async () => {
+        const Planning = window.HEYS.Planning;
+
+        expect(Planning.getVisibleSubnavItems(false).map((item) => item.id)).not.toContain('games');
+        expect(Planning.getVisibleSubnavItems(true).map((item) => item.id)).toContain('games');
+
+        // Клиент без облачного признака и без API не получает вкладку.
+        window.HEYS.currentClientId = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+        await expect(Planning.loadGamesAccess()).resolves.toBe(false);
+
+        const getKV = vi.fn(async () => ({ data: { enabled: true } }));
+        window.HEYS.YandexAPI = { getKV };
+        await expect(Planning.loadGamesAccess()).resolves.toBe(true);
+        expect(getKV).toHaveBeenCalledWith('ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a', Planning.GAMES_ACCESS_KEY);
+
+        window.HEYS.YandexAPI = { getKV: vi.fn(async () => ({ data: { enabled: false } })) };
+        await expect(Planning.loadGamesAccess()).resolves.toBe(false);
+
+        // Куратор видит вкладку без обращения к KV.
+        const unusedGetKV = vi.fn();
+        window.HEYS.YandexAPI = { getKV: unusedGetKV };
+        window.HEYS.auth = { isCuratorSession: () => true };
+        await expect(Planning.loadGamesAccess()).resolves.toBe(true);
+        expect(unusedGetKV).not.toHaveBeenCalled();
+    });
+
     it('auto-syncs to home screen only when at DEFAULT fallback, never when already on a real screen', () => {
         // At DEFAULT fallback ('calendar'), not navigated → apply requested home
         expect(window.HEYS.Planning.resolveNextHomeScreen('calendar', 'gantt', false)).toBe('calendar');
