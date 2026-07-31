@@ -1,23 +1,168 @@
-# HEYS Project Documentation
+# HEYS — карта актуальной документации
 
-> Last updated: 2026-07-17
+> **Обновлено:** 2026-07-31 **Назначение:** за один экран понять, где источник
+> правды по каждой зоне, на каком этапе проект и что читать НЕ надо.
 
-## Start here
+Карта — навигация, а не источник статусов. Живые статусы всегда в профильных
+источниках: продуктово-инженерные — в [`todo.md`](../todo.md), запуск и
+маркетинг — в [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md),
+gates — в [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) /
+[`32`](../маркетинг/32_ПДн_governance_релизный_контур.md).
 
-| Document                                                                | Purpose                                        |
-| ----------------------------------------------------------------------- | ---------------------------------------------- |
-| [Living application reference](reference/README.md)                     | Project map and verified system dossiers       |
-| [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | Agent rules (domain conventions, API, storage) |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                                      | Architecture overview (v18.1.0)                |
-| [dev/QUALITY_GATE.md](dev/QUALITY_GATE.md)                              | Commit quality gate                            |
-| [dev/AUTOLIMITS.md](dev/AUTOLIMITS.md)                                  | Legacy growth control                          |
+---
 
-## Deep dive
+## Где мы сейчас — снимок 2026-07-31
 
-- [HEYS Brief](HEYS_BRIEF.md) — product brief
-- [Living application reference](reference/README.md) — product-to-code map
-- [Historical project context](HEYS_Project_Context.md) — August 2025 snapshot
-- [Development Methodology](HEYS_Development_Methodology.md) — dev principles
-- [Module Architecture](dev/MODULE_ARCHITECTURE.md) — modularity rules
-- [Code Style](dev/CODE_STYLE.md) — code standards
-- [SUMMARY.md](SUMMARY.md) — full documentation index
+| Контур                   | Этап                                                                                                                                                  | Живой статус                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Запуск / продажи         | S0 закрыт (Telegram-канал запущен). S1 «заявки + бесплатный триал» открывается после P0-правок лендинга и product-smoke                               | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § «Ступени» |
+| Юридический gate ПДн/РКН | R0 ✅ закрыт 2026-07-26 · R1 🟡 (нужен до первой оплаты: ЮKassa, чеки, payment events) · R2/R3 ⬜                                                     | [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) → детали в `32`                    |
+| Лендинг                  | baseline `A` заморожен как source/visual контроль. Открыт decision-gate `3.14` (PurchaseModal / legal v1.9). `Landing B-Future` ещё не проектировался | [`22`](../маркетинг/22_План_реализации_маркетинга.md) п. 3.13 / 3.14        |
+| Trial intake             | v3: приглашение создаёт кандидата, аккаунт — только после ручного approval. Production live-smoke 2026-07-29 зелёный                                  | [`systems/TRIAL_INTAKE.md`](reference/systems/TRIAL_INTAKE.md)              |
+| Telegram                 | Start-бот и client-бот — рабочий backend-контур, production smoke 2026-07-30 зелёный. Curator Mini App — frontend-прототип без production API         | [`systems/TELEGRAM.md`](reference/systems/TELEGRAM.md)                      |
+| Инженерная очередь       | Подтверждённых блокеров после спринта S1 нет; вход в очередь — только с воспроизведением                                                              | [`todo.md`](../todo.md)                                                     |
+
+---
+
+## Куда идти по типу задачи
+
+| Задача                                   | Первый файл                                                                                                                 |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| «Что делать дальше по запуску»           | [`маркетинг/41`](../маркетинг/41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md)                                   |
+| «Какой статус у задачи запуска»          | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md)                                                             |
+| «Можно ли уже собирать заявки / платить» | [`маркетинг/25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) + [`32`](../маркетинг/32_ПДн_governance_релизный_контур.md)              |
+| «Как работает система X в коде»          | [`docs/reference/README.md`](reference/README.md) → досье в `reference/systems/`                                            |
+| «Какие инженерные задачи открыты»        | [`todo.md`](../todo.md)                                                                                                     |
+| «Правила работы агента»                  | [`CLAUDE.md`](../CLAUDE.md) / [`AGENTS.md`](../AGENTS.md)                                                                   |
+| «Как коммитить / пушить / деплоить»      | [`operations/AGENT_SHIPPING_RUNBOOK.md`](operations/AGENT_SHIPPING_RUNBOOK.md) + [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) |
+| «Писать клиент-видимый текст»            | [`apps/landing/COPY_VOICE.md`](../apps/landing/COPY_VOICE.md)                                                               |
+| «Почему решение такое»                   | [`маркетинг/15`](../маркетинг/15_Ревизия_и_лог_решений.md)                                                                  |
+| «Отладить баг в проде»                   | [`apps/web/DEBUGGING.md`](../apps/web/DEBUGGING.md) + [`apps/web/BUGS_HISTORY.md`](../apps/web/BUGS_HISTORY.md)             |
+
+---
+
+## 1. Запуск, маркетинг, релизный контур
+
+Полный корпус и правила ведения — в
+[`маркетинг/README.md`](../маркетинг/README.md). Ключевое:
+
+| Роль                               | Файл                                                                                                                                           |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Маршрут S0→S4 + готовые промпты    | [`41_Единый_релизный_контур`](../маркетинг/41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md)                                         |
+| **Единственный источник статусов** | [`22_План_реализации_маркетинга`](../маркетинг/22_План_реализации_маркетинга.md)                                                               |
+| Gates Ф0→Ф1 и красные триггеры     | [`25_Roadmap_Ф0_Ф1`](../маркетинг/25_Roadmap_Ф0_Ф1.md)                                                                                         |
+| Журнал решений                     | [`15_Ревизия_и_лог_решений`](../маркетинг/15_Ревизия_и_лог_решений.md)                                                                         |
+| Канон тарифов и запуска            | [`19_Pro-first`](../маркетинг/19_Pro-first_методология_Фазы_0.md), [`43_Pro_Спорт`](../маркетинг/43_Pro_Спорт_founder-led_пилот_2026-07-28.md) |
+| Операционка куратора               | [`23_Плейбук_куратора`](../маркетинг/23_Плейбук_куратора.md)                                                                                   |
+
+Статус задачи меняется только в `22`; gates — в `25`/`32`; решения — в `15`.
+
+## 2. Продукт и код — живой справочник
+
+[`docs/reference/README.md`](reference/README.md) — единая точка входа перед
+правкой незнакомой области:
+
+- [`SYSTEM_MAP.md`](reference/SYSTEM_MAP.md) — приложения, пакеты, backend
+- [`systems/HOW_HEYS_WORKS.md`](reference/systems/HOW_HEYS_WORKS.md) — сквозной
+  путь
+- [`systems/`](reference/systems/README.md) — 19 досье (sync, curator, trial
+  intake, telegram, payments, planning, training modes, PWA/push, …)
+- [`IMPROVEMENT_BACKLOG.md`](reference/IMPROVEMENT_BACKLOG.md) /
+  [`IMPROVEMENT_HISTORY.md`](reference/IMPROVEMENT_HISTORY.md)
+
+После правки досье — `pnpm docs:reference:check`.
+
+Технический слой рядом: [`ARCHITECTURE.md`](ARCHITECTURE.md),
+[`apps/web/ARCHITECTURE.md`](../apps/web/ARCHITECTURE.md),
+[`SYNC_REFERENCE.md`](SYNC_REFERENCE.md),
+[`DATA_MODEL_REFERENCE.md`](DATA_MODEL_REFERENCE.md),
+[`dev/QUALITY_GATE.md`](dev/QUALITY_GATE.md),
+[`dev/AUTOLIMITS.md`](dev/AUTOLIMITS.md),
+[`dev/MODULE_ARCHITECTURE.md`](dev/MODULE_ARCHITECTURE.md).
+
+Протоколы реализации конкретных проходов — [`implementation/`](implementation/)
+(trial intake v1–v3, morning check-in, consent/payment, planning games,
+pricing). Это evidence прошедших работ, не очередь задач.
+
+## 3. Лендинг и клиент-видимые тексты
+
+| Роль                                         | Файл                                                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Голос, чёрный список слов, история замечаний | [`apps/landing/COPY_VOICE.md`](../apps/landing/COPY_VOICE.md)                                                                            |
+| Как устроен лид-контур в коде                | [`systems/LANDING_AND_LEADS.md`](reference/systems/LANDING_AND_LEADS.md)                                                                 |
+| Мобильный UX/CRO-аудит (24 экрана)           | [`маркетинг/40`](../маркетинг/40_Аудит_лендинга_mobile_2026-07-26.md)                                                                    |
+| Архитектура тарифного блока (принята)        | [`маркетинг/44`](../маркетинг/44_Ревью_архитектуры_тарифного_выбора_2026-07-29.md)                                                       |
+| Референс следующего прохода `B-Future`       | [`маркетинг/45`](../маркетинг/45_Future_референс_лендинга_2026-07-29.md)                                                                 |
+| Что уже было реализовано (evidence)          | [`маркетинг/35`](../маркетинг/35_Landing_perfect_pass_2026-06-14.md), [`39`](../маркетинг/39_Протокол_реализации_лендинга_2026-06-22.md) |
+
+Живой статус правок лендинга — только `22` п. 3.12–3.14.
+
+## 4. Telegram
+
+| Роль                                        | Файл                                                                                                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Что реально работает в коде (4 поверхности) | [`systems/TELEGRAM.md`](reference/systems/TELEGRAM.md)                                                                                                           |
+| Контент-система, продвижение, метрики       | [`маркетинг/14`](../маркетинг/14_Telegram_плейбук.md)                                                                                                            |
+| Бот-лид-магнит «Твой тип срыва»             | [`маркетинг/17`](../маркетинг/17_Бот_лид-магнит_и_онбординг-квиз.md)                                                                                             |
+| Готовые посты и календарь                   | [`маркетинг/24`](../маркетинг/24_Telegram_посты_батч1.md)                                                                                                        |
+| Настройка ботов                             | [`yandex-cloud-functions/TELEGRAM_SETUP.md`](../yandex-cloud-functions/TELEGRAM_SETUP.md), [`apps/tg-mini/TELEGRAM_SETUP.md`](../apps/tg-mini/TELEGRAM_SETUP.md) |
+| Mini App контракт                           | [`apps/tg-mini/API_CONTRACT.md`](../apps/tg-mini/API_CONTRACT.md)                                                                                                |
+
+## 5. Юридический контур ПДн / РКН
+
+- [`маркетинг/32`](../маркетинг/32_ПДн_governance_релизный_контур.md) — R0–R3
+- [`маркетинг/31`](../маркетинг/31_РКН_уведомление_ПДн_ИП.md) — уведомление РКН
+- [`маркетинг/33`](../маркетинг/33_ERID_регламент_и_шаблоны.md) — ERID до
+  посевов
+- [`docs/legal/`](legal/) — пользовательские документы и согласия
+- [`docs/legal/operator/`](legal/operator/) — операторские регламенты, DSAR,
+  retention, инцидент-плейбук, evidence-пакеты R0/R2
+
+## 6. Релиз, деплой, безопасность
+
+| Роль                                                                                                | Файл                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Правила commit/push/shipping для агента                                                             | [`operations/AGENT_SHIPPING_RUNBOOK.md`](operations/AGENT_SHIPPING_RUNBOOK.md)                                                                     |
+| Механика push/What's New/CI                                                                         | [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                                                                                         |
+| Методология release-readiness + аудит 2026-06-17 (сверка 2026-07-31 в § 0; статусы — в `22` § 1.10) | [`release-readiness-methodology.md`](release-readiness-methodology.md)                                                                             |
+| Деплой Yandex Cloud                                                                                 | [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md), [`YANDEX_DEPLOY_SETUP.md`](YANDEX_DEPLOY_SETUP.md)                                                   |
+| Security                                                                                            | [`SECURITY_DOCUMENTATION.md`](SECURITY_DOCUMENTATION.md), [`SECURITY_RUNBOOK.md`](SECURITY_RUNBOOK.md), [`SECURITY_REVIEW.md`](SECURITY_REVIEW.md) |
+| Мобильный релиз RuStore                                                                             | [`apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md`](../apps/mobile/release/RUSTORE_AGENT_RUNBOOK.md)                                                  |
+
+## 7. Дашборды — generated, руками не править
+
+| Артефакт                                                    | Источник                                               | Как пересобрать                                                                                               |
+| ----------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| [`маркетинг/00_Дашборд.html`](../маркетинг/00_Дашборд.html) | `22`, `25`, `30`, `14`, `23`, `00_Сводная_панель.xlsx` | `python3 маркетинг/tools/build_dashboard.py` (авто в pre-commit через `scripts/sync-marketing-dashboard.mjs`) |
+| `security-reports/consolidated/security-dashboard.html`     | security-сканы                                         | профильные security-скрипты                                                                                   |
+| `00_Сводная_панель.xlsx`                                    | датированный снимок 2026-06-10 + лист «KPI-трекер»     | вручную, только KPI-факт                                                                                      |
+
+Правишь source → перегенерируешь артефакт. Правка HTML руками = дашборд начинает
+врать при следующей сборке.
+
+## 8. Архив — не источник правды
+
+Читать только за историческим контекстом; статусы оттуда не брать:
+
+- [`docs/plans/`](plans/) — `NEXT_STEPS.md`, `INDEX.md`, `README.md`,
+  `DOCS_ACTUALIZATION_*`, `ENHANCED_ERROR_LOGGING_*`, `*NAVIGATION_MAPS*` —
+  корпус 2025 года, заброшен. Актуальны только `TECHNICAL_RISK_PROGRAM_2026.md`
+  и `LOCAL_WORKTREE_RECOVERY_2026.md` (2026-07).
+- [`docs/SUMMARY.md`](SUMMARY.md) — старый индекс, заменён этой картой.
+- `apps/web/PHASE_*.md`, `apps/web/REFACTORING_*.md`, `MODULARIZATION_PLAN.md` —
+  отчёты рефакторинга января 2026, закрыты.
+- [`docs/archive/`](archive/), [`docs/legacy/`](legacy/),
+  [`docs/sprints/`](sprints/), `docs/guides/` (кроме служебных),
+  `docs/HEYS_Project_Context.md` — исторические снимки.
+- В `маркетинг/` статус документа указан в таблице
+  [`маркетинг/README.md`](../маркетинг/README.md) § «Статус корпуса»: `01`–`13`,
+  `16`, `26`, `34`–`40`, `42` — evidence/reference, не задачи.
+
+## Правила поддержки карты
+
+1. Карта обновляется, когда меняется **владелец правды** (появился/умер источник
+   статусов), а не при каждой правке документа.
+2. Блок «Где мы сейчас» — короткий снимок с датой. Числа и галочки живут в
+   `22`/`25`/`32`/`todo.md`; при расхождении прав профильный источник.
+3. Документ, ставший неактуальным, переносится в § 8 с одной строкой «чем
+   заменён», а не удаляется молча.

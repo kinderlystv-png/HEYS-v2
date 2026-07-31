@@ -1,8 +1,13 @@
-# 🗺️ PLANS & ROADMAPS
+# 🗺️ PLANS & ROADMAPS — АРХИВ 2025
 
-> **Purpose:** Active project roadmaps and strategic planning documents  
-> **Maintainer:** @product-team  
-> **Version:** 1.3.0
+> ⚠️ **Не источник статусов (помечено 2026-07-31).** Список ниже — корпус 2025
+> года; даты, приоритеты и «Active» устарели. Актуальные планы:
+> [`todo.md`](../../todo.md) (инженерная очередь),
+> [`маркетинг/22`](../../маркетинг/22_План_реализации_маркетинга.md) (запуск и
+> маркетинг), [карта документации](../README.md).
+>
+> В этой папке живыми остаются только `TECHNICAL_RISK_PROGRAM_2026.md` и
+> `LOCAL_WORKTREE_RECOVERY_2026.md`.
 
 ## 🔥 ACTIVE PLANS
 

@@ -1,7 +1,9 @@
-# Next Steps - Unified Backlog
+# Next Steps - Unified Backlog — АРХИВ
 
-> **Centralized task management** for HEYS project documentation and
-> development.
+> ⚠️ **Заброшен с 2025-08-30, не рабочая очередь (помечено 2026-07-31).**
+> Актуальная инженерная очередь — [`todo.md`](../../todo.md), проверенный
+> backlog по коду —
+> [`docs/reference/IMPROVEMENT_BACKLOG.md`](../reference/IMPROVEMENT_BACKLOG.md).
 >
 > Version: 1.3.0 | Last updated: 2025-08-30
 

@@ -4,6 +4,12 @@
 **Покрытие методологии:** L6 матрицы из `docs/SECURITY_REVIEW.md` (DR, 152-ФЗ,
 retention) **Юрисдикция:** РФ, 152-ФЗ «О персональных данных»
 
+> **Статус находок обновлён 2026-07-31.** Находки 🔴 L6-1 и 🔴 L6-2 ниже — это
+> исходный срез baseline-сессии 2026-06-14. Обе с тех пор закрыты (watchdog и
+> cron-cleanup), остался только флип `DRY_RUN=0` — см. § 7.2a. Текст находок
+> сохранён как история; живой статус ведёт
+> [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § 6Б.5.
+
 ---
 
 ## 1. Backup infrastructure baseline
@@ -336,11 +342,33 @@ practice: **до 30 дней** для access/correction, **до 30 дней** д
 CASCADE + 2 SET NULL корректно ✅ Retention recommendations для 11 таблиц с ПДн
 составлены ✅ DSAR процедура skeleton написана
 
-### 7.2 Осталось как launch-blocker
+### 7.2 Осталось как launch-blocker (срез 2026-06-14 — см. 7.2a)
 
 🔴 **L6-1**: 27-дневная дыра в backup-chain (2026-04-14 — 2026-05-10) — нужно
 расследовать root cause + добавить gap-detector 🔴 **L6-2**: photos orphan после
 client deletion — нужен cleanup mechanism (cron OR trigger)
+
+### 7.2a Актуализация 2026-07-31 — оба пункта больше не launch-blocker
+
+✅ **L6-1 mitigated** (2026-06-14/15): заведена таблица success-маркеров
+`backup_run_log` (`database/2026-06-14_backup_run_log.sql`), запись из
+`yandex-cloud-functions/heys-client-daily-backup/index.js:506`, алерт
+`backup_chain_gap` при >30 ч без успешного run'а
+(`yandex-cloud-functions/heys-cron-security-alerts/index.js:176`). ✅ **L6-2
+fixed + deployed** (2026-06-14):
+`yandex-cloud-functions/heys-cron-photo-cleanup`
+
+- `photo_cleanup_log` (`database/2026-06-14_photo_cleanup_log.sql`), soft-grace
+  7 дней и hard cap 100. Локальный guard — `pnpm security:l6-watchdogs`.
+
+⚠️ **Остаточный операционный хвост по L6-2:** реальное удаление по умолчанию
+выключено — `heys-cron-photo-cleanup/index.js:47`
+(`DRY_RUN = process.env.DRY_RUN !== '0'`). Пока `DRY_RUN=0` не включён после
+dry-run observation, cleanup только логирует кандидатов. Статус этого хвоста
+ведёт [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § 6Б.5, не
+этот файл.
+
+Исходные формулировки 7.2 оставлены как история baseline-сессии 2026-06-14.
 
 ### 7.3 Осталось для user / legal
 

@@ -60,6 +60,10 @@ pnpm --dir apps/web run dev:iw-config
 
 ## 🆕 Recent Updates
 
+> **Исторический раздел (февраль 2026).** Текущие изменения продукта — в
+> [apps/web/CHANGELOG.md](apps/web/CHANGELOG.md) и `whats-new.json`; текущий
+> этап проекта — в [карте документации](docs/README.md).
+
 ### v13.3.0 — Health Score Algorithm Fixes (February 13, 2026) 🎯
 
 **Critical correctness fixes** in Health Score calculation algorithm.
@@ -158,24 +162,27 @@ const products = window.HEYS?.products?.getAll?.() || [];
 
 ```
 packages/
-├── core/          # 🧠 Business logic & models
-├── ui/            # 🎨 React UI components
-├── search/        # 🔍 Smart search engine
-├── storage/       # 💾 Data persistence layer
-├── gaming/        # 🎮 Gamification system
-├── analytics/     # 📊 Analytics & metrics
-└── shared/        # 🔧 Shared utilities
+├── core/                 # 🧠 Business logic & models
+├── ui/                   # 🎨 React UI components
+├── search/               # 🔍 Smart search engine
+├── storage/              # 💾 Data persistence layer
+├── logger/               # 🪵 Logging
+├── assemble-day-engine/  # 🎮 Assemble Day causal engine
+└── shared/               # 🔧 Shared utilities
 
 apps/
-├── web/           # 🌐 Main web application
-├── mobile/        # 📱 React Native app
-└── desktop/       # 🖥️ Electron app
+├── web/           # 🌐 Main web application (основной продукт)
+├── landing/       # 🛬 Лендинг (Next.js)
+├── tg-mini/       # 🤖 Telegram Mini App куратора (прототип)
+└── mobile/        # 📱 Мобильная сборка / RuStore
 
-tools/
-├── scripts/       # 🛠️ Build & utility scripts
-├── cli/           # ⌨️ Command line tools
-└── devtools/      # 🔧 Development tools
+scripts/                  # 🛠️ Build, release & utility scripts
+yandex-cloud-functions/   # ☁️ Backend (Yandex Cloud Functions)
+database/                 # 🗄️ SQL миграции и схема
 ```
+
+Подробная карта поверхностей и точек входа —
+[docs/reference/SYSTEM_MAP.md](docs/reference/SYSTEM_MAP.md).
 
 ## 🛠️ Development
 
@@ -189,14 +196,14 @@ tools/
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/heys.git
-cd heys
+git clone https://github.com/kinderlystv-png/HEYS-v2.git
+cd HEYS-v2
 
 # Install dependencies (automatically installs all workspaces)
 pnpm install
 
-# Setup development environment
-pnpm setup:dev
+# Full stack локально (API:4001 + web:3001) — дефолт для работы с продуктом
+pnpm dev:local
 ```
 
 ### Onboarding
@@ -216,11 +223,23 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 
 ## 📚 Документация
 
-> **Для разработчиков и ИИ:** Вся документация проекта организована в папке
-> `docs/`
+> **Для разработчиков и ИИ — начинать здесь:**
 >
-> 📖 **[Посмотреть полную документацию](docs/README.md)** - мастер-индекс со
-> всеми руководствами, отчетами и anchor системой
+> 🗺️ **[Карта актуальной документации](docs/README.md)** — где источник правды
+> по каждой зоне (запуск, маркетинг, лендинг, Telegram, продукт, legal, релиз),
+> на каком этапе проект сейчас и какие документы уже архивные.
+
+Три источника живых статусов (карта на них ссылается, но сама статусы не
+хранит):
+
+| Зона                       | Источник правды                                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Инженерная очередь         | [todo.md](todo.md)                                                                                   |
+| Запуск, маркетинг, лендинг | [маркетинг/22](маркетинг/22_План_реализации_маркетинга.md)                                           |
+| Release gates ПДн/РКН      | [маркетинг/25](маркетинг/25_Roadmap_Ф0_Ф1.md) + [32](маркетинг/32_ПДн_governance_релизный_контур.md) |
+
+Перед правкой незнакомой области — системное досье в
+[живом справочнике](docs/reference/README.md).
 
 ## 🧹 Repository Hygiene (Root Folders)
 
@@ -261,10 +280,14 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 
 ### 📋 Development Guides
 
-- 🔧 **[Setup Guide](docs/guides/SETUP.md)** - Development environment setup
-- 🧪 **[Testing Guide](docs/guides/TESTING.md)** - Testing strategies and tools
-- 🚀 **[Deployment Guide](docs/guides/DEPLOYMENT.md)** - Production deployment
-- 🔍 **[Debugging Guide](docs/guides/DEBUGGING.md)** - Troubleshooting tips
+- 🧭 **[Developer Onboarding](docs/dev/ONBOARDING.md)** - короткий старт
+- 🚀 **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - деплой в Yandex Cloud
+- 📦 **[Release Process](docs/RELEASE_PROCESS.md)** - push, What's New, CI
+- 🚢 **[Agent Shipping Runbook](docs/operations/AGENT_SHIPPING_RUNBOOK.md)** -
+  commit/shipping для агентов
+- 🔍 **[Debugging](apps/web/DEBUGGING.md)** - процедуры отладки продукта
+- 🐛 **[Bugs History](apps/web/BUGS_HISTORY.md)** - post-mortem прошлых
+  инцидентов
 
 ## 🧩 Legacy v12 (архив)
 
@@ -313,12 +336,6 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 - ⚡ Автоматические инструменты: `dynamic-navigation-mapper.js`,
   `anchor-navigation.js`
 
-### 🔧 Утилиты
-
-- `TOOLS/code-mapper.js` - генератор навигационных карт
-- `TOOLS/Create-NavigationMaps.ps1` - PowerShell скрипт анализа
-- `NAVIGATION_MAPS_README.md` - документация по картам
-
 ## 📊 Системные требования
 
 - Современный браузер с поддержкой ES6+
@@ -335,19 +352,27 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 
 ## 📋 Планы развития
 
-- [ ] PWA функциональность
-- [ ] Синхронизация между устройствами
-- [ ] Машинное обучение для рекомендаций
-- [ ] Интеграция с фитнес-трекерами
-- [ ] Расширенная аналитика
+Здесь роадмап не дублируется. Актуальные планы и статусы:
+
+- **Инженерная очередь:** [todo.md](todo.md)
+- **Запуск и маркетинг (S0→S4):**
+  [маркетинг/41](маркетинг/41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md)
+  → статусы в [маркетинг/22](маркетинг/22_План_реализации_маркетинга.md)
+- **Gates Ф0→Ф1:** [маркетинг/25](маркетинг/25_Roadmap_Ф0_Ф1.md)
+- **Технические риски 2026:**
+  [docs/plans/TECHNICAL_RISK_PROGRAM_2026.md](docs/plans/TECHNICAL_RISK_PROGRAM_2026.md)
+- **Проверенный backlog по коду:**
+  [docs/reference/IMPROVEMENT_BACKLOG.md](docs/reference/IMPROVEMENT_BACKLOG.md)
 
 ## 🔗 Дополнительно
 
-- **Функциональные тесты:** `АНАЛИЗ_ТЕСТИРОВАНИЯ_vs_РЕАЛЬНОСТЬ.md`
-- **История изменений:** `TYPESCRIPT_MIGRATION_FINAL_REPORT.md`
-- **Отчеты о производстве:** `PRODUCTION_FINAL_REPORT.md`
+- **История изменений продукта:** [apps/web/CHANGELOG.md](apps/web/CHANGELOG.md)
+  и `apps/web/public/whats-new.json`
+- **Закрытые проблемы и регрессии:**
+  [docs/reference/IMPROVEMENT_HISTORY.md](docs/reference/IMPROVEMENT_HISTORY.md)
 
 ---
 
-💡 **Совет:** Начните с `super-diagnostic-center.html` для полной диагностики
-системы!
+💡 **Совет:** незнакомая область — начинайте с
+[карты документации](docs/README.md), затем системное досье в
+[живом справочнике](docs/reference/README.md).

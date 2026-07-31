@@ -1,6 +1,10 @@
-# HEYS Documentation Summary
+# HEYS Documentation Summary — АРХИВ
 
-> Last updated: 2026-07-17 | Navigation for active HEYS documentation
+> ⚠️ **Устарел 2026-07-31. Не источник навигации и статусов.** Актуальная точка
+> входа — [карта документации](README.md). Ниже сохранён исторический индекс
+> 2025 года: часть перечисленных планов (`plans/NEXT_STEPS.md`,
+> `plans/DOCS_ACTUALIZATION_*`, `plans/*NAVIGATION_MAPS*`) заброшена и не
+> отражает текущий этап проекта.
 
 ## 🚀 Core Documentation
 
