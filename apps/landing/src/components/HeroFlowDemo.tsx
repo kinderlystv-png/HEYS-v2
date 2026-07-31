@@ -83,6 +83,10 @@ export default function HeroFlowDemo() {
     lastShownAtRef.current = next.at;
     interstitialPauseRef.current = true;
     video.pause();
+    // timeupdate тикает ~4 раза в секунду, поэтому пауза случается с дрейфом
+    // до ~0,25с после таймкода. Отматываем ровно на границу сцены: замерший
+    // кадр под карточкой и точка возобновления всегда одни и те же.
+    video.currentTime = next.at;
     setCard({ text: next.text, leaving: false });
     interstitialTimersRef.current = [
       window.setTimeout(() => {
