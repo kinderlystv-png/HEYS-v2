@@ -38,6 +38,18 @@ const INTERSTITIAL_EXIT_EASING = 'cubic-bezier(0.64, 0, 0.78, 0)';
 //           экран питания);
 //   36.80 — сам переход между «Осталось на сегодня» и недельными виджетами;
 //   59.80 — конец диалога про зарядку (60.00 — финальные виджеты).
+// Пропуски дефектных отрезков самой записи: на съёмке фото подгружалось по
+// сети, и в кадре успевал побыть экран «Загружаю…» и серый плейсхолдер вместо
+// блюда. Отрезок вырезается на лету (без перекодирования файла): плеер
+// перескакивает на кадр, где фото уже на месте. Границы сняты покадрово.
+const SKIPS: ReadonlyArray<{ from: number; to: number }> = [
+  // Границы сняты точным декодом (`ffmpeg -i … -ss`, а не input-seek по
+  // ключевым кадрам): 2.62 — экран уже затемнён переходом, но содержимое чата
+  // ещё не видно; на 3.95 плейсхолдер ещё серый, на 3.98 фото отрисовано.
+  // Анимация открытия чата остаётся, «Загружаю…» и плейсхолдер вырезаются.
+  { from: 2.62, to: 3.98 },
+];
+
 // `resumeAt` — точка возобновления, если после паузы идёт «доезд» сцены
 // (скролл, появление карточек). Пропуск выполняется под плашкой, поэтому
 // склейка не видна, а зритель получает уже стабильный кадр.
@@ -67,6 +79,9 @@ export default function HeroFlowDemo() {
   const interstitialPauseRef = useRef(false);
   const interstitialTimersRef = useRef<number[]>([]);
   const lastShownAtRef = useRef<number | null>(null);
+  // Поднят на время seek-пропуска дефектного отрезка: гасит 'waiting',
+  // чтобы не показать постер вместо кадра.
+  const skipSeekRef = useRef(false);
 
   const clearInterstitialTimers = useCallback(() => {
     for (const id of interstitialTimersRef.current) window.clearTimeout(id);
@@ -83,6 +98,16 @@ export default function HeroFlowDemo() {
     const video = videoRef.current;
     if (!video || interstitialPauseRef.current) return;
     const t = time;
+
+    // Дефектный отрезок записи пропускаем раньше всего: плеер перескакивает
+    // на кадр с уже загруженным фото. `skipSeekRef` гасит `waiting` от seek,
+    // иначе фаза уйдёт в 'buffering' и мелькнёт постер.
+    const skip = SKIPS.find((item) => t >= item.from && t < item.to);
+    if (skip) {
+      skipSeekRef.current = true;
+      video.currentTime = skip.to;
+      return;
+    }
 
     // Loop или перемотка назад — разрешаем показать карточки заново.
     if (lastShownAtRef.current !== null && t < lastShownAtRef.current - 1) {
@@ -302,9 +327,12 @@ export default function HeroFlowDemo() {
           onWaiting={() => {
             // Seek на `resumeAt` под плашкой поднимает waiting: не отдаём
             // фазу в 'buffering', иначе карточка перемонтируется и влетает
-            // повторно, не успев уехать.
-            if (interstitialPauseRef.current) return;
+            // повторно, не успев уехать. То же для seek-пропуска.
+            if (interstitialPauseRef.current || skipSeekRef.current) return;
             if (phaseRef.current === 'playing') updatePhase('buffering');
+          }}
+          onSeeked={() => {
+            skipSeekRef.current = false;
           }}
           onPause={() => {
             // Пауза, вызванная отбивкой, не меняет фазу: для пользователя
