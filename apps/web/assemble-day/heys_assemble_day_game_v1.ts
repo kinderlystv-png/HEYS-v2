@@ -15,7 +15,7 @@ declare global {
 }
 
 const STORAGE_KEY = 'heys_planning_assemble_day_campaign_v1';
-const ENVELOPE_VERSION = 2;
+const ENVELOPE_VERSION = 3;
 const CHECKPOINT_BUDGET_BYTES = 128 * 1024;
 const UUID_RE = /\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/i;
 
@@ -51,18 +51,35 @@ type CampaignSession = {
   periodSummaries: PeriodSummary[];
   revision: number;
   diagnostics: DiagnosticLedger;
+  /**
+   * Снимок на последней закрытой границе периода. Восстановление начинается с
+   * него, поэтому стоимость сохранения и загрузки зависит от длины текущего
+   * периода, а не от длины жизни персонажа.
+   */
+  anchor: CampaignAnchor;
   comparisonBaseline?: { outcome: CampaignOutcome; finalStateHash: string };
 };
 
+type CampaignAnchor = {
+  revision: number;
+  stateHash: string;
+  state: GameState;
+  lastStepSummary: StepSummary | null;
+  periodSummaries: PeriodSummary[];
+  lastDecisionKind: DiagnosticDecision['kind'] | null;
+};
+
 type CampaignEnvelope = {
-  envelopeVersion: 2;
+  envelopeVersion: 3;
   scopeTag: string;
   gameSeed: string;
   savedAt: string;
   revision: number;
   stateHash: string;
   contract: typeof CONTRACT;
+  anchor: CampaignAnchor;
   diagnostics: DiagnosticLedger;
+  lifetime: { decisions: number };
   comparisonBaseline?: CampaignSession['comparisonBaseline'];
 };
 
@@ -226,7 +243,8 @@ function createSession(seed = createOpaqueGameSeed(), comparisonBaseline?: Campa
   assertGameSeed(seed);
   const state = createInitialState(seed);
   validateState(state);
-  return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: 'complete', decisions: [] }, ...(comparisonBaseline ? { comparisonBaseline } : {}) };
+  const anchor: CampaignAnchor = { revision: 0, stateHash: stateHash(state), state: structuredClone(state), lastStepSummary: null, periodSummaries: [], lastDecisionKind: null };
+  return { state, lastStepSummary: null, periodSummaries: [], revision: 0, diagnostics: { version: 1, history: 'complete', decisions: [] }, anchor, ...(comparisonBaseline ? { comparisonBaseline } : {}) };
 }
 
 function diagnosticStateSnapshot(state: GameState): Omit<GameState, 'causalJournal'> {
@@ -235,7 +253,7 @@ function diagnosticStateSnapshot(state: GameState): Omit<GameState, 'causalJourn
   return snapshot as Omit<GameState, 'causalJournal'>;
 }
 
-function diagnosticsFrom(value: unknown, revision: number): DiagnosticLedger {
+function diagnosticsFrom(value: unknown, revision: number, anchorRevision = 0): DiagnosticLedger {
   if (value === undefined) return { version: 1, history: revision === 0 ? 'complete' : 'legacy_partial', decisions: [] };
   const ledger = value as DiagnosticLedger;
   if (!ledger || typeof ledger !== 'object' || ledger.version !== 1 || !['complete', 'legacy_partial'].includes(ledger.history)
@@ -249,8 +267,8 @@ function diagnosticsFrom(value: unknown, revision: number): DiagnosticLedger {
   }
   const decisions = structuredClone(ledger.decisions);
   if (decisions.some((decision) => decision.revision <= 0 || decision.stepIndex < 0)) throw new Error('invalid diagnostic position');
-  if (decisions.some((decision, index) => decision.revision !== index + 1)) throw new Error('diagnostic revision sequence');
-  if (decisions.length ? decisions.at(-1)!.revision !== revision : ledger.history === 'complete' && revision !== 0) throw new Error('diagnostic revision mismatch');
+  if (decisions.some((decision, index) => decision.revision !== anchorRevision + index + 1)) throw new Error('diagnostic revision sequence');
+  if (decisions.length ? decisions.at(-1)!.revision !== revision : ledger.history === 'complete' && revision !== anchorRevision) throw new Error('diagnostic revision mismatch');
   return { version: 1, history: ledger.history, decisions };
 }
 
@@ -309,7 +327,8 @@ function confirmAction(session: CampaignSession, actionId: string): CampaignSess
   const chosenCopy = actionCopy(openEvent.templateId, actionId);
   const lastStepSummary = getStepSummary({ before: session.state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
   const periodSummaries = getPeriodBoundaries(session.state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
-  return { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  const next: CampaignSession = { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  return periodSummaries.length ? reanchor(next) : next;
 }
 
 function confirmPlanning(session: CampaignSession, plan: PlanningPlan): CampaignSession {
@@ -319,12 +338,28 @@ function confirmPlanning(session: CampaignSession, plan: PlanningPlan): Campaign
   return { ...session, state: output.state, lastStepSummary: session.lastStepSummary, periodSummaries: session.periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
 }
 
-function replayDecisions(seed: string, diagnostics: DiagnosticLedger, comparisonBaseline?: CampaignSession['comparisonBaseline']): CampaignSession {
-  assertGameSeed(seed);
+/**
+ * Переносит якорь на текущее состояние и очищает хвост решений. Вызывается на
+ * закрытии периода, поэтому хвост никогда не длиннее одного периода.
+ */
+function reanchor(session: CampaignSession): CampaignSession {
+  const anchor: CampaignAnchor = {
+    revision: session.revision,
+    stateHash: stateHash(session.state),
+    state: structuredClone(session.state),
+    lastStepSummary: session.lastStepSummary ? structuredClone(session.lastStepSummary) : null,
+    periodSummaries: structuredClone(session.periodSummaries),
+    lastDecisionKind: session.diagnostics.decisions.at(-1)?.kind ?? session.anchor.lastDecisionKind,
+  };
+  return { ...session, anchor, diagnostics: { ...session.diagnostics, decisions: [] } };
+}
+
+function replayDecisions(anchor: CampaignAnchor, diagnostics: DiagnosticLedger, comparisonBaseline?: CampaignSession['comparisonBaseline']): CampaignSession {
+  assertGameSeed(anchor.state.rng.seed);
   if (diagnostics.history !== 'complete') throw new Error('complete decision history required');
-  let state = createInitialState(seed);
-  let lastStepSummary: StepSummary | null = null;
-  let periodSummaries: PeriodSummary[] = [];
+  let state = structuredClone(anchor.state);
+  let lastStepSummary: StepSummary | null = anchor.lastStepSummary ? structuredClone(anchor.lastStepSummary) : null;
+  let periodSummaries: PeriodSummary[] = structuredClone(anchor.periodSummaries);
   for (const decision of diagnostics.decisions) {
     if (decision.kind === 'action') {
       const slot = registries.slots[state.scenarioCursor];
@@ -346,8 +381,9 @@ function replayDecisions(seed: string, diagnostics: DiagnosticLedger, comparison
     state,
     lastStepSummary,
     periodSummaries,
-    revision: diagnostics.decisions.at(-1)?.revision || 0,
+    revision: diagnostics.decisions.at(-1)?.revision || anchor.revision,
     diagnostics: structuredClone(diagnostics),
+    anchor: structuredClone(anchor),
     ...(comparisonBaseline ? { comparisonBaseline } : {}),
   };
 }
@@ -371,15 +407,17 @@ function hasRawClientIdentifier(value: unknown, clientId: string) {
 
 function makeEnvelope(session: CampaignSession, clientId: string): CampaignEnvelope {
   assertGameSeed(session.state.rng.seed);
-  const diagnostics = diagnosticsFrom(session.diagnostics, session.revision);
-  if (diagnostics.history !== 'complete' || hasRawClientIdentifier({ state: session.state, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
+  const diagnostics = diagnosticsFrom(session.diagnostics, session.revision, session.anchor.revision);
+  if (diagnostics.history !== 'complete' || hasRawClientIdentifier({ anchor: session.anchor, diagnostics, comparisonBaseline: session.comparisonBaseline }, clientId)) {
     throw new Error('checkpoint contains a personal identifier or incomplete history');
   }
-  const replayed = replayDecisions(session.state.rng.seed, diagnostics, session.comparisonBaseline);
+  if (stateHash(session.anchor.state) !== session.anchor.stateHash) throw new Error('checkpoint anchor hash mismatch');
+  // Проверка стоит ровно один период: якорь плюс хвост решений после него.
+  const replayed = replayDecisions(session.anchor, diagnostics, session.comparisonBaseline);
   if (stateHash(replayed.state) !== stateHash(session.state)
     || JSON.stringify(replayed.lastStepSummary) !== JSON.stringify(session.lastStepSummary)
     || JSON.stringify(replayed.periodSummaries) !== JSON.stringify(session.periodSummaries)) {
-    throw new Error('checkpoint decision ledger does not reproduce the session');
+    throw new Error('checkpoint tail does not reproduce the session');
   }
   return {
     envelopeVersion: ENVELOPE_VERSION,
@@ -389,7 +427,9 @@ function makeEnvelope(session: CampaignSession, clientId: string): CampaignEnvel
     revision: session.revision,
     stateHash: stateHash(session.state),
     contract: { ...CONTRACT },
+    anchor: structuredClone(session.anchor),
     diagnostics,
+    lifetime: { decisions: session.revision },
     comparisonBaseline: session.comparisonBaseline,
   };
 }
@@ -406,12 +446,35 @@ function loadLegacyCheckpoint(envelope: LegacyCampaignEnvelope, clientId: string
     const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
     if (diagnostics.history !== 'complete') return { status: 'incompatible', message: 'В старом сохранении нет полной истории решений для безопасного восстановления. Оно оставлено без изменений.' };
     const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
-    const session = replayDecisions(envelope.state.rng.seed, diagnostics, comparisonBaseline);
+    const session = replayDecisions(initialAnchor(envelope.state.rng.seed), diagnostics, comparisonBaseline);
     if (stateHash(session.state) !== envelope.stateHash) throw new Error('legacy replay mismatch');
     return { status: 'ready', session };
   } catch {
     return { status: 'corrupt', message: 'Сохранение не прошло проверку целостности. Оно оставлено без изменений.' };
   }
+}
+
+function initialAnchor(seed: string): CampaignAnchor {
+  const state = createInitialState(seed);
+  return { revision: 0, stateHash: stateHash(state), state, lastStepSummary: null, periodSummaries: [], lastDecisionKind: null };
+}
+
+function anchorFrom(value: unknown, gameSeed: string): CampaignAnchor {
+  const anchor = value as CampaignAnchor;
+  if (!anchor || typeof anchor !== 'object' || !Number.isInteger(anchor.revision) || anchor.revision < 0 || typeof anchor.stateHash !== 'string') throw new Error('invalid checkpoint anchor');
+  const state = structuredClone(anchor.state);
+  validateState(state);
+  if (state.rng.seed !== gameSeed) throw new Error('anchor seed mismatch');
+  if (stateHash(state) !== anchor.stateHash) throw new Error('anchor hash mismatch');
+  if (!Array.isArray(anchor.periodSummaries)) throw new Error('invalid anchor summaries');
+  return {
+    revision: anchor.revision,
+    stateHash: anchor.stateHash,
+    state,
+    lastStepSummary: anchor.lastStepSummary ? structuredClone(anchor.lastStepSummary) : null,
+    periodSummaries: structuredClone(anchor.periodSummaries),
+    lastDecisionKind: anchor.lastDecisionKind === 'action' || anchor.lastDecisionKind === 'planning' ? anchor.lastDecisionKind : null,
+  };
 }
 
 function loadCheckpoint(store: any, clientId: string, _fresh = false): LoadResult {
@@ -434,14 +497,15 @@ function loadCheckpoint(store: any, clientId: string, _fresh = false): LoadResul
   if (!contractMatches(envelope.contract)) return { status: 'incompatible', message: 'Сохранение создано другой версией игры. Начните новую кампанию явно или вернитесь в HEYS.' };
   if (envelope.scopeTag !== scopeTagFor(clientId)) return { status: 'foreign', message: 'Сохранение принадлежит другому профилю HEYS и не будет открыто.' };
   if (checkpointSizeBytes(clientId, envelope) > CHECKPOINT_BUDGET_BYTES) return { status: 'incompatible', message: 'Сохранение превышает безопасный размер этой версии игры. Оно оставлено без изменений.' };
-  if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
+  if (hasRawClientIdentifier({ gameSeed: envelope.gameSeed, anchor: envelope.anchor, diagnostics: envelope.diagnostics, comparisonBaseline: envelope.comparisonBaseline }, clientId)) {
     return { status: 'privacy', message: 'Сохранение содержит идентификатор профиля внутри кампании. Оно оставлено без изменений.' };
   }
   try {
-    const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision);
+    const anchor = anchorFrom(envelope.anchor, envelope.gameSeed);
+    const diagnostics = diagnosticsFrom(envelope.diagnostics, envelope.revision, anchor.revision);
     if (diagnostics.history !== 'complete' || !Number.isInteger(envelope.revision) || envelope.revision < 0 || typeof envelope.stateHash !== 'string') throw new Error('checkpoint shape mismatch');
     const comparisonBaseline = comparisonBaselineFrom(envelope.comparisonBaseline);
-    const session = replayDecisions(envelope.gameSeed, diagnostics, comparisonBaseline);
+    const session = replayDecisions(anchor, diagnostics, comparisonBaseline);
     if (session.revision !== envelope.revision || stateHash(session.state) !== envelope.stateHash) throw new Error('checkpoint replay mismatch');
     return { status: 'ready', session };
   } catch {
@@ -458,8 +522,10 @@ function redactDiagnosticIdentifiers(value: unknown, identifiers: string[]): unk
 
 function createDiagnosticTrace(session: CampaignSession) {
   const steps: unknown[] = [];
-  let replayState = createInitialState(session.state.rng.seed);
-  let replayStatus: 'match' | 'mismatch' | 'partial' = session.diagnostics.history === 'complete' ? 'match' : 'partial';
+  // Полный лог строится от якоря: детали периодов до него намеренно усечены,
+  // а причинно значимое состояние целиком лежит в самом якоре.
+  let replayState = structuredClone(session.anchor.state);
+  let replayStatus: 'match' | 'mismatch' | 'partial' = session.diagnostics.history === 'complete' ? (session.anchor.revision > 0 ? 'partial' : 'match') : 'partial';
   let replayError = '';
   if (session.diagnostics.history === 'complete') {
     try {
@@ -1053,6 +1119,16 @@ function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }: {
   );
 }
 
+function RestartPanel({ onConfirm, onCancel }: any) {
+  return h('section', { className: 'assemble-day-card assemble-day-restart-confirm', role: 'alertdialog', 'aria-label': 'Начать кампанию заново' },
+    h('span', { className: 'assemble-day-eyebrow' }, 'Новая кампания'),
+    h('h2', null, 'Начать заново?'),
+    h('p', null, 'Текущая кампания будет заменена новой с другим сценарием. Прогресс этой недели не сохранится.'),
+    h('button', { type: 'button', className: 'assemble-day-primary', onClick: onConfirm }, 'Начать заново'),
+    h('button', { type: 'button', className: 'assemble-day-secondary', onClick: onCancel }, 'Вернуться к кампании'),
+  );
+}
+
 function RecoveryPanel({ result, onNew, onExit }: any) {
   return h('section', { className: 'assemble-day-card assemble-day-recovery', role: 'alert' },
     h('span', { className: 'assemble-day-eyebrow' }, 'Сохранение требует решения'),
@@ -1081,8 +1157,11 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
   const [traceMessage, setTraceMessage] = React.useState('');
   const [traceTone, setTraceTone] = React.useState('');
   const [traceBusy, setTraceBusy] = React.useState(false);
-  const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === 'ready' && initialLoad.session.lastStepSummary && initialLoad.session.diagnostics.decisions.at(-1)?.kind === 'action' ? initialLoad.session.revision : null);
+  const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === 'ready' && initialLoad.session.lastStepSummary
+    && (initialLoad.session.diagnostics.decisions.at(-1)?.kind ?? initialLoad.session.anchor.lastDecisionKind) === 'action'
+    ? initialLoad.session.revision : null);
   const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState<number | null>(null);
+  const [restartOpen, setRestartOpen] = React.useState(false);
 
   const startNew = () => {
     const next = createSession();
@@ -1090,6 +1169,8 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     setPlanningDraft(planningDraftFromState(next.state));
     setLoadIssue(null);
     setForceNewCampaign(true);
+    setRestartOpen(false);
+    setActiveScreen('day');
     setSelectedActionId('');
     setSaveMessage('');
     setSaveTone('');
@@ -1212,12 +1293,17 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
 
   return h('div', { className: 'assemble-day-app' },
     h('div', { className: 'assemble-day-shell' },
-      h('nav', { className: 'assemble-day-tabs', 'aria-label': 'Масштаб кампании' },
-        ...[['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['life', 'Жизнь']].map(([id, label]) => h('button', {
-          key: id, type: 'button', className: activeScreen === id ? 'is-active' : '', 'aria-current': activeScreen === id ? 'page' : undefined, onClick: () => setActiveScreen(id),
-        }, label)),
+      h('div', { className: 'assemble-day-topbar' },
+        h('nav', { className: 'assemble-day-tabs', 'aria-label': 'Масштаб кампании' },
+          ...[['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['life', 'Жизнь']].map(([id, label]) => h('button', {
+            key: id, type: 'button', className: activeScreen === id ? 'is-active' : '', 'aria-current': activeScreen === id ? 'page' : undefined, onClick: () => setActiveScreen(id),
+          }, label)),
+        ),
+        h('button', { type: 'button', className: 'assemble-day-restart', onClick: () => setRestartOpen(true) }, 'Начать заново'),
       ),
-      h('main', { className: 'assemble-day-content' }, screens[activeScreen]),
+      h('main', { className: 'assemble-day-content' }, restartOpen
+        ? h(RestartPanel, { onConfirm: startNew, onCancel: () => setRestartOpen(false) })
+        : screens[activeScreen]),
     ),
   );
 }
@@ -1246,6 +1332,7 @@ HEYS.PlanningGames.modules['assemble-day'] = {
     loadCheckpoint,
     saveCheckpoint,
     checkpointSizeBytes,
+    makeEnvelope,
     createDiagnosticTrace,
     serializeDiagnosticTrace,
     copyDiagnosticTrace,
