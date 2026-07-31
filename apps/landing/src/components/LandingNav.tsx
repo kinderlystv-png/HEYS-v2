@@ -114,8 +114,12 @@ export default function LandingNav({ links, children, heroHeaderHeight = 85 }: L
           pastHero ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
+        {/* Полоску от контента отделяет тень, а не цвет: так она остаётся
+            нейтральной и на белых секциях, и на серых, и на жёлтой Trial.
+            Полупрозрачность включается только там, где работает
+            backdrop-filter, иначе фон остаётся сплошным белым. */}
         <div
-          className="flex items-center justify-between gap-3 border-b border-[#0F172A]/[0.06] bg-white/85 pl-5 pr-3 backdrop-blur-xl"
+          className="flex items-center justify-between gap-3 border-b border-[#0F172A]/10 bg-white pl-5 pr-3 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_28px_-18px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/75"
           style={{ height: STICKY_HEIGHT }}
         >
           {/* items-end: у логотипа плюсы поднимаются над буквами, поэтому по
