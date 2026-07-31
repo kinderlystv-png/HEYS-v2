@@ -13,14 +13,15 @@ gates — в [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) /
 
 ## Где мы сейчас — снимок 2026-07-31
 
-| Контур                   | Этап                                                                                                                                                  | Живой статус                                                                |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Запуск / продажи         | S0 закрыт (Telegram-канал запущен). S1 «заявки + бесплатный триал» открывается после P0-правок лендинга и product-smoke                               | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § «Ступени» |
-| Юридический gate ПДн/РКН | R0 ✅ закрыт 2026-07-26 · R1 🟡 (нужен до первой оплаты: ЮKassa, чеки, payment events) · R2/R3 ⬜                                                     | [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) → детали в `32`                    |
-| Лендинг                  | baseline `A` заморожен как source/visual контроль. Открыт decision-gate `3.14` (PurchaseModal / legal v1.9). `Landing B-Future` ещё не проектировался | [`22`](../маркетинг/22_План_реализации_маркетинга.md) п. 3.13 / 3.14        |
-| Trial intake             | v3: приглашение создаёт кандидата, аккаунт — только после ручного approval. Production live-smoke 2026-07-29 зелёный                                  | [`systems/TRIAL_INTAKE.md`](reference/systems/TRIAL_INTAKE.md)              |
-| Telegram                 | Start-бот и client-бот — рабочий backend-контур, production smoke 2026-07-30 зелёный. Curator Mini App — frontend-прототип без production API         | [`systems/TELEGRAM.md`](reference/systems/TELEGRAM.md)                      |
-| Инженерная очередь       | Подтверждённых блокеров после спринта S1 нет; вход в очередь — только с воспроизведением                                                              | [`todo.md`](../todo.md)                                                     |
+| Контур                   | Этап                                                                                                                                                                        | Живой статус                                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Запуск / продажи         | S0 закрыт (Telegram-канал запущен). S1 «заявки + бесплатный триал» ждёт двух вещей: P0-правок лендинга и продуктового smoke на 5–10 знакомых                                | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § «Ступени» |
+| Юридический gate ПДн/РКН | R0 ✅ закрыт 2026-07-26 · R1 🟡 (нужен до первой оплаты: ЮKassa, чеки, payment events) · R2/R3 ⬜                                                                           | [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) → детали в `32`                    |
+| Инженерная готовность    | Пакет 1.10 закрыт кроме физического Android-smoke (1.10.8). Проверка перед релизом — одна команда `pnpm release:preflight`                                                  | [`release-readiness-methodology.md`](release-readiness-methodology.md) § 0  |
+| Лендинг                  | baseline `A` заморожен как контроль. Decision-gate `3.14` (акцепт оферты) решён 2026-07-31 — покупка с лендинга это заявка, не акцепт. `Landing B-Future` не проектировался | [`22`](../маркетинг/22_План_реализации_маркетинга.md) п. 3.13 / 3.14        |
+| Trial intake             | v3: приглашение создаёт кандидата, аккаунт — только после ручного approval. Production live-smoke 2026-07-29 зелёный                                                        | [`systems/TRIAL_INTAKE.md`](reference/systems/TRIAL_INTAKE.md)              |
+| Telegram                 | Start-бот и client-бот — рабочий backend-контур, production smoke 2026-07-30 зелёный. Curator Mini App — frontend-прототип без production API                               | [`systems/TELEGRAM.md`](reference/systems/TELEGRAM.md)                      |
+| Инженерная очередь       | Подтверждённых блокеров нет. В наблюдении — нестабильная выпадашка клиента (ждёт повторения у владельца)                                                                    | [`todo.md`](../todo.md)                                                     |
 
 ---
 
@@ -82,7 +83,14 @@ gates — в [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) /
 
 Протоколы реализации конкретных проходов — [`implementation/`](implementation/)
 (trial intake v1–v3, morning check-in, consent/payment, planning games,
-pricing). Это evidence прошедших работ, не очередь задач.
+pricing). Это evidence прошедших работ, не очередь задач. Свежие:
+
+- [`DATA_LOSS_RECOVERY_COVERAGE_2026-07-31`](implementation/DATA_LOSS_RECOVERY_COVERAGE_2026-07-31.md)
+  — чем защищены данные при офлайне, устаревшем снимке, двух вкладках, битом
+  `localStorage` и 413, плюс протокол живого smoke и cross-client проверки.
+- [`LANDING_ACCEPTANCE_CONTRACT_PROTOCOL_2026-07-31`](implementation/LANDING_ACCEPTANCE_CONTRACT_PROTOCOL_2026-07-31.md)
+  — почему покупка с лендинга это заявка, а не акцепт оферты, и что из этого
+  следует для формы и legal-текстов.
 
 ## 3. Лендинг и клиент-видимые тексты
 
@@ -94,6 +102,10 @@ pricing). Это evidence прошедших работ, не очередь з�
 | Архитектура тарифного блока (принята)        | [`маркетинг/44`](../маркетинг/44_Ревью_архитектуры_тарифного_выбора_2026-07-29.md)                                                       |
 | Референс следующего прохода `B-Future`       | [`маркетинг/45`](../маркетинг/45_Future_референс_лендинга_2026-07-29.md)                                                                 |
 | Что уже было реализовано (evidence)          | [`маркетинг/35`](../маркетинг/35_Landing_perfect_pass_2026-06-14.md), [`39`](../маркетинг/39_Протокол_реализации_лендинга_2026-06-22.md) |
+
+Контракт акцепта (что именно принимает человек в форме и где принимается оферта)
+разобран в
+[`LANDING_ACCEPTANCE_CONTRACT_PROTOCOL_2026-07-31`](implementation/LANDING_ACCEPTANCE_CONTRACT_PROTOCOL_2026-07-31.md).
 
 Живой статус правок лендинга — только `22` п. 3.12–3.14.
 
@@ -124,6 +136,7 @@ pricing). Это evidence прошедших работ, не очередь з�
 | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Правила commit/push/shipping для агента                                                             | [`operations/AGENT_SHIPPING_RUNBOOK.md`](operations/AGENT_SHIPPING_RUNBOOK.md)                                                                     |
 | Механика push/What's New/CI                                                                         | [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                                                                                         |
+| Обязательная проверка перед клиентской ступенью — одна команда `pnpm release:preflight`             | [`scripts/release-preflight.mjs`](../scripts/release-preflight.mjs)                                                                                |
 | Методология release-readiness + аудит 2026-06-17 (сверка 2026-07-31 в § 0; статусы — в `22` § 1.10) | [`release-readiness-methodology.md`](release-readiness-methodology.md)                                                                             |
 | Деплой Yandex Cloud                                                                                 | [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md), [`YANDEX_DEPLOY_SETUP.md`](YANDEX_DEPLOY_SETUP.md)                                                   |
 | Security                                                                                            | [`SECURITY_DOCUMENTATION.md`](SECURITY_DOCUMENTATION.md), [`SECURITY_RUNBOOK.md`](SECURITY_RUNBOOK.md), [`SECURITY_REVIEW.md`](SECURITY_REVIEW.md) |
