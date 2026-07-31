@@ -385,7 +385,8 @@ fail-closed.
 дня и переоткрывает обязательные шаги с тем же `dateKey`; исторический день не
 перенаправляется в сегодняшний flow. Если конфигурация шага не
 зарегистрировалась за 8 секунд, StepModal показывает явную ошибку и кнопку
-закрытия вместо вечного loading-overlay.
+закрытия вместо вечного loading-overlay, а также пишет privacy-safe
+`step_registry_timeout` с отсутствующими code step ids и build/SW state.
 
 Download использует полную или delta-загрузку. Полученные ключи проходят
 проверки client ownership, pending-local guard и специальные anti-wipe правила.

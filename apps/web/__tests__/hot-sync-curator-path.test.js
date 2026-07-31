@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const storageFile = path.resolve(__dirname, '..', 'heys_storage_supabase_v1.js');
 const source = fs.readFileSync(storageFile, 'utf8');
@@ -45,6 +45,68 @@ describe('foreground hot-sync curator auth path', () => {
     expect(curatorIndex).toBeGreaterThanOrEqual(0);
     expect(sessionIndex).toBeGreaterThanOrEqual(0);
     expect(curatorIndex).toBeLessThan(sessionIndex);
+  });
+});
+
+describe('foreground hot-sync cookie-only PIN path', () => {
+  it('uses one batch request without falling back to legacy getKV fan-out', async () => {
+    const keys = ['heys_profile', 'heys_norms'];
+    const getKVBatch = vi.fn().mockResolvedValue({ data: [] });
+    const getKVBatchByCurator = vi.fn();
+    const legacyFallback = vi.fn();
+    const curatorFallback = vi.fn();
+    const cloud = { isPinAuthClient: vi.fn(() => true) };
+    const runtimeGlobal = {
+      HEYS: { YandexAPI: { getKVBatch, getKVBatchByCurator } },
+      localStorage: { getItem: vi.fn(() => null) },
+    };
+    const runForegroundHotKeySync = new Function(
+      'global',
+      'HEYS',
+      'cloud',
+      'hasCuratorJwtAuth',
+      'getForegroundHotSyncKeys',
+      'isMarkersDisabled',
+      'isBatchDisabled',
+      'mergeOverlayRpcTailRawClientRows',
+      'applyForegroundHotSyncValue',
+      '_runForegroundHotKeySyncLegacy',
+      '_runForegroundHotKeySyncCurator',
+      `
+        let foregroundAutoSyncTick = 0;
+        let user = null;
+        ${getRunForegroundHotKeySyncSource()}
+        return runForegroundHotKeySync;
+      `,
+    )(
+      runtimeGlobal,
+      { auth: { getSessionToken: vi.fn(() => null) } },
+      cloud,
+      () => false,
+      () => keys,
+      () => false,
+      () => false,
+      (rows) => rows,
+      () => false,
+      legacyFallback,
+      curatorFallback,
+    );
+
+    const result = await runForegroundHotKeySync('client-cookie-pin', 'critical-first-frame', {
+      keys,
+      skipMarkers: true,
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      mode: 'session-batch',
+      fetchedKeyCount: keys.length,
+    });
+    expect(getKVBatch).toHaveBeenCalledTimes(1);
+    expect(getKVBatch).toHaveBeenCalledWith('client-cookie-pin', keys);
+    expect(getKVBatchByCurator).not.toHaveBeenCalled();
+    expect(legacyFallback).not.toHaveBeenCalled();
+    expect(curatorFallback).not.toHaveBeenCalled();
   });
 });
 

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const originalHEYS = window.HEYS;
 const originalLocalStorage = window.localStorage;
 const originalReact = window.React;
+const originalReactDOM = window.ReactDOM;
 
 const modulePath = path.resolve(__dirname, '../heys_subscription_v1.js');
 const moduleSource = fs.readFileSync(modulePath, 'utf8');
@@ -64,6 +65,9 @@ describe('HEYS.Subscription curator guard', () => {
     });
     window.HEYS = originalHEYS;
     window.React = originalReact;
+    window.ReactDOM = originalReactDOM;
+    document.getElementById('heys-trial-banner-host')?.remove();
+    document.getElementById('heys-welcome-host')?.remove();
   });
 
   beforeEach(() => {
@@ -283,6 +287,66 @@ describe('HEYS.Subscription curator guard', () => {
     expect(showPaywallSource).toContain('HEYS.Subscriptions.openCuratorContactModal()');
     expect(dayPageShellSource).toContain("HEYS.Paywall?.show?.('trial_expired')");
     expect(dayPageShellSource).not.toContain('HEYS.Paywall?.showPaywall?.');
+  });
+
+  it('keeps an active trial out of the app header and removes its early payment CTA', () => {
+    window.React = React;
+    window.ReactDOM = {
+      createRoot: vi.fn(() => ({ render: vi.fn() })),
+    };
+    const subscriptions = loadSubscriptions();
+    const futureTrialEnd = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString();
+
+    expect(subscriptions.TrialCountdownBanner({
+      subscriptionStatus: 'trial',
+      trialEndsAt: futureTrialEnd,
+    })).toBeNull();
+    expect(subscriptions.TrialCountdownBanner({
+      subscriptionStatus: 'read_only',
+      trialEndsAt: futureTrialEnd,
+    })).not.toBeNull();
+
+    subscriptions.mountTrialUI({
+      clientId: null,
+      subscriptionStatus: 'trial',
+      trialEndsAt: futureTrialEnd,
+    });
+    expect(document.getElementById('heys-trial-banner-host')).toBeNull();
+
+    subscriptions.mountTrialUI({
+      clientId: null,
+      subscriptionStatus: 'read_only',
+      trialEndsAt: futureTrialEnd,
+    });
+    expect(document.getElementById('heys-trial-banner-host')).toBeNull();
+
+    const subscriptionSectionSource = subscriptionsModuleSource.slice(
+      subscriptionsModuleSource.indexOf('function SubscriptionSection('),
+      subscriptionsModuleSource.indexOf('function showPaymentRequired('),
+    );
+    expect(subscriptionSectionSource).toContain("status?.status === 'read_only'");
+    expect(subscriptionSectionSource).not.toContain("status?.status === 'trial' || status?.status === 'read_only'");
+  });
+
+  it('registers payment_required after the canonical StepModal ready event', () => {
+    window.React = React;
+    loadSubscriptions();
+
+    const registerStep = vi.fn();
+    window.HEYS.StepModal = { registerStep };
+    document.dispatchEvent(new CustomEvent('heys-stepmodal-ready'));
+
+    expect(registerStep).toHaveBeenCalledOnce();
+    expect(registerStep).toHaveBeenCalledWith(
+      'payment_required',
+      expect.objectContaining({
+        canSkip: false,
+        hideHeaderNext: true,
+        component: expect.any(Function),
+      }),
+    );
+    expect(registerStep.mock.calls[0][1].render).toBeUndefined();
+    expect(subscriptionsModuleSource).not.toContain("window.addEventListener('heys:step-modal-ready'");
   });
 
   it('retires unsafe legacy trial extension and keeps the owned subscription path', () => {

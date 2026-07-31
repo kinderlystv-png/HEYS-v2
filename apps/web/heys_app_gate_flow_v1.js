@@ -2716,7 +2716,7 @@
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
         }
 
-        const renderGateMessage = ({ key = null, title, text, tone = 'loading', icon = null, actions = [] }) => {
+        const renderGateMessage = ({ key = null, title, text, tone = 'loading', icon = null, actions = [], visibleFrame = null }) => {
             const isError = tone === 'error';
             return React.createElement('div', {
                 key,
@@ -2732,6 +2732,7 @@
                 },
                 role: isError ? 'alert' : 'status',
                 'aria-live': isError ? 'assertive' : 'polite',
+                'data-heys-visible-frame': visibleFrame || undefined,
             }, React.createElement('div', {
                 className: 'heys-consent-status-panel',
                 style: {
@@ -2937,6 +2938,7 @@
             if (!profileIncomplete && subscriptionState.isLoading) {
                 return renderGateMessage({
                     key: 'subscription-loading',
+                    visibleFrame: 'subscription-loading',
                     title: 'Проверяем доступ',
                     text: 'Профиль сохранён. Уточняем дату начала пробной недели.',
                     icon: '⏳',

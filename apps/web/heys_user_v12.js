@@ -263,6 +263,28 @@
     );
   }
 
+  function formatSubscriptionDaysLeft(daysLeft) {
+    const days = Number(daysLeft);
+    if (!Number.isFinite(days) || days <= 0) return '';
+    const mod10 = days % 10;
+    const mod100 = days % 100;
+    const unit = mod10 === 1 && mod100 !== 11
+      ? 'день'
+      : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'дня' : 'дней');
+    return `${days} ${unit}`;
+  }
+
+  function getSubscriptionSettingsSubtitle(subscription) {
+    const details = subscription?.getCachedDetails?.();
+    if (!details?.status) return 'Загрузка...';
+    const meta = subscription.getStatusMeta(details.status);
+    const daysLabel = formatSubscriptionDaysLeft(details.days_left);
+    if (details.status === 'trial' && daysLabel) {
+      return `${meta?.shortLabel || 'Триал'} · осталось ${daysLabel}`;
+    }
+    return meta?.label || 'Тариф и оплата';
+  }
+
   // === SubscriptionStatusSection — отображение статуса подписки ===
   function SubscriptionStatusSection() {
     const [statusData, setStatusData] = React.useState(null);
@@ -274,7 +296,7 @@
         return;
       }
 
-      window.HEYS.Subscription.getStatus(true).then(data => {
+      window.HEYS.Subscription.getStatusDetails(true).then(data => {
         setStatusData(data);
         setLoading(false);
       }).catch(() => setLoading(false));
@@ -1498,12 +1520,7 @@
           id: 'subscription',
           icon: '💎',
           title: 'Подписка',
-          subtitle: (() => {
-            const cached = window.HEYS?.Subscription?.getCachedStatus?.();
-            if (!cached) return 'Загрузка...';
-            const meta = window.HEYS.Subscription.getStatusMeta(cached.status);
-            return meta?.label || 'Тариф и оплата';
-          })(),
+          subtitle: getSubscriptionSettingsSubtitle(window.HEYS?.Subscription),
           tone: 'emerald',
           expanded: expandedSections.subscription,
           onToggle: () => toggleSection('subscription')

@@ -1,13 +1,13 @@
 # Подписка, trial, paywall и платежи
 
 > **Статус:** client access core проверен 2026-07-18; pre-trial profile-only и
-> post-activation registration-marker contracts обновлены локально 2026-07-30;
-> payment code-path — 2026-07-28<br> **Охват:** статусы, кэш, write gate, trial
-> UI, payment create/status/webhook/refund, auth и идемпотентность<br> **Не
-> подтверждено/Не охвачено:** production payment rollout. **Deferred до
-> отдельного post-trial этапа:** deployment `heys-api-payments`, payment routes,
-> отдельный Lockbox и credentials ЮKassa. Их отсутствие не блокирует первые
-> реальные trial.
+> post-activation registration-marker contracts проверены production 2026-07-31;
+> active-trial UI contract обновлён локально 2026-07-31; payment code-path —
+> 2026-07-28<br> **Охват:** статусы, кэш, write gate, trial UI, payment
+> create/status/webhook/refund, auth и идемпотентность<br> **Не подтверждено/Не
+> охвачено:** production payment rollout. **Deferred до отдельного post-trial
+> этапа:** deployment `heys-api-payments`, payment routes, отдельный Lockbox и
+> credentials ЮKassa. Их отсутствие не блокирует первые реальные trial.
 
 ## Назначение и границы
 
@@ -123,6 +123,13 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 этого плана не открывается: пользователь направляется в существующий ручной
 контур, а платёж создаётся только после подтверждения места.
 
+Активный полный `trial` не занимает основной экран и шапку отдельным banner,
+сроком или CTA оплаты. Краткий остаток показывается только в свёрнутом разделе
+настроек, подробные `status/days_left` — внутри блока «Подписка». Досрочное
+оформление не предлагается клиенту: первые trial продлевает куратор. Для
+`read_only` сохраняются write-gate, readonly UI и paywall, но не постоянная
+subscription-строка над шапкой.
+
 Отдельный `refreshProfileSubscription()` обновляет профиль после auth, но не
 пишет subscription-only объект поверх ещё не загруженного полного профиля. При
 неполном local profile обновляется только отдельный status cache, а профиль
@@ -187,6 +194,15 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
     профиля из более нового полного sync того же клиента; marker снимается как
     stale. Если локальный профиль новее sync, marker продолжает блокировать
     flow.
+17. Активный `trial` не рендерит subscription status, срок или CTA на основном
+    экране; эти данные доступны только во втором слое настроек.
+18. Поздняя загрузка StepModal повторно регистрирует `payment_required` через
+    каноническое событие `document:heys-stepmodal-ready`; альтернативное имя или
+    `window` target не являются частью контракта.
+19. Повторное исполнение lazy chunk не очищает существующий StepModal registry:
+    внешние шаги сохраняются, а `payment_required` использует штатный
+    `component` contract. В `read_only` он показывает отдельный blocking gate с
+    контактом куратора, а не пустую модалку или CTA активного trial.
 
 ## Отложенный post-trial payment этап
 
@@ -214,6 +230,8 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
   отозванные self-start privileges и доступ active trial.
 - `apps/web/__tests__/first-login-registration-flow.test.js` — точечный cloud
   readback профиля и stale-marker guard после активации trial.
+- `apps/web/__tests__/subscription-settings-status-contract.test.js` — срок
+  активного trial во втором слое настроек и синхронность двух user-tab source.
 - `yandex-cloud-functions/heys-api-payments/__tests__/auth-helpers-cookie-session.test.cjs`
   — cookie/session auth.
 - `yandex-cloud-functions/heys-api-payments/__tests__/payment-status-webhook.test.cjs`
@@ -241,3 +259,6 @@ metadata, legacy `Subscriptions.canEdit` и async/sync Paywall делегиру�
 | B14 | До trial доступны согласия и профиль, но не чекин/dayv2/main UI                                                                                | `pnpm exec vitest run apps/web/__tests__/consent-gate-flow.test.js apps/web/__tests__/morning-checkin-flow-resume.test.js apps/web/__tests__/trial-prestart-access-contract.test.js`                                                                                | проверено локально 2026-07-30    |
 | B16 | Stale registration marker снимается только после более нового полного sync того же клиента; более свежая локальная запись остаётся fail-closed | `apps/web/heys_profile_step_v1.js:76-104`; `pnpm exec vitest run apps/web/__tests__/first-login-registration-flow.test.js --no-coverage`                                                                                                                            | 6/6 пройдено локально 2026-07-30 |
 | B15 | PIN self-start закрыт в gateway и DB privilege                                                                                                 | `pnpm test:db:trial-intake`                                                                                                                                                                                                                                         | проверено локально 2026-07-30    |
+| B17 | Active trial не создаёт header banner/CTA, а срок отображается только в настройках                                                             | `pnpm exec vitest run apps/web/__tests__/subscription-curator-guard.test.js apps/web/__tests__/subscription-settings-status-contract.test.js --no-coverage`                                                                                                         | проверено локально 2026-07-31    |
+| B18 | `payment_required` регистрируется после канонического StepModal-ready event                                                                    | `pnpm exec vitest run apps/web/__tests__/subscription-curator-guard.test.js --no-coverage`                                                                                                                                                                          | проверено локально 2026-07-31    |
+| B19 | Duplicate lazy execution сохраняет внешний StepModal registry и содержательный `payment_required` component                                    | `pnpm exec vitest run apps/web/__tests__/morning-checkin-flow-resume.test.js apps/web/__tests__/subscription-curator-guard.test.js --no-coverage`                                                                                                                   | проверено локально 2026-07-31    |

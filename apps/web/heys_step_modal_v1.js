@@ -449,7 +449,10 @@
   }
 
   // === Реестр шагов ===
-  const StepRegistry = {};;
+  // Lazy chunks can be requested both by the postboot loader and by a facade.
+  // Preserve already registered external steps if this module is evaluated
+  // again (for example during a same-version lazy/SW race).
+  const StepRegistry = HEYS.StepModal?.registry || {};
 
   /**
    * Регистрация нового шага
@@ -523,6 +526,7 @@
     const shownStepSigRef = useRef('');
     const frozenVisibleStepConfigsRef = useRef(null);
     const frozenContextKeyRef = useRef(null);
+    const registryTimeoutTraceRef = useRef('');
     const [registryVersion, setRegistryVersion] = useState(0);
     const [registryWaitExpired, setRegistryWaitExpired] = useState(false);
 
@@ -590,14 +594,42 @@
     const requestedStepIdsKey = steps.map((step) => (
       typeof step === 'string' ? step : (step?.id || '')
     )).join('|');
+    const missingStepIds = steps
+      .filter((stepId) => typeof stepId === 'string' && !StepRegistry[stepId]);
 
     useEffect(() => {
       if (currentConfig || steps.length === 0) {
         setRegistryWaitExpired(false);
+        registryTimeoutTraceRef.current = '';
         return undefined;
       }
       setRegistryWaitExpired(false);
-      const timer = setTimeout(() => setRegistryWaitExpired(true), 8000);
+      const timer = setTimeout(() => {
+        setRegistryWaitExpired(true);
+        const missingIds = steps
+          .filter((stepId) => typeof stepId === 'string' && !StepRegistry[stepId])
+          .slice(0, 8);
+        const signature = missingIds.join('|') || requestedStepIdsKey || 'unknown';
+        if (registryTimeoutTraceRef.current === signature) return;
+        registryTimeoutTraceRef.current = signature;
+        const updateState = HEYS.PlatformAPIs?.getUpdateState?.() || {};
+        HEYS.LogTrace?.event?.('step_registry_timeout', {
+          source: 'step_modal',
+          status: 'failed',
+          reason: 'missing_step_config',
+          step_id: missingIds.join(',') || 'unknown',
+          release_version: HEYS.PlatformAPIs?.getAppVersion?.() || HEYS.version || global.APP_VERSION || 'unknown',
+          update_version: updateState.version || 'none',
+          phase: HEYS.PlatformAPIs?.getSwUpdateState?.() || 'unknown'
+        }, 'warn');
+        console.warn('[StepModal] Step registry timeout', {
+          missingStepIds: missingIds,
+          reason: 'missing_step_config',
+          appVersion: HEYS.PlatformAPIs?.getAppVersion?.() || HEYS.version || global.APP_VERSION || 'unknown',
+          swState: HEYS.PlatformAPIs?.getSwUpdateState?.() || 'unknown',
+          updateVersion: updateState.version || null
+        });
+      }, 8000);
       return () => clearTimeout(timer);
     }, [currentConfig, registryVersion, requestedStepIdsKey, steps.length]);
 
@@ -1009,11 +1041,10 @@
     }, [onClose]);
 
     if (!currentConfig) {
-      const missingStepIds = steps
-        .filter((stepId) => typeof stepId === 'string' && !StepRegistry[stepId]);
       return React.createElement('div', {
         className: 'mc-backdrop',
-        'data-heys-step-modal-loading': 'true'
+        'data-heys-step-modal-loading': 'true',
+        'data-heys-step-modal-error': registryWaitExpired ? 'missing_step_config' : undefined
       },
         React.createElement('div', {
           className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}`,

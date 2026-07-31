@@ -1059,9 +1059,9 @@
         `Активна до ${formatDate(status.subscription_expires_at)}`
       ),
 
-      (status?.status === 'trial' || status?.status === 'read_only') &&
+      status?.status === 'read_only' &&
       h('button', { style: buttonStyle, onClick: () => setShowPayment(true) },
-        status?.status === 'trial' ? 'Оформить подписку' : 'Продлить подписку'
+        'Продлить подписку'
       )
     );
   }
@@ -1217,46 +1217,29 @@
   }
 
   // =====================================================
-  // P0.8: TrialCountdownBanner — sticky-плашка обратного отсчёта
+  // P0.8: TrialCountdownBanner — только блокирующее состояние доступа
   // =====================================================
 
   /**
-   * Sticky-плашка, висит сверху страницы. Цвет и текст зависят от
-   * subscription_status и days_left:
-   *   trial, daysLeft > 3 → нейтральная синяя
-   *   trial, 1 <= daysLeft <= 3 → жёлтая с CTA «Оформить»
-   *   read_only / daysLeft <= 0 → красная блокирующая с CTA
-   *   active / none → не рендерится
+   * Активный trial не занимает шапку и не предлагает досрочную оплату:
+   * срок доступен в настройках подписки. Баннер остаётся только для явно
+   * завершившегося доступа (read_only либо истёкший trial до refresh статуса).
    */
   function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade, onClose }) {
     const status = subscriptionStatus || 'none';
     const endDate = subscriptionEndsAt || trialEndsAt;
     const daysLeft = endDate ? daysUntil(endDate) : null;
 
-    if (status === 'active') return null;
-    if (status === 'none' && daysLeft === null) return null;
-
-    let bg, color, border, text, ctaText;
-
-    if (status === 'read_only' || (daysLeft !== null && daysLeft <= 0)) {
-      bg = '#fee2e2'; color = '#991b1b'; border = '#fca5a5';
-      text = '🔒 Доступ ограничен. Чтобы продолжить, оформите подписку.';
-      ctaText = 'Оформить подписку';
-    } else if (status === 'trial' && daysLeft !== null && daysLeft <= 3) {
-      bg = '#fef3c7'; color = '#92400e'; border = '#fcd34d';
-      text = `⏰ Осталось ${daysLeft} ${daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'} триала.`;
-      ctaText = 'Оформить подписку →';
-    } else if (status === 'trial' && daysLeft !== null) {
-      bg = '#dbeafe'; color = '#1e40af'; border = '#93c5fd';
-      text = `🎫 Триал до ${formatDate(trialEndsAt)} (${daysLeft} дн. осталось)`;
-      ctaText = 'Оформить';
-    } else if (status === 'trial_pending') {
-      bg = '#dbeafe'; color = '#1e40af'; border = '#93c5fd';
-      text = '🕐 Триал ожидает старта';
-      ctaText = null;
-    } else {
+    const isExpiredTrial = status === 'trial' && daysLeft !== null && daysLeft <= 0;
+    if (status !== 'read_only' && !isExpiredTrial) {
       return null;
     }
+
+    const bg = '#fee2e2';
+    const color = '#991b1b';
+    const border = '#fca5a5';
+    const text = '🔒 Доступ ограничен. Чтобы продолжить, оформите подписку.';
+    const ctaText = 'Оформить подписку';
 
     return h('div', {
       style: {
@@ -1381,24 +1364,13 @@
   function mountTrialUI({ clientId, clientName, subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade }) {
     if (typeof document === 'undefined' || !React || !ReactDOM) return null;
 
-    // 1. Sticky countdown banner — монтируем в начало body
-    let bannerHost = document.getElementById('heys-trial-banner-host');
-    if (!bannerHost) {
-      bannerHost = document.createElement('div');
-      bannerHost.id = 'heys-trial-banner-host';
-      document.body.insertBefore(bannerHost, document.body.firstChild);
+    // 1. Основной экран и шапка всегда свободны от subscription UI.
+    // Ограничение read_only/expired остаётся в HEYS.Paywall и readonly UI.
+    const bannerHost = document.getElementById('heys-trial-banner-host');
+    if (bannerHost) {
+      if (bannerHost._heysRoot) bannerHost._heysRoot.render(null);
+      bannerHost.remove();
     }
-    const bannerRoot = bannerHost._heysRoot || ReactDOM.createRoot(bannerHost);
-    bannerHost._heysRoot = bannerRoot;
-
-    bannerRoot.render(
-      h(TrialCountdownBanner, {
-        subscriptionStatus,
-        trialEndsAt,
-        subscriptionEndsAt,
-        onUpgrade: onUpgrade || (() => showPaymentRequired()),
-      })
-    );
 
     // 2. Welcome-модалка при первом логине.
     //
@@ -1493,13 +1465,12 @@
   };
 
   // =====================================================
-  // P0.8: Auto-bootstrap countdown-баннера и welcome-модалки
+  // P0.8: Auto-bootstrap welcome-модалки и очистка legacy header-баннера
   // =====================================================
   //
   // Слушает heys:profile-updated и при наличии активного клиента и
-  // данных подписки — монтирует TrialCountdownBanner + WelcomeFirstLogin
-  // в начало document.body. Это позволяет UI работать без явных правок
-  // в shell-приложении.
+  // данных подписки — удаляет legacy header banner и монтирует
+  // WelcomeFirstLogin. Subscription status показывается только в настройках.
 
   function readProfileForUI() {
     try {
@@ -1645,15 +1616,18 @@
       title: '🔒 Подписка не активна',
       icon: '💳',
       canSkip: false,
-      hideBackButton: true,
+      hideHeaderNext: true,
 
-      render: ({ onComplete }) => {
+      component: function PaymentRequiredStep({ context }) {
         // Phase 1 (A.7): pay-wall с ЮKassa выключен по умолчанию.
         // Чтобы включить — set HEYS.config.paymentsEnabled = true (Phase 2).
         const paymentsEnabled = !!(HEYS.config && HEYS.config.paymentsEnabled);
 
         if (!paymentsEnabled) {
-          return h(ContactCuratorScreen, { onClose: onComplete });
+          return h(ContactCuratorScreen, {
+            onClose: context?.onClose,
+            isReadOnly: true,
+          });
         }
 
         const [selectedPlan, setSelectedPlan] = React.useState('pro');
@@ -1713,9 +1687,7 @@
 
       validate: () => true, // Всегда можно закрыть
 
-      onSave: () => {
-        // Ничего не сохраняем, это информационный шаг
-      }
+      save: () => true,
     });
 
     return true;
@@ -1724,7 +1696,7 @@
   // Пытаемся зарегистрировать сразу
   if (!registerPaymentRequiredStep()) {
     // Если StepModal ещё не загружен — подписываемся на событие
-    window.addEventListener('heys:step-modal-ready', registerPaymentRequiredStep, { once: true });
+    document.addEventListener('heys-stepmodal-ready', registerPaymentRequiredStep, { once: true });
   }
 
   devLog('[HEYS] Subscriptions module loaded v1.0.0');

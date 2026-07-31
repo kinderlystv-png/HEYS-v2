@@ -195,7 +195,7 @@ apps/web/heys_storage_photos_v1.js:435
 apps/web/heys_storage_photos_v1.js:575
 apps/web/heys_subscription_v1.js:99
 apps/web/heys_subscriptions_v1.js:695
-apps/web/heys_subscriptions_v1.js:1432
+apps/web/heys_subscriptions_v1.js:1404
 apps/web/heys_training_step_v1.js:29
 apps/web/heys_trial_queue_v1.js:57
 apps/web/heys_ui_onboarding_v1.js:1133
@@ -204,8 +204,8 @@ apps/web/heys_ui_onboarding_v1.js:1665
 apps/web/heys_ui_onboarding_v1.js:1680
 apps/web/heys_ui_onboarding_v1.js:174
 apps/web/heys_ui_onboarding_v1.js:781
-apps/web/heys_user_tab_impl_v1.js:378
-apps/web/heys_user_tab_impl_v1.js:628
+apps/web/heys_user_tab_impl_v1.js:400
+apps/web/heys_user_tab_impl_v1.js:650
 apps/web/heys_user_v12.js:147
 apps/web/heys_user_v12.js:158
 apps/web/heys_weekly_reports_v2.js:36

@@ -410,6 +410,10 @@ describe('PWA update protection', () => {
       expect(platformSource).toContain('window.matchMedia?.(`(display-mode: ${mode})`).matches');
       expect(platformSource).toContain('navigator.standalone === true');
       expect(platformSource).toContain("await lockOrientation('portrait-primary')");
+      expect(platformSource).toContain("'NotSupportedError'");
+      expect(platformSource).toContain("'SecurityError'");
+      expect(platformSource).toContain("if (reason === 'not_supported')");
+      expect(platformSource).toContain("console.info('[Orientation] Lock unavailable in this display context:'");
       expect(platformSource).toContain('if (isAppleMobileWebKit() || !isInstalledPwa()');
       expect(platformSource).toContain('if (!isAppleMobileWebKit() || !isInstalledPwa() || !document.body');
       expect(platformSource).toContain("gate.id = 'heys-mobile-landscape-gate'");

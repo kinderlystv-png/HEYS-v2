@@ -14196,11 +14196,12 @@
       : Array.from(new Set([...allKeys, ...getForegroundHotSyncKeys('marker-scope')]));
     let markerScopes = [];
 
-    // Detect auth mode: session_token (PIN client) vs curator JWT
+    // Detect auth mode: PIN session (JS token or HttpOnly cookie) vs curator JWT.
     const hasSessionToken = !!(
       (typeof HEYS !== 'undefined' && HEYS.auth?.getSessionToken?.()) ||
       global.localStorage.getItem('heys_session_token')
     );
+    const hasPinSession = hasSessionToken || !!cloud.isPinAuthClient?.();
     const hasCuratorSession = (() => {
       try {
         return hasCuratorJwtAuth();
@@ -14225,7 +14226,7 @@
         // by_curator endpoint с explicit clientId.
         if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
           markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs, _lastMarkerCheckRevision);
-        } else if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
+        } else if (hasPinSession && typeof YandexAPI.getChangeMarkers === 'function') {
           markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs, _lastMarkerCheckRevision);
         }
 
@@ -14271,7 +14272,7 @@
 
         if (isCuratorMode && typeof YandexAPI.getKVBatchByCurator === 'function') {
           batchResult = await YandexAPI.getKVBatchByCurator(clientId, keysToFetch);
-        } else if (hasSessionToken && typeof YandexAPI.getKVBatch === 'function') {
+        } else if (hasPinSession && typeof YandexAPI.getKVBatch === 'function') {
           batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
         }
 

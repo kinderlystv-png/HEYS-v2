@@ -2775,6 +2775,18 @@
   // === Screen Orientation API ===
   // Управление ориентацией экрана
 
+  const EXPECTED_ORIENTATION_LOCK_ERRORS = new Set([
+    'NotSupportedError',
+    'SecurityError',
+    'InvalidStateError',
+    'AbortError'
+  ]);
+
+  function getOrientationLockFailureReason(error) {
+    const name = String(error?.name || '');
+    return EXPECTED_ORIENTATION_LOCK_ERRORS.has(name) ? 'not_supported' : 'unexpected_error';
+  }
+
   async function lockOrientation(orientation = 'portrait') {
     if (!screen.orientation?.lock) {
       console.log('[Orientation] Lock not supported');
@@ -2786,8 +2798,13 @@
       console.log('[Orientation] ✅ Locked to:', orientation);
       return { success: true, orientation };
     } catch (e) {
+      const reason = getOrientationLockFailureReason(e);
+      if (reason === 'not_supported') {
+        console.info('[Orientation] Lock unavailable in this display context:', e?.name || 'unknown');
+        return { success: false, reason, errorCode: e?.name || 'unknown' };
+      }
       console.error('[Orientation] Lock error:', e);
-      return { success: false, error: e.message };
+      return { success: false, reason, error: e?.message || String(e) };
     }
   }
 

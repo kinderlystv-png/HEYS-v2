@@ -11,6 +11,7 @@ const hungerSource = fs.readFileSync(path.join(webRoot, 'heys_hunger_energy_stat
 const stepModalSource = fs.readFileSync(path.join(webRoot, 'heys_step_modal_v1.js'), 'utf8');
 const consentsSource = fs.readFileSync(path.join(webRoot, 'heys_consents_v1.js'), 'utf8');
 const trialIntakeSource = fs.readFileSync(path.join(webRoot, 'heys_trial_intake_v1.js'), 'utf8');
+const gateFlowSource = fs.readFileSync(path.join(webRoot, 'heys_app_gate_flow_v1.js'), 'utf8');
 
 function visible(element) {
   element.getBoundingClientRect = () => ({ width: 390, height: 600, top: 0, left: 0, right: 390, bottom: 600 });
@@ -34,7 +35,7 @@ function createRuntime(options = {}) {
   const guard = createGuard({
     timeoutMs: 15000,
     retryTimeoutMs: 10000,
-    observe: false,
+    observe: options.observe === true,
     now: () => clock,
     requestAnimationFrame: (callback) => callback(),
     setTimeout: (callback) => {
@@ -98,6 +99,31 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(trialIntakeSource).toContain("'data-heys-visible-frame': 'trial-intake'");
     expect(trialIntakeSource).toContain("screen: 'trial-intake'");
     expect(trialIntakeSource).toContain("reason: 'trial_intake_screen_painted'");
+  });
+
+  it('accepts the route-level subscription loading screen before the timeout', async () => {
+    expect(gateFlowSource).toContain("visibleFrame: 'subscription-loading'");
+    expect(gateFlowSource).toContain("'data-heys-visible-frame': visibleFrame || undefined");
+
+    const runtime = createRuntime({ observe: true });
+    expect(runtime.guard.arm(runtime.root)).toBe(true);
+
+    const frame = visible(document.createElement('div'));
+    frame.dataset.heysVisibleFrame = 'subscription-loading';
+    runtime.root.replaceChildren(frame);
+
+    await vi.waitFor(() => {
+      expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toEqual([
+        expect.objectContaining({
+          context: expect.objectContaining({ reason: 'visible_marker_detected' }),
+        }),
+      ]);
+    });
+    runtime.setClock(15000);
+    runtime.timers[0]();
+
+    expect(document.getElementById('heys-boot-visual-guard')).toBeNull();
+    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
   });
 
   it('keeps the skeleton until a visible frame is confirmed after paint', () => {

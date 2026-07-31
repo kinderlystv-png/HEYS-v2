@@ -15,12 +15,13 @@ const PROGRESS_KEY = `heys_${CLIENT_ID}_morning_checkin_progress_v1_${DATE_KEY}`
 const LEGACY_PROGRESS_KEY = `heys_${CLIENT_ID}_heys_morning_checkin_progress_v1_${DATE_KEY}`;
 const DAY_KEY = `heys_${CLIENT_ID}_dayv2_${DATE_KEY}`;
 
-function loadStepModal() {
+function loadStepModal(heysOverrides = {}) {
   window.React = React;
   window.ReactDOM = { createRoot: vi.fn() };
   window.HEYS = {
     utils: { lsGet: () => ({}), lsSet: vi.fn() },
     dayUtils: { todayISO: () => DATE_KEY },
+    ...heysOverrides,
   };
   // eslint-disable-next-line no-new-func
   new Function(STEP_MODAL_SRC)();
@@ -142,9 +143,19 @@ describe('StepModal forced visibility', () => {
   it('offers a close action instead of loading forever when a step never registers', () => {
     vi.useFakeTimers();
     try {
-      const StepModal = loadStepModal();
+      const traceEvent = vi.fn();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const StepModal = loadStepModal({
+        version: '2026.07.31.test',
+        LogTrace: { event: traceEvent },
+        PlatformAPIs: {
+          getAppVersion: () => '2026.07.31.test',
+          getSwUpdateState: () => 'ready',
+          getUpdateState: () => ({ version: '2026.07.31.next' }),
+        },
+      });
       const onClose = vi.fn();
-      render(React.createElement(StepModal.Component, {
+      const view = render(React.createElement(StepModal.Component, {
         steps: ['missing-step'],
         onClose,
       }));
@@ -152,6 +163,19 @@ describe('StepModal forced visibility', () => {
       expect(screen.getByText('Загружаем следующий шаг…')).toBeTruthy();
       act(() => vi.advanceTimersByTime(8000));
       expect(screen.getByText('Не удалось загрузить шаг')).toBeTruthy();
+      expect(view.container.querySelector('[data-heys-step-modal-error="missing_step_config"]')).toBeTruthy();
+      expect(traceEvent).toHaveBeenCalledWith('step_registry_timeout', expect.objectContaining({
+        source: 'step_modal',
+        status: 'failed',
+        reason: 'missing_step_config',
+        step_id: 'missing-step',
+        release_version: '2026.07.31.test',
+        update_version: '2026.07.31.next',
+        phase: 'ready',
+      }), 'warn');
+      expect(warn).toHaveBeenCalledWith('[StepModal] Step registry timeout', expect.objectContaining({
+        missingStepIds: ['missing-step'],
+      }));
       fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     } finally {
@@ -205,6 +229,24 @@ describe('StepModal forced visibility', () => {
     loadStepModal();
 
     expect(ready).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves externally registered steps when a duplicate lazy load reinitializes StepModal', () => {
+    const modal = loadStepModal();
+    modal.registerStep('payment_required', {
+      title: 'Подписка не активна',
+      component: () => React.createElement('div', null, 'contact-curator'),
+    });
+
+    // Reproduce the confirmed runtime order: subscriptions register their
+    // external step, then a duplicate postboot-3 lazy chunk executes again.
+    // eslint-disable-next-line no-new-func
+    new Function(STEP_MODAL_SRC)();
+
+    expect(window.HEYS.StepModal.registry.payment_required).toEqual(expect.objectContaining({
+      id: 'payment_required',
+      title: 'Подписка не активна',
+    }));
   });
 
   it('keeps a planned step visible without changing ordinary shouldShow filtering', () => {

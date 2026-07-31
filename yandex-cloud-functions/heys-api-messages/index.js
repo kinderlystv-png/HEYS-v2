@@ -153,8 +153,7 @@ async function resolveIdentity(authHeader, cookieHeader) {
   const sessionToken = bearer || cookieSession;
   if (!sessionToken) return { error: 'missing_auth' };
 
-  const pool = getPool();
-  const client = await pool.connect();
+  const client = await acquireHealthyClient();
   try {
     const r = await client.query(
       `SELECT client_id FROM client_sessions
@@ -1627,35 +1626,36 @@ module.exports.handler = async function (event) {
   // ['messages', 'send' | 'thread' | 'inbox' | 'mark-read']
   const action = pathParts[1] || '';
 
-  // Все endpoints требуют auth (JWT, legacy LS-Bearer или HttpOnly cookie)
-  const identity = await resolveIdentity(
-    event.headers?.Authorization || event.headers?.authorization,
-    event.headers?.cookie || event.headers?.Cookie
-  );
-  if (identity.error) {
-    return {
-      statusCode: 401,
-      headers: cors,
-      body: JSON.stringify({ error: identity.error }),
-    };
-  }
-
-  let body = {};
   try {
-    if (event.body) {
-      body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    // Все endpoints требуют auth (JWT, legacy LS-Bearer или HttpOnly cookie).
+    // Identity resolution stays inside this boundary so exhausted transient DB
+    // retries still return the function's credentialed-CORS JSON response.
+    const identity = await resolveIdentity(
+      event.headers?.Authorization || event.headers?.authorization,
+      event.headers?.cookie || event.headers?.Cookie
+    );
+    if (identity.error) {
+      return {
+        statusCode: 401,
+        headers: cors,
+        body: JSON.stringify({ error: identity.error }),
+      };
     }
-  } catch {
-    return {
-      statusCode: 400,
-      headers: cors,
-      body: JSON.stringify({ error: 'invalid_json' }),
-    };
-  }
 
-  const query = event.queryStringParameters || {};
+    let body = {};
+    if (event.body) {
+      try {
+        body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      } catch {
+        return {
+          statusCode: 400,
+          headers: cors,
+          body: JSON.stringify({ error: 'invalid_json' }),
+        };
+      }
+    }
 
-  try {
+    const query = event.queryStringParameters || {};
     let res;
     switch (action) {
       case 'send':
