@@ -115,7 +115,15 @@ export default function PriceSection() {
                 </a>
               ) : null}
 
-              <p className="mt-2 text-center text-[12px] text-slate-500">{item.note}</p>
+              {/* Под кнопкой сноска центрируется вместе с ней, без кнопки —
+                  продолжает левый край списка, иначе висит сама по себе. */}
+              <p
+                className={`text-[12px] text-slate-500 ${
+                  item.cta ? 'mt-2 text-center' : 'mt-3'
+                }`}
+              >
+                {item.note}
+              </p>
             </article>
           ))}
         </div>

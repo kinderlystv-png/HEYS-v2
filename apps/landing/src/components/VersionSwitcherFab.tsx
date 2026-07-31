@@ -21,6 +21,9 @@ import {
  *
  * Признак «свой»: localhost, либо флаг `heys_dev_mode` в localStorage, либо
  * разовый параметр `?owner=1` (он же ставит флаг, чтобы не тащить его дальше).
+ * Сам параметр сразу вычищается из адресной строки, иначе он уехал бы наружу
+ * вместе со скопированной ссылкой. `?owner=0` снимает флаг — это единственный
+ * способ отозвать доступ на чужом устройстве.
  */
 
 const OWNER_FLAG_KEY = 'heys_dev_mode';
@@ -38,9 +41,24 @@ export default function VersionSwitcherFab({ current }: { current: LandingVersio
     let hasFlag = false;
     try {
       hasFlag = localStorage.getItem(OWNER_FLAG_KEY) === 'true';
-      if (new URLSearchParams(search).get(OWNER_PARAM) === '1') {
+
+      const param = new URLSearchParams(search).get(OWNER_PARAM);
+      if (param === '1') {
         localStorage.setItem(OWNER_FLAG_KEY, 'true');
         hasFlag = true;
+      } else if (param === '0') {
+        // Флаг живёт в браузере бессрочно. Если ссылку с `?owner=1` открыли не
+        // на том устройстве, отозвать доступ больше нечем — кроме `?owner=0`.
+        localStorage.removeItem(OWNER_FLAG_KEY);
+        hasFlag = false;
+      }
+
+      if (param !== null) {
+        // Параметр разовый: признак уже сохранён в браузере, а в адресной
+        // строке он остался бы и уехал дальше вместе со скопированной ссылкой.
+        const url = new URL(window.location.href);
+        url.searchParams.delete(OWNER_PARAM);
+        window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
       }
     } catch {
       /* приватный режим — просто остаёмся скрытыми */
@@ -75,12 +93,12 @@ export default function VersionSwitcherFab({ current }: { current: LandingVersio
   if (!allowed || demoOpen) return null;
 
   return (
-    <div className="fixed bottom-5 left-5 z-[9998] font-sans">
+    <div className="fixed bottom-2 left-2 z-[9998] font-sans">
       {open ? (
         <div
           role="menu"
           aria-label="Версии лендинга"
-          className="absolute bottom-16 left-0 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          className="absolute bottom-11 left-0 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         >
           <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-sm font-semibold text-slate-800">Версия лендинга</p>
@@ -124,16 +142,22 @@ export default function VersionSwitcherFab({ current }: { current: LandingVersio
         </div>
       ) : null}
 
+      {/* Кнопка висит поверх страницы, которую владелец в этот момент и
+          оценивает, поэтому она отжата в самый угол и в покое приглушена:
+          непрозрачный круг закрывал текст на каждом втором экране. При
+          наведении, фокусе и в открытом состоянии она снова полностью видима.
+          Размер меньше пальцевого минимума сознательно — это приватный
+          инструмент владельца, а не элемент продукта. */}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={`Версия лендинга: ${current}. Открыть выбор версии`}
-        className={`flex h-12 w-12 items-center justify-center rounded-full border text-base font-semibold shadow-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+        className={`flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold shadow-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
           open
             ? 'scale-95 border-slate-800 bg-slate-800 text-white'
-            : 'border-slate-200 bg-white text-slate-800 hover:scale-105'
+            : 'border-slate-200 bg-white/70 text-slate-800 opacity-45 backdrop-blur-sm hover:scale-105 hover:bg-white hover:opacity-100 focus-visible:bg-white focus-visible:opacity-100'
         }`}
       >
         {current}

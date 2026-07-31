@@ -18,11 +18,15 @@ const DAYS = [
   { day: 'Вс', meals: true, sleepShort: false, lateDinner: false },
 ];
 
+// Легенда обязана покрывать все состояния схемы, иначе бледный столбик
+// читается как «непонятно что». Форма значка повторяет форму на схеме:
+// столбик — про день целиком, точка — про отдельное обстоятельство.
 const LEGEND = [
-  { className: 'bg-emerald-500', label: 'день в дневнике' },
-  { className: 'bg-amber-400', label: 'поздний ужин' },
-  { className: 'bg-rose-400', label: 'короткий сон' },
-];
+  { shape: 'bar', className: 'bg-emerald-500/90', label: 'все приёмы пищи' },
+  { shape: 'bar', className: 'bg-emerald-100', label: 'день с пропуском' },
+  { shape: 'dot', className: 'bg-amber-400', label: 'поздний ужин' },
+  { shape: 'dot', className: 'bg-rose-400', label: 'короткий сон' },
+] as const;
 
 export default function WeekArtifact() {
   return (
@@ -67,10 +71,15 @@ export default function WeekArtifact() {
           короче обычного, три вечера ужин позже привычного.
         </p>
 
-        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
           {LEGEND.map((item) => (
             <li key={item.label} className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${item.className}`} />
+              <span
+                aria-hidden="true"
+                className={`shrink-0 ${
+                  item.shape === 'bar' ? 'h-2.5 w-2 rounded-[3px]' : 'h-1.5 w-1.5 rounded-full'
+                } ${item.className}`}
+              />
               {item.label}
             </li>
           ))}

@@ -8,8 +8,8 @@
 
 import { Metadata } from 'next';
 
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import VersionA from '@/components/versions/VersionA';
+import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { VARIANTS } from '@/config/landing-variants';
 
 // Метаданные для главной страницы

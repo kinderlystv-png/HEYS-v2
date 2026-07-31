@@ -5,8 +5,8 @@
 
 import { Metadata } from 'next';
 
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import VersionC from '@/components/versions/VersionC';
+import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 export const metadata: Metadata = {
