@@ -1,13 +1,17 @@
-// Черновая версия B — нарратив по образцу Future (`маркетинг/45`).
+// Черновая версия B — «страница-знакомство» по образцу Future (`маркетинг/47`).
 //
 // Отдельный статический роут: страница существует для личного выбора владельца
 // и не связана ссылками с публичной версией. Индексация запрещена.
+//
+// Страница собрана вокруг скролл-hero (`45`, «Скролл-механика Future»). Готовые
+// главы из `VersionB` в репозитории есть, но здесь пока не подключены: сначала
+// владелец выбирает первый экран, потом под него собирается тело версии.
 
 import { Metadata } from 'next';
 
+import VersionDraft from '@/components/versions/VersionDraft';
 import FontSwitcherFab from '@/components/versions/b/FontSwitcherFab';
 import HeroScrollStage from '@/components/versions/b/HeroScrollStage';
-import VersionDraft from '@/components/versions/VersionDraft';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { VARIANTS } from '@/config/landing-variants';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';

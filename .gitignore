@@ -86,6 +86,8 @@ apps/landing/public/*
 !apps/landing/public/hero-curator-demo.mp4
 !apps/landing/public/hero-curator-demo.webm
 !apps/landing/public/hero-curator-demo-poster.jpg
+# Version B media (interim photos now, shoot materials in phase 3)
+!apps/landing/public/b/
 # But keep legal docs in apps/web/public/docs
 !apps/web/public/docs/
 !apps/web/public/
