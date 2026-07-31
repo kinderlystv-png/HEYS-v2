@@ -41,6 +41,11 @@ export interface VariantContent {
   hero: {
     headline: string;
     subheadline: string;
+    /**
+     * Разбивка подзаголовка на строки для широкого экрана: на мобильном текст
+     * всегда идёт сплошняком. По умолчанию — одна строка `subheadline`.
+     */
+    subheadlineDesktopLines?: string[];
     features?: string[]; // H3 — пункты под subheadline
     ctaPrimary: string;
     /** Куда ведёт главная кнопка первого экрана. По умолчанию `#curator`. */
@@ -173,6 +178,10 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
       headline: 'Ваш дневник питания ведёт куратор.',
       subheadline:
         'Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.',
+      subheadlineDesktopLines: [
+        'Фото, голосовое или короткое сообщение — этого достаточно.',
+        'Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.',
+      ],
       features: [],
       ctaPrimary: 'Понять, как работает HEYS',
       ctaSecondary: '',

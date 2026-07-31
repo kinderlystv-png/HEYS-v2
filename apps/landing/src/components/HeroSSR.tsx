@@ -108,6 +108,12 @@ function Hero({ content }: HeroSSRProps) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Подзаголовок на широком экране версия вправе разбить на строки; на
+  // мобильном он всегда идёт сплошняком.
+  const subheadlineDesktopLines = content.hero.subheadlineDesktopLines ?? [
+    content.hero.subheadline,
+  ];
+
   // Куда ведут кнопка и подсказка прокрутки, решает контент версии: у A это
   // блок «как устроено», у других версий может не быть такой секции.
   const ctaHref = content.hero.ctaPrimaryHref ?? '#curator';
@@ -192,20 +198,22 @@ function Hero({ content }: HeroSSRProps) {
                 }`}
                 style={{ transitionDelay: '800ms' }}
               >
-                <span className="md:hidden">
-                  Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в
-                  приложение, оценивает всё в контексте вашей недели и делится своими
-                  рекомендациями.
-                </span>
+                <span className="md:hidden">{content.hero.subheadline}</span>
                 <span className="hidden md:inline">
-                  Фото, голосовое или короткое сообщение — этого достаточно.
-                  <br />
-                  Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и
-                  делится своими рекомендациями.
+                  {subheadlineDesktopLines.map((line, index) => (
+                    <span key={line}>
+                      {index > 0 ? <br /> : null}
+                      {line}
+                    </span>
+                  ))}
                 </span>
               </h2>
 
-              {/* CTA — first move is understanding the format, not forcing a form. */}
+              {/* CTA — first move is understanding the format, not forcing a form.
+                  Главное действие не сжимается вместе с блоком: подгонка высоты
+                  уменьшает весь первый экран, и кнопка уезжала до 18px. Компенсацию
+                  считаем числом — прежний `scale(max(1, calc(… var(…))))` браузер
+                  отбрасывал целиком, то есть компенсации не было вовсе. */}
               <div
                 className={`hero-mobile-actions flex flex-row flex-wrap items-center justify-center gap-x-6 gap-y-3 transition-all duration-700 ease-out lg:mb-4 lg:justify-start ${
                   mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
@@ -216,7 +224,8 @@ function Hero({ content }: HeroSSRProps) {
                   href={ctaHref}
                   className="hero-mobile-primary inline-flex items-center justify-center gap-2 bg-[#1D70B7] px-6 py-3 text-white font-semibold rounded-2xl hover:bg-[#185F9D] transition-all text-[14px] tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)]"
                   style={{
-                    transform: 'scale(max(1, calc(0.88 / var(--hero-content-scale, 1))))',
+                    transform:
+                      contentScale < 1 ? `scale(${(1 / contentScale).toFixed(4)})` : undefined,
                   }}
                 >
                   {content.hero.ctaPrimary}

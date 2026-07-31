@@ -214,8 +214,7 @@ body {
 .hero-brand-plus-pattern {
   pointer-events: none;
   opacity: 0.22;
-  background-image:
-    url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%2352A0D8'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%2352A0D8'/%3E%3C/svg%3E");
   background-position:
     calc(100% - 88px) 68px,
     28px calc(100% - 168px);
@@ -328,11 +327,13 @@ body {
     --hero-mobile-action-mb: clamp(2px, 1dvh, 4px);
     --hero-mobile-action-gap-x: clamp(10px, 3vw, 14px);
     --hero-mobile-action-gap-y: clamp(4px, 1.2dvh, 6px);
-    --hero-mobile-button-h: clamp(30px, 7dvh, 36px);
-    --hero-mobile-button-py: clamp(6px, 1.6dvh, 8px);
+    /* Нижняя граница главного действия: даже на низком экране палец должен
+       попадать. Остальные элементы первого экрана ужимаются, кнопка — нет. */
+    --hero-mobile-button-h: clamp(42px, 7dvh, 44px);
+    --hero-mobile-button-py: clamp(8px, 1.6dvh, 10px);
     --hero-mobile-button-px: clamp(14px, 4.2vw, 18px);
     --hero-mobile-button-radius: clamp(10px, 3vw, 13px);
-    --hero-mobile-button-size: clamp(10.5px, 3vw, 12px);
+    --hero-mobile-button-size: clamp(12px, 3.4vw, 13px);
     --hero-mobile-micro-size: clamp(9px, 2.7vw, 10.5px);
   }
 

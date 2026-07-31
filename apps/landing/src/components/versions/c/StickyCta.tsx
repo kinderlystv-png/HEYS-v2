@@ -41,8 +41,13 @@ export default function StickyCta() {
 
   return (
     <div
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-end px-4 pb-4 transition-all duration-300 ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
+      // Глобальное правило `prefers-reduced-motion` в лендинге гасит только
+      // анимации первого экрана, а панель ездит по вертикали. Для тех, кто
+      // просил меньше движения, оставляем появление через прозрачность.
+      className={`pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-end px-4 pb-4 transition-all duration-300 motion-reduce:transition-opacity ${
+        visible
+          ? 'translate-y-0 opacity-100'
+          : 'pointer-events-none translate-y-4 opacity-0 motion-reduce:translate-y-0'
       }`}
       aria-hidden={!visible}
     >

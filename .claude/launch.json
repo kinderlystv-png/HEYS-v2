@@ -25,6 +25,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:landing"],
       "port": 3003
+    },
+    {
+      "name": "landing-alt",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/landing", "exec", "next", "dev", "-p", "3013"],
+      "port": 3013
     }
   ]
 }

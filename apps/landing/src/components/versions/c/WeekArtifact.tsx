@@ -28,6 +28,15 @@ const LEGEND = [
   { shape: 'dot', className: 'bg-rose-400', label: 'короткий сон' },
 ] as const;
 
+// Второй слой самого артефакта: та же демонстрационная неделя, но подробности,
+// которые не нужны для решения и мешали бы читать схему. Только наблюдения из
+// дневника — без выводов о результате и без обещаний.
+const EXTRA_SIGNALS = [
+  'В какое время был каждый приём пищи и сколько часов между ними',
+  'Сколько дней подряд повторялся сдвиг, а не был ли он разовым',
+  'Что вы писали про самочувствие и нагрузку в эти дни',
+];
+
 export default function WeekArtifact() {
   return (
     <figure className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -116,6 +125,33 @@ export default function WeekArtifact() {
           </p>
         </div>
       </div>
+
+      {/* Тому, кто захотел вглядеться, должно быть что показать: артефакт —
+          главный аргумент версии, и упираться в тупик он не должен. Раскрытие
+          остаётся на той же демонстрационной неделе и не добавляет ни обещаний,
+          ни цифр результата. */}
+      <details className="group border-t border-slate-100">
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-4 px-5 text-[13px] font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          Что ещё видит куратор в этой неделе
+          <span
+            aria-hidden="true"
+            className="shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+          >
+            ▾
+          </span>
+        </summary>
+        <ul className="space-y-2 px-5 pb-4 text-[14px] leading-5 text-slate-600">
+          {EXTRA_SIGNALS.map((item) => (
+            <li key={item} className="flex gap-2.5">
+              <span
+                aria-hidden="true"
+                className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-slate-400"
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
 
       <p className="border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] text-slate-400">
         Демонстрационный пример

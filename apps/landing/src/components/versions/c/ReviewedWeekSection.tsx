@@ -33,7 +33,7 @@ export default function ReviewedWeekSection() {
     <section id="reviewed-week" className="bg-slate-50 px-5 py-14 sm:px-8 sm:py-16">
       <div className="mx-auto w-full max-w-xl">
         <h2 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-          Вы получаете разобранную неделю.
+          Вот как выглядит разобранная неделя.
         </h2>
         <p className="mt-3 text-[15px] leading-6 text-slate-600">
           Не один неидеальный день, а изменения за неделю — и один выполнимый шаг дальше.
