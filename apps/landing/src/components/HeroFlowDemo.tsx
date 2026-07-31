@@ -72,10 +72,10 @@ export default function HeroFlowDemo() {
     setCard(null);
   }, [clearInterstitialTimers]);
 
-  const handleTimeUpdate = useCallback(() => {
+  const checkInterstitial = useCallback((time: number) => {
     const video = videoRef.current;
     if (!video || interstitialPauseRef.current) return;
-    const t = video.currentTime;
+    const t = time;
 
     // Loop или перемотка назад — разрешаем показать карточки заново.
     if (lastShownAtRef.current !== null && t < lastShownAtRef.current - 1) {
@@ -91,10 +91,10 @@ export default function HeroFlowDemo() {
     lastShownAtRef.current = next.at;
     interstitialPauseRef.current = true;
     video.pause();
-    // timeupdate тикает ~4 раза в секунду, поэтому пауза случается с дрейфом
-    // до ~0,25с после таймкода. Отматываем ровно на границу сцены: замерший
-    // кадр под карточкой и точка возобновления всегда одни и те же.
-    video.currentTime = next.at;
+    // Страховка на случай fallback-тика (`timeupdate`, ~4 раза в секунду):
+    // возвращаем кадр ровно на границу сцены. При покадровом источнике
+    // (`requestVideoFrameCallback`) перебег ≤ одного кадра и отмотка незаметна.
+    if (Math.abs(video.currentTime - next.at) > 0.01) video.currentTime = next.at;
     setCard({ text: next.text, leaving: false });
     interstitialTimersRef.current = [
       window.setTimeout(() => {
@@ -109,6 +109,45 @@ export default function HeroFlowDemo() {
       }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS + INTERSTITIAL_EXIT_MS),
     ];
   }, []);
+
+  // Покадровый источник тика. `timeupdate` срабатывает ~4 раза в секунду, из-за
+  // чего пауза наступала уже на первом кадре следующей сцены: зритель успевал
+  // увидеть новый фон, и последующая отмотка читалась как моргание.
+  // requestVideoFrameCallback даёт время фактически показанного кадра, поэтому
+  // перебег не превышает длительности одного кадра.
+  const frameHandleRef = useRef<number | null>(null);
+  const startFrameLoop = useCallback(() => {
+    const video = videoRef.current;
+    if (!video?.requestVideoFrameCallback || frameHandleRef.current !== null) return;
+    const tick: VideoFrameRequestCallback = (_now, metadata) => {
+      frameHandleRef.current = null;
+      checkInterstitial(metadata.mediaTime);
+      const current = videoRef.current;
+      if (current?.requestVideoFrameCallback && !current.paused) {
+        frameHandleRef.current = current.requestVideoFrameCallback(tick);
+      }
+    };
+    frameHandleRef.current = video.requestVideoFrameCallback(tick);
+  }, [checkInterstitial]);
+
+  useEffect(() => {
+    startFrameLoop();
+    return () => {
+      const video = videoRef.current;
+      if (video?.cancelVideoFrameCallback && frameHandleRef.current !== null) {
+        video.cancelVideoFrameCallback(frameHandleRef.current);
+      }
+      frameHandleRef.current = null;
+    };
+  }, [startFrameLoop]);
+
+  // Fallback для браузеров без requestVideoFrameCallback (например Firefox).
+  // В типах DOM метод объявлен всегда, поэтому проверяем именно runtime.
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || typeof video.requestVideoFrameCallback === 'function') return;
+    checkInterstitial(video.currentTime);
+  }, [checkInterstitial]);
 
   const updatePhase = useCallback((next: PlaybackPhase) => {
     phaseRef.current = next;
@@ -244,6 +283,8 @@ export default function HeroFlowDemo() {
           aria-label="Демонстрация: клиент пишет куратору, а данные появляются в HEYS"
           onPlaying={() => {
             if (phaseRef.current !== 'probing') updatePhase('playing');
+            // Цепочка rVFC обрывается на паузе — поднимаем её заново.
+            startFrameLoop();
           }}
           onWaiting={() => {
             if (phaseRef.current === 'playing') updatePhase('buffering');
