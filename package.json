@@ -89,6 +89,7 @@
     "reading:new": "node scripts/create-reading-summary.mjs",
     "reading:personalization:sync": "node scripts/sync-reading-personalization.mjs",
     "release": "pnpm run build:packages && changeset publish",
+    "release:preflight": "node scripts/release-preflight.mjs",
     "release:prepare-and-commit": "node scripts/release-prepare-and-commit.mjs",
     "security:l6-watchdogs": "node scripts/security/l6-watchdogs-check.mjs",
     "security:sbom": "node scripts/security/generate-sbom.js",

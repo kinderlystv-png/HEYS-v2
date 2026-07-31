@@ -390,7 +390,11 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(deployAllSource).toContain('API_GATEWAY_ID="${API_GATEWAY_ID:-d5d7939njvjp27ofsok0}"');
     expect(deployAllSource).toContain('API_GATEWAY_SPEC="${API_GATEWAY_SPEC:-$SCRIPT_DIR/api-gateway-spec.yaml}"');
     expect(deployAllSource).toMatch(/update_api_gateway\(\)[\s\S]*yc serverless api-gateway update[\s\S]*--id "\$API_GATEWAY_ID"[\s\S]*--spec "\$API_GATEWAY_SPEC"/);
-    expect(deployAllSource).toMatch(/if \[ "\$TARGET_FUNC" = "heys-api-auth" \]; then[\s\S]*SHOULD_UPDATE_GATEWAY=true/);
+    // Переменная цикла деплоя называется `func_name` (раньше `TARGET_FUNC`).
+    // Контракт прежний: после выката heys-api-auth шлюз обязан обновиться.
+    expect(deployAllSource).toMatch(/if \[ "\$func_name" = "heys-api-auth" \]; then[\s\S]*SHOULD_UPDATE_GATEWAY=true/);
+    // Групповой деплой api/all тоже обновляет шлюз — иначе роуты разъедутся с функциями.
+    expect(deployAllSource).toMatch(/"\$DEPLOY_GROUP" == "api" \|\| "\$DEPLOY_GROUP" == "all"[\s\S]*SHOULD_UPDATE_GATEWAY=true/);
   });
 
   it('keeps cookie-auth cloud functions covered by CI/manual all deploys', () => {
@@ -398,14 +402,22 @@ describe('TASK-005: write-context upload resilience', () => {
       expect(functionInventorySource).toContain(`name: '${functionName}'`);
       expect(functionInventorySource).toMatch(new RegExp(`name: '${functionName}'[^\n]+autoDeploy: true`));
     }
-    for (const envName of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT']) {
+    // Публичные VAPID-параметры прокидываются через CI-секреты.
+    for (const envName of ['VAPID_PUBLIC_KEY', 'VAPID_SUBJECT']) {
       expect(cloudFunctionsDeployWorkflowSource).toContain(`${envName}: \${{ secrets.${envName} }}`);
       expect(cloudFunctionsDeployWorkflowSource).toContain(`write_env_var ${envName} "$${envName}"`);
     }
+    // Приватный ключ намеренно НЕ ходит через GitHub Actions env: он выдаётся
+    // функции ссылкой на Lockbox. Тест удерживает именно этот контракт, иначе
+    // возврат секрета в CI-переменные пройдёт незамеченным.
+    expect(cloudFunctionsDeployWorkflowSource).not.toContain('VAPID_PRIVATE_KEY');
+    expect(deployAllSource).toContain('VAPID_PRIVATE_KEY=__IN_LOCKBOX__');
+    // S3-доступы, как и приватный VAPID, живут в Lockbox: функция получает
+    // ссылку на секрет, а не сами ключи через CI-переменные.
     for (const envName of ['S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']) {
-      expect(cloudFunctionsDeployWorkflowSource).toContain(`${envName}: \${{ secrets.${envName} }}`);
-      expect(cloudFunctionsDeployWorkflowSource).toContain(`write_env_var ${envName} "$${envName}"`);
+      expect(cloudFunctionsDeployWorkflowSource).not.toContain(envName);
     }
+    expect(deployAllSource).toContain('LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID');
     expect(deployAllSource).toContain('done < <(selected_functions)');
     expect(deployAllSource).toContain('"$TEST_SCRIPT" "${PREDEPLOY_TARGETS[@]}"');
 

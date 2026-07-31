@@ -42,7 +42,7 @@ release readiness» (`22:346–366`) — именно там источник п
 | P1: broad training test isolation failure (`kernel-training-focus-ui.test.js`)               | **Закрыто проверкой 2026-07-31:** broad-прогон `kernel-*` + `fingers-*` + `mobility-*` + `training-step-drums-tab` дважды подряд зелёный — 74 файла, 983 теста. Падение на дублирующемся табе «Сегодня» не воспроизводится; отдельного фикса изоляции не потребовалось                                                                                                                                                                                                                                                                                            | `22` § 1.10.7                                                                                                       |
 | P1: Android/DayTab performance smoke перед широким запуском                                  | **Актуально, открыто** как физический smoke на устройстве. Частная причина скрытой работы DayTab закрыта и измерена 2026-07-18: скрытый отложенный commit `38.1 → 0.5 ms`, тёплый переход `279.1 → 256.1 ms` (390×844, 6× CPU), регрессия `day-diary-section-mobile-fast-path.test.js`                                                                                                                                                                                                                                                                            | `22` § 1.10.8, `todo.md` § «Сейчас», `IMPROVEMENT_HISTORY` P2-09                                                    |
 | P1: support diagnostics card                                                                 | **Закрыто существующим инструментом (проверено 2026-07-31):** `apps/web/heys_client_diagnostics_v1.js` — вкладка «Диагн.» в панели куратора. `sessionDebugReport()` собирает одной кнопкой client_id, устройство/ОС/браузер, boot/build id, проблемный этап и событие, тайминги, счётчики ошибок, состояние начальной синхронизации и ленту событий с размером очереди; контекст фильтруется whitelist'ом `SAFE_CONTEXT_KEYS`, поэтому токены и секреты в отчёт не попадают. Отдельный шаблон-карточку не заводим — он бы дублировал инструмент и разошёлся с ним | `22` § 1.10.9                                                                                                       |
-| P1: pre-release command pack зафиксировать                                                   | **Частично:** состав пакета зафиксирован, регулярный прогон перед S1 ещё не закреплён                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `22` § 1.10.5                                                                                                       |
+| P1: pre-release command pack зафиксировать                                                   | **Закрыто 2026-07-31:** пакет собран в одну команду `pnpm release:preflight` (`scripts/release-preflight.mjs`) — восемь проверок по порядку, остановка на первой ошибке, ничего не мутирует, ~16 с. Первый же прогон нашёл два устаревших assertion в `task-005`; после их синхронизации с текущим деплой-контуром пакет зелёный целиком                                                                                                                                                                                                                          | `22` § 1.10.5                                                                                                       |
 | P1 (док-долг): `ARCHITECTURE.md` говорит `storage_audit_enforce` default `false`             | **Устранено 2026-07-31:** документ приведён к source. Помимо дефолта поправлено второе устаревшее утверждение — merge-ключи с Phase 5 тоже enforced, но через `_mergeAndPrune` (cloud-merge, затем усечение). Runtime подтвердил `isEnabled('storage_audit_enforce') === true` без localStorage-override                                                                                                                                                                                                                                                          | `22` § 1.10.10                                                                                                      |
 
 ### Актуальный scorecard — сверка 2026-07-31
@@ -65,11 +65,11 @@ release readiness» (`22:346–366`) — именно там источник п
 ### Что осталось открытым по этому аудиту
 
 По статусам `22`/`25` на 2026-07-31 ни один пункт аудита не блокирует R0.
-Открытыми остаются два P1: регулярный pre-release pack (1.10.5) и физический
-Android/DayTab smoke (1.10.8) — последний требует реального устройства. Закрыты
-2026-07-31: data-loss/recovery smoke (1.10.4), broad training isolation
-(1.10.7), support diagnostics card (1.10.9) и документационный drift
-`storage_audit_enforce` (1.10.10).
+Открытым остаётся один P1: физический Android/DayTab smoke (1.10.8) — он требует
+реального устройства. Закрыты 2026-07-31: data-loss/recovery smoke (1.10.4),
+pre-release pack (1.10.5), broad training isolation (1.10.7), support
+diagnostics card (1.10.9) и документационный drift `storage_audit_enforce`
+(1.10.10).
 
 Оговорка к P0 «tenant isolation»: закрытие подтверждено для REST-пути. Покрытие
 `heys-api-rpc` strict-режимом решением владельца от 2026-07-31 принято как
@@ -327,6 +327,19 @@ Use this as the short gate before real clients.
 ## 8. Testing & Verification Plan
 
 ### Required pre-release pack
+
+С 2026-07-31 весь пакет запускается одной командой — она и есть регламент:
+
+```bash
+pnpm release:preflight
+```
+
+Скрипт `scripts/release-preflight.mjs` прогоняет проверки по порядку и
+останавливается на первой ошибке, чтобы «зелёный прогон» нельзя было получить
+частично. Полный список проблем за один заход:
+`pnpm release:preflight -- --continue-on-error`. Ничего не мутирует.
+
+Состав (он же — то, что нужно прогнать вручную, если команда недоступна):
 
 ```bash
 pnpm validate:ci
