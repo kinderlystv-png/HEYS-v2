@@ -12,9 +12,9 @@ import {
   useState,
 } from 'react';
 
-import logoHeroBlue from '../assets/logo-hero-blue.png';
-
 import HeroFlowDemo from './HeroFlowDemo';
+import LandingHeader from './LandingHeader';
+import LandingNav, { useLandingNav } from './LandingNav';
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants';
 
@@ -23,8 +23,19 @@ interface HeroSSRProps {
   variant: LandingVariant;
 }
 
-export default function HeroSSR({ content }: HeroSSRProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+// Навигация живёт над версиями страницы. Пока версия не обернула себя в
+// LandingNav сама, hero поднимает её сам — чтобы меню не исчезло.
+export default function HeroSSR(props: HeroSSRProps) {
+  const nav = useLandingNav();
+  if (nav) return <Hero {...props} />;
+  return (
+    <LandingNav links={props.content.nav.links}>
+      <Hero {...props} />
+    </LandingNav>
+  );
+}
+
+function Hero({ content }: HeroSSRProps) {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -73,8 +84,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
     // content too would feedback-loop: applying air grows the content →
     // ResizeObserver fires → re-measure → oscillation. The slot's height is
     // independent of the air we inject, so it's the stable signal.
-    const ro =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(queue);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(queue);
     if (fitSlotRef.current) ro?.observe(fitSlotRef.current);
     return () => {
       if (raf) cancelAnimationFrame(raf);
@@ -98,11 +108,14 @@ export default function HeroSSR({ content }: HeroSSRProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Hide scroll cue when user scrolls
+  // Куда ведут кнопка и подсказка прокрутки, решает контент версии: у A это
+  // блок «как устроено», у других версий может не быть такой секции.
+  const ctaHref = content.hero.ctaPrimaryHref ?? '#curator';
+  const scrollCueHref = content.hero.scrollCueHref ?? ctaHref;
+
+  // Подсказка скролла прячется, как только пользователь тронул страницу.
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -120,82 +133,10 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       />
       <div className="hero-brand-plus-pattern absolute inset-0" aria-hidden="true" />
 
-      {/* Header */}
-      <header
-        className={`relative w-full transition-all duration-700 ease-out ${
-          mounted ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="hero-mobile-header mx-auto w-full max-w-[1024px] py-4 pl-6 pr-4 md:px-6 flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logoHeroBlue.src} alt="HEYS" width={80} height={53} />
-          </div>
-
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
-            {content.nav.links.map((link) => (
-              <a
-                key={link.id}
-                href={link.href}
-                className="text-[#374151] hover:text-[#111827] transition-colors text-[13px] tracking-wide"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Mobile menu button — минималистичный premium стиль */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-[#111827]/10 lg:hidden"
-            aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-          >
-            <div className="relative w-5 h-4 flex flex-col justify-between">
-              <span
-                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-300 origin-center ${
-                  menuOpen ? 'rotate-45 translate-y-[7px]' : ''
-                }`}
-              />
-              <span
-                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-200 ${
-                  menuOpen ? 'opacity-0 scale-x-0' : ''
-                }`}
-              />
-              <span
-                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-300 origin-center ${
-                  menuOpen ? '-rotate-45 -translate-y-[7px]' : ''
-                }`}
-              />
-            </div>
-          </button>
-        </div>
-
-        {/* Mobile menu overlay */}
-        <div
-          id="mobile-navigation"
-          className={`fixed inset-0 top-[85px] z-50 bg-white/95 backdrop-blur-xl transition-all duration-300 lg:hidden ${
-            menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <nav className="flex flex-col items-center justify-center h-full gap-8 pb-20">
-            {content.nav.links.map((link, index) => (
-              <a
-                key={link.id}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className={`flex min-h-11 items-center px-4 text-[18px] font-light tracking-wide text-[#374151] transition-all hover:text-[#111827] ${
-                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-                }`}
-                style={{ transitionDelay: menuOpen ? `${index * 50 + 100}ms` : '0ms' }}
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <LandingHeader
+        links={content.nav.links}
+        className={`transition-all duration-700 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}
+      />
 
       {/* Hero Content — unified grid: left=all text, right=phone.
           min-h-0 stops this flex-1 slot from growing under its content (the
@@ -252,14 +193,15 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 style={{ transitionDelay: '800ms' }}
               >
                 <span className="md:hidden">
-                  Фото, голосовое или короткое сообщение — этого достаточно.
-                  Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.
+                  Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в
+                  приложение, оценивает всё в контексте вашей недели и делится своими
+                  рекомендациями.
                 </span>
                 <span className="hidden md:inline">
                   Фото, голосовое или короткое сообщение — этого достаточно.
                   <br />
-                  Куратор вносит данные в приложение, оценивает всё в контексте вашей недели
-                  и делится своими рекомендациями.
+                  Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и
+                  делится своими рекомендациями.
                 </span>
               </h2>
 
@@ -271,7 +213,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 style={{ transitionDelay: '1200ms' }}
               >
                 <a
-                  href="#curator"
+                  href={ctaHref}
                   className="hero-mobile-primary inline-flex items-center justify-center gap-2 bg-[#1D70B7] px-6 py-3 text-white font-semibold rounded-2xl hover:bg-[#185F9D] transition-all text-[14px] tracking-wide shadow-[0_10px_22px_rgba(29,112,183,0.18)]"
                   style={{
                     transform: 'scale(max(1, calc(0.88 / var(--hero-content-scale, 1))))',
@@ -312,8 +254,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
         style={{ transitionDelay: scrolled ? '0ms' : '5000ms' }}
       >
         <a
-          href="#curator"
-          aria-label="Перейти к блоку «Как устроено»"
+          href={scrollCueHref}
+          aria-label="Перейти к следующему блоку"
           className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
         >
           <svg

@@ -11,6 +11,14 @@ html {
   scroll-padding-top: 0;
 }
 
+/* На мобильном после первого экрана висит шапка высотой 56px: без отступа
+   переход по якорю уводит начало секции под неё. */
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-top: 64px;
+  }
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   /* Блокирует "цепной" overscroll (родитель скроллится когда внутренний дошёл

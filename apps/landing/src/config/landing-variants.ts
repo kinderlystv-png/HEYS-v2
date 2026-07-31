@@ -2,7 +2,7 @@
 // A: premium (минимализм, делегирование) — единственный активный вариант
 // Варианты B/C/D удалены — не использовались в production
 
-export type LandingVariant = 'A'
+export type LandingVariant = 'A';
 
 export type LandingSectionId =
   | 'socialProof'
@@ -24,130 +24,136 @@ export type LandingSectionId =
   | 'trial'
   | 'purchase'
   | 'faq'
-  | 'footer'
+  | 'footer';
 
 export interface NavLink {
-  id: string
-  label: string
-  href: string
+  id: string;
+  label: string;
+  href: string;
+  /** Короткая подсказка о содержании раздела — показывается в мобильном меню. */
+  hint?: string;
 }
 
 export interface VariantContent {
-  id: LandingVariant
-  name: string
-  description: string
+  id: LandingVariant;
+  name: string;
+  description: string;
   hero: {
-    headline: string
-    subheadline: string
-    features?: string[] // H3 — пункты под subheadline
-    ctaPrimary: string
-    ctaSecondary: string
-    frictionNote?: string // Снижение трения рядом с CTA
-    microtext: string
-    microtextLine2?: string // Вторая строка microtext
-  }
+    headline: string;
+    subheadline: string;
+    features?: string[]; // H3 — пункты под subheadline
+    ctaPrimary: string;
+    /** Куда ведёт главная кнопка первого экрана. По умолчанию `#curator`. */
+    ctaPrimaryHref?: string;
+    ctaSecondary: string;
+    frictionNote?: string; // Снижение трения рядом с CTA
+    microtext: string;
+    microtextLine2?: string; // Вторая строка microtext
+    /** Куда ведёт подсказка прокрутки внизу первого экрана. По умолчанию `#curator`. */
+    scrollCueHref?: string;
+  };
   nav: {
-    links: NavLink[]
-  }
+    links: NavLink[];
+  };
   page: {
-    order: LandingSectionId[]
-  }
+    order: LandingSectionId[];
+  };
   socialProof: {
-    eyebrow?: string
-    title: string
-    quotes: string[]
-  }
+    eyebrow?: string;
+    title: string;
+    quotes: string[];
+  };
   delegate: {
-    eyebrow?: string
-    title: string
-    cards: { title: string; desc: string; icon: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    cards: { title: string; desc: string; icon: string }[];
+  };
   interaction: {
-    eyebrow?: string
-    title: string
-    steps: { title: string; desc: string; icon: string }[]
-    note?: string
-  }
+    eyebrow?: string;
+    title: string;
+    steps: { title: string; desc: string; icon: string }[];
+    note?: string;
+  };
   formats: {
-    eyebrow?: string
-    title: string
-    cards: { title: string; desc: string; points: string[]; highlight?: boolean }[]
-  }
+    eyebrow?: string;
+    title: string;
+    cards: { title: string; desc: string; points: string[]; highlight?: boolean }[];
+  };
   layers: {
-    eyebrow?: string
-    title: string
-    items: { title: string; desc: string; icon: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    items: { title: string; desc: string; icon: string }[];
+  };
   screens: {
-    eyebrow?: string
-    title: string
-    subtitle?: string
-    items: { title: string; benefit: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
+    items: { title: string; benefit: string }[];
+  };
   matrix: {
-    eyebrow?: string
-    title: string
-    subtitle?: string
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
     rows: {
-      label: string
-      base: string
-      pro: string
-      proPlus: string
-    }[]
-  }
+      label: string;
+      base: string;
+      pro: string;
+      proPlus: string;
+    }[];
+  };
   cases: {
-    eyebrow?: string
-    title: string
-    items: { before: string; after: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    items: { before: string; after: string }[];
+  };
   doDont: {
-    eyebrow?: string
-    title: string
-    do: string[]
-    dont: string[]
-  }
+    eyebrow?: string;
+    title: string;
+    do: string[];
+    dont: string[];
+  };
   method: {
-    eyebrow?: string
-    title: string
-    steps: { title: string; desc: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    steps: { title: string; desc: string }[];
+  };
   sla: {
-    eyebrow?: string
-    title: string
-    items: { label: string; value: string }[]
-    protocol: { icon: string; label: string; desc: string }[]
-    note?: string
-  }
+    eyebrow?: string;
+    title: string;
+    items: { label: string; value: string }[];
+    protocol: { icon: string; label: string; desc: string }[];
+    note?: string;
+  };
   security: {
-    eyebrow?: string
-    title: string
-    bullets: string[]
-    links: { label: string; href: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    bullets: string[];
+    links: { label: string; href: string }[];
+  };
   faq: {
-    eyebrow?: string
-    title: string
-    subtitle?: string
-    items: { q: string; a: string }[]
-  }
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
+    items: { q: string; a: string }[];
+  };
   trial: {
-    title: string
-    subtitle: string
-    limitation: string
-    startPoint: string
-    ctaAvailable: string
-    ctaQueue: string
-    purchaseLinkText: string
-    purchaseLinkCta: string
-  }
+    title: string;
+    subtitle: string;
+    limitation: string;
+    startPoint: string;
+    ctaAvailable: string;
+    ctaQueue: string;
+    purchaseLinkText: string;
+    purchaseLinkCta: string;
+  };
   pricing: {
-    intro: string
-    formatSelf: { title: string; desc: string }
-    formatConcierge: { title: string; desc: string }
-  }
+    intro: string;
+    formatSelf: { title: string; desc: string };
+    formatConcierge: { title: string; desc: string };
+  };
 }
 
-const SHARED_QUOTES: string[] = []
+const SHARED_QUOTES: string[] = [];
 
 const SHARED_SCREEN_ITEMS = [
   { title: 'Дневник дня', benefit: 'Быстро понимаете, где вы сейчас.' },
@@ -155,7 +161,7 @@ const SHARED_SCREEN_ITEMS = [
   { title: 'Привычки', benefit: 'Фокус на 1–2 действиях, которые реально двигают.' },
   { title: 'Динамика', benefit: 'Видите причинно‑следственные связи, а не шум.' },
   { title: 'Чек‑ин', benefit: 'Регулярный контроль и план на следующую неделю.' },
-]
+];
 
 export const VARIANTS: Record<LandingVariant, VariantContent> = {
   // Вариант A — "Премиальный минимализм" (близкий к текущему вайбу)
@@ -165,7 +171,8 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     description: 'Премиальный минимализм',
     hero: {
       headline: 'Ваш дневник питания ведёт куратор.',
-      subheadline: 'Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.',
+      subheadline:
+        'Фото, голосовое или короткое сообщение — этого достаточно. Куратор вносит данные в приложение, оценивает всё в контексте вашей недели и делится своими рекомендациями.',
       features: [],
       ctaPrimary: 'Понять, как работает HEYS',
       ctaSecondary: '',
@@ -173,23 +180,23 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     },
     nav: {
       links: [
-        { id: 'curator', label: 'как устроено', href: '#curator' },
-        { id: 'pain', label: 'ситуация', href: '#pain' },
-        { id: 'how', label: 'первый месяц', href: '#how-it-works' },
-        { id: 'navigator', label: 'сигналы', href: '#navigator' },
-        { id: 'trust', label: 'доверие', href: '#trust' },
-        { id: 'pricing', label: 'тарифы', href: '#pricing' },
-        { id: 'faq', label: 'вопросы', href: '#faq' },
+        { id: 'curator', label: 'как устроено', href: '#curator', hint: 'Дневник ведёт куратор' },
+        { id: 'pain', label: 'ситуация', href: '#pain', hint: 'С чем обычно приходят' },
+        {
+          id: 'how',
+          label: 'первый месяц',
+          href: '#how-it-works',
+          hint: 'От заявки до первой недели',
+        },
+        { id: 'navigator', label: 'сигналы', href: '#navigator', hint: 'Что видно в вашей неделе' },
+        { id: 'trust', label: 'доверие', href: '#trust', hint: 'Опыт куратора и стандарт разбора' },
+        { id: 'pricing', label: 'тарифы', href: '#pricing', hint: 'Self, Pro, Pro Спорт' },
+        { id: 'faq', label: 'вопросы', href: '#faq', hint: 'Ответы на частые вопросы' },
       ],
     },
     page: {
       // A: премиальная подача — эмоции/делегирование/сервис. Меньше “таблиц”, больше ощущений.
-      order: [
-        'pricing',
-        'trial',
-        'faq',
-        'footer',
-      ],
+      order: ['pricing', 'trial', 'faq', 'footer'],
     },
     socialProof: {
       eyebrow: 'Отзывы',
@@ -214,11 +221,13 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
           icon: '🧘',
           title: 'Спокойная системность',
           desc: 'Не “идеальная дисциплина”, а спокойный режим, который держится.',
-        }, {
+        },
+        {
           icon: '💬',
           title: 'Контекст в одном месте',
           desc: 'Первый контакт — во внешнем канале из заявки, дальше можно перейти в HEYS-мессенджер: дневник и переписка рядом.',
-        },],
+        },
+      ],
     },
     interaction: {
       eyebrow: 'Как работает',
@@ -249,7 +258,10 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
         {
           title: 'Self — самостоятельный режим',
           desc: 'Дневник вы ведёте сами в приложении: КБЖУ, динамика, виджеты, своя база продуктов. Куратора в этом формате нет.',
-          points: ['Подходит, если вы привыкли вести трекеры сами', 'Нужен только дневник и базовый контроль'],
+          points: [
+            'Подходит, если вы привыкли вести трекеры сами',
+            'Нужен только дневник и базовый контроль',
+          ],
         },
         {
           title: 'Pro / Pro Спорт — персональное ведение',
@@ -339,8 +351,10 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     },
     trial: {
       title: 'Неделя Pro бесплатно',
-      subtitle: 'За 7 дней куратор перенесёт первые приёмы в дневник, посмотрит ритм недели и разберёт с вами, где день начинает сбиваться и какой шаг взять дальше.',
-      limitation: 'Берём ограниченное число людей одновременно — иначе не сохранить вовлечённость в каждую жизнь: график, тренировки, сон, контекст.',
+      subtitle:
+        'За 7 дней куратор перенесёт первые приёмы в дневник, посмотрит ритм недели и разберёт с вами, где день начинает сбиваться и какой шаг взять дальше.',
+      limitation:
+        'Берём ограниченное число людей одновременно — иначе не сохранить вовлечённость в каждую жизнь: график, тренировки, сон, контекст.',
       startPoint: 'Формат начинается с первого утреннего чек-ина.',
       ctaAvailable: 'Оставить заявку на неделю Pro (0 ₽) →',
       ctaQueue: 'Встать в очередь на тест →',
@@ -359,10 +373,10 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
       },
     },
   },
-}
+};
 
-export const DEFAULT_VARIANT: LandingVariant = 'A'
+export const DEFAULT_VARIANT: LandingVariant = 'A';
 
 export function getVariantFromUrl(): LandingVariant {
-  return DEFAULT_VARIANT
+  return DEFAULT_VARIANT;
 }
