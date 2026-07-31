@@ -1,19 +1,35 @@
 'use client';
 
+import { Playfair_Display } from 'next/font/google';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+// Фирменный шрифт отбивок (решение владельца 2026-07-31): контрастная
+// антиква с кириллицей. next/font self-host'ит файлы на сборке — внешних
+// CDN-запросов в runtime нет (важно для CSP лендинга).
+const interstitialFont = Playfair_Display({
+  subsets: ['cyrillic', 'latin'],
+  weight: '500',
+  display: 'swap',
+});
 
 type PlaybackPhase = 'probing' | 'poster' | 'buffering' | 'playing' | 'paused';
 
 const AUTOPLAY_PROBE_MS = 3500;
 const AUTOPLAY_REVEAL_DELAY_MS = 1200;
 
-// Типографские отбивки поверх демо (`22` п. 3.15, концепт — `маркетинг/45`
+// Типографские отбивки в демо (`22` п. 3.15, концепт — `маркетинг/45`
 // § «Типографские отбивки в демо»): «один кадр — одна фраза» на белом фоне
-// между действиями ролика. Видео при показе карточки НЕ ставится на паузу —
-// карточка просто перекрывает кадр на границе сцен, поэтому state-машина
-// фаз, кнопка play/pause и loop не затрагиваются. Тексты — из сценарной
-// таблицы `45`; таймкоды сняты по фактическим границам сцен текущего ролика.
-const INTERSTITIAL_SECONDS = 1.8;
+// между действиями ролика. На таймкоде видео ставится на ПАУЗУ, карточка
+// плавно выезжает справа (замедляясь), держится и уезжает влево (разгоняясь),
+// после чего воспроизведение продолжается — контент сцены не теряется.
+// Тексты — из сценарной таблицы `45`; таймкоды сняты по фактическим
+// границам сцен текущего ролика.
+const INTERSTITIAL_ENTER_MS = 450;
+const INTERSTITIAL_HOLD_MS = 1400;
+const INTERSTITIAL_EXIT_MS = 450;
+// Влёт: быстрый старт, мягкое торможение. Уход: мягкий старт, разгон.
+const INTERSTITIAL_ENTER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const INTERSTITIAL_EXIT_EASING = 'cubic-bezier(0.64, 0, 0.78, 0)';
 const INTERSTITIALS: ReadonlyArray<{ at: number; text: string }> = [
   { at: 15.2, text: 'Прислали — и пошли дальше' },
   { at: 22.6, text: 'Дневник ведёт куратор' },
@@ -21,27 +37,95 @@ const INTERSTITIALS: ReadonlyArray<{ at: number; text: string }> = [
   { at: 51.8, text: 'Без поспешных выводов' },
 ];
 
+interface InterstitialCard {
+  text: string;
+  leaving: boolean;
+}
+
 export default function HeroFlowDemo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const phaseRef = useRef<PlaybackPhase>('probing');
   const [phase, setPhase] = useState<PlaybackPhase>('probing');
-  const [interstitial, setInterstitial] = useState<string | null>(null);
+  const [card, setCard] = useState<InterstitialCard | null>(null);
+  // true, пока пауза видео вызвана отбивкой: onPause не должен переводить
+  // фазу в 'paused', чтобы кнопка и cover вели себя как при воспроизведении.
+  const interstitialPauseRef = useRef(false);
+  const interstitialTimersRef = useRef<number[]>([]);
+  const lastShownAtRef = useRef<number | null>(null);
+
+  const clearInterstitialTimers = useCallback(() => {
+    for (const id of interstitialTimersRef.current) window.clearTimeout(id);
+    interstitialTimersRef.current = [];
+  }, []);
+
+  const cancelInterstitial = useCallback(() => {
+    clearInterstitialTimers();
+    interstitialPauseRef.current = false;
+    setCard(null);
+  }, [clearInterstitialTimers]);
 
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || interstitialPauseRef.current) return;
     const t = video.currentTime;
-    const active = INTERSTITIALS.find(
-      (card) => t >= card.at && t < card.at + INTERSTITIAL_SECONDS,
+
+    // Loop или перемотка назад — разрешаем показать карточки заново.
+    if (lastShownAtRef.current !== null && t < lastShownAtRef.current - 1) {
+      lastShownAtRef.current = null;
+    }
+    if (phaseRef.current !== 'playing') return;
+
+    const next = INTERSTITIALS.find(
+      (item) => t >= item.at && t < item.at + 0.8 && lastShownAtRef.current !== item.at,
     );
-    const next = active ? active.text : null;
-    setInterstitial((prev) => (prev === next ? prev : next));
+    if (!next) return;
+
+    lastShownAtRef.current = next.at;
+    interstitialPauseRef.current = true;
+    video.pause();
+    setCard({ text: next.text, leaving: false });
+    interstitialTimersRef.current = [
+      window.setTimeout(() => {
+        setCard((prev) => (prev ? { ...prev, leaving: true } : prev));
+      }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS),
+      window.setTimeout(() => {
+        interstitialPauseRef.current = false;
+        setCard(null);
+        void video.play().catch(() => {
+          /* пользователь мог поставить паузу — не считаем ошибкой */
+        });
+      }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS + INTERSTITIAL_EXIT_MS),
+    ];
   }, []);
 
   const updatePhase = useCallback((next: PlaybackPhase) => {
     phaseRef.current = next;
     setPhase(next);
   }, []);
+
+  // Страховка от утечки таймеров при размонтировании.
+  useEffect(() => clearInterstitialTimers, [clearInterstitialTimers]);
+
+  // Анимации карточки через Web Animations API: влёт стартует синхронно в
+  // ref-callback при монтировании (до первого paint — без вспышки и без
+  // requestAnimationFrame, который замерзает в фоновых вкладках).
+  const cardElRef = useRef<HTMLDivElement | null>(null);
+  const attachCardEl = useCallback((el: HTMLDivElement | null) => {
+    cardElRef.current = el;
+    if (!el) return;
+    el.animate(
+      [{ transform: 'translateX(105%)' }, { transform: 'translateX(0)' }],
+      { duration: INTERSTITIAL_ENTER_MS, easing: INTERSTITIAL_ENTER_EASING, fill: 'both' },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!card?.leaving || !cardElRef.current) return;
+    cardElRef.current.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-105%)' }],
+      { duration: INTERSTITIAL_EXIT_MS, easing: INTERSTITIAL_EXIT_EASING, fill: 'both' },
+    );
+  }, [card?.leaving]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -110,6 +194,9 @@ export default function HeroFlowDemo() {
     if (!video || phase === 'buffering') return;
 
     if (phase === 'playing') {
+      // Ручная пауза во время отбивки: снимаем карточку и её таймеры,
+      // чтобы отложенный resume не сработал против воли пользователя.
+      cancelInterstitial();
       video.pause();
       updatePhase('paused');
       return;
@@ -150,6 +237,9 @@ export default function HeroFlowDemo() {
             if (phaseRef.current === 'playing') updatePhase('buffering');
           }}
           onPause={() => {
+            // Пауза, вызванная отбивкой, не меняет фазу: для пользователя
+            // «фильм» продолжается, кнопка остаётся в состоянии Pause.
+            if (interstitialPauseRef.current) return;
             if (phaseRef.current === 'playing') updatePhase('paused');
           }}
           onError={() => updatePhase('poster')}
@@ -171,16 +261,18 @@ export default function HeroFlowDemo() {
           </div>
         ) : null}
 
-        {phase === 'playing' && interstitial ? (
+        {phase === 'playing' && card ? (
           <div
+            ref={attachCardEl}
             aria-hidden="true"
+            data-testid="hero-interstitial"
             className="absolute inset-0 z-10 flex items-center justify-center bg-white px-[11%]"
+            style={{ willChange: 'transform' }}
           >
             <p
-              className="text-center text-[24px] leading-snug text-[#111827] lg:text-[30px]"
-              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              className={`${interstitialFont.className} text-center text-[24px] leading-snug text-[#111827] lg:text-[30px]`}
             >
-              {interstitial}
+              {card.text}
             </p>
           </div>
         ) : null}
