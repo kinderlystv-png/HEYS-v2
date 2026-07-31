@@ -1,11 +1,11 @@
-// Черновая версия B — нарратив по образцу Future (`маркетинг/45`).
+// Черновая версия B — «страница-знакомство» по образцу Future (`маркетинг/47`).
 //
 // Отдельный статический роут: страница существует для личного выбора владельца
 // и не связана ссылками с публичной версией. Индексация запрещена.
 
 import { Metadata } from 'next';
 
-import VersionDraft from '@/components/versions/VersionDraft';
+import VersionB from '@/components/versions/VersionB';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
@@ -17,14 +17,7 @@ export const metadata: Metadata = {
 export default function VersionBPage() {
   return (
     <main>
-      <VersionDraft
-        version="B"
-        plan={[
-          'Нарратив по образцу Future: сначала человеческий смысл, затем интерфейс как его доказательство',
-          'Видимая работа специалиста вместо описания процесса',
-          'Свой ритм блоков: один экран — один смысл',
-        ]}
-      />
+      <VersionB />
 
       <VersionSwitcherFab current="B" />
     </main>

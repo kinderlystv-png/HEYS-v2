@@ -24,13 +24,29 @@ import {
  * Сам параметр сразу вычищается из адресной строки, иначе он уехал бы наружу
  * вместе со скопированной ссылкой. `?owner=0` снимает флаг — это единственный
  * способ отозвать доступ на чужом устройстве.
+ *
+ * Сейчас это условие временно перекрыто — см. `TEMPORARY_PUBLIC_SWITCHER`.
  */
 
 const OWNER_FLAG_KEY = 'heys_dev_mode';
 const OWNER_PARAM = 'owner';
 
+/**
+ * ВРЕМЕННО (решение владельца 2026-07-31, `15` №46): переключатель показывается
+ * всем посетителям, а не только владельцу, — чтобы сравнивать версии с любого
+ * устройства без возни с флагом. Пока это включено, посетитель может уйти в
+ * черновики `B` и `C` с незаменёнными материалами.
+ *
+ * Откат — одно значение `false`: логика признака «свой» ниже сохранена целиком
+ * и сразу снова становится единственным условием показа.
+ */
+const TEMPORARY_PUBLIC_SWITCHER = true;
+
 export default function VersionSwitcherFab({ current }: { current: LandingVersion }) {
-  const [allowed, setAllowed] = useState(false);
+  // При временном публичном режиме кнопка есть уже в статической разметке —
+  // начальное состояние совпадает с тем, что выставит эффект, поэтому
+  // рассинхрона гидратации нет.
+  const [allowed, setAllowed] = useState(TEMPORARY_PUBLIC_SWITCHER);
   const [open, setOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
 
@@ -64,7 +80,7 @@ export default function VersionSwitcherFab({ current }: { current: LandingVersio
       /* приватный режим — просто остаёмся скрытыми */
     }
 
-    setAllowed(isLocal || hasFlag);
+    setAllowed(TEMPORARY_PUBLIC_SWITCHER || isLocal || hasFlag);
   }, []);
 
   // Демонстрация в hero разворачивается на весь экран — не мешаем ей.
