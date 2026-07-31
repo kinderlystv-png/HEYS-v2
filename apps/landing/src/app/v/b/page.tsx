@@ -9,9 +9,9 @@
 
 import { Metadata } from 'next';
 
-import VersionDraft from '@/components/versions/VersionDraft';
 import FontSwitcherFab from '@/components/versions/b/FontSwitcherFab';
 import HeroScrollStage from '@/components/versions/b/HeroScrollStage';
+import VersionDraft from '@/components/versions/VersionDraft';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { VARIANTS } from '@/config/landing-variants';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
