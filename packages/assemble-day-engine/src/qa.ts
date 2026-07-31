@@ -209,6 +209,9 @@ export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOStri
     echoEventCoverageRate: ['thu_colleague_reciprocity','fri_final_issue_with_support','sat_meal_prep_familiar','sun_family_time_reciprocal'].filter((id)=>eventSet.has(id)).length / 4,
   };
   const gate = (threshold: string, actual: number, passed: boolean): Gate => ({ threshold, actual, passed });
+  // `D74`: покрытие каталога перестало быть блокирующим gate. Оно измеряется и
+  // попадает в отчёт, но при свободном порядке ситуаций одна выборка не обязана
+  // показать весь контент; достижимость проверяет профиль `qa-profile.ts`.
   const gates: Record<string, Gate> = {
     terminalLockCount: gate('=0', metrics.terminalLockCount, metrics.terminalLockCount === 0),
     heavyStateStabilizationRate: gate('=1', metrics.heavyStateStabilizationRate, metrics.heavyStateStabilizationRate === 1),
@@ -226,8 +229,6 @@ export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOStri
     reproMismatchCount: gate('=0', metrics.reproMismatchCount, metrics.reproMismatchCount === 0),
     personalizationAdvantageCount: gate('=0', metrics.personalizationAdvantageCount, metrics.personalizationAdvantageCount === 0),
     counterfactualPassRate: gate('=1', metrics.counterfactualPassRate, metrics.counterfactualPassRate === 1),
-    auditedActionCount: gate(`=${Object.keys(registries.actions).length}`, metrics.auditedActionCount, metrics.auditedActionCount === Object.keys(registries.actions).length),
-    echoEventCoverageRate: gate('=1', metrics.echoEventCoverageRate, metrics.echoEventCoverageRate === 1),
   };
   const missingSlots = registries.slots.map((item) => item.slot).filter((id) => !slotSet.has(id));
   const missingEvents = Object.keys(registries.events).filter((id) => !eventSet.has(id));

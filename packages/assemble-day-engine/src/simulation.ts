@@ -376,5 +376,25 @@ export function runCampaign(
     recovery: state.vitals.energy - state.vitals.tension - state.vitals.physicalFatigue,
     sleep: -state.accumulators.sleepDebtMin + finalContext.sleepReadiness,
   };
+  lastFinalState = state;
   return result;
+}
+
+/**
+ * Последнее финальное состояние прогона. Нужно профилю инвариантов (`D74`),
+ * который проверяет свойства прожитой кампании, а не только её счётчики.
+ * Не хранится в `CampaignResult`, чтобы массовый прогон не тащил состояния.
+ */
+let lastFinalState: GameState | null = null;
+
+export function runCampaignWithState(
+  seed: string,
+  policyId: PolicyId,
+  trustedQaMode = false,
+  auditTransitions = true,
+  captureReplay = auditTransitions,
+): { result: CampaignResult; finalState: GameState } {
+  const result = runCampaign(seed, policyId, trustedQaMode, auditTransitions, captureReplay);
+  if (!lastFinalState) throw new Error('campaign did not produce a final state');
+  return { result, finalState: lastFinalState };
 }

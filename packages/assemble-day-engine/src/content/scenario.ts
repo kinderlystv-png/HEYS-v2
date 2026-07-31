@@ -52,6 +52,28 @@ export const slots:ScenarioSlot[]=raw.map(([day,minute,eventId],index)=>{
 });
 slots[7]={...slots[7]!,sleepBeforeMin:210,interruptionsMin:10};
 
+/**
+ * Длина играбельной кампании (`D72`, Sprint 15). Авторская неделя задаёт первые
+ * семь дней, дальше идёт ровный суточный ритм из тех же временных якорей. Якорь
+ * не называет ситуацию: её выбирает отбор по состоянию, поэтому продолжение
+ * кампании — это календарь, а не копия недели.
+ */
+export const CAMPAIGN_DAYS=30;
+const ROUTINE_DAY_ANCHORS=[420,600,780,960,1140,1320];
+const ROUTINE_SLEEP:[number,number]=[450,0];
+const authoredDays=Math.max(...raw.map((item)=>item[0]));
+for(let dayIndex=authoredDays;dayIndex<CAMPAIGN_DAYS;dayIndex+=1){
+  ROUTINE_DAY_ANCHORS.forEach((minuteOfDay,index)=>{
+    slots.push({
+      slot:slots.length+1,
+      dayIndex,
+      minuteOfDay,
+      forkKind:'ordinary',
+      ...(index===0?{sleepBeforeMin:ROUTINE_SLEEP[0],interruptionsMin:ROUTINE_SLEEP[1]}:{}),
+    });
+  });
+}
+
 const heavyIds=new Set(['tue_night_wakeup','tue_pickup_conflict','wed_school_call','thu_family_evening','fri_final_issue','fri_submit','sat_school_event']);
 const familyWindowIds=new Set(['mon_family_dinner','tue_pickup_conflict','thu_family_evening','fri_family_plan','sat_school_event','sun_family_time']);
 /**
@@ -60,7 +82,7 @@ const familyWindowIds=new Set(['mon_family_dinner','tue_pickup_conflict','thu_fa
  * между якорями не остаётся дыр, а порядок внутри дня решает отбор, а не
  * позиция в сценарии.
  */
-const STATE_DRIVEN_DAYS=new Set([1]);
+const STATE_DRIVEN_DAYS=new Set([1,2,3,4,5,6,7]);
 const dayAnchors=(day:number):number[]=>raw.filter((item)=>item[0]===day).map((item)=>item[1]);
 const domainCondition:Record<string,EventTemplate['trigger']>={
   mon_breakfast:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
@@ -162,11 +184,74 @@ addEcho('sun_family_time',{
   onOpenEffects:[{op:'add_state',path:'vitals.tension',delta:-5,reason:'взаимная семейная поддержка снизила неопределённость'}],tags:['causal','echo','family_reciprocity'],
 },{kind:'compare',path:'family.partner.trust',op:'gte',value:79});
 
+/**
+ * Бытовые ситуации (`D73`, Sprint 10). Они доступны в своём окне любого дня и
+ * имеют самый низкий приоритет источника, поэтому не вытесняют авторские, а
+ * подхватывают якорь, когда авторские ситуации дня уже прожиты. Каждая содержит
+ * хотя бы одно стабилизирующее действие, иначе анти-спираль отбросила бы её в
+ * тяжёлом состоянии и запас не сработал бы именно тогда, когда он нужнее всего.
+ */
+const ROUTINE_SITUATIONS:Array<{id:string;fromMin:number;toMin:number;actionIds:string[]}>=[
+  {id:'routine_morning_start',fromMin:240,toMin:660,actionIds:['eat_quick_base','walk_short','drink_coffee_100']},
+  {id:'routine_work_stretch',fromMin:540,toMin:1080,actionIds:['work_standard','walk_short','ask_colleague_help']},
+  {id:'routine_family_moment',fromMin:900,toMin:1380,actionIds:['protect_commitment','take_family_load','walk_short','wind_down_early','work_standard']},
+  {id:'routine_evening_wind',fromMin:1020,toMin:1439,actionIds:['wind_down_early','walk_short','work_late']},
+  // Страховочная ситуация: доступна почти всегда и держит стабилизаторы сразу
+  // двух доменов, поэтому тяжёлое состояние не остаётся без платного выхода,
+  // когда авторские и остальные бытовые ситуации не подходят.
+  {id:'routine_pause',fromMin:300,toMin:1380,actionIds:['walk_short','work_standard','wind_down_early']},
+];
+
+for(const routine of ROUTINE_SITUATIONS){
+  events[routine.id]={
+    schemaVersion:1,id:routine.id,version:1,source:'opportunity',
+    copy:EVENT_COPY[routine.id]!,
+    trigger:{kind:'all',conditions:[
+      {kind:'compare',path:'clock.minuteOfDay',op:'gte',value:routine.fromMin},
+      {kind:'compare',path:'clock.minuteOfDay',op:'lte',value:routine.toMin},
+    ]},
+    urgency:0,selectionWeight:1,cooldownDays:0,
+    load:{external:0,total:0,size:'none'},
+    onOpenEffects:[],actionIds:routine.actionIds,tags:['opportunity','routine'],
+  };
+}
+
+/**
+ * Семейные ситуации (`D21`–`D23`, Sprint 8). Они открываются собственным окном и
+ * состоянием близких, а не расписанием игрока: партнёр предлагает помощь, когда
+ * у него самого есть ресурс, а ребёнок появляется в своё окно.
+ */
+events.family_partner_offers={
+  schemaVersion:1,id:'family_partner_offers',version:1,source:'causal',
+  copy:EVENT_COPY.family_partner_offers!,
+  trigger:{kind:'all',conditions:[
+    {kind:'compare',path:'context.partnerAvailableNow',op:'gte',value:1},
+    {kind:'compare',path:'context.partnerLoad',op:'lte',value:26},
+    {kind:'compare',path:'family.partner.trust',op:'gte',value:70},
+  ]},
+  urgency:1,selectionWeight:2,cooldownDays:2,
+  load:{external:0,total:8,size:'small'},
+  onOpenEffects:[{op:'add_state',path:'vitals.tension',delta:-4,reason:'разделённая нагрузка снизила напряжение'}],
+  actionIds:['take_family_load','protect_commitment','wind_down_early'],tags:['causal','family_anchor_window','family_reciprocity'],
+};
+events.family_child_evening={
+  schemaVersion:1,id:'family_child_evening',version:1,source:'causal',
+  copy:EVENT_COPY.family_child_evening!,
+  trigger:{kind:'all',conditions:[
+    {kind:'compare',path:'context.childAvailableNow',op:'gte',value:1},
+    {kind:'compare',path:'family.child.closeness',op:'lte',value:82},
+  ]},
+  urgency:2,selectionWeight:2,cooldownDays:1,
+  load:{external:0,total:10,size:'small'},
+  onOpenEffects:[],
+  actionIds:['take_family_load','protect_commitment','walk_short'],tags:['causal','family_anchor_window'],
+};
+
 export const registries:Registries={actions,events,slots};
 
 export function createInitialState(seed:string):GameState {
   return {
-    schemaVersion:3,periods:createPeriodState(),weekStats:{weekIndex:0,actionCounts:{},previousWeekIndex:-1,previousActionCounts:{}},campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
+    schemaVersion:3,periods:createPeriodState(),weekStats:{weekIndex:0,actionCounts:{},previousWeekIndex:-1,previousActionCounts:{}},employment:{format:null,chosenAtStepIndex:null},campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
     rng:{seed,algorithm:CONTRACT.rngAlgorithm,occurrences:{}},clock:{dayIndex:0,minuteOfDay:420,stepIndex:0,awakeSinceMinute:60},scenarioCursor:0,activeEventId:'mon_breakfast',
     character:{
       profile:{sleepNeedMin:480,chronotype:'neutral',caffeineHalfLifeMin:300,caffeineSensitivity:1,digestionSensitivity:1,moodBaseline:55},
@@ -177,7 +262,7 @@ export function createInitialState(seed:string):GameState {
     accumulators:{sleepDebtMin:30,activeCaffeineMg:0,satietyWindowMin:0,recoveryNeed:22,familyLoadPlayer7d:18,familyLoadPartner7d:18},
     economy:{cashRub:32000,foodPortions:{ready_meal:2,quick_base:3,cook_stock:5},expectedIncome:[{id:'salary',amountRub:72000,dueDayIndex:4,status:'expected',source:'salary'},{id:'bonus',amountRub:0,dueDayIndex:4,status:'expected',source:'bonus'}],obligations:[{id:'monthly_payment',amountRub:45000,dueDayIndex:7,status:'scheduled',deferrable:true,deferralsUsed:0,maxDeferrals:1,deferCostRub:1500}]},
     work:{reputation:58,projectBacklogMin:420,helpDebt:0,tasks:[{id:'project_delivery',remainingMin:420,dueDayIndex:4,dueMinuteOfDay:1020,requiredSkill:60,baseRisk:25,status:'open'}]},
-    family:{partner:{closeness:72,trust:74,available:true},child:{closeness:76,trust:73,available:true},friction:18,participationBalance:0},
+    family:{partner:{closeness:72,trust:74,available:true,load:28,windowFromMin:1020,windowToMin:1380},child:{closeness:76,trust:73,available:true,load:0,windowFromMin:960,windowToMin:1260},friction:18,participationBalance:0},
     commitments:[{id:'family_week',domain:'family',dueDayIndex:4,dueMinuteOfDay:1140,status:'open',owner:'shared',hard:true,renegotiationsUsed:0,sourceId:'initial_state'},{id:'school_event',domain:'family',dueDayIndex:5,dueMinuteOfDay:540,status:'open',owner:'player',hard:true,renegotiationsUsed:0,sourceId:'initial_state'}],
     scheduledEffects:[
       {id:'salary_effect',sourceId:'salary',trigger:{kind:'at_time',dayIndex:4,minuteOfDay:1020},effects:[{op:'receive_income',incomeId:'salary',reason:'зарплата получена'}],status:'pending'},

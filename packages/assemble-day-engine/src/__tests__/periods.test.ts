@@ -22,8 +22,10 @@ function extendedRegistries(days: number): Registries {
   const events = structuredClone(registries.events);
   for (let day = 0; day < days; day += 1) {
     perDay.forEach((minuteOfDay, index) => {
-      const source = registries.slots[(slots.length) % registries.slots.length]!;
-      const sourceEventId = source.eventId!;
+      // Берём только якоря авторской недели: у продолжения кампании ситуации
+      // не назначены, там их выбирает отбор по состоянию.
+      const authored = registries.slots.filter((slot) => slot.eventId);
+      const sourceEventId = authored[(slots.length) % authored.length]!.eventId!;
       const eventId = `long_${day}_${index}`;
       const template = structuredClone(registries.events[sourceEventId]!);
       template.id = eventId;
@@ -152,10 +154,10 @@ describe('state-driven situation contract (Sprint 22)', () => {
     expect(anchors.filter((slot) => slot.eventId)).toHaveLength(1);
   });
 
-  it('reports how many authored situations still open by scenario position', () => {
-    // Инвариант `D73`: цель — ноль. Понедельник переведён на условия состояния
-    // и времени; число фиксируется явно, чтобы остаток нельзя было забыть.
-    expect(findCursorBoundEvents(registries)).toHaveLength(36);
+  it('opens no situation by scenario position', () => {
+    // Инвариант `D73` выполнен: ни одна ситуация не открывается позицией в
+    // сценарии. Проверка остаётся как защита от отката.
+    expect(findCursorBoundEvents(registries)).toEqual([]);
     expect(findCursorBoundEvents({ ...registries, events: {} })).toEqual([]);
   });
 });

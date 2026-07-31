@@ -8,12 +8,12 @@ const STATE_PATHS=[
   /^economy\.cashRub$/, /^economy\.foodPortions\.(ready_meal|quick_base|cook_stock)$/,
   /^economy\.expectedIncome\.\d+\.amountRub$/, /^work\.(reputation|projectBacklogMin|helpDebt)$/,
   /^work\.tasks\.\d+\.(remainingMin|requiredSkill|baseRisk|dueDayIndex|dueMinuteOfDay)$/,
-  /^family\.(friction|participationBalance)$/, /^family\.(partner|child)\.(closeness|trust)$/,
+  /^family\.(friction|participationBalance)$/, /^family\.(partner|child)\.(closeness|trust|load|windowFromMin|windowToMin)$/,
   /^character\.skills\.(professional|planning|cooking|physical_fitness)$/,
   /^character\.habits\.(caffeine_compensation|late_work|delivery|short_walk|meal_prep)$/,
-  /^weeklyRules$/,
+  /^weeklyRules$/, /^employment\.format$/,
 ];
-const CONTEXT_PATHS=[/^context\.(sleepiness|sleepReadiness|deadlinePressure|financialPressure|familyImbalance|cashAfterNextObligationsRub)$/, /^context\.focusByTaskId\.[a-z0-9_]+$/, /^context\.optionPressureByActionId\.[a-z0-9_]+$/];
+const CONTEXT_PATHS=[/^context\.(sleepiness|sleepReadiness|deadlinePressure|financialPressure|familyImbalance|cashAfterNextObligationsRub|partnerLoad|partnerAvailableNow|childAvailableNow)$/, /^context\.focusByTaskId\.[a-z0-9_]+$/, /^context\.optionPressureByActionId\.[a-z0-9_]+$/];
 const snake=/^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 function fail(path:string,message:string):never{throw new Error(`${path}: ${message}`);}
 function finite(value:unknown,path:string):asserts value is number{if(typeof value!=='number'||!Number.isFinite(value))fail(path,'expected finite number');}
@@ -115,6 +115,11 @@ function validatePeriods(state:GameState):void {
   unique(periods.appliedBoundaries,'state.periods.appliedBoundaries');
   if(!Array.isArray(periods.plannedWeeks)||periods.plannedWeeks.some((index)=>!Number.isInteger(index)||index<0))fail('state.periods.plannedWeeks','expected non-negative week indexes');
   unique(periods.plannedWeeks.map(String),'state.periods.plannedWeeks');
+  const employment=state.employment;
+  if(!employment||typeof employment!=='object')fail('state.employment','required');
+  if(employment.format!==null&&!['office','remote','project'].includes(employment.format))fail('state.employment.format','unknown format');
+  if(employment.chosenAtStepIndex!==null){integer(employment.chosenAtStepIndex,'state.employment.chosenAtStepIndex');if(employment.chosenAtStepIndex<0)fail('state.employment.chosenAtStepIndex','negative');}
+  if((employment.format===null)!==(employment.chosenAtStepIndex===null))fail('state.employment','format and choice step must be set together');
   const stats=state.weekStats;
   if(!stats||typeof stats!=='object')fail('state.weekStats','required');
   integer(stats.weekIndex,'state.weekStats.weekIndex');integer(stats.previousWeekIndex,'state.weekStats.previousWeekIndex');
@@ -133,7 +138,7 @@ export function validateState(state:GameState):void {
   Object.entries(state.vitals).forEach(([key,value])=>inRange(value,0,100,`state.vitals.${key}`));for(const key of ['recoveryNeed','familyLoadPlayer7d','familyLoadPartner7d'] as const)inRange(state.accumulators[key],0,100,`state.accumulators.${key}`);
   inRange(state.accumulators.sleepDebtMin,0,480,'state.accumulators.sleepDebtMin');inRange(state.accumulators.activeCaffeineMg,0,600,'state.accumulators.activeCaffeineMg');inRange(state.accumulators.satietyWindowMin,0,360,'state.accumulators.satietyWindowMin');
   Object.entries(state.character.skills).forEach(([key,value])=>inRange(value,0,100,`state.character.skills.${key}`));Object.entries(state.character.habits).forEach(([key,value])=>inRange(value,0,100,`state.character.habits.${key}`));
-  inRange(state.work.reputation,0,100,'state.work.reputation');inRange(state.family.friction,0,100,'state.family.friction');inRange(state.family.participationBalance,-100,100,'state.family.participationBalance');for(const person of ['partner','child'] as const){inRange(state.family[person].closeness,0,100,`state.family.${person}.closeness`);inRange(state.family[person].trust,0,100,`state.family.${person}.trust`);}
+  inRange(state.work.reputation,0,100,'state.work.reputation');inRange(state.family.friction,0,100,'state.family.friction');inRange(state.family.participationBalance,-100,100,'state.family.participationBalance');for(const person of ['partner','child'] as const){inRange(state.family[person].closeness,0,100,`state.family.${person}.closeness`);inRange(state.family[person].trust,0,100,`state.family.${person}.trust`);inRange(state.family[person].load,0,100,`state.family.${person}.load`);integer(state.family[person].windowFromMin,`state.family.${person}.windowFromMin`);integer(state.family[person].windowToMin,`state.family.${person}.windowToMin`);inRange(state.family[person].windowFromMin,0,1439,`state.family.${person}.windowFromMin`);inRange(state.family[person].windowToMin,0,1439,`state.family.${person}.windowToMin`);if(state.family[person].windowToMin<state.family[person].windowFromMin)fail(`state.family.${person}.windowToMin`,'window ends before it starts');}
   const nonnegativeIntegers=[state.economy.cashRub,...Object.values(state.economy.foodPortions),state.work.projectBacklogMin,state.work.helpDebt];for(const value of nonnegativeIntegers){integer(value,'state.integerResource');if(value<0)fail('state.integerResource','negative');}
   unique(state.work.tasks.map((item)=>item.id),'state.work.tasks');unique(state.commitments.map((item)=>item.id),'state.commitments');unique(state.economy.expectedIncome.map((item)=>item.id),'state.economy.expectedIncome');unique(state.economy.obligations.map((item)=>item.id),'state.economy.obligations');unique(state.scheduledEffects.map((item)=>item.id),'state.scheduledEffects');unique(state.causalJournal.map((item)=>item.id),'state.causalJournal');
   for(const effect of state.scheduledEffects){if(effect.trigger.kind==='condition')validateCondition(effect.trigger.condition);else if(effect.trigger.kind==='after_steps'){integer(effect.trigger.remainingSteps,`state.scheduledEffects.${effect.id}.remainingSteps`);if(effect.trigger.remainingSteps<0)fail(`state.scheduledEffects.${effect.id}.remainingSteps`,'negative remaining steps');}else{integer(effect.trigger.dayIndex,`state.scheduledEffects.${effect.id}.dayIndex`);integer(effect.trigger.minuteOfDay,`state.scheduledEffects.${effect.id}.minuteOfDay`);if(effect.trigger.dayIndex<0||effect.trigger.minuteOfDay<0||effect.trigger.minuteOfDay>1439)fail(`state.scheduledEffects.${effect.id}.trigger`,'invalid at_time bounds');}effect.effects.forEach((item,index)=>validateEffect(item,`state.scheduledEffects.${effect.id}.effects[${index}]`));}
@@ -142,7 +147,7 @@ export function validateState(state:GameState):void {
 
 export function validateRegistries(registries:Registries,initialState:GameState):void {
   Object.values(registries.actions).forEach(validateAction);Object.values(registries.events).forEach(validateEvent);registries.slots.forEach(validateSlot);
-  if(!Object.keys(registries.actions).length)fail('registries.actions','at least one authored action required');if(Object.keys(registries.events).length<registries.slots.length)fail('registries.events','authored events must cover every slot');if(!registries.slots.length)fail('registries.slots','at least one slot required');
+  if(!Object.keys(registries.actions).length)fail('registries.actions','at least one authored action required');if(!Object.keys(registries.events).length)fail('registries.events','at least one authored situation required');if(!registries.slots.length)fail('registries.slots','at least one slot required');
   if(initialState.activeEventId!==registries.slots[0]?.eventId)fail('state.activeEventId','initial active event must match first slot');
   if(registries.slots.some((slot,index)=>slot.slot!==index+1))fail('registries.slots','slot numbers must be contiguous from 1');if(registries.slots.some((slot,index)=>index>0&&slot.dayIndex<registries.slots[index-1]!.dayIndex))fail('registries.slots','slot days must not go backwards');
   if(!registries.slots[0]?.eventId)fail('registries.slots','the first anchor must name the opening situation');

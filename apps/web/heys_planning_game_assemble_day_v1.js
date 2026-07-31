@@ -29,6 +29,16 @@
 
   // ../../packages/assemble-day-engine/src/content/presentation.ts
   var EVENT_COPY = {
+    // Бытовые ситуации (`D73`, Sprint 10): они не привязаны ко дню и наполняют
+    // якорь тогда, когда авторские ситуации дня уже прожиты. Без этого запаса
+    // свободный порядок упирается в день без единой доступной развилки.
+    routine_morning_start: { title: "\u041E\u0431\u044B\u0447\u043D\u043E\u0435 \u0443\u0442\u0440\u043E", situation: "\u0414\u0435\u043D\u044C \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0431\u0435\u0437 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u043F\u043E\u0432\u043E\u0434\u0430: \u043D\u0443\u0436\u043D\u043E \u0440\u0435\u0448\u0438\u0442\u044C, \u0441 \u0447\u0435\u0433\u043E \u0438\u043C\u0435\u043D\u043D\u043E." },
+    routine_work_stretch: { title: "\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u043E\u0442\u0440\u0435\u0437\u043E\u043A", situation: "\u0412\u043F\u0435\u0440\u0435\u0434\u0438 \u0440\u044F\u0434\u043E\u0432\u043E\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A \u0431\u0435\u0437 \u0432\u043D\u0435\u0448\u043D\u0435\u0433\u043E \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u044F." },
+    routine_evening_wind: { title: "\u0412\u0435\u0447\u0435\u0440 \u0431\u0435\u0437 \u0441\u043E\u0431\u044B\u0442\u0438\u0439", situation: "\u0412\u0435\u0447\u0435\u0440 \u0441\u0432\u043E\u0431\u043E\u0434\u0435\u043D: \u0435\u0433\u043E \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E \u0438\u043B\u0438 \u0434\u043E\u0442\u044F\u043D\u0443\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443." },
+    routine_pause: { title: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u043F\u0435\u0440\u0435\u0434\u044B\u0448\u043A\u0430", situation: "\u0415\u0441\u0442\u044C \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u0439 \u043F\u0440\u043E\u043C\u0435\u0436\u0443\u0442\u043E\u043A: \u0435\u0433\u043E \u043C\u043E\u0436\u043D\u043E \u043F\u043E\u0442\u0440\u0430\u0442\u0438\u0442\u044C \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435." },
+    family_partner_offers: { title: "\u041F\u0430\u0440\u0442\u043D\u0451\u0440 \u043F\u0440\u0435\u0434\u043B\u0430\u0433\u0430\u0435\u0442 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C", situation: "\u0423 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0440\u0430\u0437\u0433\u0440\u0443\u0436\u0435\u043D\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440, \u0438 \u043E\u043D \u0441\u0430\u043C \u043F\u0440\u0435\u0434\u043B\u0430\u0433\u0430\u0435\u0442 \u0432\u0437\u044F\u0442\u044C \u0447\u0430\u0441\u0442\u044C \u0434\u0435\u043B.", causeHint: "\u0421\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u043F\u043E\u044F\u0432\u0438\u043B\u0430\u0441\u044C \u043F\u043E\u0442\u043E\u043C\u0443, \u0447\u0442\u043E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u043D\u0438\u0437\u043A\u0430\u044F, \u0430 \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u0432\u044B\u0441\u043E\u043A\u0438\u043C." },
+    family_child_evening: { title: "\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u0436\u0434\u0451\u0442 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u044F", situation: "\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u0434\u043E\u043C\u0430 \u0438 \u0441\u0432\u043E\u0431\u043E\u0434\u0435\u043D \u0438\u043C\u0435\u043D\u043D\u043E \u0441\u0435\u0439\u0447\u0430\u0441; \u043F\u043E\u0437\u0436\u0435 \u044D\u0442\u043E \u043E\u043A\u043D\u043E \u0437\u0430\u043A\u0440\u043E\u0435\u0442\u0441\u044F.", causeHint: "\u0421\u0438\u0442\u0443\u0430\u0446\u0438\u044F \u043E\u0442\u043A\u0440\u044B\u043B\u0430\u0441\u044C \u0432 \u0441\u043E\u0431\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u043C \u043E\u043A\u043D\u0435 \u0440\u0435\u0431\u0451\u043D\u043A\u0430 \u043F\u0440\u0438 \u0441\u043D\u0438\u0437\u0438\u0432\u0448\u0435\u0439\u0441\u044F \u0431\u043B\u0438\u0437\u043E\u0441\u0442\u0438." },
+    routine_family_moment: { title: "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442", situation: "\u0414\u043E\u043C\u0430 \u043E\u0431\u044B\u0447\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440\u043D\u0438\u0439 \u0440\u0438\u0442\u043C, \u0438 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043F\u043E-\u0440\u0430\u0437\u043D\u043E\u043C\u0443." },
     mon_breakfast: { title: "\u041D\u0430\u0447\u0430\u043B\u043E \u043D\u0435\u0434\u0435\u043B\u0438", situation: "\u0423\u0442\u0440\u043E \u0443\u0436\u0435 \u043D\u0430\u0447\u0430\u043B\u043E\u0441\u044C, \u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u043A \u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A \u043A\u043E\u043D\u043A\u0443\u0440\u0438\u0440\u0443\u044E\u0442 \u0437\u0430 \u0432\u0440\u0435\u043C\u044F." },
     mon_commute: { title: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043A \u043F\u0435\u0440\u0432\u043E\u043C\u0443 \u0434\u0435\u043B\u0443", situation: "\u0414\u043E \u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043C\u0435\u0436\u0434\u0443 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u0432 \u043F\u0443\u0442\u0438 \u0438 \u0440\u0430\u0441\u0445\u043E\u0434\u0430\u043C\u0438." },
     mon_scope_expansion: { title: "\u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0430\u043B \u0431\u043E\u043B\u044C\u0448\u0435", situation: "\u0412 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043E\u0431\u0430\u0432\u0438\u043B\u0438 \u043D\u043E\u0432\u044B\u0435 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u044F, \u043D\u043E \u0441\u0440\u043E\u043A \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u043F\u0440\u0435\u0436\u043D\u0438\u043C." },
@@ -183,11 +193,21 @@
   var lowFocus = { when: compare("context.focusByTaskId.project_delivery", "lt", 45), delta: { timeMin: 25, effortScore: 15, riskScore: 18, preview: "\u041D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u0440\u0435\u043C\u044F \u0438 \u0440\u0438\u0441\u043A" }, reason: "\u043D\u0438\u0437\u043A\u0438\u0439 \u0444\u043E\u043A\u0443\u0441", ruleEvidenceId: "re_multifactor_task_geometry" };
   var highCaffeine = { when: compare("accumulators.activeCaffeineMg", "gte", 140), delta: { riskScore: 20, optionPressure: 15, preview: "\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0444\u0435 \u0443\u0445\u0443\u0434\u0448\u0438\u0442 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u044C \u043A\u043E \u0441\u043D\u0443" }, reason: "\u0430\u043A\u0442\u0438\u0432\u043D\u044B\u0439 \u043A\u043E\u0444\u0435\u0438\u043D", ruleEvidenceId: "re_caffeine_timing_sleep" };
   var partnerFriction = { when: compare("family.friction", "gte", 55), delta: { riskScore: 20, optionPressure: 18, preview: "\u041F\u0440\u043E\u0441\u044C\u0431\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435" }, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u0442\u0440\u0435\u043D\u0438\u0435", ruleEvidenceId: "re_family_load_support" };
+  var partnerOverloaded = { when: compare("context.partnerLoad", "gte", 72), delta: { available: false, preview: "\u041F\u0430\u0440\u0442\u043D\u0451\u0440 \u0443\u0436\u0435 \u043F\u0435\u0440\u0435\u0433\u0440\u0443\u0436\u0435\u043D \u0441\u0432\u043E\u0438\u043C\u0438 \u0434\u0435\u043B\u0430\u043C\u0438" }, reason: "\u043F\u0430\u0440\u0442\u043D\u0451\u0440 \u043F\u0435\u0440\u0435\u0433\u0440\u0443\u0436\u0435\u043D", ruleEvidenceId: "re_family_load_support" };
+  var partnerOutsideWindow = { when: compare("context.partnerAvailableNow", "lt", 1), delta: { timeMin: 15, riskScore: 14, optionPressure: 16, preview: "\u0421\u0435\u0439\u0447\u0430\u0441 \u043D\u0435 \u043E\u043A\u043D\u043E \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430: \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u043B\u044F\u0436\u0435\u0442 \u043F\u043E\u0432\u0435\u0440\u0445 \u0435\u0433\u043E \u0434\u0435\u043B" }, reason: "\u0432\u043D\u0435 \u043E\u043A\u043D\u0430 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430", ruleEvidenceId: "re_family_load_support" };
+  var partnerLoaded = { when: compare("context.partnerLoad", "gte", 48), delta: { effortScore: 10, riskScore: 10, optionPressure: 12, preview: "\u041F\u0430\u0440\u0442\u043D\u0451\u0440 \u0443\u0436\u0435 \u0437\u0430\u043D\u044F\u0442: \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u043E\u0431\u043E\u0439\u0434\u0451\u0442\u0441\u044F \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430", ruleEvidenceId: "re_family_load_support" };
   var compressedMondayMorning = { kind: "all", conditions: [compare("clock.dayIndex", "eq", 0), compare("clock.minuteOfDay", "gte", 360), compare("clock.minuteOfDay", "lte", 540), compare("context.deadlinePressure", "gte", 70)] };
   var compressedMorningCooking = { when: compressedMondayMorning, delta: { timeMin: 10, effortScore: 15, riskScore: 8, optionPressure: 35, preview: "\u0421\u0436\u0430\u0442\u043E\u0435 \u0443\u0442\u0440\u043E: \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0435\u0449\u0451 10 \u043C\u0438\u043D\u0443\u0442, \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0441\u0438\u043B\u0438\u044F \u0438 \u043F\u043E\u0432\u044B\u0441\u0438\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }, reason: "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435", ruleEvidenceId: "re_multifactor_task_geometry" };
   var compressedMorningTension = { when: compressedMondayMorning, evaluateAt: "pre_action", effects: [add("vitals.tension", 7, "\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0432 \u0441\u0436\u0430\u0442\u043E\u043C \u0443\u0442\u0440\u0435")], explanation: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442 \u0438 \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0435\u043D\u043D\u043E\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u0435\u0435 \u043E\u043A\u043D\u043E \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 \u043E\u0442 \u0433\u043E\u0442\u043E\u0432\u043A\u0438", ruleEvidenceId: "re_multifactor_task_geometry" };
   var cookingRoutine = { when: compare("character.skills.cooking", "gte", 37), delta: { timeMin: -10, effortScore: -4, optionPressure: -6, preview: "\u041D\u0430\u0432\u044B\u043A \u0438 \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u0433\u043E\u0442\u043E\u0432\u043A\u0438" }, reason: "\u043E\u0441\u0432\u043E\u0435\u043D\u043D\u044B\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438", ruleEvidenceId: "re_habit_skill_future_geometry" };
   var batchPrepUnlock = { when: compare("character.skills.cooking", "gte", 37), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "kitchen.batch_prep_familiar", reason: "\u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043D\u0430\u0432\u044B\u043A \u0433\u043E\u0442\u043E\u0432\u043A\u0438 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438\u0451\u043C\u043E\u0432" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u0451\u043D\u043D\u0430\u044F \u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u0431\u044B\u0442\u043E\u0432\u043E\u0439 \u043F\u0440\u043E\u0446\u0435\u0441\u0441", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var sharedRhythmUnlock = { when: compare("context.partnerLoad", "lte", 26), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "family.shared_rhythm", reason: "\u0440\u0430\u0437\u0433\u0440\u0443\u0436\u0435\u043D\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u0437\u0430\u043A\u0440\u0435\u043F\u0438\u043B \u043E\u0431\u0449\u0438\u0439 \u0440\u0438\u0442\u043C" }], explanation: "\u0412\u0437\u044F\u0442\u0430\u044F \u043D\u0430 \u0441\u0435\u0431\u044F \u0437\u0430\u0434\u0430\u0447\u0430 \u043F\u0440\u0438 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u043C \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0435 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u044F\u0435\u0442 \u043E\u0431\u0449\u0438\u0439 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0439 \u0440\u0438\u0442\u043C", ruleEvidenceId: "re_family_load_support" };
+  var sharedRhythmRelief = { when: { kind: "capability", id: "family.shared_rhythm" }, delta: { effortScore: -6, riskScore: -8, optionPressure: -10, preview: "\u041E\u0431\u0449\u0438\u0439 \u0440\u0438\u0442\u043C \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0440\u043E\u0441\u044C\u0431\u0443 \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u043E\u0439" }, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0439 \u043E\u0431\u0449\u0438\u0439 \u0440\u0438\u0442\u043C", ruleEvidenceId: "re_family_load_support" };
+  var remoteEveningIntrusion = { when: { kind: "all", conditions: [{ kind: "compare", path: "employment.format", op: "eq", value: "remote" }, compare("clock.minuteOfDay", "gte", 1020)] }, delta: { riskScore: 10, optionPressure: 12, preview: "\u0423\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u043B\u0435\u0433\u0447\u0435 \u043F\u0443\u0441\u043A\u0430\u0435\u0442 \u0440\u0430\u0431\u043E\u0442\u0443 \u0432 \u0432\u0435\u0447\u0435\u0440" }, reason: "\u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u0432\u0442\u043E\u0440\u0436\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u043E\u0433\u043E \u0444\u043E\u0440\u043C\u0430\u0442\u0430", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var officeCommuteCost = { when: { kind: "compare", path: "employment.format", op: "eq", value: "office" }, delta: { timeMin: 10, preview: "\u041E\u0444\u0438\u0441\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0434\u043E\u0440\u043E\u0433\u0443 \u043A \u0440\u0430\u0431\u043E\u0447\u0435\u043C\u0443 \u0431\u043B\u043E\u043A\u0443" }, reason: "\u0434\u043E\u0440\u043E\u0433\u0430 \u043E\u0444\u0438\u0441\u043D\u043E\u0433\u043E \u0444\u043E\u0440\u043C\u0430\u0442\u0430", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var projectInstability = { when: { kind: "compare", path: "employment.format", op: "eq", value: "project" }, delta: { riskScore: 8, preview: "\u041F\u0440\u043E\u0435\u043A\u0442\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0434\u0435\u0440\u0436\u0438\u0442 \u0432\u044B\u0448\u0435 \u043D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0441\u0442\u044C" }, reason: "\u043D\u0435\u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u043D\u043E\u0433\u043E \u0444\u043E\u0440\u043C\u0430\u0442\u0430", ruleEvidenceId: "re_multifactor_task_geometry" };
+  var trainingUnlock = { when: compare("character.skills.professional", "gte", 56), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.focused_block", reason: "\u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u0435\u043F\u0438\u043B\u043E \u043F\u0440\u0438\u0451\u043C \u0434\u043B\u0438\u043D\u043D\u043E\u0433\u043E \u0444\u043E\u043A\u0443\u0441\u0430" }], explanation: "\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0432 \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043F\u0440\u0438\u0451\u043C \u0434\u043B\u0438\u043D\u043D\u043E\u0433\u043E \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u0431\u043B\u043E\u043A\u0430", ruleEvidenceId: "re_habit_skill_future_geometry" };
+  var focusedBlockRelief = { when: { kind: "capability", id: "work.focused_block" }, delta: { timeMin: -15, riskScore: -6, preview: "\u041F\u0440\u0438\u0451\u043C \u0434\u043B\u0438\u043D\u043D\u043E\u0433\u043E \u0444\u043E\u043A\u0443\u0441\u0430 \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u0435\u0442 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A" }, reason: "\u043E\u0441\u0432\u043E\u0435\u043D\u043D\u044B\u0439 \u043F\u0440\u0438\u0451\u043C \u0434\u043B\u0438\u043D\u043D\u043E\u0433\u043E \u0444\u043E\u043A\u0443\u0441\u0430", ruleEvidenceId: "re_habit_skill_future_geometry" };
   var reciprocalSupportUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u0432\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" }], explanation: "\u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0451\u043D\u043D\u0430\u044F \u043F\u043E\u043C\u043E\u0449\u044C \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u0432\u0437\u0430\u0438\u043C\u043D\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443", ruleEvidenceId: "re_habit_skill_future_geometry" };
   var repeatedCollaborationUnlock = { when: compare("work.helpDebt", "gte", 1), evaluateAt: "pre_action", effects: [{ op: "grant_capability", capabilityId: "work.reciprocal_support", reason: "\u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043E\u0442\u043A\u0440\u044B\u043B\u0430 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u044B\u0439 \u043A\u0430\u043D\u0430\u043B \u043F\u043E\u043C\u043E\u0449\u0438" }], explanation: "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443", ruleEvidenceId: "re_habit_skill_future_geometry" };
   var priorityAlignmentByAction = {
@@ -269,14 +289,14 @@
     action("walk_short", "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u043F\u0440\u043E\u0439\u0442\u0438\u0441\u044C", 25, 0, 6, 1, -18, U(0, 1, 4, 1, 1, 2), [add("vitals.tension", -16, "\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435"), add("vitals.energy", 6, "\u0441\u0432\u0435\u0436\u0438\u0439 \u0432\u043E\u0437\u0434\u0443\u0445"), { op: "adjust_habit", habitId: "short_walk", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0439 \u043F\u0440\u043E\u0433\u0443\u043B\u043A\u0438" }], { domains: ["movement", "state"], stabilizes: ["recovery", "family"] }),
     action("train_light", "\u041B\u0451\u0433\u043A\u0430\u044F \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430", 35, 0, 18, 5, -12, U(0, 0, 4, 1, 0, 1), [add("vitals.tension", -12, "\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435"), add("vitals.physicalFatigue", 8, "\u043B\u0451\u0433\u043A\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("accumulators.recoveryNeed", -8, "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u044D\u0444\u0444\u0435\u043A\u0442")], { rules: [tired], domains: ["movement", "state"], stabilizes: ["recovery"] }),
     action("train_planned", "\u041F\u043B\u0430\u043D\u043E\u0432\u0430\u044F \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430", 70, 0, 42, 12, -8, U(0, 0, 5, 1, -2, -1), [add("vitals.tension", -18, "\u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430"), add("vitals.physicalFatigue", 20, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("accumulators.recoveryNeed", -12, "\u0437\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435")], { rules: [tired], domains: ["movement", "state"], stabilizes: ["recovery"] }),
-    action("work_standard", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435", 75, 0, 32, 16, -16, U(5, 0, -2, 2, 0, -1), [{ op: "progress_task", taskId: "project_delivery", minutes: 75, reason: "\u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }, add("vitals.energy", -5, "\u0443\u043C\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), add("vitals.tension", 4, "\u0440\u0430\u0431\u043E\u0447\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), { op: "adjust_skill", skillId: "professional", delta: 1, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }], { rules: [lowFocus], conditional: [workConditional], domains: ["work", "state"], stabilizes: ["deadline"] }),
+    action("work_standard", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435", 75, 0, 32, 16, -16, U(5, 0, -2, 2, 0, -1), [{ op: "progress_task", taskId: "project_delivery", minutes: 75, reason: "\u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }, add("vitals.energy", -5, "\u0443\u043C\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), add("vitals.tension", 4, "\u0440\u0430\u0431\u043E\u0447\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), { op: "adjust_skill", skillId: "professional", delta: 1, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }], { rules: [lowFocus, officeCommuteCost, remoteEveningIntrusion, projectInstability, focusedBlockRelief], conditional: [workConditional, trainingUnlock], domains: ["work", "state"], stabilizes: ["deadline"] }),
     action("work_fast", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0431\u044B\u0441\u0442\u0440\u043E", 60, 0, 38, 28, -20, U(5, 0, -3, 2, 3, -4), [{ op: "progress_task", taskId: "project_delivery", minutes: 82, reason: "\u0431\u044B\u0441\u0442\u0440\u044B\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441" }, add("vitals.energy", -7, "\u0438\u043D\u0442\u0435\u043D\u0441\u0438\u0432\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), add("vitals.tension", 7, "\u0440\u0438\u0441\u043A \u043F\u0435\u0440\u0435\u0434\u0435\u043B\u043A\u0438")], { rules: [lowFocus], conditional: [workConditional], domains: ["work", "state"], stabilizes: ["deadline"] }),
     action("work_careful", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u043E", 90, 0, 30, 8, -14, U(4, 0, -2, 2, -2, 3), [{ op: "progress_task", taskId: "project_delivery", minutes: 70, reason: "\u043D\u0430\u0434\u0451\u0436\u043D\u044B\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441" }, add("vitals.energy", -4, "\u0441\u043E\u0441\u0440\u0435\u0434\u043E\u0442\u043E\u0447\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), { op: "adjust_skill", skillId: "professional", delta: 2, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438" }, { op: "append_causal_link", mechanism: "\u0442\u0449\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u043B\u0430 \u0440\u0438\u0441\u043A \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430", resultPath: "work.reviewRisk", confidence: "plausible_model" }], { rules: [lowFocus], conditional: [workConditional], domains: ["work", "state"], stabilizes: ["deadline"] }),
     action("ask_colleague_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0443 \u043E \u043F\u043E\u043C\u043E\u0449\u0438", 15, 0, 8, 12, -25, U(4, 0, 0, 2, 5, -1), [{ op: "progress_task", taskId: "project_delivery", minutes: 90, reason: "\u043F\u043E\u043C\u043E\u0449\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0438" }, add("work.helpDebt", 1, "\u0441\u043E\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0434\u043E\u043B\u0433"), add("vitals.tension", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0430 \u0441 \u043A\u043E\u043B\u043B\u0435\u0433\u043E\u0439"), { op: "append_causal_link", mechanism: "\u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0441\u043D\u0438\u0436\u0430\u0435\u0442 \u0440\u0438\u0441\u043A \u043F\u0435\u0440\u0435\u0434\u0435\u043B\u043A\u0438", resultPath: "work.reviewRisk", confidence: "plausible_model" }], { conditional: [repeatedCollaborationUnlock], domains: ["work", "social"], stabilizes: ["deadline", "recovery"] }),
     action("renegotiate_work", "\u041F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443", 25, 0, 12, 16, -22, U(3, 1, 2, 2, 3, -2), [{ op: "set_task", taskId: "project_delivery", patch: { dueDayIndex: 4, status: "renegotiated" }, reason: "\u0441\u0440\u043E\u043A \u0443\u0442\u043E\u0447\u043D\u0451\u043D" }, add("work.reputation", -2, "\u0446\u0435\u043D\u0430 \u043F\u0435\u0440\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u0438\u044F"), add("vitals.tension", -10, "\u043E\u0431\u044A\u0451\u043C \u0438 \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u044B")], { rules: [{ when: compare("work.reputation", "lt", 45), delta: { riskScore: 18, optionPressure: 15, preview: "\u041D\u0438\u0437\u043A\u0430\u044F \u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u044F \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0435\u0440\u0435\u0433\u043E\u0432\u043E\u0440\u044B \u0441\u043B\u043E\u0436\u043D\u0435\u0435" }, reason: "\u0440\u0435\u043F\u0443\u0442\u0430\u0446\u0438\u043E\u043D\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442", ruleEvidenceId: "re_multifactor_task_geometry" }], domains: ["work"], stabilizes: ["deadline", "recovery"] }),
     action("work_late", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0434\u043E\u043F\u043E\u0437\u0434\u043D\u0430", 90, 0, 45, 25, -20, U(5, -3, -4, 2, 1, -3), [{ op: "progress_task", taskId: "project_delivery", minutes: 105, reason: "\u043F\u043E\u0437\u0434\u043D\u0438\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0431\u043B\u043E\u043A" }, add("vitals.tension", 9, "\u043F\u043E\u0437\u0434\u043D\u044F\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("vitals.windDown", -25, "\u0441\u0431\u0438\u0442\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435 \u0434\u043D\u044F"), add("family.friction", 4, "\u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u043F\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043D\u0438\u0435"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: -2, reason: "\u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u0441\u043D\u043E\u0432\u0430 \u0443\u0441\u0442\u0443\u043F\u0438\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u0435" }, { op: "adjust_habit", habitId: "late_work", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0437\u0434\u043D\u0435\u0439 \u0440\u0430\u0431\u043E\u0442\u044B" }], { rules: [tired, { when: compare("family.friction", "gte", 55), delta: { riskScore: 18, optionPressure: 20, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u0434\u0435\u043B\u0430\u044E\u0442 \u043E\u0442\u043C\u0435\u043D\u0443 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u043F\u043B\u0430\u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u0435" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u044B\u0445 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043F\u043B\u0430\u043D\u043E\u0432", ruleEvidenceId: "re_family_load_support" }], domains: ["work", "state"], stabilizes: ["deadline"] }),
-    action("ask_partner_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u043F\u043E\u043C\u043E\u0447\u044C", 10, 0, 6, 14, -18, U(2, -2, 2, 2, 4, -2), [add("accumulators.familyLoadPartner7d", 12, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u0430"), add("accumulators.familyLoadPlayer7d", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0436\u0435\u043D\u0430"), add("family.friction", 6, "\u0446\u0435\u043D\u0430 \u043F\u0440\u043E\u0441\u044C\u0431\u044B")], { rules: [partnerFriction, { when: compare("context.familyImbalance", "gte", 20), delta: { timeMin: 10, riskScore: 16, preview: "\u041F\u0435\u0440\u0435\u043A\u043E\u0441 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0440\u043E\u0441\u044C\u0431\u0443 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435" }, reason: "\u043F\u0435\u0440\u0435\u043A\u043E\u0441 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438", ruleEvidenceId: "re_family_load_support" }], domains: ["family", "social"], stabilizes: ["family"] }),
-    action("take_family_load", "\u0412\u0437\u044F\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443", 60, 0, 26, 4, -24, U(-2, 5, -1, 1, -2, 2), [add("accumulators.familyLoadPlayer7d", 12, "\u0432\u043A\u043B\u0430\u0434 \u0432 \u0441\u0435\u043C\u044C\u044E"), add("family.participationBalance", 10, "\u0443\u0447\u0430\u0441\u0442\u0438\u0435"), add("family.friction", -10, "\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u043E"), add("vitals.tension", -8, "\u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0441\u0442\u044C \u0441\u043D\u044F\u0442\u0430"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 3, reason: "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0430 \u043D\u0430\u0434\u0451\u0436\u043D\u043E" }, { op: "adjust_relationship", target: "child", dimension: "closeness", delta: 2, reason: "\u0432\u0440\u0435\u043C\u044F \u0443\u0434\u0435\u043B\u0435\u043D\u043E \u0440\u0435\u0431\u0451\u043D\u043A\u0443" }], { domains: ["family"], stabilizes: ["family", "recovery"] }),
+    action("ask_partner_help", "\u041F\u043E\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430 \u043F\u043E\u043C\u043E\u0447\u044C", 10, 0, 6, 14, -18, U(2, -2, 2, 2, 4, -2), [add("accumulators.familyLoadPartner7d", 12, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u0430"), add("accumulators.familyLoadPlayer7d", -10, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0436\u0435\u043D\u0430"), add("family.friction", 6, "\u0446\u0435\u043D\u0430 \u043F\u0440\u043E\u0441\u044C\u0431\u044B"), add("family.partner.load", 16, "\u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u043B\u0435\u0433\u043B\u0430 \u043D\u0430 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430")], { rules: [partnerFriction, partnerOverloaded, partnerOutsideWindow, partnerLoaded, sharedRhythmRelief, { when: compare("context.familyImbalance", "gte", 20), delta: { timeMin: 10, riskScore: 16, preview: "\u041F\u0435\u0440\u0435\u043A\u043E\u0441 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u0440\u043E\u0441\u044C\u0431\u0443 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435" }, reason: "\u043F\u0435\u0440\u0435\u043A\u043E\u0441 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438", ruleEvidenceId: "re_family_load_support" }], domains: ["family", "social"], stabilizes: ["family"] }),
+    action("take_family_load", "\u0412\u0437\u044F\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443", 60, 0, 26, 4, -24, U(-2, 5, -1, 1, -2, 2), [add("accumulators.familyLoadPlayer7d", 12, "\u0432\u043A\u043B\u0430\u0434 \u0432 \u0441\u0435\u043C\u044C\u044E"), add("family.participationBalance", 10, "\u0443\u0447\u0430\u0441\u0442\u0438\u0435"), add("family.friction", -10, "\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u043E"), add("vitals.tension", -8, "\u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0441\u0442\u044C \u0441\u043D\u044F\u0442\u0430"), { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 3, reason: "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0430 \u043D\u0430\u0434\u0451\u0436\u043D\u043E" }, { op: "adjust_relationship", target: "child", dimension: "closeness", delta: 2, reason: "\u0432\u0440\u0435\u043C\u044F \u0443\u0434\u0435\u043B\u0435\u043D\u043E \u0440\u0435\u0431\u0451\u043D\u043A\u0443" }, add("family.partner.load", -14, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u044F\u0442\u0430 \u0441 \u043F\u0430\u0440\u0442\u043D\u0451\u0440\u0430")], { conditional: [sharedRhythmUnlock], domains: ["family"], stabilizes: ["family", "recovery"] }),
     action("protect_commitment", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435", 75, 0, 28, 5, -25, U(-2, 5, -1, 1, -2, 2), [{ op: "resolve_commitment", commitmentId: "family_week", reason: "\u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E" }, { op: "adjust_relationship", target: "partner", dimension: "trust", delta: 5, reason: "\u043D\u0430\u0434\u0451\u0436\u043D\u043E\u0441\u0442\u044C" }], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 20, optionPressure: 18, preview: "\u0412\u044B\u0441\u043E\u043A\u043E\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F" }, reason: "\u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430", ruleEvidenceId: "re_multifactor_task_geometry" }, { when: compare("family.friction", "gte", 55), delta: { riskScore: 16, optionPressure: 14, preview: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0435 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u044B\u0448\u0430\u044E\u0442 \u0446\u0435\u043D\u0443 \u043E\u0442\u043C\u0435\u043D\u044B" }, reason: "\u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F", ruleEvidenceId: "re_family_load_support" }], domains: ["family"], stabilizes: ["family"] }),
     action("wind_down_early", "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0440\u0430\u043D\u044C\u0448\u0435", 60, 0, 4, 1, -28, U(-2, 1, 5, 2, -1, 3), [add("vitals.windDown", 38, "\u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u0435"), add("vitals.tension", -14, "\u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0431\u0443\u0436\u0434\u0435\u043D\u0438\u044F")], { rules: [{ when: compare("context.deadlinePressure", "gte", 70), delta: { timeMin: 15, optionPressure: 20, preview: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0445\u0432\u043E\u0441\u0442 \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0434\u043D\u044F" }, reason: "\u0441\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0445\u0432\u043E\u0441\u0442", ruleEvidenceId: "re_multifactor_task_geometry" }], domains: ["state"], stabilizes: ["recovery"] }),
     action("commute_transit", "\u041F\u043E\u0435\u0445\u0430\u0442\u044C \u043E\u0431\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u043E\u043C", 55, 120, 10, 8, 0, U(0, 0, 0, 3, -1, 0), [add("vitals.tension", -8, "\u0434\u043E\u0440\u043E\u0433\u0430 \u0431\u0435\u0437 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E\u0441\u0442\u0438 \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C")], { domains: ["finance", "state"], stabilizes: ["recovery"] }),
@@ -375,6 +395,17 @@
     state.causalJournal = state.causalJournal.filter((entry) => entry.dayIndex >= completedDayIndex);
     return before - state.causalJournal.length;
   }
+  var FAMILY_LOAD_NIGHTLY_RELIEF = 18;
+  function relieveFamilyLoad(state) {
+    for (const person of ["partner", "child"]) {
+      state.family[person].load = Math.max(0, state.family[person].load - FAMILY_LOAD_NIGHTLY_RELIEF);
+    }
+  }
+  function compactScheduledEffects(state) {
+    const before = state.scheduledEffects.length;
+    state.scheduledEffects = state.scheduledEffects.filter((item) => item.status === "pending");
+    return before - state.scheduledEffects.length;
+  }
   function rollWeekStats(state) {
     const week = currentWeekIndex(state);
     if (state.weekStats.weekIndex === week) return;
@@ -445,9 +476,24 @@
     return { slot: index + 1, dayIndex, minuteOfDay: minute, eventId, forkKind: eventId === "tue_night_wakeup" || eventId === "sat_school_event" ? "hard" : "ordinary", ...sleep ? { sleepBeforeMin: sleep[0], interruptionsMin: sleep[1] } : {} };
   });
   slots[7] = { ...slots[7], sleepBeforeMin: 210, interruptionsMin: 10 };
+  var CAMPAIGN_DAYS = 30;
+  var ROUTINE_DAY_ANCHORS = [420, 600, 780, 960, 1140, 1320];
+  var ROUTINE_SLEEP = [450, 0];
+  var authoredDays = Math.max(...raw.map((item) => item[0]));
+  for (let dayIndex = authoredDays; dayIndex < CAMPAIGN_DAYS; dayIndex += 1) {
+    ROUTINE_DAY_ANCHORS.forEach((minuteOfDay, index) => {
+      slots.push({
+        slot: slots.length + 1,
+        dayIndex,
+        minuteOfDay,
+        forkKind: "ordinary",
+        ...index === 0 ? { sleepBeforeMin: ROUTINE_SLEEP[0], interruptionsMin: ROUTINE_SLEEP[1] } : {}
+      });
+    });
+  }
   var heavyIds = /* @__PURE__ */ new Set(["tue_night_wakeup", "tue_pickup_conflict", "wed_school_call", "thu_family_evening", "fri_final_issue", "fri_submit", "sat_school_event"]);
   var familyWindowIds = /* @__PURE__ */ new Set(["mon_family_dinner", "tue_pickup_conflict", "thu_family_evening", "fri_family_plan", "sat_school_event", "sun_family_time"]);
-  var STATE_DRIVEN_DAYS = /* @__PURE__ */ new Set([1]);
+  var STATE_DRIVEN_DAYS = /* @__PURE__ */ new Set([1, 2, 3, 4, 5, 6, 7]);
   var dayAnchors = (day) => raw.filter((item) => item[0] === day).map((item) => item[1]);
   var domainCondition = {
     mon_breakfast: { kind: "compare", path: "vitals.hunger", op: "gte", value: 5 },
@@ -552,12 +598,80 @@
     onOpenEffects: [{ op: "add_state", path: "vitals.tension", delta: -5, reason: "\u0432\u0437\u0430\u0438\u043C\u043D\u0430\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430 \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0441\u0442\u044C" }],
     tags: ["causal", "echo", "family_reciprocity"]
   }, { kind: "compare", path: "family.partner.trust", op: "gte", value: 79 });
+  var ROUTINE_SITUATIONS = [
+    { id: "routine_morning_start", fromMin: 240, toMin: 660, actionIds: ["eat_quick_base", "walk_short", "drink_coffee_100"] },
+    { id: "routine_work_stretch", fromMin: 540, toMin: 1080, actionIds: ["work_standard", "walk_short", "ask_colleague_help"] },
+    { id: "routine_family_moment", fromMin: 900, toMin: 1380, actionIds: ["protect_commitment", "take_family_load", "walk_short", "wind_down_early", "work_standard"] },
+    { id: "routine_evening_wind", fromMin: 1020, toMin: 1439, actionIds: ["wind_down_early", "walk_short", "work_late"] },
+    // Страховочная ситуация: доступна почти всегда и держит стабилизаторы сразу
+    // двух доменов, поэтому тяжёлое состояние не остаётся без платного выхода,
+    // когда авторские и остальные бытовые ситуации не подходят.
+    { id: "routine_pause", fromMin: 300, toMin: 1380, actionIds: ["walk_short", "work_standard", "wind_down_early"] }
+  ];
+  for (const routine of ROUTINE_SITUATIONS) {
+    events[routine.id] = {
+      schemaVersion: 1,
+      id: routine.id,
+      version: 1,
+      source: "opportunity",
+      copy: EVENT_COPY[routine.id],
+      trigger: { kind: "all", conditions: [
+        { kind: "compare", path: "clock.minuteOfDay", op: "gte", value: routine.fromMin },
+        { kind: "compare", path: "clock.minuteOfDay", op: "lte", value: routine.toMin }
+      ] },
+      urgency: 0,
+      selectionWeight: 1,
+      cooldownDays: 0,
+      load: { external: 0, total: 0, size: "none" },
+      onOpenEffects: [],
+      actionIds: routine.actionIds,
+      tags: ["opportunity", "routine"]
+    };
+  }
+  events.family_partner_offers = {
+    schemaVersion: 1,
+    id: "family_partner_offers",
+    version: 1,
+    source: "causal",
+    copy: EVENT_COPY.family_partner_offers,
+    trigger: { kind: "all", conditions: [
+      { kind: "compare", path: "context.partnerAvailableNow", op: "gte", value: 1 },
+      { kind: "compare", path: "context.partnerLoad", op: "lte", value: 26 },
+      { kind: "compare", path: "family.partner.trust", op: "gte", value: 70 }
+    ] },
+    urgency: 1,
+    selectionWeight: 2,
+    cooldownDays: 2,
+    load: { external: 0, total: 8, size: "small" },
+    onOpenEffects: [{ op: "add_state", path: "vitals.tension", delta: -4, reason: "\u0440\u0430\u0437\u0434\u0435\u043B\u0451\u043D\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }],
+    actionIds: ["take_family_load", "protect_commitment", "wind_down_early"],
+    tags: ["causal", "family_anchor_window", "family_reciprocity"]
+  };
+  events.family_child_evening = {
+    schemaVersion: 1,
+    id: "family_child_evening",
+    version: 1,
+    source: "causal",
+    copy: EVENT_COPY.family_child_evening,
+    trigger: { kind: "all", conditions: [
+      { kind: "compare", path: "context.childAvailableNow", op: "gte", value: 1 },
+      { kind: "compare", path: "family.child.closeness", op: "lte", value: 82 }
+    ] },
+    urgency: 2,
+    selectionWeight: 2,
+    cooldownDays: 1,
+    load: { external: 0, total: 10, size: "small" },
+    onOpenEffects: [],
+    actionIds: ["take_family_load", "protect_commitment", "walk_short"],
+    tags: ["causal", "family_anchor_window"]
+  };
   var registries = { actions, events, slots };
   function createInitialState(seed) {
     return {
       schemaVersion: 3,
       periods: createPeriodState(),
       weekStats: { weekIndex: 0, actionCounts: {}, previousWeekIndex: -1, previousActionCounts: {} },
+      employment: { format: null, chosenAtStepIndex: null },
       campaignId: `week01:${seed}`,
       scenarioId: CONTRACT.scenarioId,
       scenarioVersion: CONTRACT.scenarioVersion,
@@ -577,7 +691,7 @@
       accumulators: { sleepDebtMin: 30, activeCaffeineMg: 0, satietyWindowMin: 0, recoveryNeed: 22, familyLoadPlayer7d: 18, familyLoadPartner7d: 18 },
       economy: { cashRub: 32e3, foodPortions: { ready_meal: 2, quick_base: 3, cook_stock: 5 }, expectedIncome: [{ id: "salary", amountRub: 72e3, dueDayIndex: 4, status: "expected", source: "salary" }, { id: "bonus", amountRub: 0, dueDayIndex: 4, status: "expected", source: "bonus" }], obligations: [{ id: "monthly_payment", amountRub: 45e3, dueDayIndex: 7, status: "scheduled", deferrable: true, deferralsUsed: 0, maxDeferrals: 1, deferCostRub: 1500 }] },
       work: { reputation: 58, projectBacklogMin: 420, helpDebt: 0, tasks: [{ id: "project_delivery", remainingMin: 420, dueDayIndex: 4, dueMinuteOfDay: 1020, requiredSkill: 60, baseRisk: 25, status: "open" }] },
-      family: { partner: { closeness: 72, trust: 74, available: true }, child: { closeness: 76, trust: 73, available: true }, friction: 18, participationBalance: 0 },
+      family: { partner: { closeness: 72, trust: 74, available: true, load: 28, windowFromMin: 1020, windowToMin: 1380 }, child: { closeness: 76, trust: 73, available: true, load: 0, windowFromMin: 960, windowToMin: 1260 }, friction: 18, participationBalance: 0 },
       commitments: [{ id: "family_week", domain: "family", dueDayIndex: 4, dueMinuteOfDay: 1140, status: "open", owner: "shared", hard: true, renegotiationsUsed: 0, sourceId: "initial_state" }, { id: "school_event", domain: "family", dueDayIndex: 5, dueMinuteOfDay: 540, status: "open", owner: "player", hard: true, renegotiationsUsed: 0, sourceId: "initial_state" }],
       scheduledEffects: [
         { id: "salary_effect", sourceId: "salary", trigger: { kind: "at_time", dayIndex: 4, minuteOfDay: 1020 }, effects: [{ op: "receive_income", incomeId: "salary", reason: "\u0437\u0430\u0440\u043F\u043B\u0430\u0442\u0430 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0430" }], status: "pending" },
@@ -673,12 +787,13 @@
     /^work\.(reputation|projectBacklogMin|helpDebt)$/,
     /^work\.tasks\.\d+\.(remainingMin|requiredSkill|baseRisk|dueDayIndex|dueMinuteOfDay)$/,
     /^family\.(friction|participationBalance)$/,
-    /^family\.(partner|child)\.(closeness|trust)$/,
+    /^family\.(partner|child)\.(closeness|trust|load|windowFromMin|windowToMin)$/,
     /^character\.skills\.(professional|planning|cooking|physical_fitness)$/,
     /^character\.habits\.(caffeine_compensation|late_work|delivery|short_walk|meal_prep)$/,
-    /^weeklyRules$/
+    /^weeklyRules$/,
+    /^employment\.format$/
   ];
-  var CONTEXT_PATHS = [/^context\.(sleepiness|sleepReadiness|deadlinePressure|financialPressure|familyImbalance|cashAfterNextObligationsRub)$/, /^context\.focusByTaskId\.[a-z0-9_]+$/, /^context\.optionPressureByActionId\.[a-z0-9_]+$/];
+  var CONTEXT_PATHS = [/^context\.(sleepiness|sleepReadiness|deadlinePressure|financialPressure|familyImbalance|cashAfterNextObligationsRub|partnerLoad|partnerAvailableNow|childAvailableNow)$/, /^context\.focusByTaskId\.[a-z0-9_]+$/, /^context\.optionPressureByActionId\.[a-z0-9_]+$/];
   function fail(path, message) {
     throw new Error(`${path}: ${message}`);
   }
@@ -777,6 +892,14 @@
     unique(periods.appliedBoundaries, "state.periods.appliedBoundaries");
     if (!Array.isArray(periods.plannedWeeks) || periods.plannedWeeks.some((index) => !Number.isInteger(index) || index < 0)) fail("state.periods.plannedWeeks", "expected non-negative week indexes");
     unique(periods.plannedWeeks.map(String), "state.periods.plannedWeeks");
+    const employment = state.employment;
+    if (!employment || typeof employment !== "object") fail("state.employment", "required");
+    if (employment.format !== null && !["office", "remote", "project"].includes(employment.format)) fail("state.employment.format", "unknown format");
+    if (employment.chosenAtStepIndex !== null) {
+      integer(employment.chosenAtStepIndex, "state.employment.chosenAtStepIndex");
+      if (employment.chosenAtStepIndex < 0) fail("state.employment.chosenAtStepIndex", "negative");
+    }
+    if (employment.format === null !== (employment.chosenAtStepIndex === null)) fail("state.employment", "format and choice step must be set together");
     const stats = state.weekStats;
     if (!stats || typeof stats !== "object") fail("state.weekStats", "required");
     integer(stats.weekIndex, "state.weekStats.weekIndex");
@@ -816,6 +939,12 @@
     for (const person of ["partner", "child"]) {
       inRange(state.family[person].closeness, 0, 100, `state.family.${person}.closeness`);
       inRange(state.family[person].trust, 0, 100, `state.family.${person}.trust`);
+      inRange(state.family[person].load, 0, 100, `state.family.${person}.load`);
+      integer(state.family[person].windowFromMin, `state.family.${person}.windowFromMin`);
+      integer(state.family[person].windowToMin, `state.family.${person}.windowToMin`);
+      inRange(state.family[person].windowFromMin, 0, 1439, `state.family.${person}.windowFromMin`);
+      inRange(state.family[person].windowToMin, 0, 1439, `state.family.${person}.windowToMin`);
+      if (state.family[person].windowToMin < state.family[person].windowFromMin) fail(`state.family.${person}.windowToMin`, "window ends before it starts");
     }
     const nonnegativeIntegers = [state.economy.cashRub, ...Object.values(state.economy.foodPortions), state.work.projectBacklogMin, state.work.helpDebt];
     for (const value of nonnegativeIntegers) {
@@ -1109,8 +1238,10 @@
     const cashAfterNextObligationsRub = state.economy.cashRub + expected - obligations;
     const financialPressure = clamp(cashAfterNextObligationsRub < 0 ? 50 + Math.min(50, -cashAfterNextObligationsRub / 500) : 20);
     const familyImbalance = Math.abs(state.accumulators.familyLoadPlayer7d - state.accumulators.familyLoadPartner7d);
+    const inWindow = (person) => person.available && state.clock.minuteOfDay >= person.windowFromMin && state.clock.minuteOfDay <= person.windowToMin ? 1 : 0;
+    const partnerAvailableNow = inWindow(state.family.partner), childAvailableNow = inWindow(state.family.child);
     const focus = clamp(0.36 * state.vitals.energy + 0.2 * (100 - sleepiness) + 0.18 * (100 - state.vitals.tension) + 0.12 * (100 - state.vitals.hunger) + 0.14 * state.character.skills.professional);
-    return { sleepiness, sleepReadiness, deadlinePressure, financialPressure, familyImbalance, cashAfterNextObligationsRub, focusByTaskId: Object.fromEntries(active.map((task) => [task.id, focus])), optionPressureByActionId: {} };
+    return { sleepiness, sleepReadiness, deadlinePressure, financialPressure, familyImbalance, cashAfterNextObligationsRub, partnerLoad: state.family.partner.load, partnerAvailableNow, childAvailableNow, focusByTaskId: Object.fromEntries(active.map((task) => [task.id, focus])), optionPressureByActionId: {} };
   }
   var riskLabel = (score) => score >= 35 ? "very_high" : score >= 24 ? "high" : score >= 12 ? "moderate" : score >= 5 ? "low" : "none";
   var effortLevel = (score) => score >= 35 ? "high" : score >= 15 ? "normal" : score > 0 ? "light" : "none";
@@ -1191,6 +1322,7 @@
     for (const person of ["partner", "child"]) {
       state.family[person].closeness = round(clamp(state.family[person].closeness));
       state.family[person].trust = round(clamp(state.family[person].trust));
+      state.family[person].load = round(clamp(state.family[person].load));
     }
     state.economy.cashRub = Math.max(0, Math.round(state.economy.cashRub));
     for (const key of Object.keys(state.economy.foodPortions)) state.economy.foodPortions[key] = Math.max(0, Math.round(state.economy.foodPortions[key]));
@@ -1202,8 +1334,9 @@
     const value = getRaw(state, path);
     if (typeof value !== "number") return;
     let next = value;
-    if (/^vitals\./.test(path) || /^character\.(skills|habits)\./.test(path) || path === "work.reputation" || /^family\.(friction|(partner|child)\.(closeness|trust))$/.test(path) || /^accumulators\.(recoveryNeed|familyLoadPlayer7d|familyLoadPartner7d)$/.test(path)) next = round(clamp(value));
+    if (/^vitals\./.test(path) || /^character\.(skills|habits)\./.test(path) || path === "work.reputation" || /^family\.(friction|(partner|child)\.(closeness|trust|load))$/.test(path) || /^accumulators\.(recoveryNeed|familyLoadPlayer7d|familyLoadPartner7d)$/.test(path)) next = round(clamp(value));
     else if (path === "family.participationBalance") next = round(clamp(value, -100, 100));
+    else if (/^family\.(partner|child)\.load$/.test(path)) next = round(clamp(value));
     else if (path === "accumulators.sleepDebtMin") next = round(clamp(value, 0, 480));
     else if (path === "accumulators.activeCaffeineMg") next = round(clamp(value, 0, 600));
     else if (path === "accumulators.satietyWindowMin") next = round(clamp(value, 0, 360));
@@ -1646,13 +1779,22 @@
           const crossed = boundariesForCompletedDay({ periods: state.periods, completedDayIndex: completedSlot.dayIndex, nextDayIndex: nextSlot ? nextSlot.dayIndex : null, afterStepIndex: state.clock.stepIndex });
           const beforePeriods = clone2(state.periods);
           const applied = applyPeriodBoundaries(state, crossed);
+          if (applied.some((item) => item.kind === "day")) {
+            const beforeLoad = { partner: state.family.partner.load, child: state.family.child.load };
+            relieveFamilyLoad(state);
+            pushChange(changes, "family_recovery", "\u043D\u043E\u0447\u044C \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0431\u043B\u0438\u0437\u043A\u0438\u0445", "family.partner.load", beforeLoad.partner, state.family.partner.load, "plausible_model");
+            pushChange(changes, "family_recovery", "\u043D\u043E\u0447\u044C \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0431\u043B\u0438\u0437\u043A\u0438\u0445", "family.child.load", beforeLoad.child, state.family.child.load, "plausible_model");
+          }
           if (applied.length) pushChange(changes, "period_boundary", `\u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432 \u0437\u0430\u043A\u0440\u044B\u0442\u044B: ${applied.map((item) => item.id).join(", ")}`, "periods", beforePeriods, clone2(state.periods), "established");
           closedDayIndex = applied.find((item) => item.kind === "day")?.completedDayIndex ?? null;
         }
       }
       appendJournal(state, changes, startJournal);
       const produced = state.causalJournal.slice(startJournal);
-      if (closedDayIndex !== null) compactCausalJournal(state, closedDayIndex);
+      if (closedDayIndex !== null) {
+        compactCausalJournal(state, closedDayIndex);
+        compactScheduledEffects(state);
+      }
       normalize(state);
       if (!mutateOwnedState) validateState(state);
       const hash = mutateOwnedState ? "" : stateHash(state);

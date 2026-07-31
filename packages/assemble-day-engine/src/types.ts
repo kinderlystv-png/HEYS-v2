@@ -258,10 +258,24 @@ export interface WeekStats {
   previousActionCounts: Record<string, number>;
 }
 
+export type EmploymentFormat = 'office' | 'remote' | 'project';
+
+/**
+ * Экономический контур кампании (`D76`, Sprint 9). Формат занятости выбирается
+ * отдельным атомарным шагом до планирования недели: он задаёт ритм дохода,
+ * дорогу, стабильность и вечернее вторжение работы. Пока выбор не сделан,
+ * кампания не начинает недельный план.
+ */
+export interface EmploymentState {
+  format: EmploymentFormat | null;
+  chosenAtStepIndex: number | null;
+}
+
 export interface GameState {
   schemaVersion: 3;
   periods: PeriodState;
   weekStats: WeekStats;
+  employment: EmploymentState;
   campaignId: string;
   scenarioId: typeof CONTRACT.scenarioId;
   scenarioVersion: typeof CONTRACT.scenarioVersion;
@@ -276,7 +290,14 @@ export interface GameState {
   accumulators: { sleepDebtMin: number; activeCaffeineMg: number; satietyWindowMin: number; recoveryNeed: number; familyLoadPlayer7d: number; familyLoadPartner7d: number };
   economy: { cashRub: number; foodPortions: Record<FoodCategory, number>; expectedIncome: Income[]; obligations: FinancialObligation[]; financialGoal?: { id: string; targetRub: number; reservedRub: number } };
   work: { reputation: number; projectBacklogMin: number; helpDebt: number; tasks: WorkTask[] };
-  family: { partner: { closeness: number; trust: number; available: boolean }; child: { closeness: number; trust: number; available: boolean }; friction: number; participationBalance: number };
+  /**
+   * Партнёр и ребёнок — не фон, а участники со своей загрузкой и своим окном
+   * (`D21`–`D23`, Sprint 8). `load` растёт, когда нагрузку переносят на них, и
+   * спадает на границе дня. `windowFromMin`/`windowToMin` задают часы, когда
+   * человек реально доступен; отказ помочь объясняется состоянием, а не скрытым
+   * броском.
+   */
+  family: { partner: { closeness: number; trust: number; available: boolean; load: number; windowFromMin: number; windowToMin: number }; child: { closeness: number; trust: number; available: boolean; load: number; windowFromMin: number; windowToMin: number }; friction: number; participationBalance: number };
   commitments: Commitment[];
   scheduledEffects: ScheduledEffect[];
   eventCooldownUntilDay: Record<string, number>;
@@ -285,7 +306,7 @@ export interface GameState {
   monthlyPriorities: MonthlyPriority[];
   causalJournal: CausalEntry[];
 }
-export interface DecisionContext { sleepiness: number; sleepReadiness: number; deadlinePressure: number; financialPressure: number; familyImbalance: number; cashAfterNextObligationsRub: number; focusByTaskId: Record<string, number>; optionPressureByActionId: Record<string, number> }
+export interface DecisionContext { sleepiness: number; sleepReadiness: number; deadlinePressure: number; financialPressure: number; familyImbalance: number; cashAfterNextObligationsRub: number; partnerLoad: number; partnerAvailableNow: number; childAvailableNow: number; focusByTaskId: Record<string, number>; optionPressureByActionId: Record<string, number> }
 export interface Registries { actions: Record<string, ActionDefinition>; events: Record<string, EventTemplate>; slots: ScenarioSlot[] }
 
 export type ReducerErrorCode = 'invalid_state' | 'stale_event' | 'unavailable_action' | 'invalid_content' | 'invariant_violation' | 'terminal_lock';

@@ -119,6 +119,31 @@ export function compactCausalJournal(state: GameState, completedDayIndex: number
 }
 
 /**
+ * Отложенные эффекты, которые уже применены или отменены, тоже не должны копиться
+ * в состоянии: за тридцать дней они одни съедали заметную часть бюджета
+ * чекпойнта. Их последствия уже в состоянии и в журнале, поэтому очередь чистится
+ * на границе дня вместе с журналом.
+ */
+/**
+ * Загрузка партнёра и ребёнка спадает за ночь (`D21`, Sprint 8). Спад
+ * детерминированный и происходит на границе дня, поэтому «партнёр отказал»
+ * всегда объясняется состоянием, а не скрытым броском.
+ */
+export const FAMILY_LOAD_NIGHTLY_RELIEF = 18;
+
+export function relieveFamilyLoad(state: GameState): void {
+  for (const person of ['partner', 'child'] as const) {
+    state.family[person].load = Math.max(0, state.family[person].load - FAMILY_LOAD_NIGHTLY_RELIEF);
+  }
+}
+
+export function compactScheduledEffects(state: GameState): number {
+  const before = state.scheduledEffects.length;
+  state.scheduledEffects = state.scheduledEffects.filter((item) => item.status === 'pending');
+  return before - state.scheduledEffects.length;
+}
+
+/**
  * Переносит недельные счётчики в предыдущее ведро, когда началась новая неделя.
  * Итог закрытой недели читает то ведро, чей `weekIndex` совпадает с неделей
  * итога, поэтому граница не стирает данные, которые ей же нужны.

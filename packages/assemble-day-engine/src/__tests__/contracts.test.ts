@@ -11,12 +11,12 @@ describe('runtime contracts', () => {
     expect(() => validateRegistries(registries, state)).not.toThrow();
     expect(() => validateState(state)).not.toThrow();
     expect(Object.keys(actions)).toHaveLength(31);
-    expect(Object.keys(events)).toHaveLength(42);
+    expect(Object.keys(events)).toHaveLength(49);
     expect(Object.values(events).every((event) => event.copy.title && event.copy.situation && !event.copy.situation.startsWith('Контрольная развилка'))).toBe(true);
     expect(Object.values(actions).every((action) => RULE_EVIDENCE[action.ruleEvidenceId])).toBe(true);
     expect(actions.eat_ready_meal?.copy.contextual?.mon_breakfast?.label).toBe('Съесть заранее приготовленный завтрак');
     expect(actions.cook_meal_batch?.copy.contextual?.mon_breakfast?.label).toBe('Приготовить завтрак');
-    expect(slots.map((slot) => slot.slot)).toEqual(Array.from({ length: 38 }, (_, index) => index + 1));
+    expect(slots.map((slot) => slot.slot)).toEqual(Array.from({ length: slots.length }, (_, index) => index + 1));
     expect(state).not.toHaveProperty('derived');
     expect(state).not.toHaveProperty('context');
   });

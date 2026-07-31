@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCampaignBrief, getCampaignOutcome, getCharacterDevelopment, getPeriodBoundaries, getPeriodSummary, getStepSummary } from '../campaign.js';
-import { createInitialState, registries } from '../content/scenario.js';
+import { CAMPAIGN_DAYS, createInitialState, registries } from '../content/scenario.js';
 import { reducePlanningStep } from '../planning.js';
 import { collectEventCandidates, getActionOffers, initialEvent, reduceStep } from '../reducer.js';
 import type { GameState, PeriodBoundary } from '../types.js';
@@ -18,7 +18,7 @@ describe('campaign brief and period summaries', () => {
     expect(brief.mission.summary).toContain('пятницу 17:00');
     expect(brief.stakes.find((item) => item.id === 'commitments')?.summary).toContain('2');
     expect(brief.stakes.find((item) => item.id === 'finance')?.summary).toContain('45 000 ₽');
-    expect(brief.choiceSpace).toContain('38 развилок');
+    expect(brief.choiceSpace).toContain(`${registries.slots.length} развилок`);
   });
 
   it('detects a day boundary from authored slots even before the next day clock is applied', () => {
@@ -38,7 +38,7 @@ describe('campaign brief and period summaries', () => {
     expect(JSON.stringify(first)).not.toMatch(/vitals\.|work\.tasks|decisionGeometry|\b(?:energy|tension)\s+\d/i);
   });
 
-  it('returns one summary per day and one mirrored weekly checkpoint', () => {
+  it('returns one summary per day, weekly checkpoints and a month boundary', { timeout: 120_000 }, () => {
     let state = reducePlanningStep({
       state: createInitialState('week-summary'),
       plan: { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' },
@@ -50,9 +50,13 @@ describe('campaign brief and period summaries', () => {
       state = step.output.state;
       boundaries.push(...getPeriodBoundaries(before, state, registries));
     }
-    expect(boundaries.filter((item) => item.kind === 'day')).toHaveLength(7);
-    expect(boundaries.filter((item) => item.kind === 'week')).toHaveLength(1);
-    const week = getPeriodSummary(state, boundaries.at(-1)!, registries);
+    // Кампания стала тридцатидневной (`CAMPAIGN_DAYS`), поэтому границ больше
+    // одной недели: проверяется сам контракт периодов, а не длина авторской
+    // недели.
+    expect(boundaries.filter((item) => item.kind === 'day')).toHaveLength(CAMPAIGN_DAYS);
+    expect(boundaries.filter((item) => item.kind === 'week').length).toBeGreaterThan(1);
+    expect(boundaries.filter((item) => item.kind === 'month').length).toBeGreaterThan(0);
+    const week = getPeriodSummary(state, boundaries.filter((item) => item.kind === 'week').at(-1)!, registries);
     expect(week.brief?.mission.title).toBe('Сдать проект и не потерять опоры недели');
     expect(week.rules).toHaveLength(2);
     expect(week.commitments?.summary).toMatch(/Выполнено: \d+; нарушено: \d+; осталось открыто: \d+/);
@@ -111,14 +115,26 @@ describe('campaign brief and period summaries', () => {
     const noviceOffer = getActionOffers(noviceCook, 'mon_breakfast', registries).find((item) => item.actionId === 'cook_meal_batch')!;
     const practicedOffer = getActionOffers(practicedCook, 'mon_breakfast', registries).find((item) => item.actionId === 'cook_meal_batch')!;
     expect(practicedOffer.effectiveTimeMin).toBeLessThan(noviceOffer.effectiveTimeMin);
-    noviceCook.scenarioCursor = practicedCook.scenarioCursor = registries.slots.findIndex((slot) => slot.eventId === 'sat_meal_prep');
+    // Ситуации открываются временем и состоянием, поэтому фикстуру нужно
+    // ставить не только на позицию, но и в окно самой ситуации.
+    const mealPrepAnchor = registries.slots[registries.slots.findIndex((slot) => slot.eventId === 'sat_meal_prep')]!;
+    for (const state of [noviceCook, practicedCook]) {
+      state.scenarioCursor = registries.slots.indexOf(mealPrepAnchor);
+      state.clock.dayIndex = mealPrepAnchor.dayIndex;
+      state.clock.minuteOfDay = mealPrepAnchor.minuteOfDay;
+    }
     expect(collectEventCandidates(noviceCook, registries).map((item) => item.templateId)).toContain('sat_meal_prep');
     expect(collectEventCandidates(practicedCook, registries).map((item) => item.templateId)).toContain('sat_meal_prep_familiar');
 
     const oneWayHelp = createInitialState('development-support-echo');
     const reciprocalHelp = structuredClone(oneWayHelp);
     reciprocalHelp.character.capabilities.push('work.reciprocal_support');
-    oneWayHelp.scenarioCursor = reciprocalHelp.scenarioCursor = registries.slots.findIndex((slot) => slot.eventId === 'fri_final_issue');
+    const finalIssueAnchor = registries.slots[registries.slots.findIndex((slot) => slot.eventId === 'fri_final_issue')]!;
+    for (const state of [oneWayHelp, reciprocalHelp]) {
+      state.scenarioCursor = registries.slots.indexOf(finalIssueAnchor);
+      state.clock.dayIndex = finalIssueAnchor.dayIndex;
+      state.clock.minuteOfDay = finalIssueAnchor.minuteOfDay;
+    }
     expect(collectEventCandidates(oneWayHelp, registries).map((item) => item.templateId)).toContain('fri_final_issue');
     expect(collectEventCandidates(reciprocalHelp, registries).map((item) => item.templateId)).toContain('fri_final_issue_with_support');
   });
