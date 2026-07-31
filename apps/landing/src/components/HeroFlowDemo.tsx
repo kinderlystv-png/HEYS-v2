@@ -7,10 +7,36 @@ type PlaybackPhase = 'probing' | 'poster' | 'buffering' | 'playing' | 'paused';
 const AUTOPLAY_PROBE_MS = 3500;
 const AUTOPLAY_REVEAL_DELAY_MS = 1200;
 
+// Типографские отбивки поверх демо (`22` п. 3.15, концепт — `маркетинг/45`
+// § «Типографские отбивки в демо»): «один кадр — одна фраза» на белом фоне
+// между действиями ролика. Видео при показе карточки НЕ ставится на паузу —
+// карточка просто перекрывает кадр на границе сцен, поэтому state-машина
+// фаз, кнопка play/pause и loop не затрагиваются. Тексты — из сценарной
+// таблицы `45`; таймкоды сняты по фактическим границам сцен текущего ролика.
+const INTERSTITIAL_SECONDS = 1.8;
+const INTERSTITIALS: ReadonlyArray<{ at: number; text: string }> = [
+  { at: 15.2, text: 'Прислали — и пошли дальше' },
+  { at: 22.6, text: 'Дневник ведёт куратор' },
+  { at: 36.8, text: 'Неделя становится понятной' },
+  { at: 51.8, text: 'Без поспешных выводов' },
+];
+
 export default function HeroFlowDemo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const phaseRef = useRef<PlaybackPhase>('probing');
   const [phase, setPhase] = useState<PlaybackPhase>('probing');
+  const [interstitial, setInterstitial] = useState<string | null>(null);
+
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const t = video.currentTime;
+    const active = INTERSTITIALS.find(
+      (card) => t >= card.at && t < card.at + INTERSTITIAL_SECONDS,
+    );
+    const next = active ? active.text : null;
+    setInterstitial((prev) => (prev === next ? prev : next));
+  }, []);
 
   const updatePhase = useCallback((next: PlaybackPhase) => {
     phaseRef.current = next;
@@ -127,6 +153,7 @@ export default function HeroFlowDemo() {
             if (phaseRef.current === 'playing') updatePhase('paused');
           }}
           onError={() => updatePhase('poster')}
+          onTimeUpdate={handleTimeUpdate}
         >
           <source src="/hero-curator-demo.webm" type="video/webm" />
           <source src="/hero-curator-demo.mp4" type="video/mp4" />
@@ -141,6 +168,20 @@ export default function HeroFlowDemo() {
             <div className="mt-[16%] h-[19%] w-[82%] self-end rounded-[14px] bg-[#DDEAF4] motion-safe:animate-pulse" />
             <div className="mt-[8%] h-[13%] w-[62%] rounded-[14px] bg-white shadow-sm motion-safe:animate-pulse" />
             <div className="mt-auto h-[10%] w-full rounded-[16px] border border-[#D8E1E8] bg-white/90 motion-safe:animate-pulse" />
+          </div>
+        ) : null}
+
+        {phase === 'playing' && interstitial ? (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 z-10 flex items-center justify-center bg-white px-[11%]"
+          >
+            <p
+              className="text-center text-[24px] leading-snug text-[#111827] lg:text-[30px]"
+              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+            >
+              {interstitial}
+            </p>
           </div>
         ) : null}
 
