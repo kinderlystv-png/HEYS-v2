@@ -1,7 +1,7 @@
 # 12 — Дорожная карта от концепции к вертикальному срезу
 
-> Статус: рабочий план реализации<br> Версия модуля: 0.37<br> Обновлено:
-> 2026-07-30
+> Статус: рабочий план реализации<br> Версия модуля: 0.39<br> Обновлено:
+> 2026-07-31
 
 [← К карте документации](./README.md)
 
@@ -15,8 +15,15 @@ headless-модель, затем поверх неё строится инте�
 Исторические этапы ниже сохраняют путь до vertical slice. Текущая исполнимая
 очередь, gates и копируемые промпты принадлежат
 [`assemble_prodution_megaplan.md`](./assemble_prodution_megaplan.md). После
-завершённых Sprints 0–5 следующий разрешённый шаг — Sprint 6; formative human
-gate проводится только с реальными независимыми участниками.
+завершённых Sprints 0–5 следующий разрешённый шаг — Sprint 14: по `D75`
+отдельный приёмочный спринт снят, владелец тестирует игру по ходу разработки, а
+из меню игры доступен сброс кампании.
+
+Этапы 0–6 описывают путь к семидневному срезу и остаются историей. После `D70`
+срез перестал быть конечной точкой: целевой масштаб — полноценный симулятор
+жизни, порядок дальнейших работ задан очередью v2.0 в мегаплане, а обоснование
+порядка — в аудите
+[`reports/life-sim-direction-audit-v0.1.md`](./reports/life-sim-direction-audit-v0.1.md).
 
 ### Матрица production-обязательств v0.37
 
@@ -38,7 +45,7 @@ gate проводится только с реальными независим�
 | Replay/content diversity (`H23`, `H31`)                                                      | `11_HYPOTHESES_BACKLOG.md`, scenario owner                              | same-seed replay технически существует; желание/разнообразие не проверены | `HYPOTHESIS`                                         | Sprint 10 только по evidence     |
 | Full QA расширенной недели (`D53`, `D60`)                                                    | `09_CALIBRATION_QA.md`, QA plan                                         | отчёта после family/economy/content пока нет                              | `DEFERRED`                                           | Sprint 11                        |
 | Human exit семидневного slice (`H23`, `H26`, `H29–H32`)                                      | human protocol, backlog                                                 | cohort PASS/PASS отсутствует                                              | `HYPOTHESIS`                                         | Sprint 12                        |
-| Ценность возврата между сессиями                                                             | `01_PRODUCT_VISION.md`, backlog                                         | longitudinal evidence отсутствует                                         | `HYPOTHESIS`                                         | Sprint 13 `GO/NO-GO`             |
+| Ценность возврата между сессиями                                                             | `01_PRODUCT_VISION.md`, backlog                                         | longitudinal evidence отсутствует                                         | `HYPOTHESIS`                                         | Наблюдение Sprints 12 и 18       |
 | 30-дневный lifecycle (`D11`)                                                                 | `02_GAMEPLAY_CAMPAIGN.md`, schemas, backlog blockers                    | engine ограничен семидневным scenario lifecycle                           | target `DECIDED`; runtime `DEFERRED`                 | Sprint 14 после `GO`             |
 | Playable month и месячная сводка (`D4`, `D11`)                                               | `02_GAMEPLAY_CAMPAIGN.md`, `06_UI_UX.md`                                | текущий Month screen — planning preview, не завершённый период            | `DEFERRED` до настоящего месяца                      | Sprint 15                        |
 | Runtime policies (`D31`)                                                                     | gameplay/content contracts                                              | automation runtime отсутствует; repetitive burden не наблюдалась          | `HYPOTHESIS / DEFERRED`                              | Sprint 16 только по evidence     |
@@ -275,7 +282,13 @@ evidence для статуса причинности и игрового инт
 
 ## Ближайший этап
 
-Sprints 0–5 завершены контрактами v0.32–0.37. Следующий этап — Sprint 6
-[`production-мегаплана`](./assemble_prodution_megaplan.md): formative human
-gate. Полный `calibration v0.4` QA 10 000 × 7 — Sprint 7 на отдельном runner.
-Персональные данные HEYS и контур куратора по-прежнему не подключены.
+Sprints 0–5 завершены контрактами v0.32–0.37. Следующий этап —
+[`production-мегаплана`](./assemble_prodution_megaplan.md) Sprint 14, первый
+спринт структурного блока Sprints 14 → 21 → 22: модель периодов без зашитого
+финала, формат сохранения под длинную жизнь и ситуации по состоянию вместо
+слот-грида.
+
+Прежний план «полный `calibration v0.4` QA 10 000 × 7 в Sprint 7» отменён
+решением `D74`: Sprint 7 заменён Sprint 23 с профилем из инвариантов,
+регрессионных зёрен и длинных прогонов. Персональные данные HEYS и контур
+куратора по-прежнему не подключены.

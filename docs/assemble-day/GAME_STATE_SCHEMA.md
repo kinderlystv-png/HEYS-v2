@@ -27,11 +27,13 @@ type DayIndex = number;
 type MinuteOfDay = number;
 type EntityId = string;
 
-interface GameStateV2 {
-  schemaVersion: 2;
+interface GameStateV3 {
+  schemaVersion: 3;
+  periods: PeriodState;
+  weekStats: WeekStats;
   campaignId: string;
   scenarioId: 'week-01-project-deadline';
-  scenarioVersion: '4';
+  scenarioVersion: '5';
   calibrationVersion: '0.4';
   priceBookVersion: 'week-01-rub-v1';
 
@@ -287,9 +289,10 @@ Reducer пересчитывает контекст из хранимого со
 1. Все значения конечны; `NaN`, `Infinity`, `Date`, `Map`, `Set` и функции
    запрещены.
 2. Значения `0–100` остаются в диапазоне, `participationBalance` в `−100…100`,
-   минуты суток в `0…1439`. Активная контрольная неделя использует
-   `dayIndex 0…6`, а завершённый снимок после воскресного сна может иметь
-   `dayIndex 7`.
+   минуты суток в `0…1439`. Верхней границы у `dayIndex` и `scenarioCursor` нет:
+   после `D72` горизонт открыт, поэтому проверяется только неотрицательность и
+   целочисленность. Длину кампании ограничивает объём авторского контента, а не
+   схема.
 3. `cashRub` и число порций неотрицательны и целочисленны.
 4. ID уникальны внутри коллекции; ссылка на задачу, обязательство, действие или
    событие разрешается до запуска кампании.
@@ -335,3 +338,51 @@ Envelope v1 мигрирует только если его boundary `clientId` 
 hash. Иначе adapter показывает отдельный
 `privacy`/`incompatible`/`corrupt`/`foreign` результат и не удаляет либо не
 перезаписывает snapshot без явного старта новой кампании.
+
+## Границы журнала и недельные счётчики
+
+Журнал причин ограничен одним днём: на закрытии дня редьюсер оставляет записи
+завершённого дня и удаляет более ранние. Компактизация выполняется после того,
+как шаг вернул свои записи, поэтому диагностика и causal QA видят полный поток
+изменений, а состояние не растёт вместе с жизнью персонажа.
+
+Недельные итоги больше не перебирают журнал. Для них в состоянии живёт
+`weekStats` с двумя вёдрами:
+
+```ts
+interface WeekStats {
+  weekIndex: number;
+  actionCounts: Record<string, number>;
+  previousWeekIndex: number;
+  previousActionCounts: Record<string, number>;
+}
+```
+
+Второе ведро обязательно: итог закрытой недели считается уже после её границы и
+должен читать счётчики именно своей недели.
+
+## Календарь и периоды (`PeriodState`)
+
+```ts
+interface PeriodState {
+  version: 1;
+  daysPerWeek: number;
+  weeksPerMonth: number;
+  completedDays: number;
+  completedWeeks: number;
+  completedMonths: number;
+  appliedBoundaries: string[];
+  plannedWeeks: number[];
+}
+```
+
+Абсолютный день кампании — это `clock.dayIndex`, поэтому день недели, номер
+недели и номер месяца выводятся функциями `periods.ts` и не сериализуются. В
+состоянии остаются только конфигурация календаря, счётчики завершённых периодов,
+идентификаторы уже применённых границ и недели с подтверждённым планом.
+
+`appliedBoundaries` обеспечивает идемпотентность: граница с тем же
+идентификатором применяется ровно один раз, поэтому повторный расчёт, reload и
+replay не удваивают счётчики и не сбрасывают недельные лимиты второй раз.
+`plannedWeeks` даёт каждой неделе собственный planning-lock: контракт недели
+фиксируется один раз, а следующая неделя получает свой шаг планирования.
