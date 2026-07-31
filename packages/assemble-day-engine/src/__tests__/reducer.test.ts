@@ -12,7 +12,7 @@ const setCursor = (state: GameState, cursor: number, minuteOfDay: number): void 
   state.clock.stepIndex = cursor;
   state.clock.dayIndex = registries.slots[cursor]!.dayIndex;
   state.clock.minuteOfDay = minuteOfDay;
-  state.activeEventId = registries.slots[cursor]!.eventId;
+  state.activeEventId = registries.slots[cursor]!.eventId!;
 };
 
 describe('atomic ten-stage reducer', () => {
@@ -23,7 +23,7 @@ describe('atomic ten-stage reducer', () => {
     const duplicate = createInitialState('golden');
     const second = reduceStep({ state: duplicate, openEvent: eventAt(duplicate), actionId: 'eat_ready_meal' }, registries, true);
     expect(first.stages.map((item) => item.stage)).toEqual(STAGES);
-    expect(first.stateHash).toBe('2b0c1c54cb553d84');
+    expect(first.stateHash).toBe('04392685d3eb9ad4');
     expect(first.stateHash).toBe(second.stateHash);
     expect(first.stages.map((item) => item.hash)).toEqual(second.stages.map((item) => item.hash));
     expect(first.nextEvent?.templateId).toBe('mon_commute');

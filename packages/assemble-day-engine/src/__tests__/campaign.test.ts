@@ -32,7 +32,7 @@ describe('campaign brief and period summaries', () => {
     }
     expect(state.clock.dayIndex).toBe(0);
     expect(state.activeEventId).toBe('tue_night_wakeup');
-    expect(boundaries).toEqual([{ id: 'day:0', kind: 'day', completedDayIndex: 0, nextDayIndex: 1, afterStepIndex: 6 }]);
+    expect(boundaries).toEqual([{ id: 'day:0', kind: 'day', completedDayIndex: 0, nextDayIndex: 1, afterStepIndex: 6, periodIndex: 0 }]);
     const first = getPeriodSummary(state, boundaries[0]!, registries);
     expect(getPeriodSummary(state, boundaries[0]!, registries)).toEqual(first);
     expect(JSON.stringify(first)).not.toMatch(/vitals\.|work\.tasks|decisionGeometry|\b(?:energy|tension)\s+\d/i);

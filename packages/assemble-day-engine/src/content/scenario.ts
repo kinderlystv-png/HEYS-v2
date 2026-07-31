@@ -1,6 +1,7 @@
 import { CONTRACT, type EventSource, type EventTemplate, type GameState, type Registries, type ScenarioSlot } from '../types.js';
 import { actions } from './actions.js';
 import { EVENT_COPY } from './presentation.js';
+import { createPeriodState } from '../periods.js';
 
 type SlotSeed=[number,number,string,EventSource,string[]];
 const raw:SlotSeed[]=[
@@ -53,13 +54,68 @@ slots[7]={...slots[7]!,sleepBeforeMin:210,interruptionsMin:10};
 
 const heavyIds=new Set(['tue_night_wakeup','tue_pickup_conflict','wed_school_call','thu_family_evening','fri_final_issue','fri_submit','sat_school_event']);
 const familyWindowIds=new Set(['mon_family_dinner','tue_pickup_conflict','thu_family_evening','fri_family_plan','sat_school_event','sun_family_time']);
+/**
+ * Ситуации, переведённые на условия состояния и времени (`D73`). Окно каждой
+ * начинается на предыдущем якоре своего дня и заканчивается с запасом, поэтому
+ * между якорями не остаётся дыр, а порядок внутри дня решает отбор, а не
+ * позиция в сценарии.
+ */
+const STATE_DRIVEN_DAYS=new Set([1]);
+const dayAnchors=(day:number):number[]=>raw.filter((item)=>item[0]===day).map((item)=>item[1]);
+const domainCondition:Record<string,EventTemplate['trigger']>={
+  mon_breakfast:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
+  mon_commute:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  mon_scope_expansion:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  mon_lunch_window:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
+  mon_project_block:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  mon_family_dinner:{kind:'compare',path:'family.partner.closeness',op:'gte',value:1},
+  tue_night_wakeup:{kind:'compare',path:'family.child.closeness',op:'gte',value:1},
+  tue_recovery_breakfast:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
+  tue_review_prep:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  tue_pickup_conflict:{kind:'compare',path:'family.child.closeness',op:'gte',value:1},
+  wed_long_meeting:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  wed_late_lunch:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
+  wed_school_call:{kind:'compare',path:'family.child.closeness',op:'gte',value:1},
+  wed_work_recovery:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  thu_family_evening:{kind:'compare',path:'family.partner.closeness',op:'gte',value:1},
+  fri_deadline_plan:{kind:'compare',path:'work.projectBacklogMin',op:'gte',value:1},
+  fri_lunch:{kind:'compare',path:'vitals.hunger',op:'gte',value:5},
+  fri_family_plan:{kind:'compare',path:'family.partner.closeness',op:'gte',value:1},
+  sat_school_event:{kind:'compare',path:'family.child.closeness',op:'gte',value:1},
+  sun_family_time:{kind:'compare',path:'family.partner.closeness',op:'gte',value:1},
+};
+function situationTrigger(day:number,minute:number,id:string):EventTemplate['trigger'] {
+  const anchors=dayAnchors(day),position=anchors.indexOf(minute);
+  // Ситуация становится доступной со своего якоря и остаётся доступной до конца
+  // дня: верхней границы нет, поэтому длинное действие не может оставить день
+  // без единой подходящей ситуации.
+  const fromMin=position<=0?0:anchors[position-1]!;
+  const dayIndex=day-1;
+  const ownDay:EventTemplate['trigger']={kind:'all',conditions:[
+    {kind:'compare',path:'clock.dayIndex',op:'eq',value:dayIndex},
+    {kind:'compare',path:'clock.minuteOfDay',op:'gte',value:fromMin},
+  ]};
+  // Следующая ситуация выбирается ещё до перевода часов на её якорь, поэтому
+  // первая ситуация дня доступна начиная с последнего якоря предыдущего дня.
+  const previousAnchors=dayAnchors(day-1);
+  const handoverFrom=previousAnchors.length?previousAnchors[previousAnchors.length-1]!:0;
+  const window:EventTemplate['trigger']=position<=0&&dayIndex>0
+    ? {kind:'any',conditions:[ownDay,{kind:'all',conditions:[
+        {kind:'compare',path:'clock.dayIndex',op:'eq',value:dayIndex-1},
+        {kind:'compare',path:'clock.minuteOfDay',op:'gte',value:handoverFrom},
+      ]}]}
+    : ownDay;
+  const domain=domainCondition[id];
+  return domain?{kind:'all',conditions:[window,domain]}:window;
+}
+
 export const events:Record<string,EventTemplate>=Object.fromEntries(raw.map(([day,minute,id,source,actionIds],index)=>{
   const heavy=heavyIds.has(id),large=source==='external',dayIndex=day-1;
   const event:EventTemplate={
     schemaVersion:1,id,version:1,source,
     copy:{...EVENT_COPY[id]!,...(source==='causal'&&!EVENT_COPY[id]?.causeHint?{causeHint:'Ситуация учитывает накопленное состояние и предыдущие решения.'}:{})},
-    trigger:{kind:'compare',path:'scenarioCursor',op:'eq',value:index},
-    hardWindow:{fromDayIndex:dayIndex,fromMinuteOfDay:minute,toDayIndex:dayIndex,toMinuteOfDay:Math.min(1439,minute+120)},
+    trigger:STATE_DRIVEN_DAYS.has(day)?situationTrigger(day,minute,id):{kind:'compare',path:'scenarioCursor',op:'eq',value:index},
+    ...(STATE_DRIVEN_DAYS.has(day)?{}:{hardWindow:{fromDayIndex:dayIndex,fromMinuteOfDay:minute,toDayIndex:dayIndex,toMinuteOfDay:Math.min(1439,minute+120)}}),
     urgency:heavy?3:source==='mandatory'?2:1,selectionWeight:1,cooldownDays:source==='external'?2:0,maxOccurrencesPerCampaign:1,
     load:{external:source==='external'?35:0,total:source==='external'?40:source==='causal'?12:0,size:large?'large':heavy?'medium':'small'},
     onOpenEffects:source==='external'?[{op:'add_state',path:'vitals.tension',delta:5,reason:'внешняя задержка'}]:[],actionIds,tags:[source,...(heavy?['heavy']:[]),...(day<=5&&minute>=540&&minute<1080?['planned_work_window']:[]),...(familyWindowIds.has(id)?['family_anchor_window']:[]),...(minute>=1080?['sleep_boundary_window']:[])],
@@ -68,7 +124,11 @@ export const events:Record<string,EventTemplate>=Object.fromEntries(raw.map(([da
 }));
 
 function branchTrigger(cursor:number, condition:EventTemplate['trigger']):EventTemplate['trigger'] {
-  return {kind:'all',conditions:[{kind:'compare',path:'scenarioCursor',op:'eq',value:cursor},condition]};
+  const seed=raw[cursor]!;
+  const base:EventTemplate['trigger']=STATE_DRIVEN_DAYS.has(seed[0])
+    ? situationTrigger(seed[0],seed[1],seed[2])
+    : {kind:'compare',path:'scenarioCursor',op:'eq',value:cursor};
+  return {kind:'all',conditions:[base,condition]};
 }
 function addEcho(fallbackId:string, echo:EventTemplate, when:EventTemplate['trigger']):void {
   const cursor=raw.findIndex((item)=>item[2]===fallbackId);
@@ -106,7 +166,7 @@ export const registries:Registries={actions,events,slots};
 
 export function createInitialState(seed:string):GameState {
   return {
-    schemaVersion:2,campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
+    schemaVersion:3,periods:createPeriodState(),weekStats:{weekIndex:0,actionCounts:{},previousWeekIndex:-1,previousActionCounts:{}},campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
     rng:{seed,algorithm:CONTRACT.rngAlgorithm,occurrences:{}},clock:{dayIndex:0,minuteOfDay:420,stepIndex:0,awakeSinceMinute:60},scenarioCursor:0,activeEventId:'mon_breakfast',
     character:{
       profile:{sleepNeedMin:480,chronotype:'neutral',caffeineHalfLifeMin:300,caffeineSensitivity:1,digestionSensitivity:1,moodBaseline:55},

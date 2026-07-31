@@ -2,6 +2,7 @@ import { createInitialState } from './content/scenario.js';
 import { WEEKLY_RULE_PRESETS } from './content/planning.js';
 import { getCharacterPresentationLevel } from './content/presentation.js';
 import { computeDecisionContext } from './reducer.js';
+import { boundariesForCompletedDay, weekActionCount, weekIndexFor } from './periods.js';
 import type {
   CampaignBrief,
   CampaignOutcome,
@@ -145,22 +146,24 @@ export function getStepSummary(input: {
   };
 }
 
+/**
+ * Границы периодов принадлежат редьюсеру: он применяет их ровно один раз и
+ * записывает идентификаторы в состояние. Здесь остаётся только разница между
+ * двумя состояниями, поэтому второго источника истины не появляется.
+ */
 export function getPeriodBoundaries(before: GameState, after: GameState, registries: Registries): PeriodBoundary[] {
   if (after.scenarioCursor !== before.scenarioCursor + 1) return [];
   const completedSlot = registries.slots[before.scenarioCursor];
   if (!completedSlot) return [];
+  const appliedNow = new Set(after.periods.appliedBoundaries.filter((id) => !before.periods.appliedBoundaries.includes(id)));
+  if (!appliedNow.size) return [];
   const nextSlot = registries.slots[after.scenarioCursor];
-  const closesDay = !nextSlot || nextSlot.dayIndex > completedSlot.dayIndex;
-  if (!closesDay) return [];
-  const day: PeriodBoundary = {
-    id: `day:${completedSlot.dayIndex}`,
-    kind: 'day',
+  return boundariesForCompletedDay({
+    periods: after.periods,
     completedDayIndex: completedSlot.dayIndex,
-    nextDayIndex: nextSlot?.dayIndex ?? null,
+    nextDayIndex: nextSlot ? nextSlot.dayIndex : null,
     afterStepIndex: after.clock.stepIndex,
-  };
-  if (nextSlot) return [day];
-  return [day, { id: 'week:0', kind: 'week', completedDayIndex: completedSlot.dayIndex, nextDayIndex: null, afterStepIndex: after.clock.stepIndex }];
+  }).filter((boundary) => appliedNow.has(boundary.id));
 }
 
 function dayEntries(state: GameState, dayIndex: number, registries: Registries): CausalEntry[] {
@@ -170,8 +173,8 @@ function dayEntries(state: GameState, dayIndex: number, registries: Registries):
   return state.causalJournal.filter((entry) => entry.stepIndex >= from && entry.stepIndex <= to);
 }
 
-function weeklyRuleResults(state: GameState): PeriodRuleResult[] {
-  const lateWork = state.causalJournal.filter((entry) => entry.sourceId === 'work_late' && entry.resultPath === 'vitals.energy').length;
+function weeklyRuleResults(state: GameState, weekIndex = weekIndexFor(state.periods, Math.max(0, state.clock.dayIndex - 1))): PeriodRuleResult[] {
+  const lateWork = weekActionCount(state, weekIndex, 'work_late');
   const brokenFamily = state.commitments.filter((item) => item.domain === 'family' && item.status === 'broken').length;
   const task = state.work.tasks.find((item) => item.id === 'project_delivery');
   return state.weeklyRules.filter((item) => item.enabled && WEEKLY_RULE_PRESETS.some((preset) => preset.id === item.id)).map((item) => {
@@ -199,7 +202,7 @@ export function getPeriodSummary(state: GameState, boundary: PeriodBoundary, reg
       causalLink: 'Выбранные границы меняли цену решений; подтверждённые действия сформировали итог по четырём независимым линиям.',
       carryover: outcome.openThreads.length ? `${outcome.openThreads.length} открытые нити переходят дальше.` : 'Обязательные нити этой недели закрыты.',
       brief: getCampaignBrief(state, registries),
-      rules: weeklyRuleResults(state),
+      rules: weeklyRuleResults(state, boundary.periodIndex),
       commitments: { resolved, broken, open, summary: `Выполнено: ${resolved}; нарушено: ${broken}; осталось открыто: ${open}.` },
       pressure: `К финалу давление проекта ${qualitative(context.deadlinePressure, 'neuter')}, семейное давление ${qualitative(context.familyImbalance, 'neuter')}, потребность в восстановлении ${qualitative(Math.max(context.sleepiness, 100 - state.vitals.energy, state.accumulators.recoveryNeed), 'feminine')}.`,
       axes: outcome.axes,
