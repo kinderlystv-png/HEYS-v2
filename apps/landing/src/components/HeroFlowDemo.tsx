@@ -99,13 +99,16 @@ export default function HeroFlowDemo() {
     interstitialTimersRef.current = [
       window.setTimeout(() => {
         setCard((prev) => (prev ? { ...prev, leaving: true } : prev));
-      }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS),
-      window.setTimeout(() => {
+        // Воспроизведение возобновляется ВМЕСТЕ с началом ухода, а не после
+        // него: плашка уезжает, открывая уже новую сцену. Иначе под уходящей
+        // карточкой ещё ~450 мс виден замороженный кадр предыдущей сцены.
         interstitialPauseRef.current = false;
-        setCard(null);
         void video.play().catch(() => {
           /* пользователь мог поставить паузу — не считаем ошибкой */
         });
+      }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS),
+      window.setTimeout(() => {
+        setCard(null);
       }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS + INTERSTITIAL_EXIT_MS),
     ];
   }, []);
