@@ -60,8 +60,10 @@ export default function HeroFlowDemo() {
   const phaseRef = useRef<PlaybackPhase>('probing');
   const [phase, setPhase] = useState<PlaybackPhase>('probing');
   const [card, setCard] = useState<InterstitialCard | null>(null);
-  // true, пока пауза видео вызвана отбивкой: onPause не должен переводить
-  // фазу в 'paused', чтобы кнопка и cover вели себя как при воспроизведении.
+  // true, пока карточка отбивки на экране. Пока флаг поднят, медиа-события
+  // (pause/waiting от нашей же паузы и seek) не меняют фазу: иначе карточка
+  // размонтируется вместе с `phase === 'playing'` и при возврате фазы
+  // смонтируется заново, повторно проигрывая анимацию влёта.
   const interstitialPauseRef = useRef(false);
   const interstitialTimersRef = useRef<number[]>([]);
   const lastShownAtRef = useRef<number | null>(null);
@@ -108,12 +110,14 @@ export default function HeroFlowDemo() {
         // него: плашка уезжает, открывая уже новую сцену. Иначе под уходящей
         // карточкой ещё ~450 мс виден замороженный кадр предыдущей сцены.
         if (next.resumeAt !== undefined) video.currentTime = next.resumeAt;
-        interstitialPauseRef.current = false;
         void video.play().catch(() => {
           /* пользователь мог поставить паузу — не считаем ошибкой */
         });
       }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS),
       window.setTimeout(() => {
+        // Флаг снимается только когда карточка ушла: до этого момента
+        // pause/waiting от нашей паузы и seek не должны трогать фазу.
+        interstitialPauseRef.current = false;
         setCard(null);
       }, INTERSTITIAL_ENTER_MS + INTERSTITIAL_HOLD_MS + INTERSTITIAL_EXIT_MS),
     ];
@@ -296,6 +300,10 @@ export default function HeroFlowDemo() {
             startFrameLoop();
           }}
           onWaiting={() => {
+            // Seek на `resumeAt` под плашкой поднимает waiting: не отдаём
+            // фазу в 'buffering', иначе карточка перемонтируется и влетает
+            // повторно, не успев уехать.
+            if (interstitialPauseRef.current) return;
             if (phaseRef.current === 'playing') updatePhase('buffering');
           }}
           onPause={() => {
