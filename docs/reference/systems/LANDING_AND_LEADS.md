@@ -33,17 +33,18 @@ TrialForm / PurchaseModal
 
 ## Владельцы ответственности
 
-| Область                                   | Точка                                                          |
-| ----------------------------------------- | -------------------------------------------------------------- |
-| Основная форма пробного периода           | `apps/landing/src/components/TrialForm.tsx`                    |
-| Форма прямой покупки                      | `apps/landing/src/components/modals/PurchaseModal.tsx`         |
-| Версии юридических документов             | `apps/landing/src/config/legal-versions.ts`                    |
-| Публичный endpoint                        | `yandex-cloud-functions/api-gateway-spec.yaml` → `/leads`      |
-| Валидация, запись, атрибуция, уведомление | `yandex-cloud-functions/heys-api-leads/index.js`               |
-| SQL-схема и эволюция лидов                | `database/` migrations                                         |
-| Curator API лида                          | `apps/web/heys_trial_queue_v1.js`                              |
-| Защищённый RPC allowlist/contract         | `yandex-cloud-functions/heys-api-rpc/index.js`                 |
-| Финальная конвертация                     | актуальная SQL-функция `public.admin_convert_lead(UUID, UUID)` |
+| Область                                                      | Точка                                                                       |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Основная форма пробного периода                              | `apps/landing/src/components/TrialForm.tsx`                                 |
+| Мобильная навигация: меню, залипающая шапка, активный раздел | `apps/landing/src/components/LandingNav.tsx` (панель — `MobileNavMenu.tsx`) |
+| Форма прямой покупки                                         | `apps/landing/src/components/modals/PurchaseModal.tsx`                      |
+| Версии юридических документов                                | `apps/landing/src/config/legal-versions.ts`                                 |
+| Публичный endpoint                                           | `yandex-cloud-functions/api-gateway-spec.yaml` → `/leads`                   |
+| Валидация, запись, атрибуция, уведомление                    | `yandex-cloud-functions/heys-api-leads/index.js`                            |
+| SQL-схема и эволюция лидов                                   | `database/` migrations                                                      |
+| Curator API лида                                             | `apps/web/heys_trial_queue_v1.js`                                           |
+| Защищённый RPC allowlist/contract                            | `yandex-cloud-functions/heys-api-rpc/index.js`                              |
+| Финальная конвертация                                        | актуальная SQL-функция `public.admin_convert_lead(UUID, UUID)`              |
 
 ## Два входа с лендинга
 
