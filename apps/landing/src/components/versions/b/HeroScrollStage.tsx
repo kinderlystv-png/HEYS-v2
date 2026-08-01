@@ -236,7 +236,7 @@ function Stage({ content }: HeroScrollStageProps) {
 
         {/* Воздух над заголовком — как у Future: первый экран начинается не
             вплотную под шапкой, иначе текст читается как продолжение меню. */}
-        <div className="flex w-full flex-col items-center px-4 pt-2 md:px-6 md:pt-8">
+        <div className="flex w-full flex-col items-center px-4 pt-12 md:px-6 md:pt-14">
           {/* Колонка текста уже ширины экрана: на всю ширину строка тянется до
               краёв и читается как сплошная плита. Ролик остаётся шире текста —
               так он и остаётся главным на первом экране. */}
@@ -290,7 +290,7 @@ function Stage({ content }: HeroScrollStageProps) {
               Future это же положение работает подсказкой «здесь прокрутка». */}
           <div
             ref={demoRef}
-            className={`hero-b-demo mt-[7vh] w-[301px] max-w-[86vw] transition-opacity duration-700 ease-out md:mt-[5vh] lg:w-[280px] ${
+            className={`hero-b-demo mt-[7vh] w-[276px] max-w-[86vw] transition-opacity duration-700 ease-out md:mt-[5vh] lg:w-[280px] ${
               mounted ? 'opacity-100' : 'opacity-0'
             }`}
             style={{
