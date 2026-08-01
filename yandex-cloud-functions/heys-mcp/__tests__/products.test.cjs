@@ -148,3 +148,58 @@ test('describeProduct показывает вес штуки, когда он и
   assert.equal(products.describeProduct(products.findById(c, 'own-toffifee')).piece_grams, 8);
   assert.equal(products.describeProduct(products.findById(c, 'own-soba')).piece_grams, undefined);
 });
+
+// ── Словоформы и границы слова ────────────────────────────────────────────
+// Инцидент 2026-08-01: «миндаль» не находил продукт клиента. Причина оказалась
+// не в скоринге, но прогон вскрыл, что русские окончания ломают совпадение.
+
+const FORMS = [
+  ['Миндаль', 21, 22, 50], ['Яйцо куриное', 12.7, 0.7, 11.5], ['Творог 5%', 17, 3, 5],
+  ['Сыр твёрдый классический', 25, 0, 30], ['Молоко ультрапастеризованное 3.5', 3, 4.7, 3.5],
+  ['Масло сливочное 82,5', 0.8, 0.8, 82.5], ['Вода питьевая', 0, 0, 0], ['Водка', 0, 0.1, 0],
+  ['Сахар-песок', 0, 100, 0], ['Сок апельсиновый', 0.7, 10, 0.2], ['Мясо говядина', 20, 0, 12],
+].map((r, i) => ({ id: `f${i}`, _custom: true, name: r[0], protein100: r[1], carbs100: r[2], fat100: r[3], in_my_list: true }));
+
+function forms() {
+  return products.buildCatalog(FORMS, new Map());
+}
+
+test('падежи находят продукт: «миндаля», «яйца», «творога», «молока»', () => {
+  const c = forms();
+  const top = (q) => (products.searchProducts(c, q, 3)[0] || {}).name;
+  assert.equal(top('миндаля'), 'Миндаль');
+  assert.equal(top('яйца'), 'Яйцо куриное');
+  assert.equal(top('творога'), 'Творог 5%');
+  assert.equal(top('молока'), 'Молоко ультрапастеризованное 3.5');
+});
+
+test('падежи работают и в словосочетании', () => {
+  const c = forms();
+  assert.equal(products.searchProducts(c, 'сыра твердого', 3)[0].name, 'Сыр твёрдый классический');
+  assert.equal(products.searchProducts(c, 'масла сливочного', 3)[0].name, 'Масло сливочное 82,5');
+});
+
+test('общая основа не склеивает разные продукты', () => {
+  const c = forms();
+  const names = (q) => products.searchProducts(c, q, 5).map((p) => p.name);
+  // Расхождение начинается слишком рано и несимметрично — это разные слова.
+  assert.equal(names('вода').includes('Водка'), false);
+  assert.equal(names('мясо').includes('Масло сливочное 82,5'), false);
+  assert.deepEqual(products.searchProducts(c, 'кагор', 5), []);
+});
+
+test('подстрока засчитывается только с границы слова', () => {
+  const c = forms();
+  const names = products.searchProducts(c, 'сок', 5).map((p) => p.name);
+  assert.ok(names.includes('Сок апельсиновый'));
+  // «песок» содержит «сок», но это середина слова.
+  assert.equal(names.includes('Сахар-песок'), false);
+});
+
+test('подстрока внутри скобок и перечислений по-прежнему находится', () => {
+  const c = products.buildCatalog(
+    [{ id: 'mix', _custom: true, name: 'Орехи микс (миндаль,кешью,фундук)', protein100: 18, carbs100: 18, fat100: 53, in_my_list: true }],
+    new Map(),
+  );
+  assert.equal(products.searchProducts(c, 'миндаль', 3).length, 1);
+});

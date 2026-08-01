@@ -14,6 +14,11 @@ const { TOOL_SCHEMAS } = require('../lib/tools');
 const oauth = require('../lib/oauth');
 const tokens = require('../lib/crypto-tokens');
 const mcp = require('../lib/mcp');
+const sharedCatalog = require('../lib/shared-catalog');
+
+// Кеш общей базы живёт в модуле и переживает вызовы — в тестах его надо
+// сбрасывать, иначе прогретый снимок из соседнего теста подменит сбойный ответ.
+test.beforeEach(() => sharedCatalog.reset());
 
 const SECRET = 'unit-secret-'.repeat(4);
 const RAW_JWT_SECRET = 'raw-jwt-secret-'.repeat(3);
@@ -166,11 +171,16 @@ test('приём по набору пишется в день нужного к�
   assert.match(res.text, /^\[Антон\]/);
 });
 
-test('кураторские схемы: +heys_list_clients и параметр client в каждом инструменте', () => {
+test('кураторские схемы: свои инструменты сверху и параметр client везде, кроме списка клиентов', () => {
   const schemas = buildCuratorSchemas();
-  assert.equal(schemas.length, TOOL_SCHEMAS.length + 1);
-  assert.equal(schemas[0].name, 'heys_list_clients');
-  for (const schema of schemas.slice(1)) {
+  const added = ['heys_list_clients', 'heys_list_messages', 'heys_mark_message_done', 'heys_reply_message'];
+  assert.equal(schemas.length, TOOL_SCHEMAS.length + added.length);
+  assert.deepEqual(schemas.slice(0, added.length).map((s) => s.name), added);
+  for (const schema of schemas) {
+    if (schema.name === 'heys_list_clients') {
+      assert.equal(schema.inputSchema.properties.client, undefined, 'списку клиентов адресат не нужен');
+      continue;
+    }
     assert.ok(schema.inputSchema.properties.client, `${schema.name}: есть параметр client`);
   }
 });
@@ -298,7 +308,7 @@ test('initialize отдаёт кураторские инструкции, tools
   assert.match(init.result.instructions, /heys_list_clients/);
 
   const list = await mcp.handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx);
-  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 1);
+  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 4);
 });
 
 test('client_required доходит до модели как isError со списком клиентов', async () => {
@@ -324,4 +334,160 @@ test('страница входа содержит обе формы и экра
   const curatorPage = oauth.renderLoginPage(req, { curatorMode: true, email: '<img src=x>' });
   assert.match(curatorPage, /<details open>/);
   assert.equal(curatorPage.includes('<img src=x>'), false);
+});
+
+// ── Деградация общей базы продуктов ──────────────────────────────────────
+// Инцидент 2026-08-01: поиск «миндаль» у клиента вернул пусто, хотя продукт
+// есть. Причина — сбой загрузки shared_products: все Type A строки (у клиента
+// это подавляющее большинство) молча выпали из каталога, и модель была готова
+// завести дубликат уже существующего продукта.
+
+const { createTools } = require('../lib/tools');
+
+function apiWithShared(sharedResult) {
+  return {
+    stats: { calls: 0, ms: 0 },
+    async getKV(_s, key) {
+      if (key === 'heys_products_overlay_v2') {
+        return {
+          data: [
+            { id: 'own-almond', shared_origin_id: 's-almond', overrides: {}, in_my_list: true },
+            { id: 'own-custom', _custom: true, name: 'Домашний батончик', protein100: 10, carbs100: 40, fat100: 20, in_my_list: true },
+          ],
+          error: null,
+        };
+      }
+      return { data: null, error: null };
+    },
+    async getSharedProducts() { return sharedResult; },
+    async mergeSaveKV() { return { ok: true }; },
+    async upsertKV() { return { ok: true }; },
+  };
+}
+
+test('сбой общей базы не превращается в «продукт не найден»', async () => {
+  const { tools } = createTools({
+    api: apiWithShared({ data: null, error: { message: 'rest_http_502' } }),
+    sessionToken: 's', clientId: 'c', nowMs: NOW,
+  });
+  await assert.rejects(
+    () => tools.heys_search_products({ query: 'миндаль' }),
+    (e) => {
+      assert.equal(e.code, 'upstream_error');
+      assert.match(e.message, /общую базу/);
+      return true;
+    },
+  );
+});
+
+test('пустой ответ общей базы при наличии связанных продуктов — тоже сбой', async () => {
+  const { tools } = createTools({
+    api: apiWithShared({ data: [], error: null }),
+    sessionToken: 's', clientId: 'c', nowMs: NOW,
+  });
+  await assert.rejects(
+    () => tools.heys_search_products({ query: 'миндаль' }),
+    (e) => {
+      assert.equal(e.code, 'shared_catalog_unavailable');
+      // Модель должна понять, что дубликат заводить нельзя.
+      assert.match(e.message, /заводить продукт заново не нужно/);
+      return true;
+    },
+  );
+});
+
+test('клиент без связанных продуктов работает и с пустой общей базой', async () => {
+  const api = apiWithShared({ data: [], error: null });
+  const originalGetKV = api.getKV;
+  api.getKV = async (s, key) => (key === 'heys_products_overlay_v2'
+    ? { data: [{ id: 'own-custom', _custom: true, name: 'Домашний батончик', protein100: 10, carbs100: 40, fat100: 20, in_my_list: true }], error: null }
+    : originalGetKV(s, key));
+  const { tools } = createTools({ api, sessionToken: 's', clientId: 'c', nowMs: NOW });
+  const res = await tools.heys_search_products({ query: 'батончик' });
+  assert.equal(res.structured.results.length, 1);
+});
+
+
+// ── Просьбы из мессенджера ────────────────────────────────────────────────
+// Клиент пишет «добавь протеин» — ассистент читает, вносит, помечает
+// обработанным. Повторное чтение переписки не должно вносить ту же еду дважды.
+
+function apiWithMessages(thread) {
+  const api = fakeCuratorApi();
+  api.doneCalls = [];
+  api.sent = [];
+  api.getMessagesThread = async (bearer, clientId, opts) => {
+    assert.equal(bearer, JWT);
+    api.lastThread = { clientId, opts };
+    return { data: { messages: thread }, error: null };
+  };
+  api.setMessageDone = async (bearer, messageId, state) => {
+    api.doneCalls.push({ messageId, state });
+    return { data: { success: true }, error: null };
+  };
+  api.sendMessageToClient = async (bearer, clientId, text) => {
+    api.sent.push({ clientId, text });
+    return { data: { success: true }, error: null };
+  };
+  return api;
+}
+
+const THREAD = [
+  { id: 'msg-1', body: 'Добавь протеин 30 г, выпила в 21:15', created_at: '2026-08-01T18:15:00Z', sender: 'client', is_done: false },
+  { id: 'msg-2', body: 'Приняла, спасибо', created_at: '2026-08-01T18:20:00Z', sender: 'curator', is_done: false },
+  { id: 'msg-3', body: 'И ещё банан', created_at: '2026-08-01T18:30:00Z', sender: 'client', is_done: true },
+];
+
+test('переписка читается адресно и нормализуется', async () => {
+  const api = apiWithMessages(THREAD);
+  const { tools } = build(api);
+  const res = await tools.heys_list_messages({ client: 'Александра' });
+
+  assert.equal(api.lastThread.clientId, 'cid-alexandra');
+  assert.match(res.text, /^\[Александра\]/);
+  const first = res.structured.messages[0];
+  assert.equal(first.message_id, 'msg-1');
+  assert.match(first.text, /протеин 30 г/);
+  assert.equal(first.from_client, true);
+  assert.equal(first.done, false);
+  // Ответ куратора клиентским сообщением не считается.
+  assert.equal(res.structured.messages[1].from_client, false);
+  // Необработанных от клиента ровно одно: msg-3 уже помечено.
+  assert.match(res.text, /необработанных от клиента: 1/);
+});
+
+test('время сообщения показывается в московской зоне', async () => {
+  const { tools } = build(apiWithMessages(THREAD));
+  const res = await tools.heys_list_messages({ client: 'Александра' });
+  // 18:15 UTC = 21:15 МСК — то самое время, которое назвала клиентка.
+  assert.match(res.structured.messages[0].sent_local, /21:15/);
+});
+
+test('пометка обработанным адресна и требует id', async () => {
+  const api = apiWithMessages(THREAD);
+  const { tools } = build(api);
+  await tools.heys_mark_message_done({ client: 'Александра', message_id: 'msg-1' });
+  assert.deepEqual(api.doneCalls, [{ messageId: 'msg-1', state: true }]);
+  await assert.rejects(() => tools.heys_mark_message_done({ client: 'Александра' }), (e) => e.code === 'invalid_message_id');
+});
+
+test('ответ клиенту уходит выбранному клиенту', async () => {
+  const api = apiWithMessages(THREAD);
+  const { tools } = build(api);
+  await tools.heys_reply_message({ client: 'Александра', text: 'Внёс 30 г на 21:15' });
+  assert.equal(api.sent[0].clientId, 'cid-alexandra');
+  assert.match(api.sent[0].text, /21:15/);
+  await assert.rejects(() => tools.heys_reply_message({ client: 'Александра', text: '  ' }), (e) => e.code === 'invalid_text');
+});
+
+test('чтение переписки без указания клиента не угадывает адресата', async () => {
+  const { tools } = build(apiWithMessages(THREAD));
+  await assert.rejects(() => tools.heys_list_messages({}), (e) => e.code === 'client_required');
+});
+
+test('правила мессенджера доехали до инструкций', () => {
+  const { instructions } = build(apiWithMessages(THREAD));
+  assert.match(instructions, /Если клиент время НЕ назвал — спроси куратора/);
+  assert.match(instructions, /Граммовку бери ровно ту, что назвал клиент/);
+  assert.match(instructions, /heys_mark_message_done/);
 });

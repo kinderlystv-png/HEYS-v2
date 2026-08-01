@@ -61,15 +61,51 @@ function unwrap(data, fnName) {
   return data;
 }
 
-function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = request }) {
+/**
+ * Читающие RPC. Повтор для них безопасен: они ничего не меняют, а сетевой сбой
+ * при чтении каталога раньше превращался в «продукт не найден» и подталкивал
+ * к созданию дубликата.
+ *
+ * Чего здесь намеренно нет: записи (повтор merge-сохранения мог бы задвоить
+ * приём) и `verify_client_pin_v3` — он считает попытки входа, и повтор сжигал
+ * бы лимит клиента вместо того, чтобы помочь.
+ */
+const IDEMPOTENT_RPC = /^(get_|batch_get_)/;
+
+const RETRY_DELAYS_MS = [200, 700];
+
+/** 429 не повторяем: лимит снимается временем, а не настойчивостью. */
+function isRetriableStatus(status) {
+  return status === 0 || status === 408 || (status >= 500 && status < 600);
+}
+
+function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = request, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   // Счётчик round-trip'ов к API: по нему видно, из чего складывается время
   // инструмента — из его логики или из числа обращений к серверу.
-  const stats = { calls: 0, ms: 0 };
+  const stats = { calls: 0, ms: 0, retries: 0 };
 
-  async function measured(...args) {
+  async function measured(url, options, { retry = false } = {}) {
     const startedAt = Date.now();
     try {
-      return await fetchImpl(...args);
+      let lastError = null;
+      for (let attempt = 0; attempt <= (retry ? RETRY_DELAYS_MS.length : 0); attempt += 1) {
+        if (attempt > 0) {
+          stats.retries += 1;
+          await sleep(RETRY_DELAYS_MS[attempt - 1]);
+        }
+        try {
+          const res = await fetchImpl(url, options);
+          if (!retry || !isRetriableStatus(res.status)) return res;
+          lastError = null;
+          if (attempt === RETRY_DELAYS_MS.length) return res;
+        } catch (e) {
+          // Обрыв соединения и таймаут — самый частый сбой в serverless.
+          lastError = e;
+          if (!retry || attempt === RETRY_DELAYS_MS.length) throw e;
+        }
+      }
+      if (lastError) throw lastError;
+      return { status: 0, json: null, text: '' };
     } finally {
       stats.calls += 1;
       stats.ms += Date.now() - startedAt;
@@ -79,7 +115,8 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   async function rpc(fnName, params = {}, { bearer = null } = {}) {
     const url = `${apiUrl}/rpc?fn=${encodeURIComponent(fnName)}`;
     const headers = bearer ? { Authorization: `Bearer ${bearer}` } : {};
-    const res = await measured(url, { method: 'POST', body: params, headers, timeoutMs });
+    const res = await measured(url, { method: 'POST', body: params, headers, timeoutMs },
+      { retry: IDEMPOTENT_RPC.test(fnName) });
     if (res.status < 200 || res.status >= 300) {
       const message = (res.json && (res.json.error || res.json.message)) || `rpc_http_${res.status}`;
       return { data: null, error: { message: String(message), status: res.status, raw: res.json } };
@@ -94,7 +131,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { data, error: null };
   }
 
-  async function rest(table, { select, limit, offset, order, filters, bearer } = {}) {
+  async function rest(table, { select, limit, offset, order, filters, bearer, timeoutMs: callTimeoutMs } = {}) {
     const params = new URLSearchParams();
     if (select) params.set('select', select);
     if (limit) params.set('limit', String(limit));
@@ -109,7 +146,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     const query = params.toString();
     const url = `${apiUrl}/rest/${table}${query ? `?${query}` : ''}`;
     const headers = bearer ? { Authorization: `Bearer ${bearer}` } : {};
-    const res = await measured(url, { method: 'GET', headers, timeoutMs });
+    const res = await measured(url, { method: 'GET', headers, timeoutMs: callTimeoutMs || timeoutMs }, { retry: true });
     if (res.status < 200 || res.status >= 300) {
       return { data: null, error: { message: `rest_http_${res.status}`, status: res.status } };
     }
@@ -174,8 +211,17 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { ok: true, data };
   }
 
+  /**
+   * Общий справочник — самый тяжёлый запрос в системе, поэтому у него свой
+   * таймаут. Если пришло ровно `limit` строк, справочник почти наверняка
+   * обрезан: сообщаем об этом, чтобы неполнота не выглядела как «нет продукта».
+   */
   async function getSharedProducts({ limit = 5000 } = {}) {
-    return rest('shared_products', { limit });
+    const res = await rest('shared_products', { limit, timeoutMs: Math.max(timeoutMs, 20000) });
+    if (!res.error && Array.isArray(res.data) && res.data.length >= limit) {
+      return { ...res, truncated: true };
+    }
+    return res;
   }
 
   // ── Кураторский контур ────────────────────────────────────────────────
@@ -273,9 +319,63 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { ok: true, data };
   }
 
+  // ── Мессенджер ────────────────────────────────────────────────────────
+  // Отдельная функция heys-api-messages со своими путями: в /rpc её функций
+  // нет вообще. Куратор авторизуется тем же JWT, что и остальной кураторский
+  // контур.
+
+  async function messagesRequest(path, { method = 'GET', bearer, body = null, query = null } = {}) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query || {})) {
+      if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+    }
+    const qs = params.toString();
+    const url = `${apiUrl}${path}${qs ? `?${qs}` : ''}`;
+    const res = await measured(
+      url,
+      { method, body, headers: { Authorization: `Bearer ${bearer}` }, timeoutMs },
+      { retry: method === 'GET' },
+    );
+    if (res.status < 200 || res.status >= 300) {
+      const message = (res.json && (res.json.error || res.json.message)) || `messages_http_${res.status}`;
+      return { data: null, error: { message: String(message), status: res.status } };
+    }
+    return { data: res.json || {}, error: null };
+  }
+
+  /** Переписка с клиентом. limit максимум 200, дальше — пагинация через before. */
+  async function getMessagesThread(bearer, clientId, { limit = 100, before = null } = {}) {
+    return messagesRequest('/messages/thread', {
+      bearer,
+      query: { client_id: clientId, limit: Math.min(Number(limit) || 100, 200), before },
+    });
+  }
+
+  /** Счётчики непрочитанного по всем клиентам куратора. */
+  async function getMessagesInbox(bearer) {
+    return messagesRequest('/messages/inbox', { bearer });
+  }
+
+  async function setMessageDone(bearer, messageId, desiredState = true) {
+    return messagesRequest('/messages/set-done', {
+      method: 'POST',
+      bearer,
+      body: { message_id: messageId, desired_state: !!desiredState },
+    });
+  }
+
+  async function sendMessageToClient(bearer, clientId, text) {
+    return messagesRequest('/messages/send', {
+      method: 'POST',
+      bearer,
+      body: { client_id: clientId, body: text },
+    });
+  }
+
   return {
     rpc, rest, verifyPin, getKV, mergeSaveKV, upsertKV, getSharedProducts, stats,
     curatorLogin, listClients, getKVByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
+    getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient,
   };
 }
 

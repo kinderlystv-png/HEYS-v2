@@ -161,13 +161,44 @@ function withinDistance(a, b, max) {
   return prev[b.length] <= max;
 }
 
+function commonPrefixLength(a, b) {
+  const limit = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < limit && a[i] === b[i]) i += 1;
+  return i;
+}
+
 /**
- * Слово запроса против слова названия. Опечатка допускается только внутри
- * слова при совпадающем начале — иначе «сахар» и «кагор» стали бы одним
- * продуктом. Неточное совпадение весит меньше точного.
+ * Одна основа при разных окончаниях: «яйца»/«яйцо», «твердого»/«твёрдый».
+ * Русский словоформы различает именно хвостом, поэтому дешёвый стемминг без
+ * словаря даёт больше, чем расстояние Левенштейна: оно на коротких словах
+ * пришлось бы делать таким щедрым, что «вода» слилась бы с «водкой».
+ *
+ * Отсюда два порога вместо одного: длинным словам прощаем окончание до трёх
+ * букв, коротким — только одну. «вода»/«водка» отсекается тем, что расхождение
+ * несимметрично (1 против 2) и начинается слишком рано.
+ */
+function sameStem(a, b) {
+  if (a === b) return true;
+  const prefix = commonPrefixLength(a, b);
+  const tailA = a.length - prefix;
+  const tailB = b.length - prefix;
+  if (prefix >= 4 && tailA <= 3 && tailB <= 3) return true;
+  if (prefix >= 3 && tailA <= 1 && tailB <= 1) return true;
+  return false;
+}
+
+/**
+ * Слово запроса против слова названия. Порядок проверок — от точного к
+ * вольному: префикс (в обе стороны, потому что «сыра» длиннее «сыр»), одна
+ * основа, и лишь потом опечатка. Опечатка допускается только внутри слова при
+ * совпадающем начале — иначе «сахар» и «кагор» стали бы одним продуктом.
  */
 function tokenMatches(nameToken, queryToken) {
   if (nameToken.startsWith(queryToken)) return 1;
+  // Запрос длиннее названия: «сыра» → «Сыр», «молока» → «Молоко 2,5».
+  if (queryToken.length > nameToken.length && queryToken.startsWith(nameToken) && nameToken.length >= 3) return 1;
+  if (sameStem(nameToken, queryToken)) return 0.95;
   const length = queryToken.length;
   if (length < 5) return 0;
   if (nameToken.slice(0, 3) !== queryToken.slice(0, 3)) return 0;
@@ -213,7 +244,9 @@ function scoreProduct(product, prepared) {
     let value = 0;
     if (nameNorm === phrase) value = 1000;
     else if (nameNorm.startsWith(phrase)) value = 600;
-    else if (nameNorm.includes(phrase)) value = 400;
+    // Подстрока засчитывается только с границы слова: иначе «сок» вытаскивает
+    // «Сахар-песок», а «мясо» — «Мясо» внутри любого составного слова.
+    else if (nameNorm.includes(` ${phrase}`)) value = 400;
     // Транслитерация — догадка, а не то, что написал пользователь: чуть дешевле.
     if (index > 0) value *= 0.9;
     if (value > score) score = value;

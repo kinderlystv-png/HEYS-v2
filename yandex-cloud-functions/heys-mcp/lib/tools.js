@@ -11,6 +11,7 @@
 const crypto = require('node:crypto');
 const day = require('./day');
 const products = require('./products');
+const sharedCatalog = require('./shared-catalog');
 
 /** Наборы приёмов, которые пользователь сохранил в приложении. */
 const PRESETS_KEY = 'heys_meal_presets_v1';
@@ -89,14 +90,31 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       catalogPromise = (async () => {
         const [overlayRes, sharedRes] = await Promise.all([
           api.getKV(sessionToken, products.OVERLAY_KEY),
-          api.getSharedProducts({}),
+          sharedCatalog.loadSharedProducts(api, { nowMs }),
         ]);
         if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+        if (sharedRes.error) throw new ToolError('upstream_error', `Не удалось прочитать общую базу продуктов: ${sharedRes.error.message}`);
+
         const sharedById = new Map();
-        for (const row of sharedRes.data || []) {
+        for (const row of sharedRes.rows || []) {
           const normalized = products.normalizeSharedRow(row);
           if (normalized && normalized.id) sharedById.set(String(normalized.id), normalized);
         }
+
+        // Большинство личных продуктов — это Type A: ссылка на строку общей базы
+        // плюс overrides. Если общая база не доехала, такие строки молча выпадут
+        // из каталога, инструмент ответит «не нашлось», а модель пойдёт заводить
+        // дубликат уже существующего продукта. Пустая общая база при наличии
+        // Type A строк — это сбой загрузки, а не легальное состояние.
+        const overlayRows = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+        const linkedRows = overlayRows.filter((row) => row && !row._custom && row.shared_origin_id && row.in_my_list !== false);
+        if (linkedRows.length > 0 && sharedById.size === 0) {
+          throw new ToolError(
+            'shared_catalog_unavailable',
+            'Общая база продуктов сейчас недоступна, поэтому личный список клиента прочитан не полностью. Повтори запрос — заводить продукт заново не нужно, он может уже существовать.',
+          );
+        }
+
         return products.buildCatalog(overlayRes.data, sharedById);
       })();
     }

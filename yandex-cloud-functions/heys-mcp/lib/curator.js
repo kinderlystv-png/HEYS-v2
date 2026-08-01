@@ -21,6 +21,7 @@
 
 const { createTools, TOOL_SCHEMAS, ToolError } = require('./tools');
 const products = require('./products');
+const day = require('./day');
 
 /** Инструменты, которым не нужен целевой клиент. */
 const CLIENTLESS_TOOLS = new Set(['heys_list_clients']);
@@ -39,6 +40,40 @@ function buildCuratorSchemas() {
       properties: { client: CLIENT_ARG, ...(schema.inputSchema.properties || {}) },
     },
   }));
+  schemas.unshift({
+    name: 'heys_reply_message',
+    description: 'Ответить клиенту в мессенджере приложения. Используй после того, как внёс просьбу в дневник: клиент должен видеть, что его сообщение обработано.',
+    inputSchema: {
+      type: 'object',
+      properties: { client: CLIENT_ARG, text: { type: 'string', description: 'Текст ответа клиенту.' } },
+      required: ['text'],
+    },
+  });
+  schemas.unshift({
+    name: 'heys_mark_message_done',
+    description: 'Пометить сообщение обработанным. Вызывай сразу после того, как внёс просьбу клиента в дневник, — иначе при следующем чтении переписки та же еда будет внесена повторно.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        client: CLIENT_ARG,
+        message_id: { type: 'string', description: 'Идентификатор сообщения из heys_list_messages.' },
+        done: { type: 'boolean', description: 'false — снять отметку. По умолчанию true.' },
+      },
+      required: ['message_id'],
+    },
+  });
+  schemas.unshift({
+    name: 'heys_list_messages',
+    description: 'Прочитать переписку с клиентом в мессенджере приложения: текст сообщений, время отправки, отметка «обработано». Здесь же оказываются расшифровки голосовых. Вызывай, когда куратор спрашивает, что писал клиент, или просит внести то, о чём клиент написал.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        client: CLIENT_ARG,
+        limit: { type: 'integer', description: 'Сколько сообщений вернуть, до 200. По умолчанию 100.' },
+        before: { type: 'string', description: 'Читать сообщения старше этой метки времени — для листания вглубь истории.' },
+      },
+    },
+  });
   schemas.unshift({
     name: 'heys_list_clients',
     description: 'Список клиентов куратора: client_id, имя, статус подписки. Вызывай, когда непонятно, кому вносить, или когда пользователь спрашивает про «клиентов», «кого я веду».',
@@ -65,6 +100,12 @@ function curatorInstructions(curatorName) {
     '7. Время приёма по умолчанию — текущее московское.',
     '8. Если продукта нет в базе, а куратор прислал фото упаковки — сними состав и создай продукт через heys_create_product в списке ЭТОГО клиента. Значения приводи к 100 г; калорийность HEYS считает сам.',
     '9. Не выдумывай нутриенты, которых не видно на фото: скажи, чего не хватает.',
+    '',
+    'Просьбы из мессенджера (heys_list_messages):',
+    '10. Время приёма берётся из того, что написал клиент: «съела в 21:15» — приём на 21:15, а не на момент, когда ты это читаешь. Если клиент время НЕ назвал — спроси куратора, какое ставить. Не подставляй время сообщения и не бери текущее.',
+    '11. Граммовку бери ровно ту, что назвал клиент. Если он её НЕ назвал — спроси куратора. Здесь нельзя брать привычную порцию из наборов или прошлых дней, даже если она очевидна: это данные клиента, а не твоя догадка.',
+    '12. Внёс просьбу — сразу вызови heys_mark_message_done. Без этого при следующем чтении переписки та же еда будет внесена повторно.',
+    '13. Отвечать клиенту через heys_reply_message — по решению куратора, а не автоматически: это его переписка с клиентом, и голос в ней принадлежит ему.',
   ].join('\n');
 }
 
@@ -166,7 +207,80 @@ function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.
     return toolsByClient.get(target.client_id);
   }
 
+  /**
+   * Форма сообщения задаётся SQL-функцией и может отличаться по именам полей.
+   * Поэтому вытаскиваем ключевое по нескольким вариантам, а не жёстко по одному:
+   * промах здесь означал бы «сообщений нет» там, где они есть.
+   */
+  function describeMessage(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const text = raw.body ?? raw.text ?? raw.message ?? raw.content ?? '';
+    const sentAt = raw.created_at ?? raw.createdAt ?? raw.sent_at ?? raw.ts ?? null;
+    const author = raw.sender ?? raw.author ?? raw.from ?? raw.direction ?? null;
+    return {
+      message_id: raw.id ?? raw.message_id ?? null,
+      text: String(text || ''),
+      sent_at: sentAt,
+      // Время в московской зоне — в нём же ассистент ставит приём, если клиент
+      // не назвал время явно… но по правилу куратора он всё равно спросит.
+      sent_local: sentAt ? new Date(sentAt).toLocaleString('ru-RU', { timeZone: day.MOSCOW_TZ }) : null,
+      from_client: author == null ? null : !/curator/i.test(String(author)),
+      done: raw.is_done ?? raw.done ?? false,
+      has_attachment: !!(raw.attachment || raw.attachments || raw.photo_id),
+      intent: raw.intent_type ?? raw.intent ?? null,
+    };
+  }
+
   const tools = {
+    async heys_list_messages(args = {}) {
+      const target = await resolveTarget(args.client);
+      const res = await api.getMessagesThread(curatorJwt, target.client_id, {
+        limit: args.limit || 100,
+        before: args.before || null,
+      });
+      if (res.error) {
+        throw new ToolError('upstream_error', `Не удалось прочитать переписку: ${res.error.message}`);
+      }
+      const raw = Array.isArray(res.data && res.data.messages) ? res.data.messages : [];
+      const messages = raw.map(describeMessage).filter(Boolean);
+      const pending = messages.filter((m) => m.from_client !== false && !m.done).length;
+      const label = target.name || target.client_id;
+      return {
+        text: messages.length
+          ? `[${label}] Сообщений: ${messages.length}, из них необработанных от клиента: ${pending}.`
+          : `[${label}] Переписки нет.`,
+        structured: {
+          client: { client_id: target.client_id, name: target.name },
+          messages,
+        },
+      };
+    },
+
+    async heys_mark_message_done(args = {}) {
+      const target = await resolveTarget(args.client);
+      if (!args.message_id) throw new ToolError('invalid_message_id', 'Нужен message_id из heys_list_messages.');
+      const res = await api.setMessageDone(curatorJwt, String(args.message_id), args.done !== false);
+      if (res.error) throw new ToolError('upstream_error', `Не удалось изменить статус сообщения: ${res.error.message}`);
+      const label = target.name || target.client_id;
+      return {
+        text: `[${label}] Сообщение ${args.message_id} помечено как ${args.done === false ? 'необработанное' : 'обработанное'}.`,
+        structured: { client: { client_id: target.client_id, name: target.name }, message_id: args.message_id, done: args.done !== false },
+      };
+    },
+
+    async heys_reply_message(args = {}) {
+      const target = await resolveTarget(args.client);
+      const text = String(args.text || '').trim();
+      if (!text) throw new ToolError('invalid_text', 'Нужен текст ответа.');
+      const res = await api.sendMessageToClient(curatorJwt, target.client_id, text);
+      if (res.error) throw new ToolError('upstream_error', `Не удалось отправить сообщение: ${res.error.message}`);
+      const label = target.name || target.client_id;
+      return {
+        text: `[${label}] Отправил: «${text}»`,
+        structured: { client: { client_id: target.client_id, name: target.name }, sent: text },
+      };
+    },
+
     async heys_list_clients() {
       const clients = await loadClients();
       const text = clients.length
