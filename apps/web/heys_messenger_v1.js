@@ -2700,6 +2700,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onClick: handleTranscriptionSettingsToggle,
             }, savingTranscriptionConsent ? '...' : transcriptionConsent?.granted ? 'Отозвать' : 'Включить'),
           ),
+        // Напоминание клиенту: время + граммы в сообщениях о еде
+        !isCurator &&
+          React.createElement(
+            'div',
+            { className: 'messenger-food-hint', role: 'note' },
+            'Пишете о еде — укажите время и вес в граммах: так данные точнее попадут в дневник.',
+          ),
         // Input
         React.createElement(
           'div',

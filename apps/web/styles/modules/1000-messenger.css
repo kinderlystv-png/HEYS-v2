@@ -1714,6 +1714,17 @@ body.planning-tab-active .fab-group .message-fab {
   box-shadow: 0 7px 16px rgba(37, 99, 235, 0.24);
 }
 
+.messenger-food-hint {
+  padding: 7px 16px 8px;
+  border-top: 1px solid rgba(180, 83, 9, 0.16);
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .messenger-input-row {
   display: flex;
   align-items: flex-end;
@@ -2030,6 +2041,12 @@ body.planning-tab-active .fab-group .message-fab {
 [data-theme="dark"] .messenger-input-row {
   background: rgba(15, 23, 42, 0.92);
   border-top-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="dark"] .messenger-food-hint {
+  background: #3b2a08;
+  border-top-color: rgba(252, 211, 77, 0.18);
+  color: #fcd34d;
 }
 
 [data-theme="dark"] .messenger-recording-live,
