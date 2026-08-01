@@ -286,6 +286,15 @@
           if (!r || r._custom !== true || !r.name) return r;
           var sm = _autoAux.byName.get(_normalizeName(r.name));
           if (!sm) return r;
+          // 🔐 2026-08-02: склейка только при совпадении состава.
+          // Раньше связывали по одному имени. Когда в каталоге оказывались две
+          // одноимённые карточки (30.05.2026 туда попали 12 битых — с белком,
+          // но с нулевыми углеводами и жирами), индекс отдавал одну из них, и
+          // личная запись клиента молча привязывалась к битой: «Торт Наполеон»
+          // считался как 18 ккал/100 г вместо 300. Имя совпало — состав нет.
+          // Теперь при расхождении состава запись остаётся личной копией
+          // (TypeB): потерять склейку безопасно, потерять состав — нет.
+          if (!_sameComposition(r, sm)) return r;
           var sid = String(sm.id);
           if (_autoCoveredSO.has(sid)) return null; // уже есть TypeA с таким SO — TypeB-клон не сохраняем
           _autoCoveredSO.add(sid);
@@ -708,6 +717,43 @@
     delete resolved._selectionDisabled;
     return { ok: true, product: resolved, reason: 'shared_nutrients_ready' };
   }
+  // Один макронутриент из строки продукта. Личная запись хранит поля в
+  // camelCase (badFat100), строка каталога — в lowercase (badfat100), поэтому
+  // читаем оба написания: именно на этом расхождении легко получить «0» там,
+  // где значение на самом деле есть.
+  function _macroValue(row, camelKey, lowerKey) {
+    if (!row) return 0;
+    var raw = row[camelKey] != null ? row[camelKey] : row[lowerKey];
+    var num = typeof raw === 'number' ? raw : parseFloat(raw);
+    return isFinite(num) ? Math.round(num * 10) / 10 : 0;
+  }
+
+  // Совпадает ли состав личной записи и карточки каталога.
+  // Сравниваем только макронутриенты — они определяют калорийность и приходят
+  // с упаковки. ГИ и harm сюда намеренно не входят: они оценочные, расходятся
+  // у одного и того же продукта и, если их учитывать, склейка почти перестанет
+  // срабатывать — вернётся накопление личных дублей, ради которого её и делали.
+  var _COMPOSITION_FIELDS = [
+    ['simple100', 'simple100'],
+    ['complex100', 'complex100'],
+    ['protein100', 'protein100'],
+    ['badFat100', 'badfat100'],
+    ['goodFat100', 'goodfat100'],
+    ['trans100', 'trans100'],
+    ['fiber100', 'fiber100']
+  ];
+
+  function _sameComposition(localRow, sharedRow) {
+    for (var i = 0; i < _COMPOSITION_FIELDS.length; i++) {
+      var camelKey = _COMPOSITION_FIELDS[i][0];
+      var lowerKey = _COMPOSITION_FIELDS[i][1];
+      if (_macroValue(localRow, camelKey, lowerKey) !== _macroValue(sharedRow, camelKey, lowerKey)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function _getSharedAuxIndexes(sharedById) {
     if (_sharedByFingerprintRef !== sharedById) {
       const byFp = new Map();
