@@ -1,6 +1,6 @@
-# Технический addendum v0.35
+# Технический addendum v0.38
 
-Статус: обязательное исполнимое уточнение v0.35. Продуктовые решения
+Статус: обязательное исполнимое уточнение v0.38. Продуктовые решения
 D12/D14/D15/D16 и пороги D60 не изменяются; решения D61–D68 добавляют системный
 игровой цикл.
 
@@ -18,9 +18,9 @@ D12/D14/D15/D16 и пороги D60 не изменяются; решения D6
 
 ## 2. Исполнимое состояние
 
-`GameStateV2` включает:
+`GameStateV4` включает:
 
-- `scenarioCursor` — индекс следующего из 38 decision slots;
+- `scenarioCursor` — индекс следующего decision slot из production-календаря;
 - `activeEventId` — выбранная движком текущая причинная ветвь до её
   подтверждения;
 - `eventLedger` — occurrence по template, дневные total/external/large loads,
@@ -29,7 +29,8 @@ D12/D14/D15/D16 и пороги D60 не изменяются; решения D6
   obligations, tasks, commitments, queue, rules и priorities.
 
 `projectBacklogMin` равен сумме `remainingMin` активных задач и пересчитывается
-после task effects. `StepOutputV1.nextEvent` равен `null` после slot 38.
+после task effects. `StepOutputV1.nextEvent` равен `null` после последнего из
+2012 slots годовой кампании.
 
 ## 3. Закрытые операторы
 
@@ -47,8 +48,8 @@ scenario-specific ветвление в reducer запрещено.
 
 ## 4. События и manifest
 
-- `SCENARIO_WEEK_01` является массивом ровно из 38 полных records: slot, anchor,
-  event template и action IDs.
+- production-календарь содержит 2012 slots на 336 дней; первые 38 якорей несут
+  авторскую геометрию недели, остальные не назначают event template по позиции;
 - При пересечении anchor среда продвигается до `max(currentClock, anchor)`; slot
   не пропускается.
 - Manifest slot — основная развилка; hard consequence того же окна записывается
@@ -113,7 +114,8 @@ Utilities tie-break by action ID. `random_valid` uses seed key
 - пользовательская проекция не содержит raw state paths и внутренних значений
   `0–100`; exact evidence остаётся в diagnostic trace;
 - week summary зеркально содержит brief, rules, commitments, qualitative
-  pressure, четыре axes и `openThreads`; month summary не создаётся.
+  pressure, четыре axes и `openThreads`; month summary использует те же четыре
+  axes и открытые нити.
 
 ## 5.3. Development projection
 
@@ -126,7 +128,7 @@ Utilities tie-break by action ID. `random_valid` uses seed key
   `work.reciprocal_support → work echo events`;
 - остальные persisted skills/habits/capabilities остаются causal history и
   diagnostic evidence, но не user-facing development;
-- projection replay-derived и не расширяет `GameStateV2` или checkpoint v2.
+- projection replay-derived и не расширяет `GameStateV4` или checkpoint v3.
 
 ## 5.4. Content, evidence и presentation projection
 
@@ -149,10 +151,50 @@ Utilities tie-break by action ID. `random_valid` uses seed key
   summary; пороги принадлежат engine presentation и переиспользуются campaign-
   projection;
 - `CharacterPresentation` replay-derived, не мутирует state и не расширяет
-  `GameStateV2`, checkpoint v2, reducer, RNG или persistence; first-touch не
+  `GameStateV4`, checkpoint v3, reducer, RNG или persistence; first-touch не
   создаёт отдельного visual state;
-- presentation additions не меняют `GameStateV2`, scenario v4, calibration v0.4,
+- presentation additions не меняют `GameStateV3`, scenario v5, calibration v0.4,
   RNG, reducer order или D60/D66 gates.
+
+## 5.5. Bounded-state contract v0.37
+
+- `registerEvent()` журналирует короткий `before/after`-дайджест occurrence и
+  дневных/недельных budget counters, а не сериализует весь `eventLedger`;
+- граница периода тем же способом хранит счётчики day/week/month и последний
+  применённый boundary, не копируя весь `PeriodState`;
+- после журналирования границы дня удаляются только завершённые
+  `event-select:<day>:<step>:…` RNG keys и завершённые ключи трёх дневных
+  load-map; уже выбранное состояние следующего дня остаётся;
+- bounded-roll RNG keys не удаляются этим правилом: у них отдельный recurrence
+  contract;
+- QA снимает дневные максимумы до reducer-step, поэтому компактизация persisted
+  map не ослабляет load gates;
+- изменение повышает только technical contract `0.36 → 0.37`: schema v3,
+  scenario v5, calibration v0.4 и checkpoint envelope v3 сохраняют форму.
+
+## 5.6. Годовой календарь v0.38
+
+- модельный год состоит из `12 × 4 × 7 = 336` дней; календарные индексы
+  выводятся из `PeriodState`, а не хранятся отдельными датами;
+- `PeriodState` v2 добавляет `monthsPerYear` и `completedYears`; граница `year`
+  закрывается редьюсером ровно один раз после двенадцатого месяца;
+- недельная блокировка планирования хранит только текущую неделю, а прошлые
+  решения остаются в replay/diagnostics, чтобы state не рос по числу недель;
+- годовой итог использует существующую карточку периода, четыре независимые
+  линии и открытые нити, без отдельного экрана и общего балла;
+- production-календарь продлён существующими state/time-driven якорями и
+  двухнедельным ритмом выбранной занятости; новые активы, пассивный доход и
+  экономические типы не добавлены;
+- длинный QA обнаружил ложный recovery-выход при критическом голоде и низкой
+  энергии: hunger-gate теперь требует доступное действие домена food, а
+  routine-контент получил явный `rest_short`;
+- при нулевых деньгах и пустых учтённых порциях `prepare_simple_meal` оставляет
+  time/effort-priced food-выход без долга и без добавления economic entity; этот
+  выход распределён по существующим временным ситуациям, чтобы годовой
+  routine-хвост не схлопывался в одну универсальную развилку;
+- контракт повышен до schema v4, scenario v6 и technical v0.38. Calibration v0.4
+  и checkpoint envelope v3 не меняются; сохранения v0.37 fail-closed
+  несовместимы и требуют явного старта новой кампании.
 
 ## 6. QA denominators
 
@@ -167,7 +209,7 @@ Utilities tie-break by action ID. `random_valid` uses seed key
   Одного тега недостаточно.
 - Массовые availability/balance gates и долгосрочный diff-аудит считаются по
   всем policy-runs. Воспроизводимость отдельно повторяет все 38 переходов
-  контрольного seed для каждой политики и сравнивает 266 пар transition hashes и
-  семь final hashes.
+  контрольного seed для каждой политики и сравнивает 14 084 пары transition
+  hashes и семь final hashes.
 - Stable simulation payload не содержит `createdAt` и code revision. Artifact
   metadata хранится рядом и не влияет на comparison hash.

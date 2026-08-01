@@ -1,0 +1,44 @@
+{
+  "createdAt": "2026-08-01T11:54:05.137Z",
+  "sourceFingerprint": "e1ca1739602e2e06",
+  "seedSet": "regression",
+  "profileVersion": "1.0",
+  "contracts": {
+    "schemaVersion": 3,
+    "scenarioId": "week-01-project-deadline",
+    "scenarioVersion": "5",
+    "calibrationVersion": "0.4",
+    "technicalContractVersion": "0.36",
+    "priceBookVersion": "week-01-rub-v1",
+    "rngAlgorithm": "fnv1a-mulberry32-v1",
+    "hashAlgorithm": "canonical-json-fnv1a64-v1"
+  },
+  "seeds": ["qa-00000", "qa-00001", "qa-00042", "qa-01024"],
+  "policyIds": [
+    "maximize_work",
+    "protect_family",
+    "protect_recovery",
+    "save_money",
+    "buy_time",
+    "balanced",
+    "random_valid"
+  ],
+  "employmentFormats": ["office", "remote", "project"],
+  "campaigns": 28,
+  "passed": true,
+  "violations": [],
+  "reachability": {
+    "events": [],
+    "actions": ["repay_colleague_help"]
+  },
+  "variability": {
+    "distinctSequences": 28,
+    "campaigns": 28,
+    "topEventShare": 0.2684659090909091,
+    "topActionShare": 0.4147727272727273
+  },
+  "replay": {
+    "checked": 7,
+    "mismatched": 0
+  }
+}

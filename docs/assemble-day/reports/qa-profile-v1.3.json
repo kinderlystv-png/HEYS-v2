@@ -1,0 +1,52 @@
+{
+  "createdAt": "2026-08-01T16:43:27.405Z",
+  "sourceFingerprint": "a68f25df23accd7f",
+  "seedSet": "extended",
+  "profileVersion": "1.0",
+  "contracts": {
+    "schemaVersion": 4,
+    "scenarioId": "week-01-project-deadline",
+    "scenarioVersion": "6",
+    "calibrationVersion": "0.4",
+    "technicalContractVersion": "0.38",
+    "priceBookVersion": "week-01-rub-v1",
+    "rngAlgorithm": "fnv1a-mulberry32-v1",
+    "hashAlgorithm": "canonical-json-fnv1a64-v1"
+  },
+  "seeds": ["qa-00000", "qa-00001", "qa-00042", "qa-01024", "qa-00007", "qa-00099", "qa-00256", "qa-04096"],
+  "policyIds": [
+    "maximize_work",
+    "protect_family",
+    "protect_recovery",
+    "save_money",
+    "buy_time",
+    "balanced",
+    "random_valid"
+  ],
+  "employmentFormats": ["office", "remote", "project"],
+  "campaigns": 56,
+  "passed": false,
+  "violations": [
+    {
+      "id": "heavy_state_has_stabilizer",
+      "summary": "Тяжёлое состояние осталось без стабилизирующего действия",
+      "evidence": "qa-00099/random_valid: 1 из 1278; ситуации: wed_commute_delay",
+      "seed": "qa-00099",
+      "policyId": "random_valid"
+    }
+  ],
+  "reachability": {
+    "events": [],
+    "actions": []
+  },
+  "variability": {
+    "distinctSequences": 56,
+    "campaigns": 56,
+    "topEventShare": 0.30395306731042315,
+    "topActionShare": 0.3716895058222096
+  },
+  "replay": {
+    "checked": 7,
+    "mismatched": 0
+  }
+}

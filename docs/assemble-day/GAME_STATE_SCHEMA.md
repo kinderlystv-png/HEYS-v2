@@ -1,7 +1,7 @@
-# Game state schema v2
+# Game state schema v4
 
-> Статус: implementation-контракт<br> Набор документов: 0.35<br> Обновлено:
-> 2026-07-30<br> Владелец: причинный движок
+> Статус: implementation-контракт<br> Набор документов: 0.56<br> Обновлено:
+> 2026-08-01<br> Владелец: причинный движок
 
 [← К карте документации](./README.md)
 
@@ -13,7 +13,7 @@
 экономике: [`10_DECISION_REGISTER.md`](./10_DECISION_REGISTER.md).
 
 Схема описывает вымышленного персонажа контрольной недели. Персональные данные
-HEYS в `GameStateV2` не входят.
+HEYS в `GameStateV4` не входят.
 
 ## Нормативная форма
 
@@ -27,13 +27,13 @@ type DayIndex = number;
 type MinuteOfDay = number;
 type EntityId = string;
 
-interface GameStateV3 {
-  schemaVersion: 3;
+interface GameStateV4 {
+  schemaVersion: 4;
   periods: PeriodState;
   weekStats: WeekStats;
   campaignId: string;
   scenarioId: 'week-01-project-deadline';
-  scenarioVersion: '5';
+  scenarioVersion: '6';
   calibrationVersion: '0.4';
   priceBookVersion: 'week-01-rub-v1';
 
@@ -126,7 +126,7 @@ interface AccumulatorsV1 {
 `calibration v0.1`; последующие версии добавляют контекстную цену готовки,
 стратегический цикл и ограниченную planning capacity. Движок применяет границы
 после каждого оператора эффекта, а не только в конце шага. Производная
-`PlanningView.capacity` не сериализуется в `GameStateV2`.
+`PlanningView.capacity` не сериализуется в `GameStateV3`.
 
 ## Деньги, платежи и запас еды
 
@@ -300,12 +300,12 @@ Reducer пересчитывает контекст из хранимого со
    миграционного правила.
 6. Один и тот же JSON состояния, действие и seed дают один результат при
    одинаковых версиях схемы, сценария, калибровки и набора цен.
-7. `GameStateV2` не содержит `clientId`, дневник HEYS, диагноз, вес, лекарство
+7. `GameStateV4` не содержит `clientId`, дневник HEYS, диагноз, вес, лекарство
    или другой персональный признак.
 
 ## Сериализация и миграции
 
-- `GameStateV2` имеет каноническую JSON-форму с `schemaVersion` для hash, replay
+- `GameStateV4` имеет каноническую JSON-форму с `schemaVersion` для hash, replay
   и обмена между headless-компонентами.
 - Реализация сортирует ключи перед хешированием QA-снимка; порядок ключей
   исходного JSON не влияет на hash.
@@ -315,29 +315,32 @@ Reducer пересчитывает контекст из хранимого со
 - Несовместимая версия закрывает загрузку с явной ошибкой. Движок не пытается
   угадать форму старого состояния.
 
-### Browser checkpoint envelope v2
+### Browser checkpoint envelope v3
 
-Client-scoped browser checkpoint не дублирует полный `GameStateV2`. Он хранит
-только opaque UUID-free seed, точный `CONTRACT`, revision, итоговый state hash,
-domain-separated pseudonymous scope tag и компактную последовательность
-подтверждённых action/planning-решений. При reload adapter создаёт initial state
-и повторяет ledger через `reducePlanningStep` / `reduceStep`; только совпавший
-итоговый hash разрешает продолжение.
+Client-scoped browser checkpoint хранит opaque UUID-free seed, точный
+`CONTRACT`, revision, итоговый state hash, domain-separated pseudonymous scope
+tag, полный bounded state-якорь на последней границе периода и только хвост
+подтверждённых action/planning/employment-решений после него. При reload adapter
+повторяет через reducer только этот хвост; совпавший итоговый hash разрешает
+продолжение.
 
-`lastStepSummary`, `periodSummaries`, `causalJournal` и полный диагностический
-trace восстанавливаются локально replay и не входят в envelope. Brief всегда
-строится из same-seed initial state; day/week boundaries — из переходов authored
-slots. Внутренний hard budget — 128 KiB по формуле
+State-якорь включает актуальные `lastStepSummary`, `periodSummaries` и
+ограниченный `causalJournal`; полный диагностический trace строится локально из
+якоря и хвоста и отдельно не сохраняется. Brief всегда строится из same-seed
+initial state; day/week boundaries — из переходов authored slots. Внутренний
+hard budget — 128 KiB по формуле
 `(physicalKey.length + JSON.stringify(envelope).length) * 2`; внешний storage
 registry cap 512 KiB остаётся fail-safe и не повышается. Raw `clientId`
 участвует только в выборе client-scoped storage key и вычислении scope tag, но
 не входит в game seed, `campaignId`, RNG, ledger, state или trace.
 
-Envelope v1 мигрирует только если его boundary `clientId` совпадает с текущим
-профилем, game payload UUID-free, ledger полный и воспроизводит сохранённый
-hash. Иначе adapter показывает отдельный
+Legacy envelope v1 мигрирует только если его boundary `clientId` совпадает с
+текущим профилем, game payload UUID-free, ledger полный и воспроизводит
+сохранённый hash. Иначе adapter показывает отдельный
 `privacy`/`incompatible`/`corrupt`/`foreign` результат и не удаляет либо не
-перезаписывает snapshot без явного старта новой кампании.
+перезаписывает snapshot без явного старта новой кампании. Envelope v2 и любой
+checkpoint с другим technical contract получают явный `incompatible`, без silent
+reset.
 
 ## Занятость и экономический контур
 
@@ -365,12 +368,14 @@ interface EmploymentState {
 ## Границы журнала и недельные счётчики
 
 Журнал причин ограничен одним днём: на закрытии дня редьюсер оставляет записи
-завершённого дня и удаляет более ранние. Там же очищается очередь отложенных
-эффектов: применённые и отменённые удаляются, их последствия уже в состоянии и в
-журнале. Без этого за тридцать дней очередь одна съедала заметную часть бюджета
-чекпойнта. Компактизация выполняется после того, как шаг вернул свои записи,
-поэтому диагностика и causal QA видят полный поток изменений, а состояние не
-растёт вместе с жизнью персонажа.
+завершённого дня и удаляет более ранние. `eventLedger` и `PeriodState`
+представлены в записи короткими `before/after`-дайджестами, а не полными
+снимками растущих структур; источник, механизм, result path и confidence
+сохраняются. Там же очищается очередь применённых/отменённых эффектов,
+завершённые `event-select` RNG keys и ключи завершённых дней в трёх load-map.
+Первая уже выбранная ситуация следующего дня сохраняется, потому что её выбор
+происходит до финализации границы. Компактизация выполняется после возврата
+записей шага, поэтому диагностика и causal QA видят полный поток изменений.
 
 Недельные итоги больше не перебирают журнал. Для них в состоянии живёт
 `weekStats` с двумя вёдрами:
@@ -391,24 +396,27 @@ interface WeekStats {
 
 ```ts
 interface PeriodState {
-  version: 1;
+  version: 2;
   daysPerWeek: number;
   weeksPerMonth: number;
+  monthsPerYear: number;
   completedDays: number;
   completedWeeks: number;
   completedMonths: number;
+  completedYears: number;
   appliedBoundaries: string[];
   plannedWeeks: number[];
 }
 ```
 
 Абсолютный день кампании — это `clock.dayIndex`, поэтому день недели, номер
-недели и номер месяца выводятся функциями `periods.ts` и не сериализуются. В
+недели, месяца и года выводятся функциями `periods.ts` и не сериализуются. В
 состоянии остаются только конфигурация календаря, счётчики завершённых периодов,
 идентификаторы уже применённых границ и недели с подтверждённым планом.
 
 `appliedBoundaries` обеспечивает идемпотентность: граница с тем же
 идентификатором применяется ровно один раз, поэтому повторный расчёт, reload и
 replay не удваивают счётчики и не сбрасывают недельные лимиты второй раз.
-`plannedWeeks` даёт каждой неделе собственный planning-lock: контракт недели
-фиксируется один раз, а следующая неделя получает свой шаг планирования.
+`plannedWeeks` хранит только planning-lock текущей недели. Контракт недели
+фиксируется один раз, а история подтверждённых планов остаётся в diagnostics и
+replay, поэтому массив не растёт вместе с числом прожитых недель.
