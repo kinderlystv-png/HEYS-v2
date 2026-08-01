@@ -607,6 +607,52 @@ async function handleRestRequest(event, context) {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔐 SEC-025 (2026-08-02): curator-only write для каталога общих продуктов.
+  //
+  // До фикса: POST /rest/shared_products с валидным телом проходил БЕЗ любой
+  // аутентификации. Три условия складывались в дыру:
+  //   1) CORS-гейт пропускает origin === null (server-to-server, обычный curl);
+  //   2) в POST спец-обработка есть только для client_log_trace и
+  //      client_kv_store — shared_products шёл в generic INSERT;
+  //   3) пул подключается под PG_USER=heys_admin (владелец таблиц), поэтому
+  //      RLS на shared_products не применяется (relforcerowsecurity = f).
+  // Итог: любой мог дописать строку в общий каталог мимо очереди модерации.
+  //
+  // Штатные писатели — только кураторский UI: updateSharedProduct и
+  // updateSharedProductBarcodes (apps/web/heys_add_product_step_v1.js), оба
+  // вызываются под isCuratorUser(). YandexAPI.rest() шлёт кураторский JWT как
+  // Authorization: Bearer и cookie heys_curator_jwt (credentials: 'include'),
+  // так что штатный путь проверку проходит. Клиентские публикации идут через
+  // RPC create_pending_product_by_session и сюда не попадают.
+  //
+  // Fail-closed: нет секрета или нет валидного curator-JWT → отказ.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const CURATOR_WRITE_TABLES = ['shared_products', 'shared_products_pending'];
+  if (method !== 'GET' && CURATOR_WRITE_TABLES.includes(tableName)) {
+    const wh = event.headers || {};
+    const wAuth = wh.Authorization || wh.authorization || '';
+    const wBearer = wAuth.startsWith('Bearer ') ? wAuth.slice(7).trim() : null;
+    const wCookieJwt = getCookieValue(wh.cookie || wh.Cookie || '', 'heys_curator_jwt');
+    const wToken = (wBearer && wBearer.split('.').length === 3) ? wBearer : wCookieJwt;
+    const wVerified = verifyCuratorJwt(wToken, process.env.JWT_SECRET);
+    if (!wVerified.valid || wVerified.payload?.role !== 'curator') {
+      console.warn('[REST WRITE BLOCKED]', {
+        table: tableName,
+        method,
+        hadToken: !!wToken,
+        reason: wVerified.error || 'role_mismatch'
+      });
+      return {
+        statusCode: wToken ? 403 : 401,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: wToken ? 'curator_role_required' : 'curator_auth_required'
+        })
+      };
+    }
+  }
+
   // Для GET: валидируем select columns ДО подключения к БД
   let selectColumns = null;
   if (method === 'GET') {

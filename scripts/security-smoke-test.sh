@@ -112,6 +112,39 @@ else
   ((FAILED++))
 fi
 
+# Test 7b: REST POST на shared_products с ВАЛИДНЫМ телом — требует куратора
+# (SEC-025: Test 6 выше проверяет только пустое тело и засчитывает любой reject,
+#  поэтому анонимная запись валидной строки в общий каталог им не ловилась.)
+#
+# Тело намеренно содержит несуществующую колонку __contract_probe__: если гейт
+# отработал — придёт 401 и до БД дело не дойдёт; если гейт сломан регрессией —
+# запрос упадёт на unknown column, строка в каталоге НЕ появится, а тест это
+# заметит по отсутствию 401/403.
+echo "--- Test 6b: REST write to shared catalog requires curator ---"
+RESULT=$(curl -s -X POST "$API_BASE/rest/shared_products" \
+  -H "Content-Type: application/json" \
+  -d '[{"name":"__contract_probe__","__contract_probe__":1}]')
+if echo "$RESULT" | grep -qE 'curator_auth_required|curator_role_required'; then
+  echo -e "${GREEN}✓${NC} anonymous write to shared_products blocked (curator required)"
+  ((PASSED++))
+else
+  echo -e "${RED}✗${NC} anonymous write to shared_products NOT blocked — moderation bypass"
+  echo "  Got: $RESULT"
+  ((FAILED++))
+fi
+
+# Test 7c: чтение общего каталога должно остаться открытым (регресс SEC-025)
+echo "--- Test 6c: shared catalog read stays open ---"
+RESULT=$(curl -s "$API_BASE/rest/shared_products?limit=1")
+if echo "$RESULT" | grep -qE 'curator_auth_required|curator_role_required'; then
+  echo -e "${RED}✗${NC} shared_products read blocked — search will break for all clients"
+  echo "  Got: $RESULT"
+  ((FAILED++))
+else
+  echo -e "${GREEN}✓${NC} shared_products read still public"
+  ((PASSED++))
+fi
+
 # Test 8: CORS evil origin (только для prod)
 if [ "$ENV" = "prod" ]; then
   echo "--- Test 7: CORS whitelist ---"
