@@ -160,6 +160,9 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     const curatorCtx = createCuratorContext({
       api,
       curatorJwt: auth.sessionToken,
+      // sub кураторского токена — это curator_id: он нужен админским RPC,
+      // которые принимают его параметром (подписки), а не берут из JWT.
+      curatorId: auth.clientId,
       curatorName: auth.subjectName,
     });
     tools = curatorCtx.tools;

@@ -21,10 +21,17 @@
 
 const { createTools, TOOL_SCHEMAS, ToolError } = require('./tools');
 const products = require('./products');
+const admin = require('./admin');
 const day = require('./day');
 
 /** Инструменты, которым не нужен целевой клиент. */
-const CLIENTLESS_TOOLS = new Set(['heys_list_clients']);
+const CLIENTLESS_TOOLS = new Set([
+  'heys_list_clients',
+  'heys_list_inbox',
+  'heys_moderate_products',
+  'heys_create_client',
+  'heys_leads',
+]);
 
 const CLIENT_ARG = {
   type: 'string',
@@ -75,6 +82,103 @@ function buildCuratorSchemas() {
     },
   });
   schemas.unshift({
+    name: 'heys_get_client_health',
+    description: 'Диагностика клиента: сессии и входы за последние часы, включая неудачные попытки. Вызывай на жалобы «не заходит», «не синхронизируется», «пропали данные» — прежде чем гадать о причине.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        client: CLIENT_ARG,
+        hours: { type: 'integer', description: 'За сколько последних часов смотреть. По умолчанию 24, максимум 720.' },
+      },
+    },
+  });
+  schemas.unshift({
+    name: 'heys_leads',
+    description: 'Заявки с лендинга: список и смена статуса. Без аргументов — весь список; с action «update» меняет статус конкретного лида.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: '«list» (по умолчанию) или «update».' },
+        status: { type: 'string', description: 'Для списка — фильтр по статусу; для update — новый статус, например «rejected».' },
+        lead_id: { type: 'string', description: 'Идентификатор лида для update.' },
+        reason: { type: 'string', description: 'Причина смены статуса.' },
+      },
+    },
+  });
+  schemas.unshift({
+    name: 'heys_trial_queue',
+    description: 'Очередь заявок на пробный период: показать список со статистикой, активировать триал клиенту или отклонить заявку с причиной.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: '«list» (по умолчанию), «activate» или «reject».' },
+        client: CLIENT_ARG,
+        start_date: { type: 'string', description: 'Дата старта триала YYYY-MM-DD. По умолчанию — сегодня.' },
+        queue_id: { type: 'string', description: 'Идентификатор заявки для отказа.' },
+        reason: { type: 'string', description: 'Причина отказа — попадёт в карточку заявки.' },
+      },
+    },
+  });
+  schemas.unshift({
+    name: 'heys_manage_subscription',
+    description: 'Подписка клиента: продлить на несколько месяцев или сбросить. Сброс закрывает доступ сразу и требует подтверждения.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        client: CLIENT_ARG,
+        action: { type: 'string', description: '«extend» или «cancel».' },
+        months: { type: 'integer', description: 'На сколько месяцев продлить, 1–24.' },
+        confirm: { type: 'boolean', description: 'Подтверждение сброса подписки.' },
+      },
+      required: ['action'],
+    },
+  });
+  schemas.unshift({
+    name: 'heys_client_access',
+    description: 'Доступ клиента в приложение: получить действующую ссылку входа или выпустить новый PIN. ВАЖНО: и ссылка, и PIN — секреты, они появятся в переписке. Вызывай только когда куратор прямо об этом попросил, и предупреди, что значение осталось в чате.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        client: CLIENT_ARG,
+        action: { type: 'string', description: '«link» (по умолчанию) или «reset_pin».' },
+        pin: { type: 'string', description: 'Конкретный PIN из четырёх цифр. Без него сгенерируется случайный — так лучше.' },
+        confirm: { type: 'boolean', description: 'Подтверждение смены PIN: старый перестанет работать сразу.' },
+      },
+    },
+  });
+  schemas.unshift({
+    name: 'heys_create_client',
+    description: 'Завести нового клиента куратора: имя и телефон. PIN генерируется сам и возвращается в ответе, поэтому вызов требует confirm: true — значение останется в истории чата.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Имя клиента.' },
+        phone: { type: 'string', description: 'Телефон, российский номер в любом формате.' },
+        pin: { type: 'string', description: 'Свой PIN из четырёх цифр. Обычно не нужен: без него PIN сгенерируется.' },
+        confirm: { type: 'boolean', description: 'Подтверждение создания.' },
+      },
+      required: ['name', 'phone'],
+    },
+  });
+  schemas.unshift({
+    name: 'heys_moderate_products',
+    description: 'Очередь продуктов, которые клиенты прислали в общую базу. Без аргументов показывает список на модерации; с pending_id и action одобряет или отклоняет заявку. Отклонение требует причины — её увидит приславший клиент.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pending_id: { type: 'string', description: 'Идентификатор заявки из списка.' },
+        action: { type: 'string', description: '«approve» или «reject».' },
+        reason: { type: 'string', description: 'Причина отклонения.' },
+        limit: { type: 'integer', description: 'Сколько заявок показать, по умолчанию 50.' },
+      },
+    },
+  });
+  schemas.unshift({
+    name: 'heys_list_inbox',
+    description: 'Кто из клиентов написал и сколько сообщений ждёт ответа — по всем клиентам сразу. Вызывай на «что нового», «кто мне писал», «есть непрочитанные»: отсюда видно, к кому идти с heys_list_messages, без перебора клиентов по одному.',
+    inputSchema: { type: 'object', properties: {} },
+  });
+  schemas.unshift({
     name: 'heys_list_clients',
     description: 'Список клиентов куратора: client_id, имя, статус подписки. Вызывай, когда непонятно, кому вносить, или когда пользователь спрашивает про «клиентов», «кого я веду».',
     inputSchema: { type: 'object', properties: {} },
@@ -100,16 +204,33 @@ function curatorInstructions(curatorName) {
     '7. Время приёма по умолчанию — текущее московское.',
     '8. Если продукта нет в базе, а куратор прислал фото упаковки — сними состав и создай продукт через heys_create_product в списке ЭТОГО клиента. Значения приводи к 100 г; калорийность HEYS считает сам.',
     '9. Не выдумывай нутриенты, которых не видно на фото: скажи, чего не хватает.',
+    '10. Вопросы про неделю, месяц, динамику веса и пробелы в дневнике закрывает heys_get_period одним вызовом. Не перебирай дни через heys_get_day: в период не попадают позиции приёмов, но именно они для такого вопроса и не нужны.',
     '',
-    'Просьбы из мессенджера (heys_list_messages):',
-    '10. Время приёма берётся из того, что написал клиент: «съела в 21:15» — приём на 21:15, а не на момент, когда ты это читаешь. Если клиент время НЕ назвал — спроси куратора, какое ставить. Не подставляй время сообщения и не бери текущее.',
-    '11. Граммовку бери ровно ту, что назвал клиент. Если он её НЕ назвал — спроси куратора. Здесь нельзя брать привычную порцию из наборов или прошлых дней, даже если она очевидна: это данные клиента, а не твоя догадка.',
-    '12. Внёс просьбу — сразу вызови heys_mark_message_done. Без этого при следующем чтении переписки та же еда будет внесена повторно.',
-    '13. Отвечать клиенту через heys_reply_message — по решению куратора, а не автоматически: это его переписка с клиентом, и голос в ней принадлежит ему.',
+    'Настройки клиента (heys_get_profile / heys_update_profile / heys_update_norms / heys_update_hr_zones):',
+    '11. Перед правкой профиля, норм или пульсовых зон читай heys_get_profile: по нему видно текущие значения и то, что менять ничего не нужно.',
+    '12. Меняй только те поля, которые куратор назвал. Рост, вес, цели и нормы — это то, из чего считается весь рацион клиента, и «заодно поправить» здесь недопустимо.',
+    '13. Утренний вес конкретного дня — это heys_update_day, а не профиль. В профиле вес — базовая настройка, а не измерение.',
+    '',
+    'Каталог продуктов:',
+    '14. Ошибку в карточке продукта исправляй через heys_update_product, а не создавай второй продукт с тем же названием: дубль потом тянется в дневник, наборы и отчёты. heys_create_product — только для действительно нового продукта.',
+    '15. Продукт общей базы правится лично для этого клиента; общая карточка меняется только через очередь модерации (heys_moderate_products).',
+    '',
+    'Администрирование (клиенты, доступ, подписки, заявки):',
+    '16. Необратимое действие — создание клиента, смена PIN, сброс подписки — выполняется только после confirm: true. Сначала назови куратору, что именно произойдёт, и дождись ответа.',
+    '17. PIN и ссылка доступа — секреты. Они появятся прямо в переписке, поэтому вызывай heys_client_access и heys_create_client только по прямой просьбе куратора и всегда предупреждай, что значение осталось в истории чата.',
+    '18. Отказ — по заявке на триал, лиду или продукту на модерации — всегда с причиной: её видит человек по ту сторону.',
+    '19. Задачи клиента (heys_get_planning) и тренировочные модули (heys_get_training_status) доступны только на чтение. Если куратор просит что-то там изменить — скажи, что это делается в приложении, и не пытайся обойти.',
+    '',
+    'Просьбы из мессенджера (heys_list_inbox / heys_list_messages):',
+    '20. На вопрос «что нового» или «кто писал» начинай с heys_list_inbox — он показывает всех клиентов с непрочитанными сразу.',
+    '21. Время приёма берётся из того, что написал клиент: «съела в 21:15» — приём на 21:15, а не на момент, когда ты это читаешь. Если клиент время НЕ назвал — спроси куратора, какое ставить. Не подставляй время сообщения и не бери текущее.',
+    '22. Граммовку бери ровно ту, что назвал клиент. Если он её НЕ назвал — спроси куратора. Здесь нельзя брать привычную порцию из наборов или прошлых дней, даже если она очевидна: это данные клиента, а не твоя догадка.',
+    '23. Внёс просьбу — сразу вызови heys_mark_message_done. Без этого при следующем чтении переписки та же еда будет внесена повторно.',
+    '24. Отвечать клиенту через heys_reply_message — по решению куратора, а не автоматически: это его переписка с клиентом, и голос в ней принадлежит ему.',
   ].join('\n');
 }
 
-function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.now() }) {
+function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName = '', nowMs = Date.now() }) {
   let clientsPromise = null;
   const toolsByClient = new Map();
   const contextByClient = new Map();
@@ -181,6 +302,9 @@ function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.
       async getKV(_session, key) {
         return api.getKVByCurator(curatorJwt, clientId, key);
       },
+      async getKVMany(_session, keys) {
+        return api.getKVManyByCurator(curatorJwt, clientId, keys);
+      },
       async mergeSaveKV(_session, key, value, lastSeenUpdatedAt) {
         const contextId = await writeContextFor(clientId);
         return api.mergeSaveKVByCurator(curatorJwt, clientId, key, value, lastSeenUpdatedAt, contextId);
@@ -212,6 +336,19 @@ function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.
    * Поэтому вытаскиваем ключевое по нескольким вариантам, а не жёстко по одному:
    * промах здесь означал бы «сообщений нет» там, где они есть.
    */
+  /** Вложения приходят JSONB-массивом; форма элемента может отличаться по версии. */
+  function describeAttachments(raw) {
+    const list = Array.isArray(raw.attachments) ? raw.attachments : [];
+    return list.map((item) => {
+      if (!item || typeof item !== 'object') return { kind: 'file' };
+      return {
+        kind: item.kind || item.type || (item.transcript_text ? 'audio' : 'photo'),
+        path: item.path || item.object_path || null,
+        transcript: item.transcript_text || item.transcript || null,
+      };
+    });
+  }
+
   function describeMessage(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const text = raw.body ?? raw.text ?? raw.message ?? raw.content ?? '';
@@ -227,11 +364,49 @@ function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.
       from_client: author == null ? null : !/curator/i.test(String(author)),
       done: raw.is_done ?? raw.done ?? false,
       has_attachment: !!(raw.attachment || raw.attachments || raw.photo_id),
+      // Сами файлы коннектор не отдаёт: он умеет только текст, а фото клиент
+      // и куратор смотрят в приложении. Но знать, что к сообщению приложено
+      // фото, ассистенту нужно — иначе «внеси, что на фото» выглядит как
+      // сообщение без содержания.
+      attachments: describeAttachments(raw),
       intent: raw.intent_type ?? raw.intent ?? null,
+      applied_at: raw.applied_at ?? null,
     };
   }
 
   const tools = {
+    /**
+     * Сводка по всем перепискам сразу. Имена клиентов приходят не отсюда:
+     * SQL-функция считает счётчики по client_id, поэтому подписи берутся из
+     * списка клиентов — иначе куратор увидел бы «3 непрочитанных у cid-…».
+     */
+    async heys_list_inbox() {
+      const [clients, res] = await Promise.all([loadClients(), api.getMessagesInbox(curatorJwt)]);
+      if (res.error) throw new ToolError('upstream_error', `Не удалось прочитать входящие: ${res.error.message}`);
+      const rows = Array.isArray(res.data && res.data.inbox) ? res.data.inbox : [];
+      const nameById = new Map(clients.map((c) => [String(c.client_id), c.name || '']));
+
+      const threads = rows.map((row) => {
+        const preview = (row && row.last_message_preview) || null;
+        const lastAt = row && row.last_message_at;
+        return {
+          client_id: row && row.client_id,
+          name: nameById.get(String(row && row.client_id)) || '',
+          unread: Number(row && row.unread_count) || 0,
+          last_message_at: lastAt || null,
+          last_message_local: lastAt ? new Date(lastAt).toLocaleString('ru-RU', { timeZone: day.MOSCOW_TZ }) : null,
+          last_message_from_client: preview ? !/curator/i.test(String(preview.sender_role || '')) : null,
+          last_message_text: preview ? String(preview.body || '') : '',
+        };
+      });
+
+      const waiting = threads.filter((t) => t.unread > 0);
+      const text = waiting.length
+        ? `Ждут ответа: ${waiting.map((t) => `${t.name || t.client_id} — ${t.unread}`).join('; ')}.`
+        : 'Необработанных сообщений нет.';
+      return { text, structured: { threads, total_unread: waiting.reduce((sum, t) => sum + t.unread, 0) } };
+    },
+
     async heys_list_messages(args = {}) {
       const target = await resolveTarget(args.client);
       const res = await api.getMessagesThread(curatorJwt, target.client_id, {
@@ -278,6 +453,270 @@ function createCuratorContext({ api, curatorJwt, curatorName = '', nowMs = Date.
       return {
         text: `[${label}] Отправил: «${text}»`,
         structured: { client: { client_id: target.client_id, name: target.name }, sent: text },
+      };
+    },
+
+    /**
+     * Очередь модерации общей базы. Список и решение — один инструмент:
+     * решение без предварительного списка невозможно (нужен pending_id), а
+     * разносить их по двум инструментам значит удвоить шанс промаха моделью.
+     */
+    async heys_moderate_products(args = {}) {
+      if (!args.pending_id) {
+        if (!curatorId) throw new ToolError('no_curator_id', 'Не удалось определить куратора — переподключи коннектор.');
+        const res = await api.getPendingSharedProducts(curatorJwt, curatorId, { limit: args.limit || 50 });
+        if (res.error) throw new ToolError('upstream_error', `Не удалось прочитать очередь модерации: ${res.error.message}`);
+        const items = (res.data || []).map((row) => {
+          const data = (row && row.product_data) || {};
+          return {
+            pending_id: row.id,
+            name: data.name || '(без названия)',
+            brand: data.brand || null,
+            kcal100: data.kcal100 ?? null,
+            barcode: row.barcode || data.barcode || null,
+            client_id: row.client_id || null,
+            created_at: row.created_at || null,
+          };
+        });
+        return {
+          text: items.length
+            ? `На модерации ${items.length}: ${items.map((i) => `«${i.name}»${i.brand ? ` (${i.brand})` : ''}`).join('; ')}.`
+            : 'Очередь модерации пуста.',
+          structured: { pending: items },
+        };
+      }
+
+      const action = String(args.action || '').toLowerCase();
+      if (action !== 'approve' && action !== 'reject') {
+        throw new ToolError('invalid_action', 'action — «approve» или «reject».');
+      }
+      if (action === 'reject' && !String(args.reason || '').trim()) {
+        throw new ToolError('reason_required', 'Для отклонения нужна причина: её увидит клиент, приславший продукт.');
+      }
+
+      const res = await api.moderatePendingProduct(curatorJwt, args.pending_id, action, args.reason);
+      if (res.race) {
+        throw new ToolError('already_moderated', 'Эту заявку уже разобрали — обнови список через heys_moderate_products без аргументов.');
+      }
+      if (!res.ok) throw new ToolError('moderation_failed', `Не удалось обработать заявку: ${res.error}`);
+      return {
+        text: action === 'approve'
+          ? `Продукт ${args.pending_id} одобрен и добавлен в общую базу.`
+          : `Продукт ${args.pending_id} отклонён: ${args.reason}.`,
+        structured: { pending_id: args.pending_id, action, reason: args.reason || null },
+      };
+    },
+
+    /**
+     * Новый клиент. PIN возвращается в ответе — иначе клиенту нечем войти, —
+     * поэтому инструмент требует подтверждения: значение осядет в переписке.
+     */
+    async heys_create_client(args = {}) {
+      const name = String(args.name || '').trim();
+      if (!name) throw new ToolError('invalid_name', 'Нужно имя клиента.');
+      if (!admin.isValidPhone(args.phone)) {
+        throw new ToolError('invalid_phone', `Телефон «${args.phone || ''}» не похож на российский номер. Ожидается 11 цифр, например +7 999 123-45-67.`);
+      }
+      if (args.confirm !== true) {
+        throw new ToolError('confirm_required', `Создать клиента «${name}» с номером ${admin.formatPhone(args.phone)}? PIN придёт в ответе и останется в истории чата. Подтверди вызовом с confirm: true.`);
+      }
+
+      const pin = args.pin ? String(args.pin) : admin.generatePin();
+      if (!admin.validatePinStrict(pin)) {
+        throw new ToolError('invalid_pin', 'PIN — четыре цифры, и не из очевидных вроде 1234 или 0000. Не передавай pin вовсе, чтобы он сгенерировался сам.');
+      }
+
+      const salt = admin.generateSalt();
+      const res = await api.createClientWithPin(curatorJwt, {
+        name,
+        phone: admin.normalizePhone(args.phone),
+        pinSalt: salt,
+        pinHash: admin.hashPin(pin, salt),
+      });
+      if (!res.ok) throw new ToolError('create_failed', `Не удалось создать клиента: ${res.error}`);
+      clientsPromise = null; // список клиентов устарел
+
+      const created = res.data || {};
+      return {
+        text: `Создал клиента «${name}» (${admin.formatPhone(args.phone)}). PIN: ${pin}. ${admin.SECRET_WARNING}`,
+        structured: {
+          client_id: created.client_id || created.id || null,
+          name,
+          phone: admin.normalizePhone(args.phone),
+          pin,
+          contains_secret: true,
+        },
+      };
+    },
+
+    /**
+     * Доступ клиента: перевыпуск PIN и текущая ссылка входа. Оба значения —
+     * секреты, поэтому оба требуют подтверждения и оба помечены в ответе.
+     */
+    async heys_client_access(args = {}) {
+      const target = await resolveTarget(args.client);
+      const label = target.name || target.client_id;
+      const action = String(args.action || 'link').toLowerCase();
+
+      if (action === 'link') {
+        const res = await api.getClientAccessLink(curatorJwt, target.client_id);
+        if (!res.ok) throw new ToolError('access_link_failed', `[${label}] Не удалось получить ссылку доступа: ${res.error}`);
+        const data = res.data || {};
+        const link = data.link || data.url || data.access_link || null;
+        if (!link) {
+          return { text: `[${label}] Ссылки доступа сейчас нет — клиент ещё не привязан.`, structured: { client: { client_id: target.client_id, name: target.name }, link: null } };
+        }
+        return {
+          text: `[${label}] Ссылка доступа: ${link}. ${admin.SECRET_WARNING}`,
+          structured: { client: { client_id: target.client_id, name: target.name }, link, contains_secret: true },
+        };
+      }
+
+      if (action !== 'reset_pin') throw new ToolError('invalid_action', 'action — «link» (получить ссылку) или «reset_pin» (сменить PIN).');
+      if (args.confirm !== true) {
+        throw new ToolError('confirm_required', `[${label}] Сменить PIN клиента? Старый перестанет работать сразу, новый придёт в ответе и останется в истории чата. Подтверди вызовом с confirm: true.`);
+      }
+
+      const pin = args.pin ? String(args.pin) : admin.generatePin();
+      if (!admin.validatePinStrict(pin)) {
+        throw new ToolError('invalid_pin', 'PIN — четыре цифры, и не из очевидных вроде 1234 или 0000.');
+      }
+      const res = await api.setClientPin(curatorJwt, target.client_id, pin);
+      if (!res.ok) throw new ToolError('pin_reset_failed', `[${label}] Не удалось сменить PIN: ${res.error}`);
+      return {
+        text: `[${label}] Новый PIN: ${pin}. Старый больше не действует. ${admin.SECRET_WARNING}`,
+        structured: { client: { client_id: target.client_id, name: target.name }, pin, contains_secret: true },
+      };
+    },
+
+    /** Подписка клиента: продление на месяцы или сброс. */
+    async heys_manage_subscription(args = {}) {
+      const target = await resolveTarget(args.client);
+      const label = target.name || target.client_id;
+      const action = String(args.action || '').toLowerCase();
+      if (!curatorId) throw new ToolError('no_curator_id', 'Не удалось определить куратора — переподключи коннектор.');
+
+      if (action === 'extend') {
+        const months = Number(args.months);
+        if (!Number.isInteger(months) || months < 1 || months > 24) {
+          throw new ToolError('invalid_months', 'months — целое число от 1 до 24.');
+        }
+        const res = await api.extendSubscription(curatorJwt, curatorId, target.client_id, months);
+        if (!res.ok) throw new ToolError('subscription_failed', `[${label}] Не удалось продлить подписку: ${res.error}`);
+        const sub = admin.describeSubscription(res.data) || {};
+        return {
+          text: `[${label}] Подписка продлена на ${months} мес.${sub.active_until ? ` — до ${sub.active_until}` : ''}`,
+          structured: { client: { client_id: target.client_id, name: target.name }, ...sub },
+        };
+      }
+
+      if (action !== 'cancel') throw new ToolError('invalid_action', 'action — «extend» (продлить, нужны months) или «cancel» (сбросить).');
+      if (args.confirm !== true) {
+        throw new ToolError('confirm_required', `[${label}] Сбросить подписку? Клиент потеряет доступ сразу. Подтверди вызовом с confirm: true.`);
+      }
+      const res = await api.cancelSubscription(curatorJwt, curatorId, target.client_id);
+      if (!res.ok) throw new ToolError('subscription_failed', `[${label}] Не удалось сбросить подписку: ${res.error}`);
+      return {
+        text: `[${label}] Подписка сброшена, доступ закрыт.`,
+        structured: { client: { client_id: target.client_id, name: target.name }, status: 'none' },
+      };
+    },
+
+    /** Очередь заявок на триал: список, активация, отказ. */
+    async heys_trial_queue(args = {}) {
+      const action = String(args.action || 'list').toLowerCase();
+
+      if (action === 'list') {
+        const [queue, stats] = await Promise.all([api.getTrialQueue(curatorJwt), api.getQueueStats(curatorJwt)]);
+        if (!queue.ok) throw new ToolError('upstream_error', `Не удалось прочитать очередь: ${queue.error}`);
+        const payload = queue.data || {};
+        const items = Array.isArray(payload.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        return {
+          text: items.length
+            ? `В очереди ${items.length}: ${items.slice(0, 10).map((i) => `${i.name || i.client_name || i.phone || i.id}${i.status ? ` (${i.status})` : ''}`).join('; ')}${items.length > 10 ? '…' : ''}`
+            : 'Очередь на триал пуста.',
+          structured: { queue: items, stats: stats.ok ? stats.data : null },
+        };
+      }
+
+      if (action === 'activate') {
+        const target = await resolveTarget(args.client);
+        const label = target.name || target.client_id;
+        const res = await api.activateTrial(curatorJwt, target.client_id, args.start_date || null);
+        if (!res.ok) throw new ToolError('trial_failed', `[${label}] Не удалось активировать триал: ${res.error}`);
+        const data = res.data || {};
+        return {
+          text: `[${label}] Триал активирован${data.trial_ends_at ? ` до ${data.trial_ends_at}` : ''}.`,
+          structured: { client: { client_id: target.client_id, name: target.name }, ...data },
+        };
+      }
+
+      if (action !== 'reject') throw new ToolError('invalid_action', 'action — «list», «activate» (нужен client) или «reject» (нужны queue_id и reason).');
+      if (!args.queue_id) throw new ToolError('invalid_queue_id', 'Нужен queue_id из списка очереди.');
+      const reason = String(args.reason || '').trim();
+      if (!reason) throw new ToolError('reason_required', 'Для отказа нужна причина — она уходит в карточку заявки.');
+      const res = await api.rejectTrialRequest(curatorJwt, args.queue_id, reason);
+      if (!res.ok) throw new ToolError('trial_failed', `Не удалось отклонить заявку: ${res.error}`);
+      return {
+        text: `Заявка ${args.queue_id} отклонена: ${reason}.`,
+        structured: { queue_id: args.queue_id, rejected: true, reason },
+      };
+    },
+
+    /** Лиды с лендинга: список и смена статуса. */
+    async heys_leads(args = {}) {
+      const action = String(args.action || 'list').toLowerCase();
+
+      if (action === 'list') {
+        const res = await api.getLeads(curatorJwt, args.status || null);
+        if (!res.ok) throw new ToolError('upstream_error', `Не удалось прочитать лиды: ${res.error}`);
+        const rows = Array.isArray(res.data) ? res.data : (res.data && Array.isArray(res.data.leads) ? res.data.leads : []);
+        return {
+          text: rows.length
+            ? `Лидов${args.status ? ` со статусом «${args.status}»` : ''}: ${rows.length}. Последние: ${rows.slice(0, 10).map((l) => `${l.name || l.phone || l.id}${l.status ? ` (${l.status})` : ''}`).join('; ')}`
+            : `Лидов${args.status ? ` со статусом «${args.status}»` : ''} нет.`,
+          structured: { leads: rows },
+        };
+      }
+
+      if (action !== 'update') throw new ToolError('invalid_action', 'action — «list» или «update» (нужны lead_id и status).');
+      if (!args.lead_id) throw new ToolError('invalid_lead_id', 'Нужен lead_id из списка.');
+      const status = String(args.status || '').trim();
+      if (!status) throw new ToolError('invalid_status', 'Нужен новый статус лида, например «rejected».');
+      const res = await api.updateLeadStatus(curatorJwt, args.lead_id, status, args.reason);
+      if (!res.ok) throw new ToolError('lead_update_failed', `Не удалось обновить лид: ${res.error}`);
+      return {
+        text: `Лид ${args.lead_id} → статус «${status}»${args.reason ? ` (${args.reason})` : ''}.`,
+        structured: { lead_id: args.lead_id, status, reason: args.reason || null },
+      };
+    },
+
+    /**
+     * Диагностика клиента: сессии и входы. Отвечает на «у неё не
+     * синхронизируется» до того, как куратор пойдёт смотреть логи руками.
+     */
+    async heys_get_client_health(args = {}) {
+      const target = await resolveTarget(args.client);
+      const label = target.name || target.client_id;
+      const hours = Math.min(Math.max(Number(args.hours) || 24, 1), 24 * 30);
+      const since = new Date(nowMs - hours * 3600000).toISOString();
+
+      const res = await api.getClientObservability(curatorJwt, target.client_id, { since, limit: 100 });
+      if (!res.ok) throw new ToolError('upstream_error', `[${label}] Не удалось прочитать диагностику: ${res.error}`);
+      const data = res.data || {};
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      const logins = Array.isArray(data.logins) ? data.logins : [];
+      const failed = logins.filter((l) => l && /fail|error|denied/i.test(String(l.type || ''))).length;
+
+      return {
+        text: `[${label}] За ${hours} ч: сессий ${sessions.length}, входов ${logins.length}${failed ? `, из них неудачных ${failed}` : ''}.`,
+        structured: {
+          client: { client_id: target.client_id, name: target.name },
+          since,
+          sessions,
+          logins,
+          failed_logins: failed,
+        },
       };
     },
 

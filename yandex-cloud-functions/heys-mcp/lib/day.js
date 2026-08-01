@@ -56,6 +56,25 @@ function dayKey(date) {
   return `${DAY_KEY_PREFIX}${date}`;
 }
 
+/** Сдвиг даты в UTC: календарные дни считаются без часовых поясов. */
+function addDays(date, delta) {
+  const [y, m, d] = String(date).split('-').map(Number);
+  const shifted = new Date(Date.UTC(y, m - 1, d + Number(delta)));
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+/** Список дат включительно, от старой к новой. */
+function enumerateDates(from, to, maxDays = 31) {
+  const dates = [];
+  let cursor = from;
+  while (cursor <= to) {
+    dates.push(cursor);
+    if (dates.length > maxDays) return dates.slice(0, maxDays);
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
+}
+
 function timeToMinutes(time) {
   const normalized = normalizeTime(time);
   if (!normalized) return null;
@@ -368,6 +387,50 @@ function summarizeDay(day) {
   };
 }
 
+/**
+ * Строка дня для обзора периода: без позиций приёмов и нутриентных слепков.
+ * Неделя в полном виде — это десятки килобайт, из которых куратору нужны
+ * калории, вес, вода, сон и активность.
+ */
+function summarizeDayBrief(day) {
+  const totals = macroTotals(day.meals);
+  const trainingMinutes = (day.trainings || []).reduce((sum, t) => {
+    const z = Array.isArray(t && t.z) ? t.z : [];
+    return sum + z.reduce((a, b) => a + (Number(b) || 0), 0);
+  }, 0);
+  const sleepHours = sleepDuration(day.sleepStart, day.sleepEnd);
+
+  return {
+    date: day.date,
+    kcal: totals.kcal,
+    protein: totals.protein,
+    carbs: totals.carbs,
+    fat: totals.fat,
+    meals: (day.meals || []).length,
+    water_ml: Number(day.waterMl) || 0,
+    weight_morning: day.weightMorning ?? null,
+    steps: Number(day.steps) || 0,
+    household_min: Number(day.householdMin) || 0,
+    training_min: trainingMinutes,
+    sleep_hours: sleepHours,
+    sleep_quality: day.sleepQuality ?? null,
+    mood: day.moodAvg ?? null,
+    wellbeing: day.wellbeingAvg ?? null,
+    stress: day.stressAvg ?? null,
+    comment: day.dayComment || '',
+    empty: !(day.meals || []).length && !Number(day.waterMl) && !day.weightMorning && !Number(day.steps),
+  };
+}
+
+/** Часы сна из времён засыпания и подъёма, с переходом через полночь. */
+function sleepDuration(start, end) {
+  const from = timeToMinutes(start);
+  const to = timeToMinutes(end);
+  if (from === null || to === null) return null;
+  const minutes = to >= from ? to - from : to + 24 * 60 - from;
+  return Math.round((minutes / 60) * 10) / 10;
+}
+
 module.exports = {
   MOSCOW_TZ,
   HR_ZONES,
@@ -375,6 +438,10 @@ module.exports = {
   isValidDate,
   normalizeTime,
   dayKey,
+  addDays,
+  enumerateDates,
+  sleepDuration,
+  summarizeDayBrief,
   timeToMinutes,
   sortMealsByTime,
   emptyDay,

@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { createCuratorContext, buildCuratorSchemas } = require('../lib/curator');
+const { createCuratorContext, buildCuratorSchemas, CLIENTLESS_TOOLS } = require('../lib/curator');
 const { TOOL_SCHEMAS } = require('../lib/tools');
 const oauth = require('../lib/oauth');
 const tokens = require('../lib/crypto-tokens');
@@ -50,9 +50,11 @@ function fakeCuratorApi({ clients = CLIENTS } = {}) {
   };
   const writes = [];
   const contexts = [];
+  const batchReads = [];
   return {
     writes,
     contexts,
+    batchReads,
     stats: { calls: 0, ms: 0 },
     async listClients(bearer) {
       assert.equal(bearer, JWT, 'список клиентов запрашивается с кураторским JWT');
@@ -61,6 +63,16 @@ function fakeCuratorApi({ clients = CLIENTS } = {}) {
     async getKVByCurator(bearer, clientId, key) {
       assert.equal(bearer, JWT);
       return { data: (kv[clientId] && kv[clientId][key]) ?? null, error: null };
+    },
+    async getKVManyByCurator(bearer, clientId, keys) {
+      assert.equal(bearer, JWT);
+      batchReads.push({ clientId, keys });
+      const out = {};
+      for (const key of keys) {
+        const value = kv[clientId] && kv[clientId][key];
+        if (value !== undefined) out[key] = value;
+      }
+      return { data: out, error: null };
     },
     async issueWriteContext(bearer, clientId) {
       contexts.push(clientId);
@@ -173,12 +185,16 @@ test('приём по набору пишется в день нужного к�
 
 test('кураторские схемы: свои инструменты сверху и параметр client везде, кроме списка клиентов', () => {
   const schemas = buildCuratorSchemas();
-  const added = ['heys_list_clients', 'heys_list_messages', 'heys_mark_message_done', 'heys_reply_message'];
+  const added = [
+    'heys_list_clients', 'heys_list_inbox', 'heys_moderate_products', 'heys_create_client',
+    'heys_client_access', 'heys_manage_subscription', 'heys_trial_queue', 'heys_leads',
+    'heys_get_client_health', 'heys_list_messages', 'heys_mark_message_done', 'heys_reply_message',
+  ];
   assert.equal(schemas.length, TOOL_SCHEMAS.length + added.length);
   assert.deepEqual(schemas.slice(0, added.length).map((s) => s.name), added);
   for (const schema of schemas) {
-    if (schema.name === 'heys_list_clients') {
-      assert.equal(schema.inputSchema.properties.client, undefined, 'списку клиентов адресат не нужен');
+    if (CLIENTLESS_TOOLS.has(schema.name)) {
+      assert.equal(schema.inputSchema.properties.client, undefined, `${schema.name}: адресат не нужен`);
       continue;
     }
     assert.ok(schema.inputSchema.properties.client, `${schema.name}: есть параметр client`);
@@ -308,7 +324,7 @@ test('initialize отдаёт кураторские инструкции, tools
   assert.match(init.result.instructions, /heys_list_clients/);
 
   const list = await mcp.handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx);
-  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 4);
+  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 12);
 });
 
 test('client_required доходит до модели как isError со списком клиентов', async () => {
@@ -490,4 +506,87 @@ test('правила мессенджера доехали до инструкц
   assert.match(instructions, /Если клиент время НЕ назвал — спроси куратора/);
   assert.match(instructions, /Граммовку бери ровно ту, что назвал клиент/);
   assert.match(instructions, /heys_mark_message_done/);
+});
+
+// ── Входящие по всем клиентам ─────────────────────────────────────────────
+// Счётчики приходят по client_id: без подписей куратор увидел бы «3
+// непрочитанных у cid-…» и не понял бы, к кому идти.
+
+test('inbox подписывает клиентов именами и считает ждущих ответа', async () => {
+  const api = fakeCuratorApi();
+  api.getMessagesInbox = async (bearer) => {
+    assert.equal(bearer, JWT);
+    return {
+      data: {
+        inbox: [
+          {
+            client_id: 'cid-alexandra',
+            unread_count: 2,
+            last_message_at: '2026-08-01T18:30:00Z',
+            last_message_preview: { body: 'И ещё банан', sender_role: 'client' },
+          },
+          {
+            client_id: 'cid-anton',
+            unread_count: 0,
+            last_message_at: '2026-07-30T10:00:00Z',
+            last_message_preview: { body: 'Ок, спасибо', sender_role: 'curator' },
+          },
+        ],
+      },
+      error: null,
+    };
+  };
+  const { tools } = build(api);
+  const res = await tools.heys_list_inbox({});
+
+  assert.equal(res.structured.total_unread, 2);
+  assert.equal(res.structured.threads[0].name, 'Александра');
+  assert.equal(res.structured.threads[0].last_message_from_client, true);
+  assert.equal(res.structured.threads[1].last_message_from_client, false);
+  assert.match(res.text, /Александра — 2/);
+  assert.equal(/Антон/.test(res.text), false, 'клиенты без непрочитанных не шумят в ответе');
+});
+
+test('inbox без непрочитанных отвечает прямо, а не пустым списком', async () => {
+  const api = fakeCuratorApi();
+  api.getMessagesInbox = async () => ({ data: { inbox: [] }, error: null });
+  const { tools } = build(api);
+  const res = await tools.heys_list_inbox({});
+  assert.match(res.text, /Необработанных сообщений нет/);
+});
+
+// ── Карточка клиента и период кураторским путём ───────────────────────────
+
+test('период читается пакетно и только по ключам выбранного клиента', async () => {
+  const api = fakeCuratorApi();
+  const { tools } = build(api);
+  const res = await tools.heys_get_period({ client: 'Антон', days: 3 });
+
+  assert.equal(api.batchReads.length, 1, 'три дня — один запрос');
+  assert.equal(api.batchReads[0].clientId, 'cid-anton');
+  assert.deepEqual(api.batchReads[0].keys, [
+    'heys_dayv2_2026-07-30', 'heys_dayv2_2026-07-31', 'heys_dayv2_2026-08-01',
+  ]);
+  assert.match(res.text, /^\[Антон\]/);
+  assert.equal(res.structured.client.client_id, 'cid-anton');
+});
+
+test('правка профиля уходит адресно, merge-ом и с write-context', async () => {
+  const api = fakeCuratorApi();
+  const { tools } = build(api);
+  const res = await tools.heys_update_profile({ client: 'Александра', weight_goal: 55 });
+
+  const write = api.writes.find((w) => w.key === 'heys_profile');
+  assert.equal(write.clientId, 'cid-alexandra');
+  assert.equal(write.path, 'merge', 'профиль — mergeable-ключ приложения');
+  assert.equal(write.contextId, 'ctx-cid-alexandra');
+  assert.equal(write.value.weightGoal, 55);
+  assert.match(res.text, /^\[Александра\]/);
+});
+
+test('правила карточки клиента доехали до инструкций', () => {
+  const { instructions } = build(fakeCuratorApi());
+  assert.match(instructions, /heys_get_profile/);
+  assert.match(instructions, /heys_get_period/);
+  assert.match(instructions, /heys_list_inbox/);
 });

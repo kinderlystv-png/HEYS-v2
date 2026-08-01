@@ -440,8 +440,164 @@ function buildCustomProduct(input, { nowMs, makeId }) {
   return row;
 }
 
+/** Поля, которые разрешено править в личной карточке продукта. */
+const EDITABLE_FIELDS = ['name', 'brand', 'barcode', 'portions']
+  .concat(REQUIRED_NUTRIENTS)
+  .concat(OPTIONAL_NUTRIENTS)
+  .concat(BOOLEAN_FLAGS)
+  .concat(['additives']);
+
+/**
+ * Патч карточки продукта.
+ *
+ * Возвращает `patch` — только изменённые поля, и `changed` — их человеческое
+ * описание. Патч сознательно не собирает карточку заново: у Type A строки
+ * собственных полей нет вовсе, есть только `overrides` поверх общей базы, и
+ * пересборка превратила бы ссылку в копию, которая перестанет получать правки
+ * общей базы.
+ *
+ * @param {object} current объединённая карточка продукта (как её видит поиск)
+ * @param {object} input поля из аргументов инструмента
+ */
+function buildProductPatch(current, input, nowMs) {
+  const patch = {};
+  const changed = [];
+  const ignored = [];
+
+  for (const [key, raw] of Object.entries(input || {})) {
+    if (raw === undefined || raw === null || raw === '') continue;
+    if (!EDITABLE_FIELDS.includes(key)) {
+      ignored.push(key);
+      continue;
+    }
+
+    if (key === 'name') {
+      const name = String(raw).trim();
+      if (!name) throw new Error('invalid_name');
+      if (name === current.name) continue;
+      patch.name = name;
+      changed.push(`название: «${current.name}» → «${name}»`);
+      continue;
+    }
+    if (key === 'brand') {
+      const brand = String(raw).trim().replace(/\s+/g, ' ');
+      const next = ['нет', 'no', 'none', '-', '—'].includes(brand.toLowerCase()) ? null : brand;
+      if (next === (current.brand || null)) continue;
+      patch.brand = next;
+      changed.push(`бренд: ${next || '—'}`);
+      continue;
+    }
+    if (key === 'barcode') {
+      const barcode = normalizeBarcode(raw);
+      if (!barcode) throw new Error('invalid_barcode');
+      if (barcode === current.barcode) continue;
+      patch.barcode = barcode;
+      const known = Array.isArray(current.barcodes) ? current.barcodes.filter(Boolean) : [];
+      patch.barcodes = known.includes(barcode) ? known : [...known, barcode];
+      changed.push(`штрихкод: ${barcode}`);
+      continue;
+    }
+    if (key === 'portions') {
+      const portions = normalizePortions(raw);
+      if (!portions.length) throw new Error('invalid_portions');
+      patch.portions = portions;
+      changed.push(`порции: ${portions.map((p) => `${p.name} ${p.grams} г`).join(', ')}`);
+      continue;
+    }
+    if (key === 'additives') {
+      if (!Array.isArray(raw)) throw new Error('invalid_additives');
+      patch.additives = raw.map((a) => String(a).trim().toUpperCase()).filter(Boolean);
+      changed.push(`добавки: ${patch.additives.join(', ') || '—'}`);
+      continue;
+    }
+    if (BOOLEAN_FLAGS.includes(key)) {
+      const next = !!raw;
+      if (next === !!current[key]) continue;
+      patch[key] = next;
+      changed.push(`${key}: ${next ? 'да' : 'нет'}`);
+      continue;
+    }
+
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 0) throw new Error(`invalid_number:${key}`);
+    if (num === Number(current[key])) continue;
+    patch[key] = num;
+    changed.push(`${key}: ${current[key] ?? '—'} → ${num}`);
+  }
+
+  if (!changed.length) return { patch: {}, changed, ignored };
+
+  // Калорийность и суммарные макросы — производные: если поменялась любая
+  // составляющая, пересчитываем их здесь, иначе карточка разъедется с
+  // приёмами, которые считаются по kcal100.
+  const merged = { ...current, ...patch };
+  const touchesMacros = Object.keys(patch).some((key) => REQUIRED_NUTRIENTS.includes(key)
+    || ['carbs100', 'fat100'].includes(key));
+  if (touchesMacros) {
+    const carbs = patch.carbs100 !== undefined
+      ? Number(patch.carbs100)
+      : (Number(merged.simple100) || 0) + (Number(merged.complex100) || 0);
+    const fat = patch.fat100 !== undefined
+      ? Number(patch.fat100)
+      : (Number(merged.badFat100) || 0) + (Number(merged.goodFat100) || 0) + (Number(merged.trans100) || 0);
+    patch.carbs100 = round1(carbs);
+    patch.fat100 = round1(fat);
+    patch.kcal100 = round1(3 * (Number(merged.protein100) || 0) + 4 * carbs + 9 * fat);
+    changed.push(`калорийность: ${current.kcal100 ?? '—'} → ${patch.kcal100} ккал/100 г`);
+  }
+  patch.updatedAt = nowMs;
+  return { patch, changed, ignored };
+}
+
+/**
+ * Строка overlay для правки продукта.
+ *
+ * Три случая, и различать их обязательно:
+ *  - своя карточка (`_custom`) — поля правятся прямо в строке;
+ *  - Type A (ссылка на общую базу) — правка ложится в `overrides`, сама общая
+ *    строка остаётся нетронутой;
+ *  - продукт только из общей базы — заводится Type A строка с overrides, ровно
+ *    как это делает приложение, когда пользователь правит чужой продукт «под
+ *    себя». Копия общей карточки при этом не создаётся.
+ */
+function applyProductPatchToOverlay(overlayRows, product, patch, { nowMs, makeId }) {
+  const rows = Array.isArray(overlayRows) ? [...overlayRows] : [];
+  const productId = String(product.id);
+  const index = rows.findIndex((r) => r && String(r.id) === productId);
+
+  if (index >= 0 && rows[index]._custom) {
+    rows[index] = { ...rows[index], ...patch, user_modified: true };
+    return { rows, mode: 'custom' };
+  }
+  if (index >= 0) {
+    rows[index] = {
+      ...rows[index],
+      overrides: { ...(rows[index].overrides || {}), ...patch },
+      user_modified: true,
+      updatedAt: nowMs,
+    };
+    return { rows, mode: 'override' };
+  }
+
+  const sharedId = product.shared_origin_id || product.id;
+  rows.push({
+    id: makeId(),
+    shared_origin_id: String(sharedId),
+    fingerprint: product.fingerprint || null,
+    overrides: { ...patch },
+    in_my_list: true,
+    user_modified: true,
+    createdAt: nowMs,
+    updatedAt: nowMs,
+  });
+  return { rows, mode: 'linked' };
+}
+
 module.exports = {
   OVERLAY_KEY,
+  EDITABLE_FIELDS,
+  buildProductPatch,
+  applyProductPatchToOverlay,
   REQUIRED_NUTRIENTS,
   OPTIONAL_NUTRIENTS,
   BOOLEAN_FLAGS,

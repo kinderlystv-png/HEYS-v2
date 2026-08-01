@@ -572,3 +572,82 @@ test('метрика пишется и для ошибки инструмент�
   assert.equal(metrics[0].error, 'invalid_ml');
   assert.equal(typeof metrics[0].ms, 'number');
 });
+
+// ── Правка и удаление продукта ───────────────────────────────────────────
+// Дубликат вместо правки — самая дорогая ошибка каталога: он тянется в дневник,
+// наборы и отчёты. Поэтому правка обязана работать и на своих карточках, и на
+// продуктах общей базы.
+
+const CUSTOM_OVERLAY = [
+  {
+    id: 'own-cake', _custom: true, in_my_list: true, name: 'Торт домашний',
+    protein100: 5, simple100: 30, complex100: 10, badFat100: 8, goodFat100: 4, trans100: 0,
+    fiber100: 1, gi: 60, harm: 6, carbs100: 40, fat100: 12, kcal100: 283,
+  },
+];
+
+test('правка своей карточки меняет поля и пересчитывает калорийность', async () => {
+  const api = fakeApi({ overlay: CUSTOM_OVERLAY });
+  const tools = build(api);
+  const res = await tools.heys_update_product({ query: 'торт домашний', simple100: 40, harm: 8 });
+
+  const saved = api.upserts.find((u) => u.key === 'heys_products_overlay_v2').value;
+  const row = saved.find((r) => r.id === 'own-cake');
+  assert.equal(row.simple100, 40);
+  assert.equal(row.harm, 8);
+  assert.equal(row.carbs100, 50, 'углеводы пересобраны из простых и сложных');
+  assert.equal(row.kcal100, 3 * 5 + 4 * 50 + 9 * 12, 'калорийность пересчитана, а не осталась старой');
+  assert.equal(row.name, 'Торт домашний', 'нетронутое поле осталось');
+  assert.equal(res.structured.mode, 'custom');
+});
+
+test('правка продукта общей базы заводит личную версию, а не копию', async () => {
+  const api = fakeApi({ overlay: [] });
+  const tools = build(api);
+  const res = await tools.heys_update_product({ query: 'кофе латте', gi: 35 });
+
+  const saved = api.upserts.find((u) => u.key === 'heys_products_overlay_v2').value;
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].shared_origin_id, 's-latte', 'строка ссылается на общую базу');
+  assert.equal(saved[0].overrides.gi, 35, 'правка легла в overrides');
+  assert.equal(saved[0].overrides.name, undefined, 'ничего лишнего в overrides не попало');
+  assert.equal(saved[0].in_my_list, true);
+  assert.equal(res.structured.mode, 'linked');
+  assert.match(res.text, /общая карточка не изменилась/);
+});
+
+test('правка без изменений и с неизвестными полями не пишет в облако', async () => {
+  const api = fakeApi({ overlay: CUSTOM_OVERLAY });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_update_product({ query: 'торт домашний', harm: 6 }), (e) => e.code === 'nothing_to_update');
+  await assert.rejects(() => tools.heys_update_product({ query: 'торт домашний', calories: 100 }), (e) => {
+    assert.equal(e.code, 'nothing_to_update');
+    assert.match(e.message, /не хранятся/);
+    return true;
+  });
+  assert.equal(api.upserts.length, 0);
+});
+
+test('удаление продукта ставит tombstone и убирает строку overlay', async () => {
+  const api = fakeApi({ overlay: CUSTOM_OVERLAY });
+  const tools = build(api);
+  const res = await tools.heys_delete_product({ query: 'торт домашний' });
+
+  const overlaySave = api.upserts.find((u) => u.key === 'heys_products_overlay_v2');
+  assert.deepEqual(overlaySave.value, [], 'строка убрана из списка');
+  const tombSave = api.upserts.find((u) => u.key === 'heys_deleted_ids');
+  assert.equal(tombSave.value.length, 1);
+  assert.equal(tombSave.value[0].id, 'own-cake');
+  assert.equal(tombSave.value[0].name, 'Торт домашний');
+  assert.equal(res.structured.deleted, true);
+});
+
+test('продукт общей базы удалить нельзя', async () => {
+  const api = fakeApi({ overlay: [] });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_delete_product({ query: 'кофе латте' }), (e) => {
+    assert.equal(e.code, 'shared_product');
+    return true;
+  });
+  assert.equal(api.upserts.length, 0);
+});

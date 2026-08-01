@@ -11,7 +11,19 @@
 const crypto = require('node:crypto');
 const day = require('./day');
 const products = require('./products');
+const profile = require('./profile');
 const sharedCatalog = require('./shared-catalog');
+
+/** Верхняя граница обзора периода: месяц читается одним пакетом без риска для таймаута. */
+const MAX_PERIOD_DAYS = 31;
+
+/** Ключи планирования, из которых собирается сводка по задачам клиента. */
+const PLANNING_KEYS = [
+  'heys_planning_tasks',
+  'heys_planning_projects',
+  'heys_planning_goals_v1',
+  'heys_planning_checklists_v1',
+];
 
 /** Наборы приёмов, которые пользователь сохранил в приложении. */
 const PRESETS_KEY = 'heys_meal_presets_v1';
@@ -156,6 +168,32 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
     const { data, error } = await api.getKV(sessionToken, key);
     if (error) throw new ToolError('upstream_error', `Не удалось прочитать день ${date}: ${error.message}`);
     return day.ensureDay(data, date, clientId, nowMs);
+  }
+
+  /**
+   * Пакетное чтение с деградацией в поштучное: адаптеры API старше этого
+   * инструмента метода не имеют, и терять из-за этого весь инструмент нельзя.
+   */
+  async function readMany(keys) {
+    if (typeof api.getKVMany === 'function') {
+      const { data, error } = await api.getKVMany(sessionToken, keys);
+      if (error) throw new ToolError('upstream_error', `Не удалось прочитать данные клиента: ${error.message}`);
+      return data || {};
+    }
+    const out = {};
+    for (const key of keys) {
+      const { data, error } = await api.getKV(sessionToken, key);
+      if (error) throw new ToolError('upstream_error', `Не удалось прочитать ${key}: ${error.message}`);
+      out[key] = data;
+    }
+    return out;
+  }
+
+  /** Чтение → патч → merge для ключей карточки клиента (профиль, нормы, зоны). */
+  async function saveCardKey(key, value, lastSeenUpdatedAt) {
+    const res = await api.mergeSaveKV(sessionToken, key, value, lastSeenUpdatedAt);
+    if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись ${key}: ${res.error}`);
+    return res;
   }
 
   async function writeDay(date, nextDay, lastSeenUpdatedAt) {
@@ -681,6 +719,347 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
         structured: { date, updated: updated.applied },
       };
     },
+
+    /**
+     * Правка личной карточки продукта. Нужна ровно затем, чтобы ошибка в
+     * нутриентах не закрывалась созданием второго продукта с тем же именем:
+     * дубль тянется в дневник, в наборы и в отчёты и живёт там годами.
+     */
+    async heys_update_product(args) {
+      const catalog = await loadCatalog();
+      const target = await resolveProduct(
+        { product_id: args.product_id, query: args.query },
+        'Продукт',
+      );
+
+      const { product_id: _id, query: _query, ...fields } = args;
+      let built;
+      try {
+        built = products.buildProductPatch(target, fields, nowMs);
+      } catch (e) {
+        throw new ToolError('invalid_field', `Не могу применить правку: ${e.message}.`);
+      }
+      if (!built.changed.length) {
+        throw new ToolError('nothing_to_update', built.ignored.length
+          ? `Эти поля у продукта не хранятся: ${built.ignored.join(', ')}.`
+          : `Карточка «${target.name}» уже содержит эти значения.`);
+      }
+
+      // Правка по имени — самый опасный вход: «поправь молоко» при трёх видах
+      // молока должно упереться в вопрос, а не в тихую правку не той карточки.
+      // Это уже обеспечивает resolveProduct, отказывающий при неоднозначности.
+      const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
+      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+
+      const { rows, mode } = products.applyProductPatchToOverlay(overlayRes.data, target, built.patch, {
+        nowMs,
+        makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
+      });
+      const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, rows);
+      if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
+      catalogPromise = null;
+
+      const note = mode === 'linked'
+        ? ' Продукт был из общей базы — правка сохранена как личная версия, общая карточка не изменилась.'
+        : mode === 'override'
+          ? ' Правка сохранена поверх карточки общей базы, у других клиентов она не изменится.'
+          : '';
+      return {
+        text: `Поправил «${target.name}»: ${built.changed.join('; ')}.${note}`,
+        structured: {
+          product_id: target.id,
+          name: built.patch.name || target.name,
+          mode,
+          updated: built.changed,
+          ignored: built.ignored,
+          catalog_size: catalog.all.length,
+        },
+      };
+    },
+
+    /**
+     * Удаление личного продукта. Кроме строки overlay обязателен tombstone:
+     * без него облачная синхронизация вернёт продукт при следующем обмене, и
+     * «удалил, а он на месте» — исторический баг именно этого механизма.
+     */
+    async heys_delete_product(args) {
+      const target = await resolveProduct({ product_id: args.product_id, query: args.query }, 'Продукт');
+      if (target._source !== 'own') {
+        throw new ToolError(
+          'shared_product',
+          `«${target.name}» — продукт общей базы, а не личный список клиента. Удалить его отсюда нельзя; если он мешает, скажи об этом куратору.`,
+        );
+      }
+
+      const [overlayRes, tombRes] = await Promise.all([
+        api.getKV(sessionToken, products.OVERLAY_KEY),
+        api.getKV(sessionToken, TOMBSTONES_KEY),
+      ]);
+      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+
+      const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+      const rows = overlay.filter((row) => row && String(row.id) !== String(target.id));
+      if (rows.length === overlay.length) {
+        throw new ToolError('product_not_found', `Строка продукта «${target.name}» не найдена в личном списке.`);
+      }
+
+      const existing = Array.isArray(tombRes.data) ? tombRes.data : [];
+      // Лимит и форма записи — те же, что в приложении (heys_core_v12.js):
+      // список читается обеими сторонами, расхождение здесь означало бы
+      // воскрешение продукта после синхронизации.
+      const tombstones = [...existing.filter((t) => t && String(t.id) !== String(target.id)),
+        { id: target.id, name: target.name || null, ts: nowMs }].slice(-200);
+
+      const saveOverlay = await api.upsertKV(sessionToken, products.OVERLAY_KEY, rows);
+      if (!saveOverlay.ok) throw new ToolError('save_failed', `Сервер отклонил удаление продукта: ${saveOverlay.error}`);
+      const saveTomb = await api.upsertKV(sessionToken, TOMBSTONES_KEY, tombstones);
+      if (!saveTomb.ok) {
+        throw new ToolError(
+          'tombstone_failed',
+          `Продукт «${target.name}» убран из списка, но пометку об удалении сохранить не удалось (${saveTomb.error}). Синхронизация может вернуть его — проверь в приложении.`,
+        );
+      }
+      catalogPromise = null;
+
+      return {
+        text: `Удалил продукт «${target.name}» из списка клиента.`,
+        structured: { product_id: target.id, name: target.name, deleted: true },
+      };
+    },
+
+    /**
+     * Обзор периода. Отдельный инструмент нужен потому, что «как прошла
+     * неделя» через heys_get_day — это семь вызовов и семь полных дневных
+     * блобов; здесь один пакетный запрос и сводка без позиций приёмов.
+     */
+    async heys_get_period(args) {
+      const to = resolveDate(args.to, nowMs);
+      const from = args.from
+        ? resolveDate(args.from, nowMs)
+        : day.addDays(to, -(Math.min(Math.max(Number(args.days) || 7, 1), MAX_PERIOD_DAYS) - 1));
+      if (from > to) throw new ToolError('invalid_range', `Начало периода (${from}) позже конца (${to}).`);
+      const dates = day.enumerateDates(from, to, MAX_PERIOD_DAYS);
+      if (dates.length >= MAX_PERIOD_DAYS && day.addDays(dates[dates.length - 1], 1) <= to) {
+        throw new ToolError('invalid_range', `За один раз можно посмотреть не больше ${MAX_PERIOD_DAYS} дней.`);
+      }
+
+      const blobs = await readMany(dates.map((date) => day.dayKey(date)));
+      const days = dates.map((date) => day.summarizeDayBrief(day.ensureDay(blobs[day.dayKey(date)], date, clientId, nowMs)));
+
+      const filled = days.filter((d) => !d.empty);
+      const average = (pick) => {
+        const values = filled.map(pick).filter((v) => Number.isFinite(v) && v > 0);
+        if (!values.length) return null;
+        return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
+      };
+      const totals = {
+        days: days.length,
+        days_with_data: filled.length,
+        avg_kcal: average((d) => d.kcal),
+        avg_protein: average((d) => d.protein),
+        avg_carbs: average((d) => d.carbs),
+        avg_fat: average((d) => d.fat),
+        avg_water_ml: average((d) => d.water_ml),
+        avg_steps: average((d) => d.steps),
+        avg_sleep_hours: average((d) => d.sleep_hours),
+        training_min: filled.reduce((sum, d) => sum + d.training_min, 0),
+        weight_first: (filled.find((d) => d.weight_morning) || {}).weight_morning ?? null,
+        weight_last: ([...filled].reverse().find((d) => d.weight_morning) || {}).weight_morning ?? null,
+      };
+      const missing = days.filter((d) => d.empty).map((d) => d.date);
+
+      const text = filled.length
+        ? `Период ${from}…${to}: заполнено ${filled.length} из ${days.length} дней, в среднем ${totals.avg_kcal ?? '—'} ккал, вода ${totals.avg_water_ml ?? '—'} мл, шаги ${totals.avg_steps ?? '—'}, сон ${totals.avg_sleep_hours ?? '—'} ч.${missing.length ? ` Пустые дни: ${missing.join(', ')}.` : ''}`
+        : `Период ${from}…${to}: данных нет ни за один день.`;
+      return { text, structured: { from, to, totals, days, missing_dates: missing } };
+    },
+
+    /**
+     * Задачи и цели клиента — только чтение.
+     *
+     * Запись сюда сознательно не сделана: планирование синхронизируется
+     * заменой списка без tombstone'ов, и правка из коннектора в момент, когда
+     * у клиента открыто приложение, потеряла бы его изменения. Чтение этой
+     * проблемы не имеет.
+     */
+    async heys_get_planning(args = {}) {
+      const blobs = await readMany(PLANNING_KEYS);
+      const asArray = (value) => (Array.isArray(value) ? value : []);
+      const tasks = asArray(blobs.heys_planning_tasks);
+      const projects = asArray(blobs.heys_planning_projects);
+      const goals = asArray(blobs.heys_planning_goals_v1);
+      const checklists = asArray(blobs.heys_planning_checklists_v1);
+
+      const today = day.nowParts(nowMs).date;
+      const isTerminal = (t) => t && (t.status === 'done' || t.status === 'cancelled');
+      const active = tasks.filter((t) => !isTerminal(t));
+      const overdue = active.filter((t) => t && t.dueDate && t.dueDate < today);
+      const dueToday = active.filter((t) => t && t.dueDate === today);
+      const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 100);
+
+      const describeTask = (t) => ({
+        id: t.id ?? null,
+        title: t.title || t.name || '(без названия)',
+        status: t.status || null,
+        due_date: t.dueDate || null,
+        project_id: t.projectId ?? null,
+      });
+
+      return {
+        text: `Задачи: активных ${active.length}, просрочено ${overdue.length}, на сегодня ${dueToday.length}. Проектов ${projects.length}, целей ${goals.length}, чек-листов ${checklists.length}.`,
+        structured: {
+          totals: {
+            tasks_total: tasks.length,
+            tasks_active: active.length,
+            overdue: overdue.length,
+            due_today: dueToday.length,
+            projects: projects.length,
+            goals: goals.length,
+            checklists: checklists.length,
+          },
+          overdue: overdue.slice(0, limit).map(describeTask),
+          due_today: dueToday.slice(0, limit).map(describeTask),
+          active: active.slice(0, limit).map(describeTask),
+        },
+      };
+    },
+
+    /**
+     * Тренировочные модули (пальцы, мобильность) — только чтение.
+     *
+     * Сессии этих модулей живут не в отдельном хранилище, а в тренировках
+     * дневного блоба (`trainings[].type`), поэтому статус собирается из тех же
+     * дней, что и остальной дневник — без обхода валидаторов самих модулей.
+     */
+    async heys_get_training_status(args = {}) {
+      const to = resolveDate(args.to, nowMs);
+      const days = Math.min(Math.max(Number(args.days) || 30, 1), MAX_PERIOD_DAYS);
+      const from = day.addDays(to, -(days - 1));
+      const dates = day.enumerateDates(from, to, MAX_PERIOD_DAYS);
+      const blobs = await readMany(dates.map((date) => day.dayKey(date)));
+
+      const sessions = [];
+      for (const date of dates) {
+        const blob = blobs[day.dayKey(date)];
+        const trainings = (blob && Array.isArray(blob.trainings)) ? blob.trainings : [];
+        trainings.forEach((tr, index) => {
+          if (!tr || !tr.type) return;
+          const log = tr.fingersLog || tr.mobilityLog || null;
+          sessions.push({
+            date,
+            index,
+            type: tr.type,
+            program_id: (log && log.programId) || null,
+            holds: (log && Array.isArray(log.holds)) ? log.holds.length : null,
+            partial: !!(log && log.partial),
+            note: tr.notes || '',
+          });
+        });
+      }
+
+      const byType = {};
+      for (const s of sessions) {
+        if (!byType[s.type]) byType[s.type] = { count: 0, last_date: null };
+        byType[s.type].count += 1;
+        if (!byType[s.type].last_date || s.date > byType[s.type].last_date) byType[s.type].last_date = s.date;
+      }
+      const summary = Object.entries(byType).map(([type, info]) => `${type}: ${info.count}, последняя ${info.last_date}`);
+
+      return {
+        text: sessions.length
+          ? `Тренировки за ${from}…${to} — ${summary.join('; ')}.`
+          : `За ${from}…${to} тренировок не записано.`,
+        structured: { from, to, by_type: byType, sessions },
+      };
+    },
+
+    /** Карточка клиента целиком: профиль, нормы и пульсовые зоны одним чтением. */
+    async heys_get_profile() {
+      const blobs = await readMany([profile.PROFILE_KEY, profile.NORMS_KEY, profile.ZONES_KEY]);
+      const card = profile.describeCard(
+        blobs[profile.PROFILE_KEY],
+        blobs[profile.NORMS_KEY],
+        Array.isArray(blobs[profile.ZONES_KEY]) && blobs[profile.ZONES_KEY].length
+          ? blobs[profile.ZONES_KEY]
+          : profile.DEFAULT_ZONES,
+        nowMs,
+      );
+      const p = card.profile;
+      const text = [
+        `Профиль: ${p.gender || '—'}, ${p.age ?? '—'} лет, рост ${p.height ?? '—'} см, вес ${p.weight ?? '—'} кг`,
+        p.weight_goal ? `цель ${p.weight_goal} кг` : null,
+        p.deficit_pct_target ? `дефицит ${p.deficit_pct_target}%` : null,
+        p.steps_goal ? `шаги ${p.steps_goal}` : null,
+        `сон ${p.sleep_hours ?? '—'} ч`,
+      ].filter(Boolean).join(', ') + '.';
+      return { text, structured: card };
+    },
+
+    async heys_update_profile(args) {
+      const blobs = await readMany([profile.PROFILE_KEY]);
+      const current = blobs[profile.PROFILE_KEY];
+      let patch;
+      try {
+        patch = profile.applyProfileFields(current, args, nowMs);
+      } catch (e) {
+        throw new ToolError(e.code || 'invalid_field', e.message);
+      }
+      if (!patch.changed.length) {
+        throw new ToolError('nothing_to_update', patch.ignored.length
+          ? `Эти поля профиль не хранит: ${patch.ignored.join(', ')}.`
+          : 'Ни одно поле профиля не изменилось.');
+      }
+      await saveCardKey(profile.PROFILE_KEY, patch.value, Number(current && current.updatedAt) || 0);
+      return {
+        text: `Профиль обновлён — ${patch.changed.join('; ')}.`,
+        structured: { updated: patch.changed, ignored: patch.ignored },
+      };
+    },
+
+    async heys_update_norms(args) {
+      const blobs = await readMany([profile.NORMS_KEY]);
+      const current = blobs[profile.NORMS_KEY];
+      let patch;
+      try {
+        patch = profile.applyNormsFields(current, args, nowMs);
+      } catch (e) {
+        throw new ToolError(e.code || 'invalid_field', e.message);
+      }
+      if (!patch.changed.length) {
+        throw new ToolError('nothing_to_update', patch.ignored.length
+          ? `Эти нормы не хранятся: ${patch.ignored.join(', ')}.`
+          : 'Ни одна норма не изменилась.');
+      }
+      await saveCardKey(profile.NORMS_KEY, patch.value, Number(current && current.updatedAt) || 0);
+      return {
+        text: `Нормы обновлены — ${patch.changed.join('; ')}.`,
+        structured: { updated: patch.changed, ignored: patch.ignored },
+      };
+    },
+
+    async heys_update_hr_zones(args) {
+      const patches = Array.isArray(args.zones) ? args.zones : [];
+      if (!patches.length) throw new ToolError('nothing_to_update', 'Передай массив zones: [{ zone: 1, hr_from: 90, hr_to: 105 }].');
+      const blobs = await readMany([profile.ZONES_KEY]);
+      const current = blobs[profile.ZONES_KEY];
+      let patch;
+      try {
+        patch = profile.applyZonePatches(current, patches);
+      } catch (e) {
+        throw new ToolError(e.code || 'invalid_field', e.message);
+      }
+      if (!patch.changed.length) throw new ToolError('nothing_to_update', 'Пульсовые зоны не изменились.');
+      // Зоны — массив: сервер меняет его целиком, поэтому известного
+      // updatedAt у значения нет и merge сводится к «свежее выигрывает».
+      await saveCardKey(profile.ZONES_KEY, patch.value, 0);
+      return {
+        text: `Пульсовые зоны обновлены — ${patch.changed.join('; ')}.`,
+        structured: {
+          updated: patch.changed,
+          hr_zones: patch.value.map((z, i) => ({ zone: i + 1, name: z.name, hr_from: z.hrFrom, hr_to: z.hrTo, met: z.MET })),
+        },
+      };
+    },
   };
 
   return { tools, ToolError };
@@ -707,6 +1086,107 @@ const TOOL_SCHEMAS = [
     inputSchema: {
       type: 'object',
       properties: { date: DATE_ARG },
+    },
+  },
+  {
+    name: 'heys_get_period',
+    description: 'Обзор нескольких дней сразу: калории и БЖУ по дням, вода, утренний вес, шаги, сон, тренировки, настроение, а также средние за период и список пустых дней. Вызывай на вопросы «как прошла неделя», «что с весом за месяц», «где пробелы в дневнике» — вместо того чтобы дёргать heys_get_day по одному дню. Позиции приёмов здесь не возвращаются: за составом конкретного дня иди в heys_get_day.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: 'Сколько последних дней показать, 1–31. По умолчанию 7. Игнорируется, если задан from.' },
+        from: { type: 'string', description: 'Начало периода YYYY-MM-DD включительно.' },
+        to: { type: 'string', description: 'Конец периода YYYY-MM-DD включительно. По умолчанию — сегодня.' },
+      },
+    },
+  },
+  {
+    name: 'heys_get_planning',
+    description: 'Задачи, проекты, цели и чек-листы клиента: сколько активных, что просрочено, что на сегодня. Только чтение — менять планирование из чата нельзя, его синхронизация этого не переживёт.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: 'Сколько задач показать в каждом списке, по умолчанию 20.' },
+      },
+    },
+  },
+  {
+    name: 'heys_get_training_status',
+    description: 'Тренировочные модули клиента (пальцы, мобильность и прочие): сколько сессий за период, когда была последняя, какие программы. Только чтение — записывать тренировки модулей из чата нельзя, их протоколы проверяются в самом приложении. Обычная тренировка по пульсовым зонам записывается через heys_log_training.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: 'За сколько последних дней смотреть, 1–31. По умолчанию 30.' },
+        to: { type: 'string', description: 'Последний день периода YYYY-MM-DD. По умолчанию — сегодня.' },
+      },
+    },
+  },
+  {
+    name: 'heys_get_profile',
+    description: 'Карточка клиента: пол, возраст, рост, вес, целевой вес, целевой дефицит, норма сна и шагов, трекинг цикла, доступ с десктопа, нормы рациона в процентах и пульсовые зоны. Вызывай перед правкой этих настроек и когда нужно понять, из чего считаются нормы клиента.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'heys_update_profile',
+    description: 'Изменить настройки клиента, которые куратор обычно вбивает во вкладке «Пользователь»: рост, вес, целевой вес, дату рождения, пол, норму сна, целевой дефицит, цель по шагам, трекинг цикла, доступ с десктопа. Передавай только те поля, которые действительно меняешь: остальные останутся как были. Имя клиента отсюда не меняется.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        gender: { type: 'string', description: 'Пол: «Мужской» или «Женский».' },
+        birth_date: { type: 'string', description: 'Дата рождения YYYY-MM-DD. Если задана, возраст считается автоматически.' },
+        age: { type: 'integer', description: 'Возраст в годах — только если дата рождения неизвестна.' },
+        height: { type: 'number', description: 'Рост, см.' },
+        weight: { type: 'number', description: 'Текущий вес в профиле, кг. Утренний вес конкретного дня пишется через heys_update_day.' },
+        base_weight: { type: 'number', description: 'Базовый вес, кг — точка отсчёта прогресса.' },
+        weight_goal: { type: 'number', description: 'Целевой вес, кг. 0 — цель не задана.' },
+        sleep_hours: { type: 'number', description: 'Норма сна, часов.' },
+        insulin_wave_hours: { type: 'number', description: 'Длительность инсулиновой волны, часов (0.5–12).' },
+        deficit_pct_target: { type: 'number', description: 'Целевой дефицит калорий в процентах, от -50 до 50.' },
+        steps_goal: { type: 'integer', description: 'Цель по шагам за день.' },
+        cycle_tracking_enabled: { type: 'boolean', description: 'Трекинг менструального цикла.' },
+        desktop_allowed: { type: 'boolean', description: 'Разрешить клиенту вход с десктопа.' },
+      },
+    },
+  },
+  {
+    name: 'heys_update_norms',
+    description: 'Изменить нормы рациона клиента — доли белка, углеводов, простых углеводов, клетчатки, насыщенных и транс-жиров, пороги гликемического индекса и вредности. Все значения в процентах. Передавай только изменяемые поля.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        protein_pct: { type: 'number', description: 'Доля белка, %.' },
+        carbs_pct: { type: 'number', description: 'Доля углеводов, %.' },
+        simple_carb_pct: { type: 'number', description: 'Доля простых углеводов, %.' },
+        fiber_pct: { type: 'number', description: 'Норма клетчатки, %.' },
+        bad_fat_pct: { type: 'number', description: 'Доля насыщенных жиров, %.' },
+        superbad_fat_pct: { type: 'number', description: 'Доля транс-жиров, %.' },
+        gi_pct: { type: 'number', description: 'Порог гликемического индекса, %.' },
+        harm_pct: { type: 'number', description: 'Порог вредности рациона, %.' },
+      },
+    },
+  },
+  {
+    name: 'heys_update_hr_zones',
+    description: 'Поправить границы пульсовых зон клиента: зона 1 — бытовая активность, 2 — умеренная, 3 — аэробная, 4 — анаэробная. Меняются только присланные зоны и только границы пульса и MET; названия зон фиксированы. По ним считаются калории тренировок, записанных через heys_log_training.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        zones: {
+          type: 'array',
+          description: 'Правки по зонам.',
+          items: {
+            type: 'object',
+            properties: {
+              zone: { type: 'integer', description: 'Номер зоны, 1–4.' },
+              hr_from: { type: 'number', description: 'Нижняя граница пульса, уд/мин.' },
+              hr_to: { type: 'number', description: 'Верхняя граница пульса, уд/мин.' },
+              met: { type: 'number', description: 'MET зоны — во сколько раз расход выше покоя.' },
+            },
+            required: ['zone'],
+          },
+        },
+      },
+      required: ['zones'],
     },
   },
   {
@@ -822,6 +1302,55 @@ const TOOL_SCHEMAS = [
         allow_duplicate: { type: 'boolean', description: 'Создать, даже если продукт с таким названием уже есть или был удалён. Ставь только после подтверждения пользователя.' },
       },
       required: ['name', 'protein100', 'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm'],
+    },
+  },
+  {
+    name: 'heys_update_product',
+    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Используй это вместо heys_create_product, когда продукт уже есть, но в нём ошибка — второй продукт с тем же именем потом тянется в дневник, наборы и отчёты. Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
+        query: { type: 'string', description: 'Название продукта, если id неизвестен. При нескольких похожих инструмент попросит уточнить.' },
+        name: { type: 'string', description: 'Новое название.' },
+        brand: { type: 'string', description: 'Бренд. «нет» — очистить.' },
+        barcode: { type: 'string', description: 'Штрихкод с упаковки.' },
+        protein100: { type: 'number', description: 'Белки, г на 100 г.' },
+        simple100: { type: 'number', description: 'Простые углеводы (сахара), г на 100 г.' },
+        complex100: { type: 'number', description: 'Сложные углеводы, г на 100 г.' },
+        badFat100: { type: 'number', description: 'Насыщенные жиры, г на 100 г.' },
+        goodFat100: { type: 'number', description: 'Ненасыщенные жиры, г на 100 г.' },
+        trans100: { type: 'number', description: 'Транс-жиры, г на 100 г.' },
+        fiber100: { type: 'number', description: 'Клетчатка, г на 100 г.' },
+        gi: { type: 'number', description: 'Гликемический индекс, 0–100.' },
+        harm: { type: 'number', description: 'Вредность по шкале HEYS, 0–10.' },
+        sodium100: { type: 'number', description: 'Натрий, мг на 100 г.' },
+        nova_group: { type: 'integer', description: 'Группа NOVA, 1–4.' },
+        additives: { type: 'array', items: { type: 'string' }, description: 'E-добавки из состава.' },
+        portions: {
+          type: 'array',
+          description: 'Типовые порции. Передаётся целиком: новый список заменяет прежний.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Название порции, например «1 шт».' },
+              grams: { type: 'number', description: 'Вес порции в граммах.' },
+            },
+            required: ['name', 'grams'],
+          },
+        },
+      },
+    },
+  },
+  {
+    name: 'heys_delete_product',
+    description: 'Удалить продукт из личного списка клиента вместе с пометкой об удалении, чтобы синхронизация не вернула его обратно. Продукты общей базы удалить нельзя. Уже записанные приёмы пищи не меняются: они хранят собственный слепок нутриентов.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
+        query: { type: 'string', description: 'Название продукта, если id неизвестен.' },
+      },
     },
   },
   {

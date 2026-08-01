@@ -72,6 +72,41 @@ function unwrap(data, fnName) {
  */
 const IDEMPOTENT_RPC = /^(get_|batch_get_)/;
 
+/** Строки KV → карта ключ→значение. Форма ответа отличается по путям чтения. */
+function rowsToMap(rows) {
+  const out = {};
+  for (const row of rows || []) {
+    if (!row || typeof row !== 'object') continue;
+    const key = row.k ?? row.key;
+    if (!key) continue;
+    out[key] = row.v ?? row.value ?? null;
+  }
+  return out;
+}
+
+/**
+ * Строки пакетного чтения. Форма ответа зависит от того, как SQL-функция
+ * прошла через SELECT-обёртку: и `{items:[…]}`, и `[{fn:{items:[…]}}]` в
+ * системе встречаются (см. parseExistingPlanningData в heys-api-rpc).
+ * `null` — форма незнакомая; отличать это от пустого набора обязательно.
+ */
+function extractBatchItems(data, fnName) {
+  if (Array.isArray(data)) {
+    if (!data.length || data[0] == null) return data;
+    if (typeof data[0] === 'object' && (data[0].k !== undefined || data[0].key !== undefined)) return data;
+    const nested = data[0][fnName];
+    if (nested && Array.isArray(nested.items)) return nested.items;
+    return null;
+  }
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.rows)) return data.rows;
+    const nested = data[fnName];
+    if (nested && Array.isArray(nested.items)) return nested.items;
+  }
+  return null;
+}
+
 const RETRY_DELAYS_MS = [200, 700];
 
 /** 429 не повторяем: лимит снимается временем, а не настойчивостью. */
@@ -181,6 +216,26 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   /**
+   * Пакетное чтение: неделя дневников — это 7 ключей, и по одному запросу на
+   * каждый инструмент упирался бы в холодный старт вместо полезной работы.
+   * Ключи перечисляются явно, без префиксного поиска: так в ответ не может
+   * попасть ничего, кроме запрошенного.
+   */
+  async function getKVMany(sessionToken, keys) {
+    if (!Array.isArray(keys) || !keys.length) return { data: {}, error: null };
+    const { data, error } = await rpc('batch_get_client_kv_by_session', {
+      p_session_token: sessionToken,
+      p_keys: keys,
+    });
+    if (error) return { data: null, error };
+    const items = extractBatchItems(data, 'batch_get_client_kv_by_session');
+    // Незнакомая форма ответа — это сбой, а не «данных нет»: пустая карта здесь
+    // означала бы «клиент ничего не ведёт» и увела бы ассистента в неверный вывод.
+    if (!items) return { data: null, error: { message: 'unexpected_batch_shape', status: 0 } };
+    return { data: rowsToMap(items), error: null };
+  }
+
+  /**
    * Запись дневного блоба всегда через merge: сервер сам разрешает конфликт
    * с версией в облаке по p_last_seen_updated_at, поэтому параллельно открытое
    * PWA не теряет данные и не затирает наши.
@@ -280,6 +335,18 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { data: row ? row.v : null, error: null };
   }
 
+  /** Пакетное чтение кураторским путём — тот же `in.k`, что у getKVBatchByCurator в приложении. */
+  async function getKVManyByCurator(bearer, clientId, keys) {
+    if (!Array.isArray(keys) || !keys.length) return { data: {}, error: null };
+    const { data, error } = await rest('client_kv_store', {
+      select: 'k,v',
+      filters: { 'eq.client_id': clientId, 'in.k': `(${keys.join(',')})` },
+      bearer,
+    });
+    if (error) return { data: null, error };
+    return { data: rowsToMap(data), error: null };
+  }
+
   /**
    * Write-context для кураторской записи (Phase B: без него запись пройдёт,
    * но с ним сервер жёстко привязывает цель записи и чище ведёт аудит;
@@ -317,6 +384,123 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
       return { ok: false, error: 'identity_blocked' };
     }
     return { ok: true, data };
+  }
+
+  // ── Административный контур куратора ──────────────────────────────────
+  // Все функции ниже — curator-only по JWT: ownership и права проверяет SQL,
+  // `p_curator_id` там, где он есть, сервер подставляет из токена.
+
+  /** Разворачивает `{fnName: {...}}` и приводит ошибку к единой форме. */
+  async function adminRpc(fnName, params, bearer) {
+    const { data, error } = await rpc(fnName, params, { bearer });
+    if (error) return { ok: false, error: error.message, raw: data };
+    const result = unwrap(data, fnName);
+    if (result && typeof result === 'object' && result.success === false) {
+      return { ok: false, error: String(result.error || result.message || `${fnName}_failed`), raw: result };
+    }
+    return { ok: true, data: result };
+  }
+
+  async function createClientWithPin(bearer, { name, phone, pinSalt, pinHash }) {
+    return adminRpc('create_client_with_pin', {
+      p_name: name,
+      p_phone: phone,
+      p_pin_salt: pinSalt,
+      p_pin_hash: pinHash,
+    }, bearer);
+  }
+
+  async function setClientPin(bearer, clientId, pin) {
+    return adminRpc('admin_set_client_pin', { p_client_id: clientId, p_pin: pin }, bearer);
+  }
+
+  async function getClientAccessLink(bearer, clientId) {
+    return adminRpc('admin_get_client_access_link', { p_client_id: clientId }, bearer);
+  }
+
+  async function extendSubscription(bearer, curatorId, clientId, months) {
+    return adminRpc('admin_extend_subscription', {
+      p_curator_id: curatorId,
+      p_client_id: clientId,
+      p_months: months,
+    }, bearer);
+  }
+
+  async function cancelSubscription(bearer, curatorId, clientId) {
+    return adminRpc('admin_cancel_subscription', {
+      p_curator_id: curatorId,
+      p_client_id: clientId,
+    }, bearer);
+  }
+
+  async function getTrialQueue(bearer) {
+    return adminRpc('admin_get_trial_queue_list', {}, bearer);
+  }
+
+  async function getQueueStats(bearer) {
+    return adminRpc('admin_get_queue_stats', {}, bearer);
+  }
+
+  async function activateTrial(bearer, clientId, startDate) {
+    const params = { p_client_id: clientId };
+    if (startDate) params.p_start_date = startDate;
+    return adminRpc('admin_activate_trial', params, bearer);
+  }
+
+  async function rejectTrialRequest(bearer, queueId, reason) {
+    return adminRpc('admin_reject_request', { p_queue_id: queueId, p_reason: reason }, bearer);
+  }
+
+  async function getLeads(bearer, status) {
+    return adminRpc('admin_get_leads', { p_status: status || null }, bearer);
+  }
+
+  async function updateLeadStatus(bearer, leadId, status, reason) {
+    return adminRpc('admin_update_lead_status', {
+      p_lead_id: leadId,
+      p_status: status,
+      p_reason: reason || '',
+    }, bearer);
+  }
+
+  async function getClientObservability(bearer, clientId, { since, limit = 100 } = {}) {
+    return adminRpc('get_client_observability_by_curator', {
+      p_client_id: clientId,
+      p_since: since,
+      p_limit: limit,
+    }, bearer);
+  }
+
+  // ── Модерация общей базы продуктов ────────────────────────────────────
+  // Клиент присылает продукт в очередь, куратор её разбирает. Обе операции
+  // ходят теми же путями, что и вкладка модерации в приложении.
+
+  async function getPendingSharedProducts(bearer, curatorId, { limit = 50 } = {}) {
+    return rest('shared_products_pending', {
+      select: 'id,client_id,product_data,status,created_at,barcode',
+      filters: { 'eq.curator_id': curatorId, 'eq.status': 'pending' },
+      order: 'created_at.desc',
+      limit,
+      bearer,
+    });
+  }
+
+  /**
+   * Approve/reject. Ownership проверяет SQL, `p_curator_id` подставляется из
+   * JWT на стороне функции. Ответ `status: 'race'` означает, что заявку уже
+   * разобрали — это нормальный исход, а не ошибка.
+   */
+  async function moderatePendingProduct(bearer, pendingId, action, rejectReason = '') {
+    const { data, error } = await rpc('moderate_pending_shared_product_by_curator', {
+      p_pending_id: pendingId,
+      p_action: action,
+      p_reject_reason: rejectReason || '',
+    }, { bearer });
+    if (error) return { ok: false, error: error.message, raw: data };
+    const result = (data && data.moderate_pending_shared_product_by_curator) || data || {};
+    if (result.status === 'race') return { ok: false, race: true, error: 'already_moderated' };
+    if (result.success === false) return { ok: false, error: String(result.error || result.message || 'moderation_failed') };
+    return { ok: true, data: result };
   }
 
   // ── Мессенджер ────────────────────────────────────────────────────────
@@ -373,10 +557,15 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   return {
-    rpc, rest, verifyPin, getKV, mergeSaveKV, upsertKV, getSharedProducts, stats,
-    curatorLogin, listClients, getKVByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
+    rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
+    curatorLogin, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient,
+    createClientWithPin, setClientPin, getClientAccessLink,
+    extendSubscription, cancelSubscription,
+    getTrialQueue, getQueueStats, activateTrial, rejectTrialRequest,
+    getLeads, updateLeadStatus, getClientObservability,
+    getPendingSharedProducts, moderatePendingProduct,
   };
 }
 
-module.exports = { createApiClient, request, unwrap, DEFAULT_TIMEOUT_MS };
+module.exports = { createApiClient, request, unwrap, extractBatchItems, rowsToMap, DEFAULT_TIMEOUT_MS };
