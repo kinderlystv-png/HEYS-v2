@@ -91,8 +91,11 @@ yc serverless api-gateway update --name <gateway-name> --spec=api-gateway-spec.y
 
 ### Production status — 2026-08-01
 
-- **Факт:** функция `heys-mcp` (`d4egv2a6pdhmf5hbrgp8`) и gateway `heys-api`
-  активны; Claude-коннектор подключён и проверен чтением дня, наборов, поиском
+- **Факт:** функция `heys-mcp` (`d4egv2a6pdhmf5hbrgp8`), версия
+  `d4epi1k9hloceo34sdn8` из commit `39a01a1c7`, и gateway `heys-api` активны;
+  deploy gate прошёл 100/100 MCP-тестов, обязательный post-deploy health
+  зелёный.
+- **Факт:** Claude-коннектор подключён и проверен чтением дня, наборов, поиском
   продукта и обратимой записью воды.
 - **Факт:** `MCP_TOKEN_SECRET` хранится в `heys-app-secrets`; активная версия
   Lockbox содержит 14 ключей, включая все 13 прежних.
@@ -100,8 +103,8 @@ yc serverless api-gateway update --name <gateway-name> --spec=api-gateway-spec.y
   директиве `form-action`, поэтому она намеренно не задана. Сохранены
   `default-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`,
   экранирование ввода и `X-Frame-Options: DENY`.
-- **Следующий gate:** задеплоить текущий 100-тестовый release candidate и
-  подтвердить через live `tools/list` появление `heys_create_product`.
+- **Следующий gate:** подтвердить из подключённого Claude через live
+  `tools/list` появление одиннадцатого инструмента `heys_create_product`.
 
 ### Проверка после деплоя
 
