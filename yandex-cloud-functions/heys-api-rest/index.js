@@ -446,6 +446,43 @@ function sanitizeSelectColumns(selectParam, tableName) {
   return validColumns.join(', ');
 }
 
+/**
+ * 🔐 SEC-029 (2026-08-02): валидация имени колонки в ФИЛЬТРЕ.
+ *
+ * До фикса имя колонки бралось из ключа query-параметра и подставлялось в SQL
+ * как есть: `"${fieldName}" = $1`. Двойная кавычка внутри имени не
+ * экранировалась, поэтому ключ вида `is.x" IS NULL OR (SELECT ...) IS NULL --`
+ * закрывал идентификатор и дописывал произвольное условие. Ветка `is.` при
+ * этом не добавляет плейсхолдер, так что нумерация параметров не ломалась и
+ * запрос оставался синтаксически валидным — получалась слепая инъекция на
+ * публичном GET-пути каталога.
+ *
+ * Проверка та же, что уже работает для SELECT (`sanitizeSelectColumns`):
+ * сначала форма идентификатора, затем whitelist колонок таблицы. Колонка вне
+ * whitelist и раньше не могла дать результат (Postgres отвечал 42703 → 500),
+ * поэтому отказ 400 не отнимает ни одного рабочего сценария.
+ *
+ * @returns {string|null} валидное имя колонки или null
+ */
+function sanitizeFilterColumn(columnName, tableName) {
+  const allowedForTable = ALLOWED_COLUMNS[tableName];
+  if (!allowedForTable) return null;
+  if (typeof columnName !== 'string') return null;
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(columnName)) return null;
+  if (!allowedForTable.includes(columnName)) return null;
+  return columnName;
+}
+
+/**
+ * Служебные query-параметры, которые не являются фильтрами по колонкам.
+ * Всё остальное трактуется как имя колонки и обязано пройти
+ * `sanitizeFilterColumn`.
+ */
+const NON_FILTER_PARAMS = new Set(['order', 'limit', 'offset', 'select', 'table', 'on_conflict', 'columns', 'upsert']);
+
+/** Операторный префикс в ключе (формат `eq.field=value`). */
+const OPERATOR_KEY_PREFIX = /^(eq|neq|gt|lt|gte|lte|like|ilike|in|contains|is)\./;
+
 function getCorsHeaders(origin) {
   const headers = {
     // 🔐 CORS: All REST methods allowed (GET/POST/PATCH/DELETE)
@@ -608,7 +645,9 @@ async function handleRestRequest(event, context) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 🔐 SEC-025 (2026-08-02): curator-only write для каталога общих продуктов.
+  // 🔐 SEC-028 (2026-08-02): curator-only write для каталога общих продуктов.
+  // (ID исправлен с SEC-025 — тот номер в docs/SECURITY_REVIEW.md занят
+  // находкой от 2026-06-14 про UUID-cast → HTTP 500.)
   //
   // До фикса: POST /rest/shared_products с валидным телом проходил БЕЗ любой
   // аутентификации. Три условия складывались в дыру:
@@ -629,6 +668,9 @@ async function handleRestRequest(event, context) {
   // Fail-closed: нет секрета или нет валидного curator-JWT → отказ.
   // ═══════════════════════════════════════════════════════════════════════════
   const CURATOR_WRITE_TABLES = ['shared_products', 'shared_products_pending'];
+  // 🔐 SEC-032: владелец строки для гейта выше. Заполняется только когда роль
+  // уже подтверждена, ниже подставляется в WHERE.
+  let enforcedCuratorId = null;
   if (method !== 'GET' && CURATOR_WRITE_TABLES.includes(tableName)) {
     const wh = event.headers || {};
     const wAuth = wh.Authorization || wh.authorization || '';
@@ -650,6 +692,44 @@ async function handleRestRequest(event, context) {
           error: wToken ? 'curator_role_required' : 'curator_auth_required'
         })
       };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🔐 SEC-032 (2026-08-02): гейт выше проверял роль, но не владение.
+    //
+    // Любой куратор с валидным JWT мог править и удалять заявки чужой очереди
+    // модерации. Штатные пути так не делают — вся модерация идёт через
+    // атомарную RPC moderate_pending_shared_product_by_curator, где ownership
+    // уже проверяется (scripts/db/migrations/2026-07-29_atomic_shared_product_moderation.sql).
+    // Прямой REST-вызов эту проверку обходил.
+    //
+    // curator_id в shared_products_pending — куратор клиента-автора заявки,
+    // то есть «чья очередь» (database/2025-12-16_shared_products_pending.sql:18),
+    // а фактический модератор пишется отдельно в moderated_by. Общей очереди и
+    // супер-модератора в продукте нет, поэтому фильтр по своему curator_id
+    // совпадает с логикой RPC и легитимный доступ не сужает.
+    //
+    // shared_products под правило не попадает намеренно: это общий каталог,
+    // колонки curator_id у него нет вовсе.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (tableName === 'shared_products_pending' && (method === 'PATCH' || method === 'DELETE')) {
+      enforcedCuratorId = wVerified.payload.sub;
+      const requestedCuratorId = (event.queryStringParameters || {})['curator_id']
+        || (event.queryStringParameters || {})['eq.curator_id'];
+      const requestedValue = String(requestedCuratorId || '').replace(/^eq\./, '');
+      if (requestedValue && requestedValue.toLowerCase() !== String(enforcedCuratorId).toLowerCase()) {
+        console.warn('[REST WRITE BLOCKED] cross-curator pending write', {
+          table: tableName,
+          method,
+          authed: String(enforcedCuratorId).slice(0, 8),
+          requested: requestedValue.slice(0, 8)
+        });
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'cross_curator_forbidden' })
+        };
+      }
     }
   }
 
@@ -870,6 +950,22 @@ async function handleRestRequest(event, context) {
         let i = 1;
 
         for (const [key, value] of Object.entries(params)) {
+          // 🔐 SEC-029: ниже имя колонки берётся либо из `key`, либо из
+          // `key` без операторного префикса. Проверяем оба варианта здесь,
+          // одним местом на все ветви — так новая ветвь не сможет появиться
+          // в обход проверки.
+          if (!NON_FILTER_PARAMS.has(key)) {
+            const candidate = key.replace(OPERATOR_KEY_PREFIX, '');
+            if (!sanitizeFilterColumn(candidate, tableName)) {
+              console.warn('[REST] filter column rejected', { table: tableName, method });
+              return {
+                statusCode: 400,
+                headers: corsHeaders,
+                body: JSON.stringify({ error: 'invalid_filter_column' })
+              };
+            }
+          }
+
           // Поддержка ДВУХ форматов:
           // 1. PostgREST style: field=eq.value (value начинается с оператора)
           // 2. Supabase-like: eq.field=value (key начинается с оператора)
@@ -1514,6 +1610,35 @@ async function handleRestRequest(event, context) {
           };
         }
 
+        // 🔐 SEC-029: имена колонок здесь приходят из ключей JSON-тела, а
+        // `on_conflict` — из query. Оба подставляются в SQL как идентификаторы,
+        // поэтому оба обязаны пройти whitelist. Сюда доходят только
+        // shared_products и shared_products_pending (у client_kv_store и
+        // client_log_trace свои ветки выше), а они закрыты кураторским гейтом
+        // SEC-028 — но куратор не должен получать произвольный SQL под
+        // владельцем таблиц.
+        for (const col of columns) {
+          if (!sanitizeFilterColumn(col, tableName)) {
+            console.warn('[REST] insert column rejected', { table: tableName });
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'invalid_insert_column' })
+            };
+          }
+        }
+        if (isUpsert) {
+          const conflictColumns = String(onConflict).split(',').map((c) => c.trim());
+          if (!conflictColumns.length || !conflictColumns.every((c) => sanitizeFilterColumn(c, tableName))) {
+            console.warn('[REST] on_conflict column rejected', { table: tableName });
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'invalid_on_conflict_column' })
+            };
+          }
+        }
+
         // 🔐 FIX v2: JSON/JSONB колонки нужно сериализовать в JSON строку
         // 🔐 FIX v3: TEXT[] массивы нужно преобразовывать в PostgreSQL array format
         const JSON_COLUMNS = ['v', 'portions']; // JSONB columns
@@ -1650,6 +1775,19 @@ async function handleRestRequest(event, context) {
         // Build WHERE clause from query params (same logic as GET)
         const conditions = [];
         for (const [key, value] of Object.entries(params)) {
+          // 🔐 SEC-029: имя колонки — только из whitelist таблицы.
+          if (!NON_FILTER_PARAMS.has(key)) {
+            const candidate = key.replace(OPERATOR_KEY_PREFIX, '');
+            if (!sanitizeFilterColumn(candidate, tableName)) {
+              console.warn('[REST] filter column rejected', { table: tableName, method });
+              return {
+                statusCode: 400,
+                headers: corsHeaders,
+                body: JSON.stringify({ error: 'invalid_filter_column' })
+              };
+            }
+          }
+
           if (key.startsWith('eq.')) {
             const col = key.replace('eq.', '');
             conditions.push(`"${col}" = $${i++}`);
@@ -1669,6 +1807,14 @@ async function handleRestRequest(event, context) {
             headers: corsHeaders,
             body: JSON.stringify({ error: 'PATCH requires at least one filter' })
           };
+        }
+
+        // 🔐 SEC-032: владение навязывается сервером, а не берётся из запроса.
+        // Проверки совпадения выше недостаточно: запрос вообще без curator_id
+        // (например только по id заявки) иначе дотянулся бы до чужой строки.
+        if (enforcedCuratorId) {
+          conditions.push(`"curator_id" = $${i++}`);
+          values.push(enforcedCuratorId);
         }
 
         let query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${conditions.join(' AND ')}`;
@@ -1710,6 +1856,19 @@ async function handleRestRequest(event, context) {
         let i = 1;
 
         for (const [key, value] of Object.entries(params)) {
+          // 🔐 SEC-029: имя колонки — только из whitelist таблицы.
+          if (!NON_FILTER_PARAMS.has(key)) {
+            const candidate = key.replace(OPERATOR_KEY_PREFIX, '');
+            if (!sanitizeFilterColumn(candidate, tableName)) {
+              console.warn('[REST] filter column rejected', { table: tableName, method });
+              return {
+                statusCode: 400,
+                headers: corsHeaders,
+                body: JSON.stringify({ error: 'invalid_filter_column' })
+              };
+            }
+          }
+
           if (key.startsWith('eq.')) {
             const col = key.replace('eq.', '');
             conditions.push(`"${col}" = $${i++}`);
@@ -1726,6 +1885,12 @@ async function handleRestRequest(event, context) {
             headers: corsHeaders,
             body: JSON.stringify({ error: 'DELETE requires at least one filter' })
           };
+        }
+
+        // 🔐 SEC-032: см. комментарий в PATCH — владение навязывает сервер.
+        if (enforcedCuratorId) {
+          conditions.push(`"curator_id" = $${i++}`);
+          values.push(enforcedCuratorId);
         }
 
         const query = `DELETE FROM "${tableName}" WHERE ${conditions.join(' AND ')}`;
