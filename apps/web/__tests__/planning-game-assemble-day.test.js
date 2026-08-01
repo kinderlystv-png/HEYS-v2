@@ -15,6 +15,11 @@ const originalReact = window.React;
 const originalClipboard = window.navigator.clipboard;
 const defaultPlan = { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
 
+/** Кампания теперь начинается с выбора формата занятости, поэтому фикстуры проходят этот шаг. */
+function startedSession(module, seed, format = 'office') {
+  return module.api.confirmEmployment(module.api.createSession(seed), format);
+}
+
 function memoryStore(initial = undefined) {
   let value = initial;
   return {
@@ -48,7 +53,7 @@ describe('Planning Assemble Day', () => {
 
   it('bundles the real engine behind a narrow browser adapter', () => {
     const { module } = loadModule();
-    const session = module.api.createSession('adapter-smoke');
+    const session = startedSession(module, 'adapter-smoke');
     const before = JSON.stringify(session.state);
     const view = module.api.getCampaignView(session);
 
@@ -85,7 +90,10 @@ describe('Planning Assemble Day', () => {
     expect(cooked.state.clock.awakeSinceMinute).toBe(session.state.clock.awakeSinceMinute);
     expect(cooked.state.causalJournal.some((entry) => entry.resultPath === 'decisionGeometry.cook_meal_batch.context.deadlinePressure')).toBe(true);
     expect(cooked.diagnostics).toMatchObject({ version: 1, history: 'complete' });
-    expect(cooked.diagnostics.decisions).toEqual([{ kind: 'action', revision: 1, stepIndex: 0, eventId: 'mon_breakfast', actionId: 'cook_meal_batch' }]);
+    expect(cooked.diagnostics.decisions).toEqual([
+      { kind: 'employment', revision: 1, stepIndex: 0, format: 'office' },
+      { kind: 'action', revision: 2, stepIndex: 0, eventId: 'mon_breakfast', actionId: 'cook_meal_batch' },
+    ]);
 
     const next = module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
     expect(JSON.stringify(session.state)).toBe(before);
@@ -98,7 +106,7 @@ describe('Planning Assemble Day', () => {
 
   it('keeps operational costs out of the main causal result and names the chosen action', () => {
     const { module } = loadModule();
-    const session = module.api.createSession('causal-summary');
+    const session = startedSession(module, 'causal-summary');
     const next = module.api.confirmAction(session, 'drink_coffee_100');
 
     expect(next.lastStepSummary.mainChange).toBe('Главное изменение: запас сил вырос.');
@@ -108,7 +116,7 @@ describe('Planning Assemble Day', () => {
 
   it('persists only a confirmed reducer step and resumes it after reload', () => {
     const { module, store } = loadModule();
-    const session = module.api.createSession('checkpoint');
+    const session = startedSession(module, 'checkpoint');
     const actionId = module.api.getCampaignView(session).offers.find((offer) => offer.available).actionId;
     expect(store.set).not.toHaveBeenCalled();
 
@@ -118,13 +126,13 @@ describe('Planning Assemble Day', () => {
     expect(store.set).toHaveBeenCalledTimes(1);
     expect(store.set.mock.calls[0][0]).toBe('heys_planning_assemble_day_campaign_v1');
     expect(store.value().envelopeVersion).toBe(3);
-    expect(store.value().revision).toBe(1);
+    expect(store.value().revision).toBe(2);
     expect(store.value().gameSeed).toBe('checkpoint');
     expect(store.value()).not.toHaveProperty('state');
     expect(store.value()).not.toHaveProperty('lastSummary');
     expect(store.value()).not.toHaveProperty('clientId');
     expect(store.value()).not.toHaveProperty('campaignId');
-    expect(store.value().diagnostics.decisions).toHaveLength(1);
+    expect(store.value().diagnostics.decisions).toHaveLength(2);
     expect(JSON.stringify(store.value())).not.toContain('selectedActionId');
     expect(JSON.stringify(store.value())).not.toContain(clientId);
     expect(saved.sizeBytes).toBe(module.api.checkpointSizeBytes(clientId, saved.envelope));
@@ -135,13 +143,13 @@ describe('Planning Assemble Day', () => {
     expect(reloaded.session.state.clock.stepIndex).toBe(1);
     expect(reloaded.session.state).toEqual(confirmed.state);
     expect(reloaded.session.lastSummary).toEqual(confirmed.lastSummary);
-    expect(reloaded.session.diagnostics.decisions).toHaveLength(1);
+    expect(reloaded.session.diagnostics.decisions).toHaveLength(2);
     expect(module.api.getCampaignView(reloaded.session).progress.current).toBe(2);
   });
 
   it('shows known consequences before the irreversible tap, then inserts a separate result beat', async () => {
     const { module, store } = loadModule();
-    const planned = module.api.confirmPlanning(module.api.createSession('ui-choice'), defaultPlan);
+    const planned = module.api.confirmPlanning(startedSession(module, 'ui-choice'), defaultPlan);
     expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
     store.set.mockClear();
     render(React.createElement(module.Component, { onExit: vi.fn() }));
@@ -193,7 +201,7 @@ describe('Planning Assemble Day', () => {
 
     fireEvent.click(restoredConfirm);
     expect(store.set).toHaveBeenCalledTimes(1);
-    expect(store.value().diagnostics.decisions).toHaveLength(2);
+    expect(store.value().diagnostics.decisions).toHaveLength(3);
     expect(module.api.loadCheckpoint(store, clientId).session.state.clock.stepIndex).toBe(1);
     const resultHeading = screen.getByRole('heading', { name: 'Съесть заранее приготовленный завтрак' });
     expect(resultHeading).toBeTruthy();
@@ -206,7 +214,7 @@ describe('Planning Assemble Day', () => {
 
   it('renders the engine-owned Pocket Retro scene and restores it only from confirmed state', () => {
     const { module, store } = loadModule();
-    const planned = module.api.confirmPlanning(module.api.createSession('character-scene'), defaultPlan);
+    const planned = module.api.confirmPlanning(startedSession(module, 'character-scene'), defaultPlan);
     expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
     store.set.mockClear();
     render(React.createElement(module.Component, { onExit: vi.fn() }));
@@ -217,6 +225,10 @@ describe('Planning Assemble Day', () => {
     expect(beforeKey).toBe(Object.values(beforeProjection.frame).join(':'));
     expect(beforeScene.querySelectorAll('rect,path,line,polyline,circle,ellipse').length).toBeLessThanOrEqual(80);
     expect(beforeScene.querySelector('image')).toBeNull();
+    // Рот заливается, а не обводится: незамкнутый контур не имеет площади и выражение лица пропадает.
+    const mouthPath = beforeScene.querySelector('.scene-mouth');
+    expect(mouthPath).toBeTruthy();
+    expect(mouthPath.getAttribute('d').trim().endsWith('z')).toBe(true);
     expect(document.querySelector('canvas')).toBeNull();
     expect(document.querySelectorAll('.assemble-day-status strong')).toHaveLength(3);
     expect(Array.from(document.querySelectorAll('.assemble-day-status strong')).map((node) => node.textContent)).toEqual(beforeProjection.indicators.map((item) => item.value));
@@ -245,7 +257,7 @@ describe('Planning Assemble Day', () => {
 
   it('shows exactly one replay-derived day summary before the next authored day', () => {
     const { module, store } = loadModule();
-    let session = module.api.confirmPlanning(module.api.createSession('day-summary-flow'), defaultPlan);
+    let session = module.api.confirmPlanning(startedSession(module, 'day-summary-flow'), defaultPlan);
     for (let index = 0; index < 6; index += 1) {
       const view = module.api.getCampaignView(session);
       session = module.api.confirmAction(session, view.offers.find((offer) => offer.available).actionId);
@@ -275,7 +287,7 @@ describe('Planning Assemble Day', () => {
 
   it('never silently resets an incompatible snapshot or overwrites newer progress', () => {
     const first = loadModule();
-    const session = first.module.api.createSession('protected');
+    const session = startedSession(first.module, 'protected');
     const actionId = first.module.api.getCampaignView(session).offers.find((offer) => offer.available).actionId;
     const stepOne = first.module.api.confirmAction(session, actionId);
     first.module.api.saveCheckpoint(first.store, clientId, stepOne);
@@ -291,34 +303,37 @@ describe('Planning Assemble Day', () => {
     first.module.api.saveCheckpoint(first.store, clientId, stepTwo);
     const staleSave = first.module.api.saveCheckpoint(first.store, clientId, stepOne);
     expect(staleSave.status).toBe('conflict');
-    expect(first.store.value().revision).toBe(2);
+    expect(first.store.value().revision).toBe(3);
   });
 
   it('confirms an atomic plan without advancing scenario time and resumes its separate revision', () => {
     const { module, store } = loadModule();
-    const session = module.api.createSession('planning-checkpoint');
+    const session = startedSession(module, 'planning-checkpoint');
     const plan = { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' };
     const view = module.api.getPlanningCampaignView(session, plan);
 
     expect(view.valid).toBe(true);
     expect(view.conflicts.map((item) => item.id)).toContain('work_sleep_window');
     expect(view.capacity.weekly).toEqual({ totalSlots: 2, allocatedSlots: 2, remainingSlots: 0 });
-    expect(view.financialHorizon.cashAfterNextObligationsRub).toBe(59000);
+    expect(view.financialHorizon.cashAfterNextObligationsRub).toBe(131000);
     expect(store.set).not.toHaveBeenCalled();
 
     const confirmed = module.api.confirmPlanning(session, plan);
-    expect(confirmed.revision).toBe(1);
+    expect(confirmed.revision).toBe(2);
     expect(confirmed.state.clock.stepIndex).toBe(0);
     expect(confirmed.state.scenarioCursor).toBe(0);
     expect(confirmed.state.weeklyRules.map((item) => item.id)).toEqual(plan.weeklyRuleIds);
-    expect(confirmed.diagnostics.decisions).toEqual([{ kind: 'planning', revision: 1, stepIndex: 0, plan }]);
+    expect(confirmed.diagnostics.decisions).toEqual([
+      { kind: 'employment', revision: 1, stepIndex: 0, format: 'office' },
+      { kind: 'planning', revision: 2, stepIndex: 0, plan },
+    ]);
     expect(module.api.saveCheckpoint(store, clientId, confirmed).status).toBe('saved');
-    expect(store.value().revision).toBe(1);
+    expect(store.value().revision).toBe(2);
     expect(store.value()).not.toHaveProperty('state');
 
     const reloaded = module.api.loadCheckpoint(store, clientId);
     expect(reloaded.status).toBe('ready');
-    expect(reloaded.session.revision).toBe(1);
+    expect(reloaded.session.revision).toBe(2);
     expect(reloaded.session.state.monthlyPriorities).toEqual(expect.arrayContaining([
       { domain: 'work', level: 2 },
       { domain: 'family', level: 1 },
@@ -330,7 +345,7 @@ describe('Planning Assemble Day', () => {
     Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText } });
     const { module, store } = loadModule();
     const rawSeed = 'privacy-safe-trace';
-    const session = module.api.createSession(rawSeed);
+    const session = startedSession(module, rawSeed);
     const confirmed = module.api.confirmAction(session, 'cook_meal_batch');
     expect(module.api.saveCheckpoint(store, clientId, confirmed).status).toBe('saved');
 
@@ -338,11 +353,12 @@ describe('Planning Assemble Day', () => {
     const trace = JSON.parse(text);
     expect(trace.replayIntegrity.status).toBe('match');
     expect(trace.replayIntegrity.replayStateHash).toBe(trace.replayIntegrity.actualStateHash);
-    expect(trace.steps).toHaveLength(1);
-    expect(trace.steps[0].offersBefore).toHaveLength(4);
-    expect(trace.steps[0].reducerStages).toHaveLength(10);
-    expect(trace.steps[0].reducerStages.every((stage) => stage.hash)).toBe(true);
-    expect(trace.steps[0].journalEntries.length).toBeGreaterThan(0);
+    expect(trace.steps).toHaveLength(2);
+    expect(trace.steps[0].kind).toBe('employment');
+    expect(trace.steps[1].offersBefore).toHaveLength(4);
+    expect(trace.steps[1].reducerStages).toHaveLength(10);
+    expect(trace.steps[1].reducerStages.every((stage) => stage.hash)).toBe(true);
+    expect(trace.steps[1].journalEntries.length).toBeGreaterThan(0);
     expect(trace.catalog.actions.cook_meal_batch.geometryRules.length).toBeGreaterThan(0);
     expect(text).not.toContain(clientId);
     expect(text).not.toContain(rawSeed);
@@ -371,7 +387,7 @@ describe('Planning Assemble Day', () => {
 
   it('keeps a checkpoint bounded by one period and rebuilds state, summary and trace from the anchor', () => {
     const first = loadModule();
-    let session = first.module.api.createSession('diagnostic-size');
+    let session = startedSession(first.module, 'diagnostic-size');
     let earlySizeBytes = 0;
     let maxTail = 0;
     while (true) {
@@ -433,8 +449,15 @@ describe('Planning Assemble Day', () => {
     const savedCount = first.store.set.mock.calls.length;
     const completedSeed = session.state.rng.seed;
     fireEvent.click(screen.getByRole('button', { name: 'Пройти этот сценарий иначе' }));
+    // Повтор того же сценария — это новая кампания, поэтому она снова начинается
+    // с выбора формата занятости.
+    expect(screen.getByRole('heading', { name: 'С чего начинается месяц' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: /Офис/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить формат' }));
     expect(screen.getByRole('heading', { name: 'Какие границы сохранить' })).toBeTruthy();
-    expect(first.store.set).toHaveBeenCalledTimes(savedCount);
+    // Выбор формата — подтверждённое решение, поэтому он сохраняется сразу; до
+    // него повтор сценария не писал ничего.
+    expect(first.store.set).toHaveBeenCalledTimes(savedCount + 1);
     fireEvent.click(screen.getByRole('checkbox', { name: /Закончить день вовремя/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Защитить рабочие блоки/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить к приоритетам' }));
@@ -446,7 +469,7 @@ describe('Planning Assemble Day', () => {
 
   it('loads only replay-safe legacy checkpoints and upgrades them after the next confirmed step', () => {
     const { module, store } = loadModule();
-    const confirmed = module.api.confirmAction(module.api.createSession('legacy-safe'), 'eat_ready_meal');
+    const confirmed = module.api.confirmAction(startedSession(module, 'legacy-safe'), 'eat_ready_meal');
     const saved = module.api.saveCheckpoint(store, clientId, confirmed);
     expect(saved.status).toBe('saved');
     const legacyEnvelope = {
@@ -497,7 +520,7 @@ describe('Planning Assemble Day', () => {
     expect(malformedStore.set).not.toHaveBeenCalled();
 
     const validStore = memoryStore();
-    const confirmed = module.api.confirmAction(module.api.createSession('scope-safe'), 'eat_ready_meal');
+    const confirmed = module.api.confirmAction(startedSession(module, 'scope-safe'), 'eat_ready_meal');
     expect(module.api.saveCheckpoint(validStore, clientId, confirmed).status).toBe('saved');
     const foreignStore = memoryStore(structuredClone(validStore.value()));
     expect(module.api.loadCheckpoint(foreignStore, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')).toMatchObject({ status: 'foreign' });
@@ -520,7 +543,7 @@ describe('Planning Assemble Day', () => {
     expect(module.api.loadCheckpoint(oversizedPersistedStore, clientId)).toMatchObject({ status: 'incompatible', message: expect.stringContaining('размер') });
     expect(oversizedPersistedStore.set).not.toHaveBeenCalled();
 
-    const oversized = module.api.createSession('oversized-checkpoint');
+    const oversized = startedSession(module, 'oversized-checkpoint');
     oversized.comparisonBaseline = {
       outcome: module.api.createDiagnosticTrace(oversized).derivedOutcome,
       finalStateHash: 'baseline',
@@ -533,7 +556,7 @@ describe('Planning Assemble Day', () => {
 
   it('restarts the campaign from the menu only after an explicit confirmation', () => {
     const { module, store } = loadModule();
-    const planned = module.api.confirmPlanning(module.api.createSession('ui-restart'), defaultPlan);
+    const planned = module.api.confirmPlanning(startedSession(module, 'ui-restart'), defaultPlan);
     expect(module.api.saveCheckpoint(store, clientId, planned).status).toBe('saved');
     store.set.mockClear();
     render(React.createElement(module.Component, { onExit: vi.fn() }));
@@ -554,13 +577,36 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Начать заново' })[1]);
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(screen.queryByRole('radio', { name: /Приготовить завтрак/ })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Сначала выберите, что будете защищать' })).toBeTruthy();
+    // Новая кампания начинается с того же первого шага, что и любая другая:
+    // с выбора формата занятости.
+    expect(screen.getByRole('heading', { name: 'С чего начинается месяц' })).toBeTruthy();
     expect(store.set).not.toHaveBeenCalled();
     expect(module.api.loadCheckpoint(store, clientId).session.state.rng.seed).toBe('ui-restart');
   });
 
+  it('starts with the employment choice and only then opens the week', async () => {
+    const { module, store } = loadModule();
+    render(React.createElement(module.Component, { onExit: vi.fn() }));
+
+    // Первый слой: цель месяца, три формата с их уступкой и одно действие.
+    expect(screen.getByRole('heading', { name: 'Финансовый резерв к концу месяца' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'С чего начинается месяц' })).toBeTruthy();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Подтвердить формат' }).disabled).toBe(true);
+    expect(store.set).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Офис/ }));
+    expect(screen.getByRole('button', { name: 'Подтвердить формат' }).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить формат' }));
+    expect(store.set).toHaveBeenCalledTimes(1);
+    expect(store.value().diagnostics.decisions).toEqual([{ kind: 'employment', revision: 1, stepIndex: 0, format: 'office' }]);
+    expect(module.api.loadCheckpoint(store, clientId).session.state.employment.format).toBe('office');
+  });
+
   it('renders progressive planning, exposes conflicts and saves only on final confirmation', async () => {
     const { module, store } = loadModule();
+    expect(module.api.saveCheckpoint(store, clientId, startedSession(module, 'ui-planning')).status).toBe('saved');
+    store.set.mockClear();
     render(React.createElement(module.Component, { onExit: vi.fn() }));
 
     expect(screen.getByRole('heading', { name: 'Координатор проектов' })).toBeTruthy();
@@ -579,7 +625,7 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить к приоритетам' }));
     expect(screen.getByRole('heading', { name: 'Что защищать в первую очередь' })).toBeTruthy();
     expect(screen.getByText('Финансовый горизонт')).toBeTruthy();
-    expect(screen.getByText(/59.*000 ₽/)).toBeTruthy();
+    expect(screen.getByText(/131.*000 ₽/)).toBeTruthy();
     expect(screen.getAllByText('Срок проекта').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ожидаемое поступление').length).toBeGreaterThan(0);
     const mainWork = screen.getAllByRole('radio', { name: 'Работа' })[0];
@@ -595,7 +641,7 @@ describe('Planning Assemble Day', () => {
     expect(store.set).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Подтвердить план' }));
     expect(store.set).toHaveBeenCalledTimes(1);
-    expect(store.value().revision).toBe(1);
+    expect(store.value().revision).toBe(2);
     expect(store.value()).not.toHaveProperty('state');
     expect(module.api.loadCheckpoint(store, clientId).session.state.clock.stepIndex).toBe(0);
     expect(screen.getByText(/План принят/)).toBeTruthy();

@@ -1,11 +1,12 @@
-import { createInitialState, registries } from '../../../packages/assemble-day-engine/src/content/scenario.ts';
+import { CAMPAIGN_DAYS, createInitialState, registries } from '../../../packages/assemble-day-engine/src/content/scenario.ts';
+import { employmentSetupView, reduceEmploymentSetup } from '../../../packages/assemble-day-engine/src/employment.ts';
 import { getCharacterPresentation, getRuleEvidence } from '../../../packages/assemble-day-engine/src/content/presentation.ts';
 import { compareCampaignOutcomes, getCampaignBrief, getCampaignOutcome, getCharacterDevelopment, getPeriodBoundaries, getPeriodSummary, getStepSummary, getSyntheticObservation } from '../../../packages/assemble-day-engine/src/campaign.ts';
 import { getPlanningView, reducePlanningStep } from '../../../packages/assemble-day-engine/src/planning.ts';
 import { computeDecisionContext, getActionOffers, initialEvent, reduceStep } from '../../../packages/assemble-day-engine/src/reducer.ts';
 import { fnv1a64, stateHash } from '../../../packages/assemble-day-engine/src/rng.ts';
 import { validateState } from '../../../packages/assemble-day-engine/src/schema.ts';
-import { CONTRACT, type ActionOffer, type CampaignOutcome, type CausalEntry, type CharacterPresentation, type GameState, type PeriodBoundary, type PeriodSummary, type PlanningDomain, type PlanningPlan, type StepSummary, type WeeklyRulePresetId } from '../../../packages/assemble-day-engine/src/types.ts';
+import { CONTRACT, type ActionOffer, type EmploymentFormat, type CampaignOutcome, type CausalEntry, type CharacterPresentation, type GameState, type PeriodBoundary, type PeriodSummary, type PlanningDomain, type PlanningPlan, type StepSummary, type WeeklyRulePresetId } from '../../../packages/assemble-day-engine/src/types.ts';
 
 declare global {
   interface Window {
@@ -38,6 +39,11 @@ type DiagnosticDecision = {
   revision: number;
   stepIndex: number;
   plan: PlanningPlan;
+} | {
+  kind: 'employment';
+  revision: number;
+  stepIndex: number;
+  format: EmploymentFormat;
 };
 type DiagnosticLedger = {
   version: 1;
@@ -258,11 +264,12 @@ function diagnosticsFrom(value: unknown, revision: number, anchorRevision = 0): 
   const ledger = value as DiagnosticLedger;
   if (!ledger || typeof ledger !== 'object' || ledger.version !== 1 || !['complete', 'legacy_partial'].includes(ledger.history)
     || !Array.isArray(ledger.decisions) || ledger.decisions.some((decision) => !decision || typeof decision !== 'object'
-      || !['action', 'planning'].includes((decision as any).kind)
+      || !['action', 'planning', 'employment'].includes((decision as any).kind)
       || !Number.isInteger((decision as any).revision)
       || !Number.isInteger((decision as any).stepIndex)
       || ((decision as any).kind === 'action' && (typeof (decision as any).eventId !== 'string' || typeof (decision as any).actionId !== 'string'))
-      || ((decision as any).kind === 'planning' && !(decision as any).plan))) {
+      || ((decision as any).kind === 'planning' && !(decision as any).plan)
+      || ((decision as any).kind === 'employment' && typeof (decision as any).format !== 'string'))) {
     throw new Error('invalid diagnostic ledger');
   }
   const decisions = structuredClone(ledger.decisions);
@@ -331,6 +338,17 @@ function confirmAction(session: CampaignSession, actionId: string): CampaignSess
   return periodSummaries.length ? reanchor(next) : next;
 }
 
+/**
+ * Выбор формата занятости — отдельное подтверждённое решение до плана недели.
+ * Он необратим, поэтому экран называет цену прямо, а не прячет её во второй слой.
+ */
+function confirmEmployment(session: CampaignSession, format: EmploymentFormat): CampaignSession {
+  const output = reduceEmploymentSetup({ state: session.state, format, campaignDays: CAMPAIGN_DAYS });
+  const revision = session.revision + 1;
+  const decision: DiagnosticDecision = { kind: 'employment', revision, stepIndex: session.state.clock.stepIndex, format };
+  return { ...session, state: output.state, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+}
+
 function confirmPlanning(session: CampaignSession, plan: PlanningPlan): CampaignSession {
   const output = reducePlanningStep({ state: session.state, plan });
   const revision = session.revision + 1;
@@ -371,6 +389,9 @@ function replayDecisions(anchor: CampaignAnchor, diagnostics: DiagnosticLedger, 
       lastStepSummary = getStepSummary({ before: state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
       periodSummaries = getPeriodBoundaries(state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
       state = output.state;
+    } else if (decision.kind === 'employment') {
+      if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`employment replay mismatch at revision ${decision.revision}`);
+      state = reduceEmploymentSetup({ state, format: decision.format, campaignDays: CAMPAIGN_DAYS }).state;
     } else {
       if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
       state = reducePlanningStep({ state, plan: decision.plan }).state;
@@ -548,6 +569,18 @@ function createDiagnosticTrace(session: CampaignSession) {
             stateAfter: diagnosticStateSnapshot(output.state), stateAfterHash: output.stateHash,
           });
           replayState = output.state;
+        } else if (decision.kind === 'employment') {
+          if (replayState.clock.stepIndex !== decision.stepIndex) throw new Error(`employment replay mismatch at revision ${decision.revision}`);
+          const contextBefore = computeDecisionContext(replayState);
+          const stateBefore = diagnosticStateSnapshot(replayState);
+          const stateBeforeHash = stateHash(replayState);
+          const output = reduceEmploymentSetup({ state: replayState, format: decision.format, campaignDays: CAMPAIGN_DAYS });
+          steps.push({
+            ...decision, contextBefore, stateBefore, stateBeforeHash,
+            reducerStages: [{ stage: 'employment', hash: output.stateHash }], journalEntries: output.journalEntries,
+            stateAfter: diagnosticStateSnapshot(output.state), stateAfterHash: output.stateHash,
+          });
+          replayState = output.state;
         } else {
           if (replayState.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
           const contextBefore = computeDecisionContext(replayState);
@@ -664,16 +697,227 @@ function saveCheckpoint(store: any, clientId: string, session: CampaignSession, 
 
 const h = (...args: any[]) => window.React.createElement(...args);
 
+/**
+ * Панорама места: холст 180×48 логических пикселей при том же масштабе 2×, что и
+ * прежняя сцена 56×48. Обстановка — фон, персонаж — отдельный слой поверх неё,
+ * поэтому один спрайт переиспользуется во всех местах. Кадр меняется только
+ * вместе с подтверждённым состоянием, анимации перехода между местами нет.
+ */
+const SCENE_WIDTH = 180;
+const SCENE_CHARACTER_X = 58;
+
+/** Окно вместе с ночными огнями: время суток несёт свет, а не новые предметы. */
+function sceneWindow(dx: number, night: boolean) {
+  return h('g', { key: `window-${dx}`, transform: `translate(${dx},0)` },
+    h('rect', { className: 'scene-window', x: 35, y: 5, width: 16, height: 13 }),
+    h('path', { className: 'scene-mid', d: 'M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z' }),
+    h('path', { className: 'scene-ink', d: 'M35 5h16v2H35zm0 4h16v1H35z' }),
+    night && h('path', { className: 'scene-highlight', d: 'M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z' }),
+  );
+}
+
+function scenePicture(dx: number) {
+  return h('path', { key: `picture-${dx}`, className: 'scene-ink', transform: `translate(${dx},0)`, d: 'M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z' });
+}
+
+function sceneShelf(dx: number) {
+  return h('g', { key: `shelf-${dx}`, transform: `translate(${dx},0)` },
+    h('rect', { className: 'scene-ink', x: 41, y: 25, width: 11, height: 13 }),
+    h('rect', { className: 'scene-bg', x: 43, y: 27, width: 7, height: 3 }),
+    h('rect', { className: 'scene-bg', x: 43, y: 32, width: 1, height: 4 }),
+    h('rect', { className: 'scene-bg', x: 46, y: 31, width: 1, height: 5 }),
+    h('rect', { className: 'scene-bg', x: 49, y: 32, width: 1, height: 4 }),
+  );
+}
+
+function sceneTable(dx: number, dy = 0) {
+  return h('g', { key: `table-${dx}`, transform: `translate(${dx},${dy})` },
+    h('rect', { className: 'scene-ink', x: 5, y: 25, width: 14, height: 2 }),
+    h('rect', { className: 'scene-ink', x: 7, y: 27, width: 2, height: 11 }),
+    h('rect', { className: 'scene-ink', x: 16, y: 27, width: 2, height: 11 }),
+  );
+}
+
+function scenePlant(dx: number, dy = 0) {
+  return h('g', { key: `plant-${dx}`, transform: `translate(${dx},${dy})` },
+    h('rect', { className: 'scene-mid', x: 10, y: 21, width: 4, height: 4 }),
+    h('path', { className: 'scene-ink', d: 'M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z' }),
+  );
+}
+
+/** Мебель за спиной персонажа заливается светлым: иначе силуэт сливается с обивкой. */
+function sceneSeat(kind: 'chair' | 'sofa', dx: number, dy: number) {
+  return kind === 'chair'
+    ? h('g', { key: 'seat', transform: `translate(${dx},${dy})` },
+      h('rect', { className: 'scene-ink', x: 0, y: 0, width: 20, height: 12 }),
+      h('rect', { className: 'scene-floor', x: 2, y: 2, width: 16, height: 8 }),
+      h('rect', { className: 'scene-ink', x: 8, y: 12, width: 4, height: 4 }),
+      h('rect', { className: 'scene-ink', x: 4, y: 16, width: 12, height: 2 }),
+    )
+    : h('g', { key: 'seat', transform: `translate(${dx},${dy})` },
+      h('rect', { className: 'scene-ink', x: 0, y: 0, width: 40, height: 8 }),
+      h('rect', { className: 'scene-floor', x: 2, y: 2, width: 36, height: 6 }),
+      h('rect', { className: 'scene-ink', x: 0, y: 8, width: 40, height: 10 }),
+      h('rect', { className: 'scene-floor', x: 4, y: 10, width: 32, height: 6 }),
+      h('rect', { className: 'scene-mid', x: 5, y: 3, width: 7, height: 5 }),
+      h('rect', { className: 'scene-ink', x: 2, y: 18, width: 3, height: 3 }),
+      h('rect', { className: 'scene-ink', x: 35, y: 18, width: 3, height: 3 }),
+    );
+}
+
+/** Обстановка позади персонажа. Три-четыре якоря на место, больше не добавляем. */
+function scenePlaceBack(place: CharacterPresentation['frame']['place'], night: boolean) {
+  if (place === 'bedroom') {
+    return [
+      scenePicture(14),
+      h('g', { key: 'bed', transform: 'translate(14,16)' },
+        h('rect', { className: 'scene-ink', x: 0, y: 6, width: 3, height: 16 }),
+        h('rect', { className: 'scene-skin', x: 3, y: 14, width: 36, height: 3 }),
+        h('rect', { className: 'scene-ink', x: 5, y: 9, width: 10, height: 1 }),
+        h('rect', { className: 'scene-skin', x: 5, y: 10, width: 10, height: 4 }),
+        h('rect', { className: 'scene-mid', x: 18, y: 12, width: 21, height: 5 }),
+        h('rect', { className: 'scene-ink', x: 24, y: 12, width: 1, height: 5 }),
+        h('rect', { className: 'scene-ink', x: 31, y: 12, width: 1, height: 5 }),
+        h('rect', { className: 'scene-ink', x: 3, y: 17, width: 36, height: 2 }),
+        h('rect', { className: 'scene-ink', x: 4, y: 19, width: 2, height: 3 }),
+        h('rect', { className: 'scene-ink', x: 36, y: 19, width: 2, height: 3 }),
+      ),
+      sceneTable(50), scenePlant(49), sceneWindow(65, night), sceneShelf(90),
+      h('g', { key: 'door', transform: 'translate(150,14)' },
+        h('rect', { className: 'scene-ink', x: 0, y: 0, width: 16, height: 24 }),
+        h('rect', { className: 'scene-bg', x: 2, y: 2, width: 12, height: 22 }),
+        h('rect', { className: 'scene-mid', x: 11, y: 15, width: 2, height: 2 }),
+      ),
+    ];
+  }
+  if (place === 'kitchen') {
+    return [
+      h('g', { key: 'kitchen', transform: 'translate(22,0)' },
+        h('rect', { className: 'scene-ink', x: 4, y: 6, width: 34, height: 12 }),
+        h('rect', { className: 'scene-bg', x: 6, y: 8, width: 14, height: 8 }),
+        h('rect', { className: 'scene-bg', x: 22, y: 8, width: 14, height: 8 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 25, width: 50, height: 2 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 27, width: 50, height: 11 }),
+        h('rect', { className: 'scene-bg', x: 2, y: 29, width: 22, height: 7 }),
+        h('rect', { className: 'scene-bg', x: 26, y: 29, width: 22, height: 7 }),
+      ),
+      h('g', { key: 'pot', transform: 'translate(38,15)' },
+        h('rect', { className: 'scene-ink', x: 2, y: 0, width: 1, height: 2 }),
+        h('rect', { className: 'scene-ink', x: 5, y: 1, width: 1, height: 2 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 4, width: 8, height: 1 }),
+        h('rect', { className: 'scene-mid', x: 0, y: 5, width: 8, height: 5 }),
+      ),
+      sceneWindow(65, night),
+      h('g', { key: 'fridge', transform: 'translate(126,14)' },
+        h('rect', { className: 'scene-ink', x: 0, y: 0, width: 16, height: 24 }),
+        h('rect', { className: 'scene-bg', x: 2, y: 2, width: 12, height: 8 }),
+        h('rect', { className: 'scene-bg', x: 2, y: 12, width: 12, height: 10 }),
+        h('rect', { className: 'scene-mid', x: 11, y: 4, width: 1, height: 4 }),
+      ),
+    ];
+  }
+  if (place === 'commute') {
+    return [
+      h('g', { key: 'skyline', className: 'scene-mid' },
+        h('rect', { x: 6, y: 22, width: 9, height: 16 }),
+        h('rect', { x: 18, y: 17, width: 7, height: 21 }),
+        h('rect', { x: 28, y: 25, width: 10, height: 13 }),
+        h('rect', { x: 142, y: 20, width: 8, height: 18 }),
+        h('rect', { x: 154, y: 26, width: 10, height: 12 }),
+        h('rect', { x: 168, y: 15, width: 8, height: 23 }),
+      ),
+      h('g', { key: 'marks', className: 'scene-skin' },
+        h('rect', { x: 4, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 28, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 52, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 76, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 100, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 124, y: 42, width: 8, height: 1 }),
+        h('rect', { x: 148, y: 42, width: 8, height: 1 }),
+      ),
+      h('g', { key: 'car', transform: 'translate(44,14)' },
+        h('rect', { className: 'scene-ink', x: 22, y: 0, width: 46, height: 1 }),
+        h('rect', { className: 'scene-mid', x: 22, y: 1, width: 46, height: 11 }),
+        h('rect', { className: 'scene-ink', x: 22, y: 1, width: 1, height: 11 }),
+        h('rect', { className: 'scene-ink', x: 67, y: 1, width: 1, height: 11 }),
+        h('rect', { className: 'scene-window', x: 26, y: 3, width: 18, height: 8 }),
+        h('rect', { className: 'scene-window', x: 48, y: 3, width: 16, height: 8 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 11, width: 88, height: 1 }),
+        h('rect', { className: 'scene-mid', x: 0, y: 12, width: 88, height: 10 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 22, width: 88, height: 1 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 12, width: 1, height: 10 }),
+        h('rect', { className: 'scene-ink', x: 87, y: 12, width: 1, height: 10 }),
+        h('rect', { className: 'scene-skin', x: 84, y: 16, width: 3, height: 3 }),
+        h('rect', { className: 'scene-skin', x: 1, y: 16, width: 3, height: 3 }),
+        h('rect', { className: 'scene-ink', x: 15, y: 18, width: 10, height: 10 }),
+        h('rect', { className: 'scene-ink', x: 14, y: 20, width: 12, height: 6 }),
+        h('rect', { className: 'scene-bg', x: 18, y: 21, width: 4, height: 4 }),
+        h('rect', { className: 'scene-ink', x: 65, y: 18, width: 10, height: 10 }),
+        h('rect', { className: 'scene-ink', x: 64, y: 20, width: 12, height: 6 }),
+        h('rect', { className: 'scene-bg', x: 68, y: 21, width: 4, height: 4 }),
+      ),
+      h('g', { key: 'traffic', transform: 'translate(150,6)' },
+        h('rect', { className: 'scene-ink', x: 4, y: 13, width: 3, height: 19 }),
+        h('rect', { className: 'scene-ink', x: 0, y: 0, width: 11, height: 13 }),
+        h('rect', { className: 'scene-mid', x: 3, y: 2, width: 5, height: 4 }),
+        h('rect', { className: 'scene-bg', x: 3, y: 8, width: 5, height: 3 }),
+      ),
+    ];
+  }
+  if (place === 'work') {
+    return [scenePicture(8), sceneShelf(-25), sceneSeat('chair', 76, 20), sceneWindow(112, night)];
+  }
+  return [scenePicture(8), sceneShelf(-25), sceneSeat('sofa', 62, 17), sceneWindow(88, night),
+    h('g', { key: 'lamp', transform: 'translate(110,16)' },
+      h('rect', { className: 'scene-mid', x: 0, y: 0, width: 9, height: 1 }),
+      h('rect', { className: 'scene-mid', x: 1, y: 1, width: 7, height: 5 }),
+      h('rect', { className: 'scene-ink', x: 4, y: 6, width: 1, height: 14 }),
+      h('rect', { className: 'scene-ink', x: 1, y: 20, width: 7, height: 2 }),
+    ),
+    sceneTable(125), scenePlant(124),
+  ];
+}
+
+/** Предметы перед персонажем: рабочий стол закрывает его по пояс, иначе он читается стоящим сбоку. */
+function scenePlaceFront(place: CharacterPresentation['frame']['place']) {
+  if (place !== 'work') return [];
+  return [
+    h('g', { key: 'desk', transform: 'translate(60,33)' },
+      h('rect', { className: 'scene-ink', x: 0, y: 0, width: 56, height: 2 }),
+      h('rect', { className: 'scene-ink', x: 2, y: 2, width: 2, height: 3 }),
+      h('rect', { className: 'scene-ink', x: 52, y: 2, width: 2, height: 3 }),
+    ),
+    scenePlant(55, 8),
+    h('g', { key: 'monitor', transform: 'translate(98,18)' },
+      h('rect', { className: 'scene-ink', x: 0, y: 0, width: 18, height: 13 }),
+      h('rect', { className: 'scene-bg', x: 2, y: 2, width: 14, height: 9 }),
+      h('rect', { className: 'scene-mid', x: 4, y: 4, width: 8, height: 1 }),
+      h('rect', { className: 'scene-mid', x: 4, y: 6, width: 10, height: 1 }),
+      h('rect', { className: 'scene-mid', x: 4, y: 8, width: 6, height: 1 }),
+      h('rect', { className: 'scene-ink', x: 7, y: 13, width: 4, height: 2 }),
+    ),
+  ];
+}
+
 function CharacterScene({ presentation }: { presentation: CharacterPresentation }) {
-  const { pose, expression, load, dayPhase } = presentation.frame;
+  const { pose, expression, load, dayPhase, place } = presentation.frame;
   const recovering = pose === 'recovering';
   const headY = recovering ? 22 : pose === 'depleted' ? 21 : 18;
   const bodyY = recovering ? 28 : pose === 'depleted' ? 28 : 25;
-  const mouth = expression === 'bright' ? `M27 ${headY + 5}h1v1h2v-1h1` : expression === 'subdued' ? `M27 ${headY + 6}h1v-1h2v1h1` : `M27 ${headY + 6}h4`;
-  const frameKey = `${pose}:${expression}:${load}:${dayPhase}`;
+  // Контуры рта замкнуты: незакрытый path не имеет площади, а stroke у сцены не задан — иначе выражение не рисуется.
+  const mouth = expression === 'bright'
+    ? `M28 ${headY + 6}h2v1h-2zM27 ${headY + 5}h1v1h-1zM30 ${headY + 5}h1v1h-1z`
+    : expression === 'subdued'
+      ? `M28 ${headY + 6}h2v1h-2z`
+      : `M27 ${headY + 6}h4v1h-4z`;
+  const frameKey = `${pose}:${expression}:${load}:${dayPhase}:${place}`;
+  const inCar = place === 'commute';
+  // В машине человек и так сидит: видны голова и плечи, посадка головы по-прежнему несёт позу.
+  const characterX = inCar ? 48 : SCENE_CHARACTER_X;
   return h('svg', {
-    className: `assemble-day-character__scene is-${dayPhase} is-${load}`,
-    viewBox: '0 0 56 48',
+    className: `assemble-day-character__scene is-${dayPhase} is-${load} is-${place}`,
+    viewBox: `0 0 ${SCENE_WIDTH} 48`,
+    preserveAspectRatio: 'xMidYMid slice',
     'aria-hidden': 'true',
     focusable: 'false',
     shapeRendering: 'crispEdges',
@@ -681,44 +925,41 @@ function CharacterScene({ presentation }: { presentation: CharacterPresentation 
     'data-pose': pose,
     'data-expression': expression,
     'data-load': load,
+    'data-place': place,
   },
-  h('rect', { className: 'scene-bg', x: 0, y: 0, width: 56, height: 48, rx: 2 }),
-  h('rect', { className: 'scene-floor', x: 1, y: 38, width: 54, height: 9 }),
-  h('rect', { className: 'scene-window', x: 35, y: 5, width: 16, height: 13 }),
-  h('path', { className: 'scene-mid', d: 'M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z' }),
-  h('path', { className: 'scene-ink', d: 'M35 5h16v2H35zm0 4h16v1H35z' }),
-  h('rect', { className: 'scene-ink', x: 5, y: 25, width: 14, height: 2 }),
-  h('rect', { className: 'scene-ink', x: 7, y: 27, width: 2, height: 11 }),
-  h('rect', { className: 'scene-ink', x: 16, y: 27, width: 2, height: 11 }),
-  h('rect', { className: 'scene-mid', x: 10, y: 21, width: 4, height: 4 }),
-  h('path', { className: 'scene-ink', d: 'M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z' }),
-  h('rect', { className: 'scene-ink', x: 41, y: 25, width: 11, height: 13 }),
-  h('rect', { className: 'scene-bg', x: 43, y: 27, width: 7, height: 3 }),
-  h('rect', { className: 'scene-bg', x: 43, y: 32, width: 1, height: 4 }),
-  h('rect', { className: 'scene-bg', x: 46, y: 31, width: 1, height: 5 }),
-  h('rect', { className: 'scene-bg', x: 49, y: 32, width: 1, height: 4 }),
-  h('path', { className: 'scene-ink', d: 'M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z' }),
-  dayPhase === 'night' && h('path', { className: 'scene-highlight', d: 'M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z' }),
-  load === 'pressured' && h('g', { className: 'scene-pressure', 'data-pressure-marks': 'true' },
-    h('path', { d: 'M22 14h1v-3h1v4h-2z' }),
-    h('path', { d: 'M26 13h1V9h1v5h-2z' }),
-    h('path', { d: 'M32 14h1v-3h1v4h-2z' }),
-  ),
-  recovering && h('g', { className: 'scene-stool' },
+  h('rect', { className: 'scene-bg', x: 0, y: 0, width: SCENE_WIDTH, height: 48 }),
+  h('rect', { className: 'scene-floor', x: 0, y: 38, width: SCENE_WIDTH, height: 10 }),
+  ...scenePlaceBack(place, dayPhase === 'night'),
+  recovering && !inCar && place !== 'work' && place !== 'living' && h('g', { key: 'stool', className: 'scene-stool', transform: `translate(${characterX},0)` },
     h('rect', { className: 'scene-ink', x: 24, y: 36, width: 10, height: 2 }),
     h('rect', { className: 'scene-ink', x: 25, y: 38, width: 2, height: 5 }),
     h('rect', { className: 'scene-ink', x: 31, y: 38, width: 2, height: 5 }),
   ),
-  h('g', { className: `scene-character pose-${pose}` },
-    h('rect', { className: 'scene-skin', x: 25, y: headY, width: 8, height: 8 }),
-    h('path', { className: 'scene-ink', d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
-    h('rect', { className: 'scene-ink', x: 27, y: headY + 3, width: 1, height: 1 }),
-    h('rect', { className: 'scene-ink', x: 31, y: headY + 3, width: 1, height: 1 }),
-    h('path', { className: 'scene-ink scene-mouth', d: mouth }),
-    h('rect', { className: 'scene-mid', x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
-    h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
-    h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` }),
-  ));
+  // Три уровня намеренно: клип по стеклу, затем сдвиг в место, и только внутри — слой позы, у которого свой CSS-transform.
+  h('g', { key: 'character', clipPath: inCar ? 'url(#assemble-day-car-window)' : undefined },
+    h('g', { transform: `translate(${characterX},0)` },
+    h('g', { className: `scene-character pose-${pose}` },
+      h('rect', { className: 'scene-skin', x: 25, y: headY, width: 8, height: 8 }),
+      h('path', { className: 'scene-ink', d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
+      h('rect', { className: 'scene-ink', x: 27, y: headY + 3, width: 1, height: 1 }),
+      h('rect', { className: 'scene-ink', x: 31, y: headY + 3, width: 1, height: 1 }),
+      h('path', { className: 'scene-ink scene-mouth', d: mouth }),
+      h('rect', { className: 'scene-mid', x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
+      !inCar && h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
+      !inCar && h('path', { className: 'scene-ink', d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` }),
+    ),
+    ),
+  ),
+  ...scenePlaceFront(place),
+  load === 'pressured' && h('g', { key: 'pressure', className: 'scene-pressure', 'data-pressure-marks': 'true', transform: `translate(${characterX},0)` },
+    h('path', { d: 'M22 14h1v-3h1v4h-2z' }),
+    h('path', { d: 'M26 13h1V9h1v5h-2z' }),
+    h('path', { d: 'M32 14h1v-3h1v4h-2z' }),
+  ),
+  inCar && h('clipPath', { key: 'car-clip', id: 'assemble-day-car-window' },
+    h('rect', { x: 70, y: 17, width: 18, height: 8 }),
+  ),
+  );
 }
 
 function StatusPill({ label, value, tone }: { label: string; value: string; tone: string }) {
@@ -809,7 +1050,14 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-action-id="${nextId}"]`)?.focus());
   };
   if (resultRevision === session.revision && session.lastStepSummary) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
-  if (periodSummary?.kind === 'day') return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod }));
+  if (periodSummary && periodSummary.kind !== 'week') {
+    const closesWeek = session.periodSummaries.some((item) => item.kind === 'week');
+    const closesMonth = session.periodSummaries.some((item) => item.kind === 'month');
+    const nextLabel = periodSummary.kind === 'month'
+      ? 'Продолжить жизнь'
+      : closesMonth ? 'Посмотреть итог месяца' : closesWeek ? 'Посмотреть итог недели' : 'Перейти к следующему дню';
+    return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod, nextLabel }));
+  }
   if (periodSummary?.kind === 'week') return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
   if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
   const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === 'planning_plan');
@@ -890,14 +1138,21 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
   );
 }
 
-function DaySummaryCard({ summary, onContinue }: { summary: PeriodSummary; onContinue: () => void }) {
-  return h('section', { className: 'assemble-day-card assemble-day-summary' },
-    h('span', { className: 'assemble-day-eyebrow' }, 'Итог дня'),
+const PERIOD_EYEBROW: Record<PeriodSummary['kind'], string> = { day: 'Итог дня', week: 'Итог недели', month: 'Итог месяца' };
+
+function DaySummaryCard({ summary, onContinue, nextLabel }: { summary: PeriodSummary; onContinue: () => void; nextLabel: string }) {
+  return h('section', { className: `assemble-day-card assemble-day-summary assemble-day-summary--${summary.kind}` },
+    h('span', { className: 'assemble-day-eyebrow' }, PERIOD_EYEBROW[summary.kind]),
     h('h2', null, summary.title),
     h('p', null, summary.headline),
     h('p', { className: 'assemble-day-summary__causal' }, summary.causalLink),
     h('p', { className: 'assemble-day-summary__carry' }, summary.carryover),
-    h('button', { type: 'button', className: 'assemble-day-primary', onClick: onContinue }, summary.completedDayIndex < 6 ? 'Перейти к следующему дню' : 'Посмотреть итог недели'),
+    summary.axes?.length ? h('div', { className: 'assemble-day-outcome-grid' }, ...summary.axes.map((axis) => h('article', { key: axis.id, className: `is-${axis.direction}` }, h('strong', null, axis.title), h('span', null, axis.summary)))) : null,
+    summary.openThreads?.length ? h('details', { className: 'assemble-day-details' },
+      h('summary', null, 'Что осталось открытым'),
+      h('ul', { className: 'assemble-day-list' }, ...summary.openThreads.map((item, index) => h('li', { key: `${index}:${item}` }, item))),
+    ) : null,
+    h('button', { type: 'button', className: 'assemble-day-primary', onClick: onContinue }, nextLabel),
   );
 }
 
@@ -1026,13 +1281,20 @@ function MonthScreen({ session, plan, onGoalChange, onConfirm, onGoWeek, onGoDay
 function journalGroups(session: CampaignSession) {
   const development = getCharacterDevelopment(session.state);
   return session.diagnostics.decisions.slice().reverse().map((decision) => {
-    const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === 'action' ? decision.stepIndex + 1 : decision.stepIndex) && (decision.kind === 'planning' ? entry.sourceId === 'planning_plan' : entry.sourceId !== 'planning_plan'));
-    const title = decision.kind === 'planning' ? 'Контракт недели' : `${eventCopy(decision.eventId).title} → ${actionCopy(decision.eventId, decision.actionId).label}`;
+    const sourceFor = (kind: DiagnosticDecision['kind']) => kind === 'planning' ? 'planning_plan' : kind === 'employment' ? 'employment_setup' : null;
+    const wantedSource = sourceFor(decision.kind);
+    const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === 'action' ? decision.stepIndex + 1 : decision.stepIndex)
+      && (wantedSource ? entry.sourceId === wantedSource : entry.sourceId !== 'planning_plan' && entry.sourceId !== 'employment_setup'));
+    const title = decision.kind === 'planning'
+      ? 'Контракт недели'
+      : decision.kind === 'employment'
+        ? 'Формат занятости'
+        : `${eventCopy(decision.eventId).title} → ${actionCopy(decision.eventId, decision.actionId).label}`;
     const primary = entries.find((entry) => !/decisionGeometry|activeEventId/.test(entry.resultPath)) || entries[0];
     const carry = entries.find((entry) => /scheduledEffects|commitments|character|family|work|weeklyRules|monthlyPriorities/.test(entry.resultPath));
     const carriedDevelopment = carry && development.find((item) => item.evidencePaths.includes(carry.resultPath));
-    const evidence = decision.kind === 'planning'
-      ? getRuleEvidence('re_planning_capacity_tradeoff')
+    const evidence = decision.kind === 'planning' || decision.kind === 'employment'
+      ? getRuleEvidence(decision.kind === 'planning' ? 're_planning_capacity_tradeoff' : 're_financial_pressure_choice')
       : getRuleEvidence(registries.actions[decision.actionId]!.ruleEvidenceId);
     return { id:`decision:${decision.revision}`, title, primary, carry, carrySummary:carriedDevelopment?.summary, evidence, entries };
   }).filter((group) => group.entries.length);
@@ -1119,6 +1381,49 @@ function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }: {
   );
 }
 
+/**
+ * Первый слой выбора формата: цель кампании, три варианта с их уступкой и одно
+ * доминирующее действие. Необратимость названа прямо и не спрятана во второй
+ * слой, потому что это критическое последствие.
+ */
+function EmploymentScreen({ selected, onSelect, onConfirm, message, tone }: any) {
+  const view = employmentSetupView();
+  return h('div', { className: 'assemble-day-screen assemble-day-screen--setup' },
+    h('section', { className: 'assemble-day-card assemble-day-goal' },
+      h('span', { className: 'assemble-day-eyebrow' }, 'Цель кампании'),
+      h('h2', null, view.goal.title),
+      h('p', null, view.goal.summary),
+    ),
+    h('section', { className: 'assemble-day-card assemble-day-formats', 'aria-labelledby': 'assemble-day-format-title' },
+      h('h2', { id: 'assemble-day-format-title' }, 'С чего начинается месяц'),
+      h('p', null, 'Формат занятости задаёт доход, дорогу и то, насколько работа заходит в вечер. Он выбирается один раз и дальше меняется только историей кампании.'),
+      h('div', { className: 'assemble-day-formats__grid', role: 'radiogroup', 'aria-label': 'Формат занятости' },
+        ...view.formats.map((format: any) => h('button', {
+          key: format.id,
+          type: 'button',
+          role: 'radio',
+          'aria-checked': selected === format.id ? 'true' : 'false',
+          className: 'assemble-day-format' + (selected === format.id ? ' is-selected' : ''),
+          onClick: () => onSelect(format.id),
+        },
+          h('strong', null, format.title),
+          h('span', { className: 'assemble-day-format__summary' }, format.summary),
+          h('span', { className: 'assemble-day-format__tradeoff' }, format.tradeoff),
+          h('details', { className: 'assemble-day-format__details' },
+            h('summary', null, 'Подробнее'),
+            h('p', null, `Доход раз в две недели: ${format.fortnightIncomeRub.toLocaleString('ru-RU')} ₽${format.incomeVarianceRub ? ` ± ${format.incomeVarianceRub.toLocaleString('ru-RU')} ₽` : ''}.`),
+            h('p', null, format.commuteMinutesPerDay ? `Дорога: ${format.commuteMinutesPerDay} мин в день.` : 'Дороги нет.'),
+            h('p', null, format.eveningIntrusion),
+          ),
+        )),
+      ),
+      message && h('p', { className: 'assemble-day-plan-message is-' + (tone || ''), role: 'status' }, message),
+      h('button', { type: 'button', className: 'assemble-day-primary', disabled: !selected, onClick: onConfirm }, 'Подтвердить формат'),
+      h('small', null, 'Выбор фиксируется вместе с ритмом дохода и целью месяца и не переключается позже.'),
+    ),
+  );
+}
+
 function RestartPanel({ onConfirm, onCancel }: any) {
   return h('section', { className: 'assemble-day-card assemble-day-restart-confirm', role: 'alertdialog', 'aria-label': 'Начать кампанию заново' },
     h('span', { className: 'assemble-day-eyebrow' }, 'Новая кампания'),
@@ -1162,6 +1467,9 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     ? initialLoad.session.revision : null);
   const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState<number | null>(null);
   const [restartOpen, setRestartOpen] = React.useState(false);
+  const [employmentDraft, setEmploymentDraft] = React.useState('');
+  const [employmentMessage, setEmploymentMessage] = React.useState('');
+  const [employmentTone, setEmploymentTone] = React.useState('');
 
   const startNew = () => {
     const next = createSession();
@@ -1171,6 +1479,9 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     setForceNewCampaign(true);
     setRestartOpen(false);
     setActiveScreen('day');
+    setEmploymentDraft('');
+    setEmploymentMessage('');
+    setEmploymentTone('');
     setSelectedActionId('');
     setSaveMessage('');
     setSaveTone('');
@@ -1253,6 +1564,23 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     }
   };
 
+  const confirmEmploymentChoice = () => {
+    if (!employmentDraft) return;
+    try {
+      const nextSession = confirmEmployment(session, employmentDraft as EmploymentFormat);
+      const result = saveCheckpoint(store, clientId, nextSession, forceNewCampaign);
+      if (result.status === 'saved') setForceNewCampaign(false);
+      setSession(nextSession);
+      setPlanningDraft(planningDraftFromState(nextSession.state));
+      setEmploymentMessage(result.status === 'saved' ? 'Формат принят: ритм дохода и цель месяца зафиксированы.' : result.message);
+      setEmploymentTone(result.status === 'saved' ? 'success' : 'error');
+      if (result.status === 'saved') setActiveScreen('week');
+    } catch (error) {
+      setEmploymentMessage('Формат не удалось зафиксировать. Повторите выбор.');
+      setEmploymentTone('error');
+    }
+  };
+
   if (loadIssue) return h('div', { className: 'assemble-day-app' }, h(RecoveryPanel, { result: loadIssue, onNew: startNew, onExit }));
 
   const screens: Record<string, any> = {
@@ -1291,6 +1619,22 @@ function AssembleDayGame({ onExit = () => undefined }: { onExit?: () => void }) 
     life: h(LifeScreen, { session, onCopyTrace: copyTrace, traceMessage, traceTone, traceBusy }),
   };
 
+  // Пока формат не выбран, кампания не начинается: это первый и единственный
+  // шаг, поэтому переключатель масштабов не показывается и не конкурирует с ним.
+  if (!session.state.employment.format && !restartOpen) {
+    return h('div', { className: 'assemble-day-app' },
+      h('div', { className: 'assemble-day-shell' },
+        h('main', { className: 'assemble-day-content' }, h(EmploymentScreen, {
+          selected: employmentDraft,
+          onSelect: (format: string) => { setEmploymentDraft(format); setEmploymentMessage(''); setEmploymentTone(''); },
+          onConfirm: confirmEmploymentChoice,
+          message: employmentMessage,
+          tone: employmentTone,
+        })),
+      ),
+    );
+  }
+
   return h('div', { className: 'assemble-day-app' },
     h('div', { className: 'assemble-day-shell' },
       h('div', { className: 'assemble-day-topbar' },
@@ -1327,6 +1671,8 @@ HEYS.PlanningGames.modules['assemble-day'] = {
     confirmAction,
     getPlanningCampaignView,
     confirmPlanning,
+    confirmEmployment,
+    employmentSetupView,
     getPeriodBoundaries: (before: GameState, after: GameState) => getPeriodBoundaries(before, after, registries),
     getPeriodSummary: (state: GameState, boundary: PeriodBoundary) => getPeriodSummary(state, boundary, registries),
     loadCheckpoint,

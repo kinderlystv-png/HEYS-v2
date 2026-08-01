@@ -2,6 +2,7 @@ import type {
   CharacterPresentation,
   CharacterPresentationIndicator,
   CharacterPresentationLevel,
+  CharacterPresentationPlace,
   CharacterPresentationReason,
   Confidence,
   GameState,
@@ -123,6 +124,72 @@ function dayPhase(minuteOfDay: number): CharacterPresentation['frame']['dayPhase
   return 'evening';
 }
 
+/**
+ * Место действия — контент, а не логика: событие знает, где человек находится.
+ * Незнакомое событие не ломает сцену, а падает в место по фазе дня.
+ */
+const PLACE_BY_EVENT: Record<string, CharacterPresentationPlace> = {
+  routine_morning_start: 'bedroom',
+  routine_work_stretch: 'work',
+  routine_evening_wind: 'living',
+  family_partner_offers: 'living',
+  family_child_evening: 'living',
+  routine_family_moment: 'living',
+  mon_breakfast: 'kitchen',
+  mon_commute: 'commute',
+  mon_scope_expansion: 'work',
+  mon_lunch_window: 'kitchen',
+  mon_project_block: 'work',
+  mon_family_dinner: 'living',
+  tue_night_wakeup: 'bedroom',
+  tue_recovery_breakfast: 'kitchen',
+  tue_review_prep: 'work',
+  tue_review_result: 'work',
+  tue_pickup_conflict: 'commute',
+  tue_evening_pressure: 'living',
+  wed_commute_delay: 'commute',
+  wed_long_meeting: 'work',
+  wed_late_lunch: 'kitchen',
+  wed_school_call: 'work',
+  wed_work_recovery: 'work',
+  wed_evening_stabilize: 'living',
+  thu_hybrid_start: 'bedroom',
+  thu_colleague_help_debt: 'work',
+  thu_extra_project: 'work',
+  thu_movement_plan: 'living',
+  thu_family_evening: 'living',
+  fri_deadline_plan: 'work',
+  fri_final_issue: 'work',
+  fri_lunch: 'kitchen',
+  fri_submit: 'work',
+  fri_after_submit: 'work',
+  fri_family_plan: 'living',
+  sat_school_event: 'commute',
+  sat_household_stock: 'kitchen',
+  sat_meal_prep: 'kitchen',
+  sat_social_invite: 'living',
+  sat_evening_close: 'living',
+  sun_recovery_start: 'bedroom',
+  sun_family_time: 'living',
+  sun_week_preparation: 'kitchen',
+  sun_early_finish: 'living',
+};
+
+const PLACE_BY_PHASE: Record<CharacterPresentation['frame']['dayPhase'], CharacterPresentationPlace> = {
+  morning: 'bedroom',
+  day: 'work',
+  evening: 'living',
+  night: 'bedroom',
+};
+
+function place(
+  activeEventId: string | null,
+  phase: CharacterPresentation['frame']['dayPhase'],
+): CharacterPresentationPlace {
+  const mapped = activeEventId ? PLACE_BY_EVENT[activeEventId] : undefined;
+  return mapped ?? PLACE_BY_PHASE[phase];
+}
+
 function indicator(
   id: CharacterPresentationIndicator['id'],
   value: number,
@@ -146,12 +213,14 @@ export function getCharacterPresentation(state: GameState): CharacterPresentatio
   if (state.family.friction >= 67) reasons.push({ id: 'family_load', label: 'Семейная нагрузка', summary: 'Незакрытая семейная нагрузка поддерживает текущее напряжение.' });
   const visibleReasons = reasons.slice(0, 2);
   const summary = `Энергия ${energy.value}, настроение ${mood.value}, напряжение ${tension.value}.`;
+  const phase = dayPhase(state.clock.minuteOfDay);
   return {
     frame: {
       pose: energy.level === 'low' ? 'depleted' : state.accumulators.recoveryNeed >= 67 || state.vitals.physicalFatigue >= 67 ? 'recovering' : 'steady',
       expression: mood.level === 'high' ? 'bright' : mood.level === 'low' ? 'subdued' : 'neutral',
       load: tension.level === 'high' ? 'pressured' : 'calm',
-      dayPhase: dayPhase(state.clock.minuteOfDay),
+      dayPhase: phase,
+      place: place(state.activeEventId, phase),
     },
     indicators: [energy, mood, tension],
     reasons: visibleReasons,

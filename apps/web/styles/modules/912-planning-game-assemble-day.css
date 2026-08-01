@@ -79,6 +79,36 @@
 .assemble-day-content,
 .assemble-day-screen { display: grid; gap: 14px; }
 
+/* Выбор формата занятости: цель сверху, три равных варианта, одно действие. */
+.assemble-day-goal strong { display: block; }
+.assemble-day-formats__grid { display: grid; gap: 10px; margin: 14px 0; }
+
+.assemble-day-format {
+  display: grid;
+  gap: 6px;
+  min-height: 48px;
+  padding: 16px;
+  border: 1px solid var(--ad-line);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ad-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.assemble-day-format.is-selected { border-color: var(--ad-brand); box-shadow: 0 0 0 2px rgba(67, 69, 135, 0.14); }
+.assemble-day-format strong { font-size: 16px; font-weight: 800; }
+.assemble-day-format__summary { color: var(--ad-muted); font-size: 13px; line-height: 1.4; }
+.assemble-day-format__tradeoff { color: var(--ad-brand); font-size: 12px; font-weight: 750; }
+.assemble-day-format__details summary { display: flex; align-items: center; min-height: 44px; color: var(--ad-brand); font-size: 13px; font-weight: 750; cursor: pointer; }
+.assemble-day-format__details p { margin: 0 0 4px; font-size: 13px; }
+.assemble-day-summary--month { border-color: color-mix(in srgb, var(--ad-brand) 35%, var(--ad-line)); }
+
+@media (min-width: 760px) {
+  .assemble-day-formats__grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 .assemble-day-card {
   min-width: 0;
   padding: clamp(18px, 3vw, 28px);
@@ -102,14 +132,15 @@
 
 .assemble-day-character {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
 }
 
+/* Панорама во всю ширину карточки. Холст шире видимой области, поэтому масштаб
+   остаётся целым на любом экране, а срезаются только края обстановки. */
 .assemble-day-character__scene {
   display: block;
-  width: 112px;
+  width: 100%;
   height: 96px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--ad-scene-ink) 32%, transparent);
@@ -395,6 +426,7 @@
 
 .assemble-day-tabs button:focus-visible,
 .assemble-day-restart:focus-visible,
+.assemble-day-format:focus-visible,
 .assemble-day-option:focus-visible,
 .assemble-day-rule:focus-visible,
 .assemble-day-goals button:focus-visible,
@@ -432,8 +464,8 @@
   .assemble-day-topbar { gap: 6px; }
   .assemble-day-restart { padding: 0 10px; font-size: 12px; border-radius: 16px; }
   .assemble-day-card { border-radius: 20px; }
-  .assemble-day-character { grid-template-columns: 96px minmax(0, 1fr); gap: 13px; }
-  .assemble-day-character__scene { width: 96px; height: 82px; }
+  .assemble-day-character { gap: 10px; }
+  .assemble-day-character__scene { height: 82px; }
   .assemble-day-status { padding: 10px 8px; }
   .assemble-day-status strong { font-size: 11px; }
   .assemble-day-week-day span { display: none; }
@@ -471,5 +503,6 @@
 :is(body.dark, [data-theme="dark"]) .assemble-day-tabs { background: rgba(23, 23, 34, 0.92); }
 :is(body.dark, [data-theme="dark"]) .assemble-day-restart { background: rgba(23, 23, 34, 0.92); color: var(--ad-muted); }
 :is(body.dark, [data-theme="dark"]) .assemble-day-option { background: #242431; color: var(--ad-ink); }
+:is(body.dark, [data-theme="dark"]) .assemble-day-format { background: #242431; color: var(--ad-ink); }
 :is(body.dark, [data-theme="dark"]) .assemble-day-rule,
 :is(body.dark, [data-theme="dark"]) .assemble-day-goals button { background: #242431; color: var(--ad-ink); }

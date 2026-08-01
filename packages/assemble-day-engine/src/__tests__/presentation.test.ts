@@ -49,6 +49,43 @@ describe('character presentation projection', () => {
     expect(getCharacterPresentation(recovering)).toEqual(getCharacterPresentation(structuredClone(recovering)));
   });
 
+  it('derives the place from the active event and falls back to the day phase', () => {
+    const state = neutralState();
+    state.clock.minuteOfDay = 8 * 60;
+
+    state.activeEventId = 'mon_commute';
+    expect(getCharacterPresentation(state).frame.place).toBe('commute');
+
+    state.activeEventId = 'mon_breakfast';
+    expect(getCharacterPresentation(state).frame.place).toBe('kitchen');
+
+    state.activeEventId = 'mon_project_block';
+    expect(getCharacterPresentation(state).frame.place).toBe('work');
+
+    // Незнакомое или отсутствующее событие не оставляет сцену без места.
+    state.activeEventId = 'event_that_does_not_exist';
+    expect(getCharacterPresentation(state).frame.place).toBe('bedroom');
+    state.activeEventId = null;
+    expect(getCharacterPresentation(state).frame.place).toBe('bedroom');
+    state.clock.minuteOfDay = 14 * 60;
+    expect(getCharacterPresentation(state).frame.place).toBe('work');
+    state.clock.minuteOfDay = 20 * 60;
+    expect(getCharacterPresentation(state).frame.place).toBe('living');
+  });
+
+  it('keeps the place independent from energy, mood and tension', () => {
+    const state = neutralState();
+    state.clock.minuteOfDay = 14 * 60;
+    state.activeEventId = 'mon_project_block';
+    const baseline = getCharacterPresentation(state).frame.place;
+
+    const drained = structuredClone(state);
+    drained.vitals.energy = 15;
+    drained.vitals.mood = 15;
+    drained.vitals.tension = 90;
+    expect(getCharacterPresentation(drained).frame.place).toBe(baseline);
+  });
+
   it('limits explanations, exposes no raw values and leaves state untouched', () => {
     const state = neutralState();
     state.accumulators.sleepDebtMin = 240;

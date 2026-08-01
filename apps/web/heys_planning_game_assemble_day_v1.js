@@ -154,6 +154,62 @@
     if (minuteOfDay < 1080) return "day";
     return "evening";
   }
+  var PLACE_BY_EVENT = {
+    routine_morning_start: "bedroom",
+    routine_work_stretch: "work",
+    routine_evening_wind: "living",
+    family_partner_offers: "living",
+    family_child_evening: "living",
+    routine_family_moment: "living",
+    mon_breakfast: "kitchen",
+    mon_commute: "commute",
+    mon_scope_expansion: "work",
+    mon_lunch_window: "kitchen",
+    mon_project_block: "work",
+    mon_family_dinner: "living",
+    tue_night_wakeup: "bedroom",
+    tue_recovery_breakfast: "kitchen",
+    tue_review_prep: "work",
+    tue_review_result: "work",
+    tue_pickup_conflict: "commute",
+    tue_evening_pressure: "living",
+    wed_commute_delay: "commute",
+    wed_long_meeting: "work",
+    wed_late_lunch: "kitchen",
+    wed_school_call: "work",
+    wed_work_recovery: "work",
+    wed_evening_stabilize: "living",
+    thu_hybrid_start: "bedroom",
+    thu_colleague_help_debt: "work",
+    thu_extra_project: "work",
+    thu_movement_plan: "living",
+    thu_family_evening: "living",
+    fri_deadline_plan: "work",
+    fri_final_issue: "work",
+    fri_lunch: "kitchen",
+    fri_submit: "work",
+    fri_after_submit: "work",
+    fri_family_plan: "living",
+    sat_school_event: "commute",
+    sat_household_stock: "kitchen",
+    sat_meal_prep: "kitchen",
+    sat_social_invite: "living",
+    sat_evening_close: "living",
+    sun_recovery_start: "bedroom",
+    sun_family_time: "living",
+    sun_week_preparation: "kitchen",
+    sun_early_finish: "living"
+  };
+  var PLACE_BY_PHASE = {
+    morning: "bedroom",
+    day: "work",
+    evening: "living",
+    night: "bedroom"
+  };
+  function place(activeEventId, phase) {
+    const mapped = activeEventId ? PLACE_BY_EVENT[activeEventId] : void 0;
+    return mapped ?? PLACE_BY_PHASE[phase];
+  }
   function indicator(id, value, label, labels, warning) {
     const level = getCharacterPresentationLevel(value);
     return { id, label, level, value: labels[level], tone: warning(level) ? "warning" : id === "energy" ? "calm" : "neutral" };
@@ -170,12 +226,14 @@
     if (state.family.friction >= 67) reasons.push({ id: "family_load", label: "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430", summary: "\u041D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u0430\u044F \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0435 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435." });
     const visibleReasons = reasons.slice(0, 2);
     const summary = `\u042D\u043D\u0435\u0440\u0433\u0438\u044F ${energy.value}, \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 ${mood.value}, \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435 ${tension.value}.`;
+    const phase = dayPhase(state.clock.minuteOfDay);
     return {
       frame: {
         pose: energy.level === "low" ? "depleted" : state.accumulators.recoveryNeed >= 67 || state.vitals.physicalFatigue >= 67 ? "recovering" : "steady",
         expression: mood.level === "high" ? "bright" : mood.level === "low" ? "subdued" : "neutral",
         load: tension.level === "high" ? "pressured" : "calm",
-        dayPhase: dayPhase(state.clock.minuteOfDay)
+        dayPhase: phase,
+        place: place(state.activeEventId, phase)
       },
       indicators: [energy, mood, tension],
       reasons: visibleReasons,
@@ -599,7 +657,7 @@
     tags: ["causal", "echo", "family_reciprocity"]
   }, { kind: "compare", path: "family.partner.trust", op: "gte", value: 79 });
   var ROUTINE_SITUATIONS = [
-    { id: "routine_morning_start", fromMin: 240, toMin: 660, actionIds: ["eat_quick_base", "walk_short", "drink_coffee_100"] },
+    { id: "routine_morning_start", fromMin: 240, toMin: 660, actionIds: ["eat_quick_base", "walk_short", "drink_coffee_100", "work_standard"] },
     { id: "routine_work_stretch", fromMin: 540, toMin: 1080, actionIds: ["work_standard", "walk_short", "ask_colleague_help"] },
     { id: "routine_family_moment", fromMin: 900, toMin: 1380, actionIds: ["protect_commitment", "take_family_load", "walk_short", "wind_down_early", "work_standard"] },
     { id: "routine_evening_wind", fromMin: 1020, toMin: 1439, actionIds: ["wind_down_early", "walk_short", "work_late"] },
@@ -644,7 +702,7 @@
     cooldownDays: 2,
     load: { external: 0, total: 8, size: "small" },
     onOpenEffects: [{ op: "add_state", path: "vitals.tension", delta: -4, reason: "\u0440\u0430\u0437\u0434\u0435\u043B\u0451\u043D\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }],
-    actionIds: ["take_family_load", "protect_commitment", "wind_down_early"],
+    actionIds: ["take_family_load", "protect_commitment", "wind_down_early", "work_standard"],
     tags: ["causal", "family_anchor_window", "family_reciprocity"]
   };
   events.family_child_evening = {
@@ -662,7 +720,7 @@
     cooldownDays: 1,
     load: { external: 0, total: 10, size: "small" },
     onOpenEffects: [],
-    actionIds: ["take_family_load", "protect_commitment", "walk_short"],
+    actionIds: ["take_family_load", "protect_commitment", "walk_short", "work_standard"],
     tags: ["causal", "family_anchor_window"]
   };
   var registries = { actions, events, slots };
@@ -705,13 +763,6 @@
       causalJournal: []
     };
   }
-
-  // ../../packages/assemble-day-engine/src/content/planning.ts
-  var WEEKLY_RULE_PRESETS = [
-    { id: "protect_sleep", kind: "protected_window", title: "\u0417\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0432\u043E\u0432\u0440\u0435\u043C\u044F", summary: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0432\u0435\u0447\u0435\u0440\u043D\u044E\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0434\u043D\u0435.", source: "\u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E", tradeoff: "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0434\u043E\u043B\u044C\u0448\u0435 \u0438 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u0435\u0435." },
-    { id: "family_anchor", kind: "protected_window", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u0432\u0435\u0447\u0435\u0440\u0430", summary: "\u041D\u0435 \u043E\u0442\u0434\u0430\u0432\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u043E\u043A\u043D\u0430 \u043D\u043E\u0432\u044B\u043C \u0437\u0430\u0434\u0430\u0447\u0430\u043C.", source: "\u0434\u0432\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043E\u043A\u043D\u0430", tradeoff: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0432 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u043C \u043E\u043A\u043D\u0435 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u0435\u0442 \u0440\u0438\u0441\u043A \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439." },
-    { id: "work_blocks", kind: "work_boundary", title: "\u0417\u0430\u0449\u0438\u0442\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0431\u043B\u043E\u043A\u0438", summary: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u0432\u0440\u0435\u043C\u044F \u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0434\u043E \u0441\u0440\u043E\u043A\u0430.", source: "\u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u043E\u043A\u043D\u0430 \u0434\u043E 18:00", tradeoff: "\u0414\u0440\u0443\u0433\u0438\u0435 \u0434\u0435\u043B\u0430 \u0432\u043D\u0443\u0442\u0440\u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u043E\u043A\u043D\u0430 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u044E\u0442 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435." }
-  ];
 
   // ../../packages/assemble-day-engine/src/rng.ts
   function fnv1a32(value) {
@@ -972,6 +1023,102 @@
     const backlog = state.work.tasks.filter((task) => task.status === "open" || task.status === "renegotiated").reduce((sum, task) => sum + task.remainingMin, 0);
     if (backlog !== state.work.projectBacklogMin) fail("state.work.projectBacklogMin", `expected ${backlog}`);
   }
+
+  // ../../packages/assemble-day-engine/src/employment.ts
+  var EMPLOYMENT_PROFILES = {
+    office: {
+      id: "office",
+      title: "\u041E\u0444\u0438\u0441",
+      summary: "\u0420\u043E\u0432\u043D\u044B\u0439 \u0434\u043E\u0445\u043E\u0434 \u0438 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u044B\u0439 \u0433\u0440\u0430\u0444\u0438\u043A, \u043D\u043E \u0434\u043E\u0440\u043E\u0433\u0430 \u0441\u044A\u0435\u0434\u0430\u0435\u0442 \u0432\u0440\u0435\u043C\u044F \u043A\u0430\u0436\u0434\u044B\u0439 \u0434\u0435\u043D\u044C.",
+      fortnightIncomeRub: 72e3,
+      incomeVarianceRub: 0,
+      commuteMinutesPerDay: 90,
+      eveningIntrusion: "\u0412\u0435\u0447\u0435\u0440 \u043E\u0431\u044B\u0447\u043D\u043E \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u043C.",
+      tradeoff: "\u0421\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0438 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u0432 \u043E\u0431\u043C\u0435\u043D \u043D\u0430 \u0432\u0440\u0435\u043C\u044F \u0432 \u0434\u043E\u0440\u043E\u0433\u0435."
+    },
+    remote: {
+      id: "remote",
+      title: "\u0423\u0434\u0430\u043B\u0451\u043D\u043D\u043E",
+      summary: "\u0414\u043E\u0440\u043E\u0433\u0438 \u043D\u0435\u0442, \u043D\u043E \u0440\u0430\u0431\u043E\u0442\u0430 \u043B\u0435\u0433\u0447\u0435 \u043F\u0440\u043E\u0441\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432 \u0432\u0435\u0447\u0435\u0440.",
+      fortnightIncomeRub: 66e3,
+      incomeVarianceRub: 0,
+      commuteMinutesPerDay: 0,
+      eveningIntrusion: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0447\u0430\u0449\u0435 \u0437\u0430\u0445\u043E\u0434\u0438\u0442 \u0432 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E.",
+      tradeoff: "\u0421\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u0434\u043D\u044F \u0432 \u043E\u0431\u043C\u0435\u043D \u043D\u0430 \u0440\u0430\u0437\u043C\u044B\u0442\u0443\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u0432\u0435\u0447\u0435\u0440\u0430."
+    },
+    project: {
+      id: "project",
+      title: "\u041F\u0440\u043E\u0435\u043A\u0442\u043D\u043E",
+      summary: "\u0414\u043E\u0445\u043E\u0434 \u0432\u044B\u0448\u0435 \u0432 \u0443\u0434\u0430\u0447\u043D\u044B\u0439 \u043F\u0435\u0440\u0438\u043E\u0434 \u0438 \u0437\u0430\u043C\u0435\u0442\u043D\u043E \u043D\u0438\u0436\u0435 \u0432 \u0441\u043F\u043E\u043A\u043E\u0439\u043D\u044B\u0439.",
+      fortnightIncomeRub: 58e3,
+      incomeVarianceRub: 34e3,
+      commuteMinutesPerDay: 30,
+      eveningIntrusion: "\u0412\u0435\u0447\u0435\u0440 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u043E\u0442 \u0444\u0430\u0437\u044B \u043F\u0440\u043E\u0435\u043A\u0442\u0430.",
+      tradeoff: "\u0411\u043E\u043B\u044C\u0448\u0438\u0439 \u043F\u043E\u0442\u043E\u043B\u043E\u043A \u0434\u043E\u0445\u043E\u0434\u0430 \u0432 \u043E\u0431\u043C\u0435\u043D \u043D\u0430 \u0435\u0433\u043E \u043D\u0435\u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u044C."
+    }
+  };
+  var FINANCIAL_GOAL_TARGET_RUB = 6e4;
+  var FORTNIGHT_DAYS = 14;
+  function employmentSetupView() {
+    return {
+      goal: {
+        id: "reserve_by_month",
+        title: "\u0424\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u044B\u0439 \u0440\u0435\u0437\u0435\u0440\u0432 \u043A \u043A\u043E\u043D\u0446\u0443 \u043C\u0435\u0441\u044F\u0446\u0430",
+        targetRub: FINANCIAL_GOAL_TARGET_RUB,
+        summary: `\u0426\u0435\u043B\u044C \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u2014 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C ${FINANCIAL_GOAL_TARGET_RUB.toLocaleString("ru-RU")} \u20BD \u0440\u0435\u0437\u0435\u0440\u0432\u0430 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0445 \u043F\u043B\u0430\u0442\u0435\u0436\u0435\u0439.`
+      },
+      formats: Object.values(EMPLOYMENT_PROFILES).map((profile) => ({ ...profile }))
+    };
+  }
+  function reduceEmploymentSetup(input) {
+    try {
+      validateState(input.state);
+    } catch (error) {
+      throw new ReducerError("invalid_state", "employment", void 0, [error instanceof Error ? error.message : String(error)]);
+    }
+    const profile = EMPLOYMENT_PROFILES[input.format];
+    if (!profile) throw new ReducerError("invalid_content", "employment", "employment_format", ["unknown employment format"]);
+    if (input.state.employment.format) throw new ReducerError("invalid_content", "employment", "employment_format", ["employment_locked:\u0444\u043E\u0440\u043C\u0430\u0442 \u0437\u0430\u043D\u044F\u0442\u043E\u0441\u0442\u0438 \u0443\u0436\u0435 \u0432\u044B\u0431\u0440\u0430\u043D"]);
+    if (input.state.clock.stepIndex > 0) throw new ReducerError("invalid_content", "employment", "employment_format", ["employment_late:\u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438"]);
+    const state = structuredClone(input.state);
+    const startJournal = state.causalJournal.length;
+    const incomes = [];
+    for (let dayIndex = FORTNIGHT_DAYS - 1; dayIndex < input.campaignDays; dayIndex += FORTNIGHT_DAYS) {
+      incomes.push({ id: `salary_d${dayIndex}`, dueDayIndex: dayIndex, amountRub: profile.fortnightIncomeRub, status: "expected", source: "salary" });
+    }
+    state.economy.expectedIncome = incomes;
+    state.economy.obligations = state.economy.obligations.map((item) => ({ ...item }));
+    state.economy.financialGoal = { id: "reserve_by_month", targetRub: FINANCIAL_GOAL_TARGET_RUB, reservedRub: 0 };
+    state.employment = { format: profile.id, chosenAtStepIndex: state.clock.stepIndex };
+    state.scheduledEffects = [
+      ...state.scheduledEffects.filter((item) => item.sourceId !== "salary" && item.sourceId !== "bonus"),
+      ...incomes.map((income) => ({
+        id: `${income.id}_effect`,
+        sourceId: income.id,
+        trigger: { kind: "at_time", dayIndex: income.dueDayIndex, minuteOfDay: 1020 },
+        effects: [
+          ...profile.incomeVarianceRub ? [{ op: "bounded_roll", value: { seedKey: `income:${income.id}`, targetPath: `economy.expectedIncome.${incomes.indexOf(income)}.amountRub`, minDelta: -profile.incomeVarianceRub, maxDelta: profile.incomeVarianceRub }, reason: "\u043D\u0435\u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442\u043D\u044B\u0439 \u0434\u043E\u0445\u043E\u0434" }] : [],
+          { op: "receive_income", incomeId: income.id, reason: "\u0434\u043E\u0445\u043E\u0434 \u043F\u043E \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u043C\u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0443" }
+        ],
+        status: "pending"
+      }))
+    ];
+    const journalBase = { dayIndex: state.clock.dayIndex, stepIndex: state.clock.stepIndex, sourceId: "employment_setup", confidence: "established" };
+    state.causalJournal.push(
+      { ...journalBase, id: `journal:${state.rng.seed}:employment:${startJournal}:format`, mechanism: `\u0444\u043E\u0440\u043C\u0430\u0442 \u0437\u0430\u043D\u044F\u0442\u043E\u0441\u0442\u0438 \u0432\u044B\u0431\u0440\u0430\u043D: ${profile.title}`, resultPath: "employment.format", before: canonicalJson(input.state.employment.format), after: canonicalJson(profile.id) },
+      { ...journalBase, id: `journal:${state.rng.seed}:employment:${startJournal + 1}:income`, mechanism: "\u0440\u0438\u0442\u043C \u0434\u043E\u0445\u043E\u0434\u0430 \u0441\u043E\u0437\u0434\u0430\u043D \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u043C \u0444\u043E\u0440\u043C\u0430\u0442\u043E\u043C", resultPath: "economy.expectedIncome", before: canonicalJson(input.state.economy.expectedIncome.map((item) => item.id)), after: canonicalJson(incomes.map((item) => item.id)) },
+      { ...journalBase, id: `journal:${state.rng.seed}:employment:${startJournal + 2}:goal`, mechanism: "\u0444\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u0430\u044F \u0446\u0435\u043B\u044C \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u0430", resultPath: "economy.financialGoal", before: canonicalJson(input.state.economy.financialGoal ?? null), after: canonicalJson(state.economy.financialGoal) }
+    );
+    validateState(state);
+    return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
+  }
+
+  // ../../packages/assemble-day-engine/src/content/planning.ts
+  var WEEKLY_RULE_PRESETS = [
+    { id: "protect_sleep", kind: "protected_window", title: "\u0417\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u044C \u0434\u0435\u043D\u044C \u0432\u043E\u0432\u0440\u0435\u043C\u044F", summary: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0432\u0435\u0447\u0435\u0440\u043D\u044E\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0434\u043D\u0435.", source: "\u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0447\u0435\u0440\u043D\u0435\u0435 \u043E\u043A\u043D\u043E", tradeoff: "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0434\u043E\u043B\u044C\u0448\u0435 \u0438 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u0435\u0435." },
+    { id: "family_anchor", kind: "protected_window", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u0432\u0435\u0447\u0435\u0440\u0430", summary: "\u041D\u0435 \u043E\u0442\u0434\u0430\u0432\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0435 \u043E\u043A\u043D\u0430 \u043D\u043E\u0432\u044B\u043C \u0437\u0430\u0434\u0430\u0447\u0430\u043C.", source: "\u0434\u0432\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u044B\u0445 \u043E\u043A\u043D\u0430", tradeoff: "\u0420\u0430\u0431\u043E\u0442\u0430 \u0432 \u0441\u0435\u043C\u0435\u0439\u043D\u043E\u043C \u043E\u043A\u043D\u0435 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u0435\u0442 \u0440\u0438\u0441\u043A \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0435\u0439." },
+    { id: "work_blocks", kind: "work_boundary", title: "\u0417\u0430\u0449\u0438\u0442\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0431\u043B\u043E\u043A\u0438", summary: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u0432\u0440\u0435\u043C\u044F \u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0434\u043E \u0441\u0440\u043E\u043A\u0430.", source: "\u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u043E\u043A\u043D\u0430 \u0434\u043E 18:00", tradeoff: "\u0414\u0440\u0443\u0433\u0438\u0435 \u0434\u0435\u043B\u0430 \u0432\u043D\u0443\u0442\u0440\u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0433\u043E \u043E\u043A\u043D\u0430 \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u044E\u0442 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435." }
+  ];
 
   // ../../packages/assemble-day-engine/src/planning.ts
   var WEEKLY_RULE_SLOTS = 2;
@@ -1556,19 +1703,27 @@
   function sortQueue(state) {
     state.scheduledEffects.sort((a, b) => triggerSortValue(a) - triggerSortValue(b) || a.id.localeCompare(b.id));
   }
-  function applyDueScheduled(state, changes) {
+  function cashConsumedBy(effects) {
+    return effects.reduce((sum, effect) => effect.op === "consume_resource" && effect.path === "economy.cashRub" ? sum + effect.amount : sum, 0);
+  }
+  function applyDueScheduled(state, changes, reservedCash = 0) {
     for (const item of state.scheduledEffects) if (item.status === "pending" && item.trigger.kind === "after_steps") item.trigger.remainingSteps -= 1;
     sortQueue(state);
     for (const item of state.scheduledEffects) {
       if (item.status !== "pending") continue;
       const due = item.trigger.kind === "at_time" ? item.trigger.dayIndex < state.clock.dayIndex || item.trigger.dayIndex === state.clock.dayIndex && item.trigger.minuteOfDay <= state.clock.minuteOfDay : item.trigger.kind === "after_steps" ? item.trigger.remainingSteps <= 0 : evaluateCondition(state, item.trigger.condition);
       if (!due) continue;
+      const cashCost = cashConsumedBy(item.effects);
+      if (cashCost > 0 && state.economy.cashRub - cashCost < reservedCash) {
+        pushChange(changes, item.sourceId, "\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0435 \u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043E: \u043E\u043D\u043E \u043E\u0441\u0442\u0430\u0432\u0438\u043B\u043E \u0431\u044B \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0431\u0435\u0437 \u043E\u043F\u043B\u0430\u0442\u044B", `scheduledEffects.${item.id}.status`, "pending", "pending", "established");
+        continue;
+      }
       for (const effect of item.effects) applyEffect(state, effect, item.sourceId, changes);
       item.status = "applied";
       pushChange(changes, item.sourceId, "\u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u044D\u0444\u0444\u0435\u043A\u0442 \u043F\u0440\u0438\u043C\u0435\u043D\u0451\u043D", `scheduledEffects.${item.id}.status`, "pending", "applied", "established");
     }
   }
-  function advanceToActionEnd(state, slot, duration, changes) {
+  function advanceToActionEnd(state, slot, duration, changes, reservedCash = 0) {
     const absoluteNow = state.clock.dayIndex * 1440 + state.clock.minuteOfDay, absoluteAnchor = slot.dayIndex * 1440 + slot.minuteOfDay;
     if (slot.sleepBeforeMin) applySleep(state, changes, slot.sleepBeforeMin, slot.interruptionsMin ?? 0, "sleep_transition", `\u0441\u043E\u043D \u043F\u0435\u0440\u0435\u0434 slot ${slot.slot}`);
     const idle = Math.max(0, absoluteAnchor - absoluteNow - (slot.sleepBeforeMin ?? 0));
@@ -1579,7 +1734,7 @@
     }
     if (slot.sleepBeforeMin) state.clock.awakeSinceMinute = Math.max(0, slot.minuteOfDay - idle);
     advanceBackground(state, changes, duration, "action_time", "\u044D\u0444\u0444\u0435\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0434\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F");
-    applyDueScheduled(state, changes);
+    applyDueScheduled(state, changes, reservedCash);
   }
   function scheduleActionEffects(state, actionId, registries2, changes) {
     const action2 = registries2.actions[actionId];
@@ -1689,7 +1844,7 @@
       for (const geometry of appliedAction.geometryReasons) for (const path of geometry.inputPaths) pushChange(changes, input.actionId, `\u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u044F \u0440\u0435\u0448\u0435\u043D\u0438\u044F: ${geometry.reason}`, `decisionGeometry.${input.actionId}.${path}`, getPath(preActionState, path, preContext), geometry.reason, "established");
       mark(STAGES[0]);
       currentStage = STAGES[1];
-      advanceToActionEnd(state, slot, appliedAction.effectiveTimeMin, changes);
+      advanceToActionEnd(state, slot, appliedAction.effectiveTimeMin, changes, appliedAction.moneyRub);
       mark(STAGES[1]);
       currentStage = STAGES[2];
       const cashBefore = state.economy.cashRub;
@@ -1965,6 +2120,23 @@
     });
   }
   function getPeriodSummary(state, boundary, registries2) {
+    if (boundary.kind === "month") {
+      const outcome = getCampaignOutcome(state);
+      const goal = state.economy.financialGoal;
+      const reserve = computeDecisionContext(state).cashAfterNextObligationsRub;
+      const goalDirection = !goal ? "traded" : reserve >= goal.targetRub ? "kept" : reserve >= goal.targetRub / 2 ? "traded" : "strained";
+      return {
+        id: boundary.id,
+        kind: "month",
+        completedDayIndex: boundary.completedDayIndex,
+        title: `\u041C\u0435\u0441\u044F\u0446 ${boundary.periodIndex + 1} \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D`,
+        headline: goal ? `\u0424\u0438\u043D\u0430\u043D\u0441\u043E\u0432\u0430\u044F \u0446\u0435\u043B\u044C \u043C\u0435\u0441\u044F\u0446\u0430: ${goal.targetRub.toLocaleString("ru-RU")} \u20BD \u0440\u0435\u0437\u0435\u0440\u0432\u0430. \u0421\u0435\u0439\u0447\u0430\u0441 \u043F\u043E\u0441\u043B\u0435 \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0445 \u043F\u043B\u0430\u0442\u0435\u0436\u0435\u0439 ${reserve.toLocaleString("ru-RU")} \u20BD.` : "\u041C\u0435\u0441\u044F\u0446 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D: \u0438\u0442\u043E\u0433 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0437 \u0442\u0435\u0445 \u0436\u0435 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u043B\u0438\u043D\u0438\u0439, \u0447\u0442\u043E \u0438 \u043D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0439.",
+        causalLink: "\u041C\u0435\u0441\u044F\u0446 \u0441\u043E\u0431\u0438\u0440\u0430\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F \u043D\u0435\u0434\u0435\u043B\u044C: \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0451\u043D\u043D\u044B\u0435 \u043D\u0438\u0442\u0438, \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438 \u0438 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435.",
+        carryover: outcome.openThreads.length ? `${outcome.openThreads.length} \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044F\u0442 \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446.` : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0438\u0442\u0435\u0439 \u043D\u0430 \u043A\u043E\u043D\u0435\u0446 \u043C\u0435\u0441\u044F\u0446\u0430 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C.",
+        axes: outcome.axes.map((axis) => axis.id === "finance" ? { ...axis, direction: goalDirection } : axis),
+        openThreads: outcome.openThreads
+      };
+    }
     if (boundary.kind === "week") {
       const outcome = getCampaignOutcome(state);
       const resolved = state.commitments.filter((item) => item.status === "resolved").length;
@@ -2200,7 +2372,7 @@
   function diagnosticsFrom(value, revision, anchorRevision = 0) {
     if (value === void 0) return { version: 1, history: revision === 0 ? "complete" : "legacy_partial", decisions: [] };
     const ledger = value;
-    if (!ledger || typeof ledger !== "object" || ledger.version !== 1 || !["complete", "legacy_partial"].includes(ledger.history) || !Array.isArray(ledger.decisions) || ledger.decisions.some((decision) => !decision || typeof decision !== "object" || !["action", "planning"].includes(decision.kind) || !Number.isInteger(decision.revision) || !Number.isInteger(decision.stepIndex) || decision.kind === "action" && (typeof decision.eventId !== "string" || typeof decision.actionId !== "string") || decision.kind === "planning" && !decision.plan)) {
+    if (!ledger || typeof ledger !== "object" || ledger.version !== 1 || !["complete", "legacy_partial"].includes(ledger.history) || !Array.isArray(ledger.decisions) || ledger.decisions.some((decision) => !decision || typeof decision !== "object" || !["action", "planning", "employment"].includes(decision.kind) || !Number.isInteger(decision.revision) || !Number.isInteger(decision.stepIndex) || decision.kind === "action" && (typeof decision.eventId !== "string" || typeof decision.actionId !== "string") || decision.kind === "planning" && !decision.plan || decision.kind === "employment" && typeof decision.format !== "string")) {
       throw new Error("invalid diagnostic ledger");
     }
     const decisions = structuredClone(ledger.decisions);
@@ -2260,6 +2432,12 @@
     const next = { ...session, state: output.state, lastStepSummary, periodSummaries, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
     return periodSummaries.length ? reanchor(next) : next;
   }
+  function confirmEmployment(session, format) {
+    const output = reduceEmploymentSetup({ state: session.state, format, campaignDays: CAMPAIGN_DAYS });
+    const revision = session.revision + 1;
+    const decision = { kind: "employment", revision, stepIndex: session.state.clock.stepIndex, format };
+    return { ...session, state: output.state, revision, diagnostics: { ...session.diagnostics, decisions: [...session.diagnostics.decisions, decision] } };
+  }
   function confirmPlanning(session, plan) {
     const output = reducePlanningStep({ state: session.state, plan });
     const revision = session.revision + 1;
@@ -2294,6 +2472,9 @@
         lastStepSummary = getStepSummary({ before: state, output, registries, eventTitle: copy.title, actionLabel: chosenCopy.label });
         periodSummaries = getPeriodBoundaries(state, output.state, registries).map((boundary) => getPeriodSummary(output.state, boundary, registries));
         state = output.state;
+      } else if (decision.kind === "employment") {
+        if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`employment replay mismatch at revision ${decision.revision}`);
+        state = reduceEmploymentSetup({ state, format: decision.format, campaignDays: CAMPAIGN_DAYS }).state;
       } else {
         if (state.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
         state = reducePlanningStep({ state, plan: decision.plan }).state;
@@ -2464,6 +2645,23 @@
               stateAfterHash: output.stateHash
             });
             replayState = output.state;
+          } else if (decision.kind === "employment") {
+            if (replayState.clock.stepIndex !== decision.stepIndex) throw new Error(`employment replay mismatch at revision ${decision.revision}`);
+            const contextBefore = computeDecisionContext(replayState);
+            const stateBefore = diagnosticStateSnapshot(replayState);
+            const stateBeforeHash = stateHash(replayState);
+            const output = reduceEmploymentSetup({ state: replayState, format: decision.format, campaignDays: CAMPAIGN_DAYS });
+            steps.push({
+              ...decision,
+              contextBefore,
+              stateBefore,
+              stateBeforeHash,
+              reducerStages: [{ stage: "employment", hash: output.stateHash }],
+              journalEntries: output.journalEntries,
+              stateAfter: diagnosticStateSnapshot(output.state),
+              stateAfterHash: output.stateHash
+            });
+            replayState = output.state;
           } else {
             if (replayState.clock.stepIndex !== decision.stepIndex) throw new Error(`planning replay mismatch at revision ${decision.revision}`);
             const contextBefore = computeDecisionContext(replayState);
@@ -2581,68 +2779,298 @@
     }
   }
   var h = (...args) => window.React.createElement(...args);
+  var SCENE_WIDTH = 180;
+  var SCENE_CHARACTER_X = 58;
+  function sceneWindow(dx, night) {
+    return h(
+      "g",
+      { key: `window-${dx}`, transform: `translate(${dx},0)` },
+      h("rect", { className: "scene-window", x: 35, y: 5, width: 16, height: 13 }),
+      h("path", { className: "scene-mid", d: "M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z" }),
+      h("path", { className: "scene-ink", d: "M35 5h16v2H35zm0 4h16v1H35z" }),
+      night && h("path", { className: "scene-highlight", d: "M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z" })
+    );
+  }
+  function scenePicture(dx) {
+    return h("path", { key: `picture-${dx}`, className: "scene-ink", transform: `translate(${dx},0)`, d: "M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z" });
+  }
+  function sceneShelf(dx) {
+    return h(
+      "g",
+      { key: `shelf-${dx}`, transform: `translate(${dx},0)` },
+      h("rect", { className: "scene-ink", x: 41, y: 25, width: 11, height: 13 }),
+      h("rect", { className: "scene-bg", x: 43, y: 27, width: 7, height: 3 }),
+      h("rect", { className: "scene-bg", x: 43, y: 32, width: 1, height: 4 }),
+      h("rect", { className: "scene-bg", x: 46, y: 31, width: 1, height: 5 }),
+      h("rect", { className: "scene-bg", x: 49, y: 32, width: 1, height: 4 })
+    );
+  }
+  function sceneTable(dx, dy = 0) {
+    return h(
+      "g",
+      { key: `table-${dx}`, transform: `translate(${dx},${dy})` },
+      h("rect", { className: "scene-ink", x: 5, y: 25, width: 14, height: 2 }),
+      h("rect", { className: "scene-ink", x: 7, y: 27, width: 2, height: 11 }),
+      h("rect", { className: "scene-ink", x: 16, y: 27, width: 2, height: 11 })
+    );
+  }
+  function scenePlant(dx, dy = 0) {
+    return h(
+      "g",
+      { key: `plant-${dx}`, transform: `translate(${dx},${dy})` },
+      h("rect", { className: "scene-mid", x: 10, y: 21, width: 4, height: 4 }),
+      h("path", { className: "scene-ink", d: "M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z" })
+    );
+  }
+  function sceneSeat(kind, dx, dy) {
+    return kind === "chair" ? h(
+      "g",
+      { key: "seat", transform: `translate(${dx},${dy})` },
+      h("rect", { className: "scene-ink", x: 0, y: 0, width: 20, height: 12 }),
+      h("rect", { className: "scene-floor", x: 2, y: 2, width: 16, height: 8 }),
+      h("rect", { className: "scene-ink", x: 8, y: 12, width: 4, height: 4 }),
+      h("rect", { className: "scene-ink", x: 4, y: 16, width: 12, height: 2 })
+    ) : h(
+      "g",
+      { key: "seat", transform: `translate(${dx},${dy})` },
+      h("rect", { className: "scene-ink", x: 0, y: 0, width: 40, height: 8 }),
+      h("rect", { className: "scene-floor", x: 2, y: 2, width: 36, height: 6 }),
+      h("rect", { className: "scene-ink", x: 0, y: 8, width: 40, height: 10 }),
+      h("rect", { className: "scene-floor", x: 4, y: 10, width: 32, height: 6 }),
+      h("rect", { className: "scene-mid", x: 5, y: 3, width: 7, height: 5 }),
+      h("rect", { className: "scene-ink", x: 2, y: 18, width: 3, height: 3 }),
+      h("rect", { className: "scene-ink", x: 35, y: 18, width: 3, height: 3 })
+    );
+  }
+  function scenePlaceBack(place2, night) {
+    if (place2 === "bedroom") {
+      return [
+        scenePicture(14),
+        h(
+          "g",
+          { key: "bed", transform: "translate(14,16)" },
+          h("rect", { className: "scene-ink", x: 0, y: 6, width: 3, height: 16 }),
+          h("rect", { className: "scene-skin", x: 3, y: 14, width: 36, height: 3 }),
+          h("rect", { className: "scene-ink", x: 5, y: 9, width: 10, height: 1 }),
+          h("rect", { className: "scene-skin", x: 5, y: 10, width: 10, height: 4 }),
+          h("rect", { className: "scene-mid", x: 18, y: 12, width: 21, height: 5 }),
+          h("rect", { className: "scene-ink", x: 24, y: 12, width: 1, height: 5 }),
+          h("rect", { className: "scene-ink", x: 31, y: 12, width: 1, height: 5 }),
+          h("rect", { className: "scene-ink", x: 3, y: 17, width: 36, height: 2 }),
+          h("rect", { className: "scene-ink", x: 4, y: 19, width: 2, height: 3 }),
+          h("rect", { className: "scene-ink", x: 36, y: 19, width: 2, height: 3 })
+        ),
+        sceneTable(50),
+        scenePlant(49),
+        sceneWindow(65, night),
+        sceneShelf(90),
+        h(
+          "g",
+          { key: "door", transform: "translate(150,14)" },
+          h("rect", { className: "scene-ink", x: 0, y: 0, width: 16, height: 24 }),
+          h("rect", { className: "scene-bg", x: 2, y: 2, width: 12, height: 22 }),
+          h("rect", { className: "scene-mid", x: 11, y: 15, width: 2, height: 2 })
+        )
+      ];
+    }
+    if (place2 === "kitchen") {
+      return [
+        h(
+          "g",
+          { key: "kitchen", transform: "translate(22,0)" },
+          h("rect", { className: "scene-ink", x: 4, y: 6, width: 34, height: 12 }),
+          h("rect", { className: "scene-bg", x: 6, y: 8, width: 14, height: 8 }),
+          h("rect", { className: "scene-bg", x: 22, y: 8, width: 14, height: 8 }),
+          h("rect", { className: "scene-ink", x: 0, y: 25, width: 50, height: 2 }),
+          h("rect", { className: "scene-ink", x: 0, y: 27, width: 50, height: 11 }),
+          h("rect", { className: "scene-bg", x: 2, y: 29, width: 22, height: 7 }),
+          h("rect", { className: "scene-bg", x: 26, y: 29, width: 22, height: 7 })
+        ),
+        h(
+          "g",
+          { key: "pot", transform: "translate(38,15)" },
+          h("rect", { className: "scene-ink", x: 2, y: 0, width: 1, height: 2 }),
+          h("rect", { className: "scene-ink", x: 5, y: 1, width: 1, height: 2 }),
+          h("rect", { className: "scene-ink", x: 0, y: 4, width: 8, height: 1 }),
+          h("rect", { className: "scene-mid", x: 0, y: 5, width: 8, height: 5 })
+        ),
+        sceneWindow(65, night),
+        h(
+          "g",
+          { key: "fridge", transform: "translate(126,14)" },
+          h("rect", { className: "scene-ink", x: 0, y: 0, width: 16, height: 24 }),
+          h("rect", { className: "scene-bg", x: 2, y: 2, width: 12, height: 8 }),
+          h("rect", { className: "scene-bg", x: 2, y: 12, width: 12, height: 10 }),
+          h("rect", { className: "scene-mid", x: 11, y: 4, width: 1, height: 4 })
+        )
+      ];
+    }
+    if (place2 === "commute") {
+      return [
+        h(
+          "g",
+          { key: "skyline", className: "scene-mid" },
+          h("rect", { x: 6, y: 22, width: 9, height: 16 }),
+          h("rect", { x: 18, y: 17, width: 7, height: 21 }),
+          h("rect", { x: 28, y: 25, width: 10, height: 13 }),
+          h("rect", { x: 142, y: 20, width: 8, height: 18 }),
+          h("rect", { x: 154, y: 26, width: 10, height: 12 }),
+          h("rect", { x: 168, y: 15, width: 8, height: 23 })
+        ),
+        h(
+          "g",
+          { key: "marks", className: "scene-skin" },
+          h("rect", { x: 4, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 28, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 52, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 76, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 100, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 124, y: 42, width: 8, height: 1 }),
+          h("rect", { x: 148, y: 42, width: 8, height: 1 })
+        ),
+        h(
+          "g",
+          { key: "car", transform: "translate(44,14)" },
+          h("rect", { className: "scene-ink", x: 22, y: 0, width: 46, height: 1 }),
+          h("rect", { className: "scene-mid", x: 22, y: 1, width: 46, height: 11 }),
+          h("rect", { className: "scene-ink", x: 22, y: 1, width: 1, height: 11 }),
+          h("rect", { className: "scene-ink", x: 67, y: 1, width: 1, height: 11 }),
+          h("rect", { className: "scene-window", x: 26, y: 3, width: 18, height: 8 }),
+          h("rect", { className: "scene-window", x: 48, y: 3, width: 16, height: 8 }),
+          h("rect", { className: "scene-ink", x: 0, y: 11, width: 88, height: 1 }),
+          h("rect", { className: "scene-mid", x: 0, y: 12, width: 88, height: 10 }),
+          h("rect", { className: "scene-ink", x: 0, y: 22, width: 88, height: 1 }),
+          h("rect", { className: "scene-ink", x: 0, y: 12, width: 1, height: 10 }),
+          h("rect", { className: "scene-ink", x: 87, y: 12, width: 1, height: 10 }),
+          h("rect", { className: "scene-skin", x: 84, y: 16, width: 3, height: 3 }),
+          h("rect", { className: "scene-skin", x: 1, y: 16, width: 3, height: 3 }),
+          h("rect", { className: "scene-ink", x: 15, y: 18, width: 10, height: 10 }),
+          h("rect", { className: "scene-ink", x: 14, y: 20, width: 12, height: 6 }),
+          h("rect", { className: "scene-bg", x: 18, y: 21, width: 4, height: 4 }),
+          h("rect", { className: "scene-ink", x: 65, y: 18, width: 10, height: 10 }),
+          h("rect", { className: "scene-ink", x: 64, y: 20, width: 12, height: 6 }),
+          h("rect", { className: "scene-bg", x: 68, y: 21, width: 4, height: 4 })
+        ),
+        h(
+          "g",
+          { key: "traffic", transform: "translate(150,6)" },
+          h("rect", { className: "scene-ink", x: 4, y: 13, width: 3, height: 19 }),
+          h("rect", { className: "scene-ink", x: 0, y: 0, width: 11, height: 13 }),
+          h("rect", { className: "scene-mid", x: 3, y: 2, width: 5, height: 4 }),
+          h("rect", { className: "scene-bg", x: 3, y: 8, width: 5, height: 3 })
+        )
+      ];
+    }
+    if (place2 === "work") {
+      return [scenePicture(8), sceneShelf(-25), sceneSeat("chair", 76, 20), sceneWindow(112, night)];
+    }
+    return [
+      scenePicture(8),
+      sceneShelf(-25),
+      sceneSeat("sofa", 62, 17),
+      sceneWindow(88, night),
+      h(
+        "g",
+        { key: "lamp", transform: "translate(110,16)" },
+        h("rect", { className: "scene-mid", x: 0, y: 0, width: 9, height: 1 }),
+        h("rect", { className: "scene-mid", x: 1, y: 1, width: 7, height: 5 }),
+        h("rect", { className: "scene-ink", x: 4, y: 6, width: 1, height: 14 }),
+        h("rect", { className: "scene-ink", x: 1, y: 20, width: 7, height: 2 })
+      ),
+      sceneTable(125),
+      scenePlant(124)
+    ];
+  }
+  function scenePlaceFront(place2) {
+    if (place2 !== "work") return [];
+    return [
+      h(
+        "g",
+        { key: "desk", transform: "translate(60,33)" },
+        h("rect", { className: "scene-ink", x: 0, y: 0, width: 56, height: 2 }),
+        h("rect", { className: "scene-ink", x: 2, y: 2, width: 2, height: 3 }),
+        h("rect", { className: "scene-ink", x: 52, y: 2, width: 2, height: 3 })
+      ),
+      scenePlant(55, 8),
+      h(
+        "g",
+        { key: "monitor", transform: "translate(98,18)" },
+        h("rect", { className: "scene-ink", x: 0, y: 0, width: 18, height: 13 }),
+        h("rect", { className: "scene-bg", x: 2, y: 2, width: 14, height: 9 }),
+        h("rect", { className: "scene-mid", x: 4, y: 4, width: 8, height: 1 }),
+        h("rect", { className: "scene-mid", x: 4, y: 6, width: 10, height: 1 }),
+        h("rect", { className: "scene-mid", x: 4, y: 8, width: 6, height: 1 }),
+        h("rect", { className: "scene-ink", x: 7, y: 13, width: 4, height: 2 })
+      )
+    ];
+  }
   function CharacterScene({ presentation }) {
-    const { pose, expression, load, dayPhase: dayPhase2 } = presentation.frame;
+    const { pose, expression, load, dayPhase: dayPhase2, place: place2 } = presentation.frame;
     const recovering = pose === "recovering";
     const headY = recovering ? 22 : pose === "depleted" ? 21 : 18;
     const bodyY = recovering ? 28 : pose === "depleted" ? 28 : 25;
-    const mouth = expression === "bright" ? `M27 ${headY + 5}h1v1h2v-1h1` : expression === "subdued" ? `M27 ${headY + 6}h1v-1h2v1h1` : `M27 ${headY + 6}h4`;
-    const frameKey = `${pose}:${expression}:${load}:${dayPhase2}`;
+    const mouth = expression === "bright" ? `M28 ${headY + 6}h2v1h-2zM27 ${headY + 5}h1v1h-1zM30 ${headY + 5}h1v1h-1z` : expression === "subdued" ? `M28 ${headY + 6}h2v1h-2z` : `M27 ${headY + 6}h4v1h-4z`;
+    const frameKey = `${pose}:${expression}:${load}:${dayPhase2}:${place2}`;
+    const inCar = place2 === "commute";
+    const characterX = inCar ? 48 : SCENE_CHARACTER_X;
     return h(
       "svg",
       {
-        className: `assemble-day-character__scene is-${dayPhase2} is-${load}`,
-        viewBox: "0 0 56 48",
+        className: `assemble-day-character__scene is-${dayPhase2} is-${load} is-${place2}`,
+        viewBox: `0 0 ${SCENE_WIDTH} 48`,
+        preserveAspectRatio: "xMidYMid slice",
         "aria-hidden": "true",
         focusable: "false",
         shapeRendering: "crispEdges",
         "data-frame-key": frameKey,
         "data-pose": pose,
         "data-expression": expression,
-        "data-load": load
+        "data-load": load,
+        "data-place": place2
       },
-      h("rect", { className: "scene-bg", x: 0, y: 0, width: 56, height: 48, rx: 2 }),
-      h("rect", { className: "scene-floor", x: 1, y: 38, width: 54, height: 9 }),
-      h("rect", { className: "scene-window", x: 35, y: 5, width: 16, height: 13 }),
-      h("path", { className: "scene-mid", d: "M36 16v-3h2v2h2v-4h2v3h2v-2h2v3h4v1z" }),
-      h("path", { className: "scene-ink", d: "M35 5h16v2H35zm0 4h16v1H35z" }),
-      h("rect", { className: "scene-ink", x: 5, y: 25, width: 14, height: 2 }),
-      h("rect", { className: "scene-ink", x: 7, y: 27, width: 2, height: 11 }),
-      h("rect", { className: "scene-ink", x: 16, y: 27, width: 2, height: 11 }),
-      h("rect", { className: "scene-mid", x: 10, y: 21, width: 4, height: 4 }),
-      h("path", { className: "scene-ink", d: "M12 21v-4h1v2h2v1h-2v1zm0-1H9v-1h2v-2h1z" }),
-      h("rect", { className: "scene-ink", x: 41, y: 25, width: 11, height: 13 }),
-      h("rect", { className: "scene-bg", x: 43, y: 27, width: 7, height: 3 }),
-      h("rect", { className: "scene-bg", x: 43, y: 32, width: 1, height: 4 }),
-      h("rect", { className: "scene-bg", x: 46, y: 31, width: 1, height: 5 }),
-      h("rect", { className: "scene-bg", x: 49, y: 32, width: 1, height: 4 }),
-      h("path", { className: "scene-ink", d: "M6 6h10v10H6zm2 2v6h6V8zm1 1h2v2H9zm3 0h1v4h-1z" }),
-      dayPhase2 === "night" && h("path", { className: "scene-highlight", d: "M39 11h1v1h-1zm7-2h1v1h-1zm2 4h1v1h-1z" }),
-      load === "pressured" && h(
+      h("rect", { className: "scene-bg", x: 0, y: 0, width: SCENE_WIDTH, height: 48 }),
+      h("rect", { className: "scene-floor", x: 0, y: 38, width: SCENE_WIDTH, height: 10 }),
+      ...scenePlaceBack(place2, dayPhase2 === "night"),
+      recovering && !inCar && place2 !== "work" && place2 !== "living" && h(
         "g",
-        { className: "scene-pressure", "data-pressure-marks": "true" },
-        h("path", { d: "M22 14h1v-3h1v4h-2z" }),
-        h("path", { d: "M26 13h1V9h1v5h-2z" }),
-        h("path", { d: "M32 14h1v-3h1v4h-2z" })
-      ),
-      recovering && h(
-        "g",
-        { className: "scene-stool" },
+        { key: "stool", className: "scene-stool", transform: `translate(${characterX},0)` },
         h("rect", { className: "scene-ink", x: 24, y: 36, width: 10, height: 2 }),
         h("rect", { className: "scene-ink", x: 25, y: 38, width: 2, height: 5 }),
         h("rect", { className: "scene-ink", x: 31, y: 38, width: 2, height: 5 })
       ),
+      // Три уровня намеренно: клип по стеклу, затем сдвиг в место, и только внутри — слой позы, у которого свой CSS-transform.
       h(
         "g",
-        { className: `scene-character pose-${pose}` },
-        h("rect", { className: "scene-skin", x: 25, y: headY, width: 8, height: 8 }),
-        h("path", { className: "scene-ink", d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
-        h("rect", { className: "scene-ink", x: 27, y: headY + 3, width: 1, height: 1 }),
-        h("rect", { className: "scene-ink", x: 31, y: headY + 3, width: 1, height: 1 }),
-        h("path", { className: "scene-ink scene-mouth", d: mouth }),
-        h("rect", { className: "scene-mid", x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
-        h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
-        h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` })
+        { key: "character", clipPath: inCar ? "url(#assemble-day-car-window)" : void 0 },
+        h(
+          "g",
+          { transform: `translate(${characterX},0)` },
+          h(
+            "g",
+            { className: `scene-character pose-${pose}` },
+            h("rect", { className: "scene-skin", x: 25, y: headY, width: 8, height: 8 }),
+            h("path", { className: "scene-ink", d: `M25 ${headY + 1}v-2h7v1h2v5h-1v-4z` }),
+            h("rect", { className: "scene-ink", x: 27, y: headY + 3, width: 1, height: 1 }),
+            h("rect", { className: "scene-ink", x: 31, y: headY + 3, width: 1, height: 1 }),
+            h("path", { className: "scene-ink scene-mouth", d: mouth }),
+            h("rect", { className: "scene-mid", x: 24, y: bodyY, width: 10, height: recovering ? 7 : 10 }),
+            !inCar && h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 6}h10v2h-4v4h-2v-4h-4z` : `M24 ${bodyY + 9}h4v8h-2v-6h-2zm6 0h4v2h-2v6h-2z` }),
+            !inCar && h("path", { className: "scene-ink", d: recovering ? `M24 ${bodyY + 1}h-2v5h2zm10 0h2v5h-2z` : `M24 ${bodyY + 1}h-2v7h2zm10 0h2v7h-2z` })
+          )
+        )
+      ),
+      ...scenePlaceFront(place2),
+      load === "pressured" && h(
+        "g",
+        { key: "pressure", className: "scene-pressure", "data-pressure-marks": "true", transform: `translate(${characterX},0)` },
+        h("path", { d: "M22 14h1v-3h1v4h-2z" }),
+        h("path", { d: "M26 13h1V9h1v5h-2z" }),
+        h("path", { d: "M32 14h1v-3h1v4h-2z" })
+      ),
+      inCar && h(
+        "clipPath",
+        { key: "car-clip", id: "assemble-day-car-window" },
+        h("rect", { x: 70, y: 17, width: 18, height: 8 })
       )
     );
   }
@@ -2746,7 +3174,12 @@
       window.requestAnimationFrame(() => document.querySelector(`[data-action-id="${nextId}"]`)?.focus());
     };
     if (resultRevision === session.revision && session.lastStepSummary) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
-    if (periodSummary?.kind === "day") return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod }));
+    if (periodSummary && periodSummary.kind !== "week") {
+      const closesWeek = session.periodSummaries.some((item) => item.kind === "week");
+      const closesMonth = session.periodSummaries.some((item) => item.kind === "month");
+      const nextLabel = periodSummary.kind === "month" ? "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u0436\u0438\u0437\u043D\u044C" : closesMonth ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430" : closesWeek ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438" : "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0434\u043D\u044E";
+      return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod, nextLabel }));
+    }
     if (periodSummary?.kind === "week") return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
     if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
     const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === "planning_plan");
@@ -2860,16 +3293,24 @@
       )
     );
   }
-  function DaySummaryCard({ summary, onContinue }) {
+  var PERIOD_EYEBROW = { day: "\u0418\u0442\u043E\u0433 \u0434\u043D\u044F", week: "\u0418\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438", month: "\u0418\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430" };
+  function DaySummaryCard({ summary, onContinue, nextLabel }) {
     return h(
       "section",
-      { className: "assemble-day-card assemble-day-summary" },
-      h("span", { className: "assemble-day-eyebrow" }, "\u0418\u0442\u043E\u0433 \u0434\u043D\u044F"),
+      { className: `assemble-day-card assemble-day-summary assemble-day-summary--${summary.kind}` },
+      h("span", { className: "assemble-day-eyebrow" }, PERIOD_EYEBROW[summary.kind]),
       h("h2", null, summary.title),
       h("p", null, summary.headline),
       h("p", { className: "assemble-day-summary__causal" }, summary.causalLink),
       h("p", { className: "assemble-day-summary__carry" }, summary.carryover),
-      h("button", { type: "button", className: "assemble-day-primary", onClick: onContinue }, summary.completedDayIndex < 6 ? "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0434\u043D\u044E" : "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438")
+      summary.axes?.length ? h("div", { className: "assemble-day-outcome-grid" }, ...summary.axes.map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("span", null, axis.summary)))) : null,
+      summary.openThreads?.length ? h(
+        "details",
+        { className: "assemble-day-details" },
+        h("summary", null, "\u0427\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C"),
+        h("ul", { className: "assemble-day-list" }, ...summary.openThreads.map((item, index) => h("li", { key: `${index}:${item}` }, item)))
+      ) : null,
+      h("button", { type: "button", className: "assemble-day-primary", onClick: onContinue }, nextLabel)
     );
   }
   function WeekScreen({ session, plan, onToggleRule, onContinue }) {
@@ -3030,12 +3471,14 @@
   function journalGroups(session) {
     const development = getCharacterDevelopment(session.state);
     return session.diagnostics.decisions.slice().reverse().map((decision) => {
-      const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === "action" ? decision.stepIndex + 1 : decision.stepIndex) && (decision.kind === "planning" ? entry.sourceId === "planning_plan" : entry.sourceId !== "planning_plan"));
-      const title = decision.kind === "planning" ? "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438" : `${eventCopy(decision.eventId).title} \u2192 ${actionCopy(decision.eventId, decision.actionId).label}`;
+      const sourceFor = (kind) => kind === "planning" ? "planning_plan" : kind === "employment" ? "employment_setup" : null;
+      const wantedSource = sourceFor(decision.kind);
+      const entries = meaningfulEntries(session.state.causalJournal).filter((entry) => entry.stepIndex === (decision.kind === "action" ? decision.stepIndex + 1 : decision.stepIndex) && (wantedSource ? entry.sourceId === wantedSource : entry.sourceId !== "planning_plan" && entry.sourceId !== "employment_setup"));
+      const title = decision.kind === "planning" ? "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438" : decision.kind === "employment" ? "\u0424\u043E\u0440\u043C\u0430\u0442 \u0437\u0430\u043D\u044F\u0442\u043E\u0441\u0442\u0438" : `${eventCopy(decision.eventId).title} \u2192 ${actionCopy(decision.eventId, decision.actionId).label}`;
       const primary = entries.find((entry) => !/decisionGeometry|activeEventId/.test(entry.resultPath)) || entries[0];
       const carry = entries.find((entry) => /scheduledEffects|commitments|character|family|work|weeklyRules|monthlyPriorities/.test(entry.resultPath));
       const carriedDevelopment = carry && development.find((item) => item.evidencePaths.includes(carry.resultPath));
-      const evidence2 = decision.kind === "planning" ? getRuleEvidence("re_planning_capacity_tradeoff") : getRuleEvidence(registries.actions[decision.actionId].ruleEvidenceId);
+      const evidence2 = decision.kind === "planning" || decision.kind === "employment" ? getRuleEvidence(decision.kind === "planning" ? "re_planning_capacity_tradeoff" : "re_financial_pressure_choice") : getRuleEvidence(registries.actions[decision.actionId].ruleEvidenceId);
       return { id: `decision:${decision.revision}`, title, primary, carry, carrySummary: carriedDevelopment?.summary, evidence: evidence2, entries };
     }).filter((group) => group.entries.length);
   }
@@ -3138,6 +3581,55 @@
       h("small", null, "\u041D\u043E\u0432\u043E\u0435 \u043F\u0440\u043E\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F.")
     );
   }
+  function EmploymentScreen({ selected, onSelect, onConfirm, message, tone }) {
+    const view = employmentSetupView();
+    return h(
+      "div",
+      { className: "assemble-day-screen assemble-day-screen--setup" },
+      h(
+        "section",
+        { className: "assemble-day-card assemble-day-goal" },
+        h("span", { className: "assemble-day-eyebrow" }, "\u0426\u0435\u043B\u044C \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438"),
+        h("h2", null, view.goal.title),
+        h("p", null, view.goal.summary)
+      ),
+      h(
+        "section",
+        { className: "assemble-day-card assemble-day-formats", "aria-labelledby": "assemble-day-format-title" },
+        h("h2", { id: "assemble-day-format-title" }, "\u0421 \u0447\u0435\u0433\u043E \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u043C\u0435\u0441\u044F\u0446"),
+        h("p", null, "\u0424\u043E\u0440\u043C\u0430\u0442 \u0437\u0430\u043D\u044F\u0442\u043E\u0441\u0442\u0438 \u0437\u0430\u0434\u0430\u0451\u0442 \u0434\u043E\u0445\u043E\u0434, \u0434\u043E\u0440\u043E\u0433\u0443 \u0438 \u0442\u043E, \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0431\u043E\u0442\u0430 \u0437\u0430\u0445\u043E\u0434\u0438\u0442 \u0432 \u0432\u0435\u0447\u0435\u0440. \u041E\u043D \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \u0438 \u0434\u0430\u043B\u044C\u0448\u0435 \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u0438\u0441\u0442\u043E\u0440\u0438\u0435\u0439 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438."),
+        h(
+          "div",
+          { className: "assemble-day-formats__grid", role: "radiogroup", "aria-label": "\u0424\u043E\u0440\u043C\u0430\u0442 \u0437\u0430\u043D\u044F\u0442\u043E\u0441\u0442\u0438" },
+          ...view.formats.map((format) => h(
+            "button",
+            {
+              key: format.id,
+              type: "button",
+              role: "radio",
+              "aria-checked": selected === format.id ? "true" : "false",
+              className: "assemble-day-format" + (selected === format.id ? " is-selected" : ""),
+              onClick: () => onSelect(format.id)
+            },
+            h("strong", null, format.title),
+            h("span", { className: "assemble-day-format__summary" }, format.summary),
+            h("span", { className: "assemble-day-format__tradeoff" }, format.tradeoff),
+            h(
+              "details",
+              { className: "assemble-day-format__details" },
+              h("summary", null, "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435"),
+              h("p", null, `\u0414\u043E\u0445\u043E\u0434 \u0440\u0430\u0437 \u0432 \u0434\u0432\u0435 \u043D\u0435\u0434\u0435\u043B\u0438: ${format.fortnightIncomeRub.toLocaleString("ru-RU")} \u20BD${format.incomeVarianceRub ? ` \xB1 ${format.incomeVarianceRub.toLocaleString("ru-RU")} \u20BD` : ""}.`),
+              h("p", null, format.commuteMinutesPerDay ? `\u0414\u043E\u0440\u043E\u0433\u0430: ${format.commuteMinutesPerDay} \u043C\u0438\u043D \u0432 \u0434\u0435\u043D\u044C.` : "\u0414\u043E\u0440\u043E\u0433\u0438 \u043D\u0435\u0442."),
+              h("p", null, format.eveningIntrusion)
+            )
+          ))
+        ),
+        message && h("p", { className: "assemble-day-plan-message is-" + (tone || ""), role: "status" }, message),
+        h("button", { type: "button", className: "assemble-day-primary", disabled: !selected, onClick: onConfirm }, "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \u0444\u043E\u0440\u043C\u0430\u0442"),
+        h("small", null, "\u0412\u044B\u0431\u043E\u0440 \u0444\u0438\u043A\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u0440\u0438\u0442\u043C\u043E\u043C \u0434\u043E\u0445\u043E\u0434\u0430 \u0438 \u0446\u0435\u043B\u044C\u044E \u043C\u0435\u0441\u044F\u0446\u0430 \u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u043E\u0437\u0436\u0435.")
+      )
+    );
+  }
   function RestartPanel({ onConfirm, onCancel }) {
     return h(
       "section",
@@ -3181,6 +3673,9 @@
     const [resultRevision, setResultRevision] = React.useState(() => initialLoad.status === "ready" && initialLoad.session.lastStepSummary && (initialLoad.session.diagnostics.decisions.at(-1)?.kind ?? initialLoad.session.anchor.lastDecisionKind) === "action" ? initialLoad.session.revision : null);
     const [periodSummaryIndex, setPeriodSummaryIndex] = React.useState(null);
     const [restartOpen, setRestartOpen] = React.useState(false);
+    const [employmentDraft, setEmploymentDraft] = React.useState("");
+    const [employmentMessage, setEmploymentMessage] = React.useState("");
+    const [employmentTone, setEmploymentTone] = React.useState("");
     const startNew = () => {
       const next = createSession();
       setSession(next);
@@ -3189,6 +3684,9 @@
       setForceNewCampaign(true);
       setRestartOpen(false);
       setActiveScreen("day");
+      setEmploymentDraft("");
+      setEmploymentMessage("");
+      setEmploymentTone("");
       setSelectedActionId("");
       setSaveMessage("");
       setSaveTone("");
@@ -3275,6 +3773,22 @@
         setTraceBusy(false);
       }
     };
+    const confirmEmploymentChoice = () => {
+      if (!employmentDraft) return;
+      try {
+        const nextSession = confirmEmployment(session, employmentDraft);
+        const result = saveCheckpoint(store, clientId, nextSession, forceNewCampaign);
+        if (result.status === "saved") setForceNewCampaign(false);
+        setSession(nextSession);
+        setPlanningDraft(planningDraftFromState(nextSession.state));
+        setEmploymentMessage(result.status === "saved" ? "\u0424\u043E\u0440\u043C\u0430\u0442 \u043F\u0440\u0438\u043D\u044F\u0442: \u0440\u0438\u0442\u043C \u0434\u043E\u0445\u043E\u0434\u0430 \u0438 \u0446\u0435\u043B\u044C \u043C\u0435\u0441\u044F\u0446\u0430 \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u044B." : result.message);
+        setEmploymentTone(result.status === "saved" ? "success" : "error");
+        if (result.status === "saved") setActiveScreen("week");
+      } catch (error) {
+        setEmploymentMessage("\u0424\u043E\u0440\u043C\u0430\u0442 \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0444\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u0442\u044C. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u044B\u0431\u043E\u0440.");
+        setEmploymentTone("error");
+      }
+    };
     if (loadIssue) return h("div", { className: "assemble-day-app" }, h(RecoveryPanel, { result: loadIssue, onNew: startNew, onExit }));
     const screens = {
       day: h(DayScreen, {
@@ -3328,6 +3842,27 @@
       }),
       life: h(LifeScreen, { session, onCopyTrace: copyTrace, traceMessage, traceTone, traceBusy })
     };
+    if (!session.state.employment.format && !restartOpen) {
+      return h(
+        "div",
+        { className: "assemble-day-app" },
+        h(
+          "div",
+          { className: "assemble-day-shell" },
+          h("main", { className: "assemble-day-content" }, h(EmploymentScreen, {
+            selected: employmentDraft,
+            onSelect: (format) => {
+              setEmploymentDraft(format);
+              setEmploymentMessage("");
+              setEmploymentTone("");
+            },
+            onConfirm: confirmEmploymentChoice,
+            message: employmentMessage,
+            tone: employmentTone
+          }))
+        )
+      );
+    }
     return h(
       "div",
       { className: "assemble-day-app" },
@@ -3373,6 +3908,8 @@
       confirmAction,
       getPlanningCampaignView,
       confirmPlanning,
+      confirmEmployment,
+      employmentSetupView,
       getPeriodBoundaries: (before, after) => getPeriodBoundaries(before, after, registries),
       getPeriodSummary: (state, boundary) => getPeriodSummary(state, boundary, registries),
       loadCheckpoint,

@@ -330,12 +330,15 @@ export interface CharacterPresentationIndicator {
   tone: CharacterPresentationTone;
 }
 export interface CharacterPresentationReason { id: 'sleep_debt' | 'caffeine' | 'hunger' | 'recovery_need' | 'family_load'; label: string; summary: string }
+export type CharacterPresentationPlace = 'bedroom' | 'kitchen' | 'commute' | 'work' | 'living';
 export interface CharacterPresentation {
   frame: {
     pose: 'steady' | 'depleted' | 'recovering';
     expression: 'subdued' | 'neutral' | 'bright';
     load: 'calm' | 'pressured';
     dayPhase: 'morning' | 'day' | 'evening' | 'night';
+    /** Место действия текущей развилки. Обстановка, а не отдельное состояние персонажа: собственных потребностей и persistence у неё нет. */
+    place: CharacterPresentationPlace;
   };
   indicators: [CharacterPresentationIndicator, CharacterPresentationIndicator, CharacterPresentationIndicator];
   reasons: CharacterPresentationReason[];
