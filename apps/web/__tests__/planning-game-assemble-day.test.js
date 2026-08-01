@@ -315,7 +315,8 @@ describe('Planning Assemble Day', () => {
     expect(view.valid).toBe(true);
     expect(view.conflicts.map((item) => item.id)).toContain('work_sleep_window');
     expect(view.capacity.weekly).toEqual({ totalSlots: 2, allocatedSlots: 2, remainingSlots: 0 });
-    expect(view.financialHorizon.cashAfterNextObligationsRub).toBe(131000);
+    expect(view.financialHorizon.expectedIncomeRub).toBe(1728000);
+    expect(view.financialHorizon.cashAfterNextObligationsRub).toBe(1715000);
     expect(store.set).not.toHaveBeenCalled();
 
     const confirmed = module.api.confirmPlanning(session, plan);
@@ -385,7 +386,7 @@ describe('Planning Assemble Day', () => {
     expect(() => module.api.createSession(`unsafe:${clientId}`)).toThrow(/opaque|UUID/i);
   });
 
-  it('keeps a checkpoint bounded by one period and rebuilds state, summary and trace from the anchor', () => {
+  it('keeps a year checkpoint bounded and renders week, month and year in the existing flow', { timeout: 180_000 }, () => {
     const first = loadModule();
     let session = startedSession(first.module, 'diagnostic-size');
     let earlySizeBytes = 0;
@@ -407,7 +408,7 @@ describe('Planning Assemble Day', () => {
     // растут вместе с длиной кампании, поэтому размер к концу недели остаётся
     // сопоставимым с размером после первой закрытой границы.
     expect(earlySizeBytes).toBeGreaterThan(0);
-    // Кампания идёт тридцать дней, но чекпойнт ограничен одним периодом,
+    // Кампания идёт полный модельный год, но чекпойнт ограничен одним периодом,
     // поэтому размер в конце сопоставим с размером после первой границы.
     expect(saved.sizeBytes).toBeLessThan(earlySizeBytes * 2);
     expect(maxTail).toBeLessThanOrEqual(8);
@@ -437,8 +438,8 @@ describe('Planning Assemble Day', () => {
 
     render(React.createElement(first.module.Component, { onExit: vi.fn() }));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
-    // Кампания идёт тридцать дней, поэтому последний закрытый день — не
-    // воскресенье авторской недели.
+    // Последний день естественно закрывает неделю, месяц и год; все итоги идут
+    // последовательно в той же карточке, без отдельного экрана года.
     expect(screen.getByRole('heading', { name: /^День завершён:/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Посмотреть итог недели' }));
     expect(screen.getByRole('heading', { name: 'Контрольная точка недели' })).toBeTruthy();
@@ -446,6 +447,12 @@ describe('Planning Assemble Day', () => {
     expect(screen.getByText('Договорённости')).toBeTruthy();
     expect(screen.getByText('Что осталось открытым')).toBeTruthy();
     expect(screen.queryByText(/общий балл:/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Посмотреть итог месяца' }));
+    expect(screen.getByRole('heading', { name: 'Месяц 12 завершён' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Посмотреть итог года' }));
+    expect(screen.getByRole('heading', { name: 'Год 1 завершён' })).toBeTruthy();
+    expect(screen.getByText(/12 месячных периодов/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Четыре линии итога' })).toBeTruthy();
     const savedCount = first.store.set.mock.calls.length;
     const completedSeed = session.state.rng.seed;
     fireEvent.click(screen.getByRole('button', { name: 'Пройти этот сценарий иначе' }));
@@ -625,7 +632,7 @@ describe('Planning Assemble Day', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить к приоритетам' }));
     expect(screen.getByRole('heading', { name: 'Что защищать в первую очередь' })).toBeTruthy();
     expect(screen.getByText('Финансовый горизонт')).toBeTruthy();
-    expect(screen.getByText(/131.*000 ₽/)).toBeTruthy();
+    expect(screen.getByText(/1.*715.*000 ₽/)).toBeTruthy();
     expect(screen.getAllByText('Срок проекта').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ожидаемое поступление').length).toBeGreaterThan(0);
     const mainWork = screen.getAllByRole('radio', { name: 'Работа' })[0];

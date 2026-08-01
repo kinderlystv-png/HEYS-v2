@@ -23,7 +23,7 @@ describe('atomic ten-stage reducer', () => {
     const duplicate = createInitialState('golden');
     const second = reduceStep({ state: duplicate, openEvent: eventAt(duplicate), actionId: 'eat_ready_meal' }, registries, true);
     expect(first.stages.map((item) => item.stage)).toEqual(STAGES);
-    expect(first.stateHash).toBe('4e5ba74c29a8b105');
+    expect(first.stateHash).toBe('14a4740ec395a0ca');
     expect(first.stateHash).toBe(second.stateHash);
     expect(first.stages.map((item) => item.hash)).toEqual(second.stages.map((item) => item.hash));
     expect(first.nextEvent?.templateId).toBe('mon_commute');
@@ -179,6 +179,10 @@ describe('atomic ten-stage reducer', () => {
     const output = reduceStep({ state: input, openEvent: eventAt(input), actionId: 'eat_quick_base' }, registries);
     expect(output.journalEntries.map((entry) => entry.resultPath)).toEqual(expect.arrayContaining(['clock', 'economy.foodPortions.quick_base', 'vitals.hunger', 'scenarioCursor', 'clock.stepIndex', 'eventLedger']));
     expect(output.journalEntries.every((entry) => entry.sourceId.length > 0 && entry.mechanism.length > 0)).toBe(true);
+    const ledgerEntry = output.journalEntries.find((entry) => entry.resultPath === 'eventLedger');
+    expect(ledgerEntry?.before).toMatch(/^occurrence=\d+;day=\d+;external=/);
+    expect(ledgerEntry?.after).toMatch(/^occurrence=\d+;day=\d+;external=/);
+    expect(String(ledgerEntry?.after)).not.toContain('dayExternalLoad');
   });
 
   it('filters event candidates by budget and cooldown', () => {
@@ -233,6 +237,23 @@ describe('atomic ten-stage reducer', () => {
     expect(output.state.eventLedger.occurrences.mon_commute).toBeUndefined();
   });
 
+  it('routes critical hunger to an actually available food stabilizer', () => {
+    const input = createInitialState('critical-hunger');
+    setCursor(input, 37, 1260);
+    input.vitals.hunger = 100;
+    for (const slot of registries.slots.slice(0, 38)) if (slot.eventId) input.eventLedger.occurrences[slot.eventId] = 1;
+
+    const output = reduceStep({ state: input, openEvent: eventAt(input), actionId: 'wind_down_early' }, registries);
+
+    expect(output.nextEvent?.templateId).toMatch(/^routine_/);
+    const offers = getActionOffers(output.state, output.nextEvent!.templateId, registries);
+    expect(offers.some((offer) => offer.available && offer.stabilizes.includes('recovery') && registries.actions[offer.actionId]?.domains.includes('food'))).toBe(true);
+    output.state.economy.cashRub = 0;
+    output.state.economy.foodPortions = { ready_meal: 0, quick_base: 0, cook_stock: 0 };
+    const noResourceOffers = getActionOffers(output.state, output.nextEvent!.templateId, registries);
+    expect(noResourceOffers.find((offer) => offer.actionId === 'prepare_simple_meal')).toMatchObject({ available: true, effectiveTimeMin: 40, moneyRub: 0 });
+  });
+
   it('applies an authored delayed coffee effect after exactly three subsequent steps', () => {
     let state = createInitialState('coffee-queue');
     let open = eventAt(state);
@@ -246,24 +267,25 @@ describe('atomic ten-stage reducer', () => {
     expect(output.state.scheduledEffects.find((item) => item.id === scheduledId)?.status).toBe('applied');
   });
 
-  it('reaches every anchor of the campaign, crosses sleep boundaries and closes the last day', { timeout: 120_000 }, () => {
-    const result = runCampaign('all-slots', 'balanced');
-    expect(result.visitedSlots).toEqual(Array.from({ length: registries.slots.length }, (_, index) => index + 1));
+  it('reaches every anchor of a bounded campaign and crosses sleep boundaries', { timeout: 120_000 }, () => {
+    const horizonDays = 14;
+    const result = runCampaign('all-slots', 'balanced', false, true, true, null, horizonDays);
+    expect(result.visitedSlots).toEqual(registries.slots.filter((slot) => slot.dayIndex < horizonDays).map((slot) => slot.slot));
     expect(result.terminalLocks).toBe(0);
-    const final = runCampaign('all-slots', 'balanced');
+    const final = runCampaign('all-slots', 'balanced', false, true, true, null, horizonDays);
     expect(final.finalStateHash).toBe(result.finalStateHash);
-    expect(result.transitions).toHaveLength(registries.slots.length);
+    expect(result.transitions).toHaveLength(result.visitedSlots.length);
   });
 
-  it('keeps a real hunger stabilizer in the Saturday meal-prep fork', () => {
-    const result = runCampaign('qa-00129', 'random_valid', true, false, false);
+  it('keeps a real hunger stabilizer in the Saturday meal-prep fork', { timeout: 120_000 }, () => {
+    const result = runCampaign('qa-00129', 'random_valid', true, false, false, null, 7);
     expect(result.heavyWithoutStabilizerEvents).not.toContain('sat_meal_prep');
     expect(result.terminalLocks).toBe(0);
   });
 
   it('keeps trusted mass-QA semantics equivalent to the atomic path', { timeout: 120_000 }, () => {
-    const atomic = runCampaign('equivalence', 'random_valid', false);
-    const trusted = runCampaign('equivalence', 'random_valid', true);
+    const atomic = runCampaign('equivalence', 'random_valid', false, true, true, null, 14);
+    const trusted = runCampaign('equivalence', 'random_valid', true, true, true, null, 14);
     expect(trusted.finalStateHash).toBe(atomic.finalStateHash);
     expect(trusted.chosenActions).toEqual(atomic.chosenActions);
     expect(trusted.visitedEvents).toEqual(atomic.visitedEvents);

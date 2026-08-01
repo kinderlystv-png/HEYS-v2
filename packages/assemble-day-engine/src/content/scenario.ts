@@ -1,7 +1,7 @@
 import { CONTRACT, type EventSource, type EventTemplate, type GameState, type Registries, type ScenarioSlot } from '../types.js';
 import { actions } from './actions.js';
 import { EVENT_COPY } from './presentation.js';
-import { createPeriodState } from '../periods.js';
+import { createPeriodState, daysPerYear } from '../periods.js';
 
 type SlotSeed=[number,number,string,EventSource,string[]];
 const raw:SlotSeed[]=[
@@ -58,7 +58,7 @@ slots[7]={...slots[7]!,sleepBeforeMin:210,interruptionsMin:10};
  * не называет ситуацию: её выбирает отбор по состоянию, поэтому продолжение
  * кампании — это календарь, а не копия недели.
  */
-export const CAMPAIGN_DAYS=30;
+export const CAMPAIGN_DAYS=daysPerYear(createPeriodState());
 const ROUTINE_DAY_ANCHORS=[420,600,780,960,1140,1320];
 const ROUTINE_SLEEP:[number,number]=[450,0];
 const authoredDays=Math.max(...raw.map((item)=>item[0]));
@@ -192,14 +192,14 @@ addEcho('sun_family_time',{
  * тяжёлом состоянии и запас не сработал бы именно тогда, когда он нужнее всего.
  */
 const ROUTINE_SITUATIONS:Array<{id:string;fromMin:number;toMin:number;actionIds:string[]}>=[
-  {id:'routine_morning_start',fromMin:240,toMin:660,actionIds:['eat_quick_base','walk_short','drink_coffee_100','work_standard']},
-  {id:'routine_work_stretch',fromMin:540,toMin:1080,actionIds:['work_standard','walk_short','ask_colleague_help']},
-  {id:'routine_family_moment',fromMin:900,toMin:1380,actionIds:['protect_commitment','take_family_load','walk_short','wind_down_early','work_standard']},
-  {id:'routine_evening_wind',fromMin:1020,toMin:1439,actionIds:['wind_down_early','walk_short','work_late']},
+  {id:'routine_morning_start',fromMin:240,toMin:660,actionIds:['eat_quick_base','prepare_simple_meal','walk_short','drink_coffee_100','work_standard']},
+  {id:'routine_work_stretch',fromMin:540,toMin:1080,actionIds:['prepare_simple_meal','work_standard','walk_short','ask_colleague_help']},
+  {id:'routine_family_moment',fromMin:900,toMin:1380,actionIds:['prepare_simple_meal','protect_commitment','take_family_load','walk_short','rest_short','wind_down_early','work_standard']},
+  {id:'routine_evening_wind',fromMin:1020,toMin:1439,actionIds:['prepare_simple_meal','wind_down_early','walk_short','rest_short','work_late']},
   // Страховочная ситуация: доступна почти всегда и держит стабилизаторы сразу
   // двух доменов, поэтому тяжёлое состояние не остаётся без платного выхода,
   // когда авторские и остальные бытовые ситуации не подходят.
-  {id:'routine_pause',fromMin:300,toMin:1380,actionIds:['walk_short','work_standard','wind_down_early']},
+  {id:'routine_pause',fromMin:300,toMin:1380,actionIds:['prepare_simple_meal','walk_short','rest_short','work_standard','wind_down_early']},
 ];
 
 for(const routine of ROUTINE_SITUATIONS){
@@ -232,7 +232,7 @@ events.family_partner_offers={
   urgency:1,selectionWeight:2,cooldownDays:2,
   load:{external:0,total:8,size:'small'},
   onOpenEffects:[{op:'add_state',path:'vitals.tension',delta:-4,reason:'разделённая нагрузка снизила напряжение'}],
-  actionIds:['take_family_load','protect_commitment','wind_down_early','work_standard'],tags:['causal','family_anchor_window','family_reciprocity'],
+  actionIds:['take_family_load','protect_commitment','rest_short','wind_down_early','work_standard'],tags:['causal','family_anchor_window','family_reciprocity'],
 };
 events.family_child_evening={
   schemaVersion:1,id:'family_child_evening',version:1,source:'causal',
@@ -251,7 +251,7 @@ export const registries:Registries={actions,events,slots};
 
 export function createInitialState(seed:string):GameState {
   return {
-    schemaVersion:3,periods:createPeriodState(),weekStats:{weekIndex:0,actionCounts:{},previousWeekIndex:-1,previousActionCounts:{}},employment:{format:null,chosenAtStepIndex:null},campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
+    schemaVersion:4,periods:createPeriodState(),weekStats:{weekIndex:0,actionCounts:{},previousWeekIndex:-1,previousActionCounts:{}},employment:{format:null,chosenAtStepIndex:null},campaignId:`week01:${seed}`,scenarioId:CONTRACT.scenarioId,scenarioVersion:CONTRACT.scenarioVersion,calibrationVersion:CONTRACT.calibrationVersion,priceBookVersion:CONTRACT.priceBookVersion,
     rng:{seed,algorithm:CONTRACT.rngAlgorithm,occurrences:{}},clock:{dayIndex:0,minuteOfDay:420,stepIndex:0,awakeSinceMinute:60},scenarioCursor:0,activeEventId:'mon_breakfast',
     character:{
       profile:{sleepNeedMin:480,chronotype:'neutral',caffeineHalfLifeMin:300,caffeineSensitivity:1,digestionSensitivity:1,moodBaseline:55},

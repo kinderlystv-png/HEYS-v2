@@ -141,7 +141,7 @@ export function reducePlanningStep(input: { state: GameState; plan: PlanningPlan
   );
   state.weeklyRules = weeklyRules;
   state.monthlyPriorities = monthlyPriorities;
-  state.periods.plannedWeeks = [...state.periods.plannedWeeks, weekIndex].sort((left, right) => left - right);
+  state.periods.plannedWeeks = [weekIndex];
   validateState(state);
   return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
 }

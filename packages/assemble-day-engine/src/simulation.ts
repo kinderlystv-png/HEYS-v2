@@ -252,7 +252,9 @@ export function runCampaign(
   auditTransitions = true,
   captureReplay = auditTransitions,
   employmentFormat: EmploymentFormat | null = null,
+  horizonDays = CAMPAIGN_DAYS,
 ): CampaignResult {
+  if (!Number.isInteger(horizonDays) || horizonDays < 1 || horizonDays > CAMPAIGN_DAYS) throw new Error(`Invalid campaign horizon: ${horizonDays}`);
   let state = createInitialState(seed);
   if (!registriesValidated) {
     validateRegistries(registries, state);
@@ -297,6 +299,10 @@ export function runCampaign(
     outcomes: { money: 0, work: 0, family: 0, recovery: 0, sleep: 0 },
   };
   while (state.scenarioCursor < registries.slots.length) {
+    if (registries.slots[state.scenarioCursor]!.dayIndex >= horizonDays) break;
+    result.maxExternalLoad = Math.max(result.maxExternalLoad, ...Object.values(state.eventLedger.dayExternalLoad));
+    result.maxTotalLoad = Math.max(result.maxTotalLoad, ...Object.values(state.eventLedger.dayTotalLoad));
+    result.maxLargePerDay = Math.max(result.maxLargePerDay, ...Object.values(state.eventLedger.dayLargeCount));
     const slot = registries.slots[state.scenarioCursor]!,
       event = registries.events[openEvent.templateId]!,
       context = computeDecisionContext(state),
@@ -367,9 +373,6 @@ export function runCampaign(
   validateState(state);
   result.finalStateHash = stateHash(state);
   result.personalizationInputsDetected = Number(containsPersonalization(state));
-  result.maxExternalLoad = Math.max(0, ...Object.values(state.eventLedger.dayExternalLoad));
-  result.maxTotalLoad = Math.max(0, ...Object.values(state.eventLedger.dayTotalLoad));
-  result.maxLargePerDay = Math.max(0, ...Object.values(state.eventLedger.dayLargeCount));
   result.weekLargeCount = state.eventLedger.weekLargeCount;
   const finalContext = computeDecisionContext(state);
   result.outcomes = {
@@ -401,8 +404,9 @@ export function runCampaignWithState(
   auditTransitions = true,
   captureReplay = auditTransitions,
   employmentFormat: EmploymentFormat | null = null,
+  horizonDays = CAMPAIGN_DAYS,
 ): { result: CampaignResult; finalState: GameState } {
-  const result = runCampaign(seed, policyId, trustedQaMode, auditTransitions, captureReplay, employmentFormat);
+  const result = runCampaign(seed, policyId, trustedQaMode, auditTransitions, captureReplay, employmentFormat, horizonDays);
   if (!lastFinalState) throw new Error('campaign did not produce a final state');
   return { result, finalState: lastFinalState };
 }

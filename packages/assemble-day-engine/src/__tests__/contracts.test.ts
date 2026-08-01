@@ -10,7 +10,7 @@ describe('runtime contracts', () => {
     const state = createInitialState('schema-golden');
     expect(() => validateRegistries(registries, state)).not.toThrow();
     expect(() => validateState(state)).not.toThrow();
-    expect(Object.keys(actions)).toHaveLength(31);
+    expect(Object.keys(actions)).toHaveLength(33);
     expect(Object.keys(events)).toHaveLength(49);
     expect(Object.values(events).every((event) => event.copy.title && event.copy.situation && !event.copy.situation.startsWith('Контрольная развилка'))).toBe(true);
     expect(Object.values(actions).every((action) => RULE_EVIDENCE[action.ruleEvidenceId])).toBe(true);

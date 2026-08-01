@@ -61,12 +61,24 @@ const boundariesIdempotent: Check = ({ seed, policyId, finalState }) => {
   return issues;
 };
 
-/** Состояние не растёт вместе с длиной жизни: журнал ограничен одним днём. */
+const MAX_CAUSAL_VALUE_CHARS = 512;
+
+/** Состояние не растёт вместе с длиной жизни: все lifetime-хвосты ограничены. */
 const stateStaysBounded: Check = ({ seed, policyId, finalState }) => {
+  const issues: InvariantViolation[] = [];
   const dayIndexes = new Set(finalState.causalJournal.map((entry) => entry.dayIndex));
-  return dayIndexes.size > 2
-    ? [violation('state_stays_bounded', 'Журнал причин вышел за границу одного дня', `${seed}/${policyId}: дней в журнале ${dayIndexes.size}, записей ${finalState.causalJournal.length}`)]
-    : [];
+  if (dayIndexes.size > 2) issues.push(violation('state_stays_bounded', 'Журнал причин вышел за границу одного дня', `${seed}/${policyId}: дней в журнале ${dayIndexes.size}, записей ${finalState.causalJournal.length}`));
+  const oversizedEntry = finalState.causalJournal.find((entry) => Math.max(String(entry.before ?? '').length, String(entry.after ?? '').length) > MAX_CAUSAL_VALUE_CHARS);
+  if (oversizedEntry) issues.push(violation('state_stays_bounded', 'Запись журнала содержит растущий снимок структуры', `${seed}/${policyId}: ${oversizedEntry.resultPath}, before/after > ${MAX_CAUSAL_VALUE_CHARS} символов`));
+  const staleEventRolls = Object.keys(finalState.rng.occurrences).filter((key) => key.startsWith('event-select:'));
+  if (staleEventRolls.length) issues.push(violation('state_stays_bounded', 'Завершённые броски выбора событий остались в состоянии', `${seed}/${policyId}: ${staleEventRolls.length} event-select ключей`));
+  const dailyLoadKeys = new Set([
+    ...Object.keys(finalState.eventLedger.dayExternalLoad),
+    ...Object.keys(finalState.eventLedger.dayTotalLoad),
+    ...Object.keys(finalState.eventLedger.dayLargeCount),
+  ]);
+  if (dailyLoadKeys.size) issues.push(violation('state_stays_bounded', 'Завершённые дневные бюджеты остались в состоянии', `${seed}/${policyId}: дни ${[...dailyLoadKeys].sort().join(', ')}`));
+  return issues;
 };
 
 export const CAMPAIGN_INVARIANTS: Array<{ id: string; check: Check }> = [

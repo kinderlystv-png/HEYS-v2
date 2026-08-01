@@ -3,6 +3,7 @@ import { employmentSetupView, reduceEmploymentSetup } from '../../../packages/as
 import { getCharacterPresentation, getRuleEvidence } from '../../../packages/assemble-day-engine/src/content/presentation.ts';
 import { compareCampaignOutcomes, getCampaignBrief, getCampaignOutcome, getCharacterDevelopment, getPeriodBoundaries, getPeriodSummary, getStepSummary, getSyntheticObservation } from '../../../packages/assemble-day-engine/src/campaign.ts';
 import { getPlanningView, reducePlanningStep } from '../../../packages/assemble-day-engine/src/planning.ts';
+import { dayOfWeekFor } from '../../../packages/assemble-day-engine/src/periods.ts';
 import { computeDecisionContext, getActionOffers, initialEvent, reduceStep } from '../../../packages/assemble-day-engine/src/reducer.ts';
 import { fnv1a64, stateHash } from '../../../packages/assemble-day-engine/src/rng.ts';
 import { validateState } from '../../../packages/assemble-day-engine/src/schema.ts';
@@ -1050,15 +1051,23 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-action-id="${nextId}"]`)?.focus());
   };
   if (resultRevision === session.revision && session.lastStepSummary) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
-  if (periodSummary && periodSummary.kind !== 'week') {
-    const closesWeek = session.periodSummaries.some((item) => item.kind === 'week');
-    const closesMonth = session.periodSummaries.some((item) => item.kind === 'month');
-    const nextLabel = periodSummary.kind === 'month'
-      ? 'Продолжить жизнь'
-      : closesMonth ? 'Посмотреть итог месяца' : closesWeek ? 'Посмотреть итог недели' : 'Перейти к следующему дню';
+  if (periodSummary?.kind === 'year') return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
+  if (periodSummary) {
+    const currentIndex = session.periodSummaries.findIndex((item) => item.id === periodSummary.id);
+    const nextKind = session.periodSummaries[currentIndex + 1]?.kind;
+    const nextLabel = nextKind === 'week'
+      ? 'Посмотреть итог недели'
+      : nextKind === 'month'
+        ? 'Посмотреть итог месяца'
+        : nextKind === 'year'
+          ? 'Посмотреть итог года'
+          : periodSummary.kind === 'month'
+            ? 'Продолжить жизнь'
+            : periodSummary.kind === 'week'
+              ? 'Перейти к следующей неделе'
+              : 'Перейти к следующему дню';
     return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod, nextLabel }));
   }
-  if (periodSummary?.kind === 'week') return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
   if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
   const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === 'planning_plan');
   if (!planConfirmed) return h('div', { className: 'assemble-day-screen assemble-day-screen--day' }, h(CharacterCard, { state: session.state }), h(CampaignBriefCard, { state: session.state }), h('section', { className: 'assemble-day-card assemble-day-contract-start' }, h('span', { className: 'assemble-day-eyebrow' }, 'Контракт недели'), h('h2', null, 'Сначала выберите, что будете защищать'), h('p', null, 'Две недельные границы и два разных фокуса изменят усилие, риск и давление в следующих развилках.'), h('button', { type: 'button', className: 'assemble-day-primary', onClick: onOpenPlan }, 'Выбрать правила недели')));
@@ -1138,7 +1147,7 @@ function DayScreen({ session, selectedActionId, onSelect, onConfirm, saveMessage
   );
 }
 
-const PERIOD_EYEBROW: Record<PeriodSummary['kind'], string> = { day: 'Итог дня', week: 'Итог недели', month: 'Итог месяца' };
+const PERIOD_EYEBROW: Record<PeriodSummary['kind'], string> = { day: 'Итог дня', week: 'Итог недели', month: 'Итог месяца', year: 'Итог года' };
 
 function DaySummaryCard({ summary, onContinue, nextLabel }: { summary: PeriodSummary; onContinue: () => void; nextLabel: string }) {
   return h('section', { className: `assemble-day-card assemble-day-summary assemble-day-summary--${summary.kind}` },
@@ -1147,10 +1156,19 @@ function DaySummaryCard({ summary, onContinue, nextLabel }: { summary: PeriodSum
     h('p', null, summary.headline),
     h('p', { className: 'assemble-day-summary__causal' }, summary.causalLink),
     h('p', { className: 'assemble-day-summary__carry' }, summary.carryover),
+    summary.brief && h('section', { className: 'assemble-day-complete__brief' }, h('strong', null, summary.brief.mission.title), h('span', null, summary.brief.mission.summary)),
+    summary.rules?.length ? h('section', { className: 'assemble-day-complete__rules', 'aria-label': 'Что стало с правилами недели' },
+      h('h3', null, 'Выбранные границы'),
+      ...summary.rules.map((rule) => h('article', { key: rule.id, className: `is-${rule.direction}` }, h('strong', null, rule.title), h('small', null, outcomeDirectionLabel(rule.direction)), h('span', null, rule.summary))),
+    ) : null,
+    summary.commitments && h('p', { className: 'assemble-day-summary__causal' }, summary.commitments.summary),
+    summary.pressure && h('p', { className: 'assemble-day-summary__carry' }, summary.pressure),
     summary.axes?.length ? h('div', { className: 'assemble-day-outcome-grid' }, ...summary.axes.map((axis) => h('article', { key: axis.id, className: `is-${axis.direction}` }, h('strong', null, axis.title), h('span', null, axis.summary)))) : null,
-    summary.openThreads?.length ? h('details', { className: 'assemble-day-details' },
-      h('summary', null, 'Что осталось открытым'),
-      h('ul', { className: 'assemble-day-list' }, ...summary.openThreads.map((item, index) => h('li', { key: `${index}:${item}` }, item))),
+    summary.openThreads ? h('section', { className: 'assemble-day-complete__threads', 'aria-label': 'Открытые нити' },
+      h('h3', null, 'Что осталось открытым'),
+      summary.openThreads.length
+        ? h('ul', { className: 'assemble-day-list' }, ...summary.openThreads.map((item, index) => h('li', { key: `${index}:${item}` }, item)))
+        : h('p', null, 'Открытых нитей на конец периода не осталось.'),
     ) : null,
     h('button', { type: 'button', className: 'assemble-day-primary', onClick: onContinue }, nextLabel),
   );
@@ -1159,7 +1177,7 @@ function DaySummaryCard({ summary, onContinue, nextLabel }: { summary: PeriodSum
 function WeekScreen({ session, plan, onToggleRule, onContinue }: { session: CampaignSession; plan: PlanningPlan; onToggleRule: (id: WeeklyRulePresetId) => void; onContinue: () => void }) {
   const planning = getPlanningCampaignView(session, plan);
   const locked = session.state.clock.stepIndex > 0;
-  const currentDay = session.state.clock.dayIndex;
+  const currentDay = dayOfWeekFor(session.state.periods, session.state.clock.dayIndex);
   const dayProgress = DAY_NAMES.map((name, index) => ({ name, status: index < currentDay ? 'Готово' : index === currentDay ? 'Сейчас' : 'Впереди' }));
   const commitments = session.state.commitments.filter((item) => item.status === 'open').slice(0, 3);
   return h('div', { className: 'assemble-day-screen' },
@@ -1352,27 +1370,27 @@ function LifeScreen({ session, onCopyTrace, traceMessage, traceTone, traceBusy }
 
 function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }: { session: CampaignSession; summary?: PeriodSummary; onReplaySameSeed: () => void; onStartNew: () => void }) {
   const outcome = getCampaignOutcome(session.state);
-  const week = summary?.kind === 'week' ? summary : session.periodSummaries.find((item) => item.kind === 'week');
-  const brief = week?.brief || getCampaignBrief(session.state, registries);
+  const period = summary || [...session.periodSummaries].reverse().find((item) => item.kind !== 'day');
+  const brief = period?.brief || getCampaignBrief(session.state, registries);
   const comparison = session.comparisonBaseline ? compareCampaignOutcomes(session.comparisonBaseline.outcome, outcome) : [];
   return h('section', { className: 'assemble-day-card assemble-day-complete' },
-    h('span', { className: 'assemble-day-eyebrow' }, 'Неделя завершена'),
-    h('h2', null, week?.title || 'Контрольная точка недели'),
-    h('p', null, week?.headline || 'Итог складывается из четырёх независимых линий без общего балла.'),
+    h('span', { className: 'assemble-day-eyebrow' }, period ? PERIOD_EYEBROW[period.kind] : 'Итог кампании'),
+    h('h2', null, period?.title || 'Кампания завершена'),
+    h('p', null, period?.headline || 'Итог складывается из четырёх независимых линий без общего балла.'),
     h('section', { className: 'assemble-day-complete__brief' }, h('strong', null, brief.mission.title), h('span', null, brief.mission.summary)),
-    week?.rules?.length && h('section', { className: 'assemble-day-complete__rules', 'aria-label': 'Что стало с правилами недели' },
+    period?.rules?.length && h('section', { className: 'assemble-day-complete__rules', 'aria-label': 'Что стало с правилами недели' },
       h('h3', null, 'Выбранные границы'),
-      ...week.rules.map((rule) => h('article', { key: rule.id, className: `is-${rule.direction}` }, h('strong', null, rule.title), h('small', null, outcomeDirectionLabel(rule.direction)), h('span', null, rule.summary))),
+      ...period.rules.map((rule) => h('article', { key: rule.id, className: `is-${rule.direction}` }, h('strong', null, rule.title), h('small', null, outcomeDirectionLabel(rule.direction)), h('span', null, rule.summary))),
     ),
-    week?.commitments && h('p', { className: 'assemble-day-summary__causal' }, week.commitments.summary),
-    week?.pressure && h('p', { className: 'assemble-day-summary__carry' }, week.pressure),
+    period?.commitments && h('p', { className: 'assemble-day-summary__causal' }, period.commitments.summary),
+    period?.pressure && h('p', { className: 'assemble-day-summary__carry' }, period.pressure),
     h('h3', null, 'Четыре линии итога'),
-    h('div', { className:'assemble-day-outcome-grid' }, ...(week?.axes || outcome.axes).map((axis)=>h('article',{key:axis.id,className:`is-${axis.direction}`},h('strong',null,axis.title),h('small',null,outcomeDirectionLabel(axis.direction)),h('span',null,axis.summary)))),
+    h('div', { className:'assemble-day-outcome-grid' }, ...(period?.axes || outcome.axes).map((axis)=>h('article',{key:axis.id,className:`is-${axis.direction}`},h('strong',null,axis.title),h('small',null,outcomeDirectionLabel(axis.direction)),h('span',null,axis.summary)))),
     h('section', { className: 'assemble-day-complete__threads', 'aria-label': 'Открытые нити' },
       h('h3', null, 'Что осталось открытым'),
-      (week?.openThreads || outcome.openThreads).length
-        ? h('ul', { className: 'assemble-day-list' }, ...(week?.openThreads || outcome.openThreads).map((item, index) => h('li', { key: `${index}:${item}` }, item)))
-        : h('p', null, 'Обязательные нити недели закрыты.'),
+      (period?.openThreads || outcome.openThreads).length
+        ? h('ul', { className: 'assemble-day-list' }, ...(period?.openThreads || outcome.openThreads).map((item, index) => h('li', { key: `${index}:${item}` }, item)))
+        : h('p', null, 'Открытых нитей на конец кампании не осталось.'),
     ),
     comparison.length>0 && h('section',{className:'assemble-day-comparison'},h('h3',null,'Сравнение с прошлым прохождением'),...comparison.map((item)=>h('p',{key:item.id},h('strong',null,item.title),` · ${item.changed?'результат изменился':'результат сохранился'} · ${item.summary}`))),
     h('button',{type:'button',className:'assemble-day-primary',onClick:onReplaySameSeed},'Пройти этот сценарий иначе'),

@@ -38,7 +38,7 @@ describe('campaign brief and period summaries', () => {
     expect(JSON.stringify(first)).not.toMatch(/vitals\.|work\.tasks|decisionGeometry|\b(?:energy|tension)\s+\d/i);
   });
 
-  it('returns one summary per day, weekly checkpoints and a month boundary', { timeout: 120_000 }, () => {
+  it('returns one summary per day and closes the production year once', { timeout: 180_000 }, () => {
     let state = reducePlanningStep({
       state: createInitialState('week-summary'),
       plan: { weeklyRuleIds: ['protect_sleep', 'work_blocks'], mainGoal: 'work', supportingGoal: 'family' },
@@ -50,12 +50,14 @@ describe('campaign brief and period summaries', () => {
       state = step.output.state;
       boundaries.push(...getPeriodBoundaries(before, state, registries));
     }
-    // Кампания стала тридцатидневной (`CAMPAIGN_DAYS`), поэтому границ больше
-    // одной недели: проверяется сам контракт периодов, а не длина авторской
-    // недели.
+    // Production-календарь длится ровно один модельный год. Авторская неделя
+    // остаётся контентом, а последующие якоря — временем без закреплённой
+    // ситуации.
     expect(boundaries.filter((item) => item.kind === 'day')).toHaveLength(CAMPAIGN_DAYS);
     expect(boundaries.filter((item) => item.kind === 'week').length).toBeGreaterThan(1);
-    expect(boundaries.filter((item) => item.kind === 'month').length).toBeGreaterThan(0);
+    expect(boundaries.filter((item) => item.kind === 'month')).toHaveLength(12);
+    expect(boundaries.filter((item) => item.kind === 'year').map((item) => item.id)).toEqual(['year:0']);
+    expect(state.periods.completedYears).toBe(1);
     const week = getPeriodSummary(state, boundaries.filter((item) => item.kind === 'week').at(-1)!, registries);
     expect(week.brief?.mission.title).toBe('Сдать проект и не потерять опоры недели');
     expect(week.rules).toHaveLength(2);
@@ -63,6 +65,11 @@ describe('campaign brief and period summaries', () => {
     expect(week.axes?.map((axis) => axis.id)).toEqual(['work', 'family', 'finance', 'recovery']);
     expect(week.openThreads).toEqual(getCampaignOutcome(state).openThreads);
     expect(JSON.stringify(week.axes)).not.toMatch(/Энергия \d|напряжение \d|доверие [+-]?\d/i);
+    const year = getPeriodSummary(state, boundaries.find((item) => item.kind === 'year')!, registries);
+    expect(year.title).toBe('Год 1 завершён');
+    expect(year.axes?.map((axis) => axis.id)).toEqual(['work', 'family', 'finance', 'recovery']);
+    expect(year.openThreads).toEqual(getCampaignOutcome(state).openThreads);
+    expect(year.headline).toContain('12 месячных периодов');
   });
 
   it('gives a directional step result while keeping raw paths out of user copy', () => {

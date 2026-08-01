@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState, registries } from '../content/scenario.js';
 import { getPeriodBoundaries } from '../campaign.js';
 import { getActionOffers, initialEvent, reduceStep } from '../reducer.js';
-import { applyPeriodBoundaries, boundariesForCompletedDay, createPeriodState, currentWeekIndex } from '../periods.js';
+import { applyPeriodBoundaries, boundariesForCompletedDay, compactDailyEventLedger, compactEventSelectionRng, createPeriodState, currentWeekIndex } from '../periods.js';
 import { reducePlanningStep } from '../planning.js';
 import { findCursorBoundEvents, validateRegistries, validateState } from '../schema.js';
 import { stateHash } from '../rng.js';
@@ -83,8 +83,16 @@ describe('period contract', () => {
     expect(played.state.periods.completedDays).toBe(30);
     expect(played.state.periods.completedWeeks).toBe(5);
     expect(played.state.periods.completedMonths).toBe(1);
+    expect(played.state.periods.completedYears).toBe(0);
     expect(played.boundaries.filter((item) => item.kind === 'day')).toHaveLength(30);
     expect(played.boundaries.filter((item) => item.kind === 'month').map((item) => item.id)).toEqual(['month:0']);
+    expect(Object.keys(played.state.eventLedger.dayExternalLoad)).toEqual([]);
+    expect(Object.keys(played.state.eventLedger.dayTotalLoad)).toEqual([]);
+    expect(Object.keys(played.state.eventLedger.dayLargeCount)).toEqual([]);
+    expect(Object.keys(played.state.rng.occurrences).filter((key) => key.startsWith('event-select:'))).toEqual([]);
+    const periodEntry = played.state.causalJournal.find((entry) => entry.resultPath === 'periods');
+    expect(periodEntry?.before).toMatch(/^days=\d+;weeks=\d+;months=\d+;years=\d+;history=\d+;latest=/);
+    expect(periodEntry?.after).toMatch(/^days=\d+;weeks=\d+;months=\d+;years=\d+;history=\d+;latest=/);
   });
 
   it('closes every boundary exactly once and resets only weekly counters', { timeout: 30_000 }, () => {
@@ -117,7 +125,7 @@ describe('period contract', () => {
     const played = play(planned, extended);
     expect(currentWeekIndex(played.state)).toBe(2);
     const replanned = reducePlanningStep({ state: played.state, plan: { weeklyRuleIds: ['family_anchor', 'work_blocks'], mainGoal: 'family', supportingGoal: 'recovery' } }).state;
-    expect(replanned.periods.plannedWeeks).toEqual([0, 2]);
+    expect(replanned.periods.plannedWeeks).toEqual([2]);
     expect(replanned.weeklyRules.map((item) => item.id)).toEqual(['family_anchor', 'work_blocks']);
   });
 
@@ -131,11 +139,34 @@ describe('period contract', () => {
     expect(left.boundaries.map((item) => item.id)).toEqual(right.boundaries.map((item) => item.id));
   });
 
+  it('compacts only completed-day RNG and load entries', () => {
+    const state = createInitialState('period-compaction');
+    state.rng.occurrences = {
+      'event-select:0:4:causal:a,b': 1,
+      'event-select:1:8:causal:a,b': 1,
+      friday_bonus: 1,
+    };
+    state.eventLedger.dayExternalLoad = { '0': 20, '1': 10 };
+    state.eventLedger.dayTotalLoad = { '0': 40, '1': 15 };
+    state.eventLedger.dayLargeCount = { '0': 1, '1': 0 };
+
+    expect(compactEventSelectionRng(state, 0)).toBe(1);
+    expect(compactDailyEventLedger(state, 0)).toBe(3);
+    expect(state.rng.occurrences).toEqual({
+      'event-select:1:8:causal:a,b': 1,
+      friday_bonus: 1,
+    });
+    expect(state.eventLedger.dayExternalLoad).toEqual({ '1': 10 });
+    expect(state.eventLedger.dayTotalLoad).toEqual({ '1': 15 });
+    expect(state.eventLedger.dayLargeCount).toEqual({ '1': 0 });
+  });
+
   it('keeps the calendar configurable instead of hard-coding a seven-day week', () => {
-    const periods = createPeriodState({ daysPerWeek: 5, weeksPerMonth: 2 });
+    const periods = createPeriodState({ daysPerWeek: 5, weeksPerMonth: 2, monthsPerYear: 3 });
     expect(boundariesForCompletedDay({ periods, completedDayIndex: 4, nextDayIndex: 5, afterStepIndex: 1 }).map((item) => item.kind)).toEqual(['day', 'week']);
     expect(boundariesForCompletedDay({ periods, completedDayIndex: 9, nextDayIndex: 10, afterStepIndex: 1 }).map((item) => item.id)).toEqual(['day:9', 'week:1', 'month:0']);
     expect(boundariesForCompletedDay({ periods, completedDayIndex: 2, nextDayIndex: 3, afterStepIndex: 1 }).map((item) => item.kind)).toEqual(['day']);
+    expect(boundariesForCompletedDay({ periods, completedDayIndex: 29, nextDayIndex: null, afterStepIndex: 1 }).map((item) => item.id)).toEqual(['day:29', 'week:5', 'month:2', 'year:0']);
   });
 });
 

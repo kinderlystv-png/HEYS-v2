@@ -188,6 +188,20 @@ function weeklyRuleResults(state: GameState, weekIndex = weekIndexFor(state.peri
 }
 
 export function getPeriodSummary(state: GameState, boundary: PeriodBoundary, registries: Registries): PeriodSummary {
+  if (boundary.kind === 'year') {
+    const outcome = getCampaignOutcome(state);
+    return {
+      id: boundary.id,
+      kind: 'year',
+      completedDayIndex: boundary.completedDayIndex,
+      title: `Год ${boundary.periodIndex + 1} завершён`,
+      headline: `Год собрал ${state.periods.monthsPerYear} месячных периодов. Итог остаётся по четырём независимым линиям — без общего балла.`,
+      causalLink: 'Итог года связывает последствия месяцев: выбранные границы, выполненные договорённости и накопленное состояние.',
+      carryover: outcome.openThreads.length ? `Открытых нитей: ${outcome.openThreads.length}. Они остаются частью следующего горизонта.` : 'Открытых нитей на конец года не осталось.',
+      axes: outcome.axes,
+      openThreads: outcome.openThreads,
+    };
+  }
   if (boundary.kind === 'month') {
     const outcome = getCampaignOutcome(state);
     const goal = state.economy.financialGoal;

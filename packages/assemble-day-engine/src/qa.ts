@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { getActionOffers, initialEvent, reduceStep } from './reducer.js';
-import { createInitialState, registries } from './content/scenario.js';
+import { CAMPAIGN_DAYS, createInitialState, registries } from './content/scenario.js';
 import { POLICY_IDS, scoreOffer } from './policies.js';
 import { canonicalJson, fnv1a64 } from './rng.js';
 import { runCampaign } from './simulation.js';
@@ -37,6 +37,7 @@ export interface QaReport {
     contracts: typeof CONTRACT;
     seedCount: number;
     seedStart: number;
+    horizonDays: number;
     policyIds: PolicyId[];
     runCount: number;
     replayVerificationCount: number;
@@ -146,7 +147,7 @@ function counterfactuals(): CounterfactualResult[] {
 
 const zeroOutcomes = (): CampaignResult['outcomes'] => ({ money: 0, work: 0, family: 0, recovery: 0, sleep: 0 });
 
-export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOString(), seedStart = 0): QaReport {
+export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOString(), seedStart = 0, horizonDays = CAMPAIGN_DAYS): QaReport {
   if (!Number.isInteger(seedCount) || seedCount < 1) throw new Error('seedCount must be a positive integer');
   if (!Number.isInteger(seedStart) || seedStart < 0) throw new Error('seedStart must be a non-negative integer');
   const fingerprint = sourceFingerprint();
@@ -163,7 +164,7 @@ export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOStri
 
   for (let localSeedIndex = 0; localSeedIndex < seedCount; localSeedIndex++) for (const policyId of POLICY_IDS) {
     const seedIndex=seedStart+localSeedIndex,seed = `qa-${String(seedIndex).padStart(5, '0')}`;
-    const result = runCampaign(seed, policyId, true, true, localSeedIndex === 0);
+    const result = runCampaign(seed, policyId, true, true, localSeedIndex === 0, null, horizonDays);
     if (localSeedIndex === 0) firstReplay.set(policyId, structuredClone(result));
     runs += 1; terminal += result.terminalLocks; ordinary += result.ordinaryForks; ordinaryTwo += result.ordinaryTwoChoiceForks; hard += result.hardForks; hardSingle += result.hardSingleChoiceForks; heavy += result.heavyStates; stabilized += result.heavyWithStabilizer; multiStabilized += result.heavyWithMultipleStabilizers;
     maxExternal = Math.max(maxExternal, result.maxExternalLoad); maxTotal = Math.max(maxTotal, result.maxTotalLoad); maxLargeDay = Math.max(maxLargeDay, result.maxLargePerDay); maxLargeWeek = Math.max(maxLargeWeek, result.weekLargeCount);
@@ -181,7 +182,7 @@ export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOStri
   let reproMismatch = 0, replayVerificationCount = 0;
   for (const policyId of POLICY_IDS) {
     const expected = firstReplay.get(policyId)!;
-    const replaySeed=`qa-${String(seedStart).padStart(5,'0')}`,replay = runCampaign(replaySeed, policyId, true, true, true);
+    const replaySeed=`qa-${String(seedStart).padStart(5,'0')}`,replay = runCampaign(replaySeed, policyId, true, true, true, null, horizonDays);
     const count=Math.max(expected.transitions.length,replay.transitions.length);for(let index=0;index<count;index++){replayVerificationCount+=1;const left=expected.transitions[index],right=replay.transitions[index];if(!left||!right||canonicalJson(left)!==canonicalJson(right))reproMismatch+=1;}if(replay.finalStateHash!==expected.finalStateHash)reproMismatch+=1;
   }
 
@@ -236,6 +237,6 @@ export function runCausalQa(seedCount = 10_000, createdAt = new Date().toISOStri
   const campaignSeedHashes=Array.from({length:seedCount},(_,index)=>fnv1a64(finalHashes.slice(index*POLICY_IDS.length,(index+1)*POLICY_IDS.length).join('\n')));
   const campaignHash = fnv1a64(campaignSeedHashes.join('\n'));
   const rawCounts:QaRawCounts={terminal,ordinary,ordinaryTwo,hard,hardSingle,heavy,stabilized,multiStabilized,maxExternal,maxTotal,maxLargeDay,maxLargeWeek,boundarySteps,totalSteps,auditedTransitions,unexplained,personalization};
-  const stablePayload = { contracts: CONTRACT, sourceFingerprint: fingerprint, seedCount, seedStart, policyIds: POLICY_IDS, runCount: runs, replayVerificationCount, campaignHash, campaignSeedHashes, rawCounts, metrics, gates, coverage: { slots: slotSet.size, events: eventSet.size, actions: actionSet.size, missingSlots, missingEvents, missingActions }, counterfactuals: counter, distributions: { actionFrequency, eventFrequency, policyOutcomes, heavyWithoutStabilizerByEvent, unexplainedPathFrequency, boundaryPathFrequency, auditedTransitionCount: auditedTransitions, auditedActionCount: auditedActions.size }, failures };
+  const stablePayload = { contracts: CONTRACT, sourceFingerprint: fingerprint, seedCount, seedStart, horizonDays, policyIds: POLICY_IDS, runCount: runs, replayVerificationCount, campaignHash, campaignSeedHashes, rawCounts, metrics, gates, coverage: { slots: slotSet.size, events: eventSet.size, actions: actionSet.size, missingSlots, missingEvents, missingActions }, counterfactuals: counter, distributions: { actionFrequency, eventFrequency, policyOutcomes, heavyWithoutStabilizerByEvent, unexplainedPathFrequency, boundaryPathFrequency, auditedTransitionCount: auditedTransitions, auditedActionCount: auditedActions.size }, failures };
   return { reportVersion: 2, createdAt, schemaVersion: 2, scenarioId: CONTRACT.scenarioId, scenarioVersion: CONTRACT.scenarioVersion, calibrationVersion: CONTRACT.calibrationVersion, priceBookVersion: CONTRACT.priceBookVersion, rngAlgorithm: CONTRACT.rngAlgorithm, codeRevision: revision(), sourceFingerprint: fingerprint, simulation: { ...stablePayload, simulationHash: fnv1a64(canonicalJson(stablePayload)) } };
 }

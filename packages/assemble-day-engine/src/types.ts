@@ -1,9 +1,9 @@
 export const CONTRACT = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   scenarioId: 'week-01-project-deadline',
-  scenarioVersion: '5',
+  scenarioVersion: '6',
   calibrationVersion: '0.4',
-  technicalContractVersion: '0.36',
+  technicalContractVersion: '0.38',
   priceBookVersion: 'week-01-rub-v1',
   rngAlgorithm: 'fnv1a-mulberry32-v1',
   hashAlgorithm: 'canonical-json-fnv1a64-v1',
@@ -236,13 +236,16 @@ export interface EventLedger { occurrences: Record<string, number>; dayExternalL
  * месяца выводятся функциями и не сериализуются.
  */
 export interface PeriodState {
-  version: 1;
+  version: 2;
   daysPerWeek: number;
   weeksPerMonth: number;
+  monthsPerYear: number;
   completedDays: number;
   completedWeeks: number;
   completedMonths: number;
+  completedYears: number;
   appliedBoundaries: string[];
+  /** Lock только текущей подтверждённой недели; история решений живёт в diagnostics/replay. */
   plannedWeeks: number[];
 }
 
@@ -272,7 +275,7 @@ export interface EmploymentState {
 }
 
 export interface GameState {
-  schemaVersion: 3;
+  schemaVersion: 4;
   periods: PeriodState;
   weekStats: WeekStats;
   employment: EmploymentState;
@@ -363,7 +366,7 @@ export interface StepSummary {
 }
 export interface PeriodBoundary {
   id: string;
-  kind: 'day' | 'week' | 'month';
+  kind: 'day' | 'week' | 'month' | 'year';
   completedDayIndex: number;
   nextDayIndex: number | null;
   afterStepIndex: number;
@@ -373,7 +376,7 @@ export interface PeriodBoundary {
 export interface PeriodRuleResult { id: WeeklyRulePresetId; title: string; direction: OutcomeDirection; summary: string }
 export interface PeriodSummary {
   id: string;
-  kind: 'day' | 'week' | 'month';
+  kind: 'day' | 'week' | 'month' | 'year';
   completedDayIndex: number;
   title: string;
   headline: string;

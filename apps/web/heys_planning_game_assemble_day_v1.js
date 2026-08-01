@@ -7,11 +7,11 @@
 
   // ../../packages/assemble-day-engine/src/types.ts
   var CONTRACT = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     scenarioId: "week-01-project-deadline",
-    scenarioVersion: "5",
+    scenarioVersion: "6",
     calibrationVersion: "0.4",
-    technicalContractVersion: "0.36",
+    technicalContractVersion: "0.38",
     priceBookVersion: "week-01-rub-v1",
     rngAlgorithm: "fnv1a-mulberry32-v1",
     hashAlgorithm: "canonical-json-fnv1a64-v1"
@@ -102,10 +102,12 @@
   var ACTION_EVIDENCE = {
     eat_ready_meal: "re_action_effect_contract",
     eat_quick_base: "re_action_effect_contract",
+    prepare_simple_meal: "re_action_effect_contract",
     cook_meal_batch: "re_habit_skill_future_geometry",
     order_food: "re_financial_pressure_choice",
     drink_coffee_100: "re_caffeine_timing_sleep",
     walk_short: "re_movement_affect_response",
+    rest_short: "re_action_effect_contract",
     train_light: "re_movement_affect_response",
     train_planned: "re_movement_affect_response",
     work_standard: "re_multifactor_task_geometry",
@@ -271,10 +273,12 @@
   var priorityAlignmentByAction = {
     eat_ready_meal: { supports: ["recovery"], conflicts: [] },
     eat_quick_base: { supports: [], conflicts: [] },
+    prepare_simple_meal: { supports: ["recovery"], conflicts: ["work"] },
     cook_meal_batch: { supports: ["recovery", "family"], conflicts: [] },
     order_food: { supports: [], conflicts: [] },
     drink_coffee_100: { supports: [], conflicts: ["recovery"] },
     walk_short: { supports: ["recovery"], conflicts: [] },
+    rest_short: { supports: ["recovery"], conflicts: [] },
     train_light: { supports: ["recovery"], conflicts: [] },
     train_planned: { supports: ["recovery"], conflicts: [] },
     work_standard: { supports: ["work"], conflicts: [] },
@@ -341,10 +345,12 @@
   var definitions = [
     action("eat_ready_meal", "\u0421\u044A\u0435\u0441\u0442\u044C \u0433\u043E\u0442\u043E\u0432\u0443\u044E \u043F\u043E\u0440\u0446\u0438\u044E", 20, 0, 5, 2, -18, U(0, 0, 3, 2, 1, 1), [add("vitals.hunger", -42, "\u0441\u044B\u0442\u043D\u0430\u044F \u0435\u0434\u0430"), add("accumulators.satietyWindowMin", 210, "\u043E\u043A\u043D\u043E \u0441\u044B\u0442\u043E\u0441\u0442\u0438")], { inventory: [{ category: "ready_meal", portions: 1 }], domains: ["food", "state"], stabilizes: ["recovery"] }),
     action("eat_quick_base", "\u0411\u044B\u0441\u0442\u0440\u043E \u043F\u0435\u0440\u0435\u043A\u0443\u0441\u0438\u0442\u044C", 10, 0, 4, 3, -10, U(0, 0, 2, 2, 3, 0), [add("vitals.hunger", -28, "\u043F\u0435\u0440\u0435\u043A\u0443\u0441"), add("accumulators.satietyWindowMin", 120, "\u043A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u0441\u044B\u0442\u043E\u0441\u0442\u044C")], { inventory: [{ category: "quick_base", portions: 1, fallbackMoneyRub: 350 }], domains: ["food", "state"], stabilizes: ["recovery"] }),
+    action("prepare_simple_meal", "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u043F\u0440\u043E\u0441\u0442\u0443\u044E \u0435\u0434\u0443", 40, 0, 14, 2, -22, U(-1, 0, 4, 1, -2, 2), [add("vitals.hunger", -30, "\u043F\u0440\u043E\u0441\u0442\u0430\u044F \u0435\u0434\u0430"), add("accumulators.satietyWindowMin", 120, "\u043A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u0441\u044B\u0442\u043E\u0441\u0442\u044C")], { domains: ["food", "state"], stabilizes: ["recovery"] }),
     action("cook_meal_batch", "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0435\u0434\u0443 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437", 60, 0, 22, 4, -15, U(0, 2, 3, 3, -1, 0), [{ op: "add_inventory", category: "ready_meal", portions: 2, reason: "\u0441\u043E\u0437\u0434\u0430\u043D\u044B \u0433\u043E\u0442\u043E\u0432\u044B\u0435 \u043F\u043E\u0440\u0446\u0438\u0438" }, add("vitals.hunger", -35, "\u043F\u0440\u0438\u0451\u043C \u043F\u0438\u0449\u0438"), { op: "adjust_skill", skillId: "cooking", delta: 2, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u0433\u043E\u0442\u043E\u0432\u043A\u0438" }, { op: "adjust_habit", habitId: "meal_prep", delta: 3, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0438 \u0435\u0434\u044B" }], { inventory: [{ category: "cook_stock", portions: 3 }], rules: [compressedMorningCooking, cookingRoutine], conditional: [compressedMorningTension, batchPrepUnlock], domains: ["food", "family"], stabilizes: ["recovery", "financial"] }),
     action("order_food", "\u0417\u0430\u043A\u0430\u0437\u0430\u0442\u044C \u0435\u0434\u0443", 15, 1100, 3, 8, -20, U(1, 1, 2, -3, 4, -1), [add("vitals.hunger", -38, "\u0434\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0435\u0434\u044B"), add("accumulators.satietyWindowMin", 180, "\u0441\u044B\u0442\u043E\u0441\u0442\u044C")], { rules: [lowReserve], domains: ["food", "finance"], stabilizes: ["recovery"] }),
     action("drink_coffee_100", "\u0412\u044B\u043F\u0438\u0442\u044C \u043A\u043E\u0444\u0435", 10, 250, 2, 14, -8, U(2, 0, -2, -1, 2, -2), [add("accumulators.activeCaffeineMg", 100, "\u043A\u043E\u0444\u0435\u0438\u043D"), add("vitals.energy", 10, "\u043A\u0440\u0430\u0442\u043A\u0438\u0439 \u0441\u0442\u0438\u043C\u0443\u043B"), { op: "adjust_habit", habitId: "caffeine_compensation", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u043C\u043F\u0435\u043D\u0441\u0430\u0446\u0438\u0438 \u043A\u043E\u0444\u0435\u0438\u043D\u043E\u043C" }], { rules: [highCaffeine], scheduled: [coffeeCrash], domains: ["state"] }),
     action("walk_short", "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u043F\u0440\u043E\u0439\u0442\u0438\u0441\u044C", 25, 0, 6, 1, -18, U(0, 1, 4, 1, 1, 2), [add("vitals.tension", -16, "\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435"), add("vitals.energy", 6, "\u0441\u0432\u0435\u0436\u0438\u0439 \u0432\u043E\u0437\u0434\u0443\u0445"), { op: "adjust_habit", habitId: "short_walk", delta: 2, reason: "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0439 \u043F\u0440\u043E\u0433\u0443\u043B\u043A\u0438" }], { domains: ["movement", "state"], stabilizes: ["recovery", "family"] }),
+    action("rest_short", "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u043E\u0442\u0434\u043E\u0445\u043D\u0443\u0442\u044C", 30, 0, 2, 1, -24, U(0, 1, 5, 1, 1, 3), [add("vitals.energy", 18, "\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u0442\u0434\u044B\u0445"), add("vitals.tension", -8, "\u043F\u0430\u0443\u0437\u0430 \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435"), add("accumulators.recoveryNeed", -6, "\u0447\u0430\u0441\u0442\u044C \u043F\u043E\u0442\u0440\u0435\u0431\u043D\u043E\u0441\u0442\u0438 \u0432 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u0430")], { domains: ["state"], stabilizes: ["recovery"] }),
     action("train_light", "\u041B\u0451\u0433\u043A\u0430\u044F \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430", 35, 0, 18, 5, -12, U(0, 0, 4, 1, 0, 1), [add("vitals.tension", -12, "\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435"), add("vitals.physicalFatigue", 8, "\u043B\u0451\u0433\u043A\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("accumulators.recoveryNeed", -8, "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u044D\u0444\u0444\u0435\u043A\u0442")], { rules: [tired], domains: ["movement", "state"], stabilizes: ["recovery"] }),
     action("train_planned", "\u041F\u043B\u0430\u043D\u043E\u0432\u0430\u044F \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430", 70, 0, 42, 12, -8, U(0, 0, 5, 1, -2, -1), [add("vitals.tension", -18, "\u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0430"), add("vitals.physicalFatigue", 20, "\u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), add("accumulators.recoveryNeed", -12, "\u0437\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435")], { rules: [tired], domains: ["movement", "state"], stabilizes: ["recovery"] }),
     action("work_standard", "\u0420\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435", 75, 0, 32, 16, -16, U(5, 0, -2, 2, 0, -1), [{ op: "progress_task", taskId: "project_delivery", minutes: 75, reason: "\u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }, add("vitals.energy", -5, "\u0443\u043C\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430"), add("vitals.tension", 4, "\u0440\u0430\u0431\u043E\u0447\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430"), { op: "adjust_skill", skillId: "professional", delta: 1, reason: "\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430" }], { rules: [lowFocus, officeCommuteCost, remoteEveningIntrusion, projectInstability, focusedBlockRelief], conditional: [workConditional, trainingUnlock], domains: ["work", "state"], stabilizes: ["deadline"] }),
@@ -375,12 +381,14 @@
 
   // ../../packages/assemble-day-engine/src/periods.ts
   var DEFAULT_PERIOD_STATE = {
-    version: 1,
+    version: 2,
     daysPerWeek: 7,
     weeksPerMonth: 4,
+    monthsPerYear: 12,
     completedDays: 0,
     completedWeeks: 0,
     completedMonths: 0,
+    completedYears: 0,
     appliedBoundaries: [],
     plannedWeeks: []
   };
@@ -389,6 +397,9 @@
   }
   function daysPerMonth(periods) {
     return periods.daysPerWeek * periods.weeksPerMonth;
+  }
+  function daysPerYear(periods) {
+    return daysPerMonth(periods) * periods.monthsPerYear;
   }
   function dayOfWeekFor(periods, absoluteDay) {
     return (absoluteDay % periods.daysPerWeek + periods.daysPerWeek) % periods.daysPerWeek;
@@ -399,6 +410,9 @@
   function monthIndexFor(periods, absoluteDay) {
     return Math.floor(absoluteDay / daysPerMonth(periods));
   }
+  function yearIndexFor(periods, absoluteDay) {
+    return Math.floor(absoluteDay / daysPerYear(periods));
+  }
   function currentWeekIndex(state) {
     return weekIndexFor(state.periods, state.clock.dayIndex);
   }
@@ -407,6 +421,9 @@
   }
   function isLastWeekOfMonth(periods, weekIndex) {
     return (weekIndex % periods.weeksPerMonth + periods.weeksPerMonth) % periods.weeksPerMonth === periods.weeksPerMonth - 1;
+  }
+  function isLastMonthOfYear(periods, monthIndex) {
+    return (monthIndex % periods.monthsPerYear + periods.monthsPerYear) % periods.monthsPerYear === periods.monthsPerYear - 1;
   }
   function boundariesForCompletedDay(input) {
     const { periods, completedDayIndex, nextDayIndex, afterStepIndex } = input;
@@ -420,12 +437,14 @@
       afterStepIndex,
       periodIndex: completedDayIndex
     }];
-    const closesWeek = isLastDayOfWeek(periods, completedDayIndex) || contentEnds;
+    const closesNaturalWeek = isLastDayOfWeek(periods, completedDayIndex);
+    const closesWeek = closesNaturalWeek || contentEnds;
     if (!closesWeek) return boundaries;
     boundaries.push({ id: `week:${week}`, kind: "week", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: week });
-    if (isLastWeekOfMonth(periods, week) && !contentEnds) {
-      boundaries.push({ id: `month:${monthIndexFor(periods, completedDayIndex)}`, kind: "month", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: monthIndexFor(periods, completedDayIndex) });
-    }
+    const month = monthIndexFor(periods, completedDayIndex);
+    if (!closesNaturalWeek || !isLastWeekOfMonth(periods, week)) return boundaries;
+    boundaries.push({ id: `month:${month}`, kind: "month", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: month });
+    if (isLastMonthOfYear(periods, month)) boundaries.push({ id: `year:${yearIndexFor(periods, completedDayIndex)}`, kind: "year", completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: yearIndexFor(periods, completedDayIndex) });
     return boundaries;
   }
   function applyPeriodBoundaries(state, boundaries) {
@@ -444,7 +463,11 @@
         compactAppliedBoundaries(state);
         continue;
       }
-      state.periods.completedMonths += 1;
+      if (boundary.kind === "month") {
+        state.periods.completedMonths += 1;
+        continue;
+      }
+      state.periods.completedYears += 1;
     }
     return applied;
   }
@@ -452,6 +475,27 @@
     const before = state.causalJournal.length;
     state.causalJournal = state.causalJournal.filter((entry) => entry.dayIndex >= completedDayIndex);
     return before - state.causalJournal.length;
+  }
+  function compactEventSelectionRng(state, completedDayIndex) {
+    let removed = 0;
+    for (const key of Object.keys(state.rng.occurrences)) {
+      const match = /^event-select:(-?\d+):/.exec(key);
+      if (!match || Number(match[1]) > completedDayIndex) continue;
+      delete state.rng.occurrences[key];
+      removed += 1;
+    }
+    return removed;
+  }
+  function compactDailyEventLedger(state, completedDayIndex) {
+    let removed = 0;
+    for (const ledger of [state.eventLedger.dayExternalLoad, state.eventLedger.dayTotalLoad, state.eventLedger.dayLargeCount]) {
+      for (const day of Object.keys(ledger)) {
+        if (Number(day) > completedDayIndex) continue;
+        delete ledger[day];
+        removed += 1;
+      }
+    }
+    return removed;
   }
   var FAMILY_LOAD_NIGHTLY_RELIEF = 18;
   function relieveFamilyLoad(state) {
@@ -534,7 +578,7 @@
     return { slot: index + 1, dayIndex, minuteOfDay: minute, eventId, forkKind: eventId === "tue_night_wakeup" || eventId === "sat_school_event" ? "hard" : "ordinary", ...sleep ? { sleepBeforeMin: sleep[0], interruptionsMin: sleep[1] } : {} };
   });
   slots[7] = { ...slots[7], sleepBeforeMin: 210, interruptionsMin: 10 };
-  var CAMPAIGN_DAYS = 30;
+  var CAMPAIGN_DAYS = daysPerYear(createPeriodState());
   var ROUTINE_DAY_ANCHORS = [420, 600, 780, 960, 1140, 1320];
   var ROUTINE_SLEEP = [450, 0];
   var authoredDays = Math.max(...raw.map((item) => item[0]));
@@ -657,14 +701,14 @@
     tags: ["causal", "echo", "family_reciprocity"]
   }, { kind: "compare", path: "family.partner.trust", op: "gte", value: 79 });
   var ROUTINE_SITUATIONS = [
-    { id: "routine_morning_start", fromMin: 240, toMin: 660, actionIds: ["eat_quick_base", "walk_short", "drink_coffee_100", "work_standard"] },
-    { id: "routine_work_stretch", fromMin: 540, toMin: 1080, actionIds: ["work_standard", "walk_short", "ask_colleague_help"] },
-    { id: "routine_family_moment", fromMin: 900, toMin: 1380, actionIds: ["protect_commitment", "take_family_load", "walk_short", "wind_down_early", "work_standard"] },
-    { id: "routine_evening_wind", fromMin: 1020, toMin: 1439, actionIds: ["wind_down_early", "walk_short", "work_late"] },
+    { id: "routine_morning_start", fromMin: 240, toMin: 660, actionIds: ["eat_quick_base", "prepare_simple_meal", "walk_short", "drink_coffee_100", "work_standard"] },
+    { id: "routine_work_stretch", fromMin: 540, toMin: 1080, actionIds: ["prepare_simple_meal", "work_standard", "walk_short", "ask_colleague_help"] },
+    { id: "routine_family_moment", fromMin: 900, toMin: 1380, actionIds: ["prepare_simple_meal", "protect_commitment", "take_family_load", "walk_short", "rest_short", "wind_down_early", "work_standard"] },
+    { id: "routine_evening_wind", fromMin: 1020, toMin: 1439, actionIds: ["prepare_simple_meal", "wind_down_early", "walk_short", "rest_short", "work_late"] },
     // Страховочная ситуация: доступна почти всегда и держит стабилизаторы сразу
     // двух доменов, поэтому тяжёлое состояние не остаётся без платного выхода,
     // когда авторские и остальные бытовые ситуации не подходят.
-    { id: "routine_pause", fromMin: 300, toMin: 1380, actionIds: ["walk_short", "work_standard", "wind_down_early"] }
+    { id: "routine_pause", fromMin: 300, toMin: 1380, actionIds: ["prepare_simple_meal", "walk_short", "rest_short", "work_standard", "wind_down_early"] }
   ];
   for (const routine of ROUTINE_SITUATIONS) {
     events[routine.id] = {
@@ -702,7 +746,7 @@
     cooldownDays: 2,
     load: { external: 0, total: 8, size: "small" },
     onOpenEffects: [{ op: "add_state", path: "vitals.tension", delta: -4, reason: "\u0440\u0430\u0437\u0434\u0435\u043B\u0451\u043D\u043D\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435" }],
-    actionIds: ["take_family_load", "protect_commitment", "wind_down_early", "work_standard"],
+    actionIds: ["take_family_load", "protect_commitment", "rest_short", "wind_down_early", "work_standard"],
     tags: ["causal", "family_anchor_window", "family_reciprocity"]
   };
   events.family_child_evening = {
@@ -726,7 +770,7 @@
   var registries = { actions, events, slots };
   function createInitialState(seed) {
     return {
-      schemaVersion: 3,
+      schemaVersion: 4,
       periods: createPeriodState(),
       weekStats: { weekIndex: 0, actionCounts: {}, previousWeekIndex: -1, previousActionCounts: {} },
       employment: { format: null, chosenAtStepIndex: null },
@@ -930,12 +974,12 @@
   function validatePeriods(state) {
     const periods = state.periods;
     if (!periods || typeof periods !== "object") fail("state.periods", "required");
-    if (periods.version !== 1) fail("state.periods.version", "expected 1");
-    for (const key of ["daysPerWeek", "weeksPerMonth"]) {
+    if (periods.version !== 2) fail("state.periods.version", "expected 2");
+    for (const key of ["daysPerWeek", "weeksPerMonth", "monthsPerYear"]) {
       integer(periods[key], `state.periods.${key}`);
       if (periods[key] < 1) fail(`state.periods.${key}`, "must be positive");
     }
-    for (const key of ["completedDays", "completedWeeks", "completedMonths"]) {
+    for (const key of ["completedDays", "completedWeeks", "completedMonths", "completedYears"]) {
       integer(periods[key], `state.periods.${key}`);
       if (periods[key] < 0) fail(`state.periods.${key}`, "negative");
     }
@@ -943,6 +987,7 @@
     unique(periods.appliedBoundaries, "state.periods.appliedBoundaries");
     if (!Array.isArray(periods.plannedWeeks) || periods.plannedWeeks.some((index) => !Number.isInteger(index) || index < 0)) fail("state.periods.plannedWeeks", "expected non-negative week indexes");
     unique(periods.plannedWeeks.map(String), "state.periods.plannedWeeks");
+    if (periods.plannedWeeks.length > 1) fail("state.periods.plannedWeeks", "only the current planning lock may be retained");
     const employment = state.employment;
     if (!employment || typeof employment !== "object") fail("state.employment", "required");
     if (employment.format !== null && !["office", "remote", "project"].includes(employment.format)) fail("state.employment.format", "unknown format");
@@ -965,7 +1010,7 @@
   }
   function validateState(state) {
     validateSerializable(state, "state");
-    if (state.schemaVersion !== 3 || state.scenarioId !== CONTRACT.scenarioId || state.scenarioVersion !== CONTRACT.scenarioVersion || state.calibrationVersion !== CONTRACT.calibrationVersion || state.priceBookVersion !== CONTRACT.priceBookVersion || state.rng.algorithm !== CONTRACT.rngAlgorithm) fail("state.versions", "contract mismatch");
+    if (state.schemaVersion !== CONTRACT.schemaVersion || state.scenarioId !== CONTRACT.scenarioId || state.scenarioVersion !== CONTRACT.scenarioVersion || state.calibrationVersion !== CONTRACT.calibrationVersion || state.priceBookVersion !== CONTRACT.priceBookVersion || state.rng.algorithm !== CONTRACT.rngAlgorithm) fail("state.versions", "contract mismatch");
     if ("derived" in state || "context" in state) fail("state", "derived context must not be serialized");
     if (!state.campaignId || !state.rng.seed) fail("state", "campaignId and rng.seed required");
     if (state.activeEventId !== null && typeof state.activeEventId !== "string") fail("state.activeEventId", "expected event id or null");
@@ -1237,7 +1282,7 @@
     );
     state.weeklyRules = weeklyRules;
     state.monthlyPriorities = monthlyPriorities;
-    state.periods.plannedWeeks = [...state.periods.plannedWeeks, weekIndex].sort((left, right) => left - right);
+    state.periods.plannedWeeks = [weekIndex];
     validateState(state);
     return { state, journalEntries: state.causalJournal.slice(startJournal), stateHash: stateHash(state) };
   }
@@ -1791,8 +1836,14 @@
     state.rng.occurrences[key] = (state.rng.occurrences[key] ?? 0) + 1;
     return [chosen, ...sorted.filter((item) => item !== chosen)];
   }
+  function eventLedgerDigest(ledger, eventId, day) {
+    return `occurrence=${ledger.occurrences[eventId] ?? 0};day=${day};external=${ledger.dayExternalLoad[day] ?? 0};total=${ledger.dayTotalLoad[day] ?? 0};large=${ledger.dayLargeCount[day] ?? 0};weekLarge=${ledger.weekLargeCount};heavyRun=${ledger.consecutiveHeavy}`;
+  }
+  function periodDigest(periods) {
+    return `days=${periods.completedDays};weeks=${periods.completedWeeks};months=${periods.completedMonths};years=${periods.completedYears};history=${periods.appliedBoundaries.length};latest=${periods.appliedBoundaries.at(-1) ?? "none"}`;
+  }
   function registerEvent(state, event, dayIndex, changes) {
-    const day = String(dayIndex), ledger = state.eventLedger, before = clone2(ledger);
+    const day = String(dayIndex), ledger = state.eventLedger, before = eventLedgerDigest(ledger, event.id, day);
     ledger.occurrences[event.id] = (ledger.occurrences[event.id] ?? 0) + 1;
     ledger.dayExternalLoad[day] = (ledger.dayExternalLoad[day] ?? 0) + event.load.external;
     ledger.dayTotalLoad[day] = (ledger.dayTotalLoad[day] ?? 0) + event.load.total;
@@ -1801,7 +1852,7 @@
     ledger.weekLargeCount += large;
     ledger.consecutiveHeavy = event.tags.includes("heavy") ? ledger.consecutiveHeavy + 1 : 0;
     if (event.cooldownDays) state.eventCooldownUntilDay[event.id] = dayIndex + event.cooldownDays;
-    pushChange(changes, event.id, "\u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u043F\u0440\u043E\u0448\u043B\u043E budget \u0438 cooldown gates", "eventLedger", before, ledger, "established");
+    pushChange(changes, event.id, "\u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u043F\u0440\u043E\u0448\u043B\u043E budget \u0438 cooldown gates", "eventLedger", before, eventLedgerDigest(ledger, event.id, day), "established");
     const context = computeDecisionContext(state);
     for (const path of conditionPaths(event.trigger)) pushChange(changes, event.id, `\u0441\u0438\u0442\u0443\u0430\u0446\u0438\u044E \u043E\u0442\u043A\u0440\u044B\u043B \u0444\u0430\u043A\u0442\u043E\u0440 ${path}`, `eventTrigger.${event.id}.${path}`, getPath(state, path, context), "matched", "established");
   }
@@ -1814,7 +1865,9 @@
   function isPracticallySelectable(state, template, registries2) {
     const context = computeDecisionContext(state), offers = getActionOffers(state, template.id, registries2, context), available = offers.filter((offer) => offer.available);
     if (!available.length) return false;
-    return !isHeavyState(state, context) || available.some((offer) => offer.stabilizes.length > 0);
+    if (!isHeavyState(state, context)) return true;
+    if (state.vitals.hunger > 85 && !available.some((offer) => offer.stabilizes.includes("recovery") && registries2.actions[offer.actionId]?.domains.includes("food"))) return false;
+    return available.some((offer) => offer.stabilizes.length > 0);
   }
   function appendJournal(state, changes, startIndex) {
     for (const change of changes) {
@@ -1932,7 +1985,7 @@
         const completedSlot = registries2.slots[cursorBefore], nextSlot = registries2.slots[state.scenarioCursor];
         if (completedSlot && (!nextSlot || nextSlot.dayIndex > completedSlot.dayIndex)) {
           const crossed = boundariesForCompletedDay({ periods: state.periods, completedDayIndex: completedSlot.dayIndex, nextDayIndex: nextSlot ? nextSlot.dayIndex : null, afterStepIndex: state.clock.stepIndex });
-          const beforePeriods = clone2(state.periods);
+          const beforePeriods = periodDigest(state.periods);
           const applied = applyPeriodBoundaries(state, crossed);
           if (applied.some((item) => item.kind === "day")) {
             const beforeLoad = { partner: state.family.partner.load, child: state.family.child.load };
@@ -1940,7 +1993,7 @@
             pushChange(changes, "family_recovery", "\u043D\u043E\u0447\u044C \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0431\u043B\u0438\u0437\u043A\u0438\u0445", "family.partner.load", beforeLoad.partner, state.family.partner.load, "plausible_model");
             pushChange(changes, "family_recovery", "\u043D\u043E\u0447\u044C \u0441\u043D\u0438\u0437\u0438\u043B\u0430 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 \u0431\u043B\u0438\u0437\u043A\u0438\u0445", "family.child.load", beforeLoad.child, state.family.child.load, "plausible_model");
           }
-          if (applied.length) pushChange(changes, "period_boundary", `\u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432 \u0437\u0430\u043A\u0440\u044B\u0442\u044B: ${applied.map((item) => item.id).join(", ")}`, "periods", beforePeriods, clone2(state.periods), "established");
+          if (applied.length) pushChange(changes, "period_boundary", `\u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432 \u0437\u0430\u043A\u0440\u044B\u0442\u044B: ${applied.map((item) => item.id).join(", ")}`, "periods", beforePeriods, periodDigest(state.periods), "established");
           closedDayIndex = applied.find((item) => item.kind === "day")?.completedDayIndex ?? null;
         }
       }
@@ -1949,6 +2002,8 @@
       if (closedDayIndex !== null) {
         compactCausalJournal(state, closedDayIndex);
         compactScheduledEffects(state);
+        compactEventSelectionRng(state, closedDayIndex);
+        compactDailyEventLedger(state, closedDayIndex);
       }
       normalize(state);
       if (!mutateOwnedState) validateState(state);
@@ -2120,6 +2175,20 @@
     });
   }
   function getPeriodSummary(state, boundary, registries2) {
+    if (boundary.kind === "year") {
+      const outcome = getCampaignOutcome(state);
+      return {
+        id: boundary.id,
+        kind: "year",
+        completedDayIndex: boundary.completedDayIndex,
+        title: `\u0413\u043E\u0434 ${boundary.periodIndex + 1} \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D`,
+        headline: `\u0413\u043E\u0434 \u0441\u043E\u0431\u0440\u0430\u043B ${state.periods.monthsPerYear} \u043C\u0435\u0441\u044F\u0447\u043D\u044B\u0445 \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432. \u0418\u0442\u043E\u0433 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043F\u043E \u0447\u0435\u0442\u044B\u0440\u0451\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u043C \u043B\u0438\u043D\u0438\u044F\u043C \u2014 \u0431\u0435\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0431\u0430\u043B\u043B\u0430.`,
+        causalLink: "\u0418\u0442\u043E\u0433 \u0433\u043E\u0434\u0430 \u0441\u0432\u044F\u0437\u044B\u0432\u0430\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F \u043C\u0435\u0441\u044F\u0446\u0435\u0432: \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B, \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0441\u0442\u0438 \u0438 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435.",
+        carryover: outcome.openThreads.length ? `\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0438\u0442\u0435\u0439: ${outcome.openThreads.length}. \u041E\u043D\u0438 \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u0447\u0430\u0441\u0442\u044C\u044E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430.` : "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0438\u0442\u0435\u0439 \u043D\u0430 \u043A\u043E\u043D\u0435\u0446 \u0433\u043E\u0434\u0430 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C.",
+        axes: outcome.axes,
+        openThreads: outcome.openThreads
+      };
+    }
     if (boundary.kind === "month") {
       const outcome = getCampaignOutcome(state);
       const goal = state.economy.financialGoal;
@@ -3174,13 +3243,13 @@
       window.requestAnimationFrame(() => document.querySelector(`[data-action-id="${nextId}"]`)?.focus());
     };
     if (resultRevision === session.revision && session.lastStepSummary) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(ResultBeat, { summary: session.lastStepSummary, saveMessage, saveTone, onContinue: onContinueResult, onRetry: onRetrySave }));
-    if (periodSummary && periodSummary.kind !== "week") {
-      const closesWeek = session.periodSummaries.some((item) => item.kind === "week");
-      const closesMonth = session.periodSummaries.some((item) => item.kind === "month");
-      const nextLabel = periodSummary.kind === "month" ? "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u0436\u0438\u0437\u043D\u044C" : closesMonth ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430" : closesWeek ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438" : "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0434\u043D\u044E";
+    if (periodSummary?.kind === "year") return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
+    if (periodSummary) {
+      const currentIndex = session.periodSummaries.findIndex((item) => item.id === periodSummary.id);
+      const nextKind = session.periodSummaries[currentIndex + 1]?.kind;
+      const nextLabel = nextKind === "week" ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438" : nextKind === "month" ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430" : nextKind === "year" ? "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0442\u043E\u0433 \u0433\u043E\u0434\u0430" : periodSummary.kind === "month" ? "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u0436\u0438\u0437\u043D\u044C" : periodSummary.kind === "week" ? "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0435" : "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0434\u043D\u044E";
       return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(DaySummaryCard, { summary: periodSummary, onContinue: onContinuePeriod, nextLabel }));
     }
-    if (periodSummary?.kind === "week") return h(CompletionSummary, { session, summary: periodSummary, onReplaySameSeed, onStartNew });
     if (view.complete) return h(CompletionSummary, { session, onReplaySameSeed, onStartNew });
     const planConfirmed = session.state.causalJournal.some((entry) => entry.sourceId === "planning_plan");
     if (!planConfirmed) return h("div", { className: "assemble-day-screen assemble-day-screen--day" }, h(CharacterCard, { state: session.state }), h(CampaignBriefCard, { state: session.state }), h("section", { className: "assemble-day-card assemble-day-contract-start" }, h("span", { className: "assemble-day-eyebrow" }, "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u043D\u0435\u0434\u0435\u043B\u0438"), h("h2", null, "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435, \u0447\u0442\u043E \u0431\u0443\u0434\u0435\u0442\u0435 \u0437\u0430\u0449\u0438\u0449\u0430\u0442\u044C"), h("p", null, "\u0414\u0432\u0435 \u043D\u0435\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0438 \u0434\u0432\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u0444\u043E\u043A\u0443\u0441\u0430 \u0438\u0437\u043C\u0435\u043D\u044F\u0442 \u0443\u0441\u0438\u043B\u0438\u0435, \u0440\u0438\u0441\u043A \u0438 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0440\u0430\u0437\u0432\u0438\u043B\u043A\u0430\u0445."), h("button", { type: "button", className: "assemble-day-primary", onClick: onOpenPlan }, "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u043D\u0435\u0434\u0435\u043B\u0438")));
@@ -3293,7 +3362,7 @@
       )
     );
   }
-  var PERIOD_EYEBROW = { day: "\u0418\u0442\u043E\u0433 \u0434\u043D\u044F", week: "\u0418\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438", month: "\u0418\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430" };
+  var PERIOD_EYEBROW = { day: "\u0418\u0442\u043E\u0433 \u0434\u043D\u044F", week: "\u0418\u0442\u043E\u0433 \u043D\u0435\u0434\u0435\u043B\u0438", month: "\u0418\u0442\u043E\u0433 \u043C\u0435\u0441\u044F\u0446\u0430", year: "\u0418\u0442\u043E\u0433 \u0433\u043E\u0434\u0430" };
   function DaySummaryCard({ summary, onContinue, nextLabel }) {
     return h(
       "section",
@@ -3303,12 +3372,21 @@
       h("p", null, summary.headline),
       h("p", { className: "assemble-day-summary__causal" }, summary.causalLink),
       h("p", { className: "assemble-day-summary__carry" }, summary.carryover),
+      summary.brief && h("section", { className: "assemble-day-complete__brief" }, h("strong", null, summary.brief.mission.title), h("span", null, summary.brief.mission.summary)),
+      summary.rules?.length ? h(
+        "section",
+        { className: "assemble-day-complete__rules", "aria-label": "\u0427\u0442\u043E \u0441\u0442\u0430\u043B\u043E \u0441 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C\u0438 \u043D\u0435\u0434\u0435\u043B\u0438" },
+        h("h3", null, "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B"),
+        ...summary.rules.map((rule) => h("article", { key: rule.id, className: `is-${rule.direction}` }, h("strong", null, rule.title), h("small", null, outcomeDirectionLabel(rule.direction)), h("span", null, rule.summary)))
+      ) : null,
+      summary.commitments && h("p", { className: "assemble-day-summary__causal" }, summary.commitments.summary),
+      summary.pressure && h("p", { className: "assemble-day-summary__carry" }, summary.pressure),
       summary.axes?.length ? h("div", { className: "assemble-day-outcome-grid" }, ...summary.axes.map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("span", null, axis.summary)))) : null,
-      summary.openThreads?.length ? h(
-        "details",
-        { className: "assemble-day-details" },
-        h("summary", null, "\u0427\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C"),
-        h("ul", { className: "assemble-day-list" }, ...summary.openThreads.map((item, index) => h("li", { key: `${index}:${item}` }, item)))
+      summary.openThreads ? h(
+        "section",
+        { className: "assemble-day-complete__threads", "aria-label": "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438" },
+        h("h3", null, "\u0427\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C"),
+        summary.openThreads.length ? h("ul", { className: "assemble-day-list" }, ...summary.openThreads.map((item, index) => h("li", { key: `${index}:${item}` }, item))) : h("p", null, "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0438\u0442\u0435\u0439 \u043D\u0430 \u043A\u043E\u043D\u0435\u0446 \u043F\u0435\u0440\u0438\u043E\u0434\u0430 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C.")
       ) : null,
       h("button", { type: "button", className: "assemble-day-primary", onClick: onContinue }, nextLabel)
     );
@@ -3316,7 +3394,7 @@
   function WeekScreen({ session, plan, onToggleRule, onContinue }) {
     const planning = getPlanningCampaignView(session, plan);
     const locked = session.state.clock.stepIndex > 0;
-    const currentDay = session.state.clock.dayIndex;
+    const currentDay = dayOfWeekFor(session.state.periods, session.state.clock.dayIndex);
     const dayProgress = DAY_NAMES2.map((name, index) => ({ name, status: index < currentDay ? "\u0413\u043E\u0442\u043E\u0432\u043E" : index === currentDay ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "\u0412\u043F\u0435\u0440\u0435\u0434\u0438" }));
     const commitments = session.state.commitments.filter((item) => item.status === "open").slice(0, 3);
     return h(
@@ -3549,31 +3627,31 @@
   }
   function CompletionSummary({ session, summary, onReplaySameSeed, onStartNew }) {
     const outcome = getCampaignOutcome(session.state);
-    const week = summary?.kind === "week" ? summary : session.periodSummaries.find((item) => item.kind === "week");
-    const brief = week?.brief || getCampaignBrief(session.state, registries);
+    const period = summary || [...session.periodSummaries].reverse().find((item) => item.kind !== "day");
+    const brief = period?.brief || getCampaignBrief(session.state, registries);
     const comparison = session.comparisonBaseline ? compareCampaignOutcomes(session.comparisonBaseline.outcome, outcome) : [];
     return h(
       "section",
       { className: "assemble-day-card assemble-day-complete" },
-      h("span", { className: "assemble-day-eyebrow" }, "\u041D\u0435\u0434\u0435\u043B\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"),
-      h("h2", null, week?.title || "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0442\u043E\u0447\u043A\u0430 \u043D\u0435\u0434\u0435\u043B\u0438"),
-      h("p", null, week?.headline || "\u0418\u0442\u043E\u0433 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0437 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0445 \u043B\u0438\u043D\u0438\u0439 \u0431\u0435\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0431\u0430\u043B\u043B\u0430."),
+      h("span", { className: "assemble-day-eyebrow" }, period ? PERIOD_EYEBROW[period.kind] : "\u0418\u0442\u043E\u0433 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438"),
+      h("h2", null, period?.title || "\u041A\u0430\u043C\u043F\u0430\u043D\u0438\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"),
+      h("p", null, period?.headline || "\u0418\u0442\u043E\u0433 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0437 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0445 \u043B\u0438\u043D\u0438\u0439 \u0431\u0435\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0431\u0430\u043B\u043B\u0430."),
       h("section", { className: "assemble-day-complete__brief" }, h("strong", null, brief.mission.title), h("span", null, brief.mission.summary)),
-      week?.rules?.length && h(
+      period?.rules?.length && h(
         "section",
         { className: "assemble-day-complete__rules", "aria-label": "\u0427\u0442\u043E \u0441\u0442\u0430\u043B\u043E \u0441 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C\u0438 \u043D\u0435\u0434\u0435\u043B\u0438" },
         h("h3", null, "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B"),
-        ...week.rules.map((rule) => h("article", { key: rule.id, className: `is-${rule.direction}` }, h("strong", null, rule.title), h("small", null, outcomeDirectionLabel(rule.direction)), h("span", null, rule.summary)))
+        ...period.rules.map((rule) => h("article", { key: rule.id, className: `is-${rule.direction}` }, h("strong", null, rule.title), h("small", null, outcomeDirectionLabel(rule.direction)), h("span", null, rule.summary)))
       ),
-      week?.commitments && h("p", { className: "assemble-day-summary__causal" }, week.commitments.summary),
-      week?.pressure && h("p", { className: "assemble-day-summary__carry" }, week.pressure),
+      period?.commitments && h("p", { className: "assemble-day-summary__causal" }, period.commitments.summary),
+      period?.pressure && h("p", { className: "assemble-day-summary__carry" }, period.pressure),
       h("h3", null, "\u0427\u0435\u0442\u044B\u0440\u0435 \u043B\u0438\u043D\u0438\u0438 \u0438\u0442\u043E\u0433\u0430"),
-      h("div", { className: "assemble-day-outcome-grid" }, ...(week?.axes || outcome.axes).map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("small", null, outcomeDirectionLabel(axis.direction)), h("span", null, axis.summary)))),
+      h("div", { className: "assemble-day-outcome-grid" }, ...(period?.axes || outcome.axes).map((axis) => h("article", { key: axis.id, className: `is-${axis.direction}` }, h("strong", null, axis.title), h("small", null, outcomeDirectionLabel(axis.direction)), h("span", null, axis.summary)))),
       h(
         "section",
         { className: "assemble-day-complete__threads", "aria-label": "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043D\u0438\u0442\u0438" },
         h("h3", null, "\u0427\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C"),
-        (week?.openThreads || outcome.openThreads).length ? h("ul", { className: "assemble-day-list" }, ...(week?.openThreads || outcome.openThreads).map((item, index) => h("li", { key: `${index}:${item}` }, item))) : h("p", null, "\u041E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043D\u0438\u0442\u0438 \u043D\u0435\u0434\u0435\u043B\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044B.")
+        (period?.openThreads || outcome.openThreads).length ? h("ul", { className: "assemble-day-list" }, ...(period?.openThreads || outcome.openThreads).map((item, index) => h("li", { key: `${index}:${item}` }, item))) : h("p", null, "\u041E\u0442\u043A\u0440\u044B\u0442\u044B\u0445 \u043D\u0438\u0442\u0435\u0439 \u043D\u0430 \u043A\u043E\u043D\u0435\u0446 \u043A\u0430\u043C\u043F\u0430\u043D\u0438\u0438 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C.")
       ),
       comparison.length > 0 && h("section", { className: "assemble-day-comparison" }, h("h3", null, "\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0441 \u043F\u0440\u043E\u0448\u043B\u044B\u043C \u043F\u0440\u043E\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435\u043C"), ...comparison.map((item) => h("p", { key: item.id }, h("strong", null, item.title), ` \xB7 ${item.changed ? "\u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0441\u044F" : "\u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0441\u044F"} \xB7 ${item.summary}`))),
       h("button", { type: "button", className: "assemble-day-primary", onClick: onReplaySameSeed }, "\u041F\u0440\u043E\u0439\u0442\u0438 \u044D\u0442\u043E\u0442 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0438\u043D\u0430\u0447\u0435"),

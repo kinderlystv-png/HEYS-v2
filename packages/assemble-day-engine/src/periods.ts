@@ -7,12 +7,14 @@ import type { GameState, PeriodBoundary, PeriodState } from './types.js';
  * границ и недели с подтверждённым планом.
  */
 export const DEFAULT_PERIOD_STATE: PeriodState = {
-  version: 1,
+  version: 2,
   daysPerWeek: 7,
   weeksPerMonth: 4,
+  monthsPerYear: 12,
   completedDays: 0,
   completedWeeks: 0,
   completedMonths: 0,
+  completedYears: 0,
   appliedBoundaries: [],
   plannedWeeks: [],
 };
@@ -23,6 +25,10 @@ export function createPeriodState(overrides: Partial<PeriodState> = {}): PeriodS
 
 export function daysPerMonth(periods: PeriodState): number {
   return periods.daysPerWeek * periods.weeksPerMonth;
+}
+
+export function daysPerYear(periods: PeriodState): number {
+  return daysPerMonth(periods) * periods.monthsPerYear;
 }
 
 export function dayOfWeekFor(periods: PeriodState, absoluteDay: number): number {
@@ -37,6 +43,10 @@ export function monthIndexFor(periods: PeriodState, absoluteDay: number): number
   return Math.floor(absoluteDay / daysPerMonth(periods));
 }
 
+export function yearIndexFor(periods: PeriodState, absoluteDay: number): number {
+  return Math.floor(absoluteDay / daysPerYear(periods));
+}
+
 export function currentWeekIndex(state: GameState): number {
   return weekIndexFor(state.periods, state.clock.dayIndex);
 }
@@ -47,6 +57,10 @@ export function isLastDayOfWeek(periods: PeriodState, absoluteDay: number): bool
 
 export function isLastWeekOfMonth(periods: PeriodState, weekIndex: number): boolean {
   return ((weekIndex % periods.weeksPerMonth) + periods.weeksPerMonth) % periods.weeksPerMonth === periods.weeksPerMonth - 1;
+}
+
+export function isLastMonthOfYear(periods: PeriodState, monthIndex: number): boolean {
+  return ((monthIndex % periods.monthsPerYear) + periods.monthsPerYear) % periods.monthsPerYear === periods.monthsPerYear - 1;
 }
 
 /**
@@ -71,12 +85,14 @@ export function boundariesForCompletedDay(input: {
     afterStepIndex,
     periodIndex: completedDayIndex,
   }];
-  const closesWeek = isLastDayOfWeek(periods, completedDayIndex) || contentEnds;
+  const closesNaturalWeek = isLastDayOfWeek(periods, completedDayIndex);
+  const closesWeek = closesNaturalWeek || contentEnds;
   if (!closesWeek) return boundaries;
   boundaries.push({ id: `week:${week}`, kind: 'week', completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: week });
-  if (isLastWeekOfMonth(periods, week) && !contentEnds) {
-    boundaries.push({ id: `month:${monthIndexFor(periods, completedDayIndex)}`, kind: 'month', completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: monthIndexFor(periods, completedDayIndex) });
-  }
+  const month = monthIndexFor(periods, completedDayIndex);
+  if (!closesNaturalWeek || !isLastWeekOfMonth(periods, week)) return boundaries;
+  boundaries.push({ id: `month:${month}`, kind: 'month', completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: month });
+  if (isLastMonthOfYear(periods, month)) boundaries.push({ id: `year:${yearIndexFor(periods, completedDayIndex)}`, kind: 'year', completedDayIndex, nextDayIndex, afterStepIndex, periodIndex: yearIndexFor(periods, completedDayIndex) });
   return boundaries;
 }
 
@@ -101,7 +117,11 @@ export function applyPeriodBoundaries(state: GameState, boundaries: PeriodBounda
       compactAppliedBoundaries(state);
       continue;
     }
-    state.periods.completedMonths += 1;
+    if (boundary.kind === 'month') {
+      state.periods.completedMonths += 1;
+      continue;
+    }
+    state.periods.completedYears += 1;
   }
   return applied;
 }
@@ -116,6 +136,40 @@ export function compactCausalJournal(state: GameState, completedDayIndex: number
   const before = state.causalJournal.length;
   state.causalJournal = state.causalJournal.filter((entry) => entry.dayIndex >= completedDayIndex);
   return before - state.causalJournal.length;
+}
+
+/**
+ * Weighted event selection uses a unique day/step key. Once that day is
+ * closed, the monotonic campaign clock can never request the key again.
+ * Bounded-roll keys are intentionally left intact: they have a separate
+ * recurrence contract.
+ */
+export function compactEventSelectionRng(state: GameState, completedDayIndex: number): number {
+  let removed = 0;
+  for (const key of Object.keys(state.rng.occurrences)) {
+    const match = /^event-select:(-?\d+):/.exec(key);
+    if (!match || Number(match[1]) > completedDayIndex) continue;
+    delete state.rng.occurrences[key];
+    removed += 1;
+  }
+  return removed;
+}
+
+/**
+ * Daily event budgets only read the active day. Selection of the first event
+ * of the next day happens before boundary finalization, so entries newer than
+ * the completed day must survive compaction.
+ */
+export function compactDailyEventLedger(state: GameState, completedDayIndex: number): number {
+  let removed = 0;
+  for (const ledger of [state.eventLedger.dayExternalLoad, state.eventLedger.dayTotalLoad, state.eventLedger.dayLargeCount]) {
+    for (const day of Object.keys(ledger)) {
+      if (Number(day) > completedDayIndex) continue;
+      delete ledger[day];
+      removed += 1;
+    }
+  }
+  return removed;
 }
 
 /**

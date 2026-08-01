@@ -1,13 +1,15 @@
 {
   "name": "@heys/assemble-day-engine",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
+    "measure:sprint-24-growth": "node --import tsx ../../scripts/qa/measure-assemble-day-sprint-24-growth.mts",
     "qa:merge": "tsx src/cli/merge-causal-qa.ts",
-    "qa:profile": "tsx src/cli/run-qa-profile.ts",
+    "qa:profile": "node --import tsx src/cli/run-qa-profile.ts",
     "qa:report": "tsx src/cli/run-causal-qa.ts",
+    "qa:smoke": "node --import tsx src/cli/run-qa-profile.ts --smoke",
     "test": "vitest run",
     "type-check": "tsc --noEmit"
   },

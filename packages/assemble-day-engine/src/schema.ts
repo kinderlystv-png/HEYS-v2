@@ -108,13 +108,14 @@ export function validateSlot(slot:ScenarioSlot):void {integer(slot.slot,'slot.sl
 function validatePeriods(state:GameState):void {
   const periods=state.periods;
   if(!periods||typeof periods!=='object')fail('state.periods','required');
-  if(periods.version!==1)fail('state.periods.version','expected 1');
-  for(const key of ['daysPerWeek','weeksPerMonth'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<1)fail(`state.periods.${key}`,'must be positive');}
-  for(const key of ['completedDays','completedWeeks','completedMonths'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<0)fail(`state.periods.${key}`,'negative');}
+  if(periods.version!==2)fail('state.periods.version','expected 2');
+  for(const key of ['daysPerWeek','weeksPerMonth','monthsPerYear'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<1)fail(`state.periods.${key}`,'must be positive');}
+  for(const key of ['completedDays','completedWeeks','completedMonths','completedYears'] as const){integer(periods[key],`state.periods.${key}`);if(periods[key]<0)fail(`state.periods.${key}`,'negative');}
   if(!Array.isArray(periods.appliedBoundaries)||periods.appliedBoundaries.some((id)=>typeof id!=='string'))fail('state.periods.appliedBoundaries','expected string ids');
   unique(periods.appliedBoundaries,'state.periods.appliedBoundaries');
   if(!Array.isArray(periods.plannedWeeks)||periods.plannedWeeks.some((index)=>!Number.isInteger(index)||index<0))fail('state.periods.plannedWeeks','expected non-negative week indexes');
   unique(periods.plannedWeeks.map(String),'state.periods.plannedWeeks');
+  if(periods.plannedWeeks.length>1)fail('state.periods.plannedWeeks','only the current planning lock may be retained');
   const employment=state.employment;
   if(!employment||typeof employment!=='object')fail('state.employment','required');
   if(employment.format!==null&&!['office','remote','project'].includes(employment.format))fail('state.employment.format','unknown format');
@@ -131,7 +132,7 @@ function validatePeriods(state:GameState):void {
 
 export function validateState(state:GameState):void {
   validateSerializable(state,'state');
-  if(state.schemaVersion!==3||state.scenarioId!==CONTRACT.scenarioId||state.scenarioVersion!==CONTRACT.scenarioVersion||state.calibrationVersion!==CONTRACT.calibrationVersion||state.priceBookVersion!==CONTRACT.priceBookVersion||state.rng.algorithm!==CONTRACT.rngAlgorithm)fail('state.versions','contract mismatch');
+  if(state.schemaVersion!==CONTRACT.schemaVersion||state.scenarioId!==CONTRACT.scenarioId||state.scenarioVersion!==CONTRACT.scenarioVersion||state.calibrationVersion!==CONTRACT.calibrationVersion||state.priceBookVersion!==CONTRACT.priceBookVersion||state.rng.algorithm!==CONTRACT.rngAlgorithm)fail('state.versions','contract mismatch');
   if('derived'in(state as unknown as Record<string,unknown>)||'context'in(state as unknown as Record<string,unknown>))fail('state','derived context must not be serialized');
   if(!state.campaignId||!state.rng.seed)fail('state','campaignId and rng.seed required');if(state.activeEventId!==null&&typeof state.activeEventId!=='string')fail('state.activeEventId','expected event id or null');integer(state.scenarioCursor,'state.scenarioCursor');if(state.scenarioCursor<0)fail('state.scenarioCursor','negative');validatePeriods(state);
   integer(state.clock.dayIndex,'state.clock.dayIndex');integer(state.clock.minuteOfDay,'state.clock.minuteOfDay');integer(state.clock.stepIndex,'state.clock.stepIndex');if(state.clock.dayIndex<0)fail('state.clock.dayIndex','negative');inRange(state.clock.minuteOfDay,0,1439,'state.clock.minuteOfDay');
