@@ -25,6 +25,23 @@
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
 
+# Второй адрес того же транспорта: claude.ai держит один коннектор на URL,
+# поэтому клиентский и кураторский доступ разведены по путям. Роль берётся из
+# токена, путь только разделяет два независимых OAuth-подключения.
+/mcp/curator:
+  post:
+    summary: MCP Streamable HTTP endpoint for the curator connector
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: CORS preflight for the curator MCP endpoint
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
 /mcp/register:
   post:
     summary: OAuth 2.1 dynamic client registration (RFC 7591)
@@ -87,6 +104,14 @@
 /.well-known/oauth-protected-resource/mcp:
   get:
     summary: OAuth protected resource metadata for /mcp
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-protected-resource/mcp/curator:
+  get:
+    summary: OAuth protected resource metadata for /mcp/curator
     x-yc-apigateway-integration:
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek

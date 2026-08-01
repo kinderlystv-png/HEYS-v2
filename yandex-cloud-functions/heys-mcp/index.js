@@ -4,9 +4,14 @@
  * heys-mcp — MCP-сервер HEYS для custom connector claude.ai.
  *
  * Один Cloud Function обслуживает три группы маршрутов:
- *   POST /mcp                          — Streamable HTTP транспорт MCP
+ *   POST /mcp, POST /mcp/curator       — Streamable HTTP транспорт MCP
  *   /mcp/register|authorize|token      — OAuth 2.1 + DCR + PKCE
  *   /.well-known/oauth-*               — метаданные для авто-обнаружения
+ *
+ * `/mcp/curator` — тот же транспорт под вторым адресом. claude.ai держит один
+ * коннектор на URL, поэтому личный клиентский и кураторский доступ не могут
+ * жить на одном пути. Роль берётся из токена, не из адреса: путь только
+ * разводит два независимых OAuth-подключения.
  *
  * Внешних зависимостей нет: подпись токенов — node:crypto, обращения к данным —
  * HTTPS-вызовы собственного /rpc. Прямого доступа к БД функция не имеет, поэтому
@@ -21,6 +26,22 @@ const { createTools } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
 
 const DEFAULT_API_URL = 'https://api.heyslab.ru';
+
+/**
+ * Адреса MCP-транспорта. Каждый — самостоятельный OAuth resource: claude.ai
+ * сверяет `resource` из метаданных с URL коннектора, поэтому метаданные и
+ * заголовок 401 обязаны называть именно тот путь, по которому пришёл запрос.
+ */
+const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator']);
+const DEFAULT_MCP_ENDPOINT = '/mcp';
+
+const PROTECTED_RESOURCE_PREFIX = '/.well-known/oauth-protected-resource';
+
+/** Путь ресурса из адреса метаданных: .../oauth-protected-resource/mcp/curator → /mcp/curator. */
+function resourcePathFromMetadataPath(path) {
+  const suffix = String(path).slice(PROTECTED_RESOURCE_PREFIX.length);
+  return MCP_ENDPOINTS.has(suffix) ? suffix : DEFAULT_MCP_ENDPOINT;
+}
 
 const SECURITY_HEADERS = {
   'Cache-Control': 'no-store',
@@ -106,14 +127,16 @@ function issuerFrom(headers) {
   return `https://${String(host).split(',')[0].trim()}`;
 }
 
-async function handleMcpRequest(event, { headers, secret, apiUrl }) {
+async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath = DEFAULT_MCP_ENDPOINT }) {
   const auth = oauth.authenticateAccessToken(headers.authorization, secret);
   if (!auth.ok) {
     const issuer = issuerFrom(headers);
     // RFC 9728: 401 обязан показать, где искать метаданные ресурса —
     // по ним claude.ai сам находит authorization server и запускает OAuth.
+    // Путь ресурса совпадает с адресом запроса, иначе второй коннектор уедет
+    // за метаданными первого.
     return json(401, { error: 'invalid_token', error_description: 'Требуется авторизация HEYS.' }, {
-      'WWW-Authenticate': `Bearer realm="heys-mcp", resource_metadata="${issuer}/.well-known/oauth-protected-resource/mcp"`,
+      'WWW-Authenticate': `Bearer realm="heys-mcp", resource_metadata="${issuer}${PROTECTED_RESOURCE_PREFIX}${resourcePath}"`,
     });
   }
 
@@ -263,8 +286,9 @@ exports.handler = async (event) => {
   }
 
   // Метаданные не требуют секрета и должны отвечать даже при проблемах с ним.
-  if (method === 'GET' && path.startsWith('/.well-known/oauth-protected-resource')) {
-    return json(200, oauth.protectedResourceMetadata({ issuer, resource: `${issuer}/mcp` }));
+  if (method === 'GET' && path.startsWith(PROTECTED_RESOURCE_PREFIX)) {
+    const resourcePath = resourcePathFromMetadataPath(path);
+    return json(200, oauth.protectedResourceMetadata({ issuer, resource: `${issuer}${resourcePath}` }));
   }
   if (method === 'GET' && path.startsWith('/.well-known/oauth-authorization-server')) {
     return json(200, oauth.authorizationServerMetadata({ issuer }));
@@ -321,12 +345,12 @@ exports.handler = async (event) => {
       return json(200, result.tokens);
     }
 
-    if (path === '/mcp' && method === 'POST') {
-      return await handleMcpRequest(event, { headers, secret, apiUrl });
+    if (MCP_ENDPOINTS.has(path) && method === 'POST') {
+      return await handleMcpRequest(event, { headers, secret, apiUrl, resourcePath: path });
     }
 
     // Поток «сервер → клиент» не поддерживается: транспорт stateless.
-    if (path === '/mcp' && (method === 'GET' || method === 'DELETE')) {
+    if (MCP_ENDPOINTS.has(path) && (method === 'GET' || method === 'DELETE')) {
       return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
     }
 

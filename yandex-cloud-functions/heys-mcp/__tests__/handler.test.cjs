@@ -48,6 +48,39 @@ test('GET /mcp не поддерживается: транспорт без се
   assert.equal(res.headers.Allow, 'POST');
 });
 
+test('/mcp/curator — тот же транспорт: POST требует токен, GET не поддержан', async () => {
+  const post = await call({ httpMethod: 'POST', path: '/mcp/curator', body: '{}' });
+  assert.equal(post.statusCode, 401);
+  assert.equal(body(post).error, 'invalid_token');
+
+  const get = await call({ httpMethod: 'GET', path: '/mcp/curator' });
+  assert.equal(get.statusCode, 405);
+  assert.equal(get.headers.Allow, 'POST');
+});
+
+test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {
+  const res = await call({ httpMethod: 'POST', path: '/mcp/curator', body: '{}' });
+  assert.match(
+    res.headers['WWW-Authenticate'],
+    /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/curator"/,
+  );
+
+  const meta = await call({ httpMethod: 'GET', path: '/.well-known/oauth-protected-resource/mcp/curator' });
+  assert.equal(meta.statusCode, 200);
+  assert.equal(body(meta).resource, `https://${HOST}/mcp/curator`);
+});
+
+test('метаданные неизвестного ресурса не выдумывают адрес, а отвечают за основной', async () => {
+  for (const path of [
+    '/.well-known/oauth-protected-resource',
+    '/.well-known/oauth-protected-resource/mcp/чужое',
+  ]) {
+    const res = await call({ httpMethod: 'GET', path });
+    assert.equal(res.statusCode, 200, path);
+    assert.equal(body(res).resource, `https://${HOST}/mcp`, path);
+  }
+});
+
 test('страница входа не встраивается в iframe и не кешируется', async () => {
   const reg = body(await call({
     httpMethod: 'POST', path: '/mcp/register',

@@ -864,6 +864,20 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4egv2a6pdhmf5hbrgp8
 
+  /mcp/curator:
+    post:
+      summary: MCP Streamable HTTP endpoint for the curator connector
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for the curator MCP endpoint
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
   /mcp/register:
     post:
       summary: OAuth 2.1 dynamic client registration (RFC 7591)
@@ -926,6 +940,14 @@ paths:
   /.well-known/oauth-protected-resource/mcp:
     get:
       summary: OAuth protected resource metadata for /mcp
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-protected-resource/mcp/curator:
+    get:
+      summary: OAuth protected resource metadata for /mcp/curator
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
