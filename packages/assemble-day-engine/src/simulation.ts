@@ -1,4 +1,5 @@
-import { createInitialState, registries } from './content/scenario.js';
+import { CAMPAIGN_DAYS, createInitialState, registries } from './content/scenario.js';
+import { reduceEmploymentSetup } from './employment.js';
 import { reducePlanningStep } from './planning.js';
 import { selectAction } from './policies.js';
 import {
@@ -12,6 +13,7 @@ import {
 import { canonicalJson, fnv1a64, stateHash } from './rng.js';
 import { validateRegistries, validateState } from './schema.js';
 import type {
+  EmploymentFormat,
   CampaignResult,
   DecisionContext,
   EventInstance,
@@ -249,6 +251,7 @@ export function runCampaign(
   trustedQaMode = false,
   auditTransitions = true,
   captureReplay = auditTransitions,
+  employmentFormat: EmploymentFormat | null = null,
 ): CampaignResult {
   let state = createInitialState(seed);
   if (!registriesValidated) {
@@ -256,6 +259,10 @@ export function runCampaign(
     registriesValidated = true;
   }
   validateState(state);
+  // Живой игрок обязан выбрать формат занятости до плана недели, поэтому и
+  // проверочная кампания проходит тот же шаг: иначе QA гоняет состояние,
+  // которого в игре не бывает.
+  if (employmentFormat) state = reduceEmploymentSetup({ state, format: employmentFormat, campaignDays: CAMPAIGN_DAYS }).state;
   state = reducePlanningStep({ state, plan: planForPolicy(policyId) }).state;
   let openEvent = initialEvent(state, registries);
   const result: CampaignResult = {
@@ -393,8 +400,9 @@ export function runCampaignWithState(
   trustedQaMode = false,
   auditTransitions = true,
   captureReplay = auditTransitions,
+  employmentFormat: EmploymentFormat | null = null,
 ): { result: CampaignResult; finalState: GameState } {
-  const result = runCampaign(seed, policyId, trustedQaMode, auditTransitions, captureReplay);
+  const result = runCampaign(seed, policyId, trustedQaMode, auditTransitions, captureReplay, employmentFormat);
   if (!lastFinalState) throw new Error('campaign did not produce a final state');
   return { result, finalState: lastFinalState };
 }

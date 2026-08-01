@@ -2,7 +2,7 @@ import { registries } from './content/scenario.js';
 import { checkCampaignInvariants, unreachableContent, variabilityProfile, type CampaignObservation, type InvariantViolation } from './invariants.js';
 import { POLICY_IDS } from './policies.js';
 import { runCampaignWithState } from './simulation.js';
-import { CONTRACT, type PolicyId, type Registries } from './types.js';
+import { CONTRACT, type EmploymentFormat, type PolicyId, type Registries } from './types.js';
 
 /**
  * Фиксированный набор регрессионных зёрен (`D74`). Он версионируется вместе с
@@ -38,6 +38,7 @@ export interface QaProfileReport {
   contracts: typeof CONTRACT;
   seeds: string[];
   policyIds: PolicyId[];
+  employmentFormats: EmploymentFormat[];
   campaigns: number;
   passed: boolean;
   violations: Array<InvariantViolation & { seed: string; policyId: string }>;
@@ -61,10 +62,16 @@ export function runQaProfile(options: { seeds?: readonly string[]; policyIds?: r
   const observations: CampaignObservation[] = [];
   const violations: QaProfileReport['violations'] = [];
 
+  // Формат занятости ротируется по прогонам: экономический контур должен
+  // проверяться на всех трёх форматах, а не только на одном.
+  const formats: EmploymentFormat[] = ['office', 'remote', 'project'];
+  let runIndex = 0;
   for (const seed of seeds) for (const policyId of policyIds) {
+    const format = formats[runIndex % formats.length]!;
+    runIndex += 1;
     let observation: CampaignObservation;
     try {
-      const { result, finalState } = runCampaignWithState(seed, policyId, true, true, true);
+      const { result, finalState } = runCampaignWithState(seed, policyId, true, true, true, format);
       observation = { seed, policyId, result, finalState };
     } catch (error) {
       // Кампания, которая не смогла завершиться, — это тоже результат профиля,
@@ -81,7 +88,8 @@ export function runQaProfile(options: { seeds?: readonly string[]; policyIds?: r
     const seed = seeds[0]!;
     const expected = observations.find((item) => item.seed === seed && item.policyId === policyId);
     if (!expected) continue;
-    const replay = runCampaignWithState(seed, policyId, true, true, true);
+    const replayIndex = policyIds.indexOf(policyId);
+    const replay = runCampaignWithState(seed, policyId, true, true, true, formats[replayIndex % formats.length]!);
     checked += 1;
     if (replay.result.finalStateHash !== expected.result.finalStateHash) mismatched += 1;
   }
@@ -92,6 +100,7 @@ export function runQaProfile(options: { seeds?: readonly string[]; policyIds?: r
     contracts: { ...CONTRACT },
     seeds,
     policyIds,
+    employmentFormats: formats,
     campaigns: observations.length,
     passed: violations.length === 0 && mismatched === 0,
     violations,

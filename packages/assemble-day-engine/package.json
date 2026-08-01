@@ -6,6 +6,7 @@
   "exports": "./src/index.ts",
   "scripts": {
     "qa:merge": "tsx src/cli/merge-causal-qa.ts",
+    "qa:profile": "tsx src/cli/run-qa-profile.ts",
     "qa:report": "tsx src/cli/run-causal-qa.ts",
     "test": "vitest run",
     "type-check": "tsc --noEmit"

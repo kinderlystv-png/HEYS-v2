@@ -13,6 +13,7 @@ import type {
   PeriodBoundary,
   PeriodRuleResult,
   PeriodSummary,
+  OutcomeDirection,
   Registries,
   StepOutput,
   StepSummary,
@@ -187,6 +188,25 @@ function weeklyRuleResults(state: GameState, weekIndex = weekIndexFor(state.peri
 }
 
 export function getPeriodSummary(state: GameState, boundary: PeriodBoundary, registries: Registries): PeriodSummary {
+  if (boundary.kind === 'month') {
+    const outcome = getCampaignOutcome(state);
+    const goal = state.economy.financialGoal;
+    const reserve = computeDecisionContext(state).cashAfterNextObligationsRub;
+    const goalDirection: OutcomeDirection = !goal ? 'traded' : reserve >= goal.targetRub ? 'kept' : reserve >= goal.targetRub / 2 ? 'traded' : 'strained';
+    return {
+      id: boundary.id,
+      kind: 'month',
+      completedDayIndex: boundary.completedDayIndex,
+      title: `Месяц ${boundary.periodIndex + 1} завершён`,
+      headline: goal
+        ? `Финансовая цель месяца: ${goal.targetRub.toLocaleString('ru-RU')} ₽ резерва. Сейчас после ближайших платежей ${reserve.toLocaleString('ru-RU')} ₽.`
+        : 'Месяц завершён: итог складывается из тех же четырёх линий, что и недельный.',
+      causalLink: 'Месяц собирает последствия недель: перенесённые нити, выполненные договорённости и накопленное состояние.',
+      carryover: outcome.openThreads.length ? `${outcome.openThreads.length} открытые нити переходят в следующий месяц.` : 'Открытых нитей на конец месяца не осталось.',
+      axes: outcome.axes.map((axis) => axis.id === 'finance' ? { ...axis, direction: goalDirection } : axis),
+      openThreads: outcome.openThreads,
+    };
+  }
   if (boundary.kind === 'week') {
     const outcome = getCampaignOutcome(state);
     const resolved = state.commitments.filter((item) => item.status === 'resolved').length;

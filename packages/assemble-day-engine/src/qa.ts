@@ -71,7 +71,7 @@ function filesBelow(path: string): string[] {
   });
 }
 
-function sourceFingerprint(): string {
+export function sourceFingerprint(): string {
   const contractFiles = ['GAME_STATE_SCHEMA.md', 'ACTION_SCHEMA.md', 'EVENT_SCHEMA.md', 'CAUSAL_REDUCER_PROTOCOL.md', 'SCENARIO_WEEK_01.md', 'CAUSAL_QA_PLAN.md', '09_CALIBRATION_QA.md', 'TECHNICAL_CONTRACT_ADDENDUM.md'].map((name) => resolve(REPO_ROOT, 'docs/assemble-day', name));
   const files = [...filesBelow(resolve(REPO_ROOT, 'packages/assemble-day-engine/src')), ...contractFiles].sort();
   return fnv1a64(files.map((path) => `${path.slice(REPO_ROOT.length + 1)}\n${readFileSync(path, 'utf8')}`).join('\n'));

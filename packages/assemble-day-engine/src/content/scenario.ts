@@ -192,7 +192,7 @@ addEcho('sun_family_time',{
  * тяжёлом состоянии и запас не сработал бы именно тогда, когда он нужнее всего.
  */
 const ROUTINE_SITUATIONS:Array<{id:string;fromMin:number;toMin:number;actionIds:string[]}>=[
-  {id:'routine_morning_start',fromMin:240,toMin:660,actionIds:['eat_quick_base','walk_short','drink_coffee_100']},
+  {id:'routine_morning_start',fromMin:240,toMin:660,actionIds:['eat_quick_base','walk_short','drink_coffee_100','work_standard']},
   {id:'routine_work_stretch',fromMin:540,toMin:1080,actionIds:['work_standard','walk_short','ask_colleague_help']},
   {id:'routine_family_moment',fromMin:900,toMin:1380,actionIds:['protect_commitment','take_family_load','walk_short','wind_down_early','work_standard']},
   {id:'routine_evening_wind',fromMin:1020,toMin:1439,actionIds:['wind_down_early','walk_short','work_late']},
@@ -232,7 +232,7 @@ events.family_partner_offers={
   urgency:1,selectionWeight:2,cooldownDays:2,
   load:{external:0,total:8,size:'small'},
   onOpenEffects:[{op:'add_state',path:'vitals.tension',delta:-4,reason:'разделённая нагрузка снизила напряжение'}],
-  actionIds:['take_family_load','protect_commitment','wind_down_early'],tags:['causal','family_anchor_window','family_reciprocity'],
+  actionIds:['take_family_load','protect_commitment','wind_down_early','work_standard'],tags:['causal','family_anchor_window','family_reciprocity'],
 };
 events.family_child_evening={
   schemaVersion:1,id:'family_child_evening',version:1,source:'causal',
@@ -244,7 +244,7 @@ events.family_child_evening={
   urgency:2,selectionWeight:2,cooldownDays:1,
   load:{external:0,total:10,size:'small'},
   onOpenEffects:[],
-  actionIds:['take_family_load','protect_commitment','walk_short'],tags:['causal','family_anchor_window'],
+  actionIds:['take_family_load','protect_commitment','walk_short','work_standard'],tags:['causal','family_anchor_window'],
 };
 
 export const registries:Registries={actions,events,slots};

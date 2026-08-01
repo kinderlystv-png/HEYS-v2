@@ -156,18 +156,25 @@ function applyEffect(state:GameState,effect:Effect,sourceId:string,changes:Chang
 
 function triggerSortValue(effect:ScheduledEffect):number {return effect.trigger.kind==='at_time'?effect.trigger.dayIndex*1440+effect.trigger.minuteOfDay:effect.trigger.kind==='after_steps'?10_000_000+effect.trigger.remainingSteps:20_000_000;}
 function sortQueue(state:GameState):void {state.scheduledEffects.sort((a,b)=>triggerSortValue(a)-triggerSortValue(b)||a.id.localeCompare(b.id));}
-function applyDueScheduled(state:GameState,changes:Change[]):void {
+function cashConsumedBy(effects:Effect[]):number {return effects.reduce((sum,effect)=>effect.op==='consume_resource'&&effect.path==='economy.cashRub'?sum+effect.amount:sum,0);}
+/**
+ * Отложенные эффекты применяются по своему времени, но среда не может обанкротить
+ * уже выбранное решение: списание, после которого не хватит денег на цену
+ * действия, остаётся `pending` и сработает на следующем продвижении времени.
+ * Деньги при этом не исчезают и скрытого долга не появляется.
+ */
+function applyDueScheduled(state:GameState,changes:Change[],reservedCash=0):void {
   for(const item of state.scheduledEffects)if(item.status==='pending'&&item.trigger.kind==='after_steps')item.trigger.remainingSteps-=1;
-  sortQueue(state);for(const item of state.scheduledEffects){if(item.status!=='pending')continue;const due=item.trigger.kind==='at_time'?(item.trigger.dayIndex<state.clock.dayIndex||item.trigger.dayIndex===state.clock.dayIndex&&item.trigger.minuteOfDay<=state.clock.minuteOfDay):item.trigger.kind==='after_steps'?item.trigger.remainingSteps<=0:evaluateCondition(state,item.trigger.condition);if(!due)continue;for(const effect of item.effects)applyEffect(state,effect,item.sourceId,changes);item.status='applied';pushChange(changes,item.sourceId,'отложенный эффект применён',`scheduledEffects.${item.id}.status`,'pending','applied','established');}
+  sortQueue(state);for(const item of state.scheduledEffects){if(item.status!=='pending')continue;const due=item.trigger.kind==='at_time'?(item.trigger.dayIndex<state.clock.dayIndex||item.trigger.dayIndex===state.clock.dayIndex&&item.trigger.minuteOfDay<=state.clock.minuteOfDay):item.trigger.kind==='after_steps'?item.trigger.remainingSteps<=0:evaluateCondition(state,item.trigger.condition);if(!due)continue;const cashCost=cashConsumedBy(item.effects);if(cashCost>0&&state.economy.cashRub-cashCost<reservedCash){pushChange(changes,item.sourceId,'списание отложено: оно оставило бы решение без оплаты',`scheduledEffects.${item.id}.status`,'pending','pending','established');continue;}for(const effect of item.effects)applyEffect(state,effect,item.sourceId,changes);item.status='applied';pushChange(changes,item.sourceId,'отложенный эффект применён',`scheduledEffects.${item.id}.status`,'pending','applied','established');}
 }
 
-function advanceToActionEnd(state:GameState,slot:Registries['slots'][number],duration:number,changes:Change[]):void {
+function advanceToActionEnd(state:GameState,slot:Registries['slots'][number],duration:number,changes:Change[],reservedCash=0):void {
   const absoluteNow=state.clock.dayIndex*1440+state.clock.minuteOfDay,absoluteAnchor=slot.dayIndex*1440+slot.minuteOfDay;
   if(slot.sleepBeforeMin)applySleep(state,changes,slot.sleepBeforeMin,slot.interruptionsMin??0,'sleep_transition',`сон перед slot ${slot.slot}`);
   const idle=Math.max(0,absoluteAnchor-absoluteNow-(slot.sleepBeforeMin??0));advanceBackground(state,changes,idle,'environment','среда продвинута до якоря');
   if(state.clock.dayIndex<slot.dayIndex||(state.clock.dayIndex===slot.dayIndex&&state.clock.minuteOfDay<slot.minuteOfDay)){state.clock.dayIndex=slot.dayIndex;state.clock.minuteOfDay=slot.minuteOfDay;}
   if(slot.sleepBeforeMin)state.clock.awakeSinceMinute=Math.max(0,slot.minuteOfDay-idle);
-  advanceBackground(state,changes,duration,'action_time','эффективная длительность действия');applyDueScheduled(state,changes);
+  advanceBackground(state,changes,duration,'action_time','эффективная длительность действия');applyDueScheduled(state,changes,reservedCash);
 }
 
 function scheduleActionEffects(state:GameState,actionId:string,registries:Registries,changes:Change[]):void {
@@ -203,7 +210,7 @@ function reduceCore(input:{state:GameState;openEvent:EventInstance;actionId:stri
     if(input.openEvent.templateId!==state.activeEventId||!evaluateCondition(state,event.trigger)||input.openEvent.dayIndex!==slot.dayIndex||input.openEvent.stepIndex!==state.clock.stepIndex||!input.openEvent.actionIds.includes(input.actionId)||!event.actionIds.includes(input.actionId))throw new ReducerError('stale_event',STAGES[0],input.openEvent.templateId,['active event/trigger/day/step/action mismatch']);
     const preActionState=clone(state),preContext=computeDecisionContext(preActionState),appliedAction=getActionOffers(preActionState,event.id,registries,preContext).find((offer)=>offer.actionId===input.actionId);if(!appliedAction?.available)throw new ReducerError('unavailable_action',STAGES[0],input.actionId,appliedAction?.unavailableReasons??['offer not found']);for(const geometry of appliedAction.geometryReasons)for(const path of geometry.inputPaths)pushChange(changes,input.actionId,`геометрия решения: ${geometry.reason}`,`decisionGeometry.${input.actionId}.${path}`,getPath(preActionState,path,preContext),geometry.reason,'established');mark(STAGES[0]);
 
-    currentStage=STAGES[1];advanceToActionEnd(state,slot,appliedAction.effectiveTimeMin,changes);mark(STAGES[1]);
+    currentStage=STAGES[1];advanceToActionEnd(state,slot,appliedAction.effectiveTimeMin,changes,appliedAction.moneyRub);mark(STAGES[1]);
     currentStage=STAGES[2];const cashBefore=state.economy.cashRub;if(cashBefore<appliedAction.moneyRub)throw new ReducerError('invariant_violation',STAGES[2],input.actionId,['cash changed after validation']);mutate(state,changes,input.actionId,'денежная цена действия','economy.cashRub',cashBefore-appliedAction.moneyRub);for(const item of registries.actions[input.actionId]!.cost.inventory??[]){const path=`economy.foodPortions.${item.category}`,before=state.economy.foodPortions[item.category];if(before>=item.portions)mutate(state,changes,input.actionId,'расход порции',path,before-item.portions);else if(item.fallbackMoneyRub===undefined)throw new ReducerError('invariant_violation',STAGES[2],input.actionId,[`inventory ${item.category} changed after validation`]);}mutate(state,changes,input.actionId,'цена усилия','vitals.energy',state.vitals.energy-appliedAction.effortScore*.02);mutate(state,changes,input.actionId,'цена усилия','vitals.hunger',state.vitals.hunger+appliedAction.effortScore*.05);mark(STAGES[2]);
     currentStage=STAGES[3];const action=registries.actions[input.actionId]!,conditional=action.conditionalEffects.filter((item)=>evaluateCondition(preActionState,item.when,preContext)).flatMap((item)=>item.effects),all=[...action.immediateEffects,...conditional],deterministic=all.filter((effect)=>effect.op!=='bounded_roll'),rolls=all.filter((effect)=>effect.op==='bounded_roll');for(const effect of [...deterministic,...rolls])applyEffect(state,effect,action.id,changes);mark(STAGES[3]);
     currentStage=STAGES[4];scheduleActionEffects(state,action.id,registries,changes);mark(STAGES[4]);

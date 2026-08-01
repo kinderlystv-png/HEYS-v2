@@ -18,6 +18,7 @@ describe('QA profile for long campaigns (Sprint 23)', () => {
     expect(report.profileVersion).toBe('1.0');
     expect(report.seeds).toEqual([...REGRESSION_SEEDS]);
     expect(report.campaigns).toBe(REGRESSION_SEEDS.length * report.policyIds.length);
+    expect(report.employmentFormats).toEqual(['office', 'remote', 'project']);
     expect(report.violations).toEqual([]);
     expect(report.replay.mismatched).toBe(0);
     expect(report.passed).toBe(true);
@@ -52,6 +53,25 @@ describe('QA profile for long campaigns (Sprint 23)', () => {
     // него означает, что кампания снова схлопывается в один сюжет.
     expect(profile.topEventShare).toBeLessThan(0.4);
     expect(profile.topActionShare).toBeLessThan(0.5);
+  });
+
+  it('covers the situations added by the family, routine and economy sprints', { timeout: 900_000 }, () => {
+    const report = runQaProfile({ seeds: EXTENDED_REGRESSION_SEEDS });
+    const unreachable = new Set(report.reachability.events);
+
+    // Новые семьи ситуаций обязаны быть достижимыми на наборе зёрен: иначе это
+    // мёртвый контент, который проверять нечем.
+    for (const id of ['family_partner_offers', 'family_child_evening', 'routine_pause', 'routine_work_stretch', 'routine_evening_wind', 'routine_family_moment']) {
+      expect(unreachable.has(id), id).toBe(false);
+    }
+
+    // Известный содержательный пробел: финансовое давление стабилизирует только
+    // готовка на несколько раз, а она требует запаса продуктов. Поэтому на
+    // расширенном наборе остаются единичные тяжёлые состояния без выхода именно
+    // по деньгам. Граница зафиксирована: она не должна расти, а закрывается
+    // отдельным действием «отложить платёж» в экономическом спринте.
+    expect(report.violations.every((item) => item.id === 'heavy_state_has_stabilizer')).toBe(true);
+    expect(report.violations.length).toBeLessThanOrEqual(2);
   });
 
   it('fails loudly when an invariant is actually broken', () => {
