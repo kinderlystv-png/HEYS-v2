@@ -37,18 +37,22 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY } = {}) {
   const saves = [];
   const upserts = [];
   let presetState = presets;
+  let overlayState = overlay;
   return {
     saves,
     upserts,
+    tombstones: null,
     async upsertKV(_session, key, value) {
       upserts.push({ key, value });
       if (key === 'heys_meal_presets_v1') presetState = value;
+      if (key === 'heys_products_overlay_v2') overlayState = value;
       return { ok: true };
     },
     get presetState() { return presetState; },
     async getKV(_session, key) {
-      if (key === 'heys_products_overlay_v2') return { data: overlay, error: null };
+      if (key === 'heys_products_overlay_v2') return { data: overlayState, error: null };
       if (key === 'heys_meal_presets_v1') return { data: presetState, error: null };
+      if (key === 'heys_deleted_ids') return { data: this.tombstones, error: null };
       if (key.startsWith('heys_dayv2_')) return { data: day, error: null };
       return { data: null, error: null };
     },
@@ -307,6 +311,99 @@ test('сохранённый набор сразу виден в list и при�
   assert.equal(meal.items[0].grams, 200);
   // В приём кладётся полный слепок, хотя в наборе хранится усечённый.
   assert.notEqual(meal.items[0].kcal100, undefined);
+});
+
+const LABEL = {
+  name: 'Печенье «Тест» овсяное',
+  brand: 'Тестбренд',
+  barcode: '4 600 000-12345 6',
+  protein100: 6.5, simple100: 24, complex100: 40,
+  badFat100: 5, goodFat100: 9, trans100: 0.3,
+  fiber100: 4, gi: 62, harm: 8.1,
+  portions: [{ name: '1 шт', grams: 10 }, { name: 'пусто', grams: 0 }],
+  additives: ['e500', ' e322 '],
+};
+
+test('create_product собирает карточку из данных этикетки', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_create_product(LABEL);
+
+  const write = api.upserts.find((u) => u.key === 'heys_products_overlay_v2');
+  assert.ok(write, 'записан overlay продуктов');
+  assert.equal(write.value.length, OVERLAY.length + 1, 'существующие продукты не потеряны');
+  const row = write.value[write.value.length - 1];
+
+  assert.equal(row._custom, true);
+  assert.equal(row.in_my_list, true);
+  assert.match(row.id, /^p_\d+_[0-9a-f]{6}$/);
+  assert.equal(row.brand, 'Тестбренд');
+  // Штрихкод чистится от пробелов и дефисов, как в приложении.
+  assert.equal(row.barcode, '460000012345 6'.replace(/\s/g, ''));
+  assert.deepEqual(row.barcodes, [row.barcode]);
+  // Порция с нулевым весом отбрасывается.
+  assert.deepEqual(row.portions, [{ name: '1 шт', grams: 10 }]);
+  assert.deepEqual(row.additives, ['E500', 'E322']);
+  // Углеводы и жиры достраиваются из компонентов.
+  assert.equal(row.carbs100, 64);
+  assert.equal(row.fat100, 14.3);
+  // Калорийность — NET Atwater, а не цифра с упаковки.
+  assert.equal(row.kcal100, Math.round((3 * 6.5 + 4 * 64 + 9 * 14.3) * 10) / 10);
+  assert.equal(res.structured.product_id, row.id);
+});
+
+test('create_product требует все обязательные нутриенты и называет недостающие', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const { gi, harm, ...withoutGi } = LABEL;
+  await assert.rejects(
+    () => tools.heys_create_product(withoutGi),
+    (e) => {
+      assert.equal(e.code, 'nutrients_missing');
+      assert.deepEqual(e.details.missing.sort(), ['gi', 'harm']);
+      return true;
+    },
+  );
+  assert.equal(api.upserts.length, 0);
+});
+
+test('create_product не плодит дубль существующего продукта', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_create_product({ ...LABEL, name: 'кофе американо' }),
+    (e) => {
+      assert.equal(e.code, 'product_exists');
+      assert.ok(e.details.existing.name);
+      return true;
+    },
+  );
+  assert.equal(api.upserts.length, 0);
+});
+
+test('create_product по явному подтверждению всё же создаёт одноимённый продукт', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await tools.heys_create_product({ ...LABEL, name: 'Кофе американо', allow_duplicate: true });
+  assert.equal(api.upserts.length, 1);
+});
+
+test('create_product предупреждает про ранее удалённое имя вместо тихого создания', async () => {
+  const api = fakeApi({ day: null });
+  api.tombstones = [{ id: 'old', name: 'Печенье «Тест» овсяное' }];
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_create_product(LABEL), (e) => e.code === 'product_tombstoned');
+  assert.equal(api.upserts.length, 0);
+});
+
+test('созданный продукт сразу доступен для записи приёма', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const created = await tools.heys_create_product(LABEL);
+  await tools.heys_log_meal({ items: [{ product_id: created.structured.product_id, grams: 30 }] });
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items[0].name, LABEL.name);
+  assert.equal(meal.items[0].grams, 30);
 });
 
 test('ошибка инструмента доходит до модели как isError, а не как сбой протокола', async () => {

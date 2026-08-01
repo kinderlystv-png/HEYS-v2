@@ -15,6 +15,9 @@ const products = require('./products');
 /** Наборы приёмов, которые пользователь сохранил в приложении. */
 const PRESETS_KEY = 'heys_meal_presets_v1';
 
+/** Список удалённых продуктов: приложение по нему скрывает записи из облака. */
+const TOMBSTONES_KEY = 'heys_deleted_ids';
+
 /**
  * Позиция набора — усечённый набор полей, ровно тот, что кладёт приложение
  * (apps/web/heys_add_product_step_v1.js). Полный нутриентный слепок здесь не
@@ -271,6 +274,77 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       };
     },
 
+    async heys_create_product(args) {
+      const name = String(args.name || '').trim();
+      if (!name) throw new ToolError('invalid_name', 'Нужно название продукта.');
+
+      const catalog = await loadCatalog();
+      const nameNorm = products.normalizeText(name);
+      const duplicate = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
+      if (duplicate && !args.allow_duplicate) {
+        throw new ToolError(
+          'product_exists',
+          `Продукт «${duplicate.name}» уже есть (${duplicate._source === 'own' ? 'в твоём списке' : 'в общей базе'}). Если это другой продукт — уточни название, например добавь бренд.`,
+          { existing: products.describeProduct(duplicate) },
+        );
+      }
+
+      // Удалённый когда-то продукт с тем же именем приложение отфильтрует по
+      // tombstone — новый продукт просто не появится в списке. Молча создавать
+      // его бессмысленно, поэтому проверяем заранее.
+      const tombstones = await api.getKV(sessionToken, TOMBSTONES_KEY);
+      if (Array.isArray(tombstones.data)) {
+        const hidden = tombstones.data.some((t) => t && t.name && products.normalizeText(t.name) === nameNorm);
+        if (hidden && !args.allow_duplicate) {
+          throw new ToolError(
+            'product_tombstoned',
+            `Продукт с названием «${name}» ты раньше удалял, и приложение скроет новый с тем же именем. Восстанови его в приложении или назови иначе.`,
+          );
+        }
+      }
+
+      let row;
+      try {
+        row = products.buildCustomProduct(args, {
+          nowMs,
+          makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
+        });
+      } catch (e) {
+        if (e.missing) {
+          throw new ToolError('nutrients_missing', `Не хватает обязательных полей: ${e.missing.join(', ')}. Все значения — на 100 г.`, { missing: e.missing });
+        }
+        throw new ToolError('invalid_product', e.message);
+      }
+
+      const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
+      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+      const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+
+      const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, [...overlay, row]);
+      if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил создание продукта: ${saveRes.error}`);
+      catalogPromise = null;
+
+      const extras = [];
+      if (row.brand) extras.push(`бренд ${row.brand}`);
+      if (row.barcode) extras.push(`штрихкод ${row.barcode}`);
+      if (row.portions) extras.push(`порции: ${row.portions.map((p) => `${p.name} ${p.grams} г`).join(', ')}`);
+
+      return {
+        text: `Создал продукт «${row.name}» — ${row.kcal100} ккал/100 г, Б${row.protein100} У${row.carbs100} Ж${row.fat100}${extras.length ? '. ' + extras.join(', ') : ''}. Калорийность пересчитана по правилам HEYS, поэтому может отличаться от цифры на упаковке.`,
+        structured: {
+          product_id: row.id,
+          name: row.name,
+          kcal100: row.kcal100,
+          protein100: row.protein100,
+          carbs100: row.carbs100,
+          fat100: row.fat100,
+          brand: row.brand,
+          barcode: row.barcode,
+          portions: row.portions || [],
+        },
+      };
+    },
+
     async heys_save_meal_preset(args) {
       const name = String(args.name || '').trim();
       if (!name) throw new ToolError('invalid_name', 'Нужно название набора.');
@@ -489,6 +563,62 @@ const TOOL_SCHEMAS = [
     name: 'heys_list_meal_presets',
     description: 'Показать сохранённые наборы приёмов пользователя (готовые комбинации продуктов с граммовками). Вызывай перед записью составного приёма — набор точнее ручной сборки и совпадает с тем, как пользователь ведёт дневник сам.',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'heys_create_product',
+    description: [
+      'Создать новый продукт в личном списке пользователя — например по фотографии этикетки с составом и пищевой ценностью.',
+      'Все значения указываются НА 100 Г продукта. Если на упаковке пищевая ценность дана на порцию, пересчитай на 100 г сам.',
+      'Обязательны: protein100, simple100, complex100, badFat100, goodFat100, trans100, fiber100, gi, harm.',
+      'Как заполнять то, чего нет на этикетке: simple100 — «в том числе сахара»; complex100 = углеводы минус сахара; badFat100 — «в том числе насыщенные»; goodFat100 = жиры минус насыщенные минус транс; trans100 — 0, если не указано; fiber100 — 0, если не указано.',
+      'gi — гликемический индекс 0–100 по оценке, harm — вредность 0–10 по шкале HEYS (цельный продукт ближе к 0, ультрапереработанный со сложным составом ближе к 10).',
+      'Калорийность не передаётся: HEYS считает её сам по своей формуле, поэтому она может отличаться от цифры на упаковке — это нормально и так задумано.',
+      'Штрихкод и порции указывай, если они видны на упаковке.',
+    ].join(' '),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Название продукта. Если есть бренд, лучше включить его в название — так проще искать.' },
+        brand: { type: 'string', description: 'Производитель или бренд.' },
+        barcode: { type: 'string', description: 'Штрихкод с упаковки, 6–32 символа.' },
+        protein100: { type: 'number', description: 'Белки, г на 100 г.' },
+        simple100: { type: 'number', description: 'Простые углеводы (сахара), г на 100 г.' },
+        complex100: { type: 'number', description: 'Сложные углеводы, г на 100 г.' },
+        carbs100: { type: 'number', description: 'Углеводы всего, г. Если не указать — сумма простых и сложных.' },
+        badFat100: { type: 'number', description: 'Насыщенные жиры, г на 100 г.' },
+        goodFat100: { type: 'number', description: 'Ненасыщенные жиры, г на 100 г.' },
+        trans100: { type: 'number', description: 'Транс-жиры, г на 100 г.' },
+        fat100: { type: 'number', description: 'Жиры всего, г. Если не указать — сумма насыщенных, ненасыщенных и транс.' },
+        fiber100: { type: 'number', description: 'Клетчатка, г на 100 г.' },
+        gi: { type: 'number', description: 'Гликемический индекс, 0–100.' },
+        harm: { type: 'number', description: 'Вредность по шкале HEYS, 0–10.' },
+        sodium100: { type: 'number', description: 'Натрий, мг на 100 г.' },
+        cholesterol: { type: 'number', description: 'Холестерин, мг на 100 г.' },
+        omega3_100: { type: 'number', description: 'Омега-3, г на 100 г.' },
+        omega6_100: { type: 'number', description: 'Омега-6, г на 100 г.' },
+        nova_group: { type: 'integer', description: 'Группа NOVA, 1–4 (степень переработки).' },
+        nutrient_density: { type: 'number', description: 'Нутриентная плотность, 0–100.' },
+        additives: { type: 'array', items: { type: 'string' }, description: 'E-добавки из состава, например ["E322","E500"].' },
+        is_organic: { type: 'boolean', description: 'Органический продукт.' },
+        is_whole_grain: { type: 'boolean', description: 'Цельнозерновой.' },
+        is_fermented: { type: 'boolean', description: 'Ферментированный.' },
+        is_raw: { type: 'boolean', description: 'Сырой, без термообработки.' },
+        portions: {
+          type: 'array',
+          description: 'Типовые порции с упаковки, например одна печенька или один стакан.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Название порции, например «1 шт».' },
+              grams: { type: 'number', description: 'Вес порции в граммах.' },
+            },
+            required: ['name', 'grams'],
+          },
+        },
+        allow_duplicate: { type: 'boolean', description: 'Создать, даже если продукт с таким названием уже есть или был удалён. Ставь только после подтверждения пользователя.' },
+      },
+      required: ['name', 'protein100', 'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm'],
+    },
   },
   {
     name: 'heys_save_meal_preset',

@@ -171,8 +171,113 @@ function describeProduct(product) {
   };
 }
 
+/**
+ * Числовые поля карточки продукта. Обязательные — те же 12, что требует
+ * parseAIProductString в приложении (apps/web/heys_models_v1.js): без них
+ * продукт не считается заполненным ни там, ни здесь.
+ */
+const REQUIRED_NUTRIENTS = [
+  'protein100', 'simple100', 'complex100',
+  'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm',
+];
+
+const OPTIONAL_NUTRIENTS = [
+  'carbs100', 'fat100', 'sodium100', 'cholesterol', 'omega3_100', 'omega6_100',
+  'nova_group', 'nutrient_density',
+  'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine',
+  'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+  'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+];
+
+const BOOLEAN_FLAGS = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+
+/** Та же нормализация, что normalizeBarcode в apps/web/heys_add_product_step_v1.js. */
+function normalizeBarcode(value) {
+  const cleaned = String(value == null ? '' : value)
+    .trim()
+    .replace(/[\s-]+/g, '')
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '');
+  return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
+}
+
+/** Та же нормализация, что normalizePortions: имя непустое, граммы больше нуля. */
+function normalizePortions(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((p) => ({ name: String((p && p.name) || '').trim(), grams: Number((p && p.grams) || 0) }))
+    .filter((p) => p.name && p.grams > 0);
+}
+
+function round1(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+/**
+ * Собирает строку личного продукта (Type B) в том же виде, что кладёт
+ * приложение: kcal100 всегда пересчитывается по NET Atwater, а не берётся
+ * с упаковки — иначе дневник считал бы этот продукт не так, как остальные.
+ */
+function buildCustomProduct(input, { nowMs, makeId }) {
+  const name = String(input.name || '').trim();
+  if (!name) throw new Error('product_name_required');
+
+  const missing = REQUIRED_NUTRIENTS.filter((field) => !Number.isFinite(Number(input[field])));
+  if (missing.length) {
+    const err = new Error('product_fields_missing');
+    err.missing = missing;
+    throw err;
+  }
+
+  const row = { id: makeId(), _custom: true, in_my_list: true, user_modified: true, name };
+
+  for (const field of REQUIRED_NUTRIENTS) row[field] = Number(input[field]);
+  for (const field of OPTIONAL_NUTRIENTS) {
+    if (input[field] !== undefined && input[field] !== null && Number.isFinite(Number(input[field]))) {
+      row[field] = Number(input[field]);
+    }
+  }
+  for (const field of BOOLEAN_FLAGS) {
+    if (input[field] !== undefined && input[field] !== null) row[field] = !!input[field];
+  }
+  if (Array.isArray(input.additives)) {
+    row.additives = input.additives.map((a) => String(a).trim().toUpperCase()).filter(Boolean);
+  }
+
+  const carbs = Number.isFinite(Number(input.carbs100)) && Number(input.carbs100) > 0
+    ? Number(input.carbs100)
+    : row.simple100 + row.complex100;
+  const fat = Number.isFinite(Number(input.fat100)) && Number(input.fat100) > 0
+    ? Number(input.fat100)
+    : row.badFat100 + row.goodFat100 + row.trans100;
+
+  row.carbs100 = round1(carbs);
+  row.fat100 = round1(fat);
+  row.kcal100 = round1(3 * row.protein100 + 4 * carbs + 9 * fat);
+
+  const brand = String(input.brand || '').trim().replace(/\s+/g, ' ');
+  row.brand = brand && !['нет', 'no', 'none', '-', '—'].includes(brand.toLowerCase()) ? brand : null;
+
+  const barcode = normalizeBarcode(input.barcode);
+  row.barcode = barcode || null;
+  row.barcodes = barcode ? [barcode] : [];
+
+  const portions = normalizePortions(input.portions);
+  if (portions.length) row.portions = portions;
+
+  row.createdAt = nowMs;
+  row.updatedAt = nowMs;
+  return row;
+}
+
 module.exports = {
   OVERLAY_KEY,
+  REQUIRED_NUTRIENTS,
+  OPTIONAL_NUTRIENTS,
+  BOOLEAN_FLAGS,
+  normalizeBarcode,
+  normalizePortions,
+  buildCustomProduct,
   normalizeSharedRow,
   hasNutrients,
   buildCatalog,
