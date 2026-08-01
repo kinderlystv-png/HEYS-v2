@@ -16,7 +16,7 @@ test('inventory exactly covers every cloud function source directory', () => {
       kind,
       FUNCTIONS.filter((item) => item.kind === kind).length,
     ])),
-    { api: 10, cron: 5, polling: 1, maintenance: 1, backup: 1, automation: 1 },
+    { api: 11, cron: 5, polling: 1, maintenance: 1, backup: 1, automation: 1 },
   );
 });
 
@@ -84,7 +84,7 @@ test('deploy and test scripts consume the shared inventory instead of local list
   assert.doesNotMatch(testScript, /ALL_FUNCTIONS=\(\s*heys-/);
   assert.equal((deployScript.match(/ensure_speechkit_trigger/g) || []).length, 3);
   assert.equal((deployScript.match(/\[ "\$CI_MODE" != true \]/g) || []).length >= 2, true);
-  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 18);
+  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 19);
 });
 
 test('deploy workflow routes API and automation changes through the shared classifier', () => {

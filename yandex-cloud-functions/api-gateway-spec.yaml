@@ -846,3 +846,91 @@ paths:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
+
+  # ═══════════════════════════════════════════════════════════════
+  # MCP — remote MCP connector (heys-mcp)
+  # ═══════════════════════════════════════════════════════════════
+  /mcp:
+    post:
+      summary: MCP Streamable HTTP endpoint
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for MCP
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/register:
+    post:
+      summary: OAuth 2.1 dynamic client registration (RFC 7591)
+      x-yc-apigateway-throttling:
+        rate: 10
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/authorize:
+    get:
+      summary: OAuth authorization page (phone + PIN)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    post:
+      summary: OAuth authorization form submit
+      x-yc-apigateway-throttling:
+        rate: 5
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/token:
+    post:
+      summary: OAuth token endpoint (authorization_code, refresh_token)
+      x-yc-apigateway-throttling:
+        rate: 30
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-protected-resource:
+    get:
+      summary: OAuth protected resource metadata (RFC 9728)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-protected-resource/mcp:
+    get:
+      summary: OAuth protected resource metadata for /mcp
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-authorization-server:
+    get:
+      summary: OAuth authorization server metadata (RFC 8414)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-authorization-server/mcp:
+    get:
+      summary: OAuth authorization server metadata for /mcp
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8

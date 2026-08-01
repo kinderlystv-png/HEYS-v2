@@ -335,6 +335,8 @@ get_function_config() {
             echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-messages")
             echo "nodejs22 index.handler 256m 30s" ;;
+        "heys-mcp")
+            echo "nodejs22 index.handler 256m 60s" ;;
         "heys-api-photos")
             echo "nodejs22 index.handler 256m 30s" ;;
         "heys-cron-reminders")
@@ -379,8 +381,10 @@ build_env_flags() {
     local LOCKBOX_DB_ID="e6q7gdshieo5udoet10f"
     local LOCKBOX_S3_ID="e6qnjm2ks2n1ubiaiki6"
 
-    # PG + LOCKBOX_DB_SECRET_ID — для всех функций с БД (кроме health/sms)
-    if [[ ! "$func_name" =~ (health|sms) ]]; then
+    # PG + LOCKBOX_DB_SECRET_ID — для всех функций с БД (кроме health/sms/mcp).
+    # heys-mcp работает только через HTTP /rpc и в БД не ходит — креды ему не выдаём,
+    # чтобы прямой путь записи в client_kv_store остался физически недоступен.
+    if [[ ! "$func_name" =~ (health|sms|mcp) ]]; then
         local k
         for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_SSL; do
             _add_required "$k"

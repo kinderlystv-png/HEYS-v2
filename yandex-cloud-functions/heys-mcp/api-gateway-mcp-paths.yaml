@@ -1,0 +1,97 @@
+# ═══════════════════════════════════════════════════════════════
+# MCP — remote MCP connector (heys-mcp)
+# ═══════════════════════════════════════════════════════════════
+# Вставить эти пути в `paths:` файла api-gateway-spec.yaml и заменить
+# __HEYS_MCP_FUNCTION_ID__ на id функции, полученный после первого деплоя:
+#   yc serverless function get --name heys-mcp --format json | jq -r .id
+#
+# После правки спеки:
+#   yc serverless api-gateway update --name <gateway> --spec=api-gateway-spec.yaml
+#
+# Метаданные .well-known обязаны отвечать без авторизации: по ним claude.ai
+# находит authorization server и запускает OAuth-подключение коннектора.
+
+/mcp:
+  post:
+    summary: MCP Streamable HTTP endpoint
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: CORS preflight for MCP
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/register:
+  post:
+    summary: OAuth 2.1 dynamic client registration (RFC 7591)
+    x-yc-apigateway-throttling:
+      rate: 10
+      unit: MINUTE
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/authorize:
+  get:
+    summary: OAuth authorization page (phone + PIN)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  post:
+    summary: OAuth authorization form submit
+    x-yc-apigateway-throttling:
+      rate: 5
+      unit: MINUTE
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/token:
+  post:
+    summary: OAuth token endpoint (authorization_code, refresh_token)
+    x-yc-apigateway-throttling:
+      rate: 30
+      unit: MINUTE
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-protected-resource:
+  get:
+    summary: OAuth protected resource metadata (RFC 9728)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-protected-resource/mcp:
+  get:
+    summary: OAuth protected resource metadata for /mcp
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-authorization-server:
+  get:
+    summary: OAuth authorization server metadata (RFC 8414)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-authorization-server/mcp:
+  get:
+    summary: OAuth authorization server metadata for /mcp
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__

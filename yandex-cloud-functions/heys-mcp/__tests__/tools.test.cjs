@@ -1,0 +1,321 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { createTools, defaultMealName } = require('../lib/tools');
+const mcp = require('../lib/mcp');
+
+const CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+const SESSION = 'session-token';
+const NOW = Date.UTC(2026, 7, 1, 12, 54); // 15:54 по Москве
+
+const SHARED_ROWS = [
+  { id: 's-americano', name: 'Кофе американо', protein100: 0.1, simple100: 0.3, complex100: 0, badfat100: 0, goodfat100: 0 },
+  { id: 's-milk', name: 'Молоко ультрапастеризованное 3.5', protein100: 3, simple100: 4.7, complex100: 0, badfat100: 2.2, goodfat100: 1.3 },
+  { id: 's-syrup', name: 'Сироп для кофе (классический сахарный)', protein100: 0, simple100: 75, complex100: 0, badfat100: 0, goodfat100: 0 },
+  { id: 's-latte', name: 'Кофе латте', protein100: 3, simple100: 5, complex100: 0, badfat100: 1, goodfat100: 1 },
+];
+
+const OVERLAY = [
+  { id: 'own-americano', shared_origin_id: 's-americano', overrides: {}, in_my_list: true },
+  { id: 'own-milk', shared_origin_id: 's-milk', overrides: {}, in_my_list: true },
+  { id: 'own-syrup', shared_origin_id: 's-syrup', overrides: {}, in_my_list: true },
+];
+
+const PRESETS = [{
+  id: 'mp_coffee',
+  name: 'Кофе Киндерли',
+  items: [
+    { product_id: 'legacy-milk-id', name: 'Молоко ультрапастеризованное 3.5', grams: 185 },
+    { product_id: 'own-americano', name: 'Кофе американо', grams: 100 },
+    { product_id: 'legacy-syrup-id', name: 'Сироп для кофе (классический сахарный)', grams: 20 },
+  ],
+}];
+
+/** Подставной API: фиксирует записи, чтобы проверить контракт merge-сохранения. */
+function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY } = {}) {
+  const saves = [];
+  const upserts = [];
+  let presetState = presets;
+  return {
+    saves,
+    upserts,
+    async upsertKV(_session, key, value) {
+      upserts.push({ key, value });
+      if (key === 'heys_meal_presets_v1') presetState = value;
+      return { ok: true };
+    },
+    get presetState() { return presetState; },
+    async getKV(_session, key) {
+      if (key === 'heys_products_overlay_v2') return { data: overlay, error: null };
+      if (key === 'heys_meal_presets_v1') return { data: presetState, error: null };
+      if (key.startsWith('heys_dayv2_')) return { data: day, error: null };
+      return { data: null, error: null };
+    },
+    async getSharedProducts() {
+      return { data: SHARED_ROWS, error: null };
+    },
+    async mergeSaveKV(_session, key, value, lastSeenUpdatedAt) {
+      saves.push({ key, value, lastSeenUpdatedAt });
+      return { ok: true, outcome: 'incoming_wins' };
+    },
+  };
+}
+
+function build(api) {
+  return createTools({ api, sessionToken: SESSION, clientId: CLIENT, nowMs: NOW }).tools;
+}
+
+test('название приёма подбирается по времени', () => {
+  assert.equal(defaultMealName('08:00'), 'Завтрак');
+  assert.equal(defaultMealName('13:00'), 'Обед');
+  assert.equal(defaultMealName('19:30'), 'Ужин');
+  assert.equal(defaultMealName('16:10'), 'Перекус');
+});
+
+test('log_meal собирает составной напиток из позиций и сохраняет merge-ом', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 111 } });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({
+    items: [
+      { product_id: 'own-americano', grams: 100 },
+      { query: 'молоко ультрапастеризованное', grams: 185 },
+      { query: 'сироп для кофе', grams: 20 },
+    ],
+  });
+
+  assert.equal(api.saves.length, 1);
+  const save = api.saves[0];
+  assert.equal(save.key, 'heys_dayv2_2026-08-01');
+  // Отправляем известную версию облака — иначе сервер не сможет разрулить конфликт.
+  assert.equal(save.lastSeenUpdatedAt, 111);
+  assert.equal(save.value.meals.length, 1);
+  assert.equal(save.value.meals[0].items.length, 3);
+  assert.equal(save.value.meals[0].time, '15:54');
+  assert.equal(save.value.meals[0].name, 'Перекус');
+  assert.equal(save.value._writerCid, CLIENT);
+  assert.ok(res.structured.totals.kcal > 0);
+});
+
+test('log_meal через набор берёт граммовки пользователя и разрешает устаревшие id по названию', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 5 } });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({ preset: 'кофе киндерли' });
+
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.name, 'Кофе Киндерли');
+  assert.deepEqual(meal.items.map((i) => i.grams), [185, 100, 20]);
+  // legacy-id не существует в каталоге — позиция обязана найтись по имени.
+  assert.equal(meal.items[0].name, 'Молоко ультрапастеризованное 3.5');
+  assert.equal(meal.items[0].product_id, 'own-milk');
+  assert.equal(res.structured.items.length, 3);
+});
+
+test('набор принимает переопределение граммовки', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 5 } });
+  const tools = build(api);
+  await tools.heys_log_meal({
+    preset: 'Кофе Киндерли',
+    preset_grams: { 'Молоко ультрапастеризованное 3.5': 200 },
+  });
+  assert.equal(api.saves[0].value.meals[0].items[0].grams, 200);
+});
+
+test('несуществующий набор не превращается молча в пустой приём', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(() => tools.heys_log_meal({ preset: 'Смузи' }), (e) => e.code === 'preset_not_found');
+});
+
+test('неоднозначный продукт возвращает кандидатов вместо догадки', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(
+    () => tools.heys_log_meal({ items: [{ query: 'кофе', grams: 100 }] }),
+    (e) => {
+      assert.equal(e.code, 'ambiguous_product');
+      assert.ok(e.details.candidates.length > 1);
+      return true;
+    },
+  );
+});
+
+test('точное название вносится без переспроса', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await tools.heys_log_meal({ items: [{ query: 'Кофе американо', grams: 100 }] });
+  assert.equal(api.saves[0].value.meals[0].items[0].name, 'Кофе американо');
+});
+
+test('невалидные граммы и время отклоняются до записи', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_log_meal({ items: [{ product_id: 'own-milk', grams: 0 }] }), (e) => e.code === 'invalid_grams');
+  await assert.rejects(() => tools.heys_log_meal({ items: [{ product_id: 'own-milk', grams: 100 }], time: '25:00' }), (e) => e.code === 'invalid_time');
+  await assert.rejects(() => tools.heys_log_meal({ items: [{ product_id: 'own-milk', grams: 100 }], date: '2026-02-30' }), (e) => e.code === 'invalid_date');
+  assert.equal(api.saves.length, 0);
+});
+
+test('log_meal без позиций и набора не создаёт пустой приём', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(() => tools.heys_log_meal({}), (e) => e.code === 'invalid_items');
+});
+
+test('add_water прибавляет к текущему объёму', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 200, updatedAt: 9 } });
+  const tools = build(api);
+  const res = await tools.heys_add_water({ ml: 300 });
+  assert.equal(api.saves[0].value.waterMl, 500);
+  assert.equal(res.structured.water_ml, 500);
+});
+
+test('delete_meal требует существующий meal_id', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [{ id: 'm1' }], updatedAt: 9 } });
+  const tools = build(api);
+  await tools.heys_delete_meal({ meal_id: 'm1' });
+  assert.equal(api.saves[0].value.deletedMealIds.m1, NOW);
+  await assert.rejects(() => tools.heys_delete_meal({ meal_id: 'нет' }), (e) => e.code === 'meal_not_found');
+});
+
+test('update_day без полей не пишет в облако', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 9 } });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_update_day({}), (e) => e.code === 'nothing_to_update');
+  assert.equal(api.saves.length, 0);
+});
+
+test('update_day валидирует субъективные шкалы 1..10', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(() => tools.heys_update_day({ mood: 12 }), (e) => e.code === 'invalid_range');
+});
+
+test('log_training отклоняет нулевую тренировку', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(() => tools.heys_log_training({ zones_minutes: [0, 0] }), (e) => e.code === 'invalid_zones');
+});
+
+test('get_day отдаёт сводку и meal_id для правок', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01', updatedAt: 9, waterMl: 200,
+      meals: [{ id: 'm1', name: 'Перекус', time: '15:54', items: [{ id: 'i1', name: 'Кофе', grams: 100, kcal100: 50 }] }],
+    },
+  });
+  const tools = build(api);
+  const res = await tools.heys_get_day({});
+  assert.equal(res.structured.meals[0].id, 'm1');
+  assert.equal(res.structured.water_ml, 200);
+  assert.equal(api.saves.length, 0);
+});
+
+test('search_products показывает источник продукта', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const res = await tools.heys_search_products({ query: 'сироп' });
+  assert.equal(res.structured.results[0].source, 'мой список');
+});
+
+test('list_meal_presets отдаёт наборы с граммовками', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const res = await tools.heys_list_meal_presets({});
+  assert.equal(res.structured.presets[0].name, 'Кофе Киндерли');
+  assert.equal(res.structured.presets[0].items.length, 3);
+});
+
+test('save_meal_preset создаёт набор и кладёт его в начало списка, как приложение', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_save_meal_preset({
+    name: 'Кофе без сиропа',
+    items: [{ product_id: 'own-americano', grams: 100 }, { query: 'молоко ультрапастеризованное', grams: 200 }],
+  });
+
+  assert.equal(api.upserts.length, 1);
+  assert.equal(api.upserts[0].key, 'heys_meal_presets_v1');
+  const saved = api.upserts[0].value;
+  assert.equal(saved.length, PRESETS.length + 1);
+  assert.equal(saved[0].name, 'Кофе без сиропа');
+  assert.equal(saved[1].name, 'Кофе Киндерли', 'существующие наборы не потерялись');
+  assert.equal(res.structured.created, true);
+  // Позиция набора — усечённая форма приложения, без полного слепка нутриентов.
+  const ALLOWED = new Set(['product_id', 'name', 'grams', 'kcal100', 'protein100', 'fat100',
+    'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm']);
+  const unexpected = Object.keys(saved[0].items[0]).filter((k) => !ALLOWED.has(k));
+  assert.deepEqual(unexpected, [], 'в наборе нет лишних полей');
+  assert.equal(saved[0].items[0].calcium, undefined);
+  assert.equal(saved[0].items[0].product_id, 'own-americano');
+});
+
+test('save_meal_preset с тем же названием обновляет набор, а не плодит дубль', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_save_meal_preset({
+    name: 'кофе киндерли',
+    items: [{ product_id: 'own-americano', grams: 120 }],
+  });
+  const saved = api.upserts[0].value;
+  assert.equal(saved.length, PRESETS.length);
+  assert.equal(res.structured.created, false);
+  assert.equal(res.structured.preset_id, 'mp_coffee');
+  const updated = saved.find((p) => p.id === 'mp_coffee');
+  assert.equal(updated.items.length, 1);
+  assert.equal(updated.items[0].grams, 120);
+  assert.equal(updated.createdAt !== undefined, true);
+});
+
+test('save_meal_preset отклоняет пустое имя и пустой список позиций', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_save_meal_preset({ name: '  ', items: [{ product_id: 'own-milk', grams: 100 }] }), (e) => e.code === 'invalid_name');
+  await assert.rejects(() => tools.heys_save_meal_preset({ name: 'X', items: [] }), (e) => e.code === 'invalid_items');
+  assert.equal(api.upserts.length, 0);
+});
+
+test('save_meal_preset не пишет набор с неоднозначным продуктом', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_save_meal_preset({ name: 'Кофе', items: [{ query: 'кофе', grams: 100 }] }),
+    (e) => e.code === 'ambiguous_product',
+  );
+  assert.equal(api.upserts.length, 0);
+});
+
+test('delete_meal_preset удаляет по названию и оставляет остальные', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_delete_meal_preset({ name: 'Кофе Киндерли' });
+  assert.equal(api.upserts[0].value.length, PRESETS.length - 1);
+  assert.equal(res.structured.deleted, true);
+  await assert.rejects(() => tools.heys_delete_meal_preset({ name: 'Нет такого' }), (e) => e.code === 'preset_not_found');
+});
+
+test('delete_meal_preset требует хотя бы один идентификатор', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(() => tools.heys_delete_meal_preset({}), (e) => e.code === 'invalid_args');
+});
+
+test('сохранённый набор сразу виден в list и пригоден для log_meal', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await tools.heys_save_meal_preset({
+    name: 'Двойной американо',
+    items: [{ product_id: 'own-americano', grams: 200 }],
+  });
+  const listed = await tools.heys_list_meal_presets({});
+  assert.ok(listed.structured.presets.some((p) => p.name === 'Двойной американо'));
+  await tools.heys_log_meal({ preset: 'Двойной американо' });
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.name, 'Двойной американо');
+  assert.equal(meal.items[0].grams, 200);
+  // В приём кладётся полный слепок, хотя в наборе хранится усечённый.
+  assert.notEqual(meal.items[0].kcal100, undefined);
+});
+
+test('ошибка инструмента доходит до модели как isError, а не как сбой протокола', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const response = await mcp.handleMessage(
+    { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'heys_log_meal', arguments: { items: [{ query: 'кофе', grams: 100 }] } } },
+    { tools },
+  );
+  assert.equal(response.result.isError, true);
+  assert.equal(response.result.structuredContent.error, 'ambiguous_product');
+  assert.ok(Array.isArray(response.result.structuredContent.candidates));
+});

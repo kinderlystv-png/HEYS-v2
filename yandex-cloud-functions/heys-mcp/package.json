@@ -1,0 +1,9 @@
+{
+  "name": "heys-mcp",
+  "version": "1.0.0",
+  "description": "HEYS MCP server - remote MCP connector for logging meals, water, sleep and training",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test __tests__"
+  }
+}

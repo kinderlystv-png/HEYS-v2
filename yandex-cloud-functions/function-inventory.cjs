@@ -16,6 +16,7 @@ const FUNCTIONS = Object.freeze([
   { name: 'heys-api-push', group: 'api', kind: 'api', autoDeploy: true },
   { name: 'heys-api-messages', group: 'api', kind: 'api', autoDeploy: true },
   { name: 'heys-api-photos', group: 'api', kind: 'api', autoDeploy: true },
+  { name: 'heys-mcp', group: 'api', kind: 'api', autoDeploy: true },
   {
     name: 'heys-api-sms',
     group: 'api',
