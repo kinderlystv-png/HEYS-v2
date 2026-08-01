@@ -151,32 +151,31 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
    * совпадении инструмент не угадывает, а возвращает кандидатов — уточнение
    * дешевле, чем неверная еда в дневнике.
    */
-  async function resolveItem(spec, index) {
-    const grams = Number(spec && spec.grams);
-    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
-      throw new ToolError('invalid_grams', `Позиция #${index + 1}: граммы должны быть числом от 1 до 5000.`);
-    }
+  async function resolveProduct(spec, label) {
     const catalog = await loadCatalog();
 
     if (spec.product_id) {
       const found = products.findById(catalog, spec.product_id);
       if (!found) throw new ToolError('product_not_found', `Продукт с id "${spec.product_id}" не найден.`);
-      return { product: found, grams };
+      return found;
     }
 
     if (!spec.query) {
-      throw new ToolError('invalid_item', `Позиция #${index + 1}: нужен product_id или query.`);
+      throw new ToolError('invalid_item', `${label}: нужен product_id или query.`);
     }
 
     const matches = products.searchProducts(catalog, spec.query, 5);
     if (!matches.length) {
       throw new ToolError('product_not_found', `По запросу "${spec.query}" ничего не найдено. Уточни название или подбери продукт через heys_search_products.`);
     }
-    const queryNorm = products.normalizeText(spec.query);
-    const tokens = queryNorm.split(' ').filter(Boolean);
-    const best = products.scoreProduct(matches[0], queryNorm, tokens);
-    const second = matches[1] ? products.scoreProduct(matches[1], queryNorm, tokens) : 0;
-    const confident = best >= 400 && (second === 0 || best >= second * 1.25);
+    const prepared = products.prepareQuery(spec.query);
+    const best = products.scoreProduct(matches[0], prepared);
+    const second = matches[1] ? products.scoreProduct(matches[1], prepared) : 0;
+    // Единственное совпадение в личном списке считаем однозначным даже при
+    // неточном названии: конкурента у него нет, а пользователь вносит еду
+    // именно своими позициями.
+    const soleOwnMatch = matches.length === 1 && matches[0]._source === 'own' && best > 0;
+    const confident = soleOwnMatch || (best >= 400 && (second === 0 || best >= second * 1.25));
     if (!confident) {
       throw new ToolError(
         'ambiguous_product',
@@ -184,7 +183,77 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
         { candidates: matches.map(products.describeProduct) },
       );
     }
-    return { product: matches[0], grams };
+    return matches[0];
+  }
+
+  /**
+   * Граммовка: либо прямо в граммах, либо в штуках. Вес штуки берётся из
+   * карточки продукта, а если его там нет — инструмент отказывается угадывать
+   * и просит спросить у пользователя. Названный вес запоминается в карточке.
+   */
+  function resolveGrams(spec, product, label) {
+    const pieces = Number(spec && spec.pieces);
+    if (Number.isFinite(pieces) && pieces > 0) {
+      if (pieces > 200) throw new ToolError('invalid_pieces', `${label}: слишком много штук (${pieces}).`);
+      const known = products.pieceGrams(product);
+      const explicit = Number(spec.piece_grams);
+      const hasExplicit = Number.isFinite(explicit) && explicit > 0 && explicit <= 5000;
+      const perPiece = hasExplicit ? explicit : known;
+      if (!perPiece) {
+        throw new ToolError(
+          'piece_weight_unknown',
+          `${label}: у продукта «${product.name}» не задан вес одной штуки. Спроси у пользователя, сколько граммов в одной штуке, и передай piece_grams — вес сохранится в карточку, и дальше «штуки» будут считаться сами.`,
+          { product: products.describeProduct(product) },
+        );
+      }
+      const grams = Math.round(pieces * perPiece * 10) / 10;
+      if (grams > 5000) throw new ToolError('invalid_grams', `${label}: получилось ${grams} г — больше допустимых 5000.`);
+      return { grams, learnPieceGrams: hasExplicit && !known ? perPiece : null };
+    }
+
+    const grams = Number(spec && spec.grams);
+    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
+      throw new ToolError('invalid_grams', `${label}: нужны grams (число от 1 до 5000) или pieces (штуки).`);
+    }
+    return { grams, learnPieceGrams: null };
+  }
+
+  async function resolveItem(spec, index) {
+    const label = `Позиция #${index + 1}`;
+    const product = await resolveProduct(spec || {}, label);
+    const { grams, learnPieceGrams } = resolveGrams(spec, product, label);
+    return { product, grams, learnPieceGrams };
+  }
+
+  /**
+   * Вес штуки, названный пользователем, дописывается в карточку продукта, чтобы
+   * второй раз «четыре штуки» не потребовали вопроса. Пишем только в свои
+   * строки overlay: продукт общей базы правится через модерацию, не отсюда.
+   */
+  async function persistPieceGrams(resolved) {
+    const learned = resolved.filter((entry) => entry.learnPieceGrams);
+    if (!learned.length) return [];
+
+    const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
+    if (overlayRes.error) return [];
+    const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+
+    const saved = [];
+    const next = overlay.map((row) => {
+      if (!row || typeof row !== 'object') return row;
+      const hit = learned.find((entry) => String(entry.product.id) === String(row.id));
+      if (!hit) return row;
+      const portions = products.normalizePortions(row.portions);
+      if (portions.some((p) => products.normalizeText(p.name).includes('шт'))) return row;
+      saved.push({ name: row.name, grams: hit.learnPieceGrams });
+      return { ...row, portions: [...portions, { name: '1 шт', grams: hit.learnPieceGrams }], updatedAt: nowMs };
+    });
+    if (!saved.length) return [];
+
+    const res = await api.upsertKV(sessionToken, products.OVERLAY_KEY, next);
+    if (!res.ok) return [];
+    catalogPromise = null;
+    return saved;
   }
 
   const tools = {
@@ -265,12 +334,105 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       const current = await readDay(date);
       const next = day.addMeal(current, meal, { nowMs, clientId });
       await writeDay(date, next, Number(current.updatedAt) || 0);
+      const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([meal]);
       const itemsText = meal.items.map((item) => `${item.name} ${item.grams} г`).join(', ');
+      const learnedText = learned.length
+        ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
+        : '';
       return {
-        text: `Записал: ${meal.name} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.`,
-        structured: { date, meal_id: meal.id, name: meal.name, time, totals: kcal, items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })) },
+        text: `Записал: ${meal.name} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}`,
+        structured: {
+          date,
+          meal_id: meal.id,
+          name: meal.name,
+          time,
+          totals: kcal,
+          items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+          learned_piece_grams: learned.length ? learned : undefined,
+        },
+      };
+    },
+
+    /**
+     * Правка уже записанного приёма. Нужен для «добавь туда ещё» и «поменяй
+     * граммовку»: пересоздание приёма меняет meal_id, теряет шапку и лишний раз
+     * гоняется с открытым приложением.
+     */
+    async heys_update_meal(args) {
+      const date = resolveDate(args.date, nowMs);
+      if (!args.meal_id) throw new ToolError('invalid_meal_id', 'Нужен meal_id (его отдаёт heys_get_day).');
+
+      const time = args.time === undefined || args.time === null || args.time === ''
+        ? null
+        : day.normalizeTime(args.time);
+      if (args.time && !time) throw new ToolError('invalid_time', `Время "${args.time}" не в формате HH:MM.`);
+
+      const specs = Array.isArray(args.add_items) ? args.add_items : [];
+      if (specs.length > 20) throw new ToolError('invalid_items', 'За раз можно добавить не больше 20 позиций.');
+
+      const current = await readDay(date);
+      const target = (current.meals || []).find((m) => m && String(m.id) === String(args.meal_id));
+      if (!target) {
+        throw new ToolError('meal_not_found', `Приём ${args.meal_id} не найден в дне ${date}. Возьми актуальный meal_id через heys_get_day.`);
+      }
+
+      const resolved = [];
+      for (let i = 0; i < specs.length; i += 1) {
+        resolved.push(await resolveItem(specs[i], i));
+      }
+
+      const patch = {
+        addItems: resolved.map(({ product, grams }) => day.buildMealItem(product, grams, makeId)),
+        removeItemIds: Array.isArray(args.remove_item_ids) ? args.remove_item_ids : [],
+        setGrams: (args.set_grams && typeof args.set_grams === 'object') ? args.set_grams : {},
+        name: args.name,
+        time,
+        mood: clampSubjective(args.mood, 'mood'),
+        wellbeing: clampSubjective(args.wellbeing, 'wellbeing'),
+        stress: clampSubjective(args.stress, 'stress'),
+      };
+
+      let result;
+      try {
+        result = day.updateMeal(current, args.meal_id, patch, { nowMs, clientId });
+      } catch (e) {
+        throw new ToolError('invalid_grams', `Некорректная граммовка: ${e.message}`);
+      }
+      if (result.unknownItems.length) {
+        throw new ToolError(
+          'item_not_found',
+          `В приёме нет позиций с id: ${result.unknownItems.join(', ')}. Возьми актуальные id через heys_get_day.`,
+          { meal_id: args.meal_id, items: (target.items || []).map((i) => ({ id: i.id, name: i.name, grams: i.grams })) },
+        );
+      }
+      if (!result.changed.length) {
+        throw new ToolError('nothing_to_update', 'Не передано ни одного изменения: нужен add_items, remove_item_ids, set_grams, name, time или оценка самочувствия.');
+      }
+      if (!result.meal.items.length) {
+        throw new ToolError('meal_would_be_empty', 'После правки в приёме не осталось позиций. Если приём нужно убрать целиком — heys_delete_meal.');
+      }
+
+      await writeDay(date, result.day, Number(current.updatedAt) || 0);
+      const learned = await persistPieceGrams(resolved);
+
+      const kcal = day.macroTotals([result.meal]);
+      const learnedText = learned.length
+        ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
+        : '';
+      return {
+        text: `Обновил «${result.meal.name}» (${result.meal.time}, ${date}): ${result.changed.join('; ')}. Теперь в приёме ${result.meal.items.length} позиций, ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}`,
+        structured: {
+          date,
+          meal_id: result.meal.id,
+          name: result.meal.name,
+          time: result.meal.time,
+          changed: result.changed,
+          totals: kcal,
+          items: result.meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+          learned_piece_grams: learned.length ? learned : undefined,
+        },
       };
     },
 
@@ -508,6 +670,18 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
 
 const DATE_ARG = { type: 'string', description: 'Дата в формате YYYY-MM-DD. По умолчанию — сегодня по московскому времени.' };
 
+/** Одна позиция: какой продукт и сколько. Количество — граммы либо штуки. */
+const ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
+    query: { type: 'string', description: 'Название продукта, если id неизвестен.' },
+    grams: { type: 'number', description: 'Вес порции в граммах (для напитков — миллилитры).' },
+    pieces: { type: 'number', description: 'Количество штук, когда пользователь считает штуками («четыре конфеты»). Вес одной штуки берётся из карточки продукта — не подставляй граммы от себя.' },
+    piece_grams: { type: 'number', description: 'Вес одной штуки в граммах. Нужен только если в карточке продукта его ещё нет: инструмент попросит, а полученное значение сохранит в карточку.' },
+  },
+};
+
 const TOOL_SCHEMAS = [
   {
     name: 'heys_get_day',
@@ -540,15 +714,7 @@ const TOOL_SCHEMAS = [
         items: {
           type: 'array',
           description: 'Позиции приёма.',
-          items: {
-            type: 'object',
-            properties: {
-              product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
-              query: { type: 'string', description: 'Название продукта, если id неизвестен.' },
-              grams: { type: 'number', description: 'Вес порции в граммах (для напитков — миллилитры).' },
-            },
-            required: ['grams'],
-          },
+          items: ITEM_SCHEMA,
         },
         date: DATE_ARG,
         time: { type: 'string', description: 'Время приёма HH:MM. По умолчанию — текущее московское время.' },
@@ -557,6 +723,26 @@ const TOOL_SCHEMAS = [
         wellbeing: { type: 'integer', description: 'Самочувствие во время приёма, 1–10.' },
         stress: { type: 'integer', description: 'Стресс во время приёма, 1–10.' },
       },
+    },
+  },
+  {
+    name: 'heys_update_meal',
+    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. Именно этим инструментом вносится «добавь туда ещё» — НЕ удаляй и не пересоздавай приём, иначе он получит новый id и потеряет оценки самочувствия. meal_id и id позиций берутся из heys_get_day.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        meal_id: { type: 'string', description: 'Идентификатор приёма из heys_get_day.' },
+        date: DATE_ARG,
+        add_items: { type: 'array', description: 'Позиции, которые нужно добавить к приёму.', items: ITEM_SCHEMA },
+        remove_item_ids: { type: 'array', items: { type: 'string' }, description: 'Id позиций, которые нужно убрать из приёма.' },
+        set_grams: { type: 'object', description: 'Новые граммовки для позиций по их id: { "it_08399c46e4ff": 180 }.' },
+        name: { type: 'string', description: 'Новое название приёма.' },
+        time: { type: 'string', description: 'Новое время приёма HH:MM.' },
+        mood: { type: 'integer', description: 'Настроение во время приёма, 1–10.' },
+        wellbeing: { type: 'integer', description: 'Самочувствие во время приёма, 1–10.' },
+        stress: { type: 'integer', description: 'Стресс во время приёма, 1–10.' },
+      },
+      required: ['meal_id'],
     },
   },
   {
@@ -630,15 +816,7 @@ const TOOL_SCHEMAS = [
         items: {
           type: 'array',
           description: 'Позиции набора.',
-          items: {
-            type: 'object',
-            properties: {
-              product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
-              query: { type: 'string', description: 'Название продукта, если id неизвестен.' },
-              grams: { type: 'number', description: 'Вес позиции в граммах.' },
-            },
-            required: ['grams'],
-          },
+          items: ITEM_SCHEMA,
         },
         preset_id: { type: 'string', description: 'Id существующего набора для обновления.' },
       },
@@ -658,7 +836,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_delete_meal',
-    description: 'Удалить приём пищи по meal_id (взять из heys_get_day). Нужен для исправлений, когда приём внесён ошибочно.',
+    description: 'Удалить приём пищи целиком по meal_id (взять из heys_get_day). Только когда приём не нужен вовсе; чтобы поправить состав или граммовку — heys_update_meal.',
     inputSchema: {
       type: 'object',
       properties: { meal_id: { type: 'string', description: 'Идентификатор приёма.' }, date: DATE_ARG },

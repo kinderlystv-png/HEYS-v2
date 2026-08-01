@@ -13,7 +13,17 @@
  * внутри токена: после отзыва все инструменты мгновенно перестают работать.
  */
 
-const { signToken, verifyToken, encryptSecret, decryptSecret, verifyPkce } = require('./crypto-tokens');
+const { signToken, verifyToken, encryptSecret, decryptSecret, verifyPkce, signRawJwt } = require('./crypto-tokens');
+
+/**
+ * Кураторский JWT живёт 24 часа (JWT_EXPIRES_IN в heys-api-auth). Чтобы
+ * коннектор куратора не требовал ежедневного перелогина, на refresh мы
+ * перевыпускаем кураторский JWT сами: у функции есть JWT_SECRET через
+ * Lockbox-overlay, а формат claims повторяет createJwt из heys-api-auth
+ * ({sub, email, role:'curator'}). Для клиентских токенов это не нужно —
+ * client-session живёт 30 дней на сервере.
+ */
+const CURATOR_JWT_TTL_SECONDS = 24 * 60 * 60;
 
 const SCOPE = 'heys:diary';
 const CODE_TTL_SECONDS = 300;            // 5 минут на обмен кода
@@ -131,12 +141,23 @@ function issueAuthorizationCode(params, secret, nowMs = Date.now()) {
     cc: params.codeChallenge,
     sub: params.heysClientId,
     st: encryptSecret(params.sessionToken, secret),
+    rl: params.role || 'client',
+    nm: params.subjectName || '',
+    em: params.email || '',
     aud: params.resource || '',
   }, secret, { typ: 'heys-mcp-code', ttlSeconds: CODE_TTL_SECONDS, nowMs });
 }
 
 function issueTokenPair(claims, secret, nowMs = Date.now()) {
-  const base = { sub: claims.sub, cid: claims.cid, st: claims.st, aud: claims.aud || '' };
+  const base = {
+    sub: claims.sub,
+    cid: claims.cid,
+    st: claims.st,
+    rl: claims.rl || 'client',
+    nm: claims.nm || '',
+    em: claims.em || '',
+    aud: claims.aud || '',
+  };
   return {
     access_token: signToken(base, secret, { typ: 'heys-mcp-access', ttlSeconds: ACCESS_TTL_SECONDS, nowMs }),
     token_type: 'Bearer',
@@ -163,13 +184,24 @@ function exchangeAuthorizationCode(form, secret, nowMs = Date.now()) {
   return { ok: true, tokens: issueTokenPair(claims, secret, nowMs) };
 }
 
-function exchangeRefreshToken(form, secret, nowMs = Date.now()) {
+function exchangeRefreshToken(form, secret, nowMs = Date.now(), { rawJwtSecret = null } = {}) {
   const verified = verifyToken(form.refresh_token, secret, { typ: 'heys-mcp-refresh', nowMs });
   if (!verified.ok) return { ok: false, error: 'invalid_grant', description: 'Refresh-токен недействителен или истёк.' };
   if (form.client_id && form.client_id !== verified.claims.cid) {
     return { ok: false, error: 'invalid_client', description: 'client_id не совпадает с refresh-токеном.' };
   }
-  return { ok: true, tokens: issueTokenPair(verified.claims, secret, nowMs) };
+  const claims = { ...verified.claims };
+  // Куратор: перевыпускаем 24-часовой JWT, иначе инструменты умрут через сутки
+  // после входа, хотя refresh-токен ещё жив.
+  if (claims.rl === 'curator' && rawJwtSecret && claims.sub) {
+    const freshJwt = signRawJwt(
+      { sub: claims.sub, email: claims.em || '', role: 'curator' },
+      rawJwtSecret,
+      { ttlSeconds: CURATOR_JWT_TTL_SECONDS, nowMs },
+    );
+    claims.st = encryptSecret(freshJwt, secret);
+  }
+  return { ok: true, tokens: issueTokenPair(claims, secret, nowMs) };
 }
 
 /** Проверка Bearer на MCP-эндпоинте: отдаёт клиентскую сессию HEYS. */
@@ -184,7 +216,13 @@ function authenticateAccessToken(authorizationHeader, secret, nowMs = Date.now()
   } catch (_) {
     return { ok: false, error: 'invalid_token' };
   }
-  return { ok: true, clientId: verified.claims.sub, sessionToken };
+  return {
+    ok: true,
+    clientId: verified.claims.sub,
+    sessionToken,
+    role: verified.claims.rl === 'curator' ? 'curator' : 'client',
+    subjectName: verified.claims.nm || '',
+  };
 }
 
 function escapeHtml(value) {
@@ -193,8 +231,12 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/** Страница входа: телефон + PIN, те же, что в приложении. */
-function renderLoginPage(request, { error = '', phone = '' } = {}) {
+/**
+ * Страница входа. Две формы: клиент (телефон + PIN) и, под <details>,
+ * куратор (email + пароль + опциональный код 2FA). JS на странице нет
+ * намеренно — CSP default-src 'none'; раскрытие секции через <details>.
+ */
+function renderLoginPage(request, { error = '', phone = '', email = '', curatorMode = false } = {}) {
   const hidden = [
     ['client_id', request.clientId],
     ['redirect_uri', request.redirectUri],
@@ -220,8 +262,12 @@ function renderLoginPage(request, { error = '', phone = '' } = {}) {
   h1 { font-size:19px; margin:0 0 6px; }
   p.sub { font-size:14px; line-height:1.45; color:#5c6070; margin:0 0 20px; }
   label { display:block; font-size:13px; color:#5c6070; margin:14px 0 6px; }
-  input[type=tel], input[type=password] { width:100%; box-sizing:border-box; padding:11px 13px;
+  input[type=tel], input[type=password], input[type=email], input[type=text] { width:100%; box-sizing:border-box; padding:11px 13px;
           font-size:16px; border:1px solid #d7dae2; border-radius:10px; background:#fff; color:inherit; }
+  details { margin-top:20px; border-top:1px solid #e4e6ec; padding-top:14px; }
+  summary { font-size:13px; color:#5c6070; cursor:pointer; list-style:none; }
+  summary::before { content:'\\2192  '; }
+  details[open] summary::before { content:'\\2193  '; }
   button { width:100%; margin-top:22px; padding:12px; font-size:15px; font-weight:600; color:#fff;
            background:#2f6df6; border:0; border-radius:10px; cursor:pointer; }
   .err { margin:14px 0 0; padding:10px 12px; border-radius:10px; background:#fdecec; color:#b3261e; font-size:13px; }
@@ -229,24 +275,41 @@ function renderLoginPage(request, { error = '', phone = '' } = {}) {
   @media (prefers-color-scheme: dark) {
     body { background:#15161a; color:#eceef4; }
     .card { background:#1e2027; box-shadow:none; }
-    input[type=tel], input[type=password] { background:#15161a; border-color:#333744; }
+    input[type=tel], input[type=password], input[type=email], input[type=text] { background:#15161a; border-color:#333744; }
+    details { border-color:#2a2d36; }
     .err { background:#3a1f1f; color:#ff9a92; }
   }
 </style>
 </head>
 <body>
-  <form class="card" method="post" action="/mcp/authorize">
+  <div class="card">
     <h1>Доступ к дневнику HEYS</h1>
-    <p class="sub">${escapeHtml(request.clientName || 'Приложение')} запрашивает доступ к вашему дневнику питания, воды, сна и тренировок.</p>
+    <p class="sub">${escapeHtml(request.clientName || 'Приложение')} запрашивает доступ к дневнику питания, воды, сна и тренировок.</p>
     ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
-    ${hidden}
-    <label for="phone">Телефон</label>
-    <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00" value="${escapeHtml(phone)}" required>
-    <label for="pin">PIN</label>
-    <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]*" maxlength="6" required>
-    <button type="submit">Разрешить доступ</button>
-    <p class="foot">Доступ можно в любой момент отозвать: выйдите из аккаунта в приложении — сессия ассистента прекратится вместе с вашей.</p>
-  </form>
+    <form method="post" action="/mcp/authorize">
+      ${hidden}
+      <label for="phone">Телефон</label>
+      <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00" value="${escapeHtml(phone)}" ${curatorMode ? '' : 'required'}>
+      <label for="pin">PIN</label>
+      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]*" maxlength="6" ${curatorMode ? '' : 'required'}>
+      <button type="submit">Разрешить доступ</button>
+    </form>
+    <details${curatorMode ? ' open' : ''}>
+      <summary>Я куратор — вход по email</summary>
+      <form method="post" action="/mcp/authorize">
+        ${hidden}
+        <label for="email">Email куратора</label>
+        <input id="email" name="email" type="email" autocomplete="username" value="${escapeHtml(email)}">
+        <label for="password">Пароль</label>
+        <input id="password" name="password" type="password" autocomplete="current-password">
+        <label for="mfa_code">Код 2FA (если включена)</label>
+        <input id="mfa_code" name="mfa_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+        <button type="submit">Войти как куратор</button>
+      </form>
+      <p class="foot">Кураторский доступ открывает дневники всех ваших клиентов. Ассистент всегда называет, кому вносит данные.</p>
+    </details>
+    <p class="foot">Доступ можно отозвать в любой момент: клиенту — выйти из аккаунта в приложении, куратору — отключить коннектор в Claude.</p>
+  </div>
 </body>
 </html>`;
 }
@@ -271,6 +334,7 @@ function buildRedirect(redirectUri, params) {
 
 module.exports = {
   SCOPE,
+  CURATOR_JWT_TTL_SECONDS,
   ACCESS_TTL_SECONDS,
   REFRESH_TTL_SECONDS,
   CODE_TTL_SECONDS,

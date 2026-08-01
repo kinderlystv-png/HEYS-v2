@@ -100,6 +100,39 @@ function decryptSecret(payload, secret) {
   return Buffer.concat([decipher.update(b64urlDecode(dataPart)), decipher.final()]).toString('utf8');
 }
 
+/**
+ * Стандартный JWT HS256 на СЫРОМ секрете — без HKDF.
+ * Нужен ровно для одного: перевыпуска кураторского JWT при refresh.
+ * heys-api-rpc проверяет кураторские токены сырым JWT_SECRET (verifyJwt),
+ * поэтому подпись обязана совпадать с той, что делает heys-api-auth.
+ */
+function signRawJwt(payload, rawSecret, { ttlSeconds, nowMs = Date.now() }) {
+  if (!rawSecret || typeof rawSecret !== 'string') throw new Error('raw_jwt_secret_missing');
+  const iat = Math.floor(nowMs / 1000);
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const claims = b64url(JSON.stringify({ ...payload, iat, exp: iat + ttlSeconds }));
+  const data = `${header}.${claims}`;
+  const sig = b64url(crypto.createHmac('sha256', Buffer.from(rawSecret, 'utf8')).update(data).digest());
+  return `${data}.${sig}`;
+}
+
+/** Проверка сырого JWT — в проде не используется, только контроль совместимости в тестах. */
+function verifyRawJwt(token, rawSecret, { nowMs = Date.now() } = {}) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) return { ok: false, error: 'malformed_token' };
+  const data = `${parts[0]}.${parts[1]}`;
+  const expected = b64url(crypto.createHmac('sha256', Buffer.from(rawSecret, 'utf8')).update(data).digest());
+  if (!timingSafeEqualStr(expected, parts[2])) return { ok: false, error: 'bad_signature' };
+  let claims;
+  try {
+    claims = JSON.parse(b64urlDecode(parts[1]).toString('utf8'));
+  } catch (_) {
+    return { ok: false, error: 'malformed_claims' };
+  }
+  if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= nowMs) return { ok: false, error: 'token_expired' };
+  return { ok: true, claims };
+}
+
 /** PKCE S256 (RFC 7636). plain не поддерживаем — OAuth 2.1 его запрещает. */
 function verifyPkce(codeVerifier, codeChallenge) {
   if (!codeVerifier || !codeChallenge) return false;
@@ -111,6 +144,8 @@ function verifyPkce(codeVerifier, codeChallenge) {
 module.exports = {
   signToken,
   verifyToken,
+  signRawJwt,
+  verifyRawJwt,
   encryptSecret,
   decryptSecret,
   verifyPkce,

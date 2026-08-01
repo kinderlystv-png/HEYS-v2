@@ -98,31 +98,148 @@ function normalizeText(value) {
 }
 
 /**
- * Скоринг: точное совпадение → префикс → все слова запроса → подстрока.
+ * Бренды живут в двух написаниях сразу: в базе продукт заведён как «Toffifee»,
+ * а пользователь пишет «тоффифи». Поэтому запрос сравнивается с названием во
+ * всех написаниях, а не только в том, которым его набрали.
+ */
+const CYRILLIC_TO_LATIN = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i',
+  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's',
+  т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch',
+  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+/** Порядок важен: диграфы разбираются раньше одиночных букв. */
+const LATIN_TO_CYRILLIC = [
+  ['sch', 'щ'], ['zh', 'ж'], ['ch', 'ч'], ['sh', 'ш'], ['yu', 'ю'], ['ya', 'я'],
+  ['a', 'а'], ['b', 'б'], ['c', 'к'], ['d', 'д'], ['e', 'е'], ['f', 'ф'],
+  ['g', 'г'], ['h', 'х'], ['i', 'и'], ['j', 'дж'], ['k', 'к'], ['l', 'л'],
+  ['m', 'м'], ['n', 'н'], ['o', 'о'], ['p', 'п'], ['q', 'к'], ['r', 'р'],
+  ['s', 'с'], ['t', 'т'], ['u', 'у'], ['v', 'в'], ['w', 'в'], ['x', 'кс'],
+  ['y', 'й'], ['z', 'з'],
+];
+
+function toLatin(text) {
+  let out = '';
+  for (const char of text) out += (CYRILLIC_TO_LATIN[char] !== undefined ? CYRILLIC_TO_LATIN[char] : char);
+  return out;
+}
+
+function toCyrillic(text) {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const rest = text.slice(i);
+    const hit = LATIN_TO_CYRILLIC.find(([latin]) => rest.startsWith(latin));
+    if (hit) {
+      out += hit[1];
+      i += hit[0].length;
+    } else {
+      out += text[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
+/** Расстояние Левенштейна с ранним выходом: дальше порога считать незачем. */
+function withinDistance(a, b, max) {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > max) return false;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      row[j] = Math.min(row[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      if (row[j] < best) best = row[j];
+    }
+    if (best > max) return false;
+    prev = row;
+  }
+  return prev[b.length] <= max;
+}
+
+/**
+ * Слово запроса против слова названия. Опечатка допускается только внутри
+ * слова при совпадающем начале — иначе «сахар» и «кагор» стали бы одним
+ * продуктом. Неточное совпадение весит меньше точного.
+ */
+function tokenMatches(nameToken, queryToken) {
+  if (nameToken.startsWith(queryToken)) return 1;
+  const length = queryToken.length;
+  if (length < 5) return 0;
+  if (nameToken.slice(0, 3) !== queryToken.slice(0, 3)) return 0;
+  return withinDistance(nameToken, queryToken, length >= 7 ? 2 : 1) ? 0.8 : 0;
+}
+
+function uniq(values) {
+  const out = [];
+  for (const value of values) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (text && !out.includes(text)) out.push(text);
+  }
+  return out;
+}
+
+/**
+ * Запрос во всех написаниях. Написания хранятся и целиком (для совпадения по
+ * фразе), и отдельно по словам: в «конфеты тоффифи» латиницей стоит искать
+ * только второе слово, а транслитерация всей строки сломала бы первое.
+ * Первый вариант в каждом списке — то, что действительно набрал пользователь.
+ */
+function prepareQuery(query) {
+  const norm = normalizeText(query);
+  if (!norm) return null;
+  return {
+    norm,
+    phrases: uniq([norm, toLatin(norm), toCyrillic(norm)]),
+    tokens: norm.split(' ').filter(Boolean).map((token) => uniq([token, toLatin(token), toCyrillic(token)])),
+  };
+}
+
+/**
+ * Скоринг: точное совпадение → префикс → подстрока → слова запроса.
  * Свои продукты получают надбавку, поэтому при равном тексте выигрывает
  * позиция из личного списка, а не её общий дубль.
  */
-function scoreProduct(product, queryNorm, queryTokens) {
+function scoreProduct(product, prepared) {
   const nameNorm = normalizeText(product.name);
-  if (!nameNorm) return 0;
+  if (!nameNorm || !prepared) return 0;
 
   let score = 0;
-  if (nameNorm === queryNorm) score = 1000;
-  else if (nameNorm.startsWith(queryNorm)) score = 600;
-  else if (nameNorm.includes(queryNorm)) score = 400;
-  else {
+  prepared.phrases.forEach((phrase, index) => {
+    let value = 0;
+    if (nameNorm === phrase) value = 1000;
+    else if (nameNorm.startsWith(phrase)) value = 600;
+    else if (nameNorm.includes(phrase)) value = 400;
+    // Транслитерация — догадка, а не то, что написал пользователь: чуть дешевле.
+    if (index > 0) value *= 0.9;
+    if (value > score) score = value;
+  });
+
+  if (score === 0 && prepared.tokens.length) {
     const nameTokens = nameNorm.split(' ');
-    const matched = queryTokens.filter((token) => nameTokens.some((nameToken) => nameToken.startsWith(token)));
-    if (matched.length === 0) return 0;
-    if (matched.length < queryTokens.length) {
-      // Частичное совпадение принимаем только если найдено большинство слов —
-      // иначе одно общее слово («кофе») вытаскивает десятки нерелевантных строк.
-      if (matched.length * 2 <= queryTokens.length) return 0;
-      score = 120 * (matched.length / queryTokens.length);
-    } else {
-      score = 300;
+    let matched = 0;
+    for (const forms of prepared.tokens) {
+      let best = 0;
+      forms.forEach((form, index) => {
+        for (const nameToken of nameTokens) {
+          const hit = tokenMatches(nameToken, form) * (index === 0 ? 1 : 0.9);
+          if (hit > best) best = hit;
+        }
+      });
+      matched += best;
+    }
+    // Частичное совпадение принимаем только если найдено большинство слов —
+    // иначе одно общее слово («кофе») вытаскивает десятки нерелевантных строк.
+    if (matched > 0 && matched * 2 > prepared.tokens.length) {
+      score = matched >= prepared.tokens.length ? 300 : 120 * (matched / prepared.tokens.length);
     }
   }
+
+  if (score <= 0) return 0;
 
   if (product._source === 'own') score += 60;
   // Короткое имя при равном совпадении точнее длинного составного.
@@ -131,12 +248,11 @@ function scoreProduct(product, queryNorm, queryTokens) {
 }
 
 function searchProducts(catalog, query, limit = 10) {
-  const queryNorm = normalizeText(query);
-  if (!queryNorm) return [];
-  const queryTokens = queryNorm.split(' ').filter(Boolean);
+  const prepared = prepareQuery(query);
+  if (!prepared) return [];
 
   return catalog.all
-    .map((product) => ({ product, score: scoreProduct(product, queryNorm, queryTokens) }))
+    .map((product) => ({ product, score: scoreProduct(product, prepared) }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.max(1, Math.min(50, Number(limit) || 10)))
@@ -148,6 +264,26 @@ function findById(catalog, productId) {
   return catalog.all.find((p) => String(p.id) === wanted)
     || catalog.all.find((p) => String(p.shared_origin_id || '') === wanted)
     || null;
+}
+
+/**
+ * Вес одной штуки из типовых порций продукта. «4 конфетки» превращаются в
+ * граммы только здесь: своей константы у инструмента нет и быть не должно —
+ * вес штуки берётся из карточки, которую заполнил пользователь.
+ * Порция вида «2 шт» тоже годится: делим на количество из названия.
+ */
+function pieceGrams(product) {
+  const portions = Array.isArray(product && product.portions) ? product.portions : [];
+  let best = null;
+  for (const portion of portions) {
+    const grams = Number(portion && portion.grams);
+    if (!Number.isFinite(grams) || grams <= 0) continue;
+    const match = /(?:^|\s)(\d+)?\s*(?:шт|штук|штуки|штука|pcs|pc)(?:\s|$)/.exec(normalizeText(portion.name));
+    if (!match) continue;
+    const perPiece = grams / (Number(match[1]) || 1);
+    if (best === null || perPiece < best) best = perPiece;
+  }
+  return best === null ? null : Math.round(best * 10) / 10;
 }
 
 /** Витрина продукта для модели: без нутриентного «шума», но с калорийностью. */
@@ -168,6 +304,7 @@ function describeProduct(product) {
     portions: Array.isArray(product.portions) && product.portions.length
       ? product.portions.map((p) => ({ name: p.name, grams: p.grams }))
       : undefined,
+    piece_grams: pieceGrams(product) ?? undefined,
   };
 }
 
@@ -282,8 +419,12 @@ module.exports = {
   hasNutrients,
   buildCatalog,
   normalizeText,
+  toLatin,
+  toCyrillic,
+  prepareQuery,
   scoreProduct,
   searchProducts,
   findById,
+  pieceGrams,
   describeProduct,
 };

@@ -35,6 +35,12 @@
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: CORS preflight for dynamic client registration
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
 
 /mcp/authorize:
   get:
@@ -59,6 +65,12 @@
     x-yc-apigateway-throttling:
       rate: 30
       unit: MINUTE
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: CORS preflight for the token endpoint
     x-yc-apigateway-integration:
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek

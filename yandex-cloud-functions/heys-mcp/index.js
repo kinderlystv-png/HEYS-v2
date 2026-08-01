@@ -18,6 +18,7 @@ const mcp = require('./lib/mcp');
 const oauth = require('./lib/oauth');
 const { createApiClient } = require('./lib/heys-api');
 const { createTools } = require('./lib/tools');
+const { createCuratorContext } = require('./lib/curator');
 
 const DEFAULT_API_URL = 'https://api.heyslab.ru';
 
@@ -127,10 +128,32 @@ async function handleMcpRequest(event, { headers, secret, apiUrl }) {
   }
 
   const api = createApiClient({ apiUrl });
-  const { tools } = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId });
+  let tools;
+  let toolSchemas = null;
+  let instructions = null;
+  if (auth.role === 'curator') {
+    // Кураторский коннектор: в auth.sessionToken лежит кураторский JWT,
+    // инструменты работают с дневниками клиентов куратора.
+    const curatorCtx = createCuratorContext({
+      api,
+      curatorJwt: auth.sessionToken,
+      curatorName: auth.subjectName,
+    });
+    tools = curatorCtx.tools;
+    toolSchemas = curatorCtx.schemas;
+    instructions = curatorCtx.instructions;
+  } else {
+    tools = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId }).tools;
+  }
   const response = await mcp.handlePayload(payload, {
     tools,
+    toolSchemas,
+    instructions,
     logError: (kind, meta) => console.error(`[heys-mcp] ${kind}`, meta),
+    upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
+    // Одна строка на вызов инструмента: по ней в Cloud Logging видно, какой
+    // сценарий записи сколько стоит и сколько в нём round-trip'ов к API.
+    logMetric: (metric) => console.info('[heys-mcp] tool_timing', JSON.stringify({ role: auth.role, ...metric })),
   });
 
   // Только уведомления и ответы — по спеке отвечаем 202 без тела.
@@ -156,13 +179,49 @@ async function handleAuthorizePost(event, { secret, apiUrl }) {
     return html(400, oauth.renderErrorPage('Не удалось выдать доступ', validation.description));
   }
 
+  const api = createApiClient({ apiUrl });
+  const email = String(form.email || '').trim();
+
+  // ── Куратор: email + пароль (+ TOTP при включённой 2FA) ────────────────
+  if (email) {
+    const password = String(form.password || '');
+    if (!password) {
+      return html(400, oauth.renderLoginPage(validation, { error: 'Введите email и пароль куратора.', email, curatorMode: true }));
+    }
+    const mfaCode = String(form.mfa_code || '').trim();
+    const login = await api.curatorLogin(email, password, mfaCode);
+    if (!login.ok) {
+      const message = login.error === 'mfa_required'
+        ? 'Включена двухфакторная защита: введите код из приложения-аутентификатора.'
+        : login.error === 'rate_limited'
+          ? 'Слишком много попыток. Подождите минуту и повторите.'
+          : 'Неверный email или пароль.';
+      return html(401, oauth.renderLoginPage(validation, { error: message, email, curatorMode: true }));
+    }
+
+    const code = oauth.issueAuthorizationCode({
+      clientId: validation.clientId,
+      redirectUri: validation.redirectUri,
+      codeChallenge: validation.codeChallenge,
+      heysClientId: login.curatorId,
+      sessionToken: login.token,
+      role: 'curator',
+      subjectName: login.name,
+      email,
+      resource: validation.resource,
+    }, secret);
+
+    console.info('[heys-mcp] authorize granted (curator)', { curator: String(login.curatorId).slice(0, 8) });
+    return redirect(oauth.buildRedirect(validation.redirectUri, { code, state: validation.state }));
+  }
+
+  // ── Клиент: телефон + PIN ──────────────────────────────────────────────
   const phone = String(form.phone || '').trim();
   const pin = String(form.pin || '').trim();
   if (!phone || !pin) {
     return html(400, oauth.renderLoginPage(validation, { error: 'Введите телефон и PIN.', phone }));
   }
 
-  const api = createApiClient({ apiUrl });
   const verified = await api.verifyPin(phone, pin);
   if (!verified.ok) {
     const message = verified.error === 'rate_limited'
@@ -177,6 +236,8 @@ async function handleAuthorizePost(event, { secret, apiUrl }) {
     codeChallenge: validation.codeChallenge,
     heysClientId: verified.clientId,
     sessionToken: verified.sessionToken,
+    role: 'client',
+    subjectName: verified.name,
     resource: validation.resource,
   }, secret);
 
@@ -254,7 +315,7 @@ exports.handler = async (event) => {
       const result = grant === 'authorization_code'
         ? oauth.exchangeAuthorizationCode(form, secret)
         : grant === 'refresh_token'
-          ? oauth.exchangeRefreshToken(form, secret)
+          ? oauth.exchangeRefreshToken(form, secret, Date.now(), { rawJwtSecret: process.env.JWT_SECRET || null })
           : { ok: false, error: 'unsupported_grant_type', description: `grant_type "${grant}" не поддерживается.` };
       if (!result.ok) return json(400, { error: result.error, error_description: result.description });
       return json(200, result.tokens);

@@ -99,3 +99,52 @@ test('describeProduct считает калорийность, если её н�
   assert.equal(syrup.kcal100, 300);
   assert.equal(syrup.source, 'мой список');
 });
+
+// ── Написание, опечатки, штуки ────────────────────────────────────────────
+
+const BRANDS = [
+  { id: 'own-toffifee', _custom: true, name: 'Конфеты Toffifee', protein100: 6, carbs100: 57, fat100: 31, in_my_list: true, portions: [{ name: '🍬 1 шт', grams: 8 }] },
+  { id: 'own-sausage', _custom: true, name: 'Сосиски «Вязанка Сливочные»', protein100: 11, carbs100: 1, fat100: 15, in_my_list: true },
+  { id: 'own-soba', _custom: true, name: 'Лапша соба варёная', protein100: 3.7, carbs100: 24.8, fat100: 0.5, in_my_list: true, portions: [{ name: '🍜 1 порция', grams: 180 }] },
+  { id: 'own-pack', _custom: true, name: 'Печенье овсяное в упаковке', protein100: 6, carbs100: 60, fat100: 20, in_my_list: true, portions: [{ name: '2 шт', grams: 30 }] },
+];
+
+function brands() {
+  return products.buildCatalog(BRANDS, new Map());
+}
+
+test('транслитерация: кириллический запрос находит латинское название', () => {
+  const [first] = products.searchProducts(brands(), 'тоффифи', 5);
+  assert.equal(first && first.name, 'Конфеты Toffifee');
+});
+
+test('транслитерация работает и в обратную сторону', () => {
+  const [first] = products.searchProducts(brands(), 'sosiski vyazanka', 5);
+  assert.equal(first && first.name, 'Сосиски «Вязанка Сливочные»');
+});
+
+test('смешанный запрос ищет каждое слово в своём написании', () => {
+  const [first] = products.searchProducts(brands(), 'конфеты тоффифи', 5);
+  assert.equal(first && first.name, 'Конфеты Toffifee');
+});
+
+test('опечатка прощается внутри слова, но не в его начале', () => {
+  assert.equal(products.searchProducts(brands(), 'сосиски вязанка сливушки', 5).length, 1);
+  // Пять букв и две правки до «сахара», но начало другое — не совпадение.
+  assert.deepEqual(products.searchProducts(brands(), 'кагор', 5), []);
+});
+
+test('вес штуки берётся из порции и делится на количество в названии', () => {
+  const c = brands();
+  assert.equal(products.pieceGrams(products.findById(c, 'own-toffifee')), 8);
+  assert.equal(products.pieceGrams(products.findById(c, 'own-pack')), 15);
+  // «порция» — не «штука»: угадывать вес штуки по ней нельзя.
+  assert.equal(products.pieceGrams(products.findById(c, 'own-soba')), null);
+  assert.equal(products.pieceGrams(products.findById(c, 'own-sausage')), null);
+});
+
+test('describeProduct показывает вес штуки, когда он известен', () => {
+  const c = brands();
+  assert.equal(products.describeProduct(products.findById(c, 'own-toffifee')).piece_grams, 8);
+  assert.equal(products.describeProduct(products.findById(c, 'own-soba')).piece_grams, undefined);
+});

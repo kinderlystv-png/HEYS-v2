@@ -416,3 +416,159 @@ test('ошибка инструмента доходит до модели ка�
   assert.equal(response.result.structuredContent.error, 'ambiguous_product');
   assert.ok(Array.isArray(response.result.structuredContent.candidates));
 });
+
+// ── Правка приёма, штуки, тайминг ─────────────────────────────────────────
+
+const DINNER_DAY = () => ({
+  date: '2026-08-01',
+  updatedAt: 900,
+  meals: [{
+    id: 'm_dinner',
+    name: 'Ужин',
+    time: '20:42',
+    mood: 7,
+    items: [{ id: 'it_milk', product_id: 'own-milk', name: 'Молоко ультрапастеризованное 3.5', grams: 185, kcal100: 60, protein100: 3, carbs100: 4.7, fat100: 3.5 }],
+  }],
+});
+
+test('update_meal добавляет позицию, сохраняя id, время и оценки приёма', async () => {
+  const api = fakeApi({ day: DINNER_DAY() });
+  const tools = build(api);
+  const res = await tools.heys_update_meal({
+    meal_id: 'm_dinner',
+    add_items: [{ product_id: 'own-syrup', grams: 20 }],
+  });
+
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.id, 'm_dinner');
+  assert.equal(meal.time, '20:42');
+  assert.equal(meal.mood, 7);
+  assert.equal(meal.items.length, 2);
+  assert.equal(api.saves[0].lastSeenUpdatedAt, 900);
+  assert.equal(res.structured.meal_id, 'm_dinner');
+  assert.ok(res.structured.changed.length);
+});
+
+test('update_meal правит граммовку и убирает позицию', async () => {
+  const api = fakeApi({ day: DINNER_DAY() });
+  const tools = build(api);
+  await tools.heys_update_meal({
+    meal_id: 'm_dinner',
+    add_items: [{ product_id: 'own-syrup', grams: 20 }],
+    set_grams: { it_milk: 200 },
+  });
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items.find((i) => i.id === 'it_milk').grams, 200);
+});
+
+test('update_meal не даёт опустошить приём и предлагает удаление', async () => {
+  const api = fakeApi({ day: DINNER_DAY() });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_update_meal({ meal_id: 'm_dinner', remove_item_ids: ['it_milk'] }),
+    (e) => e.code === 'meal_would_be_empty',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('update_meal сообщает о неизвестном id позиции и ничего не пишет', async () => {
+  const api = fakeApi({ day: DINNER_DAY() });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_update_meal({ meal_id: 'm_dinner', remove_item_ids: ['it_nope'] }),
+    (e) => e.code === 'item_not_found',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('update_meal требует существующий приём и хотя бы одно изменение', async () => {
+  const api = fakeApi({ day: DINNER_DAY() });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_update_meal({ meal_id: 'm_nope', name: 'X' }), (e) => e.code === 'meal_not_found');
+  await assert.rejects(() => tools.heys_update_meal({ meal_id: 'm_dinner' }), (e) => e.code === 'nothing_to_update');
+});
+
+const CANDY_OVERLAY = [
+  ...OVERLAY,
+  { id: 'own-candy', _custom: true, in_my_list: true, name: 'Конфеты Toffifee', protein100: 6, carbs100: 57, fat100: 31, portions: [{ name: '1 шт', grams: 8 }] },
+  { id: 'own-sausage', _custom: true, in_my_list: true, name: 'Сосиски «Вязанка Сливочные»', protein100: 11, carbs100: 1, fat100: 15 },
+];
+
+test('штуки считаются по весу порции из карточки продукта', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  await tools.heys_log_meal({ items: [{ product_id: 'own-candy', pieces: 4 }] });
+  assert.equal(api.saves[0].value.meals[0].items[0].grams, 32);
+});
+
+test('штуки без известного веса не угадываются, а спрашиваются', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_log_meal({ items: [{ product_id: 'own-sausage', pieces: 4 }] }),
+    (e) => e.code === 'piece_weight_unknown',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('названный пользователем вес штуки сохраняется в карточку продукта', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({ items: [{ product_id: 'own-sausage', pieces: 4, piece_grams: 45 }] });
+
+  assert.equal(api.saves[0].value.meals[0].items[0].grams, 180);
+  const overlaySave = api.upserts.find((u) => u.key === 'heys_products_overlay_v2');
+  const sausage = overlaySave.value.find((r) => r.id === 'own-sausage');
+  assert.deepEqual(sausage.portions, [{ name: '1 шт', grams: 45 }]);
+  assert.deepEqual(res.structured.learned_piece_grams, [{ name: 'Сосиски «Вязанка Сливочные»', grams: 45 }]);
+});
+
+test('известный вес штуки не перезаписывается и лишней записи не делает', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  await tools.heys_log_meal({ items: [{ product_id: 'own-candy', pieces: 2, piece_grams: 99 }] });
+  assert.equal(api.upserts.some((u) => u.key === 'heys_products_overlay_v2'), false);
+});
+
+test('единственное совпадение в личном списке не считается неоднозначным', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  await tools.heys_log_meal({ items: [{ query: 'сосиски вязанка сливушки', grams: 180 }] });
+  assert.equal(api.saves[0].value.meals[0].items[0].name, 'Сосиски «Вязанка Сливочные»');
+});
+
+test('tools/call возвращает длительность и отдаёт её в метрику', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 } });
+  const tools = build(api);
+  const metrics = [];
+  let upstreamCalls = 0;
+  const response = await mcp.handleMessage(
+    { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'heys_add_water', arguments: { ml: 200 } } },
+    {
+      tools,
+      logMetric: (m) => metrics.push(m),
+      upstream: () => ({ calls: (upstreamCalls += 1), ms: 5 }),
+    },
+  );
+
+  assert.equal(typeof response.result.structuredContent.duration_ms, 'number');
+  assert.equal(metrics.length, 1);
+  assert.equal(metrics[0].tool, 'heys_add_water');
+  assert.equal(metrics[0].ok, true);
+  assert.equal(metrics[0].upstream.calls, 1);
+});
+
+test('метрика пишется и для ошибки инструмента', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 } });
+  const tools = build(api);
+  const metrics = [];
+  const response = await mcp.handleMessage(
+    { jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'heys_add_water', arguments: { ml: 0 } } },
+    { tools, logMetric: (m) => metrics.push(m) },
+  );
+
+  assert.equal(response.result.isError, true);
+  assert.equal(metrics[0].ok, false);
+  assert.equal(metrics[0].error, 'invalid_ml');
+  assert.equal(typeof metrics[0].ms, 'number');
+});

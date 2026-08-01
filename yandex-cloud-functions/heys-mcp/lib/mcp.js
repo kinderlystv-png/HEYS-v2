@@ -68,19 +68,24 @@ async function handleMessage(message, ctx) {
         protocolVersion: negotiateProtocolVersion(requested),
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
-        instructions: [
+        // Кураторский коннектор присылает свои инструкции через ctx —
+        // базовый текст ниже относится к клиентскому режиму.
+        instructions: ctx.instructions || [
           'Дневник питания, воды, сна и тренировок HEYS. Пользователь описывает съеденное свободным текстом, а ты вносишь это за него.',
           '',
           'Правила работы:',
           '1. Составной напиток или блюдо вносится компонентами, а не одним «итоговым» продуктом. Капучино — это кофе + молоко + сироп, а не строка «капучино».',
           '2. Сначала вызывай heys_list_meal_presets. Если у пользователя есть подходящий сохранённый набор, вноси приём через preset: набор хранит его собственные граммовки, и дневник остаётся однородным.',
-          '3. Граммовку, не названную явно, бери из привычной для пользователя порции — из набора или из того, как этот продукт вносился раньше (heys_get_day за прошлые даты). Не подставляй «круглые» значения от себя.',
+          '3. Граммовку, не названную явно, бери из привычной для пользователя порции — из набора или из того, как этот продукт вносился раньше (heys_get_day за прошлые даты). Не подставляй «круглые» значения от себя. Приёмы с названием вида «Обед · оценочно 155%» — заглушки автооценки, а не реальная еда: граммовки из них не бери.',
           '4. Продукты из личного списка пользователя приоритетнее одноимённых из общей базы.',
           '5. Если продукт определяется неоднозначно, инструмент вернёт кандидатов — уточни у пользователя, а не угадывай. Уверен — вноси сам, не переспрашивая.',
           '6. Перед правкой или удалением приёма вызывай heys_get_day, чтобы взять актуальный meal_id.',
-          '7. Время приёма по умолчанию — текущее московское. Если пользователь говорит «утром», «за обедом», уточни время или поставь правдоподобное и назови его в ответе.',
-          '8. Если продукта нет в базе, а пользователь прислал фотографию упаковки — сними с неё состав и пищевую ценность и создай продукт через heys_create_product, затем вноси приём. Все значения приводи к 100 г. Калорийность HEYS считает сам, с упаковки её не переноси.',
-          '9. Не выдумывай нутриенты, которых не видно на фото: если данных не хватает даже для обязательных полей, скажи, чего именно не хватает, и попроси снимок нужной части упаковки.',
+          '7. Добавить еду в уже записанный приём — heys_update_meal. Не удаляй и не пересоздавай приём ради этого: он получит новый id и потеряет оценки самочувствия.',
+          '8. Штуки вноси через pieces, а не пересчитывай в граммы сам. Вес одной штуки инструмент возьмёт из карточки продукта; если его там нет — спросит, и названное пользователем значение сохранит в карточку.',
+          '9. Время приёма по умолчанию — текущее московское. Если пользователь говорит «утром», «за обедом», уточни время или поставь правдоподобное и назови его в ответе.',
+          '10. Если продукта нет в базе, а пользователь прислал фотографию упаковки — сними с неё состав и пищевую ценность и создай продукт через heys_create_product, затем вноси приём. Все значения приводи к 100 г. Калорийность HEYS считает сам, с упаковки её не переноси.',
+          '11. Не выдумывай нутриенты, которых не видно на фото: если данных не хватает даже для обязательных полей, скажи, чего именно не хватает, и попроси снимок нужной части упаковки.',
+          '12. У напитков пищевая ценность на упаковке обычно дана на 100 мл, а не на 100 г — скажи об этом пользователю, если вносишь напиток по этикетке. Сходимость проверяй так: белки×4 + углеводы×4 + жиры×9 должно примерно совпасть с ккал на упаковке. Совпало без белков и жиров — значит их там действительно нет, а не «не поместились на этикетку».',
         ].join('\n'),
       });
     }
@@ -93,7 +98,7 @@ async function handleMessage(message, ctx) {
       return isNotification ? null : rpcResult(id, {});
 
     case 'tools/list':
-      return rpcResult(id, { tools: TOOL_SCHEMAS });
+      return rpcResult(id, { tools: ctx.toolSchemas || TOOL_SCHEMAS });
 
     case 'tools/call': {
       const name = params && params.name;
@@ -102,18 +107,39 @@ async function handleMessage(message, ctx) {
       if (!handler) {
         return rpcError(id, JSONRPC_ERRORS.INVALID_PARAMS, `Unknown tool: ${name}`);
       }
+
+      // Каждый вызов измеряется: и полное время, и та его часть, что ушла на
+      // обращения к API. Без этого непонятно, что дорожает — логика инструмента
+      // или количество round-trip'ов, и какой из сценариев записи оптимизировать.
+      const startedAt = Date.now();
+      const upstreamBefore = ctx.upstream ? ctx.upstream() : null;
+      const measure = () => {
+        const upstreamAfter = ctx.upstream ? ctx.upstream() : null;
+        return {
+          ms: Date.now() - startedAt,
+          upstream: upstreamBefore && upstreamAfter
+            ? { calls: upstreamAfter.calls - upstreamBefore.calls, ms: upstreamAfter.ms - upstreamBefore.ms }
+            : null,
+        };
+      };
+
       try {
         const result = await handler(args);
+        const timing = measure();
+        ctx.logMetric?.({ tool: name, ok: true, ...timing });
         return rpcResult(id, {
           content: [{ type: 'text', text: result.text }],
-          structuredContent: { ok: true, ...result.structured },
+          structuredContent: { ok: true, ...result.structured, duration_ms: timing.ms },
         });
       } catch (e) {
+        const timing = measure();
         if (e && e.code) {
-          return rpcResult(id, toolFailure(e.message, e.code, e.details));
+          ctx.logMetric?.({ tool: name, ok: false, error: e.code, ...timing });
+          return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms }));
         }
+        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', ...timing });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
-        return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error'));
+        return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms }));
       }
     }
 

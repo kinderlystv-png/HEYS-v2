@@ -152,3 +152,85 @@ test('ensureDay поднимает пустой день, а не падает',
   const broken = day.ensureDay({ date: '2026-08-01', meals: 'мусор' }, '2026-08-01', CLIENT, 1000);
   assert.deepEqual(broken.meals, []);
 });
+
+// ── Правка существующего приёма ───────────────────────────────────────────
+
+const MEAL_DAY = () => ({
+  date: '2026-08-01',
+  meals: [
+    {
+      id: 'm_dinner',
+      name: 'Ужин',
+      time: '20:42',
+      mood: 7,
+      items: [
+        { id: 'it_soba', name: 'Соба', grams: 250, kcal100: 118.5, protein100: 3.7, carbs100: 24.8, fat100: 0.5 },
+        { id: 'it_mayo', name: 'Майонез', grams: 15, kcal100: 691, protein100: 1, carbs100: 3, fat100: 75 },
+      ],
+    },
+    { id: 'm_snack', name: 'Перекус', time: '15:54', items: [{ id: 'it_milk', name: 'Молоко', grams: 185, kcal100: 60 }] },
+  ],
+  updatedAt: 100,
+});
+
+const CTX = { nowMs: 777, clientId: 'client-1' };
+
+test('updateMeal добавляет позицию, не трогая шапку приёма', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_dinner', {
+    addItems: [{ id: 'it_new', name: 'Сосиски', grams: 180, kcal100: 183 }],
+  }, CTX);
+
+  assert.equal(res.meal.id, 'm_dinner');
+  assert.equal(res.meal.name, 'Ужин');
+  assert.equal(res.meal.time, '20:42');
+  assert.equal(res.meal.mood, 7);
+  assert.equal(res.meal.items.length, 3);
+  assert.equal(res.day.updatedAt, 777);
+  assert.equal(res.day._writerCid, 'client-1');
+});
+
+test('updateMeal меняет граммовку и убирает позицию по id', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_dinner', {
+    setGrams: { it_soba: 300 },
+    removeItemIds: ['it_mayo'],
+  }, CTX);
+
+  assert.deepEqual(res.meal.items.map((i) => [i.id, i.grams]), [['it_soba', 300]]);
+  assert.equal(res.unknownItems.length, 0);
+});
+
+test('updateMeal сообщает о неизвестных id позиций вместо тихого no-op', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_dinner', {
+    removeItemIds: ['it_missing'],
+    setGrams: { it_also_missing: 10 },
+  }, CTX);
+  assert.deepEqual(res.unknownItems.sort(), ['it_also_missing', 'it_missing']);
+});
+
+test('updateMeal со сменой времени пересортирует приёмы дня', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_snack', { time: '23:10' }, CTX);
+  assert.deepEqual(res.day.meals.map((m) => m.id), ['m_snack', 'm_dinner']);
+});
+
+test('updateMeal без изменений не двигает день', () => {
+  const source = MEAL_DAY();
+  const res = day.updateMeal(source, 'm_dinner', {}, CTX);
+  assert.deepEqual(res.changed, []);
+  assert.equal(res.day, source);
+});
+
+test('updateMeal не находит несуществующий приём', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_nope', { name: 'X' }, CTX);
+  assert.equal(res.meal, null);
+  assert.deepEqual(res.changed, []);
+});
+
+test('updateMeal отбивает недопустимую граммовку', () => {
+  assert.throws(() => day.updateMeal(MEAL_DAY(), 'm_dinner', { setGrams: { it_soba: 99999 } }, CTX), /invalid_grams/);
+});
+
+test('updateMeal не мутирует исходный день', () => {
+  const source = MEAL_DAY();
+  day.updateMeal(source, 'm_dinner', { addItems: [{ id: 'x', name: 'X', grams: 10 }] }, CTX);
+  assert.equal(source.meals[0].items.length, 2);
+});

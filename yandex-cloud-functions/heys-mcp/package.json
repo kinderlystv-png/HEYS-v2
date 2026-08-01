@@ -4,6 +4,6 @@
   "description": "HEYS MCP server - remote MCP connector for logging meals, water, sleep and training",
   "main": "index.js",
   "scripts": {
-    "test": "node --test __tests__"
+    "test": "node --test __tests__/*.test.cjs"
   }
 }

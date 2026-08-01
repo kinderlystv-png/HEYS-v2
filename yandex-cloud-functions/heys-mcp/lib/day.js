@@ -187,6 +187,75 @@ function addMeal(day, meal, { nowMs, clientId }) {
   return touch({ ...day, meals }, nowMs, clientId);
 }
 
+/**
+ * Точечная правка уже записанного приёма.
+ *
+ * Отдельный путь нужен потому, что «добавь туда ещё» через delete + create
+ * теряет шапку приёма (название, время, самочувствие), меняет meal_id и
+ * открывает лишнее окно гонки с параллельно открытым приложением.
+ *
+ * Возвращает список изменений: пустой список — сигнал, что менять нечего,
+ * и писать день не нужно.
+ */
+function updateMeal(day, mealId, patch, { nowMs, clientId }) {
+  const meals = day.meals || [];
+  const index = meals.findIndex((m) => m && String(m.id) === String(mealId));
+  if (index === -1) return { day, meal: null, changed: [], unknownItems: [] };
+
+  const meal = { ...meals[index], items: [...((meals[index] && meals[index].items) || [])] };
+  const changed = [];
+  const unknownItems = [];
+
+  const removeIds = (patch.removeItemIds || []).map(String);
+  if (removeIds.length) {
+    for (const id of removeIds) {
+      if (!meal.items.some((item) => String(item.id) === id)) unknownItems.push(id);
+    }
+    const before = meal.items.length;
+    meal.items = meal.items.filter((item) => !removeIds.includes(String(item.id)));
+    if (meal.items.length !== before) changed.push(`убрано позиций: ${before - meal.items.length}`);
+  }
+
+  for (const [itemId, value] of Object.entries(patch.setGrams || {})) {
+    const position = meal.items.findIndex((item) => String(item.id) === String(itemId));
+    if (position === -1) {
+      unknownItems.push(String(itemId));
+      continue;
+    }
+    const grams = Number(value);
+    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) throw new Error(`invalid_grams:${itemId}`);
+    meal.items[position] = { ...meal.items[position], grams };
+    changed.push(`${meal.items[position].name} → ${grams} г`);
+  }
+
+  if (Array.isArray(patch.addItems) && patch.addItems.length) {
+    meal.items = [...meal.items, ...patch.addItems];
+    changed.push(`добавлено: ${patch.addItems.map((item) => `${item.name} ${item.grams} г`).join(', ')}`);
+  }
+
+  let resort = false;
+  if (patch.time) {
+    meal.time = patch.time;
+    changed.push(`время → ${patch.time}`);
+    resort = true;
+  }
+  if (patch.name) {
+    meal.name = String(patch.name);
+    changed.push(`название → ${meal.name}`);
+  }
+  for (const field of ['mood', 'wellbeing', 'stress']) {
+    if (patch[field] === undefined || patch[field] === null) continue;
+    meal[field] = patch[field];
+    changed.push(`${field} → ${patch[field]}`);
+  }
+
+  if (!changed.length) return { day, meal: meals[index], changed, unknownItems };
+
+  const nextMeals = meals.map((m, i) => (i === index ? meal : m));
+  const nextDay = touch({ ...day, meals: resort ? sortMealsByTime(nextMeals) : nextMeals }, nowMs, clientId);
+  return { day: nextDay, meal, changed, unknownItems };
+}
+
 function deleteMeal(day, mealId, { nowMs, clientId }) {
   const meals = (day.meals || []).filter((m) => m && String(m.id) !== String(mealId));
   if (meals.length === (day.meals || []).length) return { day, removed: false };
@@ -314,6 +383,7 @@ module.exports = {
   buildMealItem,
   macroTotals,
   addMeal,
+  updateMeal,
   deleteMeal,
   addWater,
   addTraining,
