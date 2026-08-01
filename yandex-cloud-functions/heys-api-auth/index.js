@@ -1080,6 +1080,45 @@ async function handleMobileSessionExchangeConsume(event, jwtSecret) {
 // 🔐 GET CLIENTS — Curator-only endpoint (JWT required)
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * 🔐 SEC-031 (2026-08-02): состояние кураторского аккаунта.
+ *
+ * `/auth/verify` для этого не годится: он проверяет только подпись и `exp`
+ * токена и в БД не ходит вовсе, поэтому JWT удалённого или отключённого
+ * куратора там остаётся «валидным». Единственный признак деактивации в схеме —
+ * `curators.is_active` (database/2025-12-22_curators.sql:14), его и читаем.
+ *
+ * Зачем понадобилось: MCP-коннектор на refresh-гранте перевыпускает
+ * кураторский JWT сам и до этого фикса не спрашивал сервер вообще ни о чём.
+ * Мгновенного отзыва кураторских JWT в платформе по-прежнему нет — этот
+ * эндпоинт закрывает только «аккаунт больше не должен работать».
+ */
+async function handleCuratorStatus(curatorId) {
+  const client = await getClient();
+  try {
+    const result = await client.query(
+      'SELECT id, email, is_active FROM curators WHERE id = $1',
+      [curatorId]
+    );
+    const curator = result.rows[0];
+    if (!curator) {
+      return { statusCode: 404, body: JSON.stringify({ error: 'curator_not_found' }) };
+    }
+    if (curator.is_active === false) {
+      return { statusCode: 403, body: JSON.stringify({ error: 'curator_inactive' }) };
+    }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ active: true, id: curator.id, email: curator.email })
+    };
+  } catch (e) {
+    console.error('CuratorStatus error:', e);
+    return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
+  } finally {
+    client.release();
+  }
+}
+
 async function handleGetClients(curatorId) {
   const client = await getClient();
 
@@ -2055,6 +2094,19 @@ module.exports.handler = async function (event, context) {
     case 'curator-logout':
       result = handleCuratorLogout();
       break;
+    // 🔐 SEC-031: живая проверка состояния кураторского аккаунта.
+    case 'curator-status': {
+      const statusToken = getCuratorTokenFromRequest(event);
+      const statusJwt = verifyJwt(statusToken, JWT_SECRET);
+      if (!statusJwt.valid) {
+        result = { statusCode: 401, body: JSON.stringify({ error: statusJwt.error }) };
+      } else if (statusJwt.payload.role !== 'curator') {
+        result = { statusCode: 403, body: JSON.stringify({ error: 'Curator role required' }) };
+      } else {
+        result = await handleCuratorStatus(statusJwt.payload.sub);
+      }
+      break;
+    }
     case 'mobile':
       if (mfaAction === 'session-exchange' && pathParts[3] === 'consume') {
         result = await handleMobileSessionExchangeConsume(event, JWT_SECRET);

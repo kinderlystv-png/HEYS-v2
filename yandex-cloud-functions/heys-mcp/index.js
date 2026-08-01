@@ -339,11 +339,23 @@ exports.handler = async (event) => {
     if (path === '/mcp/token' && method === 'POST') {
       const form = parseForm(readBody(event));
       const grant = form.grant_type;
-      const result = grant === 'authorization_code'
-        ? oauth.exchangeAuthorizationCode(form, secret)
-        : grant === 'refresh_token'
-          ? oauth.exchangeRefreshToken(form, secret, Date.now(), { rawJwtSecret: process.env.JWT_SECRET || null })
-          : { ok: false, error: 'unsupported_grant_type', description: `grant_type "${grant}" не поддерживается.` };
+      let result;
+      if (grant === 'authorization_code') {
+        result = oauth.exchangeAuthorizationCode(form, secret);
+      } else if (grant === 'refresh_token') {
+        // 🔐 SEC-031: продление кураторской сессии проходит через сервер.
+        // Проверка ходит под свежевыпущенным JWT — прежний мог уже истечь.
+        const api = createApiClient({ apiUrl });
+        result = await oauth.exchangeRefreshToken(form, secret, Date.now(), {
+          rawJwtSecret: process.env.JWT_SECRET || null,
+          verifyCurator: async (_curatorId, curatorJwt) => api.curatorStatus(curatorJwt),
+        });
+        if (!result.ok) {
+          console.warn('[heys-mcp] refresh denied', { error: result.error });
+        }
+      } else {
+        result = { ok: false, error: 'unsupported_grant_type', description: `grant_type "${grant}" не поддерживается.` };
+      }
       if (!result.ok) return json(400, { error: result.error, error_description: result.description });
       return json(200, result.tokens);
     }

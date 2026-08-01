@@ -307,6 +307,30 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     };
   }
 
+  /**
+   * 🔐 SEC-031: GET /auth/curator-status — жив ли ещё кураторский аккаунт.
+   *
+   * Вызывается перед перевыпуском кураторского JWT на refresh-гранте. Ответ
+   * трактуется fail-closed: всё, кроме явного 200 `{active:true}`, означает
+   * «не перевыпускать». Сетевая ошибка тоже отказ — цена ошибки здесь
+   * несимметрична: лишний перелогин против доступа к дневникам всех клиентов.
+   */
+  async function curatorStatus(bearer) {
+    try {
+      const res = await measured(`${apiUrl}/auth/curator-status`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${bearer}` },
+        timeoutMs,
+      });
+      if (res.status === 200 && res.json && res.json.active === true) {
+        return { ok: true };
+      }
+      return { ok: false, error: String((res.json && res.json.error) || `curator_status_http_${res.status}`) };
+    } catch (e) {
+      return { ok: false, error: `curator_status_unreachable: ${e && e.message}` };
+    }
+  }
+
   async function listClients(bearer) {
     const { data, error } = await rpc('get_curator_clients', {}, { bearer });
     if (error) return { data: null, error };
@@ -558,7 +582,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
 
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
-    curatorLogin, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
+    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient,
     createClientWithPin, setClientPin, getClientAccessLink,
     extendSubscription, cancelSubscription,

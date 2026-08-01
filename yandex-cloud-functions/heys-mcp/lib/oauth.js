@@ -8,9 +8,15 @@
  * Dynamic Client Registration. Поэтому сервер обязан сам уметь DCR + PKCE.
  *
  * Состояние не хранится: client_id, authorization code, access и refresh
- * токены — это подписанные HS256-структуры. Отзыв доступа делается не удалением
- * строки, а `revoke_session` на клиентской сессии HEYS, которая зашифрована
- * внутри токена: после отзыва все инструменты мгновенно перестают работать.
+ * токены — это подписанные HS256-структуры.
+ *
+ * Отзыв доступа различается по ролям, и это важно не перепутать:
+ *   • клиент — внутри токена зашифрована клиентская сессия HEYS, `revoke_session`
+ *     мгновенно обрывает все инструменты;
+ *   • куратор — внутри токена кураторский JWT, а он stateless: мгновенного
+ *     отзыва в платформе нет. Продление сессии останавливает
+ *     `curators.is_active = false` (проверяется на каждом refresh, SEC-031),
+ *     но уже выданный JWT доживает свои 24 часа.
  */
 
 const { signToken, verifyToken, encryptSecret, decryptSecret, verifyPkce, signRawJwt } = require('./crypto-tokens');
@@ -31,14 +37,62 @@ const ACCESS_TTL_SECONDS = 3600;         // 1 час: короткий, пото
 const REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30;
 const CLIENT_TTL_SECONDS = 60 * 60 * 24 * 365;
 
+/**
+ * 🔐 SEC-030 (2026-08-02): allowlist хостов redirect_uri.
+ *
+ * До фикса DCR принимала любой https-адрес. В связке со страницей входа это
+ * давало готовый фишинг на легитимном домене: атакующий регистрировал клиента
+ * с `redirect_uri` на свой сервер и любым `client_name`, присылал куратору
+ * ссылку на настоящий `/mcp/authorize`, тот вводил email, пароль и код 2FA —
+ * и код уезжал атакующему. Проверка домена, обычная защита пользователя, здесь
+ * не срабатывает: домен действительно наш.
+ *
+ * Держать список в коде, а не в env, осознанно: heys-mcp при деплое получает
+ * ровно одну переменную (LOCKBOX_APP_SECRET_ID), остальное приходит
+ * Lockbox-overlay'ем. Переопределение через MCP_ALLOWED_REDIRECT_HOSTS
+ * оставлено на случай нового клиента — список через запятую, `*.example.com`
+ * разрешает поддомены.
+ */
+const DEFAULT_ALLOWED_REDIRECT_HOSTS = ['claude.ai', '*.claude.ai', 'claude.com', '*.claude.com', 'anthropic.com', '*.anthropic.com'];
+
+function allowedRedirectHosts() {
+  const raw = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
+  if (!raw || !String(raw).trim()) return DEFAULT_ALLOWED_REDIRECT_HOSTS;
+  return String(raw).split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
+}
+
+function hostMatches(hostname, pattern) {
+  if (pattern.startsWith('*.')) return hostname.endsWith(pattern.slice(1));
+  return hostname === pattern;
+}
+
+/** Loopback для нативных клиентов (Claude Code) — любой порт, но только петля. */
+function isLoopback(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
 function isHttpsUri(value) {
   try {
     const url = new URL(value);
-    // localhost по HTTP разрешён спекой для нативных клиентов.
-    if (url.protocol === 'https:') return true;
-    return url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
+    // Спека разрешает нативным клиентам loopback по HTTP.
+    if (url.protocol === 'http:') return isLoopback(url.hostname);
+    if (url.protocol !== 'https:') return false;
+    // Фрагмент в redirect_uri запрещён OAuth 2.1.
+    if (url.hash) return false;
+    const hostname = url.hostname.toLowerCase();
+    if (isLoopback(hostname)) return true;
+    return allowedRedirectHosts().some((pattern) => hostMatches(hostname, pattern));
   } catch (_) {
     return false;
+  }
+}
+
+/** Origin получателя — его показываем пользователю на странице согласия. */
+function redirectOrigin(value) {
+  try {
+    return new URL(value).origin;
+  } catch (_) {
+    return '';
   }
 }
 
@@ -117,6 +171,12 @@ function validateAuthorizeRequest(query, secret, nowMs = Date.now()) {
   if (!redirectUri || !client.redirectUris.includes(redirectUri)) {
     return { ok: false, fatal: true, error: 'invalid_request', description: 'redirect_uri не совпадает с зарегистрированным.' };
   }
+  // 🔐 SEC-030: allowlist проверяется и здесь, а не только при регистрации.
+  // client_id живёт год, поэтому без этой проверки регистрации, выданные до
+  // фикса, продолжали бы работать до истечения TTL.
+  if (!isHttpsUri(redirectUri)) {
+    return { ok: false, fatal: true, error: 'invalid_request', description: 'redirect_uri ведёт на неразрешённый адрес.' };
+  }
   if (query.response_type !== 'code') {
     return { ok: false, fatal: false, redirectUri, error: 'unsupported_response_type', description: 'Поддерживается только response_type=code.' };
   }
@@ -128,6 +188,7 @@ function validateAuthorizeRequest(query, secret, nowMs = Date.now()) {
     clientId,
     clientName: client.clientName,
     redirectUri,
+    redirectOrigin: redirectOrigin(redirectUri),
     state: typeof query.state === 'string' ? query.state : '',
     codeChallenge: query.code_challenge,
     resource: typeof query.resource === 'string' ? query.resource : '',
@@ -184,21 +245,53 @@ function exchangeAuthorizationCode(form, secret, nowMs = Date.now()) {
   return { ok: true, tokens: issueTokenPair(claims, secret, nowMs) };
 }
 
-function exchangeRefreshToken(form, secret, nowMs = Date.now(), { rawJwtSecret = null } = {}) {
+/**
+ * 🔐 SEC-031 (2026-08-02): перевыпуск кураторского JWT — только после
+ * подтверждения сервером, что аккаунт ещё действует.
+ *
+ * До фикса функция подписывала свежий `role: curator` JWT боевым JWT_SECRET,
+ * не спрашивая сервер вообще ни о чём: ни существует ли куратор, ни не
+ * отключён ли он. Refresh-токен живёт 30 суток и на каждом обмене выдаётся
+ * новый, эндпоинт публичный и без клиентской аутентификации — то есть
+ * утёкший refresh-токен давал возобновляемый кураторский доступ, который
+ * нельзя было прекратить ничем, кроме ротации общего JWT_SECRET.
+ *
+ * Теперь перед перевыпуском вызывается `verifyCurator` (обёртка над
+ * GET /auth/curator-status). Он же — единственный доступный «рубильник»:
+ * `curators.is_active = false` прекращает продление. Мгновенного отзыва уже
+ * выданного 24-часового JWT это не даёт — для него нужен `token_version` в
+ * токене и его сверка во всех функциях; вынесено отдельной задачей.
+ *
+ * `client_id` стал обязательным: раньше проверка стояла под `if (form.client_id)`,
+ * то есть обходилась простым отсутствием параметра.
+ *
+ * @param {Function} [verifyCurator] async (curatorId, curatorJwt) => {ok, error}
+ */
+async function exchangeRefreshToken(form, secret, nowMs = Date.now(), { rawJwtSecret = null, verifyCurator = null } = {}) {
   const verified = verifyToken(form.refresh_token, secret, { typ: 'heys-mcp-refresh', nowMs });
   if (!verified.ok) return { ok: false, error: 'invalid_grant', description: 'Refresh-токен недействителен или истёк.' };
-  if (form.client_id && form.client_id !== verified.claims.cid) {
+  if (!form.client_id || form.client_id !== verified.claims.cid) {
     return { ok: false, error: 'invalid_client', description: 'client_id не совпадает с refresh-токеном.' };
   }
   const claims = { ...verified.claims };
   // Куратор: перевыпускаем 24-часовой JWT, иначе инструменты умрут через сутки
   // после входа, хотя refresh-токен ещё жив.
-  if (claims.rl === 'curator' && rawJwtSecret && claims.sub) {
+  if (claims.rl === 'curator') {
+    if (!rawJwtSecret || !claims.sub) {
+      return { ok: false, error: 'invalid_grant', description: 'Кураторскую сессию продлить нельзя — войдите заново.' };
+    }
     const freshJwt = signRawJwt(
       { sub: claims.sub, email: claims.em || '', role: 'curator' },
       rawJwtSecret,
       { ttlSeconds: CURATOR_JWT_TTL_SECONDS, nowMs },
     );
+    // Fail-closed: без положительного ответа сервера продления не будет.
+    // Свежий JWT нужен самой проверке — прежний к этому моменту мог истечь
+    // (он живёт 24 часа, а refresh-токен — 30 суток).
+    const check = verifyCurator ? await verifyCurator(claims.sub, freshJwt) : { ok: false, error: 'verifier_missing' };
+    if (!check || !check.ok) {
+      return { ok: false, error: 'invalid_grant', description: 'Кураторский доступ больше не действует — войдите заново.' };
+    }
     claims.st = encryptSecret(freshJwt, secret);
   }
   return { ok: true, tokens: issueTokenPair(claims, secret, nowMs) };
@@ -272,19 +365,33 @@ function renderLoginPage(request, { error = '', phone = '', email = '', curatorM
            background:#2f6df6; border:0; border-radius:10px; cursor:pointer; }
   .err { margin:14px 0 0; padding:10px 12px; border-radius:10px; background:#fdecec; color:#b3261e; font-size:13px; }
   .foot { margin-top:18px; font-size:12px; color:#8a8f9e; line-height:1.5; }
+  .who { margin:0 0 18px; padding:12px 14px; border:1px solid #e4e6ec; border-radius:12px; background:#fafbfd; }
+  .who-row { display:flex; gap:10px; align-items:baseline; font-size:13px; line-height:1.5; }
+  .who-row span { flex:0 0 78px; color:#8a8f9e; }
+  .who-row b { font-weight:600; word-break:break-all; }
+  .who-note { margin:8px 0 0; font-size:12px; line-height:1.5; color:#8a8f9e; }
   @media (prefers-color-scheme: dark) {
     body { background:#15161a; color:#eceef4; }
     .card { background:#1e2027; box-shadow:none; }
     input[type=tel], input[type=password], input[type=email], input[type=text] { background:#15161a; border-color:#333744; }
     details { border-color:#2a2d36; }
     .err { background:#3a1f1f; color:#ff9a92; }
+    .who { background:#191b21; border-color:#2a2d36; }
   }
 </style>
 </head>
 <body>
   <div class="card">
     <h1>Доступ к дневнику HEYS</h1>
-    <p class="sub">${escapeHtml(request.clientName || 'Приложение')} запрашивает доступ к дневнику питания, воды, сна и тренировок.</p>
+    <p class="sub">Приложение запрашивает доступ к дневнику питания, воды, сна и тренировок.</p>
+    <!-- 🔐 SEC-030: получатель кода показывается явно. Имя приложения приходит
+         из запроса регистрации и никем не подтверждено, поэтому опорным
+         признаком для пользователя служит адрес, а не название. -->
+    <div class="who">
+      <div class="who-row"><span>Кому</span><b>${escapeHtml(request.redirectOrigin || 'адрес не определён')}</b></div>
+      <div class="who-row"><span>Назвалось</span><b>${escapeHtml(request.clientName || 'без названия')}</b></div>
+      <p class="who-note">Название приложение указывает само — HEYS его не проверяет. Если адрес выше вам незнаком, закройте эту страницу и не вводите данные.</p>
+    </div>
     ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
     <form method="post" action="/mcp/authorize">
       ${hidden}
@@ -306,9 +413,15 @@ function renderLoginPage(request, { error = '', phone = '', email = '', curatorM
         <input id="mfa_code" name="mfa_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
         <button type="submit">Войти как куратор</button>
       </form>
-      <p class="foot">Кураторский доступ открывает дневники всех ваших клиентов. Ассистент всегда называет, кому вносит данные.</p>
+      <!-- 🔐 SEC-030: до фикса здесь было сказано только про «дневники», хотя
+           кураторский вход открывает ещё управление клиентами, подписками и
+           лидами. Согласие обязано называть реальный объём. -->
+      <p class="foot">Кураторский вход открывает не только дневники. Ассистент сможет: читать и вести дневники всех ваших клиентов; читать переписку и отвечать клиентам; заводить клиентов и выдавать им доступ, включая смену PIN; продлевать и отменять подписки; работать с заявками и лидами. Он всегда называет, кому вносит данные.</p>
     </details>
-    <p class="foot">Доступ можно отозвать в любой момент: клиенту — выйти из аккаунта в приложении, куратору — отключить коннектор в Claude.</p>
+    <!-- 🔐 SEC-031: прежний текст обещал отзыв через отключение коннектора в
+         Claude. Для куратора это неправда: кураторские JWT stateless, отзыва на
+         сервере нет. Пишем как есть. -->
+    <p class="foot">Клиент может прекратить доступ в любой момент — выйдя из аккаунта в приложении. У куратора мгновенного отзыва нет: отключение коннектора в Claude убирает его только на вашей стороне, а выданный доступ действует до суток. Если доступ мог утечь — смените пароль и сообщите администратору.</p>
   </div>
 </body>
 </html>`;
@@ -339,6 +452,9 @@ module.exports = {
   REFRESH_TTL_SECONDS,
   CODE_TTL_SECONDS,
   isHttpsUri,
+  redirectOrigin,
+  allowedRedirectHosts,
+  DEFAULT_ALLOWED_REDIRECT_HOSTS,
   protectedResourceMetadata,
   authorizationServerMetadata,
   registerClient,

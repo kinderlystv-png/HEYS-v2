@@ -58,6 +58,106 @@ test('DCR требует https redirect_uri', () => {
   assert.equal(oauth.registerClient({ redirect_uris: [REDIRECT] }, SECRET).ok, true);
 });
 
+// ── SEC-030: allowlist redirect-хостов ───────────────────────────────────────
+//
+// Открытая DCR + страница, собирающая пароль и код 2FA, давали фишинг на
+// легитимном домене: атакующий регистрировал клиента с redirect_uri на себя и
+// присылал куратору ссылку на настоящий /mcp/authorize.
+
+test('SEC-030: DCR отклоняет посторонний https-хост', () => {
+  assert.equal(oauth.registerClient({ redirect_uris: ['https://evil.tld/cb'] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ redirect_uris: ['https://claude.ai.evil.tld/cb'] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ redirect_uris: ['https://notclaude.ai/cb'] }, SECRET).ok, false);
+});
+
+test('SEC-030: известные адреса клиентов Anthropic и loopback проходят', () => {
+  for (const uri of [
+    REDIRECT,
+    'https://claude.com/api/mcp/auth_callback',
+    'https://console.anthropic.com/cb',
+    'http://localhost:53123/callback',
+    'http://127.0.0.1:8976/cb',
+  ]) {
+    assert.equal(oauth.registerClient({ redirect_uris: [uri] }, SECRET).ok, true, uri);
+  }
+});
+
+test('SEC-030: allowlist переопределяется переменной окружения', () => {
+  const saved = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
+  try {
+    process.env.MCP_ALLOWED_REDIRECT_HOSTS = 'partner.example, *.vendor.example';
+    assert.equal(oauth.registerClient({ redirect_uris: ['https://partner.example/cb'] }, SECRET).ok, true);
+    assert.equal(oauth.registerClient({ redirect_uris: ['https://a.vendor.example/cb'] }, SECRET).ok, true);
+    // Переопределение заменяет список целиком — дефолты больше не действуют.
+    assert.equal(oauth.registerClient({ redirect_uris: [REDIRECT] }, SECRET).ok, false);
+  } finally {
+    if (saved === undefined) delete process.env.MCP_ALLOWED_REDIRECT_HOSTS;
+    else process.env.MCP_ALLOWED_REDIRECT_HOSTS = saved;
+  }
+});
+
+test('SEC-030: client_id, выданный до фикса, не проходит authorize', () => {
+  // Регистрация с чужим хостом — как если бы client_id выдали до allowlist'а.
+  const saved = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
+  let clientId;
+  try {
+    process.env.MCP_ALLOWED_REDIRECT_HOSTS = 'evil.tld';
+    clientId = oauth.registerClient({ redirect_uris: ['https://evil.tld/cb'] }, SECRET).registration.client_id;
+  } finally {
+    if (saved === undefined) delete process.env.MCP_ALLOWED_REDIRECT_HOSTS;
+    else process.env.MCP_ALLOWED_REDIRECT_HOSTS = saved;
+  }
+  const result = oauth.validateAuthorizeRequest({
+    client_id: clientId,
+    redirect_uri: 'https://evil.tld/cb',
+    response_type: 'code',
+    code_challenge: 'x',
+    code_challenge_method: 'S256',
+  }, SECRET);
+  assert.equal(result.ok, false);
+  assert.equal(result.fatal, true);
+});
+
+test('SEC-030: страница согласия показывает получателя кода', () => {
+  const { validation } = registerAndAuthorize();
+  const page = oauth.renderLoginPage(validation);
+  assert.ok(page.includes('https://claude.ai'), 'origin получателя должен быть виден');
+  assert.match(page, /HEYS его не проверяет/, 'имя приложения помечено как непроверенное');
+});
+
+test('SEC-030: имя приложения не может внести разметку в страницу', () => {
+  const reg = oauth.registerClient(
+    { redirect_uris: [REDIRECT], client_name: '<img src=x onerror=alert(1)>' },
+    SECRET,
+  );
+  const { challenge } = pkcePair();
+  const validation = oauth.validateAuthorizeRequest({
+    client_id: reg.registration.client_id,
+    redirect_uri: REDIRECT,
+    response_type: 'code',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+  }, SECRET);
+  const page = oauth.renderLoginPage(validation);
+  assert.ok(!page.includes('<img src=x'), 'имя приложения обязано быть экранировано');
+  assert.ok(page.includes('&lt;img src=x'));
+});
+
+test('SEC-031: страница не обещает куратору мгновенного отзыва', () => {
+  const { validation } = registerAndAuthorize();
+  const page = oauth.renderLoginPage(validation);
+  assert.ok(!page.includes('отключить коннектор в Claude'), 'старое ложное обещание убрано');
+  assert.match(page, /мгновенного отзыва нет/);
+});
+
+test('SEC-030: согласие называет реальный объём кураторского доступа', () => {
+  const { validation } = registerAndAuthorize();
+  const page = oauth.renderLoginPage(validation);
+  for (const capability of ['подписк', 'PIN', 'лид', 'переписк']) {
+    assert.ok(page.includes(capability), `в согласии не назван доступ: ${capability}`);
+  }
+});
+
 test('authorize отвергает redirect_uri, не указанный при регистрации', () => {
   const reg = oauth.registerClient({ redirect_uris: [REDIRECT] }, SECRET);
   const result = oauth.validateAuthorizeRequest({
@@ -146,7 +246,7 @@ test('обмен кода на чужой redirect_uri не проходит', (
   assert.equal(result.ok, false);
 });
 
-test('refresh выдаёт новую пару и сохраняет привязку к клиенту HEYS', () => {
+test('refresh выдаёт новую пару и сохраняет привязку к клиенту HEYS', async () => {
   const { reg, verifier, validation } = registerAndAuthorize();
   const code = oauth.issueAuthorizationCode({
     clientId: validation.clientId,
@@ -158,7 +258,7 @@ test('refresh выдаёт новую пару и сохраняет привя�
   const first = oauth.exchangeAuthorizationCode({
     code, client_id: reg.registration.client_id, redirect_uri: REDIRECT, code_verifier: verifier,
   }, SECRET);
-  const refreshed = oauth.exchangeRefreshToken({
+  const refreshed = await oauth.exchangeRefreshToken({
     refresh_token: first.tokens.refresh_token,
     client_id: reg.registration.client_id,
   }, SECRET);
@@ -167,7 +267,7 @@ test('refresh выдаёт новую пару и сохраняет привя�
   assert.equal(auth.sessionToken, SESSION);
 });
 
-test('access-токен нельзя подсунуть вместо refresh и наоборот', () => {
+test('access-токен нельзя подсунуть вместо refresh и наоборот', async () => {
   const { reg, verifier, validation } = registerAndAuthorize();
   const code = oauth.issueAuthorizationCode({
     clientId: validation.clientId,
@@ -180,7 +280,9 @@ test('access-токен нельзя подсунуть вместо refresh и 
     code, client_id: reg.registration.client_id, redirect_uri: REDIRECT, code_verifier: verifier,
   }, SECRET).tokens;
 
-  assert.equal(oauth.exchangeRefreshToken({ refresh_token: pair.access_token }, SECRET).ok, false);
+  assert.equal((await oauth.exchangeRefreshToken({
+    refresh_token: pair.access_token, client_id: reg.registration.client_id,
+  }, SECRET)).ok, false);
   assert.equal(oauth.authenticateAccessToken(`Bearer ${pair.refresh_token}`, SECRET).ok, false);
   assert.equal(oauth.authenticateAccessToken(`Bearer ${code}`, SECRET).ok, false);
 });

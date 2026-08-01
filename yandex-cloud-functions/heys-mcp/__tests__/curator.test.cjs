@@ -261,12 +261,15 @@ test('клиентские токены остаются клиентскими,
   assert.equal(auth.role, 'client');
 });
 
-test('refresh перевыпускает кураторский JWT, совместимый с verifyJwt из heys-api-rpc', () => {
+/** SEC-031: сервер подтвердил, что куратор активен. */
+const curatorActive = async () => ({ ok: true });
+
+test('refresh перевыпускает кураторский JWT, совместимый с verifyJwt из heys-api-rpc', async () => {
   const { exchanged, clientId } = curatorTokens();
   const later = NOW + 3600 * 1000;
-  const refreshed = oauth.exchangeRefreshToken(
+  const refreshed = await oauth.exchangeRefreshToken(
     { refresh_token: exchanged.tokens.refresh_token, client_id: clientId },
-    SECRET, later, { rawJwtSecret: RAW_JWT_SECRET },
+    SECRET, later, { rawJwtSecret: RAW_JWT_SECRET, verifyCurator: curatorActive },
   );
   assert.equal(refreshed.ok, true);
   const auth = oauth.authenticateAccessToken(`Bearer ${refreshed.tokens.access_token}`, SECRET, later);
@@ -282,15 +285,61 @@ test('refresh перевыпускает кураторский JWT, совме�
   assert.ok(verified.claims.exp * 1000 > later + 23 * 3600 * 1000, 'срок нового JWT ~24 часа');
 });
 
-test('refresh без rawJwtSecret не ломается: кураторский JWT остаётся прежним', () => {
-  const { exchanged } = curatorTokens();
-  const refreshed = oauth.exchangeRefreshToken({ refresh_token: exchanged.tokens.refresh_token }, SECRET, NOW + 1000);
-  assert.equal(refreshed.ok, true);
-  const auth = oauth.authenticateAccessToken(`Bearer ${refreshed.tokens.access_token}`, SECRET, NOW + 1000);
-  assert.equal(auth.sessionToken, JWT);
+// SEC-031: поведение изменено намеренно. Раньше без rawJwtSecret кураторский
+// refresh проходил и протаскивал ПРЕЖНИЙ JWT — а он живёт 24 часа, то есть к
+// моменту продления обычно уже мёртв: инструменты всё равно не работали, но
+// пара токенов выдавалась как валидная. Теперь это явный отказ.
+test('refresh без rawJwtSecret отклоняется, а не выдаёт мёртвую сессию', async () => {
+  const { exchanged, clientId } = curatorTokens();
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: exchanged.tokens.refresh_token, client_id: clientId },
+    SECRET, NOW + 1000, { verifyCurator: curatorActive },
+  );
+  assert.equal(refreshed.ok, false);
+  assert.equal(refreshed.error, 'invalid_grant');
 });
 
-test('клиентский refresh не трогает client-session даже при наличии rawJwtSecret', () => {
+test('SEC-031: refresh не продлевает доступ, если сервер не подтвердил куратора', async () => {
+  const { exchanged, clientId } = curatorTokens();
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: exchanged.tokens.refresh_token, client_id: clientId },
+    SECRET, NOW + 1000,
+    { rawJwtSecret: RAW_JWT_SECRET, verifyCurator: async () => ({ ok: false, error: 'curator_inactive' }) },
+  );
+  assert.equal(refreshed.ok, false);
+  assert.equal(refreshed.error, 'invalid_grant');
+});
+
+test('SEC-031: недоступность сервера тоже отказ (fail-closed)', async () => {
+  const { exchanged, clientId } = curatorTokens();
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: exchanged.tokens.refresh_token, client_id: clientId },
+    SECRET, NOW + 1000,
+    { rawJwtSecret: RAW_JWT_SECRET, verifyCurator: async () => { throw new Error('network'); } },
+  ).catch((e) => ({ ok: false, error: 'invalid_grant', thrown: e }));
+  assert.equal(refreshed.ok, false);
+});
+
+test('SEC-031: без verifyCurator кураторский refresh не проходит', async () => {
+  const { exchanged, clientId } = curatorTokens();
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: exchanged.tokens.refresh_token, client_id: clientId },
+    SECRET, NOW + 1000, { rawJwtSecret: RAW_JWT_SECRET },
+  );
+  assert.equal(refreshed.ok, false);
+});
+
+test('SEC-031: client_id обязателен в refresh-гранте', async () => {
+  const { exchanged } = curatorTokens();
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: exchanged.tokens.refresh_token },
+    SECRET, NOW + 1000, { rawJwtSecret: RAW_JWT_SECRET, verifyCurator: curatorActive },
+  );
+  assert.equal(refreshed.ok, false);
+  assert.equal(refreshed.error, 'invalid_client');
+});
+
+test('клиентский refresh не трогает client-session даже при наличии rawJwtSecret', async () => {
   const reg = oauth.registerClient({ redirect_uris: ['https://claude.ai/api/mcp/auth_callback'] }, SECRET, NOW);
   const { verifier, challenge } = pkce();
   const code = oauth.issueAuthorizationCode({
@@ -305,8 +354,9 @@ test('клиентский refresh не трогает client-session даже �
     code, client_id: reg.registration.client_id,
     redirect_uri: 'https://claude.ai/api/mcp/auth_callback', code_verifier: verifier,
   }, SECRET, NOW);
-  const refreshed = oauth.exchangeRefreshToken(
-    { refresh_token: pair.tokens.refresh_token }, SECRET, NOW + 1000, { rawJwtSecret: RAW_JWT_SECRET },
+  const refreshed = await oauth.exchangeRefreshToken(
+    { refresh_token: pair.tokens.refresh_token, client_id: reg.registration.client_id },
+    SECRET, NOW + 1000, { rawJwtSecret: RAW_JWT_SECRET },
   );
   const auth = oauth.authenticateAccessToken(`Bearer ${refreshed.tokens.access_token}`, SECRET, NOW + 1000);
   assert.equal(auth.role, 'client');

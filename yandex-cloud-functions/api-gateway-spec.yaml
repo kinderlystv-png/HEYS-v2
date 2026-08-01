@@ -387,6 +387,22 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  # SEC-031: живая проверка состояния кураторского аккаунта (curators.is_active).
+  # Нужна MCP-коннектору перед перевыпуском кураторского JWT на refresh-гранте.
+  /auth/curator-status:
+    get:
+      summary: Curator account state (active / inactive / missing)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for curator status
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   # ═══════════════════════════════════════════════════════════════
   # Telegram Bot для клиентов / HEYS Старт — heys-bot-client
   # ═══════════════════════════════════════════════════════════════
