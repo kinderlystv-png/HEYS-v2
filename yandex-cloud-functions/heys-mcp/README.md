@@ -203,6 +203,15 @@ client-session HEYS, поэтому **отзыв доступа = отзыв с�
 
 ## Деплой
 
+> **Порядок с 2026-08-02: сначала `heys-api-auth` и спека шлюза, только потом
+> `heys-mcp`.** Правка SEC-031 связала функции: на refresh-гранте коннектор
+> ходит в `GET /auth/curator-status`, проверка fail-closed — 404 означает отказ.
+> Выкатить коннектор раньше auth значит уронить все кураторские продления
+> сессии. Заведомо рабочее состояние без этой зависимости — версия
+> `d4ee37sd8d6o44ohveei` из коммита `64a0bf483`. Подробности и остальные туры
+> hardening'а —
+> [`docs/implementation/SECURITY_HARDENING_PROTOCOL_2026-08-02.md`](../../docs/implementation/SECURITY_HARDENING_PROTOCOL_2026-08-02.md).
+
 Функция не получает PG-креды (`deploy-all.sh` исключает `mcp` из ветки с
 `PG_*`/`LOCKBOX_DB_SECRET_ID`): прямой путь записи в `client_kv_store` для неё
 физически недоступен. `LOCKBOX_APP_SECRET_ID` она получает, поэтому
