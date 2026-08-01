@@ -1221,6 +1221,44 @@
    * 🆕 Поиск по категории продуктов
    * "молочные" → все молочные продукты
    */
+  // Категории, проставленные в каталоге, шире словаря ключевых слов: там есть
+  // «готовые блюда», «спортпит», «снеки», «алкоголь», «яйца», которых по имени
+  // не угадать. Карта связывает запрос пользователя с этими значениями.
+  const DB_CATEGORY_ALIASES = {
+    'молочные': ['молочные'],
+    'мясо': ['мясо/птица'],
+    'птица': ['мясо/птица'],
+    'рыба': ['рыба/морепродукты'],
+    'морепродукты': ['рыба/морепродукты'],
+    'овощи': ['овощи'],
+    'фрукты': ['фрукты/ягоды'],
+    'ягоды': ['фрукты/ягоды'],
+    'крупы': ['крупы/хлеб/макароны'],
+    'макароны': ['крупы/хлеб/макароны'],
+    'хлеб': ['крупы/хлеб/макароны'],
+    'выпечка': ['сладости/выпечка'],
+    'сладости': ['сладости/выпечка'],
+    'орехи': ['орехи/семена'],
+    'семена': ['орехи/семена'],
+    'яйца': ['яйца'],
+    'напитки': ['напитки'],
+    'алкоголь': ['алкоголь'],
+    'снеки': ['снеки'],
+    'соусы': ['соусы/масла'],
+    'масла': ['соусы/масла'],
+    'спортпит': ['спортпит'],
+    'готовые блюда': ['готовые блюда'],
+    'блюда': ['готовые блюда']
+  };
+
+  function matchesCatalogCategory(item, requestedCategory) {
+    const itemCategory = String(item && item.category ? item.category : '').toLowerCase().trim();
+    if (!itemCategory) return false;
+    const expected = DB_CATEGORY_ALIASES[requestedCategory];
+    if (expected) return expected.indexOf(itemCategory) !== -1;
+    return itemCategory === requestedCategory;
+  }
+
   function findCategoryProducts(query, dataSource) {
     const normalized = normalizeText(query);
 
@@ -1229,12 +1267,29 @@
       if (normalized === category || normalized === category.slice(0, -2)) { // молочные/молочн
         // Возвращаем продукты этой категории
         return dataSource.filter(item => {
+          // Категория из каталога — первичный признак: она проставлена вручную
+          // и знает то, чего в названии нет («Мясо по-французски» — блюдо, а не
+          // мясо). Ключевые слова остаются fallback для карточек без категории.
+          if (matchesCatalogCategory(item, category)) return true;
           const itemName = normalizeText(item.name || '');
           return keywords.some(kw => itemName.includes(kw));
         }).map(item => ({
           ...item,
           matchType: 'category',
           matchedCategory: category
+        }));
+      }
+    }
+
+    // Категории, которых нет в словаре ключевых слов, ищутся только по полю.
+    const aliasTargets = DB_CATEGORY_ALIASES[normalized];
+    if (aliasTargets) {
+      const byField = dataSource.filter((item) => matchesCatalogCategory(item, normalized));
+      if (byField.length) {
+        return byField.map((item) => ({
+          ...item,
+          matchType: 'category',
+          matchedCategory: normalized
         }));
       }
     }
