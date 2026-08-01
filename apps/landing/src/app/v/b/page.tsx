@@ -2,18 +2,13 @@
 //
 // Отдельный статический роут: страница существует для личного выбора владельца
 // и не связана ссылками с публичной версией. Индексация запрещена.
-//
-// Страница собрана вокруг скролл-hero (`45`, «Скролл-механика Future»). Готовые
-// главы из `VersionB` в репозитории есть, но здесь пока не подключены: сначала
-// владелец выбирает первый экран, потом под него собирается тело версии.
 
 import { Metadata } from 'next';
 
+import { VERSION_B_FONT_SIZE_ADJUST, versionBFont } from '@/components/versions/b/fonts';
 import FontSwitcherFab from '@/components/versions/b/FontSwitcherFab';
-import HeroScrollStage from '@/components/versions/b/HeroScrollStage';
-import VersionDraft from '@/components/versions/VersionDraft';
+import VersionB from '@/components/versions/VersionB';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
-import { VARIANTS } from '@/config/landing-variants';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 export const metadata: Metadata = {
@@ -23,16 +18,11 @@ export const metadata: Metadata = {
 
 export default function VersionBPage() {
   return (
-    <main>
-      <VersionDraft
-        version="B"
-        hero={<HeroScrollStage content={VARIANTS.A} />}
-        plan={[
-          'Нарратив по образцу Future: сначала человеческий смысл, затем интерфейс как его доказательство',
-          'Видимая работа специалиста вместо описания процесса',
-          'Свой ритм блоков: один экран — один смысл',
-        ]}
-      />
+    // Шрифт версии и компенсация его мелкости задаются здесь, а не поблочно:
+    // так они действуют на всю страницу сразу и приходят уже с сервера, без
+    // подмены шрифта на глазах у посетителя. Подробности — в `fonts.ts`.
+    <main className={versionBFont.className} style={{ fontSizeAdjust: VERSION_B_FONT_SIZE_ADJUST }}>
+      <VersionB />
 
       <VersionSwitcherFab current="B" />
       <FontSwitcherFab />

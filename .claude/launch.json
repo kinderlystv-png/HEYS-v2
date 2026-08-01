@@ -27,10 +27,11 @@
       "port": 3003
     },
     {
-      "name": "landing-alt",
+      "name": "landing-preview",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "apps/landing", "exec", "next", "dev", "-p", "3013"],
-      "port": 3013
+      "runtimeArgs": ["--dir", "apps/landing", "exec", "next", "dev"],
+      "port": 3003,
+      "autoPort": true
     }
   ]
 }

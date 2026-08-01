@@ -34,16 +34,23 @@ interface HeroScrollStageProps {
 
 /**
  * Доля прокрутки первого экрана, на которой ролик достиг предела. Подобрана так,
- * чтобы рост занимал примерно те же ~270 px хода, что и у Future: у них 60 % от
- * более длинного трека, у нас трек короче — значит доля больше.
+ * чтобы рост занимал примерно те же ~270 px хода, что и у Future.
  */
-const GROW_END = 0.75;
+const GROW_END = 0.6;
 /** Ширина развёрнутого ролика — значение Future на мобильном брейкпоинте. */
 const MAX_WIDTH_PX = 340;
 /** Предохранитель для узких экранов: ролик не должен упираться в края. */
 const MAX_WIDTH_RATIO = 0.94;
 /** Запас по высоте, чтобы развёрнутый ролик не перекрывал экран целиком. */
 const HEIGHT_PADDING = 24;
+
+/**
+ * Подпись под главной кнопкой. Живёт здесь, а не в контенте варианта: это
+ * копирайт первого экрана версии B, а `VariantContent` описывает вариант A и
+ * развивается параллельно. Задача строки — сказать, что человек увидит по
+ * переходу, без обещаний и без повтора условий бесплатной недели.
+ */
+const CTA_NOTE = 'От самостоятельного режима до работы с тренером';
 
 export default function HeroScrollStage(props: HeroScrollStageProps) {
   // Навигация живёт над версиями страницы: если версия не обернула себя в
@@ -229,7 +236,7 @@ function Stage({ content }: HeroScrollStageProps) {
 
         {/* Воздух над заголовком — как у Future: первый экран начинается не
             вплотную под шапкой, иначе текст читается как продолжение меню. */}
-        <div className="flex w-full flex-col items-center px-4 pt-6 md:px-6 md:pt-10">
+        <div className="flex w-full flex-col items-center px-4 pt-2 md:px-6 md:pt-8">
           {/* Колонка текста уже ширины экрана: на всю ширину строка тянется до
               краёв и читается как сплошная плита. Ролик остаётся шире текста —
               так он и остаётся главным на первом экране. */}
@@ -259,7 +266,7 @@ function Stage({ content }: HeroScrollStageProps) {
               берётся из контента варианта, отдельного текста здесь нет. */}
           {content.hero.microtext ? (
             <div
-              className={`mt-8 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.12] px-3.5 py-2 text-[11.5px] backdrop-blur-sm transition-all duration-700 ease-out md:px-4 md:text-[13px] ${
+              className={`mt-7 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.12] px-3.5 py-2 text-[11.5px] backdrop-blur-sm transition-all duration-700 ease-out md:px-4 md:text-[13px] ${
                 mounted ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}
               style={{ transitionDelay: '1000ms' }}
@@ -283,7 +290,7 @@ function Stage({ content }: HeroScrollStageProps) {
               Future это же положение работает подсказкой «здесь прокрутка». */}
           <div
             ref={demoRef}
-            className={`hero-b-demo mt-[5vh] w-[301px] max-w-[86vw] transition-opacity duration-700 ease-out md:mt-[4vh] lg:w-[280px] ${
+            className={`hero-b-demo mt-[7vh] w-[301px] max-w-[86vw] transition-opacity duration-700 ease-out md:mt-[5vh] lg:w-[280px] ${
               mounted ? 'opacity-100' : 'opacity-0'
             }`}
             style={{
@@ -324,8 +331,13 @@ function Stage({ content }: HeroScrollStageProps) {
               </svg>
             </a>
 
-            {/* Условия уже показаны плашкой над роликом — второй раз под
-                кнопкой они были бы просто повтором. */}
+            {/* Строка под кнопкой отвечает на «что я увижу, если нажму»: она
+                снижает трение перед переходом и держит композицию — иначе
+                кнопка висит в пустоте над краем экрана. Условия бесплатной
+                недели здесь не повторяем, они уже стоят плашкой над роликом. */}
+            <p className="mt-3 max-w-[240px] text-balance text-center text-[clamp(11px,3.1vw,12.5px)] text-white/70 md:max-w-[280px] md:text-[13px]">
+              {CTA_NOTE}
+            </p>
           </div>
         </div>
       </div>

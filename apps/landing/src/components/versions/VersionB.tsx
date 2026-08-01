@@ -5,15 +5,17 @@
 // «кто этот человек». Ритм — четыре полноэкранные главы по `45`; смысловой
 // центр — глава-знакомство (решение `15` №45 о публичной личности).
 //
-// Hero общий с A и C: демо-фильм с отбивками — часть нарратива B, якоря
-// версия передаёт через контент, как это делает C. Тарифы, форма, FAQ и футер
-// переиспользуются каноническим хвостом варианта A: `44` и контракт `3.14` в
-// версии B не пересобираются (`47`, принцип 5).
+// Первый экран у B собственный: демо-фильм тот же, но разворачивается при
+// прокрутке (`45`, «Скролл-механика Future»). Контракт первого экрана общий с
+// `HeroSSR` — принимает контент версии и сам поднимает меню, — поэтому якоря и
+// пункты навигации версия передаёт через контент, как это делает C. Тарифы,
+// форма, FAQ и футер переиспользуются каноническим хвостом варианта A: `44` и
+// контракт `3.14` в версии B не пересобираются (`47`, принцип 5).
 
-import HeroSSR from '@/components/HeroSSR';
 import VariantLandingSectionsSSR from '@/components/VariantLandingSectionsSSR';
 import Chapter from '@/components/versions/b/Chapter';
 import CuratorIntro from '@/components/versions/b/CuratorIntro';
+import HeroScrollStage from '@/components/versions/b/HeroScrollStage';
 import MediaSlot from '@/components/versions/b/MediaSlot';
 import WeekFrame from '@/components/versions/b/WeekFrame';
 import { VARIANTS } from '@/config/landing-variants';
@@ -35,13 +37,18 @@ const B_NAV_LINKS = [
 ];
 
 export default function VersionB() {
-  // Кнопка hero обещает объяснить, как работает HEYS, — в B ответ начинается
-  // с первой главы; туда же ведёт и подсказка прокрутки.
+  // Кнопка hero ведёт в тарифы, а не в первую главу (решение владельца
+  // 2026-08-01): страницу листают сверху вниз и так, а кнопка нужна тому, кто
+  // уже готов и хочет цену. Запись на бесплатную неделю идёт следующим шагом —
+  // после того, как человек посмотрел форматы. Подсказку прокрутки скролл-hero
+  // не показывает: ролик растёт с первого же пикселя и сам говорит, что
+  // страницу нужно листать.
   const content = {
     ...VARIANTS.A,
     hero: {
       ...VARIANTS.A.hero,
-      ctaPrimaryHref: '#chapter-diary',
+      ctaPrimary: 'Посмотреть тарифы',
+      ctaPrimaryHref: '#pricing',
       scrollCueHref: '#chapter-diary',
     },
     nav: { links: B_NAV_LINKS },
@@ -49,7 +56,7 @@ export default function VersionB() {
 
   return (
     <>
-      <HeroSSR content={content} variant="A" />
+      <HeroScrollStage content={content} />
 
       <Chapter
         id="chapter-diary"

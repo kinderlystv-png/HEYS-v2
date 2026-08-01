@@ -52,7 +52,12 @@ interface FontOption {
 }
 
 const FONTS: ReadonlyArray<FontOption> = [
-  { id: 'default', label: 'Как сейчас', hint: 'Текущий гротеск лендинга', stack: null },
+  {
+    id: 'default',
+    label: 'Как на странице',
+    hint: 'Spectral — шрифт версии B по умолчанию',
+    stack: null,
+  },
   {
     id: 'playfair',
     label: 'Playfair Display',
@@ -168,6 +173,9 @@ export default function FontSwitcherFab() {
         {[
           'html[data-hb-font] body, html[data-hb-font] body * { font-family: var(--hb-font) !important; }',
           'html[data-hb-font] .hb-font-ui, html[data-hb-font] .hb-font-ui * { font-family: ui-sans-serif, system-ui, sans-serif !important; }',
+          // Панель не должна расти вместе со страницей: компенсация кегля
+          // рассчитана на Spectral в контенте, а не на служебный интерфейс.
+          '.hb-font-ui, .hb-font-ui * { font-size-adjust: none; }',
           ...FONTS.filter((font) => font.stack).map(
             (font) =>
               `html[data-hb-font] .hb-font-ui .hb-font-preview-${font.id} { font-family: ${font.stack} !important; }`,
