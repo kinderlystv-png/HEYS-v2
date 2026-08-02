@@ -9,7 +9,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { createCuratorContext, buildCuratorSchemas, CLIENTLESS_TOOLS } = require('../lib/curator');
+const { createCuratorContext, buildCuratorSchemas, curatorInstructions, CLIENTLESS_TOOLS } = require('../lib/curator');
+const tasksLib = require('../lib/tasks');
 const { TOOL_SCHEMAS } = require('../lib/tools');
 const products = require('../lib/products');
 const oauth = require('../lib/oauth');
@@ -910,4 +911,117 @@ test('правило про объём фото доехало до инстру
   const { instructions } = build(fakeCuratorApi());
   assert.match(instructions, /не больше четырёх подряд/);
   assert.match(instructions, /action hide/);
+});
+
+// ── Правила задачника: что срезано, а что обязано выжить ─────────────────
+//
+// 2026-08-03 из правил убрали предписанный порядок действий: слепой
+// эксперимент показал, что процедура сужает обзор и ответы получаются хуже.
+// Эксперимент судил только сбор и подачу — на десяти вопросах, ни один из
+// которых ничего не записывал. Поэтому правила про полномочия, форматы записи
+// и границы инструментов резать было не на чем, и эти тесты стоят затем,
+// чтобы следующая «чистка» не унесла их заодно.
+
+const TASKS_RULES = () => curatorInstructions('Антон', true, Date.UTC(2026, 7, 3))
+  .split('\n')
+  .filter((line) => /^З\d+\./.test(line));
+
+test('правила задачника пронумерованы подряд и без пропусков', () => {
+  const numbers = TASKS_RULES().map((line) => Number(/^З(\d+)\./.exec(line)[1]));
+  assert.ok(numbers.length >= 21, 'правил не стало меньше, чем было');
+  assert.deepEqual(numbers, numbers.map((_, i) => i + 1));
+});
+
+test('полномочия остались дословно — их эксперимент не проверял', () => {
+  const rules = TASKS_RULES().join('\n');
+  // Галочки: единственное, что стоит между агентом и «закрыл за него».
+  assert.match(rules, /Задачи и подпункты закрывает только он/);
+  assert.match(rules, /Сам галочки не ставь/);
+  // Деньги: зона «спрашивай, а не действуй».
+  assert.match(rules, /движение лимитов[\s\S]*только через него/);
+  assert.match(rules, /В money\/budget\.md не пиши ничего/);
+  // Наружу — ничего без его слова.
+  assert.match(rules, /галочка и оценка дня — его слова, не твой вывод/);
+});
+
+test('форматы записи и границы инструментов остались — на них держатся данные', () => {
+  const rules = TASKS_RULES().join('\n');
+  // Формат: строка операции, слот против задачи, адрес задачи, потолок доски.
+  assert.match(rules, /tasks_money/);
+  assert.match(rules, /добавь строку-поправку, задним числом не правь/);
+  assert.match(rules, /Событие галочкой не закрывается/);
+  assert.match(rules, /пять нерешённых развилок/);
+  // Границы: что инструмент физически не умеет — это факт, а не указание.
+  assert.match(rules, /Пересечение по времени он не видит вовсе/);
+  assert.match(rules, /tasks_link связывает только две задачи проектов/);
+  assert.match(rules, /Поиск такую пару не находит никогда/);
+  // Целостность: снятый слот обязан исчезнуть из дня.
+  assert.match(rules, /tasks_unslot/);
+  assert.match(rules, /загруженность дальше считает день занятым/);
+});
+
+test('предписанного порядка действий в правилах больше нет', () => {
+  const rules = TASKS_RULES().join('\n');
+  assert.doesNotMatch(rules, /Порядок входа один на все случаи/);
+  assert.doesNotMatch(rules, /Прежде чем что-то ответить, собери три контекста/);
+  assert.doesNotMatch(rules, /и только потом/);
+  // Инструменты никуда не делись — исчезло только предписание, чем и в каком
+  // порядке их звать.
+  for (const tool of ['tasks_delta', 'tasks_list', 'tasks_context', 'tasks_calendar', 'tasks_budget', 'tasks_review', 'tasks_focus']) {
+    assert.match(rules, new RegExp(tool), `${tool} остался в описи инструментов`);
+  }
+  assert.match(rules, /решаешь ты/);
+});
+
+test('правило про цифры на месте — на нём провалились оба варианта', () => {
+  const rules = TASKS_RULES().join('\n');
+  const numbers = TASKS_RULES().find((line) => /цифра/.test(line));
+  assert.ok(numbers, 'правило про цифры есть');
+  assert.match(numbers, /пересчитай/);
+  assert.match(numbers, /скажи это отдельной фразой/);
+  assert.ok(rules.includes(numbers));
+});
+
+test('запрет на чужие файлы назван и в правилах, и в коде — одними и теми же файлами', () => {
+  const rules = TASKS_RULES().join('\n');
+  for (const path of tasksLib.OWNER_ONLY_FILES) {
+    assert.ok(rules.includes(path), `${path} назван в правилах, а не только в коде`);
+  }
+});
+
+// ── Недельный эксперимент «два ответа» ───────────────────────────────────
+
+// Соседний тест в tasks.test.cjs берёт даты с запасом; здесь проверяется сама
+// граница — последний час эксперимента и первый час после него.
+test('эксперимент выключается ровно на границе срока', () => {
+  const before = curatorInstructions('Антон', true, Date.UTC(2026, 7, 10, 20, 0));
+  assert.match(before, /Эксперимент до 2026-08-10 включительно/);
+  assert.match(before, /tasks_vote/);
+
+  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 10, 21, 0));
+  assert.doesNotMatch(after, /Эксперимент до 2026-08-10/);
+  assert.doesNotMatch(after, /tasks_vote/);
+  // Сами правила задачника от этого не страдают.
+  assert.match(after, /Задачи и подпункты закрывает только он/);
+});
+
+test('эксперимент сравнивает урезанные правила со свободой, а не мёртвую процедуру', () => {
+  const block = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3))
+    .split('\n')
+    .filter((line) => /^Э\d+\./.test(line))
+    .join('\n');
+  // Ссылок на срезанную процедуру в эксперименте остаться не могло.
+  assert.doesNotMatch(block, /З2:/);
+  assert.doesNotMatch(block, /З17/);
+  assert.doesNotMatch(block, /дельта → список → контекст/);
+  assert.match(block, /по правилам задачника/);
+  // Механика записи не тронута: голос без tasks_vote не существует.
+  assert.match(block, /tasks_vote/);
+  assert.match(block, /Полномочия действуют в обоих/);
+});
+
+test('эксперимент не включается без задачника', () => {
+  const plain = curatorInstructions('Антон', false, Date.UTC(2026, 7, 3));
+  assert.doesNotMatch(plain, /Эксперимент до 2026-08-10/);
+  assert.doesNotMatch(plain, /^З1\./m);
 });

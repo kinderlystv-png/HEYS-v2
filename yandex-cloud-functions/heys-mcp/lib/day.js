@@ -12,6 +12,9 @@
  * Модуль не делает сетевых вызовов: всё тестируется без прод-доступа.
  */
 
+const webMirror = require('./web-mirror');
+const { ageFromBirthDate, GENDERS } = require('./profile');
+
 const MOSCOW_TZ = 'Europe/Moscow';
 const DAY_KEY_PREFIX = 'heys_dayv2_';
 const HR_ZONES = 4;
@@ -677,6 +680,143 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
   return { day: touch(next, nowMs, clientId), applied };
 }
 
+/**
+ * Норма дня: сколько клиенту положено съесть — калории и БЖУ в граммах.
+ *
+ * Без неё картина дня после записи бесполезна: «1400 ккал» ничего не значит,
+ * пока не видно, что норма 1900.
+ *
+ * Три источника, строго в этом порядке.
+ *
+ * 1. `savedDisplayOptimum` из блоба дня (`source: 'client_saved'`) — ровно то
+ *    число, которое клиент видел в шапке дневника. Пишет его приложение
+ *    (apps/web/heys_day_caloric_display_state.js:64-69), и оно уже учитывает
+ *    поправку на накопленный недобор и рефид. Пересчитать эту поправку здесь
+ *    нельзя: она считается из истории за неделю в ~1900 строках
+ *    apps/web/heys_day_caloric_balance_v1.js.
+ * 2. Базовый `optimum` по TDEE (`source: 'estimate'`) — когда поля нет. Это
+ *    частый случай: приложение пишет его, только если клиент сам открывал день,
+ *    а дни, заполненные куратором, остаются без него. Считается зеркалом
+ *    apps/web/heys_tdee_v1.js, поэтому формула — не наша копипаста. Не учтены
+ *    поправка на недобор и надбавка за вчерашнюю тренировку (NDTE): последняя
+ *    живёт в apps/web/heys_iw_constants.js и опирается на локальные часы
+ *    браузера, серверу их взять негде. Отсюда пометка «оценка».
+ * 3. Ничего (`source: null`) — когда в профиле нет веса, роста, возраста или
+ *    пола. Дефолты приложения (70 кг / 30 лет / 170 см / мужской) здесь не
+ *    повторяем намеренно: подсунуть куратору чужую норму хуже, чем не дать
+ *    никакой.
+ *
+ * Проценты БЖУ → граммы считает то же зеркало
+ * (apps/web/heys_day_calculations.js), включая вывод жиров остатком
+ * `100 − углеводы% − белок%`. Отдельный случай — пустой `heys_norms`: там все
+ * нули, и формула честно отдаёт «жиры = 100% калорий». Это вырожденное
+ * состояние, а не норма, поэтому граммы в таком случае не отдаём вовсе.
+ */
+const NORM_REASONS = {
+  no_inputs: 'нет доступа к профилю и нормам клиента',
+  no_profile: 'профиль клиента не заполнен',
+  profile_incomplete: 'в профиле клиента не хватает веса, роста, возраста или пола',
+  no_norms: 'в карточке клиента не заданы проценты белка и углеводов',
+};
+
+function normMacros(kcal, norms) {
+  const n = (norms && typeof norms === 'object' && !Array.isArray(norms)) ? norms : {};
+  const proteinPct = Number(n.proteinPct) || 0;
+  const carbsPct = Number(n.carbsPct) || 0;
+  // Оба нуля — это не «норма 0 г белка», а незаполненный ключ: computeDailyNorms
+  // на нём выдаст жиры = 100% калорий.
+  if (proteinPct <= 0 && carbsPct <= 0) {
+    return { protein_g: null, carbs_g: null, fat_g: null, macros_reason: 'no_norms' };
+  }
+  const abs = webMirror.computeDailyNorms(kcal, n);
+  return {
+    protein_g: Math.round(abs.prot * 10) / 10,
+    carbs_g: Math.round(abs.carbs * 10) / 10,
+    fat_g: Math.round(abs.fat * 10) / 10,
+    macros_reason: null,
+  };
+}
+
+/** Базовый оптимум по зеркалу TDEE — или причина, по которой его не посчитать. */
+function estimateOptimum(day, profile, hrZones) {
+  const p = (profile && typeof profile === 'object' && !Array.isArray(profile)) ? profile : null;
+  if (!p) return { kcal: 0, reason: 'no_profile' };
+
+  const weight = Number(day && day.weightMorning) || Number(p.weight) || 0;
+  const height = Number(p.height) || 0;
+  const age = Number(p.age) || ageFromBirthDate(p.birthDate, Date.now()) || 0;
+  const gender = GENDERS.includes(p.gender) ? p.gender : null;
+  if (!weight || !height || !age || !gender) return { kcal: 0, reason: 'profile_incomplete' };
+
+  const result = webMirror.calculateTDEE(
+    day || {},
+    { weight, height, age, gender, deficitPctTarget: Number(p.deficitPctTarget) || 0 },
+    {
+      hrZones: Array.isArray(hrZones) ? hrZones : [],
+      // NDTE и localStorage приложения серверу недоступны — гасим оба пути явно,
+      // чтобы расчёт не зависел от того, что окажется в песочнице.
+      includeNDTE: false,
+      lsGet: () => null,
+    },
+  );
+  const kcal = Number(result && result.optimum) || 0;
+  return kcal > 0 ? { kcal, reason: null } : { kcal: 0, reason: 'profile_incomplete' };
+}
+
+function dailyNorm(day, inputs) {
+  const has = inputs && typeof inputs === 'object';
+  const eaten = macroTotals(day && day.meals);
+  const empty = {
+    source: null,
+    kcal: null,
+    protein_g: null,
+    carbs_g: null,
+    fat_g: null,
+    left: null,
+  };
+
+  if (!has) return { ...empty, reason: 'no_inputs', note: `Норма не рассчитана: ${NORM_REASONS.no_inputs}.` };
+
+  const saved = Number(day && day.savedDisplayOptimum) || 0;
+  let kcal = 0;
+  let source = null;
+  if (saved > 0) {
+    kcal = Math.round(saved);
+    source = 'client_saved';
+  } else {
+    const estimate = estimateOptimum(day, inputs.profile, inputs.hrZones);
+    if (estimate.kcal > 0) {
+      kcal = estimate.kcal;
+      source = 'estimate';
+    } else {
+      return { ...empty, reason: estimate.reason, note: `Норма не рассчитана: ${NORM_REASONS[estimate.reason]}.` };
+    }
+  }
+
+  const macros = normMacros(kcal, inputs.norms);
+  const note = source === 'client_saved'
+    ? 'Норма, которую клиент видит в приложении.'
+    : 'Расчётная оценка: клиент не открывал этот день, поэтому поправка на накопленный недобор и надбавка за вчерашнюю тренировку не учтены.';
+  const macrosNote = macros.macros_reason ? ` БЖУ в граммах не считаем: ${NORM_REASONS[macros.macros_reason]}.` : '';
+
+  return {
+    source,
+    kcal,
+    protein_g: macros.protein_g,
+    carbs_g: macros.carbs_g,
+    fat_g: macros.fat_g,
+    // Сколько ещё влезает: то же вычитание, что куратор делает в уме.
+    left: {
+      kcal: kcal - eaten.kcal,
+      protein: macros.protein_g === null ? null : Math.round((macros.protein_g - eaten.protein) * 10) / 10,
+      carbs: macros.carbs_g === null ? null : Math.round((macros.carbs_g - eaten.carbs) * 10) / 10,
+      fat: macros.fat_g === null ? null : Math.round((macros.fat_g - eaten.fat) * 10) / 10,
+    },
+    reason: macros.macros_reason,
+    note: `${note}${macrosNote}`,
+  };
+}
+
 /** Компактная сводка для ответа модели — без нутриентных слепков позиций. */
 function summarizeDay(day) {
   const averages = dayAverages(day);
@@ -866,6 +1006,8 @@ module.exports = {
   computeTefKcal100,
   buildMealItem,
   macroTotals,
+  dailyNorm,
+  NORM_REASONS,
   addMeal,
   updateMeal,
   deleteMeal,

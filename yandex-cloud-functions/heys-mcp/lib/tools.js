@@ -196,7 +196,38 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     return res;
   }
 
+  let normInputsPromise = null;
+
+  /**
+   * Входы для нормы дня: профиль, проценты БЖУ и пульсовые зоны. Читаются один
+   * раз на запрос и одним пакетом.
+   *
+   * Сбой чтения гасим здесь же: норма — справочная величина в отчёте о записи,
+   * и ронять из-за неё уже прошедшую запись еды нельзя. Куратор увидит «норма
+   * не рассчитана», а не ошибку инструмента.
+   */
+  function loadNormInputs() {
+    if (!normInputsPromise) {
+      normInputsPromise = (async () => {
+        try {
+          const data = await readMany([profile.PROFILE_KEY, profile.NORMS_KEY, profile.ZONES_KEY]);
+          return {
+            profile: data[profile.PROFILE_KEY] || null,
+            norms: data[profile.NORMS_KEY] || null,
+            hrZones: data[profile.ZONES_KEY] || null,
+          };
+        } catch (_) {
+          return null;
+        }
+      })();
+    }
+    return normInputsPromise;
+  }
+
   async function writeDay(date, nextDay, lastSeenUpdatedAt) {
+    // Запускаем до await'а записи: норма нужна сразу после неё, и читать её
+    // последовательно значило бы добавить лишний round-trip к каждой записи еды.
+    loadNormInputs();
     const res = await api.mergeSaveKV(sessionToken, day.dayKey(date), nextDay, lastSeenUpdatedAt);
     if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись дня ${date}: ${res.error}`);
     return res;
@@ -212,13 +243,17 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
    * по ответу это не видно, а следующего heys_get_day ассистент обычно не
    * делает. Итог дня возвращается тем же запросом, без лишнего round-trip.
    */
-  function dayAfterWrite(res, fallbackDay) {
+  async function dayAfterWrite(res, fallbackDay) {
     const saved = (res && res.value && typeof res.value === 'object' && !Array.isArray(res.value))
       ? res.value
       : fallbackDay;
     return {
       date: saved.date || fallbackDay.date,
       totals: day.macroTotals(saved.meals),
+      // Съеденное без нормы ни о чём не говорит: «1400 ккал» читается только
+      // рядом с «из 1900». Источник цифры указан в norm.source — куратор должен
+      // видеть, сверяется он с тем, что видит клиент, или с нашей оценкой.
+      norm: day.dailyNorm(saved, await loadNormInputs()),
       meals: (saved.meals || []).length,
       water_ml: Number(saved.waterMl) || 0,
       // 'saved' — наша версия победила, 'day_merged' — сервер слил с облачной,
@@ -230,7 +265,20 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
   /** Хвост к тексту ответа: то же, что в day_after, одной строкой для модели. */
   function dayAfterText(after) {
-    return ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.`;
+    return ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.${normText(after.norm)}`;
+  }
+
+  /** Норма одной строкой: цифра, БЖУ и откуда она взялась. */
+  function normText(norm) {
+    if (!norm || !norm.source) return ` Норма не рассчитана (${norm && norm.reason ? day.NORM_REASONS[norm.reason] : 'нет данных'}).`;
+    const approx = norm.source === 'estimate' ? '≈' : '';
+    const macros = norm.protein_g === null
+      ? ' (проценты БЖУ в карточке не заданы)'
+      : `, Б${norm.protein_g} У${norm.carbs_g} Ж${norm.fat_g} г`;
+    const from = norm.source === 'estimate'
+      ? ' — расчётная оценка, клиент этот день не открывал'
+      : ' — та, что видит клиент';
+    return ` Норма: ${approx}${norm.kcal} ккал${macros}${from}.`;
   }
 
   /**
@@ -429,7 +477,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
       const next = day.addMeal(current, meal, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, next);
+      const after = await dayAfterWrite(saved, next);
       const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([meal]);
@@ -517,7 +565,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
 
       const saved = await writeDay(date, result.day, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, result.day);
+      const after = await dayAfterWrite(saved, result.day);
       const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([result.meal]);
@@ -707,7 +755,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const { day: next, removed } = day.deleteMeal(current, args.meal_id, { nowMs, clientId });
       if (!removed) throw new ToolError('meal_not_found', `Приём ${args.meal_id} не найден в дне ${date}.`);
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, next);
+      const after = await dayAfterWrite(saved, next);
       return {
         text: `Удалил приём ${args.meal_id} из дня ${date}.${dayAfterText(after)}`,
         structured: { date, meal_id: args.meal_id, deleted: true, day_after: after },
@@ -723,7 +771,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const current = await readDay(date);
       const next = day.addWater(current, ml, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, next);
+      const after = await dayAfterWrite(saved, next);
       return {
         text: `Вода за ${date}: ${after.water_ml} мл (${ml > 0 ? '+' : ''}${ml}).${dayAfterText(after)}`,
         structured: { date, water_ml: after.water_ml, delta_ml: ml, day_after: after },
@@ -741,7 +789,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const current = await readDay(date);
       const next = day.addTraining(current, zones, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, next);
+      const after = await dayAfterWrite(saved, next);
       return {
         text: `Записал тренировку ${date}: ${total} мин по зонам [${zones.join(', ')}].${dayAfterText(after)}`,
         structured: { date, zones_minutes: zones, total_minutes: total, day_after: after },
@@ -772,7 +820,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       if (!updated.applied.length) throw new ToolError('nothing_to_update', 'Не передано ни одного поля для обновления.');
       const saved = await writeDay(date, updated.day, Number(current.updatedAt) || 0);
-      const after = dayAfterWrite(saved, updated.day);
+      const after = await dayAfterWrite(saved, updated.day);
       return {
         text: `Обновил ${date}: ${updated.applied.join(', ')}.${dayAfterText(after)}`,
         structured: { date, updated: updated.applied, day_after: after },

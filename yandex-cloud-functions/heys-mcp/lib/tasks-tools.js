@@ -313,7 +313,7 @@ const TASKS_BOARD_SCHEMAS = [
       type: 'object',
       properties: {
         choice: { type: 'string', description: 'Что он выбрал: «1», «2» или «ничья».' },
-        procedural: { type: 'string', description: 'Какой из ответов был собран по процедуре правил: «1» или «2». Это знаешь только ты — не спрашивай его.' },
+        procedural: { type: 'string', description: 'Какой из ответов был собран по правилам задачника, а не свободно: «1» или «2». Это знаешь только ты — не спрашивай его.' },
         question: { type: 'string', description: 'Суть вопроса одной короткой строкой, чтобы потом было видно, на каких вопросах что побеждает.' },
         note: { type: 'string', description: 'Его комментарий к выбору, если был. Дословно и коротко.' },
       },
@@ -488,6 +488,12 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
    * заберёт правку, либо будет считать её потерянной.
    */
   async function writeFile(file, text) {
+    // Единственная дверь наружу для всех пишущих инструментов, поэтому запрет
+    // на чужие файлы стоит здесь, а не в каждом обработчике по отдельности.
+    const guarded = tasks.ownerOnlyFile(file.path);
+    if (guarded) {
+      throw new ToolError('owner_only_file', tasks.ownerOnlyRefusal(guarded), { path: guarded });
+    }
     const next = tasks.bumpFile(file, text, nowMs);
     const index = await loadIndex();
     const nextIndex = tasks.withIndexEntry(index, next, nowMs);

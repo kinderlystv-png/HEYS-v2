@@ -35,7 +35,7 @@ const PRESETS = [{
 }];
 
 /** Подставной API: фиксирует записи, чтобы проверить контракт merge-сохранения. */
-function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY } = {}) {
+function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null } = {}) {
   const saves = [];
   const upserts = [];
   let presetState = presets;
@@ -56,6 +56,7 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY } = {}) {
       if (key === 'heys_meal_presets_v1') return { data: presetState, error: null };
       if (key === 'heys_deleted_ids') return { data: this.tombstones, error: null };
       if (key.startsWith('heys_dayv2_')) return { data: day, error: null };
+      if (card && Object.hasOwn(card, key)) return { data: card[key], error: null };
       return { data: null, error: null };
     },
     async getSharedProducts() {
@@ -740,5 +741,110 @@ test('WRITE_TOOLS совпадает с обработчиками, которы
     'список WRITE_TOOLS разошёлся с инструментами, которые пишут в облако');
   for (const name of WRITE_TOOLS) {
     assert.ok(TOOL_SCHEMAS.some((s) => s.name === name), `${name} нет среди схем`);
+  }
+});
+
+// --- Норма клиента в day_after ---------------------------------------------
+
+const CARD = {
+  heys_profile: { weight: 80, height: 180, age: 40, gender: 'Мужской', deficitPctTarget: -15 },
+  heys_norms: { proteinPct: 25, carbsPct: 40, simpleCarbPct: 20, fiberPct: 14, badFatPct: 30, superbadFatPct: 1 },
+  heys_hr_zones: [],
+};
+
+test('day_after отдаёт норму, которую клиент видит в приложении', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, savedDisplayOptimum: 1900, updatedAt: 111 },
+  });
+  const res = await build(api).heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] });
+
+  const norm = res.structured.day_after.norm;
+  assert.equal(norm.source, 'client_saved');
+  assert.equal(norm.kcal, 1900);
+  assert.equal(norm.protein_g, 158.3);
+  assert.equal(norm.carbs_g, 190);
+  assert.equal(norm.fat_g, 73.9);
+  assert.equal(norm.left.kcal, 1900 - res.structured.day_after.totals.kcal);
+  assert.match(res.text, /Норма: 1900 ккал, Б158\.3 У190 Ж73\.9 г — та, что видит клиент\./);
+});
+
+test('в дне без сохранённой нормы day_after даёт оценку и говорит, что это оценка', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 80, updatedAt: 111 },
+  });
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  const norm = res.structured.day_after.norm;
+  assert.equal(norm.source, 'estimate');
+  assert.equal(norm.kcal, 1471); // BMR 1730 без активности, дефицит −15%
+  assert.match(res.text, /Норма: ≈1471 ккал.*расчётная оценка/);
+});
+
+test('без профиля day_after честно говорит, что нормы нет, и ничего не выдумывает', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  const norm = res.structured.day_after.norm;
+  assert.equal(norm.source, null);
+  assert.equal(norm.kcal, null);
+  assert.equal(norm.left, null);
+  assert.equal(norm.reason, 'no_profile');
+  assert.match(res.text, /Норма не рассчитана/);
+  assert.ok(!/1618/.test(res.text), 'дефолт приложения 70 кг / 30 лет в ответ не просочился');
+});
+
+test('норма читается один раз на запрос, а не на каждый инструмент', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, savedDisplayOptimum: 1900, updatedAt: 111 },
+  });
+  const reads = [];
+  const inner = api.getKV.bind(api);
+  api.getKV = async (session, key) => { reads.push(key); return inner(session, key); };
+  const tools = build(api);
+  await tools.heys_add_water({ ml: 100 });
+  await tools.heys_add_water({ ml: 100 });
+  assert.equal(reads.filter((k) => k === 'heys_profile').length, 1);
+});
+
+test('сбой чтения карточки не роняет запись еды, а только гасит норму', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, savedDisplayOptimum: 1900, updatedAt: 111 },
+  });
+  const inner = api.getKV.bind(api);
+  api.getKV = async (session, key) => (
+    key === 'heys_profile' ? { data: null, error: { message: 'boom' } } : inner(session, key)
+  );
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  assert.equal(api.saves.length, 1, 'вода записана');
+  assert.equal(res.structured.day_after.norm.source, null);
+  assert.equal(res.structured.day_after.norm.reason, 'no_inputs');
+});
+
+test('каждый инструмент, меняющий день, отдаёт норму в day_after', async () => {
+  const base = {
+    date: '2026-08-01',
+    meals: [{ id: 'm1', time: '09:00', name: 'Завтрак', items: [{ id: 'it1', name: 'Каша', grams: 200, kcal100: 100 }] }],
+    waterMl: 0,
+    savedDisplayOptimum: 1900,
+    updatedAt: 111,
+  };
+  const calls = [
+    ['heys_log_meal', { items: [{ product_id: 'own-americano', grams: 100 }] }],
+    ['heys_update_meal', { meal_id: 'm1', set_grams: { it1: 150 } }],
+    ['heys_delete_meal', { meal_id: 'm1' }],
+    ['heys_add_water', { ml: 200 }],
+    ['heys_log_training', { zones_minutes: [30] }],
+    ['heys_update_day', { steps: 8000 }],
+  ];
+  for (const [name, args] of calls) {
+    const tools = build(fakeApi({ card: CARD, day: JSON.parse(JSON.stringify(base)) }));
+    const res = await tools[name](args);
+    assert.equal(res.structured.day_after.norm.kcal, 1900, `${name}: нет нормы в day_after`);
+    assert.match(res.text, /Норма: 1900 ккал/, `${name}: норма не попала в текст`);
   }
 });

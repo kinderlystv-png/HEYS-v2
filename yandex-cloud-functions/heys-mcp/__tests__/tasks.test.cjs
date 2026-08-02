@@ -1944,3 +1944,81 @@ test('один слот, названный дважды, состоявшимс
   assert.equal(res.structured.done.length, 1);
   assert.equal(res.structured.open.length, 4);
 });
+
+// ── Файлы, которые правит только он ──────────────────────────────────────
+//
+// «Пишет только он» стояло в самих файлах и в правилах, но инструменты туда
+// пускали. Правило без опоры в коде держится ровно до первой уверенной
+// просьбы «поправь лимит», поэтому отказ проверяется на самих вызовах.
+
+const GUARDED_FILES = {
+  [tasks.keyForPath('money/budget.md')]: { path: 'money/budget.md', text: '# Бюджет\n\n- family | ?\n', rev: 4, updatedAt: 1 },
+  [tasks.keyForPath('GOALS.md')]: { path: 'GOALS.md', text: '# Зачем\n\n- heys — запустить релиз\n', rev: 2, updatedAt: 1 },
+};
+
+test('список защищённых файлов лежит одним местом и совпадает с пометками в данных', () => {
+  assert.deepEqual([...tasks.OWNER_ONLY_FILES].sort(), ['GOALS.md', 'money/budget.md']);
+  assert.equal(tasks.ownerOnlyFile('money/budget.md'), 'money/budget.md');
+  assert.equal(tasks.ownerOnlyFile('GOALS.md'), 'GOALS.md');
+  // Обход другим написанием пути закрыт: ключ у файла всё равно один.
+  assert.equal(tasks.ownerOnlyFile('Money/Budget'), 'money/budget.md');
+  assert.equal(tasks.ownerOnlyFile('goals'), 'GOALS.md');
+  // Соседние файлы той же папки под запрет не попадают.
+  assert.equal(tasks.ownerOnlyFile('money/2026-08.md'), null);
+  assert.equal(tasks.ownerOnlyFile('projects/goals.md'), null);
+});
+
+test('дописать в money/budget.md и GOALS.md нельзя ни одним пишущим инструментом', async () => {
+  const cases = [
+    { path: 'money/budget.md', rev: 4, anchor: '# Бюджет' },
+    { path: 'GOALS.md', rev: 2, anchor: '# Зачем' },
+  ];
+  for (const { path, rev, anchor } of cases) {
+    const api = liveApi({ ...GUARDED_FILES });
+    const tools = session(api);
+    const before = JSON.stringify(api.kv);
+
+    await assert.rejects(
+      () => tools.tasks_append({ path, block: '- family | 60000' }),
+      (e) => e.code === 'owner_only_file' && /только он сам/.test(e.message),
+      `tasks_append не должен писать в ${path}`,
+    );
+    await assert.rejects(
+      () => tools.tasks_patch({ path, rev, from: anchor, replacement: '# Правлено' }),
+      (e) => e.code === 'owner_only_file',
+      `tasks_patch не должен писать в ${path}`,
+    );
+
+    assert.equal(JSON.stringify(api.kv), before, `${path} не изменился ни на байт`);
+  }
+});
+
+test('отказ не обходится правильной ревизией и прямой просьбой', async () => {
+  const api = liveApi({ ...GUARDED_FILES });
+  const tools = session(api);
+  // Ревизия свежая, якорь существует — то есть отказ не побочный эффект
+  // проверки гонки, а именно запрет на файл.
+  const read = await tools.tasks_read({ path: 'money/budget.md' });
+  await assert.rejects(
+    () => tools.tasks_patch({
+      path: 'money/budget.md', rev: read.structured.rev,
+      from: '- family | ?', replacement: '- family | 60000',
+    }),
+    (e) => e.code === 'owner_only_file' && /предложение/.test(e.message),
+  );
+  assert.match(api.kv[tasks.keyForPath('money/budget.md')].text, /family \| \?/);
+});
+
+test('читать защищённые файлы по-прежнему можно — запрет только на запись', async () => {
+  const api = liveApi({ ...GUARDED_FILES });
+  const res = await session(api).tasks_read({ path: 'money/budget.md' });
+  assert.match(res.text, /family/);
+});
+
+test('tasks_update до защищённых файлов не дотягивается по устройству путей', async () => {
+  const api = liveApi({ ...GUARDED_FILES });
+  await assert.rejects(
+    () => session(api).tasks_update({ project: '../GOALS', hash: 'abc123', state: 'done' }),
+    (e) => e.code === 'invalid_path' || e.code === 'task_not_found',
+  );
+});

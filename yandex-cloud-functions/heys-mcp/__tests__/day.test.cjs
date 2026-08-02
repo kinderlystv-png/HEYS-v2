@@ -540,3 +540,142 @@ test('но кофе с йогуртом вместо молока в кофе-б
   const res = day.classifyMeal(meal, { meals: [] });
   assert.notEqual(res.mealType, 'coffee_break');
 });
+
+// --- Норма дня -------------------------------------------------------------
+
+const fs = require('node:fs');
+const path = require('node:path');
+const webMirror = require('../lib/web-mirror');
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const MIRROR_DIR = path.join(__dirname, '..', 'lib', 'web-mirror');
+
+/** Профиль, которого хватает на расчёт: вес, рост, возраст, пол. */
+const FULL_PROFILE = { weight: 80, height: 180, age: 40, gender: 'Мужской', deficitPctTarget: -15 };
+/** Проценты как в карточке клиента: белок 25, углеводы 40, жиры — остаток 35. */
+const NORMS = { proteinPct: 25, carbsPct: 40, simpleCarbPct: 20, fiberPct: 14, badFatPct: 30, superbadFatPct: 1 };
+
+test('зеркала apps/web совпадают с оригиналом побайтово', () => {
+  for (const file of webMirror.MIRRORED_FILES) {
+    const source = path.join(REPO_ROOT, webMirror.SOURCE_DIR, file);
+    if (!fs.existsSync(source)) continue; // деплой-архив без apps/web — не наш случай
+    assert.equal(
+      fs.readFileSync(path.join(MIRROR_DIR, file), 'utf8'),
+      fs.readFileSync(source, 'utf8'),
+      `lib/web-mirror/${file} разошёлся с ${webMirror.SOURCE_DIR}/${file}. `
+      + `Чинить: cp ${webMirror.SOURCE_DIR}/${file} yandex-cloud-functions/heys-mcp/lib/web-mirror/${file}`,
+    );
+  }
+});
+
+test('норма берёт сохранённую клиентом цифру как есть, а не считает свою', () => {
+  const norm = day.dailyNorm(
+    { date: '2026-08-01', savedDisplayOptimum: 2400, weightMorning: 80, meals: [] },
+    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
+  );
+  assert.equal(norm.source, 'client_saved');
+  assert.equal(norm.kcal, 2400);
+  // Расчёт по этому же дню дал бы другое число — значит, сохранённое не пересчитали.
+  const estimated = day.dailyNorm(
+    { date: '2026-08-01', weightMorning: 80, meals: [] },
+    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
+  );
+  assert.notEqual(estimated.kcal, 2400);
+});
+
+test('без сохранённой цифры норма считается и помечается как оценка', () => {
+  const norm = day.dailyNorm(
+    { date: '2026-08-01', weightMorning: 80, steps: 8000, trainings: [{ z: [0, 30, 0, 0] }], householdMin: 60, meals: [] },
+    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
+  );
+  assert.equal(norm.source, 'estimate');
+  // Ровно то, что отдаёт зеркало apps/web/heys_tdee_v1.js на тех же входах:
+  // BMR 1730 + активность 843 = 2573, дефицит −15% → 2187.
+  assert.equal(norm.kcal, 2187);
+  assert.match(norm.note, /оценка/i);
+});
+
+test('оценка не подставляет дефолты приложения при пустом профиле', () => {
+  for (const profile of [null, {}, { weight: 80 }, { weight: 80, height: 180, age: 40 }]) {
+    const norm = day.dailyNorm({ date: '2026-08-01', meals: [] }, { profile, norms: NORMS, hrZones: [] });
+    assert.equal(norm.source, null, `профиль ${JSON.stringify(profile)}: норму выдумали`);
+    assert.equal(norm.kcal, null);
+    assert.equal(norm.protein_g, null);
+    // 1618 — то, что приложение молча посчитало бы по 70 кг / 30 лет / 170 см.
+    assert.ok(!/1618/.test(norm.note));
+  }
+});
+
+test('возраст берётся из даты рождения, когда поля age в профиле нет', () => {
+  const byAge = day.dailyNorm(
+    { date: '2026-08-01', meals: [] },
+    { profile: { weight: 80, height: 180, age: 40, gender: 'Мужской' }, norms: NORMS, hrZones: [] },
+  );
+  const byBirthDate = day.dailyNorm(
+    { date: '2026-08-01', meals: [] },
+    { profile: { weight: 80, height: 180, birthDate: '1986-01-01', gender: 'Мужской' }, norms: NORMS, hrZones: [] },
+  );
+  assert.equal(byAge.source, 'estimate');
+  assert.equal(byBirthDate.source, 'estimate');
+  assert.equal(byBirthDate.kcal, byAge.kcal);
+});
+
+test('граммы БЖУ считаются по коэффициентам приложения, жиры — остатком', () => {
+  const norm = day.dailyNorm(
+    { date: '2026-08-01', savedDisplayOptimum: 1900, meals: [] },
+    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
+  );
+  // NET Atwater: белок ÷3, углеводы ÷4, жир ÷9; жиры% = 100 − 40 − 25 = 35.
+  assert.equal(norm.protein_g, Math.round((1900 * 0.25 / 3) * 10) / 10); // 158.3
+  assert.equal(norm.carbs_g, Math.round((1900 * 0.40 / 4) * 10) / 10);   // 190
+  assert.equal(norm.fat_g, Math.round((1900 * 0.35 / 9) * 10) / 10);     // 73.9
+});
+
+test('пустые проценты БЖУ не превращаются в «жиры 100% калорий»', () => {
+  const norm = day.dailyNorm(
+    { date: '2026-08-01', savedDisplayOptimum: 1900, meals: [] },
+    { profile: FULL_PROFILE, norms: {}, hrZones: [] },
+  );
+  assert.equal(norm.kcal, 1900, 'калорийная норма известна и остаётся');
+  assert.equal(norm.protein_g, null);
+  assert.equal(norm.fat_g, null);
+  assert.equal(norm.reason, 'no_norms');
+});
+
+test('норма показывает остаток по калориям и каждому макросу', () => {
+  const norm = day.dailyNorm(
+    {
+      date: '2026-08-01',
+      savedDisplayOptimum: 1900,
+      meals: [{ id: 'm1', items: [{ name: 'Каша', grams: 200, kcal100: 100, protein100: 10, simple100: 20, complex100: 0, badFat100: 2, goodFat100: 1 }] }],
+    },
+    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
+  );
+  assert.equal(norm.left.kcal, 1900 - 200);
+  assert.equal(norm.left.protein, Math.round((norm.protein_g - 20) * 10) / 10);
+  assert.equal(norm.left.carbs, Math.round((norm.carbs_g - 40) * 10) / 10);
+  assert.equal(norm.left.fat, Math.round((norm.fat_g - 6) * 10) / 10);
+});
+
+test('пульсовые зоны клиента влияют на оценку так же, как в приложении', () => {
+  const dayData = { date: '2026-08-01', weightMorning: 80, trainings: [{ z: [0, 30, 0, 0] }], meals: [] };
+  const withDefaults = day.dailyNorm(dayData, { profile: FULL_PROFILE, norms: NORMS, hrZones: [] });
+  const zones = [{ MET: 2 }, { MET: 12 }, { MET: 8 }, { MET: 10 }];
+  const withZones = day.dailyNorm(dayData, { profile: FULL_PROFILE, norms: NORMS, hrZones: zones });
+  assert.ok(withZones.kcal > withDefaults.kcal, 'MET второй зоны поднят вдвое — норма обязана вырасти');
+});
+
+test('без доступа к профилю и нормам норма честно не рассчитана', () => {
+  const norm = day.dailyNorm({ date: '2026-08-01', savedDisplayOptimum: 1900, meals: [] }, null);
+  assert.equal(norm.source, null);
+  assert.equal(norm.kcal, null);
+  assert.equal(norm.reason, 'no_inputs');
+});
+
+test('оценка учитывает день цикла — множитель берётся из зеркала apps/web', () => {
+  const profile = { weight: 60, height: 165, age: 30, gender: 'Женский' };
+  const plain = day.dailyNorm({ date: '2026-08-01', meals: [] }, { profile, norms: NORMS, hrZones: [] });
+  // День 2 — менструальная фаза, приложение поднимает норму на 5%.
+  const cycle = day.dailyNorm({ date: '2026-08-01', cycleDay: 2, meals: [] }, { profile, norms: NORMS, hrZones: [] });
+  assert.equal(cycle.kcal, Math.round(plain.kcal * 1.05));
+});
