@@ -17,6 +17,8 @@ regexes = [
     '''migrationKey\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
     '''p_key\s*:\s*['"]heys_[a-z0-9_-]+['"]''',
     '''key:\s*heys_[a-z0-9_-]+''',
+    # Тестовые assert'ы на имя ключа хранилища: `assert.equal(save.key, 'heys_dayv2_…')`.
+    '''\.key,\s*['"]heys_[a-z0-9_:-]+['"]''',
     '''key\s*:\s*['"][cr]\d{2}[a-z]?_[a-z0-9_]+['"]''',
     '''\.key\s*={2,3}\s*['"][cr]\d{2}[a-z]?_[a-z0-9_]+['"]''',
     '''[A-Z0-9_]*(?:KEY|STORAGE_KEY)\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
