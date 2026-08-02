@@ -38,6 +38,18 @@ const {
   buildHungerFollowUpPayload,
   buildHungerFollowUpIdempotencyKey,
 } = require('./hunger-follow-up');
+// Общее с мессенджером правило «чего ещё ждём от клиента сегодня».
+// Крон решает, слать ли пуш; сам факт «пункт ещё не закрыт» считается здесь,
+// чтобы чек-лист в мессенджере и напоминания не разъехались.
+const {
+  lastMealMinutes: lastMealMinutesOfDay,
+  hasMorningWeight,
+  waterDeficitMl,
+  averageWakeMinutes,
+  wakeHistoryDayKeys,
+  resolveNorms,
+  WATER_DEFICIT_RATIO,
+} = require('./shared/day-checklist-rules');
 
 // VAPID config: лениво, после initSecrets() — иначе на cold start читаем
 // плейсхолдер `__IN_LOCKBOX__heys-app-secrets__` из env и setVapidDetails ломается.
@@ -313,22 +325,9 @@ async function loadKv(client, clientId, k) {
 
 /** Норма kcal/Б/Ж/У/вода. Читает heys_norms + heys_profile, возвращает абсолютные значения. */
 async function getNorms(client, clientId) {
-  const norms = (await loadKv(client, clientId, 'heys_norms')) || {};
-  const profile = (await loadKv(client, clientId, 'heys_profile')) || {};
-  // Абсолютная дневная норма kcal из profile (поля могут разные — пробуем).
-  const kcal = Number(profile.dailyKcal || profile.kcalGoal || profile.targetKcal || norms.kcal || 0);
-  if (kcal <= 0) return null;
-  // Проценты Б/У из heys_norms (или fallback на profile). Жиры = 100 - Б - У.
-  const proteinPct = Number(norms.proteinPct || profile.proteinPct || 25);
-  const carbsPct = Number(norms.carbsPct || profile.carbsPct || 45);
-  const fatPct = Math.max(0, 100 - proteinPct - carbsPct);
-  // 1 г белка = 4 ккал, углевода = 4 ккал, жира = 9 ккал.
-  const protein = Math.round((kcal * proteinPct) / 100 / 4);
-  const carbs = Math.round((kcal * carbsPct) / 100 / 4);
-  const fat = Math.round((kcal * fatPct) / 100 / 9);
-  // Вода: heys_norms.water или fallback 2000 мл.
-  const water = Number(norms.water || profile.waterGoal || 2000);
-  return { kcal, protein, fat, carbs, water };
+  const norms = await loadKv(client, clientId, 'heys_norms');
+  const profile = await loadKv(client, clientId, 'heys_profile');
+  return resolveNorms({ norms, profile });
 }
 
 /** Получить kcal за каждый из последних N дней (включая сегодня). */
@@ -347,22 +346,13 @@ async function getLastNDaysKcal(client, clientId, n) {
 
 /** Среднее время пробуждения (sleepEnd) за 7 дней. Возвращает minutes-of-day или null. */
 async function getWakeAvgMinutes(client, clientId) {
-  const keys = [];
-  for (let i = 0; i < 7; i++) keys.push(`heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
   const r = await client.query(
     `SELECT v FROM client_kv_store
       WHERE client_id = $1 AND k = ANY($2::text[])`,
-    [clientId, keys]
+    [clientId, wakeHistoryDayKeys()]
   );
-  const minutes = [];
-  for (const row of r.rows) {
-    const t = row.v?.sleepEnd;
-    if (typeof t !== 'string') continue;
-    const m = parseHHMM(t);
-    if (m !== null) minutes.push(m);
-  }
-  if (minutes.length < 5) return null; // мало данных — fallback на client logic
-  return Math.round(minutes.reduce((a, b) => a + b, 0) / minutes.length);
+  // Мало данных → null, дальше подхватывается fallback вызывающего.
+  return averageWakeMinutes(r.rows.map((row) => row.v));
 }
 
 /** Медиана minutes-of-day последнего приёма пищи за 14 дней. null если мало данных. */
@@ -507,19 +497,6 @@ async function jobCuratorBatching(client) {
 }
 
 // ─── b) 4h без еды ─────────────────────────────────────────────────────
-
-function lastMealMinutesOfDay(dayJson) {
-  if (!dayJson || !Array.isArray(dayJson.meals)) return null;
-  let maxMin = null;
-  for (const meal of dayJson.meals) {
-    if (!meal?.time) continue;
-    if (!Array.isArray(meal.items) || meal.items.length === 0) continue;
-    const m = parseHHMM(meal.time);
-    if (m === null) continue;
-    if (maxMin === null || m > maxMin) maxMin = m;
-  }
-  return maxMin;
-}
 
 async function jobMealReminders(client) {
   const today = todayDateMsk();
@@ -774,7 +751,7 @@ async function jobMorningCheckin(client) {
 
     // Если weightMorning уже заполнен — не шлём.
     const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
-    if (day?.weightMorning && Number(day.weightMorning) > 0) continue;
+    if (hasMorningWeight(day)) continue;
 
     const key = `morning_checkin:${today}:${clientId}`;
 
@@ -812,7 +789,7 @@ async function jobMorningVitamins(client) {
 
     // И только если чек-ин уже сделан
     const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
-    if (!day?.weightMorning) continue;
+    if (!hasMorningWeight(day)) continue;
 
     const key = `morning_vitamins:${today}:${clientId}`;
 
@@ -849,14 +826,15 @@ async function jobWaterHint(client) {
     if (!norms || !norms.water) continue;
 
     const wakeAvg = (await getWakeAvgMinutes(client, clientId)) ?? 8 * 60;
-    const hoursSinceWake = Math.max(1, (cur - wakeAvg) / 60);
-    const totalActiveHours = Math.max(1, (20 * 60 - wakeAvg) / 60); // активно до 20:00
-    const expected = Math.min(norms.water, norms.water * (hoursSinceWake / totalActiveHours));
-
     const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
-    const actual = Number(day?.water || 0);
-    const deficit = expected - actual;
-    if (deficit < norms.water * 0.3) continue; // отстаём <30% — норм
+    const deficit = waterDeficitMl({
+      day,
+      waterNorm: norms.water,
+      nowMinutes: cur,
+      wakeMinutes: wakeAvg,
+    });
+    if (deficit === null) continue;
+    if (deficit < norms.water * WATER_DEFICIT_RATIO) continue; // отстаём <30% — норм
 
     const bucket = waterHourBucket(cur);
     const key = `water_hint:${today}:${bucket}:${clientId}`;
