@@ -218,3 +218,62 @@ test('deduplication still uses the canonical phone and skips a second INSERT', a
   assert.equal(queries.some((query) => /INSERT INTO leads/.test(query.sql)), false);
   assert.equal(getReleases(), 1);
 });
+
+test('quiz details reach the INSERT as JSON and drop unknown keys', async (t) => {
+  quietConsole(t);
+  const { handler, queries } = loadSubject(async (sql) => {
+    if (/SELECT COUNT\(\*\)/.test(sql)) return { rows: [{ cnt: 0 }] };
+    if (/SELECT id, created_at/.test(sql)) return { rows: [] };
+    if (/INSERT INTO leads/.test(sql)) return { rows: [{ id: LEAD_ID }] };
+    if (/record_funnel_event/.test(sql)) return { rows: [{ event: null }] };
+    return { rows: [] };
+  });
+
+  const event = leadEvent('+7 (999) 111-22-33');
+  const payload = JSON.parse(event.body);
+  payload.quiz_segment = 'evening';
+  // Лендинг шлёт три уточнения; всё остальное — чужие ключи, их в карточку
+  // лида пускать нельзя (свободный текст стал бы неучтённым каналом ПДн).
+  payload.quiz_details = {
+    frequency: 'weekly',
+    barrier: 'no_time',
+    goal: 'understand',
+    note: 'произвольный текст',
+  };
+  event.body = JSON.stringify(payload);
+
+  const response = await handler(event);
+  const insert = queries.find((query) => /INSERT INTO leads/.test(query.sql));
+
+  assert.equal(response.statusCode, 200);
+  assert.match(insert.sql, /quiz_details/);
+
+  const stored = insert.params.find(
+    (param) => typeof param === 'string' && param.startsWith('{"frequency"'),
+  );
+  assert.deepEqual(JSON.parse(stored), {
+    frequency: 'weekly',
+    barrier: 'no_time',
+    goal: 'understand',
+  });
+});
+
+test('a lead without quiz details stores NULL instead of an empty object', async (t) => {
+  quietConsole(t);
+  const { handler, queries } = loadSubject(async (sql) => {
+    if (/SELECT COUNT\(\*\)/.test(sql)) return { rows: [{ cnt: 0 }] };
+    if (/SELECT id, created_at/.test(sql)) return { rows: [] };
+    if (/INSERT INTO leads/.test(sql)) return { rows: [{ id: LEAD_ID }] };
+    if (/record_funnel_event/.test(sql)) return { rows: [{ event: null }] };
+    return { rows: [] };
+  });
+
+  const response = await handler(leadEvent('+7 (999) 111-22-33'));
+  const insert = queries.find((query) => /INSERT INTO leads/.test(query.sql));
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(
+    insert.params.some((param) => typeof param === 'string' && param.startsWith('{')),
+    false,
+  );
+});

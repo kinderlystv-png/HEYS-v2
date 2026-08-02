@@ -131,6 +131,23 @@ function cleanOptionalText(value, maxLength = 128) {
   return text ? text.slice(0, maxLength) : null;
 }
 
+/**
+ * Уточнения квиза (`маркетинг/17` § 3.7): частота, барьер и цель. Принимаем
+ * только эти три ключа и только коды вариантов — свободный текст с публичной
+ * формы в карточку лида не пускаем, иначе поле станет неучтённым каналом ПДн.
+ */
+const QUIZ_DETAIL_KEYS = ['frequency', 'barrier', 'goal'];
+
+function cleanQuizDetails(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const result = {};
+  for (const key of QUIZ_DETAIL_KEYS) {
+    const code = cleanOptionalText(value[key], 32);
+    if (code) result[key] = code;
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 async function markFunnelEventMetricaStatus(client, eventId, status, error) {
   if (!eventId) return;
   try {
@@ -301,6 +318,7 @@ module.exports.handler = async function (event, context) {
       how_heard,
       ym_client_id,
       quiz_segment,
+      quiz_details,
       readiness,
       ab_variant,
       referrer,
@@ -453,6 +471,7 @@ module.exports.handler = async function (event, context) {
     const safePromoCode = cleanOptionalText(promo_code, 64);
     const safeHowHeard = cleanOptionalText(how_heard, 64);
     const safeQuizSegment = cleanOptionalText(quiz_segment, 64);
+    const safeQuizDetails = cleanQuizDetails(quiz_details);
     const safeReadiness = cleanOptionalText(readiness, 64);
     const safeAbVariant = cleanOptionalText(ab_variant, 256);
 
@@ -538,7 +557,7 @@ module.exports.handler = async function (event, context) {
             INSERT INTO leads (
               name, phone, email, messenger,
               utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-              promo_code, how_heard, ym_client_id, quiz_segment, readiness, ab_variant,
+              promo_code, how_heard, ym_client_id, quiz_segment, quiz_details, readiness, ab_variant,
               referrer, landing_page, ip_address,
               consent_privacy_version, consent_method, consent_user_agent,
               birth_year, consent_marketing_version
@@ -546,10 +565,10 @@ module.exports.handler = async function (event, context) {
             VALUES (
               $1, $2, $3, $4,
               $5, $6, $7, $8, $9,
-              $10, $11, $12, $13, $14, $15,
-              $16, $17, $18,
-              $19, $20, $21,
-              $22, $23
+              $10, $11, $12, $13, $14::jsonb, $15, $16,
+              $17, $18, $19,
+              $20, $21, $22,
+              $23, $24
             )
             RETURNING id
           `,
@@ -567,6 +586,7 @@ module.exports.handler = async function (event, context) {
               safeHowHeard,
               safeYmClientId,
               safeQuizSegment,
+              safeQuizDetails ? JSON.stringify(safeQuizDetails) : null,
               safeReadiness,
               safeAbVariant,
               referrer,
