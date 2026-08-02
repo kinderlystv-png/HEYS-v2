@@ -92,8 +92,8 @@ apps/web/heys_core_v12.js:5630
 apps/web/heys_core_v12.js:5741
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_core_bundle_v1.js:2225
-apps/web/heys_day_core_bundle_v1.js:3966
-apps/web/heys_day_core_bundle_v1.js:4576
+apps/web/heys_day_core_bundle_v1.js:3996
+apps/web/heys_day_core_bundle_v1.js:4606
 apps/web/heys_day_core_bundle_v1.js:489
 apps/web/heys_day_core_bundle_v1.js:53
 apps/web/heys_day_orphan_alert.js:142
@@ -147,11 +147,11 @@ apps/web/heys_leaderboard_v1.js:129
 apps/web/heys_meal_optimizer_v1.js:1822
 apps/web/heys_meal_step_v1.js:30
 apps/web/heys_meal_step_v1.js:54
-apps/web/heys_metabolic_intelligence_v1.js:1255
-apps/web/heys_metabolic_intelligence_v1.js:2012
-apps/web/heys_metabolic_intelligence_v1.js:2191
-apps/web/heys_metabolic_intelligence_v1.js:2333
-apps/web/heys_metabolic_intelligence_v1.js:2417
+apps/web/heys_metabolic_intelligence_v1.js:1256
+apps/web/heys_metabolic_intelligence_v1.js:2015
+apps/web/heys_metabolic_intelligence_v1.js:2194
+apps/web/heys_metabolic_intelligence_v1.js:2336
+apps/web/heys_metabolic_intelligence_v1.js:2420
 apps/web/heys_models_v1.js:415
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
@@ -219,7 +219,7 @@ apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4772
-apps/web/heys_widgets_ui_v1.js:7007
+apps/web/heys_widgets_ui_v1.js:7003
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36
@@ -281,7 +281,7 @@ apps/web/heys_planning_reading_v1.js:119
 apps/web/heys_messenger_v1.js:1700
 apps/web/heys_messenger_v1.js:1754
 apps/web/heys_messenger_v1.js:1759
-apps/web/heys_messenger_v1.js:2423
+apps/web/heys_messenger_v1.js:2421
 
 # [phase3] Собранная копия advice-исходников. Те же три записи уже разрешены
 # в apps/web/advice/_actions.js:175 и _commitments.js:52,200 — в бандл они

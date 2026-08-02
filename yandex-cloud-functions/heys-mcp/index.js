@@ -164,6 +164,9 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
       // которые принимают его параметром (подписки), а не берут из JWT.
       curatorId: auth.clientId,
       curatorName: auth.subjectName,
+      // Задачник живёт под обычным клиентом HEYS, id задаётся окружением:
+      // это личные файлы куратора, и подставлять их по имени нельзя.
+      tasksClientId: process.env.HEYS_TASKS_CLIENT_ID || null,
     });
     tools = curatorCtx.tools;
     toolSchemas = curatorCtx.schemas;

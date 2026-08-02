@@ -24,6 +24,7 @@
  */
 
 const { createTools, TOOL_SCHEMAS, WRITE_TOOLS, ToolError } = require('./tools');
+const { createTasksTools } = require('./tasks-tools');
 const products = require('./products');
 const admin = require('./admin');
 const day = require('./day');
@@ -257,7 +258,17 @@ function buildCuratorSchemas() {
   return schemas;
 }
 
-function curatorInstructions(curatorName) {
+/** Правила задачника — отдельным блоком, потому что это личные дела куратора, а не работа с клиентом. */
+const TASKS_INSTRUCTIONS = [
+  '',
+  'Задачник куратора (tasks_read / tasks_search / tasks_context / tasks_list):',
+  '26. Это его личные задачи, проекты, журнал и дни — не данные клиента. Клиент этим инструментам не передаётся, адресат у них один.',
+  '27. Перед разбором любой его вводной сначала вызови tasks_context или tasks_search по теме. В журнале почти всегда есть прошлый разговор, и ответ, начатый с «две недели назад ты решил …», стоит дороже нового вопроса.',
+  '28. Открытые вопросы («открыто:») и обязательства («ждём:», «при встрече:») поднимай до своих новых вопросов — они возвращаются в tasks_context первыми именно поэтому.',
+  '29. Задачи закрывает только он. Сам галочки не ставь.',
+];
+
+function curatorInstructions(curatorName, withTasks = false) {
   return [
     `Дневники питания, воды, сна и тренировок HEYS. Ты помогаешь куратору${curatorName ? ` (${curatorName})` : ''} вести дневники его клиентов.`,
     '',
@@ -304,10 +315,21 @@ function curatorInstructions(curatorName) {
     '23. Граммовку бери ровно ту, что назвал клиент. Если он её НЕ назвал — спроси куратора. Здесь нельзя брать привычную порцию из наборов или прошлых дней, даже если она очевидна: это данные клиента, а не твоя догадка.',
     '24. Внёс просьбу — сразу вызови heys_mark_message_done. Без этого при следующем чтении переписки та же еда будет внесена повторно.',
     '25. Отвечать клиенту через heys_reply_message — по решению куратора, а не автоматически: это его переписка с клиентом, и голос в ней принадлежит ему.',
+    ...(withTasks ? TASKS_INSTRUCTIONS : []),
   ].join('\n');
 }
 
-function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName = '', nowMs = Date.now() }) {
+function createCuratorContext({
+  api,
+  curatorJwt,
+  curatorId = null,
+  curatorName = '',
+  nowMs = Date.now(),
+  // Клиент, под которым лежит задачник куратора. Это его собственные задачи,
+  // а не данные клиента, поэтому адресат берётся из конфигурации: лишний
+  // аргумент `client` у этих инструментов был бы лишним способом промахнуться.
+  tasksClientId = null,
+}) {
   let clientsPromise = null;
   const toolsByClient = new Map();
   const contextByClient = new Map();
@@ -968,10 +990,18 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
     };
   };
 
+  // Задачник куратора: свой набор инструментов поверх собственного хранилища.
+  // Подключается только когда клиент задачника настроен — иначе в списке
+  // инструментов висели бы вызовы, которые заведомо возвращают ошибку.
+  const tasksContext = tasksClientId
+    ? createTasksTools({ api, curatorJwt, clientId: tasksClientId, nowMs, ToolError, writeContext: writeContextFor })
+    : null;
+  if (tasksContext) Object.assign(tools, tasksContext.tools);
+
   return {
     tools,
-    schemas: buildCuratorSchemas(),
-    instructions: curatorInstructions(curatorName),
+    schemas: [...(tasksContext ? tasksContext.schemas : []), ...buildCuratorSchemas()],
+    instructions: curatorInstructions(curatorName, !!tasksContext),
   };
 }
 

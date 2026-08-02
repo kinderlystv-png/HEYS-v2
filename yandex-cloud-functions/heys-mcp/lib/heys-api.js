@@ -404,6 +404,26 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { ok: true, outcome: (data && data.outcome) || 'saved', value: data && data.v };
   }
 
+  /**
+   * Пакетная запись нескольких ключей одним вызовом. Нужна там, где значение и
+   * его индекс обязаны меняться вместе: задачник хранит файл и запись в
+   * `heys_tasks_index`, и разъехавшись они дают либо потерянную для пуллера
+   * правку, либо запись о файле, которого нет.
+   */
+  async function upsertKVManyByCurator(bearer, clientId, items, contextId = null) {
+    if (!Array.isArray(items) || !items.length) return { ok: true, data: null };
+    const { data, error } = await rpc('batch_upsert_client_kv_by_curator', {
+      p_client_id: clientId,
+      p_items: items,
+      p_context_id: contextId,
+    }, { bearer });
+    if (error) return { ok: false, error: error.message };
+    if (data && Array.isArray(data.identity_blocked) && data.identity_blocked.length) {
+      return { ok: false, error: 'identity_blocked' };
+    }
+    return { ok: true, data };
+  }
+
   async function upsertKVByCurator(bearer, clientId, key, value, contextId = null) {
     const { data, error } = await rpc('batch_upsert_client_kv_by_curator', {
       p_client_id: clientId,
@@ -670,7 +690,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
 
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
-    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
+    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,
     extendSubscription, cancelSubscription,
