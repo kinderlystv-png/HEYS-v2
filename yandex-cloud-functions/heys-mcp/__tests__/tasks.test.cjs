@@ -1650,3 +1650,297 @@ test('при потолке в 60 файлов задачи не вытесня�
   const kept = tasks.rankPaths([...days, ...projects], { today: '2026-08-02' }).slice(0, 60);
   for (const p of projects) assert.ok(kept.includes(p), `${p} выпал из чтения`);
 });
+
+// ── Снять, перенести, закрыть день ───────────────────────────────────────
+//
+// Слот умели только ставить. «Отмени праздник 25-го» кончалось словами: агент
+// говорил «снял», строка оставалась в дне, и загруженность дальше считала день
+// занятым. Здесь проверяется ровно то, что расходилось: адресация слота,
+// отказ вместо угадывания, и что закрытый день отличим от несмотренного.
+
+const PLAN = `# План на 2026-08-02
+- 09:00–09:30 Уборка кухни #дело
+- 10:00–14:00 Лендинг: оптимальная версия · heys/7caa24 #фокус
+- 14:00–19:00 Студия: уборка и встреча гостей · праздник Ксении
+- 19:00–23:00 Дома у родителей #фон
+- 15:00–15:15 Встретить торт #дело
+`;
+
+function dayApi(extra = {}) {
+  const files = {
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+    [tasks.keyForPath('days/2026-08-02.md')]: { path: 'days/2026-08-02.md', text: PLAN, rev: 1, updatedAt: 1 },
+  };
+  for (const [path, text] of Object.entries(extra)) files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 };
+  const api = liveApi(files);
+  api.saved = [];
+  const orig = api.upsertKVManyByCurator;
+  api.upsertKVManyByCurator = async (bearer, clientId, items, contextId) => {
+    api.saved.push(items.map((i) => i.k));
+    return orig(bearer, clientId, items, contextId);
+  };
+  api.day = (date) => api.kv[tasks.keyForPath(`days/${date}.md`)].text;
+  return api;
+}
+
+test('снятый слот исчезает из дня, а задача под ним остаётся', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_unslot({ date: '2026-08-02', at: '10:00' });
+
+  assert.equal(res.structured.ref, 'heys/7caa24');
+  assert.match(res.text, /Задача heys\/7caa24 осталась на месте/);
+  const day = api.day('2026-08-02');
+  assert.ok(!/Лендинг: оптимальная версия/.test(day), 'строка слота убрана из дня');
+  assert.match(day, /Встретить торт/, 'остальные слоты не тронуты');
+  // Задача живёт в проекте и снятием слота не закрывается и не двигается.
+  assert.equal(api.kv[tasks.keyForPath('projects/heys.md')].text, HEYS_PROJECT);
+});
+
+test('слот снимается и по словам названия, без времени', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_unslot({ date: '2026-08-02', title: 'торт' });
+  assert.equal(res.structured.from, '15:00');
+  assert.ok(!/Встретить торт/.test(api.day('2026-08-02')));
+});
+
+test('«15:00 торт» одной строкой разбирается на время и слова', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_unslot({ date: '2026-08-02', slot: '15:00 торт' });
+  assert.equal(res.structured.title, 'Встретить торт');
+});
+
+test('несуществующий слот не снимается молча, а перечисляет что в дне есть', async () => {
+  const api = dayApi();
+  await assert.rejects(
+    () => session(api).tasks_unslot({ date: '2026-08-02', title: 'дзюдо' }),
+    (e) => e.code === 'slot_not_found' && /Уборка кухни/.test(e.message),
+  );
+  assert.equal(api.saved.length, 0, 'ничего не записано');
+});
+
+test('под неоднозначное описание инструмент отказывается выбирать сам', async () => {
+  const api = dayApi();
+  await assert.rejects(
+    () => session(api).tasks_unslot({ date: '2026-08-02', title: 'уборка' }),
+    (e) => e.code === 'slot_ambiguous' && e.details.candidates.length === 2,
+  );
+  assert.equal(api.saved.length, 0, 'снятие «первого подходящего» — это молча снятый не тот слот');
+});
+
+test('слот без описания вовсе не снимается', async () => {
+  const api = dayApi();
+  await assert.rejects(
+    () => session(api).tasks_unslot({ date: '2026-08-02' }),
+    (e) => e.code === 'slot_query_required',
+  );
+  assert.equal(api.saved.length, 0);
+});
+
+test('перенос по времени сохраняет ссылку на задачу и вид слота', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_reslot({ date: '2026-08-02', at: '10:00', from: '11:00', to: '12:00' });
+  assert.equal(res.structured.moved, true);
+  assert.match(api.day('2026-08-02'), /- 11:00–12:00 Лендинг: оптимальная версия · heys\/7caa24 #фокус/);
+  assert.ok(!/10:00–14:00 Лендинг/.test(api.day('2026-08-02')), 'старой строки не осталось');
+});
+
+test('названо только начало — длительность переезжает вместе со слотом', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_reslot({ date: '2026-08-02', at: '15:00', from: '16:30' });
+  assert.equal(res.structured.to, '16:45', 'пятнадцать минут остались пятнадцатью');
+  assert.match(api.day('2026-08-02'), /- 16:30–16:45 Встретить торт #дело/);
+});
+
+test('перенос сам с собой не конфликтует, а в занятое время — конфликтует', async () => {
+  const clean = dayApi();
+  const shifted = await session(clean).tasks_reslot({ date: '2026-08-02', at: '10:00', from: '09:00', to: '13:00' });
+  assert.deepEqual(shifted.structured.conflicts, [], 'слот пересёкся со своим прежним местом — это не конфликт');
+
+  const api = dayApi();
+  const res = await session(api).tasks_reslot({ date: '2026-08-02', at: '10:00', from: '15:00', to: '18:00' });
+  const hard = res.structured.conflicts.filter((c) => c.level === 'конфликт');
+  assert.equal(hard.length, 1);
+  assert.match(hard[0].title, /Студия/);
+  assert.match(res.text, /Конфликт с/);
+});
+
+test('перенос на другую дату пишет сначала туда, потом убирает отсюда', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_reslot({ date: '2026-08-02', at: '15:00', to_date: '2026-08-03' });
+  assert.equal(res.structured.to_date, '2026-08-03');
+  assert.equal(res.structured.from, '15:00', 'без нового времени слот уезжает на ту же пору');
+  assert.match(api.day('2026-08-03'), /- 15:00–15:15 Встретить торт #дело/);
+  assert.ok(!/Встретить торт/.test(api.day('2026-08-02')));
+  // Упади вторая запись — слот будет в двух днях, и это видно. При обратном
+  // порядке он бы исчез молча, а это ровно то, что чинится этой задачей.
+  assert.ok(api.saved[0].includes(tasks.keyForPath('days/2026-08-03.md')), 'первым пишется день-получатель');
+  assert.ok(api.saved[1].includes(tasks.keyForPath('days/2026-08-02.md')), 'вторым — день, откуда сняли');
+});
+
+test('перенос на то же место ничего не переписывает', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_reslot({ date: '2026-08-02', at: '15:00', from: '15:00', to: '15:15' });
+  assert.equal(res.structured.moved, false);
+  assert.equal(api.saved.length, 0);
+});
+
+test('закрытие дня ставит галочки, пишет заметку и называет неотмеченное', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_close_day({
+    date: '2026-08-02', done: ['10:00', 'торт'], note: 'весь день ушёл на лендинг',
+  });
+
+  const day = api.day('2026-08-02');
+  assert.match(day, /- \[x\] 10:00–14:00 Лендинг: оптимальная версия · heys\/7caa24 #фокус/);
+  assert.match(day, /- \[x\] 15:00–15:15 Встретить торт #дело/);
+  assert.match(day, /^> весь день ушёл на лендинг$/m);
+  assert.equal(res.structured.already_closed, false);
+  assert.equal(res.structured.done.length, 2);
+  assert.equal(res.structured.open.length, 3, 'остальное осталось без отметки');
+  assert.match(res.text, /перенести \(tasks_reslot\), снять \(tasks_unslot\)/);
+});
+
+test('второе закрытие переписывает заметку, а не заводит вторую', async () => {
+  const api = dayApi();
+  await session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'], note: 'первая версия' });
+  const again = await session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'], note: 'на самом деле съехало' });
+
+  assert.equal(again.structured.already_closed, true);
+  assert.equal(again.structured.previous_note, 'первая версия');
+  assert.equal(again.structured.done[0].already, true, 'галочка уже стояла — повтор её не портит');
+  const day = api.day('2026-08-02');
+  assert.equal(day.split('\n').filter((l) => l.startsWith('> ')).length, 1);
+  assert.match(day, /^> на самом деле съехало$/m);
+});
+
+test('день без фразы «как прошло» не считается закрытым', async () => {
+  const api = dayApi();
+  await assert.rejects(
+    () => session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'] }),
+    (e) => e.code === 'note_required',
+  );
+  assert.equal(api.saved.length, 0, 'без заметки слот без галочки не отличить от «ещё не смотрели»');
+});
+
+test('неоднозначное «что состоялось» не закрывает день наполовину', async () => {
+  const api = dayApi();
+  await assert.rejects(
+    () => session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00', 'уборка'], note: 'как-то так' }),
+    (e) => e.code === 'slot_ambiguous',
+  );
+  assert.equal(api.saved.length, 0, 'ни галочки, ни заметки — иначе непонятно, закрыт день или нет');
+});
+
+test('снять и перенести названы в правилах — иначе инструмент никто не вызовет', () => {
+  const rules = curatorInstructions('Антон', true);
+  assert.match(rules, /tasks_unslot/);
+  assert.match(rules, /tasks_reslot/);
+  assert.match(rules, /tasks_close_day/);
+});
+
+// ── Размер ответа на чтение ──────────────────────────────────────────────
+//
+// Журнал — один файл на месяц и растёт на десятки килобайт в день. Целиковое
+// чтение к концу месяца стоит сотни тысяч токенов на один вызов.
+
+const BIG_JOURNAL = `# Журнал 2026-08\n\n${Array.from({ length: 900 },
+  (_, i) => `## 2026-08-${String(1 + (i % 28)).padStart(2, '0')}\n\nЗапись номер ${i + 1}: разговор про лендинг и сроки.\n`).join('\n')}`;
+
+test('большой файл отдаётся хвостом и честно говорит, что обрезан', async () => {
+  const api = liveApi({ [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: BIG_JOURNAL, rev: 7, updatedAt: 1 } });
+  const res = await session(api).tasks_read({ path: 'journal/2026-08.md' });
+
+  assert.equal(res.structured.truncated, true);
+  assert.ok(res.structured.text.length < BIG_JOURNAL.length / 2, 'обрезка должна реально резать');
+  assert.ok(res.structured.text.includes('Запись номер 900'), 'хвост — свежая часть, она нужнее');
+  assert.ok(!res.structured.text.includes('Запись номер 1:'), 'начало осталось за границей окна');
+  assert.match(res.text, /Отдана только часть файла/);
+  assert.match(res.text, /tasks_search|from_line/, 'сказано, чем достать остальное');
+  assert.ok(res.structured.from_line > 1 && res.structured.to_line === res.structured.total_lines);
+});
+
+test('from_line достаёт нужный кусок, а не только хвост', async () => {
+  const api = liveApi({ [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: BIG_JOURNAL, rev: 7, updatedAt: 1 } });
+  const res = await session(api).tasks_read({ path: 'journal/2026-08.md', from_line: 5, max_chars: 2000 });
+  assert.equal(res.structured.from_line, 5);
+  assert.match(res.structured.text, /Запись номер 1:/);
+});
+
+test('маленький файл читается целиком и обрезанным не помечается', async () => {
+  const res = await build(withFiles()).tasks_read({ path: 'projects/heys.md' });
+  assert.equal(res.structured.truncated, false);
+  assert.equal(res.structured.text, HEYS_PROJECT);
+});
+
+test('у обрезанного проекта список задач остаётся полным', async () => {
+  const long = `# HEYS\n\n## Задачи\n\n${HEYS_PROJECT.split('\n').slice(4).join('\n')}${Array.from({ length: 400 },
+    (_, i) => `- [ ] P3 Задача номер ${i} ^2026-08-01\n`).join('')}`;
+  const api = liveApi({ [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: long, rev: 1, updatedAt: 1 } });
+  const res = await session(api).tasks_read({ path: 'projects/heys.md', max_chars: 3000 });
+
+  assert.equal(res.structured.truncated, true);
+  assert.ok(!res.structured.text.includes('Собрать оптимальную версию лендинга'), 'начало файла в окно не попало');
+  assert.ok(
+    res.structured.tasks.some((t) => t.title === 'Собрать оптимальную версию лендинга'),
+    'разбор идёт по полному тексту: иначе править нечем ровно те задачи, которые не влезли',
+  );
+});
+
+// ── Порядок выдачи поиска ────────────────────────────────────────────────
+
+test('строка с фразой целиком идёт выше, чем строка с теми же словами вразброс', async () => {
+  const api = liveApi({
+    [tasks.keyForPath('projects/heys.md')]: {
+      path: 'projects/heys.md', rev: 1, updatedAt: 1,
+      text: '# HEYS\n\n## Задачи\n\n- [ ] P2 Версия лендинга ещё не выбрана ^2026-08-01\n',
+    },
+    [tasks.keyForPath('journal/2026-08.md')]: {
+      path: 'journal/2026-08.md', rev: 1, updatedAt: 1,
+      text: '# Журнал 2026-08\n\n## 2026-08-01\n\nОбсуждали: лендинг версия D — на ней и остановились.\n',
+    },
+  });
+  const res = await session(api).tasks_search({ query: 'лендинг версия' });
+  assert.equal(res.structured.matches[0].path, 'journal/2026-08.md', 'точное совпадение фразы должно быть первым');
+
+  // Потолок применяется ПОСЛЕ отбора: иначе самая точная строка вылетает
+  // просто потому, что её файл читается вторым.
+  const one = await session(api).tasks_search({ query: 'лендинг версия', limit: 1 });
+  assert.equal(one.structured.matches.length, 1);
+  assert.equal(one.structured.matches[0].path, 'journal/2026-08.md');
+});
+
+// ── Правила про деньги против money/README.md ────────────────────────────
+
+test('правило про деньги не спорит с money/README.md', () => {
+  const rules = curatorInstructions('Антон', true);
+  const money = rules.split('\n').find((l) => l.startsWith('З8.'));
+  assert.ok(money, 'правило про деньги на месте');
+  // README требует вносить сводку самому и ставить контур самому; прежняя
+  // формулировка «сумму и контур бери у него» ровно этому противоречила.
+  assert.ok(!/контур бери у него/.test(money));
+  assert.match(money, /не переспрашивая/);
+  assert.match(money, /контур ставь сам/);
+  // Запрет на budget.md жил только в данных, а инструкция агента о нём молчала.
+  assert.match(money, /budget\.md/);
+});
+
+test('снятие, перенос и закрытие дня объявлены и в схемах, и обработчиком', () => {
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  for (const name of ['tasks_unslot', 'tasks_reslot', 'tasks_close_day']) {
+    const schema = built.schemas.find((s) => s.name === name);
+    assert.ok(schema, `${name} объявлен в схемах — иначе модель его не увидит`);
+    assert.equal(typeof built.tools[name], 'function', `${name} имеет обработчик`);
+  }
+  // Окно чтения бесполезно, если про его границы нельзя сказать в вызове.
+  const read = built.schemas.find((s) => s.name === 'tasks_read');
+  assert.ok(read.inputSchema.properties.from_line && read.inputSchema.properties.max_chars);
+});
+
+test('один слот, названный дважды, состоявшимся считается один раз', async () => {
+  const api = dayApi();
+  const res = await session(api).tasks_close_day({
+    date: '2026-08-02', done: ['10:00', 'лендинг'], note: 'нормально',
+  });
+  assert.equal(res.structured.done.length, 1);
+  assert.equal(res.structured.open.length, 4);
+});

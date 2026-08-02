@@ -279,6 +279,11 @@ function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, 
     : String(query || '').toLowerCase().split(/\s+/).filter(Boolean).map((word) => ({ word, kind: 'word' }));
   if (!terms.length) return [];
 
+  // Совпадение по всей фразе целиком — единственное, чем строки различаются,
+  // когда все слова нашлись в каждой: `matchTerms` в этом режиме выдаёт всем
+  // один и тот же вес, и сортировка по нему ничего не переставляет.
+  const phrase = terms.length > 1 ? terms.map((t) => t.word).join(' ') : null;
+
   const results = [];
   for (const file of files) {
     if (!file || typeof file.text !== 'string' || !file.text) continue;
@@ -294,14 +299,89 @@ function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, 
         text: lines[i].trim(),
         score,
         matched: hit,
+        exact: phrase ? lines[i].toLowerCase().includes(phrase) : false,
         context: lines
           .slice(Math.max(0, i - context), Math.min(lines.length, i + context + 1))
           .join('\n'),
       });
-      if (!any && results.length >= limit) return results;
     }
   }
-  return any ? results.sort((a, b) => b.score - a.score).slice(0, limit) : results;
+  // Отбор по релевантности идёт ДО потолка: иначе сорок первых попавшихся
+  // строк вытесняют ту единственную, где фраза стоит целиком. Порядок обхода
+  // (rankPaths: сначала задачи, потом дни и журнал) остаётся последним
+  // доводом — сортировка в JS устойчива.
+  return results
+    .sort((a, b) => (b.score - a.score) || (Number(b.exact) - Number(a.exact)))
+    .slice(0, limit);
+}
+
+/**
+ * Окно чтения файла.
+ *
+ * Журнал — один файл на месяц, и растёт он примерно на десятки килобайт в
+ * день: к концу месяца целиковое чтение стоит сотни тысяч токенов на один
+ * вызов. Отдаём хвост: свежая запись нужнее прошлогодней, а до начала есть
+ * поиск и `from_line`. Обрезка обязана быть ВИДНОЙ — молча укороченный файл
+ * страшнее длинного: по нему делают вывод «в журнале про это ничего нет».
+ */
+const READ_MAX_CHARS = 24000;
+const READ_HARD_MAX = 120000;
+
+function fileWindow(text, { maxChars = null, fromLine = null } = {}) {
+  const full = String(text || '');
+  const lines = full.split('\n');
+  const limit = Math.min(
+    READ_HARD_MAX,
+    Math.max(1000, Number.isFinite(Number(maxChars)) && Number(maxChars) > 0 ? Number(maxChars) : READ_MAX_CHARS),
+  );
+
+  const start = Number.isFinite(Number(fromLine)) && Number(fromLine) > 0
+    ? Math.min(Math.floor(Number(fromLine)), lines.length)
+    : null;
+
+  // Граница окна проходит по строке, а не по символу: обрезанная посередине
+  // строка задачи читается как другая задача, а хэш у неё будет третий.
+  let from;
+  let to;
+  if (start) {
+    // Назвали, откуда читать, — читаем оттуда ВПЕРЁД: это и есть «достать
+    // нужный кусок», ради которого параметр и заведён.
+    from = start;
+    to = start;
+    let taken = 0;
+    while (to <= lines.length) {
+      const next = taken + lines[to - 1].length + (taken ? 1 : 0);
+      if (next > limit && to > start) break;
+      taken = next;
+      to += 1;
+      if (taken >= limit) break;
+    }
+    to -= 1;
+  } else {
+    // По умолчанию — хвост: свежая запись нужнее прошлогодней.
+    to = lines.length;
+    from = lines.length;
+    let taken = 0;
+    while (from >= 1) {
+      const next = taken + lines[from - 1].length + (taken ? 1 : 0);
+      if (next > limit && from < lines.length) break;
+      taken = next;
+      from -= 1;
+      if (taken >= limit) break;
+    }
+    from += 1;
+  }
+
+  const out = lines.slice(from - 1, to).join('\n');
+  return {
+    text: out,
+    truncated: from > 1 || to < lines.length,
+    from_line: from,
+    to_line: to,
+    total_lines: lines.length,
+    total_chars: full.length,
+    shown_chars: out.length,
+  };
 }
 
 /**
@@ -1921,6 +2001,127 @@ function slotConflicts(text, from, to, kind = 'фокус') {
     .map((slot) => ({ title: slot.title, raw: slot.raw.trim(), level: slot.level }));
 }
 
+// ── Снять, перенести, закрыть ────────────────────────────────────────────
+//
+// Слот умели только ставить. Из-за этого «отмени праздник 25-го» кончалось
+// словами: ассистент говорил «снял», в дне оставалась строка, и загруженность
+// дальше считала день занятым. Расхождение между сказанным и записанным — то,
+// ради чего задачник и заводили, поэтому снятие и перенос живут здесь, рядом
+// с постановкой, и той же арифметикой.
+
+/** Часть заголовка без ссылки на задачу: по ней слот и ищут словами. */
+function slotPlainTitle(title) {
+  const body = String(title || '').trim();
+  const cut = body.lastIndexOf('·');
+  if (cut < 0) return body;
+  return parseAddress(body.slice(cut + 1).trim()) ? body.slice(0, cut).trim() : body;
+}
+
+/**
+ * Совпал ли слот с тем, как его назвали словами. Слова ищутся все и в любом
+ * порядке: «праздник Ксении» и «Ксении праздник» — про одно и то же, а вот
+ * лишнее слово должно отсекать, иначе «уборка» снимет не тот слот.
+ */
+function slotTitleMatches(title, needle) {
+  const hay = slotPlainTitle(title).toLowerCase();
+  const words = String(needle || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return false;
+  return words.every((word) => hay.includes(word));
+}
+
+/**
+ * Слоты дня, подходящие под описание: время начала, слова заголовка или оба
+ * сразу. Возвращаются ВСЕ подходящие — выбор «какой из них» инструмент делать
+ * не вправе: молча снятый не тот слот не виден вообще никак.
+ */
+function findSlotsIn(text, { at = null, title = null } = {}) {
+  const wantAt = at ? timeToMinutes(String(at).trim()) : null;
+  if (at && wantAt === null) throw new Error(`invalid_time:${at}`);
+  const needle = title ? String(title).trim() : null;
+  if (wantAt === null && !needle) throw new Error('slot_query_required');
+  return parseSlots(text).filter((slot) => {
+    if (wantAt !== null && timeToMinutes(slot.start) !== wantAt) return false;
+    if (needle && !slotTitleMatches(slot.title, needle)) return false;
+    return true;
+  });
+}
+
+/** ЧЧ:ММ в канонический вид: «9:00» и «09:00» — одна и та же минута. */
+function padTime(value) {
+  const minutes = timeToMinutes(value);
+  if (minutes === null) throw new Error(`invalid_time:${value}`);
+  return minutesToTime(minutes);
+}
+
+/** Разобрать строку слота на приставку с галочкой и хвост после времени. */
+function splitSlotLine(raw) {
+  const match = SLOT_RE.exec(String(raw || '').trim());
+  if (!match) throw new Error('not_a_slot');
+  return { mark: match[1] || null, from: match[2], to: match[3], tail: match[4] };
+}
+
+/** Собрать строку слота обратно. Формат тот же, что пишет доска. */
+function buildSlotLine({ mark = null, from, to, tail }) {
+  const box = mark ? `[${mark.toLowerCase() === 'x' ? 'x' : ' '}] ` : '';
+  return `- ${box}${padTime(from)}–${padTime(to)} ${String(tail).trim()}`;
+}
+
+/** Убрать строку слота из файла дня. Задачу, на которую он ссылался, не трогаем. */
+function removeSlotLine(text, index) {
+  const lines = String(text || '').split('\n');
+  if (index < 0 || index >= lines.length) throw new Error('slot_line_out_of_range');
+  lines.splice(index, 1);
+  return lines.join('\n');
+}
+
+/** Переставить время у слота на месте: ссылка, тег вида и место остаются как были. */
+function retimeSlotLine(text, index, from, to) {
+  const lines = String(text || '').split('\n');
+  const parts = splitSlotLine(lines[index]);
+  lines[index] = buildSlotLine({ ...parts, from, to });
+  return lines.join('\n');
+}
+
+/**
+ * Галочка у слота. Доска пишет закрытый слот как `- [x] 15:00-17:00 …` и
+ * продолжает считать его занятым временем — свой значок «состоялось» тут был
+ * бы форматом-двойником.
+ */
+function markSlotDone(text, index, done = true) {
+  const lines = String(text || '').split('\n');
+  const parts = splitSlotLine(lines[index]);
+  lines[index] = buildSlotLine({ ...parts, mark: done ? 'x' : ' ' });
+  return lines.join('\n');
+}
+
+/**
+ * Заметка дня — строка `> …` внизу файла (days/README.md). Она же отметка
+ * того, что день вообще закрывали: слот без галочки в закрытом дне значит «не
+ * состоялось», а в незакрытом — «неизвестно», и различить это можно только по
+ * ней.
+ */
+const DAY_NOTE_RE = /^>\s?(.*)$/;
+
+function dayNote(text) {
+  const lines = String(text || '').split('\n');
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const match = DAY_NOTE_RE.exec(lines[i].trim());
+    if (match) return { line: i, text: match[1].trim() };
+  }
+  return null;
+}
+
+/** Записать заметку дня. Второе закрытие переписывает строку, а не плодит вторую. */
+function setDayNote(text, note) {
+  const clean = String(note || '').trim().replace(/\s*\n\s*/g, ' ');
+  if (!clean) throw new Error('empty_note');
+  const existing = dayNote(text);
+  if (!existing) return appendBlock(text, `> ${clean}`);
+  const lines = String(text || '').split('\n');
+  lines[existing.line] = `> ${clean}`;
+  return lines.join('\n');
+}
+
 // ── Загруженность вперёд ─────────────────────────────────────────────────
 //
 // «Когда можно уехать» — вопрос не про поиск по словам. Поиск находит то, что
@@ -2237,6 +2438,18 @@ module.exports = {
   cutTask,
   parseSlots,
   slotConflicts,
+  // снять, перенести, закрыть день
+  slotPlainTitle,
+  slotTitleMatches,
+  findSlotsIn,
+  padTime,
+  splitSlotLine,
+  buildSlotLine,
+  removeSlotLine,
+  retimeSlotLine,
+  markSlotDone,
+  dayNote,
+  setDayNote,
   markHabit,
   // загруженность вперёд
   BOARD_DAY_START,
@@ -2244,6 +2457,7 @@ module.exports = {
   BOARD_SNAP,
   FREE_GAP_MIN,
   RU_WEEKDAYS,
+  timeToMinutes,
   minutesToTime,
   freeGaps,
   busyMinutes,
@@ -2276,6 +2490,9 @@ module.exports = {
   ensureIndex,
   withIndexEntry,
   searchFiles,
+  READ_MAX_CHARS,
+  READ_HARD_MAX,
+  fileWindow,
   parseTaskLine,
   parseTasks,
   taskTitle,

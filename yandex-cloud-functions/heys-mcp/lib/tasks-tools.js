@@ -20,11 +20,13 @@ const tasks = require('./tasks');
 const TASKS_TOOL_SCHEMAS = [
   {
     name: 'tasks_read',
-    description: 'Прочитать файл задачника целиком: проект, день, месяц журнала, NOW, GOALS, INBOX. Путь такой же, как в репозитории: projects/heys.md, days/2026-08-02.md, journal/2026-08.md.',
+    description: 'Прочитать файл задачника: проект, день, месяц журнала, NOW, GOALS, INBOX. Путь такой же, как в репозитории: projects/heys.md, days/2026-08-02.md, journal/2026-08.md. Файл длиннее окна чтения отдаётся хвостом — свежая часть нужнее, — и об обрезке говорится прямо: «в журнале про это ничего нет» по обрезанному куску выводить нельзя, для этого есть tasks_search. Задачи проекта в ответе перечислены все, даже если сам текст обрезан.',
     inputSchema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Путь файла в задачнике, например projects/heys.md.' },
+        from_line: { type: 'integer', description: 'Читать с этой строки и вперёд — так достаётся начало длинного журнала. Номера строк отдаёт сам ответ и tasks_search.' },
+        max_chars: { type: 'integer', description: 'Размер окна в символах. По умолчанию около 24 тысяч — этого хватает на любой проект и на несколько дней журнала. Больше просить стоит только под конкретную задачу.' },
       },
       required: ['path'],
     },
@@ -190,8 +192,54 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_unslot',
+    description: 'Снять слот с дня: событие отменилось, договорённость отпала, поставили по ошибке. Без этого «отменил праздник» остаётся только словами — строка в дне живёт дальше, и загруженность продолжает считать день занятым. Слот адресуется временем начала, словами из названия или и тем и другим; подойдёт несколько — инструмент откажет и перечислит их, выбирать за куратора нельзя. Задачу, ради которой слот стоял, снятие не трогает: вытащить событие из календаря — значит снять с плана, а не сделать или бросить.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Дата дня ГГГГ-ММ-ДД. По умолчанию сегодня.' },
+        at: { type: 'string', description: 'Время начала слота ЧЧ:ММ — самый точный адрес.' },
+        title: { type: 'string', description: 'Слова из названия слота. Ищутся все и в любом порядке, регистр не важен.' },
+        slot: { type: 'string', description: 'Одной строкой, как сказал куратор: «15:00», «праздник Ксении», «15:00 уборка». Разбирается на время и слова здесь.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_reslot',
+    description: 'Перенести слот: на другое время того же дня или на другую дату. Адресуется так же, как в tasks_unslot. Назови только новое начало — длительность сохранится сама; назови только to_date — событие уедет на ту же пору другого дня. Пересечения на новом месте считаются той же логикой, что и при постановке, и возвращаются в conflicts: «конфликт» назови куратору сразу, «вопрос» упомяни мимоходом. Перенос — не отмена: строка уезжает целиком, вместе со ссылкой на задачу и видом слота.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Где слот стоит сейчас, ГГГГ-ММ-ДД. По умолчанию сегодня.' },
+        at: { type: 'string', description: 'Время начала слота сейчас, ЧЧ:ММ.' },
+        title: { type: 'string', description: 'Слова из названия слота.' },
+        slot: { type: 'string', description: 'Одной строкой, как сказал куратор: «15:00 уборка».' },
+        to_date: { type: 'string', description: 'На какую дату переносим, ГГГГ-ММ-ДД. Не указана — остаётся тот же день.' },
+        from: { type: 'string', description: 'Новое начало ЧЧ:ММ. Не указано — время не меняется, меняется только дата.' },
+        to: { type: 'string', description: 'Новый конец ЧЧ:ММ. Не указан — длительность берётся прежняя.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_close_day',
+    description: 'Закрыть день: отметить, что из запланированного состоялось, и записать одну фразу «как прошло» строкой «> …» — так это описано в days/README.md. Без закрытия в задачнике остаётся один план: слот без галочки в незакрытом дне значит «неизвестно», а не «не состоялось», и на «как прошла неделя», «что я забросил», «сколько реально ушло на kinderly» отвечать нечем. Отмечай только то, что он сам назвал состоявшимся — галочка это его слово, а не твой вывод. Что осталось без отметки, инструмент перечислит в ответе: перенести, снять или оставить — решает он.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Какой день закрываем, ГГГГ-ММ-ДД. По умолчанию сегодня.' },
+        done: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Что состоялось. Каждый слот — строкой, как назвал его куратор: «10:00», «лендинг», «14:00 студия». Неоднозначное описание инструмент не угадывает, а переспрашивает.',
+        },
+        note: { type: 'string', description: 'Одна фраза «как прошло», его словами. Обязательна: она же отметка, что день закрывали. Второе закрытие переписывает её, а не заводит вторую.' },
+      },
+      required: ['note'],
+    },
+  },
+  {
     name: 'tasks_money',
-    description: 'Записать операцию в деньги месяца в формате money/README.md. После записи возвращает картину месяца: сколько ушло в этом контуре, сколько всего, сколько сегодня, остаток на счетах и сколько ещё спишется само. Деньги это зона «спрашивай, а не действуй»: сумму, категорию и контур бери у куратора, не подставляй сам.',
+    description: 'Записать операцию в деньги месяца в формате money/README.md. После записи возвращает картину месяца: сколько ушло в этом контуре, сколько всего, сколько сегодня, остаток на счетах и сколько ещё спишется само. Обычный вход — сводка из приложения: разбирай её в строки и вноси сам, не переспрашивая; категорию бери из приложения, контур ставь сам, а спорный назови в ответе. Спрашивают здесь про другое: движение лимитов, отнесение крупной траты к контуру и любые оценки «дорого/дёшево» — через него.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -501,16 +549,34 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       }
       // Текст файла отдаётся как есть, а рядом — список задач с адресами:
       // в самом markdown хэша нет, и по прочитанному файлу править задачу
-      // было бы нечем.
+      // было бы нечем. Разбор идёт по ПОЛНОМУ тексту, даже когда наружу уходит
+      // только хвост: иначе у обрезанного файла половина задач просто исчезнет
+      // из ответа, и править их будет нечем.
       const inFile = /^projects\//i.test(file.path)
         ? tasks.parseTasks(file).map((task) => {
           const { ref, hash, project } = tasks.taskAddress(file.path, task.title);
           return { ref, hash, project, title: task.title, line: task.line, done: task.done, waiting: task.waiting, due: task.due, priority: task.priority, tags: task.tags };
         })
         : [];
+
+      const view = tasks.fileWindow(file.text, { maxChars: args.max_chars, fromLine: args.from_line });
+      const head = `${file.path} (ревизия ${file.rev}${view.truncated ? `, показаны строки ${view.from_line}–${view.to_line} из ${view.total_lines}` : ''}):`;
+      const tail = view.truncated
+        ? `\n\n[Отдана только часть файла: ${view.shown_chars} символов из ${view.total_chars}. Дальше вверх — начало, его тут нет. Нужен кусок оттуда: tasks_search по словам из него или tasks_read с from_line.]`
+        : '';
       return {
-        text: `${file.path} (ревизия ${file.rev}):\n\n${file.text}`,
-        structured: { path: file.path, rev: file.rev, text: file.text, tasks: inFile },
+        text: `${head}\n\n${view.text}${tail}`,
+        structured: {
+          path: file.path,
+          rev: file.rev,
+          text: view.text,
+          tasks: inFile,
+          truncated: view.truncated,
+          from_line: view.from_line,
+          to_line: view.to_line,
+          total_lines: view.total_lines,
+          total_chars: view.total_chars,
+        },
       };
     },
 
@@ -993,6 +1059,73 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     return tasks.moscowDate(nowMs);
   }
 
+  /**
+   * Как адресуется слот, который надо снять или подвинуть.
+   *
+   * По времени начала, по словам заголовка или по обоим сразу. Одного времени
+   * человеку мало («отмени праздник» — он не помнит, с которого часа), одних
+   * слов тоже: «уборка» может стоять дважды. Поэтому принимаем и то и другое,
+   * а строку вида «15:00 уборка» разбираем сами — модель всё равно перескажет
+   * его слова как есть.
+   */
+  function splitSlotQuery(entry) {
+    if (entry && typeof entry === 'object') return { at: entry.at || null, title: entry.title || null };
+    const raw = String(entry || '').trim();
+    const match = /^(\d{1,2}:\d{2})\s*(?:[-–—]\s*\d{1,2}:\d{2})?\s*(.*)$/.exec(raw);
+    if (match) return { at: match[1], title: match[2].trim() || null };
+    return { at: null, title: raw || null };
+  }
+
+  /**
+   * Один слот дня по описанию — или внятный отказ.
+   *
+   * Молча взять первый подходящий нельзя: снятый не тот слот выглядит ровно
+   * как выполненная просьба, и расхождение всплывёт через неделю. Поэтому при
+   * нескольких совпадениях инструмент отказывается и перечисляет кандидатов —
+   * уточнить время дешевле, чем чинить день задним числом.
+   */
+  function locateSlotIn(file, { at, title }, date) {
+    const all = tasks.parseSlots(file.text);
+    const listing = all.length
+      ? all.map((s) => `${s.start}–${s.end} ${s.title}`).join('; ')
+      : 'в этом дне вообще ничего не стоит';
+    if (!at && !title) {
+      throw new ToolError('slot_query_required', `Скажи, какой слот: время начала, слова из названия или и то и другое. В ${date}: ${listing}.`);
+    }
+    let found;
+    try {
+      found = tasks.findSlotsIn(file.text, { at, title });
+    } catch (e) {
+      throw new ToolError('invalid_time', `Время «${at}» не в формате ЧЧ:ММ.`);
+    }
+    if (!found.length) {
+      throw new ToolError(
+        'slot_not_found',
+        `В ${date} нет слота «${[at, title].filter(Boolean).join(' ')}». Что там стоит: ${listing}.`,
+        { date, slots: all.map((s) => ({ from: s.start, to: s.end, title: s.title })) },
+      );
+    }
+    if (found.length > 1) {
+      throw new ToolError(
+        'slot_ambiguous',
+        `Под «${[at, title].filter(Boolean).join(' ')}» в ${date} подходит ${found.length}: ${found.map((s) => `${s.start}–${s.end} ${s.title}`).join('; ')}. Спроси у него, какой именно, и передай время начала — сам я выбрать не могу.`,
+        { date, candidates: found.map((s) => ({ from: s.start, to: s.end, title: s.title })) },
+      );
+    }
+    return found[0];
+  }
+
+  async function locateSlot(date, args) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+      throw new ToolError('invalid_date', `Дата «${date}» не в формате ГГГГ-ММ-ДД.`);
+    }
+    const file = await readFile(`days/${date}.md`);
+    const query = args.at || args.title
+      ? { at: args.at || null, title: args.title || null }
+      : splitSlotQuery(args.slot);
+    return { file, slot: locateSlotIn(file, query, date) };
+  }
+
   Object.assign(tools, {
     async tasks_habit(args = {}) {
       const date = args.date || today();
@@ -1064,6 +1197,163 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       return {
         text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title} (${kind}).${warn}`,
         structured: { date, from: args.from, to: args.to, title: args.title, kind, ref: ref ? `${ref.project}/${ref.hash}` : null, conflicts, rev: saved.rev },
+      };
+    },
+
+    async tasks_unslot(args = {}) {
+      const date = args.date || today();
+      const { file, slot } = await locateSlot(date, args);
+      const next = tasks.removeSlotLine(file.text, slot.line);
+      const saved = await writeFile(file, next);
+      // Слот и задача — разные вещи: «вытащил слот из календаря» значит снят с
+      // плана, а не сделан или брошен. Задача остаётся там, где лежала, и
+      // сказать об этом надо вслух, иначе следующий шаг будет «а куда делось».
+      const link = tasks.parseSlotRef(slot.raw);
+      const kept = link ? ` Задача ${link.ref.project}/${link.ref.hash} осталась на месте — снят только слот в дне.` : '';
+      return {
+        text: `Снял с ${date}: ${slot.start}–${slot.end} ${slot.title}.${kept}`,
+        structured: {
+          date, from: slot.start, to: slot.end, title: slot.title, kind: slot.kind,
+          ref: link ? `${link.ref.project}/${link.ref.hash}` : null, rev: saved.rev,
+        },
+      };
+    },
+
+    async tasks_reslot(args = {}) {
+      const date = args.date || today();
+      const { file, slot } = await locateSlot(date, args);
+      const toDate = args.to_date || date;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+        throw new ToolError('invalid_date', `Дата «${args.to_date}» не в формате ГГГГ-ММ-ДД.`);
+      }
+
+      // Длительность сохраняется сама: «перенеси на 16:00» — это про начало,
+      // а не про то, что событие теперь длится до конца суток.
+      const span = slot.to - slot.from;
+      let from;
+      let to;
+      try {
+        from = args.from ? tasks.padTime(args.from) : slot.start;
+        to = args.to
+          ? tasks.padTime(args.to)
+          : (args.from ? tasks.minutesToTime(tasks.timeToMinutes(from) + span) : slot.end);
+      } catch (e) {
+        throw new ToolError('invalid_time', `Время «${args.from || ''}–${args.to || ''}» не в формате ЧЧ:ММ.`);
+      }
+
+      if (toDate === date && tasks.padTime(from) === tasks.padTime(slot.start) && tasks.padTime(to) === tasks.padTime(slot.end)) {
+        return {
+          text: `${slot.start}–${slot.end} ${slot.title} и так стоит на ${date} — не трогал.`,
+          structured: { moved: false, date, from: slot.start, to: slot.end, title: slot.title, conflicts: [] },
+        };
+      }
+
+      // Пересечения считаются на новом месте той же логикой, что и постановка,
+      // и обязательно БЕЗ самого переносимого слота: иначе он найдёт конфликт
+      // сам с собой и остановит перенос на пустом месте.
+      const sourceWithout = tasks.removeSlotLine(file.text, slot.line);
+      const targetFile = toDate === date ? null : await readFile(`days/${toDate}.md`);
+      const targetText = toDate === date ? sourceWithout : (targetFile.text || '');
+      let conflicts;
+      try {
+        conflicts = tasks.slotConflicts(targetText, from, to, slot.kind);
+      } catch (e) {
+        throw new ToolError('invalid_time', `Время «${from}–${to}» не в формате ЧЧ:ММ.`);
+      }
+
+      let rev;
+      if (toDate === date) {
+        const saved = await writeFile(file, tasks.retimeSlotLine(file.text, slot.line, from, to));
+        rev = saved.rev;
+      } else {
+        // Сначала пишем туда, потом убираем отсюда. Порядок не косметический:
+        // упади вторая запись — слот окажется в двух днях, и это видно и
+        // чинится; упади первая при обратном порядке — он исчезнет молча.
+        const parts = tasks.splitSlotLine(slot.raw);
+        const line = tasks.buildSlotLine({ ...parts, from, to });
+        const nextTarget = slot.kind === 'фон'
+          ? [line, ...String(targetFile.text || '').split('\n')].join('\n').replace(/^\n+/, '')
+          : tasks.appendBlock(targetFile.text, line);
+        const saved = await writeFile(targetFile, nextTarget);
+        rev = saved.rev;
+        await writeFile(file, sourceWithout);
+      }
+
+      const real = conflicts.filter((c) => c.level === 'конфликт');
+      const soft = conflicts.filter((c) => c.level === 'вопрос');
+      let warn = '';
+      if (real.length) warn += ` Конфликт с: ${real.map((c) => c.title).join('; ')} — скажи об этом куратору.`;
+      if (soft.length) warn += ` Стоит уточнить: ${soft.map((c) => c.title).join('; ')}.`;
+
+      return {
+        text: `Перенёс: ${slot.title} — было ${date} ${slot.start}–${slot.end}, стало ${toDate} ${from}–${to}.${warn}`,
+        structured: {
+          moved: true, date, to_date: toDate, from, to, title: slot.title, kind: slot.kind,
+          was: { date, from: slot.start, to: slot.end }, conflicts, rev,
+        },
+      };
+    },
+
+    /**
+     * Закрытие дня. Без него вся ретроспектива слепая: в файлах остаётся один
+     * план, и «как прошла неделя», «что я забросил», «сколько реально ушло на
+     * kinderly» отвечать нечем — слот без галочки в незакрытом дне значит
+     * «неизвестно», а не «не состоялось».
+     *
+     * Формат не наш: галочка `- [x]` и строка `> …` внизу — это то, что уже
+     * описано в days/README.md и что рисует доска.
+     */
+    async tasks_close_day(args = {}) {
+      const date = args.date || today();
+      const note = String(args.note || '').trim();
+      if (!note) {
+        throw new ToolError(
+          'note_required',
+          'Нужна одна фраза «как прошло» — она же отметка того, что день закрывали. Без неё слот без галочки не отличить от «ещё не смотрели».',
+        );
+      }
+      const file = await readFile(`days/${date}.md`);
+      const before = tasks.dayNote(file.text);
+
+      // Сначала находим всё, потом пишем: половина отмеченных галочек и
+      // ошибка на третьей — это день, про который непонятно, закрыт он или нет.
+      const asked = Array.isArray(args.done) ? args.done : (args.done ? [args.done] : []);
+      const picked = [];
+      for (const entry of asked) {
+        const { at, title } = splitSlotQuery(entry);
+        const slot = locateSlotIn(file, { at, title }, date);
+        // Один слот, названный дважды («10:00» и «лендинг»), — это один слот,
+        // а не два состоявшихся дела: иначе «состоялось 3 из 2».
+        if (!picked.some((s) => s.line === slot.line)) picked.push(slot);
+      }
+
+      let text = file.text;
+      const marked = [];
+      for (const slot of picked) {
+        if (slot.done) { marked.push({ ...slot, already: true }); continue; }
+        text = tasks.markSlotDone(text, slot.line, true);
+        marked.push({ ...slot, already: false });
+      }
+      text = tasks.setDayNote(text, note);
+      const saved = await writeFile(file, text);
+
+      const doneLines = new Set(marked.map((s) => s.line));
+      const open = tasks.parseSlots(text)
+        .filter((slot) => !slot.done && !doneLines.has(slot.line))
+        .map((slot) => ({ from: slot.start, to: slot.end, title: slot.title, kind: slot.kind }));
+
+      const tail = open.length
+        ? ` Без отметки осталось ${open.length}: ${open.map((s) => `${s.from} ${s.title}`).join('; ')} — перенести (tasks_reslot), снять (tasks_unslot) или оставить как есть, решает он.`
+        : '';
+      return {
+        text: `${before ? 'Переписал закрытие' : 'Закрыл день'} ${date}: состоялось ${marked.length} из ${marked.length + open.length}. Заметка: «${note}».${tail}`,
+        structured: {
+          date, note, rev: saved.rev,
+          already_closed: !!before,
+          previous_note: before ? before.text : null,
+          done: marked.map((s) => ({ from: s.start, to: s.end, title: s.title, already: s.already })),
+          open,
+        },
       };
     },
 
