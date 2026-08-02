@@ -202,6 +202,13 @@
       "path": "scripts/db/migrations/2026-08-02_shared_products_category_trigger.sql",
       "description": "Assign product category server-side when the caller did not provide one",
       "destructive": false
+    },
+    {
+      "id": "2026-08-02_curator_clients_day_summary",
+      "order": 27,
+      "path": "scripts/db/migrations/2026-08-02_curator_clients_day_summary.sql",
+      "description": "Read-only day summary across all clients of a curator",
+      "destructive": false
     }
   ]
 }

@@ -291,6 +291,34 @@ credentialed CORS, а не platform `502` без browser-readable ответа.
 - Показ экранной клавиатуры зависит от реального iOS/WebKit runtime; source-
   контракты и классификация покрыты тестами, но device smoke остаётся отдельной
   проверкой.
+- Бейджи активности на карточке клиента (`🔥 стрик`, `📅 последний визит`)
+  считаются `getClientStats` перебором localStorage за 30 дней, а не серверным
+  запросом. Для клиента, в которого куратор не заходил на этом устройстве,
+  значения пустые или устаревшие. Сводка дня рядом с ними уже серверная (см.
+  ниже), но сами эти два бейджа на localStorage пока остались.
+
+## Сводка дня на экране выбора клиента
+
+`get_curator_clients_day_summary(p_curator_id, p_date)` отдаёт строку на каждого
+клиента куратора: приёмы с калорийностью, вода, шаги, тренировки, вес утром, сон
+и `day_updated_at`. Функция read-only, `SECURITY DEFINER`, ownership проверяет
+сама по `clients.curator_id`; клиент без записи за дату возвращается с
+`has_day = false`, потому что «ничего не внёс» — значимый ответ, а не пропуск.
+Калорийность считается из `kcal100`/`grams` внутри самой позиции, поэтому сводка
+не зависит от каталога продуктов.
+
+Путь: `heys_app_gate_state_v1.js` грузит сводку только на экране выбора клиента
+и обновляет раз в 5 минут → `heys_app_gate_flow_v1.js` рисует строку на
+карточке, где незаполненное показано красным. Сводка необязательна: при ошибке
+карточка рендерится без неё.
+
+В `CURATOR_ONLY_FUNCTIONS` функция есть, в `CURATOR_AUDIT_SKIP` — тоже,
+осознанно: это агрегат по всем клиентам сразу, единого target `client_id` у него
+нет, а детальный доступ логируется при входе в конкретного клиента.
+
+Рядом остаётся локальный инструмент
+[`scripts/curator-board`](../../../scripts/curator-board/README.md) — та же
+сводка страницей на `localhost` через REST, без установки в приложение.
 
 ## Facts Table
 
@@ -325,6 +353,19 @@ credentialed CORS, а не platform `502` без browser-readable ответа.
 | C27 | Фото имеет auth-bound API fallback; итоговая ошибка пишет только allowlisted context без вложения  | `apps/web/heys_messenger_v1.js`, `apps/web/heys_messenger_api_v1.js`, `apps/web/heys_client_log_trace_v1.js`, `yandex-cloud-functions/heys-api-photos/index.js`, `apps/web/__tests__/messenger-reliability-contract.test.js`, `yandex-cloud-functions/heys-api-photos/__tests__/attachment-delete-contract.test.cjs` | проверено 2026-07-26          |
 | C28 | Мегалог различает безопасный write-контекст и исключает только чистый pre-auth resume шум          | `apps/web/heys_storage_supabase_v1.js`, `scripts/db/migrations/2026-07-30_client_observability_ignore_preauth_resume.sql`, `apps/web/__tests__/client-observability-signal-quality.test.js`                                                                                                                          | проверено 2026-07-30          |
 | C29 | Messages identity lookup использует healthy-client/retry и сохраняет credentialed CORS на 5xx      | `yandex-cloud-functions/heys-api-messages/index.js`, `yandex-cloud-functions/heys-api-messages/__tests__/identity-db-cors.test.cjs`                                                                                                                                                                                  | проверено локально 2026-07-31 |
+
+| C30 | Стрик и «последний визит» на карточке клиента читаются из localStorage,
+а не с сервера | `sed -n '60,95p' apps/web/heys_app_client_helpers_v1.js`,
+`sed -n '2300,2310p' apps/web/heys_app_gate_flow_v1.js` | проверено 2026-08-02 |
+| C31 | Сводка дня куратором читается через REST `client_kv_store` с curator
+JWT; ккал считаются из `kcal100`/`grams` внутри самого блоба дня |
+`node scripts/curator-board/server.mjs` → `curl -s localhost:4777/api/summary`,
+`sed -n '355,380p' yandex-cloud-functions/heys-mcp/lib/heys-api.js` | проверено
+на живых данных 2026-08-02 | | C32 | `get_curator_clients_day_summary` применена
+в production и считает те же цифры, что клиентский расчёт |
+`bash scripts/db/psql.sh -c "SELECT * FROM get_curator_clients_day_summary((SELECT curator_id FROM clients WHERE name='Полтавский' LIMIT 1), '2026-08-01')"`
+— совпало с JS-подсчётом по тем же дням (1935 и 1417 ккал) | проверено на
+production 2026-08-02 |
 
 ## Связанные источники
 

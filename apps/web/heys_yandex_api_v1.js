@@ -2397,6 +2397,24 @@
   }
 
   /**
+   * Сводка дня по всем клиентам куратора — одним запросом, с сервера.
+   *
+   * Заменяет localStorage-подсчёт на экране выбора клиента: тот видел только
+   * клиентов, в которых куратор уже заходил на этом устройстве.
+   * @param {string} dateStr - дата YYYY-MM-DD; по умолчанию сегодня на сервере
+   * @returns {Promise<{data: Array|null, error: any}>}
+   */
+  async function getClientsDaySummary(dateStr) {
+    const params = dateStr ? { p_date: dateStr } : {};
+    const { data, error } = await rpc('get_curator_clients_day_summary', params);
+    if (error) {
+      err('getClientsDaySummary failed:', error.message);
+      return { data: null, error };
+    }
+    return { data: Array.isArray(data) ? data : [], error: null };
+  }
+
+  /**
    * Создать нового клиента (без phone/PIN)
    * 🔐 Использует /auth/clients вместо REST API (clients убран из REST по security)
    * @param {string} name - Имя клиента
@@ -3182,6 +3200,7 @@
 
     // 👥 Clients
     getClients,
+    getClientsDaySummary,
     createClient,
     updateClient,
     deleteClient,

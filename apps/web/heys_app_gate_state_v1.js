@@ -63,6 +63,28 @@
             return () => window.removeEventListener('heys:messenger-inbox-updated', onUpdate);
         }, []);
 
+        // 📊 Сводка дня по всем клиентам — серверная, в отличие от getClientStats,
+        // который видит только клиентов, открытых на этом устройстве.
+        const [daySummary, setDaySummary] = React.useState(null);
+        const clientsCount = clients?.length || 0;
+        React.useEffect(() => {
+            // Грузим только на экране выбора клиента: внутри клиента сводка не видна.
+            if (clientId || !clientsCount || !HEYS.YandexAPI?.getClientsDaySummary) return undefined;
+            let cancelled = false;
+            const load = () => {
+                HEYS.YandexAPI.getClientsDaySummary().then(({ data, error }) => {
+                    if (cancelled || error || !data) return;
+                    const byClient = {};
+                    data.forEach((row) => { if (row?.client_id) byClient[row.client_id] = row; });
+                    setDaySummary(byClient);
+                }).catch(() => { /* сводка необязательна — карточка живёт и без неё */ });
+            };
+            load();
+            // День меняется у клиентов в течение сессии куратора, поэтому обновляем.
+            const timer = setInterval(load, 5 * 60 * 1000);
+            return () => { cancelled = true; clearInterval(timer); };
+        }, [clientId, clientsCount]);
+
         React.useEffect(() => {
             let cancelled = false;
             const applyDetails = (value) => {
@@ -108,6 +130,7 @@
             handleSignOut,
             U,
             getClientStats,
+            daySummary,
             formatLastActive,
             getAvatarColor,
             getClientInitials,

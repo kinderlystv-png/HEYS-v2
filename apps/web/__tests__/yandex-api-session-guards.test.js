@@ -543,6 +543,31 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
   });
 
+  it('day summary goes through the curator RPC and normalizes the result to an array', async () => {
+    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    global.fetch.mockResolvedValue(createJsonResponse([
+      { client_id: 'c1', meals_count: 2, kcal: 900, water_ml: 1200, steps: 4000, trainings_count: 0 },
+    ]));
+
+    const result = await api.getClientsDaySummary('2026-08-02');
+
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rpc?fn=get_curator_clients_day_summary');
+    expect(JSON.parse(options.body)).toEqual({ p_date: '2026-08-02' });
+  });
+
+  it('day summary without a date lets the server decide today', async () => {
+    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    global.fetch.mockResolvedValue(createJsonResponse([]));
+
+    const result = await api.getClientsDaySummary();
+
+    expect(result).toEqual({ data: [], error: null });
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual({});
+  });
+
   it('curator-only RPC can use the rewritten HttpOnly curator cookie on localhost after reload', async () => {
     const api = loadYandexAPI({
       hostname: 'localhost',

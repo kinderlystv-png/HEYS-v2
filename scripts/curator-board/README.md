@@ -17,12 +17,11 @@ node scripts/curator-board/server.mjs
 PWA и `heys-mcp`: curator JWT → REST `client_kv_store` (`heys_dayv2_<дата>` и
 `heys_profile`).
 
-Продуктовый аналог — сводка прямо на карточке клиента в кураторском gate — пока
-не сделан: серверного RPC со сводкой дневников нет, а бейджи на карточках
-считаются из localStorage, то есть только по клиентам, в которых куратор уже
-заходил на этом устройстве
-([CURATOR_WORKSPACE.md](../../docs/reference/systems/CURATOR_WORKSPACE.md),
-C30).
+В приложении та же сводка есть на карточке клиента в кураторском gate — через
+`get_curator_clients_day_summary`
+([CURATOR_WORKSPACE.md](../../docs/reference/systems/CURATOR_WORKSPACE.md)).
+Доска остаётся для случаев, когда удобнее отдельная страница: она показывает
+больше метрик и историю за 7 дней, не занимая места на карточке.
 
 ## Доступ
 

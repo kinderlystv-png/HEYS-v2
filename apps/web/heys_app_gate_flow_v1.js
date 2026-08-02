@@ -1840,6 +1840,7 @@
             handleSignOut,
             U,
             getClientStats,
+            daySummary,
             formatLastActive,
             getAvatarColor,
             getClientInitials,
@@ -2493,6 +2494,34 @@
                                                                     // Метка "Последний"
                                                                     isLast && React.createElement('span', { style: { color: '#4285f4', fontWeight: 500, fontSize: 12 } }, '✓')
                                                                 ),
+
+                                                                // 📊 Сводка дня с сервера: что клиент внёс сегодня, а что нет
+                                                                (() => {
+                                                                    const day = daySummary && daySummary[c.id];
+                                                                    if (!day) return null;
+                                                                    const cell = (icon, text, filled) => React.createElement('span', {
+                                                                        key: icon,
+                                                                        style: {
+                                                                            fontSize: 12,
+                                                                            fontWeight: 600,
+                                                                            color: filled ? 'var(--muted)' : '#dc2626',
+                                                                            whiteSpace: 'nowrap'
+                                                                        }
+                                                                    }, icon + ' ' + text);
+                                                                    const meals = Number(day.meals_count) || 0;
+                                                                    const water = Number(day.water_ml) || 0;
+                                                                    const steps = Number(day.steps) || 0;
+                                                                    const trainings = Number(day.trainings_count) || 0;
+                                                                    return React.createElement('div', {
+                                                                        className: 'curator-card-day-summary',
+                                                                        style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }
+                                                                    },
+                                                                        cell('🍽', meals ? `${meals} · ${Math.round(Number(day.kcal) || 0)} ккал` : 'еды нет', meals > 0),
+                                                                        cell('💧', water ? `${(water / 1000).toFixed(1)} л` : 'воды нет', water > 0),
+                                                                        cell('👟', steps ? steps.toLocaleString('ru-RU') : 'шагов нет', steps > 0),
+                                                                        cell('🏋', trainings ? `${trainings} трен.` : 'без тренировки', trainings > 0)
+                                                                    );
+                                                                })(),
 
                                                                 // 💬 Preview последнего сообщения (если есть)
                                                                 lastPreview && React.createElement('div', {
