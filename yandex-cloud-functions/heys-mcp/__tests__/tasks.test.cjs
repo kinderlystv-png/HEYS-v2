@@ -1072,3 +1072,107 @@ test('tasks_list показывает то, что требует решения
   assert.equal(blocked[0].ref, `heys/${tasks.taskHash('heys', 'Собрать оптимальную версию лендинга')}`);
   assert.match(res.text, /требует решения: 1/);
 });
+
+// ── Потолок и дубли развилок ─────────────────────────────────────────────
+//
+// Потолок в три находки за проход стоял только на автоматическом обходе, а
+// развилку можно положить и напрямую. Проверяем, что прямой путь закрыт теми
+// же правилами: иначе потолок не значит ничего.
+
+test('одна и та же развилка не ложится второй раз, даже другими словами', () => {
+  const open = [{ ref: 'heys/aaa111', task: 'Лендинг', question: 'версия D закрывает эту задачу или нужен ещё вариант?' }];
+  const guard = tasks.decisionGuard(open, ['нужен ли ещё вариант, или версия D закрывает задачу?']);
+  assert.equal(guard.fresh.length, 0);
+  assert.equal(guard.duplicates.length, 1);
+  assert.equal(guard.duplicates[0].ref, 'heys/aaa111');
+});
+
+test('разные вопросы про один проект дублями не считаются', () => {
+  const open = [{ ref: 'heys/aaa111', task: 'Лендинг', question: 'версия D закрывает задачу?' }];
+  const guard = tasks.decisionGuard(open, ['во сколько запускать рекламу?']);
+  assert.equal(guard.fresh.length, 1);
+  assert.equal(guard.duplicates.length, 0);
+});
+
+test('tasks_decision не заводит вторую задачу про уже открытый вопрос', async () => {
+  const api = liveTasksApi();
+  const before = api.kv[tasks.keyForPath('projects/heys.md')].text;
+  const res = await session(api).tasks_decision({
+    project: 'heys',
+    title: 'Решить по версии лендинга',
+    questions: ['нужен ли ещё один вариант, или версия D закрывает задачу?'],
+  });
+  assert.equal(res.structured.created, false);
+  assert.equal(res.structured.reason, 'duplicate');
+  assert.equal(api.kv[tasks.keyForPath('projects/heys.md')].text, before, 'файл не тронут');
+});
+
+/** Проект, где уже висит нужное число нерешённых развилок. */
+function crowdedApi(count) {
+  const lines = [];
+  for (let i = 1; i <= count; i += 1) {
+    lines.push(`- [ ] P2 Развилка номер ${i} #blocked ^2026-08-01`);
+    lines.push(`  - открыто: уникальный вопрос ${i} про совершенно отдельный предмет ${i}?`);
+  }
+  return liveApi({
+    [tasks.keyForPath('projects/heys.md')]: {
+      path: 'projects/heys.md', text: `# HEYS\n\n## Задачи\n\n${lines.join('\n')}\n`, rev: 3, updatedAt: 1,
+    },
+    [tasks.keyForPath('projects/family.md')]: { path: 'projects/family.md', text: FAMILY_PROJECT, rev: 2, updatedAt: 1 },
+    [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: JOURNAL, rev: 5, updatedAt: 1 },
+  });
+}
+
+test('шестая нерешённая развилка на доску не ложится', async () => {
+  const api = crowdedApi(tasks.OPEN_DECISIONS_CAP);
+  await assert.rejects(
+    () => session(api).tasks_decision({ project: 'family', title: 'Ещё одна', questions: ['совсем другой предмет разговора?'] }),
+    (e) => e.code === 'too_many_open_decisions',
+  );
+});
+
+test('при полной доске вопрос всё ещё можно привязать к существующей задаче', async () => {
+  const api = crowdedApi(tasks.OPEN_DECISIONS_CAP);
+  const hash = tasks.taskHash('heys', 'Развилка номер 1');
+  const res = await session(api).tasks_decision({
+    project: 'heys', hash, title: 'не используется', questions: ['а если перенести это на сентябрь?'],
+  });
+  assert.equal(res.structured.attached, true);
+  assert.match(api.kv[tasks.keyForPath('projects/heys.md')].text, /открыто: а если перенести это на сентябрь\?/);
+});
+
+test('снятый вопрос записывается как исход находки, а не исчезает', async () => {
+  const api = liveTasksApi();
+  const tools = session(api);
+  const created = await tools.tasks_decision({
+    project: 'family',
+    title: 'Выбрать день второго дзюдо',
+    questions: ['понедельник или четверг?'],
+    key: 'scattered_theme:дзюдо',
+  });
+  assert.equal(api.kv[tasks.STATE_KEY].proposals['scattered_theme:дзюдо'].status, 'proposed');
+  assert.equal(api.kv[tasks.STATE_KEY].proposals['scattered_theme:дзюдо'].ref, `family/${created.structured.hash}`);
+
+  const resolved = await tools.tasks_resolve({
+    project: 'family', hash: created.structured.hash, needle: 'понедельник', note: 'решили — четверг',
+  });
+  assert.equal(resolved.structured.unblocked, true);
+  const entry = api.kv[tasks.STATE_KEY].proposals['scattered_theme:дзюдо'];
+  assert.equal(entry.status, 'accepted');
+  assert.equal(entry.note, 'решили — четверг');
+});
+
+test('нумерация правил задачника сплошная — по ним ссылаются друг на друга', () => {
+  const numbers = curatorInstructions('Антон', true)
+    .split('\n').map((l) => /^З(\d+)\./.exec(l)).filter(Boolean).map((m) => Number(m[1]));
+  assert.ok(numbers.length >= 10);
+  assert.deepEqual(numbers, numbers.map((_, i) => i + 1), 'дыры и буквенные вставки ломают внутренние ссылки');
+});
+
+test('правила не обещают того, чего инструменты не умеют', () => {
+  const rules = curatorInstructions('Антон', true);
+  // Слот с задачей связывается через ref, а не через tasks_link: раньше правило
+  // приводило именно такой невыполнимый пример.
+  assert.match(rules, /ref у tasks_slot/);
+  assert.match(rules, /tasks_link связывает только две задачи проектов/);
+});

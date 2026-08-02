@@ -1069,6 +1069,63 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
   };
 }
 
+// ── Потолок и дубли развилок ─────────────────────────────────────────────
+//
+// Потолок в три находки за проход стоит на автоматическом обходе, но развилку
+// можно положить и напрямую, в любом разговоре. Без такой же проверки здесь
+// потолок не значит ничего: тот же вопрос ложится вторым, третьим, и блок
+// «Требует решения» перестают читать целиком — вместе с тем, что там важно.
+//
+// Порог схожести 0.6 взят тот же, что в ритуальном контуре: два разных числа
+// для одного и того же решения — способ получить два разных поведения.
+
+const OPEN_DECISIONS_CAP = 5;
+const DECISION_SIMILARITY = 0.6;
+
+/** Значимые слова фразы, приведённые к основе: «встречу» и «встреча» — одно. */
+function questionStems(text) {
+  return new Set(topicTerms(text).terms.map((t) => stemWord(t.word)).filter((w) => w.length >= 3));
+}
+
+/**
+ * Насколько два вопроса про одно и то же: доля общих значимых слов.
+ * Точного совпадения строк мало — один и тот же вопрос человек и модель
+ * формулируют по-разному, и дубль проходит мимо проверки.
+ */
+function questionSimilarity(a, b) {
+  const first = questionStems(a);
+  const second = questionStems(b);
+  if (!first.size || !second.size) return 0;
+  let shared = 0;
+  for (const word of first) if (second.has(word)) shared += 1;
+  return shared / (first.size + second.size - shared);
+}
+
+/**
+ * Что мешает положить развилку: такой вопрос уже висит открытым, или доска
+ * уже держит столько нерешённого, что новое просто не прочитают.
+ *
+ * @param {Array} openQuestions результат collectOpenQuestions
+ * @param {string[]} questions что собираемся спросить
+ */
+function decisionGuard(openQuestions, questions, { cap = OPEN_DECISIONS_CAP, threshold = DECISION_SIMILARITY } = {}) {
+  const duplicates = [];
+  const fresh = [];
+  for (const question of questions) {
+    let best = null;
+    for (const open of openQuestions) {
+      const score = questionSimilarity(question, open.question);
+      if (score >= threshold && (!best || score > best.score)) {
+        best = { asked: question, same_as: open.question, ref: open.ref, task: open.task, score: Math.round(score * 100) / 100 };
+      }
+    }
+    if (best) duplicates.push(best);
+    else fresh.push(question);
+  }
+  const openTasks = [...new Set(openQuestions.map((q) => q.ref).filter(Boolean))];
+  return { fresh, duplicates, open_refs: openTasks, open_count: openTasks.length, cap, over_cap: openTasks.length >= cap };
+}
+
 // ── «Что делать прямо сейчас» ────────────────────────────────────────────
 //
 // «Есть час», «я в студии», «голова не варит» — это ситуация, а не просьба
@@ -1509,6 +1566,11 @@ module.exports = {
   pickFindings,
   rememberProposal,
   answerProposal,
+  // потолок развилок
+  OPEN_DECISIONS_CAP,
+  DECISION_SIMILARITY,
+  questionSimilarity,
+  decisionGuard,
   // что делать сейчас
   PLACE_TAGS,
   TIME_TAGS,

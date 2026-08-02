@@ -229,13 +229,14 @@ const TASKS_BOARD_SCHEMAS = [
           description: 'Факты, без которых вопрос не читается: что уже стоит в расписании, что с чем пересекается, какой вариант ты считаешь лучшим. Без пересказа очевидного.',
         },
         hash: { type: 'string', description: 'Хэш существующей задачи, если развилка относится к ней. Тогда вопросы лягут под неё, а не заведут вторую задачу про то же.' },
+        key: { type: 'string', description: 'Ключ находки из tasks_review, если развилка выросла из обхода. Тогда обзор запомнит, что уже спрашивал, и не поднимет то же самое второй раз.' },
       },
       required: ['project', 'title', 'questions'],
     },
   },
   {
     name: 'tasks_move',
-    description: 'Перенести задачу со всеми её вложенными строками в другой проект или в архив.',
+    description: 'Перенести задачу со всеми её вложенными строками в другой проект или в архив. Хэш задачи после переноса меняется — он считается от проекта и названия; новый вернётся в ответе, назови его куратору, иначе прежняя ссылка с доски перестанет находить задачу.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -892,9 +893,27 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       }
 
       const saved = await writeFile(file, nextText);
+
+      // Исход находки: до сих пор нигде не оставалось следа, что человек
+      // ответил. Без этого нельзя отличить полезный обход от генератора шума —
+      // и нечем оправдать ни один порог. Пишем ответ туда же, где лежит
+      // предложение, по ссылке на задачу.
+      let remembered = null;
+      if (unblocked) {
+        const state = await loadState();
+        const ref = `${key}/${args.hash}`;
+        const entry = Object.entries(state.proposals).find(([, p]) => p && p.ref === ref && p.status === 'proposed');
+        if (entry) {
+          const next = tasks.answerProposal(state, entry[0], {
+            status: 'accepted', nowMs, note: args.note ? String(args.note).trim() : result.removed,
+          });
+          if (next) { await writeState(next); remembered = entry[0]; }
+        }
+      }
+
       return {
         text: `${key}/${args.hash} · ${found.parsed.title}: снял «${result.removed}»${args.note ? ', записал ответ' : ''}${unblocked ? '. Открытых вопросов больше нет — убрал из «Требует решения»' : ''}.`,
-        structured: { path: saved.path, rev: saved.rev, hash: args.hash, removed: result.removed, note: args.note || null, unblocked },
+        structured: { path: saved.path, rev: saved.rev, hash: args.hash, removed: result.removed, note: args.note || null, unblocked, remembered },
       };
     },
 
@@ -919,6 +938,21 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         .map((c) => String(c).trim())
         .filter(Boolean);
 
+      // Сначала смотрим, что уже висит открытым. Дубль вопроса и переполненная
+      // доска — две причины не писать; обе дешевле поймать до записи.
+      const openIndex = await loadIndex();
+      const openFiles = await readAll({ paths: projectPaths(openIndex) });
+      const openQuestions = tasks.collectOpenQuestions(openFiles);
+      const guard = tasks.decisionGuard(openQuestions, questions);
+
+      if (!guard.fresh.length) {
+        const where = [...new Set(guard.duplicates.map((d) => d.ref).filter(Boolean))].join(', ');
+        return {
+          text: `Не стал дублировать: такой вопрос уже открыт${where ? ` — ${where}` : ''}. Ответа на него всё ещё нет.`,
+          structured: { created: false, reason: 'duplicate', duplicates: guard.duplicates, open_count: guard.open_count },
+        };
+      }
+
       // Развилка по существующей задаче вешается на неё: вторая задача про то
       // же самое разводит контекст по двум местам, и отвечать приходится дважды.
       if (args.hash) {
@@ -928,14 +962,31 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           ? lines[found.line]
           : tasks.applyTaskPatch(lines[found.line], { addTags: ['blocked'] });
         let nextText = [...lines.slice(0, found.line), blocked, ...lines.slice(found.line + 1)].join('\n');
-        for (const line of [...context, ...questions.map((q) => `открыто: ${q}`)]) {
+        for (const line of [...context, ...guard.fresh.map((q) => `открыто: ${q}`)]) {
           nextText = tasks.appendChild(nextText, found.line, line);
         }
         const saved = await writeFile(file, nextText);
+        const skipped = guard.duplicates.length ? `, ${guard.duplicates.length} уже были открыты` : '';
         return {
-          text: `${key}/${args.hash} · ${found.parsed.title}: развилка на доске, вопросов ${questions.length}.`,
-          structured: { path: saved.path, rev: saved.rev, hash: args.hash, title: found.parsed.title, questions, attached: true },
+          text: `${key}/${args.hash} · ${found.parsed.title}: развилка на доске, вопросов ${guard.fresh.length}${skipped}.`,
+          structured: {
+            path: saved.path, rev: saved.rev, hash: args.hash, title: found.parsed.title,
+            questions: guard.fresh, duplicates: guard.duplicates, attached: true, created: true,
+          },
         };
+      }
+
+      // Потолок: доска, на которой уже висит пять нерешённых развилок, не станет
+      // полезнее от шестой — её просто не прочитают вместе с остальными. Это
+      // отказ, а не предупреждение: предупреждение агент проигнорирует.
+      // Привязка к существующей задаче (выше) под потолок не попадает — она не
+      // добавляет новую строку в «Требует решения».
+      if (guard.over_cap) {
+        throw new ToolError(
+          'too_many_open_decisions',
+          `На доске уже ${guard.open_count} нерешённых развилок (потолок ${guard.cap}): ${guard.open_refs.join(', ')}. `
+          + 'Новую не завожу. Либо привяжи вопрос к одной из них через hash, либо скажи куратору, что сначала нужно закрыть висящее.',
+        );
       }
 
       const project = String(args.project || '').toLowerCase().replace(/\.md$/i, '');
@@ -955,15 +1006,31 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       // Строку задачи ищем после вставки: appendToSection кладёт её в конец
       // своего раздела, а не файла, поэтому номер строки заранее не известен.
       const taskLine = nextText.split('\n').findIndex((l) => l === line);
-      for (const child of [...context, ...questions.map((q) => `открыто: ${q}`)]) {
+      for (const child of [...context, ...guard.fresh.map((q) => `открыто: ${q}`)]) {
         nextText = tasks.appendChild(nextText, taskLine, child);
       }
       const saved = await writeFile(file, nextText);
 
       const hash = tasks.taskHash(project, tasks.taskTitle(line));
+      // Развилка, выросшая из находки обхода, записывается в память прохода:
+      // иначе обзор через две недели поднимет то же самое второй задачей —
+      // одна память будет молчать, другая повторяться.
+      if (args.key) {
+        const state = await loadState();
+        await writeState(tasks.rememberProposal(
+          state,
+          { key: String(args.key), kind: 'decision', subject: title, title, project },
+          { nowMs, ref: `${project}/${hash}` },
+        ));
+      }
+      const skipped = guard.duplicates.length ? ` ${guard.duplicates.length} вопрос(а) уже были открыты — не повторял.` : '';
       return {
-        text: `Положил на доску: ${title}. Вопросов: ${questions.length}. Ссылка: ${project}/${hash}`,
-        structured: { path: saved.path, rev: saved.rev, hash, title, questions, context, attached: false },
+        text: `Положил на доску: ${title}. Вопросов: ${guard.fresh.length}. Ссылка: ${project}/${hash}.${skipped}`,
+        structured: {
+          path: saved.path, rev: saved.rev, hash, title, created: true,
+          questions: guard.fresh, duplicates: guard.duplicates, context, attached: false,
+          open_count: guard.open_count + 1, cap: guard.cap,
+        },
       };
     },
 
