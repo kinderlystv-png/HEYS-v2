@@ -86,6 +86,9 @@ apps/landing/public/*
 !apps/landing/public/hero-curator-demo.mp4
 !apps/landing/public/hero-curator-demo.webm
 !apps/landing/public/hero-curator-demo-poster.jpg
+# Разметка ролика (отбивки, пропуски, главы) правится без пересборки, поэтому
+# лежит рядом с видео и должна ехать в прод вместе с ним.
+!apps/landing/public/hero-curator-demo-chapters.json
 # Version B media (interim photos now, shoot materials in phase 3)
 !apps/landing/public/b/
 # But keep legal docs in apps/web/public/docs
