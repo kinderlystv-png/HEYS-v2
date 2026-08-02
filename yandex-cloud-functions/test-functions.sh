@@ -47,6 +47,11 @@ node --test "$SCRIPT_DIR/__tests__/function-inventory.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-policy.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-contract.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-operations.test.cjs"
+# check-heys-ops-status.cjs уже блокирует каждый деплой шагом `--canary --strict`
+# в deploy-all.sh и работает dead-man switch'ем в api-health-monitor.yml, но его
+# тесты до 2026-08-03 не входили ни в один автопрогон. Держим их здесь, чтобы
+# поломка ловилась ДО выкатки, а не канарейкой после неё.
+node --test "$SCRIPT_DIR/__tests__/check-heys-ops-status.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-sync-load-test.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/messenger-gateway-contract.test.cjs"
 

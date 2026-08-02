@@ -36,15 +36,22 @@ async function recordWorkerHeartbeat(client) {
 // читаем напрямую в sendAlert ниже.
 
 // ── Concurrency watch (rolled out 2026-05-22) ─────────────────────────────
-// 5 API-функций переведены на concurrency=2. Этот блок проверяет пиковую
-// память (used_memory_bytes) через YC Monitoring API. Если приближается к
-// лимиту → Telegram-алерт. OOM = верный признак что concurrency=2 не
-// вытягивает; нужно откатить на 1 (см. todo.md → Item 2 / plan
-// 1-5-cheeky-micali.md → Item 2).
+// 5 API-функций работают с instanceConcurrency из serverless-capacity-policy.cjs
+// (на 2026-08-03 — 4). Этот блок проверяет память экземпляра через YC Monitoring
+// API. Если приближается к лимиту → Telegram-алерт: OOM = верный признак, что
+// текущий concurrency не вытягивает и его надо снижать.
 //
 // ⚠️ Изначально пытался читать логи через Cloud Logging Reader API, но он
 // gRPC-only без HTTP/JSON gateway → "socket hang up". Перевёл на Monitoring
 // API metric (HTTP) с порогом по памяти.
+//
+// ⚠️ Инвариант (2026-08-03): serverless.functions.used_memory_bytes — ГИСТОГРАММА,
+// а не gauge. Живая проверка API: ответ 200, 128 рядов, у каждого метка `bin`
+// (верхняя граница корзины в БАЙТАХ), а значение ряда — счётчик попаданий за
+// интервал. Старый код читал эти счётчики как байты, из-за чего максимум по всем
+// точкам выходил 0.75 → peak 0.0MB по всем пяти функциям в прод-логах, и порог
+// не мог быть превышен ни при какой нагрузке. Как читать правильно — см.
+// histogramPeak() и meanMemoryPeak() ниже.
 const API_FUNCTIONS = [
   { name: 'heys-api-rpc', memory_mb: 512 },
   { name: 'heys-api-rest', memory_mb: 512 },
@@ -52,8 +59,18 @@ const API_FUNCTIONS = [
   { name: 'heys-api-leads', memory_mb: 256 },
   { name: 'heys-api-push', memory_mb: 256 },
 ];
-// Алертим если used_memory > 90% от лимита (memory_mb * 0.9 * 1MB).
-const MEMORY_WARN_THRESHOLD_RATIO = 0.9;
+// Порог пересмотрен 2026-08-03 по живым замерам (окно 24ч, per-invocation память):
+//   heys-api-rpc   512МиБ: p50 121.7 / p95 132.1 / max 139.2 МиБ → 27.2% лимита
+//   heys-api-rest  512МиБ: p50 119.7 / p95 129.8 / max 136.4 МиБ → 26.6%
+//   heys-api-auth  256МиБ: p50 110.6 / p95 116.4 / max 116.5 МиБ → 45.5%
+//   heys-api-leads 256МиБ: p50 105.7 / p95 113.9 / max 113.9 МиБ → 44.5%
+//   heys-api-push  256МиБ: вызовов за сутки не было → no_data
+// 0.75 оставляет ≥1.65x запаса над худшим наблюдённым значением (45.5%), то есть
+// сегодня не шумит, и при этом предупреждает, пока до OOM ещё ~64 МиБ на 256-МиБ
+// функции. Прежние 0.9 давали бы всего ~26 МиБ форы — для Node это уже GC-трэшинг.
+// Ступень гистограммы (см. histogramPeak) для обоих размеров лимита срабатывает
+// на 93.1%, то есть ловится и коротким всплеском, и порогом.
+const MEMORY_WARN_THRESHOLD_RATIO = 0.75;
 const MONITORING_API_HOST = 'monitoring.api.cloud.yandex.net';
 const FOLDER_ID = 'b1gnv1a4q8i6de6atl6n';
 
@@ -354,22 +371,105 @@ async function getIamTokenForLogging() {
   return meta.access_token;
 }
 
+function parseBinEdge(bin) {
+  if (bin === undefined || bin === null) return null;
+  if (bin === 'inf' || bin === '+inf') return Infinity;
+  const edge = Number(bin);
+  return Number.isFinite(edge) ? edge : null;
+}
+
+// Гистограмма serverless.functions.used_memory_bytes → доказанные границы пика
+// памяти на один вызов. Метка `bin` — ВЕРХНЯЯ граница корзины в байтах, значение
+// ряда — счётчик попаданий, а не байты.
+//
+// Что `bin` именно верхняя граница, проверено на живом API 2026-08-03: средняя
+// память на вызов у heys-api-rpc ~120 МБ, и весь счёт лежит в корзине
+// bin=250000000 (238.4 МиБ). При нижней границе то же наблюдение означало бы
+// «все вызовы ≥238 МиБ», что противоречит средней.
+//
+// Отсюда: непустая корзина доказывает, что хотя бы один вызов взял БОЛЬШЕ, чем
+// нижняя граница этой корзины (= предыдущая ступень лестницы). Её и отдаём как
+// floorBytes — консервативная, но настоящая оценка пика в байтах. Разрешение
+// лестницы в рабочей зоне: 95.4 → 238.4 → 476.8 → 953.7 МиБ, поэтому для 256-МиБ
+// функции переход в корзину 5e8 даёт floor 238.4 МиБ (93.1% лимита), а для
+// 512-МиБ функции переход в корзину 1e9 даёт floor 476.8 МиБ (те же 93.1%).
+function histogramPeak(resp) {
+  const counts = new Map();
+  for (const metric of (resp && resp.metrics) || []) {
+    const edge = parseBinEdge(metric.labels && metric.labels.bin);
+    if (edge === null) continue;
+    let total = counts.get(edge) || 0;
+    for (const raw of (metric.timeseries && metric.timeseries.doubleValues) || []) {
+      const value = Number(raw);
+      if (Number.isFinite(value) && value > 0) total += value;
+    }
+    counts.set(edge, total);
+  }
+
+  const edges = [...counts.keys()].sort((a, b) => a - b);
+  let topIndex = -1;
+  let observations = 0;
+  for (let i = 0; i < edges.length; i += 1) {
+    const count = counts.get(edges[i]) || 0;
+    observations += count;
+    if (count > 0) topIndex = i;
+  }
+  if (topIndex < 0) return { floorBytes: 0, ceilBytes: 0, observations: 0, bins: edges.length };
+  return {
+    floorBytes: topIndex > 0 ? edges[topIndex - 1] : 0,
+    ceilBytes: edges[topIndex],
+    observations,
+    bins: edges.length,
+  };
+}
+
+function sumSeriesByTimestamp(resp) {
+  const acc = new Map();
+  for (const metric of (resp && resp.metrics) || []) {
+    const timestamps = (metric.timeseries && metric.timeseries.timestamps) || [];
+    const values = (metric.timeseries && metric.timeseries.doubleValues) || [];
+    for (let i = 0; i < timestamps.length; i += 1) {
+      const value = Number(values[i]);
+      if (!Number.isFinite(value)) continue;
+      acc.set(timestamps[i], (acc.get(timestamps[i]) || 0) + value);
+    }
+  }
+  return acc;
+}
+
+// _sum / _count той же гистограммы — это те же наблюдения в виде rate-рядов.
+// Их отношение В ОДНОЙ ТОЧКЕ = средняя память на вызов в байтах (точное число,
+// в отличие от корзин). Делим поточечно и берём максимум по окну: MAX по каждому
+// ряду отдельно дал бы несогласованную пару «максимум суммы / максимум счётчика».
+// Ряды разных версий функции складываем — получается взвешенное среднее.
+function meanMemoryPeak(sumResp, countResp) {
+  const sums = sumSeriesByTimestamp(sumResp);
+  const counts = sumSeriesByTimestamp(countResp);
+  let peakBytes = 0;
+  let points = 0;
+  for (const [timestamp, sum] of sums) {
+    const count = counts.get(timestamp);
+    if (!count || count <= 0) continue;
+    points += 1;
+    const mean = sum / count;
+    if (mean > peakBytes) peakBytes = mean;
+  }
+  return { peakBytes, points };
+}
+
 async function readPeakMemory(functionName, sinceMinutes, iamToken) {
-  // Возвращает { peakBytes, points }. points === 0 значит «ответ пришёл, но
-  // точек в окне нет» — это НЕ доказательство здоровья (функция могла просто
-  // не вызываться), поэтому счётчик отдаём наверх для отчёта.
-  // Query Monitoring API для max(used_memory_bytes) за окно.
-  // Возвращает максимум по всем версиям/bin'ам за window.
+  // Возвращает { peakBytes, points, meanPeakBytes, floorBytes, ceilBytes }.
+  // points === 0 значит «ответ пришёл, но точек в окне нет» — это НЕ
+  // доказательство здоровья (функция могла просто не вызываться), поэтому
+  // счётчик отдаём наверх для отчёта.
+  //
+  // peakBytes = max(точное среднее на вызов, доказанный низ верхней корзины):
+  // первое ловит ползучую утечку, второе — короткий всплеск, который среднее
+  // размывает. Обе величины — настоящие байты.
   const now = new Date();
   const since = new Date(now.getTime() - sinceMinutes * 60 * 1000);
-  const body = {
-    query:
-      `"serverless.functions.used_memory_bytes"{service="serverless-functions", function="${functionName}"}`,
-    fromTime: since.toISOString(),
-    toTime: now.toISOString(),
-    downsampling: { maxPoints: 10, aggregation: 'MAX' },
-  };
-  const resp = await fetchJson(https, {
+  const selector = `{service="serverless-functions", function="${functionName}"}`;
+  const readMetric = (metric) => fetchJson(https, {
     method: 'POST',
     hostname: MONITORING_API_HOST,
     path: `/monitoring/v2/data/read?folderId=${FOLDER_ID}`,
@@ -377,19 +477,30 @@ async function readPeakMemory(functionName, sinceMinutes, iamToken) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${iamToken}`,
     },
-  }, body);
-  let peak = 0;
-  let points = 0;
-  for (const m of resp.metrics || []) {
-    const values = m.timeseries?.doubleValues || [];
-    for (const v of values) {
-      const n = Number(v);
-      if (!Number.isFinite(n)) continue;
-      points += 1;
-      if (n > peak) peak = n;
-    }
-  }
-  return { peakBytes: peak, points };
+  }, {
+    query: `"${metric}"${selector}`,
+    fromTime: since.toISOString(),
+    toTime: now.toISOString(),
+    downsampling: { maxPoints: 100, aggregation: 'AVG' },
+  });
+
+  // Параллельно: три последовательных запроса на функцию упёрлись бы в 60s
+  // таймаут самой cron-функции при пяти целях и 5s таймауте на запрос.
+  const [histResp, sumResp, countResp] = await Promise.all([
+    readMetric('serverless.functions.used_memory_bytes'),
+    readMetric('serverless.functions.used_memory_bytes_sum'),
+    readMetric('serverless.functions.used_memory_bytes_count'),
+  ]);
+
+  const histogram = histogramPeak(histResp);
+  const mean = meanMemoryPeak(sumResp, countResp);
+  return {
+    peakBytes: Math.max(mean.peakBytes, histogram.floorBytes),
+    points: mean.points + (histogram.observations > 0 ? 1 : 0),
+    meanPeakBytes: mean.peakBytes,
+    floorBytes: histogram.floorBytes,
+    ceilBytes: histogram.ceilBytes,
+  };
 }
 
 // Возвращает { issues, unreadable, noData, error }.
@@ -425,11 +536,24 @@ async function checkConcurrencyIssues({
   let lastError = null;
   for (const fn of API_FUNCTIONS) {
     try {
-      const { peakBytes, points } = await readMemory(fn.name, WINDOW_MINUTES, iamToken);
-      const peakMB = peakBytes / 1024 / 1024;
+      const {
+        peakBytes,
+        points,
+        meanPeakBytes = 0,
+        floorBytes = 0,
+        ceilBytes = 0,
+      } = await readMemory(fn.name, WINDOW_MINUTES, iamToken);
       const limitMB = fn.memory_mb;
+      const toMB = (bytes) => bytes / 1024 / 1024;
+      const peakMB = toMB(peakBytes);
       const ratio = peakMB / limitMB;
-      console.log(`[concurrency-watch] ${fn.name}: peak ${peakMB.toFixed(1)}MB / ${limitMB}MB (${(ratio * 100).toFixed(1)}%), points=${points}`);
+      // Верх корзины показываем обрезанным по лимиту: больше выделенной памяти
+      // экземпляр физически не возьмёт, а лестница корзин грубее лимита.
+      const ceilMB = ceilBytes ? Math.min(toMB(ceilBytes), limitMB) : 0;
+      console.log(
+        `[concurrency-watch] ${fn.name}: peak ${peakMB.toFixed(1)}MB / ${limitMB}MB (${(ratio * 100).toFixed(1)}%), ` +
+        `mean ${toMB(meanPeakBytes).toFixed(1)}MB, histogram ${toMB(floorBytes).toFixed(1)}..${ceilMB.toFixed(1)}MB, points=${points}`,
+      );
       if (!points) noData.push(fn.name);
       if (ratio >= MEMORY_WARN_THRESHOLD_RATIO) {
         issues.push({
@@ -437,6 +561,9 @@ async function checkConcurrencyIssues({
           peak_mb: Math.round(peakMB),
           limit_mb: limitMB,
           ratio_pct: Math.round(ratio * 100),
+          mean_mb: Math.round(toMB(meanPeakBytes)),
+          hist_floor_mb: Math.round(toMB(floorBytes)),
+          hist_ceil_mb: Math.round(ceilMB),
         });
       }
     } catch (err) {
@@ -580,10 +707,13 @@ module.exports.handler = async function () {
       } else {
         const concurrencyRule = {
           key: 'concurrency_watch',
-          label: '⚠️ Concurrency=2: OOM/pool issues',
+          label: '⚠️ Память API-функции близка к лимиту',
           description:
-            'В логах одной из 5 API-функций найдены ошибки памяти или БД-пула. ' +
-            'Возможно, нужно откатить concurrency на 1 в deploy-all.sh.',
+            `Память экземпляра одной из 5 API-функций дошла до ${Math.round(MEMORY_WARN_THRESHOLD_RATIO * 100)}% ` +
+            'выделенного лимита — это предвестник OOM. peak_mb — большая из двух оценок: ' +
+            'точное среднее на вызов (mean_mb) и доказанный низ верхней корзины гистограммы ' +
+            '(hist_floor_mb..hist_ceil_mb). Что делать: снизить instanceConcurrency в ' +
+            'serverless-capacity-policy.cjs либо поднять лимит памяти в deploy-all.sh.',
         };
         const telegram = await sendTelegram(concurrencyRule, issues);
         await recordAlert(
@@ -636,10 +766,14 @@ module.exports.handler = async function () {
 
 module.exports.__test = {
   API_FUNCTIONS,
+  MEMORY_WARN_THRESHOLD_RATIO,
   buildAlertPayload,
   checkConcurrencyIssues,
   concurrencyWatchBlindResult,
   evaluateMonitorResults,
+  histogramPeak,
+  meanMemoryPeak,
+  readPeakMemory,
   crossClientRule: RULES.find((rule) => rule.key === 'cross_client_write_blocked'),
   sendTelegram,
   syncTelegramDeliveryIncident,

@@ -19,6 +19,24 @@ const {
 
 const ROOT = resolve(__dirname, '..');
 
+// Этот файл входит в pre-deploy gate (test-functions.sh), поэтому его падение
+// блокирует деплой любой cloud function. Значит, проверять он обязан контракты,
+// а не форматирование: совпадение по точному тексту исходника уронило бы деплой
+// всего облака на безобидном переименовании переменной или переносе строки.
+// Правило: где нельзя вызвать поведение напрямую, утверждаем ОТСУТСТВИЕ
+// баг-паттерна (это переживает рефакторинг), а не наличие конкретной строки.
+
+// Вырезает тело top-level функции: от её объявления до следующего объявления.
+function functionBody(source, declaration) {
+  const start = source.indexOf(declaration);
+  assert.notEqual(start, -1, `не найдено объявление ${declaration}`);
+  const rest = source.slice(start + declaration.length);
+  const next = rest.search(/\n(?:async )?function /);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+const squish = (text) => text.replace(/\s+/g, ' ');
+
 test('ops status covers the complete automation inventory and production trigger contract', () => {
   assert.equal(FUNCTIONS.length, 9);
   assert.equal(TRIGGERS.length, 17);
@@ -46,9 +64,16 @@ test('standalone scheduled workers stamp every expected runtime heartbeat', () =
   ]);
 
   for (const [task, sourcePath] of heartbeatSources) {
-    const source = readFileSync(resolve(ROOT, sourcePath), 'utf8');
-    assert.match(source, new RegExp(`VALUES \\('${task}', now\\(\\), NULL, interval`));
-    assert.match(source, /ON CONFLICT \(task\) DO UPDATE/);
+    const source = squish(readFileSync(resolve(ROOT, sourcePath), 'utf8'));
+    // Контракт — сам SQL: имя задачи, сброс stale_alerted_at и upsert по task.
+    // Регулярка терпима к пробелам и переносам, чтобы переформатирование
+    // запроса не роняло pre-deploy gate.
+    assert.match(
+      source,
+      new RegExp(`VALUES\\s*\\(\\s*'${task}'\\s*,\\s*now\\(\\)\\s*,\\s*NULL\\s*,\\s*interval`, 'i'),
+      `${sourcePath}: не штампует heartbeat '${task}'`,
+    );
+    assert.match(source, /ON CONFLICT\s*\(\s*task\s*\)\s*DO UPDATE/i, `${sourcePath}: нет upsert по task`);
     assert.ok(EXPECTED_HEARTBEAT_TASKS.includes(task));
     assert.match(seedMigration, new RegExp(`'${task}'`));
   }
@@ -181,13 +206,25 @@ test('unreadable Lockbox reports an explicit failure instead of an empty secret 
 
 test('collectStatus reads bot tokens from Lockbox only, without a local .env fallback', () => {
   const source = readFileSync(resolve(ROOT, 'check-heys-ops-status.cjs'), 'utf8');
-  const collectStatusBody = source.slice(source.indexOf('async function collectStatus()'));
-  assert.match(collectStatusBody, /const token = lockbox\.secrets\[bot\.key\];/);
+  const body = squish(functionBody(source, 'async function collectStatus()'));
+
+  // Токен для облачного чека берётся из Lockbox…
+  assert.match(body, /lockbox\.secrets\s*\[/, 'collectStatus обязан читать токен из Lockbox');
+  // …и нечитаемый Lockbox доезжает до отчёта отдельной проблемой.
+  assert.match(body, /lockbox:read_failed=/, 'нечитаемый Lockbox обязан попадать в issues');
+
+  // Ключевой инвариант — ОТСУТСТВИЕ fallback'а. Утверждаем баг-паттерн, а не
+  // конкретную строку: переименование переменной или переносы это переживают,
+  // а возврат `|| envFile[...]` / `|| process.env[...]` — нет. Легитимный
+  // fallback живёт в remediateSafeTelegramWebhooks и в этот срез не попадает.
   assert.doesNotMatch(
-    collectStatusBody.slice(0, collectStatusBody.indexOf('async function collectSecretInventory')),
-    /lockbox\.secrets\[bot\.key\] \|\|/,
+    body,
+    /lockbox\.secrets\s*\[[^\]]*\]\s*\|\|/,
+    'в collectStatus вернулся fallback на локальный секрет',
   );
-  assert.match(collectStatusBody, /issues\.push\(`lockbox:read_failed=/);
+  assert.doesNotMatch(body, /process\.env\s*\[/, 'collectStatus не должен читать токены из process.env');
+  assert.doesNotMatch(body, /parseEnvFile\s*\(/, 'collectStatus не должен читать локальный .env');
+
   // Пустой токен доезжает до отчёта как проблема, а не как «всё настроено».
   assert.deepEqual(evaluateWebhookInfo({ label: 'support', configured: false }), ['token_missing']);
 });

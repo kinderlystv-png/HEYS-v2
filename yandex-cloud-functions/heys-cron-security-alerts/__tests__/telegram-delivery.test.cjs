@@ -5,14 +5,24 @@ const test = require('node:test');
 
 const {
   API_FUNCTIONS,
+  MEMORY_WARN_THRESHOLD_RATIO,
   buildAlertPayload,
   checkConcurrencyIssues,
   concurrencyWatchBlindResult,
   crossClientRule,
   evaluateMonitorResults,
+  histogramPeak,
+  meanMemoryPeak,
   sendTelegram,
   syncTelegramDeliveryIncident,
 } = require('../index.js').__test;
+
+const MB = 1024 * 1024;
+const liveMetrics = require('./fixtures/monitoring-used-memory.json');
+
+function loadFixture() {
+  return JSON.parse(JSON.stringify(liveMetrics));
+}
 
 test('logged_only is unhealthy and blocks worker heartbeat', () => {
   const state = evaluateMonitorResults([
@@ -159,4 +169,112 @@ test('empty metric window is surfaced as no_data, not silently treated as proof 
 
   assert.deepEqual(watch.unreadable, []);
   assert.deepEqual(watch.noData, API_FUNCTIONS.map((fn) => fn.name));
+});
+
+// ── concurrency_watch: метрика памяти читается как байты (2026-08-03) ─────
+// Регресс, который эти тесты держат: serverless.functions.used_memory_bytes —
+// гистограмма, значение ряда это счётчик попаданий, а величина памяти лежит в
+// метке `bin`. Старый код читал счётчики как байты → peak по всем функциям
+// выходил 0.0MB, и порог не мог быть превышен ни при какой нагрузке.
+// Фикстура — живой ответ Monitoring API (heys-api-rpc, окно 60 мин).
+
+test('histogram bin label carries the memory value, series value is only a hit counter', () => {
+  const fixture = loadFixture();
+
+  // Как читал старый код: максимум по doubleValues, будто это байты.
+  let legacyPeakBytes = 0;
+  for (const metric of fixture.histogram.metrics) {
+    for (const raw of metric.timeseries.doubleValues) {
+      const value = Number(raw);
+      if (Number.isFinite(value) && value > legacyPeakBytes) legacyPeakBytes = value;
+    }
+  }
+  assert.ok(
+    legacyPeakBytes < 2,
+    `счётчики попаданий не байты: старое чтение дало ${legacyPeakBytes}`,
+  );
+  assert.ok(legacyPeakBytes / MB < 0.001, 'старое чтение округлялось в 0.0MB');
+
+  const histogram = histogramPeak(fixture.histogram);
+  assert.equal(histogram.ceilBytes, 250000000, 'верхняя корзина с попаданиями');
+  assert.equal(histogram.floorBytes, 100000000, 'доказанный низ пика = ступень ниже');
+  assert.ok(histogram.observations > 0);
+  assert.ok(histogram.bins >= 30, 'лестница корзин пришла целиком');
+});
+
+test('sum/count of the same histogram yields real megabytes per invocation', () => {
+  const fixture = loadFixture();
+  const mean = meanMemoryPeak(fixture.sum, fixture.count);
+
+  assert.equal(mean.points, 6, 'в фикстуре 6 точек, где были вызовы');
+  const peakMB = mean.peakBytes / MB;
+  // Живой замер: пик поточечного среднего у heys-api-rpc ≈ 129.7 МиБ.
+  assert.ok(peakMB > 100 && peakMB < 200, `ожидали ~130MB, получили ${peakMB.toFixed(1)}MB`);
+});
+
+test('combined peak on live data is a real ratio, not zero, and stays under the threshold', () => {
+  const fixture = loadFixture();
+  const peakBytes = Math.max(
+    meanMemoryPeak(fixture.sum, fixture.count).peakBytes,
+    histogramPeak(fixture.histogram).floorBytes,
+  );
+  const limitMB = 512; // heys-api-rpc
+  const ratio = peakBytes / MB / limitMB;
+
+  assert.ok(ratio > 0.2, `штатная нагрузка должна давать заметный ratio, получили ${ratio}`);
+  assert.ok(
+    ratio < MEMORY_WARN_THRESHOLD_RATIO,
+    `штатная нагрузка не должна алертить: ratio ${ratio} при пороге ${MEMORY_WARN_THRESHOLD_RATIO}`,
+  );
+});
+
+test('a hit in the limit-touching bucket crosses the threshold', () => {
+  const fixture = loadFixture();
+  // Тот же живой ответ, но попадания перенесены в корзину 1e9. Для 512-МиБ
+  // функции это значит «вызов взял больше 5e8 байт», то есть ≥93% лимита.
+  for (const metric of fixture.histogram.metrics) {
+    if (metric.labels.bin === '250000000') metric.labels.bin = '1000000000';
+  }
+  const histogram = histogramPeak(fixture.histogram);
+  assert.equal(histogram.floorBytes, 500000000);
+
+  const ratio = histogram.floorBytes / MB / 512;
+  assert.ok(ratio > 0.9, `ожидали ~93% лимита, получили ${(ratio * 100).toFixed(1)}%`);
+  assert.ok(ratio >= MEMORY_WARN_THRESHOLD_RATIO, 'правило обязано сработать');
+});
+
+test('threshold turns a real peak into an issue with byte-derived fields', async () => {
+  const nearLimit = 0.95 * 512 * MB;
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => 'iam-token',
+    readMemory: async (name) => (name === 'heys-api-rpc'
+      ? { peakBytes: nearLimit, points: 4, meanPeakBytes: nearLimit, floorBytes: 500000000, ceilBytes: 1000000000 }
+      : { peakBytes: 120 * MB, points: 4, meanPeakBytes: 120 * MB, floorBytes: 100000000, ceilBytes: 250000000 }),
+  });
+
+  assert.deepEqual(watch.unreadable, []);
+  assert.equal(watch.issues.length, 1);
+  const issue = watch.issues[0];
+  assert.equal(issue.function, 'heys-api-rpc');
+  assert.equal(issue.peak_mb, 486);
+  assert.equal(issue.limit_mb, 512);
+  assert.equal(issue.ratio_pct, 95);
+  // Верх корзины обрезан лимитом: 1e9 байт экземпляр на 512МиБ взять не может.
+  assert.equal(issue.hist_ceil_mb, 512);
+  assert.equal(issue.hist_floor_mb, 477);
+});
+
+test('normal load produces no issue at the calibrated threshold', async () => {
+  // Худшее из живых суточных наблюдений: heys-api-auth, 116.5МиБ из 256 = 45.5%.
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => 'iam-token',
+    readMemory: async () => ({
+      peakBytes: 116.5 * MB, points: 8, meanPeakBytes: 116.5 * MB,
+      floorBytes: 100000000, ceilBytes: 250000000,
+    }),
+  });
+
+  assert.deepEqual(watch.issues, []);
+  assert.deepEqual(watch.noData, []);
+  assert.equal(concurrencyWatchBlindResult(watch), null);
 });
