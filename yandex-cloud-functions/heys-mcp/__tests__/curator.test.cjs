@@ -615,7 +615,7 @@ test('правила мессенджера доехали до инструкц
   const { instructions } = build(apiWithMessages(THREAD));
   assert.match(instructions, /Если клиент время НЕ назвал — спроси куратора/);
   assert.match(instructions, /Граммовку бери ровно ту, что назвал клиент/);
-  assert.match(instructions, /heys_mark_message_done/);
+  assert.match(instructions, /heys_reply_message/);
 });
 
 // ── Входящие по всем клиентам ─────────────────────────────────────────────
@@ -697,7 +697,7 @@ test('правка профиля уходит адресно, merge-ом и с 
 test('правила карточки клиента доехали до инструкций', () => {
   const { instructions } = build(fakeCuratorApi());
   assert.match(instructions, /heys_get_profile/);
-  assert.match(instructions, /heys_get_period/);
+  assert.match(instructions, /heys_update_norms/);
   assert.match(instructions, /heys_list_inbox/);
 });
 
@@ -781,7 +781,7 @@ test('вложения сообщения отдаются с путями — �
 test('правило про фото доехало до инструкций', () => {
   const { instructions } = build(fakeCuratorApi());
   assert.match(instructions, /heys_get_photo/);
-  assert.match(instructions, /Не проси куратора описать снимок словами/);
+  assert.match(instructions, /Не листай ими весь тред/);
 });
 
 // ── Публикация нового продукта в общую базу ──────────────────────────────
@@ -908,6 +908,6 @@ test('для продукта общей базы допустимы тольк�
 
 test('правило про объём фото доехало до инструкций', () => {
   const { instructions } = build(fakeCuratorApi());
-  assert.match(instructions, /не больше трёх-четырёх подряд/);
+  assert.match(instructions, /не больше четырёх подряд/);
   assert.match(instructions, /action hide/);
 });

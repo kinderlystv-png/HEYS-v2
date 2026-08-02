@@ -535,7 +535,9 @@ test('tasks_decision кладёт развилку в формате, котор
 
   const saved = api.writes[0].items[0].v.text;
   // #blocked даёт блок «Требует решения», «открыто:» — панель «Открыто».
-  assert.match(saved, /- \[ \] P1 Выбрать день второго дзюдо #blocked/);
+  // Приоритет P2: внешнего срока у развилки нет, а P1 поставил бы её в один
+  // ряд с настоящей просрочкой.
+  assert.match(saved, /- \[ \] P2 Выбрать день второго дзюдо #blocked/);
   assert.match(saved, /^ {2}- открыто: понедельник или четверг\?$/m);
   assert.match(saved, /^ {2}- открыто: если понедельник — переносим уборку\?$/m);
   assert.match(saved, /^ {2}- пн 3\.08 уборка/m);
@@ -581,4 +583,492 @@ test('снятие последнего вопроса убирает задач
     .find((t) => t.title === 'Покрасить потолок баллончиком')
     .children.some((c) => /^открыто:/i.test(c));
   assert.equal(stillOpen, false, 'вопросов не осталось — значит тег #blocked должен сниматься');
+});
+
+// ── Время: задачник живёт по Москве ──────────────────────────────────────
+
+test('дата по умолчанию считается по Москве, а не по UTC', () => {
+  // 22:30 UTC — это уже 01:30 следующего дня по Москве. По UTC метка `^`
+  // уехала бы на вчера, причём молча, прямо в файл.
+  assert.equal(tasks.moscowDate(Date.UTC(2026, 7, 2, 22, 30)), '2026-08-03');
+  assert.equal(tasks.moscowDate(Date.UTC(2026, 7, 2, 12, 0)), '2026-08-02');
+});
+
+test('ночью метка создания ставится московским числом', async () => {
+  const api = withWrites();
+  const night = createTasksTools({ api, curatorJwt: JWT, clientId: CLIENT, nowMs: Date.UTC(2026, 7, 2, 22, 30), ToolError }).tools;
+  await night.tasks_capture({ text: 'Ночная мысль', project: 'family' });
+  const saved = api.writes[0].items.find((i) => i.k === tasks.keyForPath('projects/family.md')).v.text;
+  assert.match(saved, /Ночная мысль \^2026-08-03/, 'метка обязана быть московской датой');
+});
+
+// ── Агентский слой: дельта, связи, развитие контекстов ───────────────────
+
+/**
+ * Живой фейк: записи применяются к хранилищу, поэтому следующий вызов видит
+ * то, что записал предыдущий. Отдельная сборка инструментов — это отдельная
+ * сессия: так проверяется, что память прохода живёт на сервере, а не в
+ * замыкании.
+ */
+function liveApi(files = {}, index = null) {
+  const kv = { ...files };
+  kv[tasks.INDEX_KEY] = index || {
+    files: Object.fromEntries(Object.values(files).map((f) => [f.path, { rev: f.rev, updatedAt: f.updatedAt }])),
+    updatedAt: 1,
+  };
+  return {
+    kv,
+    async getKVByCurator(bearer, clientId, key) {
+      return { data: kv[key] ?? null, error: null };
+    },
+    async getKVManyByCurator(bearer, clientId, keys) {
+      const out = {};
+      for (const key of keys) if (kv[key] !== undefined) out[key] = kv[key];
+      return { data: out, error: null };
+    },
+    async upsertKVManyByCurator(bearer, clientId, items) {
+      for (const item of items) kv[item.k] = item.v;
+      return { ok: true };
+    },
+  };
+}
+
+function session(api, nowMs = NOW) {
+  return createTasksTools({ api, curatorJwt: JWT, clientId: CLIENT, nowMs, ToolError }).tools;
+}
+
+function liveTasksApi() {
+  return liveApi({
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+    [tasks.keyForPath('projects/family.md')]: { path: 'projects/family.md', text: FAMILY_PROJECT, rev: 2, updatedAt: 1 },
+    [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: JOURNAL, rev: 5, updatedAt: 1 },
+  });
+}
+
+test('первый проход запоминает отпечаток, а не вываливает весь задачник', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_delta({});
+  assert.equal(res.structured.first_pass, true);
+  assert.equal(res.structured.changed.length, 0);
+  assert.ok(api.kv[tasks.STATE_KEY], 'память прохода сохранена на сервере');
+  assert.ok(!api.kv[tasks.INDEX_KEY].files['agent_state.md'], 'память прохода не притворяется файлом задачника');
+});
+
+test('дельта показывает новую задачу и не показывает её второй раз', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_delta({});                       // первый проход — базовый отпечаток
+  await session(api).tasks_capture({ text: 'Купить леску', project: 'family', tags: ['15min'] });
+
+  const delta = await session(api).tasks_delta({});
+  assert.equal(delta.structured.first_pass, false);
+  const family = delta.structured.changed.find((d) => d.path === 'projects/family.md');
+  assert.ok(family, 'изменившийся файл назван');
+  assert.equal(family.added_tasks.length, 1);
+  assert.equal(family.added_tasks[0].title, 'Купить леску');
+  assert.equal(delta.structured.changed.length, 1, 'нетронутые файлы в дельту не попадают');
+
+  const again = await session(api).tasks_delta({});
+  assert.equal(again.structured.changed.length, 0, 'прошлый проход запомнен — второй раз то же не показываем');
+  assert.match(again.text, /ничего не изменилось/);
+});
+
+test('дельта видит закрытую задачу и дописанное в журнал', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_delta({});
+
+  const hash = tasks.taskHash('heys', 'Собрать оптимальную версию лендинга');
+  await session(api).tasks_update({ project: 'heys', hash, state: 'done' });
+  await session(api).tasks_append({ path: 'journal/2026-08.md', block: '## 2026-08-02\n\nРешили: версия D уходит в релиз.' });
+
+  const delta = await session(api).tasks_delta({});
+  const heys = delta.structured.changed.find((d) => d.path === 'projects/heys.md');
+  assert.equal(heys.closed_tasks.length, 1);
+  assert.equal(heys.closed_tasks[0].title, 'Собрать оптимальную версию лендинга');
+  const journal = delta.structured.changed.find((d) => d.path === 'journal/2026-08.md');
+  assert.match(journal.appended.join('\n'), /версия D уходит в релиз/);
+});
+
+test('дельта с mark: false и с явным since не двигает метку прохода', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_delta({});
+  await session(api).tasks_capture({ text: 'Ещё одна', project: 'heys' });
+
+  const peek = await session(api).tasks_delta({ mark: false });
+  assert.equal(peek.structured.changed.length, 1);
+  assert.equal(peek.structured.marked, false);
+
+  const back = await session(api).tasks_delta({ since: '2026-08-01' });
+  assert.equal(back.structured.marked, false, 'взгляд назад — не проход');
+
+  const real = await session(api).tasks_delta({});
+  assert.equal(real.structured.changed.length, 1, 'ни один из них не съел изменение');
+});
+
+// ── Связи ────────────────────────────────────────────────────────────────
+
+test('ссылка ставится вложенной строкой и не ломает разбор задачи', async () => {
+  const api = liveTasksApi();
+  const from = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const to = tasks.taskHash('heys', 'Прогнать месячный аудит ПДн');
+
+  const res = await session(api).tasks_link({ project: 'family', hash: from, to: `heys/${to}`, note: 'один и тот же подрядчик' });
+  assert.equal(res.structured.already, false);
+  const saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.match(saved, new RegExp(`^ {2}- см: heys/${to} — один и тот же подрядчик$`, 'm'));
+
+  const parsed = tasks.parseTasks({ path: 'projects/family.md', text: saved })
+    .find((t) => t.title === 'Покрасить потолок баллончиком');
+  assert.ok(parsed.children.some((c) => c.startsWith('см:')), 'ссылка осталась вложенной строкой задачи');
+
+  const second = await session(api).tasks_link({ project: 'family', hash: from, to: `heys/${to}` });
+  assert.equal(second.structured.already, true, 'вторую такую же строку не пишем');
+});
+
+test('ссылка в никуда не ставится', async () => {
+  const api = liveTasksApi();
+  const from = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  await assert.rejects(() => session(api).tasks_link({ project: 'family', hash: from, to: 'heys/ffffff' }),
+    (e) => e.code === 'ref_not_found');
+  await assert.rejects(() => session(api).tasks_link({ project: 'family', hash: from, to: 'просто слова' }),
+    (e) => e.code === 'invalid_ref');
+});
+
+test('связь читается в обе стороны: ссылку писали один раз', async () => {
+  const api = liveTasksApi();
+  const from = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const to = tasks.taskHash('heys', 'Прогнать месячный аудит ПДн');
+  await session(api).tasks_link({ project: 'family', hash: from, to: `heys/${to}`, note: 'общий подрядчик' });
+
+  // Сторона, где ссылку писали.
+  const forward = await session(api).tasks_context({ topic: `family/${from}` });
+  const out = forward.structured.linked.find((l) => l.direction === 'ссылается на');
+  assert.ok(out, 'исходящая связь видна');
+  assert.equal(out.ref, `heys/${to}`);
+  assert.equal(out.title, 'Прогнать месячный аудит ПДн');
+
+  // Сторона, где её не писали, — связь всё равно обязана быть видна.
+  const backward = await session(api).tasks_context({ topic: `heys/${to}` });
+  const incoming = backward.structured.linked.find((l) => l.direction === 'ссылается сюда');
+  assert.ok(incoming, 'входящая связь видна с другой стороны');
+  assert.equal(incoming.title, 'Покрасить потолок баллончиком');
+  assert.equal(incoming.note, 'общий подрядчик');
+});
+
+test('ссылка на исчезнувшую задачу помечается, а не пропадает молча', () => {
+  const text = '## Задачи\n\n- [ ] P2 Оплатить смету ^2026-08-01\n  - см: kinderly/aaaaaa\n';
+  const files = [{ path: 'projects/family.md', text, rev: 1, updatedAt: 1 }];
+  const { outgoing } = tasks.linksFor(files, { project: 'family', hash: tasks.taskHash('family', 'Оплатить смету') });
+  assert.equal(outgoing.length, 1);
+  assert.equal(outgoing[0].missing, true);
+});
+
+// ── Развитие контекстов ──────────────────────────────────────────────────
+
+const KINDERLY_PROJECT = `# Kinderly
+
+## Задачи
+
+- [ ] P2 Собрать смету на праздник ^2026-07-20
+- [ ] P2 Согласовать сценарий праздника ^2026-07-21
+- [ ] P2 Купить реквизит для праздника #город #15min ^2026-07-22
+- [ ] P2 Найти аниматора на праздник ^2026-07-23
+- [ ] P2 Разослать приглашения на праздник ^2026-07-24
+- [ ] P1 Починить свет в студии due:2026-08-05 #студия ^2026-08-01
+- [>] P2 Забрать зеркало ^2026-07-01
+  - ждём: Даня — привезёт зеркало, с 2026-07-05
+`;
+
+const TRAVEL_PROJECT = `# Travel
+
+## Задачи
+
+- [ ] P2 Проверить загранпаспорт ^2026-06-01
+- [ ] P3 Посмотреть билеты ^2026-06-02
+`;
+
+const JOURNAL_REPEATS = `# Журнал
+
+## 2026-07-20
+
+Опять думаю про отдельный контекст под праздники: праздники расползаются по проектам.
+
+## 2026-07-28
+
+Снова думаю про отдельный контекст под праздники, праздники расползаются по всем проектам.
+
+## 2026-08-01
+
+Всё ещё думаю про отдельный контекст под праздники — праздники расползаются по проектам.
+`;
+
+function liveReviewApi() {
+  const api = liveApi({
+    [tasks.keyForPath('projects/kinderly.md')]: { path: 'projects/kinderly.md', text: KINDERLY_PROJECT, rev: 2, updatedAt: NOW - 3 * 86400000 },
+    [tasks.keyForPath('projects/travel.md')]: { path: 'projects/travel.md', text: TRAVEL_PROJECT, rev: 1, updatedAt: Date.UTC(2026, 5, 1) },
+    [tasks.keyForPath('projects/personal.md')]: { path: 'projects/personal.md', text: '# Личное\n\n## Задачи\n\n', rev: 1, updatedAt: NOW },
+    [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: JOURNAL_REPEATS, rev: 4, updatedAt: NOW },
+  });
+  return api;
+}
+
+test('обзор находит то, что видно только сверху', () => {
+  const files = [
+    { path: 'projects/kinderly.md', text: KINDERLY_PROJECT, rev: 2, updatedAt: NOW - 3 * 86400000 },
+    { path: 'projects/travel.md', text: TRAVEL_PROJECT, rev: 1, updatedAt: Date.UTC(2026, 5, 1) },
+    { path: 'journal/2026-08.md', text: JOURNAL_REPEATS, rev: 4, updatedAt: NOW },
+  ];
+  const index = { files: { 'projects/travel.md': { rev: 1, updatedAt: Date.UTC(2026, 5, 1) } }, updatedAt: NOW };
+  const found = tasks.reviewFindings(files, { nowMs: NOW, index });
+  const kinds = found.map((f) => f.kind);
+
+  assert.ok(kinds.includes('split_context'), 'пять задач про праздник в одном проекте — повод предложить контекст');
+  assert.ok(kinds.includes('stale_promise'), 'ждём: висит четвёртую неделю');
+  assert.ok(kinds.includes('collapse_project'), 'travel стоит месяцами и в нём две задачи');
+  assert.ok(kinds.includes('repeating_thought'), 'одна и та же мысль в трёх записях журнала');
+
+  const split = found.find((f) => f.kind === 'split_context');
+  assert.match(split.title, /праздник/);
+  assert.ok(split.questions[0].endsWith('?'), 'находка без вопроса бесполезна');
+});
+
+test('обзор отдаёт не больше трёх находок за проход', async () => {
+  const api = liveReviewApi();
+  const res = await session(api).tasks_review({ post: false, limit: 10 });
+  assert.equal(res.structured.findings.length, 3, 'потолок жёсткий — три, сколько бы ни нашлось');
+  assert.ok(res.structured.held_back >= 1, 'придержанное названо, а не потеряно');
+  // Первым идёт обещание человеку: оно про чужое ожидание, а не про порядок в файлах.
+  assert.equal(res.structured.findings[0].kind, 'stale_promise');
+  for (const finding of res.structured.findings) {
+    assert.ok(finding.questions.length >= 1, 'у каждой находки есть вопрос');
+  }
+});
+
+test('находки ложатся на доску развилкой, а не в переписку', async () => {
+  const api = liveReviewApi();
+  const res = await session(api).tasks_review({});
+  assert.equal(res.structured.posted, true);
+  const board = api.kv[tasks.keyForPath('projects/kinderly.md')].text;
+  assert.match(board, /#blocked/);
+  assert.match(board, /^ {2}- открыто: /m);
+  assert.ok(res.structured.findings.every((f) => f.ref), 'у каждой находки есть ссылка с доски');
+});
+
+test('отклонённое предложение не поднимается снова', async () => {
+  const api = liveReviewApi();
+  const first = await session(api).tasks_review({ post: false, limit: 3 });
+  const declined = first.structured.findings.find((f) => f.kind === 'split_context');
+  assert.ok(declined, 'предложение про выделение контекста прозвучало');
+
+  await session(api).tasks_proposal({ key: declined.key, answer: 'нет', note: 'праздники и есть kinderly' });
+
+  const second = await session(api).tasks_review({ post: false, limit: 3 });
+  assert.ok(!second.structured.findings.some((f) => f.key === declined.key), 'второй раз не предлагаем');
+  const held = second.structured.skipped.find((f) => f.key === declined.key);
+  assert.equal(held.status, 'declined');
+  assert.ok(held.days_left >= 29 && held.days_left <= 30, `молчим месяц, а не ${held.days_left} дней`);
+
+  // Через месяц можно снова: это предложение, а не запрет.
+  const later = session(api, NOW + 31 * 86400000);
+  const third = await later.tasks_review({ post: false, limit: 3 });
+  assert.ok(third.structured.findings.some((f) => f.key === declined.key), 'через месяц тему можно поднять снова');
+});
+
+test('память предложений переживает сессию и показывается списком', async () => {
+  const api = liveReviewApi();
+  const first = await session(api).tasks_review({ post: false });
+  const key = first.structured.findings[0].key;
+
+  const list = await session(api).tasks_proposal({});
+  assert.equal(list.structured.proposals.length, first.structured.findings.length);
+  assert.ok(list.structured.proposals.every((p) => p.status === 'proposed'));
+
+  await session(api).tasks_proposal({ key, answer: 'да' });
+  const after = await session(api).tasks_proposal({});
+  assert.equal(after.structured.proposals.find((p) => p.key === key).status, 'accepted');
+});
+
+test('ответ на несуществующее предложение не выдумывается', async () => {
+  const api = liveReviewApi();
+  await assert.rejects(() => session(api).tasks_proposal({ key: 'split_context:нет:такого', answer: 'нет' }),
+    (e) => e.code === 'proposal_not_found');
+});
+
+// ── Что делать прямо сейчас ──────────────────────────────────────────────
+
+test('под место и время подбирается не больше трёх задач, и каждая — с причиной', async () => {
+  const api = liveReviewApi();
+  const res = await session(api).tasks_focus({ place: 'студия', minutes: 60 });
+  assert.ok(res.structured.picked.length <= 3, 'не больше трёх');
+  assert.equal(res.structured.picked[0].title, 'Починить свет в студии', 'первой идёт самая подходящая, а не самая старая');
+  assert.ok(res.structured.picked[0].reasons.some((r) => /студия/.test(r)), 'причина названа');
+  assert.ok(res.structured.picked.every((t) => !t.tags.some((tag) => ['дом', 'город', 'ноут'].includes(tag))),
+    'задача с чужим местом не предлагается: её физически не сделать');
+});
+
+test('пятнадцать минут и «голова не варит» поднимают короткое, а не важное', async () => {
+  const api = liveReviewApi();
+  const short = await session(api).tasks_focus({ minutes: 15, place: 'город' });
+  assert.equal(short.structured.picked[0].title, 'Купить реквизит для праздника');
+
+  const tired = await session(api).tasks_focus({ mood: 'голова не варит' });
+  assert.equal(tired.structured.picked[0].title, 'Купить реквизит для праздника',
+    'в таком состоянии наверх идёт короткая задача, а не P1 со сроком');
+});
+
+test('незнакомое место отклоняется вместо тихой выдачи всего подряд', async () => {
+  const api = liveReviewApi();
+  await assert.rejects(() => session(api).tasks_focus({ place: 'дача' }), (e) => e.code === 'invalid_place');
+});
+
+// ── Фраза целиком вместо угаданной темы ──────────────────────────────────
+
+test('значимые слова выделяются из живой фразы, а не выбираются моделью', () => {
+  const { terms, dropped } = tasks.topicTerms('надо бы поставить Даню на зеркало в понедельник');
+  const words = terms.map((t) => t.word);
+  assert.deepEqual(words, ['даню', 'зеркало', 'понедельник']);
+  assert.ok(dropped.includes('надо') && dropped.includes('поставить'), 'команды и предлоги отброшены');
+  assert.equal(terms.find((t) => t.word === 'даню').kind, 'name', 'имя не теряется и весит больше');
+});
+
+test('дата, время и тег из фразы сохраняются', () => {
+  const { terms } = tasks.topicTerms('перенести съёмку на 2026-08-05 в 15:30 #студия');
+  const byKind = Object.fromEntries(terms.map((t) => [t.kind, t.word]));
+  assert.equal(byKind.date, '2026-08-05');
+  assert.equal(byKind.time, '15:30');
+  assert.equal(byKind.tag, 'студия');
+});
+
+test('фраза целиком поднимает контекст, и видно, по каким словам искали', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_context({ topic: 'что там с зеркалом от Дани, он вообще привезёт?' });
+  assert.ok(res.structured.terms.includes('зеркалом'), 'слово из фразы стало запросом');
+  assert.ok(res.structured.ignored.includes('что'), 'мусорные слова названы отдельно');
+  assert.equal(res.structured.people.length, 1, 'обязательство нашлось по словоформе «зеркалом»');
+  assert.match(res.text, /Искал по словам/);
+});
+
+test('тема в одно слово работает как раньше', async () => {
+  const tools = build(withFiles());
+  const res = await tools.tasks_context({ topic: 'версия' });
+  assert.ok(res.structured.open_questions.length >= 1);
+  assert.ok(res.structured.journal.length >= 1);
+});
+
+// ── Правила: инструмент без повода звать бесполезен ──────────────────────
+
+const { curatorInstructions } = require('../lib/curator');
+
+test('у каждого нового инструмента задачника есть повод в правилах', () => {
+  const rules = curatorInstructions('Антон', true);
+  for (const [tool, why] of [
+    ['tasks_delta', /начале сессии|прошлого прохода/],
+    ['tasks_link', /не по словам|общих слов/],
+    ['tasks_review', /три находки|потолок в три/],
+    ['tasks_proposal', /месяц/],
+    ['tasks_focus', /максимум три|три задачи/],
+  ]) {
+    assert.match(rules, new RegExp(tool), `${tool} нигде не назван — модель его не вызовет`);
+    assert.match(rules, why, `у ${tool} нет объяснения, когда его звать`);
+  }
+});
+
+test('правила закрывают дыры, из-за которых задачник переставал наполняться', () => {
+  const rules = curatorInstructions('Антон', true);
+  // Запись в журнал: без неё правило «подними прошлый разговор» не на чем держится.
+  assert.match(rules, /journal\/ГГГГ-ММ\.md/);
+  // Событие против задачи: «сегодня с 15 до 17 на киндерли» — это слот, а не задача.
+  assert.match(rules, /tasks_slot.*tasks_capture|tasks_capture.*tasks_slot/s);
+  // Привычка отмечается сама и не подпадает под запрет ставить галочки.
+  assert.match(rules, /tasks_habit/);
+  // Фразу передаём целиком — решение «что искать» больше не за моделью.
+  assert.match(rules, /фразу ЦЕЛИКОМ/);
+});
+
+test('в правилах не осталось запрета, который противоречит виду слота по умолчанию', () => {
+  const rules = curatorInstructions('Антон', true);
+  assert.ok(!/у tasks_slot угадывать нельзя/.test(rules), 'правило 31 больше не спорит с правилом 32');
+});
+
+test('правила задачника подключаются только вместе с задачником', () => {
+  assert.ok(!/tasks_review/.test(curatorInstructions('Антон', false)));
+});
+
+test('слот дня связывается с задачей форматом самой доски', async () => {
+  const api = liveTasksApi();
+  api.kv[tasks.keyForPath('days/2026-08-02.md')] = { path: 'days/2026-08-02.md', text: '# 2026-08-02\n', rev: 1, updatedAt: 1 };
+  const hash = tasks.taskHash('heys', 'Прогнать месячный аудит ПДн');
+
+  const slot = await session(api).tasks_slot({ date: '2026-08-02', from: '10:00', to: '12:00', title: 'Аудит', ref: `heys/${hash}` });
+  assert.equal(slot.structured.ref, `heys/${hash}`);
+  const saved = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  // Ровно тот вид, который build_board.py читает как ссылку: «текст · проект/хэш».
+  assert.match(saved, new RegExp(`- 10:00–12:00 Аудит · heys/${hash} #фокус`));
+
+  // С той стороны видно, что под задачу уже выделено время.
+  const ctx = await session(api).tasks_context({ topic: `heys/${hash}` });
+  const fromDay = ctx.structured.linked.find((l) => l.path === 'days/2026-08-02.md');
+  assert.ok(fromDay, 'слот дня виден со стороны задачи');
+  assert.match(fromDay.title, /10:00–12:00 Аудит/);
+});
+
+test('слот не привязывается к несуществующей задаче', async () => {
+  const api = liveTasksApi();
+  api.kv[tasks.keyForPath('days/2026-08-02.md')] = { path: 'days/2026-08-02.md', text: '# 2026-08-02\n', rev: 1, updatedAt: 1 };
+  await assert.rejects(() => session(api).tasks_slot({ date: '2026-08-02', from: '10:00', to: '11:00', title: 'x', ref: 'heys/ffffff' }),
+    (e) => e.code === 'ref_not_found');
+});
+
+test('кириллический тег добавляется один раз и снимается', () => {
+  const line = '- [ ] P2 Купить леску #ноут ^2026-08-01';
+  assert.equal(tasks.applyTaskPatch(line, { addTags: ['ноут'] }), line, 'тот же тег вторым не пишется');
+  assert.ok(!/#ноут/.test(tasks.applyTaskPatch(line, { removeTags: ['ноут'] })), 'тег снимается');
+  // Тег-приставка не должен цепляться за более длинный: #дом ≠ #домашка.
+  const home = '- [ ] P2 Прибраться #домашка ^2026-08-01';
+  assert.match(tasks.applyTaskPatch(home, { addTags: ['дом'] }), /#домашка .*#дом$/);
+});
+
+test('зависшее обещание вешается на свою задачу, а не заводит вторую', async () => {
+  const api = liveReviewApi();
+  const res = await session(api).tasks_review({});
+  const promise = res.structured.findings.find((f) => f.kind === 'stale_promise');
+  assert.ok(promise, 'находка про обещание есть');
+
+  const saved = api.kv[tasks.keyForPath('projects/kinderly.md')].text;
+  const mirror = tasks.parseTasks({ path: 'projects/kinderly.md', text: saved })
+    .filter((t) => /зеркало/i.test(t.title));
+  assert.equal(mirror.length, 1, 'вторая задача про зеркало не заводится');
+  assert.ok(mirror[0].children.some((c) => /^открыто:/i.test(c)), 'вопрос лёг под существующую задачу');
+});
+
+// ── Адрес задачи: без него цикл «нашёл → ответил → снял» не замыкается ────
+
+test('читающие инструменты отдают задачу вместе с её адресом на доске', async () => {
+  const tools = build(withFiles());
+
+  const read = await tools.tasks_read({ path: 'projects/heys.md' });
+  const landing = read.structured.tasks.find((t) => t.title === 'Собрать оптимальную версию лендинга');
+  assert.equal(landing.hash, tasks.taskHash('heys', 'Собрать оптимальную версию лендинга'));
+  assert.equal(landing.ref, `heys/${landing.hash}`);
+
+  const list = await tools.tasks_list({});
+  assert.ok(list.structured.next.every((t) => t.ref), 'в списках у каждой задачи есть адрес');
+
+  const ctx = await tools.tasks_context({ topic: 'версия' });
+  assert.ok(ctx.structured.tasks.every((t) => t.ref), 'в контексте тоже');
+  assert.ok(ctx.structured.open_questions.every((q) => q.ref), 'у открытого вопроса — адрес его задачи');
+
+  const mirror = await tools.tasks_context({ topic: 'зеркало' });
+  assert.equal(mirror.structured.people[0].ref, `family/${tasks.taskHash('family', 'Забрать зеркало')}`);
+});
+
+test('tasks_list показывает то, что требует решения, отдельным списком', async () => {
+  const api = withFiles();
+  // Задача с «открыто:» и без срока: ни в просроченное, ни в #next она не
+  // попадает, а именно её куратор и ищет в «Требует решения».
+  const res = await build(api).tasks_list({});
+  const blocked = res.structured.blocked;
+  assert.equal(blocked.length, 1);
+  assert.equal(blocked[0].title, 'Собрать оптимальную версию лендинга');
+  assert.equal(blocked[0].ref, `heys/${tasks.taskHash('heys', 'Собрать оптимальную версию лендинга')}`);
+  assert.match(res.text, /требует решения: 1/);
 });

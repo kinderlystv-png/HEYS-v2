@@ -78,6 +78,26 @@ function normalizePath(path) {
   return /\.md$/i.test(joined) ? joined : `${joined}.md`;
 }
 
+/**
+ * Сегодняшняя дата по Москве.
+ *
+ * Задачник живёт по МСК: слоты в `days/`, метки `^` и операции в деньгах.
+ * `toISOString()` считает по UTC, и с полуночи до трёх часов ночи по Москве
+ * такая «сегодняшняя» дата молча уезжает на вчера — прямо в файл дня, где
+ * ошибку на сутки уже никто не заметит. Поэтому дата всегда берётся с
+ * указанием пояса, а не из смещения сервера.
+ */
+const MOSCOW_TZ = 'Europe/Moscow';
+
+function moscowDate(nowMs = Date.now()) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MOSCOW_TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date(nowMs)).map((p) => [p.type, p.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 /** Пустой файл — валидное состояние: месяц журнала мог ещё не начаться. */
 function emptyFile(path) {
   return { path: normalizePath(path), text: '', rev: 0, updatedAt: 0 };
@@ -155,6 +175,94 @@ function lineMatchesTerm(line, term) {
 }
 
 /**
+ * Значимые слова из живой фразы.
+ *
+ * Зачем это на сервере. Инструмент, который просит «тему», перекладывает на
+ * модель решение «что искать» — и ровно на этом шаге она промахивается: ищет
+ * по «поставь» и «надо», не находит ничего и начинает перебирать запросы по
+ * одному. Разбор фразы здесь делает этот шаг детерминированным: модель отдаёт
+ * то, что услышала, а какие слова значимы — решает код.
+ *
+ * Имена, даты, времена и теги весят больше обычных слов: именно они привязывают
+ * фразу к конкретной задаче, а не к десятку похожих.
+ */
+const TOPIC_STOP_WORDS = new Set([
+  'в', 'во', 'на', 'и', 'а', 'но', 'с', 'со', 'к', 'ко', 'по', 'за', 'из', 'от', 'до',
+  'для', 'у', 'о', 'об', 'про', 'при', 'что', 'чтобы', 'как', 'так', 'это', 'этот',
+  'эта', 'эти', 'том', 'тот', 'там', 'тут', 'здесь', 'я', 'ты', 'он', 'она', 'они',
+  'мы', 'вы', 'мне', 'меня', 'мой', 'моя', 'мои', 'твой', 'наш', 'его', 'её', 'их',
+  'себе', 'себя', 'ну', 'же', 'ли', 'бы', 'вот', 'ещё', 'еще', 'уже', 'только',
+  'очень', 'потом', 'сейчас', 'надо', 'нужно', 'хочу', 'хочет', 'давай', 'давайте',
+  'сделай', 'сделать', 'поставь', 'поставить', 'запиши', 'записать', 'добавь',
+  'добавить', 'посмотри', 'посмотреть', 'скажи', 'сказать', 'напомни', 'напомнить',
+  'найди', 'найти', 'покажи', 'показать', 'глянь', 'проверь', 'проверить',
+  // Формы «мы»: «давай посмотрим», «поставим на понедельник». Перечислены
+  // списком, а не отсечены основой: основа «сдела» съела бы «сделку», а
+  // «показ» — настоящий показ в студии.
+  'посмотрим', 'посмотрю', 'поставим', 'поставлю', 'запишем', 'добавим',
+  'проверим', 'напомним', 'скажем', 'найдём', 'найдем', 'покажем', 'сделаем',
+  'будет', 'было', 'был', 'была', 'быть', 'есть', 'нет', 'не', 'да', 'или', 'если',
+  'когда', 'где', 'куда', 'кто', 'какой', 'какая', 'какие', 'сколько', 'можно',
+  'может', 'вообще', 'просто', 'типа', 'значит',
+]);
+
+const DATE_TIME_RE = /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}:\d{2}\b/g;
+
+/** Адреса задач, встреченные прямо в тексте фразы. */
+function findAddresses(text) {
+  return [...String(text || '').matchAll(ADDRESS_IN_TEXT_RE)]
+    .map((m) => ({ project: m[1].toLowerCase(), hash: m[2].toLowerCase() }));
+}
+
+function topicTerms(phrase) {
+  const raw = String(phrase || '').trim();
+  const terms = [];
+  const dropped = [];
+  const seen = new Set();
+  const push = (word, kind) => {
+    const key = String(word).toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    terms.push({ word: key, kind });
+  };
+
+  for (const match of raw.matchAll(DATE_TIME_RE)) push(match[0], match[0].includes(':') ? 'time' : 'date');
+  let rest = raw.replace(DATE_TIME_RE, ' ').replace(ADDRESS_IN_TEXT_RE, ' ');
+  for (const match of rest.matchAll(/#([\p{L}\p{N}]+)/gu)) push(match[1], 'tag');
+  rest = rest.replace(/#[\p{L}\p{N}]+/gu, ' ');
+
+  const words = rest.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  words.forEach((word, i) => {
+    const lower = word.toLowerCase();
+    // Заглавная буква не в начале фразы — почти всегда имя или название, и
+    // терять его нельзя: по нему находится и человек, и его обязательства.
+    const looksLikeName = i > 0 && /^\p{Lu}/u.test(word) && word.length > 2;
+    if (!looksLikeName && (TOPIC_STOP_WORDS.has(lower) || lower.length < 3 || /^\d+$/.test(lower))) {
+      dropped.push(lower);
+      return;
+    }
+    push(lower, looksLikeName ? 'name' : 'word');
+  });
+
+  return { terms, dropped };
+}
+
+const TERM_WEIGHT = { name: 2, date: 2, time: 2, tag: 2, word: 1 };
+
+/** Насколько строка отвечает фразе: сколько значимых слов в ней встретилось. */
+function matchTerms(haystack, terms) {
+  const text = String(haystack || '').toLowerCase();
+  let score = 0;
+  const hit = [];
+  for (const term of terms) {
+    if (!lineMatchesTerm(text, term.word)) continue;
+    score += TERM_WEIGHT[term.kind] || 1;
+    hit.push(term.word);
+  }
+  return { score, hit };
+}
+
+/**
  * Поиск по задачнику. Возвращает совпадения со строками вокруг: запись журнала
  * без соседних строк бесполезна — по ней не видно, о чём шла речь.
  *
@@ -162,11 +270,13 @@ function lineMatchesTerm(line, term) {
  * совпавшей, когда содержит их все. Это ближе к тому, как человек ищет
  * («лендинг версия D»), чем точное вхождение фразы.
  */
-function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40 } = {}) {
-  const terms = String(query || '')
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
+function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, terms: given = null, any = false } = {}) {
+  // `terms` приходит из разбора живой фразы; `any` нужен там же: у фразы из
+  // пяти слов строки, где встретились все пять, не бывает, а строка с двумя
+  // самыми весомыми — ровно то, что искали.
+  const terms = (given && given.length)
+    ? given.map((t) => (typeof t === 'string' ? { word: t.toLowerCase(), kind: 'word' } : t))
+    : String(query || '').toLowerCase().split(/\s+/).filter(Boolean).map((word) => ({ word, kind: 'word' }));
   if (!terms.length) return [];
 
   const results = [];
@@ -175,21 +285,23 @@ function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40 }
     const lines = file.text.split('\n');
     let found = 0;
     for (let i = 0; i < lines.length && found < limitPerFile; i += 1) {
-      const haystack = lines[i].toLowerCase();
-      if (!terms.every((term) => lineMatchesTerm(haystack, term))) continue;
+      const { score, hit } = matchTerms(lines[i], terms);
+      if (any ? !hit.length : hit.length !== terms.length) continue;
       found += 1;
       results.push({
         path: file.path,
         line: i + 1,
         text: lines[i].trim(),
+        score,
+        matched: hit,
         context: lines
           .slice(Math.max(0, i - context), Math.min(lines.length, i + context + 1))
           .join('\n'),
       });
-      if (results.length >= limit) return results;
+      if (!any && results.length >= limit) return results;
     }
   }
-  return results;
+  return any ? results.sort((a, b) => b.score - a.score).slice(0, limit) : results;
 }
 
 /**
@@ -286,6 +398,21 @@ function parseTasks(file) {
   return tasks;
 }
 
+/**
+ * Адрес задачи — тот же, которым она адресуется на доске.
+ *
+ * Возвращается из всего, что читает задачи, и это не удобство: без него
+ * каждый, кто хочет потом снять вопрос или поправить срок, обязан повторить у
+ * себя разбор заголовка и подсчёт хэша — и рано или поздно разойтись с доской
+ * на один пробел. Один раз мы это уже чинили.
+ */
+function taskAddress(path, title) {
+  if (!/^projects\//i.test(String(path || ''))) return { project: null, hash: null, ref: null };
+  const project = projectKeyForPath(path);
+  const hash = taskHash(project, title);
+  return { project, hash, ref: `${project}/${hash}` };
+}
+
 /** Открытые вопросы задачника: вложенные строки `открыто:` под задачами. */
 function collectOpenQuestions(files) {
   const out = [];
@@ -293,7 +420,12 @@ function collectOpenQuestions(files) {
     for (const task of parseTasks(file)) {
       for (const child of task.children) {
         if (/^открыто:/i.test(child)) {
-          out.push({ path: file.path, task: task.title, question: child.replace(/^открыто:\s*/i, '') });
+          out.push({
+            path: file.path,
+            ...taskAddress(file.path, task.title),
+            task: task.title,
+            question: child.replace(/^открыто:\s*/i, ''),
+          });
         }
       }
     }
@@ -309,12 +441,709 @@ function collectPeopleThreads(files) {
       for (const child of task.children) {
         const match = /^(ждём|при встрече):\s*(.*)$/i.exec(child);
         if (match) {
-          out.push({ path: file.path, task: task.title, kind: match[1].toLowerCase(), text: match[2] });
+          out.push({
+            path: file.path,
+            ...taskAddress(file.path, task.title),
+            task: task.title,
+            kind: match[1].toLowerCase(),
+            text: match[2],
+          });
         }
       }
     }
   }
   return out;
+}
+
+// ── Связи: явная ссылка вместо случайного совпадения слов ────────────────
+//
+// До этого задача, запись журнала, слот дня и человек были связаны только
+// словами: пересечение находилось поиском, то есть случайно. Явная ссылка —
+// вложенная строка `см: kinderly/8e3572`, где адрес тот же, которым задача
+// адресуется на доске. Формат читается человеком в markdown, доска рисует его
+// как обычную вложенную строку и ничего не ломает.
+//
+// Ссылка хранится в одну сторону, а читается в обе: если А сослался на Б, то
+// при разборе Б надо видеть А. Хранить обе стороны — значит держать их в
+// согласии при каждой правке, а это лишний способ развести файлы.
+
+/** Адрес задачи: `проект/хэш`. Строгая форма — для аргумента инструмента. */
+function parseAddress(value) {
+  const match = /^\s*([a-zа-яё0-9][a-zа-яё0-9_-]*)\s*\/\s*([0-9a-f]{6})\s*$/i.exec(String(value || ''));
+  return match ? { project: match[1].toLowerCase(), hash: match[2].toLowerCase() } : null;
+}
+
+const ADDRESS_IN_TEXT_RE = /([a-zа-яё0-9][a-zа-яё0-9_-]*)\/([0-9a-f]{6})\b/gi;
+const REF_LINE_RE = /^\s*(?:[-*]\s*)?см:\s*(.*)$/i;
+
+/**
+ * Разбор строки-ссылки. В одной строке может стоять несколько адресов и
+ * пояснение словами: `см: kinderly/8e3572, heys/0765d3 — общая смета`.
+ */
+function parseRefLine(line) {
+  const match = REF_LINE_RE.exec(String(line || ''));
+  if (!match) return null;
+  const refs = [...match[1].matchAll(ADDRESS_IN_TEXT_RE)]
+    .map((m) => ({ project: m[1].toLowerCase(), hash: m[2].toLowerCase() }));
+  if (!refs.length) return null;
+  const note = match[1]
+    .replace(ADDRESS_IN_TEXT_RE, '')
+    .replace(/^[\s,;·—–-]+|[\s,;·—–-]+$/g, '')
+    .trim();
+  return { refs, note };
+}
+
+/**
+ * Ссылка слота дня на задачу. Формат не наш: доска давно читает
+ * `- 15:00–17:00 Съёмка · kinderly/8e3572 #фокус` и рисует такой слот
+ * кликабельным. Второй способ связать слот с задачей был бы форматом-двойником,
+ * поэтому здесь мы просто читаем существующий.
+ */
+const SLOT_LINE_RE = /^-\s*(?:\[[ x]\]\s*)?(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})\s+(.+?)\s*$/;
+
+function parseSlotRef(line) {
+  const match = SLOT_LINE_RE.exec(String(line || '').trim());
+  if (!match) return null;
+  // `\b` здесь ставить нельзя: граница слова считается по ASCII, и после
+  // кириллического «#фокус» её просто нет — тег оставался бы в строке и ломал
+  // разбор адреса.
+  const body = match[3].replace(/\s*#[\p{L}\d]+/gu, '').replace(/\s*@[\p{L}\d-]+/gu, '').trim();
+  if (!body.includes('·')) return null;
+  const tail = body.slice(body.lastIndexOf('·') + 1).trim();
+  const ref = parseAddress(tail);
+  if (!ref) return null;
+  return { ref, title: body.slice(0, body.lastIndexOf('·')).trim(), from: match[1], to: match[2] };
+}
+
+/** Ближайший заголовок выше строки — им подписывается ссылка из журнала или дня. */
+function nearestHeading(lines, at) {
+  for (let i = at; i >= 0; i -= 1) {
+    if (/^#{1,6}\s/.test(lines[i])) return lines[i].replace(/^#{1,6}\s*/, '').trim();
+  }
+  return null;
+}
+
+/** Все ссылки задачника: откуда, куда и с каким пояснением. */
+function collectLinks(files) {
+  const links = [];
+  for (const file of files) {
+    if (!file || typeof file.text !== 'string' || !file.text) continue;
+    const isProject = /^projects\//i.test(file.path || '');
+    const projectKey = isProject ? projectKeyForPath(file.path) : null;
+
+    if (isProject) {
+      for (const task of parseTasks(file)) {
+        for (const child of task.children) {
+          const parsed = parseRefLine(child);
+          if (!parsed) continue;
+          const from = {
+            path: file.path,
+            line: task.line,
+            project: projectKey,
+            hash: taskHash(projectKey, task.title),
+            title: task.title,
+          };
+          for (const to of parsed.refs) links.push({ from, to, note: parsed.note });
+        }
+      }
+    }
+
+    // Ссылка вне задачи: запись журнала, слот дня, операция в деньгах.
+    const isDay = /^days\//i.test(file.path || '');
+    const lines = file.text.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      if (isDay) {
+        const slot = parseSlotRef(lines[i]);
+        if (slot) {
+          links.push({
+            from: { path: file.path, line: i + 1, project: null, hash: null, title: `${slot.from}–${slot.to} ${slot.title}` },
+            to: slot.ref,
+            note: 'слот дня',
+          });
+          continue;
+        }
+      }
+      if (!REF_LINE_RE.test(lines[i])) continue;
+      if (isProject && /^\s/.test(lines[i])) continue; // уже учтена как вложенная строка задачи
+      const parsed = parseRefLine(lines[i]);
+      if (!parsed) continue;
+      const from = {
+        path: file.path,
+        line: i + 1,
+        project: null,
+        hash: null,
+        title: nearestHeading(lines, i) || (lines[i - 1] || '').trim() || file.path,
+      };
+      for (const to of parsed.refs) links.push({ from, to, note: parsed.note });
+    }
+  }
+  return links;
+}
+
+/** Задача по адресу с доски. Возвращает задачу вместе с её файлом. */
+function findTaskByAddress(files, address) {
+  if (!address) return null;
+  const wanted = `projects/${address.project}.md`.toLowerCase();
+  const file = files.find((f) => String(f.path || '').toLowerCase() === wanted);
+  if (!file) return null;
+  for (const task of parseTasks(file)) {
+    if (taskHash(address.project, task.title) === address.hash) {
+      return { ...task, project: address.project, hash: address.hash };
+    }
+  }
+  return null;
+}
+
+/**
+ * Связи задачи в обе стороны. Исходящие идут с разрешённой целью: ссылка на
+ * задачу, которой больше нет, — это не связь, а мусор, и он должен быть видно
+ * помечен `missing`, а не молча пропущен.
+ */
+function linksFor(files, address, links = null) {
+  const all = links || collectLinks(files);
+  const key = `${address.project}/${address.hash}`;
+  const outgoing = all
+    .filter((l) => l.from.project === address.project && l.from.hash === address.hash)
+    .map((l) => {
+      const target = findTaskByAddress(files, l.to);
+      return {
+        ref: `${l.to.project}/${l.to.hash}`,
+        note: l.note,
+        title: target ? target.title : null,
+        path: target ? target.path : null,
+        done: target ? target.done : null,
+        children: target ? target.children : [],
+        missing: !target,
+      };
+    });
+  const incoming = all
+    .filter((l) => `${l.to.project}/${l.to.hash}` === key)
+    .map((l) => ({
+      ref: l.from.project && l.from.hash ? `${l.from.project}/${l.from.hash}` : null,
+      path: l.from.path,
+      line: l.from.line,
+      title: l.from.title,
+      note: l.note,
+    }));
+  return { outgoing, incoming };
+}
+
+// ── Дельта: что изменилось с прошлого прохода ────────────────────────────
+//
+// У каждого файла в индексе есть ревизия, и по ней видно, что файл трогали.
+// Но «файл изменился» — слишком грубо, чтобы на этом что-то решать: в проекте
+// на полсотни строк это может быть и новая задача, и снятая галочка. Поэтому
+// прошлый проход запоминается отпечатком: ревизия, число строк и по задаче —
+// её состояние и слепок вложенных строк. Тогда разница читается словами:
+// «добавилась задача», «закрылась», «появилась строка ждём:».
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function shortDigest(value) {
+  return require('node:crypto').createHash('md5').update(String(value), 'utf8').digest('hex').slice(0, 4);
+}
+
+function taskMark(task) {
+  if (task.done) return 'x';
+  if (task.waiting) return '>';
+  return ' ';
+}
+
+/** Отпечаток файла — то, что кладётся в память прохода. */
+function fileSnapshot(file) {
+  const text = String((file && file.text) || '');
+  // Считаем непустые строки: пустая строка в конце файла то появляется, то
+  // исчезает от разных операций записи, и на счёте всех строк хвост дописанного
+  // уезжал бы на строку.
+  const snapshot = {
+    rev: Number(file.rev) || 0,
+    updatedAt: Number(file.updatedAt) || 0,
+    lines: text ? text.split('\n').filter((l) => l.trim()).length : 0,
+  };
+  if (/^projects\//i.test(file.path || '')) {
+    const projectKey = projectKeyForPath(file.path);
+    snapshot.tasks = {};
+    for (const task of parseTasks(file)) {
+      snapshot.tasks[taskHash(projectKey, task.title)] = `${taskMark(task)}${shortDigest(task.children.join('\n'))}`;
+    }
+  }
+  return snapshot;
+}
+
+const MARK_WORD = { ' ': 'открыта', x: 'закрыта', '>': 'ждёт', '~': 'в работе' };
+
+/**
+ * Разница между отпечатком прошлого прохода и текущим файлом.
+ *
+ * Хвост дописанных строк берётся по числу строк: журнал, день и деньги всегда
+ * дописываются в конец, и это самый дешёвый способ показать «что нового», не
+ * храня прошлый текст целиком. Строк стало меньше — значит правили середину, и
+ * тогда честнее сказать «изменился», чем показать неверный хвост.
+ */
+function diffFile(prev, file, { tailLimit = 12 } = {}) {
+  const next = fileSnapshot(file);
+  const out = {
+    path: file.path,
+    status: prev ? 'changed' : 'added',
+    rev_from: prev ? prev.rev : 0,
+    rev_to: next.rev,
+    appended: [],
+    added_tasks: [],
+    closed_tasks: [],
+    changed_tasks: [],
+    gone_tasks: [],
+  };
+
+  const filled = String(file.text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const prevLines = prev ? Number(prev.lines) || 0 : 0;
+  if (filled.length > prevLines) out.appended = filled.slice(prevLines).slice(0, tailLimit);
+
+  if (next.tasks) {
+    const projectKey = projectKeyForPath(file.path);
+    const before = (prev && prev.tasks) || null;
+    const byHash = new Map();
+    for (const task of parseTasks(file)) byHash.set(taskHash(projectKey, task.title), task);
+
+    for (const [hash, task] of byHash) {
+      const was = before ? before[hash] : undefined;
+      const now = next.tasks[hash];
+      const entry = {
+        hash,
+        ref: `${projectKey}/${hash}`,
+        title: task.title,
+        state: MARK_WORD[taskMark(task)] || 'открыта',
+        due: task.due,
+        priority: task.priority,
+        children: task.children,
+      };
+      if (!before) continue;              // прошлого слепка задач нет — деталей не выдумываем
+      if (was === undefined) { out.added_tasks.push(entry); continue; }
+      if (was === now) continue;
+      if (was[0] !== now[0] && task.done) { out.closed_tasks.push(entry); continue; }
+      out.changed_tasks.push({ ...entry, was: MARK_WORD[was[0]] || 'открыта' });
+    }
+    if (before) {
+      for (const hash of Object.keys(before)) {
+        if (!byHash.has(hash)) out.gone_tasks.push({ hash, ref: `${projectKey}/${hash}` });
+      }
+    }
+  }
+
+  return { diff: out, snapshot: next };
+}
+
+// ── Развитие контекстов: что заметить самому ─────────────────────────────
+//
+// Здесь считаются наблюдения, которые методичка задачника («Гибкость
+// контекстов», «Люди», «Журнал») велит замечать самому: тема переросла проект,
+// тема расползлась по проектам, обещание висит без движения, проект пора
+// схлопнуть, мысль ходит по журналу кругами.
+//
+// Всё это — эвристики, и они обязаны быть скупыми. Потолок в три находки за
+// проход стоит не здесь, а в инструменте, но правила подбора настроены так,
+// чтобы кандидатов было единицы, а не десятки: длинный список наблюдений
+// перестают читать, и тогда вся затея работает в минус.
+
+const THEME_STOP_WORDS = [
+  'сделать', 'купить', 'написать', 'позвонить', 'отправить', 'забрать', 'найти',
+  'проверить', 'добавить', 'обновить', 'поставить', 'решить', 'разобрать',
+  'посмотреть', 'узнать', 'сходить', 'съездить', 'привезти', 'доделать',
+  'собрать', 'закрыть', 'спросить', 'договориться', 'который', 'которая',
+  'чтобы', 'нужно', 'потом', 'после', 'перед', 'через', 'вместе', 'сейчас',
+  'самый', 'самое', 'ещё', 'если', 'когда', 'может', 'можно', 'вообще',
+  'todo', 'задача', 'задачи', 'вопрос', 'вариант',
+];
+/**
+ * Основа слова для темы — первые пять букв.
+ *
+ * `stemWord` для поиска отрезает два символа, и этого хватает, пока рядом есть
+ * сравнение по началу слова. Здесь сравниваются сами основы, и такая обрезка
+ * разводит «праздник» и «праздника» в разные темы — то есть ровно ту тему, из-за
+ * которой стоило бы завести отдельный контекст, никто и не заметит.
+ */
+function themeStem(word) {
+  return word.length > 5 ? word.slice(0, 5) : word;
+}
+
+const THEME_STOP_STEMS = new Set(THEME_STOP_WORDS.map((w) => themeStem(w)));
+
+/** Слова темы: основа → самое короткое написание, им тему и называем. */
+function themeTokens(text) {
+  const out = new Map();
+  for (const word of String(text || '').toLowerCase().split(/[^\p{L}\p{N}]+/u)) {
+    if (word.length < 5 || /^\d+$/.test(word)) continue;
+    const stem = themeStem(word);
+    if (THEME_STOP_STEMS.has(stem)) continue;
+    const prev = out.get(stem);
+    if (!prev || word.length < prev.length) out.set(stem, word);
+  }
+  return out;
+}
+
+function dateToMs(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
+  return match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+}
+
+function projectFiles(files) {
+  return files.filter((f) => /^projects\//i.test(f.path || ''));
+}
+
+/**
+ * Находки по задачнику. Возвращает всех кандидатов без потолка и без памяти:
+ * и то и другое — дело инструмента, а функция должна оставаться проверяемой.
+ */
+function reviewFindings(files, { nowMs = Date.now(), index = null, minTheme = 5, staleDays = 14, quietDays = 30 } = {}) {
+  const findings = [];
+  const projects = projectFiles(files);
+  const themeByProject = new Map(); // stem → { word, projects: Map<project, tasks[]> }
+
+  for (const file of projects) {
+    const projectKey = projectKeyForPath(file.path);
+    if (projectKey === 'someday') continue; // отложенное лежит кучей по замыслу
+    const open = parseTasks(file).filter((t) => !t.done);
+
+    const byStem = new Map();
+    for (const task of open) {
+      for (const [stem, word] of themeTokens(task.title)) {
+        if (!byStem.has(stem)) byStem.set(stem, { word, tasks: [] });
+        byStem.get(stem).tasks.push(task);
+        if (!themeByProject.has(stem)) themeByProject.set(stem, { word, projects: new Map() });
+        const across = themeByProject.get(stem);
+        if (word.length > across.word.length) across.word = word;
+        if (!across.projects.has(projectKey)) across.projects.set(projectKey, []);
+        across.projects.get(projectKey).push(task);
+      }
+    }
+
+    // 1. Тема переросла проект: задач по ней много, но это не весь проект.
+    for (const [stem, group] of byStem) {
+      if (group.tasks.length < minTheme) continue;
+      if (group.tasks.length >= open.length) continue; // это и есть сам проект, делить нечего
+      findings.push({
+        kind: 'split_context',
+        key: `split_context:${projectKey}:${stem}`,
+        project: projectKey,
+        rank: 2,
+        weight: group.tasks.length,
+        subject: group.word,
+        title: `Выделить «${group.word}» из ${projectKey} в отдельный контекст`,
+        questions: [
+          `В ${projectKey} набралось ${group.tasks.length} задач про «${group.word}» — выделяем в отдельный контекст, и как тогда назовём файл в projects/?`,
+        ],
+        context: [
+          `задач по теме: ${group.tasks.length} из ${open.length} открытых в проекте`,
+          ...group.tasks.slice(0, 4).map((t) => `— ${t.title}`),
+        ],
+      });
+    }
+
+    // 2. Проект без движения и почти пустой — кандидат на схлопывание.
+    const meta = index && index.files ? index.files[file.path] : null;
+    const lastTouch = Math.max(
+      Number(meta && meta.updatedAt) || 0,
+      ...open.map((t) => dateToMs(t.created) || 0),
+      ...parseTasks(file).map((t) => dateToMs(t.due) || 0),
+    );
+    if (open.length > 0 && open.length < 3 && lastTouch && nowMs - lastTouch >= quietDays * DAY_MS) {
+      const days = Math.floor((nowMs - lastTouch) / DAY_MS);
+      findings.push({
+        kind: 'collapse_project',
+        key: `collapse_project:${projectKey}`,
+        project: projectKey,
+        rank: 4,
+        weight: days,
+        subject: projectKey,
+        title: `Схлопнуть проект ${projectKey}`,
+        questions: [
+          `${projectKey} стоит без движения ${days} дней, в нём ${open.length} задач${open.length === 1 ? 'а' : 'и'} — вернуть их в родительский контекст или в someday.md?`,
+        ],
+        context: open.map((t) => `— ${t.title}`),
+      });
+    }
+
+    // 3. Обещание человеку висит без движения.
+    for (const task of parseTasks(file).filter((t) => !t.done)) {
+      for (const child of task.children) {
+        const match = /^ждём:\s*(.*)$/i.exec(child);
+        if (!match) continue;
+        const body = match[1];
+        const person = body.split(/[—–-]/)[0].trim();
+        // Имя и дату из текста ожидания убираем: вопрос и так начинается с
+        // имени, а «Даня — привезёт зеркало, с 2026-07-05» внутри вопроса
+        // читается как заикание.
+        const what = body.slice(person.length).replace(/^[\s—–-]+/, '').replace(/,?\s*с\s+\d{4}-\d{2}-\d{2}\s*$/, '').trim() || body;
+        const since = dateToMs((/(?:^|\s)с\s+(\d{4}-\d{2}-\d{2})/.exec(body) || [])[1]) || dateToMs(task.created);
+        if (!since) continue;
+        const days = Math.floor((nowMs - since) / DAY_MS);
+        if (days < staleDays) continue;
+        findings.push({
+          kind: 'stale_promise',
+          key: `stale_promise:${projectKey}:${shortDigest(`${person}|${body}`)}`,
+          project: projectKey,
+          // Ожидание уже висит на своей задаче — вопрос должен лечь под неё, а
+          // не завести вторую задачу про то же самое.
+          hash: taskHash(projectKey, task.title),
+          rank: 1,
+          weight: days,
+          subject: person,
+          title: `Зависло ожидание: ${person} — ${what}`,
+          questions: [
+            `${person}: «${what}» — ждём ${days} дней. Напомнить или снять ожидание?`,
+          ],
+          context: [`задача: ${task.title}`, `ждём с ${new Date(since).toISOString().slice(0, 10)}, это ${days} дней`],
+        });
+      }
+    }
+  }
+
+  // 4. Тема всплывает в разных проектах — каждый раз ложится в новый.
+  for (const [stem, across] of themeByProject) {
+    if (across.projects.size < 3) continue;
+    const total = [...across.projects.values()].reduce((sum, list) => sum + list.length, 0);
+    findings.push({
+      kind: 'scattered_theme',
+      key: `scattered_theme:${stem}`,
+      project: [...across.projects.keys()][0],
+      rank: 3,
+      weight: total,
+      subject: across.word,
+      title: `Свести «${across.word}» в один контекст`,
+      questions: [
+        `«${across.word}» лежит в ${[...across.projects.keys()].join(', ')} — держим в одном месте или так и оставляем?`,
+      ],
+      context: [...across.projects.entries()].map(([p, list]) => `${p}: ${list.length} — ${list[0].title}`),
+    });
+  }
+
+  // 5. Мысль ходит по журналу кругами.
+  findings.push(...repeatedThoughts(files, { nowMs }));
+
+  return findings;
+}
+
+/** Повторяющиеся мысли журнала: одна и та же фраза в разные дни. */
+function repeatedThoughts(files, { minTimes = 3, minDates = 2 } = {}) {
+  const groups = new Map();
+  for (const file of files.filter((f) => /^journal\//i.test(f.path || ''))) {
+    const lines = String(file.text || '').split('\n');
+    let date = null;
+    for (let i = 0; i < lines.length; i += 1) {
+      const heading = /^#{1,6}\s*(\d{4}-\d{2}-\d{2})/.exec(lines[i]);
+      if (heading) { date = heading[1]; continue; }
+      const line = lines[i].trim();
+      if (line.length < 25 || /^#/.test(line)) continue;
+      // Отпечаток мысли — четыре самых длинных слова строки. Первые попавшиеся
+      // слова не годятся: «опять думаю про …» и «снова думаю про …» — это одна
+      // мысль, а по началу строки они разные. Длинные слова в русской фразе и
+      // есть то, о чём она.
+      const tokens = [...themeTokens(line).entries()];
+      if (tokens.length < 3) continue;
+      const signature = tokens
+        .sort((a, b) => b[1].length - a[1].length)
+        .slice(0, 4)
+        .map(([stem]) => stem)
+        .sort()
+        .join('+');
+      if (!groups.has(signature)) groups.set(signature, { lines: [], dates: new Set(), words: themeTokens(line) });
+      const group = groups.get(signature);
+      group.lines.push({ path: file.path, line: i + 1, text: line, date });
+      if (date) group.dates.add(date);
+    }
+  }
+
+  const out = [];
+  for (const [signature, group] of groups) {
+    if (group.lines.length < minTimes || group.dates.size < minDates) continue;
+    // Мысль называем её же словами, а не набором основ: «расползаются
+    // праздники» человек в своей записи не узнает, а свою фразу — узнает сразу.
+    const sample = group.lines.map((l) => l.text).sort((a, b) => a.length - b.length)[0];
+    const label = sample.length > 70 ? `${sample.slice(0, 70).trim()}…` : sample;
+    out.push({
+      kind: 'repeating_thought',
+      key: `repeating_thought:${shortDigest(signature)}`,
+      project: null,
+      rank: 5,
+      weight: group.lines.length,
+      subject: label,
+      title: `Мысль повторяется в журнале: «${label}»`,
+      questions: [
+        `Ты возвращаешься к этому ${group.lines.length}-й раз (${[...group.dates].join(', ')}) — заводим задачу или отпускаем?`,
+      ],
+      context: group.lines.slice(0, 3).map((l) => `${l.date || l.path}: ${l.text.slice(0, 120)}`),
+    });
+  }
+  return out;
+}
+
+// ── Память прохода ───────────────────────────────────────────────────────
+//
+// Без памяти всё вышенаписанное вредно: агент, который каждый проход заново
+// «замечает» одно и то же, превращается в генератор шума, и его перестают
+// читать вместе со всем остальным. Поэтому проход помнит две вещи: отпечаток
+// задачника (чтобы входить в разницу, а не во весь файлопад) и то, что уже
+// предлагал — вместе с ответом.
+//
+// Отказ держится месяц: ровно так написано в методичке про выделение
+// контекста («повторно с ней не приставать раньше месяца»). Предложение без
+// ответа не поднимается две недели — оно и так висит на доске.
+
+const STATE_KEY = `${KEY_PREFIX}agent_state`;
+const PROPOSAL_COOLDOWN_DAYS = { proposed: 14, declined: 30, accepted: 90 };
+
+function ensureState(raw) {
+  const base = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  const seen = (base.seen && typeof base.seen === 'object' && !Array.isArray(base.seen)) ? base.seen : {};
+  const files = (seen.files && typeof seen.files === 'object' && !Array.isArray(seen.files)) ? seen.files : {};
+  const proposals = (base.proposals && typeof base.proposals === 'object' && !Array.isArray(base.proposals))
+    ? base.proposals
+    : {};
+  return {
+    version: 1,
+    seen: { at: Number(seen.at) || 0, files: { ...files } },
+    proposals: { ...proposals },
+    updatedAt: Number(base.updatedAt) || 0,
+  };
+}
+
+/** Сколько ещё молчать про это предложение. */
+function proposalCooldown(entry, nowMs) {
+  if (!entry) return { blocked: false, days_left: 0, status: null };
+  const days = PROPOSAL_COOLDOWN_DAYS[entry.status] ?? PROPOSAL_COOLDOWN_DAYS.proposed;
+  const since = Number(entry.answeredAt) || Number(entry.proposedAt) || 0;
+  const left = Math.ceil((since + days * DAY_MS - nowMs) / DAY_MS);
+  return { blocked: left > 0, days_left: Math.max(0, left), status: entry.status };
+}
+
+/**
+ * Что из найденного вообще можно поднимать. Потолок жёсткий: не больше трёх за
+ * проход, независимо от того, сколько нашлось. Это не настройка — без него
+ * длинный список наблюдений перестают читать, и вместе с ним перестают читать
+ * блок «Требует решения».
+ */
+function pickFindings(state, findings, { nowMs = Date.now(), limit = 3 } = {}) {
+  const cap = Math.max(0, Math.min(Number(limit) || 3, 3));
+  const skipped = [];
+  const fresh = [];
+  for (const finding of findings) {
+    const cooldown = proposalCooldown(state.proposals[finding.key], nowMs);
+    if (cooldown.blocked) { skipped.push({ ...finding, cooldown }); continue; }
+    fresh.push(finding);
+  }
+  fresh.sort((a, b) => (a.rank - b.rank) || (b.weight - a.weight) || a.key.localeCompare(b.key));
+  return { picked: fresh.slice(0, cap), skipped, held_back: Math.max(0, fresh.length - cap) };
+}
+
+function rememberProposal(state, finding, { nowMs = Date.now(), ref = null } = {}) {
+  const prev = state.proposals[finding.key] || {};
+  return {
+    ...state,
+    proposals: {
+      ...state.proposals,
+      [finding.key]: {
+        kind: finding.kind,
+        subject: finding.subject,
+        project: finding.project,
+        title: finding.title,
+        status: 'proposed',
+        proposedAt: nowMs,
+        answeredAt: 0,
+        ref: ref || prev.ref || null,
+        note: prev.note || null,
+      },
+    },
+    updatedAt: nowMs,
+  };
+}
+
+function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), note = null } = {}) {
+  const prev = state.proposals[key];
+  if (!prev) return null;
+  return {
+    ...state,
+    proposals: {
+      ...state.proposals,
+      [key]: { ...prev, status, answeredAt: nowMs, note: note || prev.note || null },
+    },
+    updatedAt: nowMs,
+  };
+}
+
+// ── «Что делать прямо сейчас» ────────────────────────────────────────────
+//
+// «Есть час», «я в студии», «голова не варит» — это ситуация, а не просьба
+// показать всё. Отбор идёт по месту, времени и состоянию, а не по возрасту
+// задачи: самая старая задача почти никогда не бывает самой подходящей.
+
+const PLACE_TAGS = new Set(['студия', 'дом', 'ноут', 'город']);
+const TIME_TAGS = { '15min': 15, '30min': 30, '45min': 45, '1h': 60, '2h': 120 };
+
+function taskPlace(task) {
+  return (task.tags || []).map((t) => t.toLowerCase()).find((t) => PLACE_TAGS.has(t)) || null;
+}
+
+function taskMinutes(task) {
+  for (const tag of (task.tags || [])) {
+    const minutes = TIME_TAGS[String(tag).toLowerCase()];
+    if (minutes) return minutes;
+  }
+  return null;
+}
+
+/**
+ * Подбор задач под ситуацию. Возвращает не больше `limit` штук, каждая — с
+ * причиной, по которой она здесь: без причины список читается как «покажи всё»,
+ * а именно от этого методичка и уводит.
+ */
+function pickFocus(tasks_, { place = null, minutes = null, mood = null, today = null, limit = 3 } = {}) {
+  const wantedPlace = place ? String(place).replace(/^#/, '').toLowerCase() : null;
+  const budget = Number(minutes) || null;
+  const low = mood === 'low';
+
+  const scored = [];
+  for (const task of tasks_) {
+    if (task.done || task.waiting) continue;
+    const tags = (task.tags || []).map((t) => t.toLowerCase());
+    const blocked = tags.includes('blocked') || task.children.some((c) => /^открыто:/i.test(c));
+    const taskPlaceTag = taskPlace(task);
+    const taskTime = taskMinutes(task);
+
+    // Место: задача с чужим местом сюда не подходит вовсе — её физически не
+    // сделать. Задача без места подходит везде.
+    if (wantedPlace && taskPlaceTag && taskPlaceTag !== wantedPlace) continue;
+    // Время: задача, которая заведомо длиннее окна, — не вариант.
+    if (budget && taskTime && taskTime > budget) continue;
+
+    const reasons = [];
+    let score = 0;
+    if (wantedPlace && taskPlaceTag === wantedPlace) { score += 40; reasons.push(`место: #${taskPlaceTag}`); }
+    if (budget && taskTime) { score += 25; reasons.push(`влезает в ${budget} мин (#${Object.keys(TIME_TAGS).find((k) => TIME_TAGS[k] === taskTime)})`); }
+    if (task.due && today) {
+      if (task.due < today) { score += 50; reasons.push(`просрочено с ${task.due}`); }
+      else if (task.due === today) { score += 45; reasons.push('срок сегодня'); }
+      else if (dateToMs(task.due) - dateToMs(today) <= 3 * DAY_MS) { score += 20; reasons.push(`срок ${task.due}`); }
+    }
+    if (task.priority === 'P1') { score += 30; reasons.push('P1'); }
+    else if (task.priority === 'P2') score += 15;
+    else if (task.priority === 'P3') score += 5;
+    if (tags.includes('next')) { score += 20; reasons.push('#next'); }
+
+    // Состояние. «Голова не варит» — это про короткое и понятное: длинная
+    // задача с подпунктами в таком состоянии не делается, а откладывается.
+    if (low) {
+      if (taskTime && taskTime <= 15) { score += 35; reasons.push('короткая, под «голова не варит»'); }
+      if (task.children.filter((c) => /^-?\s*\[[ x]\]/.test(c)).length >= 2) score -= 25;
+      if (task.title.length > 60) score -= 15;
+      if (task.priority === 'P1') score -= 10;
+    }
+    if (blocked) { score -= 60; reasons.push('ждёт твоего решения'); }
+
+    scored.push({ ...task, score, blocked, reasons });
+  }
+
+  return scored
+    .sort((a, b) => b.score - a.score || String(a.title).localeCompare(String(b.title)))
+    .slice(0, limit);
 }
 
 // ── Операции записи ──────────────────────────────────────────────────────
@@ -401,13 +1230,18 @@ function applyTaskPatch(rawLine, patch = {}) {
       : line.replace(/^(\s*-\s*\[[ x>~]\]\s*)/i, `$1${patch.priority} `);
   }
 
+  // Конец тега проверяем через «дальше не буква и не цифра», а не через `\b`:
+  // граница слова в JS считается по ASCII, и у кириллического `#ноут` её в
+  // конце строки просто нет. С `\b` тот же тег добавлялся вторым, а снять его
+  // было нельзя вовсе — молча, на самых частых тегах места.
+  const tagEnd = '(?![\\p{L}\\d_])';
   for (const tag of (patch.addTags || [])) {
     const clean = String(tag).replace(/^#/, '');
-    if (!new RegExp(`#${clean}\\b`).test(line)) line = `${line} #${clean}`;
+    if (!new RegExp(`#${clean}${tagEnd}`, 'u').test(line)) line = `${line} #${clean}`;
   }
   for (const tag of (patch.removeTags || [])) {
     const clean = String(tag).replace(/^#/, '');
-    line = line.replace(new RegExp(`\\s*#${clean}\\b`), '');
+    line = line.replace(new RegExp(`\\s*#${clean}${tagEnd}`, 'u'), '');
   }
 
   return line.replace(/\s{2,}/g, ' ').replace(/\s+$/, '');
@@ -614,6 +1448,7 @@ function markHabit(text, habit, date) {
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
+  moscowDate,
   SLOT_KINDS,
   slotKindAndTitle,
   slotClashLevel,
@@ -644,6 +1479,38 @@ module.exports = {
   parseTaskLine,
   parseTasks,
   taskTitle,
+  taskAddress,
   collectOpenQuestions,
   collectPeopleThreads,
+  // разбор фразы
+  topicTerms,
+  matchTerms,
+  findAddresses,
+  TOPIC_STOP_WORDS,
+  // связи
+  parseAddress,
+  parseRefLine,
+  parseSlotRef,
+  collectLinks,
+  findTaskByAddress,
+  linksFor,
+  // дельта
+  fileSnapshot,
+  diffFile,
+  // развитие контекстов
+  reviewFindings,
+  repeatedThoughts,
+  themeTokens,
+  // память прохода
+  STATE_KEY,
+  PROPOSAL_COOLDOWN_DAYS,
+  ensureState,
+  proposalCooldown,
+  pickFindings,
+  rememberProposal,
+  answerProposal,
+  // что делать сейчас
+  PLACE_TAGS,
+  TIME_TAGS,
+  pickFocus,
 };
