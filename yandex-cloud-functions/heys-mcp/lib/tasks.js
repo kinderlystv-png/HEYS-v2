@@ -1069,6 +1069,139 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
   };
 }
 
+// ── Как он решает ────────────────────────────────────────────────────────
+//
+// Дообучить модель на этом задачнике нельзя: такого в API нет, да и данных на
+// два порядка мало. То, что человек называет «обучением на моём контексте»,
+// получается иначе — накоплением его решений в одном коротком месте, которое
+// читается всегда. Это обычный markdown в задачнике, а не скрытое состояние:
+// он должен уметь прочитать это глазами и вычеркнуть неверное.
+//
+// Записывается только подтверждённое: его слова, его выбор. Догадка агента
+// про то, «как он, наверное, любит», — это ровно тот мусор, из-за которого
+// такую память перестают читать.
+
+const PREFS_PATH = 'docs/preferences.md';
+const PREFS_SECTION = '## Как он решает';
+const PREFS_SOFT_LIMIT = 60;
+
+/** Строки памяти предпочтений: дата, вид, сама формулировка, откуда известно. */
+function parsePreferences(file) {
+  const out = [];
+  const lines = String((file && file.text) || '').split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = /^-\s*(\d{4}-\d{2}-\d{2})\s*·\s*([^·]+?)\s*·\s*(.+)$/.exec(lines[i].trim());
+    if (!match) continue;
+    const body = match[3];
+    const split = body.lastIndexOf(' — ');
+    out.push({
+      line: i,
+      date: match[1],
+      kind: match[2].trim(),
+      note: (split === -1 ? body : body.slice(0, split)).trim(),
+      evidence: split === -1 ? null : body.slice(split + 3).trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Уже записано ли то же самое. Дословного совпадения мало: одна и та же мысль
+ * записывается разными словами, и память быстро зарастает повторами.
+ */
+function knownPreference(existing, note, { threshold = DECISION_SIMILARITY } = {}) {
+  let best = null;
+  for (const entry of existing) {
+    const score = questionSimilarity(note, entry.note);
+    if (score >= threshold && (!best || score > best.score)) best = { ...entry, score: Math.round(score * 100) / 100 };
+  }
+  return best;
+}
+
+function preferenceLine({ date, kind, note, evidence }) {
+  return `- ${date} · ${kind} · ${note}${evidence ? ` — ${evidence}` : ''}`;
+}
+
+// ── Окружение находки ────────────────────────────────────────────────────
+//
+// Поиск по словам возвращает обрывки строк, и дальше модель додумывает, что
+// вокруг них. Между тем весь задачник — проценты окна модели, экономить не на
+// чем. Поэтому к найденному прикладывается его окружение: проект целиком (он
+// маленький) и время, которое уже выделено под эти задачи в днях.
+//
+// Время — отдельный смысл: пересечение по часам поиск по словам не находит
+// никогда, у «дзюдо в понедельник» и «уборки 15:30» нет общих слов.
+
+/**
+ * Проекты найденных задач — целиком, коротким списком открытых задач.
+ * @param {Array} files все файлы задачника
+ * @param {Array} matched найденные задачи
+ */
+function projectNeighborhood(files, matched, { limit = 3, perProject = 12 } = {}) {
+  const order = [];
+  for (const task of matched) {
+    const key = projectKeyForPath(task.path);
+    if (key && !order.includes(key)) order.push(key);
+    if (order.length >= limit) break;
+  }
+  const out = [];
+  for (const key of order) {
+    const file = files.find((f) => projectKeyForPath(f.path) === key);
+    if (!file) continue;
+    const all = parseTasks(file);
+    const open = all.filter((t) => !t.done);
+    out.push({
+      project: key,
+      open_count: open.length,
+      done_count: all.length - open.length,
+      tasks: open.slice(0, perProject).map((t) => ({
+        ...taskAddress(file.path, t.title),
+        title: t.title,
+        pri: t.pri,
+        due: t.due || null,
+        tags: t.tags,
+        waiting: t.children.filter((c) => /^(открыто|ждём|при встрече):/i.test(c)),
+      })),
+      truncated: Math.max(0, open.length - perProject),
+    });
+  }
+  return out;
+}
+
+/**
+ * Время в днях, относящееся к найденному: слоты со ссылкой на эти задачи и
+ * слоты, названные теми же словами. Отвечает на «когда это стоит» — вопрос, на
+ * который список задач не отвечает вовсе.
+ */
+function slotsAround(files, refs, terms, { from = null, limit = 20 } = {}) {
+  const wanted = new Set(refs.map((r) => String(r).toLowerCase()));
+  const out = [];
+  for (const file of files) {
+    if (!/^days\//i.test(String(file.path || ''))) continue;
+    const date = /days\/(\d{4}-\d{2}-\d{2})/i.exec(file.path)?.[1] || null;
+    if (from && date && date < from) continue;
+    for (const line of String(file.text || '').split('\n')) {
+      const slot = SLOT_LINE_RE.exec(line.trim());
+      if (!slot) continue;
+      const linked = parseSlotRef(line);
+      const ref = linked ? `${linked.ref.project}/${linked.ref.hash}` : null;
+      const byRef = ref && wanted.has(ref.toLowerCase());
+      const byWord = !byRef && terms.length ? matchTerms(slot[3], terms).score > 0 : false;
+      if (!byRef && !byWord) continue;
+      out.push({
+        date,
+        from: slot[1],
+        to: slot[2],
+        title: (linked ? linked.title : slot[3].replace(/\s*#[\p{L}\d]+/gu, '')).trim(),
+        ref,
+        why: byRef ? 'под эту задачу' : 'названо теми же словами',
+      });
+    }
+  }
+  out.sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.from.localeCompare(b.from));
+  return out.slice(0, limit);
+}
+
 // ── Потолок и дубли развилок ─────────────────────────────────────────────
 //
 // Потолок в три находки за проход стоит на автоматическом обходе, но развилку
@@ -1566,6 +1699,16 @@ module.exports = {
   pickFindings,
   rememberProposal,
   answerProposal,
+  // как он решает
+  PREFS_PATH,
+  PREFS_SECTION,
+  PREFS_SOFT_LIMIT,
+  parsePreferences,
+  knownPreference,
+  preferenceLine,
+  // окружение находки
+  projectNeighborhood,
+  slotsAround,
   // потолок развилок
   OPEN_DECISIONS_CAP,
   DECISION_SIMILARITY,

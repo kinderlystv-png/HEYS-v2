@@ -235,6 +235,19 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_learn',
+    description: 'Запомнить, как куратор решает: повторяющийся выбор, порог, правило, которое он назвал сам. Хранится обычным файлом задачника, который он может прочитать и поправить, и возвращается в каждом tasks_context. Без аргументов — показать всё, что уже записано. Записывай только то, что он подтвердил словами; догадка «ему, наверное, так удобнее» эту память обесценивает.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        note: { type: 'string', description: 'Как он решает — одной строкой, без пересказа разговора. «Развилки по деньгам решает сам, не делегирует», а не «мы обсудили деньги».' },
+        evidence: { type: 'string', description: 'Откуда это известно: его слова цитатой, дата разговора или адрес задачи. Обязательно — без опоры запись не отличить от догадки.' },
+        kind: { type: 'string', description: 'Вид: «предпочтение» (по умолчанию), «порог» (названное им число или граница), «решение» (разовый выбор с последствиями).' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'tasks_move',
     description: 'Перенести задачу со всеми её вложенными строками в другой проект или в архив. Хэш задачи после переноса меняется — он считается от проекта и названия; новый вернётся в ответе, назови его куратору, иначе прежняя ссылка с доски перестанет находить задачу.',
     inputSchema: {
@@ -551,9 +564,27 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const people = tasks.collectPeopleThreads(files)
         .filter((p) => tasks.matchTerms(`${p.task} ${p.text}`, terms).score > 0);
 
+      // Окружение найденного: проект целиком и время в днях. Без него ответ
+      // строится по обрывкам строк, и остальное приходится домысливать.
+      const projects = tasks.projectNeighborhood(files, matchingTasks);
+      const slots = tasks.slotsAround(
+        files,
+        foundTasks.map((t) => t.ref).filter(Boolean),
+        terms,
+        { from: tasks.moscowDate(nowMs) },
+      );
+
+      // Как он решает — возвращается всегда и целиком. Смысл этой памяти в
+      // том, что её не надо вспоминать отдельным вызовом: правило, о котором
+      // помнят через раз, хуже отсутствующего.
+      const preferences = tasks.parsePreferences(
+        files.find((f) => f.path === tasks.PREFS_PATH) || null,
+      );
+
       const parts = [];
       if (open.length) parts.push(`открытых вопросов: ${open.length}`);
       if (foundTasks.length) parts.push(`задач: ${foundTasks.length}`);
+      if (slots.length) parts.push(`уже стоит в днях: ${slots.length}`);
       if (linked.length) parts.push(`связанного по ссылкам: ${linked.length}`);
       if (journalHits.length) parts.push(`записей в журнале: ${journalHits.length}`);
       if (people.length) parts.push(`обязательств перед людьми: ${people.length}`);
@@ -575,6 +606,9 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           refs: addresses.map((a) => `${a.project}/${a.hash}`),
           open_questions: open,
           tasks: foundTasks,
+          projects,
+          slots,
+          preferences,
           linked,
           journal: journalHits,
           people,
@@ -1031,6 +1065,57 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           questions: guard.fresh, duplicates: guard.duplicates, context, attached: false,
           open_count: guard.open_count + 1, cap: guard.cap,
         },
+      };
+    },
+
+    /**
+     * Память о том, как он решает. Не скрытое состояние, а обычный файл
+     * задачника: он должен уметь прочитать это глазами и вычеркнуть неверное.
+     * Записывается только подтверждённое — его слова, его выбор.
+     */
+    async tasks_learn(args = {}) {
+      const file = await readFile(tasks.PREFS_PATH);
+      const existing = tasks.parsePreferences(file);
+
+      const note = String(args.note || '').trim();
+      if (!note) {
+        return {
+          text: existing.length
+            ? `Про то, как он решает, записано ${existing.length}: ${existing.slice(-8).map((e) => e.note).join('; ')}.`
+            : 'Пока ничего не записано про то, как он решает.',
+          structured: { preferences: existing, path: tasks.PREFS_PATH },
+        };
+      }
+
+      const evidence = String(args.evidence || '').trim();
+      if (!evidence) {
+        throw new ToolError(
+          'evidence_required',
+          'Нужно, откуда это известно: его слова, дата разговора или ссылка на задачу. Без опоры это твоя догадка, а догадки такую память и обесценивают.',
+        );
+      }
+
+      const known = tasks.knownPreference(existing, note);
+      if (known) {
+        return {
+          text: `Уже записано ${known.date}: «${known.note}». Второй раз не пишу.`,
+          structured: { created: false, reason: 'duplicate', same_as: known, path: tasks.PREFS_PATH },
+        };
+      }
+
+      const kind = ['предпочтение', 'порог', 'решение'].includes(String(args.kind))
+        ? String(args.kind)
+        : 'предпочтение';
+      const line = tasks.preferenceLine({ date: today(), kind, note, evidence });
+      const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.PREFS_SECTION));
+
+      const total = existing.length + 1;
+      const crowded = total > tasks.PREFS_SOFT_LIMIT
+        ? ` Записей уже ${total} — их стало больше, чем читают за раз; предложи ему вычистить устаревшее.`
+        : '';
+      return {
+        text: `Запомнил: ${note}.${crowded}`,
+        structured: { created: true, path: saved.path, rev: saved.rev, kind, note, evidence, total },
       };
     },
 

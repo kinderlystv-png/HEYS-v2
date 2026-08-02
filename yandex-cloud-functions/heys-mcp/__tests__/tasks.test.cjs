@@ -1176,3 +1176,100 @@ test('правила не обещают того, чего инструмент
   assert.match(rules, /ref у tasks_slot/);
   assert.match(rules, /tasks_link связывает только две задачи проектов/);
 });
+
+// ── Окружение находки ────────────────────────────────────────────────────
+//
+// Поиск по словам отдавал обрывки строк, и всё вокруг них модель домысливала.
+// Задачник — проценты окна модели, экономить не на чем.
+
+test('контекст отдаёт проект найденной задачи целиком, а не одну строку', async () => {
+  const res = await build(withFiles()).tasks_context({ topic: 'что там по лендингу' });
+  const heys = res.structured.projects.find((p) => p.project === 'heys');
+  assert.ok(heys, 'проект найденной задачи поднят целиком');
+  // В HEYS_PROJECT две открытые задачи и одна закрытая.
+  assert.equal(heys.open_count, 2);
+  assert.equal(heys.done_count, 1);
+  assert.ok(heys.tasks.every((t) => t.ref), 'у соседей по проекту тоже есть адрес');
+  const landing = heys.tasks.find((t) => t.title === 'Собрать оптимальную версию лендинга');
+  assert.deepEqual(landing.waiting, ['открыто: версия D закрывает эту задачу или нужен ещё вариант?']);
+});
+
+test('контекст показывает, когда задача уже стоит в дне', async () => {
+  const api = withFiles();
+  const hash = tasks.taskHash('heys', 'Собрать оптимальную версию лендинга');
+  api.kv = api.kv || {};
+  const day = {
+    path: 'days/2026-08-04.md',
+    text: `# 2026-08-04\n\n- 10:00–14:00 Лендинг · heys/${hash} #фокус\n- 16:00–17:30 Дзюдо\n`,
+    rev: 1, updatedAt: 1,
+  };
+  const orig = api.getKVManyByCurator;
+  api.getKVManyByCurator = async (bearer, clientId, keys) => {
+    const out = (await orig(bearer, clientId, keys)).data;
+    if (keys.includes(tasks.keyForPath(day.path))) out[tasks.keyForPath(day.path)] = day;
+    return { data: out, error: null };
+  };
+  const origIndex = api.getKVByCurator;
+  api.getKVByCurator = async (bearer, clientId, key) => {
+    const res = await origIndex(bearer, clientId, key);
+    if (key === tasks.INDEX_KEY && res.data) {
+      return { data: { ...res.data, files: { ...res.data.files, [day.path]: { rev: 1, updatedAt: 1 } } }, error: null };
+    }
+    return res;
+  };
+
+  const res = await build(api).tasks_context({ topic: 'лендинг' });
+  const slot = res.structured.slots.find((s) => s.ref === `heys/${hash}`);
+  assert.ok(slot, 'слот, поставленный под эту задачу, виден в контексте');
+  assert.equal(slot.date, '2026-08-04');
+  assert.equal(slot.why, 'под эту задачу');
+  assert.match(res.text, /уже стоит в днях: 1/);
+});
+
+test('прошедшие дни в окружение не тянутся — они уже не про «когда это стоит»', () => {
+  const files = [{ path: 'days/2026-07-01.md', text: '- 10:00–11:00 Лендинг\n' },
+    { path: 'days/2026-08-05.md', text: '- 10:00–11:00 Лендинг\n' }];
+  const { terms } = tasks.topicTerms('лендинг');
+  const slots = tasks.slotsAround(files, [], terms, { from: '2026-08-02' });
+  assert.deepEqual(slots.map((s) => s.date), ['2026-08-05']);
+});
+
+// ── Как он решает ────────────────────────────────────────────────────────
+
+test('память предпочтений требует опору, а не догадку', async () => {
+  await assert.rejects(
+    () => session(liveTasksApi()).tasks_learn({ note: 'ему удобнее по вечерам' }),
+    (e) => e.code === 'evidence_required',
+  );
+});
+
+test('предпочтение записывается строкой, которую он может прочитать глазами', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_learn({
+    note: 'Развилки по деньгам решает сам, не делегирует',
+    evidence: 'его слова 2026-08-03',
+    kind: 'предпочтение',
+  });
+  assert.equal(res.structured.created, true);
+  const saved = api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text;
+  assert.match(saved, /^- 2026-08-02 · предпочтение · Развилки по деньгам решает сам, не делегирует — его слова 2026-08-03$/m);
+  assert.match(saved, /^## Как он решает$/m);
+});
+
+test('то же самое другими словами второй раз не записывается', async () => {
+  const api = liveTasksApi();
+  const tools = session(api);
+  await tools.tasks_learn({ note: 'Развилки по деньгам решает сам, не делегирует', evidence: 'его слова' });
+  const again = await tools.tasks_learn({ note: 'по деньгам развилки не делегирует, решает сам', evidence: 'снова сказал' });
+  assert.equal(again.structured.created, false);
+  assert.equal(again.structured.reason, 'duplicate');
+  assert.equal(tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text }).length, 1);
+});
+
+test('память «как он решает» приходит в контекст сама, без отдельного вызова', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({ note: 'Дела короче получаса в день не ставим', evidence: 'его слова' });
+  const res = await session(api).tasks_context({ topic: 'лендинг' });
+  assert.equal(res.structured.preferences.length, 1);
+  assert.equal(res.structured.preferences[0].note, 'Дела короче получаса в день не ставим');
+});
