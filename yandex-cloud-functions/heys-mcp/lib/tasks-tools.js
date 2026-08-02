@@ -210,6 +210,29 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_decision',
+    description: 'Положить на доску развилку, которую может решить только куратор: конфликт в расписании, выбор между вариантами, недостающий факт. Появляется в блоке «Требует решения», вопросы — в блоке «Открыто». Вызывай вместо того, чтобы держать вопрос в переписке: чат он закроет и забудет, доска останется. Один вызов — одна развилка.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Проект, к которому относится развилка: heys, kinderly, family, personal, mine2d, travel, someday.' },
+        title: { type: 'string', description: 'Что решить — одной строкой, глаголом. «Выбрать день второго дзюдо», а не «дзюдо».' },
+        questions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Вопросы, на которые нужен его ответ. Каждый — отдельной строкой, коротко и по сути. Ответ на вопрос должен менять то, что ты сделаешь дальше; иначе это не вопрос, а мысль вслух.',
+        },
+        context: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Факты, без которых вопрос не читается: что уже стоит в расписании, что с чем пересекается, какой вариант ты считаешь лучшим. Без пересказа очевидного.',
+        },
+        hash: { type: 'string', description: 'Хэш существующей задачи, если развилка относится к ней. Тогда вопросы лягут под неё, а не заведут вторую задачу про то же.' },
+      },
+      required: ['project', 'title', 'questions'],
+    },
+  },
+  {
     name: 'tasks_move',
     description: 'Перенести задачу со всеми её вложенными строками в другой проект или в архив.',
     inputSchema: {
@@ -644,11 +667,91 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       } catch (e) {
         throw new ToolError('child_not_found', `У задачи нет строки со словами «${args.needle}».`);
       }
-      const nextText = args.note ? tasks.appendChild(result.text, found.line, String(args.note).trim()) : result.text;
+      let nextText = args.note ? tasks.appendChild(result.text, found.line, String(args.note).trim()) : result.text;
+
+      // Сняли последний «открыто:» — задача больше не ждёт решения, и тег
+      // #blocked обязан уйти вместе с ним. Иначе блок «Требует решения»
+      // копит уже решённое, перестаёт быть коротким и его перестают читать.
+      const lines = nextText.split('\n');
+      const stillOpen = tasks.parseTasks({ path: file.path, text: nextText })
+        .find((t) => t.line - 1 === found.line)?.children
+        .some((c) => /^открыто:/i.test(c));
+      let unblocked = false;
+      if (!stillOpen && /#blocked\b/.test(lines[found.line])) {
+        lines[found.line] = tasks.applyTaskPatch(lines[found.line], { removeTags: ['blocked'] });
+        nextText = lines.join('\n');
+        unblocked = true;
+      }
+
       const saved = await writeFile(file, nextText);
       return {
-        text: `${key}/${args.hash} · ${found.parsed.title}: снял «${result.removed}»${args.note ? `, записал ответ` : ''}.`,
-        structured: { path: saved.path, rev: saved.rev, hash: args.hash, removed: result.removed, note: args.note || null },
+        text: `${key}/${args.hash} · ${found.parsed.title}: снял «${result.removed}»${args.note ? ', записал ответ' : ''}${unblocked ? '. Открытых вопросов больше нет — убрал из «Требует решения»' : ''}.`,
+        structured: { path: saved.path, rev: saved.rev, hash: args.hash, removed: result.removed, note: args.note || null, unblocked },
+      };
+    },
+
+    /**
+     * Развилка на доску. Ничего нового в формате не изобретаем: доска уже
+     * собирает блок «Требует решения» из задач с тегом #blocked, а панель
+     * «Открыто» — из вложенных строк «открыто:». Инструмент просто пишет
+     * развилку в этом виде, поэтому она видна там, где куратор её и ищет.
+     *
+     * Почему это нужно отдельным инструментом: вопрос, заданный в переписке,
+     * живёт до конца разговора. Куратор закрывает чат, вопрос исчезает, а
+     * решение так и не принято — и следующий проход начинается с того же
+     * вопроса. На доске он лежит, пока на него не ответят.
+     */
+    async tasks_decision(args = {}) {
+      const questions = (Array.isArray(args.questions) ? args.questions : [])
+        .map((q) => String(q).trim())
+        .filter(Boolean);
+      if (!questions.length) throw new ToolError('questions_required', 'Нужен хотя бы один вопрос, ответ на который меняет твои дальнейшие действия.');
+
+      const context = (Array.isArray(args.context) ? args.context : [])
+        .map((c) => String(c).trim())
+        .filter(Boolean);
+
+      // Развилка по существующей задаче вешается на неё: вторая задача про то
+      // же самое разводит контекст по двум местам, и отвечать приходится дважды.
+      if (args.hash) {
+        const { file, found, key } = await locateTask(args.project, args.hash);
+        const lines = file.text.split('\n');
+        const blocked = /#blocked\b/.test(lines[found.line])
+          ? lines[found.line]
+          : tasks.applyTaskPatch(lines[found.line], { addTags: ['blocked'] });
+        let nextText = [...lines.slice(0, found.line), blocked, ...lines.slice(found.line + 1)].join('\n');
+        for (const line of [...context, ...questions.map((q) => `открыто: ${q}`)]) {
+          nextText = tasks.appendChild(nextText, found.line, line);
+        }
+        const saved = await writeFile(file, nextText);
+        return {
+          text: `${key}/${args.hash} · ${found.parsed.title}: развилка на доске, вопросов ${questions.length}.`,
+          structured: { path: saved.path, rev: saved.rev, hash: args.hash, title: found.parsed.title, questions, attached: true },
+        };
+      }
+
+      const project = String(args.project || '').toLowerCase().replace(/\.md$/i, '');
+      if (!project) throw new ToolError('invalid_project', 'Нужен проект развилки.');
+      const title = String(args.title || '').trim();
+      if (!title) throw new ToolError('invalid_title', 'Нужно, что именно решить — одной строкой, глаголом.');
+
+      const file = await readFile(`projects/${project}.md`);
+      const today_ = today();
+      const line = `- [ ] P1 ${title} #blocked ^${today_}`;
+      let nextText = tasks.appendToSection(file.text, line, '## Задачи');
+
+      // Строку задачи ищем после вставки: appendToSection кладёт её в конец
+      // своего раздела, а не файла, поэтому номер строки заранее не известен.
+      const taskLine = nextText.split('\n').findIndex((l) => l === line);
+      for (const child of [...context, ...questions.map((q) => `открыто: ${q}`)]) {
+        nextText = tasks.appendChild(nextText, taskLine, child);
+      }
+      const saved = await writeFile(file, nextText);
+
+      const hash = tasks.taskHash(project, tasks.taskTitle(line));
+      return {
+        text: `Положил на доску: ${title}. Вопросов: ${questions.length}. Ссылка: ${project}/${hash}`,
+        structured: { path: saved.path, rev: saved.rev, hash, title, questions, context, attached: false },
       };
     },
 

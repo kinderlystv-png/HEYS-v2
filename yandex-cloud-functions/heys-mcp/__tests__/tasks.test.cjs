@@ -521,3 +521,64 @@ test('tasks_resolve снимает строку и записывает отве
   assert.ok(!/ждём: Даня/.test(saved));
   assert.match(saved, /привёз 2 августа/);
 });
+
+// ── Развилки: то, что может решить только куратор ────────────────────────
+
+test('tasks_decision кладёт развилку в формате, который доска уже понимает', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_decision({
+    project: 'family',
+    title: 'Выбрать день второго дзюдо',
+    questions: ['понедельник или четверг?', 'если понедельник — переносим уборку?'],
+    context: ['пн 3.08 уборка 15:30–17:30 — полное совпадение'],
+  });
+
+  const saved = api.writes[0].items[0].v.text;
+  // #blocked даёт блок «Требует решения», «открыто:» — панель «Открыто».
+  assert.match(saved, /- \[ \] P1 Выбрать день второго дзюдо #blocked/);
+  assert.match(saved, /^ {2}- открыто: понедельник или четверг\?$/m);
+  assert.match(saved, /^ {2}- открыто: если понедельник — переносим уборку\?$/m);
+  assert.match(saved, /^ {2}- пн 3\.08 уборка/m);
+  assert.equal(res.structured.hash, tasks.taskHash('family', 'Выбрать день второго дзюдо'));
+});
+
+test('развилка по существующей задаче вешается на неё, а не заводит вторую', async () => {
+  const api = withBoard();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const res = await build(api).tasks_decision({
+    project: 'family', hash,
+    title: 'не используется при hash',
+    questions: ['какой цвет?'],
+  });
+
+  const saved = api.writes[0].items[0].v.text;
+  assert.equal(res.structured.attached, true);
+  assert.match(saved, /Покрасить потолок баллончиком.*#blocked/);
+  assert.match(saved, /^ {2}- открыто: какой цвет\?$/m);
+  const tasksInFile = tasks.parseTasks({ path: 'projects/family.md', text: saved });
+  assert.equal(tasksInFile.length, 2, 'новая задача не заводится');
+});
+
+test('развилка без вопросов отклоняется — это не развилка', async () => {
+  const api = withBoard();
+  await assert.rejects(() => build(api).tasks_decision({ project: 'family', title: 'x', questions: [] }),
+    (e) => e.code === 'questions_required');
+  assert.equal(api.writes.length, 0);
+});
+
+test('снятие последнего вопроса убирает задачу из «Требует решения»', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  await tools.tasks_decision({ project: 'family', hash, title: '', questions: ['какой цвет?'] });
+
+  // Второй инструмент читает исходный фейковый файл, поэтому проверяем
+  // поведение на тексте, который вернула первая запись.
+  const withDecision = api.writes[0].items[0].v.text;
+  const line = withDecision.split('\n').findIndex((l) => /Покрасить потолок/.test(l));
+  const afterAnswer = tasks.removeChild(withDecision, line, 'какой цвет');
+  const stillOpen = tasks.parseTasks({ path: 'projects/family.md', text: afterAnswer.text })
+    .find((t) => t.title === 'Покрасить потолок баллончиком')
+    .children.some((c) => /^открыто:/i.test(c));
+  assert.equal(stillOpen, false, 'вопросов не осталось — значит тег #blocked должен сниматься');
+});
