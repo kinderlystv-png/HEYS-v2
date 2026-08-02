@@ -99,17 +99,54 @@
     return json;
   }
 
+  // SEC-036: сервер спрашивается первым, кеш — только запасной вариант.
+  // Прежняя версия возвращала localStorage-кеш и наружу не ходила вовсе, из-за
+  // чего смену VAPID-ключа на сервере клиент не мог заметить в принципе.
   async function fetchVapidPublicKey() {
+    try {
+      const res = await fetch(`${API_URL}/push/vapid-key`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.publicKey) {
+          lsSet('heys_push_vapid_pk', json.publicKey);
+          return json.publicKey;
+        }
+      }
+    } catch (_) {
+      // Сети нет — ниже отдадим последний известный ключ.
+    }
     const cached = lsGet('heys_push_vapid_pk', null);
     if (cached) return cached;
-    const res = await fetch(`${API_URL}/push/vapid-key`);
-    if (!res.ok) throw new Error('vapid_key_fetch_failed');
-    const json = await res.json();
-    if (json?.publicKey) {
-      lsSet('heys_push_vapid_pk', json.publicKey);
-      return json.publicKey;
+    throw new Error('vapid_key_fetch_failed');
+  }
+
+  // base64url из ArrayBuffer — обратная операция к urlBase64ToUint8Array.
+  function uint8ArrayToBase64Url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  /**
+   * SEC-036: выдана ли подписка под другой VAPID-ключ.
+   *
+   * Push-сервис отклоняет доставку, если сервер подписывает запрос ключом, не
+   * тем, под который создана подписка. Браузер при этом продолжает отдавать её
+   * как валидную, поэтому без явной сверки push умирает молча и навсегда.
+   *
+   * `options` есть не во всех браузерах: когда его нет, рабочую подписку не
+   * трогаем — потерять доставку из-за неудачной проверки хуже, чем не заметить
+   * ротацию.
+   */
+  function subscriptionKeyMismatch(sub, publicKey) {
+    const applied = sub && sub.options && sub.options.applicationServerKey;
+    if (!applied || !publicKey) return false;
+    try {
+      return uint8ArrayToBase64Url(applied) !== publicKey;
+    } catch (_) {
+      return false;
     }
-    throw new Error('vapid_key_missing');
   }
 
   // ── Status ────────────────────────────────────────────────────────────
@@ -153,8 +190,31 @@
 
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
+
+    // Ключ нужен и для сверки существующей подписки, а не только для новой.
+    // Если сети нет, а подписка уже есть — оставляем как было: молчаливый отказ
+    // от доставки хуже, чем пропущенная проверка.
+    let publicKey = null;
+    try {
+      publicKey = await fetchVapidPublicKey();
+    } catch (e) {
+      if (!sub) throw e;
+    }
+
+    // SEC-036: подписка под прежним VAPID-ключом после ротации перестаёт
+    // доставлять уведомления, оставаясь «валидной» с точки зрения браузера.
+    // Пересоздаём её, иначе push тихо умирает до ручной очистки данных сайта.
+    if (sub && subscriptionKeyMismatch(sub, publicKey)) {
+      console.info('[push] VAPID-ключ сменился — пересоздаю подписку');
+      try {
+        await sub.unsubscribe();
+      } catch (_) {
+        // Не отписались — всё равно создаём новую: старая уже нерабочая.
+      }
+      sub = null;
+    }
+
     if (!sub) {
-      const publicKey = await fetchVapidPublicKey();
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
