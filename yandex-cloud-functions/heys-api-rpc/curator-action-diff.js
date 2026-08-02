@@ -87,6 +87,7 @@ const MEAL_TYPE_LABELS = {
   lunch: 'Обед',
   dinner: 'Ужин',
   snack: 'Перекус',
+  coffee_break: 'Кофе-брейк',
   snack1: 'Перекус',
   snack2: 'Перекус',
   snack3: 'Перекус',

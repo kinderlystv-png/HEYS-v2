@@ -99,6 +99,7 @@
   const MEAL_TYPES = HEYS.dayUtils?.MEAL_TYPES || {
     breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
     snack1: { name: 'Перекус', icon: '🍎', order: 2 },
+    coffee_break: { name: 'Кофе-брейк', icon: '☕', order: 2.5 },
     lunch: { name: 'Обед', icon: '🍲', order: 3 },
     snack2: { name: 'Перекус', icon: '🥜', order: 4 },
     dinner: { name: 'Ужин', icon: '🍽️', order: 5 },

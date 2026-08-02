@@ -311,3 +311,139 @@ test('updateMeal не мутирует исходный день', () => {
   day.updateMeal(source, 'm_dinner', { addItems: [{ id: 'x', name: 'X', grams: 10 }] }, CTX);
   assert.equal(source.meals[0].items.length, 2);
 });
+
+// ── Тип приёма: время + состав ───────────────────────────────────────────
+
+function itemOf(name, grams, kcal100) {
+  return { id: `it_${name}`, name, grams, kcal100 };
+}
+
+test('кофе с бананом — перекус, а не обед', () => {
+  // Три продукта = формально основной приём по порогам приложения, но по сути
+  // это кофе и фрукт: обедом такой набор подписывать нельзя.
+  const meal = {
+    id: 'm1', time: '15:15',
+    items: [itemOf('Кофе американо', 100, 2), itemOf('Молоко ультрапастеризованное 3.5', 185, 61), itemOf('Банан', 120, 90)],
+  };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.equal(res.mealType, 'snack1');
+  assert.equal(res.name, 'Перекус');
+});
+
+test('одиночная тарелка каши утром — завтрак, а не перекус', () => {
+  const meal = { id: 'm1', time: '08:30', items: [itemOf('Овсяные хлопья', 60, 350)] };
+  assert.equal(day.classifyMeal(meal, { meals: [] }).mealType, 'breakfast');
+});
+
+test('яблоко днём — перекус, суп днём — обед', () => {
+  const apple = { id: 'm1', time: '12:00', items: [itemOf('Яблоко', 150, 50)] };
+  assert.equal(day.classifyMeal(apple, { meals: [] }).mealType, 'snack1');
+  const soup = { id: 'm2', time: '13:00', items: [itemOf('Суп куриный', 350, 90)] };
+  assert.equal(day.classifyMeal(soup, { meals: [] }).mealType, 'lunch');
+});
+
+test('второй обед в дне не заводится — становится перекусом', () => {
+  const existing = { meals: [{ id: 'm1', time: '13:00', mealType: 'lunch', items: [] }] };
+  const second = { id: 'm2', time: '14:30', items: [itemOf('Паста', 300, 160)] };
+  assert.equal(day.classifyMeal(second, existing).mealType, 'snack1');
+});
+
+test('ночной приём получает свой тип', () => {
+  const meal = { id: 'm1', time: '23:40', items: [itemOf('Творог', 200, 120)] };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.equal(res.mealType, 'night');
+  assert.equal(res.name, 'Ночной приём');
+});
+
+test('добавление значимого в перекус повышает его до основного приёма', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '13:00', name: 'Перекус', mealType: 'snack1', items: [itemOf('Яблоко', 150, 50)] }],
+    updatedAt: 1,
+  };
+  const res = day.updateMeal(base, 'm1', {
+    addItems: [itemOf('Суп куриный', 350, 90)],
+    removeItemIds: [], setGrams: {},
+  }, { nowMs: 2, clientId: 'c1' });
+
+  assert.equal(res.meal.mealType, 'lunch');
+  assert.equal(res.meal.name, 'Обед');
+  assert.ok(res.changed.some((c) => c.includes('тип → Обед')), `changed: ${res.changed}`);
+});
+
+test('удаление позиции не понижает основной приём обратно в перекус', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{
+      id: 'm1', time: '13:00', name: 'Обед', mealType: 'lunch',
+      items: [itemOf('Суп куриный', 350, 90), itemOf('Хлеб', 40, 250)],
+    }],
+    updatedAt: 1,
+  };
+  const res = day.updateMeal(base, 'm1', {
+    removeItemIds: ['it_Суп куриный'], setGrams: {}, addItems: [],
+  }, { nowMs: 2, clientId: 'c1' });
+
+  assert.equal(res.meal.mealType, 'lunch', 'чужой обед не переименовываем');
+});
+
+test('своё название приёма правка не перетирает', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '13:00', name: 'Кофе Киндерли', mealType: 'snack1', items: [itemOf('Кофе американо', 100, 2)] }],
+    updatedAt: 1,
+  };
+  const res = day.updateMeal(base, 'm1', {
+    addItems: [itemOf('Паста', 300, 160)], removeItemIds: [], setGrams: {},
+  }, { nowMs: 2, clientId: 'c1' });
+
+  assert.equal(res.meal.mealType, 'lunch', 'тип обновился');
+  assert.equal(res.meal.name, 'Кофе Киндерли', 'название куратора осталось');
+});
+
+// ── Кофе-брейк ───────────────────────────────────────────────────────────
+
+test('кофе с молоком и сиропом — кофе-брейк, а не перекус', () => {
+  const meal = {
+    id: 'm1', time: '15:15',
+    items: [itemOf('Кофе американо', 100, 2), itemOf('Молоко ультрапастеризованное 3.5', 185, 61), itemOf('Сироп для кофе (классический сахарный)', 20, 300)],
+  };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.equal(res.mealType, 'coffee_break');
+  assert.equal(res.name, 'Кофе-брейк');
+});
+
+test('кофе-брейк не зависит от времени суток', () => {
+  for (const time of ['07:00', '13:00', '23:30']) {
+    const meal = { id: 'm1', time, items: [itemOf('Капучино', 200, 60)] };
+    assert.equal(day.classifyMeal(meal, { meals: [] }).mealType, 'coffee_break', `время ${time}`);
+  }
+});
+
+test('кофе с твёрдой едой — уже перекус', () => {
+  const meal = {
+    id: 'm1', time: '15:15',
+    items: [itemOf('Кофе американо', 100, 2), itemOf('Печенье овсяное', 40, 430)],
+  };
+  assert.equal(day.classifyMeal(meal, { meals: [] }).mealType, 'snack1');
+});
+
+test('стакан молока без кофе кофе-брейком не считается', () => {
+  const meal = { id: 'm1', time: '15:15', items: [itemOf('Молоко 3.5', 200, 61)] };
+  assert.notEqual(day.classifyMeal(meal, { meals: [] }).mealType, 'coffee_break');
+});
+
+test('печенье, добавленное в кофе-брейк, переводит его в перекус', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '15:15', name: 'Кофе-брейк', mealType: 'coffee_break', items: [itemOf('Кофе американо', 100, 2)] }],
+    updatedAt: 1,
+  };
+  const res = day.updateMeal(base, 'm1', {
+    addItems: [itemOf('Печенье овсяное', 40, 430)], removeItemIds: [], setGrams: {},
+  }, { nowMs: 2, clientId: 'c1' });
+
+  assert.equal(res.meal.mealType, 'snack1');
+  assert.equal(res.meal.name, 'Перекус');
+  assert.ok(res.changed.some((c) => c.includes('тип → Перекус')), `changed: ${res.changed}`);
+});

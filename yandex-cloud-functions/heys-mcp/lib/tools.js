@@ -419,6 +419,14 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       };
 
       const current = await readDay(date);
+      // Тип приёма проставляем сами, по времени и составу: без `mealType`
+      // дневник подписывает приём собственным расчётом, и запись куратора
+      // оказывается не тем, чем она является. Название куратора и имя набора
+      // сильнее — они и есть ответ на вопрос «что это было».
+      const classified = day.classifyMeal(meal, current);
+      meal.mealType = classified.mealType;
+      if (!args.name && !presetName) meal.name = classified.name;
+
       const next = day.addMeal(current, meal, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
       const after = dayAfterWrite(saved, next);
@@ -429,12 +437,17 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const learnedText = learned.length
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
         : '';
+      // Тип называем вслух, когда подпись приёма его не показывает (набор,
+      // своё название): куратор должен видеть, чем запись легла в дневник, и
+      // успеть поправить, если это не обед.
+      const typeHint = meal.name === classified.name ? '' : ` (${classified.name})`;
       return {
-        text: `Записал: ${meal.name} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
+        text: `Записал: ${meal.name}${typeHint} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: meal.id,
           name: meal.name,
+          meal_type: meal.mealType,
           time,
           totals: kcal,
           items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),

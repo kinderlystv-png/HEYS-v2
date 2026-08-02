@@ -62,17 +62,21 @@
       {label:''}
     ];
     
-    // Helper function to determine meal type
-    function getMealType(mealIndex, meal, allMeals, pIndex) {
-      // This is a simplified version - actual implementation may differ
-      const time = meal?.time || '';
-      const hour = parseInt(time.split(':')[0]) || 12;
-      
-      if (hour >= 6 && hour < 11) return { type: 'breakfast', label: 'Завтрак', emoji: '🌅' };
-      if (hour >= 11 && hour < 16) return { type: 'lunch', label: 'Обед', emoji: '🌞' };
-      if (hour >= 16 && hour < 21) return { type: 'dinner', label: 'Ужин', emoji: '🌆' };
-      return { type: 'snack', label: 'Перекус', emoji: '🍎' };
-    }
+    // Тип приёма считает dayUtils: там слоты относительно завтрака, пороги
+    // основного приёма и защита от двух обедов подряд. Локальная заглушка,
+    // стоявшая здесь, возвращала {label, emoji}, а шапка карточки читает
+    // {name, icon} — и любой приём без явного meal.mealType подписывался
+    // «undefined undefined». Фолбэк ниже — на случай, если dayUtils ещё не
+    // загрузился; он отдаёт поля того же контракта.
+    const getMealType = U.getMealType || function (mealIndex, meal) {
+      const hour = parseInt(String(meal?.time || '').split(':')[0], 10);
+      const type = !Number.isFinite(hour) ? 'snack1'
+        : hour >= 5 && hour < 11 ? 'breakfast'
+        : hour >= 11 && hour < 16 ? 'lunch'
+        : hour >= 16 && hour < 22 ? 'dinner'
+        : 'snack3';
+      return { type, ...(MEAL_TYPES[type] || {}) };
+    };
     
     const MealCard = React.memo(function MealCard({
       meal,

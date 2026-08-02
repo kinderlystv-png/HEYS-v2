@@ -98,7 +98,9 @@ test('log_meal собирает составной напиток из пози�
   assert.equal(save.value.meals.length, 1);
   assert.equal(save.value.meals[0].items.length, 3);
   assert.equal(save.value.meals[0].time, '15:54');
-  assert.equal(save.value.meals[0].name, 'Перекус');
+  // Кофе с молоком и сиропом — кофе-брейк: еды в приёме нет.
+  assert.equal(save.value.meals[0].name, 'Кофе-брейк');
+  assert.equal(save.value.meals[0].mealType, 'coffee_break');
   assert.equal(save.value._writerCid, CLIENT);
   assert.ok(res.structured.totals.kcal > 0);
 });

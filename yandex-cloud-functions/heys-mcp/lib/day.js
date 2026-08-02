@@ -176,6 +176,194 @@ function itemKcal(item) {
   return ((Number(item.kcal100) || 0) * (Number(item.grams) || 0)) / 100;
 }
 
+/**
+ * Тип приёма — та же таксономия, что в приложении (MEAL_TYPES в
+ * apps/web/heys_day_utils.js). Коннектор обязан проставлять `mealType` сам:
+ * без него карточка дня считает тип на клиенте по своим правилам, и приём,
+ * записанный куратором, подписан не тем, чем он является.
+ */
+const MEAL_TYPE_NAMES = {
+  breakfast: 'Завтрак',
+  snack1: 'Перекус',
+  coffee_break: 'Кофе-брейк',
+  lunch: 'Обед',
+  snack2: 'Перекус',
+  dinner: 'Ужин',
+  snack3: 'Перекус',
+  night: 'Ночной приём',
+};
+
+/**
+ * Кофе-брейк: напиток и то, что кладут в напиток. Отдельный тип нужен потому,
+ * что кофе с молоком и сиропом — это не перекус: еды в нём нет, а в дневнике
+ * он занимал строку наравне с тарелкой каши и портил картину по приёмам.
+ *
+ * Граница простая и проверяемая: как только в приёме появляется хоть что-то
+ * твёрдое — печенье, банан, бутерброд, — это уже перекус, и дальше работает
+ * обычная классификация по времени и составу.
+ */
+const COFFEE_BASE_PATTERNS = [
+  /кофе/i, /coffee/i, /латте/i, /latte/i, /капучино/i, /cappuccino/i,
+  /раф/i, /americano/i, /американо/i, /эспрессо/i, /espresso/i,
+  /чай/i, /tea/i, /какао/i, /матча/i, /цикори/i,
+];
+
+/** То, что добавляют в чашку и что само по себе приёмом пищи не является. */
+const COFFEE_COMPANION_PATTERNS = [
+  /молоко/i, /milk/i, /сливк/i, /сироп/i, /syrup/i, /сахар/i, /подсластител/i,
+  /мёд\b/i, /мед\b/i, /корица/i, /вода/i, /water/i, /лимон/i, /пенка/i,
+];
+
+function matchesAny(patterns, value) {
+  const name = String(value || '');
+  return patterns.some((pattern) => pattern.test(name));
+}
+
+function isCoffeeBreak(meal) {
+  const items = (meal && meal.items) || [];
+  if (!items.length) return false;
+  const everythingLiquid = items.every((item) => matchesAny(COFFEE_BASE_PATTERNS, item.name)
+    || matchesAny(COFFEE_COMPANION_PATTERNS, item.name));
+  if (!everythingLiquid) return false;
+  // Стакан молока сам по себе кофе-брейком не считается: нужен собственно
+  // напиток-основа, иначе тип начнёт подписывать любую жидкость.
+  return items.some((item) => matchesAny(COFFEE_BASE_PATTERNS, item.name));
+}
+
+const MAIN_MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'night']);
+
+/** Зеркало BEVERAGE_LIKE_PATTERNS из apps/web/day/_meal_quality.js. */
+const BEVERAGE_LIKE_PATTERNS = [
+  /кофе/i, /coffee/i, /латте/i, /latte/i, /капучино/i, /cappuccino/i,
+  /раф/i, /americano/i, /американо/i, /чай/i, /tea/i,
+  /молоко/i, /milk/i, /кефир/i, /йогурт/i, /смузи/i, /коктейль/i, /shake/i,
+];
+
+const MAIN_MEAL_THRESHOLDS = { minProducts: 3, minGrams: 200, minKcal: 300 };
+
+/**
+ * Одиночное блюдо тоже бывает полноценным приёмом: пороги приложения рассчитаны
+ * на состав из нескольких позиций, и тарелка супа одной строкой в них не
+ * проходит. Планка ниже 300, но заметно выше перекуса — кофе с печеньем (≈175)
+ * основным приёмом не становится.
+ */
+const SINGLE_DISH_KCAL = 250;
+
+function isBeverageLikeName(name) {
+  const value = String(name || '');
+  return BEVERAGE_LIKE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+/**
+ * Состав приёма отдельно по еде и по жидкому.
+ *
+ * Пороги «основного приёма» считаются только по еде: кофе, молоко и сироп —
+ * это три позиции, и по общему счёту продуктов кофе с бананом дотягивал до
+ * обеда. Обедом приём делает еда, напиток её только сопровождает.
+ */
+function mealComposition(meal) {
+  const items = (meal && meal.items) || [];
+  let grams = 0;
+  let kcal = 0;
+  let beverageKcal = 0;
+  let foodCount = 0;
+  let foodGrams = 0;
+  let foodKcal = 0;
+  for (const item of items) {
+    const itemGrams = Number(item.grams) || 0;
+    const kc = itemKcal(item);
+    grams += itemGrams;
+    kcal += kc;
+    const liquid = isBeverageLikeName(item.name)
+      || matchesAny(COFFEE_BASE_PATTERNS, item.name)
+      || matchesAny(COFFEE_COMPANION_PATTERNS, item.name);
+    if (isBeverageLikeName(item.name)) beverageKcal += kc;
+    if (!liquid) {
+      foodCount += 1;
+      foodGrams += itemGrams;
+      foodKcal += kc;
+    }
+  }
+  return {
+    count: items.length,
+    grams,
+    kcal,
+    foodCount,
+    foodGrams,
+    foodKcal,
+    beverageRatio: kcal > 0 ? beverageKcal / kcal : 0,
+  };
+}
+
+/**
+ * «Скорее напиток, чем еда» — тот же критерий, по которому дневник рисует чип
+ * «напиток» (getMealRoleStatus в apps/web/day/_meal_quality.js). Без него кофе
+ * с молоком и сиропом — это три продукта, то есть формально основной приём, и
+ * подписывался бы «Обедом».
+ */
+function isDrinkLike(composition) {
+  return composition.beverageRatio >= 0.7 && composition.kcal <= 180;
+}
+
+function isSubstantialMeal(composition) {
+  if (isDrinkLike(composition)) return false;
+  if (composition.foodCount >= MAIN_MEAL_THRESHOLDS.minProducts) return true;
+  if (composition.foodGrams >= MAIN_MEAL_THRESHOLDS.minGrams && composition.foodCount >= 2) return true;
+  if (composition.foodKcal >= MAIN_MEAL_THRESHOLDS.minKcal) return true;
+  return composition.foodCount === 1 && composition.foodKcal >= SINGLE_DISH_KCAL;
+}
+
+/**
+ * Слот суток по времени приёма.
+ *
+ * Утро и ночь размер не проверяют: еда в 8 утра — это завтрак, даже лёгкий, а
+ * еда в полночь — ночной приём, и именно этот факт важен куратору. Днём и
+ * вечером обедом или ужином становится только то, что дотягивает по объёму:
+ * иначе кофе с печеньем в 15:15 подписывается «Обедом».
+ */
+function slotTypesForTime(time) {
+  const minutes = timeToMinutes(time);
+  const hour = minutes === null ? 12 : Math.floor(minutes / 60);
+  if (hour >= 5 && hour < 11) return { main: 'breakfast', light: 'breakfast', snack: 'snack1' };
+  if (hour >= 11 && hour < 16) return { main: 'lunch', light: 'snack1', snack: 'snack1' };
+  if (hour >= 16 && hour < 22) return { main: 'dinner', light: 'snack2', snack: 'snack2' };
+  return { main: 'night', light: 'night', snack: 'snack3' };
+}
+
+/**
+ * Тип и подпись приёма по времени и составу.
+ *
+ * Второй обед в одном дне не заводится: если основной тип этого слота уже занят
+ * другим приёмом, новый становится перекусом того же слота — так же поступает
+ * приложение, когда считает тип само.
+ */
+function classifyMeal(meal, dayData) {
+  const composition = mealComposition(meal);
+  // Кофе-брейк не зависит от времени суток: кофе в семь утра и кофе в одиннадцать
+  // вечера — одно и то же, и завтраком первый из них не становится.
+  if (isCoffeeBreak(meal)) {
+    return { mealType: 'coffee_break', name: MEAL_TYPE_NAMES.coffee_break, composition };
+  }
+
+  const slot = slotTypesForTime(meal && meal.time);
+  let type = isSubstantialMeal(composition) ? slot.main : slot.light;
+
+  if (MAIN_MEAL_TYPES.has(type)) {
+    const taken = ((dayData && dayData.meals) || [])
+      .filter((m) => m && String(m.id) !== String(meal && meal.id))
+      .some((m) => m.mealType === type);
+    if (taken) type = slot.snack;
+  }
+
+  return { mealType: type, name: MEAL_TYPE_NAMES[type], composition };
+}
+
+/** Подпись приёма сгенерирована нами (а не названа куратором или набором)? */
+function isAutoMealName(name) {
+  const value = String(name || '').trim();
+  return value === '' || Object.values(MEAL_TYPE_NAMES).includes(value) || value === 'Приём';
+}
+
 function macroTotals(meals) {
   const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
   for (const meal of meals || []) {
@@ -278,6 +466,27 @@ function updateMeal(day, mealId, patch, { nowMs, clientId }) {
   }
 
   if (!changed.length) return { day, meal: meals[index], changed, unknownItems };
+
+  // Правка меняет не только состав, но и суть приёма: к «перекусу» добавили
+  // тарелку супа — это уже обед, и подписан он должен быть обедом. Понижать
+  // сами не начинаем: убранная позиция не повод переименовывать чужой обед,
+  // а вот сдвиг времени меняет слот в обе стороны.
+  const contentChanged = removeIds.length > 0
+    || Object.keys(patch.setGrams || {}).length > 0
+    || (Array.isArray(patch.addItems) && patch.addItems.length > 0);
+  if ((contentChanged || patch.time) && !patch.name) {
+    const before = meal.mealType;
+    const classified = classifyMeal(meal, day);
+    const upgraded = !MAIN_MEAL_TYPES.has(before) && MAIN_MEAL_TYPES.has(classified.mealType);
+    // Кофе-брейк перестаёт им быть, как только в чашку добавили еду, — и это
+    // тоже повышение, хотя формально «перекус» основным приёмом не является.
+    const leftCoffeeBreak = before === 'coffee_break' && classified.mealType !== 'coffee_break';
+    if (classified.mealType !== before && (upgraded || leftCoffeeBreak || patch.time)) {
+      meal.mealType = classified.mealType;
+      if (isAutoMealName(meal.name)) meal.name = classified.name;
+      changed.push(`тип → ${classified.name}`);
+    }
+  }
 
   const nextMeals = meals.map((m, i) => (i === index ? meal : m));
   const nextDay = touch({ ...day, meals: resort ? sortMealsByTime(nextMeals) : nextMeals }, nowMs, clientId);
@@ -575,6 +784,12 @@ function dayAverages(day) {
 module.exports = {
   MOSCOW_TZ,
   HR_ZONES,
+  MEAL_TYPE_NAMES,
+  classifyMeal,
+  isAutoMealName,
+  mealComposition,
+  isDrinkLike,
+  isCoffeeBreak,
   nowParts,
   isValidDate,
   normalizeTime,
