@@ -86,21 +86,27 @@ function mealTotals(meals) {
   return { kcal: Math.round(kcal), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
 }
 
-function trainingMinutes(trainings) {
+/** Минуты одной тренировки — сумма пульсовых зон `z`. */
+function trainingMinutes(training) {
   let min = 0;
-  for (const t of trainings || []) {
-    const direct = Number(t.minutes ?? t.duration ?? t.durationMin ?? t.time);
-    if (Number.isFinite(direct) && direct > 0) { min += direct; continue; }
-    for (const z of t.zones || []) min += Number(z.minutes ?? z) || 0;
-  }
-  return Math.round(min);
+  for (const zone of training?.z || []) min += Number(zone) || 0;
+  return min;
+}
+
+/**
+ * День всегда содержит три слота-заготовки вида {"z":[0,0,0,0]}, поэтому
+ * считать по длине массива нельзя: получится «3 тренировки» у того, кто не
+ * тренировался. Канон приложения — слот с ненулевой зоной.
+ */
+function realTrainings(trainings) {
+  return (trainings || []).filter((t) => trainingMinutes(t) > 0);
 }
 
 function summarizeDay(day) {
   if (!day) return null;
   const meals = (day.meals || []).filter((m) => (m.items || []).length > 0);
   const totals = mealTotals(meals);
-  const trainings = day.trainings || [];
+  const trainings = realTrainings(day.trainings);
   return {
     meals: meals.length,
     mealNames: meals.map((m) => `${m.time || '--:--'} ${m.name || 'приём'}`),
@@ -110,7 +116,7 @@ function summarizeDay(day) {
     steps: Number(day.steps) || 0,
     householdMin: Number(day.householdMin) || 0,
     trainings: trainings.length,
-    trainingMin: trainingMinutes(trainings),
+    trainingMin: Math.round(trainings.reduce((sum, t) => sum + trainingMinutes(t), 0)),
     weight: Number(day.weightMorning) || null,
     sleepHours: Number(day.sleepHours) || null,
     sleepQuality: Number(day.sleepQuality) || null,

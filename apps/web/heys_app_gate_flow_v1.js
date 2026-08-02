@@ -2519,7 +2519,7 @@
                                                                         cell('🍽', meals ? `${meals} · ${Math.round(Number(day.kcal) || 0)} ккал` : 'еды нет', meals > 0),
                                                                         cell('💧', water ? `${(water / 1000).toFixed(1)} л` : 'воды нет', water > 0),
                                                                         cell('👟', steps ? steps.toLocaleString('ru-RU') : 'шагов нет', steps > 0),
-                                                                        cell('🏋', trainings ? `${trainings} трен.` : 'без тренировки', trainings > 0)
+                                                                        cell('🏋', trainings ? `${Number(day.training_min) || 0} мин` : 'без тренировки', trainings > 0)
                                                                     );
                                                                 })(),
 

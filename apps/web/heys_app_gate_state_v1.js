@@ -68,8 +68,9 @@
         const [daySummary, setDaySummary] = React.useState(null);
         const clientsCount = clients?.length || 0;
         React.useEffect(() => {
-            // Грузим только на экране выбора клиента: внутри клиента сводка не видна.
-            if (clientId || !clientsCount || !HEYS.YandexAPI?.getClientsDaySummary) return undefined;
+            // Только кураторский контекст и только экран выбора клиента: внутри
+            // клиента сводка не видна, а из PIN-сессии этот RPC вернёт 401.
+            if (clientId || !cloudUser || !clientsCount || !HEYS.YandexAPI?.getClientsDaySummary) return undefined;
             let cancelled = false;
             const load = () => {
                 HEYS.YandexAPI.getClientsDaySummary().then(({ data, error }) => {
@@ -83,7 +84,7 @@
             // День меняется у клиентов в течение сессии куратора, поэтому обновляем.
             const timer = setInterval(load, 5 * 60 * 1000);
             return () => { cancelled = true; clearInterval(timer); };
-        }, [clientId, clientsCount]);
+        }, [clientId, clientsCount, cloudUser]);
 
         React.useEffect(() => {
             let cancelled = false;

@@ -209,6 +209,13 @@
       "path": "scripts/db/migrations/2026-08-02_curator_clients_day_summary.sql",
       "description": "Read-only day summary across all clients of a curator",
       "destructive": false
+    },
+    {
+      "id": "2026-08-02_curator_day_summary_real_trainings",
+      "order": 28,
+      "path": "scripts/db/migrations/2026-08-02_curator_day_summary_real_trainings.sql",
+      "description": "Count only trainings with non-zero zones and return training minutes",
+      "destructive": false
     }
   ]
 }
