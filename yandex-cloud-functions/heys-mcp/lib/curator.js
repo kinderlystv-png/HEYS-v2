@@ -10,16 +10,20 @@
  * приёмы, наборы, продукты, поиск — остаётся одной на оба режима.
  *
  * Главный риск режима — записать не тому клиенту. Он же главный исторический
- * инцидент этого проекта. Поэтому:
- *  - параметр `client` обязателен в каждом инструменте, пока у куратора
- *    больше одного клиента; неоднозначное имя не угадывается, а возвращает
- *    кандидатов;
- *  - каждый ответ начинается с имени клиента;
- *  - перед записью выдаётся write-context на конкретного клиента — сервер
- *    привязывает цель записи независимо от того, что прислал вызов.
+ * инцидент этого проекта. Серверной страховки от него нет: write-context
+ * выдаётся по тому же client_id, который потом уходит в запись, поэтому
+ * серверная сверка контекста с целью в этом пути тавтологична (она ловит
+ * рассинхрон браузерного стейта, а не промах адресации). Значит, вся защита
+ * живёт здесь:
+ *  - для пишущих инструментов `client` обязателен по схеме и принимается
+ *    только точно: client_id или имя, совпавшее целиком;
+ *  - для чтения совпадение по подстроке допустимо — цена промаха там
+ *    несопоставима;
+ *  - неоднозначное имя не угадывается, а возвращает кандидатов;
+ *  - каждый ответ начинается с имени клиента.
  */
 
-const { createTools, TOOL_SCHEMAS, ToolError } = require('./tools');
+const { createTools, TOOL_SCHEMAS, WRITE_TOOLS, ToolError } = require('./tools');
 const products = require('./products');
 const admin = require('./admin');
 const day = require('./day');
@@ -35,8 +39,38 @@ const CLIENTLESS_TOOLS = new Set([
 
 const CLIENT_ARG = {
   type: 'string',
-  description: 'Кому вносим: имя клиента или client_id из heys_list_clients. Обязательно, если у куратора больше одного клиента.',
+  description: 'Про кого спрашиваем: имя клиента или client_id из heys_list_clients. Обязательно, если у куратора больше одного клиента.',
 };
+
+/**
+ * Тот же параметр для записи и для действий наружу (сообщение клиенту, PIN,
+ * подписка). Здесь имя работает только целиком: частичное совпадение с
+ * единственным клиентом — это и есть механика, которой не хватает одной
+ * похожей строки, чтобы еда уехала в чужой дневник.
+ */
+const CLIENT_ARG_STRICT = {
+  type: 'string',
+  description: 'Кому вносим: client_id из heys_list_clients (надёжный вариант) или имя клиента целиком. Часть имени на запись не принимается — сначала возьми client_id из heys_list_clients.',
+};
+
+/**
+ * Инструменты, где промах адресацией необратим или виден клиенту: запись в
+ * дневник плюс действия наружу — сообщение в мессенджер, PIN и ссылка входа,
+ * подписка, активация триала.
+ */
+const STRICT_TARGET_TOOLS = new Set([
+  ...WRITE_TOOLS,
+  'heys_reply_message',
+  'heys_client_access',
+  'heys_manage_subscription',
+  'heys_trial_queue',
+]);
+
+/** Добавить `client` в required, не потеряв собственные обязательные поля схемы. */
+function withRequiredClient(required) {
+  const list = Array.isArray(required) ? required : [];
+  return list.includes('client') ? list : ['client', ...list];
+}
 
 /**
  * Публикация в общую базу — кураторская возможность, поэтому параметр живёт
@@ -52,27 +86,31 @@ const CURATOR_EXTRA_ARGS = {
 };
 
 function buildCuratorSchemas() {
-  const schemas = TOOL_SCHEMAS.map((schema) => ({
-    ...schema,
-    description: schema.name === 'heys_create_product'
-      ? `${schema.description} Работает со списком выбранного клиента куратора; промышленный продукт заодно уезжает в общую базу.`
-      : `${schema.description} Работает с дневником выбранного клиента куратора.`,
-    inputSchema: {
-      ...schema.inputSchema,
-      properties: {
-        client: CLIENT_ARG,
-        ...(schema.inputSchema.properties || {}),
-        ...(CURATOR_EXTRA_ARGS[schema.name] || {}),
+  const schemas = TOOL_SCHEMAS.map((schema) => {
+    const strict = STRICT_TARGET_TOOLS.has(schema.name);
+    return {
+      ...schema,
+      description: schema.name === 'heys_create_product'
+        ? `${schema.description} Работает со списком выбранного клиента куратора; промышленный продукт заодно уезжает в общую базу.`
+        : `${schema.description} Работает с дневником выбранного клиента куратора.`,
+      inputSchema: {
+        ...schema.inputSchema,
+        properties: {
+          client: strict ? CLIENT_ARG_STRICT : CLIENT_ARG,
+          ...(schema.inputSchema.properties || {}),
+          ...(CURATOR_EXTRA_ARGS[schema.name] || {}),
+        },
+        ...(strict ? { required: withRequiredClient(schema.inputSchema.required) } : {}),
       },
-    },
-  }));
+    };
+  });
   schemas.unshift({
     name: 'heys_reply_message',
     description: 'Ответить клиенту в мессенджере приложения. Используй после того, как внёс просьбу в дневник: клиент должен видеть, что его сообщение обработано.',
     inputSchema: {
       type: 'object',
-      properties: { client: CLIENT_ARG, text: { type: 'string', description: 'Текст ответа клиенту.' } },
-      required: ['text'],
+      properties: { client: CLIENT_ARG_STRICT, text: { type: 'string', description: 'Текст ответа клиенту.' } },
+      required: ['client', 'text'],
     },
   });
   schemas.unshift({
@@ -156,12 +194,12 @@ function buildCuratorSchemas() {
     inputSchema: {
       type: 'object',
       properties: {
-        client: CLIENT_ARG,
+        client: CLIENT_ARG_STRICT,
         action: { type: 'string', description: '«extend» или «cancel».' },
         months: { type: 'integer', description: 'На сколько месяцев продлить, 1–24.' },
         confirm: { type: 'boolean', description: 'Подтверждение сброса подписки.' },
       },
-      required: ['action'],
+      required: ['client', 'action'],
     },
   });
   schemas.unshift({
@@ -170,11 +208,12 @@ function buildCuratorSchemas() {
     inputSchema: {
       type: 'object',
       properties: {
-        client: CLIENT_ARG,
+        client: CLIENT_ARG_STRICT,
         action: { type: 'string', description: '«link» (по умолчанию) или «reset_pin».' },
         pin: { type: 'string', description: 'Конкретный PIN из четырёх цифр. Без него сгенерируется случайный — так лучше.' },
         confirm: { type: 'boolean', description: 'Подтверждение смены PIN: старый перестанет работать сразу.' },
       },
+      required: ['client'],
     },
   });
   schemas.unshift({
@@ -223,7 +262,9 @@ function curatorInstructions(curatorName) {
     `Дневники питания, воды, сна и тренировок HEYS. Ты помогаешь куратору${curatorName ? ` (${curatorName})` : ''} вести дневники его клиентов.`,
     '',
     'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА: каждая запись адресная. Прежде чем внести что-либо, ты обязан знать, КОМУ. Если из сообщения не ясно, какому клиенту вносить, — вызови heys_list_clients и уточни у куратора. Никогда не выбирай клиента по догадке: запись в чужой дневник — худшая ошибка этого инструмента.',
+    'В пишущие инструменты и в действия наружу (ответ клиенту, PIN, подписка, триал) передавай client_id из heys_list_clients, а не имя: часть имени там не принимается, и имя двух похожих клиентов различает только id.',
     'В каждом ответе называй клиента, которому внёс данные, — так куратор сразу заметит промах.',
+    'После записи инструмент возвращает day_after — состояние дня по версии сервера. Сверяй его с тем, что ожидал: приёмов стало больше на один, калории выросли на внесённое. Не сошлось или outcome не «saved» — скажи об этом куратору, а не отчитывайся «внёс».',
     'Если куратор в диалоге явно сказал «сейчас работаем с <имя>» — используй этого клиента для последующих записей, пока он не переключится.',
     '',
     'Правила работы с дневником:',
@@ -291,17 +332,27 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
     return clientsPromise;
   }
 
-  async function resolveTarget(clientArg) {
+  /**
+   * @param {string} clientArg — что прислал вызов.
+   * @param {{strict?: boolean}} options — strict для записи и действий наружу:
+   *   единственный клиент молча не подставляется, частичное имя не считается
+   *   попаданием. Цена строгости — лишний heys_list_clients; цена мягкости —
+   *   запись в чужой дневник.
+   */
+  async function resolveTarget(clientArg, { strict = false } = {}) {
     const clients = await loadClients();
     if (!clients.length) throw new ToolError('no_clients', 'У куратора нет клиентов.');
+    const candidates = () => clients.map((c) => ({ client_id: c.client_id, name: c.name }));
 
     const raw = String(clientArg || '').trim();
     if (!raw) {
-      if (clients.length === 1) return clients[0];
+      if (!strict && clients.length === 1) return clients[0];
       throw new ToolError(
         'client_required',
-        'Не указан клиент. Уточни у куратора, кому вносить.',
-        { clients: clients.map((c) => ({ client_id: c.client_id, name: c.name })) },
+        strict
+          ? 'Действие адресное: назови клиента явно — client_id из heys_list_clients.'
+          : 'Не указан клиент. Уточни у куратора, кому вносить.',
+        { clients: candidates() },
       );
     }
 
@@ -311,6 +362,17 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
     const norm = products.normalizeText(raw);
     const exact = clients.filter((c) => products.normalizeText(c.name) === norm);
     if (exact.length === 1) return exact[0];
+
+    if (strict) {
+      throw new ToolError(
+        exact.length ? 'client_ambiguous' : 'client_not_found',
+        exact.length
+          ? `Имя «${raw}» носит несколько клиентов — для записи возьми client_id из heys_list_clients.`
+          : `Клиент «${raw}» не найден по точному совпадению. Для записи имя должно совпадать целиком — возьми client_id из heys_list_clients.`,
+        { clients: candidates() },
+      );
+    }
+
     const partial = clients.filter((c) => products.normalizeText(c.name).includes(norm));
     if (partial.length === 1) return partial[0];
 
@@ -362,6 +424,9 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
         sessionToken: '__curator__',
         clientId: target.client_id,
         nowMs,
+        // Блоб штампуется id клиента (иначе не пройдёт cross-client guard),
+        // поэтому автор записи виден только по явной метке.
+        byCurator: true,
       }).tools);
     }
     return toolsByClient.get(target.client_id);
@@ -400,10 +465,9 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
       from_client: author == null ? null : !/curator/i.test(String(author)),
       done: raw.is_done ?? raw.done ?? false,
       has_attachment: !!(raw.attachment || raw.attachments || raw.photo_id),
-      // Сами файлы коннектор не отдаёт: он умеет только текст, а фото клиент
-      // и куратор смотрят в приложении. Но знать, что к сообщению приложено
-      // фото, ассистенту нужно — иначе «внеси, что на фото» выглядит как
-      // сообщение без содержания.
+      // Здесь только описи вложений: путь и расшифровка. Само изображение
+      // отдаёт heys_get_photo по этому пути — иначе «внеси, что на фото»
+      // выглядело бы как сообщение без содержания.
       attachments: describeAttachments(raw),
       intent: raw.intent_type ?? raw.intent ?? null,
       applied_at: raw.applied_at ?? null,
@@ -521,7 +585,7 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
     },
 
     async heys_reply_message(args = {}) {
-      const target = await resolveTarget(args.client);
+      const target = await resolveTarget(args.client, { strict: true });
       const text = String(args.text || '').trim();
       if (!text) throw new ToolError('invalid_text', 'Нужен текст ответа.');
       const res = await api.sendMessageToClient(curatorJwt, target.client_id, text);
@@ -650,7 +714,7 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
      * секреты, поэтому оба требуют подтверждения и оба помечены в ответе.
      */
     async heys_client_access(args = {}) {
-      const target = await resolveTarget(args.client);
+      const target = await resolveTarget(args.client, { strict: true });
       const label = target.name || target.client_id;
       const action = String(args.action || 'link').toLowerCase();
 
@@ -687,7 +751,7 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
 
     /** Подписка клиента: продление на месяцы или сброс. */
     async heys_manage_subscription(args = {}) {
-      const target = await resolveTarget(args.client);
+      const target = await resolveTarget(args.client, { strict: true });
       const label = target.name || target.client_id;
       const action = String(args.action || '').toLowerCase();
       if (!curatorId) throw new ToolError('no_curator_id', 'Не удалось определить куратора — переподключи коннектор.');
@@ -736,7 +800,7 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
       }
 
       if (action === 'activate') {
-        const target = await resolveTarget(args.client);
+        const target = await resolveTarget(args.client, { strict: true });
         const label = target.name || target.client_id;
         const res = await api.activateTrial(curatorJwt, target.client_id, args.start_date || null);
         if (!res.ok) throw new ToolError('trial_failed', `[${label}] Не удалось активировать триал: ${res.error}`);
@@ -826,9 +890,10 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
   };
 
   for (const schema of TOOL_SCHEMAS) {
+    const strict = STRICT_TARGET_TOOLS.has(schema.name);
     tools[schema.name] = async (args = {}) => {
       const { client, ...rest } = args;
-      const target = await resolveTarget(client);
+      const target = await resolveTarget(client, { strict });
       const result = await toolsFor(target)[schema.name](rest);
       const label = target.name || target.client_id;
       return {

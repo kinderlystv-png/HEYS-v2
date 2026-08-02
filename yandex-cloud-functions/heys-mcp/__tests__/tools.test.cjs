@@ -2,7 +2,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTools, defaultMealName } = require('../lib/tools');
+const fs = require('node:fs');
+const path = require('node:path');
+const { createTools, defaultMealName, TOOL_SCHEMAS, WRITE_TOOLS } = require('../lib/tools');
 const mcp = require('../lib/mcp');
 
 const CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
@@ -650,4 +652,91 @@ test('продукт общей базы удалить нельзя', async () 
     return true;
   });
   assert.equal(api.upserts.length, 0);
+});
+
+// ── Итог дня после записи ────────────────────────────────────────────────
+
+/**
+ * Подставной API, где merge возвращает СВОЮ версию дня — как настоящий сервер.
+ * Форма ответа — контракт клиента API (`value`), в который heys-api.js
+ * разворачивает `v` из тела merge_save.
+ */
+function fakeApiWithServerMerge(mergedDay, outcome = 'day_merged') {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  api.mergeSaveKV = async (_session, key, value, lastSeenUpdatedAt) => {
+    api.saves.push({ key, value, lastSeenUpdatedAt });
+    return { ok: true, outcome, value: mergedDay };
+  };
+  return api;
+}
+
+test('day_after считается по блобу сервера, а не по нашей копии', async () => {
+  // Сервер слил нашу запись с приёмом, который клиент внёс параллельно:
+  // в дне два приёма, а мы отправляли один.
+  const merged = {
+    date: '2026-08-01',
+    waterMl: 250,
+    meals: [
+      { id: 'm_from_client', time: '09:00', items: [{ name: 'Каша', grams: 200, kcal100: 100 }] },
+      { id: 'm_ours', time: '13:47', items: [{ name: 'Кофе', grams: 100, kcal100: 50 }] },
+    ],
+  };
+  const api = fakeApiWithServerMerge(merged);
+  const tools = build(api);
+  const res = await tools.heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }], time: '13:47' });
+
+  const after = res.structured.day_after;
+  assert.equal(after.meals, 2, 'видно чужой приём, которого не было в нашей копии');
+  assert.equal(after.water_ml, 250);
+  assert.equal(after.totals.kcal, 250);
+  assert.equal(after.outcome, 'day_merged');
+  assert.match(res.text, /Итого за 2026-08-01: 250 ккал, приёмов 2/);
+});
+
+test('day_after падает на нашу копию, когда сервер блоб не вернул', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 100, updatedAt: 111 } });
+  const tools = build(api);
+  const res = await tools.heys_add_water({ ml: 150 });
+  assert.equal(res.structured.day_after.water_ml, 250);
+  assert.equal(res.structured.day_after.meals, 0);
+});
+
+test('каждый инструмент, меняющий день, отдаёт day_after', async () => {
+  const day = {
+    date: '2026-08-01',
+    meals: [{ id: 'm1', time: '09:00', name: 'Завтрак', items: [{ id: 'it1', name: 'Каша', grams: 200, kcal100: 100 }] }],
+    waterMl: 0,
+    updatedAt: 111,
+  };
+  const calls = [
+    ['heys_log_meal', { items: [{ product_id: 'own-americano', grams: 100 }] }],
+    ['heys_update_meal', { meal_id: 'm1', set_grams: { it1: 150 } }],
+    ['heys_delete_meal', { meal_id: 'm1' }],
+    ['heys_add_water', { ml: 200 }],
+    ['heys_log_training', { zones_minutes: [30] }],
+    ['heys_update_day', { steps: 8000 }],
+  ];
+  for (const [name, args] of calls) {
+    const tools = build(fakeApi({ day: JSON.parse(JSON.stringify(day)) }));
+    const res = await tools[name](args);
+    assert.ok(res.structured.day_after, `${name}: нет day_after`);
+    assert.equal(res.structured.day_after.date, '2026-08-01', `${name}: не та дата`);
+    assert.match(res.text, /Итого за 2026-08-01/, `${name}: итог не попал в текст`);
+  }
+});
+
+test('WRITE_TOOLS совпадает с обработчиками, которые реально пишут', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'lib', 'tools.js'), 'utf8');
+  const found = new Set();
+  let current = null;
+  for (const line of source.split('\n')) {
+    const header = /^ {4}async (heys_[a-z_]+)\(/.exec(line);
+    if (header) current = header[1];
+    if (current && /\b(writeDay|saveCardKey|api\.upsertKV)\(/.test(line)) found.add(current);
+  }
+  assert.deepEqual([...found].sort(), [...WRITE_TOOLS].sort(),
+    'список WRITE_TOOLS разошёлся с инструментами, которые пишут в облако');
+  for (const name of WRITE_TOOLS) {
+    assert.ok(TOOL_SCHEMAS.some((s) => s.name === name), `${name} нет среди схем`);
+  }
 });

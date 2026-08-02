@@ -94,7 +94,7 @@ function clampSubjective(value, field) {
  * clientId и «сейчас». Кэш каталога живёт в контексте, чтобы один
  * tools/call с несколькими позициями не тянул общую базу дважды.
  */
-function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
+function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurator = false }) {
   let catalogPromise = null;
 
   async function loadCatalog() {
@@ -200,6 +200,37 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
     const res = await api.mergeSaveKV(sessionToken, day.dayKey(date), nextDay, lastSeenUpdatedAt);
     if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись дня ${date}: ${res.error}`);
     return res;
+  }
+
+  /**
+   * Состояние дня после записи — считается по блобу, который вернул сервер
+   * (`v` из merge_save), а не по нашей оптимистичной копии.
+   *
+   * Зачем: инструмент отчитывается «внёс» сразу после ok, и до сих пор это был
+   * отчёт о намерении. Если merge принял чужую параллельную правку, отбросил
+   * нашу как stale или в дне уже лежит такой же приём от повторного вызова —
+   * по ответу это не видно, а следующего heys_get_day ассистент обычно не
+   * делает. Итог дня возвращается тем же запросом, без лишнего round-trip.
+   */
+  function dayAfterWrite(res, fallbackDay) {
+    const saved = (res && res.value && typeof res.value === 'object' && !Array.isArray(res.value))
+      ? res.value
+      : fallbackDay;
+    return {
+      date: saved.date || fallbackDay.date,
+      totals: day.macroTotals(saved.meals),
+      meals: (saved.meals || []).length,
+      water_ml: Number(saved.waterMl) || 0,
+      // 'saved' — наша версия победила, 'day_merged' — сервер слил с облачной,
+      // 'stale_write_blocked' — нашу отбросили. Последнее ассистент обязан
+      // назвать вслух, а не отчитаться «записал».
+      outcome: (res && res.outcome) || null,
+    };
+  }
+
+  /** Хвост к тексту ответа: то же, что в day_after, одной строкой для модели. */
+  function dayAfterText(after) {
+    return ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.`;
   }
 
   /**
@@ -389,7 +420,8 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
 
       const current = await readDay(date);
       const next = day.addMeal(current, meal, { nowMs, clientId });
-      await writeDay(date, next, Number(current.updatedAt) || 0);
+      const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, next);
       const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([meal]);
@@ -398,7 +430,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
         : '';
       return {
-        text: `Записал: ${meal.name} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}`,
+        text: `Записал: ${meal.name} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: meal.id,
@@ -407,6 +439,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
           totals: kcal,
           items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
+          day_after: after,
         },
       };
     },
@@ -470,7 +503,8 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
         throw new ToolError('meal_would_be_empty', 'После правки в приёме не осталось позиций. Если приём нужно убрать целиком — heys_delete_meal.');
       }
 
-      await writeDay(date, result.day, Number(current.updatedAt) || 0);
+      const saved = await writeDay(date, result.day, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, result.day);
       const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([result.meal]);
@@ -478,7 +512,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
         : '';
       return {
-        text: `Обновил «${result.meal.name}» (${result.meal.time}, ${date}): ${result.changed.join('; ')}. Теперь в приёме ${result.meal.items.length} позиций, ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}`,
+        text: `Обновил «${result.meal.name}» (${result.meal.time}, ${date}): ${result.changed.join('; ')}. Теперь в приёме ${result.meal.items.length} позиций, ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: result.meal.id,
@@ -488,6 +522,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
           totals: kcal,
           items: result.meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
+          day_after: after,
         },
       };
     },
@@ -658,8 +693,12 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       const current = await readDay(date);
       const { day: next, removed } = day.deleteMeal(current, args.meal_id, { nowMs, clientId });
       if (!removed) throw new ToolError('meal_not_found', `Приём ${args.meal_id} не найден в дне ${date}.`);
-      await writeDay(date, next, Number(current.updatedAt) || 0);
-      return { text: `Удалил приём ${args.meal_id} из дня ${date}.`, structured: { date, meal_id: args.meal_id, deleted: true } };
+      const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, next);
+      return {
+        text: `Удалил приём ${args.meal_id} из дня ${date}.${dayAfterText(after)}`,
+        structured: { date, meal_id: args.meal_id, deleted: true, day_after: after },
+      };
     },
 
     async heys_add_water(args) {
@@ -670,10 +709,11 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       }
       const current = await readDay(date);
       const next = day.addWater(current, ml, { nowMs, clientId });
-      await writeDay(date, next, Number(current.updatedAt) || 0);
+      const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, next);
       return {
-        text: `Вода за ${date}: ${next.waterMl} мл (${ml > 0 ? '+' : ''}${ml}).`,
-        structured: { date, water_ml: next.waterMl, delta_ml: ml },
+        text: `Вода за ${date}: ${after.water_ml} мл (${ml > 0 ? '+' : ''}${ml}).${dayAfterText(after)}`,
+        structured: { date, water_ml: after.water_ml, delta_ml: ml, day_after: after },
       };
     },
 
@@ -687,10 +727,11 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       if (total <= 0) throw new ToolError('invalid_zones', 'Суммарная длительность тренировки должна быть больше нуля.');
       const current = await readDay(date);
       const next = day.addTraining(current, zones, { nowMs, clientId });
-      await writeDay(date, next, Number(current.updatedAt) || 0);
+      const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, next);
       return {
-        text: `Записал тренировку ${date}: ${total} мин по зонам [${zones.join(', ')}].`,
-        structured: { date, zones_minutes: zones, total_minutes: total },
+        text: `Записал тренировку ${date}: ${total} мин по зонам [${zones.join(', ')}].${dayAfterText(after)}`,
+        structured: { date, zones_minutes: zones, total_minutes: total, day_after: after },
       };
     },
 
@@ -712,15 +753,16 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
       const current = await readDay(date);
       let updated;
       try {
-        updated = day.updateDayFields(current, fields, { nowMs, clientId });
+        updated = day.updateDayFields(current, fields, { nowMs, clientId, byCurator });
       } catch (e) {
         throw new ToolError('invalid_field', e.message);
       }
       if (!updated.applied.length) throw new ToolError('nothing_to_update', 'Не передано ни одного поля для обновления.');
-      await writeDay(date, updated.day, Number(current.updatedAt) || 0);
+      const saved = await writeDay(date, updated.day, Number(current.updatedAt) || 0);
+      const after = dayAfterWrite(saved, updated.day);
       return {
-        text: `Обновил ${date}: ${updated.applied.join(', ')}.`,
-        structured: { date, updated: updated.applied },
+        text: `Обновил ${date}: ${updated.applied.join(', ')}.${dayAfterText(after)}`,
+        structured: { date, updated: updated.applied, day_after: after },
       };
     },
 
@@ -1430,13 +1472,39 @@ const TOOL_SCHEMAS = [
         sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
         sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },
         sleep_note: { type: 'string', description: 'Заметка про сон.' },
-        mood: { type: 'integer', description: 'Настроение за день, 1–10.' },
-        wellbeing: { type: 'integer', description: 'Самочувствие за день, 1–10.' },
-        stress: { type: 'integer', description: 'Стресс за день, 1–10.' },
+        mood: { type: 'integer', description: 'Утреннее настроение из чек-ина, 1–10. Среднее за день считается вместе с оценками приёмов и тренировок.' },
+        wellbeing: { type: 'integer', description: 'Утреннее самочувствие из чек-ина, 1–10.' },
+        stress: { type: 'integer', description: 'Утренний стресс из чек-ина, 1–10.' },
         comment: { type: 'string', description: 'Комментарий к дню.' },
       },
     },
   },
 ];
 
-module.exports = { createTools, TOOL_SCHEMAS, ToolError, defaultMealName, makeId };
+/**
+ * Инструменты, которые меняют данные клиента.
+ *
+ * Список живёт рядом с обработчиками намеренно: по нему кураторский режим
+ * решает, можно ли принимать клиента по частичному совпадению имени. Завёл
+ * новый пишущий инструмент — впиши его сюда, иначе адресовать запись можно
+ * будет подстрокой. Тест `tools.test.cjs` сверяет список с обработчиками,
+ * которые реально вызывают writeDay/saveCardKey/upsertKV.
+ */
+const WRITE_TOOLS = new Set([
+  'heys_log_meal',
+  'heys_update_meal',
+  'heys_delete_meal',
+  'heys_add_water',
+  'heys_log_training',
+  'heys_update_day',
+  'heys_update_profile',
+  'heys_update_norms',
+  'heys_update_hr_zones',
+  'heys_create_product',
+  'heys_update_product',
+  'heys_delete_product',
+  'heys_save_meal_preset',
+  'heys_delete_meal_preset',
+]);
+
+module.exports = { createTools, TOOL_SCHEMAS, WRITE_TOOLS, ToolError, defaultMealName, makeId };

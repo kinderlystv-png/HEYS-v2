@@ -151,12 +151,70 @@ test('неизвестный и неоднозначный клиент не у�
   await assert.rejects(() => tools.heys_get_day({ client: 'Пётр' }), (e) => e.code === 'client_not_found');
 });
 
-test('единственный клиент подставляется без параметра', async () => {
+test('единственный клиент подставляется без параметра — на чтении', async () => {
   const api = fakeCuratorApi({ clients: [CLIENTS[1]] });
   const { tools } = build(api);
-  const res = await tools.heys_add_water({ ml: 100 });
-  assert.equal(api.writes[0].clientId, 'cid-alexandra');
+  const res = await tools.heys_get_day({ date: '2026-08-01' });
   assert.match(res.text, /^\[Александра\]/);
+});
+
+test('запись требует явного клиента даже когда он единственный', async () => {
+  const api = fakeCuratorApi({ clients: [CLIENTS[1]] });
+  const { tools } = build(api);
+  await assert.rejects(
+    () => tools.heys_add_water({ ml: 100 }),
+    (e) => {
+      assert.equal(e.code, 'client_required');
+      assert.equal(api.writes.length, 0, 'до разрешения цели запись не уходит');
+      return true;
+    },
+  );
+});
+
+test('на запись частичное совпадение имени не принимается, на чтение — да', async () => {
+  const api = fakeCuratorApi();
+  const { tools } = build(api);
+
+  const read = await tools.heys_get_day({ client: 'Алекс', date: '2026-08-01' });
+  assert.match(read.text, /^\[Александра\]/);
+
+  await assert.rejects(
+    () => tools.heys_add_water({ client: 'Алекс', ml: 100 }),
+    (e) => {
+      assert.equal(e.code, 'client_not_found');
+      assert.match(e.message, /целиком/);
+      assert.equal(api.writes.length, 0);
+      return true;
+    },
+  );
+
+  const byId = await tools.heys_add_water({ client: 'cid-alexandra', ml: 100 });
+  assert.equal(api.writes[0].clientId, 'cid-alexandra');
+  assert.match(byId.text, /^\[Александра\]/);
+});
+
+test('строгая адресация распространяется на действия наружу', async () => {
+  const api = fakeCuratorApi();
+  const { tools } = build(api);
+  await assert.rejects(
+    () => tools.heys_reply_message({ client: 'Алекс', text: 'привет' }),
+    (e) => e.code === 'client_not_found',
+  );
+});
+
+test('client обязателен по схеме у пишущих инструментов и у действий наружу', () => {
+  const schemas = buildCuratorSchemas();
+  const byName = new Map(schemas.map((s) => [s.name, s]));
+  for (const name of ['heys_log_meal', 'heys_add_water', 'heys_update_day', 'heys_create_product', 'heys_reply_message', 'heys_client_access']) {
+    assert.ok((byName.get(name).inputSchema.required || []).includes('client'), `${name}: client должен быть required`);
+  }
+  // Собственные обязательные поля схемы при этом не теряются.
+  assert.deepEqual(byName.get('heys_reply_message').inputSchema.required, ['client', 'text']);
+  assert.ok((byName.get('heys_manage_subscription').inputSchema.required || []).includes('action'));
+  // Чтение остаётся свободным: там частичное имя допустимо.
+  for (const name of ['heys_get_day', 'heys_search_products', 'heys_get_period']) {
+    assert.ok(!(byName.get(name).inputSchema.required || []).includes('client'), `${name}: client не должен быть required`);
+  }
 });
 
 test('каталоги продуктов и наборы у клиентов раздельные', async () => {

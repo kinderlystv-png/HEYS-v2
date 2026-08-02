@@ -197,8 +197,17 @@ function macroTotals(meals) {
   };
 }
 
+/**
+ * Единая точка фиксации мутации дня. Здесь же пересчитываются производные поля
+ * блоба (часы сна, средние оценки, dayScore): их входы меняются в четырёх
+ * разных инструментах, и оставленное протухшим производное — это неверные
+ * числа в дневнике и в отчётах до тех пор, пока клиент не откроет день.
+ */
 function touch(day, nowMs, clientId) {
-  return { ...day, updatedAt: nowMs, _writerCid: clientId };
+  const next = { ...day, updatedAt: nowMs, _writerCid: clientId };
+  const hours = totalSleepHours(next);
+  if (hours !== null) next.sleepHours = hours;
+  return Object.assign(next, dayAverages(next));
 }
 
 function addMeal(day, meal, { nowMs, clientId }) {
@@ -316,12 +325,62 @@ const DAY_FIELD_MAP = {
   sleep_quality: 'sleepQuality',
   sleep_note: 'sleepNote',
   comment: 'dayComment',
-  mood: 'moodAvg',
-  wellbeing: 'wellbeingAvg',
-  stress: 'stressAvg',
+  // Утренние оценки — это ручной ввод чек-ина. Одноимённые *Avg в блобе
+  // производные: приложение усредняет утро с оценками приёмов и тренировок и
+  // перезаписывает их, так что запись коннектора туда не доживала до следующего
+  // открытия дня.
+  mood: 'moodMorning',
+  wellbeing: 'wellbeingMorning',
+  stress: 'stressMorning',
 };
 
-function updateDayFields(day, fields, { nowMs, clientId }) {
+/**
+ * Поля чек-ина, для которых важно, чья это запись: по ним закрываются шаги
+ * утреннего чек-ина и растёт стрик дисциплины.
+ */
+const CHECKIN_AUTHORED_FIELDS = new Set([
+  'weightMorning',
+  'sleepStart',
+  'sleepEnd',
+  'sleepQuality',
+  'moodMorning',
+  'wellbeingMorning',
+  'stressMorning',
+  'steps',
+]);
+
+/**
+ * Метка авторства живёт вместе со значением, которое вписал куратор, и потому
+ * самоочищается: как только клиент вводит своё, значения расходятся и метка
+ * перестаёт действовать. Tombstone не нужен — а он и невозможен, пока merge
+ * объединяет такие словари union'ом.
+ */
+function markCuratorEdits(day, targets, nowMs) {
+  const prev = (day._curatorEdits && typeof day._curatorEdits === 'object' && !Array.isArray(day._curatorEdits))
+    ? day._curatorEdits
+    : {};
+  const marks = { ...prev };
+  for (const field of targets) {
+    if (!CHECKIN_AUTHORED_FIELDS.has(field)) continue;
+    marks[field] = { at: nowMs, value: day[field] };
+  }
+  return marks;
+}
+
+/** Поля, значение которых до сих пор то самое, что вписал куратор. */
+function curatorAuthoredFields(day) {
+  const marks = (day && day._curatorEdits && typeof day._curatorEdits === 'object' && !Array.isArray(day._curatorEdits))
+    ? day._curatorEdits
+    : null;
+  if (!marks) return [];
+  return Object.keys(marks).filter((field) => {
+    const mark = marks[field];
+    if (!mark || typeof mark !== 'object') return false;
+    return String(day[field] ?? '') === String(mark.value ?? '');
+  }).sort();
+}
+
+function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
   const next = { ...day };
   const applied = [];
   for (const [publicName, target] of Object.entries(DAY_FIELD_MAP)) {
@@ -341,12 +400,19 @@ function updateDayFields(day, fields, { nowMs, clientId }) {
     applied.push(publicName);
   }
   if (fields.weight !== undefined && fields.weight !== null) next.weightUpdatedAt = nowMs;
+  // Шаги в merge разрешаются по своему штампу: без него запись коннектора
+  // проигрывает облачной версии даже когда она старее.
+  if (applied.includes('steps')) next.stepsUpdatedAt = nowMs;
   if (!applied.length) return { day, applied };
+  if (byCurator) {
+    next._curatorEdits = markCuratorEdits(next, applied.map((name) => DAY_FIELD_MAP[name]), nowMs);
+  }
   return { day: touch(next, nowMs, clientId), applied };
 }
 
 /** Компактная сводка для ответа модели — без нутриентных слепков позиций. */
 function summarizeDay(day) {
+  const averages = dayAverages(day);
   const meals = (day.meals || []).map((meal) => ({
     id: meal.id,
     name: meal.name || '',
@@ -376,14 +442,24 @@ function summarizeDay(day) {
     sleep: {
       start: day.sleepStart || null,
       end: day.sleepEnd || null,
-      hours: day.sleepHours ?? null,
+      hours: totalSleepHours(day) ?? day.sleepHours ?? null,
       quality: day.sleepQuality ?? null,
     },
-    mood: day.moodAvg ?? null,
-    wellbeing: day.wellbeingAvg ?? null,
-    stress: day.stressAvg ?? null,
+    // Средние по дню (утро + приёмы + тренировки) и отдельно то, что реально
+    // ввели утром: куратор должен видеть, что его «настроение 7» — это утренняя
+    // отметка, а среднее по дню считается вместе с оценками приёмов.
+    mood: averages.moodAvg === '' ? null : averages.moodAvg,
+    wellbeing: averages.wellbeingAvg === '' ? null : averages.wellbeingAvg,
+    stress: averages.stressAvg === '' ? null : averages.stressAvg,
+    morning: {
+      mood: day.moodMorning ?? null,
+      wellbeing: day.wellbeingMorning ?? null,
+      stress: day.stressMorning ?? null,
+    },
     comment: day.dayComment || '',
     trainings,
+    // Что в этом дне до сих пор стоит с кураторской руки, а не введено клиентом.
+    curator_authored: curatorAuthoredFields(day),
   };
 }
 
@@ -398,7 +474,8 @@ function summarizeDayBrief(day) {
     const z = Array.isArray(t && t.z) ? t.z : [];
     return sum + z.reduce((a, b) => a + (Number(b) || 0), 0);
   }, 0);
-  const sleepHours = sleepDuration(day.sleepStart, day.sleepEnd);
+  const sleepHours = totalSleepHours(day) ?? day.sleepHours ?? null;
+  const averages = dayAverages(day);
 
   return {
     date: day.date,
@@ -414,9 +491,9 @@ function summarizeDayBrief(day) {
     training_min: trainingMinutes,
     sleep_hours: sleepHours,
     sleep_quality: day.sleepQuality ?? null,
-    mood: day.moodAvg ?? null,
-    wellbeing: day.wellbeingAvg ?? null,
-    stress: day.stressAvg ?? null,
+    mood: averages.moodAvg === '' ? null : averages.moodAvg,
+    wellbeing: averages.wellbeingAvg === '' ? null : averages.wellbeingAvg,
+    stress: averages.stressAvg === '' ? null : averages.stressAvg,
     comment: day.dayComment || '',
     empty: !(day.meals || []).length && !Number(day.waterMl) && !day.weightMorning && !Number(day.steps),
   };
@@ -431,6 +508,70 @@ function sleepDuration(start, end) {
   return Math.round((minutes / 60) * 10) / 10;
 }
 
+function normalizeDaySleepMinutes(value) {
+  const num = Math.round(Number(value) || 0);
+  return num > 0 ? num : 0;
+}
+
+/**
+ * Контракт поля sleepHours в блобе дня: ночной интервал плюс дневной досып,
+ * округлённые до 0.1 ч. Веб считает так же (apps/web/heys_steps_v1.js), и если
+ * MCP запишет только времена, не тронув производное поле, дневник и обзор
+ * покажут часы от прежнего интервала.
+ */
+function totalSleepHours(day) {
+  const night = sleepDuration(day.sleepStart, day.sleepEnd);
+  if (night === null) return null;
+  const nap = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
+  return Math.round((night + nap) * 10) / 10;
+}
+
+function ratingValues(source, field) {
+  return (source || [])
+    .filter((row) => row && row[field] && !Number.isNaN(Number(row[field])))
+    .map((row) => Number(row[field]));
+}
+
+/** Тренировка-заготовка без времени и минут в средние не входит — как в приложении. */
+function isRealTraining(t) {
+  if (!t) return false;
+  const hasTime = typeof t.time === 'string' && t.time.trim() !== '';
+  const hasMinutes = Array.isArray(t.z) && t.z.some((m) => Number(m) > 0);
+  const hasBuilder = t.type === 'strength'
+    && t.strengthEntryMode === 'workout_builder'
+    && !!t.workoutLog && typeof t.workoutLog === 'object';
+  return hasTime || hasMinutes || hasBuilder;
+}
+
+/**
+ * Средние оценки дня и dayScore — производные от утреннего чек-ина, оценок
+ * приёмов и тренировок (apps/web/heys_day_calculations.js). Коннектор пишет
+ * только источник, но обязан пересчитать производные: иначе дневник и отчёты
+ * показывают прежние средние до тех пор, пока клиент не откроет день.
+ */
+function dayAverages(day) {
+  const meals = day.meals || [];
+  const trainings = (day.trainings || []).filter(isRealTraining);
+  const out = {};
+  const scores = {};
+  for (const [key, morningField] of [['mood', 'moodMorning'], ['wellbeing', 'wellbeingMorning'], ['stress', 'stressMorning']]) {
+    const morning = day[morningField] && !Number.isNaN(Number(day[morningField])) ? [Number(day[morningField])] : [];
+    const all = [...morning, ...ratingValues(meals, key), ...ratingValues(trainings, key)];
+    const avg = all.length ? Math.round((all.reduce((a, b) => a + b, 0) / all.length) * 10) / 10 : '';
+    out[`${key}Avg`] = avg;
+    scores[key] = avg;
+  }
+  if (scores.mood !== '' || scores.wellbeing !== '' || scores.stress !== '') {
+    const m = scores.mood !== '' ? scores.mood : 5;
+    const w = scores.wellbeing !== '' ? scores.wellbeing : 5;
+    const s = scores.stress !== '' ? scores.stress : 5;
+    const raw = (m + w + (10 - s)) / 3; // низкий стресс — это хорошо, поэтому инверсия
+    out.dayScoreRaw = Math.round(raw * 10) / 10;
+    if (!day.dayScoreManual) out.dayScore = Math.round(raw);
+  }
+  return out;
+}
+
 module.exports = {
   MOSCOW_TZ,
   HR_ZONES,
@@ -441,6 +582,9 @@ module.exports = {
   addDays,
   enumerateDates,
   sleepDuration,
+  totalSleepHours,
+  dayAverages,
+  curatorAuthoredFields,
   summarizeDayBrief,
   timeToMinutes,
   sortMealsByTime,

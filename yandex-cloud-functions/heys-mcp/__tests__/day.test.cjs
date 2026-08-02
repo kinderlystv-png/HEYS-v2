@@ -126,6 +126,83 @@ test('updateDayFields пишет во внутренние имена полей
   assert.deepEqual(applied.sort(), ['comment', 'sleep_start', 'weight']);
 });
 
+test('updateDayFields пересчитывает sleepHours под новые времена сна', () => {
+  // Регресс 2026-08-02: запись 06:30-12:00 оставляла hours 5.8 от прежнего
+  // интервала 04:35-10:25 — и дневник, и обзор за период врали.
+  const base = {
+    ...day.emptyDay('2026-08-02', CLIENT, 1000),
+    sleepStart: '04:35',
+    sleepEnd: '10:25',
+    sleepHours: 5.8,
+  };
+  const { day: next } = day.updateDayFields(base, { sleep_start: '06:30', sleep_end: '12:00' }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.sleepHours, 5.5);
+  assert.equal(day.summarizeDay(next).sleep.hours, 5.5);
+  assert.equal(day.summarizeDayBrief(next).sleep_hours, 5.5);
+});
+
+test('sleepHours учитывает дневной досып, как это делает веб', () => {
+  const base = {
+    ...day.emptyDay('2026-08-02', CLIENT, 1000),
+    sleepEnd: '07:00',
+    daySleepMinutes: 45,
+  };
+  const { day: next } = day.updateDayFields(base, { sleep_start: '23:30' }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.sleepHours, 8.3); // 7.5 ночью + 0.75 днём
+});
+
+test('updateDayFields не трогает sleepHours, пока пара времён неполная', () => {
+  const base = { ...day.emptyDay('2026-08-02', CLIENT, 1000), sleepHours: 5.8 };
+  const { day: next } = day.updateDayFields(base, { sleep_start: '06:30' }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.sleepHours, 5.8);
+});
+
+test('оценки пишутся в утренние поля, а не в производные средние', () => {
+  const base = day.emptyDay('2026-08-02', CLIENT, 1000);
+  const { day: next } = day.updateDayFields(base, { mood: 7, wellbeing: 8, stress: 3 }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.moodMorning, 7);
+  assert.equal(next.wellbeingMorning, 8);
+  assert.equal(next.stressMorning, 3);
+  // Без других оценок среднее по дню совпадает с утренним.
+  assert.equal(next.moodAvg, 7);
+  assert.equal(next.dayScore, 7); // (7 + 8 + (10-3)) / 3 = 7.33
+  assert.equal(next.dayScoreRaw, 7.3);
+});
+
+test('среднее по дню считается вместе с оценками приёмов', () => {
+  const base = {
+    ...day.emptyDay('2026-08-02', CLIENT, 1000),
+    meals: [{ id: 'm1', name: 'Обед', time: '13:00', mood: 5, items: [] }],
+  };
+  const { day: next } = day.updateDayFields(base, { mood: 7 }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.moodMorning, 7);
+  assert.equal(next.moodAvg, 6);
+  assert.equal(day.summarizeDay(next).mood, 6);
+  assert.equal(day.summarizeDay(next).morning.mood, 7);
+});
+
+test('ручной dayScore не перетирается пересчётом', () => {
+  const base = { ...day.emptyDay('2026-08-02', CLIENT, 1000), dayScore: 9, dayScoreManual: true };
+  const { day: next } = day.updateDayFields(base, { mood: 3, wellbeing: 3, stress: 8 }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.dayScore, 9);
+});
+
+test('заготовка тренировки без времени и минут не портит средние', () => {
+  const base = {
+    ...day.emptyDay('2026-08-02', CLIENT, 1000),
+    trainings: [{ z: [0, 0, 0, 0], mood: 1 }],
+  };
+  const { day: next } = day.updateDayFields(base, { mood: 7 }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.moodAvg, 7);
+});
+
+test('шаги получают собственный штамп — иначе проигрывают в merge', () => {
+  const base = day.emptyDay('2026-08-02', CLIENT, 1000);
+  const { day: next } = day.updateDayFields(base, { steps: 8200 }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.steps, 8200);
+  assert.equal(next.stepsUpdatedAt, 2000);
+});
+
 test('updateDayFields падает на нечисловом весе', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
   assert.throws(() => day.updateDayFields(base, { weight: 'много' }, { nowMs: 2000, clientId: CLIENT }), /invalid_number/);
