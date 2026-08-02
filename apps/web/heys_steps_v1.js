@@ -1302,6 +1302,7 @@
       dayData.date = dateKey;
       dayData.weightMorning = weight;
       dayData.weightUpdatedAt = mutationAt;
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, 'weightMorning', mutationAt);
       dayData.updatedAt = mutationAt;
       const saved = saveDayData(dateKey, dayData);
       if (!saved) {
@@ -1566,6 +1567,7 @@
       dayData.daySleepMinutes = daySleepMinutes;
       dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, ['sleepStart', 'sleepEnd'], dayData.updatedAt);
       saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       // TASK-003: несём полный payload дня (с live-meals merge), чтобы apply пошёл
@@ -1890,6 +1892,7 @@
 
       dayData.date = dateKey;
       dayData.updatedAt = Date.now();
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, 'sleepQuality', dayData.updatedAt);
       saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
       // TASK-003: полный payload → immediate apply минуя SKIP_RAF_PENDING.
@@ -3972,6 +3975,8 @@
       dayData.stressMorning = data.stress ?? 5;
 
       dayData.updatedAt = Date.now();
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(
+        dayData, ['moodMorning', 'wellbeingMorning', 'stressMorning'], dayData.updatedAt);
       saveDayData(dateKey, dayData);
 
       window.dispatchEvent(new CustomEvent('heys:data-saved', {

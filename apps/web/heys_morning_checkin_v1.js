@@ -855,20 +855,29 @@
     return Number.isFinite(numeric) && numeric > 0;
   }
 
+  // Чек-ин — самоотчёт клиента, поэтому поле, вписанное куратором, шаг не
+  // закрывает: иначе клиента не спросят, а стрик дисциплины по этому дню всё
+  // равно не вырастет, и он потеряет его молча. Подтверждение клиента гасит
+  // метку (HEYS.models.clearCuratorMarks), даже если он ввёл то же число.
+  function byCurator(day, field) {
+    return !!HEYS.models?.isCuratorAuthored?.(day, field);
+  }
+
   function hasSleepTime(day) {
-    return hasCheckinValue(day?.sleepStart) && hasCheckinValue(day?.sleepEnd);
+    return hasCheckinValue(day?.sleepStart) && hasCheckinValue(day?.sleepEnd)
+      && !byCurator(day, 'sleepStart') && !byCurator(day, 'sleepEnd');
   }
 
   function hasCheckinWeight(day) {
-    return hasPositiveCheckinNumber(day?.weightMorning);
+    return hasPositiveCheckinNumber(day?.weightMorning) && !byCurator(day, 'weightMorning');
   }
 
   function hasSleepQuality(day) {
-    return hasPositiveCheckinNumber(day?.sleepQuality);
+    return hasPositiveCheckinNumber(day?.sleepQuality) && !byCurator(day, 'sleepQuality');
   }
 
   function hasMorningMood(day) {
-    return hasPositiveCheckinNumber(day?.moodMorning);
+    return hasPositiveCheckinNumber(day?.moodMorning) && !byCurator(day, 'moodMorning');
   }
 
   function hasCycleDay(day) {

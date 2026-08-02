@@ -2727,14 +2727,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     // ── ШАГ 7: Чекин веса (streak bonus + trend awareness) ──
-    var weightMorning = (day && day.weightMorning) || 0;
-    var checkinConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.weightMorning; });
+    // Дисциплина — это про действие клиента, поэтому вес, вписанный куратором,
+    // в стрик не идёт: иначе стрик рос бы чужими руками.
+    var isCuratorWeight = function (d) {
+      return !!(d && HEYS.models?.isCuratorAuthored?.(d, 'weightMorning'));
+    };
+    var hasClientWeight = function (d) { return !!(d && d.weightMorning > 0 && !isCuratorWeight(d)); };
+    var weightMorning = (day && !isCuratorWeight(day) && day.weightMorning) || 0;
+    var checkinConfidence = getFactorConfidence(prevDays14, function (d) { return d && !isCuratorWeight(d) && d.weightMorning; });
     confidenceMap.checkin = checkinConfidence;
 
     if (weightMorning > 0) {
       var checkinBase = 0.3;
       // Streak bonus: consecutive check-ins (+0.05/day, max +0.5)
-      var checkinStreak = countConsecutive(prevDays14, function (d) { return d && d.weightMorning > 0; });
+      var checkinStreak = countConsecutive(prevDays14, hasClientWeight);
       var streakBonus = Math.min(0.5, checkinStreak * 0.05);
 
       // Trend awareness: stability bonus if weight is stable ±50g/day
@@ -2773,7 +2779,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     } else {
       // Mild habit-break penalty if streak was active
-      var brokenStreak = countConsecutive(prevDays14, function (d) { return d && d.weightMorning > 0; });
+      var brokenStreak = countConsecutive(prevDays14, hasClientWeight);
       if (brokenStreak >= 3) {
         var breakPenalty = -0.1 * checkinConfidence;
         rawWeights.checkin = -0.1;

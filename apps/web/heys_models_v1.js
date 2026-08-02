@@ -502,6 +502,9 @@
       lastWaterTime: d.lastWaterTime || undefined,
       meals: Array.isArray(d.meals) ? d.meals : [],
       deletedMealIds: (d.deletedMealIds && typeof d.deletedMealIds === 'object' && !Array.isArray(d.deletedMealIds)) ? d.deletedMealIds : {},
+      // Метки авторства куратора: ensureDay собирает объект перечислением полей,
+      // поэтому без явной строки метка пропадала бы на первом же проходе.
+      _curatorEdits: (d._curatorEdits && typeof d._curatorEdits === 'object' && !Array.isArray(d._curatorEdits)) ? d._curatorEdits : undefined,
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined,
       // Холодовое воздействие (cold_exposure шаг)
@@ -1166,6 +1169,43 @@
   M.computeProductFingerprint = computeProductFingerprint;
   M.computeProductBrandFingerprint = computeProductBrandFingerprint;
   M.normalizeProductName = normalizeProductName;
+
+  /**
+   * Поле дня стоит с кураторской руки, а не введено клиентом.
+   *
+   * Метка хранит значение, которое вписал куратор, поэтому действует ровно до
+   * тех пор, пока клиент не введёт своё: расходящиеся значения гасят её сами,
+   * без tombstone. Метки ставит MCP-коннектор в кураторском режиме
+   * (yandex-cloud-functions/heys-mcp/lib/day.js).
+   */
+  M.isCuratorAuthored = function isCuratorAuthored(day, field) {
+    const marks = day && day._curatorEdits;
+    if (!marks || typeof marks !== 'object' || Array.isArray(marks)) return false;
+    const mark = marks[field];
+    if (!mark || typeof mark !== 'object') return false;
+    if (mark.value === null || mark.value === undefined) return false; // погашена вводом клиента
+    return String(day[field] ?? '') === String(mark.value ?? '');
+  };
+
+  /**
+   * Гасит метку авторства, когда поле заполняет сам клиент.
+   *
+   * Метка не удаляется, а перезаписывается пустым значением: merge объединяет
+   * этот словарь union'ом по свежести, поэтому удалённый ключ вернулся бы со
+   * второй стороны. Совпадение значений тоже не спасает — оценки по шкале 1–10
+   * клиент и куратор ставят одинаковые сплошь и рядом.
+   */
+  M.clearCuratorMarks = function clearCuratorMarks(day, fields, nowMs) {
+    const marks = day && day._curatorEdits;
+    if (!marks || typeof marks !== 'object' || Array.isArray(marks)) return undefined;
+    const list = Array.isArray(fields) ? fields : [fields];
+    const touched = list.filter((f) => marks[f]);
+    if (!touched.length) return marks;
+    const next = { ...marks };
+    const at = nowMs || Date.now();
+    for (const field of touched) next[field] = { at, value: null };
+    return next;
+  };
 
   // Harm field normalization (v4.3.0)
   M.normalizeHarm = normalizeHarm;

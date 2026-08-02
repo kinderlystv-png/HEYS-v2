@@ -171,10 +171,17 @@
               ? '💡 Попробуй: без экранов за час, прохладная комната'
               : null;
 
+            const sleepByCurator = ['sleepStart', 'sleepEnd', 'sleepQuality']
+              .some(f => HEYS.models?.isCuratorAuthored?.(day, f));
+
             return React.createElement('div', { className: 'sleep-card', 'data-curator-target': 'sleep' },
               React.createElement('div', { className: 'sleep-card-header' },
                 React.createElement('span', { className: 'sleep-card-icon' }, '🌙'),
-                React.createElement('span', { className: 'sleep-card-title' }, 'Сон')
+                React.createElement('span', { className: 'sleep-card-title' }, 'Сон'),
+                sleepByCurator && React.createElement('span', {
+                  className: 'curator-authored-hint',
+                  title: 'Эти данные внёс куратор. Поменяйте, если было иначе.'
+                }, '✎ куратор')
               ),
               React.createElement('div', { className: 'sleep-card-times' },
                 React.createElement('span', {
@@ -278,10 +285,17 @@
                 ? '💡 Высокий стресс. Попробуй 5 мин дыхания'
                 : null;
 
+            const moodByCurator = ['moodMorning', 'wellbeingMorning', 'stressMorning']
+              .some(f => HEYS.models?.isCuratorAuthored?.(day, f));
+
             return React.createElement('div', { className: 'sleep-card' },
               React.createElement('div', { className: 'sleep-card-header' },
                 React.createElement('span', { className: 'sleep-card-icon' }, '📊'),
-                React.createElement('span', { className: 'sleep-card-title' }, 'Оценка дня')
+                React.createElement('span', { className: 'sleep-card-title' }, 'Оценка дня'),
+                moodByCurator && React.createElement('span', {
+                  className: 'curator-authored-hint',
+                  title: 'Утренние оценки внёс куратор. Поменяйте, если было иначе.'
+                }, '✎ куратор')
               ),
               // dayScore: авто из mood/wellbeing/stress, но можно поправить вручную
               React.createElement('div', {

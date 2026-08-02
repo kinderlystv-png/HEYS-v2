@@ -86,6 +86,7 @@
                     ...prevDay,
                     weightMorning: newWeight,
                     weightUpdatedAt: mutationAt,
+                    _curatorEdits: HEYS.models?.clearCuratorMarks?.(prevDay, 'weightMorning', mutationAt),
                     deficitPct: shouldSetDeficit ? (Number(prof.deficitPctTarget) || 0) : prevDay.deficitPct,
                     ...(shouldSetDeficit ? { deficitUpdatedAt: deficitMutationAt } : {}),
                     updatedAt: Math.max(mutationAt, deficitMutationAt)
@@ -93,7 +94,12 @@
                 });
               }
             })),
-            React.createElement('td', null, 'вес на утро')
+            React.createElement('td', null, 'вес на утро',
+              HEYS.models?.isCuratorAuthored?.(day, 'weightMorning') && React.createElement('span', {
+                className: 'curator-authored-hint',
+                title: 'Вес внёс куратор. Поменяйте, если было иначе.'
+              }, '✎ куратор')
+            )
           ),
           // Row 3 — Шаги (ккал считаем из stepsK)
           React.createElement('tr', null,

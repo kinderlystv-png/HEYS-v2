@@ -4517,8 +4517,14 @@
             continue;
           }
           if (parsed) {
-            if (!hasCheckin && (parsed.weightMorning != null || parsed.sleepStart || parsed.sleepEnd || parsed.morningMood != null)) {
-              hasCheckin = true;
+            if (!hasCheckin) {
+              // Ачивка «первый чек-ин» — про действие клиента: поля, вписанные
+              // куратором, её не выдают.
+              const byClient = (field) => parsed[field] != null && parsed[field] !== ''
+                && !HEYS.models?.isCuratorAuthored?.(parsed, field);
+              if (byClient('weightMorning') || byClient('sleepStart') || byClient('sleepEnd') || byClient('moodMorning')) {
+                hasCheckin = true;
+              }
             }
             if (!hasSupplements && Array.isArray(parsed.supplementsTaken) && parsed.supplementsTaken.length > 0) {
               hasSupplements = true;

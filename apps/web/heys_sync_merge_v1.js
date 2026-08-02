@@ -138,6 +138,22 @@
     return out;
   }
 
+  // Merge two { field: { at, value } } maps of curator authorship marks,
+  // keeping the later mark per field. Marks carry the value the curator wrote,
+  // so they expire on their own once the client overwrites the field — no
+  // tombstone is needed (and none would survive a union anyway).
+  function unionCuratorEdits(localMap, remoteMap) {
+    const out = { ...(remoteMap || {}) };
+    if (localMap) {
+      for (const field of Object.keys(localMap)) {
+        const mine = localMap[field];
+        const theirs = out[field];
+        if (!theirs || (mine && (mine.at || 0) >= (theirs.at || 0))) out[field] = mine;
+      }
+    }
+    return out;
+  }
+
   function trainingDeletionSignature(training) {
     if (!training || typeof training !== 'object') return '';
     const id = training.id == null ? '' : String(training.id).trim();
@@ -755,6 +771,12 @@
     const localDeletedItemIds = (local.deletedItemIds && typeof local.deletedItemIds === 'object' && !Array.isArray(local.deletedItemIds)) ? local.deletedItemIds : {};
     const remoteDeletedItemIds = (remote.deletedItemIds && typeof remote.deletedItemIds === 'object' && !Array.isArray(remote.deletedItemIds)) ? remote.deletedItemIds : {};
     const mergedDeletedItemIds = unionMaxTimestamp(localDeletedItemIds, remoteDeletedItemIds);
+
+    // Curator authorship marks (2026-08-02): base is `remote`, so a mark written
+    // by the connector would vanish here without an explicit union.
+    const localCuratorEdits = (local._curatorEdits && typeof local._curatorEdits === 'object' && !Array.isArray(local._curatorEdits)) ? local._curatorEdits : {};
+    const remoteCuratorEdits = (remote._curatorEdits && typeof remote._curatorEdits === 'object' && !Array.isArray(remote._curatorEdits)) ? remote._curatorEdits : {};
+    const mergedCuratorEdits = unionCuratorEdits(localCuratorEdits, remoteCuratorEdits);
     const dayLocalTs = local.updatedAt || 0;
     const dayRemoteTs = remote.updatedAt || 0;
 
@@ -851,6 +873,9 @@
     merged.deletedMealIds = mergedDeletedMealIds;
     if (Object.keys(mergedDeletedItemIds).length > 0) {
       merged.deletedItemIds = mergedDeletedItemIds;
+    }
+    if (Object.keys(mergedCuratorEdits).length > 0) {
+      merged._curatorEdits = mergedCuratorEdits;
     }
 
     // ─── Trainings: position-indexed merge ────────────────────────────────

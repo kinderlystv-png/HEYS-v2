@@ -349,7 +349,9 @@ function diffDayv2(oldV, newV, actions) {
   diffMeals(oldDay.meals, newDay.meals, actions);
   diffTrainings(oldDay.trainings, newDay.trainings, actions);
   diffScalar(oldDay.weightMorning, newDay.weightMorning, 'weight_set', actions, { numericTolerance: 0.05 });
-  diffScalar(oldDay.stepsCount, newDay.stepsCount, 'steps_set', actions, { numericTolerance: 50 });
+  // Поле блоба дня называется steps (heys-mcp/lib/day.js, apps/web) — по
+  // stepsCount диф молчал, и кураторская правка шагов не попадала в фид.
+  diffScalar(oldDay.steps, newDay.steps, 'steps_set', actions, { numericTolerance: 50 });
   const oSleepH = computeSleepHours(oldDay);
   const nSleepH = computeSleepHours(newDay);
   diffScalar(oSleepH, nSleepH, 'sleep_set', actions, { numericTolerance: 0.1 });

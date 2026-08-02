@@ -279,12 +279,12 @@ test('weight: first-time set (no old value)', () => {
 });
 
 test('steps_set with tolerance', () => {
-  const oldV = { stepsCount: 8000 };
-  const newV = { stepsCount: 8030 }; // within 50 → skip
+  const oldV = { steps: 8000 };
+  const newV = { steps: 8030 }; // within 50 → skip
   const { actions: a1 } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(a1.length, 0);
 
-  const newV2 = { stepsCount: 9200 };
+  const newV2 = { steps: 9200 };
   const { actions: a2 } = computeCuratorActionPayload(oldV, newV2, 'heys_dayv2_2026-05-18');
   assert.equal(a2.length, 1);
   assert.equal(a2[0].type, 'steps_set');
@@ -307,7 +307,7 @@ test('no-op: identical dayv2 → empty actions', () => {
     meals: [{ id: 'm_1', name: 'A', items: [{ name: 'X' }] }],
     trainings: [{ z: [0, 0, 0, 0] }],
     weightMorning: 90,
-    stepsCount: 8000,
+    steps: 8000,
   };
   const { actions } = computeCuratorActionPayload(day, { ...day }, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 0);
