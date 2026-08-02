@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"></link>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet"></link>
+<script src="./image-slot.js"></script>
+<title>HEYS — ваш дневник питания ведёт куратор</title>
+<meta name="description" content="Присылайте фото, текст или голосовое — куратор ведёт дневник питания в HEYS, видит неделю целиком и помогает выбрать следующий шаг. Неделя Pro — 0 ₽, без карты."></meta>
+<meta property="og:type" content="website"></meta>
+<meta property="og:title" content="HEYS — ваш дневник питания ведёт куратор"></meta>
+<meta property="og:description" content="Фото, голосовое или короткое сообщение — этого достаточно. Куратор ведёт дневник и разбирает вашу неделю. 7 дней Pro бесплатно."></meta>
+<meta property="og:locale" content="ru_RU"></meta>
+<meta name="twitter:card" content="summary_large_image"></meta>
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#F7F6F2;font-family:'Golos Text',system-ui,sans-serif;color:#101826;-webkit-font-smoothing:antialiased}
+a{color:#2E7CC0}a:hover{color:#1D5E96}
+summary{list-style:none;cursor:pointer}summary::-webkit-details-marker{display:none}
+details .dchev{transition:transform .25s ease}
+details[open] .dchev{transform:rotate(45deg)}
+input::placeholder{color:#9AA3B0}
+::selection{background:rgba(46,124,192,0.3)}
+@media (min-width:861px){.sticky-cta{display:none !important}}
+.nav-burger{display:none !important}
+@media (max-width:1180px){
+.nav-desktop{display:none !important}
+.nav-burger{display:flex !important}
+}
+@media (max-width:900px){
+.g-steps,.g-trust{grid-template-columns:1fr !important}
+.g-steps>div{padding:24px 0 !important}
+}
+@media (max-width:820px){
+.g-pro,.g-plans{grid-template-columns:1fr !important}
+}
+@media (max-width:560px){
+.hero-head{padding:16px 16px 12px 22px !important}
+.ft-links{justify-content:flex-start !important;flex-direction:column !important;gap:14px !important;max-width:none !important}
+.g-curator{grid-template-columns:1fr !important}
+.g-curator > div:first-child{max-width:300px}
+.ft-links a{font-size:14px !important}
+
+.g-month{grid-template-columns:1fr !important;gap:10px !important}
+}
+</style>
+</helmet>
+
+<div ref="{{ barRef }}" style="position:fixed;top:0;left:0;right:0;z-index:70;transform:translateY(-105%);transition:transform 0.35s ease;background:rgba(247,246,242,0.88);backdrop-filter:blur(14px);border-bottom:1px solid rgba(16,24,38,0.08)">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;max-width:1240px;margin:0 auto;padding:12px 36px;box-sizing:border-box">
+    <a href="#hero" style="font-weight:700;font-size:17px;letter-spacing:0.05em;color:#101826;text-decoration:none">HEYS<svg width="8" height="18" viewBox="0 0 28.2 64" style="display:inline-block;margin:0 2px 0 1px;transform:translateY(-6px)" aria-hidden="true"><g transform="translate(4201.18 210.42)" fill="#52A0D8"><path d="M-4201.18-159.14v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-157.67-4201.18-159.14-4201.18-159.14z"></path><path d="M-4188.47-174.44h2.58c0,0,1.47,7.73,1.47,14.12s-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-168.23-4188.47-174.44-4188.47-174.44z"></path><path d="M-4201.18-195.13v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-193.66-4201.18-195.13-4201.18-195.13z"></path><path d="M-4188.47-210.42h2.58c0,0,1.47,7.73,1.47,14.12c0,6.38-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-204.22-4188.47-210.42-4188.47-210.42z"></path></g></svg><span style="font-weight:300;letter-spacing:0.02em;color:#8A94A2">lab</span></a>
+    <nav class="nav-desktop" style="display:flex;gap:22px;flex-wrap:wrap;justify-content:center">
+      <a href="#pain" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">ситуация</a>
+      <a href="#curator" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">как устроено</a>
+      <a href="#how-it-works" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">первый месяц</a>
+      <a href="#week" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">неделя</a>
+      <a href="#trust" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">доверие</a>
+      <a href="#pricing" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">тарифы</a>
+      <a href="#faq" style="font-size:12.5px;color:#5B6472;text-decoration:none;white-space:nowrap">вопросы</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a href="#trial" style="font-size:12.5px;font-weight:600;color:#FFFFFF;background:#12283E;text-decoration:none;border-radius:999px;padding:9px 16px;white-space:nowrap">Неделя Pro — 0 ₽</a>
+      <button type="button" class="nav-burger" onClick="{{ openMenu }}" aria-label="Открыть меню" style="display:flex;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;padding:0 10px;background:none;border:none;cursor:pointer;box-sizing:border-box">
+        <span style="display:block;height:2px;background:#101826;border-radius:2px"></span>
+        <span style="display:block;height:2px;background:#101826;border-radius:2px"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<a ref="{{ stickyRef }}" href="#trial" class="sticky-cta" style="position:fixed;left:50%;bottom:16px;z-index:60;transform:translate(-50%,100px);transition:transform 0.35s ease;display:flex;align-items:center;gap:8px;background:#12283E;color:#FFFFFF;border-radius:999px;padding:14px 26px;font-weight:600;font-size:14px;white-space:nowrap;box-shadow:0 14px 34px rgba(10,17,25,0.4);text-decoration:none">Неделя Pro — 0 ₽ <span aria-hidden="true">→</span></a>
+
+<sc-if value="{{ proOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;background:rgba(10,17,25,0.55);backdrop-filter:blur(6px);overflow-y:auto;overscroll-behavior:contain">
+    <div role="dialog" aria-modal="true" aria-label="Заявка на Pro Спорт" style="width:100%;max-width:520px;margin:auto;background:#FFFFFF;border-radius:26px;padding:36px 34px;box-shadow:0 30px 80px rgba(10,17,25,0.4)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+        <div>
+          <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#4A4C7E">Pro Спорт · пилот до 4 участников</p>
+          <h3 style="margin:10px 0 0;font-size:22px;font-weight:600;line-height:1.3">Обсудить формат</h3>
+        </div>
+        <button type="button" onClick="{{ closePro }}" aria-label="Закрыть" style="flex-shrink:0;width:40px;height:40px;background:#F2F1EC;border:none;border-radius:50%;color:#5B6472;font-size:22px;line-height:1;cursor:pointer">×</button>
+      </div>
+      <sc-if value="{{ proNotSent }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:14px 0 0;font-size:14.5px;line-height:1.65;color:#5B6472">Оплата — только после личного согласования: сначала специалист уточнит запрос, график и подтвердит свободное место. Бесплатная неделя на этот формат не распространяется.</p>
+        <form onSubmit="{{ submitPro }}" style="margin-top:24px;display:flex;flex-direction:column;gap:14px">
+          <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:600;color:#5B6472">Имя</span><input type="text" name="name" autoComplete="given-name" required="{{ true }}" placeholder="Как к вам обращаться" style="width:100%;box-sizing:border-box;border:1px solid rgba(16,24,38,0.18);border-radius:13px;padding:14px 17px;font-family:'Golos Text',sans-serif;font-size:15px;color:#101826;background:#FBFAF7;outline-color:#4A4C7E"></input></label>
+          <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:600;color:#5B6472">Телефон</span><input type="tel" name="phone" inputMode="tel" autoComplete="tel" required="{{ true }}" placeholder="+7 999 000-00-00" style="width:100%;box-sizing:border-box;border:1px solid rgba(16,24,38,0.18);border-radius:13px;padding:14px 17px;font-family:'Golos Text',sans-serif;font-size:15px;color:#101826;background:#FBFAF7;outline-color:#4A4C7E"></input></label>
+          <div>
+            <p style="margin:0 0 9px;font-size:12.5px;font-weight:600;color:#5B6472">Где удобнее общаться?</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <sc-for list="{{ proMsgOpts }}" as="opt" hint-placeholder-count="3">
+                <button type="button" data-v="{{ opt.v }}" onClick="{{ pickProMsg }}" style="{{ opt.st }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <label style="display:flex;align-items:flex-start;gap:11px;margin-top:4px;cursor:pointer"><input type="checkbox" name="consent" required="{{ true }}" style="margin-top:2px;width:17px;height:17px;flex-shrink:0;accent-color:#4A4C7E;cursor:pointer"></input><span style="font-size:12.5px;line-height:1.6;color:#5B6472">Даю согласие на обработку персональных данных согласно <a href="/legal/privacy-policy" style="color:#4A4C7E">политике конфиденциальности</a>. Согласие относится только к заявке и обратной связи по ней.</span></label>
+          <button type="submit" style="margin-top:6px;background:#4A4C7E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:16px 22px;cursor:pointer">Отправить запрос</button>
+        </form>
+      </sc-if>
+      <sc-if value="{{ proSent }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:22px 0 0;font-family:'Playfair Display',serif;font-weight:500;font-size:22px;line-height:1.35">Запрос отправлен.</p>
+        <p style="margin:12px 0 0;font-size:14.5px;line-height:1.65;color:#5B6472">Специалист свяжется с вами, уточнит запрос и подтвердит, есть ли свободное место в текущем пилоте.</p>
+        <button type="button" onClick="{{ closePro }}" style="margin-top:24px;width:100%;background:#12283E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:15px 22px;cursor:pointer">Закрыть</button>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<section id="hero" ref="{{ heroRef }}" data-screen-label="Hero" style="position:relative;background:#0A1119">
+  <div style="position:sticky;top:0;height:100vh;overflow:hidden" aria-hidden="true">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#12263B 0%,#0E1D2E 42%,#0A1420 78%,#080F17 100%)"></div>
+    <div style="position:absolute;inset:0;opacity:0.04;background-size:56px 56px;background-image:url(&quot;data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E&quot;);-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0.35) 84px,rgba(0,0,0,1) 132px);mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0.35) 84px,rgba(0,0,0,1) 132px)"></div>
+    <div style="position:absolute;left:50%;top:-220px;transform:translateX(-50%);width:900px;height:520px;border-radius:50%;background:radial-gradient(closest-side,rgba(88,150,205,0.28),rgba(88,150,205,0))"></div>
+  </div>
+
+  <div style="position:relative;margin-top:-100vh;display:flex;flex-direction:column">
+    <header class="hero-head" style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 36px;max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box">
+      <a href="#hero" style="font-weight:700;font-size:20px;letter-spacing:0.05em;color:#FFFFFF;text-decoration:none">HEYS<svg width="10" height="23" viewBox="0 0 28.2 64" style="display:inline-block;margin:0 2px 0 1px;transform:translateY(-9px)" aria-hidden="true"><g transform="translate(4201.18 210.42)" fill="#52A0D8"><path d="M-4201.18-159.14v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-157.67-4201.18-159.14-4201.18-159.14z"></path><path d="M-4188.47-174.44h2.58c0,0,1.47,7.73,1.47,14.12s-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-168.23-4188.47-174.44-4188.47-174.44z"></path><path d="M-4201.18-195.13v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-193.66-4201.18-195.13-4201.18-195.13z"></path><path d="M-4188.47-210.42h2.58c0,0,1.47,7.73,1.47,14.12c0,6.38-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-204.22-4188.47-210.42-4188.47-210.42z"></path></g></svg><span style="font-weight:300;letter-spacing:0.02em;color:rgba(255,255,255,0.65)">lab</span></a>
+      <nav class="nav-desktop" style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center">
+        <a href="#pain" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">ситуация</a>
+        <a href="#curator" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">как устроено</a>
+        <a href="#how-it-works" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">первый месяц</a>
+        <a href="#week" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">неделя</a>
+        <a href="#trust" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">доверие</a>
+        <a href="#pricing" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">тарифы</a>
+        <a href="#faq" style="font-size:13px;color:rgba(255,255,255,0.72);text-decoration:none;white-space:nowrap">вопросы</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:10px">
+        <a href="#trial" style="font-size:13px;font-weight:600;color:#FFFFFF;text-decoration:none;border:1px solid rgba(255,255,255,0.32);border-radius:999px;padding:9px 16px;white-space:nowrap">Неделя Pro — 0 ₽</a>
+        <button type="button" class="nav-burger" onClick="{{ openMenu }}" aria-label="Открыть меню" style="display:flex;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;padding:0 10px;background:none;border:none;cursor:pointer;box-sizing:border-box">
+          <span style="display:block;height:2px;background:#FFFFFF;border-radius:2px"></span>
+          <span style="display:block;height:2px;background:#FFFFFF;border-radius:2px"></span>
+        </button>
+      </div>
+    </header>
+
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:fixed;inset:0;z-index:80;background:linear-gradient(180deg,#12263B 0%,#0C1826 60%,#0A1119 100%);display:flex;flex-direction:column;padding:0 28px 24px;overflow-y:auto;overscroll-behavior:contain">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 0 8px">
+          <span style="font-weight:700;font-size:20px;letter-spacing:0.05em;color:#FFFFFF">HEYS<svg width="10" height="23" viewBox="0 0 28.2 64" style="display:inline-block;margin:0 2px 0 1px;transform:translateY(-9px)" aria-hidden="true"><g transform="translate(4201.18 210.42)" fill="#52A0D8"><path d="M-4201.18-159.14v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-157.67-4201.18-159.14-4201.18-159.14z"></path><path d="M-4188.47-174.44h2.58c0,0,1.47,7.73,1.47,14.12s-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-168.23-4188.47-174.44-4188.47-174.44z"></path><path d="M-4201.18-195.13v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-193.66-4201.18-195.13-4201.18-195.13z"></path><path d="M-4188.47-210.42h2.58c0,0,1.47,7.73,1.47,14.12c0,6.38-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-204.22-4188.47-210.42-4188.47-210.42z"></path></g></svg><span style="font-weight:300;letter-spacing:0.02em;color:rgba(255,255,255,0.65)">lab</span></span>
+          <button type="button" onClick="{{ closeMenu }}" aria-label="Закрыть меню" style="width:44px;height:44px;background:none;border:none;color:rgba(255,255,255,0.85);font-size:28px;line-height:1;cursor:pointer">×</button>
+        </div>
+        <nav style="flex:1 0 auto;display:flex;flex-direction:column;justify-content:center;max-width:520px;width:100%;margin:0 auto;padding:12px 0" aria-label="Разделы страницы">
+          <p style="margin:0 0 10px;font-weight:600;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(255,255,255,0.45)">Разделы</p>
+          <a href="#pain" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">01</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">ситуация</span></a>
+          <a href="#curator" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">02</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">как устроено</span></a>
+          <a href="#how-it-works" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">03</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">первый месяц</span></a>
+          <a href="#week" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">04</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">неделя</span></a>
+          <a href="#trust" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">05</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">доверие</span></a>
+          <a href="#pricing" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">06</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">тарифы</span></a>
+          <a href="#faq" onClick="{{ closeMenu }}" style="display:flex;align-items:baseline;gap:16px;padding:15px 4px;border-top:1px solid rgba(255,255,255,0.12);border-bottom:1px solid rgba(255,255,255,0.12);text-decoration:none"><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.4)">FAQ</span><span style="font-size:19px;font-weight:600;color:#FFFFFF">вопросы</span></a>
+        </nav>
+        <a href="#trial" onClick="{{ closeMenu }}" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#FFFFFF;color:#12283E;text-decoration:none;font-weight:600;font-size:15px;border-radius:16px;padding:16px 24px;max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">Бесплатная неделя Pro <span aria-hidden="true">→</span></a>
+        <p style="margin:10px 0 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.5)">Без карты и автосписаний</p>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;align-items:center;padding:clamp(71px,calc(135px - 4.6vw),99px) 24px 0;text-align:center">
+      <div ref="{{ textRef }}" style="display:flex;flex-direction:column;align-items:center;will-change:opacity,transform">
+      <h1 style="margin:0;max-width:760px;font-weight:600;font-size:clamp(38px,5vw,62px);line-height:1.08;letter-spacing:-0.025em;color:#FFFFFF;text-wrap:balance">Ваш дневник питания <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">ведёт куратор.</em></h1>
+      <p style="margin:clamp(26px,3.2vw,36px) 0 0;max-width:560px;font-size:clamp(15px,1.6vw,17px);line-height:1.6;color:rgba(255,255,255,0.75)">Присылаете фото, голосовое или пару фраз — 3–5 минут в день. Остальное делает куратор: ведёт дневник, помнит, что было на прошлой неделе, и спрашивает, прежде чем советовать.</p>
+      <div style="margin-top:30px;display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(255,255,255,0.24);background:rgba(255,255,255,0.09);backdrop-filter:blur(4px);border-radius:999px;padding:9px 18px;font-size:13px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#7FD1A0"></span>
+        <span style="font-weight:600;color:#FFFFFF;white-space:nowrap">7 дней Pro — 0 ₽</span>
+        <span style="color:rgba(255,255,255,0.62);white-space:nowrap">· без карты и автосписаний</span>
+      </div>
+      </div>
+
+      <div ref="{{ phoneRef }}" style="position:relative;margin-top:7vh;width:300px;max-width:86vw;will-change:transform;transform-origin:center center">
+        <div style="background:#0B0F16;border-radius:44px;padding:8px;box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 40px 90px rgba(0,0,0,0.55)">
+          <div style="position:relative;overflow:hidden;border-radius:36px;background:#FFFFFF">
+            <video ref="{{ videoRef }}" loop="{{ true }}" muted="{{ true }}" playsInline="{{ true }}" preload="auto" poster="./ref/hero-curator-demo-poster.jpg" style="display:block;width:100%;aspect-ratio:301/608;object-fit:cover" aria-label="Демонстрация: клиент пишет куратору, а данные появляются в HEYS">
+              <source src="./ref/hero-curator-demo.webm" type="video/webm"></source>
+              <source src="./ref/hero-curator-demo.mp4" type="video/mp4"></source>
+            </video>
+            <sc-if value="{{ cardOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:#FFFFFF;padding:0 11%;transform:{{ cardTransform }};transition:transform 0.45s cubic-bezier(0.22,1,0.36,1);will-change:transform" aria-hidden="true">
+                <p style="margin:0;font-family:'Playfair Display',serif;font-weight:500;font-size:25px;line-height:1.35;text-align:center;color:#101826">{{ cardText }}</p>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <button type="button" ref="{{ btnRef }}" onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="position:absolute;right:-14px;top:14px;z-index:10;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,0.8);background:rgba(255,255,255,0.94);color:#14283C;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.25)">
+          <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;gap:4px"><span style="width:3px;height:14px;background:#14283C;border-radius:2px"></span><span style="width:3px;height:14px;background:#14283C;border-radius:2px"></span></span>
+          </sc-if>
+          <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}">
+            <span style="display:block;width:0;height:0;border-left:13px solid #14283C;border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:3px"></span>
+          </sc-if>
+        </button>
+      </div>
+
+      <div ref="{{ ctaRef }}" style="display:flex;flex-direction:column;align-items:center;margin-top:52px">
+        <div style="display:flex;gap:2px;margin-bottom:4px">
+          <button type="button" data-i="0" onClick="{{ seekChapter }}" aria-label="Глава 1: прислали — и пошли дальше" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot1 }};transition:background 0.4s"></span></button>
+          <button type="button" data-i="1" onClick="{{ seekChapter }}" aria-label="Глава 2: дневник ведёт куратор" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot2 }};transition:background 0.4s"></span></button>
+          <button type="button" data-i="2" onClick="{{ seekChapter }}" aria-label="Глава 3: неделя становится понятной" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot3 }};transition:background 0.4s"></span></button>
+          <button type="button" data-i="3" onClick="{{ seekChapter }}" aria-label="Глава 4: без поспешных выводов" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot4 }};transition:background 0.4s"></span></button>
+        </div>
+        <a href="#curator" style="display:inline-flex;align-items:center;gap:10px;background:#FFFFFF;color:#12283E;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.01em;border-radius:16px;padding:16px 30px;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:transform 0.25s,box-shadow 0.25s" style-hover="transform:translateY(-2px);box-shadow:0 18px 42px rgba(0,0,0,0.4)">Понять, как работает HEYS <span aria-hidden="true">→</span></a>
+        <p style="margin:14px 0 0;font-size:13px;color:rgba(255,255,255,0.58)">Куратор — живой человек, не чат-бот</p>
+      </div>
+      <div style="height:10vh"></div>
+    </div>
+  </div>
+</section>
+
+<section id="pain" data-screen-label="01 Ваша ситуация" style="background:#FFFFFF;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">01 — Ваша ситуация</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,46px);line-height:1.12;letter-spacing:-0.02em">Знакомо?</h2>
+
+    <div style="max-width:680px;margin:48px auto 0;border-top:1px solid rgba(16,24,38,0.12)">
+      <div style="display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:baseline;padding:22px 4px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">01</span>
+        <p style="margin:0;font-size:17px;line-height:1.5">Вес стоит, и непонятно, почему — вроде бы питаетесь нормально</p>
+      </div>
+      <div style="display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:baseline;padding:22px 4px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">02</span>
+        <p style="margin:0;font-size:17px;line-height:1.5">Советы «для всех» не подходят: у вас поездки, поздние ужины и общий стол с семьёй</p>
+      </div>
+      <div style="display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:baseline;padding:22px 4px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">03</span>
+        <p style="margin:0;font-size:17px;line-height:1.5">Начинаете диету — держитесь 2 недели — срываетесь — вините себя</p>
+      </div>
+      <div style="display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:baseline;padding:22px 4px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">04</span>
+        <p style="margin:0;font-size:17px;line-height:1.5">Пробовали приложения — бросили через неделю, потому что надоело всё считать</p>
+      </div>
+    </div>
+
+    <p style="margin:60px auto 0;max-width:560px;text-align:center;font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(22px,2.6vw,30px);line-height:1.4;text-wrap:balance">Сила воли тут ни при чём.<br></br><span style="color:var(--da,#2E7CC0)">Рядом нужен человек, которому не всё равно.</span></p>
+
+    <div style="max-width:640px;margin:56px auto 0;background:#FBFAF7;border:1px solid rgba(16,24,38,0.12);border-radius:24px;padding:40px 36px;text-align:center;box-shadow:0 16px 44px rgba(16,24,38,0.05)">
+      <h3 style="margin:0;font-size:20px;font-weight:600">Если узнали себя — начните с недели Pro.</h3>
+      <p style="margin:12px auto 0;max-width:480px;font-size:14.5px;line-height:1.6;color:#5B6472">За неделю куратор заполнит первые дни дневника, расспросит о том, что за ними стояло, и покажет, где ритм начинает сбиваться.</p>
+      <a href="#trial" style="display:inline-flex;align-items:center;gap:8px;margin-top:24px;background:#12283E;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;border-radius:14px;padding:14px 26px;transition:transform 0.25s,box-shadow 0.25s" style-hover="transform:translateY(-2px);box-shadow:0 14px 32px rgba(18,40,62,0.28)">Оставить заявку на 7 дней Pro <span aria-hidden="true">→</span></a>
+      <p style="margin:12px 0 0;font-size:12px;color:#9AA3B0">0 ₽ · без карты и автосписаний</p>
+    </div>
+  </div>
+</section>
+
+<section id="curator" data-screen-label="02 Как устроено" style="background:#F7F6F2;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">02 — Как устроено</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0 auto;max-width:640px;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,46px);line-height:1.12;letter-spacing:-0.02em;text-wrap:balance">Дневник не нужно заполнять <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">вручную.</em></h2>
+    <p class="rv" style="margin:20px auto 0;max-width:600px;text-align:center;font-size:16px;line-height:1.65;color:#5B6472">Куратор переносит данные в HEYS и расспрашивает о том, чего в цифрах не видно. Он ежедневно смотрит, что изменилось, и помогает поправить режим, пока тот только начинает сбиваться.</p>
+
+    <div class="g-steps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:56px;border-top:1px solid rgba(16,24,38,0.1)">
+      <div style="padding:28px 28px 28px 0;border-bottom:1px solid rgba(16,24,38,0.1)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">01</span>
+        <h3 style="margin:12px 0 8px;font-size:17px;font-weight:600">Вы присылаете</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Фото еды, снимок с весов, короткое сообщение или голосовое. Всего 3–5 минут в день — считать и заполнять ничего не нужно.</p>
+      </div>
+      <div style="padding:28px;border-bottom:1px solid rgba(16,24,38,0.1)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">02</span>
+        <h3 style="margin:12px 0 8px;font-size:17px;font-weight:600">Куратор ведёт дневник</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Заносит в HEYS еду, сон, нагрузку и обстоятельства дня.</p>
+      </div>
+      <div style="padding:28px 0 28px 28px;border-bottom:1px solid rgba(16,24,38,0.1)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">03</span>
+        <h3 style="margin:12px 0 8px;font-size:17px;font-weight:600">Вы видите результат</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Открываете HEYS и видите готовый дневник, динамику и то, как складывается день.</p>
+      </div>
+    </div>
+
+    <div class="rv" style="max-width:620px;margin:64px auto 0">
+      <p style="margin:0 0 16px;text-align:center;font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Пример разбора по дневнику</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+          <span style="font-size:11px;letter-spacing:0.06em;color:#9AA3B0;padding-right:6px">вы · 21:14</span>
+          <div style="max-width:78%;background:#12283E;color:#FFFFFF;font-size:15px;line-height:1.5;border-radius:18px 18px 6px 18px;padding:12px 18px">Вчера вечером снова был срыв.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:5px">
+          <span style="font-size:11px;letter-spacing:0.06em;color:#9AA3B0;padding-left:6px">куратор · 09:02</span>
+          <div style="max-width:88%;background:#FFFFFF;color:#101826;font-size:15px;line-height:1.55;border-radius:18px 18px 18px 6px;padding:14px 18px">Вижу по дневнику: ужин все три дня уходил поздно. А обед в эти дни получался?</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+          <span style="font-size:11px;letter-spacing:0.06em;color:#9AA3B0;padding-right:6px">вы · 09:15</span>
+          <div style="max-width:78%;background:#12283E;color:#FFFFFF;font-size:15px;line-height:1.5;border-radius:18px 18px 6px 18px;padding:12px 18px">Честно — нет. На работе завал, перехватывала на бегу.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:5px">
+          <span style="font-size:11px;letter-spacing:0.06em;color:#9AA3B0;padding-left:6px">куратор · 09:21</span>
+          <div style="max-width:88%;background:#FFFFFF;color:#101826;font-size:15px;line-height:1.55;border-radius:18px 18px 18px 6px;padding:14px 18px">Тогда это не про силу воли: днём копится голод — вечером он догоняет. Начнём с простого: вернём полноценный обед и посмотрим, станет ли вечер спокойнее.</div>
+        </div>
+      </div>
+      <p style="margin:12px 0 0;text-align:center;font-size:11px;color:#9AA3B0">Демонстрационный пример</p>
+    </div>
+
+    <p class="rv" style="margin:64px auto 0;max-width:640px;text-align:center;font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(20px,2.4vw,26px);line-height:1.45;text-wrap:balance">Вам не нужно открывать HEYS после каждого приёма пищи. <span style="color:var(--da,#2E7CC0)">И разговор начинается не с «расскажите, что вы ели», а с того, что куратор уже видит.</span></p>
+  </div>
+</section>
+
+<section id="how-it-works" data-screen-label="03 Первый месяц" style="background:#FFFFFF;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">03 — Ваш первый месяц</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0 auto;max-width:640px;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,46px);line-height:1.12;letter-spacing:-0.02em;text-wrap:balance">Как выглядит ваш первый месяц <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">с HEYS</em></h2>
+    <p class="rv" style="margin:20px auto 0;max-width:560px;text-align:center;font-size:16px;line-height:1.65;color:#5B6472">От заявки до первой устойчивой недели — без ощущения, что вас бросили разбираться в приложении</p>
+
+    <div style="margin-top:56px;display:flex;flex-direction:column;border-top:1px solid rgba(16,24,38,0.12)">
+      <div class="g-month" style="display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:28px;padding:34px 0;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <div><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">01</span><p style="margin:8px 0 0;font-weight:600;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#101826">День 1</p></div>
+        <div><h3 style="margin:0;font-size:20px;font-weight:600;line-height:1.3">Куратор знакомится с вами и помогает начать</h3><p style="margin:12px 0 0;font-size:15px;line-height:1.65;color:#5B6472">Куратор пишет в выбранном канале и расспрашивает: цель, что уже пробовали, как устроен день, сон, нагрузка. Вы не остаётесь один на один с приложением — первую неделю планируете вместе.</p></div>
+      </div>
+      <div class="g-month" style="display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:28px;padding:34px 0;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <div><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">02</span><p style="margin:8px 0 0;font-weight:600;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#101826">Дни 2–7</p></div>
+        <div><h3 style="margin:0;font-size:20px;font-weight:600;line-height:1.3">Дневник ведёт куратор — не вы</h3><p style="margin:12px 0 0;font-size:15px;line-height:1.65;color:#5B6472">От вас — фото, сообщение или голосовое. Остальное делает куратор: переносит еду в дневник, фиксирует тренировки, добавляет ваши продукты в базу. К воскресенью у вас полная неделя, которую вы не заполняли.</p></div>
+      </div>
+      <div class="g-month" style="display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:28px;padding:34px 0;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <div><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">03</span><p style="margin:8px 0 0;font-weight:600;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#101826">Неделя 2</p></div>
+        <div><h3 style="margin:0;font-size:20px;font-weight:600;line-height:1.3">Свои причины, а не советы из интернета</h3><p style="margin:12px 0 0;font-size:15px;line-height:1.65;color:#5B6472">Куратор смотрит не день, а неделю: где пропадает обед, как короткий сон отзывается вечерней тягой, что меняется после поездки. Вместо совета «для всех» — человек, который знает, как проходит именно ваша неделя.</p></div>
+      </div>
+      <div class="g-month" style="display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:28px;padding:34px 0;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <div><span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">04</span><p style="margin:8px 0 0;font-weight:600;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#101826">Месяц +</p></div>
+        <div><h3 style="margin:0;font-size:20px;font-weight:600;line-height:1.3">Режим, который выдерживает обычную жизнь</h3><p style="margin:12px 0 0;font-size:15px;line-height:1.65;color:#5B6472">Не диета с датой окончания, а ритм, который переживает поездки, усталость и семейные ужины. Сбились — куратор разбирается, что изменилось, и предлагает один простой шаг.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="week" data-screen-label="04 Неделя после разбора" style="background:#F7F6F2;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">04 — Неделя после разбора</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0 auto;max-width:700px;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,44px);line-height:1.14;letter-spacing:-0.02em;text-wrap:balance">Не один неидеальный день, а <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">изменения за неделю.</em></h2>
+    <p class="rv" style="margin:20px auto 0;max-width:600px;text-align:center;font-size:15px;line-height:1.65;color:#5B6472">Заполненный дневник, повторяющийся сдвиг и один следующий шаг. Не диагноз и не автоматический совет: выводы делает куратор, а не система.</p>
+
+    <figure class="rv" style="max-width:560px;margin:52px auto 0;background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:24px;overflow:hidden;box-shadow:0 16px 44px rgba(16,24,38,0.05)">
+      <figcaption style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(16,24,38,0.08);padding:14px 24px">
+        <span style="font-size:14px;font-weight:600">Ваша неделя в HEYS</span>
+        <span style="font-size:11px;color:#9AA3B0">7 дней подряд</span>
+      </figcaption>
+      <div style="padding:18px 24px 0">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Пн</span><span style="height:32px;width:100%;border-radius:6px;background:#4CAF7D" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Вт</span><span style="height:32px;width:100%;border-radius:6px;background:#4CAF7D" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E0A93E" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Ср</span><span style="height:32px;width:100%;border-radius:6px;background:#4CAF7D" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#D9707E" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Чт</span><span style="height:32px;width:100%;border-radius:6px;background:#DDEEE4" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E0A93E" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#D9707E" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Пт</span><span style="height:32px;width:100%;border-radius:6px;background:#DDEEE4" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E0A93E" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#D9707E" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Сб</span><span style="height:32px;width:100%;border-radius:6px;background:#4CAF7D" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#8A94A2">Вс</span><span style="height:32px;width:100%;border-radius:6px;background:#4CAF7D" aria-hidden="true"></span><span style="display:flex;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span><span style="width:6px;height:6px;border-radius:50%;background:#E4E2DB" aria-hidden="true"></span></span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:14px">
+          <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8A94A2"><span style="width:8px;height:10px;border-radius:3px;background:#4CAF7D" aria-hidden="true"></span>все приёмы пищи</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8A94A2"><span style="width:8px;height:10px;border-radius:3px;background:#DDEEE4" aria-hidden="true"></span>день с пропуском</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8A94A2"><span style="width:6px;height:6px;border-radius:50%;background:#E0A93E" aria-hidden="true"></span>поздний ужин</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8A94A2"><span style="width:6px;height:6px;border-radius:50%;background:#D9707E" aria-hidden="true"></span>короткий сон</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid rgba(16,24,38,0.08)">
+        <div style="padding:16px 24px">
+          <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A94A2">Что заметил куратор</p>
+          <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#3C4552">Три ночи подряд сон был короче обычного, в четверг и пятницу пропускался обед, а ужин стал позже.</p>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid rgba(16,24,38,0.06)">
+          <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--da,#2E7CC0)">Что уточнил куратор</p>
+          <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#3C4552">Спросил про четверг и пятницу. Оказалось — поздние встречи, обед не получался.</p>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid rgba(16,24,38,0.06)">
+          <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A94A2">Что могло повлиять</p>
+          <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#3C4552">Накопленный за день голод и недосып усиливают вечернюю тягу — дело не в дисциплине.</p>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid rgba(16,24,38,0.06);background:#12283E">
+          <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8FC1E8">Следующий шаг</p>
+          <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#FFFFFF">Вернуть полноценный обед в четверг и пятницу — и посмотреть, станет ли вечер спокойнее.</p>
+        </div>
+      </div>
+      <details style="border-top:1px solid rgba(16,24,38,0.08)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;font-size:13px;font-weight:500;color:#3C4552">Что ещё видит куратор в этой неделе<span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:14px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 24px 16px;display:flex;flex-direction:column;gap:8px">
+          <p style="margin:0;display:flex;gap:9px;font-size:13.5px;line-height:1.55;color:#5B6472"><span style="color:var(--da,#2E7CC0)">—</span>В какое время был каждый приём пищи и сколько часов между ними</p>
+          <p style="margin:0;display:flex;gap:9px;font-size:13.5px;line-height:1.55;color:#5B6472"><span style="color:var(--da,#2E7CC0)">—</span>Сколько дней подряд повторялся сдвиг, а не был ли он разовым</p>
+          <p style="margin:0;display:flex;gap:9px;font-size:13.5px;line-height:1.55;color:#5B6472"><span style="color:var(--da,#2E7CC0)">—</span>Что вы писали про самочувствие и нагрузку в эти дни</p>
+        </div>
+      </details>
+      <p style="margin:0;border-top:1px solid rgba(16,24,38,0.08);background:#FBFAF7;padding:10px 24px;font-size:11px;color:#9AA3B0">Демонстрационный пример · данные обезличены</p>
+    </figure>
+
+    <details class="rv" style="max-width:560px;margin:14px auto 0;border:1px solid rgba(16,24,38,0.1);border-radius:18px;background:#FFFFFF">
+      <summary style="display:flex;align-items:flex-start;gap:14px;padding:20px 24px">
+        <span style="flex:1;min-width:0"><span style="display:block;font-size:16px;font-weight:600;line-height:1.4">А если неделя не задалась?</span><span style="display:block;margin-top:5px;font-size:14px;line-height:1.6;color:#5B6472">Никто не предложит голодать, «отрабатывать» съеденное или начинать всё заново.</span></span>
+        <span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span>
+      </summary>
+      <div style="border-top:1px solid rgba(16,24,38,0.08);padding:6px 24px 18px">
+        <div style="display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:14px;padding:14px 0;border-bottom:1px solid rgba(16,24,38,0.08);font-size:14.5px;line-height:1.55">
+          <span style="font-weight:600">Был избыток</span><span style="color:#5B6472">Наутро возвращаемся к обычному питанию. Без голодной компенсации.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:14px;padding:14px 0;border-bottom:1px solid rgba(16,24,38,0.08);font-size:14.5px;line-height:1.55">
+          <span style="font-weight:600">Был дефицит</span><span style="color:#5B6472">Возвращаемся к обычному ритму приёмов пищи. Тоже без компенсации.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:14px;padding:14px 0;font-size:14.5px;line-height:1.55">
+          <span style="font-weight:600">Праздник или ужин вне дома</span><span style="color:#5B6472">Неделя не испорчена. Учитываем событие и продолжаем обычный режим.</span>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section id="trust" data-screen-label="05 Кто ведёт и как" style="background:#FFFFFF;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">05 — Кто ведёт и как</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0 auto;max-width:600px;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,44px);line-height:1.14;letter-spacing:-0.02em;text-wrap:balance">Вникание здесь — не обещание, а <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">стандарт работы.</em></h2>
+    <p class="rv" style="margin:20px auto 0;max-width:560px;text-align:center;font-size:15px;line-height:1.65;color:#5B6472">За словом «вникает» стоят опыт, один порядок разбора и ограниченное число участников — чтобы времени хватало на каждого.</p>
+
+    <div class="rv g-curator" style="display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:40px;align-items:start;max-width:860px;margin:52px auto 0;background:#FBFAF7;border:1px solid rgba(16,24,38,0.1);border-radius:24px;padding:36px">
+      <div style="aspect-ratio:4/5;width:100%">
+        <image-slot id="curator-portrait" shape="rounded" radius="16" placeholder="Портрет куратора — рабочая обстановка"></image-slot>
+      </div>
+      <div>
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Куратор HEYS</p>
+        <p style="margin:16px 0 0;font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(19px,2.2vw,24px);line-height:1.45;color:#101826">«Моя задача — не оценивать идеальность питания, а собрать факты, увидеть повторяющийся сбой и предложить один выполнимый следующий шаг. И не исчезать, когда неделя идёт не по плану.»</p>
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px">
+          <p style="margin:0;display:flex;gap:10px;font-size:14.5px;line-height:1.6;color:#5B6472"><span style="color:var(--da,#2E7CC0)">—</span>Опыт более 20 лет в питании и сопровождении</p>
+          <p style="margin:0;display:flex;gap:10px;font-size:14.5px;line-height:1.6;color:#5B6472"><span style="color:var(--da,#2E7CC0)">—</span>Куратор берёт немного участников — чтобы хватало времени вникать в неделю каждого</p>
+        </div>
+        <p style="margin:20px 0 0;font-size:12px;color:#9AA3B0">Имя и видео-знакомство появятся здесь после съёмки.</p>
+      </div>
+    </div>
+
+    <div class="g-trust" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:52px">
+      <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:20px;padding:30px 28px;transition:transform 0.3s,box-shadow 0.3s" style-hover="transform:translateY(-4px);box-shadow:0 20px 44px rgba(16,24,38,0.08)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">01</span>
+        <h3 style="margin:12px 0 10px;font-size:18px;font-weight:600">Один порядок разбора</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Сначала факты недели, затем возможные причины, и только потом — один следующий шаг. Одинаково для всех участников, независимо от дня и настроения.</p>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:20px;padding:30px 28px;transition:transform 0.3s,box-shadow 0.3s" style-hover="transform:translateY(-4px);box-shadow:0 20px 44px rgba(16,24,38,0.08)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">02</span>
+        <h3 style="margin:12px 0 10px;font-size:18px;font-weight:600">Ваши данные</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Дневник и переписка доступны вам и вашему куратору. Данные о здоровье обрабатываются по отдельному согласию, примеры на сайте обезличены.</p>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:20px;padding:30px 28px;transition:transform 0.3s,box-shadow 0.3s" style-hover="transform:translateY(-4px);box-shadow:0 20px 44px rgba(16,24,38,0.08)">
+        <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">03</span>
+        <h3 style="margin:12px 0 10px;font-size:18px;font-weight:600">Чего HEYS не делает</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Не ставит диагнозов, не назначает лечение и не трактует анализы. Не предлагает голодать или «отрабатывать» съеденное. При заболеваниях нужен врач.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" data-screen-label="06 Тарифы" style="background:#F7F6F2;padding:84px 0 104px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">06 — Форматы и тарифы</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0 auto;max-width:600px;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,44px);line-height:1.14;letter-spacing:-0.02em;text-wrap:balance">Какую помощь вы хотите <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">получить?</em></h2>
+    <div class="rv g-steps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:44px;border-top:1px solid rgba(16,24,38,0.14)">
+      <div style="padding:22px 26px 22px 0;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#A0616D">Трекер</p>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:#5B6472">Заполняете сами. Цифры есть — объяснения нет.</p>
+        <p style="margin:14px 0 0;font-size:13px;font-weight:600;color:#101826">Обычно бесплатно</p>
+      </div>
+      <div style="padding:22px 26px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#A8823C">Консультация</p>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:#5B6472">Видит день встречи. Неделю вспоминаете по памяти.</p>
+        <p style="margin:14px 0 0;font-size:13px;font-weight:600;color:#101826">2 000 — 9 000 ₽ за один приём</p>
+      </div>
+      <div style="padding:22px 0 22px 26px;border-bottom:1px solid rgba(16,24,38,0.12)">
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--da,#2E7CC0)">HEYS</p>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:#101826;font-weight:500">Дневник ведёт куратор. Он видит неделю целиком.</p>
+        <p style="margin:14px 0 0;font-size:13px;font-weight:600;color:var(--da,#2E7CC0)">7 990 ₽ за месяц ежедневной работы</p>
+      </div>
+    </div>
+    <p class="rv" style="margin:24px auto 0;max-width:640px;text-align:center;font-size:15px;line-height:1.65;color:#5B6472">Self — ведёте дневник сами. Pro — куратор ведёт дневник и помогает по ходу недели. Pro Спорт — один специалист ведёт питание и тренировки.</p>
+    <p style="margin:10px auto 0;max-width:620px;text-align:center;font-size:13px;line-height:1.6;color:#9AA3B0">Вилка по консультациям — открытые прайсы московских клиник и площадок на август 2026. Цены HEYS — за месяц, без скрытых доплат и автосписаний. При медицинских показаниях HEYS не заменяет врача или нутрициолога.</p>
+
+    <article style="margin-top:36px;border:1.5px solid #12283E;border-radius:26px;padding:40px 44px;background:linear-gradient(180deg,#FBFCFE 0%,#F3F7FB 100%);box-shadow:0 24px 60px rgba(18,40,62,0.1);position:relative">
+      <span style="position:absolute;top:-13px;left:44px;background:#12283E;color:#FFFFFF;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;border-radius:999px;padding:7px 14px">Основной формат</span>
+      <div class="g-pro" style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1.2fr);gap:44px">
+        <div style="display:flex;flex-direction:column">
+          <h3 style="margin:0;font-size:24px;font-weight:600">Pro</h3>
+          <div style="margin-top:10px;display:flex;align-items:baseline;gap:6px"><span style="font-size:42px;font-weight:600;letter-spacing:-0.02em">7 990</span><span style="font-size:15px;color:#8A94A2">₽/мес</span></div>
+          <p style="margin:7px 0 0;font-size:13px;color:#8A94A2">Около 270 ₽ в день — с ежедневным ведением дневника</p>
+          <p style="margin:12px 0 0;font-weight:600;font-size:14px;color:var(--da,#2E7CC0)">Дневник ведёт куратор, который вас знает</p>
+          <p style="margin:14px 0 0;font-size:14.5px;line-height:1.65;color:#5B6472">Вы присылаете фото, текст или голос. Куратор ведёт дневник, помнит, что происходило в течение недели, и помогает понять, что изменить, если планы или режим сбились.</p>
+          <div style="margin-top:auto;padding-top:28px">
+            <a href="#trial" style="display:flex;align-items:center;justify-content:center;background:#12283E;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;border-radius:14px;padding:15px 20px">Оставить заявку на 7 дней Pro</a>
+            <p style="margin:10px 0 0;text-align:center;font-size:12px;color:#8A94A2">0 ₽ · без карты и автосписаний</p>
+          </div>
+        </div>
+        <div>
+          <p style="margin:0 0 14px;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8A94A2">По ходу недели</p>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55;color:#3C4552">
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Куратор заносит в дневник всё, что вы прислали.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Спрашивает, что стояло за днём, а не достраивает за вас.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Видит питание, сон, нагрузку и график в одной картине — и помнит, как было неделю назад.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Если меняются планы или график, помогает решить, как действовать дальше.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>После сбоя помогает вернуться в ритм без необходимости начинать всё заново.</span></div>
+          </div>
+          <p style="margin:22px 0 14px;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8A94A2;border-top:1px solid rgba(16,24,38,0.1);padding-top:20px">Итог недели</p>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55;color:#3C4552">
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Подробный разбор занимает 20–45 минут.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>Понятно, что сработало, что мешало и на чём сосредоточиться дальше.</span></div>
+            <div style="display:flex;gap:10px"><span style="color:var(--da,#2E7CC0)">—</span><span>После разбора остаются заполненный дневник, динамика и понятный итог недели.</span></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="g-plans" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:20px;margin-top:20px">
+      <article style="border:1px solid rgba(16,24,38,0.12);border-radius:22px;padding:32px 30px;background:#FFFFFF;display:flex;flex-direction:column">
+        <h3 style="margin:0;font-size:19px;font-weight:600">Self</h3>
+        <div style="margin-top:8px;display:flex;align-items:baseline;gap:5px"><span style="font-size:32px;font-weight:600;letter-spacing:-0.02em">490</span><span style="font-size:14px;color:#8A94A2">₽/мес</span></div>
+        <p style="margin:10px 0 0;font-weight:600;font-size:13.5px;color:var(--da,#2E7CC0)">Дневник ведёте сами</p>
+        <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Питание, КБЖУ, тренировочные записи и динамика собраны в HEYS — без участия куратора.</p>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;font-size:13.5px;line-height:1.5;color:#3C4552">
+          <div style="display:flex;gap:9px"><span style="color:var(--da,#2E7CC0)">—</span><span>Дневник питания и КБЖУ</span></div>
+          <div style="display:flex;gap:9px"><span style="color:var(--da,#2E7CC0)">—</span><span>Динамика по дням и неделям</span></div>
+          <div style="display:flex;gap:9px"><span style="color:var(--da,#2E7CC0)">—</span><span>Своя база продуктов и история</span></div>
+          <div style="display:flex;gap:9px"><span style="color:var(--da,#2E7CC0)">—</span><span>Тренировочный дневник</span></div>
+        </div>
+        <div style="margin-top:auto;padding-top:24px">
+          <a href="https://app.heyslab.ru" style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#FFFFFF;border:1px solid rgba(16,24,38,0.25);color:#101826;font-weight:600;font-size:13.5px;border-radius:13px;padding:14px 18px;text-decoration:none;transition:border-color 0.2s" style-hover="border-color:#101826">Начать в HEYS</a>
+          <p style="margin:10px 0 0;text-align:center;font-size:12px;color:#8A94A2">Регистрация и оплата в приложении</p>
+        </div>
+      </article>
+
+      <article style="border:1px solid #C9C7E0;border-radius:22px;padding:32px 30px;background:linear-gradient(180deg,#FCFBFF 0%,#F6F4FB 100%);display:flex;flex-direction:column;position:relative">
+        <span style="position:absolute;top:-12px;left:30px;background:#FFFFFF;border:1px solid #C9C7E0;color:#4A4C7E;font-weight:600;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-radius:999px;padding:6px 12px">Пилот · до 4 участников</span>
+        <h3 style="margin:0;font-size:19px;font-weight:600">Pro Спорт</h3>
+        <div style="margin-top:8px;display:flex;align-items:baseline;gap:5px"><span style="font-size:32px;font-weight:600;letter-spacing:-0.02em">19 990</span><span style="font-size:14px;color:#8A94A2">₽/мес</span></div>
+        <p style="margin:7px 0 0;font-size:12.5px;color:#8A94A2">Около 670 ₽ в день — питание и тренировки у одного специалиста</p>
+        <p style="margin:10px 0 0;font-weight:600;font-size:13.5px;color:#4A4C7E">Pro + персональный онлайн-тренер</p>
+        <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Один специалист ведёт питание и тренировки, составляет программу под ваш график и видит, как вы выполняете упражнения. Поэтому нагрузка, питание и восстановление не существуют отдельно друг от друга.</p>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;font-size:13.5px;line-height:1.5;color:#3C4552">
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Всё сопровождение Pro</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Стартовая встреча до 60 минут</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Персональная программа тренировок на четыре недели</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Тренер ведёт тренировочный дневник и видит, что реально выполнено</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Один общий созвон по питанию и тренировкам 45–60 минут каждую неделю</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Тренер проверяет технику упражнений вашей программы по коротким видео</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Если обстоятельства меняются, тренер помогает перестроить ближайшую тренировку</span></div>
+          <div style="display:flex;gap:9px"><span style="color:#4A4C7E">—</span><span>Тренер обновляет программу с учётом того, как вы реально выполняете тренировки</span></div>
+        </div>
+        <div style="margin-top:auto;padding-top:24px">
+          <button type="button" onClick="{{ openPro }}" style="width:100%;background:#FFFFFF;border:1px solid #4A4C7E;color:#4A4C7E;font-family:'Golos Text',sans-serif;font-weight:600;font-size:13.5px;border-radius:13px;padding:14px 18px;cursor:pointer;transition:background 0.2s" style-hover="background:#F3F1F9">Обсудить Pro Спорт</button>
+          <p style="margin:10px 0 0;text-align:center;font-size:12px;color:#8A94A2">Оплата после личного согласования</p>
+        </div>
+      </article>
+    </div>
+
+    <details style="margin-top:24px;border:1px solid rgba(16,24,38,0.12);border-radius:18px;background:#FFFFFF;overflow:hidden">
+      <summary style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 26px">
+        <span><span style="display:block;font-size:15px;font-weight:600">Сравнить форматы</span><span style="display:block;margin-top:4px;font-size:13px;color:#8A94A2">Основные различия между Self, Pro и Pro Спорт</span></span>
+        <span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span>
+      </summary>
+      <div style="border-top:1px solid rgba(16,24,38,0.08);padding:8px 26px 24px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.5;color:#5B6472;text-align:left">
+          <thead>
+            <tr>
+              <th style="padding:12px 10px;font-weight:600;color:#101826;border-bottom:1px solid rgba(16,24,38,0.14);width:31%">Критерий</th>
+              <th style="padding:12px 10px;font-weight:600;color:#101826;border-bottom:1px solid rgba(16,24,38,0.14);width:23%">Self</th>
+              <th style="padding:12px 10px;font-weight:600;color:var(--da,#2E7CC0);border-bottom:1px solid rgba(16,24,38,0.14);width:23%;background:#F6FAFD">Pro</th>
+              <th style="padding:12px 10px;font-weight:600;color:#4A4C7E;border-bottom:1px solid rgba(16,24,38,0.14);width:23%;background:#F9F8FC">Pro Спорт</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Кто ведёт дневник питания</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Вы</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Куратор</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Куратор</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Помощь по ходу недели</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Самостоятельно</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Куратор помогает решить, как действовать, если планы или режим меняются</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Специалист помогает подстроить питание и тренировочную нагрузку под ситуацию</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Недельный разбор</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Питание и ритм недели · 20–45 минут</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Питание и тренировки · 45–60 минут</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Кто ведёт тренировочный дневник</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Вы</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Вы</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Тренер</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Персональная программа тренировок</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">На четыре недели</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Адаптация тренировочной нагрузки</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Самостоятельно</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Не входит</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Тренер помогает изменить ближайшую тренировку</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Обновление основной программы</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">По результатам выполнения, не чаще раза в неделю</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Контроль техники упражнений</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Самостоятельно</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Нет</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Тренер разбирает упражнения текущей программы по коротким видео</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">На старте новой программы</th><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top">Самостоятельно</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F6FAFD">Не входит</td><td style="padding:11px 10px;border-bottom:1px solid rgba(16,24,38,0.07);vertical-align:top;background:#F9F8FC">Проверка техники упражнений новой программы</td></tr>
+            <tr><th scope="row" style="padding:11px 10px;font-weight:500;color:#101826;vertical-align:top">Бесплатная неделя</th><td style="padding:11px 10px;vertical-align:top">Нет</td><td style="padding:11px 10px;vertical-align:top;background:#F6FAFD">7 дней</td><td style="padding:11px 10px;vertical-align:top;background:#F9F8FC">Нет</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details style="margin-top:12px;border:1px solid rgba(16,24,38,0.12);border-radius:18px;background:#FFFFFF">
+      <summary style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 26px">
+        <span style="font-size:15px;font-weight:600">Как устроено сопровождение</span>
+        <span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span>
+      </summary>
+      <div style="border-top:1px solid rgba(16,24,38,0.08);padding:4px 26px 10px">
+        <div style="padding:16px 0;border-bottom:1px solid rgba(16,24,38,0.07)">
+          <h4 style="margin:0;font-size:14px;font-weight:600">По ходу недели</h4>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">Куратор работает с новыми записями в течение недели: вносит данные, задаёт уточняющие вопросы и помогает решить, что изменить, если меняются график, нагрузка или обстоятельства. Для этого не нужно ждать недельного разбора.</p>
+        </div>
+        <div style="padding:16px 0;border-bottom:1px solid rgba(16,24,38,0.07)">
+          <h4 style="margin:0;font-size:14px;font-weight:600">Итог недели</h4>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">Раз в неделю проходит более глубокий разбор: что сработало, где начал сбиваться ритм и на чём сосредоточиться дальше.</p>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">Для Pro он занимает 20–45 минут. Для Pro Спорт питание и тренировки разбираются вместе на общем созвоне 45–60 минут.</p>
+        </div>
+        <div style="padding:16px 0;border-bottom:1px solid rgba(16,24,38,0.07)">
+          <h4 style="margin:0;font-size:14px;font-weight:600">Как работает тренер</h4>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">В Pro Спорт тренер видит тренировочный дневник и помогает перестроить ближайшую тренировку, если ситуация изменилась. Основная программа обновляется по результатам выполнения, но не чаще одного раза в неделю.</p>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">Для разбора техники достаточно короткого видео одного рабочего подхода. На старте тренер проверяет упражнения новой программы, дальше вы присылаете новые или вызывающие сомнение движения. В ответ — несколько главных замечаний: что уже получается, что изменить и нужно ли показать упражнение повторно.</p>
+          <p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:#4A4C7E">Цена 19 990 ₽/мес действует для текущего пилота. Для следующего набора планируется цена 26 990 ₽/мес.</p>
+        </div>
+        <div style="padding:16px 0">
+          <h4 style="margin:0;font-size:14px;font-weight:600">Связь и границы</h4>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#5B6472">Сообщения обрабатываются в часы сопровождения 09:00–21:00 МСК. Ориентир первой реакции — 1–2 часа; полный разбор может потребовать больше времени.</p>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.65;color:#3C4552;font-weight:500">Это не круглосуточная или экстренная связь. HEYS не заменяет врача, реабилитолога или медицинскую помощь.</p>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section id="trial" data-screen-label="Заявка на неделю Pro" style="background:#FFFFFF;padding:84px 0 104px">
+  <div style="max-width:760px;margin:0 auto;padding:0 32px">
+    <div class="rv" style="background:#0E1D2E;border-radius:28px;padding:52px 48px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:0.04;background-size:56px 56px;background-image:url(&quot;data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E&quot;)" aria-hidden="true"></div>
+      <div style="position:relative">
+        <h2 style="margin:0;font-weight:600;font-size:clamp(28px,3.4vw,40px);line-height:1.15;letter-spacing:-0.02em;color:#FFFFFF">Неделя Pro <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">бесплатно</em></h2>
+        <div style="margin-top:16px;display:flex;align-items:baseline;justify-content:center;gap:8px">
+          <span style="font-size:56px;font-weight:600;letter-spacing:-0.02em;color:#FFFFFF">0 ₽</span>
+          <span style="font-size:15px;color:rgba(255,255,255,0.6)">/ 7 дней</span>
+        </div>
+        <p style="margin:18px auto 0;max-width:520px;font-size:15px;line-height:1.65;color:rgba(255,255,255,0.75)">За 7 дней куратор перенесёт первые приёмы в дневник, посмотрит ритм недели и разберёт с вами, где день начинает сбиваться. Вы поймёте, каково это — когда в вашу неделю действительно вникают.</p>
+        <div style="margin-top:22px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px">
+          <span style="border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.85)">Без привязки карты</span>
+          <span style="border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.85)">Без автосписаний</span>
+        </div>
+        <p style="margin:26px auto 0;max-width:460px;display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.62);text-align:left">
+          <span style="flex-shrink:0;width:6px;height:6px;margin-top:7px;border-radius:50%;background:#7FD1A0" aria-hidden="true"></span>
+          <span>Идёт первый набор. Куратор берёт ограниченное число участников в неделю — чтобы вникать в ритм каждого, а не отвечать по шаблону.</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="rv" style="margin-top:20px;background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:24px;padding:40px 40px;box-shadow:0 16px 44px rgba(16,24,38,0.05)">
+      <sc-if value="{{ qIntro }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Перед заявкой</p>
+        <h3 style="margin:12px 0 0;font-size:22px;font-weight:600;line-height:1.3">Посмотрим, какой сценарий чаще сбивает ваш режим</h3>
+        <p style="margin:10px 0 0;font-size:14.5px;line-height:1.65;color:#5B6472">Два вопроса — меньше минуты. Вы увидите разбор своего типа срыва, а куратор получит этот контекст вместе с заявкой и начнёт не с нуля.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:26px">
+          <button type="button" onClick="{{ startQuiz }}" style="flex:1 1 220px;background:#12283E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:16px 22px;cursor:pointer;transition:transform 0.25s" style-hover="transform:translateY(-2px)">Пройти короткий разбор →</button>
+          <button type="button" onClick="{{ skipQuiz }}" style="flex:0 1 auto;background:#FFFFFF;border:1px solid rgba(16,24,38,0.22);color:#101826;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:16px 22px;cursor:pointer">Просто оставить контакт</button>
+        </div>
+        <p style="margin:16px 0 0;font-size:12.5px;line-height:1.6;color:#9AA3B0">Это не тест на силу воли: срывы чаще связаны с усталостью, контекстом и привычными сценариями дня.</p>
+      </sc-if>
+
+      <sc-if value="{{ qStepTrigger }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+          <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Короткий разбор</span>
+          <button type="button" onClick="{{ skipQuiz }}" style="background:none;border:none;padding:6px 0;font-family:'Golos Text',sans-serif;font-size:13px;color:#8A94A2;cursor:pointer;text-decoration:underline">Пропустить</button>
+        </div>
+        <h3 style="margin:14px 0 0;font-size:21px;font-weight:600;line-height:1.35">Что чаще всего запускает срыв?</h3>
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ triggerOpts }}" as="opt" hint-placeholder-count="5">
+            <button type="button" data-v="{{ opt.v }}" onClick="{{ pickTrigger }}" style="width:100%;text-align:left;background:#FBFAF7;border:1px solid rgba(16,24,38,0.14);border-radius:14px;padding:16px 18px;font-family:'Golos Text',sans-serif;font-size:15px;line-height:1.45;color:#101826;cursor:pointer;transition:border-color 0.2s,background 0.2s" style-hover="border-color:#2E7CC0;background:#FFFFFF">{{ opt.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ qStepWhen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+          <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Последний вопрос</span>
+          <button type="button" onClick="{{ backToTrigger }}" style="background:none;border:none;padding:6px 0;font-family:'Golos Text',sans-serif;font-size:13px;color:#8A94A2;cursor:pointer;text-decoration:underline">Назад</button>
+        </div>
+        <h3 style="margin:14px 0 0;font-size:21px;font-weight:600;line-height:1.35">Когда чаще всего сложнее удержать режим?</h3>
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ whenOpts }}" as="opt" hint-placeholder-count="5">
+            <button type="button" data-v="{{ opt.v }}" onClick="{{ pickWhen }}" style="width:100%;text-align:left;background:#FBFAF7;border:1px solid rgba(16,24,38,0.14);border-radius:14px;padding:16px 18px;font-family:'Golos Text',sans-serif;font-size:15px;line-height:1.45;color:#101826;cursor:pointer;transition:border-color 0.2s,background 0.2s" style-hover="border-color:#2E7CC0;background:#FFFFFF">{{ opt.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ qResult }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--da,#2E7CC0)">Ваш сценарий</p>
+        <h3 style="margin:12px 0 0;font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:clamp(26px,3.2vw,34px);line-height:1.2">{{ resTitle }}</h3>
+        <p style="margin:16px 0 0;font-size:15.5px;line-height:1.7;color:#3C4552">{{ resBody }}</p>
+        <div style="margin-top:20px;border-top:1px solid rgba(16,24,38,0.1)">
+          <div style="padding:16px 0;border-bottom:1px solid rgba(16,24,38,0.08)">
+            <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A94A2">Первый шаг</p>
+            <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#3C4552">{{ resTip }}</p>
+          </div>
+          <div style="padding:16px 0">
+            <p style="margin:0;font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A94A2">Что здесь делает куратор</p>
+            <p style="margin:6px 0 0;font-size:14.5px;line-height:1.6;color:#3C4552">{{ resHeys }}</p>
+          </div>
+        </div>
+        <p style="margin:22px 0 0;font-size:13.5px;line-height:1.6;color:#5B6472">Ещё три коротких ответа — и куратор начнёт с вашей ситуации, а не с анкеты. Можно пропустить.</p>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <p style="margin:0 0 9px;font-size:13px;font-weight:600;color:#5B6472">Как часто это повторяется?</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ freqOpts }}" as="opt" hint-placeholder-count="4">
+                <button type="button" data-v="{{ opt.v }}" onClick="{{ pickFreq }}" style="{{ opt.st }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <p style="margin:0 0 9px;font-size:13px;font-weight:600;color:#5B6472">Что сложнее всего сейчас?</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ barrierOpts }}" as="opt" hint-placeholder-count="4">
+                <button type="button" data-v="{{ opt.v }}" onClick="{{ pickBarrier }}" style="{{ opt.st }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <p style="margin:0 0 9px;font-size:13px;font-weight:600;color:#5B6472">Что важнее на ближайший месяц?</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ goalOpts }}" as="opt" hint-placeholder-count="4">
+                <button type="button" data-v="{{ opt.v }}" onClick="{{ pickGoal }}" style="{{ opt.st }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <button type="button" onClick="{{ toForm }}" style="margin-top:28px;width:100%;background:#12283E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:16px 22px;cursor:pointer">Разобрать мой случай на неделе Pro →</button>
+        <p style="margin:12px 0 0;text-align:center;font-size:12.5px;color:#9AA3B0">0 ₽ · без карты и автосписаний</p>
+      </sc-if>
+
+      <sc-if value="{{ qForm }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-size:20px;font-weight:600">Заявка на бесплатную неделю Pro</h3>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Оставьте контакт — куратор свяжется с вами и объяснит следующий шаг. Сведения о здоровье на этом этапе не нужны.</p>
+        <sc-if value="{{ hasCtx }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:18px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;background:#FBFAF7;border:1px solid rgba(16,24,38,0.1);border-radius:14px;padding:14px 16px">
+            <span style="font-weight:600;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A94A2">Куратор увидит</span>
+            <span style="flex:1 1 200px;font-size:13.5px;line-height:1.55;color:#3C4552">{{ ctxLine }}</span>
+            <button type="button" onClick="{{ startQuiz }}" style="background:none;border:none;padding:0;font-family:'Golos Text',sans-serif;font-size:13px;color:#5B6472;cursor:pointer;text-decoration:underline;white-space:nowrap">изменить</button>
+          </div>
+        </sc-if>
+        <form onSubmit="{{ submitLead }}" style="margin-top:22px;display:flex;flex-direction:column;gap:14px">
+          <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:600;color:#5B6472">Имя</span><input type="text" name="name" autoComplete="given-name" required="{{ true }}" placeholder="Как к вам обращаться" style="width:100%;box-sizing:border-box;border:1px solid rgba(16,24,38,0.18);border-radius:13px;padding:15px 18px;font-family:'Golos Text',sans-serif;font-size:15px;color:#101826;background:#FBFAF7;outline-color:#2E7CC0"></input></label>
+          <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:600;color:#5B6472">Телефон</span><input type="tel" name="phone" inputMode="tel" autoComplete="tel" required="{{ true }}" placeholder="+7 999 000-00-00" style="width:100%;box-sizing:border-box;border:1px solid rgba(16,24,38,0.18);border-radius:13px;padding:15px 18px;font-family:'Golos Text',sans-serif;font-size:15px;color:#101826;background:#FBFAF7;outline-color:#2E7CC0"></input></label>
+          <div>
+            <p style="margin:0 0 9px;font-size:12.5px;font-weight:600;color:#5B6472">Где удобнее общаться?</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <sc-for list="{{ msgOpts }}" as="opt" hint-placeholder-count="3">
+                <button type="button" data-v="{{ opt.v }}" onClick="{{ pickMsg }}" style="{{ opt.st }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:600;color:#5B6472">Год рождения</span><input type="text" name="birth_year" inputMode="numeric" autoComplete="bday-year" maxLength="{{ 4 }}" required="{{ true }}" placeholder="Например, 1990" style="width:100%;box-sizing:border-box;border:1px solid rgba(16,24,38,0.18);border-radius:13px;padding:15px 18px;font-family:'Golos Text',sans-serif;font-size:15px;color:#101826;background:#FBFAF7;outline-color:#2E7CC0"></input><span style="font-size:11.5px;line-height:1.5;color:#9AA3B0">Сервис доступен только лицам старше 18 лет.</span></label>
+          <label style="display:flex;align-items:flex-start;gap:11px;margin-top:4px;cursor:pointer"><input type="checkbox" name="consent" required="{{ true }}" style="margin-top:2px;width:17px;height:17px;flex-shrink:0;accent-color:#12283E;cursor:pointer"></input><span style="font-size:12.5px;line-height:1.6;color:#5B6472">Даю согласие на обработку персональных данных согласно <a href="/legal/privacy-policy" style="color:#2E7CC0">политике конфиденциальности</a>. Согласие относится только к заявке и обратной связи по ней.</span></label>
+          <details style="border:1px solid rgba(16,24,38,0.1);border-radius:14px;background:#FBFAF7;padding:13px 16px">
+            <summary style="font-size:12.5px;font-weight:600;color:#5B6472">Необязательно: полезные материалы и акции</summary>
+            <label style="display:flex;align-items:flex-start;gap:11px;margin-top:12px;cursor:pointer"><input type="checkbox" name="marketing_consent" style="margin-top:2px;width:17px;height:17px;flex-shrink:0;accent-color:#12283E;cursor:pointer"></input><span style="font-size:12.5px;line-height:1.6;color:#8A94A2">Хочу получать материалы и новости по выбранному каналу. На заявку не влияет, отказаться можно в любой момент.</span></label>
+          </details>
+          <button type="submit" style="margin-top:6px;background:#12283E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:14.5px;border-radius:14px;padding:16px 22px;cursor:pointer;transition:transform 0.25s,box-shadow 0.25s" style-hover="transform:translateY(-2px);box-shadow:0 14px 32px rgba(18,40,62,0.28)">Оставить заявку на неделю Pro (0 ₽) →</button>
+        </form>
+        <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#9AA3B0">Заявка не гарантирует начало пробной недели — куратор подтвердит свободное место.</p>
+      </sc-if>
+
+      <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:24px 0">
+          <p style="margin:0;font-family:'Playfair Display',serif;font-weight:500;font-size:24px">Заявка отправлена.</p>
+          <p style="margin:12px auto 0;max-width:420px;font-size:14.5px;line-height:1.6;color:#5B6472">{{ sentBody }}</p>
+        </div>
+      </sc-if>
+      <div style="margin-top:24px;border-top:1px solid rgba(16,24,38,0.1);padding-top:20px;text-align:center">
+        <p style="margin:0;font-size:13.5px;color:#8A94A2">Хотите сравнить форматы? <a href="#pricing" style="font-weight:600">Вернуться к тарифам →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" data-screen-label="Вопросы" style="background:#F7F6F2;padding:84px 0 104px">
+  <div style="max-width:860px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(16,24,38,0.14);padding-top:16px;margin-bottom:60px">
+      <span style="font-weight:600;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">FAQ — Коротко о важном</span>
+      <span class="ghost-num" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:44px;line-height:0.6;color:rgba(16,24,38,0.09)" aria-hidden="true"></span>
+    </div>
+    <h2 style="margin:0;text-align:center;font-weight:600;font-size:clamp(30px,3.8vw,44px);line-height:1.14;letter-spacing:-0.02em">Коротко <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">о важном</em></h2>
+
+    <div style="margin-top:48px;border-top:1px solid rgba(16,24,38,0.12)">
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Нужно ли самому считать калории и заполнять дневник?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">В Pro и Pro Спорт считать калории и заполнять дневник вручную не нужно. Вы присылаете фото еды, короткий текст или голосовое — это 3–5 минут в день, — а куратор переносит данные в дневник и при необходимости уточняет детали. В Self дневник ведёте сами. Чем точнее описана порция, тем точнее получится запись.</div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Куратор — живой человек или это AI?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px"><p style="margin:0">Живой человек. Технологии помогают ему быстрее обработать присланное: разобрать фото, разложить рацион, собрать неделю в одну картину. Это механика — она экономит время куратора, а не заменяет его.</p><p style="margin:10px 0 0">Выводы делает человек. Он видит то, чего в цифрах нет, спрашивает, что стояло за днём, и отвечает за то, что вам предложено. Автоматических советов HEYS не выдаёт.</p></div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Где проходит общение и когда отвечает куратор?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px"><p style="margin:0">Первый контакт проходит в выбранном при заявке канале. После входа можно продолжить общение во встроенном мессенджере HEYS — так переписка, дневник и контекст остаются рядом.</p><p style="margin:10px 0 0">Сообщения обрабатываются с 09:00 до 21:00 по московскому времени в дни и объёме, предусмотренных выбранным тарифом. Ориентир первой реакции — 1–2 часа в часы сопровождения, но это не гарантированный срок: полный разбор может занять больше времени. Отдельное приложение устанавливать не обязательно.</p></div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Придётся ли готовить отдельно от семьи?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">Нет. HEYS работает с вашим обычным рационом: семейными ужинами, бизнес-ланчами и доставкой. Куратор помогает подобрать выполнимые сочетания и порции под вашу цель, не превращая питание в отдельный режим для одного человека.</div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Что если я уеду, собьюсь с графика или пропущу несколько дней?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">Не нужно восстанавливать дневник задним числом или компенсировать пропуски жёсткими ограничениями. В Pro и Pro Спорт пришлите свежий контекст: куратор учтёт поездку, изменения графика и нагрузки и поможет выбрать ближайший выполнимый шаг. Задача — спокойно вернуться в привычный ритм, а не собрать идеальный дневник.</div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Можно ли пользоваться HEYS без куратора?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">Да. В Self вы ведёте дневник самостоятельно. В Pro дневник ведёт куратор и помогает по ходу недели. В Pro Спорт один специалист ведёт питание и тренировки: тариф включает всё сопровождение Pro и персональное ведение тренировок. Состав и цены показаны выше.</div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Что происходит после бесплатной недели Pro?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px"><p style="margin:0">Платный период не начинается автоматически, и деньги не списываются. Чтобы продолжить, нужно самостоятельно выбрать и оплатить тариф.</p><p style="margin:10px 0 0">Бесплатная неделя не распространяется на Pro Спорт: этот формат подключается и оплачивается только после личного согласования запроса и подтверждения свободного места.</p></div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Как работают оплата, отказ от тарифа и возврат денег?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">Оплата производится помесячно, без автосписаний. Вы сами решаете, продлевать ли тариф. От платных услуг можно отказаться в любое время; правила расчёта, сроки и порядок возврата указаны в <a href="/legal/refund">Условиях возврата денежных средств</a>. Если активную подписку прекращает HEYS, возвращается 100% суммы, уплаченной за текущий расчётный период.</div>
+      </details>
+      <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Это медицинская услуга?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">Нет. Куратор не ставит диагнозы, не назначает лечение и не интерпретирует результаты анализов. Рекомендации носят информационный характер и не заменяют консультацию врача. При заболеваниях или сомнениях в состоянии здоровья нужно обратиться к врачу. В Pro Спорт разбор техники по видео также не является медицинской или реабилитационной оценкой.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer data-screen-label="Футер" style="background:#0A1119;padding:64px 0 48px">
+  <div style="max-width:1060px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:32px">
+      <div>
+        <span style="font-weight:700;font-size:22px;letter-spacing:0.05em;color:#FFFFFF">HEYS<svg width="11" height="25" viewBox="0 0 28.2 64" style="display:inline-block;margin:0 2px 0 1px;transform:translateY(-10px)" aria-hidden="true"><g transform="translate(4201.18 210.42)" fill="#52A0D8"><path d="M-4201.18-159.14v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-157.67-4201.18-159.14-4201.18-159.14z"></path><path d="M-4188.47-174.44h2.58c0,0,1.47,7.73,1.47,14.12s-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-168.23-4188.47-174.44-4188.47-174.44z"></path><path d="M-4201.18-195.13v-2.58c0,0,7.73-1.47,14.12-1.47s13.89,1.47,13.89,1.47v2.58c0,0-5.98,1.47-13.89,1.47C-4194.98-193.66-4201.18-195.13-4201.18-195.13z"></path><path d="M-4188.47-210.42h2.58c0,0,1.47,7.73,1.47,14.12c0,6.38-1.47,13.89-1.47,13.89h-2.58c0,0-1.47-5.98-1.47-13.89C-4189.94-204.22-4188.47-210.42-4188.47-210.42z"></path></g></svg><span style="font-weight:300;letter-spacing:0.02em;color:rgba(255,255,255,0.65)">lab</span></span>
+        <p style="margin:8px 0 0;font-size:13.5px;color:rgba(255,255,255,0.5)">Человек, который вникает в вашу неделю</p>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:7px">
+          <a href="https://t.me/heyslab_support_bot" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none">@heyslab_support_bot</a>
+          <a href="mailto:poplanton@mail.ru" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none">poplanton@mail.ru</a>
+        </div>
+      </div>
+      <div class="ft-links" style="display:flex;flex-wrap:wrap;gap:12px 24px;max-width:560px;justify-content:flex-end">
+        <a href="/legal/user-agreement" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Пользовательское соглашение</a>
+        <a href="/calculators" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Калькуляторы</a>
+        <a href="/legal/privacy-policy" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Политика конфиденциальности</a>
+        <a href="/legal/health-data-consent" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Данные о здоровье</a>
+        <a href="/legal/refund" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Возврат</a>
+        <a href="/legal/cookie-policy" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Cookies</a>
+        <a href="/legal/agreements" style="font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;white-space:nowrap">Все документы</a>
+      </div>
+    </div>
+    <p style="margin:56px 0 0;text-align:center;font-weight:700;font-size:clamp(90px,16vw,200px);line-height:0.9;letter-spacing:0.04em;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,0.08);user-select:none" aria-hidden="true">HEYS</p>
+    <div style="margin-top:40px;border-top:1px solid rgba(255,255,255,0.1);padding-top:28px">
+      <p style="margin:0;text-align:center;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.4)">HEYS — сервис сопровождения по режиму питания, привычкам и образу жизни. Не оказывает медицинских услуг и не заменяет консультацию врача. При наличии заболеваний обратитесь к врачу.</p>
+      <p style="margin:14px 0 0;text-align:center;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.35)">ИП Поплавский Антон Сергеевич · ИНН 263517141102 · сведения об операторе в <a href="https://pd.rkn.gov.ru/operators-registry/operators-list/" style="color:rgba(255,255,255,0.5)">реестре РКН</a></p>
+      <p style="margin:12px 0 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.3)">© 2026 HEYS. Все права защищены.</p>
+    </div>
+  </div>
+</footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2E7CC0&quot;,&quot;options&quot;:[&quot;#2E7CC0&quot;,&quot;#3E66C9&quot;,&quot;#2F8F6B&quot;,&quot;#B07A3C&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Стиль&quot;},&quot;demoAutoplay&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;showQuiz&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Заявка&quot;}}">
+const INTERSTITIALS = [
+  { at: 17.3, text: 'Прислали — и пошли дальше' },
+  { at: 23.15, text: 'Дневник ведёт куратор' },
+  { at: 36.8, text: 'Неделя становится понятной' },
+  { at: 59.8, text: 'Без поспешных выводов', resumeAt: 60.45 },
+];
+const SKIPS = [{ from: 2.62, to: 3.98 }];
+
+// Вопросы и сегменты синхронизированы с ботом HEYS Старт (маркетинг/17):
+// коды сегментов и поля карточки лида совпадают, чтобы куратор видел одну карточку
+// независимо от того, пришёл человек из бота или с лендинга.
+const Q_TRIGGER = [
+  { v: 'stress', label: 'Стресс или эмоции' },
+  { v: 'fatigue', label: 'Усталость или недосып' },
+  { v: 'social', label: 'Компания, кафе, праздник' },
+  { v: 'all_or_nothing', label: 'Один промах — и режим уже не важен' },
+  { v: 'unknown', label: 'Не понимаю' },
+];
+const Q_WHEN = [
+  { v: 'morning', label: 'Утром' },
+  { v: 'day', label: 'Днём' },
+  { v: 'evening', label: 'Вечером' },
+  { v: 'night', label: 'Ночью' },
+  { v: 'varies', label: 'По-разному' },
+];
+const Q_FREQ = [
+  { v: 'daily', label: 'Почти каждый день' },
+  { v: 'weekly', label: 'Несколько раз в неделю' },
+  { v: 'weekends', label: 'В основном по выходным' },
+  { v: 'rare', label: 'Редко, но сильно' },
+];
+const Q_BARRIER = [
+  { v: 'routine', label: 'Вести рутину' },
+  { v: 'support', label: 'Оставаться без поддержки' },
+  { v: 'time', label: 'Найти время' },
+  { v: 'hold', label: 'Знаю, что делать, но не удерживаю' },
+];
+const Q_GOAL = [
+  { v: 'weight', label: 'Снизить вес' },
+  { v: 'keep', label: 'Удержать результат' },
+  { v: 'understand', label: 'Разобраться в питании' },
+  { v: 'fewer', label: 'Снизить количество срывов' },
+];
+const SEGMENTS = {
+  evening: {
+    title: 'Вечерний',
+    body: 'К вечеру копится усталость и дневной недобор — организм требует быстрого топлива. Это биология, а не распущенность.',
+    tip: 'Не урезайте день в ноль: ровный завтрак и полноценный обед заметно снижают вечерние набеги на холодильник.',
+    heys: 'Куратор видит ваш день по ходу недели и замечает момент, когда режим начинает сбиваться, — до вечера, а не постфактум.',
+  },
+  emotional: {
+    title: 'Эмоциональный',
+    body: 'Еда работает как быстрый способ снять напряжение. Дело не в еде — дело в моменте, когда накрывает.',
+    tip: 'За пять минут до «захвата» — пауза и стакан воды. Часто волна спадает сама.',
+    heys: 'Куратор держит ваш контекст и помогает разобрать, что стало триггером, — без обвинений и оценок.',
+  },
+  social: {
+    title: 'Социальный',
+    body: 'Срыв запускает среда: компания, кафе, праздник. Сила воли тут почти ни при чём — решает подготовка.',
+    tip: 'Выбирайте блюдо заранее, до того как сядете за стол.',
+    heys: 'Куратор готовит вас к кафе и поездкам заранее — это часть обычного ведения недели, а не отдельная услуга.',
+  },
+  all_or_nothing: {
+    title: 'Всё или ничего',
+    body: 'Один промах — и «неделя насмарку». На деле один приём пищи почти ничего не решает: решает то, что происходит наутро.',
+    tip: 'Не ждите понедельника — возвращайтесь в режим со следующего приёма пищи.',
+    heys: 'Куратор не ругает за срыв и не просит восстанавливать дневник задним числом — помогает вернуться с самого простого шага.',
+  },
+  fatigue: {
+    title: 'Уставший',
+    body: 'Недосып и перегруз бьют по гормонам голода — тянет на быстрые углеводы. Это не лень, это физиология сна и стресса.',
+    tip: 'Сон и вода часто важнее «правильного» ужина.',
+    heys: 'Куратор смотрит не только на еду, но и на сон, активность и нагрузку — и подсказывает, где реально рычаг.',
+  },
+  mixed: {
+    title: 'Смешанный',
+    body: 'Похоже, срыв запускает не один фактор, а сочетание режима, усталости и контекста. Тут важно не искать «главную слабость», а увидеть повторяющийся сценарий недели.',
+    tip: 'Начните с одного наблюдения: когда появляется первый сигнал, что режим сейчас сорвётся.',
+    heys: 'Куратор собирает питание, режим и контекст в одну картину и помогает найти самый простой первый рычаг.',
+  },
+};
+const MSG_OPTS = [
+  { v: 'telegram', label: 'Telegram' },
+  { v: 'whatsapp', label: 'WhatsApp' },
+  { v: 'max', label: 'MAX' },
+];
+const MSG_OFF = "background:#FFFFFF;border:1px solid rgba(16,24,38,0.16);border-radius:13px;padding:13px 8px;font-family:'Golos Text',sans-serif;font-size:13.5px;font-weight:500;color:#3C4552;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s";
+const MSG_ON = "background:#12283E;border:1px solid #12283E;border-radius:13px;padding:13px 8px;font-family:'Golos Text',sans-serif;font-size:13.5px;font-weight:600;color:#FFFFFF;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s";
+const PRO_MSG_ON = "background:#4A4C7E;border:1px solid #4A4C7E;border-radius:13px;padding:13px 8px;font-family:'Golos Text',sans-serif;font-size:13.5px;font-weight:600;color:#FFFFFF;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s";
+const CHIP_OFF = "background:#FFFFFF;border:1px solid rgba(16,24,38,0.16);border-radius:999px;padding:9px 15px;font-family:'Golos Text',sans-serif;font-size:13.5px;line-height:1.3;color:#3C4552;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s";
+const CHIP_ON = "background:#12283E;border:1px solid #12283E;border-radius:999px;padding:9px 15px;font-family:'Golos Text',sans-serif;font-size:13.5px;line-height:1.3;color:#FFFFFF;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s";
+
+class Component extends DCLogic {
+  state = {
+    sent: false, playing: false, cardOn: false, cardX: '105%', cardText: '', menuOpen: false, chapter: 0,
+    qStep: 'intro', trigger: null, when: null, freq: null, barrier: null, goal: null,
+    msg: 'telegram', proOpen: false, proSent: false, proMsg: 'telegram',
+  };
+
+  renderVals() {
+    if (!this.els) this.els = {};
+    const set = (k) => (el) => {
+      this.els[k] = el;
+      if (k === 'video' && el) this.initVideo(el);
+      if (k === 'hero' && el) this.scheduleMeasure();
+    };
+    return {
+      heroRef: set('hero'), phoneRef: set('phone'), videoRef: set('video'), textRef: set('text'),
+      ctaRef: set('cta'), btnRef: set('btn'), barRef: set('bar'), stickyRef: set('sticky'),
+      dot1: this.state.chapter >= 1 ? '#7FD1A0' : 'rgba(255,255,255,0.25)',
+      dot2: this.state.chapter >= 2 ? '#7FD1A0' : 'rgba(255,255,255,0.25)',
+      dot3: this.state.chapter >= 3 ? '#7FD1A0' : 'rgba(255,255,255,0.25)',
+      dot4: this.state.chapter >= 4 ? '#7FD1A0' : 'rgba(255,255,255,0.25)',
+      sent: this.state.sent,
+      playing: this.state.playing, paused: !this.state.playing,
+      playLabel: this.state.playing ? 'Поставить демонстрацию на паузу' : 'Воспроизвести демонстрацию',
+      cardOn: this.state.cardOn, cardText: this.state.cardText,
+      cardTransform: 'translateX(' + this.state.cardX + ')',
+      togglePlay: () => this.togglePlay(),
+      menuOpen: this.state.menuOpen,
+      seekChapter: (e) => this.seekChapter(+e.currentTarget.dataset.i),
+      openMenu: () => { this.setState({ menuOpen: true }); document.body.style.overflow = 'hidden'; },
+      closeMenu: () => { this.setState({ menuOpen: false }); document.body.style.overflow = ''; },
+      submitLead: (e) => { e.preventDefault(); this.setState({ sent: true }); },
+      proOpen: this.state.proOpen,
+      proSent: this.state.proSent,
+      proNotSent: !this.state.proSent,
+      proMsgOpts: MSG_OPTS.map((o) => ({ v: o.v, label: o.label, st: this.state.proMsg === o.v ? PRO_MSG_ON : MSG_OFF })),
+      pickProMsg: (e) => this.setState({ proMsg: e.currentTarget.dataset.v }),
+      openPro: () => { this.setState({ proOpen: true, proSent: false }); document.body.style.overflow = 'hidden'; },
+      closePro: () => { this.setState({ proOpen: false }); document.body.style.overflow = ''; },
+      submitPro: (e) => { e.preventDefault(); this.setState({ proSent: true }); },
+      ...this.quizVals(),
+    };
+  }
+
+  segment() {
+    const t = this.state.trigger;
+    if (!t) return null;
+    if (t !== 'unknown') return t === 'stress' ? 'emotional' : t;
+    return this.state.when === 'evening' || this.state.when === 'night' ? 'evening' : 'mixed';
+  }
+
+  chips(list, key, pick) {
+    return list.map((o) => ({ v: o.v, label: o.label, st: this.state[key] === o.v ? CHIP_ON : CHIP_OFF }));
+  }
+
+  labelOf(list, v) {
+    const f = list.find((o) => o.v === v);
+    return f ? f.label : null;
+  }
+
+  quizVals() {
+    const st = this.state, seg = this.segment(), meta = seg ? SEGMENTS[seg] : null;
+    const parts = [];
+    if (meta) parts.push(meta.title.toLowerCase() + ' тип');
+    const fr = this.labelOf(Q_FREQ, st.freq); if (fr) parts.push(fr.toLowerCase());
+    const ba = this.labelOf(Q_BARRIER, st.barrier); if (ba) parts.push('сложно: ' + ba.toLowerCase());
+    const go = this.labelOf(Q_GOAL, st.goal); if (go) parts.push('цель: ' + go.toLowerCase());
+    return {
+      qIntro: !st.sent && st.qStep === 'intro' && (this.props.showQuiz ?? true),
+      qStepTrigger: !st.sent && st.qStep === 'trigger',
+      qStepWhen: !st.sent && st.qStep === 'when',
+      qResult: !st.sent && st.qStep === 'result',
+      qForm: !st.sent && (st.qStep === 'form' || (st.qStep === 'intro' && !(this.props.showQuiz ?? true))),
+      triggerOpts: Q_TRIGGER, whenOpts: Q_WHEN,
+      freqOpts: this.chips(Q_FREQ, 'freq'), barrierOpts: this.chips(Q_BARRIER, 'barrier'), goalOpts: this.chips(Q_GOAL, 'goal'),
+      resTitle: meta ? meta.title + ' сценарий' : '',
+      resBody: meta ? meta.body : '', resTip: meta ? meta.tip : '', resHeys: meta ? meta.heys : '',
+      hasCtx: parts.length > 0, ctxLine: parts.join(' · '),
+      sentBody: parts.length
+        ? 'Куратор свяжется с вами в выбранном канале. Ваш разбор уже у него — начнём не с анкеты, а с вашей ситуации.'
+        : 'Куратор свяжется с вами в выбранном канале и объяснит следующий шаг.',
+      msgOpts: MSG_OPTS.map((o) => ({ v: o.v, label: o.label, st: st.msg === o.v ? MSG_ON : MSG_OFF })),
+      pickMsg: (e) => this.setState({ msg: e.currentTarget.dataset.v }),
+      startQuiz: () => this.setState({ qStep: 'trigger' }),
+      skipQuiz: () => this.setState({ qStep: 'form' }),
+      backToTrigger: () => this.setState({ qStep: 'trigger' }),
+      toForm: () => this.setState({ qStep: 'form' }),
+      pickTrigger: (e) => {
+        const v = e.currentTarget.dataset.v;
+        this.setState({ trigger: v, qStep: v === 'unknown' ? 'when' : 'result' });
+      },
+      pickWhen: (e) => this.setState({ when: e.currentTarget.dataset.v, qStep: 'result' }),
+      pickFreq: (e) => this.setState({ freq: e.currentTarget.dataset.v }),
+      pickBarrier: (e) => this.setState({ barrier: e.currentTarget.dataset.v }),
+      pickGoal: (e) => this.setState({ goal: e.currentTarget.dataset.v }),
+    };
+  }
+
+  componentDidMount() {
+    const accent = this.props.accent ?? '#2E7CC0';
+    document.documentElement.style.setProperty('--da', accent);
+    this.metrics = { top: 0, travel: 1, maxScale: 1, phoneH: 0 };
+    this.raf = 0;
+    this.itl = false; this.lastAt = null; this.timers = [];
+    this.onScroll = () => {
+      // rAF, когда доступен; синхронный fallback — в throttled/headless контекстах rAF может не прийти.
+      if (this.raf) return;
+      this.raf = requestAnimationFrame(() => { this.raf = 0; this.applyScroll(); this.revealCheck(); });
+      clearTimeout(this.rafFallback);
+      this.rafFallback = setTimeout(() => {
+        if (!this.raf) return;
+        cancelAnimationFrame(this.raf); this.raf = 0;
+        this.applyScroll(); this.revealCheck();
+      }, 80);
+    };
+    this.onResize = () => this.measure();
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', this.onResize);
+    this.measureTimer = setTimeout(() => this.measure(), 500);
+    window.addEventListener('load', this.onResize);
+    document.querySelectorAll('.ghost-num').forEach((el) => {
+      const lab = el.previousElementSibling ? el.previousElementSibling.textContent.trim() : '';
+      const m = lab.match(/^\d+/);
+      el.textContent = m ? m[0] : '';
+    });
+    this.onNavClick = (e) => {
+      const a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      if (!a) return;
+      const t = document.getElementById(a.getAttribute('href').slice(1));
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      if (Math.abs(r.top) < window.innerHeight * 2) return;
+      e.preventDefault();
+      const de = document.documentElement;
+      de.style.scrollBehavior = 'auto';
+      window.scrollTo(0, r.top + window.scrollY);
+      setTimeout(() => { de.style.scrollBehavior = ''; }, 80);
+    };
+    document.addEventListener('click', this.onNavClick);
+    this.onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.state.proOpen) { this.setState({ proOpen: false }); document.body.style.overflow = ''; }
+      else if (this.state.menuOpen) { this.setState({ menuOpen: false }); document.body.style.overflow = ''; }
+    };
+    document.addEventListener('keydown', this.onKey);
+    this.setupReveal();
+  }
+
+  // Появление секций. Опрос геометрии, а не scroll-событие и не IntersectionObserver:
+  // оба сигнала в части окружений не приходят вовсе, и тогда контент, которому уже
+  // проставлен opacity:0, остаётся невидимым навсегда. getBoundingClientRect работает
+  // всегда. Отказ должен быть «в открытую»: худший случай — секции без анимации.
+  setupReveal() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const targets = Array.from(document.querySelectorAll('section h2, .g-steps > div, .g-trust > div, .g-month, article, #faq details, .rv'));
+    if (!targets.length) return;
+    const show = (el) => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; };
+    const stop = () => { if (this.revealPoll) { clearInterval(this.revealPoll); this.revealPoll = 0; } };
+    let pending = targets.slice();
+    const sweep = () => {
+      try {
+        const limit = window.innerHeight * 0.94;
+        pending = pending.filter((el) => {
+          if (el.getBoundingClientRect().top > limit) return true;
+          show(el);
+          return false;
+        });
+        if (!pending.length) stop();
+      } catch (e) {
+        targets.forEach(show);
+        stop();
+      }
+    };
+    // Страховка вооружается ДО того, как что-то скрыто: если за 3 секунды не показалось
+    // ничего, значит опрос не работает — показываем всё без анимации.
+    this.revealSafety = setTimeout(() => {
+      if (pending.length < targets.length) return;
+      targets.forEach(show);
+      stop();
+    }, 3000);
+    this.revealPoll = setInterval(sweep, 250);
+    targets.forEach((el) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(26px)';
+      el.style.transition = 'opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1)';
+    });
+    sweep();
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('load', this.onResize);
+    document.removeEventListener('click', this.onNavClick);
+    document.removeEventListener('keydown', this.onKey);
+    clearTimeout(this.measureTimer);
+    clearTimeout(this.rafFallback);
+    clearTimeout(this.revealSafety);
+    if (this.revealPoll) { clearInterval(this.revealPoll); this.revealPoll = 0; }
+    this.timers.forEach(clearTimeout);
+    if (this.raf) cancelAnimationFrame(this.raf);
+  }
+
+  revealCheck() {
+    if (!this.rvEls || !this.rvEls.length) return;
+    const limit = window.innerHeight * 0.94;
+    this.rvEls = this.rvEls.filter((el) => {
+      if (el.getBoundingClientRect().top > limit) return true;
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+      return false;
+    });
+  }
+
+  scheduleMeasure() {
+    clearTimeout(this._m);
+    this._m = setTimeout(() => this.measure(), 100);
+  }
+
+  measure() {
+    const sec = this.els && this.els.hero, ph = this.els && this.els.phone;
+    if (!sec || !ph) return;
+    const vh = window.innerHeight;
+    const w = ph.offsetWidth, h = ph.offsetHeight;
+    if (!w || !h) return;
+    const targetW = Math.min(470, 0.92 * window.innerWidth);
+    const maxScale = Math.max(1, Math.min(targetW / w, (vh - 40) / h, 1.55));
+    this.metrics = {
+      top: sec.getBoundingClientRect().top + window.scrollY,
+      travel: Math.max(1, sec.offsetHeight - vh),
+      maxScale, phoneH: h, vh,
+      heroEnd: sec.getBoundingClientRect().top + window.scrollY + sec.offsetHeight - vh,
+      painTop: document.getElementById('pain') ? document.getElementById('pain').getBoundingClientRect().top + window.scrollY : 1e9,
+      trialTop: document.getElementById('trial') ? document.getElementById('trial').getBoundingClientRect().top + window.scrollY : 1e9,
+    };
+    if (this.els.cta) this.els.cta.style.marginTop = (52 + ((maxScale - 1) * h) / 2).toFixed(0) + 'px';
+    this.applyScroll();
+  }
+
+  applyScroll() {
+    const ph = this.els && this.els.phone;
+    if (!ph) return;
+    const { top, travel, maxScale } = this.metrics;
+    const p = Math.min(1, Math.max(0, (window.scrollY - top) / travel));
+    const g = Math.min(1, p / 0.6);
+    const e = g * g * (3 - 2 * g);
+    const s = 1 + (maxScale - 1) * e;
+    ph.style.transform = 'scale(' + s.toFixed(4) + ')';
+    if (this.els.btn) this.els.btn.style.scale = String((1 / s).toFixed(4));
+    if (this.els.text) {
+      const f = Math.min(1, p / 0.4);
+      this.els.text.style.opacity = (1 - f).toFixed(3);
+      this.els.text.style.transform = 'translateY(' + (-28 * f).toFixed(1) + 'px)';
+    }
+    const y = window.scrollY, m = this.metrics;
+    if (this.els.bar) {
+      const past = y > m.heroEnd + 40;
+      const prev = this._lastY ?? y;
+      if (!past) this._barOn = false;
+      else if (y < prev - 4) this._barOn = true;
+      else if (y > prev + 6) this._barOn = false;
+      if (past && this._barOn === undefined) this._barOn = true;
+      this._lastY = y;
+      this.els.bar.style.transform = past && this._barOn ? 'translateY(0)' : 'translateY(-105%)';
+    }
+    if (this.els.sticky) {
+      const on = y > m.painTop - m.vh * 0.5 && y < m.trialTop - m.vh * 0.9;
+      this.els.sticky.style.transform = on ? 'translate(-50%,0)' : 'translate(-50%,100px)';
+    }
+  }
+
+  initVideo(v) {
+    if (v.__dcInit) return;
+    v.__dcInit = true;
+    v.addEventListener('timeupdate', () => this.checkInterstitial(v));
+    if (this.props.demoAutoplay ?? true) {
+      const tryPlay = () => v.play().then(
+        () => this.setState({ playing: true }),
+        () => this.setState({ playing: false }),
+      );
+      if (v.readyState >= 3) setTimeout(tryPlay, 800);
+      else v.addEventListener('canplay', () => setTimeout(tryPlay, 400), { once: true });
+    }
+  }
+
+  checkInterstitial(v) {
+    const t = v.currentTime;
+    const skip = SKIPS.find((s) => t >= s.from && t < s.to);
+    if (skip) { v.currentTime = skip.to; return; }
+    if (this.itl) return;
+    if (this.lastAt !== null && t < this.lastAt - 1) { this.lastAt = null; this.setState({ chapter: 0 }); }
+    if (!this.state.playing) return;
+    const next = INTERSTITIALS.find((i) => t >= i.at && t < i.at + 0.9 && this.lastAt !== i.at);
+    if (!next) return;
+    this.lastAt = next.at;
+    this.itl = true;
+    v.pause();
+    this.setState({ cardOn: true, cardText: next.text, cardX: '105%', chapter: INTERSTITIALS.indexOf(next) + 1 });
+    requestAnimationFrame(() => requestAnimationFrame(() => this.setState({ cardX: '0%' })));
+    this.timers.push(
+      setTimeout(() => {
+        if (next.resumeAt !== undefined) v.currentTime = next.resumeAt;
+        v.play().catch(() => {});
+        this.setState({ cardX: '-105%' });
+      }, 1900),
+      setTimeout(() => {
+        this.itl = false;
+        this.setState({ cardOn: false, cardX: '105%' });
+      }, 2400),
+    );
+  }
+
+  seekChapter(i) {
+    const v = this.els && this.els.video;
+    if (!v) return;
+    const item = INTERSTITIALS[i];
+    this.timers.forEach(clearTimeout); this.timers = [];
+    this.itl = false;
+    this.lastAt = item.at;
+    v.currentTime = item.at + 0.1;
+    this.setState({ cardOn: false, cardX: '105%', chapter: i + 1 });
+    v.play().then(() => this.setState({ playing: true })).catch(() => {});
+  }
+
+  togglePlay() {
+    const v = this.els && this.els.video;
+    if (!v) return;
+    if (this.state.playing) {
+      this.timers.forEach(clearTimeout); this.timers = [];
+      this.itl = false;
+      this.setState({ cardOn: false, cardX: '105%', playing: false });
+      v.pause();
+    } else {
+      v.play().then(() => this.setState({ playing: true })).catch(() => {});
+    }
+  }
+}
+</script>
+</body>
+</html>

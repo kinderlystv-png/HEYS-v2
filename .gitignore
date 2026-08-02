@@ -89,6 +89,12 @@ apps/landing/public/*
 # Разметка ролика (отбивки, пропуски, главы) правится без пересборки, поэтому
 # лежит рядом с видео и должна ехать в прод вместе с ним.
 !apps/landing/public/hero-curator-demo-chapters.json
+
+# Референс-скриншоты дизайн-пакетов. Текстовая часть пакета (описание,
+# спецификации, прототип) версионируется — на неё ссылаются задачи и протоколы.
+# Скриншоты — производные: они пересобираются открытием самого прототипа, а
+# бинарники в истории git необратимы.
+apps/landing/design/**/screenshots/
 # Version B media (interim photos now, shoot materials in phase 3)
 !apps/landing/public/b/
 # But keep legal docs in apps/web/public/docs

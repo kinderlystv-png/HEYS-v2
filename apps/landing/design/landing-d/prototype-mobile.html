@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"></link>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet"></link>
+<style>
+body{margin:0;background:#15181C;font-family:'Golos Text',system-ui,sans-serif;color:#EAECEF}
+a{color:#8FC1E8}a:hover{color:#B6D8F2}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 20px 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:22px">
+    <span style="font-weight:600;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#7C8794">Landing D — мобильный просмотр</span>
+    <div style="display:flex;gap:6px;background:#1E2329;border:1px solid #2C333B;border-radius:999px;padding:4px">
+      <button type="button" onClick="{{ pickSmall }}" style="border:none;cursor:pointer;font-family:'Golos Text',sans-serif;font-weight:600;font-size:12px;border-radius:999px;padding:8px 14px;background:{{ bgSmall }};color:{{ fgSmall }}">375 × 812</button>
+      <button type="button" onClick="{{ pickMid }}" style="border:none;cursor:pointer;font-family:'Golos Text',sans-serif;font-weight:600;font-size:12px;border-radius:999px;padding:8px 14px;background:{{ bgMid }};color:{{ fgMid }}">390 × 844</button>
+      <button type="button" onClick="{{ pickBig }}" style="border:none;cursor:pointer;font-family:'Golos Text',sans-serif;font-weight:600;font-size:12px;border-radius:999px;padding:8px 14px;background:{{ bgBig }};color:{{ fgBig }}">430 × 932</button>
+    </div>
+    <a href="Landing D.dc.html" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;text-decoration:none;border:1px solid #2C333B;border-radius:999px;padding:8px 14px;color:#B6C2CE">Открыть во всю ширину ↗</a>
+  </div>
+
+  <div style="position:relative;background:#0B0E12;border-radius:{{ frameRadius }};padding:11px;box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 40px 90px rgba(0,0,0,0.6)">
+    <div style="position:relative;overflow:hidden;border-radius:{{ screenRadius }};background:#12263B">
+      <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px">
+        <span style="font-weight:600;font-size:13px;color:#FFFFFF">9:41</span>
+        <div style="position:absolute;left:50%;top:9px;transform:translateX(-50%);width:104px;height:26px;border-radius:999px;background:#0B0E12"></div>
+        <span style="display:flex;gap:5px;align-items:center">
+          <span style="width:16px;height:10px;border:1px solid rgba(255,255,255,0.6);border-radius:3px;display:inline-block;position:relative"><span style="position:absolute;inset:1px;right:4px;background:#FFFFFF;border-radius:1px"></span></span>
+        </span>
+      </div>
+      <iframe src="Landing D.dc.html" title="Landing D в мобильном формате" style="display:block;border:none;width:{{ w }}px;height:{{ h }}px"></iframe>
+    </div>
+  </div>
+
+  <p style="margin:18px 0 0;font-size:12.5px;color:#6E7883">Внутри рамки — настоящий мобильный вьюпорт: бургер-меню, одноколоночные сетки и скролл-механика hero работают как на телефоне.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SIZES = { small: [375, 812], mid: [390, 844], big: [430, 932] };
+
+class Component extends DCLogic {
+  state = { size: 'mid' };
+
+  renderVals() {
+    const [w, h] = SIZES[this.state.size];
+    const on = (k) => (this.state.size === k ? '#EAECEF' : 'transparent');
+    const fg = (k) => (this.state.size === k ? '#15181C' : '#98A3AE');
+    return {
+      w, h,
+      frameRadius: this.state.size === 'small' ? '48px' : '54px',
+      screenRadius: this.state.size === 'small' ? '38px' : '44px',
+      bgSmall: on('small'), fgSmall: fg('small'),
+      bgMid: on('mid'), fgMid: fg('mid'),
+      bgBig: on('big'), fgBig: fg('big'),
+      pickSmall: () => this.setState({ size: 'small' }),
+      pickMid: () => this.setState({ size: 'mid' }),
+      pickBig: () => this.setState({ size: 'big' }),
+    };
+  }
+}
+</script>
+</body>
+</html>
