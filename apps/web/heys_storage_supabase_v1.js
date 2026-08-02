@@ -8168,7 +8168,12 @@
           logCritical(`🔍 [SYNC PAGINATED] fetched ${paginatedFetchPages} page(s), total=${allData.length}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);
         }
 
-        const data = allData;
+        // 🗂️ Задачник куратора (`heys_tasks_*`) в приложение не попадает.
+        // Клиентский scope тянется без фильтра по ключам, поэтому личные файлы
+        // задачника — журнал, стенограммы, деньги — иначе оседали бы в
+        // localStorage телефона и росли бы там помесячно, ничего не давая: UI
+        // о них не знает. Читает их только MCP-коннектор, напрямую по ключу.
+        const data = allData.filter((row) => !String(row && row.k || '').startsWith('heys_tasks_'));
         const error = fetchError;
 
         logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);

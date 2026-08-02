@@ -423,6 +423,42 @@
       .slice(-maxRecords);
   }
 
+  /**
+   * savedEaten* — кэш калорий/БЖУ для отображения, читается вместо пересчёта
+   * из meals (календарь, cascade-карточка, пороги аналитики, расчёт CEB).
+   * `merged` собирается как `{ ...remote }`, а объединение приёмов идёт с
+   * обеих сторон — значит после конфликтного merge кэш от remote может не
+   * соответствовать итоговому списку позиций. Тот же промах, что был в
+   * MCP-коннекторе (heys-mcp/lib/day.js, savedEatenCache): формула здесь
+   * зеркальная, чтобы у клиента и коннектора не разошлись два разных числа.
+   *
+   * `savedDisplayOptimum` не трогаем: он от TDEE и накопленного долга по
+   * калориям, у merge этих входов нет.
+   */
+  function recalculateSavedEatenFromMeals(meals) {
+    const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+    for (const meal of meals || []) {
+      for (const item of (meal && meal.items) || []) {
+        const grams = (Number(item.grams) || 0) / 100;
+        const kcal100 = Number(item.kcal100) || 0;
+        totals.kcal += kcal100 * grams;
+        totals.protein += (Number(item.protein100) || 0) * grams;
+        const carbs = Number(item.carbs100) || ((Number(item.simple100) || 0) + (Number(item.complex100) || 0));
+        totals.carbs += carbs * grams;
+        const fat = Number(item.fat100) || ((Number(item.badFat100) || 0) + (Number(item.goodFat100) || 0) + (Number(item.trans100) || 0));
+        totals.fat += fat * grams;
+        totals.fiber += (Number(item.fiber100) || 0) * grams;
+      }
+    }
+    return {
+      savedEatenKcal: totals.kcal,
+      savedEatenProt: totals.protein,
+      savedEatenCarbs: totals.carbs,
+      savedEatenFat: totals.fat,
+      savedEatenFiber: Math.round(totals.fiber * 10) / 10,
+    };
+  }
+
   // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
   // Removes cached display nutrients when meals/items are empty (same invariant
   // as dayMealsIntegrity).
@@ -988,6 +1024,10 @@
       trainings: merged.trainings.filter((t) => t.z && t.z.some((z) => z > 0)).length,
     });
 
+    const mergedHasItems = merged.meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
+    if (mergedHasItems) {
+      Object.assign(merged, recalculateSavedEatenFromMeals(merged.meals));
+    }
     return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
   }
 
@@ -1473,6 +1513,7 @@
     mergeMorningCheckinProgress,
     hasMorningCheckinProgressConflict,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,
+    recalculateSavedEatenFromMeals,
     // Pure dayv2 stamping helpers (used by HEYS.storage interceptor + tests):
     stampDayv2ChangedEntities,
     stripDayMutationStamps,
