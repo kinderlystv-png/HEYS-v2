@@ -71,30 +71,17 @@ async function verifyClientSession(client, token) {
   return clientId ? { client_id: clientId } : null;
 }
 
-/**
- * Валидирует кураторскую сессию по plain-токену.
- * Используется в админ-эндпоинтах (refund, и т.п.).
- *
- * @param {import('pg').PoolClient} client — DB-клиент из pool.connect()
- * @param {string} token — plain-токен куратора
- * @returns {Promise<{curator_id: string} | null>}
- */
-async function verifyCuratorSession(client, token) {
-  if (!token) return null;
-
-  const result = await client.query(
-    `SELECT curator_id
-     FROM curator_sessions
-     WHERE token_hash = digest($1, 'sha256')
-       AND expires_at > NOW()
-       AND revoked_at IS NULL
-     LIMIT 1`,
-    [token]
-  );
-
-  const curatorId = result.rows?.[0]?.curator_id;
-  return curatorId ? { curator_id: curatorId } : null;
-}
+// SEC-034 (2026-08-02): удалён `verifyCuratorSession`.
+//
+// Функция читала `SELECT curator_id FROM curator_sessions`, тогда как в схеме
+// колонка называется `user_id` (database/2025-01-10_curator_sessions.sql:17) —
+// запрос упал бы с ошибкой неизвестной колонки. Вызывающих не было ни одного,
+// а сама таблица объявлена неиспользуемой при переходе на JWT-only
+// (database/2026-02-09_admin_functions_jwt_only.sql:319).
+//
+// Удалено, а не починено, именно потому, что код выглядел рабочим гейтом
+// кураторской сессии: следующий, кто на него обопрётся, получил бы неработающую
+// проверку вместо ожидаемой. Валидация куратора — `verifyCuratorJwt` ниже.
 
 /**
  * Декодирует и проверяет HS256 JWT куратора. Использует тот же алгоритм,
@@ -152,6 +139,5 @@ function verifyCuratorJwt(token, jwtSecret) {
 module.exports = {
   extractBearerToken,
   verifyClientSession,
-  verifyCuratorSession,
   verifyCuratorJwt,
 };

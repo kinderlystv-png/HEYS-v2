@@ -120,30 +120,10 @@ async function verifyClientSession(client, token) {
   return clientId ? { client_id: clientId } : null;
 }
 
-/**
- * Валидирует кураторскую сессию по plain-токену.
- * Используется в админ-эндпоинтах (refund, и т.п.).
- *
- * @param {import('pg').PoolClient} client — DB-клиент из pool.connect()
- * @param {string} token — plain-токен куратора
- * @returns {Promise<{curator_id: string} | null>}
- */
-async function verifyCuratorSession(client, token) {
-  if (!token) return null;
-
-  const result = await client.query(
-    `SELECT curator_id
-     FROM curator_sessions
-     WHERE token_hash = digest($1, 'sha256')
-       AND expires_at > NOW()
-       AND revoked_at IS NULL
-     LIMIT 1`,
-    [token]
-  );
-
-  const curatorId = result.rows?.[0]?.curator_id;
-  return curatorId ? { curator_id: curatorId } : null;
-}
+// SEC-034 (2026-08-02): удалён `verifyCuratorSession` — см. тот же комментарий
+// в yandex-cloud-functions/shared/auth-helpers.js. Функция читала несуществующую
+// колонку `curator_id` (в схеме `user_id`), вызывающих не имела и выглядела
+// рабочим гейтом кураторской сессии. Валидация куратора — `verifyCuratorJwt`.
 
 /**
  * Декодирует и проверяет HS256 JWT куратора. Использует тот же алгоритм,
@@ -203,6 +183,5 @@ module.exports = {
   extractCookieToken,
   extractCuratorJwt,
   verifyClientSession,
-  verifyCuratorSession,
   verifyCuratorJwt,
 };
