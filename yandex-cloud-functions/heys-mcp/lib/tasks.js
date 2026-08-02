@@ -1069,6 +1069,39 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
   };
 }
 
+// ── Эксперимент «два ответа» ─────────────────────────────────────────────
+//
+// Недельная проверка (решение пользователя 2026-08-03): на содержательный
+// вопрос агент даёт два ответа — процедурный и свободный, — а пользователь
+// выбирает. Голоса копятся здесь, обычным файлом задачника: статистика,
+// которую нельзя прочитать глазами, не статистика.
+
+const VOTES_PATH = 'docs/experiment-two-answers.md';
+const VOTES_SECTION = '## Голоса';
+
+/** Во что превратился голос: процедурный / свободный / ничья. */
+function voteWinner(choice, procedural) {
+  const c = String(choice).trim();
+  if (c === 'ничья') return 'ничья';
+  return c === String(procedural).trim() ? 'процедурный' : 'свободный';
+}
+
+function voteLine({ date, winner, question, note }) {
+  return `- ${date} · ${winner} · ${question}${note ? ` — ${note}` : ''}`;
+}
+
+function parseVotes(file) {
+  const counts = { 'процедурный': 0, 'свободный': 0, 'ничья': 0 };
+  const votes = [];
+  for (const raw of String((file && file.text) || '').split('\n')) {
+    const match = /^-\s*(\d{4}-\d{2}-\d{2})\s*·\s*(процедурный|свободный|ничья)\s*·\s*(.+)$/.exec(raw.trim());
+    if (!match) continue;
+    counts[match[2]] += 1;
+    votes.push({ date: match[1], winner: match[2], question: match[3] });
+  }
+  return { counts, votes, total: votes.length };
+}
+
 // ── Деньги ───────────────────────────────────────────────────────────────
 //
 // Формат строки задан в money/README.md и читается доской:
@@ -2229,6 +2262,12 @@ module.exports = {
   pickFindings,
   rememberProposal,
   answerProposal,
+  // эксперимент «два ответа»
+  VOTES_PATH,
+  VOTES_SECTION,
+  voteWinner,
+  voteLine,
+  parseVotes,
   // деньги
   moneyLine,
   parseMoneyOps,

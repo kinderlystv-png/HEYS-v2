@@ -259,6 +259,20 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_vote',
+    description: 'Записать выбор куратора в эксперименте «два ответа»: какой из двух ответов он назвал полезнее. Вызывай сразу после его ответа на «какой полезнее — 1 или 2?». Возвращает текущий счёт. Не записанный выбор для эксперимента не существует.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        choice: { type: 'string', description: 'Что он выбрал: «1», «2» или «ничья».' },
+        procedural: { type: 'string', description: 'Какой из ответов был собран по процедуре правил: «1» или «2». Это знаешь только ты — не спрашивай его.' },
+        question: { type: 'string', description: 'Суть вопроса одной короткой строкой, чтобы потом было видно, на каких вопросах что побеждает.' },
+        note: { type: 'string', description: 'Его комментарий к выбору, если был. Дословно и коротко.' },
+      },
+      required: ['choice', 'procedural', 'question'],
+    },
+  },
+  {
     name: 'tasks_learn',
     description: 'Запомнить, как куратор решает: повторяющийся выбор, порог, правило, которое он назвал сам. Хранится обычным файлом задачника, который он может прочитать и поправить, и возвращается в каждом tasks_context. Без аргументов — показать всё, что уже записано. Записывай только то, что он подтвердил словами; догадка «ему, наверное, так удобнее» эту память обесценивает.',
     inputSchema: {
@@ -1289,6 +1303,33 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
      * задачника: он должен уметь прочитать это глазами и вычеркнуть неверное.
      * Записывается только подтверждённое — его слова, его выбор.
      */
+    /** Голос эксперимента «два ответа». Копится обычным файлом задачника. */
+    async tasks_vote(args = {}) {
+      const choice = String(args.choice || '').trim();
+      if (!['1', '2', 'ничья'].includes(choice)) {
+        throw new ToolError('invalid_choice', 'Выбор — «1», «2» или «ничья».');
+      }
+      const procedural = String(args.procedural || '').trim();
+      if (!['1', '2'].includes(procedural)) {
+        throw new ToolError('invalid_procedural', 'Нужен номер процедурного ответа: «1» или «2».');
+      }
+      const question = String(args.question || '').trim();
+      if (!question) throw new ToolError('invalid_question', 'Нужна суть вопроса одной строкой.');
+
+      const file = await readFile(tasks.VOTES_PATH);
+      const winner = tasks.voteWinner(choice, procedural);
+      const line = tasks.voteLine({
+        date: today(), winner, question,
+        note: args.note ? String(args.note).trim() : null,
+      });
+      const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.VOTES_SECTION));
+      const { counts, total } = tasks.parseVotes(saved);
+      return {
+        text: `Записал: ${winner}. Счёт после ${total}: процедурный ${counts['процедурный']} · свободный ${counts['свободный']} · ничьи ${counts['ничья']}.`,
+        structured: { winner, counts, total, path: saved.path, rev: saved.rev },
+      };
+    },
+
     async tasks_learn(args = {}) {
       const file = await readFile(tasks.PREFS_PATH);
       const existing = tasks.parsePreferences(file);

@@ -1589,3 +1589,35 @@ test('правила задачника ссылаются только на с�
   assert.ok(named.has('tasks_calendar') && named.has('tasks_budget'), 'новые правила названы своими именами');
   for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
 });
+
+// ── Эксперимент «два ответа» ─────────────────────────────────────────────
+
+test('блок эксперимента живёт до дедлайна и исчезает после', () => {
+  const during = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5));
+  assert.match(during, /Эксперимент до 2026-08-10/);
+  assert.match(during, /tasks_vote/);
+  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 12));
+  assert.ok(!/Эксперимент до 2026-08-10/.test(after), 'временный режим не должен тихо стать вечным');
+  // Основные правила при этом на месте.
+  assert.match(after, /^З1\./m);
+});
+
+test('голос записывается как процедурный или свободный, а не как сырые номера', async () => {
+  const api = liveTasksApi();
+  const tools = session(api);
+  const first = await tools.tasks_vote({ choice: '2', procedural: '1', question: 'отпуск в сентябре' });
+  assert.equal(first.structured.winner, 'свободный');
+  const second = await tools.tasks_vote({ choice: '2', procedural: '2', question: 'что с лендингом', note: 'короче и по делу' });
+  assert.equal(second.structured.winner, 'процедурный');
+  assert.deepEqual(second.structured.counts, { 'процедурный': 1, 'свободный': 1, 'ничья': 0 });
+  const saved = api.kv[tasks.keyForPath(tasks.VOTES_PATH)].text;
+  assert.match(saved, /^- 2026-08-02 · свободный · отпуск в сентябре$/m);
+  assert.match(saved, /^- 2026-08-02 · процедурный · что с лендингом — короче и по делу$/m);
+});
+
+test('голос без номера процедурного не записывается — счёт без него бессмыслен', async () => {
+  await assert.rejects(
+    () => session(liveTasksApi()).tasks_vote({ choice: '1', question: 'x' }),
+    (e) => e.code === 'invalid_procedural',
+  );
+});
