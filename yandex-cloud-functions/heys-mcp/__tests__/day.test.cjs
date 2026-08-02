@@ -447,3 +447,96 @@ test('печенье, добавленное в кофе-брейк, перев�
   assert.equal(res.meal.name, 'Перекус');
   assert.ok(res.changed.some((c) => c.includes('тип → Перекус')), `changed: ${res.changed}`);
 });
+
+// ── Кэш съеденного и штампы полей ────────────────────────────────────────
+
+test('запись приёма обновляет кэш съеденного, который читают календарь и пороги', () => {
+  // Клиент записал завтрак сам — кэш от приложения.
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '08:00', items: [itemOf('Каша', 200, 250)] }],
+    savedEatenKcal: 500, savedEatenProt: 10, savedEatenCarbs: 60, savedEatenFat: 8,
+    updatedAt: 1,
+  };
+  const meal = { id: 'm2', time: '13:00', items: [itemOf('Суп', 350, 90)] };
+  const next = day.addMeal(base, meal, { nowMs: 2, clientId: 'c1' });
+
+  const totals = day.macroTotals(next.meals);
+  assert.equal(next.savedEatenKcal, totals.kcal, 'кэш калорий пересчитан по факту');
+  assert.equal(next.savedEatenProt, totals.protein);
+  assert.notEqual(next.savedEatenKcal, 500, 'протухшее значение не осталось');
+});
+
+test('удаление последнего приёма снимает кэш, а не оставляет калории призрака', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '08:00', items: [itemOf('Каша', 200, 250)] }],
+    savedEatenKcal: 500, savedEatenFiber: 4,
+    updatedAt: 1,
+  };
+  const { day: next, removed } = day.deleteMeal(base, 'm1', { nowMs: 2, clientId: 'c1' });
+  assert.equal(removed, true);
+  assert.equal(next.savedEatenKcal, undefined);
+  assert.equal(next.savedEatenFiber, undefined);
+});
+
+test('вода и шаги тоже держат кэш в актуальном состоянии', () => {
+  const base = {
+    date: '2026-08-02',
+    meals: [{ id: 'm1', time: '08:00', items: [itemOf('Каша', 200, 250)] }],
+    savedEatenKcal: 9999,
+    updatedAt: 1,
+  };
+  const next = day.addWater(base, 200, { nowMs: 2, clientId: 'c1' });
+  assert.equal(next.savedEatenKcal, day.macroTotals(base.meals).kcal);
+});
+
+test('поля со своим штампом в merge получают его при правке', () => {
+  const base = { date: '2026-08-02', meals: [], updatedAt: 1 };
+  const res = day.updateDayFields(base, {
+    household_min: 45, sleep_note: 'просыпался', comment: 'тяжёлый день', steps: 7000,
+  }, { nowMs: 777, clientId: 'c1' });
+
+  assert.equal(res.day.householdUpdatedAt, 777);
+  assert.equal(res.day.sleepNoteUpdatedAt, 777);
+  assert.equal(res.day.dayCommentUpdatedAt, 777);
+  assert.equal(res.day.stepsUpdatedAt, 777);
+});
+
+test('штамп не ставится полю, которого в правке не было', () => {
+  const base = { date: '2026-08-02', meals: [], updatedAt: 1 };
+  const res = day.updateDayFields(base, { steps: 7000 }, { nowMs: 777, clientId: 'c1' });
+  assert.equal(res.day.stepsUpdatedAt, 777);
+  assert.equal(res.day.householdUpdatedAt, undefined);
+  assert.equal(res.day.dayCommentUpdatedAt, undefined);
+});
+
+// ── Йогурт/кефир/смузи — это еда, а не «жидкое» для подсчёта основного приёма ──
+
+test('гречка, йогурт и сыр — обед, йогурт не выпадает из подсчёта еды', () => {
+  // Реальный случай из живого дневника: 3 позиции, но БЕЗ фикса «беверидж-like»
+  // список (BEVERAGE_LIKE_PATTERNS включает /йогурт/i) исключал бы йогурт из
+  // еды, оставляя гречку+сыр (185 г, 241 ккал) — ниже порога, и обед стал бы
+  // перекусом.
+  const meal = {
+    id: 'm1', time: '14:28',
+    items: [itemOf('Гречка отварная', 165, 109), itemOf('Греческий йогурт 2', 90, 48), itemOf('Сыр твёрдый классический', 20, 305)],
+  };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.equal(res.mealType, 'lunch');
+});
+
+test('кефир и смузи считаются едой при подсчёте продуктов приёма', () => {
+  const meal = {
+    id: 'm1', time: '08:00',
+    items: [itemOf('Кефир', 200, 55), itemOf('Смузи ягодный', 150, 70), itemOf('Овсяные хлопья', 60, 350)],
+  };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.equal(res.mealType, 'breakfast');
+});
+
+test('но кофе с йогуртом вместо молока в кофе-брейк не превращается — йогурт не входит в COFFEE_COMPANION', () => {
+  const meal = { id: 'm1', time: '15:15', items: [itemOf('Кофе американо', 100, 2), itemOf('Йогурт питьевой', 150, 60)] };
+  const res = day.classifyMeal(meal, { meals: [] });
+  assert.notEqual(res.mealType, 'coffee_break');
+});

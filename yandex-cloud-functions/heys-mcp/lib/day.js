@@ -257,9 +257,14 @@ function isBeverageLikeName(name) {
 /**
  * Состав приёма отдельно по еде и по жидкому.
  *
- * Пороги «основного приёма» считаются только по еде: кофе, молоко и сироп —
- * это три позиции, и по общему счёту продуктов кофе с бананом дотягивал до
- * обеда. Обедом приём делает еда, напиток её только сопровождает.
+ * Пороги «основного приёма» считаются только по еде, а «еда» здесь — именно
+ * то, что кладут в чашку кофе или чая (COFFEE_BASE/COMPANION), не более
+ * широкий BEVERAGE_LIKE_PATTERNS. Йогурт, кефир и смузи туда не входят
+ * специально: тот список посчитан для другой задачи — бейджа «скорее напиток»
+ * в приложении, — где у сытной еды с йогуртом законно высокий beverageRatio.
+ * Если исключать их и здесь, гречка с йогуртом и сыром (три позиции, но
+ * дотягивает до обеда только вместе с йогуртом) потеряла бы вес и
+ * переклассифицировалась в перекус — то есть реальный обед стал бы перекусом.
  */
 function mealComposition(meal) {
   const items = (meal && meal.items) || [];
@@ -274,11 +279,9 @@ function mealComposition(meal) {
     const kc = itemKcal(item);
     grams += itemGrams;
     kcal += kc;
-    const liquid = isBeverageLikeName(item.name)
-      || matchesAny(COFFEE_BASE_PATTERNS, item.name)
-      || matchesAny(COFFEE_COMPANION_PATTERNS, item.name);
+    const cupContent = matchesAny(COFFEE_BASE_PATTERNS, item.name) || matchesAny(COFFEE_COMPANION_PATTERNS, item.name);
     if (isBeverageLikeName(item.name)) beverageKcal += kc;
-    if (!liquid) {
+    if (!cupContent) {
       foodCount += 1;
       foodGrams += itemGrams;
       foodKcal += kc;
@@ -391,10 +394,56 @@ function macroTotals(meals) {
  * разных инструментах, и оставленное протухшим производное — это неверные
  * числа в дневнике и в отчётах до тех пор, пока клиент не откроет день.
  */
+/**
+ * Кэш съеденного за день. Приложение пересчитывает его при открытии дня и само
+ * называет «display cache», но читают его не только там: календарь
+ * (heys_day_utils.js:1861), cascade-карточка, пороги инсайтов
+ * (insights/pi_thresholds.js:35) и расчёт CEB берут блоб напрямую и
+ * предпочитают сохранённое значение пересчёту, пока в дне есть строки еды.
+ *
+ * Поэтому запись коннектора обязана его обновлять. Иначе выходит так: клиент
+ * записал завтрак сам (кэш = 500), куратор внёс обед на 700 — в дневнике 1200,
+ * а календарь, пороги и CEB продолжают видеть 500. Удалять кэш вместо
+ * обновления нельзя: потребители тогда падают на `dayTot`, который заморожен
+ * при первом расчёте и врёт ещё хуже.
+ *
+ * `savedDisplayOptimum` намеренно не трогаем: он считается от TDEE и
+ * накопленного долга по калориям, а этих входов у коннектора нет.
+ */
+const SAVED_EATEN_KEYS = ['savedEatenKcal', 'savedEatenProt', 'savedEatenCarbs', 'savedEatenFat', 'savedEatenFiber'];
+
+function savedEatenCache(meals) {
+  const totals = macroTotals(meals);
+  let fiber = 0;
+  for (const meal of meals || []) {
+    for (const item of (meal && meal.items) || []) {
+      fiber += ((Number(item.fiber100) || 0) * (Number(item.grams) || 0)) / 100;
+    }
+  }
+  return {
+    savedEatenKcal: totals.kcal,
+    savedEatenProt: totals.protein,
+    savedEatenCarbs: totals.carbs,
+    savedEatenFat: totals.fat,
+    savedEatenFiber: Math.round(fiber * 10) / 10,
+  };
+}
+
 function touch(day, nowMs, clientId) {
   const next = { ...day, updatedAt: nowMs, _writerCid: clientId };
   const hours = totalSleepHours(next);
   if (hours !== null) next.sleepHours = hours;
+
+  // Пустой дневник — кэш снимаем, как это делает серверный merge
+  // (stripStaleSavedDisplayNutrientsIfEmptyDiary): иначе после удаления
+  // последнего приёма в календаре остаются калории несуществующей еды.
+  const hasItems = (next.meals || []).some((m) => Array.isArray(m && m.items) && m.items.length > 0);
+  if (hasItems) {
+    Object.assign(next, savedEatenCache(next.meals));
+  } else {
+    for (const key of SAVED_EATEN_KEYS) delete next[key];
+  }
+
   return Object.assign(next, dayAverages(next));
 }
 
@@ -609,9 +658,18 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
     applied.push(publicName);
   }
   if (fields.weight !== undefined && fields.weight !== null) next.weightUpdatedAt = nowMs;
-  // Шаги в merge разрешаются по своему штампу: без него запись коннектора
-  // проигрывает облачной версии даже когда она старее.
-  if (applied.includes('steps')) next.stepsUpdatedAt = nowMs;
+  // Поля с собственным штампом в merge (DAY_USER_MUTATION_GROUPS в
+  // heys_sync_merge_v1.cjs): без штампа правка коннектора проигрывает облачной
+  // версии, даже когда та старее, — и молча откатывается при следующем синке.
+  const FIELD_STAMPS = {
+    steps: 'stepsUpdatedAt',
+    household_min: 'householdUpdatedAt',
+    sleep_note: 'sleepNoteUpdatedAt',
+    comment: 'dayCommentUpdatedAt',
+  };
+  for (const [publicName, stamp] of Object.entries(FIELD_STAMPS)) {
+    if (applied.includes(publicName)) next[stamp] = nowMs;
+  }
   if (!applied.length) return { day, applied };
   if (byCurator) {
     next._curatorEdits = markCuratorEdits(next, applied.map((name) => DAY_FIELD_MAP[name]), nowMs);
