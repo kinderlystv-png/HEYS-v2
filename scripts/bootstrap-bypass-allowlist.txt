@@ -271,7 +271,12 @@ apps/web/heys_yandex_api_v1.js:828
 apps/web/heys_planning_reading_v1.js:69
 apps/web/heys_planning_reading_v1.js:119
 
-# Messenger «время и граммы»: флаг «клиент скрыл плашку». Не data-bearing и не
-# bootstrap-critical, в облако не едет — это состояние конкретного устройства.
-# Ключ скоупится client_id, поэтому на общем устройстве не течёт между клиентами.
-apps/web/heys_messenger_v1.js:2082
+# Messenger, три device-local записи. В облако не едут и не bootstrap-critical;
+# все три ключа скоупятся client_id, поэтому на общем устройстве не текут между
+# клиентами (`scopedMessengerKey`, `foodHintDismissedKey`).
+#   :1694 — очередь неотправленных сообщений, пока нет сети;
+#   :1707 — черновик текста в поле ввода;
+#   :2365 — флаг «клиент скрыл плашку про время и граммы».
+apps/web/heys_messenger_v1.js:1694
+apps/web/heys_messenger_v1.js:1707
+apps/web/heys_messenger_v1.js:2365
