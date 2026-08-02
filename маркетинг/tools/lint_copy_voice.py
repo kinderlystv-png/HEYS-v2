@@ -110,6 +110,12 @@ def should_skip(line):
 
 TABLE_SEPARATOR = re.compile(r'^\s*\|[\s:|-]+\|\s*$')
 
+# Комментарии в коде — не пользовательский текст. Они регулярно цитируют сам
+# чёрный список («…„куратор всегда рядом“ в чёрном списке COPY_VOICE»), и без
+# этого линтер ругается на строку, которая правило соблюдает, а не нарушает.
+CODE_SUFFIXES = {'.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'}
+LINE_COMMENT = re.compile(r'(?<!:)//.*$')
+
 
 def split_cells(line):
     return [cell.strip() for cell in line.strip().strip('|').split('|')]
@@ -136,8 +142,11 @@ def lint_file(path):
     in_fence = False
     headers = None
     prev = ''
+    is_code = path.suffix in CODE_SUFFIXES
     for lineno, raw in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
         line, in_fence = strip_code(raw, in_fence)
+        if is_code:
+            line = LINE_COMMENT.sub('', line)
         if not line or should_skip(line):
             if not in_fence and not line.strip():
                 headers = None
