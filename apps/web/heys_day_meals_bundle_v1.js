@@ -3801,15 +3801,23 @@
         { label: '' },
     ];
 
-    function getMealType(mealIndex, meal, allMeals, pIndex) {
+    // Канонический расчёт типа — HEYS.dayUtils.getMealType (см. комментарий
+    // ниже про «бар»): он возвращает {type, name, icon}, знает про 4-й приём
+    // куратора (mealType='coffee_break') и про MEAL_TYPES из dayUtils. Локальный
+    // фолбэк ниже в старом формате {type, label, emoji} держим только на случай,
+    // если dayUtils ещё не загружен — заголовок карточки читает name/icon, и с
+    // фолбэком без них показывал «undefined undefined» на КАЖДОМ приёме без явно
+    // выставленного мануально типа (то есть почти на всех).
+    const getMealType = U.getMealType || function (mealIndex, meal, allMeals, pIndex) {
         const time = meal?.time || '';
-        const hour = parseInt(time.split(':')[0]) || 12;
-
-        if (hour >= 6 && hour < 11) return { type: 'breakfast', label: 'Завтрак', emoji: '🌅' };
-        if (hour >= 11 && hour < 16) return { type: 'lunch', label: 'Обед', emoji: '🌞' };
-        if (hour >= 16 && hour < 21) return { type: 'dinner', label: 'Ужин', emoji: '🌆' };
-        return { type: 'snack', label: 'Перекус', emoji: '🍎' };
-    }
+        const hour = parseInt(time.split(':')[0], 10);
+        const type = !Number.isFinite(hour) ? 'snack1'
+            : hour >= 5 && hour < 11 ? 'breakfast'
+            : hour >= 11 && hour < 16 ? 'lunch'
+            : hour >= 16 && hour < 22 ? 'dinner'
+            : 'snack3';
+        return { type, ...(MEAL_TYPES[type] || {}) };
+    };
 
     function getActivityContextTone(activityType) {
         switch (activityType) {
