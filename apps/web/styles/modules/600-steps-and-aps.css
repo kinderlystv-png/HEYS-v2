@@ -7261,3 +7261,9 @@ button.meal-quality-badge:active {
 [data-theme='dark'] .aps-similar-warn__dismiss {
   color: #fcd34d;
 }
+
+/* Вариант предупреждения на шаге граммов: тот же тон, компактнее. */
+.aps-similar-warn--meal {
+  margin: 10px 12px 4px;
+  padding: 9px 12px;
+}

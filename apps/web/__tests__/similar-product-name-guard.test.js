@@ -60,11 +60,11 @@ function loadNameGuard() {
     },
   };
   vm.createContext(context);
-  vm.runInContext(`${source.slice(start, end)}\nthis.__guard = { looksLikeSameProduct, findSimilarPersonalProducts };`, context);
+  vm.runInContext(`${source.slice(start, end)}\nthis.__guard = { looksLikeSameProduct, findSimilarPersonalProducts, findMealDuplicate };`, context);
   return context.__guard;
 }
 
-const { looksLikeSameProduct, findSimilarPersonalProducts } = loadNameGuard();
+const { looksLikeSameProduct, findSimilarPersonalProducts, findMealDuplicate } = loadNameGuard();
 
 describe('распознавание дубля по названию', () => {
   it('ловит приписанный в конец мусорный хвост', () => {
@@ -117,5 +117,41 @@ describe('подбор кандидатов из личного списка', (
 
   it('молчит, когда похожего нет', () => {
     expect(findSimilarPersonalProducts('Гречка отварная', list, 'new')).toHaveLength(0);
+  });
+});
+
+describe('дубль внутри одного приёма', () => {
+  // Реальная пара из дня 2026-04-26: 200 г торта двумя позициями.
+  const nightMeal = [
+    { name: 'Пшеничные гренки Самокат, тайский перец', grams: 130 },
+    { name: 'Торт Наполеон', grams: 100 },
+  ];
+
+  it('ловит повторное добавление того же продукта', () => {
+    const found = findMealDuplicate('Торт Наполеон', nightMeal);
+    expect(found).toMatchObject({ kind: 'same' });
+    expect(found.item.grams).toBe(100);
+  });
+
+  it('ловит добавление дубля с опечаткой — исходный случай', () => {
+    const found = findMealDuplicate('Торт Наполеон222', nightMeal);
+    expect(found).toMatchObject({ kind: 'similar' });
+    expect(found.item.name).toBe('Торт Наполеон');
+  });
+
+  it('молчит на другом продукте в том же приёме', () => {
+    expect(findMealDuplicate('Творог 9%', nightMeal)).toBeNull();
+  });
+
+  it('не путает разную жирность внутри приёма', () => {
+    const meal = [{ name: 'Творог 5%', grams: 200 }];
+    expect(findMealDuplicate('Творог 9%', meal)).toBeNull();
+  });
+
+  it('не падает на пустом приёме и мусорных данных', () => {
+    expect(findMealDuplicate('Торт Наполеон', [])).toBeNull();
+    expect(findMealDuplicate('Торт Наполеон', null)).toBeNull();
+    expect(findMealDuplicate('', nightMeal)).toBeNull();
+    expect(findMealDuplicate('Торт Наполеон', [null, {}])).toBeNull();
   });
 });

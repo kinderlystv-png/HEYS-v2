@@ -548,6 +548,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       .slice(0, 3);
   };
 
+  // Тот же продукт (или почти тот) уже лежит в приёме. Точное совпадение имени
+  // важно отдельно от похожести: человек мог просто добавить продукт второй раз
+  // вместо правки граммовки, и это тоже двойной учёт.
+  const findMealDuplicate = (name, items) => {
+    if (!name || !Array.isArray(items) || !items.length) return null;
+    const target = normalizeForSimilarity(name);
+    if (!target) return null;
+
+    const same = items.find((it) => it && normalizeForSimilarity(it.name) === target);
+    if (same) return { item: same, kind: 'same' };
+
+    const similar = items.find((it) => it && looksLikeSameProduct(name, it.name));
+    return similar ? { item: similar, kind: 'similar' } : null;
+  };
+
   const normalizePortions = (list) => {
     if (!Array.isArray(list)) {
       console.warn('[HEYS.portions] ⚠️ normalizePortions: не массив', { input: list });
@@ -8872,6 +8887,23 @@ NOVA: 1
 
     // Считаем сумму ккал за день
     const { dateKey, mealIndex } = context || {};
+
+    // Второй слой защиты от двойного учёта: этот же продукт (или почти этот)
+    // уже лежит в целевом приёме. Именно так появились 200 г торта двумя
+    // позициями в приёме 24:40 — «Торт Наполеон» и «Торт Наполеон222».
+    // Первый слой (предупреждение при создании) можно проигнорировать, этот
+    // срабатывает в момент добавления и виден даже для продуктов из каталога.
+    const [mealDuplicateDismissed, setMealDuplicateDismissed] = useState(false);
+    const mealDuplicate = useMemo(() => {
+      if (!product?.name || context?.isEditMode) return null;
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      const meals = Array.isArray(dayData.meals) ? dayData.meals : [];
+      const meal =
+        (context?.mealId && meals.find((m) => m && m.id === context.mealId)) ||
+        meals[mealIndex] ||
+        null;
+      return findMealDuplicate(product.name, meal?.items);
+    }, [product, dateKey, mealIndex, context?.mealId, context?.isEditMode]);
     const dayTotalKcal = useMemo(() => {
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
       let total = 0;
@@ -8924,6 +8956,26 @@ NOVA: 1
           onClick: toggleFavorite,
           title: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
         }, isFavorite ? '★' : '☆')
+      ),
+
+      // Этот продукт уже в приёме — предупреждаем о двойном учёте.
+      mealDuplicate && !mealDuplicateDismissed && React.createElement('div',
+        { className: 'aps-similar-warn aps-similar-warn--meal' },
+        React.createElement('div', { className: 'aps-similar-warn__title' },
+          mealDuplicate.kind === 'same'
+            ? 'Этот продукт уже есть в приёме'
+            : 'Похожий продукт уже есть в приёме'
+        ),
+        React.createElement('div', { className: 'aps-similar-warn__hint' },
+          mealDuplicate.kind === 'same'
+            ? `Уже добавлено ${HEYS.models.normalizeItemGrams(mealDuplicate.item.grams, 100)} г. Если хотите больше — измените граммовку у той записи, иначе еда посчитается дважды.`
+            : `В приёме уже есть «${mealDuplicate.item.name}». Проверьте, не тот ли это продукт.`
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-similar-warn__dismiss',
+          onClick: () => { haptic('light'); setMealDuplicateDismissed(true); }
+        }, 'Всё верно, добавляю ещё')
       ),
 
       // Подсказка про последние граммы
