@@ -1069,6 +1069,53 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
   };
 }
 
+// ── Что читать первым, когда всё не влезает ──────────────────────────────
+//
+// Чтение пачкой ограничено сверху: задачник целиком — это десятки килобайт, и
+// тащить их в каждый поиск незачем. Но резать по порядку ключей нельзя. Ключи
+// идут по алфавиту, `days/` растёт на файл в день и стоит раньше `projects/`,
+// поэтому через пару недель под нож попадали бы сами задачи — молча, без
+// ошибки: поиск просто «ничего не нашёл». Порядок задаётся смыслом, а не
+// алфавитом, и дни берутся ближайшие к сегодня, а не самые старые.
+
+const PATH_RANK = [
+  [/^projects\//i, 0],          // сами задачи — без них не отвечает ничто
+  [/^(NOW|INBOX|GOALS|habits)\.md$/i, 1],
+  [/^days\//i, 2],
+  [/^journal\//i, 3],
+  [/^money\//i, 4],
+  [/^archive\//i, 5],
+  [/^transcript\//i, 6],
+];
+
+function pathRank(path) {
+  for (const [re, rank] of PATH_RANK) if (re.test(String(path || ''))) return rank;
+  return 7;                       // docs и всё прочее — в последнюю очередь
+}
+
+/** Насколько дата в имени файла далека от сегодняшней, в днях. */
+function dateDistance(path, today) {
+  const found = /(\d{4}-\d{2}(?:-\d{2})?)/.exec(String(path || ''));
+  if (!found || !today) return null;
+  const [a, b] = [found[1].length === 7 ? `${found[1]}-01` : found[1], today];
+  return Math.abs(Math.round((Date.parse(a) - Date.parse(b)) / DAY_MS));
+}
+
+/**
+ * Порядок чтения: сначала по смыслу, внутри датированных папок — ближайшее к
+ * сегодня. Будущее и вчера нужнее, чем позапрошлый месяц.
+ */
+function rankPaths(paths, { today = null } = {}) {
+  return [...paths].sort((a, b) => {
+    const byRank = pathRank(a) - pathRank(b);
+    if (byRank) return byRank;
+    const da = dateDistance(a, today);
+    const db = dateDistance(b, today);
+    if (da !== null && db !== null && da !== db) return da - db;
+    return String(a).localeCompare(String(b));
+  });
+}
+
 // ── Эксперимент «два ответа» ─────────────────────────────────────────────
 //
 // Недельная проверка (решение пользователя 2026-08-03): на содержательный
@@ -2262,6 +2309,9 @@ module.exports = {
   pickFindings,
   rememberProposal,
   answerProposal,
+  // порядок чтения
+  pathRank,
+  rankPaths,
   // эксперимент «два ответа»
   VOTES_PATH,
   VOTES_SECTION,

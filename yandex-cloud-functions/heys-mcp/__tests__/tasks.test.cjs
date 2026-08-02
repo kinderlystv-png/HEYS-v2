@@ -1621,3 +1621,32 @@ test('голос без номера процедурного не записы�
     (e) => e.code === 'invalid_procedural',
   );
 });
+
+// ── Порядок чтения ───────────────────────────────────────────────────────
+//
+// Потолок на чтение пачкой существовал всегда, а порядка не было: ключи шли по
+// алфавиту, `days/` растёт на файл в день и стоит раньше `projects/`. Ещё
+// пара недель — и под нож попали бы сами задачи, молча.
+
+test('задачи читаются раньше дней, журнала и документации', () => {
+  const paths = ['docs/rituals.md', 'days/2026-08-02.md', 'journal/2026-08.md',
+    'projects/heys.md', 'archive/2026-07.md', 'NOW.md', 'money/2026-08.md'];
+  const order = tasks.rankPaths(paths, { today: '2026-08-02' });
+  assert.equal(order[0], 'projects/heys.md');
+  assert.equal(order[1], 'NOW.md');
+  assert.ok(order.indexOf('days/2026-08-02.md') < order.indexOf('journal/2026-08.md'));
+  assert.equal(order[order.length - 1], 'docs/rituals.md', 'документация нужна в одном вопросе из ста');
+});
+
+test('из дней берутся ближайшие к сегодня, а не самые старые', () => {
+  const days = ['days/2026-06-01.md', 'days/2026-08-05.md', 'days/2026-07-20.md', 'days/2026-08-01.md'];
+  const order = tasks.rankPaths(days, { today: '2026-08-02' });
+  assert.deepEqual(order.slice(0, 2), ['days/2026-08-01.md', 'days/2026-08-05.md']);
+});
+
+test('при потолке в 60 файлов задачи не вытесняются растущими днями', () => {
+  const days = Array.from({ length: 120 }, (_, i) => `days/2026-${String(1 + (i % 9)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}.md`);
+  const projects = ['projects/heys.md', 'projects/kinderly.md', 'projects/family.md'];
+  const kept = tasks.rankPaths([...days, ...projects], { today: '2026-08-02' }).slice(0, 60);
+  for (const p of projects) assert.ok(kept.includes(p), `${p} выпал из чтения`);
+});

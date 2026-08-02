@@ -418,7 +418,9 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     const index = await loadIndex();
     const known = paths && paths.length ? paths : Object.keys(index.files);
     if (!known.length) return [];
-    const selected = known.slice(0, max);
+    // Порядок — по смыслу, а не по алфавиту: иначе растущая папка дней
+    // вытеснит из чтения сами задачи, и поиск начнёт молча «не находить».
+    const selected = tasks.rankPaths(known, { today: today() }).slice(0, max);
     const keys = selected.map((path) => tasks.keyForPath(path)).filter(Boolean);
     const { data, error } = await api.getKVManyByCurator(curatorJwt, clientId, keys);
     if (error) throw new ToolError('upstream_error', `Не удалось прочитать задачник: ${error.message}`);
