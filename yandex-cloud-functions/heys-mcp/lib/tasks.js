@@ -1069,6 +1069,93 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
   };
 }
 
+// ── Деньги ───────────────────────────────────────────────────────────────
+//
+// Формат строки задан в money/README.md и читается доской:
+//   - ДД -СУММА категория ~контур · счёт · комментарий
+// День — две цифры, месяц берётся из имени файла. Второго формата тут быть не
+// может: доска разбирает строки одним выражением, и всё, что в него не попало,
+// молча выпадает из всех подсчётов — операция вроде записана, а её нигде нет.
+
+const MONEY_OP_RE = /^-\s+(\d{1,2})\s+([+-]\d+(?:\.\d+)?)\s+([^\s~·]+)\s*(?:~(\S+))?\s*(?:·\s*(.*))?$/;
+const MONEY_BALANCE_RE = /^-\s+(\d{4}-\d{2}-\d{2})\s*·\s*остаток\s+([\d.]+)/;
+
+function moneyLine({ date, amount, income = false, category, contour, account = null, comment = null }) {
+  const day = String(date).slice(8, 10);
+  const sum = `${income ? '+' : '-'}${Math.abs(Number(amount))}`;
+  const tail = [account, comment].filter(Boolean).join(' · ');
+  return `- ${day} ${sum} ${category} ~${contour}${tail ? ` · ${tail}` : ''}`;
+}
+
+function parseMoneyOps(text, month) {
+  const out = [];
+  for (const raw of String(text || '').split('\n')) {
+    const match = MONEY_OP_RE.exec(raw.trim());
+    if (!match) continue;
+    out.push({
+      date: `${month}-${match[1].padStart(2, '0')}`,
+      amount: Number(match[2]),
+      category: match[3],
+      contour: match[4] || null,
+    });
+  }
+  return out;
+}
+
+/** Последний известный остаток на счетах — из того же файла месяца. */
+function lastBalance(text) {
+  let found = null;
+  for (const raw of String(text || '').split('\n')) {
+    const match = MONEY_BALANCE_RE.exec(raw.trim());
+    if (match) found = { date: match[1], amount: Number(match[2]) };
+  }
+  return found;
+}
+
+/**
+ * Картина месяца после записи. Смысл тот же, что у day_after в дневниках: не
+ * «записал», а «вот что теперь». Без этого каждая трата обсуждается вслепую.
+ *
+ * Оценок и советов тут нет намеренно: лимиты в budget.md на август стоят «?»
+ * по его же решению — не выдумывать нормы до первого честного месяца.
+ */
+function monthAfter(text, { month, today = null, contour = null, recurring = null } = {}) {
+  const ops = parseMoneyOps(text, month);
+  const spent = ops.filter((o) => o.amount < 0).reduce((n, o) => n + Math.abs(o.amount), 0);
+  const income = ops.filter((o) => o.amount > 0).reduce((n, o) => n + o.amount, 0);
+  const byContour = {};
+  for (const op of ops) {
+    if (op.amount >= 0) continue;
+    const key = op.contour || '_';
+    byContour[key] = (byContour[key] || 0) + Math.abs(op.amount);
+  }
+  const todaySpent = today
+    ? ops.filter((o) => o.date === today && o.amount < 0).reduce((n, o) => n + Math.abs(o.amount), 0)
+    : null;
+
+  // Что ещё спишется само до конца месяца: строки recurring, чей день позже
+  // сегодняшнего. Это прогноз, а не обязательство, — так и подписано в файле.
+  let ahead = null;
+  if (recurring && today) {
+    const day = Number(today.slice(8, 10));
+    ahead = parseMoneyOps(recurring, month)
+      .filter((o) => o.amount < 0 && Number(o.date.slice(8, 10)) > day)
+      .reduce((n, o) => n + Math.abs(o.amount), 0);
+  }
+
+  return {
+    month,
+    spent: Math.round(spent * 100) / 100,
+    income: Math.round(income * 100) / 100,
+    today_spent: todaySpent === null ? null : Math.round(todaySpent * 100) / 100,
+    contour: contour ? { key: contour, spent: Math.round((byContour[contour] || 0) * 100) / 100 } : null,
+    by_contour: byContour,
+    balance: lastBalance(text),
+    recurring_ahead: ahead,
+    operations: ops.length,
+  };
+}
+
 // ── Как он решает ────────────────────────────────────────────────────────
 //
 // Дообучить модель на этом задачнике нельзя: такого в API нет, да и данных на
@@ -1354,6 +1441,20 @@ function findSectionLine(lines, section) {
  * ниже по файлу живут «## Идеи» и другие разделы, и дописанная вслепую задача
  * оказалась бы в чужом.
  */
+/**
+ * Вставить строку первой в разделе. Нужно там, где файл читается сверху вниз
+ * как лента свежего: операции месяца лежат новыми вверх, и дописанная в конец
+ * строка выглядела бы как самая старая.
+ */
+function prependToSection(text, line, section) {
+  const lines = String(text || '').split('\n');
+  const start = findSectionLine(lines, section);
+  if (start === -1) return appendToSection(text, line, section);
+  let at = start + 1;
+  while (at < lines.length && lines[at].trim() === '') at += 1;
+  return [...lines.slice(0, at), line, ...lines.slice(at)].join('\n');
+}
+
 function appendToSection(text, line, section = '## Задачи') {
   const lines = String(text || '').split('\n');
   const start = findSectionLine(lines, section);
@@ -1651,6 +1752,7 @@ module.exports = {
   taskHash,
   projectKeyForPath,
   appendToSection,
+  prependToSection,
   appendBlock,
   findTaskByHash,
   applyTaskPatch,
@@ -1699,6 +1801,11 @@ module.exports = {
   pickFindings,
   rememberProposal,
   answerProposal,
+  // деньги
+  moneyLine,
+  parseMoneyOps,
+  lastBalance,
+  monthAfter,
   // как он решает
   PREFS_PATH,
   PREFS_SECTION,

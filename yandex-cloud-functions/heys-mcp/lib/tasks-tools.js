@@ -169,17 +169,19 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_money',
-    description: 'Записать операцию в деньги месяца. Контур обязателен — без него операция не попадёт в разбивку на доске. Деньги это зона «спрашивай, а не действуй»: сумму и контур бери у куратора, не подставляй сам.',
+    description: 'Записать операцию в деньги месяца в формате money/README.md. После записи возвращает картину месяца: сколько ушло в этом контуре, сколько всего, сколько сегодня, остаток на счетах и сколько ещё спишется само. Деньги это зона «спрашивай, а не действуй»: сумму, категорию и контур бери у куратора, не подставляй сам.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'number', description: 'Сумма в рублях. Расход — положительное число, приход — отрицательное или укажи income: true.' },
-        title: { type: 'string', description: 'На что.' },
-        contour: { type: 'string', description: 'Контур: семья, дело, обязательства, инструменты, kinderly — как заведено в money/README.md.' },
+        amount: { type: 'number', description: 'Сумма в рублях, положительным числом. Приход помечается отдельно через income.' },
+        category: { type: 'string', description: 'Категория как в Zenmoney, одним словом: продукты, связь, зарплаты, инструменты, кредит, транспорт. Не выдумывай свою — посмотри, какие уже есть в money месяца.' },
+        contour: { type: 'string', description: 'Чей это рубль: family, kinderly, heys, mine2d, personal, travel, dev (общие инструменты разработки), debt (кредиты и рассрочки), cushion (взнос в подушку). Без контура операция уедет в «прочее» и испортит любой вывод.' },
+        title: { type: 'string', description: 'Комментарий для человека: что именно купили. Парсер его не разбирает.' },
+        account: { type: 'string', description: 'С какого счёта, как он их называет. Необязательно, но без него в выписке потом не сойтись.' },
         income: { type: 'boolean', description: 'true если это приход, а не трата.' },
         date: { type: 'string', description: 'Дата YYYY-MM-DD. По умолчанию сегодня.' },
       },
-      required: ['amount', 'title', 'contour'],
+      required: ['amount', 'category', 'contour'],
     },
   },
   {
@@ -877,13 +879,47 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const date = args.date || today();
       const month = date.slice(0, 7);
 
+      const category = String(args.category || '').trim().replace(/\s+/g, '-');
+      if (!category) {
+        throw new ToolError(
+          'category_required',
+          'Нужна категория, как в Zenmoney: продукты, связь, зарплаты, инструменты, кредит. Без неё строка не попадёт в разбивку по категориям на доске.',
+        );
+      }
+
       const file = await readFile(`money/${month}.md`);
-      const sign = args.income ? '+' : '';
-      const line = `- ${date} ${sign}${Math.abs(amount)} ₽ · ${String(args.title).trim()} · ${contour}`;
-      const saved = await writeFile(file, tasks.appendBlock(file.text, line));
+      const line = tasks.moneyLine({
+        date, amount, income: !!args.income, category, contour,
+        account: args.account ? String(args.account).trim() : null,
+        comment: args.title ? String(args.title).trim() : null,
+      });
+      const saved = await writeFile(file, tasks.prependToSection(file.text, line, '## Операции'));
+
+      // Картина месяца после записи — тот же смысл, что у day_after в
+      // дневниках: не «записал», а «вот что теперь». Оценок не даём: лимиты в
+      // budget.md стоят «?» по его решению не выдумывать нормы раньше времени.
+      let recurring = null;
+      try {
+        recurring = (await readFile('money/recurring.md')).text;
+      } catch (_) { /* нет файла регулярных — прогноз просто не покажем */ }
+      const month_after = tasks.monthAfter(saved.text, { month, today: date, contour, recurring });
+
+      const sign = args.income ? '+' : '-';
+      const picture = [
+        `в ${contour} за месяц ${month_after.contour.spent} ₽`,
+        `всего расходов ${month_after.spent} ₽`,
+        month_after.today_spent ? `сегодня ${month_after.today_spent} ₽` : null,
+        month_after.balance ? `остаток на ${month_after.balance.date} — ${month_after.balance.amount} ₽` : null,
+        month_after.recurring_ahead ? `до конца месяца спишется само ещё ~${month_after.recurring_ahead} ₽` : null,
+      ].filter(Boolean).join(', ');
+
       return {
-        text: `Записал в деньги за ${month}: ${sign}${Math.abs(amount)} ₽ · ${args.title} · ${contour}.`,
-        structured: { date, amount, income: !!args.income, title: args.title, contour, path: saved.path, rev: saved.rev },
+        text: `Записал: ${sign}${Math.abs(amount)} ₽ · ${category} · ~${contour}. Теперь ${picture}.`,
+        structured: {
+          date, amount, income: !!args.income, category, contour,
+          account: args.account || null, comment: args.title || null,
+          path: saved.path, rev: saved.rev, month_after,
+        },
       };
     },
 

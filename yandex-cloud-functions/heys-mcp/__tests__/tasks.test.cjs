@@ -494,12 +494,59 @@ test('tasks_money без контура не проходит', async () => {
   assert.equal(api.writes.length, 0);
 });
 
-test('tasks_money пишет операцию в месяц по дате', async () => {
+test('tasks_money пишет операцию в том формате, который читает доска', async () => {
   const api = withBoard();
-  const res = await build(api).tasks_money({ amount: 7500, title: 'Зарплата Маше', contour: 'kinderly', date: '2026-08-02' });
+  const res = await build(api).tasks_money({
+    amount: 7500, category: 'зарплаты', contour: 'kinderly',
+    title: 'Зарплата Маше', account: 'Киндерли-нал', date: '2026-08-02',
+  });
   assert.equal(res.structured.path, 'money/2026-08.md');
   const saved = api.writes[0].items[0].v.text;
-  assert.match(saved, /- 2026-08-02 7500 ₽ · Зарплата Маше · kinderly/);
+  // Формат из money/README.md: «- ДД -СУММА категория ~контур · счёт · комментарий».
+  // Свой формат тут смертелен: доска разбирает строки одним выражением, и всё,
+  // что в него не попало, молча выпадает из подсчётов.
+  assert.match(saved, /^- 02 -7500 зарплаты ~kinderly · Киндерли-нал · Зарплата Маше$/m);
+  assert.equal(BOARD_OP_RE.test(saved.split('\n').find((l) => l.startsWith('- 02'))), true);
+});
+
+// Ровно то выражение, которым board_money.py разбирает операции. Если оно
+// разойдётся с тем, что мы пишем, операции из чата пропадут с доски молча.
+const BOARD_OP_RE = /^-\s+(\d{1,2})\s+([+-]\d+(?:\.\d+)?)\s+([^\s~·]+)\s*(?:~(\S+))?\s*(?:·\s*(.*))?$/;
+
+test('после записи траты возвращается картина месяца, а не «записал»', async () => {
+  const api = withBoard();
+  const month = `# Август\n\n## Операции\n\n- 01 -2000 связь ~family · Билайн\n- 01 -1000 продукты ~family · Самокат\n\n## Счета\n\n- 2026-08-01 · остаток 23467\n`;
+  const key = tasks.keyForPath('money/2026-08.md');
+  const origMany = api.getKVManyByCurator;
+  const orig = api.getKVByCurator;
+  api.getKVByCurator = async (b, c, k) => (k === key
+    ? { data: { path: 'money/2026-08.md', text: month, rev: 1, updatedAt: 1 }, error: null }
+    : orig(b, c, k));
+  api.getKVManyByCurator = origMany;
+
+  const res = await build(api).tasks_money({
+    amount: 500, category: 'продукты', contour: 'family', title: 'Перекрёсток', date: '2026-08-02',
+  });
+  const after = res.structured.month_after;
+  assert.equal(after.spent, 3500);
+  assert.equal(after.contour.spent, 3500);
+  assert.equal(after.today_spent, 500);
+  assert.deepEqual(after.balance, { date: '2026-08-01', amount: 23467 });
+  assert.match(res.text, /за месяц 3500 ₽/);
+});
+
+test('операция без категории не пишется — она выпала бы из разбивки', async () => {
+  await assert.rejects(
+    () => build(withBoard()).tasks_money({ amount: 100, contour: 'family', title: 'что-то' }),
+    (e) => e.code === 'category_required',
+  );
+});
+
+test('новая операция ложится первой — месяц читается свежим сверху', () => {
+  const text = '# Август\n\n## Операции\n\n- 01 -2000 связь ~family · Билайн\n';
+  const next = tasks.prependToSection(text, '- 02 -500 продукты ~family · Самокат', '## Операции');
+  const ops = next.split('\n').filter((l) => l.startsWith('- '));
+  assert.deepEqual(ops.map((l) => l.slice(2, 4)), ['02', '01']);
 });
 
 test('tasks_move переносит задачу и отдаёт новую ссылку', async () => {
