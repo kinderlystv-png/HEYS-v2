@@ -33,8 +33,23 @@
 -- Побочный эффект, который является целью: попытка вставить продукт, дублирующий
 -- существующий по составу, теперь надёжно упирается в UNIQUE(fingerprint) и
 -- возвращает ошибку вместо тихого дубля.
-
-BEGIN;
+-- ЗАВИСИМОСТЬ, КОТОРУЮ НАДО ВИДЕТЬ
+-- Триггер вызывает compute_product_fingerprint / compute_product_brand_fingerprint.
+-- Они создаются миграцией 2026-05-30_compute_product_fingerprint.sql, которая в
+-- манифесте НЕ зарегистрирована и живёт в legacy baseline. На базе, собранной
+-- строго по манифесту, этих функций может не быть — а plpgsql не проверяет тело
+-- при создании, поэтому триггер встал бы молча и упал при первой же записи.
+-- Проверяем явно, чтобы миграция падала здесь и с понятной причиной.
+DO $$
+BEGIN
+  IF to_regprocedure('public.compute_product_fingerprint(jsonb)') IS NULL
+     OR to_regprocedure('public.compute_product_brand_fingerprint(jsonb)') IS NULL
+  THEN
+    RAISE EXCEPTION
+      'Нет compute_product_fingerprint/compute_product_brand_fingerprint. Сначала примените 2026-05-30_compute_product_fingerprint.sql (сейчас она в legacy baseline).';
+  END IF;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.shared_products_set_fingerprint()
 RETURNS trigger
@@ -81,9 +96,6 @@ CREATE TRIGGER trg_shared_products_set_fingerprint
   BEFORE INSERT OR UPDATE ON public.shared_products
   FOR EACH ROW
   EXECUTE FUNCTION public.shared_products_set_fingerprint();
-
-COMMIT;
-
 -- ПРОВЕРКА ПОСЛЕ:
 --   -- триггер на месте:
 --   SELECT tgname FROM pg_trigger

@@ -22,8 +22,14 @@
 --
 -- Текущие 398 карточек проверены до применения — нарушений ноль по всем
 -- шести правилам, поэтому констрейнты ставятся сразу валидными.
-
-BEGIN;
+-- Идемпотентность: раннер миграций может применить файл повторно, а
+-- ADD CONSTRAINT на существующем имени падает. Снимаем прежде чем ставить.
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_nutrients_non_negative;
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_mass_within_100g;
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_energy_plausible;
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_trans_within_fat;
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_gi_range;
+ALTER TABLE public.shared_products DROP CONSTRAINT IF EXISTS shared_products_harm_range;
 
 ALTER TABLE public.shared_products
   ADD CONSTRAINT shared_products_nutrients_non_negative CHECK (
@@ -59,9 +65,6 @@ ALTER TABLE public.shared_products
 
 ALTER TABLE public.shared_products
   ADD CONSTRAINT shared_products_harm_range CHECK (harm IS NULL OR (harm >= 0 AND harm <= 10));
-
-COMMIT;
-
 -- ПРОВЕРКА ПОСЛЕ:
 --   SELECT conname FROM pg_constraint
 --    WHERE conrelid = 'public.shared_products'::regclass AND contype = 'c'

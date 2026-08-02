@@ -21,9 +21,6 @@
 -- Категория проставляется ТОЛЬКО когда её не передали. Явно переданное
 -- значение не трогается: сервер подставляет недостающее, а не переучивает
 -- куратора.
-
-BEGIN;
-
 CREATE OR REPLACE FUNCTION public.detect_product_category(p_name text)
 RETURNS text
 LANGUAGE sql
@@ -83,9 +80,6 @@ CREATE TRIGGER trg_shared_products_set_category
 UPDATE public.shared_products
 SET category = public.detect_product_category(name)
 WHERE category IS NULL OR btrim(category) = '';
-
-COMMIT;
-
 -- ПРОВЕРКА ПОСЛЕ:
 --   SELECT count(*) FROM shared_products WHERE category IS NULL OR btrim(category)='';
 --   -- ожидаем 0

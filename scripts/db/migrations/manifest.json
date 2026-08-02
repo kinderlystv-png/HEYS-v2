@@ -181,6 +181,27 @@
       "path": "scripts/db/migrations/2026-08-03_messenger_search.sql",
       "description": "Search across messenger thread including voice transcripts",
       "destructive": false
+    },
+    {
+      "id": "2026-08-02_shared_products_sanity_constraints",
+      "order": 24,
+      "path": "scripts/db/migrations/2026-08-02_shared_products_sanity_constraints.sql",
+      "description": "Reject impossible nutrient values in the shared product catalog at write time",
+      "destructive": false
+    },
+    {
+      "id": "2026-08-02_shared_products_fingerprint_trigger",
+      "order": 25,
+      "path": "scripts/db/migrations/2026-08-02_shared_products_fingerprint_trigger.sql",
+      "description": "Compute shared product fingerprints server-side so they cannot drift from the row",
+      "destructive": false
+    },
+    {
+      "id": "2026-08-02_shared_products_category_trigger",
+      "order": 26,
+      "path": "scripts/db/migrations/2026-08-02_shared_products_category_trigger.sql",
+      "description": "Assign product category server-side when the caller did not provide one",
+      "destructive": false
     }
   ]
 }
