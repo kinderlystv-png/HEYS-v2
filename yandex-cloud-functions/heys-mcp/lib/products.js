@@ -13,6 +13,8 @@
  * появятся дубли одного и того же продукта.
  */
 
+const crypto = require('node:crypto');
+
 const OVERLAY_KEY = 'heys_products_overlay_v2';
 
 /** shared_products приходит из REST с lowercase-колонками — приводим к схеме UI. */
@@ -440,6 +442,59 @@ function buildCustomProduct(input, { nowMs, makeId }) {
   return row;
 }
 
+/**
+ * Отпечаток продукта: `sha256(имя::нутриенты)`.
+ *
+ * Повторяет computeProductFingerprint из apps/web/heys_models_v1.js побайтово —
+ * порядок полей, округление до одного знака и разделители менять нельзя. По
+ * этому отпечатку общая база отсекает дубликаты и связывает личные карточки с
+ * каталогом: разойтись здесь значит завести второй продукт там, где должен был
+ * найтись существующий.
+ */
+function fingerprintNutrientsPart(product) {
+  return [
+    round1(Number(product.simple100) || 0),
+    round1(Number(product.complex100) || 0),
+    round1(Number(product.protein100) || 0),
+    round1(Number(product.badFat100) || 0),
+    round1(Number(product.goodFat100) || 0),
+    round1(Number(product.trans100) || 0),
+    round1(Number(product.fiber100) || 0),
+    round1(Number(product.gi) || 0),
+    round1(Number(product.harm) || 0),
+  ].join('|');
+}
+
+function normalizeFingerprintText(value) {
+  return String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function computeProductFingerprint(product) {
+  if (!product) return '';
+  const combined = `${normalizeFingerprintText(product.name)}::${fingerprintNutrientsPart(product)}`;
+  return crypto.createHash('sha256').update(combined, 'utf8').digest('hex');
+}
+
+/** Отпечаток с брендом — пустой, если бренда нет: так же ведёт себя приложение. */
+function computeProductBrandFingerprint(product) {
+  if (!product) return '';
+  const brandPart = normalizeFingerprintText(product.brand);
+  if (!brandPart) return '';
+  const combined = `${normalizeFingerprintText(product.name)}::${brandPart}::${fingerprintNutrientsPart(product)}`;
+  return crypto.createHash('sha256').update(combined, 'utf8').digest('hex');
+}
+
+/**
+ * Похож ли продукт на промышленный. Бренд или штрихкод — признак того, что
+ * такую же упаковку купит и другой клиент, значит карточке место в общей базе.
+ * Домашнее блюдо этих признаков не имеет, и в общий каталог ему не нужно:
+ * состав у него уникальный, дедупликация его не отсечёт, а пользы другим от
+ * «Торта маминого» нет.
+ */
+function looksIndustrial(product) {
+  return !!(product && (product.brand || product.barcode));
+}
+
 /** Поля, которые разрешено править в личной карточке продукта. */
 const EDITABLE_FIELDS = ['name', 'brand', 'barcode', 'portions']
   .concat(REQUIRED_NUTRIENTS)
@@ -598,6 +653,9 @@ module.exports = {
   EDITABLE_FIELDS,
   buildProductPatch,
   applyProductPatchToOverlay,
+  computeProductFingerprint,
+  computeProductBrandFingerprint,
+  looksIndustrial,
   REQUIRED_NUTRIENTS,
   OPTIONAL_NUTRIENTS,
   BOOLEAN_FLAGS,

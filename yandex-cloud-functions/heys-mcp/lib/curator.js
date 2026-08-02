@@ -38,13 +38,32 @@ const CLIENT_ARG = {
   description: 'Кому вносим: имя клиента или client_id из heys_list_clients. Обязательно, если у куратора больше одного клиента.',
 };
 
+/**
+ * Публикация в общую базу — кураторская возможность, поэтому параметр живёт
+ * только в кураторской схеме: у клиента прав на общий каталог нет.
+ */
+const SHARE_ARG = {
+  type: 'boolean',
+  description: 'Публиковать ли продукт в общую базу, доступную всем клиентам. По умолчанию публикуется всё промышленное — то, у чего есть бренд или штрихкод. Домашние блюда и авторские рецепты не публикуются: ставь true только если куратор прямо просит, и false — чтобы не публиковать промышленный продукт.',
+};
+
+const CURATOR_EXTRA_ARGS = {
+  heys_create_product: { share: SHARE_ARG },
+};
+
 function buildCuratorSchemas() {
   const schemas = TOOL_SCHEMAS.map((schema) => ({
     ...schema,
-    description: `${schema.description} Работает с дневником выбранного клиента куратора.`,
+    description: schema.name === 'heys_create_product'
+      ? `${schema.description} Работает со списком выбранного клиента куратора; промышленный продукт заодно уезжает в общую базу.`
+      : `${schema.description} Работает с дневником выбранного клиента куратора.`,
     inputSchema: {
       ...schema.inputSchema,
-      properties: { client: CLIENT_ARG, ...(schema.inputSchema.properties || {}) },
+      properties: {
+        client: CLIENT_ARG,
+        ...(schema.inputSchema.properties || {}),
+        ...(CURATOR_EXTRA_ARGS[schema.name] || {}),
+      },
     },
   }));
   schemas.unshift({
@@ -215,6 +234,7 @@ function curatorInstructions(curatorName) {
     '6. Перед правкой или удалением приёма вызывай heys_get_day этого клиента, чтобы взять актуальный meal_id. Для «добавь туда ещё» используй heys_update_meal, а не delete+create.',
     '7. Время приёма по умолчанию — текущее московское.',
     '8. Если продукта нет в базе, а куратор прислал фото упаковки — сними состав и создай продукт через heys_create_product в списке ЭТОГО клиента. Значения приводи к 100 г; калорийность HEYS считает сам.',
+    '8а. Продукт с брендом или штрихкодом уезжает и в общую базу автоматически — второй раз его никому заводить не придётся. Домашнее блюдо туда не попадает; если куратор хочет опубликовать именно его, передай share: true, а чтобы промышленный остался только у клиента — share: false.',
     '9. Не выдумывай нутриенты, которых не видно на фото: скажи, чего не хватает.',
     '10. Вопросы про неделю, месяц, динамику веса и пробелы в дневнике закрывает heys_get_period одним вызовом. Не перебирай дни через heys_get_day: в период не попадают позиции приёмов, но именно они для такого вопроса и не нужны.',
     '',
@@ -795,6 +815,71 @@ function createCuratorContext({ api, curatorJwt, curatorId = null, curatorName =
       };
     };
   }
+
+  /**
+   * Создание продукта у куратора — это ещё и пополнение общей базы.
+   *
+   * Куратор владеет общим каталогом, и заводить одну и ту же пачку творога
+   * заново каждому клиенту бессмысленно. Но лить туда всё подряд нельзя:
+   * домашнее блюдо имеет уникальный состав, дедупликация его не отсечёт, и
+   * каталог замусорится чужими рецептами. Поэтому по умолчанию публикуется
+   * только промышленное — то, у чего есть бренд или штрихкод, — а решение
+   * куратора (`share`) сильнее этого правила в обе стороны.
+   *
+   * Дубликат общей базы не считается сбоем: карточка клиента уже создана, а
+   * «такой продукт там уже есть» — ровно то, ради чего дедупликация и нужна.
+   */
+  const createProductForClient = tools.heys_create_product;
+  tools.heys_create_product = async (args = {}) => {
+    const { share, ...rest } = args;
+    const result = await createProductForClient(rest);
+    const row = result.structured && result.structured.created_row;
+    if (!row) return result;
+
+    const wanted = share === undefined || share === null ? products.looksIndustrial(row) : !!share;
+    if (!wanted) {
+      const why = share === false ? 'по твоему решению' : 'нет бренда и штрихкода, похоже на домашнее блюдо';
+      return {
+        ...result,
+        text: `${result.text} В общую базу не публиковал — ${why}.`,
+        structured: { ...result.structured, shared: false, shared_reason: why },
+      };
+    }
+    if (!curatorId) {
+      return {
+        ...result,
+        text: `${result.text} В общую базу опубликовать не смог: не определён куратор — переподключи коннектор.`,
+        structured: { ...result.structured, shared: false, shared_reason: 'no_curator_id' },
+      };
+    }
+
+    const payload = {
+      ...row,
+      fingerprint: products.computeProductFingerprint(row),
+      brand_fingerprint: products.computeProductBrandFingerprint(row) || null,
+    };
+    const published = await api.publishSharedProduct(curatorJwt, curatorId, payload);
+
+    if (published.duplicate) {
+      return {
+        ...result,
+        text: `${result.text} В общей базе такой продукт уже есть — публиковать второй раз не стал.`,
+        structured: { ...result.structured, shared: false, shared_reason: 'duplicate' },
+      };
+    }
+    if (!published.ok) {
+      return {
+        ...result,
+        text: `${result.text} В личный список продукт добавлен, но в общую базу не уехал: ${published.error}.`,
+        structured: { ...result.structured, shared: false, shared_reason: published.error },
+      };
+    }
+    return {
+      ...result,
+      text: `${result.text} Опубликовал и в общую базу — теперь он найдётся у всех клиентов.`,
+      structured: { ...result.structured, shared: true },
+    };
+  };
 
   return {
     tools,

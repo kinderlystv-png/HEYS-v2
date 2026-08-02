@@ -559,6 +559,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now() }) {
           brand: row.brand,
           barcode: row.barcode,
           portions: row.portions || [],
+          // Карточка целиком нужна кураторскому слою: по ней считается
+          // отпечаток для общей базы. Без неё пришлось бы пересобирать
+          // продукт из аргументов и разойтись с тем, что реально записано.
+          created_row: row,
         },
       };
     },

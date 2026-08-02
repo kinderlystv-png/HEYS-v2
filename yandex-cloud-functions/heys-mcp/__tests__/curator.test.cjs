@@ -11,6 +11,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { createCuratorContext, buildCuratorSchemas, CLIENTLESS_TOOLS } = require('../lib/curator');
 const { TOOL_SCHEMAS } = require('../lib/tools');
+const products = require('../lib/products');
 const oauth = require('../lib/oauth');
 const tokens = require('../lib/crypto-tokens');
 const mcp = require('../lib/mcp');
@@ -723,4 +724,93 @@ test('правило про фото доехало до инструкций', 
   const { instructions } = build(fakeCuratorApi());
   assert.match(instructions, /heys_get_photo/);
   assert.match(instructions, /Не проси куратора описать снимок словами/);
+});
+
+// ── Публикация нового продукта в общую базу ──────────────────────────────
+// Куратор владеет общим каталогом, поэтому промышленная карточка попадает
+// туда сразу. Домашнее блюдо — нет: у него уникальный состав, дедупликация
+// его не отсечёт, и каталог замусорится чужими рецептами.
+
+const CARD = {
+  name: 'Творог 5%', protein100: 16, simple100: 3, complex100: 0,
+  badFat100: 3, goodFat100: 2, trans100: 0, fiber100: 0, gi: 30, harm: 2,
+};
+
+function apiWithPublish(result = { ok: true, data: { id: 'sp-1' } }) {
+  const api = fakeCuratorApi();
+  api.published = [];
+  api.publishSharedProduct = async (bearer, curatorId, payload) => {
+    assert.equal(bearer, JWT);
+    api.published.push({ curatorId, payload });
+    return result;
+  };
+  return api;
+}
+
+function buildWithCurator(api) {
+  return createCuratorContext({ api, curatorJwt: JWT, curatorId: 'cur-1', curatorName: 'Кин', nowMs: NOW });
+}
+
+test('продукт с брендом уезжает в общую базу с отпечатком', async () => {
+  const api = apiWithPublish();
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({ client: 'Антон', ...CARD, brand: 'Простоквашино' });
+
+  assert.equal(api.published.length, 1);
+  const { curatorId, payload } = api.published[0];
+  assert.equal(curatorId, 'cur-1');
+  assert.equal(payload.name, 'Творог 5%');
+  assert.equal(payload.fingerprint, products.computeProductFingerprint(payload));
+  assert.match(payload.fingerprint, /^[a-f0-9]{64}$/, 'отпечаток — sha256, как в приложении');
+  assert.ok(payload.brand_fingerprint, 'у брендового продукта есть и брендовый отпечаток');
+  assert.equal(res.structured.shared, true);
+  assert.match(res.text, /Опубликовал и в общую базу/);
+});
+
+test('домашнее блюдо остаётся только у клиента', async () => {
+  const api = apiWithPublish();
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({ client: 'Антон', ...CARD, name: 'Торт мамин' });
+
+  assert.equal(api.published.length, 0);
+  assert.equal(res.structured.shared, false);
+  assert.match(res.text, /похоже на домашнее блюдо/);
+});
+
+test('решение куратора сильнее правила — в обе стороны', async () => {
+  const api = apiWithPublish();
+  const { tools } = buildWithCurator(api);
+
+  await tools.heys_create_product({ client: 'Антон', ...CARD, name: 'Торт мамин', share: true });
+  assert.equal(api.published.length, 1, 'явное share:true публикует и домашнее');
+
+  const res = await tools.heys_create_product({ client: 'Антон', ...CARD, name: 'Творог 9%', brand: 'Домик', share: false });
+  assert.equal(api.published.length, 1, 'явное share:false оставляет промышленное у клиента');
+  assert.match(res.text, /по твоему решению/);
+});
+
+test('дубликат общей базы не ломает создание карточки', async () => {
+  const api = apiWithPublish({ ok: false, duplicate: true, error: 'duplicate_fingerprint' });
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({ client: 'Антон', ...CARD, brand: 'Простоквашино' });
+
+  assert.equal(res.structured.product_id !== undefined, true, 'личная карточка всё равно создана');
+  assert.equal(res.structured.shared, false);
+  assert.match(res.text, /уже есть/);
+});
+
+test('сбой публикации виден куратору, но карточку не откатывает', async () => {
+  const api = apiWithPublish({ ok: false, error: 'rpc_http_500' });
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({ client: 'Антон', ...CARD, barcode: '4600000000012' });
+
+  assert.equal(res.structured.shared, false);
+  assert.match(res.text, /в общую базу не уехал/);
+});
+
+test('параметр share есть только в кураторской схеме', () => {
+  const curatorSchema = buildCuratorSchemas().find((s) => s.name === 'heys_create_product');
+  const clientSchema = TOOL_SCHEMAS.find((s) => s.name === 'heys_create_product');
+  assert.ok(curatorSchema.inputSchema.properties.share);
+  assert.equal(clientSchema.inputSchema.properties.share, undefined, 'у клиента прав на общий каталог нет');
 });

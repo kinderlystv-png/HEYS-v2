@@ -517,6 +517,29 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   /**
+   * Публикация карточки в общую базу куратором — тот же путь, которым это
+   * делает вкладка каталога в приложении.
+   *
+   * `fingerprint` обязателен: по нему сервер отсекает дубликаты. Ответ
+   * «такой продукт уже есть» — не ошибка вызова, а нормальный исход, поэтому
+   * он возвращается отдельным полем, а не исключением.
+   */
+  async function publishSharedProduct(bearer, curatorId, productData) {
+    const { data, error } = await rpc('publish_shared_product_by_curator', {
+      p_curator_id: curatorId,
+      p_product_data: productData,
+    }, { bearer });
+    const result = unwrap(data, 'publish_shared_product_by_curator') || {};
+    const reason = String(result.error || (error && error.message) || '');
+    if (/duplicate|already|exists/i.test(reason)) {
+      return { ok: false, duplicate: true, error: reason, existing: result.existing_id || result.id || null };
+    }
+    if (error) return { ok: false, error: error.message };
+    if (result.success === false) return { ok: false, error: reason || 'publish_failed' };
+    return { ok: true, data: result };
+  }
+
+  /**
    * Approve/reject. Ownership проверяет SQL, `p_curator_id` подставляется из
    * JWT на стороне функции. Ответ `status: 'race'` означает, что заявку уже
    * разобрали — это нормальный исход, а не ошибка.
@@ -624,7 +647,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     extendSubscription, cancelSubscription,
     getTrialQueue, getQueueStats, activateTrial, rejectTrialRequest,
     getLeads, updateLeadStatus, getClientObservability,
-    getPendingSharedProducts, moderatePendingProduct,
+    getPendingSharedProducts, moderatePendingProduct, publishSharedProduct,
   };
 }
 

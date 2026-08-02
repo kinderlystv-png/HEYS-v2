@@ -228,3 +228,41 @@ test('клетчатка не входит в углеводы и не даёт 
   const withoutFiber = products.buildCustomProduct({ ...bran, fiber100: 0 }, { nowMs: 1, makeId: () => 'p2' });
   assert.equal(withoutFiber.kcal100, row.kcal100);
 });
+
+// ── Отпечаток продукта ───────────────────────────────────────────────────
+// Вектор снят с живой общей базы: по этому отпечатку сервер отсекает
+// дубликаты и связывает личные карточки с каталогом. Если тест упал —
+// алгоритм разошёлся с приложением, и коннектор начнёт заводить дубли
+// вместо того, чтобы находить существующий продукт.
+
+test('отпечаток совпадает с тем, что лежит в общей базе', () => {
+  assert.equal(
+    products.computeProductFingerprint({
+      name: 'Стейк говяжий на гриле',
+      simple100: 0, complex100: 0, protein100: 26,
+      badFat100: 7, goodFat100: 9, trans100: 0, fiber100: 0, gi: 0, harm: 0.9,
+    }),
+    '9257c5e86403ee33df960caa4b86413b3f12cbe6e45e780ad3f10670d1c02e27',
+  );
+  assert.equal(
+    products.computeProductFingerprint({
+      name: 'Салат крабовый классический',
+      simple100: 5, complex100: 9, protein100: 6,
+      badFat100: 3.2, goodFat100: 8.9, trans100: 0, fiber100: 1, gi: 60, harm: 5,
+    }),
+    'd38a1aac8760f399d1cb43e925dd51c0b14a806189c0e279542863e83df5fe41',
+  );
+});
+
+test('брендовый отпечаток пуст без бренда и отличается от обычного', () => {
+  const card = { name: 'Творог 5%', protein100: 16, simple100: 3, complex100: 0, badFat100: 3, goodFat100: 2, gi: 30, harm: 2 };
+  assert.equal(products.computeProductBrandFingerprint(card), '');
+  const branded = { ...card, brand: 'Простоквашино' };
+  assert.notEqual(products.computeProductBrandFingerprint(branded), products.computeProductFingerprint(branded));
+});
+
+test('промышленным считается продукт с брендом или штрихкодом', () => {
+  assert.equal(products.looksIndustrial({ name: 'Торт мамин' }), false);
+  assert.equal(products.looksIndustrial({ name: 'Творог', brand: 'Домик' }), true);
+  assert.equal(products.looksIndustrial({ name: 'Творог', barcode: '4600000000012' }), true);
+});
