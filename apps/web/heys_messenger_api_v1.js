@@ -256,6 +256,50 @@
   }
 
   /**
+   * Поиск по переписке: текст сообщений и расшифровки голосовых.
+   *   client: { q, type?, before_ts?, limit? }
+   *   curator: { client_id, q, ... }
+   * type: image | audio | applied.
+   */
+  async function searchMessages(opts = {}) {
+    const qs = new URLSearchParams();
+    qs.set('q', String(opts.q || ''));
+    if (opts.client_id) qs.set('client_id', opts.client_id);
+    if (opts.type) qs.set('type', opts.type);
+    if (opts.before_ts) qs.set('before', opts.before_ts);
+    if (opts.limit) qs.set('limit', String(opts.limit));
+    return call(`/messages/search?${qs.toString()}`);
+  }
+
+  /**
+   * Куратор отмечает сообщение внесённым в день.
+   * summary — что именно попало в дневник: { items:[{name,grams,kcal}], total, meal_label, meal_time }.
+   * applied: false снимает отметку.
+   */
+  async function setApplied(messageId, summary, applied = true) {
+    return call('/messages/set-applied', {
+      method: 'POST',
+      body: { message_id: messageId, summary: applied ? summary : null, applied },
+    });
+  }
+
+  /**
+   * Чек-лист дня — чего ещё ждём от клиента.
+   *   client: { date? }
+   *   curator: { client_id, date? }
+   * Ответ: { success, date, items: [{key, label, status, due_from?}], completeness }.
+   * Правило считается на сервере и общее с напоминаниями, поэтому клиент
+   * ничего не досчитывает: пришло items: [] — блок просто не показывается.
+   */
+  async function getDayChecklist(opts = {}) {
+    const qs = new URLSearchParams();
+    if (opts.client_id) qs.set('client_id', opts.client_id);
+    if (opts.date) qs.set('date', opts.date);
+    const qstr = qs.toString();
+    return call(`/messages/day-checklist${qstr ? '?' + qstr : ''}`);
+  }
+
+  /**
    * Пометить прочитанным.
    *   client: { up_to_ts? }
    *   curator: { client_id, up_to_ts? }
@@ -465,6 +509,9 @@
     setTranscriptionConsent,
     getThread,
     getInbox,
+    getDayChecklist,
+    searchMessages,
+    setApplied,
     markRead,
     setDone,
     setAcked,

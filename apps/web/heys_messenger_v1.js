@@ -860,6 +860,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     onReply,
     onEdit,
     onPhotoClick,
+    onOpenDay,
+    onApplyRequest,
     eagerPhotos,
     transcriptionGranted = false,
   }) {
@@ -871,8 +873,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const canMarkAck = !isMine; // ✓ только на чужих сообщениях
     const myAckAt = isCurator ? message.done_at : message.acked_at;
     const theirAckAt = isCurator ? message.acked_at : message.done_at;
-    const ackAt = myAckAt || theirAckAt;
-    const hasAnyAck = !!ackAt;
     const isMyAcked = !!myAckAt;
     const canDelete = isMine; // каждый удаляет только свои
     const canReply = !isMine; // отвечать можно только на чужие
@@ -884,30 +884,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Парсим quote-prefix только для text-сообщений
     const parsed = message.body ? parseQuotedBody(message.body) : { quote: null, reply: '' };
-    const replyText = message.body
-      ? parsed.reply
-      : message.intent_type === 'meal'
-        ? `🍽️ Съел: ${message.intent_payload?.product_name ?? '?'} (${message.intent_payload?.grams ?? '?'}г)`
-        : message.intent_type === 'training'
-          ? `🏋️ ${message.intent_payload?.training_type ?? '?'} — ${message.intent_payload?.duration_min ?? '?'} мин`
-          : message.intent_type === 'weight'
-            ? `⚖️ Вес: ${message.intent_payload?.weight_kg ?? '?'} кг`
-            : '';
-    // Метка под пузырём: показываем что сделал каждый
-    // (если есть обе метки — обе строкой; если только одна — её)
+    // Интент — структурированная запись, а не фраза с эмодзи: кикер называет
+    // тип, а значение стоит отдельной колонкой и читается с одного взгляда.
+    const intentCard = !message.body ? buildIntentCard(message) : null;
+    const replyText = message.body ? parsed.reply : '';
+    // Метка в мета-строке показывает, что с сообщением сделала ДРУГАЯ сторона.
+    // Своё действие видно в самой кнопке, дублировать его меткой незачем.
     const ackLabel = (() => {
-      if (!hasAnyAck) return null;
-      const parts = [];
-      if (message.done_at) parts.push(`✓ Обработано ${formatTime(message.done_at)}`);
-      if (message.acked_at) parts.push(`✓ Принято ${formatTime(message.acked_at)}`);
-      return parts.join(' · ');
+      if (!isMine || !theirAckAt) return null;
+      const text = isCurator ? 'Принято' : 'Обработано';
+      return { text, title: `${text} ${formatTime(theirAckAt)}` };
     })();
 
+    // Зелёный пузырь ушёл: статус теперь метка в мета-строке, а не заливка
+    // всего сообщения — она спорила с фото и текстом внутри.
     const bubbleClasses = [
       'msg-bubble',
       isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs',
-      hasAnyAck ? 'msg-bubble-done' : '',
-    ].filter(Boolean).join(' ');
+    ].join(' ');
 
     const handleDeleteClick = () => {
       if (!canDelete) return;
@@ -954,32 +948,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(); }
     };
 
-    const deleteButton = canDelete
-      ? React.createElement('button', {
-          type: 'button',
-          className: 'msg-delete-outside',
-          onClick: handleDeleteClick,
-          'aria-label': 'Удалить сообщение',
-          title: 'Удалить сообщение',
-        }, '🗑')
-      : null;
+    // Свои действия («Изменить», «Удалить») не висят на экране постоянно:
+    // на десктопе их открывает hover через CSS, на тач-устройствах —
+    // долгое нажатие, потому что hover там не существует.
+    const [touchActionsOpen, setTouchActionsOpen] = useState(false);
+    const longPressTimerRef = useRef(null);
 
-    const ackButton = canMarkAck
+    const cancelLongPress = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    const handleTouchStart = () => {
+      if (!canDelete && !canEdit) return;
+      cancelLongPress();
+      longPressTimerRef.current = setTimeout(() => setTouchActionsOpen(true), 450);
+    };
+
+    useEffect(() => cancelLongPress, []);
+
+    const ackAction = canMarkAck
       ? React.createElement('button', {
           type: 'button',
-          className: `msg-ack-outside ${isMyAcked ? 'msg-ack-outside-active' : ''}`,
+          key: 'ack',
+          className: `msg-action msg-action--ack${isMyAcked ? ' is-active' : ''}`,
           onClick: () => onToggleAck?.(message),
           disabled: ackPending,
           'aria-busy': ackPending ? 'true' : undefined,
           'aria-label': ackPending
             ? 'Сохраняем отметку'
             : isMyAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
-          title: ackPending
-            ? 'Сохраняем отметку'
+        },
+          isMyAcked ? React.createElement(Icon, { name: 'check', size: 11, strokeWidth: 1.8 }) : null,
+          ackPending
+            ? 'Сохраняем…'
             : isMyAcked
-            ? 'Снять отметку'
-            : (isCurator ? 'Отметить как обработанное' : 'Я прочитал и принял'),
-        }, '✓')
+              ? (isCurator ? 'Обработано' : 'Принято')
+              : (isCurator ? 'Обработать' : 'Принять'),
+        )
       : null;
 
     const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
@@ -1026,46 +1034,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               }, savingEdit ? '...' : 'Сохранить'),
             ),
           )
-        : replyText &&
-            React.createElement('div', { className: 'msg-body' }, replyText),
-      message.applied_at && !editing &&
-        React.createElement('div', { className: 'msg-applied' }, '✅ Куратор применил в день'),
-      ackLabel && !editing &&
-        React.createElement('div', { className: 'msg-done' }, ackLabel),
-      !editing && React.createElement(
-        'div',
-        { className: 'msg-meta-row' },
-        canReply &&
-          React.createElement('button', {
-            type: 'button',
-            className: 'msg-reply-btn',
-            onClick: () => onReply?.(message),
-            'aria-label': 'Ответить с цитатой',
-            title: 'Ответить с цитатой',
-          }, '↩'),
-        canEdit &&
-          React.createElement('button', {
-            type: 'button',
-            className: 'msg-edit-btn',
-            onClick: handleEditStart,
-            'aria-label': 'Редактировать сообщение',
-            title: 'Редактировать сообщение',
-          }, '✎'),
-        message.edited_at &&
-          React.createElement('span', {
-            className: 'msg-edited-marker',
-            title: `Изменено ${formatTime(message.edited_at)}`,
-          }, 'изм.'),
-        React.createElement('div', { className: 'msg-meta' }, formatTime(message.created_at)),
-      ),
+        : intentCard
+          ? React.createElement(IntentCard, { card: intentCard })
+          : replyText &&
+              React.createElement('div', { className: 'msg-body' }, replyText),
     );
 
-    const children = isMine ? [deleteButton, bubble] : [bubble, ackButton];
+    // Мета живёт под пузырём, а не внутри: статусы, время и действия — это
+    // не часть сообщения, и в пузыре они спорили с самим текстом.
+    const metaRow = !editing && React.createElement(
+      'div',
+      { className: `msg-meta-row${touchActionsOpen ? ' is-actions-open' : ''}` },
+      React.createElement('span', { className: 'msg-meta' }, formatTime(message.created_at)),
+      message.edited_at &&
+        React.createElement('span', {
+          className: 'msg-edited-marker',
+          title: `Изменено ${formatTime(message.edited_at)}`,
+        }, 'изм.'),
+      message.applied_at &&
+        React.createElement('span', { className: 'msg-applied' }, 'Внесено в день'),
+      ackLabel && React.createElement(
+        'span',
+        { className: 'msg-done', title: ackLabel.title },
+        React.createElement(Icon, { name: 'check', size: 11, strokeWidth: 1.8 }),
+        ackLabel.text,
+      ),
+      canReply && React.createElement('button', {
+        type: 'button',
+        className: 'msg-action',
+        onClick: () => onReply?.(message),
+        'aria-label': 'Ответить с цитатой',
+      }, 'Ответить'),
+      // Разбор — главное действие куратора, поэтому стоит рядом с ответом.
+      isCurator && !isMine && onApplyRequest && React.createElement('button', {
+        type: 'button',
+        className: 'msg-action',
+        onClick: () => onApplyRequest(message),
+      }, message.applied_at ? 'Изменить разбор' : 'Разобрать'),
+      ackAction,
+      canEdit && React.createElement('button', {
+        type: 'button',
+        className: 'msg-action msg-action--own',
+        onClick: handleEditStart,
+        'aria-label': 'Редактировать сообщение',
+      }, 'Изменить'),
+      canDelete && React.createElement('button', {
+        type: 'button',
+        className: 'msg-action msg-action--own',
+        onClick: handleDeleteClick,
+        'aria-label': 'Удалить сообщение',
+      }, 'Удалить'),
+    );
 
     return React.createElement(
       'div',
-      { className: `msg-row ${isMine ? 'msg-row-mine' : 'msg-row-theirs'}` },
-      ...children,
+      {
+        className: `msg-row ${isMine ? 'msg-row-mine' : 'msg-row-theirs'}`,
+        onTouchStart: handleTouchStart,
+        onTouchEnd: cancelLongPress,
+        onTouchMove: cancelLongPress,
+        onTouchCancel: cancelLongPress,
+      },
+      bubble,
+      metaRow,
+      // Карточка идёт сразу за сообщением, из которого куратор собрал приём.
+      message.applied_summary && React.createElement(AppliedDayCard, {
+        summary: message.applied_summary,
+        onOpenDay,
+      }),
     );
   }
 
@@ -1138,14 +1174,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (message.body) return shortPreview(message.body);
     if (message.intent_type === 'meal') {
       const p = message.intent_payload || {};
-      return `🍽️ ${p.product_name || '?'} ${p.grams || '?'}г`;
+      return `Приём пищи: ${p.product_name || '?'}, ${p.grams || '?'} г`;
     }
     if (message.intent_type === 'training') {
       const p = message.intent_payload || {};
-      return `🏋️ ${p.training_type || '?'} ${p.duration_min || '?'} мин`;
+      return `Тренировка: ${p.training_type || '?'}, ${p.duration_min || '?'} мин`;
     }
     if (message.intent_type === 'weight') {
-      return `⚖️ ${message.intent_payload?.weight_kg ?? '?'} кг`;
+      return `Вес: ${message.intent_payload?.weight_kg ?? '?'} кг`;
     }
     if (Array.isArray(message.attachments) && message.attachments.some(isAudioAttachment)) {
       return 'Голосовое сообщение';
@@ -1195,13 +1231,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'aria-labelledby': 'messenger-delete-title',
           'aria-describedby': 'messenger-delete-desc',
         },
-        React.createElement('div', { className: 'messenger-confirm-icon' }, '🗑'),
-        React.createElement('div', { className: 'messenger-confirm-kicker' }, 'Удаление сообщения'),
-        React.createElement('h3', { id: 'messenger-delete-title', className: 'messenger-confirm-title' }, 'Удалить это сообщение?'),
+        React.createElement(
+          'div',
+          { className: 'messenger-confirm-icon', 'aria-hidden': 'true' },
+          React.createElement(Icon, { name: 'trash', size: 18 }),
+        ),
+        React.createElement('h3', { id: 'messenger-delete-title', className: 'messenger-confirm-title' }, 'Удалить сообщение?'),
         React.createElement(
           'p',
           { id: 'messenger-delete-desc', className: 'messenger-confirm-text' },
-          'Сообщение исчезнет из диалога. Восстановить его не получится.',
+          'Куратор больше его не увидит. Если оно уже внесено в день, запись в дневнике останется.',
         ),
         preview && preview !== '...' &&
           React.createElement('div', { className: 'messenger-confirm-preview' }, preview),
@@ -1301,13 +1340,885 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return 'Не удалось выполнить действие. Повторите попытку.';
   }
 
+  // ── Иконки ───────────────────────────────────────────────────────────
+  // Редизайн отказывается от эмодзи (📷 🎙 ➤ ✕ 🗑 ↩ ✎ 💬): они по-разному
+  // выглядят на разных платформах и не подчиняются цвету темы. Вместо них —
+  // один stroke-набор 1.5px, который наследует currentColor.
+
+  const ICON_PATHS = {
+    close: 'M5 5l10 10M15 5L5 15',
+    more: 'M10 5.4v.01M10 10v.01M10 14.6v.01',
+    camera: 'M3 7.5A1.5 1.5 0 014.5 6h1.8l1-1.7h3.4l1 1.7h1.8A1.5 1.5 0 0115 6.5v7A1.5 1.5 0 0113.5 15h-9A1.5 1.5 0 013 13.5v-6zM9 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
+    mic: 'M10 3.5a2 2 0 012 2v4.5a2 2 0 11-4 0V5.5a2 2 0 012-2zM5.5 9.5a4.5 4.5 0 009 0M10 14.5V17',
+    send: 'M10 16V4M10 4L5 9M10 4l5 5',
+    check: 'M4 10.5l3.5 3.5L16 5.5',
+    clock: 'M10 5.5V10l2.8 1.6M10 17a7 7 0 110-14 7 7 0 010 14z',
+    chat: 'M17 9.5c0 3.3-3.1 6-7 6-.8 0-1.6-.1-2.3-.3L3.5 16.5l1.2-3.1A5.7 5.7 0 013 9.5c0-3.3 3.1-6 7-6s7 2.7 7 6z',
+    trash: 'M4 6h12M8.5 6V4.5h3V6M6 6l.7 9.2a1.3 1.3 0 001.3 1.3h4a1.3 1.3 0 001.3-1.3L14 6M8.5 9v4.5M11.5 9v4.5',
+  };
+
+  function Icon({ name, size = 18, className = '', strokeWidth = 1.5 }) {
+    const d = ICON_PATHS[name];
+    if (!d) return null;
+    return React.createElement(
+      'svg',
+      {
+        className: ['messenger-icon', className].filter(Boolean).join(' '),
+        width: size,
+        height: size,
+        viewBox: '0 0 20 20',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true',
+        focusable: 'false',
+      },
+      React.createElement('path', { d }),
+    );
+  }
+
+  // ── Шапка ────────────────────────────────────────────────────────────
+
+  function resolveCuratorName() {
+    const configured = HEYS.config?.curatorDisplayName
+      || HEYS.config?.curatorName
+      || HEYS.curatorDisplayName;
+    return String(configured || '').trim() || 'Антон';
+  }
+
+  function getInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return (parts[0].slice(0, 1) + parts[1].slice(0, 1)).toUpperCase();
+  }
+
+  function MessengerHeader({ isCurator, subtitle, menuItems, onClose }) {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+    const title = isCurator ? 'Сообщения с клиентом' : `Куратор ${resolveCuratorName()}`;
+    const items = (menuItems || []).filter(Boolean);
+
+    useEffect(() => {
+      if (!menuOpen) return undefined;
+      const onDocumentPointerDown = (event) => {
+        if (!menuRef.current?.contains(event.target)) setMenuOpen(false);
+      };
+      const onEscape = (event) => {
+        if (event.key === 'Escape') setMenuOpen(false);
+      };
+      document.addEventListener('pointerdown', onDocumentPointerDown);
+      document.addEventListener('keydown', onEscape);
+      return () => {
+        document.removeEventListener('pointerdown', onDocumentPointerDown);
+        document.removeEventListener('keydown', onEscape);
+      };
+    }, [menuOpen]);
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-header' },
+      !isCurator && React.createElement(
+        'div',
+        { className: 'messenger-avatar', 'aria-hidden': 'true' },
+        getInitials(resolveCuratorName()),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-title-stack' },
+        React.createElement('div', { className: 'messenger-title' }, title),
+        React.createElement(
+          'div',
+          { className: 'messenger-subtitle' },
+          React.createElement('span', { className: 'messenger-subtitle__dot', 'aria-hidden': 'true' }),
+          subtitle,
+        ),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-header-actions', ref: menuRef },
+        items.length > 0 && React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: `messenger-header-button${menuOpen ? ' is-open' : ''}`,
+            'aria-label': 'Ещё',
+            'aria-expanded': menuOpen ? 'true' : 'false',
+            onClick: () => setMenuOpen((open) => !open),
+          },
+          React.createElement(Icon, { name: 'more', strokeWidth: 2.4 }),
+        ),
+        React.createElement(
+          'button',
+          { type: 'button', className: 'messenger-header-button messenger-close', onClick: onClose, 'aria-label': 'Закрыть' },
+          React.createElement(Icon, { name: 'close' }),
+        ),
+        menuOpen && React.createElement(
+          'div',
+          { className: 'messenger-header-menu', role: 'menu' },
+          items.map((item) => React.createElement(
+            'button',
+            {
+              key: item.key,
+              type: 'button',
+              role: 'menuitem',
+              className: 'messenger-header-menu__item',
+              disabled: !!item.disabled,
+              onClick: () => {
+                setMenuOpen(false);
+                item.onSelect?.();
+              },
+            },
+            React.createElement('span', { className: 'messenger-header-menu__label' }, item.label),
+            item.hint && React.createElement('span', { className: 'messenger-header-menu__hint' }, item.hint),
+          )),
+        ),
+      ),
+    );
+  }
+
+  // ── Поиск по переписке ───────────────────────────────────────────────
+  // История грузится страницами по 50, и «Показать ранее» — единственная
+  // навигация. Поиск ищет и по расшифровкам голосовых: иначе голосовые
+  // неотличимы друг от друга.
+
+  const SEARCH_FILTERS = [
+    { key: null, label: 'Всё' },
+    { key: 'image', label: 'С фото' },
+    { key: 'audio', label: 'Голосовые' },
+    { key: 'applied', label: 'Внесённые' },
+  ];
+  const SEARCH_MIN_QUERY = 2;
+  const SEARCH_DEBOUNCE_MS = 300;
+
+  /** Текст, по которому ищем: тело сообщения либо расшифровка голосового. */
+  function searchableText(message) {
+    if (message?.body) return message.body;
+    const transcript = (message?.attachments || [])
+      .map((att) => att?.transcript_text)
+      .find(Boolean);
+    return transcript || '';
+  }
+
+  /** Кусок текста вокруг совпадения — целую простыню в строку результата не влезет. */
+  function buildSnippet(text, query, radius = 40) {
+    const source = String(text || '');
+    const at = source.toLowerCase().indexOf(String(query || '').toLowerCase());
+    if (at < 0) return source.slice(0, radius * 2);
+    const start = Math.max(0, at - radius);
+    const end = Math.min(source.length, at + query.length + radius);
+    return `${start > 0 ? '…' : ''}${source.slice(start, end)}${end < source.length ? '…' : ''}`;
+  }
+
+  /** Разбивка сниппета на части для подсветки — без dangerouslySetInnerHTML. */
+  function splitByMatch(snippet, query) {
+    const source = String(snippet || '');
+    const needle = String(query || '');
+    if (!needle) return [{ text: source, match: false }];
+    const parts = [];
+    let cursor = 0;
+    const lowerSource = source.toLowerCase();
+    const lowerNeedle = needle.toLowerCase();
+    for (;;) {
+      const at = lowerSource.indexOf(lowerNeedle, cursor);
+      if (at < 0) break;
+      if (at > cursor) parts.push({ text: source.slice(cursor, at), match: false });
+      parts.push({ text: source.slice(at, at + needle.length), match: true });
+      cursor = at + needle.length;
+    }
+    if (cursor < source.length) parts.push({ text: source.slice(cursor), match: false });
+    return parts;
+  }
+
+  function SearchPanel({ isCurator, curatorViewClientId, onClose }) {
+    const [query, setQuery] = useState('');
+    const [type, setType] = useState(null);
+    const [results, setResults] = useState([]);
+    const [state, setState] = useState('idle');
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }, []);
+
+    useEffect(() => {
+      const trimmed = query.trim();
+      if (trimmed.length < SEARCH_MIN_QUERY) {
+        setResults([]);
+        setState('idle');
+        return undefined;
+      }
+      let cancelled = false;
+      setState('loading');
+      const timer = setTimeout(() => {
+        HEYS.MessengerAPI.searchMessages({
+          q: trimmed,
+          ...(type ? { type } : {}),
+          ...(isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {}),
+        })
+          .then((res) => {
+            if (cancelled) return;
+            setResults(res?.success ? (res.messages || []) : []);
+            setState(res?.success ? 'ready' : 'error');
+          })
+          .catch(() => { if (!cancelled) setState('error'); });
+      }, SEARCH_DEBOUNCE_MS);
+      return () => { cancelled = true; clearTimeout(timer); };
+    }, [query, type, isCurator, curatorViewClientId]);
+
+    const groups = [];
+    for (const message of results) {
+      const label = formatDayLabel(message.created_at);
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.items.push(message);
+      else groups.push({ label, items: [message] });
+    }
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-search' },
+      React.createElement(
+        'div',
+        { className: 'messenger-search__bar' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'messenger-header-button',
+          onClick: onClose,
+          'aria-label': 'Закрыть поиск',
+        }, React.createElement(Icon, { name: 'close', size: 18 })),
+        React.createElement('input', {
+          ref: inputRef,
+          className: 'messenger-search__input',
+          value: query,
+          placeholder: 'Поиск по переписке',
+          'aria-label': 'Поиск по переписке',
+          onChange: (e) => setQuery(e.target.value),
+        }),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-search__filters' },
+        SEARCH_FILTERS.map((filter) => React.createElement('button', {
+          key: filter.key || 'all',
+          type: 'button',
+          className: `messenger-search__filter${type === filter.key ? ' is-active' : ''}`,
+          onClick: () => setType(filter.key),
+        }, filter.label)),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-search__results' },
+        state === 'idle' && query.trim().length < SEARCH_MIN_QUERY && React.createElement(
+          'div',
+          { className: 'messenger-search__hint' },
+          'Введите хотя бы два символа. Голосовые ищутся по расшифровке.',
+        ),
+        state === 'loading' && React.createElement('div', { className: 'messenger-search__hint' }, 'Ищу…'),
+        state === 'error' && React.createElement('div', { className: 'messenger-search__hint' }, 'Не удалось выполнить поиск. Повторите попытку.'),
+        state === 'ready' && results.length === 0 && React.createElement(
+          'div',
+          { className: 'messenger-search__hint' },
+          'Ничего не нашлось. Попробуйте другое слово.',
+        ),
+        groups.map((group) => React.createElement(
+          'div',
+          { key: group.label, className: 'messenger-search__group' },
+          React.createElement('div', { className: 'messenger-search__day' }, group.label),
+          group.items.map((message) => React.createElement(
+            'div',
+            { key: message.id, className: 'messenger-search__item' },
+            React.createElement(
+              'div',
+              { className: 'messenger-search__meta' },
+              React.createElement('span', { className: 'messenger-search__author' },
+                message.sender_role === 'curator' ? 'Куратор' : 'Клиент'),
+              React.createElement('span', { className: 'messenger-search__time' }, formatTime(message.created_at)),
+              message.applied_at && React.createElement('span', { className: 'msg-applied' }, 'Внесено в день'),
+            ),
+            React.createElement(
+              'div',
+              { className: 'messenger-search__snippet' },
+              splitByMatch(buildSnippet(searchableText(message), query.trim()), query.trim())
+                .map((part, index) => (part.match
+                  ? React.createElement('mark', { key: index }, part.text)
+                  : React.createElement('span', { key: index }, part.text))),
+            ),
+          )),
+        )),
+      ),
+    );
+  }
+
+  // ── Разбор сообщения в запись дня ────────────────────────────────────
+  // Куратор собирает из сообщения состав приёма и фиксирует его на сообщении.
+  // Сам дневник по-прежнему заполняется в разделе «День»: механики записи в
+  // чужой день из мессенджера в приложении нет, и притворяться, что кнопка
+  // пишет в дневник, нельзя.
+
+  // \b после «г» не работает: кириллица не входит в word-класс JS, поэтому
+  // границу проверяем явным lookahead.
+  const MEAL_ITEM_RE = /([А-Яа-яЁёA-Za-z][^,;:\n]*?)\s*(\d+(?:[.,]\d+)?)\s*(?:грамм\w*|гр|г)(?![А-Яа-яЁёA-Za-z0-9])/gi;
+
+  /** Достать пары «продукт — граммы» из текста сообщения. */
+  function parseMealItems(text) {
+    const source = String(text || '');
+    const items = [];
+    let match;
+    MEAL_ITEM_RE.lastIndex = 0;
+    while ((match = MEAL_ITEM_RE.exec(source)) !== null) {
+      const name = match[1].replace(/^[\s,;:–—-]+/, '').replace(/\s+/g, ' ').trim();
+      const grams = Number(String(match[2]).replace(',', '.'));
+      if (!name || !Number.isFinite(grams)) continue;
+      items.push({ name, grams });
+      if (items.length >= 12) break;
+    }
+    return items;
+  }
+
+  /** Заготовка разбора: из интента точнее, из текста — эвристикой. */
+  function buildApplyDraft(message) {
+    if (!message) return { items: [], mealTime: '' };
+    const mealTime = (() => {
+      const timeMatch = String(message.body || '').match(TIME_IN_TEXT_RE);
+      if (timeMatch) return timeMatch[0].replace('.', ':');
+      return formatTime(message.created_at) || '';
+    })();
+
+    if (message.intent_type === 'meal') {
+      const payload = message.intent_payload || {};
+      return {
+        items: [{ name: payload.product_name || '', grams: payload.grams ?? '', kcal: payload.kcal ?? '' }],
+        mealTime,
+      };
+    }
+    return {
+      items: parseMealItems(message.body).map((item) => ({ ...item, kcal: '' })),
+      mealTime,
+    };
+  }
+
+  function ApplyToDayPanel({ message, busy, error, onCancel, onApply }) {
+    const [draft, setDraft] = useState(() => buildApplyDraft(message));
+    // Название приёма пока не редактируется: у куратора нет источника, из
+    // которого его выбирать, а свободный ввод разъедется с дневником.
+    const mealLabel = 'Приём пищи';
+
+    useEffect(() => {
+      setDraft(buildApplyDraft(message));
+    }, [message]);
+
+    const updateItem = (index, patch) => {
+      setDraft((current) => ({
+        ...current,
+        items: current.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+      }));
+    };
+
+    const totalKcal = draft.items.reduce((sum, item) => sum + (Number(item.kcal) || 0), 0);
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-apply', role: 'group', 'aria-label': 'Собрать в день' },
+      React.createElement(
+        'div',
+        { className: 'messenger-apply__head' },
+        React.createElement('span', { className: 'messenger-apply__kicker' }, 'Собрать в день'),
+        draft.mealTime && React.createElement('span', { className: 'messenger-apply__time' }, `${mealLabel} · ${draft.mealTime}`),
+      ),
+      draft.items.length === 0 && React.createElement(
+        'div',
+        { className: 'messenger-apply__empty' },
+        'В сообщении не нашлись продукты с весом. Добавьте строку вручную.',
+      ),
+      draft.items.map((item, index) => React.createElement(
+        'div',
+        { key: index, className: 'messenger-apply__row' },
+        React.createElement('input', {
+          className: 'messenger-apply__name',
+          value: item.name,
+          placeholder: 'Продукт',
+          onChange: (e) => updateItem(index, { name: e.target.value }),
+        }),
+        React.createElement('input', {
+          className: 'messenger-apply__grams',
+          value: item.grams,
+          inputMode: 'numeric',
+          placeholder: 'г',
+          'aria-label': 'Граммы',
+          onChange: (e) => updateItem(index, { grams: e.target.value }),
+        }),
+        React.createElement('input', {
+          className: 'messenger-apply__kcal',
+          value: item.kcal,
+          inputMode: 'numeric',
+          placeholder: 'ккал',
+          'aria-label': 'Калории',
+          onChange: (e) => updateItem(index, { kcal: e.target.value }),
+        }),
+      )),
+      React.createElement(
+        'div',
+        { className: 'messenger-apply__foot' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'messenger-apply__add',
+          onClick: () => setDraft((current) => ({ ...current, items: [...current.items, { name: '', grams: '', kcal: '' }] })),
+        }, '+ Добавить продукт'),
+        totalKcal > 0 && React.createElement('span', { className: 'messenger-apply__total' }, `${totalKcal} ккал`),
+      ),
+      error && React.createElement('div', { className: 'messenger-apply__error' }, error),
+      React.createElement(
+        'div',
+        { className: 'messenger-apply__note' },
+        'Отметка появится у клиента карточкой. Сама запись — в разделе «День».',
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-apply__actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'messenger-apply__cancel',
+          onClick: onCancel,
+          disabled: busy,
+        }, 'Отмена'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'messenger-apply__submit',
+          disabled: busy || draft.items.every((item) => !item.name.trim()),
+          onClick: () => onApply?.({
+            items: draft.items
+              .filter((item) => item.name.trim())
+              .map((item) => ({
+                name: item.name.trim(),
+                ...(item.grams !== '' && Number.isFinite(Number(item.grams)) ? { grams: Number(item.grams) } : {}),
+                ...(item.kcal !== '' && Number.isFinite(Number(item.kcal)) ? { kcal: Number(item.kcal) } : {}),
+              })),
+            ...(totalKcal > 0 ? { total: { kcal: totalKcal } } : {}),
+            meal_label: mealLabel,
+            ...(draft.mealTime ? { meal_time: draft.mealTime } : {}),
+          }),
+        }, busy ? 'Сохраняю…' : 'Отметить внесённым'),
+      ),
+    );
+  }
+
+  // ── Карточка «внесено в дневник» ─────────────────────────────────────
+  // Системный блок во всю ширину треда: это не реплика, а результат работы
+  // куратора, поэтому он не пузырь и не привязан к стороне.
+
+  function formatAppliedTotal(total) {
+    if (!total || typeof total !== 'object') return null;
+    const parts = [];
+    if (total.kcal != null) parts.push(`Итого ${total.kcal} ккал`);
+    if (total.p != null) parts.push(`Б ${total.p}`);
+    if (total.f != null) parts.push(`Ж ${total.f}`);
+    if (total.c != null) parts.push(`У ${total.c}`);
+    return parts.length > 0 ? parts.join(' · ') : null;
+  }
+
+  function AppliedDayCard({ summary, onOpenDay }) {
+    if (!summary || typeof summary !== 'object') return null;
+    const items = Array.isArray(summary.items) ? summary.items : [];
+    const header = [summary.meal_label, summary.meal_time].filter(Boolean).join(' · ');
+    const total = formatAppliedTotal(summary.total);
+
+    return React.createElement(
+      'div',
+      { className: 'msg-applied-card' },
+      React.createElement(
+        'div',
+        { className: 'msg-applied-card__head' },
+        React.createElement('span', { className: 'msg-applied-card__dot', 'aria-hidden': 'true' }),
+        React.createElement('span', { className: 'msg-applied-card__title' }, 'Внесено в дневник'),
+        header && React.createElement('span', { className: 'msg-applied-card__meta' }, header),
+      ),
+      items.length > 0 && React.createElement(
+        'div',
+        { className: 'msg-applied-card__items' },
+        items.map((item, index) => React.createElement(
+          'div',
+          { key: `${item?.name || 'item'}-${index}`, className: 'msg-applied-card__item' },
+          React.createElement('span', { className: 'msg-applied-card__name' }, item?.name || 'Без названия'),
+          item?.grams != null && React.createElement('span', { className: 'msg-applied-card__grams' }, `${item.grams} г`),
+          item?.kcal != null && React.createElement('span', { className: 'msg-applied-card__kcal' }, `${item.kcal} ккал`),
+        )),
+      ),
+      (total || onOpenDay) && React.createElement(
+        'div',
+        { className: 'msg-applied-card__foot' },
+        total && React.createElement('span', { className: 'msg-applied-card__total' }, total),
+        onOpenDay && React.createElement('button', {
+          type: 'button',
+          className: 'msg-applied-card__open',
+          onClick: () => onOpenDay(summary),
+        }, 'Открыть день'),
+      ),
+    );
+  }
+
+  // ── Интент-сообщения ─────────────────────────────────────────────────
+  // meal/training/weight приходят структурой, а не текстом. Показываем их
+  // как запись: кикер — тип, слева название, справа значение. Эмодзи не
+  // используем — тип уже назван словом.
+
+  function buildIntentCard(message) {
+    const payload = message?.intent_payload || {};
+    if (message?.intent_type === 'meal') {
+      const macros = [
+        payload.kcal != null ? `${payload.kcal} ккал` : null,
+        payload.protein != null ? `Б ${payload.protein}` : null,
+        payload.fat != null ? `Ж ${payload.fat}` : null,
+        payload.carbs != null ? `У ${payload.carbs}` : null,
+      ].filter(Boolean);
+      return {
+        kicker: 'Приём пищи',
+        title: payload.product_name || 'Без названия',
+        value: payload.grams != null ? `${payload.grams} г` : null,
+        details: macros.length > 0 ? macros.join(' · ') : null,
+      };
+    }
+    if (message?.intent_type === 'training') {
+      return {
+        kicker: 'Тренировка',
+        title: payload.training_type || 'Без названия',
+        value: payload.duration_min != null ? `${payload.duration_min} мин` : null,
+      };
+    }
+    if (message?.intent_type === 'weight') {
+      return {
+        kicker: 'Вес',
+        value: payload.weight_kg != null ? `${payload.weight_kg} кг` : null,
+        valueLarge: true,
+      };
+    }
+    return null;
+  }
+
+  function IntentCard({ card }) {
+    if (!card) return null;
+    return React.createElement(
+      'div',
+      { className: 'msg-intent' },
+      React.createElement('div', { className: 'msg-intent__kicker' }, card.kicker),
+      React.createElement(
+        'div',
+        { className: `msg-intent__row${card.valueLarge ? ' msg-intent__row--single' : ''}` },
+        card.title && React.createElement('span', { className: 'msg-intent__title' }, card.title),
+        card.value && React.createElement('span', { className: 'msg-intent__value' }, card.value),
+      ),
+      card.details && React.createElement('div', { className: 'msg-intent__details' }, card.details),
+    );
+  }
+
+  // ── Лайтбокс ─────────────────────────────────────────────────────────
+
+  const SWIPE_MIN_DISTANCE_PX = 40;
+
+  function PhotoLightbox({ attachments, index, onIndexChange, onClose }) {
+    const list = Array.isArray(attachments) ? attachments : [];
+    const total = list.length;
+    const touchStartRef = useRef(null);
+
+    const goTo = useCallback((next) => {
+      if (total === 0) return;
+      const wrapped = (next + total) % total;
+      onIndexChange?.(wrapped);
+    }, [onIndexChange, total]);
+
+    useEffect(() => {
+      const onKeyDown = (event) => {
+        if (event.key === 'Escape') onClose?.();
+        if (event.key === 'ArrowRight') goTo(index + 1);
+        if (event.key === 'ArrowLeft') goTo(index - 1);
+      };
+      document.addEventListener('keydown', onKeyDown);
+      return () => document.removeEventListener('keydown', onKeyDown);
+    }, [goTo, index, onClose]);
+
+    const handleTouchStart = (event) => {
+      touchStartRef.current = event.touches?.[0]?.clientX ?? null;
+    };
+
+    const handleTouchEnd = (event) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (start == null || total < 2) return;
+      const delta = (event.changedTouches?.[0]?.clientX ?? start) - start;
+      if (Math.abs(delta) < SWIPE_MIN_DISTANCE_PX) return;
+      goTo(index + (delta < 0 ? 1 : -1));
+    };
+
+    return React.createElement(
+      'div',
+      {
+        className: 'messenger-lightbox',
+        role: 'dialog',
+        'aria-label': 'Просмотр фото',
+        onClick: (event) => { if (event.target === event.currentTarget) onClose?.(); },
+        onTouchStart: handleTouchStart,
+        onTouchEnd: handleTouchEnd,
+      },
+      React.createElement(
+        'div',
+        { className: 'messenger-lightbox__top' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'messenger-lightbox__button',
+          onClick: onClose,
+          'aria-label': 'Закрыть',
+        }, React.createElement(Icon, { name: 'close', size: 18 })),
+        total > 1 && React.createElement(
+          'div',
+          { className: 'messenger-lightbox__counter' },
+          `${index + 1} / ${total}`,
+        ),
+      ),
+      React.createElement(LightboxPhoto, { attachment: list[index] }),
+      total > 1 && React.createElement(
+        'div',
+        { className: 'messenger-lightbox__strip' },
+        list.map((attachment, i) => React.createElement('button', {
+          key: attachment?.path || attachment?.url || i,
+          type: 'button',
+          className: `messenger-lightbox__thumb${i === index ? ' is-active' : ''}`,
+          onClick: () => goTo(i),
+          'aria-label': `Фото ${i + 1}`,
+          'aria-current': i === index ? 'true' : undefined,
+        }, React.createElement(LightboxPhoto, { attachment }))),
+      ),
+    );
+  }
+
+  // ── Пустой тред и скелетон ───────────────────────────────────────────
+
+  // Подсказки закрывают самый частый ступор первого сообщения: человек не
+  // знает, что именно от него ждут. Тап начинает сообщение за него.
+  const EMPTY_THREAD_PROMPTS = [
+    { key: 'photo', label: 'Фото завтрака', template: 'Завтрак в ' },
+    { key: 'weight', label: 'Вес утром', template: 'Вес утром: ' },
+    { key: 'how', label: 'Как самочувствие', template: 'Самочувствие сегодня: ' },
+  ];
+
+  function EmptyThread({ isCurator, onPickPrompt }) {
+    if (isCurator) {
+      return React.createElement(
+        'div',
+        { className: 'messenger-empty' },
+        React.createElement('div', { className: 'messenger-empty__title' }, 'Нет сообщений от этого клиента'),
+      );
+    }
+    return React.createElement(
+      'div',
+      { className: 'messenger-empty' },
+      React.createElement(
+        'div',
+        { className: 'messenger-empty__badge', 'aria-hidden': 'true' },
+        React.createElement(Icon, { name: 'chat', size: 26, strokeWidth: 1.6 }),
+      ),
+      React.createElement('div', { className: 'messenger-empty__title' }, 'Здесь начнётся переписка с куратором'),
+      React.createElement(
+        'div',
+        { className: 'messenger-empty__text' },
+        'Отправьте фото еды, вопрос или контекст по самочувствию — куратор ответит и соберёт день.',
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-empty__prompts' },
+        EMPTY_THREAD_PROMPTS.map((prompt) => React.createElement('button', {
+          key: prompt.key,
+          type: 'button',
+          className: 'messenger-empty__prompt',
+          onClick: () => onPickPrompt?.(prompt.template),
+        }, prompt.label)),
+      ),
+    );
+  }
+
+  // Скелетон вместо «Загружаю...»: показывает форму будущего треда, поэтому
+  // переход к реальным сообщениям не выглядит скачком.
+  function ThreadSkeleton() {
+    return React.createElement(
+      'div',
+      { className: 'messenger-skeleton', 'aria-label': 'История загружается', role: 'status' },
+      ['theirs', 'mine', 'theirs'].map((side, index) => React.createElement('div', {
+        key: index,
+        className: `messenger-skeleton__bubble messenger-skeleton__bubble--${side}`,
+      })),
+    );
+  }
+
+  // ── Плашка «время и граммы» ──────────────────────────────────────────
+  // Не декоративная подсказка, а рабочий элемент: от неё зависит, соберёт
+  // куратор день с первого сообщения или пойдёт переспрашивать. Поэтому она
+  // заметная и с быстрыми вставками, а не просто текст.
+
+  const FOOD_HINT_DISMISSED_KEY = 'heys_messenger_food_hint_dismissed';
+  const FOOD_HINT_LEARNED_STREAK = 10;
+  const TIME_IN_TEXT_RE = /\b([01]?\d|2[0-3])[:.][0-5]\d\b/;
+  const GRAMS_IN_TEXT_RE = /\d+\s*(г|гр|грамм)/i;
+  // Куратор переспрашивает вес/время — значит клиент ещё не привык, плашку
+  // возвращаем даже если она была скрыта как «усвоено».
+  const CURATOR_ASKS_RE = /(сколько\s+(грамм|весил)|вес\w*\s+(порци|в\s*грамм)|во\s+сколько|в\s+какое\s+время|время\s+приёма)/i;
+
+  function readFoodHintDismissed() {
+    try {
+      return localStorage.getItem(FOOD_HINT_DISMISSED_KEY) === '1';
+    } catch { return false; }
+  }
+
+  function writeFoodHintDismissed(value) {
+    try {
+      if (value) localStorage.setItem(FOOD_HINT_DISMISSED_KEY, '1');
+      else localStorage.removeItem(FOOD_HINT_DISMISSED_KEY);
+    } catch { /* приватный режим — просто не запоминаем */ }
+  }
+
+  /**
+   * Показывать ли плашку. Клиент, который уже десять сообщений подряд пишет
+   * время и граммы, в напоминании не нуждается — но если куратор снова
+   * переспрашивает, плашка возвращается.
+   */
+  function shouldShowFoodHint(messages, viewerRole, { dismissedForSession = false } = {}) {
+    if (viewerRole === 'curator' || dismissedForSession) return false;
+    const list = Array.isArray(messages) ? messages : [];
+
+    const recentCuratorAsk = list
+      .filter((m) => m.sender_role === 'curator')
+      .slice(-3)
+      .some((m) => CURATOR_ASKS_RE.test(String(m.body || '')));
+    if (recentCuratorAsk) return true;
+
+    if (readFoodHintDismissed()) return false;
+
+    const own = list.filter((m) => m.sender_role !== 'curator' && m.body).slice(-FOOD_HINT_LEARNED_STREAK);
+    const learned = own.length >= FOOD_HINT_LEARNED_STREAK
+      && own.every((m) => TIME_IN_TEXT_RE.test(m.body) && GRAMS_IN_TEXT_RE.test(m.body));
+    if (learned) {
+      writeFoodHintDismissed(true);
+      return false;
+    }
+    return true;
+  }
+
+  const GRAMS_TEMPLATE = ' 000 г';
+
+  function FoodHintCard({ onInsertTime, onInsertGrams, onHide }) {
+    // Время живое: клиент открывает мессенджер и видит текущее, а не то,
+    // что было на момент первого рендера.
+    const [now, setNow] = useState(() => currentTimeLabel());
+    useEffect(() => {
+      const timer = setInterval(() => setNow(currentTimeLabel()), 30000);
+      return () => clearInterval(timer);
+    }, []);
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-food-hint', role: 'note' },
+      React.createElement(Icon, { name: 'clock', size: 16, className: 'messenger-food-hint__icon' }),
+      React.createElement(
+        'div',
+        { className: 'messenger-food-hint__body' },
+        React.createElement(
+          'div',
+          { className: 'messenger-food-hint__text' },
+          React.createElement('b', null, 'Время и вес в граммах'),
+          ' — тогда куратор соберёт день сразу, без уточняющих вопросов.',
+        ),
+        React.createElement(
+          'div',
+          { className: 'messenger-food-hint__actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__pill',
+            onClick: () => onInsertTime?.(now),
+          }, `+ ${now}`),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__pill',
+            onClick: () => onInsertGrams?.(),
+          }, '+ 000 г'),
+        ),
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'messenger-food-hint__hide',
+        onClick: onHide,
+      }, 'Скрыть'),
+    );
+  }
+
+  // ── Чек-лист дня ─────────────────────────────────────────────────────
+  // «Чего ещё ждём сегодня»: клиенту — «Ждём», куратору — «Нет в дне».
+  // Список приходит с сервера (/messages/day-checklist) и считается тем же
+  // правилом, что и напоминания. Клиент ничего не досчитывает: пустой ответ
+  // означает «показывать нечего», а не «данные не пришли».
+
+  function currentTimeLabel() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  // Тап по ожидаемому пункту начинает сообщение за клиента — дальше он
+  // дописывает продукты и вес, как просит подсказка под композером.
+  const CHECKLIST_TEMPLATES = {
+    meal: () => `Приём пищи в ${currentTimeLabel()}, `,
+    weight: () => 'Вес утром: ',
+    water: () => 'Вода за день: ',
+  };
+
+  function DayChecklistRow({ items, isCurator, onPick }) {
+    const visible = (Array.isArray(items) ? items : []).filter(
+      (item) => item && (item.status === 'missing' || item.status === 'done'),
+    );
+    // Если ждать больше нечего — строка уходит целиком, а не висит галочками.
+    if (!visible.some((item) => item.status === 'missing')) return null;
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-day-checklist', role: 'group', 'aria-label': isCurator ? 'Нет в дне' : 'Чего ждём сегодня' },
+      React.createElement(
+        'span',
+        { className: 'messenger-day-checklist__label' },
+        isCurator ? 'Нет в дне' : 'Ждём',
+      ),
+      visible.map((item) => {
+        const missing = item.status === 'missing';
+        const template = !isCurator && missing ? CHECKLIST_TEMPLATES[item.key] : null;
+        const dueHint = missing && item.due_from ? `Ждём с ${item.due_from}` : null;
+        return React.createElement(
+          template ? 'button' : 'span',
+          {
+            key: item.key,
+            className: [
+              'messenger-day-checklist__chip',
+              missing ? 'messenger-day-checklist__chip--missing' : 'messenger-day-checklist__chip--done',
+              missing && isCurator ? 'messenger-day-checklist__chip--curator' : '',
+            ].filter(Boolean).join(' '),
+            ...(template
+              ? {
+                  type: 'button',
+                  onClick: () => onPick?.(template()),
+                  title: dueHint || undefined,
+                }
+              : { title: dueHint || undefined }),
+          },
+          missing ? null : React.createElement('span', { className: 'messenger-day-checklist__tick', 'aria-hidden': 'true' }, '✓'),
+          item.label || item.key,
+        );
+      }),
+    );
+  }
+
   // ── Main MessengerModal ──────────────────────────────────────────────
   function MessengerModal({ onClose, curatorViewClientId }) {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [input, setInput] = useState('');
-    const [inputFocused, setInputFocused] = useState(false);
+    const [dayChecklist, setDayChecklist] = useState([]);
+    const [foodHintHidden, setFoodHintHidden] = useState(false);
     const [keyboardDiagnostic, setKeyboardDiagnostic] = useState(null);
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
@@ -1323,6 +2234,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [savingTranscriptionConsent, setSavingTranscriptionConsent] = useState(false);
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [applyTarget, setApplyTarget] = useState(null);
+    const [applyBusy, setApplyBusy] = useState(false);
+    const [applyError, setApplyError] = useState(null);
     const [deletingMessageId, setDeletingMessageId] = useState(null);
     const [pendingAckMessageIds, setPendingAckMessageIds] = useState(() => new Set());
     const threadRef = useRef(null);
@@ -1651,6 +2566,63 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
 
+    // Разбор сообщения в запись дня — только у куратора.
+    const openApplyPanel = useCallback((message) => {
+      setApplyError(null);
+      setApplyTarget(message);
+    }, []);
+
+    const closeApplyPanel = useCallback(() => {
+      setApplyTarget(null);
+      setApplyError(null);
+    }, []);
+
+    const submitApply = useCallback(async (summary) => {
+      const target = applyTarget;
+      if (!target) return;
+      setApplyBusy(true);
+      setApplyError(null);
+      const res = await HEYS.MessengerAPI.setApplied(target.id, summary, true).catch(() => null);
+      setApplyBusy(false);
+      if (!mountedRef.current) return;
+      if (!res?.success) {
+        setApplyError(formatMessengerError(res?.error) || 'Не удалось сохранить разбор. Повторите попытку.');
+        return;
+      }
+      // Отметка меняет и applied_at, и done_at — обновляем сообщение на месте,
+      // не дожидаясь следующего поллинга.
+      setMessages((prev) => prev.map((m) => (m.id === target.id
+        ? { ...m, applied_at: res.applied_at, applied_summary: res.applied_summary, done_at: res.done_at }
+        : m)));
+      setApplyTarget(null);
+      HEYS.MessengerAPI.refreshInbox?.();
+    }, [applyTarget]);
+
+    // Быстрые вставки из плашки. Обе дописывают в уже набранный текст и
+    // оставляют фокус в поле — иначе на мобильном закроется клавиатура.
+    const insertTimeIntoInput = useCallback((timeLabel) => {
+      setInput((current) => (current.startsWith(timeLabel) ? current : `${timeLabel} ${current}`.trimEnd() + (current ? '' : ' ')));
+      const field = inputRef.current;
+      if (!field) return;
+      field.focus();
+      requestAnimationFrame(() => {
+        const end = field.value.length;
+        field.setSelectionRange(end, end);
+      });
+    }, []);
+
+    const insertGramsIntoInput = useCallback(() => {
+      const field = inputRef.current;
+      setInput((current) => `${current.trimEnd()}${GRAMS_TEMPLATE}`);
+      if (!field) return;
+      field.focus();
+      // Курсор встаёт на нули, чтобы человек сразу набрал число поверх них.
+      requestAnimationFrame(() => {
+        const zerosAt = field.value.lastIndexOf('000');
+        if (zerosAt >= 0) field.setSelectionRange(zerosAt, zerosAt + 3);
+      });
+    }, []);
+
     const loadOlderHistory = useCallback(async () => {
       if (loadingOlder || !hasMoreHistory || messages.length === 0) return;
       const el = threadRef.current;
@@ -1680,6 +2652,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     useEffect(() => {
       loadThread();
     }, [loadThread]);
+
+    // Чек-лист грузится один раз на открытие треда: день меняется в других
+    // экранах приложения, поэтому свежий снимок нужен именно в момент входа.
+    // Ошибку не показываем — блок просто не появляется, остальной экран от
+    // него не зависит.
+    useEffect(() => {
+      let cancelled = false;
+      const opts = isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {};
+      HEYS.MessengerAPI.getDayChecklist?.(opts)
+        .then((res) => {
+          if (cancelled || !mountedRef.current) return;
+          setDayChecklist(res?.success && Array.isArray(res.items) ? res.items : []);
+        })
+        .catch(() => {
+          if (!cancelled && mountedRef.current) setDayChecklist([]);
+        });
+      return () => { cancelled = true; };
+    }, [isCurator, curatorViewClientId]);
 
     // ── Realtime polling: каждые 10 сек silent refresh пока модалка открыта ─
     // Cross-device sync: новые/удалённые/изменённые сообщения видны на других
@@ -2480,44 +3470,63 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         'div',
         { className: 'messenger-modal', role: 'dialog', 'aria-label': 'Мессенджер HEYS' },
         // Header
-        React.createElement(
-          'div',
-          { className: 'messenger-header' },
-          React.createElement(
-            'div',
-            { className: 'messenger-title-stack' },
-            React.createElement(
-              'div',
-              { className: 'messenger-title' },
-              '💬 ',
-              isCurator ? 'Сообщения с клиентом' : 'Куратору',
-            ),
-            React.createElement(
-              'div',
-              { className: 'messenger-subtitle' },
-              getThreadSubtitle(messages, loading),
-            ),
-          ),
-          React.createElement(
-            'button',
-            { className: 'messenger-close', onClick: onClose, 'aria-label': 'Закрыть' },
-            '✕',
-          ),
-        ),
+        React.createElement(MessengerHeader, {
+          isCurator,
+          subtitle: getThreadSubtitle(messages, loading),
+          onClose,
+          // Постоянная полоса согласия на расшифровку уехала из композера в
+          // это меню: она нужна раз в жизни клиента, а место занимала всегда.
+          menuItems: [
+            {
+              key: 'search',
+              label: 'Поиск по переписке',
+              hint: 'включая расшифровки голосовых',
+              onSelect: () => setSearchOpen(true),
+            },
+            HEYS.MessengerAPI?.setTranscriptionConsent && {
+              key: 'transcription',
+              label: 'Расшифровка голосовых',
+              hint: savingTranscriptionConsent
+                ? 'сохраняем…'
+                : transcriptionConsent?.granted
+                  ? `включена${formatConsentDate(transcriptionConsent.created_at) ? ' с ' + formatConsentDate(transcriptionConsent.created_at) : ''}`
+                  : transcriptionConsent?.decided
+                    ? 'выключена'
+                    : 'спросим перед первой расшифровкой',
+              disabled: savingTranscriptionConsent,
+              onSelect: handleTranscriptionSettingsToggle,
+            },
+          ],
+        }),
+        // Вторая строка шапки: чего ещё ждём в дне
+        React.createElement(DayChecklistRow, {
+          items: dayChecklist,
+          isCurator,
+          onPick: (template) => {
+            setInput((current) => (current ? current : template));
+            inputRef.current?.focus();
+          },
+        }),
+        // Поиск занимает место треда: это отдельный режим, а не оверлей.
+        searchOpen && React.createElement(SearchPanel, {
+          isCurator,
+          curatorViewClientId,
+          onClose: () => setSearchOpen(false),
+        }),
         // Thread
-        React.createElement(
+        !searchOpen && React.createElement(
           'div',
           { className: 'messenger-thread', ref: threadRef },
           loading
-            ? React.createElement('div', { className: 'messenger-loading' }, 'Загружаю...')
+            ? React.createElement(ThreadSkeleton, null)
             : messages.length === 0
-              ? React.createElement(
-                  'div',
-                  { className: 'messenger-empty' },
-                  isCurator
-                    ? 'Нет сообщений от этого клиента.'
-                    : 'Отправьте фото еды, вопрос или контекст по самочувствию.',
-                )
+              ? React.createElement(EmptyThread, {
+                  isCurator,
+                  onPickPrompt: (template) => {
+                    setInput((current) => (current ? current : template));
+                    inputRef.current?.focus();
+                  },
+                })
               : (() => {
                   // Collapse: всё что старше RECENT_DAYS_LIMIT дней — скрываем
                   // за кнопкой «Показать ранее (N)». Кликнул → showOldMessages=true
@@ -2546,7 +3555,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         },
                       }, loadingOlder
                         ? 'Загружаю...'
-                        : `↑ Показать ранее${oldMessages.length ? ` (${oldMessages.length})` : ''}`),
+                        : `Показать ранее${oldMessages.length ? ` · ${oldMessages.length}` : ''}`),
                     );
                   } else if (showOldMessages && hasMoreHistory) {
                     nodes.push(
@@ -2556,7 +3565,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         className: 'messenger-show-older',
                         disabled: loadingOlder,
                         onClick: () => void loadOlderHistory(),
-                      }, loadingOlder ? 'Загружаю...' : '↑ Загрузить более ранние'),
+                      }, loadingOlder ? 'Загружаю…' : 'Загрузить более ранние'),
                     );
                   }
 
@@ -2590,6 +3599,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onReply: handleReply,
                         onEdit: handleEditMessage,
                         onPhotoClick: handlePhotoClick,
+                        onApplyRequest: isCurator ? openApplyPanel : undefined,
                         eagerPhotos: msgIdx >= eagerThreshold,
                         transcriptionGranted: !!transcriptionConsent?.granted,
                       }),
@@ -2602,6 +3612,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Error banner
         error &&
           React.createElement('div', { className: 'messenger-error' }, formatMessengerError(error)),
+        // Композер: цитата, вложения, плашка и ряд ввода — одна зона,
+        // фиксированная внизу модалки.
+        React.createElement(
+          'div',
+          { className: 'messenger-composer' },
+        // Панель разбора стоит над композером: сначала «что внести», потом ответ.
+        applyTarget && React.createElement(ApplyToDayPanel, {
+          message: applyTarget,
+          busy: applyBusy,
+          error: applyError,
+          onCancel: closeApplyPanel,
+          onApply: submitApply,
+        }),
         // Reply-preview (если выбрано сообщение для ответа)
         replyTo &&
           React.createElement(
@@ -2675,49 +3698,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   }, '✕'),
                 ),
           ),
-        HEYS.MessengerAPI?.setTranscriptionConsent &&
-          React.createElement(
-            'div',
-            { className: `messenger-transcription-settings${transcriptionConsent?.granted ? ' is-enabled' : ''}` },
-            React.createElement(
-              'div',
-              { className: 'messenger-transcription-settings__text' },
-              React.createElement('span', { className: 'messenger-transcription-settings__title' }, 'Расшифровка голосовых'),
-              React.createElement(
-                'span',
-                { className: 'messenger-transcription-settings__status' },
-                transcriptionConsent?.granted
-                  ? `включена${formatConsentDate(transcriptionConsent.created_at) ? ' с ' + formatConsentDate(transcriptionConsent.created_at) : ''}`
-                  : transcriptionConsent?.decided
-                    ? 'выключена'
-                    : 'спросим перед первой расшифровкой голосового сообщения',
-              ),
-            ),
-            React.createElement('button', {
-              type: 'button',
-              className: 'messenger-transcription-settings__button',
-              disabled: savingTranscriptionConsent,
-              onClick: handleTranscriptionSettingsToggle,
-            }, savingTranscriptionConsent ? '...' : transcriptionConsent?.granted ? 'Отозвать' : 'Включить'),
-          ),
         // Напоминание клиенту: время + граммы в сообщениях о еде
-        !isCurator &&
-          React.createElement(
-            'div',
-            { className: 'messenger-food-hint', role: 'note' },
-            'Пишете о еде — укажите время и вес в граммах: так данные точнее попадут в дневник.',
-          ),
+        shouldShowFoodHint(messages, viewerRole, { dismissedForSession: foodHintHidden }) &&
+          React.createElement(FoodHintCard, {
+            onInsertTime: insertTimeIntoInput,
+            onInsertGrams: insertGramsIntoInput,
+            onHide: () => setFoodHintHidden(true),
+          }),
         // Input
         React.createElement(
           'div',
           {
+            // Подсветка фокуса и «активности» переехала на само поле ввода —
+            // ряду отдельные модификаторы больше не нужны.
             className: [
               'messenger-input-row',
-              inputFocused ? 'messenger-input-row--focused' : '',
               keyboardDiagnostic ? 'messenger-input-row--keyboard-error' : '',
-              (input.trim() || pendingPhotos.length > 0 || pendingAudio || recordingState !== 'idle')
-                ? 'messenger-input-row--active'
-                : '',
             ].filter(Boolean).join(' '),
           },
           React.createElement('input', {
@@ -2738,7 +3734,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               disabled: sending || pendingPhotos.length >= 10,
               'aria-label': 'Прикрепить фото',
               title: 'Прикрепить фото',
-            }, '📷'),
+            }, React.createElement(Icon, { name: 'camera', size: 19 })),
             React.createElement('button', {
               type: 'button',
               className: `messenger-voice${recordingState === 'recording' ? ' is-recording' : ''}`,
@@ -2746,7 +3742,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               disabled: sending || pendingAudio?.status === 'uploading' || recordingState === 'stopping',
               'aria-label': recordingState === 'recording' ? 'Остановить запись' : 'Записать голосовое',
               title: recordingState === 'recording' ? 'Остановить запись' : 'Записать голосовое',
-            }, recordingState === 'recording' ? '■' : '🎙'),
+            }, recordingState === 'recording'
+              ? React.createElement('span', { className: 'messenger-voice__stop', 'aria-hidden': 'true' })
+              : React.createElement(Icon, { name: 'mic', size: 19 })),
           ),
           React.createElement(
             'div',
@@ -2755,7 +3753,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             },
             React.createElement('textarea', {
               className: 'messenger-input',
-              placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
+              placeholder: isCurator ? 'Ответ клиенту' : 'Сообщение куратору',
               value: input,
               onChange: (e) => {
                 confirmKeyboardAttempt('text-input');
@@ -2766,16 +3764,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onPointerDown: handleKeyboardGestureStart,
               onTouchStart: handleKeyboardGestureStart,
               onClick: handleKeyboardClick,
-              onFocus: () => setInputFocused(true),
               onBlur: () => {
-                setInputFocused(false);
                 if (keyboardRefocusInProgressRef.current) return;
                 clearKeyboardAttemptTimer();
                 keyboardAttemptRef.current = null;
               },
               onKeyDown: handleKeyDown,
               disabled: sending,
-              rows: 2,
+              rows: 1,
               maxLength: 2000,
               ref: inputRef,
               'aria-invalid': keyboardDiagnostic ? 'true' : undefined,
@@ -2822,8 +3818,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   pendingAudio?.status !== 'done'),
               'aria-label': 'Отправить',
             },
-            sending ? '...' : '➤',
+            sending
+              ? React.createElement('span', { className: 'messenger-send__spinner', 'aria-hidden': 'true' })
+              : React.createElement(Icon, { name: 'send', size: 20, strokeWidth: 1.9 }),
           ),
+        ),
         ),
         transcriptionPromptOpen &&
           React.createElement(
@@ -2867,28 +3866,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
           ),
         // Lightbox для фото
-        lightbox &&
-          React.createElement(
-            'div',
-            {
-              className: 'messenger-lightbox',
-              onClick: () => setLightbox(null),
-            },
-            React.createElement(LightboxPhoto, {
-              attachment: lightbox.attachments[lightbox.index],
-            }),
-            React.createElement('button', {
-              type: 'button',
-              className: 'messenger-lightbox-close',
-              onClick: () => setLightbox(null),
-              'aria-label': 'Закрыть',
-            }, '✕'),
-            lightbox.attachments.length > 1 && React.createElement(
-              'div',
-              { className: 'messenger-lightbox-counter' },
-              `${lightbox.index + 1} / ${lightbox.attachments.length}`,
-            ),
-          ),
+        lightbox && React.createElement(PhotoLightbox, {
+          attachments: lightbox.attachments,
+          index: lightbox.index,
+          onIndexChange: (next) => setLightbox((current) => (current ? { ...current, index: next } : current)),
+          onClose: () => setLightbox(null),
+        }),
         deleteConfirm &&
           React.createElement(DeleteConfirmDialog, {
             message: deleteConfirm,
@@ -3221,7 +4204,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       onClick: () => window.HEYS?.Messenger?.openModal?.(),
       'aria-label': ariaLabel,
     },
-      React.createElement('span', { className: 'message-fab-icon' }, '💬'),
+      React.createElement(
+        'span',
+        { className: 'message-fab-icon' },
+        React.createElement(Icon, { name: 'chat', size: 24, strokeWidth: 1.6 }),
+      ),
       unread > 0 && React.createElement('span', {
         className: 'message-fab-badge',
         'aria-label': `${unread} непрочитанных сообщений`,
@@ -3260,6 +4247,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       lockPageScroll,
       unlockPageScroll,
       THREAD_PAGE_LIMIT,
+      DayChecklistRow,
+      CHECKLIST_TEMPLATES,
+      MessengerHeader,
+      EmptyThread,
+      ThreadSkeleton,
+      PhotoLightbox,
+      IntentCard,
+      buildIntentCard,
+      AppliedDayCard,
+      ApplyToDayPanel,
+      SearchPanel,
+      buildSnippet,
+      splitByMatch,
+      searchableText,
+      buildApplyDraft,
+      parseMealItems,
+      FoodHintCard,
+      shouldShowFoodHint,
+      MessageBubble,
+      DateSeparator,
+      Icon,
+      ICON_PATHS,
+      getInitials,
+      resolveCuratorName,
     },
   };
 
