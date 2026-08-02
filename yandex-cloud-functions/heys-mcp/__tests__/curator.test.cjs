@@ -814,3 +814,42 @@ test('параметр share есть только в кураторской с�
   assert.ok(curatorSchema.inputSchema.properties.share);
   assert.equal(clientSchema.inputSchema.properties.share, undefined, 'у клиента прав на общий каталог нет');
 });
+
+// ── Исправление ошибочной публикации ─────────────────────────────────────
+// Удаления из общего каталога нет ни в приложении, ни здесь: строку могли уже
+// записать в приёмы у других клиентов. Blocklist убирает из выдачи обратимо.
+
+test('ошибочно опубликованный продукт убирается из выдачи и возвращается', async () => {
+  const api = fakeCuratorApi();
+  api.hidden = [];
+  api.setSharedProductHidden = async (bearer, curatorId, productId, hidden) => {
+    assert.equal(bearer, JWT);
+    api.hidden.push({ curatorId, productId, hidden });
+    return { ok: true };
+  };
+  const { tools } = createCuratorContext({ api, curatorJwt: JWT, curatorId: 'cur-1', nowMs: NOW });
+
+  const hide = await tools.heys_moderate_products({ product_id: 'sp-9', action: 'hide' });
+  assert.deepEqual(api.hidden[0], { curatorId: 'cur-1', productId: 'sp-9', hidden: true });
+  assert.equal(hide.structured.hidden, true);
+  assert.match(hide.text, /Из базы он не удалён/);
+
+  await tools.heys_moderate_products({ product_id: 'sp-9', action: 'unhide' });
+  assert.equal(api.hidden[1].hidden, false);
+});
+
+test('для продукта общей базы допустимы только hide и unhide', async () => {
+  const api = fakeCuratorApi();
+  api.setSharedProductHidden = async () => ({ ok: true });
+  const { tools } = createCuratorContext({ api, curatorJwt: JWT, curatorId: 'cur-1', nowMs: NOW });
+  await assert.rejects(
+    () => tools.heys_moderate_products({ product_id: 'sp-9', action: 'approve' }),
+    (e) => e.code === 'invalid_action',
+  );
+});
+
+test('правило про объём фото доехало до инструкций', () => {
+  const { instructions } = build(fakeCuratorApi());
+  assert.match(instructions, /не больше трёх-четырёх подряд/);
+  assert.match(instructions, /action hide/);
+});

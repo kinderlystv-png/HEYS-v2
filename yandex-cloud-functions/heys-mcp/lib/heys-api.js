@@ -517,6 +517,35 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   /**
+   * Скрыть или вернуть продукт общей базы в выдаче клиентов этого куратора.
+   *
+   * Удаления из общего каталога нет ни здесь, ни в приложении — и это
+   * сознательно: строку могли уже записать в приёмы у других клиентов.
+   * Blocklist обратим и действует только на клиентов своего куратора,
+   * поэтому им безопасно исправлять ошибочную публикацию.
+   */
+  async function setSharedProductHidden(bearer, curatorId, productId, hidden) {
+    const headers = { Authorization: `Bearer ${bearer}` };
+    const url = hidden
+      ? `${apiUrl}/rest/shared_products_blocklist`
+      : `${apiUrl}/rest/shared_products_blocklist?${new URLSearchParams({
+        curator_id: `eq.${curatorId}`,
+        product_id: `eq.${productId}`,
+      })}`;
+    const res = await measured(url, {
+      method: hidden ? 'POST' : 'DELETE',
+      body: hidden ? { curator_id: curatorId, product_id: productId } : null,
+      headers,
+      timeoutMs,
+    });
+    if (res.status < 200 || res.status >= 300) {
+      const message = (res.json && (res.json.error || res.json.message)) || `blocklist_http_${res.status}`;
+      return { ok: false, error: String(message) };
+    }
+    return { ok: true };
+  }
+
+  /**
    * Публикация карточки в общую базу куратором — тот же путь, которым это
    * делает вкладка каталога в приложении.
    *
@@ -647,7 +676,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     extendSubscription, cancelSubscription,
     getTrialQueue, getQueueStats, activateTrial, rejectTrialRequest,
     getLeads, updateLeadStatus, getClientObservability,
-    getPendingSharedProducts, moderatePendingProduct, publishSharedProduct,
+    getPendingSharedProducts, moderatePendingProduct, publishSharedProduct, setSharedProductHidden,
   };
 }
 
