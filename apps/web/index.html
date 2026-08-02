@@ -535,7 +535,16 @@
                             + '&limit=250&offset=0';
                         window.__heysPrefetch = {
                             clientId: cid, since: syncTs,
-                            promise: fetch(pfUrl, { mode: 'cors', cache: 'no-store' })
+                            /* credentials: 'include' обязателен. Без него запрос уходит
+                               БЕЗ удостоверения — ни куки, ни заголовка, — и данные
+                               клиента отдаются любому, кто знает его client_id.
+                               Работало это лишь потому, что серверная проверка чтения
+                               (HEYS_REST_READ_STRICT) выключена: ветка «авторизации нет»
+                               пропускает запрос и пишет предупреждение в data_loss_audit.
+                               За неделю так уходило ~490 чтений живых клиентов.
+                               Кука heys_session_token/heys_curator_jwt поставлена на
+                               .heyslab.ru, поэтому долетает и на api-поддомен. */
+                            promise: fetch(pfUrl, { mode: 'cors', cache: 'no-store', credentials: 'include' })
                                 .then(function (r) {
                                     if (!r.ok) throw new Error('HTTP ' + r.status);
                                     return r.json();
