@@ -1593,11 +1593,11 @@ test('правила задачника ссылаются только на с�
 // ── Эксперимент «два ответа» ─────────────────────────────────────────────
 
 test('блок эксперимента живёт до дедлайна и исчезает после', () => {
-  const during = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5));
-  assert.match(during, /Эксперимент до 2026-08-10/);
+  const during = curatorInstructions('Антон', true, Date.UTC(2026, 7, 4));
+  assert.match(during, /Эксперимент до 2026-08-05/);
   assert.match(during, /tasks_vote/);
-  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 12));
-  assert.ok(!/Эксперимент до 2026-08-10/.test(after), 'временный режим не должен тихо стать вечным');
+  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 7));
+  assert.ok(!/Эксперимент до 2026-08-05/.test(after), 'временный режим не должен тихо стать вечным');
   // Основные правила при этом на месте.
   assert.match(after, /^З1\./m);
 });

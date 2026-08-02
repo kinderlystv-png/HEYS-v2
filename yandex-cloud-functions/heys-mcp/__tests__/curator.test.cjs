@@ -994,12 +994,12 @@ test('запрет на чужие файлы назван и в правила�
 // Соседний тест в tasks.test.cjs берёт даты с запасом; здесь проверяется сама
 // граница — последний час эксперимента и первый час после него.
 test('эксперимент выключается ровно на границе срока', () => {
-  const before = curatorInstructions('Антон', true, Date.UTC(2026, 7, 10, 20, 0));
-  assert.match(before, /Эксперимент до 2026-08-10 включительно/);
+  const before = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5, 20, 0));
+  assert.match(before, /Эксперимент до 2026-08-05 включительно/);
   assert.match(before, /tasks_vote/);
 
-  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 10, 21, 0));
-  assert.doesNotMatch(after, /Эксперимент до 2026-08-10/);
+  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5, 21, 0));
+  assert.doesNotMatch(after, /Эксперимент до 2026-08-05/);
   assert.doesNotMatch(after, /tasks_vote/);
   // Сами правила задачника от этого не страдают.
   assert.match(after, /Задачи и подпункты закрывает только он/);
@@ -1022,6 +1022,6 @@ test('эксперимент сравнивает урезанные прави�
 
 test('эксперимент не включается без задачника', () => {
   const plain = curatorInstructions('Антон', false, Date.UTC(2026, 7, 3));
-  assert.doesNotMatch(plain, /Эксперимент до 2026-08-10/);
+  assert.doesNotMatch(plain, /Эксперимент до 2026-08-05/);
   assert.doesNotMatch(plain, /^З1\./m);
 });
