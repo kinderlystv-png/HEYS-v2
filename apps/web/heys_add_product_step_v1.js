@@ -8919,11 +8919,13 @@ NOVA: 1
       return Math.round(total);
     }, [dateKey, context?.products]);
 
-    // Норма ккал из профиля
+    // Норма ккал из профиля. profile.optimum/tdee не существуют
+    // (DERIVED_FIELDS_AUDIT_2026-08-02.md) — считаем через TDEE.
     const dailyGoal = useMemo(() => {
       const profile = lsGet('heys_profile', {});
-      return profile.optimum || profile.tdee || 1800;
-    }, []);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      return HEYS.TDEE?.resolveDailyTargets?.(profile, dayData)?.kcal || 1800;
+    }, [dateKey]);
 
     // === ТЕПЕРЬ МОЖНО ДЕЛАТЬ EARLY RETURN ===
     if (!product) {

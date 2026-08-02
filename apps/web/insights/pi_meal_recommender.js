@@ -258,8 +258,10 @@
      * @private
      */
     function analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints = null) {
-        const targetKcal = dayTarget.kcal || profile.optimum || 2000;
-        const targetProtein = dayTarget.protein || profile.norm?.prot || 120;
+        // profile.optimum/norm.prot не существуют (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+        const fallbackTargets = HEYS.TDEE?.resolveDailyTargets?.(profile) || {};
+        const targetKcal = dayTarget.kcal || fallbackTargets.kcal || 2000;
+        const targetProtein = dayTarget.protein || fallbackTargets.prot || 120;
         const eatenKcal = dayEaten.kcal || 0;
         const eatenProtein = dayEaten.protein || 0;
 
@@ -1478,7 +1480,8 @@
 
         // C12: Mood ↔ Food (STRESS_EATING enhancement)
         try {
-            const optimum = profile?.optimum || 2000;
+            // profile.optimum не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+            const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000;
             const moodFood = patterns.analyzeMoodFood?.(days, pIndex, optimum);
             if (moodFood?.available) {
                 hints.moodFood = {
@@ -1736,8 +1739,12 @@
      */
     function calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, patternHints, patternImpact = []) {
         const scenario = contextAnalysis.scenario;
-        const targetKcal = dayTarget.kcal || profile.optimum || 2000;
-        const targetProtein = dayTarget.protein || profile.norm?.prot || 120;
+        // profile.optimum/norm.prot не существуют (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+        // profile.norm?.carb — тоже призрак, но для углеводов нет готовой формулы
+        // (в отличие от белка); оставлено как жёсткий дефолт до отдельного решения.
+        const fallbackTargets = HEYS.TDEE?.resolveDailyTargets?.(profile) || {};
+        const targetKcal = dayTarget.kcal || fallbackTargets.kcal || 2000;
+        const targetProtein = dayTarget.protein || fallbackTargets.prot || 120;
         const targetCarbs = dayTarget.carbs || profile.norm?.carb || 200;
 
         const eatenKcal = dayEaten.kcal || 0;

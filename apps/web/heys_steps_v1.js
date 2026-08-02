@@ -1037,6 +1037,9 @@
       dayData.householdUpdatedAt = Math.max(mutationTs, (Number(dayData.householdUpdatedAt) || 0) + 1);
     }
     dayData.updatedAt = Math.max(mutationTs, Number(dayData.householdUpdatedAt) || 0);
+    // Тренировка несёт свои mood/wellbeing/stress — без пересчёта они не
+    // попадают в среднее по дню, пока клиент не откроет вкладку дня.
+    HEYS.dayCalculations?.applyDayAverages?.(dayData);
     saveDayData(dateKey, dayData);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -3977,6 +3980,9 @@
       dayData.updatedAt = Date.now();
       dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(
         dayData, ['moodMorning', 'wellbeingMorning', 'stressMorning'], dayData.updatedAt);
+      // Морнинг-чек-ин пишет напрямую в storage, минуя вкладку дня — без этого
+      // moodAvg/wellbeingAvg/stressAvg/dayScore протухают до её открытия.
+      HEYS.dayCalculations?.applyDayAverages?.(dayData);
       saveDayData(dateKey, dayData);
 
       window.dispatchEvent(new CustomEvent('heys:data-saved', {

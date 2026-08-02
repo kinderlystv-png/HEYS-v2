@@ -602,6 +602,105 @@ After any P0 or P1 incident:
 
 ---
 
+## Scenario 8: Reaper Shutdown on Billing Block (P0)
+
+Инцидент 2026-08-02: отрицательный баланс (−1010 ₽) → `yc.iam.reaper` погасил
+ресурсы в 16:04 МСК. Прод лежал несколько часов.
+
+### Symptoms
+
+- 🔴 `api.heyslab.ru` отдаёт 403 «API Gateway is stopped» либо не отвечает
+- 🔴 `app.heyslab.ru` и `heyslab.ru` не отвечают, TLS reset
+- 🔴 CI «Deploy to Yandex Cloud» падает на шаге «Verify production build
+  metadata» с пустым `REMOTE_HASH` — артефакт выложен, но верификация не может
+  достучаться до фронта
+- 🟢 Cloud Functions при этом остаются `ACTIVE` — их reaper не гасит
+
+- 🔴 Молчат Telegram-боты, не уходят напоминания, не идут бэкапы, не
+  расшифровываются голосовые — при полностью живом API
+- 🔴 Workflow «API Health Monitor», шаг «Check Automation Dead-Man»: красный,
+  `stale: true`, `minutes_ago` примерно равно времени с момента гашения
+
+### Immediate Actions
+
+Поднимать нужно **четыре класса ресурсов**, а не один. Проверять каждый — по
+факту, а не по одному успешному `curl`.
+
+```bash
+# 1. Шлюзы — ВО ВСЕХ папках, не только в текущей
+yc resource-manager folder list
+for f in $(yc resource-manager folder list --format json | jq -r '.[].id'); do
+  yc serverless api-gateway list --folder-id "$f"
+done
+yc serverless api-gateway start <gateway-id>
+
+# 2. Кластер БД
+yc managed-postgresql cluster list
+yc managed-postgresql cluster start heys-production
+
+# 3. ВМ фронта — её проще всего пропустить
+yc compute instance list
+yc compute instance start app-heyslab-proxy
+
+# 4. Таймер-триггеры — они НЕ видны ни в одной проверке HTTP
+#    (инцидент 2026-08-02: reaper поставил на паузу все 19 во всех папках)
+for f in $(yc resource-manager folder list --format json | jq -r '.[].id'); do
+  yc serverless trigger list --folder-id "$f" --format json \
+    | jq -r '.[] | select(.status != "ACTIVE") | "\(.id) \(.name)"'
+done
+yc serverless trigger resume <trigger-id> --folder-id <F>
+```
+
+Порядок: кластер → шлюзы → ВМ фронта → триггеры.
+
+### Ловушки, на которых уже обожглись
+
+- **`yc ... list` показывает только текущую папку.** В первый заход подняли три
+  шлюза из пяти: `mine2d` и `bakshepchet` остались лежать и вскрылись случайно,
+  когда пользователь принёс ссылку на лаунчер. Всегда обходить папки списком.
+- **«API отвечает, приложение молчит» — смотреть ВМ, а не шлюз.**
+  `app.heyslab.ru` и `heyslab.ru` резолвятся в `158.160.53.194` — это ВМ
+  `app-heyslab-proxy`, а не бакет и не CDN. После поднятия шлюза и кластера
+  `api.heyslab.ru/health` уже отвечал 200, и это создало ложное ощущение, что
+  восстановление закончено.
+- **Недоступность фронта из агентской среды легко списать на песочницу.**
+  Проверка: посторонний домен из той же среды открывается, а `heyslab.ru` — нет.
+  В том инциденте то же самое видел и CI из GitHub.
+- **Триггеры не видит ни одна HTTP-проверка.** `/health`, фронт и функции могут
+  отвечать 200, пока боты молчат, напоминания не уходят, бэкапы не идут, а
+  голосовые не расшифровываются. Единственный сигнал — dead-man's switch в «API
+  Health Monitor»: `stale: true` и `minutes_ago`, совпадающее с временем
+  гашения. В инциденте 2026-08-02 это заметили спустя ~4 часа и случайно.
+- CDN-ресурсы `heyslab.ru`, `try.heyslab.ru`, `genda.heyslab.ru` числятся
+  неактивными — трафик идёт через ту же ВМ, поднимать их не требуется.
+
+### Verification
+
+```bash
+curl -s https://api.heyslab.ru/health                 # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://app.heyslab.ru/   # 200
+curl -s https://app.heyslab.ru/build-meta.json        # hash == текущий коммит
+```
+
+```bash
+# Триггеры: во всех папках не должно остаться ничего, кроме ACTIVE
+for f in $(yc resource-manager folder list --format json | jq -r '.[].id'); do
+  yc serverless trigger list --folder-id "$f" --format json \
+    | jq -r --arg f "$f" '[.[] | select(.status != "ACTIVE")] | "\($f): \(length) не ACTIVE"'
+done
+```
+
+Отдельно дождаться зелёного «Check Automation Dead-Man»: у опросов Telegram
+`minutes_ago` падает до единиц за минуту, у часовых задач (`snapshot_demo`,
+`trial_queue`) — только на следующем запуске, до тех пор `stale: true` там
+ожидаем и паникой не является.
+
+Если CI-деплой упал только на верификации, а фронт уже поднят — перезапустить
+проваленные джобы (`gh run rerun <id> --failed`), заново деплоить не нужно:
+артефакт был выложен до падения.
+
+---
+
 ## Testing Recovery Procedures
 
 **Quarterly DR drill:**

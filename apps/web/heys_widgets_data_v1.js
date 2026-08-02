@@ -76,9 +76,9 @@
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const profile = U.lsGet('heys_profile', {});
                     const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-                    const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+                    const normAbs = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData) || {}; // HEYS.norms не существует — DERIVED_FIELDS_AUDIT_2026-08-02.md
                     const waterGoal = HEYS.utils?.calculateWaterGoal?.(profile.weight) || 2000;
-                    const pIndex = profile?.pIndex || 0;
+                    const pIndex = 0; // profile.pIndex не существует — не свойство профиля (DERIVED_FIELDS_AUDIT_2026-08-02.md)
 
                     const result = HEYS.DayScore?.calculateDayScore?.({
                         dayData, profile, dayTot, normAbs, waterGoal, pIndex
@@ -99,8 +99,8 @@
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const profile = U.lsGet('heys_profile', {});
                     const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-                    const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
-                    const pIndex = profile?.pIndex || 0;
+                    const normAbs = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData) || {}; // HEYS.norms не существует — DERIVED_FIELDS_AUDIT_2026-08-02.md
+                    const pIndex = 0; // profile.pIndex не существует — не свойство профиля (DERIVED_FIELDS_AUDIT_2026-08-02.md)
 
                     const result = HEYS.RiskRadar?.calculate?.({
                         dayData, profile, dayTot, normAbs, pIndex
@@ -179,7 +179,7 @@
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const profile = U.lsGet('heys_profile', {});
                     const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-                    const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+                    const normAbs = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData) || {}; // HEYS.norms не существует — DERIVED_FIELDS_AUDIT_2026-08-02.md
                     const waterGoal = HEYS.utils?.calculateWaterGoal?.(profile.weight) || 2000;
 
                     return {
@@ -196,7 +196,8 @@
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
                     const profile = U.lsGet('heys_profile', {});
-                    const optimum = profile?.optimum || 2000;
+                    // profile.optimum не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+                    const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData)?.kcal || 2000;
 
                     return {
                         current: dayTot.kcal || 0,
@@ -277,8 +278,7 @@
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
                     const profile = U.lsGet('heys_profile', {});
-                    const pIndex = profile?.pIndex || 0;
-                    const normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
+                    const normAbs = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData) || {}; // HEYS.norms не существует — DERIVED_FIELDS_AUDIT_2026-08-02.md
 
                     // Cascade data for embedded cascade strip in 3x2/4x2 macros widget
                     let cascade = { hasData: false, pct: 0, trend: 'flat', events: [] };

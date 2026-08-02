@@ -2530,7 +2530,7 @@
         }
 
         const recentDays = days.slice(-7); // Most recent first
-        const optimum = profile?.optimum || profile?.norm?.kcal || 2000;
+        const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // profile.optimum/norm.kcal не существуют — см. DERIVED_FIELDS_AUDIT_2026-08-02.md
 
         const caloricData = recentDays.map(day => {
             const eaten = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
@@ -3134,7 +3134,7 @@
             return null;
         }
 
-        const optimum = profile?.optimum || profile?.norm?.kcal || 2000;
+        const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // profile.optimum/norm.kcal не существуют — см. DERIVED_FIELDS_AUDIT_2026-08-02.md
         const recentDays = days.slice(-7);
 
         const bingeData = recentDays.map(day => {
@@ -3400,7 +3400,7 @@
             return null;
         }
 
-        const optimum = profile?.optimum || profile?.norm?.kcal || 2000;
+        const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // profile.optimum/norm.kcal не существуют — см. DERIVED_FIELDS_AUDIT_2026-08-02.md
         const recentDays = days.slice(-21); // Last 3 weeks
 
         const weekdayData = [];

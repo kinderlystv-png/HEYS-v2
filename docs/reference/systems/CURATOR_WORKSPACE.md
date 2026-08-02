@@ -320,9 +320,10 @@ PIN-сессии этот RPC отвечает 401 → `heys_app_gate_flow_v1.js
 осознанно: это агрегат по всем клиентам сразу, единого target `client_id` у него
 нет, а детальный доступ логируется при входе в конкретного клиента.
 
-Рядом остаётся локальный инструмент
-[`scripts/curator-board`](../../../scripts/curator-board/README.md) — та же
-сводка страницей на `localhost` через REST, без установки в приложение.
+Тот же RPC читает личная доска задач владельца (`~/tasks`, блок «HEYS куратор»)
+— она ходит в `/rpc` под curator JWT и ничего не сохраняет у себя. Временный
+локальный инструмент `scripts/curator-board`, живший здесь до появления
+серверной сводки, удалён 2026-08-02, чтобы не держать третью копию расчёта.
 
 ## Facts Table
 
@@ -363,10 +364,10 @@ PIN-сессии этот RPC отвечает 401 → `heys_app_gate_flow_v1.js
 `sed -n '2300,2310p' apps/web/heys_app_gate_flow_v1.js` | проверено 2026-08-02 |
 | C31 | Сводка дня куратором читается через REST `client_kv_store` с curator
 JWT; ккал считаются из `kcal100`/`grams` внутри самого блоба дня |
-`node scripts/curator-board/server.mjs` → `curl -s localhost:4777/api/summary`,
-`sed -n '355,380p' yandex-cloud-functions/heys-mcp/lib/heys-api.js` | проверено
-на живых данных 2026-08-02 | | C32 | `get_curator_clients_day_summary` применена
-в production и считает те же цифры, что клиентский расчёт |
+`sed -n '355,380p' yandex-cloud-functions/heys-mcp/lib/heys-api.js`, сверено с
+SQL-сводкой на тех же днях | проверено на живых данных 2026-08-02 | | C32 |
+`get_curator_clients_day_summary` применена в production и считает те же цифры,
+что клиентский расчёт |
 `bash scripts/db/psql.sh -c "SELECT * FROM get_curator_clients_day_summary((SELECT curator_id FROM clients WHERE name='Полтавский' LIMIT 1), '2026-08-01')"`
 — совпало с JS-подсчётом по тем же дням (1935 и 1417 ккал) | проверено на
 production 2026-08-02 |

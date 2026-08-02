@@ -1908,6 +1908,15 @@
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
 
+      // `dayData.totKcal`/`dayData.tdee`/`profile.tdee` не существуют — читали
+      // призраков, из-за чего фактор «накопленный недобор» включался всегда
+      // (съеденное всегда 0), а «стрессовое переедание» не срабатывал никогда
+      // (обе стороны корреляции — нули). DERIVED_FIELDS_AUDIT_2026-08-02.md.
+      let pIndex = null;
+      const products = HEYS.products?.getAll?.() || [];
+      const buildIndex = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+      if (buildIndex && products.length > 0) pIndex = buildIndex(products);
+
       const CFG_STRESS_HIGH_THRESHOLD = 6;
       const avgStress = day?.stressAvg || 0;
       const isHighStress = avgStress >= CFG_STRESS_HIGH_THRESHOLD;
@@ -1941,8 +1950,8 @@
         const dayData = getter(`heys_dayv2_${dateStr}`, {});
 
         // Расчёт дефицита за день
-        const dayTdee = dayData.tdee || profile?.tdee || 2000;
-        const dayKcal = (dayData.totKcal || 0);
+        const dayTdee = HEYS.TDEE?.calculate?.(dayData, profile)?.tdee || 2000;
+        const dayKcal = calculateDayKcal(dayData, pIndex);
         const dayDebt = Math.max(0, dayTdee - dayKcal);
         totalDebt += dayDebt;
       }
@@ -1966,8 +1975,8 @@
         if (dayData.stressAvg) {
           last7days.push({
             stress: dayData.stressAvg || 0,
-            kcal: dayData.totKcal || 0,
-            tdee: dayData.tdee || profile?.tdee || 2000
+            kcal: calculateDayKcal(dayData, pIndex),
+            tdee: HEYS.TDEE?.calculate?.(dayData, profile)?.tdee || 2000
           });
         }
       }

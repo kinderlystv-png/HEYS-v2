@@ -285,7 +285,8 @@
 
         // C12: Mood ↔ Food (влияет на STRESS_EATING macro strategy)
         try {
-            const optimum = profile?.optimum || 2000;
+            // profile.optimum не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+            const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000;
             const moodFood = patterns.analyzeMoodFood?.(days, pIndex, optimum);
             if (moodFood?.available) {
                 scores.moodFood = {

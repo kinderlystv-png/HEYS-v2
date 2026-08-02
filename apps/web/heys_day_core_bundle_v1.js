@@ -3104,6 +3104,35 @@
     }
 
     /**
+     * Пересчитывает moodAvg/wellbeingAvg/stressAvg/dayScore/dayScoreRaw и
+     * записывает их прямо в переданный объект дня.
+     *
+     * Нужна писателям вне вкладки дня. React-эффект
+     * heys_day_rating_averages_v1.js пересчитывает средние только пока
+     * смонтирован DayTab (apps/web/heys_day_tab_impl_v1.js:778-786) — а шаг
+     * морнинг-чек-ина, синхронизация утренней активации (heys_steps_v1.js) и
+     * запись тренировки (heys_training_step_v1.js) пишут `moodMorning` /
+     * `trainings[].mood` напрямую в storage, минуя эффект. Без этого вызова
+     * средние по дню протухают до следующего открытия вкладки.
+     *
+     * @param {Object} dayData - день; мутируется и возвращается для удобства.
+     */
+    function applyDayAverages(dayData) {
+        if (!dayData) return dayData;
+        const averages = calculateDayAverages(dayData.meals, dayData.trainings, dayData);
+        dayData.moodAvg = averages.moodAvg;
+        dayData.wellbeingAvg = averages.wellbeingAvg;
+        dayData.stressAvg = averages.stressAvg;
+        if (!dayData.dayScoreManual) {
+            dayData.dayScore = averages.dayScore;
+        }
+        if (averages.dayScoreRaw !== '') {
+            dayData.dayScoreRaw = averages.dayScoreRaw;
+        }
+        return dayData;
+    }
+
+    /**
      * Normalize trainings data (migrate quality/feelAfter to mood/wellbeing)
      * @param {Array} trainings - Trainings array
      * @returns {Array} Normalized trainings
@@ -3228,6 +3257,7 @@
         calculateDayTotals,
         computeDailyNorms,
         calculateDayAverages,
+        applyDayAverages,
         normalizeTrainings,
         cleanEmptyTrainings,
         sortMealsByTime,

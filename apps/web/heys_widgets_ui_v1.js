@@ -4821,14 +4821,10 @@
         || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
           ? HEYS.dayCalculations.calculateDayTotals(dayData)
           : {});
-      let normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
-      if ((!normAbs.kcal || normAbs.kcal <= 0) && typeof HEYS.TDEE?.calculate === 'function') {
-        const tdee = HEYS.TDEE.calculate(profile);
-        if (tdee && tdee.optimum > 0) {
-          const weight = Number(profile.weight || profile.baseWeight || 70) || 70;
-          normAbs = { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
-        }
-      }
+      // HEYS.norms не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md) — считаем
+      // сразу через TDEE, с dayData вместо голого profile.
+      const targets = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData);
+      const normAbs = (targets && targets.kcal > 0) ? targets : {};
       const historyDays = [];
 
       for (let i = 14; i >= 1; i--) {

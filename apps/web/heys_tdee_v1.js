@@ -259,6 +259,31 @@
   };
 
   /**
+   * Норма калорий и белка по профилю — единый источник вместо `profile.optimum`,
+   * `profile.norm.kcal/prot`, `profile.tdee`, `profile.protTarget` и
+   * `profile.waterTarget`, которых в объекте профиля никогда не было (аудит
+   * DERIVED_FIELDS_AUDIT_2026-08-02.md, класс «поле-призрак»): эти чтения
+   * молча падали в жёсткие дефолты 2000 ккал / 100 г для любого клиента.
+   *
+   * Формула — уже проверенный в проде safety-net-паттерн
+   * (heys_relapse_risk_v1.js: normAbs, до этой правки продублированный
+   * копипастой в трёх файлах): белок — 1.6 г/кг веса, калории — `optimum` из
+   * TDEE. `day` необязателен — без него `calculateTDEE` считает по одному
+   * профилю (тот же деградированный, но не выдуманный путь, что уже был в
+   * проде), поэтому вызывать можно и там, где дня нет в скоупе.
+   *
+   * @param {Object} profile
+   * @param {Object} [day]
+   * @returns {{ kcal: number, prot: number }}
+   */
+  const resolveDailyTargets = (profile, day) => {
+    const tdeeResult = calculateTDEE(day || {}, profile || {});
+    const kcal = tdeeResult && tdeeResult.optimum > 0 ? tdeeResult.optimum : 2000;
+    const weightRaw = Number(profile && profile.weight) || Number(profile && profile.baseWeight) || 70;
+    return { kcal, prot: Math.round(weightRaw * 1.6) };
+  };
+
+  /**
    * Расчёт TDEE для массива дней (для недельной/месячной статистики)
    * @param {string[]} dates - Массив дат в формате YYYY-MM-DD
    * @param {Object} profile - Профиль
@@ -301,6 +326,7 @@
     // Основные функции
     calculate: calculateTDEE,
     getTDEE,
+    resolveDailyTargets,
     calculateWeek: calculateWeekTDEE,
 
     // Вспомогательные (для обратной совместимости)

@@ -8,12 +8,12 @@
     "builtAt": "2026-08-02T15:16:44.754Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.a38ae3109472.js",
-    "hash": "a38ae3109472",
-    "sourceFingerprint": "1e544f8c018e",
+    "file": "boot-calc.bundle.132acb74570d.js",
+    "hash": "132acb74570d",
+    "sourceFingerprint": "73180c8e79e1",
     "fileCount": 19,
-    "size": 845830,
-    "builtAt": "2026-08-02T18:06:00.056Z"
+    "size": 846584,
+    "builtAt": "2026-08-02T18:12:10.620Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.06032fcf18a2.js",
@@ -48,12 +48,12 @@
     "builtAt": "2026-07-31T06:28:03.772Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.6f8aeca1d557.js",
-    "hash": "6f8aeca1d557",
-    "sourceFingerprint": "f393df83bf4b",
+    "file": "postboot-1-game-lazy.bundle.4aaf17d9ff08.js",
+    "hash": "4aaf17d9ff08",
+    "sourceFingerprint": "05d1b44ea24c",
     "fileCount": 30,
-    "size": 1427484,
-    "builtAt": "2026-08-02T15:16:51.516Z"
+    "size": 1427378,
+    "builtAt": "2026-08-02T18:12:14.048Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.807cb783ab2f.js",
@@ -64,12 +64,12 @@
     "builtAt": "2026-07-31T06:28:06.735Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.0cb117583a6e.js",
-    "hash": "0cb117583a6e",
-    "sourceFingerprint": "11b5e545a3ef",
+    "file": "postboot-2-insights-lazy.bundle.be732ab2d6b7.js",
+    "hash": "be732ab2d6b7",
+    "sourceFingerprint": "e5c43a1a1db5",
     "fileCount": 39,
-    "size": 1681028,
-    "builtAt": "2026-07-31T06:28:09.329Z"
+    "size": 1681526,
+    "builtAt": "2026-08-02T18:12:16.714Z"
   },
   "postboot-3-ui-eager": {
     "file": "postboot-3-ui-eager.bundle.51c8e6b6cb06.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-07-31T06:28:09.418Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.d98bdb06c809.js",
-    "hash": "d98bdb06c809",
-    "sourceFingerprint": "b5c0ad26da51",
+    "file": "postboot-3-ui-lazy.bundle.ee4bb5bcf2a9.js",
+    "hash": "ee4bb5bcf2a9",
+    "sourceFingerprint": "7c28cb1c3830",
     "fileCount": 68,
-    "size": 4359606,
-    "builtAt": "2026-08-02T16:48:02.947Z"
+    "size": 4359776,
+    "builtAt": "2026-08-02T18:12:23.442Z"
   }
 }

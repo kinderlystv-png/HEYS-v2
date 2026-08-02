@@ -317,11 +317,16 @@
   }
 
   function getKcalTarget(normAbs, profile) {
-    return Math.max(1, toNumber(normAbs?.kcal, toNumber(profile?.optimum, 0)) || 1);
+    // profile.optimum не существует — если вызывающий не передал normAbs.kcal,
+    // считаем через TDEE вместо жёсткого 0 (который через Math.max(1, ...)
+    // давал kcalTarget=1 и абсурдно раздувал kcalPct).
+    const fallback = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal ?? 0;
+    return Math.max(1, toNumber(normAbs?.kcal, fallback) || 1);
   }
 
   function getProtTarget(normAbs, profile) {
-    return Math.max(1, toNumber(normAbs?.prot, toNumber(profile?.protTarget, 0)) || 1);
+    const fallback = HEYS.TDEE?.resolveDailyTargets?.(profile)?.prot ?? 0;
+    return Math.max(1, toNumber(normAbs?.prot, fallback) || 1);
   }
 
   function getKcalEaten(dayTot, dayData) {
@@ -1452,17 +1457,22 @@
       ? new Date(targetDate + 'T12:00:00').getDay()
       : (new Date().getDay() + 1) % 7;
 
+    // profile.optimum/protTarget не существуют — profile всегда сырой блоб без
+    // производных полей (DERIVED_FIELDS_AUDIT_2026-08-02.md, класс «поле-призрак»).
+    // Считаем один раз для всей функции, как раньше считался жёсткий дефолт.
+    const dailyTargets = HEYS.TDEE?.resolveDailyTargets?.(profile) || { kcal: 2000, prot: 100 };
+
     // Build averaged "synthetic" inputs from recent history
     const recentN = Math.min(historyDays.length, 7);
     const recent = historyDays.slice(0, recentN);
 
     const avgStress = getRecentMean(recent, getHistoryStress);
     const avgSleep = getRecentMean(recent, getHistorySleepHours);
-    const avgKcalRatio = getRecentMean(recent, (d) => getHistoryKcalRatio(d, toNumber(profile.optimum, 2000)));
+    const avgKcalRatio = getRecentMean(recent, (d) => getHistoryKcalRatio(d, dailyTargets.kcal));
 
     // Check for chronic deficit streak — strong predictor of tomorrow's risk
     const deficitDays = recent.filter(d => {
-      const ratio = getHistoryKcalRatio(d, toNumber(profile.optimum, 2000));
+      const ratio = getHistoryKcalRatio(d, dailyTargets.kcal);
       return ratio > 0 && ratio < 0.8;
     }).length;
 
@@ -1476,10 +1486,10 @@
       sleepHours: avgSleep,
       sleepQuality: 0,
       sleepNorm,
-      kcalTarget: Math.max(1, toNumber(profile.optimum, 2000)),
+      kcalTarget: Math.max(1, dailyTargets.kcal),
       kcalEaten: 0,
       kcalPct: avgKcalRatio, // use history average as expected coverage
-      protTarget: toNumber(profile.protTarget, 100),
+      protTarget: dailyTargets.prot,
       protEaten: 0,
       protPct: avgKcalRatio * 0.9, // rough proxy
       harm: 0,
@@ -1662,7 +1672,6 @@
     const dayData = HEYS.DayData?.getCurrentDay?.() || lsGet('heys_dayv2_' + todayStr, {});
 
     const profile = lsGet('heys_profile', {});
-    const pIndex = profile?.pIndex || 0;
 
     // dayTot: prefer reactive source, fall back to computed from dayData
     const dayTot = HEYS.DayData?.getDayTot?.(dayData)
@@ -1670,15 +1679,12 @@
         ? HEYS.dayCalculations.calculateDayTotals(dayData)
         : {});
 
-    // normAbs: prefer norms module, fall back to TDEE-based estimation
-    let normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
-    if ((!normAbs.kcal || normAbs.kcal <= 0) && typeof HEYS.TDEE?.calculate === 'function') {
-      var tdee = HEYS.TDEE.calculate(profile);
-      if (tdee && tdee.optimum > 0) {
-        var weight = toNumber(profile.weight, toNumber(profile.baseWeight, 70));
-        normAbs = { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
-      }
-    }
+    // normAbs: HEYS.norms не определён нигде в проекте (ghost API, всегда
+    // отдавал {}) — считаем сразу через TDEE, теперь ещё и с dayData, которой
+    // раньше здесь не хватало (HEYS.TDEE.calculate(profile) без дня занижал
+    // активность). См. DERIVED_FIELDS_AUDIT_2026-08-02.md.
+    const targets = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData);
+    const normAbs = (targets && targets.kcal > 0) ? targets : {};
 
     const historyDays = collectHistoryDays(lsGet, 14);
 

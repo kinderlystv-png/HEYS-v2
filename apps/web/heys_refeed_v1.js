@@ -242,7 +242,8 @@
         if (day.meals && Array.isArray(day.meals)) {
           // Сумма калорий
           const profile = readStoredValue('heys_profile', {});
-          const optimum = profile.optimum || 2000;
+          // profile.optimum не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+          const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, day)?.kcal || 2000;
           const refeedOptimum = getRefeedOptimum(optimum, true);
 
           const eatenKcal = day.meals.reduce((sum, meal) => {

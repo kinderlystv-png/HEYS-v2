@@ -433,7 +433,10 @@
 
     day.trainings = trainings;
     day.updatedAt = mutationTs;
-    const saved = saveDayFields(dateKey, day, ['trainings'], 'training-step');
+    // Тренировка несёт свои mood/wellbeing/stress — без пересчёта они не
+    // попадают в среднее по дню, пока клиент не откроет вкладку дня.
+    HEYS.dayCalculations?.applyDayAverages?.(day);
+    const saved = saveDayFields(dateKey, day, ['trainings', 'moodAvg', 'wellbeingAvg', 'stressAvg', 'dayScore', 'dayScoreRaw'], 'training-step');
     if (!saved) return false;
 
     window.dispatchEvent(new CustomEvent('heys:day-updated', {

@@ -232,7 +232,8 @@
     const lsGet = getScopedLsGet();
 
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
-    const optimum = profile?.optimum || 2000;
+    // profile.optimum не существует (DERIVED_FIELDS_AUDIT_2026-08-02.md).
+    const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, day)?.kcal || 2000;
 
     // Получаем dayTot и normAbs
     const dayTot = calculateDayTotals(day, pIndex);
@@ -1611,10 +1612,12 @@
         result.weaknesses.push('Склонность к перееданию при стрессе');
       }
 
-      // Персональные пороги (упрощённые)
+      // Персональные пороги (упрощённые). profile.optimum не существует
+      // (DERIVED_FIELDS_AUDIT_2026-08-02.md) — считаем через TDEE.
+      const optimumForThresholds = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal;
       result.thresholds = {
-        optimalKcalRange: profile?.optimum
-          ? [Math.round(profile.optimum * 0.9), Math.round(profile.optimum * 1.1)]
+        optimalKcalRange: optimumForThresholds
+          ? [Math.round(optimumForThresholds * 0.9), Math.round(optimumForThresholds * 1.1)]
           : [1800, 2200],
         waveHours: phenotype === 'carb_preferring' ? 3.5 : phenotype === 'fat_preferring' ? 4.0 : 3.0,
         mealGap: phenotype === 'carb_preferring' ? 3 : 4
