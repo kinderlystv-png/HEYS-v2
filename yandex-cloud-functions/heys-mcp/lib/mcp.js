@@ -51,6 +51,22 @@ function toolFailure(message, code, details) {
   };
 }
 
+/**
+ * Контент результата: текст всегда, картинки — если инструмент их вернул.
+ *
+ * Фото из переписки отдаётся именно image-блоком, а не ссылкой: у модели нет
+ * доступа к нашему хранилищу, и ссылка означала бы «посмотри сам в
+ * приложении» — ровно то, ради отмены чего инструмент и делался.
+ */
+function toolContent(result) {
+  const content = [{ type: 'text', text: result.text }];
+  for (const image of (Array.isArray(result.images) ? result.images : [])) {
+    if (!image || !image.data) continue;
+    content.push({ type: 'image', data: image.data, mimeType: image.mimeType || 'image/jpeg' });
+  }
+  return content;
+}
+
 async function handleMessage(message, ctx) {
   if (!message || typeof message !== 'object' || Array.isArray(message)) {
     return rpcError(null, JSONRPC_ERRORS.INVALID_REQUEST, 'Invalid JSON-RPC message');
@@ -130,7 +146,7 @@ async function handleMessage(message, ctx) {
         const timing = measure();
         ctx.logMetric?.({ tool: name, ok: true, ...timing });
         return rpcResult(id, {
-          content: [{ type: 'text', text: result.text }],
+          content: toolContent(result),
           structuredContent: { ok: true, ...result.structured, duration_ms: timing.ms },
         });
       } catch (e) {
@@ -177,4 +193,5 @@ module.exports = {
   rpcResult,
   rpcError,
   toolFailure,
+  toolContent,
 };

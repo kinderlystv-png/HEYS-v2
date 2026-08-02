@@ -15,7 +15,7 @@ const { URL } = require('node:url');
 
 const DEFAULT_TIMEOUT_MS = 12000;
 
-function request(url, { method = 'GET', body = null, headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+function request(url, { method = 'GET', body = null, headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS, raw = false }) {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
     const payload = body == null ? null : Buffer.from(JSON.stringify(body), 'utf8');
@@ -34,7 +34,14 @@ function request(url, { method = 'GET', body = null, headers = {}, timeoutMs = D
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => {
-        const text = Buffer.concat(chunks).toString('utf8');
+        const buffer = Buffer.concat(chunks);
+        // Картинка вложения — единственный не-JSON ответ в системе. Её нельзя
+        // прогонять через toString('utf8'): это молча портит байты.
+        if (raw) {
+          resolve({ status: res.statusCode, headers: res.headers, buffer });
+          return;
+        }
+        const text = buffer.toString('utf8');
         let json = null;
         try { json = text ? JSON.parse(text) : null; } catch (_) { /* не-JSON отдаём как текст */ }
         resolve({ status: res.statusCode, json, text });
@@ -559,6 +566,35 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     });
   }
 
+  /**
+   * Фото из переписки. Путь берётся из вложения сообщения, права проверяет
+   * сервер: он же убеждается, что путь действительно упомянут в сообщении
+   * этого клиента, — поэтому произвольный путь из S3 отсюда не прочитать.
+   *
+   * Возвращает base64 и mime: в таком виде картинка уходит в ответ инструмента
+   * как image-контент MCP, и модель видит именно изображение, а не ссылку.
+   */
+  async function readAttachment(bearer, path) {
+    const res = await measured(`${apiUrl}/photos/read`, {
+      method: 'POST',
+      body: { path },
+      headers: { Authorization: `Bearer ${bearer}` },
+      timeoutMs: Math.max(timeoutMs, 20000),
+      raw: true,
+    });
+    if (res.status < 200 || res.status >= 300) {
+      // Тело ошибки — JSON, и оно осталось в буфере: читаем его как текст.
+      let message = `photos_http_${res.status}`;
+      try {
+        const parsed = JSON.parse(res.buffer.toString('utf8'));
+        if (parsed && parsed.error) message = String(parsed.error);
+      } catch (_) { /* не-JSON ошибка — оставляем код статуса */ }
+      return { ok: false, error: message, status: res.status };
+    }
+    const mimeType = String((res.headers && res.headers['content-type']) || '').split(';')[0].trim() || 'image/jpeg';
+    return { ok: true, data: res.buffer.toString('base64'), mimeType, bytes: res.buffer.length };
+  }
+
   /** Счётчики непрочитанного по всем клиентам куратора. */
   async function getMessagesInbox(bearer) {
     return messagesRequest('/messages/inbox', { bearer });
@@ -583,7 +619,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
     curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator,
-    getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient,
+    getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,
     extendSubscription, cancelSubscription,
     getTrialQueue, getQueueStats, activateTrial, rejectTrialRequest,

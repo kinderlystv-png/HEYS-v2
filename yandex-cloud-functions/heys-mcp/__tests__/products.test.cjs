@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const products = require('../lib/products');
+const day = require('../lib/day');
 
 const SHARED = new Map([
   ['s-americano', { id: 's-americano', name: 'Кофе американо', protein100: 0.1, simple100: 0, complex100: 0.3, badfat100: 0, goodfat100: 0 }],
@@ -202,4 +203,28 @@ test('подстрока внутри скобок и перечислений �
     new Map(),
   );
   assert.equal(products.searchProducts(c, 'миндаль', 3).length, 1);
+});
+
+// ── Клетчатка ────────────────────────────────────────────────────────────
+// Инвариант, а не деталь реализации: в HEYS клетчатка — отдельная от углеводов
+// масса (в схеме shared_products она суммируется с ними при проверке «до 100 г»),
+// и в калорийность она не входит. Формула здесь намеренно повторяет
+// computeTEFKcal100 приложения: разойтись — значит показать разные калории для
+// одного продукта в дневнике и в приложении. Менять только синхронно с вебом.
+
+test('клетчатка не входит в углеводы и не даёт калорий', () => {
+  const bran = {
+    name: 'Отруби овсяные',
+    protein100: 13, simple100: 2, complex100: 34, fiber100: 24,
+    badFat100: 1, goodFat100: 6, trans100: 0, gi: 40, harm: 1,
+  };
+  const row = products.buildCustomProduct(bran, { nowMs: 1, makeId: () => 'p1' });
+
+  assert.equal(row.carbs100, 36, 'углеводы — это простые плюс сложные, без клетчатки');
+  assert.equal(row.kcal100, day.computeTefKcal100(row));
+  assert.equal(row.kcal100, 3 * 13 + 4 * 36 + 9 * 7);
+
+  // Та же карточка без клетчатки считается так же: поле в расчёт не входит.
+  const withoutFiber = products.buildCustomProduct({ ...bran, fiber100: 0 }, { nowMs: 1, makeId: () => 'p2' });
+  assert.equal(withoutFiber.kcal100, row.kcal100);
 });

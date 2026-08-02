@@ -188,7 +188,8 @@ test('кураторские схемы: свои инструменты све�
   const added = [
     'heys_list_clients', 'heys_list_inbox', 'heys_moderate_products', 'heys_create_client',
     'heys_client_access', 'heys_manage_subscription', 'heys_trial_queue', 'heys_leads',
-    'heys_get_client_health', 'heys_list_messages', 'heys_mark_message_done', 'heys_reply_message',
+    'heys_get_client_health', 'heys_list_messages', 'heys_get_photo', 'heys_mark_message_done',
+    'heys_reply_message',
   ];
   assert.equal(schemas.length, TOOL_SCHEMAS.length + added.length);
   assert.deepEqual(schemas.slice(0, added.length).map((s) => s.name), added);
@@ -374,7 +375,7 @@ test('initialize отдаёт кураторские инструкции, tools
   assert.match(init.result.instructions, /heys_list_clients/);
 
   const list = await mcp.handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx);
-  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 12);
+  assert.equal(list.result.tools.length, TOOL_SCHEMAS.length + 13);
 });
 
 test('client_required доходит до модели как isError со списком клиентов', async () => {
@@ -639,4 +640,87 @@ test('правила карточки клиента доехали до инс�
   assert.match(instructions, /heys_get_profile/);
   assert.match(instructions, /heys_get_period/);
   assert.match(instructions, /heys_list_inbox/);
+});
+
+// ── Фото из переписки ────────────────────────────────────────────────────
+// Ссылку модель открыть не может, поэтому фото возвращается изображением.
+// Без этого «клиент прислал фото» упиралось в просьбу пересказать снимок.
+
+function apiWithPhoto(overrides = {}) {
+  const api = fakeCuratorApi();
+  api.reads = [];
+  api.readAttachment = async (bearer, path) => {
+    assert.equal(bearer, JWT);
+    api.reads.push(path);
+    if (overrides.fail) return { ok: false, error: overrides.fail };
+    return { ok: true, data: 'QUJD', mimeType: 'image/jpeg', bytes: 102400 };
+  };
+  return api;
+}
+
+test('фото отдаётся изображением, а не ссылкой, и адресно', async () => {
+  const api = apiWithPhoto();
+  const { tools } = build(api);
+  const res = await tools.heys_get_photo({ client: 'Александра', path: 'cid-alexandra/2026-08-01/messenger/a1.jpg' });
+
+  assert.deepEqual(api.reads, ['cid-alexandra/2026-08-01/messenger/a1.jpg']);
+  assert.equal(res.images.length, 1);
+  assert.equal(res.images[0].data, 'QUJD');
+  assert.equal(res.images[0].mimeType, 'image/jpeg');
+  assert.match(res.text, /^\[Александра\]/);
+  assert.equal(res.structured.bytes, 102400);
+});
+
+test('картинка доезжает до модели отдельным блоком content', async () => {
+  const { tools } = build(apiWithPhoto());
+  const res = await mcp.handleMessage({
+    jsonrpc: '2.0',
+    id: 7,
+    method: 'tools/call',
+    params: { name: 'heys_get_photo', arguments: { client: 'Александра', path: 'cid-alexandra/x/messenger/a1.jpg' } },
+  }, { tools });
+
+  const content = res.result.content;
+  assert.equal(content[0].type, 'text');
+  assert.equal(content[1].type, 'image');
+  assert.equal(content[1].mimeType, 'image/jpeg');
+  assert.equal(content[1].data, 'QUJD');
+});
+
+test('отказы по вложению объясняются по-человечески', async () => {
+  const { tools } = build(apiWithPhoto({ fail: 'attachment_not_found' }));
+  await assert.rejects(() => tools.heys_get_photo({ client: 'Александра', path: 'cid-alexandra/x/messenger/a1.jpg' }), (e) => {
+    assert.equal(e.code, 'photo_unavailable');
+    assert.match(e.message, /сообщение удалили/);
+    return true;
+  });
+  await assert.rejects(() => tools.heys_get_photo({ client: 'Александра' }), (e) => e.code === 'invalid_path');
+});
+
+test('вложения сообщения отдаются с путями — по ним и открывается фото', async () => {
+  const api = fakeCuratorApi();
+  api.getMessagesThread = async () => ({
+    data: {
+      messages: [{
+        id: 'm1',
+        body: 'в 16:40 забить надо 500мл',
+        created_at: '2026-08-01T13:40:00Z',
+        sender: 'client',
+        attachments: [{ type: 'image', path: 'cid-alexandra/2026-08-01/messenger/a1.jpg', mime: 'image/jpeg' }],
+      }],
+    },
+    error: null,
+  });
+  const { tools } = build(api);
+  const res = await tools.heys_list_messages({ client: 'Александра' });
+  const [message] = res.structured.messages;
+  assert.equal(message.has_attachment, true);
+  assert.equal(message.attachments[0].path, 'cid-alexandra/2026-08-01/messenger/a1.jpg');
+  assert.equal(message.attachments[0].kind, 'image');
+});
+
+test('правило про фото доехало до инструкций', () => {
+  const { instructions } = build(fakeCuratorApi());
+  assert.match(instructions, /heys_get_photo/);
+  assert.match(instructions, /Не проси куратора описать снимок словами/);
 });
