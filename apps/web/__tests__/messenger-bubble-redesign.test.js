@@ -75,32 +75,47 @@ describe('пузырь сообщения после редизайна', () => 
     expect(cssSource).not.toMatch(/msg-bubble-done/);
   });
 
-  it('«Внесено в день» — пилюля, статус другой стороны — метка с галочкой', () => {
-    const { container, getByText } = renderBubble({
+  it('внесённое в день сообщение показывает это состоянием, а не голым временем', () => {
+    const { container } = renderBubble({
       message: message({
         applied_at: new Date(2026, 7, 2, 9, 41).toISOString(),
         done_at: new Date(2026, 7, 2, 9, 40).toISOString(),
       }),
     });
 
-    expect(getByText('Внесено в день')).toBeTruthy();
-    const done = container.querySelector('.msg-done');
-    expect(done.textContent).toBe('Обработано');
-    expect(done.querySelector('svg.messenger-icon')).toBeTruthy();
+    const status = container.querySelector('.msg-status--applied');
+    expect(status.textContent).toBe('Внесено в день · 09:41');
+    expect(status.querySelector('svg.messenger-icon')).toBeTruthy();
   });
 
-  it('куратор видит «Принято» на своём сообщении, клиент — «Обработано»', () => {
-    const acked = { acked_at: new Date(2026, 7, 2, 12, 35).toISOString() };
+  it('состояния идут от позднего к раннему: внесено → обработано → смотрит → отправлено', () => {
+    const seen = new Date(2026, 7, 2, 9, 30).toISOString();
+    const done = new Date(2026, 7, 2, 9, 40).toISOString();
+
+    const justSent = renderBubble({ message: message() });
+    expect(justSent.container.querySelector('.msg-status--sent').textContent).toMatch(/^Отправлено · /);
+
+    const watched = renderBubble({ message: message({ seen_at: seen }) });
+    expect(watched.container.querySelector('.msg-status--seen').textContent).toBe('Куратор смотрит · 09:30');
+
+    // Обработка куратором перекрывает «смотрит».
+    const processed = renderBubble({ message: message({ seen_at: seen, done_at: done }) });
+    expect(processed.container.querySelector('.msg-status--acked').textContent).toBe('Обработано · 09:40');
+  });
+
+  it('куратор на своём сообщении видит «Принято» клиентом', () => {
     const asCurator = renderBubble({
       viewerRole: 'curator',
-      message: message({ sender_role: 'curator', ...acked }),
+      message: message({ sender_role: 'curator', acked_at: new Date(2026, 7, 2, 12, 35).toISOString() }),
     });
-    expect(asCurator.container.querySelector('.msg-done').textContent).toBe('Принято');
+    expect(asCurator.container.querySelector('.msg-status--acked').textContent).toBe('Принято · 12:35');
+  });
 
-    const asClient = renderBubble({
-      message: message({ done_at: new Date(2026, 7, 2, 9, 40).toISOString() }),
-    });
-    expect(asClient.container.querySelector('.msg-done').textContent).toBe('Обработано');
+  it('у чужого сообщения состояния нет — только время', () => {
+    const { container } = renderBubble({ message: message({ sender_role: 'curator' }) });
+
+    expect(container.querySelector('.msg-status')).toBeNull();
+    expect(container.querySelector('.msg-meta').textContent).toMatch(/^\d{2}:\d{2}$/);
   });
 
   it('«принять» — текстовое действие в мета-строке, а не круглая кнопка', () => {

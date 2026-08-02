@@ -96,10 +96,13 @@ describe('плашка «время и граммы»', () => {
       onHide: () => {},
     }));
 
-    fireEvent.click(getByText('+ 08:40'));
+    fireEvent.click(getByText('Сейчас · 08:40'));
     expect(onInsertTime).toHaveBeenCalledWith('08:40');
 
-    fireEvent.click(getByText('+ 000 г'));
+    fireEvent.click(getByText('Час назад'));
+    expect(onInsertTime).toHaveBeenLastCalledWith('07:40');
+
+    fireEvent.click(getByText('Вес 000 г'));
     expect(onInsertGrams).toHaveBeenCalledTimes(1);
   });
 
@@ -146,6 +149,39 @@ describe('ряд ввода и отправка', () => {
   it('в композере не осталось эмодзи-иконок', () => {
     const composerBlock = messengerSource.slice(messengerSource.indexOf("className: 'messenger-composer'"));
     expect(composerBlock).not.toMatch(/[📷🎙➤]/u);
+  });
+
+  it('«своё время» раскрывает степпер с шагом 5 минут', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 2, 13, 5));
+    const { FoodHintCard } = loadMessengerComponentInternals();
+    const onInsertTime = vi.fn();
+
+    const { container, getByText, getByLabelText } = render(
+      RealReact.createElement(FoodHintCard, { onInsertTime }),
+    );
+    expect(container.querySelector('.messenger-food-hint__stepper')).toBeNull();
+
+    fireEvent.click(getByText('Своё время'));
+    const field = getByLabelText('Время приёма');
+    expect(field.value).toBe('13:05');
+
+    fireEvent.click(getByLabelText('Раньше на 5 минут'));
+    expect(getByLabelText('Время приёма').value).toBe('13:00');
+
+    fireEvent.click(getByText('Готово'));
+    expect(onInsertTime).toHaveBeenCalledWith('13:00');
+    expect(container.querySelector('.messenger-food-hint__stepper')).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it('время переходит через полночь в обе стороны', () => {
+    const { shiftTimeLabel } = loadMessengerComponentInternals();
+
+    expect(shiftTimeLabel('00:05', -10)).toBe('23:55');
+    expect(shiftTimeLabel('23:55', 10)).toBe('00:05');
+    expect(shiftTimeLabel('13:05', -60)).toBe('12:05');
   });
 
   it('FAB — сплошной акцент со stroke-иконкой', () => {

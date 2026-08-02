@@ -27,6 +27,10 @@ const WEIGHT_DUE_OFFSET_MINUTES = 60; // среднее пробуждение +
 const DEFAULT_WAKE_MINUTES = 8 * 60; // fallback, когда истории пробуждений мало
 const WATER_ACTIVE_UNTIL_MINUTES = 20 * 60; // «активный день» до 20:00, сценарий 4
 const WATER_DEFICIT_RATIO = 0.3; // отстаём меньше чем на 30% нормы — не считаем missing
+// Про активность спрашиваем у всех и ближе к вечеру: цель — не проконтролировать
+// тренировку, а напомнить отметить то, что человек уже сделал (в том числе
+// прогулку или хобби), пока он не забыл.
+const ACTIVITY_DUE_MINUTES = 19 * 60;
 
 const STATUS_DONE = 'done';
 const STATUS_MISSING = 'missing';
@@ -167,6 +171,16 @@ function averageWakeMinutes(days) {
   return Math.round(minutes.reduce((a, b) => a + b, 0) / minutes.length);
 }
 
+/**
+ * Есть ли в дне отмеченная активность. Активной считается запись с ненулевыми
+ * минутами хотя бы в одной зоне — пустая заготовка тренировки не в счёт
+ * (тот же признак, что в расчёте калорий дня).
+ */
+function hasActivity(day) {
+  if (!day || !Array.isArray(day.trainings)) return false;
+  return day.trainings.some((t) => Array.isArray(t?.z) && t.z.some((minutes) => Number(minutes) > 0));
+}
+
 /** Утренний вес заполнен. */
 function hasMorningWeight(day) {
   const raw = day?.weightMorning;
@@ -253,6 +267,20 @@ function buildDayChecklist({ day, norms, nowMinutes, wakeMinutes } = {}) {
     });
   }
 
+  // 4) Активность — спрашиваем у всех, вечером. Пункт закрывается любой
+  // отмеченной активностью, не обязательно тренировкой.
+  const activityDone = hasActivity(day);
+  items.push({
+    key: 'activity',
+    label: 'Активность',
+    status: activityDone
+      ? STATUS_DONE
+      : now >= ACTIVITY_DUE_MINUTES
+        ? STATUS_MISSING
+        : STATUS_SKIPPED,
+    due_from: formatHHMM(ACTIVITY_DUE_MINUTES),
+  });
+
   return { items, completeness: computeCompleteness(items) };
 }
 
@@ -274,6 +302,7 @@ module.exports = {
   DEFAULT_WAKE_MINUTES,
   WATER_ACTIVE_UNTIL_MINUTES,
   WATER_DEFICIT_RATIO,
+  ACTIVITY_DUE_MINUTES,
   MSK_OFFSET_HOURS,
   WAKE_HISTORY_DAYS,
   WAKE_MIN_SAMPLES,
@@ -292,6 +321,7 @@ module.exports = {
   hasAnyMeal,
   lastMealMinutes,
   hasMorningWeight,
+  hasActivity,
   waterDeficitMl,
   buildDayChecklist,
   computeCompleteness,

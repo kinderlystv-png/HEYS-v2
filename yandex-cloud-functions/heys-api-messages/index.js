@@ -517,14 +517,33 @@ function buildSendRequestFingerprint(payload) {
   return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
 }
 
+// Клиент не может выдать произвольный текст за машинную расшифровку: поля
+// SpeechKit срезаются. Исключение — правка, которую человек внёс сам перед
+// отправкой; она помечена своим provider и по нему отличима от машинной.
+const CLIENT_EDITED_TRANSCRIPT_PROVIDER = 'client_edited';
+
 function stripClientTranscriptFields(att) {
   if (normalizeAttachmentType(att) !== 'audio') return { ...att };
   const clean = { ...att };
+  const editedText = att?.transcript_provider === CLIENT_EDITED_TRANSCRIPT_PROVIDER
+    && typeof att.transcript_text === 'string'
+    && att.transcript_text.trim()
+    && att.transcript_text.length <= MAX_TRANSCRIPT_TEXT_LENGTH
+    ? att.transcript_text.trim()
+    : null;
+
   delete clean.transcript_text;
   delete clean.transcript_provider;
   delete clean.transcript_created_at;
   delete clean.transcript_error;
-  clean.transcript_status = 'none';
+
+  if (editedText) {
+    clean.transcript_text = editedText;
+    clean.transcript_provider = CLIENT_EDITED_TRANSCRIPT_PROVIDER;
+    clean.transcript_status = 'ready';
+  } else {
+    clean.transcript_status = 'none';
+  }
   if (clean.mime) clean.mime = normalizeMime(clean.mime);
   return clean;
 }
@@ -617,6 +636,8 @@ async function prepareAttachmentsForSend(identity, attachments) {
 
   for (const att of audio) {
     const mime = normalizeMime(att.mime);
+    // Человек уже написал текст руками — распознавать нечего.
+    if (att.transcript_provider === CLIENT_EDITED_TRANSCRIPT_PROVIDER) continue;
     if (!hasConsent) {
       att.transcript_status = 'consent_required';
       continue;
@@ -1809,6 +1830,7 @@ module.exports._test = {
   normalizeMime,
   estimateSpeechKitCost,
   stripClientTranscriptFields,
+  CLIENT_EDITED_TRANSCRIPT_PROVIDER,
   isCurrentTranscriptionConsentRow,
   TRANSCRIPTION_CONSENT_VERSION,
   TRANSCRIPTION_CONSENT_SHA256,

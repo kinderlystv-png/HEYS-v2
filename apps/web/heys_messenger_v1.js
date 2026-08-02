@@ -888,12 +888,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // тип, а значение стоит отдельной колонкой и читается с одного взгляда.
     const intentCard = !message.body ? buildIntentCard(message) : null;
     const replyText = message.body ? parsed.reply : '';
-    // Метка в мета-строке показывает, что с сообщением сделала ДРУГАЯ сторона.
-    // Своё действие видно в самой кнопке, дублировать его меткой незачем.
-    const ackLabel = (() => {
-      if (!isMine || !theirAckAt) return null;
-      const text = isCurator ? 'Принято' : 'Обработано';
-      return { text, title: `${text} ${formatTime(theirAckAt)}` };
+    // Под своим сообщением — одна строка состояния вместо голого времени:
+    // человеку важно, дошло ли до куратора и попало ли в день, а не просто час
+    // отправки. Порядок состояний — от самого позднего к раннему.
+    const ownStatus = (() => {
+      if (!isMine) return null;
+      if (message.applied_at) {
+        return { key: 'applied', icon: 'check', text: `Внесено в день · ${formatTime(message.applied_at)}` };
+      }
+      if (theirAckAt) {
+        const label = isCurator ? 'Принято' : 'Обработано';
+        return { key: 'acked', icon: 'check', text: `${label} · ${formatTime(theirAckAt)}` };
+      }
+      if (message.seen_at && !isCurator) {
+        return { key: 'seen', dot: true, text: `Куратор смотрит · ${formatTime(message.seen_at)}` };
+      }
+      return { key: 'sent', text: `Отправлено · ${formatTime(message.created_at)}` };
     })();
 
     // Зелёный пузырь ушёл: статус теперь метка в мета-строке, а не заливка
@@ -901,7 +911,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const bubbleClasses = [
       'msg-bubble',
       isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs',
-    ].join(' ');
+      message.queued ? 'msg-bubble-queued' : '',
+    ].filter(Boolean).join(' ');
 
     const handleDeleteClick = () => {
       if (!canDelete) return;
@@ -1042,23 +1053,36 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Мета живёт под пузырём, а не внутри: статусы, время и действия — это
     // не часть сообщения, и в пузыре они спорили с самим текстом.
+    if (message.queued) {
+      return React.createElement(
+        'div',
+        { className: 'msg-row msg-row-mine' },
+        bubble,
+        React.createElement(
+          'div',
+          { className: 'msg-meta-row' },
+          React.createElement('span', { className: 'msg-meta' }, 'В очереди…'),
+        ),
+      );
+    }
+
     const metaRow = !editing && React.createElement(
       'div',
       { className: `msg-meta-row${touchActionsOpen ? ' is-actions-open' : ''}` },
-      React.createElement('span', { className: 'msg-meta' }, formatTime(message.created_at)),
+      ownStatus
+        ? React.createElement(
+            'span',
+            { className: `msg-status msg-status--${ownStatus.key}` },
+            ownStatus.dot && React.createElement('span', { className: 'msg-status__dot', 'aria-hidden': 'true' }),
+            ownStatus.icon && React.createElement(Icon, { name: ownStatus.icon, size: 11, strokeWidth: 1.8 }),
+            ownStatus.text,
+          )
+        : React.createElement('span', { className: 'msg-meta' }, formatTime(message.created_at)),
       message.edited_at &&
         React.createElement('span', {
           className: 'msg-edited-marker',
           title: `Изменено ${formatTime(message.edited_at)}`,
         }, 'изм.'),
-      message.applied_at &&
-        React.createElement('span', { className: 'msg-applied' }, 'Внесено в день'),
-      ackLabel && React.createElement(
-        'span',
-        { className: 'msg-done', title: ackLabel.title },
-        React.createElement(Icon, { name: 'check', size: 11, strokeWidth: 1.8 }),
-        ackLabel.text,
-      ),
       canReply && React.createElement('button', {
         type: 'button',
         className: 'msg-action',
@@ -1395,7 +1419,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return (parts[0].slice(0, 1) + parts[1].slice(0, 1)).toUpperCase();
   }
 
-  function MessengerHeader({ isCurator, subtitle, menuItems, onClose }) {
+  function MessengerHeader({ isCurator, subtitle, menuItems, offline, onClose }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const title = isCurator ? 'Сообщения с клиентом' : `Куратор ${resolveCuratorName()}`;
@@ -1432,7 +1456,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(
           'div',
           { className: 'messenger-subtitle' },
-          React.createElement('span', { className: 'messenger-subtitle__dot', 'aria-hidden': 'true' }),
+          React.createElement('span', {
+            className: `messenger-subtitle__dot${offline ? ' is-offline' : ''}`,
+            'aria-hidden': 'true',
+          }),
           subtitle,
         ),
       ),
@@ -1477,6 +1504,261 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
       ),
     );
+  }
+
+  // ── Инбокс куратора ──────────────────────────────────────────────────
+  // Панель разбора появилась раньше инбокса, и найти клиента с неразобранным
+  // сообщением было нечем: куратор переключался через общий список приложения.
+
+  const INBOX_FILTERS = [
+    { key: 'pending', label: 'Ждут разбора' },
+    { key: 'all', label: 'Все' },
+    { key: 'silent', label: 'Молчат 3 дня' },
+  ];
+  const SILENT_DAYS = 3;
+  const WAITING_WARN_MINUTES = 30;
+
+  /** Имя клиента берём из уже загруженного списка куратора — инбокс его не отдаёт. */
+  function readCuratorClients() {
+    try {
+      const raw = localStorage.getItem('heys_clients');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }
+
+  function clientNameById(clients, clientId) {
+    const found = clients.find((c) => String(c?.id) === String(clientId));
+    return found?.name || found?.first_name || 'Клиент';
+  }
+
+  function minutesSince(iso) {
+    if (!iso) return null;
+    const ms = Date.now() - new Date(iso).getTime();
+    return Number.isFinite(ms) ? Math.max(0, Math.round(ms / 60000)) : null;
+  }
+
+  function formatWaiting(minutes) {
+    if (minutes == null) return null;
+    if (minutes < 60) return `Ждёт ${minutes} мин`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Ждёт ${hours} ч`;
+    return `Ждёт ${Math.floor(hours / 24)} дн`;
+  }
+
+  function previewText(preview) {
+    if (!preview) return 'Нет сообщений';
+    if (preview.body) return preview.body;
+    if (preview.intent_type === 'meal') return 'Приём пищи';
+    if (preview.intent_type === 'training') return 'Тренировка';
+    if (preview.intent_type === 'weight') return 'Вес';
+    return 'Вложение';
+  }
+
+  function sortInbox(rows) {
+    // Сначала те, кого ждут дольше всех: неразобранное важнее свежего.
+    return [...rows].sort((a, b) => {
+      const aPending = (a.unread_count || 0) > 0;
+      const bPending = (b.unread_count || 0) > 0;
+      if (aPending !== bPending) return aPending ? -1 : 1;
+      if (aPending && bPending) {
+        return new Date(a.last_message_at || 0) - new Date(b.last_message_at || 0);
+      }
+      return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0);
+    });
+  }
+
+  function filterInbox(rows, filter) {
+    if (filter === 'pending') return rows.filter((r) => (r.unread_count || 0) > 0);
+    if (filter === 'silent') {
+      const cutoff = Date.now() - SILENT_DAYS * 24 * 60 * 60 * 1000;
+      return rows.filter((r) => !r.last_message_at || new Date(r.last_message_at).getTime() < cutoff);
+    }
+    return rows;
+  }
+
+  function CuratorInbox({ rows, activeClientId, onSelect }) {
+    const [filter, setFilter] = useState('pending');
+    const clients = readCuratorClients();
+    const pendingCount = rows.filter((r) => (r.unread_count || 0) > 0).length;
+    const visible = sortInbox(filterInbox(rows, filter));
+
+    return React.createElement(
+      'div',
+      { className: 'messenger-inbox' },
+      React.createElement(
+        'div',
+        { className: 'messenger-inbox__head' },
+        React.createElement('div', { className: 'messenger-inbox__title' }, 'Сообщения клиентов'),
+        React.createElement(
+          'div',
+          { className: 'messenger-inbox__subtitle' },
+          `${pendingCount} ${pendingCount === 1 ? 'ждёт' : 'ждут'} разбора · ${rows.length} ${rows.length === 1 ? 'клиент' : 'клиентов'}`,
+        ),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-inbox__filters' },
+        INBOX_FILTERS.map((item) => React.createElement('button', {
+          key: item.key,
+          type: 'button',
+          className: `messenger-inbox__filter${filter === item.key ? ' is-active' : ''}`,
+          onClick: () => setFilter(item.key),
+        }, item.key === 'pending' ? `${item.label} · ${pendingCount}` : item.label)),
+      ),
+      React.createElement(
+        'div',
+        { className: 'messenger-inbox__list' },
+        visible.length === 0 && React.createElement(
+          'div',
+          { className: 'messenger-inbox__empty' },
+          filter === 'pending' ? 'Всё разобрано.' : 'Пусто.',
+        ),
+        visible.map((row) => {
+          const pending = (row.unread_count || 0) > 0;
+          const waiting = pending ? formatWaiting(minutesSince(row.last_message_at)) : null;
+          const overdue = pending && (minutesSince(row.last_message_at) || 0) >= WAITING_WARN_MINUTES;
+          return React.createElement(
+            'button',
+            {
+              key: row.client_id,
+              type: 'button',
+              className: [
+                'messenger-inbox__row',
+                String(row.client_id) === String(activeClientId) ? 'is-active' : '',
+                pending ? '' : 'is-done',
+              ].filter(Boolean).join(' '),
+              onClick: () => onSelect?.(row.client_id),
+            },
+            React.createElement(
+              'span',
+              { className: 'messenger-inbox__avatar' },
+              getInitials(clientNameById(clients, row.client_id)),
+              pending && React.createElement('span', { className: 'messenger-inbox__badge' },
+                row.unread_count > 99 ? '99+' : String(row.unread_count)),
+            ),
+            React.createElement(
+              'span',
+              { className: 'messenger-inbox__body' },
+              React.createElement(
+                'span',
+                { className: 'messenger-inbox__line' },
+                React.createElement('span', { className: 'messenger-inbox__name' }, clientNameById(clients, row.client_id)),
+                row.last_message_at && React.createElement('span', { className: 'messenger-inbox__time' }, formatTime(row.last_message_at)),
+              ),
+              React.createElement('span', { className: 'messenger-inbox__preview' }, previewText(row.last_message_preview)),
+              (waiting || !pending) && React.createElement(
+                'span',
+                { className: 'messenger-inbox__tags' },
+                waiting && React.createElement('span', {
+                  className: `messenger-inbox__tag${overdue ? ' is-overdue' : ''}`,
+                }, waiting),
+                !pending && row.last_message_at && React.createElement('span', {
+                  className: 'messenger-inbox__tag is-done',
+                }, 'Разобрано'),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── Офлайн-очередь и черновик ────────────────────────────────────────
+  // Без сети сообщение раньше просто падало с ошибкой, и написанный текст
+  // терялся. Теперь оно ложится в очередь на устройстве и уходит само, когда
+  // сеть вернётся. Ключи скоупятся клиентом: на общем устройстве очередь
+  // одного не должна уезжать от имени другого.
+
+  const QUEUE_KEY_PREFIX = 'heys_messenger_queue';
+  const DRAFT_KEY_PREFIX = 'heys_messenger_draft';
+  const QUEUE_LIMIT = 20;
+
+  function scopedMessengerKey(prefix, clientId) {
+    const cid = clientId || getCurrentClientId();
+    return cid ? `${prefix}_${String(cid).toLowerCase()}` : prefix;
+  }
+
+  function readQueue(clientId) {
+    try {
+      const raw = localStorage.getItem(scopedMessengerKey(QUEUE_KEY_PREFIX, clientId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }
+
+  function writeQueue(clientId, queue) {
+    const key = scopedMessengerKey(QUEUE_KEY_PREFIX, clientId);
+    try {
+      if (!queue || queue.length === 0) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(queue.slice(-QUEUE_LIMIT)));
+    } catch { /* приватный режим — очередь живёт только в памяти вкладки */ }
+  }
+
+  function readDraft(clientId) {
+    try {
+      return localStorage.getItem(scopedMessengerKey(DRAFT_KEY_PREFIX, clientId)) || '';
+    } catch { return ''; }
+  }
+
+  function writeDraft(clientId, text) {
+    const key = scopedMessengerKey(DRAFT_KEY_PREFIX, clientId);
+    try {
+      if (text) localStorage.setItem(key, text);
+      else localStorage.removeItem(key);
+    } catch { /* см. writeQueue */ }
+  }
+
+  function isOffline() {
+    return typeof navigator !== 'undefined' && navigator.onLine === false;
+  }
+
+  /** Ошибка транспорта, а не отказ сервера: такое сообщение имеет смысл повторить. */
+  function isNetworkFailure(res) {
+    return !res || res.error === 'network_error' || res.statusCode === 0;
+  }
+
+  function queuedToOptimistic(entry, viewerRole) {
+    return {
+      id: `queued:${entry.request_id}`,
+      sender_role: viewerRole,
+      body: entry.payload?.body || null,
+      attachments: entry.payload?.attachments || [],
+      created_at: entry.created_at,
+      queued: true,
+    };
+  }
+
+  function OfflineQueueBar({ count, hasDraft, sending, onRetry }) {
+    if (count === 0 && !hasDraft) return null;
+    const parts = [];
+    if (count > 0) parts.push(`${count} ${pluralMessages(count)}`);
+    if (hasDraft) parts.push('черновик');
+    return React.createElement(
+      'div',
+      { className: 'messenger-offline-bar', role: 'status' },
+      React.createElement('span', { className: 'messenger-offline-bar__dot', 'aria-hidden': 'true' }),
+      React.createElement(
+        'span',
+        { className: 'messenger-offline-bar__text' },
+        isOffline() ? 'Нет сети. ' : '',
+        `${parts.join(' и ')} ${count > 0 || hasDraft ? 'сохранены на устройстве.' : ''}`.trim(),
+      ),
+      count > 0 && React.createElement('button', {
+        type: 'button',
+        className: 'messenger-offline-bar__retry',
+        onClick: onRetry,
+        disabled: sending,
+      }, sending ? 'Отправляю…' : 'Повторить'),
+    );
+  }
+
+  function pluralMessages(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'сообщение';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'сообщения';
+    return 'сообщений';
   }
 
   // ── Поиск по переписке ───────────────────────────────────────────────
@@ -1538,6 +1820,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [results, setResults] = useState([]);
     const [state, setState] = useState('idle');
     const inputRef = useRef(null);
+    const flushingRef = useRef(false);
 
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 30);
@@ -2112,11 +2395,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   const GRAMS_TEMPLATE = ' 000 г';
+  const TIME_STEP_MINUTES = 5;
+
+  function parseHHMMLabel(label) {
+    const m = String(label || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return 0;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  /** Сдвинуть «HH:MM» на N минут с переходом через полночь. */
+  function shiftTimeLabel(label, deltaMinutes) {
+    const total = ((parseHHMMLabel(label) + deltaMinutes) % 1440 + 1440) % 1440;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  }
 
   function FoodHintCard({ onInsertTime, onInsertGrams, onHide }) {
     // Время живое: клиент открывает мессенджер и видит текущее, а не то,
     // что было на момент первого рендера.
     const [now, setNow] = useState(() => currentTimeLabel());
+    const [stepperOpen, setStepperOpen] = useState(false);
+    const [customTime, setCustomTime] = useState(() => currentTimeLabel());
     useEffect(() => {
       const timer = setInterval(() => setNow(currentTimeLabel()), 30000);
       return () => clearInterval(timer);
@@ -2142,12 +2440,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             type: 'button',
             className: 'messenger-food-hint__pill',
             onClick: () => onInsertTime?.(now),
-          }, `+ ${now}`),
+          }, `Сейчас · ${now}`),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__pill',
+            onClick: () => onInsertTime?.(shiftTimeLabel(now, -60)),
+          }, 'Час назад'),
+          React.createElement('button', {
+            type: 'button',
+            className: `messenger-food-hint__pill${stepperOpen ? ' is-custom' : ''}`,
+            onClick: () => setStepperOpen((open) => !open),
+            'aria-expanded': stepperOpen ? 'true' : 'false',
+          }, 'Своё время'),
           React.createElement('button', {
             type: 'button',
             className: 'messenger-food-hint__pill',
             onClick: () => onInsertGrams?.(),
-          }, '+ 000 г'),
+          }, 'Вес 000 г'),
+        ),
+        // Степпер — второй слой: нужен, когда ни «сейчас», ни «час назад» не
+        // подходят, и не занимает место в обычном случае.
+        stepperOpen && React.createElement(
+          'div',
+          { className: 'messenger-food-hint__stepper' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__step',
+            onClick: () => setCustomTime((value) => shiftTimeLabel(value, -TIME_STEP_MINUTES)),
+            'aria-label': 'Раньше на 5 минут',
+          }, '−'),
+          React.createElement('input', {
+            type: 'time',
+            className: 'messenger-food-hint__time',
+            value: customTime,
+            onChange: (e) => setCustomTime(e.target.value || customTime),
+            'aria-label': 'Время приёма',
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__step',
+            onClick: () => setCustomTime((value) => shiftTimeLabel(value, TIME_STEP_MINUTES)),
+            'aria-label': 'Позже на 5 минут',
+          }, '+'),
+          React.createElement('span', { className: 'messenger-food-hint__step-note' }, 'шаг 5 мин'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-food-hint__done',
+            onClick: () => { onInsertTime?.(customTime); setStepperOpen(false); },
+          }, 'Готово'),
         ),
       ),
       React.createElement('button', {
@@ -2175,6 +2515,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     meal: () => `Приём пищи в ${currentTimeLabel()}, `,
     weight: () => 'Вес утром: ',
     water: () => 'Вода за день: ',
+    // Спрашиваем про активность вообще, а не про тренировку: прогулка или
+    // хобби тоже считаются, и человеку не надо решать, «засчитается» ли это.
+    activity: () => 'Активность сегодня: ',
   };
 
   function DayChecklistRow({ items, isCurator, onPick }) {
@@ -2244,6 +2587,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [outbox, setOutbox] = useState([]);
+    const [flushing, setFlushing] = useState(false);
+    const [pendingAudioTranscript, setPendingAudioTranscript] = useState(null);
+    const [inboxRows, setInboxRows] = useState([]);
+    const [activeClientId, setActiveClientId] = useState(curatorViewClientId || null);
     const [applyTarget, setApplyTarget] = useState(null);
     const [applyBusy, setApplyBusy] = useState(false);
     const [applyError, setApplyError] = useState(null);
@@ -2280,6 +2628,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const isCurator = isCuratorMode();
     const viewerRole = isCurator ? 'curator' : 'client';
     const threadContextKey = `${viewerRole}:${curatorViewClientId || ''}`;
+    // Выбор клиента в инбоксе меняет тред, не закрывая модалку.
+    const threadClientId = isCurator ? (activeClientId || curatorViewClientId) : null;
     if (threadContextKeyRef.current !== threadContextKey) {
       threadContextKeyRef.current = threadContextKey;
       threadGenerationRef.current += 1;
@@ -2479,7 +2829,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!silent && !prepend) setLoading(true);
       if (prepend) setLoadingOlder(true);
       const opts = {
-        ...(isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {}),
+        ...(isCurator && threadClientId ? { client_id: threadClientId } : {}),
         ...(beforeTs ? { before_ts: beforeTs } : {}),
         limit: THREAD_PAGE_LIMIT,
       };
@@ -2560,8 +2910,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!prepend) {
         const latestTs = getLatestForeignReadTs(sorted, viewerRole);
         if (latestTs) {
-          const markPayload = isCurator && curatorViewClientId
-            ? { client_id: curatorViewClientId, up_to_ts: latestTs }
+          const markPayload = isCurator && threadClientId
+            ? { client_id: threadClientId, up_to_ts: latestTs }
             : { up_to_ts: latestTs };
           HEYS.MessengerAPI.markRead(markPayload)
             .then(() => {
@@ -2571,7 +2921,81 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             .catch(() => {});
         }
       }
-    }, [isCurator, curatorViewClientId, viewerRole, hydrateLocalAudio]);
+    }, [isCurator, threadClientId, viewerRole, hydrateLocalAudio]);
+
+    // Черновик расшифровки появляется, как только SpeechKit вернул текст, и
+    // сбрасывается вместе с самой записью.
+    useEffect(() => {
+      if (!pendingAudio) { setPendingAudioTranscript(null); return; }
+      if (pendingAudio.transcript_status === 'ready' && typeof pendingAudio.transcript_text === 'string') {
+        setPendingAudioTranscript((current) => (current === null ? pendingAudio.transcript_text : current));
+      }
+    }, [pendingAudio]);
+
+    // Инбокс живёт только у куратора и обновляется тем же событием, что и
+    // бейджи в шапке приложения.
+    useEffect(() => {
+      if (!isCurator) return undefined;
+      let cancelled = false;
+      const load = () => {
+        HEYS.MessengerAPI.getInbox?.()
+          .then((res) => {
+            if (cancelled || !mountedRef.current) return;
+            setInboxRows(res?.success && Array.isArray(res.inbox) ? res.inbox : []);
+          })
+          .catch(() => {});
+      };
+      load();
+      window.addEventListener('heys:messenger-inbox-updated', load);
+      return () => { cancelled = true; window.removeEventListener('heys:messenger-inbox-updated', load); };
+    }, [isCurator]);
+
+    const outboxClientId = isCurator ? (activeClientId || curatorViewClientId || getCurrentClientId()) : getCurrentClientId();
+
+    // Черновик и очередь переживают закрытие модалки и перезагрузку страницы.
+    useEffect(() => {
+      setOutbox(readQueue(outboxClientId));
+      const draft = readDraft(outboxClientId);
+      if (draft) setInput((current) => current || draft);
+    }, [outboxClientId]);
+
+    useEffect(() => {
+      writeDraft(outboxClientId, input.trim() ? input : '');
+    }, [input, outboxClientId]);
+
+    const flushOutbox = useCallback(async () => {
+      if (flushingRef.current) return;
+      const queue = readQueue(outboxClientId);
+      if (queue.length === 0) return;
+      flushingRef.current = true;
+      setFlushing(true);
+      let rest = queue;
+      // Порядок важен: сообщения уходят по очереди, первое неудачное
+      // останавливает отправку, чтобы не переставить их местами.
+      for (const entry of queue) {
+        const res = await HEYS.MessengerAPI.send(entry.payload, { requestId: entry.request_id })
+          .catch(() => null);
+        if (!res?.success) {
+          if (isNetworkFailure(res)) break;
+          // Сервер отказал по существу (например, сообщение слишком длинное) —
+          // держать такое в очереди вечно бессмысленно.
+        }
+        rest = rest.filter((item) => item.request_id !== entry.request_id);
+        writeQueue(outboxClientId, rest);
+      }
+      flushingRef.current = false;
+      if (!mountedRef.current) return;
+      setFlushing(false);
+      setOutbox(rest);
+      if (rest.length < queue.length) void fetchAndMerge({ silent: true });
+    }, [outboxClientId, fetchAndMerge]);
+
+    useEffect(() => {
+      const onOnline = () => { void flushOutbox(); };
+      window.addEventListener('online', onOnline);
+      if (!isOffline()) void flushOutbox();
+      return () => window.removeEventListener('online', onOnline);
+    }, [flushOutbox]);
 
     const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
 
@@ -2610,7 +3034,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Быстрые вставки из плашки. Обе дописывают в уже набранный текст и
     // оставляют фокус в поле — иначе на мобильном закроется клавиатура.
     const insertTimeIntoInput = useCallback((timeLabel) => {
-      setInput((current) => (current.startsWith(timeLabel) ? current : `${timeLabel} ${current}`.trimEnd() + (current ? '' : ' ')));
+      setInput((current) => {
+        // Время в начале строки заменяем, а не дописываем второе.
+        const withoutLeadingTime = current.replace(/^\s*([01]?\d|2[0-3])[:.][0-5]\d\s*/, '');
+        return `${timeLabel} ${withoutLeadingTime}`.trimEnd() + (withoutLeadingTime ? '' : ' ');
+      });
       const field = inputRef.current;
       if (!field) return;
       field.focus();
@@ -3194,6 +3622,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           size_bytes: readyAudio.size_bytes,
           waveform: readyAudio.waveform || getWaveformBars(readyAudio),
         };
+        // Если человек поправил расшифровку — уходит его версия, не машинная.
+        const editedTranscript = typeof pendingAudioTranscript === 'string' ? pendingAudioTranscript.trim() : '';
+        if (editedTranscript && editedTranscript !== (readyAudio.transcript_text || '').trim()) {
+          audioAttachment.transcript_text = editedTranscript;
+          audioAttachment.transcript_status = 'ready';
+          audioAttachment.transcript_provider = 'client_edited';
+        }
         const supportsTranscription = supportsPilotTranscription(audioAttachment);
         if (supportsTranscription) {
           audioAttachment.transcript_status = liveConsent?.granted ? 'queued' : 'consent_required';
@@ -3225,14 +3660,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const payload = isCurator
         ? { client_id: curatorViewClientId || getCurrentClientId(), body: finalBody, attachments: attachmentsToSend }
         : { body: finalBody, attachments: attachmentsToSend };
-      const res = await HEYS.MessengerAPI.send(payload);
+      const requestId = HEYS.MessengerAPI._createRequestId
+        ? HEYS.MessengerAPI._createRequestId()
+        : String(Date.now());
+
+      // Без сети не показываем ошибку и не теряем текст: кладём в очередь и
+      // отправляем сами, когда соединение вернётся.
+      if (isOffline()) {
+        const entry = { request_id: requestId, payload, created_at: new Date().toISOString() };
+        const queue = [...readQueue(outboxClientId), entry];
+        writeQueue(outboxClientId, queue);
+        setOutbox(queue);
+        setSending(false);
+        setInput('');
+        setReplyTo(null);
+        setPendingPhotos([]);
+        pendingAudioUrlRef.current = null;
+        setPendingAudio(null);
+        return;
+      }
+
+      const res = await HEYS.MessengerAPI.send(payload, { requestId });
       setSending(false);
       if (!res?.success) {
         if (res?.statusCode === 429) {
           setError(`Слишком много сообщений. Подожди ${res.retryAfter || 60} сек.`);
-        } else {
-          setError(res?.error || 'send_failed');
+          return;
         }
+        // Транспорт отвалился уже после ввода — то же, что офлайн: в очередь,
+        // с тем же request_id, поэтому повтор не создаст дубль.
+        if (isNetworkFailure(res)) {
+          const entry = { request_id: requestId, payload, created_at: new Date().toISOString() };
+          const queue = [...readQueue(outboxClientId), entry];
+          writeQueue(outboxClientId, queue);
+          setOutbox(queue);
+          setInput('');
+          setReplyTo(null);
+          setPendingPhotos([]);
+          pendingAudioUrlRef.current = null;
+          setPendingAudio(null);
+          return;
+        }
+        setError(res?.error || 'send_failed');
         return;
       }
       if (readyAudio) {
@@ -3249,6 +3718,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setPendingPhotos([]);
       pendingAudioUrlRef.current = null;
       setPendingAudio(null);
+      setPendingAudioTranscript(null);
       // Optimistic: добавим в ленту, затем перезагрузим из БД
       const optimistic = {
         id: res.message_id,
@@ -3477,11 +3947,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       },
       React.createElement(
         'div',
-        { className: 'messenger-modal', role: 'dialog', 'aria-label': 'Мессенджер HEYS' },
+        {
+          className: `messenger-modal${isCurator ? ' messenger-modal--curator' : ''}`,
+          role: 'dialog',
+          'aria-label': 'Мессенджер HEYS',
+        },
+        // Инбокс: на широком экране — левая колонка, на узком — отдельный
+        // экран, пока клиент не выбран.
+        isCurator && React.createElement(CuratorInbox, {
+          rows: inboxRows,
+          activeClientId: threadClientId,
+          onSelect: (clientId) => setActiveClientId(clientId),
+        }),
+        React.createElement(
+          'div',
+          { className: 'messenger-pane' },
         // Header
         React.createElement(MessengerHeader, {
           isCurator,
-          subtitle: getThreadSubtitle(messages, loading),
+          subtitle: isOffline()
+            ? 'нет сети — синхронизируем позже'
+            : getThreadSubtitle(messages, loading),
+          offline: isOffline(),
           onClose,
           // Постоянная полоса согласия на расшифровку уехала из композера в
           // это меню: она нужна раз в жизни клиента, а место занимала всегда.
@@ -3615,6 +4102,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     );
                     msgIdx++;
                   }
+                  for (const entry of outbox) {
+                    nodes.push(React.createElement(MessageBubble, {
+                      key: `queued-${entry.request_id}`,
+                      message: queuedToOptimistic(entry, viewerRole),
+                      viewerRole,
+                    }));
+                  }
+
                   return nodes;
                 })(),
         ),
@@ -3626,6 +4121,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(
           'div',
           { className: 'messenger-composer' },
+        React.createElement(OfflineQueueBar, {
+          count: outbox.length,
+          hasDraft: !!input.trim() && isOffline(),
+          sending: flushing,
+          onRetry: () => { void flushOutbox(); },
+        }),
         // Панель разбора стоит над композером: сначала «что внести», потом ответ.
         applyTarget && React.createElement(ApplyToDayPanel, {
           message: applyTarget,
@@ -3704,8 +4205,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     className: 'messenger-pending-audio-remove',
                     onClick: removePendingAudio,
                     'aria-label': 'Убрать голосовое',
-                  }, '✕'),
+                  }, React.createElement(Icon, { name: 'close', size: 14 })),
                 ),
+          ),
+        // Расшифровку можно поправить до отправки: SpeechKit ошибается в
+        // названиях продуктов, и куратор получил бы неверный состав.
+        !isCurator && pendingAudio?.status === 'done' && pendingAudioTranscript !== null &&
+          React.createElement(
+            'div',
+            { className: 'messenger-transcript-draft' },
+            React.createElement(
+              'div',
+              { className: 'messenger-transcript-draft__head' },
+              React.createElement('span', { className: 'messenger-transcript-draft__label' }, 'Расшифровка'),
+              React.createElement('span', { className: 'messenger-transcript-draft__note' }, 'можно поправить до отправки'),
+            ),
+            React.createElement('textarea', {
+              className: 'messenger-transcript-draft__field',
+              value: pendingAudioTranscript,
+              rows: 2,
+              maxLength: 2000,
+              onChange: (e) => setPendingAudioTranscript(e.target.value),
+              'aria-label': 'Текст расшифровки',
+            }),
           ),
         // Напоминание клиенту: время + граммы в сообщениях о еде
         shouldShowFoodHint(messages, viewerRole, { dismissedForSession: foodHintHidden }) &&
@@ -3888,6 +4410,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onCancel: cancelDeleteMessage,
             onConfirm: confirmDeleteMessage,
           }),
+        ),
       ),
     );
   }
@@ -4274,6 +4797,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       parseMealItems,
       FoodHintCard,
       shouldShowFoodHint,
+      shiftTimeLabel,
+      OfflineQueueBar,
+      CuratorInbox,
+      sortInbox,
+      filterInbox,
+      formatWaiting,
+      previewText,
+      readQueue,
+      writeQueue,
+      readDraft,
+      writeDraft,
+      isNetworkFailure,
+      queuedToOptimistic,
       MessageBubble,
       DateSeparator,
       Icon,

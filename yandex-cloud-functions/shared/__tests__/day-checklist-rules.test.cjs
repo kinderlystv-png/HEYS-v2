@@ -194,3 +194,33 @@ test('среднее пробуждение игнорирует дни без s
   assert.equal(averageWakeMinutes(days), null); // валидных всего два
   assert.equal(averageWakeMinutes(null), null);
 });
+
+test('активность: пустая заготовка тренировки не считается', () => {
+  const { hasActivity } = require('../day-checklist-rules');
+
+  expect_(hasActivity({ trainings: [{ z: [0, 0, 0] }] }), false);
+  expect_(hasActivity({ trainings: [{ z: [0, 25, 0] }] }), true);
+  expect_(hasActivity({ trainings: [] }), false);
+  expect_(hasActivity({}), false);
+});
+
+test('активность: спрашиваем вечером и у всех', () => {
+  const { ACTIVITY_DUE_MINUTES } = require('../day-checklist-rules');
+  const itemOf = (res) => res.items.find((it) => it.key === 'activity');
+
+  // До вечера пункт не показываем: человек ещё может пойти гулять.
+  const day = buildDayChecklist({ day: {}, nowMinutes: ACTIVITY_DUE_MINUTES - 1 });
+  assert.equal(itemOf(day).status, STATUS_SKIPPED);
+
+  const evening = buildDayChecklist({ day: {}, nowMinutes: ACTIVITY_DUE_MINUTES });
+  assert.equal(itemOf(evening).status, STATUS_MISSING);
+  assert.equal(itemOf(evening).due_from, '19:00');
+
+  // Любая отмеченная активность закрывает пункт — не обязательно тренировка.
+  const walked = buildDayChecklist({ day: { trainings: [{ z: [40] }] }, nowMinutes: 23 * 60 });
+  assert.equal(itemOf(walked).status, STATUS_DONE);
+});
+
+function expect_(actual, expected) {
+  assert.equal(actual, expected);
+}
