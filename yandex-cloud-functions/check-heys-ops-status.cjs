@@ -230,12 +230,22 @@ function parseEnvFile(filePath) {
   return out;
 }
 
+// Возвращает { ok, error, secrets }.
+//
+// ⚠️ Инвариант (2026-08-03): «Lockbox не прочитался» — это отдельное состояние,
+// а не «в Lockbox пусто». Раньше обе ситуации сворачивались в {} и вызывающий
+// молча подставлял токен из локального .env: на машине разработчика проверка
+// зеленела, хотя в облаке функции работать было нечем.
 async function loadLockboxSecrets() {
   try {
     const payload = await ycJson(['lockbox', 'payload', 'get', '--id', APP_LOCKBOX_ID]);
-    return Object.fromEntries((payload.entries || []).map((e) => [e.key || e.text_key, e.text_value || e.value || e.payload]));
-  } catch {
-    return {};
+    return {
+      ok: true,
+      error: null,
+      secrets: Object.fromEntries((payload.entries || []).map((e) => [e.key || e.text_key, e.text_value || e.value || e.payload])),
+    };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || 'lockbox_read_failed').slice(0, 200), secrets: {} };
   }
 }
 
@@ -394,10 +404,13 @@ async function collectStatus() {
     return { name: expected.name, issues: triggerIssues };
   });
 
-  const envFile = parseEnvFile(resolve(__dirname, '.env'));
   const lockbox = await loadLockboxSecrets();
+  if (!lockbox.ok) issues.push(`lockbox:read_failed=${lockbox.error}`);
   const telegram = await Promise.all(TELEGRAM_BOTS.map(async (bot) => {
-    const token = lockbox[bot.key] || envFile[bot.key] || process.env[bot.key];
+    // Источник правды для облака — Lockbox. Пустое значение остаётся пустым:
+    // fallback на локальный .env/process.env скрыл бы «в облаке нечем работать»
+    // и превращал бы этот чек в зелёный на машине разработчика.
+    const token = lockbox.secrets[bot.key];
     const info = await fetchWebhookInfo(bot.label, token);
     const tgIssues = evaluateWebhookInfo(info);
     if (tgIssues.length) issues.push(...tgIssues.map((p) => `telegram:${bot.label}:${p}`));
@@ -459,15 +472,17 @@ async function collectSecretInventory() {
       functions.push({ name, error: e.message });
     }
   }
-  const lockboxKeys = Object.keys(lockbox).sort();
-  const missingLockboxKeys = EXPECTED_APP_LOCKBOX_KEYS.filter((key) => !lockbox[key]);
+  const lockboxKeys = Object.keys(lockbox.secrets).sort();
+  const missingLockboxKeys = EXPECTED_APP_LOCKBOX_KEYS.filter((key) => !lockbox.secrets[key]);
   const localPlaintextKeys = Object.entries(envFile)
     .filter(([key, value]) => /(TOKEN|SECRET|PASSWORD|PRIVATE_KEY)/.test(key) && !String(value || '').startsWith('__IN_LOCKBOX__'))
     .map(([key]) => key)
     .sort();
   const plaintextFunctionKeys = functions.flatMap((f) => (f.plaintext_secret_keys || []).map((key) => `${f.name}:${key}`));
   return {
-    ok: missingLockboxKeys.length === 0 && plaintextFunctionKeys.length === 0,
+    ok: lockbox.ok && missingLockboxKeys.length === 0 && plaintextFunctionKeys.length === 0,
+    lockbox_read_ok: lockbox.ok,
+    lockbox_read_error: lockbox.error,
     lockbox_keys: lockboxKeys,
     missing_lockbox_keys: missingLockboxKeys,
     local_plaintext_keys: localPlaintextKeys,
@@ -481,7 +496,10 @@ async function remediateSafeTelegramWebhooks() {
   const lockbox = await loadLockboxSecrets();
   const actions = [];
   for (const bot of TELEGRAM_BOTS) {
-    const token = lockbox[bot.key] || envFile[bot.key] || process.env[bot.key];
+    // Здесь токен нужен, чтобы реально дёрнуть Bot API, поэтому локальный
+    // fallback сохраняем — но факт нечитаемого Lockbox выносим в результат,
+    // иначе ремедиация может втихую сработать по устаревшему токену.
+    const token = lockbox.secrets[bot.key] || envFile[bot.key] || process.env[bot.key];
     const before = await fetchWebhookInfo(bot.label, token);
     if (!before.webhookConfigured) {
       actions.push({ label: bot.label, action: 'skip', reason: 'webhook_off' });
@@ -500,7 +518,12 @@ async function remediateSafeTelegramWebhooks() {
       error: deleted.error || null,
     });
   }
-  return { ok: actions.every((a) => a.action === 'skip' || a.ok), actions };
+  return {
+    ok: lockbox.ok && actions.every((a) => a.action === 'skip' || a.ok),
+    lockbox_read_ok: lockbox.ok,
+    lockbox_read_error: lockbox.error,
+    actions,
+  };
 }
 
 async function runCanaries() {
@@ -625,6 +648,7 @@ module.exports = {
   evaluateHeartbeatRows,
   evaluateBackupRow,
   latestVersion,
+  loadLockboxSecrets,
   EXPECTED_HEARTBEAT_TASKS,
   collectDeadManStatus,
   collectSecretInventory,

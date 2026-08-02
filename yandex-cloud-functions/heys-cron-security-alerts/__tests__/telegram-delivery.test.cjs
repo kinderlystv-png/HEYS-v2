@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  API_FUNCTIONS,
   buildAlertPayload,
+  checkConcurrencyIssues,
+  concurrencyWatchBlindResult,
   crossClientRule,
   evaluateMonitorResults,
   sendTelegram,
@@ -92,4 +95,68 @@ test('Markdown rejection retries once as plain text', async () => {
     if (originalChat === undefined) delete process.env.TELEGRAM_CHAT_ID;
     else process.env.TELEGRAM_CHAT_ID = originalChat;
   }
+});
+
+// ── concurrency_watch: слепота ≠ «чисто» (2026-08-03) ────────────────────
+// Регресс, который эти тесты держат: при потере доступа к метрикам правило
+// рапортовало `clean`, функция отдавала 200 и штамповала heartbeat.
+
+test('lost IAM token marks every function unreadable instead of clean', async () => {
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => { throw new Error('permission denied'); },
+    readMemory: async () => { throw new Error('must not be called'); },
+  });
+
+  assert.deepEqual(watch.issues, []);
+  assert.deepEqual(watch.unreadable, API_FUNCTIONS.map((fn) => fn.name));
+  assert.match(watch.error, /IAM token unavailable/);
+
+  const blind = concurrencyWatchBlindResult(watch);
+  assert.equal(blind.status, 'check_error');
+  assert.equal(evaluateMonitorResults([blind]).healthy, false);
+});
+
+test('metric read failure for a single function is reported, not swallowed', async () => {
+  const blocked = API_FUNCTIONS[1].name;
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => 'iam-token',
+    readMemory: async (name) => {
+      if (name === blocked) throw new Error('HTTP 403: permission denied');
+      return { peakBytes: 1024 * 1024, points: 3 };
+    },
+  });
+
+  assert.deepEqual(watch.issues, []);
+  assert.deepEqual(watch.unreadable, [blocked]);
+
+  const blind = concurrencyWatchBlindResult(watch);
+  assert.ok(blind, 'partial blindness must produce a check_error result');
+  assert.match(blind.error, new RegExp(blocked));
+  assert.match(blind.error, /403/);
+  assert.equal(evaluateMonitorResults([blind]).healthy, false);
+});
+
+test('fully readable metrics still produce a clean, healthy result', async () => {
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => 'iam-token',
+    readMemory: async () => ({ peakBytes: 1024 * 1024, points: 5 }),
+  });
+
+  assert.deepEqual(watch.unreadable, []);
+  assert.deepEqual(watch.noData, []);
+  assert.equal(concurrencyWatchBlindResult(watch), null);
+  assert.equal(
+    evaluateMonitorResults([{ rule: 'concurrency_watch', status: 'clean' }]).healthy,
+    true,
+  );
+});
+
+test('empty metric window is surfaced as no_data, not silently treated as proof of health', async () => {
+  const watch = await checkConcurrencyIssues({
+    getToken: async () => 'iam-token',
+    readMemory: async () => ({ peakBytes: 0, points: 0 }),
+  });
+
+  assert.deepEqual(watch.unreadable, []);
+  assert.deepEqual(watch.noData, API_FUNCTIONS.map((fn) => fn.name));
 });

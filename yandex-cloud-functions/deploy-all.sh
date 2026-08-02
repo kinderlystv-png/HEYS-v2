@@ -117,6 +117,37 @@ done
 echo -e "${GREEN}✅ All required variables loaded${NC}"
 echo -e "${BLUE}🔐 PG_PASSWORD: configured${NC}"
 
+# Проверка входа в yc ДО первой мутации.
+#
+# ⚠️ Инвариант (2026-08-03): потеря доступа не должна выглядеть как «секрет ещё
+# не готов». Раньше при неработающем `yc` (нет логина / протух токен / нет прав
+# на folder) вызов `yc lockbox payload get` молча отдавал пустой stdout,
+# payments-проверка падала как «not ready», функция тихо уходила в
+# SKIPPED_FUNCTIONS, и деплой завершался зелёным. Теперь отсутствие доступа —
+# это честный отказ до того, как что-либо задеплоено.
+YC_ACCESS_VERIFIED=false
+require_yc_access() {
+    if [ "$YC_ACCESS_VERIFIED" = true ]; then
+        return 0
+    fi
+    if ! command -v yc >/dev/null 2>&1; then
+        echo -e "${RED}❌ Refuse to deploy: yc CLI not found in PATH${NC}"
+        exit 1
+    fi
+    # Read-only проба: требует и валидный IAM-токен, и доступ к folder'у.
+    # Вывод выбрасывается целиком — печатать там нечего.
+    if ! yc serverless function list --format json >/dev/null 2>&1; then
+        echo -e "${RED}❌ Refuse to deploy: yc is not authenticated or has no access to the target folder${NC}"
+        echo -e "${YELLOW}   Остановлено ДО первой мутации: иначе провал чтения Lockbox выглядит${NC}"
+        echo -e "${YELLOW}   как «секрет не готов», функция тихо пропускается, а деплой зелёный.${NC}"
+        echo -e "${YELLOW}   Fix: yc init (или задать YC_TOKEN / YC_SERVICE_ACCOUNT_KEY_FILE) и повторить.${NC}"
+        exit 1
+    fi
+    YC_ACCESS_VERIFIED=true
+}
+
+# Коды возврата: 0 — секрет готов, 1 — секрет не готов (конфиг/ключи),
+# 2 — прочитать секрет не удалось (потеря доступа), пропускать функцию нельзя.
 payments_lockbox_ready() {
     if [ -z "${LOCKBOX_PAYMENTS_SECRET_ID:-}" ]; then
         echo -e "${RED}❌ ERROR: LOCKBOX_PAYMENTS_SECRET_ID is required for heys-api-payments${NC}" >&2
@@ -127,8 +158,15 @@ payments_lockbox_ready() {
         return 1
     fi
 
-    yc lockbox payload get --id "$LOCKBOX_PAYMENTS_SECRET_ID" --format=json 2>/dev/null \
-        | node "$PAYMENTS_SECRET_CHECK"
+    local payload="" rc=0
+    payload="$(yc lockbox payload get --id "$LOCKBOX_PAYMENTS_SECRET_ID" --format=json 2>/dev/null)" || rc=$?
+    if [ "$rc" -ne 0 ] || [ -z "$payload" ]; then
+        echo -e "${RED}❌ ERROR: payments Lockbox is unreadable (yc call failed) — access problem, not an empty secret${NC}" >&2
+        return 2
+    fi
+
+    # payload содержит секрет: его нельзя печатать, только передать в валидатор.
+    printf '%s' "$payload" | node "$PAYMENTS_SECRET_CHECK"
 }
 
 INVENTORY_SCRIPT="$SCRIPT_DIR/function-inventory.cjs"
@@ -578,16 +616,27 @@ preflight_function() {
         exit 1
     fi
 
-    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_lockbox_ready; then
-        if [ "$CI_MODE" = true ] && [ ${#TARGET_FUNCTIONS[@]} -eq 0 ]; then
-            SKIPPED_FUNCTIONS+=("$func_name")
-            PREVALIDATED_ENV_FLAGS+=("")
-            echo -e "${YELLOW}⏭️  Preflight skip $func_name — dedicated payments Lockbox is not ready${NC}"
-            return 0
+    if [[ "$func_name" == "heys-api-payments" ]]; then
+        local payments_rc=0
+        payments_lockbox_ready || payments_rc=$?
+
+        if [ "$payments_rc" -eq 2 ]; then
+            echo -e "${RED}❌ ERROR: payments Lockbox readiness could NOT be verified for $func_name${NC}"
+            echo -e "${YELLOW}   Потеря доступа — не повод молча пропустить функцию и уйти зелёным.${NC}"
+            exit 1
         fi
 
-        echo -e "${RED}❌ ERROR: dedicated payments Lockbox is not ready for $func_name${NC}"
-        exit 1
+        if [ "$payments_rc" -ne 0 ]; then
+            if [ "$CI_MODE" = true ] && [ ${#TARGET_FUNCTIONS[@]} -eq 0 ]; then
+                SKIPPED_FUNCTIONS+=("$func_name")
+                PREVALIDATED_ENV_FLAGS+=("")
+                echo -e "${YELLOW}⏭️  Preflight skip $func_name — dedicated payments Lockbox is not ready${NC}"
+                return 0
+            fi
+
+            echo -e "${RED}❌ ERROR: dedicated payments Lockbox is not ready for $func_name${NC}"
+            exit 1
+        fi
     fi
 
     validate_function_source_state "$func_name"
@@ -899,6 +948,14 @@ if [ "$CAPACITY_REQUIRED" = true ]; then
         echo -e "${BLUE}🧮 Verifying serverless quota has >=2x target headroom...${NC}"
         node "$CAPACITY_CHECK" --strict --quota-only
     fi
+fi
+
+if [ "$DRY_RUN" = true ]; then
+    echo -e "${YELLOW}⏭️  yc access gate skipped in dry-run mode${NC}"
+else
+    echo -e "${BLUE}🔑 Verifying yc authentication before the first mutation...${NC}"
+    require_yc_access
+    echo -e "${GREEN}✅ yc access verified${NC}"
 fi
 
 echo -e "${BLUE}🔎 Preflighting all deployment targets before the first mutation...${NC}"

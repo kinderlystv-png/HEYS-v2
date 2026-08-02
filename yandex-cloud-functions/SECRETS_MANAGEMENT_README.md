@@ -168,7 +168,9 @@ nano .env  # TELEGRAM_BOT_TOKEN=new_token
 
 Преимущества:
 
-- ✅ Автоматическая ротация паролей БЕЗ redeploy
+- ✅ Ротация секретов без правки `.env` и без плейнтекста в env функций (⚠️ но
+  **не** без redeploy: тёплые контейнеры кешируют overlay до рестарта — см.
+  LOCKBOX_MIGRATION_GUIDE.md → «Ротация секретов»)
 - ✅ Audit trail всех изменений
 - ✅ Granular access control через IAM
 - ✅ Версионирование секретов

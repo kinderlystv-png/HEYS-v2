@@ -355,6 +355,9 @@ async function getIamTokenForLogging() {
 }
 
 async function readPeakMemory(functionName, sinceMinutes, iamToken) {
+  // Возвращает { peakBytes, points }. points === 0 значит «ответ пришёл, но
+  // точек в окне нет» — это НЕ доказательство здоровья (функция могла просто
+  // не вызываться), поэтому счётчик отдаём наверх для отчёта.
   // Query Monitoring API для max(used_memory_bytes) за окно.
   // Возвращает максимум по всем версиям/bin'ам за window.
   const now = new Date();
@@ -376,32 +379,58 @@ async function readPeakMemory(functionName, sinceMinutes, iamToken) {
     },
   }, body);
   let peak = 0;
+  let points = 0;
   for (const m of resp.metrics || []) {
     const values = m.timeseries?.doubleValues || [];
     for (const v of values) {
       const n = Number(v);
-      if (Number.isFinite(n) && n > peak) peak = n;
+      if (!Number.isFinite(n)) continue;
+      points += 1;
+      if (n > peak) peak = n;
     }
   }
-  return peak;  // bytes
+  return { peakBytes: peak, points };
 }
 
-async function checkConcurrencyIssues() {
+// Возвращает { issues, unreadable, noData, error }.
+//
+// ⚠️ Инвариант (2026-08-03): «не смог посмотреть» ≠ «посмотрел, чисто».
+// Раньше потеря IAM-токена или 403 от Monitoring API просто логировались, а
+// наружу уходил пустой список → правило concurrency_watch рапортовало `clean`,
+// функция отдавала 200 и штамповала heartbeat. Слепой мониторинг выглядел
+// зелёным сколько угодно долго. Теперь каждая непрочитанная функция попадает в
+// `unreadable`, и вызывающий обязан отчитаться об этом как об ошибке проверки.
+//
+// Зависимости инжектируемы, чтобы слепоту можно было проверить тестом без сети.
+async function checkConcurrencyIssues({
+  getToken = getIamTokenForLogging,
+  readMemory = readPeakMemory,
+} = {}) {
   let iamToken;
-  try { iamToken = await getIamTokenForLogging(); }
+  try { iamToken = await getToken(); }
   catch (err) {
     console.error('[concurrency-watch] failed to get IAM token:', err.message);
-    return [];
+    // Без токена не прочитана НИ одна функция — весь список слепой.
+    return {
+      issues: [],
+      unreadable: API_FUNCTIONS.map((fn) => fn.name),
+      noData: [],
+      error: `IAM token unavailable: ${err.message}`,
+    };
   }
 
   const issues = [];
+  const unreadable = [];
+  const noData = [];
+  let lastError = null;
   for (const fn of API_FUNCTIONS) {
     try {
-      const peakBytes = await readPeakMemory(fn.name, WINDOW_MINUTES, iamToken);
+      const { peakBytes, points } = await readMemory(fn.name, WINDOW_MINUTES, iamToken);
       const peakMB = peakBytes / 1024 / 1024;
       const limitMB = fn.memory_mb;
       const ratio = peakMB / limitMB;
-      console.log(`[concurrency-watch] ${fn.name}: peak ${peakMB.toFixed(1)}MB / ${limitMB}MB (${(ratio * 100).toFixed(1)}%)`);
+      console.log(`[concurrency-watch] ${fn.name}: peak ${peakMB.toFixed(1)}MB / ${limitMB}MB (${(ratio * 100).toFixed(1)}%), points=${points}`);
+      if (!points) noData.push(fn.name);
       if (ratio >= MEMORY_WARN_THRESHOLD_RATIO) {
         issues.push({
           function: fn.name,
@@ -412,9 +441,28 @@ async function checkConcurrencyIssues() {
       }
     } catch (err) {
       console.error(`[concurrency-watch] metric read failed for ${fn.name}:`, err.message);
+      unreadable.push(fn.name);
+      lastError = err.message;
     }
   }
-  return issues;
+  return {
+    issues,
+    unreadable,
+    noData,
+    error: lastError ? `metric read failed: ${lastError}` : null,
+  };
+}
+
+// Отдельная чистая функция: превращает слепоту в явный check_error-результат.
+function concurrencyWatchBlindResult(watch) {
+  const unreadable = (watch && watch.unreadable) || [];
+  if (!unreadable.length) return null;
+  return {
+    rule: 'concurrency_watch',
+    status: 'check_error',
+    unreadable,
+    error: `memory metrics unavailable for ${unreadable.join(', ')}: ${watch.error || 'unknown reason'}`,
+  };
 }
 
 async function sendTelegram(rule, rows) {
@@ -514,9 +562,19 @@ module.exports.handler = async function () {
 
     // ── Concurrency watch ─────────────────────────────────────────────
     try {
-      const issues = await checkConcurrencyIssues();
+      const watch = await checkConcurrencyIssues();
+      const blind = concurrencyWatchBlindResult(watch);
+      // Слепота репортится всегда и отдельно: даже если по прочитанным функциям
+      // проблем нет, `clean` в этом прогоне выставлять нельзя.
+      if (blind) results.push(blind);
+
+      const issues = watch.issues;
       if (!issues.length) {
-        results.push({ rule: 'concurrency_watch', status: 'clean' });
+        if (!blind) {
+          const cleanResult = { rule: 'concurrency_watch', status: 'clean' };
+          if (watch.noData.length) cleanResult.no_data = watch.noData;
+          results.push(cleanResult);
+        }
       } else if (await isOnCooldown(client, 'concurrency_watch')) {
         results.push({ rule: 'concurrency_watch', status: 'cooldown', triggered: issues.length });
       } else {
@@ -577,7 +635,10 @@ module.exports.handler = async function () {
 };
 
 module.exports.__test = {
+  API_FUNCTIONS,
   buildAlertPayload,
+  checkConcurrencyIssues,
+  concurrencyWatchBlindResult,
   evaluateMonitorResults,
   crossClientRule: RULES.find((rule) => rule.key === 'cross_client_write_blocked'),
   sendTelegram,

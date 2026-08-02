@@ -160,3 +160,34 @@ test('latestVersion prefers $latest tag', () => {
     { id: 'new', tags: ['$latest'] },
   ]).id, 'new');
 });
+
+// ── Lockbox: «не прочитался» ≠ «пусто» (2026-08-03) ──────────────────────
+// Регресс, который эти тесты держат: недоступный/пустой Lockbox подменялся
+// токеном из локального .env — локально зелено, а в облаке работать нечем.
+
+test('unreadable Lockbox reports an explicit failure instead of an empty secret map', async () => {
+  const { loadLockboxSecrets } = require('../check-heys-ops-status.cjs');
+  const originalPath = process.env.PATH;
+  process.env.PATH = resolve(ROOT, '__tests__', 'no-such-bin-dir');
+  try {
+    const lockbox = await loadLockboxSecrets();
+    assert.equal(lockbox.ok, false);
+    assert.ok(lockbox.error && lockbox.error.length > 0);
+    assert.deepEqual(lockbox.secrets, {});
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('collectStatus reads bot tokens from Lockbox only, without a local .env fallback', () => {
+  const source = readFileSync(resolve(ROOT, 'check-heys-ops-status.cjs'), 'utf8');
+  const collectStatusBody = source.slice(source.indexOf('async function collectStatus()'));
+  assert.match(collectStatusBody, /const token = lockbox\.secrets\[bot\.key\];/);
+  assert.doesNotMatch(
+    collectStatusBody.slice(0, collectStatusBody.indexOf('async function collectSecretInventory')),
+    /lockbox\.secrets\[bot\.key\] \|\|/,
+  );
+  assert.match(collectStatusBody, /issues\.push\(`lockbox:read_failed=/);
+  // Пустой токен доезжает до отчёта как проблема, а не как «всё настроено».
+  assert.deepEqual(evaluateWebhookInfo({ label: 'support', configured: false }), ['token_missing']);
+});
