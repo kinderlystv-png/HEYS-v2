@@ -5,9 +5,10 @@
 // ничего не зная о том, кто за ней стоит. Три строки закрывают этот разрыв в
 // момент, когда решение принимается.
 //
-// Дублирование с аккордеоном «Кто ведёт и по какому стандарту» намеренное:
-// здесь опора, там — возможность проверить подробнее. Тексты общие, чтобы
-// формулировки не разъехались.
+// Дубля во втором слое больше нет: формулировки стоят здесь целиком, вместе с
+// причиной («чтобы вникать в неделю каждого»), а не в усечённом виде. Раньше
+// причина жила в аккордеоне ниже тарифов, и на первом слое оставалась одна
+// регалия.
 //
 // Обезличенный proof-канон `30` L3: опыт, стандарт ведения и честный первый
 // набор — без имени, фото и регалий.
@@ -21,16 +22,16 @@ export default function TrustStrip() {
   return (
     <div className="mb-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-        Кто это делает
+        Кто вас ведёт
       </p>
       <ul className="mt-3 space-y-2.5">
         {CURATOR_STANDARD.map((item) => (
-          <li key={item.short} className="flex gap-2.5 text-[14px] leading-5 text-slate-700">
+          <li key={item} className="flex gap-2.5 text-[14px] leading-5 text-slate-700">
             <span
               aria-hidden="true"
               className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600"
             />
-            <span>{item.short}</span>
+            <span>{item}</span>
           </li>
         ))}
       </ul>

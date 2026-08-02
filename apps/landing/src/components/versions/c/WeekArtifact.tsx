@@ -107,6 +107,21 @@ export default function WeekArtifact() {
           </p>
         </div>
 
+        {/* Узел, ради которого артефакт и существует. «Заметил» умеет и
+            алгоритм — отличает HEYS то, что человек спрашивает про контекст,
+            прежде чем делать вывод. Без этой строки вникание на странице только
+            заявлено словами и нигде не показано. Реплика остаётся наблюдением
+            по той же демонстрационной неделе: Чт и Пт — пропущенный обед и
+            поздний ужин. */}
+        <div className="px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Что уточнил куратор
+          </p>
+          <p className="mt-1 text-[15px] leading-6 text-slate-700">
+            Спросил про четверг и пятницу: в эти дни были поздние встречи, и обед не получался.
+          </p>
+        </div>
+
         <div className="px-5 py-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             Что могло повлиять

@@ -11,7 +11,6 @@
 // FAQ переиспользуется из общего контента варианта A, чтобы ответы не разъехались
 // между версиями.
 
-import { CURATOR_STANDARD } from '@/components/versions/c/curatorStandard';
 import { VARIANTS } from '@/config/landing-variants';
 
 // Вопросы про деньги и границы услуги отделены от вопросов про формат: человек
@@ -115,21 +114,10 @@ export default function SecondLayerSection() {
             ))}
           </Group>
 
-          <Group title="Кто ведёт">
-            <Disclosure summary="Кто ведёт и по какому стандарту">
-              <ul className="space-y-2">
-                {CURATOR_STANDARD.map((item) => (
-                  <li key={item.short} className="flex gap-2">
-                    <span
-                      aria-hidden="true"
-                      className="mt-2 h-1 w-1 shrink-0 rounded-full bg-slate-400"
-                    />
-                    <span>{item.full}</span>
-                  </li>
-                ))}
-              </ul>
-            </Disclosure>
-          </Group>
+          {/* Группы «Кто ведёт» здесь больше нет: стандарт ведения перенесён в
+              первый слой целиком (`TrustStrip`). Он отвечает не на «а если…?»,
+              а на само решение — кто с вами работает, — и держать его в
+              аккордеоне ниже тарифов значило прятать главный аргумент. */}
 
           {terms.length ? (
             <Group title="Условия и оплата">
