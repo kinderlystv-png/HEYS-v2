@@ -487,6 +487,67 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return HEYS.models?.getAutoPortions?.(productName) || [];
   };
 
+  // ── Похожие названия в личном списке ──────────────────────────────────────
+  // Клиент создаёт «Торт Наполеон222» рядом с уже имеющимся «Торт Наполеон» —
+  // и одна и та же еда попадает в приём дважды (случай из дня 2026-04-26,
+  // 200 г торта двумя позициями). Существующая проверка дублей сравнивает
+  // названия ТОЧНО, поэтому такие пары не ловит.
+  //
+  // Голое расстояние Левенштейна здесь не работает: «Творог 5%» и «Творог 9%»
+  // различаются на 1 символ и это РАЗНЫЕ продукты, а «Наполеон» и
+  // «Наполеон222» — на 3 и это дубль. Значение имеет не длина различия, а его
+  // характер, поэтому правила два и оба узкие:
+  //   1) одно название — начало другого, а «хвост» короткий и без пробела
+  //      («наполеон» → «наполеон222»); пробел означает добавленное слово,
+  //      то есть уточнение сорта: «хлеб белый» → «хлеб белый тостовый»;
+  //   2) ровно одна опечатка внутри слова, но НЕ в цифре — числа несут смысл
+  //      (жирность, процент, вес), их замена делает продукт другим.
+  const SIMILAR_NAME_TAIL_MAX = 4;
+  const SIMILAR_NAME_MIN_LENGTH = 6;
+
+  const normalizeForSimilarity = (name) => {
+    const viaModels = HEYS.models?.normalizeProductName?.(name);
+    const base = typeof viaModels === 'string' && viaModels ? viaModels : String(name || '');
+    return base.toLowerCase().trim().replace(/\s+/g, ' ');
+  };
+
+  const hasDigitDifference = (a, b) => {
+    const max = Math.max(a.length, b.length);
+    for (let i = 0; i < max; i++) {
+      if (a[i] !== b[i]) return /\d/.test(a[i] || '') || /\d/.test(b[i] || '');
+    }
+    return false;
+  };
+
+  const looksLikeSameProduct = (rawA, rawB) => {
+    const a = normalizeForSimilarity(rawA);
+    const b = normalizeForSimilarity(rawB);
+    if (!a || !b || a === b) return false;
+
+    // Правило 1: приписанный в конец короткий хвост без пробела.
+    const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+    if (longer.startsWith(shorter)) {
+      const tail = longer.slice(shorter.length);
+      if (tail.length <= SIMILAR_NAME_TAIL_MAX && !/\s/.test(tail)) return true;
+    }
+
+    // Правило 2: одна опечатка в слове, не затрагивающая цифру.
+    if (Math.min(a.length, b.length) < SIMILAR_NAME_MIN_LENGTH) return false;
+    if (hasDigitDifference(a, b)) return false;
+    const distance = HEYS.SmartSearchWithTypos?.utils?.levenshteinDistance;
+    if (typeof distance !== 'function') return false;
+    return distance(a, b, 2) === 1;
+  };
+
+  // Кандидаты из личного списка клиента: только то, что реально видно в списке.
+  const findSimilarPersonalProducts = (name, products, excludeId) => {
+    if (!name || !Array.isArray(products)) return [];
+    return products
+      .filter((p) => p && p.name && String(p.id) !== String(excludeId) && p.in_my_list !== false)
+      .filter((p) => looksLikeSameProduct(name, p.name))
+      .slice(0, 3);
+  };
+
   const normalizePortions = (list) => {
     if (!Array.isArray(list)) {
       console.warn('[HEYS.portions] ⚠️ normalizePortions: не массив', { input: list });
@@ -7872,6 +7933,29 @@ NOVA: 1
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, updateStepData } = stepContext;
 
+    // Похожие продукты в личном списке — мягкое предупреждение перед сохранением.
+    // Только для новых продуктов: у разового и при редактировании существующего
+    // дубль не появляется.
+    const [similarDismissed, setSimilarDismissed] = useState(false);
+    const similarProducts = useMemo(() => {
+      if (!product || product._oneTime) return [];
+      const list = HEYS.products?.getAll?.() || [];
+      return findSimilarPersonalProducts(product.name, list, product.id);
+    }, [product]);
+
+    // Взять существующий продукт вместо создания нового: подставляем его в шаг
+    // граммов и переходим туда — новый в базу не сохраняется.
+    const useExistingProduct = useCallback((existing) => {
+      haptic('light');
+      updateStepData?.('grams', {
+        selectedProduct: existing,
+        grams: stepData?.create?.grams || 100
+      });
+      updateStepData?.('create', { ...stepData?.create, selectedProduct: existing });
+      onChange?.({ ...(data || {}), selectedProduct: existing });
+      setTimeout(() => goToStep?.(4, 'left'), 120);
+    }, [updateStepData, stepData, onChange, data, goToStep]);
+
     // Обновляем данные при изменении выбора
     useEffect(() => {
       if (product && selectedHarm != null) {
@@ -8140,6 +8224,35 @@ NOVA: 1
       // Название продукта
       e('div', { className: 'text-center mb-4' },
         e('span', { className: 'text-lg font-medium text-gray-900' }, product.name)
+      ),
+
+      // Похожее уже есть в списке — предлагаем взять его вместо нового.
+      // Не блокируем: у клиента законно бывают близкие названия.
+      similarProducts.length > 0 && !similarDismissed && e('div', { className: 'aps-similar-warn' },
+        e('div', { className: 'aps-similar-warn__title' },
+          similarProducts.length === 1 ? 'Похоже, такой продукт уже есть' : 'Похожие продукты уже есть'
+        ),
+        e('div', { className: 'aps-similar-warn__hint' },
+          'Если это он — выберите его, чтобы одна и та же еда не считалась дважды.'
+        ),
+        e('div', { className: 'aps-similar-warn__list' },
+          similarProducts.map((existing) => e('button', {
+            key: existing.id,
+            type: 'button',
+            className: 'aps-similar-warn__item',
+            onClick: () => useExistingProduct(existing)
+          },
+            e('span', { className: 'aps-similar-warn__name' }, existing.name),
+            e('span', { className: 'aps-similar-warn__kcal' },
+              Number.isFinite(+existing.kcal100) ? `${Math.round(+existing.kcal100)} ккал` : ''
+            )
+          ))
+        ),
+        e('button', {
+          type: 'button',
+          className: 'aps-similar-warn__dismiss',
+          onClick: () => { haptic('light'); setSimilarDismissed(true); }
+        }, 'Это другой продукт')
       ),
 
       // Два варианта: Manual vs Calculated

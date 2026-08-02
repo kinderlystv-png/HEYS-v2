@@ -7163,3 +7163,101 @@ button.meal-quality-badge:active {
 [data-theme='dark'] .mpc-name-oneoff {
   color: var(--color-slate-400, #94a3b8);
 }
+
+/* =========================================================================
+   Похожий продукт уже есть в списке (мягкое предупреждение перед созданием).
+   Цвета совпадают с плашкой-напоминанием в мессенджере, чтобы предупреждающий
+   тон читался в приложении одинаково.
+   ========================================================================= */
+
+.aps-similar-warn {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 83, 9, 0.18);
+  background: #fef3c7;
+  color: #78350f;
+  text-align: left;
+}
+
+.aps-similar-warn__title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.aps-similar-warn__hint {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+
+.aps-similar-warn__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.aps-similar-warn__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  color: #78350f;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aps-similar-warn__item:active {
+  transform: scale(0.98);
+}
+
+.aps-similar-warn__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.aps-similar-warn__kcal {
+  flex: 0 0 auto;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.aps-similar-warn__dismiss {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #78350f;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .aps-similar-warn {
+  background: #3b2a08;
+  border-color: rgba(252, 211, 77, 0.2);
+  color: #fcd34d;
+}
+
+[data-theme='dark'] .aps-similar-warn__item {
+  background: rgba(0, 0, 0, 0.22);
+  border-color: rgba(252, 211, 77, 0.24);
+  color: #fcd34d;
+}
+
+[data-theme='dark'] .aps-similar-warn__dismiss {
+  color: #fcd34d;
+}
