@@ -446,9 +446,150 @@ function patchBlock(text, { from, to = null, replacement = '' }) {
   return [...lines.slice(0, start), ...body, ...lines.slice(end)].join('\n');
 }
 
+/**
+ * Отметить или снять галочку у подпункта задачи. Подпункт ищется по тексту, а
+ * не по номеру: номер меняется от любой вставки выше, а текст — это то, что
+ * человек называет вслух.
+ */
+function toggleSubtask(text, taskLine, subtaskText, done = true) {
+  const lines = String(text || '').split('\n');
+  const needle = String(subtaskText || '').trim().toLowerCase();
+  if (!needle) throw new Error('empty_subtask');
+  for (let i = taskLine + 1; i < lines.length; i += 1) {
+    if (!lines[i].trim()) break;
+    if (!/^\s/.test(lines[i])) break;
+    const match = /^(\s*-\s*\[)([ x])(\]\s*)(.*)$/i.exec(lines[i]);
+    if (!match) continue;
+    if (!match[4].trim().toLowerCase().includes(needle)) continue;
+    lines[i] = `${match[1]}${done ? 'x' : ' '}${match[3]}${match[4]}`;
+    return { text: lines.join('\n'), matched: match[4].trim() };
+  }
+  throw new Error(`subtask_not_found:${subtaskText}`);
+}
+
+/**
+ * Снять вложенную строку у задачи — ответ получен, ожидание закрылось.
+ *
+ * Методичка задачника требует снимать `открыто:` и `ждём:` в том же ходе, в
+ * котором пришёл ответ: вопрос, оставшийся висеть после ответа, всплывает
+ * снова и заставляет спрашивать второй раз.
+ */
+function removeChild(text, taskLine, needle) {
+  const lines = String(text || '').split('\n');
+  const wanted = String(needle || '').trim().toLowerCase();
+  if (!wanted) throw new Error('empty_needle');
+  for (let i = taskLine + 1; i < lines.length; i += 1) {
+    if (!lines[i].trim()) break;
+    if (!/^\s/.test(lines[i])) break;
+    if (!lines[i].toLowerCase().includes(wanted)) continue;
+    const removed = lines[i].trim().replace(/^[-*]\s+/, '');
+    lines.splice(i, 1);
+    return { text: lines.join('\n'), removed };
+  }
+  throw new Error(`child_not_found:${needle}`);
+}
+
+/** Перенос задачи со всеми вложенными строками из одного файла в другой. */
+function cutTask(text, taskLine) {
+  const lines = String(text || '').split('\n');
+  let end = taskLine + 1;
+  while (end < lines.length && lines[end].trim() && /^\s/.test(lines[end])) end += 1;
+  const block = lines.slice(taskLine, end).join('\n');
+  return { text: [...lines.slice(0, taskLine), ...lines.slice(end)].join('\n'), block };
+}
+
+const SLOT_RE = /^-?\s*(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})\s+(.*)$/;
+
+/** Минуты от полуночи. Свой разбор: модуль намеренно ни от чего не зависит. */
+function timeToMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const hh = Number(match[1]);
+  const mm = Number(match[2]);
+  if (hh > 23 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+/**
+ * Сутки задачника кончаются не в полночь. Слот `00:00–03:00` в файле дня — это
+ * ночь ПОСЛЕ него, и доска рисует его внизу, после 23:00. Поэтому всё, что
+ * начинается раньше пяти утра, считается продолжением тех же суток: иначе
+ * ночной слот численно оказывается «раньше» вечернего, и пересечение с ним
+ * не находится вовсе.
+ */
+const DAY_TAIL_BEFORE = 5 * 60;
+
+function slotMinutes(from, to) {
+  let start = timeToMinutes(from);
+  let end = timeToMinutes(to);
+  if (start === null || end === null) return null;
+  if (start < DAY_TAIL_BEFORE) start += 24 * 60;
+  if (end < DAY_TAIL_BEFORE) end += 24 * 60;
+  if (end <= start) end += 24 * 60;
+  return { start, end };
+}
+
+/** Слоты дня как интервалы — чтобы видеть пересечения до записи, а не после. */
+function parseSlots(text) {
+  const out = [];
+  const lines = String(text || '').split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = SLOT_RE.exec(lines[i].trim());
+    if (!match) continue;
+    const span = slotMinutes(match[1], match[2]);
+    if (!span) continue;
+    out.push({ line: i, from: span.start, to: span.end, title: match[3].trim(), raw: lines[i] });
+  }
+  return out;
+}
+
+/**
+ * Пересечения нового слота с уже стоящими. Доска рисует слоты друг поверх
+ * друга и о конфликте не скажет, а методичка требует называть его сразу —
+ * поэтому считаем здесь и возвращаем инструменту, чтобы тот сказал вслух.
+ */
+function slotConflicts(text, from, to) {
+  const span = slotMinutes(from, to);
+  if (!span) throw new Error(`invalid_time:${from}-${to}`);
+  return parseSlots(text)
+    .filter((slot) => span.start < slot.to && span.end > slot.from)
+    .map((slot) => ({ title: slot.title, raw: slot.raw.trim() }));
+}
+
+/**
+ * Отметка привычки. Формат строки — `- Название | дата, дата` — и его нельзя
+ * выдумывать: ровно так его читает `parse_habits` и пишет `toggle` в
+ * `board_server.py`. Разойдись на разделитель, и доска перестанет видеть
+ * отметку, сделанную из чата, а тап по ячейке затрёт её своим форматом.
+ */
+function markHabit(text, habit, date) {
+  const lines = String(text || '').split('\n');
+  const needle = String(habit || '').trim().toLowerCase();
+  if (!needle) throw new Error('empty_habit');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line.startsWith('- ') || !line.includes('|')) continue;
+    const cut = line.slice(2).indexOf('|') + 2;
+    const title = line.slice(2, cut).trim();
+    if (!title.toLowerCase().includes(needle)) continue;
+    const dates = line.slice(cut + 1).split(',').map((d) => d.trim()).filter(Boolean);
+    if (dates.includes(date)) return { text: String(text), habit: title, already: true };
+    const next = [...new Set([...dates, date])].sort();
+    lines[i] = `- ${title} | ${next.join(', ')}`;
+    return { text: lines.join('\n'), habit: title, already: false };
+  }
+  throw new Error(`habit_not_found:${habit}`);
+}
+
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
+  toggleSubtask,
+  removeChild,
+  cutTask,
+  parseSlots,
+  slotConflicts,
+  markHabit,
   taskHash,
   projectKeyForPath,
   appendToSection,

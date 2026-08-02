@@ -350,3 +350,133 @@ test('запись двигает ревизию и обновляет инде�
   assert.equal(file.rev, 4, 'ревизия выросла с 3 до 4');
   assert.equal(index.files['projects/heys.md'].rev, 4, 'индекс знает новую ревизию');
 });
+
+// ── Второй слой: управление доской ───────────────────────────────────────
+
+// Формат — как в реальном habits.md и как его читает build_board.py:
+// «- Название | дата, дата». Разделитель именно `|`, даты через запятую.
+const HABITS = `# Привычки
+
+- Зарядка | 2026-07-30, 2026-08-01
+- Чтение |
+`;
+
+const DAY = `# 2026-08-02
+
+- 17:00–22:00 Дом у родителей
+- 19:00–23:00 Дома у родителей
+`;
+
+test('привычка отмечается один раз, повтор не портит строку', () => {
+  const first = tasks.markHabit(HABITS, 'зарядка', '2026-08-02');
+  assert.equal(first.already, false);
+  assert.match(first.text, /- Зарядка \| 2026-07-30, 2026-08-01, 2026-08-02/);
+  const again = tasks.markHabit(first.text, 'зарядка', '2026-08-02');
+  assert.equal(again.already, true);
+  assert.equal(again.text, first.text, 'повтор не должен менять файл');
+});
+
+test('привычка без единой отметки тоже находится', () => {
+  const res = tasks.markHabit(HABITS, 'чтение', '2026-08-02');
+  assert.equal(res.already, false);
+  assert.match(res.text, /- Чтение \| 2026-08-02/);
+});
+
+test('несуществующая привычка не заводится молча', () => {
+  assert.throws(() => tasks.markHabit(HABITS, 'медитация', '2026-08-02'), /habit_not_found/);
+});
+
+test('пересечения слотов считаются до записи', () => {
+  assert.equal(tasks.slotConflicts(DAY, '10:00', '11:00').length, 0);
+  const busy = tasks.slotConflicts(DAY, '18:00', '20:00');
+  assert.equal(busy.length, 2, 'слот 18–20 пересекает оба вечерних блока');
+  assert.match(busy.map((c) => c.title).join(' '), /Дом у родителей/);
+});
+
+test('слот через полночь не считается пустым интервалом', () => {
+  const night = tasks.slotConflicts('- 23:00–01:00 Лендинг\n', '00:00', '02:00');
+  assert.equal(night.length, 1, 'ночной слот обязан пересечься');
+});
+
+test('галочка подпункта ставится по тексту, а не по номеру', () => {
+  const text = '- [ ] P1 Мероприятие ^2026-08-01\n  - [ ] согласовать сценарий\n  - [ ] купить реквизит\n';
+  const res = tasks.toggleSubtask(text, 0, 'реквизит');
+  assert.match(res.text, /- \[x\] купить реквизит/);
+  assert.match(res.text, /- \[ \] согласовать сценарий/, 'соседний подпункт не тронут');
+  assert.throws(() => tasks.toggleSubtask(text, 0, 'торт'), /subtask_not_found/);
+});
+
+test('снятая строка «открыто» исчезает, соседние остаются', () => {
+  const text = '- [ ] P1 Лендинг ^2026-08-01\n  - открыто: какая версия в релиз?\n  - зум почти готов\n';
+  const res = tasks.removeChild(text, 0, 'какая версия');
+  assert.ok(!/открыто:/.test(res.text));
+  assert.match(res.text, /зум почти готов/);
+  assert.match(res.removed, /^открыто:/);
+});
+
+test('перенос задачи забирает её вложенные строки целиком', () => {
+  const text = '## Задачи\n\n- [ ] P2 Первая ^2026-08-01\n  - контекст первой\n- [ ] P2 Вторая ^2026-08-01\n';
+  const res = tasks.cutTask(text, 2);
+  assert.match(res.block, /Первая/);
+  assert.match(res.block, /контекст первой/);
+  assert.ok(!/Первая/.test(res.text), 'из источника задача убрана');
+  assert.match(res.text, /Вторая/, 'соседняя задача осталась');
+});
+
+// ── Инструменты второго слоя ─────────────────────────────────────────────
+
+function withBoard() {
+  const api = withWrites();
+  const kvExtra = {
+    [tasks.keyForPath('habits.md')]: { path: 'habits.md', text: HABITS, rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('days/2026-08-02.md')]: { path: 'days/2026-08-02.md', text: DAY, rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('money/2026-08.md')]: { path: 'money/2026-08.md', text: '# Август\n', rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('archive/2026-08.md')]: { path: 'archive/2026-08.md', text: '# Архив\n', rev: 1, updatedAt: 1 },
+  };
+  const origGet = api.getKVByCurator;
+  api.getKVByCurator = async (bearer, clientId, key) =>
+    (kvExtra[key] !== undefined ? { data: kvExtra[key], error: null } : origGet(bearer, clientId, key));
+  return api;
+}
+
+test('tasks_slot называет пересечения вместо молчания', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({ date: '2026-08-02', from: '18:00', to: '20:00', title: 'Забрать торт' });
+  assert.equal(res.structured.conflicts.length, 2);
+  assert.match(res.text, /Пересекается с/);
+});
+
+test('tasks_money без контура не проходит', async () => {
+  const api = withBoard();
+  await assert.rejects(() => build(api).tasks_money({ amount: 500, title: 'кофе' }),
+    (e) => e.code === 'contour_required');
+  assert.equal(api.writes.length, 0);
+});
+
+test('tasks_money пишет операцию в месяц по дате', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_money({ amount: 7500, title: 'Зарплата Маше', contour: 'kinderly', date: '2026-08-02' });
+  assert.equal(res.structured.path, 'money/2026-08.md');
+  const saved = api.writes[0].items[0].v.text;
+  assert.match(saved, /- 2026-08-02 7500 ₽ · Зарплата Маше · kinderly/);
+});
+
+test('tasks_move переносит задачу и отдаёт новую ссылку', async () => {
+  const api = withBoard();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const res = await build(api).tasks_move({ project: 'family', hash, to: 'heys' });
+  assert.equal(res.structured.new_hash, tasks.taskHash('heys', 'Покрасить потолок баллончиком'));
+  // Сначала приёмник, потом источник: иначе сбой между записями теряет задачу.
+  assert.equal(api.writes[0].items[0].v.path, 'projects/heys.md');
+  assert.equal(api.writes[1].items[0].v.path, 'projects/family.md');
+});
+
+test('tasks_resolve снимает строку и записывает ответ', async () => {
+  const api = withBoard();
+  const hash = tasks.taskHash('family', 'Забрать зеркало');
+  const res = await build(api).tasks_resolve({ project: 'family', hash, needle: 'Даня', note: 'привёз 2 августа' });
+  assert.match(res.structured.removed, /ждём: Даня/);
+  const saved = api.writes[0].items[0].v.text;
+  assert.ok(!/ждём: Даня/.test(saved));
+  assert.match(saved, /привёз 2 августа/);
+});

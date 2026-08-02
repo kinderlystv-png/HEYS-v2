@@ -128,6 +128,98 @@ const TASKS_WRITE_SCHEMAS = [
   },
 ];
 
+/**
+ * Второй слой: то, чем доска управляется целиком, а не только задачами.
+ * Каждый из них закрывает панель, которую generic-дописывание сломало бы —
+ * привычки хранят списки дат, у операции обязателен контур, слоты умеют
+ * пересекаться, а вложенную строку нужно уметь не только повесить, но и снять.
+ */
+const TASKS_BOARD_SCHEMAS = [
+  {
+    name: 'tasks_habit',
+    description: 'Отметить привычку за день. Повторная отметка той же даты ничего не портит.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        habit: { type: 'string', description: 'Название привычки или его часть.' },
+        date: { type: 'string', description: 'Дата YYYY-MM-DD. По умолчанию сегодня.' },
+      },
+      required: ['habit'],
+    },
+  },
+  {
+    name: 'tasks_slot',
+    description: 'Поставить событие в день: время, место, что происходит. Пересечения с уже стоящими слотами возвращаются в ответе — назови их куратору, доска о конфликте не предупредит.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Дата дня YYYY-MM-DD. По умолчанию сегодня.' },
+        from: { type: 'string', description: 'Начало ЧЧ:ММ.' },
+        to: { type: 'string', description: 'Конец ЧЧ:ММ.' },
+        title: { type: 'string', description: 'Что происходит и где.' },
+        presence: { type: 'boolean', description: 'true для крупного блока присутствия («дом у родителей»). Такие пишутся выше слотов задач: кто ниже в файле, тот рисуется поверх.' },
+      },
+      required: ['from', 'to', 'title'],
+    },
+  },
+  {
+    name: 'tasks_money',
+    description: 'Записать операцию в деньги месяца. Контур обязателен — без него операция не попадёт в разбивку на доске. Деньги это зона «спрашивай, а не действуй»: сумму и контур бери у куратора, не подставляй сам.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        amount: { type: 'number', description: 'Сумма в рублях. Расход — положительное число, приход — отрицательное или укажи income: true.' },
+        title: { type: 'string', description: 'На что.' },
+        contour: { type: 'string', description: 'Контур: семья, дело, обязательства, инструменты, kinderly — как заведено в money/README.md.' },
+        income: { type: 'boolean', description: 'true если это приход, а не трата.' },
+        date: { type: 'string', description: 'Дата YYYY-MM-DD. По умолчанию сегодня.' },
+      },
+      required: ['amount', 'title', 'contour'],
+    },
+  },
+  {
+    name: 'tasks_subtask',
+    description: 'Отметить или снять галочку у подпункта задачи. Подпункт называется текстом, а не номером.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Проект задачи.' },
+        hash: { type: 'string', description: 'Хэш задачи с доски.' },
+        subtask: { type: 'string', description: 'Текст подпункта или его часть.' },
+        done: { type: 'boolean', description: 'false — снять галочку. По умолчанию true.' },
+      },
+      required: ['project', 'hash', 'subtask'],
+    },
+  },
+  {
+    name: 'tasks_resolve',
+    description: 'Снять вложенную строку у задачи: ответ на «открыто:» получен, ожидание «ждём:» закрылось. Снимай в том же ходе, когда пришёл ответ, — иначе вопрос всплывёт снова и его зададут второй раз.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Проект задачи.' },
+        hash: { type: 'string', description: 'Хэш задачи с доски.' },
+        needle: { type: 'string', description: 'Часть текста снимаемой строки.' },
+        note: { type: 'string', description: 'Чем заменить: сам ответ, который теперь известен. Без него строка просто снимается.' },
+      },
+      required: ['project', 'hash', 'needle'],
+    },
+  },
+  {
+    name: 'tasks_move',
+    description: 'Перенести задачу со всеми её вложенными строками в другой проект или в архив.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Откуда.' },
+        hash: { type: 'string', description: 'Хэш задачи с доски.' },
+        to: { type: 'string', description: 'Куда: имя проекта либо «archive» для переноса в архив текущего месяца.' },
+      },
+      required: ['project', 'hash', 'to'],
+    },
+  },
+];
+
 function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolError, writeContext = null }) {
   let indexPromise = null;
 
@@ -429,7 +521,155 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     },
   });
 
-  return { tools, schemas: [...TASKS_TOOL_SCHEMAS, ...TASKS_WRITE_SCHEMAS] };
+  /** Задача по хэшу: общий вход для инструментов, которые её правят. */
+  async function locateTask(project, hash) {
+    const key = String(project || '').toLowerCase().replace(/\.md$/i, '');
+    if (!key) throw new ToolError('invalid_project', 'Нужен проект задачи.');
+    if (!hash) throw new ToolError('invalid_hash', 'Нужен хэш задачи с доски.');
+    const file = await readFile(`projects/${key}.md`);
+    const found = tasks.findTaskByHash(file, hash);
+    if (!found) {
+      throw new ToolError('task_not_found', `В ${file.path} нет задачи с хэшем ${hash}. Возьми актуальный через tasks_list.`);
+    }
+    return { file, found, key };
+  }
+
+  function today() {
+    return new Date(nowMs).toISOString().slice(0, 10);
+  }
+
+  Object.assign(tools, {
+    async tasks_habit(args = {}) {
+      const date = args.date || today();
+      const file = await readFile('habits.md');
+      let result;
+      try {
+        result = tasks.markHabit(file.text, args.habit, date);
+      } catch (e) {
+        throw new ToolError('habit_not_found', `Привычка «${args.habit}» не найдена в habits.md: ${e.message}`);
+      }
+      if (result.already) {
+        return { text: `«${result.habit}» за ${date} уже отмечена.`, structured: { habit: result.habit, date, already: true } };
+      }
+      const saved = await writeFile(file, result.text);
+      return {
+        text: `Отметил «${result.habit}» за ${date}.`,
+        structured: { habit: result.habit, date, already: false, rev: saved.rev },
+      };
+    },
+
+    async tasks_slot(args = {}) {
+      const date = args.date || today();
+      const file = await readFile(`days/${date}.md`);
+      let conflicts;
+      try {
+        conflicts = tasks.slotConflicts(file.text, args.from, args.to);
+      } catch (e) {
+        throw new ToolError('invalid_time', `Время «${args.from}–${args.to}» не в формате ЧЧ:ММ.`);
+      }
+
+      const line = `- ${args.from}–${args.to} ${String(args.title).trim()}`;
+      // Крупные блоки присутствия идут выше слотов задач: доска рисует то, что
+      // ниже в файле, поверх — иначе блок закроет собой всё, что внутри него.
+      const nextText = args.presence
+        ? [line, ...String(file.text || '').split('\n')].join('\n').replace(/^\n+/, '')
+        : tasks.appendBlock(file.text, line);
+      const saved = await writeFile(file, nextText);
+
+      const warn = conflicts.length
+        ? ` Пересекается с: ${conflicts.map((c) => c.title).join('; ')} — скажи об этом куратору.`
+        : '';
+      return {
+        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title}.${warn}`,
+        structured: { date, from: args.from, to: args.to, title: args.title, conflicts, rev: saved.rev },
+      };
+    },
+
+    async tasks_money(args = {}) {
+      const contour = String(args.contour || '').trim();
+      if (!contour) throw new ToolError('contour_required', 'У операции обязателен контур — без него она не попадёт в разбивку на доске.');
+      const amount = Number(args.amount);
+      if (!Number.isFinite(amount) || amount === 0) throw new ToolError('invalid_amount', 'Сумма должна быть числом и не нулём.');
+      const date = args.date || today();
+      const month = date.slice(0, 7);
+
+      const file = await readFile(`money/${month}.md`);
+      const sign = args.income ? '+' : '';
+      const line = `- ${date} ${sign}${Math.abs(amount)} ₽ · ${String(args.title).trim()} · ${contour}`;
+      const saved = await writeFile(file, tasks.appendBlock(file.text, line));
+      return {
+        text: `Записал в деньги за ${month}: ${sign}${Math.abs(amount)} ₽ · ${args.title} · ${contour}.`,
+        structured: { date, amount, income: !!args.income, title: args.title, contour, path: saved.path, rev: saved.rev },
+      };
+    },
+
+    async tasks_subtask(args = {}) {
+      const { file, found, key } = await locateTask(args.project, args.hash);
+      let result;
+      try {
+        result = tasks.toggleSubtask(file.text, found.line, args.subtask, args.done !== false);
+      } catch (e) {
+        throw new ToolError('subtask_not_found', `У задачи нет подпункта «${args.subtask}». Посмотри её через tasks_read.`);
+      }
+      const saved = await writeFile(file, result.text);
+      return {
+        text: `${key}/${args.hash} · ${found.parsed.title}: подпункт «${result.matched}» ${args.done === false ? 'снят' : 'отмечен'}.`,
+        structured: { path: saved.path, rev: saved.rev, hash: args.hash, subtask: result.matched, done: args.done !== false },
+      };
+    },
+
+    async tasks_resolve(args = {}) {
+      const { file, found, key } = await locateTask(args.project, args.hash);
+      let result;
+      try {
+        result = tasks.removeChild(file.text, found.line, args.needle);
+      } catch (e) {
+        throw new ToolError('child_not_found', `У задачи нет строки со словами «${args.needle}».`);
+      }
+      const nextText = args.note ? tasks.appendChild(result.text, found.line, String(args.note).trim()) : result.text;
+      const saved = await writeFile(file, nextText);
+      return {
+        text: `${key}/${args.hash} · ${found.parsed.title}: снял «${result.removed}»${args.note ? `, записал ответ` : ''}.`,
+        structured: { path: saved.path, rev: saved.rev, hash: args.hash, removed: result.removed, note: args.note || null },
+      };
+    },
+
+    async tasks_move(args = {}) {
+      const { file, found, key } = await locateTask(args.project, args.hash);
+      const target = String(args.to || '').toLowerCase().replace(/\.md$/i, '');
+      if (!target) throw new ToolError('invalid_target', 'Нужно, куда переносить.');
+      if (target === key) throw new ToolError('same_project', 'Задача уже в этом проекте.');
+
+      const targetPath = target === 'archive'
+        ? `archive/${today().slice(0, 7)}.md`
+        : `projects/${target}.md`;
+
+      const cut = tasks.cutTask(file.text, found.line);
+      const targetFile = await readFile(targetPath);
+      const nextTarget = target === 'archive'
+        ? tasks.appendBlock(targetFile.text, cut.block)
+        : tasks.appendToSection(targetFile.text, cut.block, '## Задачи');
+
+      // Порядок важен: сначала кладём в приёмник, потом убираем из источника.
+      // Обратный порядок при сбое между записями теряет задачу целиком.
+      const savedTarget = await writeFile(targetFile, nextTarget);
+      const savedSource = await writeFile(file, cut.text);
+
+      const newHash = target === 'archive' ? null : tasks.taskHash(target, found.parsed.title);
+      return {
+        text: `Перенёс «${found.parsed.title}» из ${key} в ${target}.${newHash ? ` Новая ссылка: ${target}/${newHash}` : ''}`,
+        structured: {
+          from: savedSource.path,
+          to: savedTarget.path,
+          title: found.parsed.title,
+          old_hash: args.hash,
+          new_hash: newHash,
+        },
+      };
+    },
+  });
+
+  return { tools, schemas: [...TASKS_TOOL_SCHEMAS, ...TASKS_WRITE_SCHEMAS, ...TASKS_BOARD_SCHEMAS] };
 }
 
 module.exports = { createTasksTools, TASKS_TOOL_SCHEMAS, TASKS_WRITE_SCHEMAS };
