@@ -282,3 +282,12 @@ apps/web/heys_messenger_v1.js:1700
 apps/web/heys_messenger_v1.js:1754
 apps/web/heys_messenger_v1.js:1759
 apps/web/heys_messenger_v1.js:2423
+
+# [phase3] Собранная копия advice-исходников. Те же три записи уже разрешены
+# в apps/web/advice/_actions.js:175 и _commitments.js:52,200 — в бандл они
+# попадают склейкой, а в аллоулист их никто не внёс, из-за чего гейт
+# direct-localStorage блокировал ЛЮБОЙ push с 2026-08-02. Удалять эти строки
+# вместе с записями исходников, когда advice переедет на Store.
+apps/web/heys_advice_bundle_v1.js:809
+apps/web/heys_advice_bundle_v1.js:957
+apps/web/heys_advice_bundle_v1.js:1394
