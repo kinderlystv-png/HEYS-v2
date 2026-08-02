@@ -1156,6 +1156,109 @@ function monthAfter(text, { month, today = null, contour = null, recurring = nul
   };
 }
 
+/**
+ * Лимиты из `money/budget.md`. `?` и пустое значение — это НЕ ноль и не
+ * «неизвестно потом посчитаем»: в файле прямо написано, что месяц идёт без
+ * лимитов по его решению. Поэтому здесь `null`, и всё, что считает отклонение,
+ * обязано этот `null` увидеть и промолчать, а не подставить своё число.
+ */
+function parseBudget(text) {
+  const limits = {};
+  const cushion = { goal: null, monthly: null, deadline: null };
+  let section = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (line.startsWith('##')) {
+      const head = line.replace(/^#+\s*/, '').toLowerCase();
+      section = head.includes('подушк') ? 'cushion' : (head.includes('лимит') ? 'limits' : null);
+      continue;
+    }
+    const match = /^-\s*([^|]+?)\s*\|\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const key = match[1].trim().toLowerCase();
+    const rawValue = match[2].trim();
+    const number = /^-?\d+(?:\.\d+)?$/.test(rawValue) ? Number(rawValue) : null;
+    if (section === 'cushion') {
+      if (key.startsWith('цел')) cushion.goal = number;
+      else if (key.includes('месяц')) cushion.monthly = number;
+      else if (key.startsWith('срок')) cushion.deadline = rawValue && rawValue !== '?' ? rawValue : null;
+      continue;
+    }
+    if (section === 'limits') limits[key] = number;
+  }
+  return { limits, cushion };
+}
+
+/**
+ * Картина денег месяца — то, чего не хватало, чтобы вообще что-то сказать про
+ * «хватит ли на поездку». Оценок тут по-прежнему нет: они появляются только
+ * там, где есть лимит-число. Где лимита нет, где нет доходов — так и написано,
+ * потому что молчаливая подстановка нуля здесь врёт сильнее пустоты.
+ */
+function budgetPicture({
+  month, text, budget = null, recurring = null, today = null, contour = null, months = [],
+} = {}) {
+  const base = monthAfter(text, { month, today, contour, recurring });
+  const parsed = parseBudget(budget);
+  const ops = parseMoneyOps(text, month);
+
+  const net = (key) => ops
+    .filter((o) => o.contour === key)
+    .reduce((n, o) => n + (o.amount < 0 ? Math.abs(o.amount) : -o.amount), 0);
+  const cushionMonth = Math.round(net('cushion') * 100) / 100;
+  const travelMonth = Math.round(net('travel') * 100) / 100;
+  const debtMonth = Math.round((base.by_contour.debt || 0) * 100) / 100;
+  // Для разбивки расходов нужна расходная сторона подушки, а не итог месяца:
+  // снятие из подушки итог уменьшает, но потреблением от этого не становится —
+  // иначе «потребление» распухало бы ровно на снятую сумму.
+  const cushionSpent = Math.round((base.by_contour.cushion || 0) * 100) / 100;
+
+  // Подушка копится не месяцем: складываем взносы по всем месяцам, которые
+  // вообще есть в задачнике. Если месяц один — так и будет один.
+  const cushionTotal = Math.round(months
+    .reduce((n, m) => n + parseMoneyOps(m.text, m.month)
+      .filter((o) => o.contour === 'cushion')
+      .reduce((s, o) => s + (o.amount < 0 ? Math.abs(o.amount) : -o.amount), 0), 0) * 100) / 100;
+
+  const keys = [...new Set([...Object.keys(parsed.limits), ...Object.keys(base.by_contour)])]
+    .filter((k) => k !== '_')
+    .sort();
+  const limits = keys.map((key) => {
+    const spent = Math.round((base.by_contour[key] || 0) * 100) / 100;
+    const limit = Object.prototype.hasOwnProperty.call(parsed.limits, key) ? parsed.limits[key] : null;
+    return limit === null
+      ? { contour: key, spent, limit: null, over: null, measurable: false }
+      : { contour: key, spent, limit, over: Math.round((spent - limit) * 100) / 100, measurable: true };
+  });
+  const unmeasured = limits.filter((l) => !l.measurable).map((l) => l.contour);
+
+  return {
+    ...base,
+    // «Взнос в подушку» и «погашение кредита» — не потребление; свести их в одну
+    // строку расходов значит каждый месяц пугать человека собственными
+    // сбережениями. Разводим явно, но исходный `spent` не трогаем.
+    split: {
+      consumption: Math.round((base.spent - cushionSpent - debtMonth) * 100) / 100,
+      debt: debtMonth,
+      cushion: cushionSpent,
+    },
+    limits,
+    unmeasured,
+    // Доходы за месяц не записаны — вывод односторонний. Это его решение, а не
+    // дыра в данных: так и записано в money/2026-08.md, раздел «Открыто».
+    income_present: base.income > 0,
+    one_sided: base.income <= 0,
+    cushion: {
+      month: cushionMonth,
+      total: cushionTotal,
+      goal: parsed.cushion.goal,
+      monthly: parsed.cushion.monthly,
+      deadline: parsed.cushion.deadline,
+    },
+    travel: { month: travelMonth },
+  };
+}
+
 // ── Как он решает ────────────────────────────────────────────────────────
 //
 // Дообучить модель на этом задачнике нельзя: такого в API нет, да и данных на
@@ -1623,10 +1726,24 @@ function cutTask(text, taskLine) {
   return { text: [...lines.slice(0, taskLine), ...lines.slice(end)].join('\n'), block };
 }
 
-const SLOT_RE = /^-?\s*(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})\s+(.*)$/;
+/**
+ * Строка слота. Галочка в начале — часть формата, а не украшение: доска пишет
+ * закрытый слот как `- [x] 15:00-17:00 Kinderly` и продолжает считать его
+ * занятым временем. Без этой группы такой слот выпадал из разбора целиком, и
+ * прошедший рабочий день выглядел бы отсюда полностью свободным.
+ */
+const SLOT_RE = /^-?\s*(?:\[([ xX])\]\s*)?(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})\s+(.*)$/;
 
-/** Тег вида слота — тот же словарь, что в build_board.py (KIND_RE). */
-const SLOT_KIND_RE = /\s*#(фон|дело|фокус|привычка)\b/i;
+/**
+ * Тег вида слота — тот же словарь, что в build_board.py (KIND_RE).
+ *
+ * Границу слова здесь пришлось написать руками: `\b` в JS считает словом только
+ * латиницу, поэтому после кириллического «фокус» границы не возникает никогда и
+ * тег не находился вовсе. Всё подряд оказывалось «фокусом», а сам `#фокус`
+ * оставался висеть в заголовке слота. В Python `\b` знает про кириллицу, из-за
+ * чего доска разбирала те же строки правильно, а здесь — молча нет.
+ */
+const SLOT_KIND_RE = /\s*#(фон|дело|фокус|привычка)(?![\wа-яё])/i;
 const SLOT_KINDS = new Set(['фон', 'дело', 'фокус', 'привычка']);
 
 /** Вид слота из текста строки и заголовок без тега. Тег может стоять где угодно в строке. */
@@ -1671,27 +1788,37 @@ function timeToMinutes(value) {
  */
 const DAY_TAIL_BEFORE = 5 * 60;
 
-function slotMinutes(from, to) {
+function slotMinutes(from, to, dayStart = DAY_TAIL_BEFORE) {
   let start = timeToMinutes(from);
   let end = timeToMinutes(to);
   if (start === null || end === null) return null;
-  if (start < DAY_TAIL_BEFORE) start += 24 * 60;
-  if (end < DAY_TAIL_BEFORE) end += 24 * 60;
+  if (start < dayStart) start += 24 * 60;
+  if (end < dayStart) end += 24 * 60;
   if (end <= start) end += 24 * 60;
   return { start, end };
 }
 
-/** Слоты дня как интервалы — чтобы видеть пересечения до записи, а не после. */
-function parseSlots(text) {
+/**
+ * Слоты дня как интервалы — чтобы видеть пересечения до записи, а не после.
+ *
+ * `dayStart` двигает границу «где кончаются сутки»: для пересечений хватает
+ * пяти утра, а свободное время считается от той же семи утра, что и на доске
+ * (H0 в build_board.py). Разойтись тут нельзя — иначе окно, которое доска
+ * рисует свободным, инструмент назовёт занятым.
+ */
+function parseSlots(text, { dayStart = DAY_TAIL_BEFORE } = {}) {
   const out = [];
   const lines = String(text || '').split('\n');
   for (let i = 0; i < lines.length; i += 1) {
     const match = SLOT_RE.exec(lines[i].trim());
     if (!match) continue;
-    const span = slotMinutes(match[1], match[2]);
+    const span = slotMinutes(match[2], match[3], dayStart);
     if (!span) continue;
-    const { kind, title } = slotKindAndTitle(match[3].trim());
-    out.push({ line: i, from: span.start, to: span.end, kind, title, raw: lines[i] });
+    const { kind, title } = slotKindAndTitle(match[4].trim());
+    out.push({
+      line: i, from: span.start, to: span.end, kind, title, raw: lines[i],
+      start: match[2], end: match[3], done: String(match[1] || '').toLowerCase() === 'x',
+    });
   }
   return out;
 }
@@ -1705,10 +1832,292 @@ function slotConflicts(text, from, to, kind = 'фокус') {
   const span = slotMinutes(from, to);
   if (!span) throw new Error(`invalid_time:${from}-${to}`);
   return parseSlots(text)
+    // Закрытый слот конфликтом не считается — так же его пропускает
+    // mark_clashes() на доске: время уже прошло, двигать нечего.
+    .filter((slot) => !slot.done)
     .filter((slot) => span.start < slot.to && span.end > slot.from)
     .map((slot) => ({ ...slot, level: slotClashLevel(kind, slot.kind) }))
     .filter((slot) => slot.level) // «дело» и «фон+фокус» — законное совмещение, не показываем как проблему
     .map((slot) => ({ title: slot.title, raw: slot.raw.trim(), level: slot.level }));
+}
+
+// ── Загруженность вперёд ─────────────────────────────────────────────────
+//
+// «Когда можно уехать» — вопрос не про поиск по словам. Поиск находит то, что
+// названо теми же словами; свободная неделя не названа никак. Поэтому здесь
+// считается ровно то, что человек видит на доске: занятость дня, свободные
+// окна и то, что повторяется из недели в неделю.
+//
+// Числа перенесены из build_board.py, а не выбраны заново. Своя арифметика
+// свободного времени — это гарантированное расхождение: инструмент сказал бы
+// «вторник свободен», а на доске там стоит зарядка.
+
+/** H0 в build_board.py: раньше семи утра доска день не рисует. */
+const BOARD_DAY_START = 7 * 60;
+/** NIGHT: после часа ночи «свободно» не рисуем. */
+const BOARD_DAY_END = 25 * 60;
+/** SNAP: слот короче четверти часа всё равно занимает четверть часа. */
+const BOARD_SNAP = 15;
+/** Порог годного окна. Меньше — это не «свободно», а щель между делами. */
+const FREE_GAP_MIN = 45;
+
+/** Минуты → ЧЧ:ММ. Хвост суток остаётся хвостом: 25:00 показывается как 01:00. */
+function minutesToTime(value) {
+  const total = ((Math.round(Number(value)) % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Свободные окна дня — зеркало freeGaps() из build_board.py, строка в строку.
+ * Вход — интервалы в минутах от полуночи с той же разверткой суток (07:00…01:00).
+ */
+function freeGaps(spans) {
+  const busy = spans
+    .map((s) => [s.from, Math.max(s.to, s.from + BOARD_SNAP)])
+    .sort((a, b) => a[0] - b[0]);
+  const gaps = [];
+  let cur = BOARD_DAY_START;
+  for (const [a, b] of busy) {
+    if (a - cur >= FREE_GAP_MIN) gaps.push({ from: cur, to: a });
+    cur = Math.max(cur, b);
+  }
+  if (BOARD_DAY_END - cur >= FREE_GAP_MIN) gaps.push({ from: cur, to: BOARD_DAY_END });
+  return gaps.map((g) => ({
+    from: minutesToTime(g.from), to: minutesToTime(g.to), minutes: g.to - g.from,
+  }));
+}
+
+/**
+ * Занято минут — это объединение интервалов, а не их сумма. Сумма врёт ровно
+ * там, где на доске всё и живёт: врезка «забрать торт» стоит внутри вечера у
+ * родителей, и сложение выдало бы «занято 26 часов». Объединение к тому же
+ * сходится со свободными окнами: занято + свободно = длина суток доски.
+ */
+function busyMinutes(spans) {
+  const clipped = spans
+    .map((s) => [s.from, Math.max(s.to, s.from + BOARD_SNAP)])
+    .map(([a, b]) => [Math.max(a, BOARD_DAY_START), Math.min(b, BOARD_DAY_END)])
+    .filter(([a, b]) => b > a)
+    .sort((x, y) => x[0] - y[0]);
+  let total = 0;
+  let cur = null;
+  for (const [a, b] of clipped) {
+    if (!cur) { cur = [a, b]; continue; }
+    if (a <= cur[1]) cur[1] = Math.max(cur[1], b);
+    else { total += cur[1] - cur[0]; cur = [a, b]; }
+  }
+  if (cur) total += cur[1] - cur[0];
+  return total;
+}
+
+const RU_WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+const RU_WEEKDAY_INDEX = Object.fromEntries(RU_WEEKDAYS.map((w, i) => [w, i]));
+const RECURRING_LINE_RE = /^([\wа-яё,-]+)\s+(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})\s+(.+?)\s*$/i;
+
+/** Дни недели повтора — тот же словарь, что rec_weekdays() на доске. */
+function recurringWeekdays(spec) {
+  const raw = String(spec || '').toLowerCase().trim();
+  if (['ежедневно', 'каждый', 'всегда'].includes(raw)) return [0, 1, 2, 3, 4, 5, 6];
+  if (['будни', 'будние'].includes(raw)) return [0, 1, 2, 3, 4];
+  if (raw === 'выходные') return [5, 6];
+  const out = new Set();
+  for (const part of raw.split(',')) {
+    const item = part.trim();
+    if (item.includes('-')) {
+      const [a, b] = item.split('-', 2).map((x) => x.trim());
+      if (!(a in RU_WEEKDAY_INDEX) || !(b in RU_WEEKDAY_INDEX)) continue;
+      const i = RU_WEEKDAY_INDEX[a];
+      const j = RU_WEEKDAY_INDEX[b];
+      const range = i <= j
+        ? Array.from({ length: j - i + 1 }, (_, k) => i + k)
+        : [...Array.from({ length: 7 - i }, (_, k) => i + k), ...Array.from({ length: j + 1 }, (_, k) => k)];
+      range.forEach((d) => out.add(d));
+    } else if (item in RU_WEEKDAY_INDEX) {
+      out.add(RU_WEEKDAY_INDEX[item]);
+    }
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+/**
+ * `days/recurring.md` — слоты, которые доска подставляет сама. В файлах дней
+ * их нет вовсе, поэтому без разбора этого файла зарядка и понедельничный
+ * разбор пропали бы из занятости, а окно под них оказалось бы «свободным».
+ */
+function parseRecurringSlots(text) {
+  const out = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || line.startsWith('Дни:') || line.startsWith('Строка')) continue;
+    const match = RECURRING_LINE_RE.exec(line);
+    if (!match) continue;
+    const days = recurringWeekdays(match[1]);
+    if (!days.length) continue;
+    const raw4 = match[4].trim();
+    const { kind, title } = slotKindAndTitle(raw4);
+    // Повтор без тега — привычка, а не фокус: ровно так его помечает parse_day()
+    // на доске. Иначе зарядка и дзюдо попадали бы в «время, которое требует
+    // головы», и полчаса разминки читались бы как полчаса работы.
+    out.push({ days, start: match[2], end: match[3], title, kind: SLOT_KIND_RE.test(raw4) ? kind : 'привычка' });
+  }
+  return out;
+}
+
+/** Понедельник = 0, как в build_board.py и в `days/recurring.md`. */
+function weekdayIndex(date) {
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return (d.getUTCDay() + 6) % 7;
+}
+
+function shiftDate(date, days) {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + Number(days));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Понедельник недели, в которую попадает дата, — ключ недельной сводки. */
+function weekStart(date) {
+  const wd = weekdayIndex(date);
+  return wd === null ? null : shiftDate(date, -wd);
+}
+
+/**
+ * Заголовок слота без служебных хвостов: ссылки на задачу и метки места.
+ * Нужен только для того, чтобы узнать повтор: `Дзюдо @ЮЗР` и `Дзюдо` — одно
+ * и то же событие, а по сырой строке они выглядят разными.
+ */
+function slotCoreTitle(title) {
+  let out = String(title || '').trim();
+  const parts = out.split('·').map((p) => p.trim());
+  if (parts.length > 1 && parseAddress(parts[parts.length - 1])) {
+    out = parts.slice(0, -1).join(' · ').trim();
+  }
+  out = out.replace(/@\S+/g, '').replace(/\s+/g, ' ').trim();
+  return out;
+}
+
+/**
+ * Загруженность одного дня. Дня без файла не существует как ошибки: это
+ * просто свободный день, и показывать его надо именно так — иначе «уехать
+ * можно» превращается в «данных нет».
+ */
+function dayLoad({ date, text = '', recurring = [] } = {}) {
+  const own = parseSlots(text, { dayStart: BOARD_DAY_START })
+    .map((s) => ({ start: s.start, end: s.end, from: s.from, to: s.to, kind: s.kind, title: s.title, repeat: false }));
+  const wd = weekdayIndex(date);
+  const have = new Set(own.map((s) => `${s.start}|${slotCoreTitle(s.title)}`));
+  const added = [];
+  for (const rec of recurring) {
+    if (wd === null || !rec.days.includes(wd)) continue;
+    if (have.has(`${rec.start}|${slotCoreTitle(rec.title)}`)) continue;
+    const span = slotMinutes(rec.start, rec.end, BOARD_DAY_START);
+    if (!span) continue;
+    added.push({
+      start: rec.start, end: rec.end, from: span.start, to: span.end,
+      kind: rec.kind || 'привычка', title: rec.title, repeat: true,
+    });
+  }
+  const slots = [...own, ...added].sort((a, b) => a.from - b.from);
+  const busy = busyMinutes(slots);
+  const focus = busyMinutes(slots.filter((s) => s.kind === 'фокус'));
+  return {
+    date,
+    weekday: wd === null ? null : RU_WEEKDAYS[wd],
+    has_file: !!String(text || '').trim(),
+    busy_minutes: busy,
+    focus_minutes: focus,
+    slots: slots.map((s) => ({ from: s.start, to: s.end, title: s.title, kind: s.kind, repeat: s.repeat })),
+    free: freeGaps(slots),
+  };
+}
+
+/**
+ * Якоря — то, что повторяется из недели в неделю. Опознаются повторением, а не
+ * названием: списка «дзюдо, футбол, зарядка» здесь нет и быть не должно, иначе
+ * инструмент знал бы только те якоря, которые кто-то однажды перечислил.
+ */
+function anchorSlots(days, { minTimes = 2, minWeeks = 2 } = {}) {
+  const groups = new Map();
+  for (const day of days) {
+    for (const slot of day.slots || []) {
+      const key = slotCoreTitle(slot.title).toLowerCase();
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, { title: slotCoreTitle(slot.title), hits: [] });
+      groups.get(key).hits.push({ date: day.date, weekday: day.weekday, from: slot.from, to: slot.to, repeat: slot.repeat });
+    }
+  }
+  const out = [];
+  for (const group of groups.values()) {
+    const dates = [...new Set(group.hits.map((h) => h.date))];
+    const weeks = new Set(dates.map((d) => weekStart(d)));
+    const fromRecurring = group.hits.some((h) => h.repeat);
+    if (!fromRecurring && (dates.length < minTimes || weeks.size < minWeeks)) continue;
+    const times = {};
+    for (const hit of group.hits) {
+      const key = `${hit.from}–${hit.to}`;
+      times[key] = (times[key] || 0) + 1;
+    }
+    const usual = Object.entries(times).sort((a, b) => b[1] - a[1])[0][0];
+    out.push({
+      title: group.title,
+      times: dates.length,
+      weeks: weeks.size,
+      weekdays: [...new Set(group.hits.map((h) => h.weekday))].filter(Boolean)
+        .sort((a, b) => RU_WEEKDAY_INDEX[a] - RU_WEEKDAY_INDEX[b]),
+      usual_time: usual,
+      source: fromRecurring ? 'days/recurring.md' : 'повтор в днях',
+    });
+  }
+  return out.sort((a, b) => b.times - a.times || a.title.localeCompare(b.title, 'ru'));
+}
+
+/**
+ * Сводка по неделям: где плотно, где пусто и сколько дней свободны совсем.
+ * Именно она отвечает на «в каком месяце уезжать», а не список из тридцати дней.
+ */
+function weekLoad(days) {
+  const byWeek = new Map();
+  for (const day of days) {
+    const key = weekStart(day.date);
+    if (!key) continue;
+    if (!byWeek.has(key)) byWeek.set(key, { start: key, days: [], busy_minutes: 0, focus_minutes: 0, free_days: 0 });
+    const week = byWeek.get(key);
+    week.days.push(day.date);
+    week.busy_minutes += day.busy_minutes;
+    week.focus_minutes += day.focus_minutes;
+    if (day.busy_minutes === 0) week.free_days += 1;
+  }
+  const weeks = [...byWeek.values()].sort((a, b) => a.start.localeCompare(b.start));
+  for (const week of weeks) {
+    week.end = week.days[week.days.length - 1];
+    // Крайние недели окна почти всегда обрезаны: у первой видно два дня, у
+    // последней — четыре. Сравнивать их с целыми по сумме минут нельзя, иначе
+    // «свободнее всего» достаётся огрызку недели просто потому, что в кадр
+    // попало полтора дня. Полнота недели отдаётся явно, чтобы это было видно.
+    week.days_count = week.days.length;
+    week.full = week.days.length === 7;
+  }
+  return weeks;
+}
+
+/**
+ * Отрезки подряд идущих полностью свободных дней. Это прямой ответ на «когда
+ * можно уехать»: не «вторник свободен», а «с 11 по 14 не занято ничего».
+ */
+function freeStretches(days, { minDays = 2 } = {}) {
+  const out = [];
+  let run = [];
+  const flush = () => {
+    if (run.length >= minDays) out.push({ from: run[0], to: run[run.length - 1], days: run.length });
+    run = [];
+  };
+  for (const day of days) {
+    if (day.busy_minutes === 0) run.push(day.date);
+    else flush();
+  }
+  flush();
+  return out;
 }
 
 /**
@@ -1749,6 +2158,25 @@ module.exports = {
   parseSlots,
   slotConflicts,
   markHabit,
+  // загруженность вперёд
+  BOARD_DAY_START,
+  BOARD_DAY_END,
+  BOARD_SNAP,
+  FREE_GAP_MIN,
+  RU_WEEKDAYS,
+  minutesToTime,
+  freeGaps,
+  busyMinutes,
+  recurringWeekdays,
+  parseRecurringSlots,
+  weekdayIndex,
+  shiftDate,
+  weekStart,
+  slotCoreTitle,
+  dayLoad,
+  anchorSlots,
+  weekLoad,
+  freeStretches,
   taskHash,
   projectKeyForPath,
   appendToSection,
@@ -1806,6 +2234,8 @@ module.exports = {
   parseMoneyOps,
   lastBalance,
   monthAfter,
+  parseBudget,
+  budgetPicture,
   // как он решает
   PREFS_PATH,
   PREFS_SECTION,

@@ -63,6 +63,28 @@ const TASKS_TOOL_SCHEMAS = [
       },
     },
   },
+  {
+    name: 'tasks_calendar',
+    description: 'Загруженность вперёд: по каждому дню — сколько занято, сколько из этого требует головы, свободные окна от 45 минут и дедлайны задач, попадающие на этот день. Плюс якоря (то, что повторяется из недели в неделю) и сводка по неделям: где плотно, где пусто, сколько дней свободны целиком. Это единственный способ ответить на «когда можно уехать» и «что придётся подвинуть»: поиском по словам свободная неделя не находится, у неё нет слов. Свободные окна считаются той же арифметикой, что рисует доска, — расхождения с тем, что он видит, не будет. День без файла — не ошибка, а свободный день, так и отдаётся.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: { type: 'string', description: 'С какой даты смотреть, YYYY-MM-DD. По умолчанию сегодня.' },
+        days: { type: 'integer', description: 'Сколько дней вперёд, по умолчанию 30, максимум 60.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_budget',
+    description: 'Картина денег месяца: расходы всего и по контурам, доходы, остаток на счетах, сколько ещё спишется само по recurring.md, лимиты из budget.md и отклонение от них. Отдельно — взносы в подушку и траты по ~travel. Отвечает на «есть ли деньги на это» ровно настолько, насколько есть данные: где лимит стоит «?», отклонение не считается вовсе, а месяц без записанных доходов помечается как односторонний. Оценок «много/мало» инструмент не даёт и тебе не даёт права их выдумывать.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        month: { type: 'string', description: 'Месяц YYYY-MM. По умолчанию текущий.' },
+        contour: { type: 'string', description: 'Показать отдельной строкой один контур: family, kinderly, heys, mine2d, personal, travel, dev, debt, cushion.' },
+      },
+    },
+  },
 ];
 
 const TASKS_WRITE_SCHEMAS = [
@@ -654,6 +676,164 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           blocked,
           total_active: all.length,
         },
+      };
+    },
+
+    /**
+     * Загруженность вперёд. Это второе из двух чтений, без которых на вопрос
+     * «когда уехать» можно было ответить только ощущением: поиск по словам
+     * находит названное теми же словами, а свободная неделя никак не названа.
+     *
+     * Дни, повторы и проекты читаются одной пачкой: тридцать дней по одному
+     * ключу — это тридцать сетевых вызовов на каждый такой вопрос.
+     */
+    async tasks_calendar(args = {}) {
+      const from = args.from ? String(args.from).trim() : today();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+        throw new ToolError('invalid_from', `Дата «${args.from}» не в формате YYYY-MM-DD.`);
+      }
+      const raw = args.days === undefined || args.days === null ? 30 : Number(args.days);
+      if (!Number.isFinite(raw) || raw < 1) throw new ToolError('invalid_days', 'Сколько дней вперёд — целое число от 1.');
+      const span = Math.min(Math.round(raw), 60);
+      const dates = Array.from({ length: span }, (_, i) => tasks.shiftDate(from, i));
+      const till = dates[dates.length - 1];
+
+      const index = await loadIndex();
+      const dayPaths = dates.map((date) => `days/${date}.md`);
+      const projects = projectPaths(index);
+      const wanted = [...dayPaths, 'days/recurring.md', ...projects];
+      const files = await readAll({ paths: wanted, max: wanted.length });
+      const byPath = new Map(files.map((file) => [file.path, file]));
+
+      const recurring = tasks.parseRecurringSlots((byPath.get('days/recurring.md') || {}).text || '');
+
+      // Дедлайны — это то, что придётся двигать вместе с датами поездки, поэтому
+      // они висят прямо на дне, а не отдельным списком «где-то в проектах».
+      const dueByDate = new Map();
+      for (const path of projects) {
+        const file = byPath.get(path);
+        if (!file) continue;
+        for (const task of tasks.parseTasks(file)) {
+          if (task.done || !task.due || task.due < from || task.due > till) continue;
+          if (!dueByDate.has(task.due)) dueByDate.set(task.due, []);
+          const withRef = withAddress(task);
+          dueByDate.get(task.due).push({
+            ref: withRef.ref, project: withRef.project, title: task.title, priority: task.priority,
+          });
+        }
+      }
+
+      const days = dates.map((date) => {
+        const load = tasks.dayLoad({ date, text: (byPath.get(`days/${date}.md`) || {}).text || '', recurring });
+        return { ...load, due: dueByDate.get(date) || [] };
+      });
+
+      const weeks = tasks.weekLoad(days);
+      const anchors = tasks.anchorSlots(days);
+      const freeDays = days.filter((d) => d.busy_minutes === 0 && !d.due.length).map((d) => d.date);
+      // День с дедлайном свободным не считается, даже если слотов в нём нет:
+      // именно он и окажется тем, что «придётся подвинуть».
+      const stretches = tasks.freeStretches(days.map((d) => ({
+        date: d.date, busy_minutes: d.due.length ? Math.max(d.busy_minutes, 1) : d.busy_minutes,
+      })));
+      // «Плотнее/свободнее всего» сравнивается только между целыми неделями:
+      // первая и последняя недели окна почти всегда обрезаны, и обрезок вида
+      // «одно воскресенье» выигрывал бы звание самой свободной недели всегда.
+      // Целых недель может не быть вовсе (окно короче) — тогда сравниваем что есть.
+      const full = weeks.filter((w) => w.full);
+      const sorted = [...(full.length ? full : weeks)].sort((a, b) => b.busy_minutes - a.busy_minutes);
+      const busiest = sorted[0] || null;
+      const quietest = sorted[sorted.length - 1] || null;
+
+      const hours = (m) => Math.round((m / 60) * 10) / 10;
+      const summary = [
+        `${from}…${till}: свободных дней ${freeDays.length} из ${span}`,
+        stretches.length ? `подряд: ${stretches.map((s) => `${s.from}…${s.to} (${s.days} дн.)`).join(', ')}` : 'подряд свободных дней нет',
+        busiest ? `плотнее всего неделя с ${busiest.start} (${hours(busiest.busy_minutes)} ч)` : null,
+        quietest && busiest && quietest.start !== busiest.start ? `свободнее всего с ${quietest.start} (${hours(quietest.busy_minutes)} ч)` : null,
+        anchors.length ? `якоря: ${anchors.slice(0, 5).map((a) => `${a.title} (${a.weekdays.join(',') || '—'})`).join('; ')}` : 'повторяющегося ничего не видно',
+        dueByDate.size ? `дедлайнов в окне: ${[...dueByDate.values()].reduce((n, x) => n + x.length, 0)}` : 'дедлайнов в окне нет',
+      ].filter(Boolean).join('. ');
+
+      return {
+        text: `${summary}.`,
+        structured: {
+          from, to: till, days, weeks, anchors,
+          free_days: freeDays,
+          free_stretches: stretches,
+          busiest_week: busiest ? busiest.start : null,
+          quietest_week: quietest ? quietest.start : null,
+        },
+      };
+    },
+
+    /**
+     * Картина денег. Честность здесь важнее полноты: лимит «?» не превращается
+     * в число, месяц без доходов помечается односторонним, а взносы в подушку
+     * не выдаются за «доступно на поездку» — он свою подушку так не определял.
+     */
+    async tasks_budget(args = {}) {
+      const month = args.month ? String(args.month).trim() : today().slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        throw new ToolError('invalid_month', `Месяц «${args.month}» не в формате YYYY-MM.`);
+      }
+      const contour = args.contour ? String(args.contour).replace(/^~/, '').trim().toLowerCase() : null;
+
+      const index = await loadIndex();
+      const monthPaths = [...new Set([
+        `money/${month}.md`,
+        ...Object.keys(index.files).filter((path) => /^money\/\d{4}-\d{2}\.md$/i.test(path)),
+      ])];
+      const wanted = [...monthPaths, 'money/budget.md', 'money/recurring.md'];
+      const files = await readAll({ paths: wanted, max: wanted.length });
+      const byPath = new Map(files.map((file) => [file.path, file.text]));
+
+      const text = byPath.get(`money/${month}.md`) || '';
+      const isCurrent = month === today().slice(0, 7);
+      const picture = tasks.budgetPicture({
+        month,
+        text,
+        budget: byPath.get('money/budget.md') || '',
+        recurring: byPath.get('money/recurring.md') || '',
+        // «Ещё спишется до конца месяца» имеет смысл только для текущего
+        // месяца: в прошедшем всё уже списалось, и прогноз там был бы враньём.
+        today: isCurrent ? today() : null,
+        contour,
+        months: monthPaths.map((path) => ({ month: path.slice(6, 13), text: byPath.get(path) || '' })),
+      });
+
+      const over = picture.limits.filter((l) => l.measurable && l.over > 0);
+      const parts = [
+        `${month}: расходов ${picture.spent} ₽`,
+        `из них потребление ${picture.split.consumption} ₽, кредиты ${picture.split.debt} ₽, в подушку ${picture.split.cushion} ₽`,
+        `доходов ${picture.income} ₽`,
+        contour ? `по ~${contour} ${picture.contour.spent} ₽` : null,
+        picture.balance ? `остаток на ${picture.balance.date} — ${picture.balance.amount} ₽` : 'остаток на счетах не замерян',
+        picture.recurring_ahead ? `до конца месяца спишется само ещё ~${picture.recurring_ahead} ₽` : null,
+        picture.travel.month ? `по ~travel за месяц ${picture.travel.month} ₽` : 'по ~travel в этом месяце ничего',
+        picture.cushion.monthly !== null
+          ? `в подушку ${picture.cushion.month} из ${picture.cushion.monthly} ₽ за месяц, накоплено ${picture.cushion.total} ₽${picture.cushion.goal !== null ? ` из цели ${picture.cushion.goal} ₽` : ''}`
+          : `в подушку ${picture.cushion.month} ₽ за месяц`,
+      ].filter(Boolean);
+
+      // Дальше — ровно то, чего в данных нет. Это не оговорки для приличия: без
+      // них вывод по бюджету читается как полный, хотя половины входа не было.
+      const gaps = [
+        picture.one_sided
+          ? 'Доходов за месяц в записях нет — вывод односторонний, «хватает или нет» отсюда не следует.'
+          : null,
+        picture.unmeasured.length
+          ? `Лимит не задан (${picture.unmeasured.join(', ')}) — отклонение мерить нечем, это его решение, а не пропуск.`
+          : null,
+        over.length
+          ? `Сверх лимита: ${over.map((l) => `${l.contour} на ${l.over} ₽`).join(', ')}.`
+          : null,
+        'Подушка — сбережения, а не бюджет поездки: называть её «доступно на поездку» нельзя, он так её не определял.',
+      ].filter(Boolean);
+
+      return {
+        text: `${parts.join(', ')}. ${gaps.join(' ')}`,
+        structured: { ...picture, contour_key: contour, gaps },
       };
     },
   };

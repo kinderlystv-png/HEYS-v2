@@ -1320,3 +1320,272 @@ test('память «как он решает» приходит в контек
   assert.equal(res.structured.preferences.length, 1);
   assert.equal(res.structured.preferences[0].note, 'Дела короче получаса в день не ставим');
 });
+
+// ── Загруженность вперёд ─────────────────────────────────────────────────
+//
+// «Когда можно уехать» считается арифметикой доски, а не своей. Расхождение
+// здесь незаметно и потому опасно: инструмент назовёт вторник свободным, а на
+// доске в нём стоит дзюдо, и человек узнает об этом уже после разговора.
+
+const RECURRING_MD = `# Повторяющиеся слоты
+
+Строка = слот, который сам появляется в нужные дни.
+
+пн-пт 09:00-09:30 Зарядка
+вт,чт 18:00-19:30 Дзюдо
+`;
+
+/** Задачник с повторами и одним дедлайном — вход обоих календарных тестов. */
+function boardApi(extra = {}) {
+  const files = {};
+  const put = (path, text) => { files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 }; };
+  put('days/recurring.md', RECURRING_MD);
+  put('projects/heys.md', `# HEYS
+
+## Задачи
+
+- [ ] P1 Собрать лендинг due:2026-08-06 ^2026-08-01
+- [ ] P2 Отдать отчёт due:2026-08-09 ^2026-08-01
+`);
+  for (const [path, text] of Object.entries(extra)) put(path, text);
+  return liveApi(files);
+}
+
+test('свободные окна считаются той же арифметикой, что рисует доска', () => {
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- 10:00-12:00 Kinderly\n- 15:00-17:00 Лендинг #фокус\n' });
+  assert.deepEqual(day.free.map((g) => `${g.from}-${g.to}`), ['07:00-10:00', '12:00-15:00', '17:00-01:00']);
+  assert.equal(day.busy_minutes, 240);
+  assert.equal(day.focus_minutes, 240, 'оба слота требуют головы');
+});
+
+test('щель короче 45 минут окном не считается', () => {
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- 10:00-12:00 Kinderly\n- 12:30-14:00 Лендинг\n' });
+  assert.deepEqual(day.free.map((g) => g.from), ['07:00', '14:00'], 'полчаса между делами — не свободное окно');
+});
+
+test('день начинается в семь утра, как на доске', () => {
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- 07:00-09:00 Kinderly\n' });
+  assert.equal(day.free.length, 1, 'до семи утра свободного времени не существует');
+  assert.equal(day.free[0].from, '09:00');
+});
+
+test('тег вида слота снимается с заголовка и меняет счёт «требует головы»', () => {
+  // Кириллица и `\b` в JS не дружат: без явной границы тег не находился вовсе,
+  // всё подряд считалось фокусом, а сам `#фон` оставался висеть в названии.
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- 10:00-12:00 Родители #фон\n- 15:00-15:15 Забрать торт #дело\n' });
+  assert.deepEqual(day.slots.map((s) => [s.title, s.kind]), [['Родители', 'фон'], ['Забрать торт', 'дело']]);
+  assert.equal(day.busy_minutes, 135, 'врезка короче четверти часа всё равно занимает четверть часа');
+  assert.equal(day.focus_minutes, 0, 'присутствие и врезка головы не требуют');
+});
+
+test('закрытый слот занимает время, а не освобождает его', () => {
+  // `- [x] 15:00-17:00 Kinderly` — обычная строка прошедшего дня. Разбор без
+  // галочки выкидывал её целиком, и отработанный день выглядел бы пустым.
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- [x] 15:00-17:00 Kinderly\n' });
+  assert.equal(day.busy_minutes, 120);
+  assert.deepEqual(day.free.map((g) => `${g.from}-${g.to}`), ['07:00-15:00', '17:00-01:00']);
+});
+
+test('повтор из recurring.md подставляется в день и не считается работой головы', () => {
+  const rec = tasks.parseRecurringSlots(RECURRING_MD);
+  const monday = tasks.dayLoad({ date: '2026-08-03', text: '', recurring: rec });
+  assert.equal(monday.has_file, false);
+  assert.equal(monday.busy_minutes, 30, 'зарядка занимает время');
+  assert.equal(monday.focus_minutes, 0, 'но головы не требует — на доске это привычка');
+  assert.equal(monday.slots[0].kind, 'привычка');
+  assert.equal(monday.slots[0].repeat, true);
+});
+
+test('повтор не задваивается, если тот же слот уже записан в дне', () => {
+  const rec = tasks.parseRecurringSlots(RECURRING_MD);
+  const day = tasks.dayLoad({ date: '2026-08-03', text: '- 09:00-09:30 Зарядка\n', recurring: rec });
+  assert.equal(day.slots.length, 1);
+  assert.equal(day.slots[0].repeat, false, 'своя строка дня главнее подстановки');
+});
+
+test('якорь опознаётся по повторению, а не по названию', () => {
+  const days = [
+    tasks.dayLoad({ date: '2026-08-04', text: '- 18:00-19:30 Пилатес у Иры @зал\n' }),
+    tasks.dayLoad({ date: '2026-08-11', text: '- 18:00-19:30 Пилатес у Иры\n' }),
+    tasks.dayLoad({ date: '2026-08-18', text: '- 18:00-19:30 Пилатес у Иры\n' }),
+    tasks.dayLoad({ date: '2026-08-05', text: '- 12:00-13:00 Разовая встреча\n' }),
+  ];
+  const anchors = tasks.anchorSlots(days);
+  assert.deepEqual(anchors.map((a) => a.title), ['Пилатес у Иры'],
+    'разовая встреча якорем не становится, а незнакомое название — становится');
+  assert.equal(anchors[0].times, 3);
+  assert.equal(anchors[0].weeks, 3);
+  assert.deepEqual(anchors[0].weekdays, ['вт']);
+  assert.equal(anchors[0].usual_time, '18:00–19:30');
+  assert.equal(anchors[0].source, 'повтор в днях');
+});
+
+test('день без файла не роняет разбор и приходит свободным', async () => {
+  const res = await session(boardApi()).tasks_calendar({ days: 7 });
+  assert.equal(res.structured.days.length, 7);
+  const sunday = res.structured.days.find((d) => d.date === '2026-08-02');
+  assert.equal(sunday.has_file, false);
+  assert.equal(sunday.busy_minutes, 0);
+  assert.deepEqual(sunday.free.map((g) => `${g.from}-${g.to}`), ['07:00-01:00']);
+  assert.ok(res.structured.free_days.includes('2026-08-02'), 'свободный день назван свободным, а не «данных нет»');
+});
+
+test('день с дедлайном свободным не считается — именно он и уедет', async () => {
+  const res = await session(boardApi()).tasks_calendar({ days: 10 });
+  const sunday = res.structured.days.find((d) => d.date === '2026-08-09');
+  assert.equal(sunday.busy_minutes, 0, 'слотов в дне нет');
+  assert.equal(sunday.due[0].title, 'Отдать отчёт');
+  assert.ok(!res.structured.free_days.includes('2026-08-09'));
+  assert.deepEqual(res.structured.free_stretches, [],
+    'суббота с воскресеньем не склеиваются в свободные выходные, пока на воскресенье висит дедлайн');
+});
+
+test('обрезанная неделя окна не выигрывает звание самой свободной', async () => {
+  const res = await session(boardApi()).tasks_calendar({ days: 21 });
+  const stub = res.structured.weeks.find((w) => w.start === '2026-07-27');
+  assert.equal(stub.days_count, 1, 'в кадр попало одно воскресенье');
+  assert.equal(stub.full, false);
+  assert.notEqual(res.structured.quietest_week, '2026-07-27');
+  assert.notEqual(res.structured.busiest_week, '2026-07-27');
+  assert.match(res.text, /якоря: /, 'повторяющееся названо сразу');
+});
+
+test('календарь не принимает мусор вместо даты и не уходит за два месяца', async () => {
+  await assert.rejects(() => session(boardApi()).tasks_calendar({ from: 'в сентябре' }), (e) => e.code === 'invalid_from');
+  await assert.rejects(() => session(boardApi()).tasks_calendar({ days: 0 }), (e) => e.code === 'invalid_days');
+  const res = await session(boardApi()).tasks_calendar({ days: 400 });
+  assert.equal(res.structured.days.length, 60);
+});
+
+// ── Деньги месяца ────────────────────────────────────────────────────────
+//
+// Здесь честность важнее полноты: лимит «?» стоит в budget.md по его решению,
+// и превратить его в число значит выдумать норму, которой он не задавал.
+
+const AUG_MONEY = `# Август
+
+- 01 -1200 еда ~family · тинькофф
+- 02 -10000 подушка ~cushion
+- 02 -3000 билеты ~travel
+- 2026-08-02 · остаток 45000
+`;
+const JUL_MONEY = `# Июль
+
+- 15 -10000 подушка ~cushion
+- 20 -2000 еда ~family
+`;
+const BUDGET_MD = `# Бюджет
+
+## Лимиты по контурам
+
+- family | ?
+- travel | 2000
+
+## Подушка
+
+- цель | 120000
+- в месяц | 10000
+- срок | 2027-08
+`;
+
+function moneyApi(extra = {}) {
+  const files = {};
+  const put = (path, text) => { files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 }; };
+  put('money/2026-08.md', AUG_MONEY);
+  put('money/2026-07.md', JUL_MONEY);
+  put('money/budget.md', BUDGET_MD);
+  put('money/recurring.md', '# Регулярное\n\n- 20 -5000 интернет ~family\n');
+  for (const [path, text] of Object.entries(extra)) put(path, text);
+  return liveApi(files);
+}
+
+test('лимит «?» остаётся неизвестным, а не превращается в ноль', () => {
+  const parsed = tasks.parseBudget(BUDGET_MD);
+  assert.equal(parsed.limits.family, null);
+  assert.equal(parsed.limits.travel, 2000);
+  assert.equal(parsed.cushion.goal, 120000);
+  assert.equal(parsed.cushion.monthly, 10000);
+  assert.equal(parsed.cushion.deadline, '2027-08');
+  assert.equal(tasks.parseBudget('## Подушка\n\n- срок | ?\n').cushion.deadline, null);
+});
+
+test('по контуру без лимита отклонение не считается вовсе', async () => {
+  const res = await session(moneyApi()).tasks_budget({});
+  const family = res.structured.limits.find((l) => l.contour === 'family');
+  assert.equal(family.limit, null);
+  assert.equal(family.over, null);
+  assert.equal(family.measurable, false);
+  assert.ok(res.structured.unmeasured.includes('family'));
+  assert.match(res.text, /Лимит не задан \([^)]*family/);
+  assert.ok(!/family на \d/.test(res.text), 'перекос по неизмеримому контуру не называется');
+
+  const travel = res.structured.limits.find((l) => l.contour === 'travel');
+  assert.equal(travel.over, 1000, 'там, где лимит есть, отклонение считается честно');
+  assert.match(res.text, /Сверх лимита: travel на 1000 ₽/);
+});
+
+test('месяц без записанных доходов помечается односторонним', async () => {
+  const res = await session(moneyApi()).tasks_budget({});
+  assert.equal(res.structured.one_sided, true);
+  assert.equal(res.structured.income_present, false);
+  assert.match(res.text, /вывод односторонний/);
+
+  const withIncome = await session(moneyApi({ 'money/2026-08.md': `${AUG_MONEY}- 05 +200000 зарплата ~family\n` }))
+    .tasks_budget({});
+  assert.equal(withIncome.structured.one_sided, false);
+  assert.equal(withIncome.structured.income, 200000);
+  assert.ok(!/вывод односторонний/.test(withIncome.text));
+});
+
+test('взнос в подушку не выдаётся за потребление и не тонет в расходах', async () => {
+  const res = await session(moneyApi()).tasks_budget({});
+  assert.deepEqual(res.structured.split, { consumption: 4200, debt: 0, cushion: 10000 });
+  assert.equal(res.structured.cushion.month, 10000);
+  assert.equal(res.structured.cushion.total, 20000, 'подушка копится по всем месяцам задачника');
+  assert.match(res.text, /Подушка — сбережения, а не бюджет поездки/);
+});
+
+test('снятие из подушки не раздувает потребление', async () => {
+  const api = moneyApi({ 'money/2026-08.md': `${AUG_MONEY}- 10 +4000 подушка ~cushion\n` });
+  const res = await session(api).tasks_budget({});
+  assert.equal(res.structured.split.consumption, 4200, 'снятые деньги никто не проел');
+  assert.equal(res.structured.split.cushion, 10000, 'разбивка расходов сходится с суммой расходов');
+  assert.equal(res.structured.cushion.month, 6000, 'а за месяц в подушке прибавилось меньше');
+});
+
+test('траты по ~travel видны отдельной строкой, в том числе по запросу контура', async () => {
+  const res = await session(moneyApi()).tasks_budget({ contour: '~travel' });
+  assert.equal(res.structured.contour_key, 'travel', '«~» перед именем контура не мешает');
+  assert.equal(res.structured.contour.spent, 3000);
+  assert.equal(res.structured.travel.month, 3000);
+});
+
+test('прогноз «спишется само» строится только по текущему месяцу', async () => {
+  const now = await session(moneyApi()).tasks_budget({ month: '2026-08' });
+  assert.equal(now.structured.recurring_ahead, 5000);
+  const past = await session(moneyApi()).tasks_budget({ month: '2026-07' });
+  assert.equal(past.structured.recurring_ahead, null, 'в прошедшем месяце всё уже списалось');
+  assert.equal(past.structured.spent, 12000);
+});
+
+test('месяц просят форматом, а не словами', async () => {
+  await assert.rejects(() => session(moneyApi()).tasks_budget({ month: 'август' }), (e) => e.code === 'invalid_month');
+});
+
+test('новые инструменты объявлены и в схемах, и обработчиком', () => {
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  for (const name of ['tasks_calendar', 'tasks_budget']) {
+    const schema = built.schemas.find((s) => s.name === name);
+    assert.ok(schema, `${name} объявлен в схемах — иначе модель его не увидит`);
+    assert.equal(schema.inputSchema.type, 'object');
+    assert.equal(typeof built.tools[name], 'function', `${name} имеет обработчик`);
+  }
+});
+
+test('правила задачника ссылаются только на существующие инструменты', () => {
+  const { schemas } = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  const known = new Set(schemas.map((s) => s.name));
+  const named = new Set(curatorInstructions('Антон', true).match(/tasks_[a-zа-яё_]+/gi) || []);
+  assert.ok(named.has('tasks_calendar') && named.has('tasks_budget'), 'новые правила названы своими именами');
+  for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
+});
