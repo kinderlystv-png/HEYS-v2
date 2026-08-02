@@ -3599,3 +3599,48 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-inbox__badge {
   border-color: #15181c;
 }
+
+/* Найденное через поиск сообщение: подсветка гаснет сама — это указатель
+   «вот оно», а не состояние. */
+.msg-row.is-highlighted .msg-bubble {
+  animation: messenger-highlight 2.6s ease-out;
+}
+
+@keyframes messenger-highlight {
+  0%, 55% { box-shadow: 0 0 0 3px rgba(255, 240, 201, 0.9); }
+  100% { box-shadow: 0 0 0 3px rgba(255, 240, 201, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-row.is-highlighted .msg-bubble {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(255, 240, 201, 0.9);
+  }
+}
+
+.messenger-search__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  button.messenger-search__item:hover .messenger-search__snippet {
+    color: #1d70b7;
+  }
+}
+
+[data-theme="dark"] .msg-row.is-highlighted .msg-bubble {
+  animation-name: messenger-highlight-dark;
+}
+
+@keyframes messenger-highlight-dark {
+  0%, 55% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0.95); }
+  100% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0); }
+}

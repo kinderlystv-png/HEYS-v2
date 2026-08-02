@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_api_v1.js'), 'utf8');
 const messengerSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_v1.js'), 'utf8');
+const cssSource = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/1000-messenger.css'),
+  'utf8',
+);
 const originalReact = globalThis.React;
 const originalReactDOM = globalThis.ReactDOM;
 const originalHEYS = window.HEYS;
@@ -129,6 +133,43 @@ describe('поиск по переписке', () => {
     await act(async () => { vi.advanceTimersByTime(400); });
 
     expect(container.textContent).toMatch(/Ничего не нашлось/);
+  });
+
+  it('результат кликабелен, только если есть куда переходить', async () => {
+    vi.useFakeTimers();
+    const { SearchPanel } = loadMessengerComponentInternals();
+    const messages = [{ id: '1', sender_role: 'client', body: 'творог', created_at: new Date().toISOString() }];
+    window.HEYS.MessengerAPI = { searchMessages: vi.fn().mockResolvedValue({ success: true, messages }) };
+
+    const withoutJump = render(RealReact.createElement(SearchPanel, { onClose: () => {} }));
+    fireEvent.change(withoutJump.container.querySelector('.messenger-search__input'), { target: { value: 'творог' } });
+    await act(async () => { vi.advanceTimersByTime(400); });
+    expect(withoutJump.container.querySelector('button.messenger-search__item')).toBeNull();
+
+    const onJump = vi.fn();
+    const withJump = render(RealReact.createElement(SearchPanel, { onClose: () => {}, onJump }));
+    fireEvent.change(withJump.container.querySelector('.messenger-search__input'), { target: { value: 'творог' } });
+    await act(async () => { vi.advanceTimersByTime(400); });
+
+    const item = withJump.container.querySelector('button.messenger-search__item');
+    expect(item).toBeTruthy();
+    fireEvent.click(item);
+    expect(onJump).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  it('переход просит у сервера страницу, заканчивающуюся найденным сообщением', () => {
+    // Догружать страницы по одной было бы десятком запросов; before = время
+    // сообщения + 1 мс даёт ровно одну нужную страницу.
+    expect(messengerSource).toContain('new Date(new Date(target.created_at).getTime() + 1).toISOString()');
+    // Лента заменяется целиком: склейка несмежных страниц оставила бы дыру.
+    expect(messengerSource).toContain('setMessages(page)');
+    expect(messengerSource).toContain('setShowOldMessages(true)');
+  });
+
+  it('подсветка гаснет сама и не остаётся состоянием', () => {
+    expect(messengerSource).toContain('setHighlightedId(null)');
+    expect(cssSource).toContain('@keyframes messenger-highlight');
+    expect(cssSource).toContain('.msg-row.is-highlighted .msg-bubble');
   });
 
   it('фильтр переспрашивает сервер', async () => {

@@ -42,13 +42,13 @@ describe('офлайн-очередь и черновик', () => {
     const { writeQueue, readQueue, writeDraft, readDraft } = loadMessengerComponentInternals();
 
     writeQueue(CLIENT_A, [{ request_id: 'r1', payload: { body: 'от первого' } }]);
-    writeDraft(CLIENT_A, 'черновик первого');
+    writeDraft(CLIENT_A, { text: 'черновик первого' });
 
     // На общем устройстве второй клиент не должен видеть чужую очередь.
     expect(readQueue(CLIENT_B)).toEqual([]);
-    expect(readDraft(CLIENT_B)).toBe('');
+    expect(readDraft(CLIENT_B)).toEqual({ text: '', photos: [] });
     expect(readQueue(CLIENT_A)).toHaveLength(1);
-    expect(readDraft(CLIENT_A)).toBe('черновик первого');
+    expect(readDraft(CLIENT_A).text).toBe('черновик первого');
   });
 
   it('пустая очередь и пустой черновик убирают ключ', () => {
@@ -56,8 +56,8 @@ describe('офлайн-очередь и черновик', () => {
 
     writeQueue(CLIENT_A, [{ request_id: 'r1', payload: {} }]);
     writeQueue(CLIENT_A, []);
-    writeDraft(CLIENT_A, 'текст');
-    writeDraft(CLIENT_A, '');
+    writeDraft(CLIENT_A, { text: 'текст' });
+    writeDraft(CLIENT_A, { text: '', photos: [] });
 
     expect(localStorage.getItem(`heys_messenger_queue_${CLIENT_A}`)).toBeNull();
     expect(localStorage.getItem(`heys_messenger_draft_${CLIENT_A}`)).toBeNull();
@@ -126,6 +126,105 @@ describe('офлайн-очередь и черновик', () => {
     // Повтор с прежним request_id не создаёт дубль: сервер идемпотентен по нему.
     expect(messengerSource).toMatch(/HEYS\.MessengerAPI\.send\(entry\.payload, \{ requestId: entry\.request_id \}\)/);
     expect(messengerSource).toMatch(/const entry = \{ request_id: requestId, payload, created_at/);
+  });
+});
+
+describe('фото в черновике', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    window.HEYS = {};
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    localStorage.clear();
+    window.HEYS = originalHEYS;
+  });
+
+  const photo = (id, bytes = 100) => ({
+    tempId: id,
+    localPreview: `data:image/jpeg;base64,${'A'.repeat(bytes)}`,
+    filename: `${id}.jpg`,
+    width: 800,
+    height: 600,
+    mime: 'image/jpeg',
+    status: 'pending-upload',
+  });
+
+  it('снимок переживает перезагрузку вместе с текстом', () => {
+    const { writeDraft, readDraft } = loadMessengerComponentInternals();
+
+    writeDraft(CLIENT_A, { text: 'ужин', photos: [photo('p1')] });
+    const restored = readDraft(CLIENT_A);
+
+    expect(restored.text).toBe('ужин');
+    expect(restored.photos).toHaveLength(1);
+    expect(restored.photos[0]).toMatchObject({ tempId: 'p1', status: 'pending-upload', mime: 'image/jpeg' });
+    expect(restored.photos[0].localPreview).toContain('data:image/jpeg;base64,');
+  });
+
+  it('загруженное фото хранит ссылку, а не только превью', () => {
+    const { writeDraft, readDraft } = loadMessengerComponentInternals();
+
+    writeDraft(CLIENT_A, {
+      text: '',
+      photos: [{ ...photo('p2'), status: 'done', url: 'https://example.test/p2.webp', path: 'c/p2.webp' }],
+    });
+
+    expect(readDraft(CLIENT_A).photos[0]).toMatchObject({
+      status: 'done',
+      url: 'https://example.test/p2.webp',
+      path: 'c/p2.webp',
+    });
+  });
+
+  it('черновик не съедает хранилище: лимит по числу и по объёму', () => {
+    const { writeDraft, readDraft } = loadMessengerComponentInternals();
+
+    const many = writeDraft(CLIENT_A, { text: '', photos: [photo('a'), photo('b'), photo('c'), photo('d')] });
+    expect(many.photosSaved).toBe(3);
+
+    // Один снимок сверх лимита объёма отбрасывается целиком, а не режется.
+    const heavy = writeDraft(CLIENT_A, { text: 'т', photos: [photo('big', 1_600_000)] });
+    expect(heavy.photosSaved).toBe(0);
+    expect(readDraft(CLIENT_A).text).toBe('т');
+  });
+
+  it('при переполнении хранилища текст сохраняется, снимки — нет', () => {
+    const { writeDraft, readDraft } = loadMessengerComponentInternals();
+    const original = localStorage.setItem.bind(localStorage);
+    let call = 0;
+    vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+      call += 1;
+      // Первая попытка — с фото — падает по квоте, вторая (только текст) проходит.
+      if (call === 1) throw new DOMException('quota', 'QuotaExceededError');
+      return original(key, value);
+    });
+
+    const res = writeDraft(CLIENT_A, { text: 'важный текст', photos: [photo('p3')] });
+    expect(res).toEqual({ saved: true, photosSaved: 0 });
+
+    vi.restoreAllMocks();
+    expect(readDraft(CLIENT_A)).toEqual({ text: 'важный текст', photos: [] });
+  });
+
+  it('старый черновик-строка читается без потери текста', () => {
+    const { readDraft } = loadMessengerComponentInternals();
+    localStorage.setItem(`heys_messenger_draft_${CLIENT_A}`, 'написано до появления фото');
+
+    expect(readDraft(CLIENT_A)).toEqual({ text: 'написано до появления фото', photos: [] });
+  });
+
+  it('без сети снимок не грузится и отправку не пускает', () => {
+    // Отправить сейчас значило бы отправить текст без снимка.
+    expect(messengerSource).toContain("status: 'pending-upload'");
+    expect(messengerSource).toContain('Нет сети — фото пока не отправить');
+  });
+
+  it('после возвращения сети сначала снимки, потом очередь', () => {
+    // Иначе очередь уйдёт без вложений, которые к ней прикладывали.
+    expect(messengerSource).toContain('uploadPendingPhotos().then(() => flushOutbox())');
   });
 });
 

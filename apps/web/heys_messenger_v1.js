@@ -862,6 +862,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     onPhotoClick,
     onOpenDay,
     onApplyRequest,
+    highlighted = false,
     eagerPhotos,
     transcriptionGranted = false,
   }) {
@@ -1113,7 +1114,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return React.createElement(
       'div',
       {
-        className: `msg-row ${isMine ? 'msg-row-mine' : 'msg-row-theirs'}`,
+        className: [
+          'msg-row',
+          isMine ? 'msg-row-mine' : 'msg-row-theirs',
+          highlighted ? 'is-highlighted' : '',
+        ].filter(Boolean).join(' '),
+        'data-message-id': message.id,
         onTouchStart: handleTouchStart,
         onTouchEnd: cancelLongPress,
         onTouchMove: cancelLongPress,
@@ -1695,18 +1701,65 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch { /* приватный режим — очередь живёт только в памяти вкладки */ }
   }
 
-  function readDraft(clientId) {
-    try {
-      return localStorage.getItem(scopedMessengerKey(DRAFT_KEY_PREFIX, clientId)) || '';
-    } catch { return ''; }
+  // Фото в черновике: сжатый base64 уже есть в pendingPhotos до отправки,
+  // поэтому снимок переживает перезагрузку так же, как текст. Лимиты жёсткие —
+  // localStorage общий, и переполнить его значит сломать соседние ключи.
+  const MAX_DRAFT_PHOTOS = 3;
+  const MAX_DRAFT_PHOTO_BYTES = 1_500_000;
+
+  function draftPhotoPayload(photo) {
+    return {
+      tempId: photo.tempId,
+      localPreview: photo.localPreview,
+      filename: photo.filename,
+      width: photo.width,
+      height: photo.height,
+      mime: photo.mime,
+      // Загруженное фото уже на сервере — храним ссылку, base64 нужен только
+      // как превью.
+      ...(photo.url ? { url: photo.url, path: photo.path } : {}),
+      status: photo.status === 'done' ? 'done' : 'pending-upload',
+    };
   }
 
-  function writeDraft(clientId, text) {
+  function readDraft(clientId) {
+    try {
+      const raw = localStorage.getItem(scopedMessengerKey(DRAFT_KEY_PREFIX, clientId));
+      if (!raw) return { text: '', photos: [] };
+      // До появления фото черновик был простой строкой.
+      if (!raw.startsWith('{')) return { text: raw, photos: [] };
+      const parsed = JSON.parse(raw);
+      return {
+        text: typeof parsed?.text === 'string' ? parsed.text : '',
+        photos: Array.isArray(parsed?.photos) ? parsed.photos : [],
+      };
+    } catch { return { text: '', photos: [] }; }
+  }
+
+  function writeDraft(clientId, { text = '', photos = [] } = {}) {
     const key = scopedMessengerKey(DRAFT_KEY_PREFIX, clientId);
     try {
-      if (text) localStorage.setItem(key, text);
-      else localStorage.removeItem(key);
-    } catch { /* см. writeQueue */ }
+      if (!text && photos.length === 0) {
+        localStorage.removeItem(key);
+        return { saved: true, photosSaved: 0 };
+      }
+      const kept = [];
+      let bytes = 0;
+      for (const photo of photos.slice(0, MAX_DRAFT_PHOTOS)) {
+        const size = (photo?.localPreview || '').length;
+        if (bytes + size > MAX_DRAFT_PHOTO_BYTES) break;
+        bytes += size;
+        kept.push(draftPhotoPayload(photo));
+      }
+      localStorage.setItem(key, JSON.stringify({ text, photos: kept }));
+      return { saved: true, photosSaved: kept.length };
+    } catch {
+      // Квота кончилась — текст важнее снимков, сохраняем хотя бы его.
+      try {
+        localStorage.setItem(key, JSON.stringify({ text, photos: [] }));
+        return { saved: true, photosSaved: 0 };
+      } catch { return { saved: false, photosSaved: 0 }; }
+    }
   }
 
   function isOffline() {
@@ -1814,13 +1867,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return parts;
   }
 
-  function SearchPanel({ isCurator, curatorViewClientId, onClose }) {
+  function SearchPanel({ isCurator, curatorViewClientId, onClose, onJump }) {
     const [query, setQuery] = useState('');
     const [type, setType] = useState(null);
     const [results, setResults] = useState([]);
     const [state, setState] = useState('idle');
     const inputRef = useRef(null);
     const flushingRef = useRef(false);
+    const pendingPhotosRef = useRef([]);
 
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 30);
@@ -1910,8 +1964,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           { key: group.label, className: 'messenger-search__group' },
           React.createElement('div', { className: 'messenger-search__day' }, group.label),
           group.items.map((message) => React.createElement(
-            'div',
-            { key: message.id, className: 'messenger-search__item' },
+            onJump ? 'button' : 'div',
+            {
+              key: message.id,
+              className: 'messenger-search__item',
+              ...(onJump ? { type: 'button', onClick: () => onJump(message) } : {}),
+            },
             React.createElement(
               'div',
               { className: 'messenger-search__meta' },
@@ -2587,6 +2645,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [highlightedId, setHighlightedId] = useState(null);
     const [outbox, setOutbox] = useState([]);
     const [flushing, setFlushing] = useState(false);
     const [pendingAudioTranscript, setPendingAudioTranscript] = useState(null);
@@ -2956,12 +3015,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     useEffect(() => {
       setOutbox(readQueue(outboxClientId));
       const draft = readDraft(outboxClientId);
-      if (draft) setInput((current) => current || draft);
+      if (draft.text) setInput((current) => current || draft.text);
+      if (draft.photos.length > 0) {
+        setPendingPhotos((current) => (current.length > 0 ? current : draft.photos));
+      }
     }, [outboxClientId]);
 
     useEffect(() => {
-      writeDraft(outboxClientId, input.trim() ? input : '');
-    }, [input, outboxClientId]);
+      pendingPhotosRef.current = pendingPhotos;
+    }, [pendingPhotos]);
+
+    useEffect(() => {
+      // Снимки без ошибки: битую загрузку тащить в новый сеанс незачем.
+      const draftPhotos = pendingPhotos.filter((p) => p.status !== 'error' && p.localPreview);
+      writeDraft(outboxClientId, { text: input.trim() ? input : '', photos: draftPhotos });
+    }, [input, pendingPhotos, outboxClientId]);
 
     const flushOutbox = useCallback(async () => {
       if (flushingRef.current) return;
@@ -2990,14 +3058,88 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (rest.length < queue.length) void fetchAndMerge({ silent: true });
     }, [outboxClientId, fetchAndMerge]);
 
+    /** Снимки, дождавшиеся сети, уходят на сервер и снова становятся отправляемыми. */
+    const uploadPendingPhotos = useCallback(async () => {
+      const waiting = pendingPhotosRef.current.filter((p) => p.status === 'pending-upload' && p.localPreview);
+      if (waiting.length === 0 || isOffline()) return;
+      const uploadFn = window.HEYS?.StoragePhotos?.uploadPhoto;
+      if (typeof uploadFn !== 'function') return;
+      const targetClientId = isCurator
+        ? (curatorViewClientId || getCurrentClientId())
+        : getCurrentClientId();
+      const today = new Date().toISOString().slice(0, 10);
+
+      for (const photo of waiting) {
+        setPendingPhotos((prev) => prev.map((p) => p.tempId === photo.tempId ? { ...p, status: 'uploading' } : p));
+        const result = await uploadFn(photo.localPreview, targetClientId, today, 'msg-' + photo.tempId)
+          .catch(() => null);
+        if (!mountedRef.current) return;
+        setPendingPhotos((prev) => prev.map((p) => {
+          if (p.tempId !== photo.tempId) return p;
+          if (!result?.url) return { ...p, status: 'error' };
+          return { ...p, status: 'done', url: result.url, path: result.path };
+        }));
+      }
+    }, [isCurator, curatorViewClientId]);
+
     useEffect(() => {
-      const onOnline = () => { void flushOutbox(); };
+      const onOnline = () => {
+        // Порядок важен: сначала снимки, потом сообщения — иначе очередь уйдёт
+        // без вложений, которые человек к ней прикладывал.
+        void uploadPendingPhotos().then(() => flushOutbox());
+      };
       window.addEventListener('online', onOnline);
-      if (!isOffline()) void flushOutbox();
+      if (!isOffline()) {
+        void uploadPendingPhotos().then(() => flushOutbox());
+      }
       return () => window.removeEventListener('online', onOnline);
-    }, [flushOutbox]);
+    }, [flushOutbox, uploadPendingPhotos]);
 
     const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
+
+    /**
+     * Открыть тред на найденном сообщении. Догружать страницы по одной до
+     * нужной было бы десятком запросов; вместо этого просим у сервера страницу,
+     * которая заканчивается искомым: `before` = его время плюс миллисекунда.
+     * Лента заменяется целиком — склеивать несмежные страницы нельзя, между
+     * ними была бы дыра.
+     */
+    const jumpToMessage = useCallback(async (target) => {
+      if (!target?.created_at) return;
+      setSearchOpen(false);
+      setLoading(true);
+      const beforeTs = new Date(new Date(target.created_at).getTime() + 1).toISOString();
+      const res = await HEYS.MessengerAPI.getThread({
+        ...(isCurator && threadClientId ? { client_id: threadClientId } : {}),
+        before_ts: beforeTs,
+        limit: THREAD_PAGE_LIMIT,
+      }).catch(() => null);
+      if (!mountedRef.current) return;
+      setLoading(false);
+      if (!res?.success) {
+        setError(res?.error || 'jump_failed');
+        return;
+      }
+      const page = (res.messages || []).slice().reverse().map(hydrateLocalAudio);
+      threadGenerationRef.current += 1;
+      setMessages(page);
+      // Найденное сообщение может быть старше недельного порога — раскрываем
+      // сворачивание, иначе переход упёрся бы в кнопку «Показать ранее».
+      setShowOldMessages(true);
+      setHasMoreHistory(page.length >= THREAD_PAGE_LIMIT);
+      historyPaginationStartedRef.current = true;
+      setHighlightedId(target.id);
+      wasAtBottomRef.current = false;
+    }, [isCurator, threadClientId, hydrateLocalAudio]);
+
+    // Подсветка гаснет сама: это указатель «вот оно», а не состояние.
+    useEffect(() => {
+      if (!highlightedId) return undefined;
+      const node = threadRef.current?.querySelector(`[data-message-id="${highlightedId}"]`);
+      node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const timer = setTimeout(() => setHighlightedId(null), 2600);
+      return () => clearTimeout(timer);
+    }, [highlightedId, messages]);
 
     // Разбор сообщения в запись дня — только у куратора.
     const openApplyPanel = useCallback((message) => {
@@ -3514,6 +3656,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               mime,
             },
           ]);
+          // Без сети грузить нечего: снимок ждёт в черновике и уйдёт на
+          // сервер, когда соединение вернётся.
+          if (isOffline()) {
+            setPendingPhotos((prev) =>
+              prev.map((p) => p.tempId === tempId ? { ...p, status: 'pending-upload' } : p)
+            );
+            continue;
+          }
           // Upload в фоне
           const dummyMealId = 'msg-' + tempId;
           const uploadFn = window.HEYS?.StoragePhotos?.uploadPhoto;
@@ -3590,6 +3740,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         setError(recordingState === 'recording' || recordingState === 'stopping'
           ? 'Заверши запись голосового перед отправкой.'
           : 'Подожди, вложение ещё загружается...');
+        return;
+      }
+      // Фото без сети на сервер не попало, а в очередь уходит только ссылка.
+      // Отправить сейчас значило бы отправить текст без снимка — вместо этого
+      // держим всё в черновике до возвращения сети.
+      if (pendingPhotos.some((p) => p.status === 'pending-upload')) {
+        setError('Нет сети — фото пока не отправить. Сообщение и снимок сохранены, отправим вместе, когда связь появится.');
         return;
       }
       // Должно быть хоть что-то: текст, фото или голосовое.
@@ -4008,6 +4165,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           isCurator,
           curatorViewClientId,
           onClose: () => setSearchOpen(false),
+          onJump: jumpToMessage,
         }),
         // Thread
         !searchOpen && React.createElement(
@@ -4096,6 +4254,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onEdit: handleEditMessage,
                         onPhotoClick: handlePhotoClick,
                         onApplyRequest: isCurator ? openApplyPanel : undefined,
+                        highlighted: m.id === highlightedId,
                         eagerPhotos: msgIdx >= eagerThreshold,
                         transcriptionGranted: !!transcriptionConsent?.granted,
                       }),

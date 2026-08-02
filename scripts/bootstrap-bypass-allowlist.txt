@@ -271,12 +271,14 @@ apps/web/heys_yandex_api_v1.js:828
 apps/web/heys_planning_reading_v1.js:69
 apps/web/heys_planning_reading_v1.js:119
 
-# Messenger, три device-local записи. В облако не едут и не bootstrap-critical;
-# все три ключа скоупятся client_id, поэтому на общем устройстве не текут между
+# Messenger, четыре device-local записи. В облако не едут и не bootstrap-critical;
+# все ключи скоупятся client_id, поэтому на общем устройстве не текут между
 # клиентами (`scopedMessengerKey`, `foodHintDismissedKey`).
-#   :1694 — очередь неотправленных сообщений, пока нет сети;
-#   :1707 — черновик текста в поле ввода;
-#   :2365 — флаг «клиент скрыл плашку про время и граммы».
+#   :1700 — очередь неотправленных сообщений, пока нет сети;
+#   :1754 — черновик: текст и снятые фото, ждущие сети;
+#   :1759 — тот же черновик без фото, когда кончилась квота хранилища;
+#   :2423 — флаг «клиент скрыл плашку про время и граммы».
 apps/web/heys_messenger_v1.js:1700
-apps/web/heys_messenger_v1.js:1713
-apps/web/heys_messenger_v1.js:2375
+apps/web/heys_messenger_v1.js:1754
+apps/web/heys_messenger_v1.js:1759
+apps/web/heys_messenger_v1.js:2423
