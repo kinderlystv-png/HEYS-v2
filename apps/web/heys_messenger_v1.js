@@ -2055,6 +2055,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // заметная и с быстрыми вставками, а не просто текст.
 
   const FOOD_HINT_DISMISSED_KEY = 'heys_messenger_food_hint_dismissed';
+
+  // Ключ скоупится клиентом: на общем устройстве скрытая одним клиентом плашка
+  // иначе пропала бы и у второго. Безклиентский вариант оставлен для случая,
+  // когда клиент ещё не определён.
+  function foodHintDismissedKey() {
+    const cid = getCurrentClientId();
+    return cid ? `${FOOD_HINT_DISMISSED_KEY}_${String(cid).toLowerCase()}` : FOOD_HINT_DISMISSED_KEY;
+  }
   const FOOD_HINT_LEARNED_STREAK = 10;
   const TIME_IN_TEXT_RE = /\b([01]?\d|2[0-3])[:.][0-5]\d\b/;
   const GRAMS_IN_TEXT_RE = /\d+\s*(г|гр|грамм)/i;
@@ -2064,14 +2072,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function readFoodHintDismissed() {
     try {
-      return localStorage.getItem(FOOD_HINT_DISMISSED_KEY) === '1';
+      return localStorage.getItem(foodHintDismissedKey()) === '1';
     } catch { return false; }
   }
 
   function writeFoodHintDismissed(value) {
     try {
-      if (value) localStorage.setItem(FOOD_HINT_DISMISSED_KEY, '1');
-      else localStorage.removeItem(FOOD_HINT_DISMISSED_KEY);
+      const key = foodHintDismissedKey();
+      if (value) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
     } catch { /* приватный режим — просто не запоминаем */ }
   }
 
