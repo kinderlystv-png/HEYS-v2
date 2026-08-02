@@ -56,8 +56,128 @@ describe('пустой тред и скелетон', () => {
     expect(messengerSource).not.toMatch(/messenger-loading/);
   });
 
-  it('мерцание скелетона отключается при prefers-reduced-motion', () => {
-    expect(cssSource).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.messenger-skeleton__bubble \{\s*animation: none/);
+  it('при prefers-reduced-motion гаснет всё, что движется само', () => {
+    // Скелетон, пульс записи и волна проигрывания — самодвижущиеся анимации;
+    // подъезд модалки заменяется появлением без сдвига.
+    const block = cssSource.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/)[0];
+    expect(block).toContain('.messenger-skeleton__bubble');
+    expect(block).toContain('.messenger-recording-dot');
+    expect(block).toContain('.msg-audio.is-playing .msg-audio-wave span');
+    expect(block).toContain('animation: none');
+    // Тост едет transition по transform, а не анимацией — гасить его надо иначе.
+    expect(block).toContain('.messenger-inapp-toast');
+    expect(block).toMatch(/transition: opacity/);
+  });
+
+  it('тёмная тема полосы записи и черновика аудио задана один раз', () => {
+    // Раньше новое правило дописывалось вниз файла и перекрывало старое лишь
+    // частично: черновик оставался сине-серым, а у полосы висела чужая тень.
+    const rules = cssSource.match(/\[data-theme="dark"\] \.messenger-recording-live/g) || [];
+    expect(rules).toHaveLength(1);
+
+    const block = cssSource.match(/\[data-theme="dark"\] \.messenger-recording-live,\n\[data-theme="dark"\] \.messenger-audio-draft \{[^}]*\}/)[0];
+    expect(block).toContain('#2a1b1d');
+    expect(block).toContain('box-shadow: none');
+  });
+
+  it('ни одно свойство не задано одному селектору дважды в одном контексте', () => {
+    // Правка раз за разом дописывалась вниз файла вместо изменения исходного
+    // правила, и новая версия перекрывала старую лишь частично.
+    //
+    // Парсер ведёт стек контекста (медиа-условия), а не просто «нулевая
+    // глубина» — иначе всё внутри @media пропускается целиком. Именно там
+    // жила регрессия с min-height: 90px в блоке 420 px, перекрывавшая базовое
+    // правило .messenger-input: контекст у них разный (глобально vs внутри
+    // @media (max-width: 420px)), а конфликт — про совпадающий контекст.
+    //
+    // Конфликт свойства считается по количеству объявлений, содержащих его, а
+    // не по пересечению с первым: если color задан во втором и третьем
+    // объявлении, а в первом его нет, это всё равно два объявления одного
+    // свойства для одного селектора в одном контексте.
+    const stripped = cssSource.replace(/\/\*[\s\S]*?\*\//g, '');
+    const contextStack = [];
+    const rules = [];
+    let depth = 0;
+    let buffer = '';
+    for (let i = 0; i < stripped.length; i += 1) {
+      const ch = stripped[i];
+      if (ch === '{') {
+        const head = buffer.trim();
+        buffer = '';
+        if (head.startsWith('@')) {
+          contextStack.push(head);
+        } else if (head) {
+          const context = contextStack.join(' > ');
+          let j = i + 1;
+          let inner = 1;
+          while (inner > 0 && j < stripped.length) {
+            if (stripped[j] === '{') inner += 1;
+            else if (stripped[j] === '}') inner -= 1;
+            j += 1;
+          }
+          const body = stripped.slice(i + 1, j - 1);
+          for (const part of head.split(',')) {
+            const sel = part.replace(/\s+/g, ' ').trim();
+            if (sel) rules.push([`${context}::${sel}`, body]);
+          }
+          i = j - 1;
+          continue;
+        } else {
+          contextStack.push('');
+        }
+        depth += 1;
+      } else if (ch === '}') {
+        depth -= 1;
+        contextStack.pop();
+        buffer = '';
+      } else {
+        buffer += ch;
+      }
+    }
+
+    // (prop, value) в порядке объявления — не только имя свойства: конфликт
+    // это разные значения одного свойства, а не сам факт повтора. `height:
+    // 90vh; height: 90dvh;` — осознанный фолбэк для браузеров без dvh, и это
+    // не баг: обе строки нормализуются к одному виду.
+    const declarationsOf = (body) => body
+      .split(';')
+      .filter((line) => line.includes(':'))
+      .map((line) => {
+        const at = line.indexOf(':');
+        return [line.slice(0, at).trim(), line.slice(at + 1).trim()];
+      });
+    const normalize = (value) => value.replace(/dvh/g, 'vh').replace(/dvw/g, 'vw');
+
+    const byKeyProp = new Map(); // "key::prop" -> value[]
+    for (const [key, body] of rules) {
+      for (const [prop, value] of declarationsOf(body)) {
+        const propKey = `${key} :: ${prop}`;
+        if (!byKeyProp.has(propKey)) byKeyProp.set(propKey, []);
+        byKeyProp.get(propKey).push(value);
+      }
+    }
+
+    const conflicts = [];
+    for (const [propKey, values] of byKeyProp) {
+      if (values.length < 2) continue;
+      const normalized = new Set(values.map(normalize));
+      if (normalized.size > 1) conflicts.push(`${propKey} (${values.join(' vs ')})`);
+    }
+    expect(conflicts).toEqual([]);
+  });
+
+  it('в компонентном файле нет !important', () => {
+    // !important здесь — не про специфичность компонента, а про войну с чужим
+    // глобальным стилем: он либо не нужен (значение и так побеждает), либо
+    // сигнализирует, что что-то извне перебивает поле, и это стоит найти и
+    // починить в источнике, а не заглушать локально.
+    expect(cssSource).not.toContain('!important');
+  });
+
+  it('в файле не осталось системного алого', () => {
+    // На плитке с ошибкой заливка и outline были разными красными.
+    expect(cssSource).not.toContain('rgba(220, 38, 38');
+    expect(cssSource).not.toContain('#dc2626');
   });
 });
 

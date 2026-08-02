@@ -8,6 +8,7 @@
 
 /* 💬 FAB-кнопка рядом с meal-fab + water-fab */
 .fab-group .message-fab {
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -32,11 +33,6 @@
 
 .fab-group .message-fab:active {
   transform: scale(0.94);
-}
-
-/* Badge с количеством непрочитанных на 💬 FAB */
-.fab-group .message-fab {
-  position: relative;
 }
 
 .message-fab-icon {
@@ -108,14 +104,12 @@ body.planning-tab-active .fab-group .message-fab {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow:
-    0 -18px 60px rgba(15, 23, 42, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 60px rgba(17, 24, 39, 0.10);
   animation: messenger-slide-up 0.2s ease-out;
 }
 
 @keyframes messenger-slide-up {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -501,9 +495,25 @@ button.messenger-day-checklist__chip:active {
   100% { background-position: 0 50%; }
 }
 
+/* Уважение к «уменьшить движение»: гасим всё, что движется само по себе —
+   мерцание скелетона, подъезд модалки, пульс записи и волну проигрывания.
+   Появление модалки остаётся, но без сдвига: иначе непонятно, что открылось. */
 @media (prefers-reduced-motion: reduce) {
-  .messenger-skeleton__bubble {
+  .messenger-skeleton__bubble,
+  .messenger-recording-dot,
+  .msg-audio.is-playing .msg-audio-wave span {
     animation: none;
+  }
+
+  .messenger-modal {
+    animation: messenger-fade-in 0.15s ease-out;
+  }
+
+  /* Тост едет не анимацией, а transition по transform — гасим сдвиг,
+     оставляя появление по прозрачности. */
+  .messenger-inapp-toast {
+    transform: translate(-50%, 0) scale(1);
+    transition: opacity 0.18s ease;
   }
 }
 
@@ -764,25 +774,22 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-play {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  color: #1d70b7;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .msg-bubble-theirs .msg-audio-play,
 .messenger-audio-draft .msg-audio-play {
-  background: #1d70b7;
-  color: #fff;
+  background: #e2ecf2;
+  color: #1d70b7;
 }
 
 @media (hover: hover) {
@@ -804,7 +811,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-wave span {
-  width: 3px;
+  width: 2px;
   min-height: 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.48);
@@ -813,11 +820,11 @@ button.messenger-day-checklist__chip:active {
 
 .msg-bubble-theirs .msg-audio-wave span,
 .messenger-audio-draft .msg-audio-wave span {
-  background: rgba(100, 116, 139, 0.30);
+  background: rgba(29, 112, 183, 0.28);
 }
 
 .msg-audio-wave span.is-played {
-  background: #bfdbfe;
+  background: #ffffff;
 }
 
 .msg-audio.is-playing .msg-audio-wave span {
@@ -862,7 +869,7 @@ button.messenger-day-checklist__chip:active {
 
 .msg-audio-error {
   max-width: 92px;
-  color: #dc2626;
+  color: #8c2f2f;
   font-size: 10px;
   line-height: 1.1;
   text-align: right;
@@ -873,7 +880,7 @@ button.messenger-day-checklist__chip:active {
   max-width: min(310px, 72vw);
   color: rgba(255, 255, 255, 0.78);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.35;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -889,7 +896,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-transcript.is-error {
-  color: #dc2626;
+  color: #8c2f2f;
   font-weight: 600;
 }
 
@@ -992,7 +999,7 @@ button.messenger-day-checklist__chip:active {
   padding: 9px 16px 0;
   overflow-x: auto;
   flex-wrap: nowrap;
-  background: rgba(248, 250, 252, 0.92);
+  background: transparent;
 }
 
 .messenger-pending-photo {
@@ -1034,14 +1041,14 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-pending-photo.status-error {
-  outline: 2px solid #dc2626;
+  outline: 2px solid #8c2f2f;
 }
 
 .messenger-pending-photo.status-error::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(220, 38, 38, 0.4);
+  background: rgba(140, 47, 47, 0.4);
 }
 
 .messenger-pending-remove {
@@ -1066,8 +1073,8 @@ button.messenger-day-checklist__chip:active {
 
 @media (hover: hover) {
   .messenger-pending-remove:hover {
-  background: rgba(220, 38, 38, 0.9);
-}
+    background: rgba(140, 47, 47, 0.9);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1075,7 +1082,7 @@ button.messenger-day-checklist__chip:active {
  * ═══════════════════════════════════════════════════════════════════ */
 .messenger-pending-audio {
   padding: 9px 16px 0;
-  background: rgba(248, 250, 252, 0.92);
+  background: transparent;
 }
 
 .messenger-recording-live,
@@ -1085,15 +1092,14 @@ button.messenger-day-checklist__chip:active {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid #f3d9d9;
+  border-radius: 14px;
+  background: #fef4f4;
 }
 
 .messenger-recording-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42);
@@ -1103,14 +1109,14 @@ button.messenger-day-checklist__chip:active {
 
 @keyframes messenger-recording-pulse {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42); }
-  70% { box-shadow: 0 0 0 9px rgba(239, 68, 68, 0); }
+  70% { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .messenger-recording-label {
   min-width: 0;
   flex: 1;
-  color: #0f172a;
+  color: #8c2f2f;
   font-size: 13px;
   font-weight: 600;
 }
@@ -1124,10 +1130,11 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-recording-stop {
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
+  min-height: 34px;
   background: #ef4444;
   color: #fff;
-  padding: 7px 12px;
+  padding: 0 12px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1154,7 +1161,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-audio-status.error {
-  color: #dc2626;
+  color: #8c2f2f;
 }
 
 .messenger-pending-audio-remove {
@@ -1207,7 +1214,7 @@ button.messenger-day-checklist__chip:active {
   margin-top: 8px;
   color: #475569;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
 }
 
@@ -1494,7 +1501,6 @@ button.messenger-day-checklist__chip:active {
 
 
 .msg-edited-marker {
-  font-size: 11px;
   opacity: 0.65;
   font-style: italic;
 }
@@ -1562,11 +1568,11 @@ button.messenger-day-checklist__chip:active {
 
 
 .messenger-error {
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
+  background: #fdecec;
+  color: #8c2f2f;
   padding: 8px 16px;
   font-size: 13px;
-  border-top: 1px solid rgba(220, 38, 38, 0.2);
+  border-top: 1px solid #f4d3d3;
 }
 
 .messenger-confirm-backdrop {
@@ -1612,29 +1618,29 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-confirm-title {
   margin: 4px 0 0;
-  color: #0f172a;
-  font-size: 20px;
+  color: #111827;
+  font-size: 17px;
   line-height: 1.2;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
 .messenger-confirm-text {
   margin: 8px 0 0;
   color: #475569;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .messenger-confirm-preview {
   margin-top: 12px;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(241, 245, 249, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 11px;
+  background: #f8fafc;
+  border: 1px solid #e4eaf0;
   color: #334155;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.35;
   word-break: break-word;
 }
@@ -1648,9 +1654,8 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-confirm-cancel,
 .messenger-confirm-delete {
-  min-height: 44px;
-  border-radius: 14px;
-  border: none;
+  min-height: 40px;
+  border-radius: 12px;
   padding: 0 14px;
   font-size: 14px;
   font-weight: 600;
@@ -1659,18 +1664,15 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-confirm-cancel {
-  background: rgba(255, 255, 255, 0.92);
+  background: #f8fafc;
   color: #334155;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e4eaf0;
 }
 
 .messenger-confirm-delete {
+  border: none;
   background: #c0392b;
   color: #fff;
-  box-shadow:
-    0 12px 24px rgba(220, 38, 38, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .messenger-confirm-cancel:disabled,
@@ -1699,15 +1701,11 @@ button.messenger-day-checklist__chip:active {
   align-items: center;
   gap: 12px;
   padding: 10px 14px 10px 12px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  border-radius: 20px;
-  background:
-    #ffffff;
-  color: #0f172a;
-  box-shadow:
-    0 20px 54px rgba(15, 23, 42, 0.22),
-    0 8px 20px rgba(37, 99, 235, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.80);
+  border: 1px solid #e4eaf0;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.14);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -16px) scale(0.98);
@@ -1732,7 +1730,7 @@ button.messenger-day-checklist__chip:active {
   background: #1d70b7;
   color: #fff;
   font-size: 20px;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 22px rgba(29, 112, 183, 0.28);
 }
 
 .messenger-inapp-toast__copy {
@@ -1787,7 +1785,6 @@ button.messenger-day-checklist__chip:active {
 .messenger-inapp-toast__read {
   background: #1d70b7;
   color: #fff;
-  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.24);
 }
 
 /* Плашка «время и граммы»: от неё зависит, соберёт куратор день с первого
@@ -1893,13 +1890,13 @@ button.messenger-day-checklist__chip:active {
   resize: none;
   border: 1px solid #eae7e0;
   border-radius: 22px;
-  padding: 11px 16px !important;
+  padding: 11px 16px;
   font-size: 14px;
   font-family: inherit;
   background: #f5f4f0;
   color: #1b2430;
   outline: none;
-  min-height: 44px;
+  min-height: 44px; /* одна строка, не 90 и не 100 — редизайн уже дважды это откатывал */
   max-height: 120px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   touch-action: auto;
@@ -1974,7 +1971,7 @@ button.messenger-day-checklist__chip:active {
   color: #fff;
   font: inherit;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   cursor: pointer;
   box-shadow: 0 6px 14px rgba(67, 69, 135, 0.18);
 }
@@ -2076,12 +2073,9 @@ button.messenger-day-checklist__chip:active {
     gap: 2px;
   }
 
-  /* Поле остаётся одностроч­ным и на телефоне: прежний min-height 90px был
-     тем самым, что редизайн убирал, и переживал правку основного правила. */
   .messenger-input {
     min-width: 0;
-    padding: 11px 14px !important;
-    font-size: 16px;
+    font-size: 16px; /* меньше — и iOS зумит страницу при фокусе на поле */
   }
 
   .messenger-keyboard-diagnostic {
@@ -2100,7 +2094,7 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-modal {
   background: #111417;
   color: #e7eaed;
-  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.48);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
 }
 
 [data-theme="dark"] .messenger-header {
@@ -2319,15 +2313,15 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-recording-live,
 [data-theme="dark"] .messenger-audio-draft {
-  background: rgba(30, 41, 59, 0.92);
-  border-color: rgba(96, 165, 250, 0.22);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.26);
+  background: #2a1b1d;
+  border-color: #3a2426;
+  box-shadow: none;
 }
 
 [data-theme="dark"] .messenger-recording-label,
 [data-theme="dark"] .messenger-recording-time,
 [data-theme="dark"] .messenger-audio-status {
-  color: #cbd5e1;
+  color: #e08c8c;
 }
 
 [data-theme="dark"] .messenger-confirm-backdrop {
@@ -2369,10 +2363,7 @@ button.messenger-day-checklist__chip:active {
     #15181c;
   border-color: rgba(96, 165, 250, 0.26);
   color: #f8fafc;
-  box-shadow:
-    0 22px 58px rgba(0, 0, 0, 0.44),
-    0 8px 20px rgba(37, 99, 235, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.44);
 }
 
 [data-theme="dark"] .messenger-inapp-toast__copy strong {
@@ -2628,13 +2619,13 @@ button.messenger-day-checklist__chip:active {
   background: #ffffff;
   color: #1b2430;
   font-family: inherit;
-  font-size: 13.5px;
   outline: none;
 }
 
 .messenger-apply__name {
   flex: 1;
   min-width: 0;
+  font-size: 13.5px;
 }
 
 .messenger-apply__grams,
@@ -2966,8 +2957,15 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-search__item {
+  display: block;
+  width: 100%;
   padding: 9px 0;
+  border: none;
   border-top: 1px solid #f1efe9;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .messenger-search__meta {
@@ -3618,18 +3616,6 @@ button.messenger-day-checklist__chip:active {
   }
 }
 
-.messenger-search__item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-  background: transparent;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  cursor: pointer;
-}
-
 @media (hover: hover) {
   button.messenger-search__item:hover .messenger-search__snippet {
     color: #1d70b7;
@@ -3643,4 +3629,17 @@ button.messenger-day-checklist__chip:active {
 @keyframes messenger-highlight-dark {
   0%, 55% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0.95); }
   100% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0); }
+}
+
+/* Полоса ошибки в тёмной теме: светлый вариант слепил на тёмном треде. */
+[data-theme="dark"] .messenger-error {
+  background: #2a1b1d;
+  color: #e08c8c;
+  border-top-color: #3a2426;
+}
+
+[data-theme="dark"] .msg-audio-error,
+[data-theme="dark"] .msg-audio-transcript.is-error,
+[data-theme="dark"] .messenger-audio-status.error {
+  color: #e08c8c;
 }
