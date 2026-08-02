@@ -23,8 +23,11 @@ regexes = [
     '''\.key\s*={2,3}\s*['"][cr]\d{2}[a-z]?_[a-z0-9_]+['"]''',
     '''[A-Z0-9_]*(?:KEY|STORAGE_KEY)\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
     '''const\s+[A-Z0-9_]*(?:KEY|STORAGE_KEY)\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
-    # Yandex Cloud public resource identifiers (function/api-gateway IDs), not secrets.
-    '''\b(?:d4e|d5d|aje)[a-z0-9]{17}\b''',
+    # Yandex Cloud public resource identifiers (function/api-gateway/Lockbox IDs),
+    # not secrets. `e6q` — идентификаторы Lockbox-секретов: они называют адрес
+    # хранилища, но доступ к payload даёт IAM, а не знание ID. Нужны в
+    # SECURITY_RUNBOOK, чтобы в инциденте было чем сверить утёкшее значение.
+    '''\b(?:d4e|d5d|aje|e6q)[a-z0-9]{17}\b''',
     # Test-only idempotency labels.
     '''idempotencyKey\s*:\s*['"]idem-[a-z0-9_-]+['"]''',
     # Documentation placeholders/SQL parameter names.
