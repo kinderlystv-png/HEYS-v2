@@ -102,7 +102,10 @@ describe('iOS/PWA blank-screen visual guard', () => {
   });
 
   it('accepts the route-level subscription loading screen before the timeout', async () => {
-    expect(gateFlowSource).toContain("visibleFrame: 'subscription-loading'");
+    // Экран ожидания подписки — это скелетон вкладки, а не карточка с текстом:
+    // человеку с давним доступом нечего сообщать про пробную неделю. Метку
+    // видимого кадра он несёт сам, иначе защита сочла бы загрузку зависанием.
+    expect(gateFlowSource).toContain("'data-heys-visible-frame': 'subscription-loading'");
     expect(gateFlowSource).toContain("'data-heys-visible-frame': visibleFrame || undefined");
 
     const runtime = createRuntime({ observe: true });
