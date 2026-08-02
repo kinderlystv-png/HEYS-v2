@@ -129,6 +129,49 @@ describe('офлайн-очередь и черновик', () => {
   });
 });
 
+describe('офлайн-очередь: рефы объявлены там, где используются', () => {
+  // Прод-регрессия 2026-08-02: flushingRef и pendingPhotosRef были объявлены
+  // внутри SearchPanel (правка попала не в тот из двух одинаковых
+  // `const inputRef = useRef(null);` — SearchPanel был выше по файлу и словил
+  // замену первым), а читались в MessengerModal — другом компоненте, другом
+  // замыкании. React не роняет это при сборке или рендере SearchPanel: ошибка
+  // всплывала только при вызове uploadPendingPhotos внутри MessengerModal,
+  // то есть у реальных пользователей, а не в момент правки.
+  //
+  // Ни один существующий тест не монтирует MessengerModal целиком — только
+  // подкомпоненты по отдельности, поэтому дубль объявления не проявлялся.
+  // Эта проверка не рендерит компонент, а сверяет положение объявления в
+  // исходнике — дёшево и ловит именно класс «переменная в чужой функции».
+  const functionBounds = (name) => {
+    const startLine = messengerSource.split('\n').findIndex((l) => l.includes(`function ${name}(`));
+    if (startLine < 0) throw new Error(`function ${name} not found`);
+    const lines = messengerSource.split('\n');
+    let depth = 0;
+    let started = false;
+    for (let i = startLine; i < lines.length; i += 1) {
+      depth += (lines[i].match(/\{/g) || []).length - (lines[i].match(/\}/g) || []).length;
+      if (lines[i].includes('{')) started = true;
+      if (started && depth === 0) return [startLine, i];
+    }
+    throw new Error(`function ${name} has no closing brace`);
+  };
+  const lineOf = (needle) => messengerSource.split('\n').findIndex((l) => l.includes(needle));
+  const within = (line, [start, end]) => line >= start && line <= end;
+
+  it('flushingRef и pendingPhotosRef объявлены внутри MessengerModal, не SearchPanel', () => {
+    const searchPanel = functionBounds('SearchPanel');
+    const messengerModal = functionBounds('MessengerModal');
+
+    const flushingDecl = lineOf('const flushingRef = useRef');
+    const photosDecl = lineOf('const pendingPhotosRef = useRef');
+
+    expect(within(flushingDecl, messengerModal)).toBe(true);
+    expect(within(flushingDecl, searchPanel)).toBe(false);
+    expect(within(photosDecl, messengerModal)).toBe(true);
+    expect(within(photosDecl, searchPanel)).toBe(false);
+  });
+});
+
 describe('фото в черновике', () => {
   beforeEach(() => {
     localStorage.clear();

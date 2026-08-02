@@ -1873,8 +1873,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [results, setResults] = useState([]);
     const [state, setState] = useState('idle');
     const inputRef = useRef(null);
-    const flushingRef = useRef(false);
-    const pendingPhotosRef = useRef([]);
 
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 30);
@@ -2658,6 +2656,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [pendingAckMessageIds, setPendingAckMessageIds] = useState(() => new Set());
     const threadRef = useRef(null);
     const inputRef = useRef(null);
+    const flushingRef = useRef(false);
+    const pendingPhotosRef = useRef([]);
     const keyboardAttemptRef = useRef(null);
     const keyboardAttemptIdRef = useRef(0);
     const keyboardAttemptTimerRef = useRef(null);
