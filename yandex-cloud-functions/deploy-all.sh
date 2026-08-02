@@ -485,6 +485,14 @@ build_env_flags() {
         _add HEYS_REST_READ_STRICT
     fi
 
+    # Задачник куратора живёт под обычным клиентом HEYS: ключи heys_tasks_* в
+    # его client_kv_store. Id задаётся здесь, а не берётся по имени — это личные
+    # файлы куратора, и подставлять их догадкой нельзя. Переменной нет —
+    # инструменты задачника просто не появятся в списке (см. lib/curator.js).
+    if [[ "$func_name" == "heys-mcp" ]]; then
+        env_flags+=" --environment HEYS_TASKS_CLIENT_ID=${HEYS_TASKS_CLIENT_ID:-ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a}"
+    fi
+
     # Server-side overload shed: reserve one slot per instance for recovery and
     # return an explicit Retry-After before the platform-wide quota is reached.
     if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
