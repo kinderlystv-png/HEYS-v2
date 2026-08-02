@@ -149,7 +149,7 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_slot',
-    description: 'Поставить событие в день: время, место, что происходит. Пересечения с уже стоящими слотами возвращаются в ответе — назови их куратору, доска о конфликте не предупредит.',
+    description: 'Поставить событие в день: время, место, что происходит. Пересечения с уже стоящими слотами возвращаются в ответе как conflicts — их считает та же логика, что и доска, так что ложных тревог не будет; уровень «конфликт» назови куратору, «вопрос» упомяни мимоходом.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -157,7 +157,11 @@ const TASKS_BOARD_SCHEMAS = [
         from: { type: 'string', description: 'Начало ЧЧ:ММ.' },
         to: { type: 'string', description: 'Конец ЧЧ:ММ.' },
         title: { type: 'string', description: 'Что происходит и где.' },
-        presence: { type: 'boolean', description: 'true для крупного блока присутствия («дом у родителей»). Такие пишутся выше слотов задач: кто ниже в файле, тот рисуется поверх.' },
+        presence: { type: 'boolean', description: 'true для крупного блока присутствия («дом у родителей»). Такие пишутся выше слотов задач и получают вид «фон»: кто ниже в файле, тот рисуется поверх, а работа внутри такого блока не считается конфликтом.' },
+        kind: {
+          type: 'string',
+          description: 'Вид слота: «фокус» (по умолчанию) — требует полной головы, второй такой же слот встык это конфликт; «дело» — короткая врезка (позвонить, забрать, пробить чек), уживается внутри чего угодно; «привычка» — не занимает голову, но полезно не сталкивать со сборами; «фон» ставится сам через presence и вручную обычно не нужен.',
+        },
       },
       required: ['from', 'to', 'title'],
     },
@@ -561,14 +565,25 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     async tasks_slot(args = {}) {
       const date = args.date || today();
       const file = await readFile(`days/${date}.md`);
+
+      let kind = args.kind ? String(args.kind).toLowerCase() : (args.presence ? 'фон' : 'фокус');
+      if (!tasks.SLOT_KINDS.has(kind)) {
+        throw new ToolError('invalid_kind', `Вид «${args.kind}» не из словаря доски: фон, дело, фокус, привычка.`);
+      }
+
       let conflicts;
       try {
-        conflicts = tasks.slotConflicts(file.text, args.from, args.to);
+        conflicts = tasks.slotConflicts(file.text, args.from, args.to, kind);
       } catch (e) {
         throw new ToolError('invalid_time', `Время «${args.from}–${args.to}» не в формате ЧЧ:ММ.`);
       }
 
-      const line = `- ${args.from}–${args.to} ${String(args.title).trim()}`;
+      // Тег пишется всегда, даже для «фокус» по умолчанию: без него доска
+      // подставляет тот же смысл сама, но именно эта неявность и завела нас в
+      // ложный конфликт — слот без тега и соседний слот без тега считались
+      // «два дела требуют головы одновременно», хотя один из них был врезкой
+      // на пятнадцать минут.
+      const line = `- ${args.from}–${args.to} ${String(args.title).trim()} #${kind}`;
       // Крупные блоки присутствия идут выше слотов задач: доска рисует то, что
       // ниже в файле, поверх — иначе блок закроет собой всё, что внутри него.
       const nextText = args.presence
@@ -576,12 +591,15 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         : tasks.appendBlock(file.text, line);
       const saved = await writeFile(file, nextText);
 
-      const warn = conflicts.length
-        ? ` Пересекается с: ${conflicts.map((c) => c.title).join('; ')} — скажи об этом куратору.`
-        : '';
+      const real = conflicts.filter((c) => c.level === 'конфликт');
+      const soft = conflicts.filter((c) => c.level === 'вопрос');
+      let warn = '';
+      if (real.length) warn += ` Конфликт с: ${real.map((c) => c.title).join('; ')} — скажи об этом куратору.`;
+      if (soft.length) warn += ` Стоит уточнить: ${soft.map((c) => c.title).join('; ')}.`;
+
       return {
-        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title}.${warn}`,
-        structured: { date, from: args.from, to: args.to, title: args.title, conflicts, rev: saved.rev },
+        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title} (${kind}).${warn}`,
+        structured: { date, from: args.from, to: args.to, title: args.title, kind, conflicts, rev: saved.rev },
       };
     },
 

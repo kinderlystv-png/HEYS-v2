@@ -500,6 +500,33 @@ function cutTask(text, taskLine) {
 
 const SLOT_RE = /^-?\s*(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})\s+(.*)$/;
 
+/** Тег вида слота — тот же словарь, что в build_board.py (KIND_RE). */
+const SLOT_KIND_RE = /\s*#(фон|дело|фокус|привычка)\b/i;
+const SLOT_KINDS = new Set(['фон', 'дело', 'фокус', 'привычка']);
+
+/** Вид слота из текста строки и заголовок без тега. Тег может стоять где угодно в строке. */
+function slotKindAndTitle(rawTitle) {
+  const match = SLOT_KIND_RE.exec(rawTitle);
+  const kind = match ? match[1].toLowerCase() : 'фокус'; // доска подставляет тот же дефолт
+  return { kind, title: rawTitle.replace(SLOT_KIND_RE, '').trim() };
+}
+
+/**
+ * Смысл пересечения двух слотов — зеркало clash_kind() из build_board.py.
+ * Расходиться с доской нельзя: инструмент и так столкнулся с этим один раз —
+ * писал слоты без тега, доска подставляла «фокус» по умолчанию, и пятнадцать
+ * минут на дела в кассе доска честно посчитала «два дела требуют головы
+ * одновременно», хотя по смыслу это была врезка внутри вечера с родителями.
+ */
+function slotClashLevel(kindA, kindB) {
+  const pair = new Set([kindA, kindB]);
+  if (pair.has('дело')) return null; // врезка живёт внутри чего угодно
+  if (pair.size === 2 && pair.has('фон') && pair.has('фокус')) return null; // работать внутри события — норма
+  if (pair.size === 1 && pair.has('фон')) return 'вопрос'; // без адреса не различить один это блок или два
+  if (pair.has('привычка')) return 'вопрос';
+  return 'конфликт';
+}
+
 /** Минуты от полуночи. Свой разбор: модуль намеренно ни от чего не зависит. */
 function timeToMinutes(value) {
   const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
@@ -538,7 +565,8 @@ function parseSlots(text) {
     if (!match) continue;
     const span = slotMinutes(match[1], match[2]);
     if (!span) continue;
-    out.push({ line: i, from: span.start, to: span.end, title: match[3].trim(), raw: lines[i] });
+    const { kind, title } = slotKindAndTitle(match[3].trim());
+    out.push({ line: i, from: span.start, to: span.end, kind, title, raw: lines[i] });
   }
   return out;
 }
@@ -548,12 +576,14 @@ function parseSlots(text) {
  * друга и о конфликте не скажет, а методичка требует называть его сразу —
  * поэтому считаем здесь и возвращаем инструменту, чтобы тот сказал вслух.
  */
-function slotConflicts(text, from, to) {
+function slotConflicts(text, from, to, kind = 'фокус') {
   const span = slotMinutes(from, to);
   if (!span) throw new Error(`invalid_time:${from}-${to}`);
   return parseSlots(text)
     .filter((slot) => span.start < slot.to && span.end > slot.from)
-    .map((slot) => ({ title: slot.title, raw: slot.raw.trim() }));
+    .map((slot) => ({ ...slot, level: slotClashLevel(kind, slot.kind) }))
+    .filter((slot) => slot.level) // «дело» и «фон+фокус» — законное совмещение, не показываем как проблему
+    .map((slot) => ({ title: slot.title, raw: slot.raw.trim(), level: slot.level }));
 }
 
 /**
@@ -584,6 +614,9 @@ function markHabit(text, habit, date) {
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
+  SLOT_KINDS,
+  slotKindAndTitle,
+  slotClashLevel,
   toggleSubtask,
   removeChild,
   cutTask,

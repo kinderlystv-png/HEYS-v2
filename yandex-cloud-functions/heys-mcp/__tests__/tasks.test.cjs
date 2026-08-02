@@ -439,11 +439,52 @@ function withBoard() {
   return api;
 }
 
-test('tasks_slot называет пересечения вместо молчания', async () => {
+test('tasks_slot называет конфликт вместо молчания', async () => {
+  // Оба соседних слота в DAY без тега — доска и инструмент одинаково
+  // подставляют «фокус», значит это настоящий конфликт, не мягкий «вопрос».
   const api = withBoard();
   const res = await build(api).tasks_slot({ date: '2026-08-02', from: '18:00', to: '20:00', title: 'Забрать торт' });
   assert.equal(res.structured.conflicts.length, 2);
-  assert.match(res.text, /Пересекается с/);
+  assert.ok(res.structured.conflicts.every((c) => c.level === 'конфликт'));
+  assert.match(res.text, /Конфликт с/);
+});
+
+test('tasks_slot пишет тег вида в строку — не оставляет доске угадывать', async () => {
+  const api = withBoard();
+  await build(api).tasks_slot({ date: '2026-08-02', from: '09:00', to: '09:10', title: 'Позвонить', kind: 'дело' });
+  const saved = api.writes[0].items[0].v.text;
+  assert.match(saved, /- 09:00–09:10 Позвонить #дело/);
+});
+
+test('короткая врезка не считается конфликтом со слотом «фокус» рядом', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({ date: '2026-08-02', from: '23:00', to: '23:15', title: 'Пробить чеки', kind: 'дело' });
+  assert.equal(res.structured.conflicts.length, 0, 'дело живёт внутри чего угодно, доска не должна обвести оба слота красным');
+});
+
+test('presence ставит вид «фон» и не конфликтует со слотом внутри него', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({ date: '2026-08-02', from: '19:30', to: '20:00', title: 'Ужин', presence: true });
+  assert.equal(res.structured.kind, 'фон');
+  const withWork = await build(api).tasks_slot({ date: '2026-08-02', from: '19:00', to: '19:30', title: 'Поработать', kind: 'фокус' });
+  const clashesWithPresence = withWork.structured.conflicts.filter((c) => c.title === 'Ужин');
+  assert.equal(clashesWithPresence.length, 0, 'работа внутри присутствия — норма, а не конфликт');
+});
+
+test('привычка в занятое время — «вопрос», а не «конфликт»', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({ date: '2026-08-02', from: '18:30', to: '19:00', title: 'Зарядка', kind: 'привычка' });
+  const habit = res.structured.conflicts.find((c) => c.title === 'Дом у родителей');
+  assert.equal(habit.level, 'вопрос');
+  assert.match(res.text, /Стоит уточнить/);
+  assert.ok(!/Конфликт с/.test(res.text));
+});
+
+test('неизвестный вид слота отклоняется до записи', async () => {
+  const api = withBoard();
+  await assert.rejects(() => build(api).tasks_slot({ date: '2026-08-02', from: '10:00', to: '10:10', title: 'x', kind: 'важное' }),
+    (e) => e.code === 'invalid_kind');
+  assert.equal(api.writes.length, 0);
 });
 
 test('tasks_money без контура не проходит', async () => {
