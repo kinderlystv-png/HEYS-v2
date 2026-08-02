@@ -57,6 +57,19 @@ FORBIDDEN_PATTERNS = [
     (re.compile(r'[-−]\s*\d+\s*кг', re.I), '-N кг'),
 ]
 
+# Контекстные сочетания: слово само по себе разрешено, запрещено только
+# конкретное употребление. «рядом» как обещание доступности куратора запрещено,
+# как описание потребности клиента («рядом нужен человек, которому не всё
+# равно») — разрешено. См. COPY_VOICE.md → «Чёрный список» → «Зависит от
+# контекста». Держать отдельно от FORBIDDEN, чтобы не смешивать с жёсткими
+# запретами.
+CONTEXTUAL_COLLOCATIONS = [
+    (re.compile(r'всегда\s+рядом', re.I), 'всегда рядом'),
+    (re.compile(r'куратор\w*\s+(?:\w+\s+){0,2}рядом', re.I), 'куратор рядом'),
+    (re.compile(r'рядом\s+24/7', re.I), 'рядом 24/7'),
+    (re.compile(r'буд\w+\s+рядом', re.I), 'будет рядом'),
+]
+
 GUIDE_MARKERS = [
     'нельзя',
     'не писать',
@@ -95,12 +108,51 @@ def should_skip(line):
     return line.lstrip().startswith('>') or any(marker in low for marker in GUIDE_MARKERS)
 
 
+TABLE_SEPARATOR = re.compile(r'^\s*\|[\s:|-]+\|\s*$')
+
+
+def split_cells(line):
+    return [cell.strip() for cell in line.strip().strip('|').split('|')]
+
+
+def drop_guide_columns(line, headers):
+    """Убрать ячейки из колонок-антипримеров («Нельзя», «Не писать», «Избегать»).
+
+    Справочные таблицы держат запрещённые формулировки в отдельной колонке.
+    Гасить строку целиком нельзя: в соседней колонке лежит реальный текст,
+    который проверять надо.
+    """
+    cells = split_cells(line)
+    kept = [
+        cell
+        for i, cell in enumerate(cells)
+        if not (i < len(headers) and should_skip(headers[i]))
+    ]
+    return ' | '.join(kept)
+
+
 def lint_file(path):
     findings = []
     in_fence = False
+    headers = None
+    prev = ''
     for lineno, raw in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
         line, in_fence = strip_code(raw, in_fence)
         if not line or should_skip(line):
+            if not in_fence and not line.strip():
+                headers = None
+            prev = line
+            continue
+        if TABLE_SEPARATOR.match(line) and prev.strip().startswith('|'):
+            headers = split_cells(prev)
+            prev = line
+            continue
+        if headers is not None and line.strip().startswith('|'):
+            line = drop_guide_columns(line, headers)
+        elif not line.strip().startswith('|'):
+            headers = None
+        prev = raw
+        if not line.strip():
             continue
         low = line.lower()
         for phrase in FORBIDDEN:
@@ -108,10 +160,13 @@ def lint_file(path):
                 r'(?<![\wА-Яа-яЁё])' + re.escape(phrase.lower()) + r'(?![\wА-Яа-яЁё])'
             )
             if pattern.search(low):
-                findings.append((path, lineno, phrase, raw.strip()))
+                findings.append((path, lineno, phrase, raw.strip(), 'forbidden'))
         for pattern, label in FORBIDDEN_PATTERNS:
             if pattern.search(line):
-                findings.append((path, lineno, label, raw.strip()))
+                findings.append((path, lineno, label, raw.strip(), 'forbidden'))
+        for pattern, label in CONTEXTUAL_COLLOCATIONS:
+            if pattern.search(line):
+                findings.append((path, lineno, label, raw.strip(), 'contextual'))
     return findings
 
 
@@ -125,9 +180,12 @@ def main():
         findings.extend(lint_file(path))
 
     if findings:
-        for path, lineno, phrase, line in findings:
-            rel = path.relative_to(ROOT)
-            print(f'{rel}:{lineno}: forbidden "{phrase}": {line}')
+        for path, lineno, phrase, line, kind in findings:
+            try:
+                rel = path.relative_to(ROOT)
+            except ValueError:
+                rel = path
+            print(f'{rel}:{lineno}: {kind} "{phrase}": {line}')
         return 1
     print('COPY_VOICE lint PASS')
     return 0
