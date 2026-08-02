@@ -277,6 +277,6 @@ apps/web/heys_planning_reading_v1.js:119
 #   :1694 — очередь неотправленных сообщений, пока нет сети;
 #   :1707 — черновик текста в поле ввода;
 #   :2365 — флаг «клиент скрыл плашку про время и граммы».
-apps/web/heys_messenger_v1.js:1694
-apps/web/heys_messenger_v1.js:1707
-apps/web/heys_messenger_v1.js:2365
+apps/web/heys_messenger_v1.js:1700
+apps/web/heys_messenger_v1.js:1713
+apps/web/heys_messenger_v1.js:2375
