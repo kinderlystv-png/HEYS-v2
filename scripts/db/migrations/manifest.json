@@ -167,6 +167,20 @@
       "path": "scripts/db/migrations/2026-07-30_client_observability_ignore_preauth_resume.sql",
       "description": "Exclude stale pre-auth resume-only telemetry from client visit metrics without hiding real failures",
       "destructive": false
+    },
+    {
+      "id": "2026-08-02_messenger_applied_summary",
+      "order": 22,
+      "path": "scripts/db/migrations/2026-08-02_messenger_applied_summary.sql",
+      "description": "Add applied_summary and seen_at to messenger, allow applying text messages to the day",
+      "destructive": false
+    },
+    {
+      "id": "2026-08-03_messenger_search",
+      "order": 23,
+      "path": "scripts/db/migrations/2026-08-03_messenger_search.sql",
+      "description": "Search across messenger thread including voice transcripts",
+      "destructive": false
     }
   ]
 }

@@ -328,6 +328,19 @@ jobs:
               -H "Access-Control-Request-Method: POST"
           }
 
+          check_messenger_day_checklist() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X GET "https://api.heyslab.ru/messages/day-checklist" \
+              -H "Origin: https://app.heyslab.ru"
+          }
+
+          check_messenger_day_checklist_preflight() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X OPTIONS "https://api.heyslab.ru/messages/day-checklist" \
+              -H "Origin: https://app.heyslab.ru" \
+              -H "Access-Control-Request-Method: GET"
+          }
+
           echo "⏳ Waiting 15s for functions to warm up..."
           sleep 15
 
@@ -341,6 +354,8 @@ jobs:
           retry_http_check "Messenger set-done route" "401" check_messenger_set_done
           retry_http_check "Messenger set-acked preflight" "204" check_messenger_set_acked_preflight
           retry_http_check "Messenger set-done preflight" "204" check_messenger_set_done_preflight
+          retry_http_check "Messenger day-checklist route" "401" check_messenger_day_checklist
+          retry_http_check "Messenger day-checklist preflight" "204" check_messenger_day_checklist_preflight
 
           echo "🧭 Verifying every deployed HEYS function runtime..."
           while IFS= read -r function_name; do

@@ -42,6 +42,7 @@ export VAPID_SUBJECT="${VAPID_SUBJECT:-mailto:contract-test@heyslab.ru}"
 
 node --test "$SCRIPT_DIR/shared/__tests__/kv-payload-contracts.test.cjs"
 node --test "$SCRIPT_DIR/shared/__tests__/serverless-capacity-guard.test.cjs"
+node --test "$SCRIPT_DIR/shared/__tests__/day-checklist-rules.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/function-inventory.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-policy.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/serverless-capacity-contract.test.cjs"
@@ -65,6 +66,13 @@ for function_name in "${TARGETS[@]}"; do
     fi
     if ! cmp -s "$SCRIPT_DIR/shared/serverless-capacity-guard.js" "$function_dir/shared/serverless-capacity-guard.js"; then
       echo "Serverless capacity guard mirror is stale for $function_name" >&2
+      exit 1
+    fi
+  fi
+
+  if [[ "$function_name" == "heys-cron-reminders" || "$function_name" == "heys-api-messages" ]]; then
+    if ! cmp -s "$SCRIPT_DIR/shared/day-checklist-rules.js" "$function_dir/shared/day-checklist-rules.js"; then
+      echo "Day checklist rules mirror is stale for $function_name" >&2
       exit 1
     fi
   fi

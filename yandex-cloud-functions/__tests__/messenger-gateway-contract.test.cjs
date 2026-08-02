@@ -25,10 +25,30 @@ for (const route of ['/messages/set-acked', '/messages/set-done']) {
   });
 }
 
+test('/messages/day-checklist exposes GET and OPTIONS through heys-api-messages', () => {
+  // Пути в спеке перечислены явно: без записи маршрут отдаёт 404 на шлюзе,
+  // сколько бы действий ни знал сам код функции.
+  const block = routeBlock('/messages/day-checklist');
+  assert.notEqual(block, '', 'missing /messages/day-checklist in canonical gateway spec');
+  assert.match(block, /^    get:/m);
+  assert.match(block, /^    options:/m);
+  assert.equal((block.match(new RegExp(`function_id: ${messageFunctionId}`, 'g')) || []).length, 2);
+});
+
+test('/messages/set-applied exposes POST and OPTIONS through heys-api-messages', () => {
+  const block = routeBlock('/messages/set-applied');
+  assert.notEqual(block, '', 'missing /messages/set-applied in canonical gateway spec');
+  assert.match(block, /^    post:/m);
+  assert.match(block, /^    options:/m);
+  assert.equal((block.match(new RegExp(`function_id: ${messageFunctionId}`, 'g')) || []).length, 2);
+});
+
 test('deploy workflow verifies desired-state routes and current DB migrations', () => {
   assert.match(workflow, /migrate\.mjs --status --require-current/);
   assert.match(workflow, /Messenger set-acked route/);
   assert.match(workflow, /Messenger set-done route/);
+  assert.match(workflow, /Messenger day-checklist route/);
+  assert.match(workflow, /Messenger day-checklist preflight/);
   assert.equal((workflow.match(/^      - name: Update API Gateway$/gm) || []).length, 1);
   assert.equal((workflow.match(/^        if: steps\.deployment-target\.outputs\.gateway_spec_changed/gm) || []).length, 1);
 });

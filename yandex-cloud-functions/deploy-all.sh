@@ -726,6 +726,22 @@ deploy_function() {
         fi
     fi
 
+    # 📋 Sync day-checklist rules — общее правило «чего ещё ждём от клиента».
+    # Крон решает по нему, слать ли пуш; мессенджер отдаёт по нему чек-лист.
+    # Копии обязаны совпадать, иначе напоминания и UI разъедутся.
+    if [[ "$func_name" == "heys-cron-reminders" || "$func_name" == "heys-api-messages" ]]; then
+        CHECKLIST_SRC="$SCRIPT_DIR/shared/day-checklist-rules.js"
+        CHECKLIST_DST_DIR="$SCRIPT_DIR/$func_name/shared"
+        if [ -f "$CHECKLIST_SRC" ]; then
+            mkdir -p "$CHECKLIST_DST_DIR"
+            cp "$CHECKLIST_SRC" "$CHECKLIST_DST_DIR/day-checklist-rules.js"
+            echo -e "${BLUE}ℹ️  Synced day-checklist rules: shared/day-checklist-rules.js${NC}"
+        else
+            echo -e "${RED}❌ ERROR: day-checklist rules not found at $CHECKLIST_SRC${NC}"
+            exit 1
+        fi
+    fi
+
     # Pre-build zip with explicit exclusions.
     # Раньше yc CLI 0.184.0 при `--source-path .` читал .ycignore и сам исключал
     # node_modules. Но для функций с большим node_modules (>4000 файлов, e.g.

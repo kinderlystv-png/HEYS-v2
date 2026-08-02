@@ -8,6 +8,13 @@
  *   GET    /messages/thread        — ?before=ts&limit=50 (client)
  *                                     ?client_id=X&before=ts&limit=50 (курятор)
  *   GET    /messages/inbox         — курятор-only: список клиентов с unread + preview
+ *   GET    /messages/search        — ?q=&type=image|audio|applied&before=&limit=
+ *                                     поиск по тексту и расшифровкам голосовых
+ *   POST   /messages/set-applied   — курятор: { message_id, applied?, summary? }
+ *                                     отмечает сообщение внесённым в день
+ *   GET    /messages/day-checklist — ?date=YYYY-MM-DD (по умолчанию сегодня)
+ *                                     ?client_id=X обязателен куратору
+ *                                     → { items, completeness }: чего ещё ждём в дне
  *   POST   /messages/mark-read     — { up_to_ts } (client)
  *                                     { client_id, up_to_ts } (курятор)
  *
@@ -24,6 +31,14 @@
 
 const { getPool, acquireHealthyClient } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
+const {
+  buildDayChecklist,
+  resolveNorms,
+  averageWakeMinutes,
+  wakeHistoryDayKeys,
+  todayDateMsk,
+  nowMinutesMsk,
+} = require('./shared/day-checklist-rules');
 const webpush = require('web-push');
 const crypto = require('crypto');
 const https = require('https');
@@ -1299,6 +1314,193 @@ async function handleSend(identity, body) {
   };
 }
 
+// ── Чек-лист дня ─────────────────────────────────────────────────────────
+// «Чего ещё ждём от клиента сегодня»: клиенту показывается как «Ждём»,
+// куратору — как «Нет в дне». Само правило живёт в shared/day-checklist-rules
+// и общее с heys-cron-reminders, чтобы напоминания и чек-лист не разъехались.
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const END_OF_DAY_MINUTES = 24 * 60 - 1;
+
+/**
+ * Резолв клиента для read-only запросов по дню: клиент видит только себя,
+ * куратор — указанного клиента и только если владеет им (как в /thread).
+ */
+async function resolveDayScopeClientId(conn, identity, query) {
+  if (identity.kind === 'client') return { clientId: identity.id };
+
+  const clientId = query.client_id;
+  if (!clientId) return { error: { statusCode: 400, body: { error: 'client_id_required' } } };
+
+  const own = await conn.query(
+    `SELECT 1 FROM clients WHERE id = $1 AND curator_id = $2`,
+    [clientId, identity.id]
+  );
+  if (!own.rows.length) {
+    return { error: { statusCode: 403, body: { error: 'curator_does_not_own_client' } } };
+  }
+  return { clientId };
+}
+
+/** Какие KV-ключи нужны, чтобы посчитать чек-лист за указанную дату. */
+function dayChecklistKeys(date, now = new Date()) {
+  return [...new Set([`heys_dayv2_${date}`, 'heys_norms', 'heys_profile', ...wakeHistoryDayKeys(now)])];
+}
+
+/**
+ * Чистая сборка ответа: на входе уже загруженные строки `client_kv_store`,
+ * на выходе тело ответа. Вынесено из хендлера, чтобы правило проверялось
+ * тестами без БД — в хендлере остаётся только auth и один запрос.
+ */
+function buildDayChecklistResponse({ date, today, rows, now = new Date() }) {
+  const byKey = new Map((rows || []).map((row) => [row.k, row.v]));
+  const wakeDays = wakeHistoryDayKeys(now)
+    .map((k) => byKey.get(k))
+    .filter(Boolean);
+
+  // Для прошедшего дня «сейчас» — это его конец: все сроки уже наступили.
+  const nowMinutes = date === today ? nowMinutesMsk(now) : END_OF_DAY_MINUTES;
+
+  const { items, completeness } = buildDayChecklist({
+    day: byKey.get(`heys_dayv2_${date}`) || null,
+    norms: resolveNorms({ norms: byKey.get('heys_norms'), profile: byKey.get('heys_profile') }),
+    nowMinutes,
+    wakeMinutes: averageWakeMinutes(wakeDays),
+  });
+
+  return { success: true, date, items, completeness };
+}
+
+async function handleDayChecklist(identity, query) {
+  const today = todayDateMsk();
+  const date = query.date || today;
+  if (!DATE_RE.test(date)) {
+    return { statusCode: 400, body: { error: 'invalid_date' } };
+  }
+  // Будущий день ждать нечего — отдаём пустой список, а не ошибку: фронт с
+  // пустым items просто не показывает блок.
+  if (date > today) {
+    return { statusCode: 200, body: { success: true, date, items: [], completeness: null } };
+  }
+
+  const conn = await acquireHealthyClient();
+  try {
+    const scope = await resolveDayScopeClientId(conn, identity, query);
+    if (scope.error) return scope.error;
+
+    const r = await conn.query(
+      `SELECT k, v FROM client_kv_store WHERE client_id = $1 AND k = ANY($2::text[])`,
+      [scope.clientId, dayChecklistKeys(date)]
+    );
+
+    return { statusCode: 200, body: buildDayChecklistResponse({ date, today, rows: r.rows }) };
+  } finally {
+    conn.release();
+  }
+}
+
+// Куратор отмечает сообщение внесённым в день и прикладывает состав записи.
+// Сам дневник пишется в приложении куратора; здесь фиксируется только факт и
+// то, что клиент увидит карточкой «внесено в дневник».
+const MAX_APPLIED_ITEMS = 40;
+
+function validateAppliedSummary(summary) {
+  if (summary === null || summary === undefined) return { ok: true, value: null };
+  if (typeof summary !== 'object' || Array.isArray(summary)) {
+    return { ok: false, error: 'invalid_applied_summary' };
+  }
+  const items = summary.items;
+  if (items !== undefined) {
+    if (!Array.isArray(items) || items.length > MAX_APPLIED_ITEMS) {
+      return { ok: false, error: 'invalid_applied_summary' };
+    }
+    for (const item of items) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return { ok: false, error: 'invalid_applied_summary' };
+      }
+      if (item.name !== undefined && typeof item.name !== 'string') {
+        return { ok: false, error: 'invalid_applied_summary' };
+      }
+      for (const numeric of ['grams', 'kcal']) {
+        if (item[numeric] !== undefined && !Number.isFinite(Number(item[numeric]))) {
+          return { ok: false, error: 'invalid_applied_summary' };
+        }
+      }
+    }
+  }
+  return { ok: true, value: summary };
+}
+
+async function handleSetApplied(identity, body) {
+  if (identity.kind !== 'curator') {
+    return { statusCode: 403, body: { error: 'curator_only' } };
+  }
+  const messageId = body?.message_id;
+  if (!messageId) {
+    return { statusCode: 400, body: { error: 'message_id_required' } };
+  }
+  const applied = body?.applied !== false;
+  const summaryCheck = validateAppliedSummary(applied ? body?.summary ?? null : null);
+  if (!summaryCheck.ok) {
+    return { statusCode: 400, body: { error: summaryCheck.error } };
+  }
+
+  const conn = await acquireHealthyClient();
+  try {
+    const r = await conn.query(
+      `SELECT public.apply_message_as_curator($1, $2, $3::jsonb, $4) AS result`,
+      [identity.id, messageId, summaryCheck.value === null ? null : JSON.stringify(summaryCheck.value), applied],
+    );
+    const result = r.rows[0]?.result || { success: false, error: 'internal_error' };
+    if (!result.success) {
+      return { statusCode: rpcStatusCode(result), body: result };
+    }
+    return { statusCode: 200, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
+const SEARCH_TYPES = new Set(['image', 'audio', 'applied']);
+const MIN_SEARCH_QUERY = 2;
+
+async function handleSearch(identity, query) {
+  const q = String(query.q || '').trim();
+  if (q.length < MIN_SEARCH_QUERY) {
+    return { statusCode: 400, body: { error: 'query_too_short' } };
+  }
+  const type = query.type && SEARCH_TYPES.has(query.type) ? query.type : null;
+  const before = query.before || null;
+  const limit = Math.min(parseInt(query.limit || '30', 10) || 30, 100);
+
+  const conn = await acquireHealthyClient();
+  try {
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT public.search_messages_as_client($1, $2, $3, $4::timestamptz, $5) AS result`,
+        [identity.sessionToken, q, type, before, limit],
+      );
+      return { statusCode: 200, body: r.rows[0]?.result || { success: true, messages: [] } };
+    }
+
+    const clientId = query.client_id;
+    if (!clientId) {
+      return { statusCode: 400, body: { error: 'client_id_required' } };
+    }
+    const r = await conn.query(
+      `SELECT public.search_messages_as_curator($1, $2, $3, $4, $5::timestamptz, $6) AS result`,
+      [identity.id, clientId, q, type, before, limit],
+    );
+    const result = r.rows[0]?.result || { success: true, messages: [] };
+    if (!result.success) {
+      return { statusCode: rpcStatusCode(result), body: result };
+    }
+    return { statusCode: 200, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
 async function handleThread(identity, query) {
   const before = query.before || null;
   const limit = Math.min(parseInt(query.limit || '50', 10) || 50, 200);
@@ -1595,6 +1797,13 @@ module.exports._test = {
   handleSend,
   handleSetDone,
   handleSetAcked,
+  handleDayChecklist,
+  handleSetApplied,
+  handleSearch,
+  validateAppliedSummary,
+  resolveDayScopeClientId,
+  buildDayChecklistResponse,
+  dayChecklistKeys,
   buildAttachmentBadge,
   normalizeAttachmentType,
   normalizeMime,
@@ -1663,6 +1872,15 @@ module.exports.handler = async function (event) {
         break;
       case 'thread':
         res = await handleThread(identity, query);
+        break;
+      case 'day-checklist':
+        res = await handleDayChecklist(identity, query);
+        break;
+      case 'set-applied':
+        res = await handleSetApplied(identity, body);
+        break;
+      case 'search':
+        res = await handleSearch(identity, query);
         break;
       case 'inbox':
         res = await handleInbox(identity);

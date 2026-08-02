@@ -550,6 +550,48 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/search:
+    get:
+      summary: Search across the messenger thread
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages search
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/set-applied:
+    post:
+      summary: Curator marks a message as applied to the client day
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages set-applied
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/day-checklist:
+    get:
+      summary: Day checklist — what is still missing in the client day
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages day-checklist
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
   /messages/inbox:
     get:
       summary: Curator inbox
