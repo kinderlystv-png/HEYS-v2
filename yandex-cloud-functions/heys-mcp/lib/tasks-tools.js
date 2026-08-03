@@ -610,7 +610,13 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const query = String(args.query || '').trim();
       if (!query) throw new ToolError('invalid_query', 'Нужны слова для поиска.');
       const files = await readAll({});
-      const matches = tasks.searchFiles(files, query, { limit: args.limit || 40 });
+      // Ссылки собираются один раз и отдаются поиску: без них связанная руками
+      // запись остаётся внизу, потому что общих слов у пары обычно нет.
+      const matches = tasks.searchFiles(files, query, {
+        limit: args.limit || 40,
+        today: today(),
+        linkPairs: tasks.linkEndpointPairs(files),
+      });
       return {
         text: matches.length
           ? `Нашёл ${matches.length} совпадений по «${query}»: ${[...new Set(matches.map((m) => m.path))].join(', ')}.`
@@ -686,10 +692,22 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         }
       }
 
+      // Записи журнала ранжируются не только по словам: свежая запись и
+      // формулировка решения весят больше пересказа, а строка, из которой
+      // руками поставлена ссылка на найденную задачу, поднимается отдельно —
+      // ссылки резолвятся по ВСЕМ файлам, иначе цель ссылки не найдётся.
       const journalHits = tasks.searchFiles(
         files.filter((f) => f.path.startsWith('journal/')),
         topic,
-        { limit: 10, context: 3, terms, any: terms.length > 1 },
+        {
+          limit: 10,
+          context: 3,
+          terms,
+          any: terms.length > 1,
+          today: today(),
+          linkPairs: tasks.linkEndpointPairs(files, allLinks),
+          related: matchingTasks.map((t) => ({ path: t.path, line: t.line })),
+        },
       );
       const open = tasks.collectOpenQuestions(files)
         .filter((q) => tasks.matchTerms(`${q.task} ${q.question}`, terms).score > 0);
@@ -2253,6 +2271,61 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       };
     },
   });
+
+  /**
+   * Где напоминать про стенограмму.
+   *
+   * Не везде: приписка в каждом ответе перестаёт читаться на второй день. Сюда
+   * попали вызовы, каждый из которых означает содержательный обмен — он что-то
+   * сказал, и это осело в задачнике. Механические (`tasks_read`, `tasks_list`,
+   * `tasks_delta`, отметка привычки, перестановка слота) остались снаружи:
+   * они бывают и без разговора.
+   */
+  const TRANSCRIPT_NUDGE_TOOLS = [
+    'tasks_context',    // разбор его фразы — самый верный признак разговора
+    'tasks_capture',
+    'tasks_append',     // разбор в журнал; запись в саму стенограмму гасит приписку
+    'tasks_decision',
+    'tasks_resolve',
+    'tasks_learn',
+    'tasks_close_day',
+    'tasks_standup',
+  ];
+
+  // Один раз на сборку инструментов: если модель за проход дёрнула три
+  // пишущих вызова подряд, третья одинаковая строка уже не напоминание, а шум.
+  let transcriptNudged = false;
+
+  async function transcriptNote() {
+    if (transcriptNudged) return null;
+    try {
+      // Индекс уже поднят самим вызовом (чтение или запись), и после записи в
+      // стенограмму он в этой же сборке обновлён — приписка гаснет сама.
+      const index = await loadIndex();
+      const reminder = tasks.transcriptReminder(
+        tasks.transcriptStatus(index, { date: today(), nowMs }),
+      );
+      if (reminder) transcriptNudged = true;
+      return reminder;
+    } catch {
+      return null;                 // напоминание не имеет права ломать вызов
+    }
+  }
+
+  for (const name of TRANSCRIPT_NUDGE_TOOLS) {
+    const inner = tools[name];
+    if (typeof inner !== 'function') continue;
+    tools[name] = async (args = {}) => {
+      const result = await inner(args);
+      const reminder = await transcriptNote();
+      if (!reminder) return result;
+      return {
+        ...result,
+        text: typeof result.text === 'string' ? `${result.text}\n\n${reminder}` : result.text,
+        structured: { ...(result.structured || {}), transcript_reminder: reminder },
+      };
+    };
+  }
 
   return { tools, schemas: [...TASKS_TOOL_SCHEMAS, ...TASKS_WRITE_SCHEMAS, ...TASKS_BOARD_SCHEMAS, ...TASKS_AGENT_SCHEMAS] };
 }

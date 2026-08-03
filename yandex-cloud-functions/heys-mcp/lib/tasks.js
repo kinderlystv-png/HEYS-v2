@@ -291,6 +291,117 @@ function matchTerms(haystack, terms) {
   return { score, hit };
 }
 
+// ── Чем строка весит, кроме совпавших слов ───────────────────────────────
+//
+// Слова отвечают на «про то ли это», но не на «стоит ли это читать первым».
+// Упоминание вчера почти всегда важнее такого же месяц назад, а принятое
+// решение весомее пересказа того же в журнале. Обе поправки СКЛАДЫВАЮТСЯ с
+// весом слов и намеренно не могут его перебить: потолок всех надбавок ниже
+// цены одного совпавшего слова (см. тест про баланс). Иначе свежая болтовня
+// вытеснила бы месячной давности решение ровно по теме — та самая ошибка,
+// ради которой ранжирование и переделывалось.
+
+const WORD_WEIGHT = 20;         // цена одного очка совпадения по словам
+const SOURCE_MAX = 5;           // самый весомый источник: записанное решение
+const RECENCY_MAX = 4;          // сегодняшняя запись
+const RECENCY_HALFLIFE_DAYS = 45; // затухание плавное: месяц назад ещё ~2.5 из 4
+const EXACT_BONUS = 6;          // фраза стоит целиком
+const LINK_BONUS = 3;           // связь поставлена руками через «см:»
+
+/**
+ * Вес источника. Порядок важен: первое совпадение выигрывает, поэтому
+ * стенограмма и архив проверяются раньше общих папок.
+ */
+const SOURCE_WEIGHT = [
+  [/^docs\/preferences\.md$/i, 5],  // как он решает — записано с его слов
+  [/^transcript\//i, 0],            // сырой лог разговора, в разбор не тащится
+  [/^archive\//i, 1],
+  [/^projects\//i, 3],              // сами задачи
+  [/^(NOW|GOALS)\.md$/i, 3],
+  [/^(INBOX|habits)\.md$/i, 2],
+  [/^days\//i, 2],
+  [/^money\//i, 2],
+  [/^journal\//i, 1.5],             // пересказ разговора — легче задачи
+];
+
+/**
+ * Принятое решение, где бы оно ни лежало. Формулировка «решили ...» в журнале
+ * весит как задача, а не как соседний абзац пересказа: по правилам разбора
+ * записывают именно так, и терять это из-за папки нельзя.
+ */
+// «Решения» в родительном падеже здесь нет намеренно: «требует решения» —
+// это открытый вопрос, а не принятое решение, и поднимать его как решение
+// значит выдать нерешённое за решённое.
+const DECISION_MARK_RE = /(?:^|[^\p{L}])(?:решил[иа]?|решено|решение|договорились|условились|остановились|выбрали)/iu;
+
+function sourceWeight(path, line) {
+  const p = String(path || '');
+  let weight = 1.5;
+  for (const [re, value] of SOURCE_WEIGHT) {
+    if (re.test(p)) { weight = value; break; }
+  }
+  // Стенограмма остаётся самой лёгкой даже со словом «решили»: она сплошная
+  // запись речи, и «решили» там звучит и в вопросе, и в отказе.
+  if (weight > 0 && DECISION_MARK_RE.test(String(line || ''))) return SOURCE_MAX;
+  return weight;
+}
+
+/** Насколько запись далека от сегодня, в днях. null — датой не помечена. */
+function daysFromToday(date, today) {
+  if (!date || !today) return null;
+  const a = Date.parse(date.length === 7 ? `${date}-01` : date);
+  const b = Date.parse(today);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.abs(Math.round((a - b) / DAY_MS));
+}
+
+function recencyBonus(days) {
+  if (days === null) return 0;
+  return RECENCY_MAX * Math.pow(0.5, Math.max(0, days) / RECENCY_HALFLIFE_DAYS);
+}
+
+const DATE_IN_TEXT_RE = /(\d{4}-\d{2}-\d{2})/;
+const DATE_HEADING_RE = /^#{1,6}\s*.*?(\d{4}-\d{2}-\d{2})/;
+
+/**
+ * Дата строки: сначала своя, потом ближайший заголовок с датой выше, потом
+ * дата в имени файла. Заголовок нужен журналу: у `journal/2026-08.md` в имени
+ * только месяц, и без него запись вчерашнего дня считалась бы месячной.
+ */
+function lineDate(line, headingDate, path) {
+  const own = DATE_IN_TEXT_RE.exec(String(line || ''));
+  if (own) return own[1];
+  if (headingDate) return headingDate;
+  const inPath = /(\d{4}-\d{2}(?:-\d{2})?)/.exec(String(path || ''));
+  return inPath ? inPath[1] : null;
+}
+
+/**
+ * Пары концов явных ссылок в виде «путь:строка». Ссылка ведёт на задачу, а
+ * задача в файле — это её заголовочная строка, поэтому совпадение внутри
+ * задачи сводится к ней же (см. `anchorLine`).
+ */
+function linkEndpointPairs(files, links = null) {
+  const all = links || collectLinks(files);
+  const pairs = [];
+  for (const link of all) {
+    const target = findTaskByAddress(files, link.to);
+    if (!target) continue;                       // битая ссылка связью не является
+    pairs.push([`${link.from.path}:${link.from.line}`, `${target.path}:${target.line}`]);
+  }
+  return pairs;
+}
+
+/** Строка задачи, внутри которой лежит совпадение; для прочих файлов — она сама. */
+function anchorLine(file, line) {
+  if (!/^projects\//i.test(String(file.path || ''))) return line;
+  let anchor = line;
+  for (const task of parseTasks(file)) {
+    if (task.line <= line) anchor = task.line; else break;
+  }
+  return anchor;
+}
+
 /**
  * Поиск по задачнику. Возвращает совпадения со строками вокруг: запись журнала
  * без соседних строк бесполезна — по ней не видно, о чём шла речь.
@@ -299,7 +410,10 @@ function matchTerms(haystack, terms) {
  * совпавшей, когда содержит их все. Это ближе к тому, как человек ищет
  * («лендинг версия D»), чем точное вхождение фразы.
  */
-function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, terms: given = null, any = false } = {}) {
+function searchFiles(files, query, {
+  context = 2, limitPerFile = 5, limit = 40, terms: given = null, any = false,
+  today = null, linkPairs = null, related = null,
+} = {}) {
   // `terms` приходит из разбора живой фразы; `any` нужен там же: у фразы из
   // пяти слов строки, где встретились все пять, не бывает, а строка с двумя
   // самыми весомыми — ровно то, что искали.
@@ -314,14 +428,22 @@ function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, 
   const phrase = terms.length > 1 ? terms.map((t) => t.word).join(' ') : null;
 
   const results = [];
+  const byPath = new Map();
   for (const file of files) {
     if (!file || typeof file.text !== 'string' || !file.text) continue;
+    byPath.set(file.path, file);
     const lines = file.text.split('\n');
     let found = 0;
+    let headingDate = null;
     for (let i = 0; i < lines.length && found < limitPerFile; i += 1) {
+      // Дата заголовка копится по ходу обхода: отдельный проход вверх стоил бы
+      // столько же, сколько сам поиск.
+      const heading = DATE_HEADING_RE.exec(lines[i]);
+      if (heading) headingDate = heading[1];
       const { score, hit } = matchTerms(lines[i], terms);
       if (any ? !hit.length : hit.length !== terms.length) continue;
       found += 1;
+      const date = lineDate(lines[i], headingDate, file.path);
       results.push({
         path: file.path,
         line: i + 1,
@@ -329,18 +451,57 @@ function searchFiles(files, query, { context = 2, limitPerFile = 5, limit = 40, 
         score,
         matched: hit,
         exact: phrase ? lines[i].toLowerCase().includes(phrase) : false,
+        date,
+        age_days: daysFromToday(date, today),
+        weight: sourceWeight(file.path, lines[i]),
+        linked: false,
         context: lines
           .slice(Math.max(0, i - context), Math.min(lines.length, i + context + 1))
           .join('\n'),
       });
     }
   }
+
+  // Явная связь «см:» — это то, что человек сам назвал связанным; поиск по
+  // словам такую пару не находит никогда, у неё общих слов обычно нет.
+  // Поднимаем запись, если её конец ссылки смотрит на другое найденное: на
+  // соседнее совпадение или на уже найденную задачу (`related`).
+  if (linkPairs && linkPairs.length && results.length) {
+    const anchors = new Map();
+    const keyOf = (m) => {
+      const cacheKey = `${m.path}:${m.line}`;
+      if (!anchors.has(cacheKey)) {
+        const file = byPath.get(m.path);
+        anchors.set(cacheKey, `${m.path}:${file ? anchorLine(file, m.line) : m.line}`);
+      }
+      return anchors.get(cacheKey);
+    };
+    const known = new Set(results.map(keyOf));
+    for (const r of related || []) known.add(`${r.path}:${r.line}`);
+    const boosted = new Set();
+    for (const [from, to] of linkPairs) {
+      if (from === to) continue;
+      if (known.has(from) && known.has(to)) { boosted.add(from); boosted.add(to); }
+    }
+    if (boosted.size) for (const m of results) if (boosted.has(keyOf(m))) m.linked = true;
+  }
+
+  for (const m of results) {
+    m.rank = Math.round((
+      m.score * WORD_WEIGHT
+      + m.weight
+      + recencyBonus(m.age_days)
+      + (m.exact ? EXACT_BONUS : 0)
+      + (m.linked ? LINK_BONUS : 0)
+    ) * 1000) / 1000;
+  }
+
   // Отбор по релевантности идёт ДО потолка: иначе сорок первых попавшихся
   // строк вытесняют ту единственную, где фраза стоит целиком. Порядок обхода
   // (rankPaths: сначала задачи, потом дни и журнал) остаётся последним
   // доводом — сортировка в JS устойчива.
   return results
-    .sort((a, b) => (b.score - a.score) || (Number(b.exact) - Number(a.exact)))
+    .sort((a, b) => b.rank - a.rank)
     .slice(0, limit);
 }
 
@@ -1223,6 +1384,63 @@ function rankPaths(paths, { today = null } = {}) {
     if (da !== null && db !== null && da !== db) return da - db;
     return String(a).localeCompare(String(b));
   });
+}
+
+// ── Стенограмма: напоминание, а не принуждение ───────────────────────────
+//
+// Записать стенограмму может только сама модель: коннектор видит вызовы
+// инструментов, но не текст разговора, и подставить реплику вместо неё не
+// может никто. Значит принуждения здесь не бывает — бывает напоминание там,
+// куда модель точно смотрит: в результате её же вызова.
+//
+// Проверка идёт ПО ИНДЕКСУ и не читает файл вовсе: индекс уже поднят для
+// любого чтения и записи, в нём есть и сам факт файла, и время последней
+// записи. Читать стенограмму ради напоминания было бы вдвойне неуместно —
+// она намеренно последняя в `rankPaths` и в разбор не тащится.
+
+const TRANSCRIPT_STALE_MS = 60 * 60 * 1000;
+
+function transcriptPath(date) {
+  return `transcript/${date}.md`;
+}
+
+/**
+ * Состояние стенограммы за день: нет вовсе, отстала или свежая.
+ *
+ * `updatedAt` в индексе двигает любая запись в файл — и своя, и приехавшая
+ * синхронизацией с диска, поэтому «час назад» здесь значит «час назад в
+ * задачнике», а не «час назад по этому чату».
+ */
+function transcriptStatus(index, { date, nowMs, staleMs = TRANSCRIPT_STALE_MS } = {}) {
+  const path = transcriptPath(date);
+  const entry = index && index.files ? index.files[path] : null;
+  if (!entry || !(Number(entry.rev) > 0) || !(Number(entry.updatedAt) > 0)) {
+    return { path, date, state: 'missing', age_min: null };
+  }
+  const age = Number(nowMs) - Number(entry.updatedAt);
+  if (!Number.isFinite(age)) return { path, date, state: 'missing', age_min: null };
+  const ageMin = Math.max(0, Math.round(age / 60000));
+  return { path, date, state: age >= staleMs ? 'stale' : 'fresh', age_min: ageMin };
+}
+
+/**
+ * Одна строка приписки — или null, когда напоминать не о чем.
+ *
+ * Номер правила сюда не пишется намеренно: нумерация уже один раз сдвигалась
+ * от вставки правила в середину, и приписка с чужим номером хуже, чем без
+ * него. Названо то, что делать, а не то, где это записано.
+ */
+function transcriptReminder(status) {
+  if (!status) return null;
+  if (status.state === 'missing') {
+    return `Стенограмма за ${status.date} пуста — допиши в ${status.path} его реплику дословно и свои выводы.`;
+  }
+  if (status.state === 'stale') {
+    const hours = Math.floor(status.age_min / 60);
+    const ago = hours >= 1 ? `${hours} ч назад` : `${status.age_min} мин назад`;
+    return `Последняя запись в ${status.path} — ${ago}, а разговор идёт: допиши стенограмму.`;
+  }
+  return null;
 }
 
 // ── Эксперимент «два ответа» ─────────────────────────────────────────────
@@ -2907,6 +3125,18 @@ module.exports = {
   ensureIndex,
   withIndexEntry,
   searchFiles,
+  RANK_WEIGHTS: {
+    WORD_WEIGHT, SOURCE_MAX, RECENCY_MAX, RECENCY_HALFLIFE_DAYS, EXACT_BONUS, LINK_BONUS,
+  },
+  sourceWeight,
+  recencyBonus,
+  daysFromToday,
+  linkEndpointPairs,
+  // стенограмма
+  TRANSCRIPT_STALE_MS,
+  transcriptPath,
+  transcriptStatus,
+  transcriptReminder,
   READ_MAX_CHARS,
   READ_HARD_MAX,
   fileWindow,

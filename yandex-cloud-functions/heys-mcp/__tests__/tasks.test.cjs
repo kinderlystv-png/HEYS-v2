@@ -2440,3 +2440,243 @@ test('замеченное и принесённое не путаются ме�
     (e) => e.code === 'ambiguous_standup_item',
   );
 });
+
+// ── Напоминание про стенограмму ──────────────────────────────────────────
+//
+// Записать стенограмму может только модель: коннектор видит вызовы, но не
+// текст разговора. Принуждения здесь не бывает, поэтому проверяется ровно то,
+// на чём держится напоминание: оно появляется, когда записи нет, и молчит,
+// как только она появилась.
+
+const TRANSCRIPT_TODAY = 'transcript/2026-08-02.md';
+
+test('стенограммы за сегодня нет — разбор фразы несёт приписку', async () => {
+  const res = await session(liveTasksApi()).tasks_context({ topic: 'лендинг версия D' });
+  assert.match(res.text, /Стенограмма за 2026-08-02 пуста/);
+  assert.match(res.structured.transcript_reminder, new RegExp(TRANSCRIPT_TODAY));
+  // Разбор от приписки не пострадал.
+  assert.ok(res.structured.tasks.length, 'сам ответ инструмента остался на месте');
+});
+
+test('запись в стенограмму гасит приписку, а её отсутствие — нет', async () => {
+  const api = liveTasksApi();
+  const before = await session(api).tasks_capture({ text: 'Купить леску', project: 'family' });
+  assert.match(before.text, /Стенограмма за 2026-08-02 пуста/);
+
+  await session(api).tasks_append({ path: TRANSCRIPT_TODAY, block: '## 12:00\n\n**Кин:** купи леску' });
+
+  const after = await session(api).tasks_capture({ text: 'Ещё одна', project: 'family' });
+  assert.equal(after.structured.transcript_reminder, undefined, 'стенограмма записана — напоминать не о чем');
+  assert.doesNotMatch(after.text, /Стенограмма/);
+});
+
+test('стенограмма за вчера сегодняшнюю приписку не снимает', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_append({ path: 'transcript/2026-08-01.md', block: '## 20:00\n\n**Кин:** вчерашнее' });
+  const res = await session(api).tasks_capture({ text: 'Сегодняшняя мысль', project: 'family' });
+  assert.match(res.text, /Стенограмма за 2026-08-02 пуста/);
+});
+
+test('отставшая стенограмма названа временем последней записи', async () => {
+  const files = {
+    [tasks.keyForPath('projects/family.md')]: { path: 'projects/family.md', text: FAMILY_PROJECT, rev: 2, updatedAt: 1 },
+    [tasks.keyForPath(TRANSCRIPT_TODAY)]: { path: TRANSCRIPT_TODAY, text: '## 09:00\n\n**Кин:** доброе утро', rev: 1, updatedAt: NOW - 3 * 60 * 60 * 1000 },
+  };
+  const api = liveApi(files, {
+    files: {
+      'projects/family.md': { rev: 2, updatedAt: 1 },
+      [TRANSCRIPT_TODAY]: { rev: 1, updatedAt: NOW - 3 * 60 * 60 * 1000 },
+    },
+    updatedAt: 1,
+  });
+  const res = await session(api).tasks_capture({ text: 'Мысль посреди дня', project: 'family' });
+  assert.match(res.structured.transcript_reminder, /3 ч назад/);
+  assert.doesNotMatch(res.structured.transcript_reminder, /пуста/);
+});
+
+test('свежая стенограмма молчит', () => {
+  const index = { files: { [TRANSCRIPT_TODAY]: { rev: 4, updatedAt: NOW - 5 * 60 * 1000 } }, updatedAt: NOW };
+  const status = tasks.transcriptStatus(index, { date: '2026-08-02', nowMs: NOW });
+  assert.equal(status.state, 'fresh');
+  assert.equal(tasks.transcriptReminder(status), null);
+});
+
+test('напоминание висит на содержательных вызовах, а не на просмотре доски', async () => {
+  const list = await session(liveTasksApi()).tasks_list({});
+  assert.equal(list.structured.transcript_reminder, undefined, 'просмотр списка разговором не является');
+  const read = await session(liveTasksApi()).tasks_read({ path: 'projects/heys.md' });
+  assert.equal(read.structured.transcript_reminder, undefined, 'чтение файла разговором не является');
+  const delta = await session(liveTasksApi()).tasks_delta({});
+  assert.equal(delta.structured.transcript_reminder, undefined, 'проход по изменениям разговором не является');
+});
+
+test('в одном проходе приписка не повторяется на каждом вызове', async () => {
+  const api = liveTasksApi();
+  const tools = session(api);
+  const first = await tools.tasks_capture({ text: 'Первая', project: 'family' });
+  const second = await tools.tasks_append({ path: 'journal/2026-08.md', block: '## 2026-08-02\n\nРазобрали.' });
+  assert.match(first.text, /Стенограмма за 2026-08-02 пуста/);
+  assert.equal(second.structured.transcript_reminder, undefined, 'вторая такая же строка подряд — уже шум');
+});
+
+test('приписка не читает саму стенограмму', async () => {
+  const api = liveTasksApi();
+  const reads = [];
+  const wrapped = {
+    ...api,
+    async getKVByCurator(bearer, clientId, key) { reads.push(key); return api.getKVByCurator(bearer, clientId, key); },
+    async getKVManyByCurator(bearer, clientId, keys) { reads.push(...keys); return api.getKVManyByCurator(bearer, clientId, keys); },
+  };
+  await session(wrapped).tasks_capture({ text: 'Мысль', project: 'family' });
+  assert.ok(!reads.includes(tasks.keyForPath(TRANSCRIPT_TODAY)), 'хватило индекса, файл не поднимался');
+});
+
+// ── Свежесть и вес источника в поиске ────────────────────────────────────
+//
+// Слова отвечают на «про то ли это», но не на «что читать первым». Проверяется
+// не сам факт поправок, а их баланс: поправка обязана уступать смыслу, иначе
+// вчерашняя болтовня вытеснит решение по теме — ровно то, ради чего
+// ранжирование и переделывалось.
+
+const RANK_TODAY = '2026-08-02';
+
+test('надбавки не могут перебить одно совпавшее слово', () => {
+  const w = tasks.RANK_WEIGHTS;
+  const ceiling = w.SOURCE_MAX + w.RECENCY_MAX + w.EXACT_BONUS + w.LINK_BONUS;
+  assert.ok(
+    ceiling < w.WORD_WEIGHT,
+    `потолок надбавок ${ceiling} обязан быть ниже цены слова ${w.WORD_WEIGHT}: иначе свежесть начнёт решать за смысл`,
+  );
+});
+
+test('при равном совпадении слов свежая запись идёт первой', () => {
+  const line = 'Говорили про зеркало в коридоре.';
+  const hits = tasks.searchFiles([
+    { path: 'journal/2026-05.md', text: `## 2026-05-06\n\n${line}\n` },
+    { path: 'journal/2026-08.md', text: `## 2026-08-01\n\n${line}\n` },
+  ], 'зеркало коридоре', { today: RANK_TODAY });
+
+  assert.equal(hits.length, 2);
+  assert.equal(hits[0].path, 'journal/2026-08.md', 'вчерашнее упоминание нужнее майского');
+  assert.equal(hits[0].score, hits[1].score, 'по словам записи неразличимы — переставила именно свежесть');
+});
+
+test('дата берётся из заголовка дня, а не из имени месячного журнала', () => {
+  // Обе записи в одном файле: по имени `journal/2026-08.md` они были бы
+  // одинаково «первого августа», и свежесть не различила бы их вовсе.
+  const hits = tasks.searchFiles([{
+    path: 'journal/2026-08.md',
+    text: '## 2026-08-01\n\nПро зеркало в коридоре.\n\n## 2026-08-30\n\nПро зеркало в коридоре.\n',
+  }], 'зеркало коридоре', { today: '2026-08-30' });
+
+  assert.equal(hits[0].date, '2026-08-30', 'запись тридцатого числа ближе к сегодня');
+  assert.equal(hits[0].line, 7);
+  assert.equal(hits[1].date, '2026-08-01');
+});
+
+test('месячная запись слабеет плавно, а не проваливается в ноль', () => {
+  const today = tasks.recencyBonus(0);
+  const month = tasks.recencyBonus(30);
+  const year = tasks.recencyBonus(365);
+  assert.ok(month > today / 2, `месяц назад — ${month} из ${today}, это не провал`);
+  assert.ok(month < today, 'но и не наравне со свежим');
+  assert.ok(year > 0 && year < month / 10, 'годовалая запись почти невесома, но не отброшена');
+});
+
+test('старое решение по теме не проваливается под свежее вскользь-упоминание', () => {
+  // Слов поровну — единственное, чем записи различаются, это дата и то, что
+  // одна из них решение, а вторая пересказ.
+  const hits = tasks.searchFiles([
+    { path: 'journal/2026-06.md', text: '## 2026-06-20\n\nРешили: лендинг уходит в релиз версией D.\n' },
+    { path: 'journal/2026-08.md', text: '## 2026-08-01\n\nЗаодно посмотрел лендинг, релиз не трогали.\n' },
+  ], 'лендинг релиз', { today: RANK_TODAY, any: true });
+
+  assert.equal(hits[0].score, hits[1].score, 'по словам записи равны');
+  assert.equal(hits[0].path, 'journal/2026-06.md', 'принятое решение весомее свежего пересказа');
+  assert.equal(hits[0].weight, tasks.RANK_WEIGHTS.SOURCE_MAX);
+});
+
+test('решение весомее пересказа, задача весомее журнала, стенограмма легче всех', () => {
+  const plain = 'зеркало в коридоре';
+  const journal = tasks.sourceWeight('journal/2026-08.md', plain);
+  const task = tasks.sourceWeight('projects/family.md', `- [ ] P2 ${plain}`);
+  const decision = tasks.sourceWeight('journal/2026-08.md', `Решили: ${plain}`);
+  const prefs = tasks.sourceWeight('docs/preferences.md', plain);
+  const transcript = tasks.sourceWeight('transcript/2026-08-02.md', `Решили: ${plain}`);
+
+  assert.ok(decision > task, 'решение весомее задачи');
+  assert.ok(task > journal, 'задача весомее пересказа в журнале');
+  assert.ok(journal > transcript, 'стенограмма легче журнала');
+  assert.equal(transcript, 0, 'сырой лог разговора вес не набирает даже словом «решили»');
+  assert.equal(prefs, decision, 'как он решает — это тоже решение');
+});
+
+test('запись, связанная руками через «см:», поднимается над случайным совпадением', () => {
+  // Порядок намеренно против связи: без надбавки за «см:» первым остаётся
+  // heys — он идёт раньше по списку файлов, а по словам все трое равны.
+  const files = [
+    { path: 'projects/heys.md', text: '# HEYS\n\n## Задачи\n\n- [ ] P2 Ремонт лендинга ^2026-08-01\n' },
+    {
+      path: 'projects/kinderly.md',
+      text: '# Kinderly\n\n## Задачи\n\n- [ ] P1 Смета на ремонт зала ^2026-08-01\n',
+    },
+    {
+      path: 'projects/family.md',
+      text: `# Семья\n\n## Задачи\n\n- [ ] P2 Оплата ремонта ^2026-08-01\n  - см: kinderly/${tasks.taskHash('kinderly', 'Смета на ремонт зала')} — одна и та же смета\n`,
+    },
+  ];
+  const opts = { today: RANK_TODAY, linkPairs: tasks.linkEndpointPairs(files) };
+  const hits = tasks.searchFiles(files, 'ремонт', opts);
+
+  const linked = hits.filter((h) => h.linked).map((h) => h.path);
+  assert.deepEqual(new Set(linked), new Set(['projects/kinderly.md', 'projects/family.md']));
+  assert.equal(
+    hits[hits.length - 1].path,
+    'projects/heys.md',
+    'совпавшее только словом уходит под пару, связанную руками',
+  );
+});
+
+test('битая ссылка связью не считается', () => {
+  const files = [{
+    path: 'projects/family.md',
+    text: '# Семья\n\n## Задачи\n\n- [ ] P2 Оплата ремонта ^2026-08-01\n  - см: kinderly/0000000 — задачи такой уже нет\n',
+  }];
+  assert.deepEqual(tasks.linkEndpointPairs(files), []);
+});
+
+test('поиск инструментом отдаёт порядок ранжирования, а не порядок файлов', async () => {
+  const api = liveApi({
+    [tasks.keyForPath('journal/2026-05.md')]: { path: 'journal/2026-05.md', text: '## 2026-05-06\n\nПро зеркало в коридоре.\n', rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('journal/2026-08.md')]: { path: 'journal/2026-08.md', text: '## 2026-08-01\n\nПро зеркало в коридоре.\n', rev: 1, updatedAt: 1 },
+  });
+  const res = await session(api).tasks_search({ query: 'зеркало коридоре' });
+  assert.equal(res.structured.matches[0].path, 'journal/2026-08.md');
+  assert.ok(res.structured.matches[0].rank > res.structured.matches[1].rank);
+});
+
+test('контекст темы поднимает свежую запись журнала над старой', async () => {
+  // Обе записи в одном файле и старая идёт первой: порядок обхода за свежесть
+  // здесь не отработает, переставить их может только сама поправка.
+  const api = liveApi({
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+    [tasks.keyForPath('journal/2026-07.md')]: {
+      path: 'journal/2026-07.md',
+      text: '## 2026-07-01\n\nСобирали версию лендинга.\n\n## 2026-07-30\n\nСобирали версию лендинга.\n',
+      rev: 1,
+      updatedAt: 1,
+    },
+  });
+  const res = await session(api).tasks_context({ topic: 'что там с версией лендинга' });
+  const journal = res.structured.journal;
+  assert.ok(journal.length >= 2);
+  assert.equal(journal[0].date, '2026-07-30', 'июльская запись тридцатого числа нужнее первой');
+  assert.equal(journal[1].date, '2026-07-01');
+});
+
+test('«требует решения» весом решения не считается', () => {
+  const open = tasks.sourceWeight('projects/heys.md', '  - открыто: требует решения — какая версия в релиз?');
+  const decided = tasks.sourceWeight('projects/heys.md', '  - решение: в релиз идёт версия D');
+  assert.ok(open < decided, 'нерешённое не должно всплывать наравне с решённым');
+  assert.equal(decided, tasks.RANK_WEIGHTS.SOURCE_MAX);
+});
