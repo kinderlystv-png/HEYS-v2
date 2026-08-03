@@ -1913,7 +1913,7 @@ test('строка с фразой целиком идёт выше, чем ст
 
 test('правило про деньги не спорит с money/README.md', () => {
   const rules = curatorInstructions('Антон', true);
-  const money = rules.split('\n').find((l) => l.startsWith('З8.'));
+  const money = rules.split('\n').find((l) => /^З\d+\. Деньги/.test(l));
   assert.ok(money, 'правило про деньги на месте');
   // README требует вносить сводку самому и ставить контур самому; прежняя
   // формулировка «сумму и контур бери у него» ровно этому противоречила.
