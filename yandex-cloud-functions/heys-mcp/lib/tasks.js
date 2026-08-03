@@ -1591,7 +1591,7 @@ function slotsAround(files, refs, terms, { from = null, limit = 20 } = {}) {
 // Порог схожести 0.6 взят тот же, что в ритуальном контуре: два разных числа
 // для одного и того же решения — способ получить два разных поведения.
 
-const OPEN_DECISIONS_CAP = 5;
+const OPEN_DECISIONS_CAP = 10;
 const DECISION_SIMILARITY = 0.6;
 
 /** Значимые слова фразы, приведённые к основе: «встречу» и «встреча» — одно. */

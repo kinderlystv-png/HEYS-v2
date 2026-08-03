@@ -1170,7 +1170,7 @@ function crowdedApi(count) {
   });
 }
 
-test('шестая нерешённая развилка на доску не ложится', async () => {
+test('развилка сверх потолка на доску не ложится', async () => {
   const api = crowdedApi(tasks.OPEN_DECISIONS_CAP);
   await assert.rejects(
     () => session(api).tasks_decision({ project: 'family', title: 'Ещё одна', questions: ['совсем другой предмет разговора?'] }),
