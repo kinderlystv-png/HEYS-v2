@@ -777,7 +777,11 @@ function parseSlotRef(line) {
   // `\b` здесь ставить нельзя: граница слова считается по ASCII, и после
   // кириллического «#фокус» её просто нет — тег оставался бы в строке и ломал
   // разбор адреса.
-  const body = match[3].replace(/\s*#[\p{L}\d]+/gu, '').replace(/\s*@[\p{L}\d-]+/gu, '').trim();
+  const body = match[3]
+    .replace(SLOT_MARK_RE, '')
+    .replace(/\s*#[\p{L}\d]+/gu, '')
+    .replace(/\s*@[\p{L}\d-]+/gu, '')
+    .trim();
   if (!body.includes('·')) return null;
   const tail = body.slice(body.lastIndexOf('·') + 1).trim();
   const ref = parseAddress(tail);
@@ -1351,16 +1355,56 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
 const PATH_RANK = [
   [/^projects\//i, 0],          // сами задачи — без них не отвечает ничто
   [/^(NOW|INBOX|GOALS|habits)\.md$/i, 1],
-  [/^days\//i, 2],
-  [/^journal\//i, 3],
-  [/^money\//i, 4],
-  [/^archive\//i, 5],
-  [/^transcript\//i, 6],
+  // 2 — рабочая память, см. isStateFile ниже
+  [/^days\//i, 3],
+  [/^journal\//i, 4],
+  [/^money\//i, 5],
+  [/^archive\//i, 6],
+  [/^(README|CLAUDE)\.md$/i, 7], // справочники: формат файлов и договорённости
+  [/^transcript\//i, 8],
 ];
 
+/**
+ * Рабочая память живёт в docs/, но документацией не является.
+ *
+ * Признак не «лежит в docs/», а «это состояние, которое пишет сам коннектор»:
+ * как он решает (tasks_learn), что вынесено на планёрку (tasks_standup), о чём
+ * напомнить (tasks_remind), чей ответ победил в эксперименте (tasks_vote).
+ * Список закрытый и растёт только вместе с инструментом, который туда пишет, —
+ * поэтому его можно перечислить, в отличие от отчётов.
+ *
+ * Пути объявлены ниже по файлу, рядом со своими инструментами, поэтому набор
+ * собирается при первом обращении, а не при загрузке модуля.
+ */
+let stateFilesCache = null;
+function stateFiles() {
+  if (!stateFilesCache) {
+    stateFilesCache = new Set([PREFS_PATH, STANDUP_PATH, REMINDERS_PATH, VOTES_PATH]);
+  }
+  return stateFilesCache;
+}
+
+function isStateFile(path) {
+  return stateFiles().has(String(path || '').trim().toLowerCase());
+}
+
+/**
+ * Разовый отчёт: всё остальное в docs/ — аудит, симуляция, разбор ночи, разбор
+ * токенов, дашборд. Это 62% задачника по объёму (≈97 тысяч токенов из 156) и
+ * почти целиком написанное один раз для одного прочтения. Признак нарочно
+ * выведен «от обратного»: перечислять имена отчётов бессмысленно, их пишут
+ * агенты и завтра появится ещё три, а вот файлов состояния конечное число.
+ */
+function isOneOffReport(path) {
+  const clean = String(path || '').trim().toLowerCase();
+  return /^docs\//.test(clean) && !isStateFile(clean);
+}
+
 function pathRank(path) {
+  if (isStateFile(path)) return 2;      // рабочая память — вровень с задачами, до дней
+  if (isOneOffReport(path)) return 9;   // разовые отчёты — последними
   for (const [re, rank] of PATH_RANK) if (re.test(String(path || ''))) return rank;
-  return 7;                       // docs и всё прочее — в последнюю очередь
+  return 8;                             // прочее (rituals/ и подобное) — перед отчётами
 }
 
 /** Насколько дата в имени файла далека от сегодняшней, в днях. */
@@ -1789,7 +1833,7 @@ function slotsAround(files, refs, terms, { from = null, limit = 20 } = {}) {
         date,
         from: slot[1],
         to: slot[2],
-        title: (linked ? linked.title : slot[3].replace(/\s*#[\p{L}\d]+/gu, '')).trim(),
+        title: (linked ? linked.title : slot[3].replace(SLOT_MARK_RE, '').replace(/\s*#[\p{L}\d]+/gu, '')).trim(),
         ref,
         why: byRef ? 'под эту задачу' : 'названо теми же словами',
       });
@@ -2160,6 +2204,97 @@ function slotKindAndTitle(rawTitle) {
   return { kind, title: rawTitle.replace(SLOT_KIND_RE, '').trim() };
 }
 
+// ── Чей слот и что он забирает ───────────────────────────────────────────
+//
+// «У жены тренировка завтра в обед» — событие не его, но зависит от него он:
+// в это время ребёнок на нём и машина уехала. Отдельной сущности под это не
+// нужно, нужны два необязательных признака у слота: чей он и что забирает.
+//
+// Ресурсов в семье ровно два — машина одна на двоих и ребёнок, который должен
+// быть с кем-то. Оба признака необязательны и по умолчанию пусты: обязательное
+// поле не заполняется, это в этом же задачнике уже проверено на тегах времени
+// (стояли на трёх задачах из пятидесяти двух, пока их не расставили разом).
+//
+// Формат — русская скобка после названия и ДО ссылки на задачу:
+//   `- 12:00–15:00 Тренировка Саши (чей: жена; занято: машина, ребёнок) #фон`
+// Доска (build_board.py, parse_day) снимает со строки только `#вид` и `@место`,
+// а ссылку ищет rsplit'ом по последней «·» — скобка ей не мешает и читается
+// человеком как есть. Отсюда и требование ставить её перед ссылкой: после неё
+// хвост перестал бы совпадать с REF_RE, и слот потерял бы кликабельность.
+//
+// Что из занятости следует — здесь НЕ решается. Таблицы «ресурс → запрещённые
+// места» в коде нет намеренно: студия у них рядом с тренировкой, то есть без
+// машины она достижима, а что-то другое — нет. Географию знает он один, и
+// спрашивается она один раз, а ответ живёт в docs/preferences.md.
+
+const SLOT_RESOURCES = new Set(['машина', 'ребёнок']);
+
+const SLOT_MARK_RE = /\s*\((?:чей:\s*([^;()]+?))?\s*;?\s*(?:занято:\s*([^()]+?))?\)/i;
+
+/** «ребенок» и «Ребёнок» — один и тот же ребёнок. */
+function normalizeResource(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const flat = raw.replace(/ё/g, 'е');
+  for (const known of SLOT_RESOURCES) {
+    if (known.replace(/ё/g, 'е') === flat) return known;
+  }
+  return raw || null;
+}
+
+/**
+ * Признаки слота из его заголовка. Скобка без ключевых слов — обычный текст
+ * («уборка (перенесена с 4 августа)»), и трогать её нельзя.
+ */
+function parseSlotMark(rawTitle) {
+  const raw = String(rawTitle || '');
+  const match = SLOT_MARK_RE.exec(raw);
+  if (!match || (!match[1] && !match[2])) return { whose: null, takes: [], title: raw.trim() };
+  const takes = String(match[2] || '')
+    .split(/[,;]/)
+    .map((item) => normalizeResource(item))
+    .filter(Boolean);
+  return {
+    whose: match[1] ? match[1].trim() : null,
+    takes: [...new Set(takes)],
+    title: raw.replace(SLOT_MARK_RE, '').replace(/\s{2,}/g, ' ').trim(),
+  };
+}
+
+/** Собрать скобку обратно. Нечего сказать — ничего и не пишем. */
+function buildSlotMark({ whose = null, takes = [] } = {}) {
+  const who = String(whose || '').trim();
+  const list = [...new Set((takes || []).map((item) => normalizeResource(item)).filter(Boolean))];
+  if (!who && !list.length) return '';
+  const parts = [];
+  if (who) parts.push(`чей: ${who}`);
+  if (list.length) parts.push(`занято: ${list.join(', ')}`);
+  return `(${parts.join('; ')})`;
+}
+
+/**
+ * Занятость ресурсов по дню: что занято, когда и чьим событием. Это факт, а не
+ * запрет: вывод «значит туда не поедешь» делает он, а не эта функция.
+ */
+function resourceLoad(slots) {
+  const out = [];
+  for (const slot of slots) {
+    for (const resource of slot.takes || []) {
+      out.push({
+        resource, from: slot.start, to: slot.end, whose: slot.whose || null, title: slot.title,
+      });
+    }
+  }
+  return out.sort((a, b) => a.from.localeCompare(b.from) || a.resource.localeCompare(b.resource));
+}
+
+/** Что занято в конкретную минуту дня — под вопрос «что делать прямо сейчас». */
+function resourcesAt(slots, at, { dayStart = DAY_TAIL_BEFORE } = {}) {
+  const minute = timeToMinutes(at);
+  if (minute === null) throw new Error(`invalid_time:${at}`);
+  const point = minute < dayStart ? minute + 24 * 60 : minute;
+  return resourceLoad(slots.filter((slot) => point >= slot.from && point < slot.to));
+}
+
 /**
  * Смысл пересечения двух слотов — зеркало clash_kind() из build_board.py.
  * Расходиться с доской нельзя: инструмент и так столкнулся с этим один раз —
@@ -2221,9 +2356,12 @@ function parseSlots(text, { dayStart = DAY_TAIL_BEFORE } = {}) {
     if (!match) continue;
     const span = slotMinutes(match[2], match[3], dayStart);
     if (!span) continue;
-    const { kind, title } = slotKindAndTitle(match[4].trim());
+    const { kind, title: withMark } = slotKindAndTitle(match[4].trim());
+    // Признаки снимаются с заголовка так же, как тег вида: слот без них
+    // разбирается ровно как раньше, а со скобкой — не тащит её в название.
+    const { whose, takes, title } = parseSlotMark(withMark);
     out.push({
-      line: i, from: span.start, to: span.end, kind, title, raw: lines[i],
+      line: i, from: span.start, to: span.end, kind, title, whose, takes, raw: lines[i],
       start: match[2], end: match[3], done: String(match[1] || '').toLowerCase() === 'x',
     });
   }
@@ -2532,7 +2670,10 @@ function slotCoreTitle(title) {
  */
 function dayLoad({ date, text = '', recurring = [] } = {}) {
   const own = parseSlots(text, { dayStart: BOARD_DAY_START })
-    .map((s) => ({ start: s.start, end: s.end, from: s.from, to: s.to, kind: s.kind, title: s.title, repeat: false }));
+    .map((s) => ({
+      start: s.start, end: s.end, from: s.from, to: s.to, kind: s.kind, title: s.title,
+      whose: s.whose, takes: s.takes, repeat: false,
+    }));
   const wd = weekdayIndex(date);
   const have = new Set(own.map((s) => `${s.start}|${slotCoreTitle(s.title)}`));
   const added = [];
@@ -2543,7 +2684,7 @@ function dayLoad({ date, text = '', recurring = [] } = {}) {
     if (!span) continue;
     added.push({
       start: rec.start, end: rec.end, from: span.start, to: span.end,
-      kind: rec.kind || 'привычка', title: rec.title, repeat: true,
+      kind: rec.kind || 'привычка', title: rec.title, whose: null, takes: [], repeat: true,
     });
   }
   const slots = [...own, ...added].sort((a, b) => a.from - b.from);
@@ -2555,8 +2696,14 @@ function dayLoad({ date, text = '', recurring = [] } = {}) {
     has_file: !!String(text || '').trim(),
     busy_minutes: busy,
     focus_minutes: focus,
-    slots: slots.map((s) => ({ from: s.start, to: s.end, title: s.title, kind: s.kind, repeat: s.repeat })),
+    slots: slots.map((s) => ({
+      from: s.start, to: s.end, title: s.title, kind: s.kind, repeat: s.repeat,
+      whose: s.whose || null, takes: s.takes || [],
+    })),
     free: freeGaps(slots),
+    // Занятость машины и ребёнка идёт рядом со свободными окнами, а не вместо
+    // них: арифметику свободного времени трогать нельзя — она зеркалит доску.
+    resources: resourceLoad(slots),
   };
 }
 
@@ -3189,6 +3336,13 @@ module.exports = {
   cutTask,
   parseSlots,
   slotConflicts,
+  // чей слот и что он забирает
+  SLOT_RESOURCES,
+  normalizeResource,
+  parseSlotMark,
+  buildSlotMark,
+  resourceLoad,
+  resourcesAt,
   // снять, перенести, закрыть день
   slotPlainTitle,
   slotTitleMatches,
@@ -3313,6 +3467,8 @@ module.exports = {
   // порядок чтения
   pathRank,
   rankPaths,
+  isStateFile,
+  isOneOffReport,
   // эксперимент «два ответа»
   VOTES_PATH,
   VOTES_SECTION,

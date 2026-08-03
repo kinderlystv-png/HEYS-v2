@@ -487,6 +487,126 @@ test('неизвестный вид слота отклоняется до за�
   assert.equal(api.writes.length, 0);
 });
 
+// ── Чей слот и что он забирает ───────────────────────────────────────────
+//
+// «У жены тренировка завтра в обед» — событие не его, а зависит от него он:
+// ребёнок на нём и машина уехала. Признака два, оба необязательные: в этом же
+// задачнике теги времени стояли на трёх задачах из пятидесяти двух, пока их не
+// расставили разом, — обязательное поле не заполняется.
+
+test('слот без признаков разбирается ровно как раньше', () => {
+  const slots = tasks.parseSlots(DAY);
+  assert.ok(slots.length, 'старый день читается');
+  for (const slot of slots) {
+    assert.equal(slot.whose, null);
+    assert.deepEqual(slot.takes, []);
+  }
+  // Обычная скобка в названии остаётся текстом: признаки узнаются по ключевым
+  // словам, а не по самой скобке.
+  const plain = tasks.parseSlots('- 12:00–14:00 Уборка (перенесена с 4 августа)\n')[0];
+  assert.equal(plain.title, 'Уборка (перенесена с 4 августа)');
+  assert.deepEqual(plain.takes, []);
+});
+
+test('доска читает слот с признаками так же, как без них', () => {
+  // Зеркало parse_day() из build_board.py: те же выражения в том же порядке.
+  // `\b` после кириллицы в JS не работает, поэтому граница написана руками —
+  // в Python она есть сама, смысл тот же.
+  const B_SLOT = /^- (?:\[([ x])\]\s*)?(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})\s+(.+?)\s*$/;
+  const B_KIND = /\s*#(фон|дело|фокус)(?![\wа-яё])/i;
+  const B_PLACE = /\s*@([\wа-яё-]+)/i;
+  const B_REF = /^([\w\d-]+\/[0-9a-f]{6})$/;
+  const boardParse = (line) => {
+    const m = B_SLOT.exec(line.trim());
+    if (!m) return null;
+    let text = m[4];
+    const km = B_KIND.exec(text);
+    const kind = km ? km[1].toLowerCase() : 'фокус';
+    text = text.replace(new RegExp(B_KIND.source, 'gi'), '').trim();
+    const pm = B_PLACE.exec(text);
+    const place = pm ? pm[1].toLowerCase() : null;
+    text = text.replace(new RegExp(B_PLACE.source, 'gi'), '').trim();
+    let ref = null;
+    if (text.includes('·')) {
+      const cut = text.lastIndexOf('·');
+      const tail = text.slice(cut + 1).trim();
+      if (B_REF.test(tail)) { ref = tail; text = text.slice(0, cut).trim(); }
+    }
+    return { start: m[2], end: m[3], kind, place, ref, title: text, done: m[1] === 'x' };
+  };
+
+  const line = '- 12:00–15:00 Тренировка Саши (чей: жена; занято: машина, ребёнок) @зал · family/ab12c3 #фон';
+  const board = boardParse(line);
+  assert.ok(board, 'строка со признаками остаётся слотом для доски');
+  assert.equal(board.kind, 'фон');
+  assert.equal(board.place, 'зал');
+  assert.equal(board.ref, 'family/ab12c3', 'ссылка на задачу читается — слот остаётся кликабельным');
+  assert.equal(board.start, '12:00');
+  assert.equal(board.end, '15:00');
+  assert.match(board.title, /Тренировка Саши/);
+
+  // Та же строка нашими глазами: признаки сняты, название чистое.
+  const mine = tasks.parseSlots(`${line}\n`)[0];
+  assert.equal(mine.kind, 'фон');
+  assert.equal(mine.whose, 'жена');
+  assert.deepEqual(mine.takes, ['машина', 'ребёнок']);
+  assert.equal(mine.title, 'Тренировка Саши @зал · family/ab12c3');
+});
+
+test('tasks_slot ставит признаки перед ссылкой, а не после неё', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({
+    date: '2026-08-02', from: '12:00', to: '15:00', title: 'Тренировка Саши',
+    kind: 'фон', whose: 'жена', takes: ['машина', 'ребёнок'],
+  });
+  const saved = api.writes[0].items[0].v.text;
+  assert.match(saved, /- 12:00–15:00 Тренировка Саши \(чей: жена; занято: машина, ребёнок\) #фон/);
+  assert.equal(res.structured.whose, 'жена');
+  assert.deepEqual(res.structured.takes, ['машина', 'ребёнок']);
+  assert.match(res.text, /занято: машина, ребёнок/);
+
+  // Со ссылкой на задачу порядок обязателен: доска ищет адрес в хвосте строки
+  // после последней «·», и признаки после него сделали бы слот некликабельным.
+  const withRef = dayApi();
+  const hash = tasks.taskHash('heys', 'Собрать оптимальную версию лендинга');
+  await session(withRef).tasks_slot({
+    date: '2026-08-02', from: '16:00', to: '17:00', title: 'Съёмка',
+    ref: `heys/${hash}`, takes: ['машина'],
+  });
+  const line = withRef.kv[tasks.keyForPath('days/2026-08-02.md')].text
+    .split('\n').find((l) => l.includes('Съёмка'));
+  assert.ok(line.indexOf('(занято: машина)') < line.indexOf('·'), 'признаки стоят до ссылки');
+  assert.equal(tasks.parseSlotRef(line).ref.hash, hash, 'ссылка всё ещё читается');
+});
+
+test('слот без признаков пишется прежней строкой — пары полей на нём не видно', async () => {
+  const api = withBoard();
+  await build(api).tasks_slot({ date: '2026-08-02', from: '09:00', to: '09:10', title: 'Позвонить', kind: 'дело' });
+  const saved = api.writes[0].items[0].v.text;
+  assert.match(saved, /- 09:00–09:10 Позвонить #дело/);
+  assert.ok(!/чей:|занято:|\(\)/.test(saved), 'пустых скобок в строке не появляется');
+});
+
+test('слот с признаками снимается по названию — скобка не мешает поиску', async () => {
+  const api = dayApi();
+  await session(api).tasks_slot({
+    date: '2026-08-02', from: '12:00', to: '15:00', title: 'Тренировка Саши',
+    kind: 'фон', whose: 'жена', takes: ['ребёнок'],
+  });
+  const res = await session(api).tasks_unslot({ date: '2026-08-02', slot: 'тренировка саши' });
+  assert.equal(res.structured.title, 'Тренировка Саши');
+  assert.ok(!/Тренировка Саши/.test(api.kv[tasks.keyForPath('days/2026-08-02.md')].text), 'строка ушла из дня');
+});
+
+test('ресурс не из словаря отклоняется до записи', async () => {
+  const api = withBoard();
+  await assert.rejects(
+    () => build(api).tasks_slot({ date: '2026-08-02', from: '10:00', to: '11:00', title: 'x', takes: ['самокат'] }),
+    (e) => e.code === 'invalid_resource',
+  );
+  assert.equal(api.writes.length, 0);
+});
+
 test('tasks_money без контура не проходит', async () => {
   const api = withBoard();
   await assert.rejects(() => build(api).tasks_money({ amount: 500, title: 'кофе' }),
@@ -967,6 +1087,43 @@ test('незнакомое место отклоняется вместо тих
   await assert.rejects(() => session(api).tasks_focus({ place: 'дача' }), (e) => e.code === 'invalid_place');
 });
 
+/** Тот же набор проектов плюс день, в котором чужое событие забирает общее. */
+function focusApiWithBusyDay() {
+  const api = liveReviewApi();
+  const key = tasks.keyForPath('days/2026-08-02.md');
+  api.kv[key] = {
+    path: 'days/2026-08-02.md',
+    text: '- 12:00–15:00 Тренировка Саши (чей: жена; занято: машина, ребёнок) #фон\n',
+    rev: 1,
+    updatedAt: 1,
+  };
+  return api;
+}
+
+test('в занятый час фокус называет занятое, но подбор от этого не сужает', async () => {
+  const api = focusApiWithBusyDay();
+  const plain = await session(api).tasks_focus({ minutes: 60 });
+  const withHour = await session(api).tasks_focus({ minutes: 60, at: '13:00' });
+
+  assert.deepEqual(
+    withHour.structured.picked.map((t) => t.ref),
+    plain.structured.picked.map((t) => t.ref),
+    'занятость — факт для него, а не фильтр: пары «ресурс → запрещённое место» в коде нет',
+  );
+  assert.deepEqual(
+    [...new Set(withHour.structured.situation.busy.map((r) => r.resource))],
+    ['машина', 'ребёнок'],
+  );
+  assert.match(withHour.text, /занято: машина, ребёнок/);
+  assert.match(withHour.text, /Тренировка Саши \(жена\)/);
+});
+
+test('вне занятого часа фокус ничего про ресурсы не выдумывает', async () => {
+  const res = await session(focusApiWithBusyDay()).tasks_focus({ minutes: 60, at: '17:00' });
+  assert.deepEqual(res.structured.situation.busy, []);
+  assert.ok(!/занято/.test(res.text));
+});
+
 // ── Фраза целиком вместо угаданной темы ──────────────────────────────────
 
 test('значимые слова выделяются из живой фразы, а не выбираются моделью', () => {
@@ -1420,6 +1577,26 @@ test('якорь опознаётся по повторению, а не по н
   assert.equal(anchors[0].source, 'повтор в днях');
 });
 
+test('занятость ресурсов идёт рядом со свободными окнами, а не вместо них', async () => {
+  const day = '- 12:00–15:00 Тренировка Саши (чей: жена; занято: машина, ребёнок) #фон\n';
+  const res = await session(boardApi({ 'days/2026-08-03.md': day })).tasks_calendar({ days: 2 });
+  const monday = res.structured.days.find((d) => d.date === '2026-08-03');
+  assert.deepEqual(monday.resources.map((r) => r.resource), ['машина', 'ребёнок']);
+  assert.equal(monday.resources[0].from, '12:00');
+  assert.equal(monday.resources[0].whose, 'жена');
+  // Арифметику свободного времени это не трогает: она зеркалит доску.
+  assert.ok(monday.free.length, 'свободные окна считаются как раньше');
+  assert.ok(monday.busy_minutes >= 180, 'событие по-прежнему занимает время');
+  assert.match(res.text, /машина/);
+});
+
+test('день без занятых ресурсов ничего лишнего в календарь не приносит', async () => {
+  const res = await session(boardApi({ 'days/2026-08-03.md': '- 12:00–15:00 Лендинг #фокус\n' })).tasks_calendar({ days: 2 });
+  const monday = res.structured.days.find((d) => d.date === '2026-08-03');
+  assert.deepEqual(monday.resources, []);
+  assert.ok(!/занято у него самого/.test(res.text));
+});
+
 test('день без файла не роняет разбор и приходит свободным', async () => {
   const res = await session(boardApi()).tasks_calendar({ days: 7 });
   assert.equal(res.structured.days.length, 7);
@@ -1649,6 +1826,88 @@ test('при потолке в 60 файлов задачи не вытесня�
   const projects = ['projects/heys.md', 'projects/kinderly.md', 'projects/family.md'];
   const kept = tasks.rankPaths([...days, ...projects], { today: '2026-08-02' }).slice(0, 60);
   for (const p of projects) assert.ok(kept.includes(p), `${p} выпал из чтения`);
+});
+
+// ── Рабочая память против разовых отчётов ────────────────────────────────
+//
+// Всё, что не назвали явно, падало в конец, и туда же попала docs/ целиком —
+// вместе с памятью «как он решает» и тем, что он сам вынес на планёрку. На
+// живом задачнике preferences.md стоял 54-м при потолке 60, а standup.md не
+// читался вовсе. Поднять потолок было нельзя: разовые отчёты агентов — 62%
+// корпуса, и каждый разбор фразы тащил бы ≈97 тысяч токенов чужих аудитов.
+
+/** Список путей того же состава, что живой задачник: 7 проектов, дни, отчёты. */
+function corpusPaths({ reports = 14 } = {}) {
+  return [
+    'NOW.md', 'INBOX.md', 'GOALS.md', 'habits.md', 'README.md', 'CLAUDE.md',
+    ...['heys', 'kinderly', 'family', 'personal', 'mine2d', 'travel', 'someday'].map((p) => `projects/${p}.md`),
+    ...Array.from({ length: 18 }, (_, i) => `days/2026-08-${String(i + 1).padStart(2, '0')}.md`),
+    'days/README.md', 'days/recurring.md',
+    'journal/2026-08.md', 'journal/README.md',
+    'money/2026-08.md', 'money/README.md', 'money/budget.md', 'money/recurring.md',
+    'archive/2026-07.md', 'archive/2026-08.md',
+    'transcript/2026-08-01.md', 'transcript/2026-08-02.md', 'transcript/README.md',
+    tasks.PREFS_PATH, tasks.STANDUP_PATH, tasks.REMINDERS_PATH, tasks.VOTES_PATH,
+    ...Array.from({ length: reports }, (_, i) => `docs/отчёт-агента-${i}.md`),
+  ];
+}
+
+test('рабочая память читается вровень с задачами, а не на грани отсечения', () => {
+  const order = tasks.rankPaths(corpusPaths(), { today: '2026-08-03' });
+  for (const path of [tasks.PREFS_PATH, tasks.STANDUP_PATH, tasks.REMINDERS_PATH, tasks.VOTES_PATH]) {
+    const at = order.indexOf(path) + 1;
+    assert.ok(at > 0 && at <= 20, `${path} стоит ${at}-м, а должен быть в первой двадцатке`);
+  }
+  // Отчёты при этом ушли в самый хвост — они и вытесняли память.
+  assert.ok(tasks.isOneOffReport(order[order.length - 1]), 'последним читается разовый отчёт');
+});
+
+test('разовый отчёт узнаётся признаком, а не списком имён', () => {
+  // Имена отчётов растут — завтра появится ещё три, и список пришлось бы вести.
+  assert.equal(tasks.isOneOffReport('docs/чего-ещё-никто-не-писал.md'), true);
+  assert.equal(tasks.isOneOffReport('docs/dev-dashboard.md'), true);
+  // Файлы состояния коннектора лежат там же, но документацией не являются.
+  for (const path of [tasks.PREFS_PATH, tasks.STANDUP_PATH, tasks.REMINDERS_PATH, tasks.VOTES_PATH]) {
+    assert.equal(tasks.isOneOffReport(path), false, `${path} — рабочая память, а не отчёт`);
+    assert.equal(tasks.isStateFile(path), true);
+  }
+  assert.equal(tasks.isOneOffReport('projects/heys.md'), false);
+});
+
+test('вдвое больше отчётов не сдвигает рабочую память в чтении', () => {
+  const order = tasks.rankPaths(corpusPaths({ reports: 28 }).filter((p) => !tasks.isOneOffReport(p)), { today: '2026-08-03' });
+  const at = order.indexOf(tasks.STANDUP_PATH) + 1;
+  assert.ok(at > 0 && at <= 20, `standup.md стоит ${at}-м при удвоенных отчётах`);
+  assert.ok(order.length <= 60, 'сплошной проход помещается в потолок');
+});
+
+/** api с отчётом в docs/ и записью того, что реально ушло в батч. */
+function apiWithReport() {
+  const api = liveApi({
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+    [tasks.keyForPath(tasks.PREFS_PATH)]: { path: tasks.PREFS_PATH, text: '# Как он решает\n\n## Как он решает\n\n- 2026-08-01 · правило · развилки по деньгам решает сам\n', rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('docs/night-2026-08-03.md')]: { path: 'docs/night-2026-08-03.md', text: '# Разбор ночи\n\nЗдесь разбирали кулинарный виджет.\n', rev: 1, updatedAt: 1 },
+  });
+  const batched = [];
+  const inner = api.getKVManyByCurator;
+  api.getKVManyByCurator = async (bearer, clientId, keys) => {
+    batched.push(...keys);
+    return inner(bearer, clientId, keys);
+  };
+  api.batched = batched;
+  return api;
+}
+
+test('разбор фразы не тащит разовые отчёты, а рабочую память тащит', async () => {
+  const api = apiWithReport();
+  await session(api).tasks_context({ topic: 'кулинарный виджет' });
+  assert.ok(!api.batched.includes(tasks.keyForPath('docs/night-2026-08-03.md')), 'отчёт в разбор фразы не пошёл');
+  assert.ok(api.batched.includes(tasks.keyForPath(tasks.PREFS_PATH)), 'память «как он решает» прочитана');
+});
+
+test('прямой поиск словами читает и отчёты — иначе «не нашёл» было бы неправдой', async () => {
+  const res = await session(apiWithReport()).tasks_search({ query: 'кулинарный виджет' });
+  assert.ok(res.structured.matches.some((m) => m.path === 'docs/night-2026-08-03.md'), 'найдено в отчёте');
 });
 
 // ── Снять, перенести, закрыть день ───────────────────────────────────────

@@ -67,7 +67,7 @@ const TASKS_TOOL_SCHEMAS = [
   },
   {
     name: 'tasks_calendar',
-    description: 'Загруженность вперёд: по каждому дню — сколько занято, сколько из этого требует головы, свободные окна от 45 минут и дедлайны задач, попадающие на этот день. Плюс якоря (то, что повторяется из недели в неделю) и сводка по неделям: где плотно, где пусто, сколько дней свободны целиком. Это единственный способ ответить на «когда можно уехать» и «что придётся подвинуть»: поиском по словам свободная неделя не находится, у неё нет слов. Свободные окна считаются той же арифметикой, что рисует доска, — расхождения с тем, что он видит, не будет. День без файла — не ошибка, а свободный день, так и отдаётся.',
+    description: 'Загруженность вперёд: по каждому дню — сколько занято, сколько из этого требует головы, свободные окна от 45 минут и дедлайны задач, попадающие на этот день. Рядом с окнами — занятость общих ресурсов (resources): когда машина уехала и когда ребёнок на нём, вместе с тем, чьё это событие. Это факт для его решения, а не запрет: что достижимо без машины и что делается с ребёнком, знает он один. Плюс якоря (то, что повторяется из недели в неделю) и сводка по неделям: где плотно, где пусто, сколько дней свободны целиком. Это единственный способ ответить на «когда можно уехать» и «что придётся подвинуть»: поиском по словам свободная неделя не находится, у неё нет слов. Свободные окна считаются той же арифметикой, что рисует доска, — расхождения с тем, что он видит, не будет. День без файла — не ошибка, а свободный день, так и отдаётся.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -187,6 +187,8 @@ const TASKS_BOARD_SCHEMAS = [
           description: 'Вид слота: «фокус» (по умолчанию) — требует полной головы, второй такой же слот встык это конфликт; «дело» — короткая врезка (позвонить, забрать, пробить чек), уживается внутри чего угодно; «привычка» — не занимает голову, но полезно не сталкивать со сборами; «фон» ставится сам через presence и вручную обычно не нужен.',
         },
         ref: { type: 'string', description: 'Адрес задачи, ради которой этот слот стоит в дне: kinderly/8e3572. Доска сделает слот кликабельным, а tasks_context покажет с той стороны, что под задачу уже выделено время.' },
+        whose: { type: 'string', description: 'Чей это слот, если не его: «жена», «Саша». Нужен там, где событие чужое, а зависимость его — тренировка жены значит, что ребёнок остаётся на нём. Не сказал чей — не ставь: по умолчанию слот его собственный.' },
+        takes: { type: 'array', items: { type: 'string' }, description: 'Что это время забирает у него: «машина», «ребёнок». Ресурсов ровно два — машина одна на двоих и ребёнок, который должен быть с кем-то. Ставь только когда он сам это сказал; по умолчанию слот не занимает ничего, и старые слоты без признака читаются как раньше. Занятость — это факт для его решения, а не запрет: что достижимо без машины и что делается с ребёнком, знает он один.' },
       },
       required: ['from', 'to', 'title'],
     },
@@ -436,6 +438,8 @@ const TASKS_AGENT_SCHEMAS = [
         minutes: { type: 'integer', description: 'Сколько времени есть, в минутах. Задачи заведомо длиннее окна отсеиваются.' },
         mood: { type: 'string', description: '«устал» или «голова не варит» — тогда наверх идут короткие и понятные, а не самые важные.' },
         project: { type: 'string', description: 'Ограничить одним проектом, если он сам его назвал.' },
+        at: { type: 'string', description: 'Время окна ЧЧ:ММ, если он говорит про конкретный час («что успею до трёх», «завтра в обед»). Тогда в ответе будет видно, что в этот час занято из общего: машина, ребёнок, и чьим событием. Отбор задач от этого не меняется — что достижимо без машины и что делается с ребёнком, знает он один.' },
+        date: { type: 'string', description: 'День для «at», ГГГГ-ММ-ДД. По умолчанию сегодня.' },
       },
     },
   },
@@ -518,10 +522,22 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
    * Чтение пачкой по индексу. Батч ограничен: задачник целиком — это десятки
    * килобайт текста, и тащить их в каждый поиск незачем. Приоритет отдаётся
    * файлам, где ответ вероятнее: проекты, журнал, дни.
+   *
+   * Разовые отчёты в docs/ из сплошного прохода выкинуты: по объёму это больше
+   * половины задачника, а отвечают они ровно на один вопрос — тот, ради
+   * которого их однажды написали. Поднять их за потолок нельзя (тогда каждый
+   * разбор фразы тащит ≈97 тысяч токенов чужих аудитов), оставить в проходе
+   * последними — тоже: они и вытеснили рабочую память. Отдельным вызовом,
+   * прямым поиском и через tasks_read они по-прежнему доступны целиком, для
+   * этого есть `reports: true`.
    */
-  async function readAll({ paths = null, max = 60 } = {}) {
+  async function readAll({ paths = null, max = 60, reports = false } = {}) {
     const index = await loadIndex();
-    const known = paths && paths.length ? paths : Object.keys(index.files);
+    const asked = paths && paths.length;
+    const known = (asked ? paths : Object.keys(index.files))
+      // Названный поимённо файл читается всегда: отказать в том, что попросили,
+      // хуже, чем прочитать лишнее.
+      .filter((path) => asked || reports || !tasks.isOneOffReport(path));
     if (!known.length) return [];
     // Порядок — по смыслу, а не по алфавиту: иначе растущая папка дней
     // вытеснит из чтения сами задачи, и поиск начнёт молча «не находить».
@@ -646,7 +662,10 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     async tasks_search(args = {}) {
       const query = String(args.query || '').trim();
       if (!query) throw new ToolError('invalid_query', 'Нужны слова для поиска.');
-      const files = await readAll({});
+      // Прямой поиск словами — единственное место, где разовые отчёты читаются
+      // наравне со всем: «искал и не нашёл» имеет право прозвучать, только
+      // если искали действительно везде.
+      const files = await readAll({ reports: true });
       // Ссылки собираются один раз и отдаются поиску: без них связанная руками
       // запись остаётся внизу, потому что общих слов у пары обычно нет.
       const matches = tasks.searchFiles(files, query, {
@@ -908,6 +927,18 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const busiest = sorted[0] || null;
       const quietest = sorted[sorted.length - 1] || null;
 
+      // Занятые ресурсы называются рядом со свободным временем: «свободно
+      // 12:00–15:00, но ребёнок с тобой и без машины» — это другой ответ, чем
+      // просто «свободно». Вывод из этого делает он: что достижимо без машины
+      // и что делается с ребёнком, в коде не зашито.
+      const withResources = days.filter((d) => d.resources.length);
+      const resourceLine = withResources.slice(0, 3).map((d) => {
+        const what = d.resources
+          .map((r) => `${r.from}–${r.to} ${r.resource}${r.whose ? ` (${r.whose})` : ''}`)
+          .join(', ');
+        return `${d.date}: ${what}`;
+      }).join('; ');
+
       const hours = (m) => Math.round((m / 60) * 10) / 10;
       const summary = [
         `${from}…${till}: свободных дней ${freeDays.length} из ${span}`,
@@ -916,6 +947,9 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         quietest && busiest && quietest.start !== busiest.start ? `свободнее всего с ${quietest.start} (${hours(quietest.busy_minutes)} ч)` : null,
         anchors.length ? `якоря: ${anchors.slice(0, 5).map((a) => `${a.title} (${a.weekdays.join(',') || '—'})`).join('; ')}` : 'повторяющегося ничего не видно',
         dueByDate.size ? `дедлайнов в окне: ${[...dueByDate.values()].reduce((n, x) => n + x.length, 0)}` : 'дедлайнов в окне нет',
+        resourceLine
+          ? `занято у него самого${withResources.length > 3 ? ` (первые 3 дня из ${withResources.length})` : ''} — ${resourceLine}`
+          : null,
       ].filter(Boolean).join('. ');
 
       return {
@@ -1260,8 +1294,36 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           throw new ToolError('ref_not_found', `В ${refFile.path} нет задачи ${ref.project}/${ref.hash}.`);
         }
       }
+      // Чей слот и что он забирает — оба признака необязательны. Не сказал —
+      // слот ничей и ничего не занимает, строка выходит ровно такой, какой была
+      // до этой пары полей.
+      const whose = args.whose === undefined || args.whose === null
+        ? null
+        : String(args.whose).replace(/[()·;#@]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      if (args.whose !== undefined && args.whose !== null && !whose) {
+        throw new ToolError('invalid_whose', 'Чей слот — одно имя словами: «жена», «Саша». Скобки, «·», «#» и «@» в него не помещаются: по ним разбирается сама строка.');
+      }
+      const takesRaw = Array.isArray(args.takes)
+        ? args.takes
+        : (args.takes === undefined || args.takes === null || args.takes === '' ? [] : [args.takes]);
+      const takes = [];
+      for (const item of takesRaw) {
+        const resource = tasks.normalizeResource(item);
+        if (!resource || !tasks.SLOT_RESOURCES.has(resource)) {
+          throw new ToolError(
+            'invalid_resource',
+            `Ресурс «${item}» не из словаря: машина, ребёнок. Общих ресурсов в семье ровно два — машина одна на двоих и ребёнок, который должен быть с кем-то. Третий не заводится словом в слоте.`,
+          );
+        }
+        takes.push(resource);
+      }
+      const mark = tasks.buildSlotMark({ whose, takes });
+
       const refTail = ref ? ` · ${ref.project}/${ref.hash}` : '';
-      const line = `- ${args.from}–${args.to} ${String(args.title).trim()}${refTail} #${kind}`;
+      // Скобка стоит до ссылки намеренно: доска ищет адрес задачи в хвосте
+      // строки после последней «·», и признаки после него сделали бы слот
+      // некликабельным.
+      const line = `- ${args.from}–${args.to} ${String(args.title).trim()}${mark ? ` ${mark}` : ''}${refTail} #${kind}`;
       // Крупные блоки присутствия идут выше слотов задач: доска рисует то, что
       // ниже в файле, поверх — иначе блок закроет собой всё, что внутри него.
       const nextText = args.presence
@@ -1274,10 +1336,19 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       let warn = '';
       if (real.length) warn += ` Конфликт с: ${real.map((c) => c.title).join('; ')} — скажи об этом куратору.`;
       if (soft.length) warn += ` Стоит уточнить: ${soft.map((c) => c.title).join('; ')}.`;
+      // Занятость называется фактом, без вывода «значит туда не поедешь»:
+      // что достижимо без машины и что делается с ребёнком, знает он один.
+      const busy = takes.length
+        ? ` В это время занято: ${takes.join(', ')}${whose ? ` (событие не его — ${whose})` : ''}.`
+        : '';
 
       return {
-        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title} (${kind}).${warn}`,
-        structured: { date, from: args.from, to: args.to, title: args.title, kind, ref: ref ? `${ref.project}/${ref.hash}` : null, conflicts, rev: saved.rev },
+        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title} (${kind}).${busy}${warn}`,
+        structured: {
+          date, from: args.from, to: args.to, title: args.title, kind,
+          whose, takes,
+          ref: ref ? `${ref.project}/${ref.hash}` : null, conflicts, rev: saved.rev,
+        },
       };
     },
 
@@ -2290,16 +2361,38 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         throw new ToolError('invalid_place', `Место «${args.place}» не из словаря задачника: студия, дом, ноут, город.`);
       }
 
+      // Занятость общего в этот час — факт рядом с подбором, а не фильтр.
+      // Отсеивать по ней нельзя: пары «ресурс → запрещённое место» в коде нет
+      // и быть не должно — студия у них рядом с тренировкой, то есть без
+      // машины она достижима, а что-то другое нет. Это знание его, и приходит
+      // оно из docs/preferences.md, куда его кладёт tasks_learn.
+      let busy = [];
+      if (args.at) {
+        const date = args.date ? String(args.date).trim() : today();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          throw new ToolError('invalid_date', `Дата «${args.date}» не в формате ГГГГ-ММ-ДД.`);
+        }
+        const day = await readFile(`days/${date}.md`);
+        try {
+          busy = tasks.resourcesAt(tasks.parseSlots(day.text), args.at);
+        } catch (e) {
+          throw new ToolError('invalid_time', `Время «${args.at}» не в формате ЧЧ:ММ.`);
+        }
+      }
+
       const picked = tasks.pickFocus(pool, { place, minutes: args.minutes, mood, today: today(), limit: 3 });
       const situation = [place ? `#${place}` : null, args.minutes ? `${args.minutes} мин` : null, mood === 'low' ? 'голова не варит' : null]
         .filter(Boolean).join(', ');
+      const busyNote = busy.length
+        ? ` В ${args.at} занято: ${[...new Set(busy.map((r) => r.resource))].join(', ')} — ${[...new Set(busy.map((r) => `${r.title}${r.whose ? ` (${r.whose})` : ''}`))].join('; ')}. Отбор это не сузило: подходит ли дело под такое время, решает он.`
+        : '';
 
       return {
-        text: picked.length
+        text: `${picked.length
           ? `${situation ? `${situation}: ` : ''}${picked.map((t) => `${t.ref} · ${t.title} (${t.reasons.join(', ') || 'ничего не мешает'})`).join('; ')}.`
-          : `${situation ? `${situation}: ` : ''}под это ничего не подходит — либо всё занято местом, либо длиннее окна.`,
+          : `${situation ? `${situation}: ` : ''}под это ничего не подходит — либо всё занято местом, либо длиннее окна.`}${busyNote}`,
         structured: {
-          situation: { place, minutes: args.minutes || null, mood },
+          situation: { place, minutes: args.minutes || null, mood, at: args.at || null, busy },
           picked: picked.map((t) => ({
             ref: t.ref, project: t.project, title: t.title, priority: t.priority,
             due: t.due, tags: t.tags, reasons: t.reasons, blocked: t.blocked, score: t.score,
