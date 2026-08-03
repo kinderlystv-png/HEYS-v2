@@ -43,13 +43,24 @@ function renderBubble(props) {
   }));
 }
 
+// День, которым датированы фикстуры. Всё, что показывается «как сегодня»,
+// считается относительно него, а не относительно дня запуска тестов.
+const FIXTURE_TODAY = new Date(2026, 7, 2, 12, 0);
+
 describe('пузырь сообщения после редизайна', () => {
   beforeEach(() => {
     localStorage.clear();
     window.HEYS = {};
+    // Фикстуры датированы 2 августа, а мета-строка показывает время без даты
+    // только для сегодняшнего сообщения. Без подмены «сегодня» тест проходил
+    // ровно один день — тот, в который его написали, — и падал со следующего.
+    // Подменяем только Date: таймеры остаются настоящими, их отдельные тесты
+    // включают себе сами.
+    vi.setSystemTime(FIXTURE_TODAY);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     globalThis.React = originalReact;
     globalThis.ReactDOM = originalReactDOM;
@@ -168,7 +179,8 @@ describe('пузырь сообщения после редизайна', () => 
   });
 
   it('долгое нажатие открывает свои действия на тач-устройствах', () => {
-    vi.useFakeTimers();
+    vi.useRealTimers();                 // снимаем подмену даты из beforeEach
+    vi.useFakeTimers({ now: FIXTURE_TODAY });
     const { container } = renderBubble({ message: message() });
 
     const row = container.querySelector('.msg-row');
@@ -182,7 +194,8 @@ describe('пузырь сообщения после редизайна', () => 
   });
 
   it('короткое касание действия не открывает', () => {
-    vi.useFakeTimers();
+    vi.useRealTimers();                 // снимаем подмену даты из beforeEach
+    vi.useFakeTimers({ now: FIXTURE_TODAY });
     const { container } = renderBubble({ message: message() });
 
     const row = container.querySelector('.msg-row');
