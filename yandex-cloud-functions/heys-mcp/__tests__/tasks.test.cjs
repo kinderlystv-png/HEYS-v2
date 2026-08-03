@@ -67,6 +67,7 @@ function fakeApi({ index = null, files = {} } = {}) {
   const reads = [];
   return {
     reads,
+    kv,
     async getKVByCurator(bearer, clientId, key) {
       assert.equal(bearer, JWT);
       assert.equal(clientId, CLIENT);
@@ -280,6 +281,10 @@ function withWrites() {
   api.upsertKVManyByCurator = async (bearer, clientId, items, contextId) => {
     assert.equal(clientId, CLIENT);
     api.writes.push({ items, contextId });
+    // Записанное должно быть видно следующему чтению: запись перечитывает
+    // себя, чтобы поймать чужую параллельную. Фейк, который «пишет в никуда»,
+    // изображал бы ровно ту потерю, от которой защита и стоит.
+    for (const item of items) api.kv[item.k] = item.v;
     return { ok: true };
   };
   return api;
@@ -427,15 +432,15 @@ test('перенос задачи забирает её вложенные ст�
 
 function withBoard() {
   const api = withWrites();
-  const kvExtra = {
+  // Кладём в само хранилище, а не поверх одного читателя: запись перечитывает
+  // файл пакетом, и фикстура, видимая только через getKVByCurator, изображала
+  // бы «файл исчез» ровно в момент записи.
+  Object.assign(api.kv, {
     [tasks.keyForPath('habits.md')]: { path: 'habits.md', text: HABITS, rev: 1, updatedAt: 1 },
     [tasks.keyForPath('days/2026-08-02.md')]: { path: 'days/2026-08-02.md', text: DAY, rev: 1, updatedAt: 1 },
     [tasks.keyForPath('money/2026-08.md')]: { path: 'money/2026-08.md', text: '# Август\n', rev: 1, updatedAt: 1 },
     [tasks.keyForPath('archive/2026-08.md')]: { path: 'archive/2026-08.md', text: '# Архив\n', rev: 1, updatedAt: 1 },
-  };
-  const origGet = api.getKVByCurator;
-  api.getKVByCurator = async (bearer, clientId, key) =>
-    (kvExtra[key] !== undefined ? { data: kvExtra[key], error: null } : origGet(bearer, clientId, key));
+  });
   return api;
 }
 
@@ -637,12 +642,7 @@ test('после записи траты возвращается картина
   const api = withBoard();
   const month = `# Август\n\n## Операции\n\n- 01 -2000 связь ~family · Билайн\n- 01 -1000 продукты ~family · Самокат\n\n## Счета\n\n- 2026-08-01 · остаток 23467\n`;
   const key = tasks.keyForPath('money/2026-08.md');
-  const origMany = api.getKVManyByCurator;
-  const orig = api.getKVByCurator;
-  api.getKVByCurator = async (b, c, k) => (k === key
-    ? { data: { path: 'money/2026-08.md', text: month, rev: 1, updatedAt: 1 }, error: null }
-    : orig(b, c, k));
-  api.getKVManyByCurator = origMany;
+  api.kv[key] = { path: 'money/2026-08.md', text: month, rev: 1, updatedAt: 1 };
 
   const res = await build(api).tasks_money({
     amount: 500, category: 'продукты', contour: 'family', title: 'Перекрёсток', date: '2026-08-02',
@@ -3499,4 +3499,174 @@ test('tasks_append отклоняет тематический заголово�
     (e) => e.code === 'invalid_transcript_heading',
   );
   assert.ok(!api.kv[tasks.keyForPath('transcript/2026-08-03.md')], 'файл не создан и не изменён');
+});
+
+// ── Гонка записей: две сессии в один задачник ────────────────────────────
+//
+// Воспроизведено 2026-08-03: 20 одновременных записей от двух сессий, одна
+// пропала, инструмент ответил `ok`. Отпечаток потери — совпавшая ревизия в
+// двух ответах: обе сессии писали от одной основы, вторая легла поверх первой.
+// Здесь чужая сессия не «где-то параллельно», а вставлена ровно в тот момент,
+// где раньше терялось: между чтением инструмента и записью либо сразу после
+// записи, до того как её успели проверить.
+
+/**
+ * Хранилище со второй сессией внутри. `onRead` даёт ей записать сразу после
+ * того, как инструмент прочитал файл; `onWrite` — сразу после нашей записи,
+ * до проверки. Оба крючка одноразовые: чужая сессия пишет один раз, иначе
+ * повтор было бы не с чем сравнивать.
+ */
+function raceApi(files) {
+  const api = liveApi(files);
+  let onRead = null;
+  let onWrite = null;
+  const readOne = api.getKVByCurator;
+  const writeMany = api.upsertKVManyByCurator;
+
+  api.onRead = (key, fn) => { onRead = { key, fn }; };
+  api.onWrite = (fn) => { onWrite = fn; };
+  api.getKVByCurator = async (bearer, clientId, key) => {
+    const res = await readOne(bearer, clientId, key);
+    if (onRead && onRead.key === key) { const { fn } = onRead; onRead = null; fn(api.kv); }
+    return res;
+  };
+  api.upsertKVManyByCurator = async (bearer, clientId, items, contextId) => {
+    const res = await writeMany(bearer, clientId, items, contextId);
+    if (onWrite) { const fn = onWrite; onWrite = null; fn(api.kv); }
+    return res;
+  };
+  return api;
+}
+
+/** Чужая сессия дописала свою строку — со своей, уже свежей основы. */
+function foreignAppend(path, line) {
+  return (kv) => {
+    const key = tasks.keyForPath(path);
+    const cur = kv[key] || { path, text: '', rev: 0, updatedAt: 0 };
+    kv[key] = { path, text: `${cur.text}${line}\n`, rev: cur.rev + 1, updatedAt: 2 };
+    const files = (kv[tasks.INDEX_KEY] && kv[tasks.INDEX_KEY].files) || {};
+    kv[tasks.INDEX_KEY] = { files: { ...files, [path]: { rev: kv[key].rev, updatedAt: 2 } }, updatedAt: 2 };
+  };
+}
+
+/**
+ * Чужая запись от ТОЙ ЖЕ основы: ложится поверх нашей и получает ту же
+ * ревизию. Это и есть воспроизведённая потеря.
+ */
+function foreignClobber(path, base, line) {
+  return (kv) => {
+    kv[tasks.keyForPath(path)] = {
+      path, text: `${base.text}${line}\n`, rev: base.rev + 1, updatedAt: 2,
+    };
+  };
+}
+
+function raceFiles() {
+  return {
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+    [tasks.keyForPath('projects/family.md')]: { path: 'projects/family.md', text: FAMILY_PROJECT, rev: 2, updatedAt: 1 },
+  };
+}
+
+test('дописывание переживает чужую запись между чтением и записью', async () => {
+  const api = raceApi(raceFiles());
+  api.onRead(tasks.keyForPath('projects/family.md'), foreignAppend('projects/family.md', '- [ ] P3 Чужая задача ^2026-08-02'));
+
+  const res = await session(api).tasks_capture({ text: 'Наша задача', project: 'family' });
+
+  const saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.match(saved, /Чужая задача/, 'чужая запись на месте — поверх неё не легли');
+  assert.match(saved, /Наша задача/, 'наша запись тоже на месте');
+  assert.equal(res.structured.rev, 4, 'ревизия считается от свежей основы, а не от прочитанной');
+});
+
+test('правка задачи поверх чужой не проходит и говорит, что делать', async () => {
+  const api = raceApi(raceFiles());
+  const hash = tasks.taskHash('heys', 'Прогнать месячный аудит ПДн');
+  api.onRead(tasks.keyForPath('projects/heys.md'), foreignAppend('projects/heys.md', '- [ ] P1 Чужая задача ^2026-08-02'));
+
+  await assert.rejects(
+    () => session(api).tasks_update({ project: 'heys', hash, state: 'done' }),
+    (e) => {
+      assert.equal(e.code, 'stale_write_blocked');
+      assert.match(e.message, /Перечитай файл/);
+      assert.match(e.message, /ревизия 3, сейчас 4/);
+      return true;
+    },
+  );
+
+  const saved = api.kv[tasks.keyForPath('projects/heys.md')].text;
+  assert.match(saved, /Чужая задача/, 'чужая запись цела');
+  assert.match(saved, /- \[ \] P2 Прогнать месячный аудит/, 'наша правка не легла — и об этом сказано вслух');
+});
+
+test('затирание сразу после записи не проходит молча — совпавшая ревизия ловится', async () => {
+  const api = raceApi(raceFiles());
+  const hash = tasks.taskHash('heys', 'Прогнать месячный аудит ПДн');
+  // Чужая сессия писала от той же основы (ревизия 3) и легла поверх нашей:
+  // у обеих записей выходит ревизия 4 — тот самый отпечаток из аудита.
+  api.onWrite(foreignClobber('projects/heys.md', { text: HEYS_PROJECT, rev: 3 }, '- [ ] P1 Чужая задача ^2026-08-02'));
+
+  await assert.rejects(
+    () => session(api).tasks_update({ project: 'heys', hash, state: 'done' }),
+    (e) => {
+      assert.equal(e.code, 'stale_write_blocked');
+      assert.match(e.message, /не удержалась/, 'сказано, что записанного в файле нет');
+      assert.match(e.message, /той же ревизией 4/, 'назван отпечаток потери — совпавшая ревизия');
+      return true;
+    },
+  );
+
+  const saved = api.kv[tasks.keyForPath('projects/heys.md')].text;
+  assert.match(saved, /Чужая задача/);
+  assert.ok(!/- \[x\] P2 Прогнать месячный аудит/.test(saved), 'нашей правки нет — и вызов это признал ошибкой');
+});
+
+test('дописывание, затёртое сразу после записи, повторяется на свежем тексте', async () => {
+  const api = raceApi(raceFiles());
+  api.onWrite(foreignClobber('projects/family.md', { text: FAMILY_PROJECT, rev: 2 }, '- [ ] P3 Чужая задача ^2026-08-02'));
+
+  const res = await session(api).tasks_capture({ text: 'Наша задача', project: 'family' });
+
+  const saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.match(saved, /Чужая задача/, 'чужая запись на месте');
+  assert.match(saved, /Наша задача/, 'наша дописана поверх свежего текста');
+  assert.equal(saved.match(/Наша задача/g).length, 1, 'повтор не задвоил запись');
+  assert.equal(res.structured.rev, 4);
+});
+
+test('чужая копия индекса не уносит след нашей записи', async () => {
+  const api = raceApi(raceFiles());
+  // Индекс один на весь задачник, поэтому за него дерутся даже записи в
+  // РАЗНЫЕ файлы: чужой батч кладёт свою копию целиком.
+  api.onWrite((kv) => {
+    kv[tasks.INDEX_KEY] = { files: { 'projects/kinderly.md': { rev: 1, updatedAt: 2 } }, updatedAt: 2 };
+  });
+
+  await session(api).tasks_capture({ text: 'Наша задача', project: 'family' });
+
+  const index = api.kv[tasks.INDEX_KEY];
+  assert.equal(index.files['projects/family.md'].rev, 3, 'наш след в индексе восстановлен — иначе пуллер правку не заберёт');
+  assert.ok(index.files['projects/kinderly.md'], 'чужой след при починке не потерян');
+});
+
+test('запись в свой файл не выкидывает из индекса чужой, заведённый по ходу сессии', async () => {
+  const api = raceApi(raceFiles());
+  const tools = session(api);
+  await tools.tasks_capture({ text: 'Первая', project: 'family' });
+
+  // Другая сессия завела новый файл и отметила его в индексе. У нашей сессии
+  // индекс в этот момент уже прочитан и лежит в памяти.
+  api.kv[tasks.keyForPath('projects/kinderly.md')] = { path: 'projects/kinderly.md', text: '# Kinderly\n\n## Задачи\n', rev: 1, updatedAt: 2 };
+  api.kv[tasks.INDEX_KEY] = {
+    files: { ...api.kv[tasks.INDEX_KEY].files, 'projects/kinderly.md': { rev: 1, updatedAt: 2 } },
+    updatedAt: 2,
+  };
+
+  await tools.tasks_capture({ text: 'Вторая', project: 'heys' });
+
+  const index = api.kv[tasks.INDEX_KEY];
+  assert.ok(index.files['projects/kinderly.md'], 'чужой файл остался в индексе — правка в наш файл его не вытеснила');
+  assert.equal(index.files['projects/heys.md'].rev, 4);
+  assert.equal(index.files['projects/family.md'].rev, 3);
 });

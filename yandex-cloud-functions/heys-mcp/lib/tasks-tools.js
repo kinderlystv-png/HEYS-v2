@@ -483,6 +483,14 @@ const TASKS_AGENT_SCHEMAS = [
   },
 ];
 
+/**
+ * Сколько раз запись повторяется, когда её перебивает чужая сессия. Потолок
+ * нужен: без него две встречные записи, идущие сплошным потоком, крутили бы
+ * друг друга бесконечно. Четырёх хватает — окно гонки это доли секунды, и
+ * подряд проиграть четыре раза значит, что писать сейчас просто не время.
+ */
+const WRITE_ATTEMPTS = 4;
+
 function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolError, writeContext = null }) {
   let indexPromise = null;
   let statePromise = null;
@@ -557,29 +565,147 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
   }
 
   /**
+   * Свежее состояние прямо перед записью: файл и индекс одним запросом.
+   * Одним — потому что оба ключа участвуют в каждой записи, и два round-trip
+   * вместо одного удвоили бы окно, ради сужения которого всё и делается.
+   */
+  async function readForWrite(path) {
+    const key = tasks.keyForPath(path);
+    const { data, error } = await api.getKVManyByCurator(curatorJwt, clientId, [key, tasks.INDEX_KEY]);
+    if (error) {
+      throw new ToolError('upstream_error', `Не удалось перечитать ${path} перед записью: ${error.message}`);
+    }
+    const byKey = data || {};
+    return {
+      file: tasks.ensureFile(byKey[key], path),
+      index: tasks.ensureIndex(byKey[tasks.INDEX_KEY]),
+    };
+  }
+
+  /**
+   * Отказ вместо тихого затирания. Формулировка та же, что у tasks_patch:
+   * модель должна понять не «сломалось», а «перечитай и повтори».
+   */
+  function staleWriteError(path, baseRev, currentRev) {
+    return new ToolError(
+      'stale_write_blocked',
+      `Файл ${path} изменился с момента чтения (была ревизия ${baseRev}, сейчас ${currentRev}) — пишет кто-то ещё. Запись не сохранена: поверх неё пропала бы чужая правка. Перечитай файл (tasks_read) и повтори операцию на свежем тексте.`,
+      { path, base_rev: baseRev, current_rev: currentRev },
+    );
+  }
+
+  function indexHasEntry(index, file) {
+    const entry = index.files[file.path];
+    return !!entry && Number(entry.rev) >= Number(file.rev);
+  }
+
+  /**
+   * След файла в индексе. Индекс общий на весь задачник, поэтому за него
+   * дерутся даже записи в РАЗНЫЕ файлы: чужой батч кладёт свою копию индекса
+   * целиком и уносит наш свежий след. Файл при этом цел, но пуллер о правке не
+   * узнает — потеря молчаливая ровно так же.
+   *
+   * Чинится без участия модели: наша правка индекса — это добавление одной
+   * записи в свежую копию, повтор идемпотентен и ничего не может затереть.
+   */
+  async function ensureIndexEntry(file, index, contextId) {
+    let current = index;
+    for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
+      if (indexHasEntry(current, file)) return current;
+      const repaired = tasks.withIndexEntry(current, file, nowMs);
+      const res = await api.upsertKVManyByCurator(curatorJwt, clientId, [
+        { k: tasks.INDEX_KEY, v: repaired },
+      ], contextId);
+      if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись индекса задачника: ${res.error}`);
+      current = (await readForWrite(file.path)).index;
+    }
+    if (indexHasEntry(current, file)) return current;
+    throw new ToolError(
+      'index_write_blocked',
+      `Текст ${file.path} сохранён, но след правки в индексе задачника раз за разом затирают из другой сессии. Пуллер её не заберёт: повтори запись, когда параллельная работа закончится.`,
+      { path: file.path, rev: file.rev },
+    );
+  }
+
+  /**
    * Запись файла: значение и индекс обновляются одним вызовом. Индекс без
    * файла или файл без индекса — расхождение, из-за которого пуллер либо не
    * заберёт правку, либо будет считать её потерянной.
+   *
+   * Между чтением файла в инструменте и этой записью проходит время, и в него
+   * помещается чужая запись из другой сессии. Раньше она молча пропадала:
+   * батч кладёт значение безусловно, ревизия у обоих получалась одна и та же,
+   * а инструмент отвечал `ok`. Поэтому здесь три вещи.
+   *
+   * 1. Перед записью состояние перечитывается: ревизия разошлась — значит
+   *    основа устарела.
+   * 2. Что делать с расхождением, решает вызывающий. Дописывание можно
+   *    безболезненно повторить на свежем тексте — для этого передаётся
+   *    `rebase`. Всё, что опирается на номер строки из старого чтения
+   *    (правка задачи, снятие слота, замена блока), повторять нельзя: строка
+   *    уже уехала. Такие пути честно отказывают.
+   * 3. После записи значение читается обратно. Совпавшая ревизия при чужом
+   *    тексте — это ровно тот отпечаток, по которому потеря и была поймана:
+   *    двое писали от одной основы, второй лёг поверх первого.
+   *
+   * Полноценного compare-and-swap на сервере нет (batch_upsert пишет
+   * безусловно), поэтому окно не закрывается совсем — но проигравший всегда
+   * видит, что его текста нет, и либо повторяет, либо отказывает вслух.
    */
-  async function writeFile(file, text) {
+  async function writeFile(file, text, { rebase = null } = {}) {
     // Единственная дверь наружу для всех пишущих инструментов, поэтому запрет
     // на чужие файлы стоит здесь, а не в каждом обработчике по отдельности.
     const guarded = tasks.ownerOnlyFile(file.path);
     if (guarded) {
       throw new ToolError('owner_only_file', tasks.ownerOnlyRefusal(guarded), { path: guarded });
     }
-    const next = tasks.bumpFile(file, text, nowMs);
-    const index = await loadIndex();
-    const nextIndex = tasks.withIndexEntry(index, next, nowMs);
-
     const contextId = writeContext ? await writeContext(clientId) : null;
-    const res = await api.upsertKVManyByCurator(curatorJwt, clientId, [
-      { k: tasks.keyForPath(next.path), v: next },
-      { k: tasks.INDEX_KEY, v: nextIndex },
-    ], contextId);
-    if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись ${next.path}: ${res.error}`);
-    indexPromise = Promise.resolve(nextIndex);
-    return next;
+    let baseRev = Number(file.rev) || 0;
+    let nextText = text;
+
+    for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
+      const before = await readForWrite(file.path);
+      if (before.file.rev !== baseRev) {
+        if (!rebase) throw staleWriteError(file.path, baseRev, before.file.rev);
+        baseRev = before.file.rev;
+        nextText = rebase(before.file.text);
+      }
+
+      const next = tasks.bumpFile(before.file, nextText, nowMs);
+      const nextIndex = tasks.withIndexEntry(before.index, next, nowMs);
+      const res = await api.upsertKVManyByCurator(curatorJwt, clientId, [
+        { k: tasks.keyForPath(next.path), v: next },
+        { k: tasks.INDEX_KEY, v: nextIndex },
+      ], contextId);
+      if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись ${next.path}: ${res.error}`);
+
+      const after = await readForWrite(file.path);
+      // Ревизия выше нашей — кто-то писал уже поверх сохранённого; наш текст
+      // до него дошёл. Ревизия наша, а текст чужой — нас затёрли.
+      const survived = after.file.rev > next.rev
+        || (after.file.rev === next.rev && after.file.text === next.text);
+      if (!survived) {
+        if (!rebase) {
+          throw new ToolError(
+            'stale_write_blocked',
+            `Запись в ${file.path} не удержалась: параллельная сессия легла поверх неё той же ревизией ${next.rev}. Твоего изменения в файле НЕТ. Перечитай файл (tasks_read) и повтори операцию на свежем тексте.`,
+            { path: file.path, base_rev: next.rev, current_rev: after.file.rev },
+          );
+        }
+        baseRev = after.file.rev;
+        nextText = rebase(after.file.text);
+        continue;
+      }
+
+      indexPromise = Promise.resolve(await ensureIndexEntry(next, after.index, contextId));
+      return next;
+    }
+
+    throw new ToolError(
+      'stale_write_blocked',
+      `Не удалось записать ${file.path}: за ${WRITE_ATTEMPTS} попытки файл каждый раз успевали переписать из другой сессии. Ничего не сохранено. Повтори операцию, когда параллельная работа закончится.`,
+      { path: file.path, attempts: WRITE_ATTEMPTS },
+    );
   }
 
   /**
@@ -1087,10 +1213,13 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       parts.push(...tags, `^${today}`);
       const line = parts.join(' ');
 
-      const nextText = project
-        ? tasks.appendToSection(file.text, line, '## Задачи')
-        : tasks.appendBlock(file.text, line);
-      const saved = await writeFile(file, nextText);
+      // Дописывание адресуется разделом, а не номером строки, поэтому его
+      // безопасно повторить на свежем тексте: чужая задача, приехавшая между
+      // чтением и записью, останется на месте, наша встанет следом.
+      const put = (text) => (project
+        ? tasks.appendToSection(text, line, '## Задачи')
+        : tasks.appendBlock(text, line));
+      const saved = await writeFile(file, put(file.text), { rebase: put });
 
       const title = tasks.taskTitle(line);
       const hash = tasks.taskHash(tasks.projectKeyForPath(path), title);
@@ -1150,7 +1279,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const headingError = tasks.transcriptHeadingError(args.path, block);
       if (headingError) throw new ToolError('invalid_transcript_heading', headingError);
       const file = await readFile(args.path);
-      const saved = await writeFile(file, tasks.appendBlock(file.text, block));
+      const put = (text) => tasks.appendBlock(text, block);
+      const saved = await writeFile(file, put(file.text), { rebase: put });
       return {
         text: `Дописал в ${saved.path} (${block.split('\n').length} строк).`,
         structured: { path: saved.path, rev: saved.rev, lines: block.split('\n').length },
@@ -1563,7 +1693,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         account: args.account ? String(args.account).trim() : null,
         comment: args.title ? String(args.title).trim() : null,
       });
-      const saved = await writeFile(file, tasks.prependToSection(file.text, line, '## Операции'));
+      const put = (text) => tasks.prependToSection(text, line, '## Операции');
+      const saved = await writeFile(file, put(file.text), { rebase: put });
 
       // Картина месяца после записи — тот же смысл, что у day_after в
       // дневниках: не «записал», а «вот что теперь». Оценок не даём: лимиты в
@@ -1798,7 +1929,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         date: today(), winner, question,
         note: args.note ? String(args.note).trim() : null,
       });
-      const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.VOTES_SECTION));
+      const put = (text) => tasks.appendToSection(text, line, tasks.VOTES_SECTION);
+      const saved = await writeFile(file, put(file.text), { rebase: put });
       const { counts, total } = tasks.parseVotes(saved);
       return {
         text: `Записал: ${winner}. Счёт после ${total}: процедурный ${counts['процедурный']} · свободный ${counts['свободный']} · ничьи ${counts['ничья']}.`,
@@ -1884,7 +2016,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       }
 
       const line = tasks.preferenceBlock({ date: today(), kind, note, evidence, question: question || null });
-      const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.PREFS_SECTION));
+      const put = (text) => tasks.appendToSection(text, line, tasks.PREFS_SECTION);
+      const saved = await writeFile(file, put(file.text), { rebase: put });
 
       const total = existing.length + 1;
       const crowded = total > tasks.PREFS_SOFT_LIMIT
@@ -2222,7 +2355,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           };
         }
         const line = tasks.standupLine({ date: today_, topic, note: args.note ? String(args.note).trim() : null });
-        const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.STANDUP_SECTION));
+        const put = (text) => tasks.appendToSection(text, line, tasks.STANDUP_SECTION);
+        const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
           text: `На планёрку: ${topic}. Сейчас в повестке ${open.length + 1}.`,
           structured: { created: true, path: saved.path, rev: saved.rev, topic, note: args.note || null, open: open.length + 1 },
@@ -2270,7 +2404,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           );
         }
         const block = tasks.observationBlock({ date: today_, question, sides });
-        const saved = await writeFile(file, tasks.appendToSection(file.text, block, tasks.STANDUP_OBSERVED_SECTION));
+        const put = (text) => tasks.appendToSection(text, block, tasks.STANDUP_OBSERVED_SECTION);
+        const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
           text: `Заметил и вынес вопросом: ${question}`,
           structured: { created: true, path: saved.path, rev: saved.rev, question, sides, open: open.length + 1 },
@@ -2595,9 +2730,13 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         }
         // Шапка объясняет формат тому, кто откроет файл руками, — поэтому она
         // пишется вместе с первой строкой, а не когда-нибудь потом.
-        const base = file.text.trim() ? file.text : tasks.REMINDERS_HEADER;
         const line = tasks.reminderLine({ date, time, text });
-        const saved = await writeFile(file, tasks.appendToSection(base, line, tasks.REMINDERS_SECTION));
+        const put = (current) => tasks.appendToSection(
+          current.trim() ? current : tasks.REMINDERS_HEADER,
+          line,
+          tasks.REMINDERS_SECTION,
+        );
+        const saved = await writeFile(file, put(file.text), { rebase: put });
         const active = tasks.activeReminders([...all, { done: false, date, time, text, line: -1 }], { today: today_ });
         const late = date < today_;
         return {
@@ -2764,7 +2903,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         const text = String(args.text).trim();
         if (!text) throw new ToolError('invalid_text', 'Нужен текст идеи.');
         const line = tasks.ideaLine({ date: today_, text });
-        const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.IDEAS_SECTION));
+        const put = (text) => tasks.appendToSection(text, line, tasks.IDEAS_SECTION);
+        const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
           text: `Записал в идеи: ${text}. Всего идей: ${ideas.length + 1}.`,
           structured: { created: true, path: saved.path, rev: saved.rev, text, total: ideas.length + 1 },
